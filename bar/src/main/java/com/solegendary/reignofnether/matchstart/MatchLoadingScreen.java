@@ -527,7 +527,7 @@ public final class MatchLoadingScreen extends Screen {
     }
 
     /**
-     * Draws the whole veil into the window at {@code alpha}: the rose window with the title, then a dark stone panel
+     * Draws the whole veil into the window at {@code alpha}: the cathedral with the title (SplashArt), then a dark stone panel
      * (SplashArt's button look) with the map's name and blurb and the lineup, the stage line, the gold rule and a tip.
      * GUI units through GuiGraphics in both forms. Allocation-light: strings are built per frame but nothing else.
      */

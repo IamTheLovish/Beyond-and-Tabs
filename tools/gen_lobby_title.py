@@ -75,7 +75,9 @@ def _strand(d, x, y0, length, wd, col):
 
 
 def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, rim_r=7, outline_r=11,
-               fill_top=(236, 84, 92), fill_mid=(186, 20, 32), fill_bot=(104, 6, 16), hatch=True):
+               fill_top=(236, 84, 92), fill_mid=(186, 20, 32), fill_bot=(104, 6, 16), hatch=True,
+               rim_top=(255, 230, 158), rim_bot=(158, 97, 31), bloom_rgb=(140, 8, 15), outline_rgb=(33, 3, 8),
+               seam_rgb=(56, 5, 10), gloss_rgb=(255, 191, 191), drip_mid=None, drip_bot=None):
     """lines: [(parts, gap_before)], parts = [(text, font_file, size_px, tracking)] laid on one baseline, each line
     centred. Returns (texture info dict)."""
     # ---- measure
@@ -163,29 +165,29 @@ def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, r
     ys = np.arange(H, dtype=np.float32)[:, None] * np.ones((1, W), np.float32)
     # crimson bloom behind, then a soft dark shadow
     bloom = _blur(_dilate(allm, int(8 * SS)), 22 * SS) * 0.55 * glow
-    _lay(rgb, a, np.broadcast_to(np.array([0.55, 0.03, 0.06], np.float32), rgb.shape), bloom)
+    _lay(rgb, a, np.broadcast_to(np.array(bloom_rgb, np.float32) / 255, rgb.shape), bloom)
     sh = _blur(_dilate(allm, int(outline_r * SS * 0.9)), 6 * SS)
     sh = ndimage.shift(sh, (5 * SS, 3 * SS), order=1)
     _lay(rgb, a, np.zeros_like(rgb), sh * 0.85)
     # dark outline (letters and drips)
     ol = np.clip(_blur(_dilate(allm, int(outline_r * SS * 0.5)), 0.8 * SS) * 1.4, 0, 1)
-    _lay(rgb, a, np.broadcast_to(np.array([0.13, 0.01, 0.03], np.float32), rgb.shape), ol)
+    _lay(rgb, a, np.broadcast_to(np.array(outline_rgb, np.float32) / 255, rgb.shape), ol)
     # gold rim (letters only): a bevel, light gold at each line's top to deep bronze at its foot, a few nicks
     rim = np.clip(_blur(_dilate(letters, int(rim_r * SS * 0.5)), 0.7 * SS) * 1.4, 0, 1)
     vrel = np.zeros_like(ys)
     for fonts, lw, base, cap in laid:
         band = (ys > base - cap * 1.25) & (ys < base + cap * 0.6)
         vrel = np.where(band, np.clip((ys - (base - cap)) / cap, 0, 1), vrel)
-    g_top, g_bot = np.array([1.0, 0.90, 0.62]), np.array([0.62, 0.38, 0.12])
+    g_top, g_bot = np.array(rim_top) / 255, np.array(rim_bot) / 255
     grgb = g_top * (1 - vrel[..., None]) + g_bot * vrel[..., None]
     bev = _bevel(rim, 2.2 * SS)
     grgb = grgb * (0.78 + 0.42 * bev[..., None])
-    grgb += np.clip(bev - 0.55, 0, 1)[..., None] * np.array([0.6, 0.5, 0.35]) * 1.4       # bright catch lights
+    grgb += np.clip(bev - 0.55, 0, 1)[..., None] * (g_top * 0.6) * 1.4       # bright catch lights
     grgb *= (0.92 + 0.08 * np.clip(_noise(H, W, 1.2 * SS, seed + 3), -1, 1))[..., None]
     _lay(rgb, a, np.clip(grgb, 0, 1).astype(np.float32), rim)
     # the dark seam between the gold and the blood
     seam = np.clip(_blur(_dilate(letters, int(1.5 * SS)), 0.6 * SS) * 1.5, 0, 1)
-    _lay(rgb, a, np.broadcast_to(np.array([0.22, 0.02, 0.04], np.float32), rgb.shape), seam)
+    _lay(rgb, a, np.broadcast_to(np.array(seam_rgb, np.float32) / 255, rgb.shape), seam)
     # the blood: three-band gradient per line, a raised wet bevel, a gloss streak near the top, ink hatching low down
     ft, fm, fb = (np.array(c, np.float32) / 255 for c in (fill_top, fill_mid, fill_bot))
     k = vrel[..., None]
@@ -196,7 +198,7 @@ def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, r
     bv = _bevel(allm, 3.0 * SS)
     frgb = frgb * (0.82 + 0.30 * bv[..., None])
     gloss = np.clip(bv - 0.35, 0, 1) * np.clip(1.2 - k[..., 0] * 1.6, 0, 1)
-    frgb += gloss[..., None] * np.array([1.0, 0.75, 0.75], np.float32) * 0.9
+    frgb += gloss[..., None] * np.array(gloss_rgb, np.float32) / 255 * 0.9
     if hatch:
         u = (np.arange(W)[None, :] + ys) / (3.2 * SS)
         hl = (0.5 + 0.5 * np.sin(u * math.pi * 2)) ** 6
@@ -237,9 +239,16 @@ def title(write_java=True):
     t = _lettering([([("B", CINZEL, s * 1.16, 4), ("EYOND", CINZEL, s, 4)], 0),
                     ([("AND ", CINZEL, s * 0.64, 6), ("T", CINZEL, s * 0.86, 3), ("ABS", CINZEL, s * 0.78, 3)], s * 0.26)],
                    pad=60 * SS, seed=17, drips_static=4, drips_anim=6, out_name="title", rim_r=10, outline_r=15)
-    b = _lettering([([("Developed by Lovish", FRAK, 64, 1)], 0)], pad=22 * SS, seed=23, drips_static=0, drips_anim=0,
+    b = _lettering([([("Developed by Lovish", FRAK, 64, 1)], 0)], pad=22 * SS, seed=23, drips_static=3, drips_anim=0,
                    out_name="byline", glow=0.6, rim_r=4, outline_r=7, fill_top=(255, 186, 160), fill_mid=(236, 78, 74),
                    fill_bot=(170, 26, 32), hatch=False)
+    # the contributor, billed equally (same face, same size) and set apart by colour: royal sapphire into violet, a
+    # platinum rim, a cool glow, no blood
+    j = _lettering([([("& Joisco", FRAK, 64, 1)], 0)], pad=22 * SS, seed=29, drips_static=0, drips_anim=0,
+                   out_name="credit_joisco", glow=0.9, rim_r=4, outline_r=7, fill_top=(150, 178, 255),
+                   fill_mid=(64, 76, 220), fill_bot=(92, 30, 150), hatch=False, rim_top=(250, 252, 255),
+                   rim_bot=(150, 160, 186), bloom_rgb=(40, 70, 190), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
+                   gloss_rgb=(220, 232, 255))
     if write_java:
         f = lambda v: f"{v:.4f}f"
         anchors = ", ".join("{" + ", ".join(f(v) for v in an) + "}" for an in t["anchors"])
@@ -248,12 +257,14 @@ def title(write_java=True):
                 f"TITLE_BOT_V = {f(t['bot_v'])};\n"
                 f"    private static final float BYLINE_TEXT_W = {f(b['text_w'])}, BYLINE_TOP_V = {f(b['top_v'])}, "
                 f"BYLINE_BOT_V = {f(b['bot_v'])};\n"
+                f"    private static final float JOISCO_TEXT_W = {f(j['text_w'])}, JOISCO_TOP_V = {f(j['top_v'])}, "
+                f"JOISCO_BOT_V = {f(j['bot_v'])};\n"
                 "    /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */\n"
                 f"    private static final float[][] TITLE_DRIPS = {{{anchors}}};\n")
         src = open(JAVA).read()
         i, j = src.index("    // <gen:title>"), src.index("    // </gen:title>")
         open(JAVA, "w").write(src[:i] + body + src[j:])
-    return t, b
+    return t, b, j
 
 
 def read_java():
@@ -263,9 +274,9 @@ def read_java():
     rows = re.findall(r"\{([^{}]*)\}", re.search(r"TITLE_DRIPS = \{(.*?)\};\n", src).group(1))
     return ({"text_w": g("TITLE_TEXT_W"), "top_v": g("TITLE_TOP_V"), "bot_v": g("TITLE_BOT_V"),
              "anchors": [tuple(float(v.strip().rstrip("f")) for v in r.split(",")) for r in rows]},
-            {"text_w": g("BYLINE_TEXT_W"), "top_v": g("BYLINE_TOP_V"), "bot_v": g("BYLINE_BOT_V")})
+            {"text_w": g("BYLINE_TEXT_W"), "top_v": g("BYLINE_TOP_V"), "bot_v": g("BYLINE_BOT_V")},
+            {"text_w": g("JOISCO_TEXT_W"), "top_v": g("JOISCO_TOP_V"), "bot_v": g("JOISCO_BOT_V")})
 
 
 if __name__ == "__main__":
-    t, b = title()
-    print(t, b)
+    print(*title(), sep="\n")

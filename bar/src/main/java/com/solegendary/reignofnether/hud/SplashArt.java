@@ -264,6 +264,25 @@ public class SplashArt {
         RenderSystem.enableDepthTest();
     }
 
+    // ---------------------------------------------------------------- waiting screens
+
+    /**
+     * The backdrop of the waiting screens on the way into a game (WaitingScreenBackdropMixin: connecting, loading
+     * terrain, joining / saving world, preparing spawn, the chunk square): the scene (cathedral, else the rose window)
+     * with a soft dark pad behind the middle of the screen, where those screens put their status text and progress.
+     * False if no art is available (the caller keeps vanilla's dirt).
+     */
+    public static boolean renderWaiting(GuiGraphics g, int w, int h) {
+        if (!ensureLoaded() || w <= 0 || h <= 0)
+            return false;
+        g.flush();
+        // no lettering: these screens put their own title and status near the top and middle
+        if (!LobbyBackdrop.renderScene(g.pose().last().pose(), w, h, w / 2f, h / 2f, 1f, true, false))
+            renderScene(g.pose().last().pose(), w, h, w / 2f, h / 2f, 1f);
+        LobbyBackdrop.softScrim(g.pose().last().pose(), w * 0.20f, h * 0.18f, w * 0.80f, h * 0.72f, 0.62f);
+        return true;
+    }
+
     // ---------------------------------------------------------------- title screen buttons
 
     /**

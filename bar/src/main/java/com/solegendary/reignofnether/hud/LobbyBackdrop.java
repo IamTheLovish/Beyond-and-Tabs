@@ -87,7 +87,7 @@ public class LobbyBackdrop {
     private static final float TAU = 6.2831855f;
     private static final float BREATH_S = 7f;    // the cathedral's slow inhale / exhale
     private static final float GUST_S = 9f;      // a gust crosses the scene left to right this often
-    private static final float RIPPLE_K = 8f, RIPPLE_SPEED = 0.35f, STREAK_HW = 0.035f;
+    private static final float RIPPLE_K = 8f, RIPPLE_SPEED = 0.35f, STREAK_HW = 0.05f;
     private static final float CASCADE_TILES = 1.6f, CASCADE_SPEED = 0.9f;
     private static final float DRIFT_X_S = 26f, DRIFT_Y_S = 19f, DRIFT_X = 0.85f, DRIFT_Y = 0.55f;
     private static final float OVERSCAN = 1.05f;
@@ -125,7 +125,9 @@ public class LobbyBackdrop {
     private static float A, top, cx, w, h, gustFront;
     /** the fade (title screen fade-in, loading overlay fade-out) and the title layout's horizontal shifts (in A) */
     private static float fade = 1f, xs = 0f;
-    private static boolean titleLayout = false;
+    private static boolean titleLayout = false, withLetters = false;
+    /** the moon's offset from the river's frame in the title layout (sky and ground slide apart), in A */
+    private static float moonShift = 0f;
     private static final int SLICES = 16, ROWS = 12, PETALS = 16, EMBERS = 12;
 
     /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
@@ -235,6 +237,12 @@ public class LobbyBackdrop {
      */
     public static boolean renderScene(Matrix4f pose, float sw, float sh, float mouseX, float mouseY, float alpha,
                                       boolean title) {
+        return renderScene(pose, sw, sh, mouseX, mouseY, alpha, title, title);
+    }
+
+    /** As above; `letters` false leaves the lettering off (screens with their own text near the top). */
+    public static boolean renderScene(Matrix4f pose, float sw, float sh, float mouseX, float mouseY, float alpha,
+                                      boolean title, boolean letters) {
         if (!ensureLoaded())
             return false;
         w = sw;
@@ -261,6 +269,7 @@ public class LobbyBackdrop {
         }
         fade = alpha;
         titleLayout = title;
+        withLetters = letters;
         draw(t, motion, pose);
         return true;
     }
@@ -314,6 +323,7 @@ public class LobbyBackdrop {
         art(SPIRES_FAR, -ART_W / 2, 0.12f, ART_W / 2, 0.80f, 0.011f, 1f);
         wrapped(CLOUDS_NEAR, 0.46f, 0.84f, windT * 0.014f, 0.012f, 1f);
 
+        moonShift = 2f * shift;
         xs = shift;
         // ---- the cathedral, back to front: each depth layer, its moon rim and its glass; mist sheets between
         float swell = 1f + 0.006f * breath;
@@ -420,7 +430,7 @@ public class LobbyBackdrop {
         M.set(pose);
         quad(VIGNETTE, 0f, 0f, w, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
         quad(GRAIN, 0f, 0f, w, h, 0f, 0f, w / 128f, h / 128f, 1f, 1f, 1f, 1f);
-        if (titleLayout)
+        if (withLetters)
             lettering(t, motion);
         xs = 0f;
 
@@ -745,10 +755,10 @@ public class LobbyBackdrop {
                 if (streak) {
                     aa *= smooth(0.84f, 0.88f, ya) * (1f - smooth(0.95f, 0.99f, ya));
                     ab *= smooth(0.84f, 0.88f, yb) * (1f - smooth(0.95f, 0.99f, yb));
-                    ula = 0.5f + (xa - wa - MOON_X) / (2f * STREAK_HW);
-                    ura = 0.5f + (xa + wa - MOON_X) / (2f * STREAK_HW);
-                    ulb = 0.5f + (xb - wb - MOON_X) / (2f * STREAK_HW);
-                    urb = 0.5f + (xb + wb - MOON_X) / (2f * STREAK_HW);
+                    ula = 0.5f + (xa - wa - (MOON_X - moonShift)) / (2f * STREAK_HW);
+                    ura = 0.5f + (xa + wa - (MOON_X - moonShift)) / (2f * STREAK_HW);
+                    ulb = 0.5f + (xb - wb - (MOON_X - moonShift)) / (2f * STREAK_HW);
+                    urb = 0.5f + (xb + wb - (MOON_X - moonShift)) / (2f * STREAK_HW);
                 }
                 float sa = ox(zg(ya)), sb = ox(zg(yb)), qa = sy(ya) + oy(zg(ya)), qb = sy(yb) + oy(zg(yb));
                 buf.vertex(M, sx(xa - wa) + sa, qa, 0f).uv(ula, va).color(1f, 1f, 1f, aa).endVertex();

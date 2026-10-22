@@ -2032,6 +2032,18 @@ def ground(w=2560, h=484):
     wrgb = lerp(wrgb, col((190, 40, 46)), lines_ * 0.18)
     wrgb += (np.exp(-((X - MOON[0]) / 0.035) ** 2) * smoothstep(0.84, 0.95, Y) * 0.12)[..., None] * col((255, 210, 170))
     wrgb *= (1 - smoothstep(0.7, 1.0, au) * 0.35)[..., None]
+    # the current drawn in ink: lines running with the flow, parallel to the banks (closer together near them, where
+    # the water slows and folds), broken like pen strokes; a pale crimson line beside each dark one
+    flow_n = fbm(uu * 0.5, v * 0.6, 9, 79, False, 3)
+    fu = u * (6.0 + 5.0 * au) + (flow_n - 0.5) * 1.6
+    fl_d = np.abs((fu % 1.0) - 0.5) * 2
+    pen = smoothstep(0.38, 0.5, fbm(uu * 0.5, v * 3.0, 20, 80, False, 2))
+    dark_l = smoothstep(0.16, 0.04, fl_d) * pen * (0.35 + 0.65 * smoothstep(0.2, 0.9, au))
+    lite_l = smoothstep(0.12, 0.03, np.abs(((fu + 0.5) % 1.0) - 0.5) * 2) * pen * smoothstep(0.75, 0.2, au)
+    wrgb = lerp(wrgb, col((34, 2, 6)), dark_l * 0.55)
+    wrgb = lerp(wrgb, col((232, 96, 96)), lite_l * 0.22)
+    # the banks and the rocks mirrored darkly in the water near them
+    wrgb *= (1 - 0.45 * smoothstep(0.55, 0.95, au) * (0.6 + 0.4 * flow_n))[..., None]
     speck = fbm(U01, V01, 260, 78, False, 2)
     bar_rgb = lerp(col((96, 80, 74)), col((150, 132, 118)), smoothstep(0.4, 0.7, speck)) * (0.8 + 0.3 * smoothstep(sby + 0.006, sby - 0.006, Y))[..., None]
     bar_rgb = lerp(bar_rgb, col((40, 30, 32)), (speck > 0.72) * 0.6)
@@ -2677,28 +2689,61 @@ def cascade(w=128, h=512):
 
 
 def ripples(w=256, h=512):
-    """Additive glints for the river strip: u across (bank to bank), v along (wraps)."""
-    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
-    U, V = xs / w, ys / h
-    dash = fbm(U, V, 3, 121, True, 3, aspect=1.2)
-    dash2 = fbm(V, U, 10, 122, True, 2, aspect=0.15)          # periodic in V
-    lines = np.clip((np.sin(V * 2 * math.pi * 26 + dash * 7) - 0.82) / 0.18, 0, 1)
-    a = lines * smoothstep(0.5, 0.75, dash2) * smoothstep(0.0, 0.2, U) * smoothstep(1.0, 0.8, U)
-    rgb = np.broadcast_to(col((255, 120, 110)), (h, w, 3)).copy()
-    save_rgba(rgb, np.clip(a, 0, 1), "ripples")
+    """Additive glints for the river strip (u across bank to bank, v along, wrapping): wave crests drawn as short pen
+    strokes across the flow, bowed downstream, in loose rows - a hatched surface that the game scrolls toward the
+    viewer; brighter toward the middle of the stream, thinning at the banks."""
+    rr = np.random.default_rng(121)
+    ss = 3
+    W, H = w * ss, h * ss
+    m = Image.new("L", (W, H), 0)
+    d = ImageDraw.Draw(m)
+    rows = 34
+    for r in range(rows):
+        y0 = (r + rr.uniform(-0.25, 0.25)) / rows * H
+        x = rr.uniform(-0.05, 0.05) * W
+        while x < W:
+            L = rr.uniform(0.04, 0.16) * W
+            mid = (x + L / 2) / W
+            keep = 1 - abs(mid - 0.5) * 1.5
+            if rr.random() < keep:
+                bow = rr.uniform(0.15, 0.45) * H / rows
+                pts = [(x + L * k / 8, y0 + bow * (1 - ((k / 4) - 1) ** 2)) for k in range(9)]
+                for dy in (-H, 0, H):                     # wrap in v
+                    d.line([(px, py + dy) for px, py in pts], fill=int(rr.uniform(120, 255)), width=ss)
+            x += L + rr.uniform(0.02, 0.12) * W
+    a = np.asarray(m.resize((w, h), Image.LANCZOS), np.float32) / 255
+    U = (np.arange(w, dtype=np.float32) + 0.5) / w
+    a *= (smoothstep(0.0, 0.18, U) * smoothstep(1.0, 0.82, U))[None, :]
+    rgb = np.broadcast_to(col((255, 132, 120)), (h, w, 3)).copy()
+    save_rgba(rgb, np.clip(a * 1.1, 0, 1), "ripples")
 
 
 def streak(w=64, h=256):
-    """The moon's reflection: broken bright dashes, centred in u (clamped), wrapping in v."""
-    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
-    U, V = xs / w, ys / h
-    br = fbm(U * 0.3, V, 6, 131, False, 2)
-    br = fbm(V, U * 0.3, 14, 131, True, 3, aspect=0.1)
-    lines = np.clip((np.sin(V * 2 * math.pi * 18 + br * 4) - 0.3) / 0.7, 0, 1)
-    across = np.exp(-((U - 0.5) / 0.16) ** 2) * smoothstep(0.0, 0.1, U) * smoothstep(1.0, 0.9, U)
-    a = lines * across * (0.4 + 0.6 * br)
-    rgb = np.broadcast_to(col((255, 226, 196)), (h, w, 3)).copy()
-    save_rgba(rgb, np.clip(a, 0, 1), "streak")
+    """The moon's reflection, a path of glints: short silver dashes across the flow, tight and bright in the middle,
+    broken and scattered toward the edges, with a few sparks; centred in u (clamped), wrapping in v."""
+    rr = np.random.default_rng(131)
+    ss = 4
+    W, H = w * ss, h * ss
+    m = Image.new("L", (W, H), 0)
+    d = ImageDraw.Draw(m)
+    y = 0.0
+    while y < H:
+        spread = abs(rr.normal(0, 0.16))
+        cxp = 0.5 + rr.normal(0, 0.05 + spread * 0.5)
+        L = (0.10 + 0.5 * rr.random() * (1 - min(spread * 3, 0.9))) * W
+        th = max(1, int(ss * rr.uniform(0.6, 1.4)))
+        v = int(255 * (1 - min(spread * 2.5, 0.75)) * rr.uniform(0.6, 1.0))
+        for dy in (-H, 0, H):
+            d.line([(cxp * W - L / 2, y + dy), (cxp * W + L / 2, y + dy + rr.uniform(-1, 1) * ss)], fill=v, width=th)
+            if rr.random() < 0.12:
+                sx_ = cxp * W + rr.uniform(-0.3, 0.3) * W
+                d.ellipse([sx_ - ss, y + dy - ss, sx_ + ss, y + dy + ss], fill=255)
+        y += rr.uniform(0.6, 2.2) * ss * 2
+    a = np.asarray(m.resize((w, h), Image.LANCZOS), np.float32) / 255
+    U = (np.arange(w, dtype=np.float32) + 0.5) / w
+    a *= (np.exp(-((U - 0.5) / 0.3) ** 2) * smoothstep(0.0, 0.08, U) * smoothstep(1.0, 0.92, U))[None, :]
+    rgb = np.broadcast_to(col((255, 232, 206)), (h, w, 3)).copy()
+    save_rgba(rgb, np.clip(a * 1.2, 0, 1), "streak")
 
 
 def grain_tex(size=256):
@@ -3066,7 +3111,7 @@ def load(name):
 
 # animation constants (LobbyBackdrop.java mirrors these)
 RIPPLE_K, RIPPLE_SPEED = 8.0, 0.35          # ripple tiles per unit of v; tiles per second
-STREAK_HW = 0.035                            # the moon reflection's half width (A)
+STREAK_HW = 0.05                            # the moon reflection's half width (A)
 CASCADE_TILES, CASCADE_SPEED = 1.6, 0.9      # v tiles over the fall; tiles per second
 STARS = [(-0.92, 0.06), (-0.71, 0.13), (-0.55, 0.04), (-0.48, 0.19), (-0.08, 0.07), (0.03, 0.16), (0.62, 0.12),
          (0.58, 0.03), (0.77, 0.09), (0.86, 0.22), (1.02, 0.05), (-1.05, 0.20), (0.69, 0.27), (-0.83, 0.27)]
