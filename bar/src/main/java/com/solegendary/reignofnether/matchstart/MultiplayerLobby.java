@@ -93,6 +93,20 @@ public class MultiplayerLobby {
     static int arena = 4, metal = 3, spawnDistance = 1;
     static int pace = 1;   // economy pace code (EconomyPace): 0 relaxed, 1 standard, 2 fast
     static int map = 0;    // MapPreset id: 0 random terrain, else a pre-made map (design/maps.md)
+    /**
+     * The stamped map's seed (MapLayout.build), rolled when the lobby opens and by the host's "New": every lobby match
+     * on a pre-made map is a different draw of it, a generated map a different battlefield. Before this the lobby
+     * played the unseeded map every time.
+     */
+    static long mapSeed = new Random().nextLong();
+    /** A generated map's shape and modifiers (indices into GenSeed.SHAPES / GenSeed.MODIFIERS). */
+    static int genShape = 0, genMods = 0;
+
+    /** The seed the lobby's match plays: a generated map's options packed into its top byte (GenSeed). */
+    static long effectiveMapSeed() {
+        return com.solegendary.reignofnether.maps.MapPreset.byId(map).generated()
+            ? com.solegendary.reignofnether.maps.gen.GenSeed.pack(mapSeed, genShape, genMods) : mapSeed;
+    }
     static boolean choosePositions = true;   // BAR's start-position phase before the match
     static int timeOfDay = 0;                // match.TimeOfDay id: the light at Start (morning)
     static int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id
@@ -147,7 +161,8 @@ public class MultiplayerLobby {
         SET_PACE,  // appended: actions travel by ordinal
         SET_MAP, SET_STARTPOS,
         SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
-        SET_TIME, SET_CYCLE   // the match sun: match.TimeOfDay id, match.DayCycle id
+        SET_TIME, SET_CYCLE,   // the match sun: match.TimeOfDay id, match.DayCycle id
+        NEW_MAP, SET_GEN_SHAPE, SET_GEN_MODS   // a new seed for the stamped map; a generated map's shape and modifiers
     }
 
     static Seat seat(int id) {
@@ -300,6 +315,21 @@ public class MultiplayerLobby {
                     return false;
                 map = value;
             }
+            case NEW_MAP -> {
+                if (!host)
+                    return false;
+                mapSeed = new Random().nextLong();
+            }
+            case SET_GEN_SHAPE -> {
+                if (!host || value < 0 || value >= com.solegendary.reignofnether.maps.gen.GenSeed.SHAPES.length)
+                    return false;
+                genShape = value;
+            }
+            case SET_GEN_MODS -> {
+                if (!host || value < 0 || value >= com.solegendary.reignofnether.maps.gen.GenSeed.MODIFIERS.length)
+                    return false;
+                genMods = value;
+            }
             case SET_STARTPOS -> {
                 if (!host)
                     return false;
@@ -386,6 +416,7 @@ public class MultiplayerLobby {
             open = true;
             seats.clear();
             startCountdown = -1;
+            mapSeed = new Random().nextLong();   // a new draw of the map for every lobby
             hostUuid = sp.getUUID();
             hostName = sp.getName().getString();
             MinecraftServer server = sp.getServer();
@@ -546,7 +577,8 @@ public class MultiplayerLobby {
             // when that is done, and only then is it live. MatchState keeps the setup with the world (CR-13) and
             // says "Match started" when it seats - after a reload too
             if (!com.solegendary.reignofnether.maps.MapMatch.begin(level, lineup, preset, choosePositions, arena, metal,
-                    spawnDistance, centre, new Random(), MatchState.Origin.LOBBY, null))
+                    spawnDistance, centre, new Random(), MatchState.Origin.LOBBY, effectiveMapSeed(),
+                    com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay), null))
                 say("The match could not start: another one is being set up or fought in this world.");
             spectateLateArrivals(server, lineup);
             return;
