@@ -54,9 +54,9 @@ TARGETS = {
     # (the floor patches took a blue sky sheen at the 30-degree view: rgb .27/.28/.32 in full sun) and gravel's tilt
     # 26 -> 18 (bubble wrap); stone std 0.060 -> 0.045 (m_stone_r24's grain); oak planks sat 0.46 -> 0.40, smooth
     # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
-    "grass_block_side": dict(luma=0.37, std=0.085, sat=0.30, tilt=22.0, smooth=26, pore=48),
+    "grass_block_side": dict(luma=0.34, std=0.085, sat=0.30, tilt=22.0, smooth=26, pore=48),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.34, std=0.081, sat=0.32, tilt=19.0, smooth=26, pore=56),
+    "dirt":             dict(luma=0.30, std=0.081, sat=0.32, tilt=19.0, smooth=26, pore=56),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
     "stone":            dict(luma=0.52, std=0.045, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12),
@@ -196,7 +196,7 @@ TARGETS = {
     "chiseled_polished_blackstone": dict(luma=0.19, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
-    "basalt_side": dict(luma=0.30, std=0.069, sat=0.05, tilt=26.0, smooth=38, pore=10),
+    "basalt_side": dict(luma=0.30, std=0.042, sat=0.05, tilt=14.0, smooth=24, pore=10),   # r24: was foil (tilt 26)
     "basalt_top": dict(luma=0.30, std=0.081, sat=0.06, tilt=24.0, smooth=20, pore=10),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
@@ -558,9 +558,11 @@ def m_dirt_r24(F, n):
     stones = (rng.random(ck) < 0.02)[cidx] & (c2 - c1 > 0.006)
     H = 0.40 + 0.25 * clod + 0.15 * crumb * dome + 0.04 * clod_tone + 0.03 * F.noise(24, 64, 0.2)
     H = np.where(stones, H + 0.12 * dome, H)
-    shade = (0.92 + 0.10 * clod_tone + 0.08 * crumb_tone + 0.06 * dome) * (0.70 + 0.18 * clod + 0.12 * crumb) \
+    # r24b (eyes run 39841580320: pink-tan in the low sun, the crumb tops pale like pebbles): a yellower umber, the
+    # crumbs' own highlight halved - the shader's light rounds them
+    shade = (0.92 + 0.10 * clod_tone + 0.08 * crumb_tone + 0.03 * dome) * (0.70 + 0.18 * clod + 0.12 * crumb) \
         - 0.07 * moist
-    alb = tint((0.45, 0.36, 0.26), shade)
+    alb = tint((0.42, 0.35, 0.26), shade)
     alb = np.where(stones[..., None], tint((0.40, 0.37, 0.33), 0.75 + 0.25 * dome), alb)
     return H, alb
 
@@ -632,8 +634,13 @@ def m_stone_r24(F, n):
     sparse = smoothstep(0.7, 1.2, F.noise(1, 3, 0.5))     # a fracture or two, not a net
     cracks = F.blur((1 - smoothstep(0.0, 0.025, line)) * sparse, 0.6)
     pits = smoothstep(1.7, 2.6, F.noise(10, 30, 0.2))
-    H = 0.6 + 0.05 * grain + 0.015 * micro - 0.15 * cracks - 0.06 * pits
-    shade = 1.0 + 0.12 * (light - dark) + 0.05 * rough + 0.03 * micro + 0.004 * drift - 0.08 * cracks - 0.04 * pits
+    # r24b (eyes run 39841580320: the grain alone read as even sandpaper / concrete): one or two thin pale calcite
+    # veins, healed fractures - lines, not blobs, so the luma fit has no blob to blow up
+    vline = np.abs(F.warp(F.noise(1, 4, 0.5), 0.04 * F.noise(4, 12), 0.04 * F.noise(4, 12)))
+    veins = (1 - smoothstep(0.0, 0.018, vline)) * smoothstep(0.5, 1.1, F.noise(1, 3, 0.5))
+    H = 0.6 + 0.05 * grain + 0.015 * micro - 0.15 * cracks - 0.06 * pits + 0.01 * veins
+    shade = 1.0 + 0.12 * (light - dark) + 0.05 * rough + 0.03 * micro + 0.004 * drift - 0.08 * cracks - 0.04 * pits \
+        + 0.10 * veins
     return H, tint((0.56, 0.55, 0.53), shade)
 
 
@@ -1542,6 +1549,23 @@ def m_basalt_rough(F, n, top):
         H = 0.5 + 0.15 * ridges + 0.03 * F.noise(16, 40, 0.2)
         shade = 0.82 + 0.15 * norm01(ridges)
     return H, tint((0.32, 0.32, 0.34), shade)
+
+
+def m_basalt_side_r24(F, n):
+    """Basalt's side, round 24 (eyes close-up, run 39838783742: m_basalt_rough's long smooth ridges at 26 degrees lit as
+    folded foil / a draped curtain). Basalt is a fine-grained dark lava rock: a dense, granular face (m_stone_r24's
+    grain, darker and tighter), the column joints as a few straight-ish vertical cracks, faint horizontal cooling
+    bands and small gas vesicles - no smooth folds."""
+    grain = F.noise(16, 64, 0.3)
+    rough = F.fbm(4, 5, 0.8)
+    micro = F.noise(48, 128, 0.0)
+    joint_line = np.abs(F.warp(F.noise(2, 5, 0.6, sx=1.0, sy=12.0), 0.01 * F.noise(3, 9), 0.0))
+    joints = F.blur(1 - smoothstep(0.0, 0.03, joint_line), 0.6)
+    bands = F.noise(2, 8, 0.6, sx=10.0, sy=1.0)                     # long along u: the cooling bands
+    ves = smoothstep(1.9, 2.7, F.noise(14, 40, 0.0))                # vesicles
+    H = 0.6 + 0.05 * grain + 0.02 * rough + 0.01 * micro - 0.2 * joints - 0.08 * ves
+    shade = 1.0 + 0.08 * grain + 0.05 * rough + 0.03 * micro + 0.01 * bands - 0.12 * joints - 0.20 * ves
+    return H, tint((0.31, 0.31, 0.33), shade)
 
 
 def m_soul_sand(F, n):
@@ -2493,7 +2517,7 @@ def recipes():
         "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
-        "basalt_side": lambda F, n: m_basalt_rough(F, n, False),
+        "basalt_side": m_basalt_side_r24,
         "basalt_top": lambda F, n: m_basalt_rough(F, n, True),
         "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
         "soul_sand": m_soul_sand,
