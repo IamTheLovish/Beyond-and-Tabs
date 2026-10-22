@@ -1,7 +1,6 @@
 package com.solegendary.reignofnether.mixin;
 
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.BlastFurnaceBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -17,10 +16,9 @@ public abstract class BlastFurnaceBlockMixin {
 
     /**
      * Blast furnaces are scenery (nothing smelts in them), but each one still ran vanilla's furnace server ticker
-     * every tick - ~340 in a big match. An unlit furnace with nothing in it does nothing in that ticker, so it gets
-     * none. A LIT furnace keeps the vanilla ticker so its first tick still puts it out exactly as before (the
-     * structure files store them lit with no fuel); that state change re-asks for the ticker, which is then
-     * dropped. The client side never had a ticker.
+     * every tick - ~340 in a big match. With no fuel and no items that ticker changes nothing: it only flips LIT when
+     * the burn time crosses zero, and a stored-lit furnace with no fuel keeps its LIT state (CI, Oct 22). So the
+     * server gets no ticker; lit ones stay lit, unlit ones stay unlit, exactly as before. The client never had one.
      */
     @Inject(
             method = "getTicker",
@@ -29,7 +27,7 @@ public abstract class BlastFurnaceBlockMixin {
     )
     private <T extends BlockEntity> void bt$noIdleServerTicker(Level pLevel, BlockState pState, BlockEntityType<T> pType,
                                                                CallbackInfoReturnable<BlockEntityTicker<T>> cir) {
-        if (!pLevel.isClientSide && !pState.getValue(AbstractFurnaceBlock.LIT))
+        if (!pLevel.isClientSide)
             cir.setReturnValue(null);
     }
 }
