@@ -447,6 +447,7 @@ public interface Unit {
             try {
                 com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
                 com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
+                com.solegendary.reignofnether.raid.WorkerFlee.tick(unitMob, unit);   // a hurt worker runs to a tower / the capitol
             } finally {
                 Sys.end(sysReactions);
             }
