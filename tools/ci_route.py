@@ -2,14 +2,15 @@
 """Where should this PR's GameTests run? build.yml's `changes` job asks; prints `where=here|mirror` to GITHUB_OUTPUT.
 
 lovish, Oct 22 01:53: "I want to be cycling through the 40 runners as well as possible". GitHub Free gives this account
-20 concurrent jobs and the org ILovishThe another 20 (its repo ILovishThe/beyond-and-tabs-ci runs the same build.yml).
+20 concurrent jobs and the org ILovishThe another 20 (its repo ILovishThe/beyond-and-tabs-ci runs the GameTests
+from this public repo with mirror-tests.yml - no secrets).
 
   mirror  the PR has the label `ci-mirror` (forced), or the mirror has fewer GameTest jobs waiting or running than here
   here    everything else: main pushes and manual runs (always: main is tested and published here), the label
-          `ci-here` (forced), no CI_MIRROR_TOKEN (fork PRs get no secrets), an API error (unsure -> here), or here
+          `ci-here` (forced), an API error (unsure -> here), or here
           is no busier than the mirror.
 
-Load = queued + in-progress jobs of build.yml runs, counted from each repo's runs (a queued run that has not started
+Load = queued + in-progress runs (build.yml here, mirror-tests.yml there), counted from each repo's runs (a queued run that has not started
 its jobs yet counts as a whole build, ~10 jobs). The mirror is public: read without a token.
 """
 import json
@@ -36,7 +37,7 @@ def load_here(repo):
 def load_mirror():
     total = 0
     for status in ("queued", "in_progress"):
-        url = f"https://api.github.com/repos/{MIRROR}/actions/workflows/build.yml/runs?status={status}&per_page=50"
+        url = f"https://api.github.com/repos/{MIRROR}/actions/workflows/mirror-tests.yml/runs?status={status}&per_page=50"
         with urllib.request.urlopen(url, timeout=30) as resp:
             runs = json.load(resp).get("workflow_runs", [])
         total += len(runs) * (BUILD_JOBS if status == "queued" else BUILD_JOBS // 2)
@@ -49,8 +50,6 @@ def decide(env):
     labels = json.loads(env.get("PR_LABELS") or "[]")
     if "ci-here" in labels:
         return "here", "label ci-here"
-    if not env.get("HAS_MIRROR_TOKEN"):
-        return "here", "no CI_MIRROR_TOKEN (fork PR or secret missing)"
     if "ci-mirror" in labels:
         return "mirror", "label ci-mirror"
     try:

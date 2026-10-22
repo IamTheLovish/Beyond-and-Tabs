@@ -144,31 +144,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          HAS_MIRROR_TOKEN: ${{ secrets.CI_MIRROR_TOKEN != '' && 'yes' || '' }}
         run: python3 tools/ci_route.py
 
-  # the GameTests of a PR routed to the mirror (tools/ci_route.py): copy the PR head there and start its build; the
-  # result comes back as the commit status `ci-mirror` (ci-mirror-report.yml), which ci_wait / merge_pr read
+  # the GameTests of a PR routed to the mirror (tools/ci_route.py): mark its head commit `ci-mirror` = "Queued for the
+  # mirror". The org repo ILovishThe/beyond-and-tabs-ci (mirror-tests.yml) picks it up within ~5 min, reads the code
+  # from this PUBLIC repo (no secrets anywhere) and runs the GameTests on its own 20 runners; ci-mirror-report.yml
+  # sets the status to the result, which ci_wait / merge_pr read.
   mirror:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where == 'mirror' }}
     runs-on: ubuntu-latest
-    concurrency:
-      group: ci-mirror-${{ github.event.pull_request.number }}   # shared with ci-mirror.yml
-      cancel-in-progress: true
     permissions:
-      contents: read
       statuses: write
     steps:
-      - uses: actions/checkout@v4
-        with: { ref: "${{ github.event.pull_request.head.sha }}", fetch-depth: 0 }   # the mirror counts dev time from history
       - env:
-          TOKEN: ${{ secrets.CI_MIRROR_TOKEN }}
-          GITHUB_TOKEN_HERE: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.pull_request.head.sha }}
-          PR: ${{ github.event.pull_request.number }}
-          MIRROR: ILovishThe/beyond-and-tabs-ci
-        run: bash tools/ci_mirror_send.sh
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending -f context=ci-mirror \
+            -f description="Queued for the mirror" -f target_url="https://github.com/ILovishThe/beyond-and-tabs-ci/actions" >/dev/null
+          echo "::notice::[Mirror] GameTests queued for the org runners (ILovishThe/beyond-and-tabs-ci)"
 
   # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
   bar:
