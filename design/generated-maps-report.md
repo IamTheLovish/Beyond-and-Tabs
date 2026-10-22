@@ -1,7 +1,9 @@
 # Generated maps: report
 
 PR #131, branch `claude/maps-generated` (draft, based on #122 `claude/maps-m1-metal`).
-Written Oct 22 from the PR body, the commit messages and the code on the branch.
+Written Oct 22 from the PR body, the commit messages and the code on the branch. Numbers are from the branch tip
+`0d2ece45` (the multiplayer lobby, the modifier chat message, the raise test and `design/maps.md` section 7 are in).
+Section 7 of `design/maps.md` is the design summary; this file is the numbers and the open problems.
 lovish's ask (Oct 21 22:28): "a way to automatically generate maps that are intricate and sometimes changes rng with
 different buffs and bonuses. The random map can give one side more neutral objectives with the other side giving more
 mexes." His Oct 21 decisions: balanced asymmetry, seats within about 5%, square maps as well as round, room kept for
@@ -13,7 +15,8 @@ Every number below is marked **re-run** or **carried over**.
 
 - **Re-run** means I ran it on the branch in this session with `tools/mapgen_sim/run.sh`. It needs only a JDK. It
   compiles `maps/gen` (plus `MapLayout`, `MapPreset`, `MetalOptions`, and a stub of `CapturePointServerEvents.Kind`)
-  and runs without Minecraft or Gradle. The container had 2 cores.
+  and runs without Minecraft or Gradle. Lobby maps score the data-only camps at zero (`Weights.live()`, applied by
+  `generate` when `liveOnly`); every re-run below does too. The container had 2 cores.
 - **Carried over** means it came from the PR work before this session and I could not reproduce it from what is on
   the branch.
 
@@ -77,12 +80,13 @@ streams in `GenRng.java`, `StrictMath` trig, sqrt not hypot). The lobby preview 
   If a balanced draw is invalid or still outside the tolerance, `generate` tries up to 4 fresh draws and keeps the
   best.
 - **Lobby** (`SkirmishSetupScreen.java`, `GenSeed.java`). "Generated" is in the map list. A **New** button rolls a new
-  seed for any stamped map. **Shape** (Any / Round / Square) and **Mods** (On / Off / Surprise) sit in the Size row.
+  seed for any stamped map (the multiplayer lobby has one too, and now carries a seed for every stamped map). **Shape** (Any / Round / Square) and **Mods** (On / Off / Surprise) sit in the Size row.
   The options ride the top byte of the seed, so no packet or save changes. The preview draws on a worker thread and
   names the modifiers. `MapPreset.GENERATED` is appended to the enum.
 - **Tests.** `MapGenGameTests.java` (batch `maps_gen`): determinism, every seat reaches everything, level pads,
   reserved zones, seats within tolerance, square edge helpers, options ride the seed, layout carries the generator's
-  map. The symmetric preset tests sweep `handmade()` maps only.
+  map, and `generated_map_raises_in_its_arena` (MapBuilder raises windows of a generated map). The symmetric preset
+  tests sweep `handmade()` maps only.
 
 ## Balance results
 
@@ -95,30 +99,30 @@ modifiers only, 5% tolerance, central weights). Seeds `0x5EED000000 + 7919 i`.
 
 | Balancer | Within 5% | Mean spread | Worst |
 |---|---|---|---|
-| NONE | 63.0% | 4.55% | 50.9% |
-| REROLL | 100% | 2.28% | 4.98% |
-| NUDGE | 100% | 2.23% | 3.99% |
-| SWAP | 100% | 1.36% | 4.88% |
-| **SWAP_NUDGE** | **100%** | **1.37%** | **3.91%** |
-| REROLL_NUDGE | 100% | 1.86% | 3.99% |
+| NONE | 62.5% | 4.55% | 50.9% |
+| REROLL | 100% | 2.34% | 4.98% |
+| NUDGE | 100% | 2.32% | 4.00% |
+| SWAP | 100% | 1.43% | 4.96% |
+| **SWAP_NUDGE** | **100%** | **1.40%** | **3.84%** |
+| REROLL_NUDGE | 100% | 1.86% | 3.89% |
 
 - All 200 maps are valid under every balancer.
-- NONE is 63% here. The earlier run recorded 68-80% for the unbalanced draw. The seeds differ, so I expect the
-  gap to be seed luck. By contrast, my NONE rates were MIXED 73%, RIVER 63%, PROSPECTOR_WARDEN 61%, OPEN_BASTION 60%.
+- NONE is 62.5% here. The earlier run recorded 68-80% for the unbalanced draw. The seeds differ, so I expect the
+  gap to be seed luck. By contrast, my NONE rates were MIXED 69%, RIVER 61%, PROSPECTOR_WARDEN 61%, OPEN_BASTION 62%.
 
 4v4, 40 seeds (new in this report):
 
 | Balancer | Within 5% | Mean spread | Worst |
 |---|---|---|---|
-| NONE | 0% | 21.5% | 33.2% |
-| REROLL | 0% | 10.9% | 13.7% |
-| NUDGE | 100% | 3.31% | 4.00% |
-| SWAP | 0% | 12.5% | 19.5% |
-| **SWAP_NUDGE** | **100%** | **3.49%** | **4.00%** |
-| REROLL_NUDGE | 100% | 3.37% | 4.00% |
+| NONE | 0% | 21.6% | 33.8% |
+| REROLL | 2.5% | 11.2% | 14.7% |
+| NUDGE | 100% | 3.36% | 3.99% |
+| SWAP | 2.5% | 12.6% | 19.7% |
+| **SWAP_NUDGE** | **100%** | **3.32%** | **3.98%** |
+| REROLL_NUDGE | 100% | 3.30% | 3.98% |
 
-At 4v4 only the nudge makes the seats even. Reroll and swap alone cannot. Every nudged map ends at 4.00%, which is
-the nudge's own stop line (80% of 5%).
+At 4v4 only the nudge makes the seats even. Reroll and swap alone cannot. Every nudged map ends at or just under
+4.0%, which is the nudge's own stop line (80% of 5%).
 
 ### Robustness under weight uncertainty (re-run, definition mine)
 
@@ -127,14 +131,14 @@ The weights in the score are guesses. For each 1v1 map I drew 40 weight sets fro
 
 | Contrast (maps) | NONE | SWAP_NUDGE |
 |---|---|---|
-| MIXED (11) | 0.63 | 0.83 |
-| OPEN_BASTION (23) | 0.58 | 0.70 |
-| PROSPECTOR_WARDEN (39) | 0.40 | 0.43 |
-| RIVER (27) | 0.63 | 0.93 |
+| MIXED (11) | 0.56 | 0.81 |
+| OPEN_BASTION (23) | 0.58 | 0.67 |
+| PROSPECTOR_WARDEN (39) | 0.40 | 0.44 |
+| RIVER (27) | 0.65 | 0.94 |
 | All | 0.53 | 0.67 |
 
 - PROSPECTOR_WARDEN is the weakest, as the earlier run found (about 0.5 then). Balancing barely helps it (0.40 to
-  0.43), while the other contrasts gain 0.1 to 0.3.
+  0.44), while MIXED and RIVER gain 0.25 to 0.3 and OPEN_BASTION 0.1.
 - Why: a Prospector's edge is metal and a Warden's edge is neutral objectives. The score trades the two at
   `energyPerMetal`, `camp`, `garrison` and the other site weights. Those weights are the least certain, so the
   balance moves with them.
@@ -145,10 +149,10 @@ The weights in the score are guesses. For each 1v1 map I drew 40 weight sets fro
 
 | Figure | Value | Status |
 |---|---|---|
-| Plain-Java port of the GameTest sweep (`run.sh gametest`: 2/4/8 seats, the 4 test seeds, 12 maps) | 0 problems, worst seat spread 3.98%, team spread within 5% | **Re-run.** The test code itself was not run: it needs the game, so CI runs it |
-| In-repo GameTest mirror, "24 maps, 0 problems, worst 4.0%" | worst spread 4.0% matches my 3.98% | Carried over. The test sweeps 12 maps, so I could not explain "24" |
+| Plain-Java port of the GameTest sweep (`run.sh gametest`: 2/4/8 seats, the 4 test seeds, 12 maps) | 0 problems, worst seat spread 3.90%, team spread within 5% | **Re-run.** The test code itself was not run: it needs the game, so CI runs it |
+| In-repo GameTest mirror, "24 maps, 0 problems, worst 4.0%" | worst spread 4.0% matches my 3.90% | Carried over. The test sweeps 12 maps, so I could not explain "24" |
 | Econ-sim side bias after SWAP+NUDGE, up to 1.3% | not reproducible | **Carried over.** No economy simulation exists on the branch. The score is the only model |
-| Build time at 4v4, about 145 ms | one raw build (NONE) took a median 216 ms, p90 402 ms. The default balanced generate took a median 1.47 s, p90 1.60 s. 1v1: raw 129 ms, balanced 517 ms | **Re-run** (2-core container, 30 builds after warm-up). 145 ms matches a raw build on a faster machine, not the balanced default |
+| Build time at 4v4, about 145 ms | one raw build (NONE) took a median 182 ms, p90 208 ms. The default balanced generate took a median 1.43 s, p90 1.52 s. 1v1: raw 123 ms, balanced 479 ms | **Re-run** (2-core container, 30 builds after warm-up, run alone). 145 ms matches a raw build on a faster machine, not the balanced default |
 
 ## Render sheets
 
@@ -177,26 +181,26 @@ still needs the CI eyes tour.
 ## Known weak spots
 
 1. **Prospector / Warden is fragile.** It is the most common contrast (36% of AUTO rolls) and has the lowest
-   robustness (0.43). The cross-resource trade is the cause.
-2. **At 4v4 only the nudge balances, and it stops at exactly 4.0%.** Reroll and swap never reach 5% on their own.
+   robustness (0.44). The cross-resource trade is the cause.
+2. **At 4v4 only the nudge balances, and it stops at about 4.0%.** Reroll and swap never reach 5% on their own.
    The margin to the 5% promise is a fixed 20%. A wrong weight can spend it.
-3. **Balanced generation is slow at 4v4.** The default takes about 1.5 s in my container, about 7 times a raw build.
+3. **Balanced generation is slow at 4v4.** The default takes about 1.4 s in my container, about 8 times a raw build (`design/maps.md` section 7 also says 1-2 s).
    It runs on a worker thread in the lobby preview but probably blocks the server at match start. I did not
    measure the match-start path.
 4. **The score is a model, not a measurement.** No economy simulation backs it on the branch. The earlier "econ-sim
    at most 1.3%" figure cannot be checked from here. The weights are guesses with ranges and none of them is
    calibrated against play.
 5. **The MIRROR control has a seam.** It reflects every field across the line through the centre that is perpendicular
-   to the sides' axis (`GenTerrain.sym`). In 6 round mirror maps, 538 of 1206 columns along that line had a height
+   to the sides' axis (`GenTerrain.sym`). On the earlier tip (the terrain code is unchanged since), in 6 round mirror maps, 538 of 1206 columns along that line had a height
    jump of 2 or more against its neighbours. Away from the line it was 6 of 1206. A Prospector / Warden map, checked the same way, showed
    none (8 of 1206); I did not check the other contrasts. The sheets show it as a straight line through the middle. The mirror is also not exact: up to
    332 of 40401 columns differ from their point mirror, and the seat spread is 0.1-0.5%, not 0.
 6. **Three modifiers and the camps are data only** (Hero relic, Hydra lair, Fog valleys; creep and relic camps). They
-   place spots but do nothing in game. The fairness score still prices camps, hydra and relics, so those weights
-   count for nothing until the mechanics exist.
-7. **Doc gap.** Code comments in `MapGenerator`, `GenMap` and `GenOptions` point to `design/maps.md` "Generated
-   maps" and to "the report". `design/maps.md` has no such section on this branch. This file is the report.
-8. **Untested in game.** The in-engine GameTests were not run here, and the look of the built map has not been seen.
+   place spots but do nothing in game. Lobby maps now score them at zero, so no seat is paid for them. Maps made
+   with `liveOnly` false (experiments) still price them, and those weights count for nothing until the mechanics
+   exist.
+7. **Untested in game for balance and look.** The in-engine GameTests were not run here, and the look of the built
+   map has not been seen.
 
 ## Recommended next steps
 
@@ -214,7 +218,7 @@ still needs the CI eyes tour.
    in the lobby.
 7. Build the data-only mechanics (hero relic, hydra lair, fog valleys) one at a time, then add them to the lobby's
    live list.
-8. Write the "Generated maps" section in `design/maps.md`, linking this file.
+8. Link this file from `design/maps.md` section 7 (it says the numbers are in the PR).
 
 ## Reproduce
 

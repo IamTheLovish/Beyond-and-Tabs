@@ -67,7 +67,7 @@ public final class MapGenSim {
                 GenRng r = GenRng.stream(seedOf(i) ^ 0xABCDEF, "weights");
                 int ok = 0; double sp = 0;
                 for (int k = 0; k < draws; k++) {
-                    Fairness.Weights w = Fairness.Weights.CENTRAL.sample(r);
+                    Fairness.Weights w = Fairness.Weights.CENTRAL.sample(r).live();   // the lobby scores data-only camps at zero
                     Fairness.Context c = new Fairness.Context(geo, w);
                     Fairness.Report rep = c.report(geo.rows(m.mexes));
                     if (rep.spread() <= 0.05 + 1e-9) ok++;
