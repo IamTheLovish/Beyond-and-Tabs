@@ -129,6 +129,7 @@ jobs:
       code: ${{ steps.plan.outputs.code }}
       matrix: ${{ steps.plan.outputs.matrix }}
       shards: ${{ steps.plan.outputs.shards }}
+      where: ${{ steps.route.outputs.where }}
       devtime: ${{ steps.devtime.outputs.json }}
     steps:
       # the whole history, but treeless (commits only, no files of old commits): the dev-time count needs every commit's
@@ -155,13 +156,39 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: python3 tools/ci_plan.py
+      # 40 runners (lovish Oct 22): this account's 20 and the org mirror's 20 - PR GameTests go where fewer wait
+      - id: route
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: python3 tools/ci_route.py
+
+  # the GameTests of a PR routed to the mirror (tools/ci_route.py): mark its head commit `ci-mirror` = "Queued for the
+  # mirror". The org repo ILovishThe/beyond-and-tabs-ci (mirror-tests.yml) picks it up within ~5 min, reads the code
+  # from this PUBLIC repo (no secrets anywhere) and runs the GameTests on its own 20 runners; ci-mirror-report.yml
+  # sets the status to the result, which ci_wait / merge_pr read.
+  mirror:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where == 'mirror' }}
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending -f context=ci-mirror \
+            -f description="Queued for the mirror" -f target_url="https://github.com/ILovishThe/beyond-and-tabs-ci/actions" >/dev/null
+          echo "::notice::[Mirror] GameTests queued for the org runners (ILovishThe/beyond-and-tabs-ci)"
 
   # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
   bar:
     # no `needs: build` any more (it put the 1.5 min of the tools audits on the critical path): bar-publish waits for
     # build, so the two releases are still never updated at the same moment. Docs-only changes skip this job.
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    # where=mirror: this PR's GameTests run on the org's runners instead (job mirror below, tools/ci_route.py)
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4   # one commit: the dev-time count comes from job changes
@@ -248,7 +275,7 @@ jobs:
   # as bar; no jar is kept from here. Docs-only changes skip it.
   bar-tests:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures

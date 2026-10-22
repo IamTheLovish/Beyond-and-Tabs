@@ -1,0 +1,21 @@
+name: ci-mirror
+# Adding the label `ci-mirror` to a PR sends its GameTests to the org's runners right away (normally build.yml's router
+# decides per build: tools/ci_route.py). Sending = the commit status `ci-mirror` "Queued for the mirror"; the org repo
+# ILovishThe/beyond-and-tabs-ci (mirror-tests.yml) polls for it every 5 min, reads the PR from this PUBLIC repo and
+# runs the tests - no secrets anywhere. ci-mirror-report.yml brings the result back.
+on:
+  pull_request:
+    types: [labeled]
+permissions:
+  statuses: write
+jobs:
+  queue:
+    if: ${{ github.event.label.name == 'ci-mirror' }}
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending -f context=ci-mirror \
+            -f description="Queued for the mirror" -f target_url="https://github.com/ILovishThe/beyond-and-tabs-ci/actions" >/dev/null
