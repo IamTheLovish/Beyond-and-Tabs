@@ -5,3 +5,4 @@ bots_play_each_other_without_errors          # soak stall; #55, #68 (Oct 21)
 mirror_images_decoys_draw_fire_deal_nothing_and_fade  # decoy dies inWall; #10 (Oct 21)
 stuck_chaser_is_nudged_then_drops_its_target # #38 (Oct 21); red again on #94 before it got its own glass pad (the free vindicator stopped 3 blocks short, nudged and sidestepped, all ticking); now on a pad at 135; cause unproven: a red run carries chase state and what stands round the unit
 shift_move_after_an_attack_waits_for_the_kill  # queued move 4 blocks short; #77 (Oct 21); hardened Oct 21 (flake-stop-short), cause unproven: a red run now carries the attacker's orders and ticks
+attack_move_stops_to_fight_then_carries_on  # "stopped 3 blocks short"; red then green on the same commit, PR #119 run 39704723375 (Oct 22), 6 of 6 alone in flake-stress 39706417949; stop-short family, cause unproven: a red run now names its orders, path and the units round it
