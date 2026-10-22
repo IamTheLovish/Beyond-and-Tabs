@@ -69,19 +69,55 @@ def latest_runs(sha):
         newest["status:" + st["context"]] = {
             "id": None, "status": "completed" if state in ("success", "failure", "error") else "in_progress",
             "conclusion": {"success": "success", "failure": "failure", "error": "failure"}.get(state),
-            "html_url": st.get("target_url") or "", "started_at": st.get("updated_at") or ""}
+            "html_url": st.get("target_url") or "", "started_at": st.get("updated_at") or "",
+            "mirror": mirror_run(st.get("target_url") or "")}
     return newest
 
 
-def failed_tests(run_id):
-    if run_id is None:   # a commit status (the mirror): no annotations here - its link says where to look
-        return []
-    names = []
-    for ann in gh(f"repos/{REPO}/check-runs/{run_id}/annotations?per_page=100") or []:
+MIRROR_RUN_RE = re.compile(r"github\.com/([\w.-]+/[\w.-]+)/actions/runs/(\d+)")
+
+
+def mirror_run(url):
+    """(repo, run id) of the mirror's build run a `ci-mirror` status links to, else None (queued: the link is the repo's
+    Actions page)."""
+    m = MIRROR_RUN_RE.search(url or "")
+    return (m.group(1), int(m.group(2))) if m else None
+
+
+def annotation_tests(repo, check_run_id, names):
+    for ann in gh(f"repos/{repo}/check-runs/{check_run_id}/annotations?per_page=100") or []:
         for m in FAILED_RE.finditer(ann.get("message") or ""):
             if m.group(1) not in names:
                 names.append(m.group(1))
+
+
+def failed_tests(run_id, mirror=None):
+    names = []
+    if run_id is None:
+        # a commit status (the mirror): its link is the mirror's run, a PUBLIC repo; the "<test> failed!" lines are the
+        # annotations of that run's failed jobs, read the same way as ours (Oct 22, #164: a soak stall in the mirror was
+        # reported "no failed GameTest named - a real failure", so the known-flake rerun never applied)
+        if not mirror:
+            return []
+        repo, rid = mirror
+        try:
+            jobs = gh(f"repos/{repo}/actions/runs/{rid}/jobs?per_page=100").get("jobs", [])
+            for j in jobs:
+                if j.get("conclusion") == "failure":
+                    annotation_tests(repo, j["id"], names)
+        except RuntimeError:
+            pass
+        return names
+    annotation_tests(REPO, run_id, names)
     return names
+
+
+def rerun_mirror(mirror):
+    """Re-runs the failed jobs of the mirror's run. The mirror is another account's repo: refused without access to it
+    (the caller says so). It cannot be re-queued from here: the mirror starts one run per PR head commit."""
+    repo, rid = mirror
+    gh(f"repos/{repo}/actions/runs/{rid}/rerun-failed-jobs", method="POST")
+    return f"mirror run {repo}#{rid}"
 
 
 def rerun_failed(sha):
@@ -149,7 +185,7 @@ def main():
                 return 0
             details, all_flaky = [], True
             for name, r in sorted(bad.items()):
-                tests = failed_tests(r["id"])
+                tests = failed_tests(r["id"], r.get("mirror"))
                 if not tests:
                     all_flaky = False
                     details.append(f"{name}: {r['conclusion']} (no failed GameTest named - a real failure; read the "
@@ -164,6 +200,15 @@ def main():
                 reruns_left -= 1
                 try:
                     redone = rerun_failed(sha)
+                    for n, r in sorted(bad.items()):
+                        if r.get("mirror"):
+                            try:
+                                redone.append(rerun_mirror(r["mirror"]))
+                            except RuntimeError as e:
+                                print(f"RED {label}: known flake(s) in the mirror, but its run cannot be re-run from here "
+                                      f"(needs access to {r['mirror'][0]}): {r['html_url']} | " + " | ".join(details)
+                                      + f" | {str(e)[:160]}")
+                                return 1
                 except RuntimeError as e:
                     print(f"RED {label}: rerun failed: {e} | " + " | ".join(details))
                     return 1
