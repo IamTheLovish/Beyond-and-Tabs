@@ -204,9 +204,12 @@ public class MoveToTargetBlockGoal extends Goal {
                 // RtsPathfinder answers null at once, inside start(), so this branch runs; or vanilla finding
                 // nothing) read as progress and reset the count, so the unit retried every 20 ticks forever,
                 // standing still and counted busy. Now it backs off and gives up like any other stuck repath.
-                if (newFinalNode == null || newFinalNode.equals(oldFinalNode))
+                // (A unit in the air - a jump, a knockback - gets null from vanilla's canUpdatePath for that moment:
+                // that is neither progress nor stuck, it just retries.)
+                boolean airborne = !this.mob.onGround() && !this.mob.isInLiquid() && !this.mob.isPassenger();
+                if ((newFinalNode == null && !airborne) || (newFinalNode != null && newFinalNode.equals(oldFinalNode)))
                     onStuckRepath();
-                else
+                else if (newFinalNode != null)
                     resetRecalcBackoff();
                 recalcCooldown = currentRecalcCooldown;
             } else {
