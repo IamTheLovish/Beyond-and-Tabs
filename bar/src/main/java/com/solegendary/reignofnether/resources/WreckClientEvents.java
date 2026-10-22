@@ -96,61 +96,67 @@ public class WreckClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || metal.isEmpty()
-                || !OrthoviewClientEvents.isEnabled() || MC.level == null || !workerSelected())
-            return;
-        Camera camera = MC.getEntityRenderDispatcher().camera;
-        PoseStack pose = evt.getPoseStack();
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || metal.isEmpty()
+                    || !OrthoviewClientEvents.isEnabled() || MC.level == null || !workerSelected())
+                return;
+            Camera camera = MC.getEntityRenderDispatcher().camera;
+            PoseStack pose = evt.getPoseStack();
 
-        // area-reclaim circle: the sum of every known wreck inside it, over the centre
-        BlockPos centre = AreaCommandClientEvents.getCentre();
-        if (centre != null && AreaCommandClientEvents.hasWorkers()) {
-            int r = AreaCommandClientEvents.getRadius();
-            double r2 = (r + 0.5) * (r + 0.5);
-            int total = 0;
+            // area-reclaim circle: the sum of every known wreck inside it, over the centre
+            BlockPos centre = AreaCommandClientEvents.getCentre();
+            if (centre != null && AreaCommandClientEvents.hasWorkers()) {
+                int r = AreaCommandClientEvents.getRadius();
+                double r2 = (r + 0.5) * (r + 0.5);
+                int total = 0;
+                for (Int2IntMap.Entry e : metal.int2IntEntrySet()) {
+                    Entity w = MC.level.getEntity(e.getIntKey());
+                    if (w == null)
+                        continue;
+                    double dx = w.getX() - (centre.getX() + 0.5), dz = w.getZ() - (centre.getZ() + 0.5);
+                    if (dx * dx + dz * dz <= r2)
+                        total += e.getIntValue();
+                }
+                if (total > 0) {
+                    if (total != lastAreaValue) {
+                        lastAreaValue = total;
+                        areaLabel = I18n.get("hud.reignofnether.reclaim_label", total);
+                    }
+                    drawLabel(pose, camera, centre.getX() + 0.5, centre.getY() + 1.6, centre.getZ() + 0.5, areaLabel);
+                }
+                return;   // while dragging, the hover label would only clutter the circle
+            }
+
+            // hovered wreck: the nearest known wreck to the cursor's block, within a block and a half
+            BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
+            if (cursor == null)
+                return;
+            Entity hovered = null;
+            double best = HOVER_RANGE_SQR;
             for (Int2IntMap.Entry e : metal.int2IntEntrySet()) {
                 Entity w = MC.level.getEntity(e.getIntKey());
-                if (w == null)
+                if (w == null || Math.abs(w.getY() - cursor.getY()) > 3)
                     continue;
-                double dx = w.getX() - (centre.getX() + 0.5), dz = w.getZ() - (centre.getZ() + 0.5);
-                if (dx * dx + dz * dz <= r2)
-                    total += e.getIntValue();
-            }
-            if (total > 0) {
-                if (total != lastAreaValue) {
-                    lastAreaValue = total;
-                    areaLabel = I18n.get("hud.reignofnether.reclaim_label", total);
+                double dx = w.getX() - (cursor.getX() + 0.5), dz = w.getZ() - (cursor.getZ() + 0.5);
+                double d = dx * dx + dz * dz;
+                if (d < best) {
+                    best = d;
+                    hovered = w;
                 }
-                drawLabel(pose, camera, centre.getX() + 0.5, centre.getY() + 1.6, centre.getZ() + 0.5, areaLabel);
             }
-            return;   // while dragging, the hover label would only clutter the circle
-        }
-
-        // hovered wreck: the nearest known wreck to the cursor's block, within a block and a half
-        BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
-        if (cursor == null)
-            return;
-        Entity hovered = null;
-        double best = HOVER_RANGE_SQR;
-        for (Int2IntMap.Entry e : metal.int2IntEntrySet()) {
-            Entity w = MC.level.getEntity(e.getIntKey());
-            if (w == null || Math.abs(w.getY() - cursor.getY()) > 3)
-                continue;
-            double dx = w.getX() - (cursor.getX() + 0.5), dz = w.getZ() - (cursor.getZ() + 0.5);
-            double d = dx * dx + dz * dz;
-            if (d < best) {
-                best = d;
-                hovered = w;
+            if (hovered == null)
+                return;
+            int value = metalOf(hovered);
+            if (value != lastHoverValue) {
+                lastHoverValue = value;
+                hoverLabel = I18n.get("hud.reignofnether.reclaim_label", value);
             }
+            drawLabel(pose, camera, hovered.getX(), hovered.getY() + 1.1, hovered.getZ(), hoverLabel);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        if (hovered == null)
-            return;
-        int value = metalOf(hovered);
-        if (value != lastHoverValue) {
-            lastHoverValue = value;
-            hoverLabel = I18n.get("hud.reignofnether.reclaim_label", value);
-        }
-        drawLabel(pose, camera, hovered.getX(), hovered.getY() + 1.1, hovered.getZ(), hoverLabel);
     }
 
     /** A camera-facing text label at a world position, same scale as RoN's resource floating text. */

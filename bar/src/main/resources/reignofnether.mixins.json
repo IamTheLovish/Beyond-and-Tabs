@@ -9,6 +9,7 @@
     "BaseSpawnerMixin",
     "BeaconBlockEntityMixin",
     "BearMixin",
+    "BlastFurnaceBlockMixin",
     "BlazeMixin",
     "ChunkMapAccessor",
     "CrossbowMixin",

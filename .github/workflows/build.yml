@@ -130,9 +130,26 @@ jobs:
       matrix: ${{ steps.plan.outputs.matrix }}
       shards: ${{ steps.plan.outputs.shards }}
       where: ${{ steps.route.outputs.where }}
+      devtime: ${{ steps.devtime.outputs.json }}
     steps:
+      # the whole history, but treeless (commits only, no files of old commits): the dev-time count needs every commit's
+      # time and nothing else. Counted ONCE here for bar and every shard - each of those 8 jobs used to fetch the whole
+      # history itself (30-150 s apiece, Oct 22 run 39724663223) and now checks out one commit.
       - uses: actions/checkout@v4
-        with: { sparse-checkout: tools, fetch-depth: 1 }
+        with: { sparse-checkout: tools, fetch-depth: 0, filter: 'tree:0' }
+      - id: devtime
+        name: Count the development time (title screen, hud/DevTime)
+        run: |
+          # commits under 30 min apart count their real gap; each session gets 15 min before its first commit
+          # (claude/dev-time-counter.md). Baked into the jar; nothing is computed at runtime.
+          json=$(git log --format=%ct | sort -n | python3 -c "
+          import sys, json
+          t = [int(x) for x in sys.stdin if x.strip()]
+          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
+          print(json.dumps({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0}))
+          ")
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "::notice::[DevTime] $json"
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
@@ -174,23 +191,23 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # the whole history, for the dev-time count below
+      - uses: actions/checkout@v4   # one commit: the dev-time count comes from job changes
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - name: Count the development time (title screen, hud/DevTime)
+        with:
+          distribution: temurin
+          java-version: '17'
+          # Gradle's caches (Forge, Minecraft, the deobfuscated jars ForgeGradle makes): restored instead of rebuilt by
+          # every job of every build. Keyed on the build files, so a dependency change starts a fresh cache.
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: The development time (counted once, in job changes)
+        env: { DEVTIME: "${{ needs.changes.outputs.devtime }}" }
         run: |
-          # commits under 30 min apart count their real gap; each session gets 15 min before its first commit
-          # (claude/dev-time-counter.md). Baked into the jar; nothing is computed at runtime.
-          git log --format=%ct | sort -n | python3 -c "
-          import sys, json
-          t = [int(x) for x in sys.stdin if x.strip()]
-          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
-          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
-                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
-          print('dev time:', round(s / 3600, 1), 'h over', len(t), 'commits')
-          "
-          echo "::notice::[DevTime] $(cat bar/src/main/resources/assets/reignofnether/devtime.json)"
+          [ -n "$DEVTIME" ] || DEVTIME='{"hours": 0, "commits": 0, "since": 0}'
+          printf '%s' "$DEVTIME" > bar/src/main/resources/assets/reignofnether/devtime.json
       # mesh bodies (inbox/spec-1-mesh-bodies-2026-10-17.md): the .bmesh files are arithmetic on the design files, written
       # here, not kept in git - the jar carries them and MeshBodyTest (gradle test, below) checks the Paladin's draws
       # exactly like its cube model. Only this job's jar ships (bar-tests builds for its server tests, which never load one)
@@ -265,19 +282,23 @@ jobs:
       matrix:
         shard: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # the whole history, for the dev-time count (the DevTime tests read it)
+      - uses: actions/checkout@v4   # one commit: the dev-time count (the DevTime tests read it) comes from job changes
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - name: Count the development time (same as bar's)
+        with:
+          distribution: temurin
+          java-version: '17'
+          # Gradle's caches (Forge, Minecraft, the deobfuscated jars ForgeGradle makes): restored instead of rebuilt by
+          # every job of every build. Keyed on the build files, so a dependency change starts a fresh cache.
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: The development time (counted once, in job changes)
+        env: { DEVTIME: "${{ needs.changes.outputs.devtime }}" }
         run: |
-          git log --format=%ct | sort -n | python3 -c "
-          import sys, json
-          t = [int(x) for x in sys.stdin if x.strip()]
-          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
-          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
-                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
-          "
+          [ -n "$DEVTIME" ] || DEVTIME='{"hours": 0, "commits": 0, "since": 0}'
+          printf '%s' "$DEVTIME" > bar/src/main/resources/assets/reignofnether/devtime.json
       - name: Headless smoke tests on a real server, shard ${{ matrix.shard }} of ${{ needs.changes.outputs.shards }}
         working-directory: bar
         env: { BAT_GAMETEST_ONLY: "${{ env[format('SHARD_{0}', matrix.shard)] }}" }

@@ -228,6 +228,8 @@ public class BattlefieldWall {
 
     static void planRing(ServerLevel level, double cx, double cz, double radius, int perTick, int fromColumn,
                          boolean pregen) {
+        // every arena gets the RTS pathfinder and a warm navmesh, whatever its size (worldborder/ArenaPathing)
+        com.solegendary.reignofnether.worldborder.ArenaPathing.onArena(level, cx, cz, radius);
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
 
         queue.clear();
