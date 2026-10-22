@@ -109,7 +109,8 @@ public final class SupportMath {
      * (not undead: harming heals them) enemies within {@code reach} of the thrower at (sx, sz). For each, the cloud
      * goes on the centre of the enemies round it, pushed {@link #AIM_OFFSET} further from our side at (ourX, ourZ) -
      * then it is dropped if any friend that harming would hurt (undead friends are healed by it) stands, or will
-     * stand in about a second, within {@link #CLOUD_RADIUS} + {@link #HARM_SAFETY}. Score: enemies under the cloud +
+     * stand in about a second, within {@link #CLOUD_RADIUS} + {@link #HARM_SAFETY}. The cluster is taken where it will
+     * be when the potion lands (SupportField.px/pz, about a second ahead). Score: enemies under the cloud +
      * the candidate's value - undead enemies under it (healed). The best positive score wins.
      */
     public static boolean harmingAim(SupportField f, double sx, double sz, double reach, double ourX, double ourZ, Aim out) {
@@ -118,12 +119,13 @@ public final class SupportMath {
         int k = nearest(f, F_ENEMY, F_UNDEAD, sx, sz, reach, 0f);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
+            // the cluster round this enemy, where it will be when the potion lands (about a second)
             double cx = 0, cz = 0;
             int m = 0;
             for (int j = 0; j < f.n; j++)
                 if (has(f.flags[j], F_ENEMY, F_UNDEAD) && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
-                    cx += f.x[j];
-                    cz += f.z[j];
+                    cx += f.px[j];
+                    cz += f.pz[j];
                     m++;
                 }
             cx /= m;   // m >= 1: the candidate itself
@@ -135,8 +137,12 @@ public final class SupportMath {
                 az += dz / len * AIM_OFFSET;
             }
             if (d2(ax, az, sx, sz) > reach2) {
-                ax = f.x[i];
-                az = f.z[i];
+                ax = f.px[i];
+                az = f.pz[i];
+                if (d2(ax, az, sx, sz) > reach2) {
+                    ax = f.x[i];
+                    az = f.z[i];
+                }
             }
             if (countWithin(f, F_FRIEND, F_UNDEAD, ax, az, CLOUD_RADIUS + HARM_SAFETY, true) > 0)
                 continue;
@@ -228,13 +234,14 @@ public final class SupportMath {
         int k = nearest(f, F_FRIEND, F_UNDEAD, sx, sz, reach + CLOUD_RADIUS, minMissing);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
+            // the hurt friends round this one, where they will be when the cloud lands (a walking group walks on)
             double cx = 0, cz = 0;
             int m = 0;
             for (int j = 0; j < f.n; j++)
                 if (has(f.flags[j], F_FRIEND, F_UNDEAD) && f.missing(j) >= minMissing
                         && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
-                    cx += f.x[j];
-                    cz += f.z[j];
+                    cx += f.px[j];
+                    cz += f.pz[j];
                     m++;
                 }
             if (m < REGEN_MIN_HURT)
@@ -246,14 +253,14 @@ public final class SupportMath {
             int hurt = 0;
             double gain = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_FRIEND, F_UNDEAD) && f.missing(j) >= minMissing && d2(f.x[j], f.z[j], cx, cz) <= r2) {
+                if (has(f.flags[j], F_FRIEND, F_UNDEAD) && f.missing(j) >= minMissing && d2(f.px[j], f.pz[j], cx, cz) <= r2) {
                     hurt++;
                     gain += Math.min(REGEN_PER_FRIEND, f.missing(j)) * Math.max(0.1f, f.value[j]);
                 }
             if (hurt < REGEN_MIN_HURT)
                 continue;
-            int friends = countWithin(f, F_FRIEND, F_UNDEAD, cx, cz, CLOUD_RADIUS, false);
-            int foes = countWithin(f, F_ENEMY, F_UNDEAD, cx, cz, CLOUD_RADIUS, false);
+            int friends = countWithin(f, F_FRIEND, F_UNDEAD, cx, cz, CLOUD_RADIUS, true);
+            int foes = countWithin(f, F_ENEMY, F_UNDEAD, cx, cz, CLOUD_RADIUS, true);
             if (foes > friends)
                 continue;
             if (gain > out.score) {
@@ -304,19 +311,19 @@ public final class SupportMath {
 
     /**
      * Which way to step out of danger, as a unit vector into out[0], out[1]; false when nothing threatens. Threats: an
-     * enemy melee unit within {@code dangerR}, or any enemy that has the healer as its target (at half weight when it
-     * is not that close). The step leads away from their weighted centre (nearer = heavier), bent toward our own
+     * enemy melee unit within {@code dangerR}, or an enemy within {@code aimedR} that has the healer as its target (at
+     * half weight when it is not that close). The step leads away from their weighted centre (nearer = heavier), bent toward our own
      * army's centre (the friends round it that are not support units) unless that lies on the threat's side.
      */
-    public static boolean fleeDirection(SupportField f, double sx, double sz, double dangerR, double[] out) {
-        double tx = 0, tz = 0, w = 0, danger2 = dangerR * dangerR;
+    public static boolean fleeDirection(SupportField f, double sx, double sz, double dangerR, double aimedR, double[] out) {
+        double tx = 0, tz = 0, w = 0, danger2 = dangerR * dangerR, aimed2 = aimedR * aimedR;
         for (int i = 0; i < f.n; i++) {
             int fl = f.flags[i];
             if ((fl & F_ENEMY) == 0)
                 continue;
             double d = d2(f.x[i], f.z[i], sx, sz);
             boolean close = (fl & F_MELEE) != 0 && d <= danger2;
-            boolean aimed = (fl & F_TARGETS_ME) != 0;
+            boolean aimed = (fl & F_TARGETS_ME) != 0 && d <= aimed2;
             if (!close && !aimed)
                 continue;
             double wi = 1.0 / (Math.sqrt(d) + 0.5);

@@ -45,8 +45,8 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  * smarter"). Each support unit looks round itself every {@link #THINK_TICKS} ticks (staggered by entity id) with one
  * UnitGrid query flattened into a {@link SupportField}, and in that one look it
  * <ol>
- *   <li>steps out of danger: a melee enemy within {@link #DANGER_RADIUS} blocks, or any enemy that has it as its
- *       target, sends it {@link #KITE_STEP} blocks away from them and toward its own army (at most once per
+ *   <li>steps out of danger: a melee enemy within {@link #DANGER_RADIUS} blocks, or an enemy within
+ *       {@link #AIMED_RADIUS} that has it as its target, sends it {@link #KITE_STEP} blocks away from them and toward its own army (at most once per
  *       {@link #KITE_COOLDOWN} ticks; never on hold position, garrisoned, riding, or off a plain move the player
  *       gave - a player's move is the player's);</li>
  *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at throw range from the
@@ -66,6 +66,9 @@ public final class SupportBrain {
     public static final int THINK_TICKS = 4;
     /** A melee enemy this close sends a support unit a step away. */
     public static final double DANGER_RADIUS = 4.0;
+    /** An enemy that has it as its target counts from this close (an archer further off is the army's job: a healer
+     * that ran from every bow in range would never heal). */
+    public static final double AIMED_RADIUS = 10.0;
     /** A standoff spot is kept at least this far from any enemy melee unit. */
     public static final double CLEAR_OF_MELEE = DANGER_RADIUS + 1.5;
     /** The danger step: this long, at most once per KITE_COOLDOWN ticks (1.5 s), and the brain leaves it alone for KITE_TICKS. */
@@ -265,14 +268,16 @@ public final class SupportBrain {
         if (a == null)
             return false;
         double ax = a.getX(), az = a.getZ();
+        // fighting = its target (or any enemy) is close to it; on the way there it only walks, and the healer trails
+        double engaged = SupportMath.ENGAGE_RADIUS + 2;
         LivingEntity foe = a instanceof Mob am ? am.getTarget() : null;
         boolean fighting = false;
         double ex = 0, ez = 0;
-        if (foe != null && foe.isAlive() && foe.distanceToSqr(a) < 16 * 16) {
+        if (foe != null && foe.isAlive() && foe.distanceToSqr(a) < engaged * engaged) {
             ex = foe.getX();
             ez = foe.getZ();
             fighting = true;
-        } else if (SupportMath.centroid(FIELD, F_ENEMY, 0, ax, az, SupportMath.ENGAGE_RADIUS + 2, Q) > 0) {
+        } else if (SupportMath.centroid(FIELD, F_ENEMY, 0, ax, az, engaged, Q) > 0) {
             ex = Q[0];
             ez = Q[1];
             fighting = true;
@@ -410,7 +415,7 @@ public final class SupportBrain {
                 && unit.getMoveGoal().getMoveTarget() != null
                 && !PatrolServerEvents.isPatrolling(mob.getId()) && !GuardServerEvents.isGuarding(mob.getId()))
             return false;
-        if (!SupportMath.fleeDirection(FIELD, mob.getX(), mob.getZ(), DANGER_RADIUS, Q))
+        if (!SupportMath.fleeDirection(FIELD, mob.getX(), mob.getZ(), DANGER_RADIUS, AIMED_RADIUS, Q))
             return false;
         BlockPos cell = stepCell(level, mob, unit, Q[0], Q[1]);
         if (cell == null) {
@@ -500,8 +505,10 @@ public final class SupportBrain {
      * A throw was released (ThrowPotionGoal): the counters the game tests read, and an idle medic that walked away
      * for it heads back to its post.
      */
-    public static void onThrow(Mob mob, SupportUnit unit, Kind kind, boolean selfDecided) {
+    public static void onThrow(Mob mob, SupportUnit unit, Kind kind, boolean selfDecided, double x, double z) {
         SupportState s = unit.getSupportState();
+        s.lastThrowX = x;
+        s.lastThrowZ = z;
         switch (kind) {
             case HEAL -> s.heals++;
             case REGEN -> s.regens++;

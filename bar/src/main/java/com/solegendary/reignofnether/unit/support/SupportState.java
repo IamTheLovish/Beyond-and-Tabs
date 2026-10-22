@@ -57,6 +57,8 @@ public final class SupportState {
     public int heals, regens, harms, waters, kites;
     /** Heals or regeneration clouds released while the unit was under a moving order (support order, follow, patrol). */
     public int healsWhileOrdered;
+    /** Where the last throw was aimed. */
+    public double lastThrowX, lastThrowZ;
 
     public Mode mode() {
         return mode;

@@ -152,6 +152,18 @@ class SupportMathTest {
     }
 
     @Test
+    void regenLandsWhereAWalkingGroupWillBe() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        // two hurt friends walking east at 0.1 blocks a tick: in a second they are 2 blocks on
+        f.add(null, 3, 0, 0.1, 0, 10f, 20f, 1f, FRIEND);
+        f.add(null, 3, 1, 0.1, 0, 10f, 20f, 1f, FRIEND);
+        SupportMath.Aim aim = new SupportMath.Aim();
+        assertTrue(SupportMath.regenAim(f, 0, 0, 8, 3f, aim));
+        assertEquals(5.0, aim.x, 1e-9, "the cloud leads the group by its second of walking");
+    }
+
+    @Test
     void frontIsTheFriendWithTheMostEnemiesNear() {
         SupportField f = field();
         add(f, 0, 0, ME);
@@ -175,7 +187,7 @@ class SupportMathTest {
         add(f, 2, 0, FOE);       // melee at 2 blocks, east
         add(f, -3, 4, FRIEND);   // our army north-west
         double[] dir = new double[2];
-        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, dir));
+        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
         assertTrue(dir[0] < -0.5, "west, away from the threat: " + dir[0]);
         assertTrue(dir[1] > 0.1, "bent toward the army: " + dir[1]);
         assertEquals(1.0, Math.hypot(dir[0], dir[1]), 1e-9);
@@ -187,9 +199,9 @@ class SupportMathTest {
         add(f, 0, 0, ME);
         add(f, 6, 0, FOE);   // melee, but 6 blocks off
         double[] dir = new double[2];
-        assertFalse(SupportMath.fleeDirection(f, 0, 0, 4, dir));
+        assertFalse(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
         add(f, 0, 10, F_ENEMY | F_ATTACKER | F_TARGETS_ME);
-        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, dir));
+        assertTrue(SupportMath.fleeDirection(f, 0, 0, 4, 10, dir));
         assertTrue(dir[1] < -0.9, "away from the archer: " + dir[1]);
     }
 

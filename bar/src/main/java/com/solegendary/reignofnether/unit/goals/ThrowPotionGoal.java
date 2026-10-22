@@ -157,12 +157,24 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
             release(level, witch);
     }
 
+    // a unit target is led by where it walks during the potion's flight (LEAD_TICKS, at most MAX_LEAD blocks): a heal
+    // thrown at a friend on the march used to land where it had been
     private double aimX() {
-        return targetEntity != null ? targetEntity.getX() : hasAim ? aimX : moveTarget.getX() + 0.5;
+        return targetEntity != null ? targetEntity.getX() + lead(targetEntity.getDeltaMovement().x)
+            : hasAim ? aimX : moveTarget.getX() + 0.5;
     }
 
     private double aimZ() {
-        return targetEntity != null ? targetEntity.getZ() : hasAim ? aimZ : moveTarget.getZ() + 0.5;
+        return targetEntity != null ? targetEntity.getZ() + lead(targetEntity.getDeltaMovement().z)
+            : hasAim ? aimZ : moveTarget.getZ() + 0.5;
+    }
+
+    /** Ticks of walking a thrown potion leads a moving target by (its flight is about 20). */
+    static final int LEAD_TICKS = 15;
+    static final double MAX_LEAD = 3.0;
+
+    private static double lead(double velocity) {
+        return Math.max(-MAX_LEAD, Math.min(MAX_LEAD, velocity * LEAD_TICKS));
     }
 
     private void release(ServerLevel level, WitchUnit witch) {
@@ -177,7 +189,7 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
         for (Ability potionAbility : witch.getAbilities().get())
             if (potionAbility.cooldownMax > 0)
                 AbilityClientboundPacket.sendSetCooldownPacket(this.mob.getId(), potionAbility.action, potionAbility.cooldownMax);
-        SupportBrain.onThrow(witch, witch, kindOf(potion), selfDecided);
+        SupportBrain.onThrow(witch, witch, kindOf(potion), selfDecided, x, z);
         stop();
     }
 
