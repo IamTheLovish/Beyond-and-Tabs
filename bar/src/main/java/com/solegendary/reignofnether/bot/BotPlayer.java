@@ -2467,6 +2467,11 @@ public class BotPlayer {
 
     enum Layout { WIND, CONVERTER, VAULT, FARM, HOUSE, ARMY }
 
+    /** Where the bot's index-th converter goes (public for the game tests: converters must stay clear of each other's death blast). */
+    public BlockPos converterSlot(int index) {
+        return layoutSlot(Layout.CONVERTER, index);
+    }
+
     /**
      * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
      * Wind generators fill rows of six behind the capitol (4-block pitch for their 3x3), converters sit at the

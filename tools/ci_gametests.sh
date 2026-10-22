@@ -59,6 +59,9 @@ grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{pr
 grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
+# the T1 raid measurements (gametest/RaidGameTests): time-to-kill per faction, short lines in ONE notice (a step keeps
+# 10 notices; one notice about 4000 characters)
+grep -oE "\[Raid\].*" gametest.log | head -46 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Raid TTK]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the building-block mods' block ids (gametest/BuildingBlockModGameTests): counts and a sample per mod, one notice -
 # the vocabulary for structure generators (only in the shard that ran that test)
 if grep -q "\[ModBlocks\]" gametest.log; then

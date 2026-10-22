@@ -487,6 +487,10 @@ public class BotArmy {
         bot.order(idle, UnitAction.ATTACK_MOVE, target);
     }
 
+    /** Whether this unit is in the infantry raid squad / the vehicle raid squad (for the game tests). */
+    public boolean inInfantryRaid(int id) { return raidIds.contains(id); }
+    public boolean inVehicleRaid(int id) { return vehicleRaidIds.contains(id); }
+
     /** The enemy worker sighting nearest home that is fresh and not within WORKER_COVER_RADIUS of a known defence, as a position; null if none. */
     BlockPos workerTarget(long gameTime, BlockPos home) {
         BlockPos best = null;

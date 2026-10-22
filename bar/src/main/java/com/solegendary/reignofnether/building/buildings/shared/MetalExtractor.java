@@ -73,6 +73,12 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
         return 0;
     }
 
+    /** A destroyed extractor leaves its patch rebuildable at once: its collapse must not crater the ground under it (RaidTuning). */
+    @Override
+    public boolean keepsGroundIntact() {
+        return true;
+    }
+
     @Override
     public String getUpgradedStructureName(int upgradeLevel) {
         return (upgradeLevel > 0 ? upgradedStructureName : structureName) + variant;
