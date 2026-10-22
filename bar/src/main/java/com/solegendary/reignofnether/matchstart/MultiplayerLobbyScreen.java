@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -408,7 +409,10 @@ public class MultiplayerLobbyScreen extends Screen {
             my = -10000;
         }
         LobbyClientboundPacket l = LobbyClientEvents.latest;
-        renderBackground(gg);
+        // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
+        // scrim behind the panel, title and hint line so every line of the lobby stays readable over it
+        LobbyBackdrop.render(this, gg, realMx, realMy);
+        LobbyBackdrop.scrim(gg, left - 10, top - 22, rightX + RIGHT_W + 10, bottom + 20);
         gg.fill(left - 4, top - 4, rightX + RIGHT_W + 4, bottom + 4, BG);
         gg.fill(left - 4, top - 5, rightX + RIGHT_W + 4, top - 4, EDGE);
         gg.fill(left - 4, bottom + 4, rightX + RIGHT_W + 4, bottom + 5, EDGE);

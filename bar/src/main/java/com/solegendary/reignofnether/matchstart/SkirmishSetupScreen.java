@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.player.PlayerColors;
@@ -386,7 +387,10 @@ public class SkirmishSetupScreen extends Screen {
             mx = -10000;
             my = -10000;
         }
-        renderBackground(gg);
+        // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
+        // scrim behind the panel, title and footer so every line of the lobby stays readable over it
+        LobbyBackdrop.render(this, gg, realMx, realMy);
+        LobbyBackdrop.scrim(gg, navX - 10, top - 22, rightX + rightW + 10, bottom + 30);
         gg.fill(navX - 4, top - 4, rightX + rightW + 4, bottom + 4, BG);
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
         gg.fill(navX - 4, bottom + 4, rightX + rightW + 4, bottom + 5, EDGE);
