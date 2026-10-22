@@ -500,7 +500,7 @@ public class TierGateGameTests {
                     boolean all = true;
                     for (int i = 0; i < count; i++) {
                         var kit = BotPlayer.kitFor(factions[i]);
-                        if (researchStart[i] < 0 && (ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(names[i])
+                        if (researchStart[i] < 0 && (ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, names[i])
                                 || ResearchServerEvents.playerHasResearch(names[i], ProductionItems.RESEARCH_TIER_2))) {
                             researchStart[i] = now;
                             fightersAtStart[i] = fighters(names[i]);

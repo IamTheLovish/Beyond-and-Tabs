@@ -584,7 +584,7 @@ public class BotPlayer {
             // otherwise (resources/TierGate). That is the army lab for every faction but the Horde, whose Flame Sanctuary
             // wants a Hoglin Stables: raised as soon as the research starts, so it stands when the research is done
             Building t1Req = kit.t2Lab() == null ? null : com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
-            boolean researchingT2 = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(name);
+            boolean researchingT2 = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
             if (!done && t1Req != null && t1Req != kit.armyBuilding() && (tier2 || researchingT2) && armyBuildings >= 1
                     && count(buildings, t1Req) < 1)
                 done = placeNear(level, t1Req, layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 1);
