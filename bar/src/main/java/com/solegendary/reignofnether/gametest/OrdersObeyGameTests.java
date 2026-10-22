@@ -222,7 +222,11 @@ public class OrdersObeyGameTests {
                 double moved = m.getX() - startX;
                 String state = "after " + t + " ticks: move target " + goal.getMoveTarget() + ", moved "
                     + TerrainGameTests.f(moved) + " east, nav done " + m.getNavigation().isDone() + ", last request at "
-                    + goal.getLastRequestTime() + " (now " + level.getGameTime() + ")";
+                    + goal.getLastRequestTime() + " (now " + level.getGameTime() + "), path pending " + goal.isPathPending()
+                    + ", goal running " + goal.isGoalRunning() + ", pool "
+                    + (com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.isInitialised()
+                        ? "queue depth " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.queueDepth() : "off")
+                    + ", fallback point " + com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.lastLoadedToward(level, m.blockPosition(), far);
                 ReignOfNether.LOGGER.info("[Orders] a move into unloaded chunks: {}", state);
                 List<String> problems = new ArrayList<>();
                 if (!idle && !(m.getX() - xAt500[0] > 1.0))

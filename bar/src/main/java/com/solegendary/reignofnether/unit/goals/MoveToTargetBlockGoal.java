@@ -113,6 +113,10 @@ public class MoveToTargetBlockGoal extends Goal {
     private static int syncFallbacksThisTick = 0;
     private int busyStreak = 0;
 
+    /** Diagnostics for tests: an async path request is in flight / the goal is active. */
+    public boolean isPathPending() { return pathPending; }
+    public boolean isGoalRunning() { return isRunning; }
+
     /** The game time of this goal's last path request (tests: did an order re-path the unit?). */
     public long getLastRequestTime() { return lastRequestTime; }
 
