@@ -28,6 +28,8 @@ public final class VanillaPathBudget {
 
     /** Counters since the last [Paths] line: unit createPath calls, how many took the short search, how many fell back. */
     public static int calls = 0, shortSearches = 0, fallbacks = 0;
+    /** Every fallback since the server started (never reset: tests compare it before and after). */
+    public static long fallbacksTotal = 0;
 
     /** The farthest target's distance from the mob (blocks), the first search's range is built from it. */
     public static double farthest(Mob mob, Set<BlockPos> targets) {
@@ -39,10 +41,13 @@ public final class VanillaPathBudget {
         return Math.sqrt(best);
     }
 
+    /** GameTests only: caps the short search's range so a small arena can make it miss and take the fallback. */
+    public static float shortRangeCapForTests = Float.MAX_VALUE;
+
     /** The first search's range, or {@code full} when the short search would not be shorter. */
     public static float shortRange(double distance, float full) {
         float r = (float) Math.max(MIN_RANGE, Math.min(full, distance + MARGIN));
-        return Math.min(r, full);
+        return Math.min(Math.min(r, full), shortRangeCapForTests);
     }
 
     /** The node-budget multiplier for a short search of {@code range} out of {@code full}. */

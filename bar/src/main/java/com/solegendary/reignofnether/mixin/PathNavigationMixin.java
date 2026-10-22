@@ -45,6 +45,9 @@ public abstract class PathNavigationMixin {
                                             CallbackInfoReturnable<Path> cir) {
         if (!(mob instanceof Unit) || mob.level().isClientSide() || targets.isEmpty())
             return;
+        // vanilla answers this with the path in hand, no search at all: leave it to vanilla
+        if (this.path != null && !this.path.isDone() && targets.contains(((PathNavigation) (Object) this).getTargetPos()))
+            return;
         VanillaPathBudget.calls++;
         float full = (float) mob.getAttributeValue(Attributes.FOLLOW_RANGE);
         float range = VanillaPathBudget.shortRange(VanillaPathBudget.farthest(mob, targets), full);
@@ -67,6 +70,7 @@ public abstract class PathNavigationMixin {
             return;
         }
         VanillaPathBudget.fallbacks++;
+        VanillaPathBudget.fallbacksTotal++;
         Path again = createPath(targets, regionOffset, offsetUpward, accuracy, full);
         cir.setReturnValue(again != null ? again : p);
     }
