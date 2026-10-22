@@ -108,6 +108,7 @@ public class NotificationClientEvents {
         }
     }
 
+    private static final ChatDedupe CHAT_DEDUPE = new ChatDedupe();
     private static final Alert[] ALERTS = Alert.values();
     private static final long[] lastFiredMs = new long[ALERTS.length];
 
@@ -325,6 +326,12 @@ public class NotificationClientEvents {
     @SubscribeEvent
     public static void onChat(ClientChatReceivedEvent evt) {
         Component msg = evt.getMessage();
+        // the mod's own announcements: an identical line again within 10 s is dropped, not stacked (ChatDedupe)
+        if (msg != null && msg.getContents() instanceof TranslatableContents dtc && ChatDedupe.isAnnouncement(dtc.getKey())
+                && CHAT_DEDUPE.seen(msg.getString(), System.currentTimeMillis()) > 1) {
+            evt.setCanceled(true);
+            return;
+        }
         if (msg == null || !(msg.getContents() instanceof TranslatableContents tc)
                 || !"server.reignofnether.t3_arrived".equals(tc.getKey()) || !canAlert())
             return;
@@ -373,7 +380,7 @@ public class NotificationClientEvents {
         // idle factories: BAR nags every 30 s for as long as a lab sits empty (the button beside the idle-worker
         // one jumps to them); quiet during the warm-up like everything else
         int idleLabs = IdleFactories.count();
-        if (idleLabs > 0 && canAlert())
+        if (EconomyWarning.choose(false, EconomyWarning.barLineUp(), idleLabs) == EconomyWarning.Kind.IDLE_FACTORIES && canAlert())
             fire(Alert.IDLE_FACTORY, String.valueOf(idleLabs));
 
         // economy - same rule as the HUD's WASTING label (EconomyBarRenderer): only true waste, i.e. overflow that
@@ -393,8 +400,12 @@ public class NotificationClientEvents {
             if (energyFullPolls >= SUSTAIN_POLLS)
                 fire(Alert.ENERGY_FULL, null);
         }
-        if (stallPolls >= SUSTAIN_POLLS)
-            fire(EconomyBarRenderer.shortOnMetal(res, eco) ? Alert.METAL_STALL : Alert.ENERGY_STALL, null);
+        if (stallPolls >= SUSTAIN_POLLS) {
+            // a stall with both pools nearly full is not a shortage (EconomyWarning): nothing to announce
+            EconomyWarning.Pool pool = EconomyWarning.stallPool(res.ore / Math.max(1f, eco.metalStorage), res.wood / Math.max(1f, eco.energyStorage));
+            if (pool != EconomyWarning.Pool.UNNAMED)
+                fire(pool == EconomyWarning.Pool.METAL ? Alert.METAL_STALL : Alert.ENERGY_STALL, null);
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------

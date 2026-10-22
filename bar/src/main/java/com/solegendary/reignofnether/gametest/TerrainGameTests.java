@@ -554,7 +554,9 @@ public class TerrainGameTests {
         EngagementStance.set(stuck, EngagementStance.HOLD_FIRE);
         EngagementStance.set(free, EngagementStance.HOLD_FIRE);
         ArenaReady.whenTicking(helper, made, 150, orderedAt -> {
-            ((AttackerUnit) stuck).setUnitAttackTargetForced(foeA);
+            // a target the unit picked on its own (not forced): a player-ordered target is never dropped by the nudge
+            // (OrdersObeyGameTests.forced_target_survives_a_stuck_nudge_give_up)
+            ((AttackerUnit) stuck).setUnitAttackTarget(foeA);
             ((AttackerUnit) free).setUnitAttackTargetForced(foeB);
             helper.runAfterDelay(300, () -> {
                 try {
