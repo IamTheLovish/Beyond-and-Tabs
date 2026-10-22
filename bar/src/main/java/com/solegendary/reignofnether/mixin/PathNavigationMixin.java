@@ -1,6 +1,5 @@
 package com.solegendary.reignofnether.mixin;
 
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
 import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
@@ -42,29 +41,33 @@ public class PathNavigationMixin {
         return mob instanceof SpiderUnit spider && spider.isWallClimbing();
     }
 
-    // Vanilla auto-recompute must never touch an RTS-pathed unit. On any block change,
+    // Vanilla auto-recompute must never touch a unit (RTS or vanilla pathed). On any block change,
     // ServerLevel.sendBlockUpdated asks every mob's navigation shouldRecomputePath (true within
     // remaining-path-length blocks of the path midpoint - a huge sphere for a long march) and then
     // recomputePath() replaces the path with a synchronous vanilla createPath(targetPos). targetPos is
     // whatever the last vanilla createPath set (eg. an attack goal's chase target) and stop() never clears
     // it, so the unit veers back toward a STALE position - the multiplayer "units walk backwards /
     // oscillate" bug. Block-change reactions are the RTS system's job (dirty-chunk reclassify + the move
-    // goal's own repath); vanilla mode (gamerule off) keeps stock behaviour.
+    // goal's own repath). This holds in vanilla mode (gamerule off) too: every unit goal repaths itself on its own
+    // throttle (move goal when its path is done, chase goals every 5-20 ticks), so the stock recompute only added a
+    // second, unthrottled createPath per nearby unit on every block change - half of bat:buildings in the Oct 22
+    // 490-entity match was this, each placed building block re-pathing every unit within range. A path a new block
+    // cuts is still caught by vanilla's own stuck check (stop -> the goal repaths). Non-unit mobs keep stock behaviour.
     @Unique
-    private boolean reignofnether$usesRtsPaths() {
-        return mob instanceof Unit && UnitServerEvents.rtsPathfinding;
+    private boolean reignofnether$ownsRepath() {
+        return mob instanceof Unit;
     }
 
     @Inject(method = "shouldRecomputePath", at = @At("HEAD"), cancellable = true)
     private void reignofnether$noBlockUpdateRecompute(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (reignofnether$usesRtsPaths()) cir.setReturnValue(false);
+        if (reignofnether$ownsRepath()) cir.setReturnValue(false);
     }
 
     // Also gate recomputePath itself: it can still fire via a pending hasDelayedRecomputation from before
     // the gamerule turned on, or any direct caller.
     @Inject(method = "recomputePath", at = @At("HEAD"), cancellable = true)
     private void reignofnether$noRecompute(CallbackInfo ci) {
-        if (reignofnether$usesRtsPaths()) ci.cancel();
+        if (reignofnether$ownsRepath()) ci.cancel();
     }
 
     @ModifyConstant(method = "followThePath", constant = @Constant(doubleValue = 1.0))
