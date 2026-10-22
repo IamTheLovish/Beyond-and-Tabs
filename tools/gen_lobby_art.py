@@ -1098,6 +1098,19 @@ def river_at(y):
     return RIVER[-1][0], RIVER[-1][2]
 
 
+RIVER_ROCKS = ((0.875, 0.35, 0.010), (0.905, -0.45, 0.013), (0.93, 0.55, 0.016), (0.955, -0.30, 0.018),
+               (0.985, 0.70, 0.024), (1.0, -0.65, 0.026))   # (y, across -1..1, radius)
+
+
+def river_rocks():
+    """(x, y, r) of the rocks that break the river's surface (LobbyBackdrop.RINGS mirrors these for the ripple rings)."""
+    out = []
+    for yy, uu, rad in RIVER_ROCKS:
+        c = river_at(yy)
+        out.append((c[0] + uu * c[1], yy, rad))
+    return out
+
+
 def river_uv(X, Y):
     """Per-pixel river coordinates: u in -1..1 across (|u| > 1 is the bank), v the perspective distance."""
     ys = np.array([p[1] for p in RIVER])
@@ -1194,10 +1207,7 @@ def ground(w=2560, h=484):
             places.append((x, yy + rr.uniform(-0.003, 0.003), rad * rr.uniform(0.8, 1.2)))
     # wet rocks breaking the river's surface
     in_river = []
-    for yy, uu, rad in ((0.875, 0.35, 0.010), (0.905, -0.45, 0.013), (0.93, 0.55, 0.016), (0.955, -0.30, 0.018),
-                        (0.985, 0.70, 0.024), (1.0, -0.65, 0.026)):
-        c = river_at(yy)
-        in_river.append((c[0] + uu * c[1], yy, rad))
+    in_river = river_rocks()
     places += in_river
     for x, y, r in sorted(places, key=lambda p: p[1]):
         ps = b.pts(rock_poly(x, y, r, rr))
@@ -1869,8 +1879,32 @@ def grain_tex(size=256):
     save_rgba(rgb, a, "grain")
 
 
+def leaf(size=32):
+    ss = 4
+    img = Image.new("RGBA", (size * ss, size * ss), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    n = size * ss
+    pts = [(n * 0.08, n * 0.5), (n * 0.35, n * 0.22), (n * 0.7, n * 0.24), (n * 0.94, n * 0.5), (n * 0.7, n * 0.74),
+           (n * 0.35, n * 0.76)]
+    d.polygon(pts, fill=(172, 82, 40, 255), outline=(70, 30, 16, 255))
+    d.line([(n * 0.08, n * 0.5), (n * 0.94, n * 0.5)], fill=(96, 40, 20, 255), width=ss)
+    for k in range(3):
+        x = n * (0.3 + 0.2 * k)
+        d.line([(x, n * 0.5), (x + n * 0.1, n * 0.3)], fill=(110, 48, 24, 255), width=ss // 2)
+        d.line([(x, n * 0.5), (x + n * 0.1, n * 0.7)], fill=(110, 48, 24, 255), width=ss // 2)
+    img.resize((size, size), Image.LANCZOS).save(os.path.join(OUT, "leaf.png"), optimize=True)
+
+
+def ring(w=128, h=64):
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    X, Y = (xs - w / 2 + 0.5) / (w / 2), (ys - h / 2 + 0.5) / (h / 2)
+    r = np.hypot(X, Y)
+    a = np.exp(-((r - 0.85) / 0.06) ** 2) * (0.6 + 0.4 * np.clip(-Y, 0, 1))
+    save_rgba(np.ones((h, w, 3), np.float32), np.clip(a, 0, 1), "ring")
+
+
 def sprites():
-    glow(); sparkle(); bats(); petal(); cascade(); ripples(); streak(); grain_tex(); vignette(); mist()
+    glow(); sparkle(); bats(); petal(); leaf(); ring(); cascade(); ripples(); streak(); grain_tex(); vignette(); mist()
 
 
 # ---------------------------------------------------------------- the hand-drawn pass: ink pen + coloured pencil
@@ -2139,10 +2173,13 @@ def compose(W, H, t=0.0, lobby=False):
     S.art(L["spires_far"], "spires_far")
     S.art(L["clouds_near"], "clouds_near", wrap_dx=t * 0.014 * S.A)
     S.art(L["cathedral"], "cathedral")
+    S.art(L["cathedral_rim"], "cathedral", mode="add", alpha=0.45)
     S.art(L["glass_rose"], "glass_rose", mode="add", alpha=0.5)
     S.art(L["glass_lancets"], "glass_lancets", mode="add", alpha=0.45)
     S.art(L["mist"], "mist", wrap_dx=t * 0.01 * S.A, alpha=0.9)
     S.art(L["ground"], "ground")
+    hz = 0.09
+    S.place(L["glow"], S.sx(-hz), S.sy(0.735 - hz * 0.6), S.sx(hz), S.sy(0.735 + hz * 0.6), mode="add", tint=(1, 0.55, 0.3), alpha=0.25)
     cx_, ty, thw, by, bhw = CASCADE
     S.place(L["cascade"], S.sx(cx_ - bhw), S.sy(ty), S.sx(cx_ + bhw), S.sy(by), alpha=0.95)
     sample_strip(S, L["ripples"], t, "ripples")
@@ -2156,8 +2193,10 @@ def compose(W, H, t=0.0, lobby=False):
         fr = bt.crop((f * fw, 0, (f + 1) * fw, bt.height))
         S.place(fr, S.sx(x - s), S.sy(y - s / 2), S.sx(x + s), S.sy(y + s / 2))
     fwpx = FRAME_W * S.A
-    S.place(L["frame_left"], 0, S.H - S.A, fwpx, S.H)
-    S.place(L["frame_right"], S.W - fwpx, S.H - S.A, S.W, S.H)
+    off = 0.03 * S.A
+    for part in ("_tree", "", "_vines"):
+        S.place(L["frame_left" + part], -off, S.H - S.A, fwpx - off, S.H)
+        S.place(L["frame_right" + part], S.W - fwpx + off, S.H - S.A, S.W + off, S.H)
     pt = L["petal"]
     r = np.random.default_rng(5)
     for i in range(10):
@@ -2188,11 +2227,31 @@ def previews():
     compose(1920, 1080, lobby=True).save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"))
 
 
+SMOOTH = {"glow", "mist", "vignette", "glass_rose", "glass_lancets", "grain", "sparkle", "ring", "streak", "ripples",
+          "cathedral_rim"}
+
+
+def compact():
+    """Palette the textured layers (256 colours, Floyd-Steinberg): the pencil grain hides the quantisation and the files
+    shrink 3-5x. Minecraft's NativeImage (stb_image) reads paletted PNGs with tRNS alpha. Smooth glows stay RGBA."""
+    for f in sorted(os.listdir(OUT)):
+        nm = f[:-4]
+        path = os.path.join(OUT, f)
+        if nm in SMOOTH or os.path.getsize(path) < 120_000:
+            continue
+        im = Image.open(path)
+        if im.mode == "P":
+            continue
+        q = im.convert("RGBA").quantize(256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.FLOYDSTEINBERG)
+        q.save(path, optimize=True)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     if "--previews-only" not in sys.argv:
         sky(); moon(); all_clouds(); spires_far(); cathedral(); ground(); fields(); frames(); sprites()
         hand_drawn_all()
+        compact()
     previews()
     total = 0
     for f in sorted(os.listdir(OUT)):
