@@ -73,6 +73,32 @@ final class GenTerrain {
 
     private double symX, symZ;
 
+    /**
+     * Blocks either side of a mirror map's fold (the line through the centre between the sides) over which a field is
+     * blended with its point mirror. Reading the far half straight off the canonical half leaves a seam: the two points
+     * that meet on the fold are a map apart in the noise (Oct 22, found on the sheets: 538 of 1206 fold columns jumped 2+).
+     */
+    static final double SEAM_BAND = 24;
+
+    private interface Field {
+        double at(double x, double z);
+    }
+
+    /**
+     * A noise field as this map reads it: as is, or on a mirror map point-symmetric through the centre and continuous
+     * across the fold. Beyond the band it is the canonical half's value (the old fold); inside it a smooth blend with
+     * the mirror point, half and half on the fold. Both points of a pair compute from the same canonical point, so the
+     * symmetry is exact.
+     */
+    private double field(Field f, double x, double z) {
+        if (!p.mirror)
+            return f.at(x, z);
+        sym(x, z);
+        double cx = symX, cz = symZ;
+        double k = Fairness.smooth(-SEAM_BAND, SEAM_BAND, cx * p.axisX + cz * p.axisZ);
+        return k >= 1 ? f.at(cx, cz) : k * f.at(cx, cz) + (1 - k) * f.at(-cx, -cz);
+    }
+
     /** A mirror map reads every field at the canonical half's point (point symmetry through the centre). */
     private void sym(double x, double z) {
         if (p.mirror) {
@@ -99,18 +125,20 @@ final class GenTerrain {
         // the lattice is centred on the map (multiples of LATTICE), so a mirror map's lattice is its own mirror image
         int lh = half / LATTICE + 2, lw = 2 * lh + 1;
         double[] lt = new double[lw * lw], lc = new double[lw * lw];
+        Field tier = (sx, sz) -> {
+            double wx = sx + 28 * warpA.fbm(sx, sz, 150, 2, 0.5), wz = sz + 28 * warpB.fbm(sx, sz, 150, 2, 0.5);
+            double bb = base.fbm(wx, wz, 190, 4, 0.5);
+            double rg = ridge.ridged(wx, wz, 140);
+            double gt = Fairness.smooth(0.0, 0.35, gate.fbm(sx, sz, 300, 2, 0.5));
+            return bb + 0.5 * Math.max(0, rg - 0.8) / 0.2 * gt
+                + p.centreBias * StrictMath.exp(-(sx * sx + sz * sz) / (cr * cr));
+        };
+        Field cliffiness = (sx, sz) -> Fairness.smooth(-0.15, 0.35, cl.fbm(sx, sz, 170, 3, 0.5));
         for (int a = -lh; a <= lh; a++)
             for (int b = -lh; b <= lh; b++) {
-                sym(a * LATTICE, b * LATTICE);
-                double sx = symX, sz = symZ;
-                double wx = sx + 28 * warpA.fbm(sx, sz, 150, 2, 0.5), wz = sz + 28 * warpB.fbm(sx, sz, 150, 2, 0.5);
-                double bb = base.fbm(wx, wz, 190, 4, 0.5);
-                double rg = ridge.ridged(wx, wz, 140);
-                double gt = Fairness.smooth(0.0, 0.35, gate.fbm(sx, sz, 300, 2, 0.5));
                 int li = (a + lh) * lw + (b + lh);
-                lt[li] = bb + 0.5 * Math.max(0, rg - 0.8) / 0.2 * gt
-                    + p.centreBias * StrictMath.exp(-(sx * sx + sz * sz) / (cr * cr));
-                lc[li] = Fairness.smooth(-0.15, 0.35, cl.fbm(sx, sz, 170, 3, 0.5));
+                lt[li] = field(tier, a * LATTICE, b * LATTICE);
+                lc[li] = field(cliffiness, a * LATTICE, b * LATTICE);
             }
         double[] t = new double[w * w];
         int sampled = 0;
@@ -271,6 +299,7 @@ final class GenTerrain {
     /** Terraced heights from the tier field; lakes where it is lowest; a block of roughness on open ground. */
     private void heights() {
         GenNoise micro = new GenNoise(GenRng.stream(p.draw, "micro").nextLong());
+        Field roughness = (sx, sz) -> micro.fbm(sx, sz, 22, 2, 0.5);
         double[] flat = flatness();
         for (int x = -half; x <= half; x++)
             for (int z = -half; z <= half; z++) {
@@ -287,9 +316,8 @@ final class GenTerrain {
                 }
                 double sharp = lerp(1.0, 0.08, cliff[i]);
                 hf[i] = heightOf(terrace(t, sharp));
-                sym(x, z);
                 if (flat[i] < 1)
-                    hf[i] += 1.1 * micro.fbm(symX, symZ, 22, 2, 0.5) * (1 - flat[i]);
+                    hf[i] += 1.1 * field(roughness, x, z) * (1 - flat[i]);
             }
     }
 
@@ -377,14 +405,14 @@ final class GenTerrain {
      */
     private void rim() {
         GenNoise rn = new GenNoise(GenRng.stream(p.draw, "rim").nextLong());
+        Field shelf = (sx, sz) -> rn.fbm(sx, sz, 90, 2, 0.5);
         for (int x = -half; x <= half; x++)
             for (int z = -half; z <= half; z++) {
                 int i = idx(x, z);
                 double e = m.distanceToEdge(x, z);
                 if (e > 44 || e < 0)
                     continue;
-                sym(x, z);
-                boolean on = rn.fbm(symX, symZ, 90, 2, 0.5) > -0.05;
+                boolean on = field(shelf, x, z) > -0.05;
                 if (on) {
                     double target = e < 30 ? 8 : lerp(8, hf[i], Fairness.smooth(30, 44, e));
                     if (target > hf[i]) {
@@ -615,6 +643,7 @@ final class GenTerrain {
             grass = (byte) MapLayout.Surface.GRASS.ordinal(), cliffS = (byte) MapLayout.Surface.CLIFF.ordinal(),
             alt = (byte) MapLayout.Surface.MESA.ordinal(), land = (byte) MapLayout.Surface.LAND.ordinal();
         GenNoise sn = new GenNoise(GenRng.stream(p.draw, "surface").nextLong());
+        Field stone = (sx, sz) -> sn.fbm(sx, sz, 26, 2, 0.5);
         for (int x = -half; x <= half; x++)
             for (int z = -half; z <= half; z++) {
                 int i = idx(x, z);
@@ -636,10 +665,8 @@ final class GenTerrain {
                     m.surface[i] = cliffS;
                 else if (hh <= 1 && nearWater(x, z, 3))
                     m.surface[i] = sand;
-                else {
-                    sym(x, z);
-                    m.surface[i] = hh >= 12 && sn.fbm(symX, symZ, 26, 2, 0.5) > -0.1 ? alt : grass;
-                }
+                else
+                    m.surface[i] = hh >= 12 && field(stone, x, z) > -0.1 ? alt : grass;
             }
     }
 
