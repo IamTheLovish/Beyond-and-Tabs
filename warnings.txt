@@ -1,0 +1,152 @@
+(2520 first-launch config/mod-loading notices filtered out)
+[01:06:15] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[01:06:24] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[01:06:32] [Worker-ResourceReload-1/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[01:06:32] [Worker-ResourceReload-1/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[01:06:38] [Worker-ResourceReload-2/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[01:06:39] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[01:06:39] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[01:06:39] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[01:06:39] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[01:06:39] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[01:06:42] [Render thread/WARN]: Game took 37.885 seconds to start
+[01:08:15] [Render thread/WARN]: Initial datapack load took 2.066 s
+[01:08:27] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[01:08:31] [Render thread/WARN]: Time from main menu to in-game was 15.750315 seconds
+[01:08:31] [Render thread/WARN]: Total time to load game and open world was 53.635315 seconds
+[01:08:36] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 4675ms or 93 ticks behind
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.entities' took aprox 146.831274 ms
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 177.513002 ms
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 177.618641 ms
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 178.306421 ms
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 192.009444 ms
+[01:09:39] [Server thread/WARN]: Something's taking too long! 'root' took aprox 192.083916 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.entities' took aprox 107.913377 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 113.258713 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 113.30948 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 113.944029 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 121.493475 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root' took aprox 121.654499 ms
+[01:09:40] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 221.232942 ms
+[01:09:40] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 140.489551 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.entities' took aprox 113.155522 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 119.265313 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 119.331874 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 119.779801 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 120.502403 ms
+[01:09:40] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.563926 ms
+[01:09:40] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 208.808455 ms
+[01:09:40] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 215.777925 ms
+[01:09:40] [Render thread/WARN]: Something's taking too long! 'root' took aprox 493.253116 ms
+[01:09:41] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 631.633701 ms
+[01:09:41] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 173.41887 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.entities' took aprox 122.537894 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 126.902999 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 126.948798 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 127.135661 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 127.547833 ms
+[01:09:41] [Server thread/WARN]: Something's taking too long! 'root' took aprox 127.600012 ms
+[01:09:41] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 253.652687 ms
+[01:09:41] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 261.669589 ms
+[01:09:41] [Render thread/WARN]: Something's taking too long! 'root' took aprox 935.704255 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 511.753428 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 106.775822 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 197.141483 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 258.708898 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root' took aprox 797.667962 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 195.845872 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 150.844498 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 263.286541 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 273.978826 ms
+[01:09:42] [Render thread/WARN]: Something's taking too long! 'root' took aprox 548.249694 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 174.797969 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.entities' took aprox 112.572135 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.compilechunks' took aprox 121.874735 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 116.860995 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 116.901987 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 117.090571 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 118.050692 ms
+[01:09:43] [Server thread/WARN]: Something's taking too long! 'root' took aprox 118.239979 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 305.50426 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 316.679815 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root' took aprox 545.849066 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 177.459881 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 193.583083 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 202.969104 ms
+[01:09:43] [Render thread/WARN]: Something's taking too long! 'root' took aprox 416.98495 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 132.309021 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 128.48914 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 136.628508 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root' took aprox 323.273868 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 200.720767 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 210.138938 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root' took aprox 361.834311 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 106.540546 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 159.494858 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 168.156755 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root' took aprox 337.874859 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 236.064455 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 245.484909 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 375.504595 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 111.309968 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 154.717875 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 170.25473 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 326.185262 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 149.462028 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 159.134032 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 324.880275 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 172.057424 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 181.548714 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 305.250891 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 132.008157 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 140.991821 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 268.851369 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 108.121685 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 215.444163 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 224.358883 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 345.816659 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 142.216862 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 159.878948 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 290.650115 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 117.646347 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 178.860287 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 184.980906 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 362.169587 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 113.76988 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 106.414205 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 189.313993 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 194.97092 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 354.537436 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 105.111006 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 108.941063 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 228.358887 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 100.170162 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 268.355019 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 367.134489 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 114.335875 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 101.272156 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 199.911635 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 204.829235 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 375.250252 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 130.874288 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 136.016163 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 283.392995 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 116.849297 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 103.818003 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 151.237782 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 326.104169 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 214.702624 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.compilechunks' took aprox 228.256482 ms
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 293.075565 ms
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 307.846193 ms
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root' took aprox 407.050821 ms
+[01:11:29] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png]

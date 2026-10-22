@@ -1,0 +1,200 @@
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 159.494858 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 168.156755 ms
+[01:09:44] [Render thread/WARN]: Something's taking too long! 'root' took aprox 337.874859 ms
+[01:09:45] [Notification Thread/INFO]: [GC] pause 50 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1308 MB of 4096 MB
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 236.064455 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 245.484909 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 375.504595 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 111.309968 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 154.717875 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 170.25473 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 326.185262 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 149.462028 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 159.134032 ms
+[01:09:45] [Render thread/WARN]: Something's taking too long! 'root' took aprox 324.880275 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 172.057424 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 181.548714 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 305.250891 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 132.008157 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 140.991821 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 268.851369 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 108.121685 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 215.444163 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 224.358883 ms
+[01:09:46] [Render thread/WARN]: Something's taking too long! 'root' took aprox 345.816659 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 142.216862 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 159.878948 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 290.650115 ms
+[01:09:47] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_mid 1792631387150
+[01:09:47] [Render thread/INFO]: [Eyes] 18_overlays_mid: zoom 45, 225 selected, 505 units and 1704 buildings known to the client, 225 selected units, 0 selected buildings
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 117.646347 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 178.860287 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 184.980906 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 362.169587 ms
+[01:09:47] [IO-Worker-4/INFO]: [Eyes] 18_overlays_mid: Saved screenshot as bat_eyes_18_overlays_mid.png
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 113.76988 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 106.414205 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 189.313993 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 194.97092 ms
+[01:09:47] [Render thread/WARN]: Something's taking too long! 'root' took aprox 354.537436 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 105.111006 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 108.941063 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 228.358887 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 100.170162 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 263.674016 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 268.355019 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 367.134489 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 114.335875 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.entities' took aprox 101.272156 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 199.911635 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 204.829235 ms
+[01:09:48] [Render thread/WARN]: Something's taking too long! 'root' took aprox 375.250252 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 130.874288 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 136.016163 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 283.392995 ms
+[01:09:49] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_mid_building 1792631389162
+[01:09:49] [Render thread/INFO]: [Eyes] 18_overlays_mid_building: 1 building(s) selected at -211, 70, 106
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.tick' took aprox 116.849297 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 103.818003 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 151.237782 ms
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 326.104169 ms
+[01:09:49] [IO-Worker-9/INFO]: [Eyes] 18_overlays_mid_building: Saved screenshot as bat_eyes_18_overlays_mid_building.png
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root' took aprox 214.702624 ms
+[01:09:49] [IO-Worker-6/INFO]: Flushed metrics to /tmp/minecraft-profiling13366983081101149039/server/metrics/ticking.csv
+[01:09:49] [Notification Thread/INFO]: [GC] 6 collections took 269 ms of the last 11 s
+[01:09:49] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level.compilechunks' took aprox 228.256482 ms
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer.level' took aprox 293.075565 ms
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root.gameRenderer' took aprox 307.846193 ms
+[01:09:50] [Render thread/INFO]: [FrameAuto] recorder: Stopped tick profiling after 10.30 seconds and 25 ticks (2.43 ticks per second)
+[01:09:50] [Render thread/WARN]: Something's taking too long! 'root' took aprox 407.050821 ms
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/event-loops.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/gpu.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/chunk_rendering_dispatching.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/cpu.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/chunk_rendering.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/mailboxes.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/jvm.csv
+[01:09:50] [IO-Worker-4/INFO]: Flushed metrics to /tmp/minecraft-profiling9966791131335202491/client/metrics/ticking.csv
+[01:09:50] [Render thread/INFO]: [Frame] p50 68.4 ms (15 fps), p95 382.0 ms, max 936.8 ms over 240 frames; RTS view, zoom 200, 505 units known
+[01:09:50] [Render thread/INFO]: [Anim] 45 units/frame (max 51): animation p50 1.3 ms, p95 4.6 ms; unit render p50 84.4 ms, p95 129.4 ms; per unit 48.9 us anim, 1772.3 us render (anim 3%); RTS view, zoom 200, icons, over 27 frames
+[01:09:50] [Render thread/INFO]: [FrameParts] 27 frames, mean 411.2 ms/frame; ours 89.9 ms (22%): unitBodies 76.41 (max 166.4, 43/f) | hud 7.40 (max 54.5, 1.0/f) | strategicIcons 2.04 (max 33.2, 0.1/f) | unitOverlays 1.34 (max 5.1, 11/f) | buildingBoxes 0.94 (max 3.0, 1.0/f) | minimap 0.93 (max 3.8, 29/f) | unitRings 0.81 (max 4.8, 11/f); elsewhere 321.3 ms; 0 section re-mesh requests/s
+[01:09:50] [Render thread/INFO]: [FrameParts] 200 ticks, ours 1.0 ms/tick: unitTick 0.99 (max 7.8, 505/t)
+[01:09:50] [Server thread/FATAL]: Preparing crash report with UUID 14512c00-b28e-465f-8ba8-9db75b08974d
+[01:09:50] [Server thread/FATAL]: Preparing crash report with UUID fef20c96-83fb-4362-a818-aec9d3c14070
+[01:09:51] [Server thread/FATAL]: Preparing crash report with UUID c12461e1-d774-4f6e-ab7d-7ba7e97c751b
+[01:09:51] [IO-Worker-4/INFO]: Compressed to debug/profiling/2026-10-22_01_09_51-Beyond and Tabs - Skirmish 1-1_20_1.zip
+[01:09:51] [Render thread/INFO]: [FrameAuto] 2026-10-22_01_09_51-Beyond and Tabs - Skirmish 1-1_20_1.zip: client/profiling.txt held no sections (EMPTY PROFILE)
+[01:09:51] [Render thread/INFO]: [FrameAuto] recorder: Profiling ended. Saved results to debug/profiling/2026-10-22_01_09_51-Beyond and Tabs - Skirmish 1-1_20_1.zip
+[01:09:53] [Server thread/INFO]: [Tick] p50 20.4 ms, p95 46.4 ms, max 93.3 ms over the last 100 ticks; 508 units, 4 buildings, 1 players
+[01:09:53] [Server thread/INFO]: [Sys] 200 ticks, mean 34.5 ms/tick; ours 6.7 ms (19%): attacker/entityScan 2.13 (max 11.9, 125/t) | unit 1.08 (max 5.7, 508/t) | attacker 0.67 (max 6.8, 508/t) | separation 0.64 (max 5.7, 508/t) | buildings 0.45 (max 2.6, 1.0/t) | unstick 0.42 (max 3.5, 508/t) | reactions 0.28 (max 1.4, 508/t) | stuckNudge 0.25 (max 2.5, 508/t) | attacker/idleAggro 0.18 (max 2.9, 125/t) | unitGrid 0.17 (max 0.9, 1.0/t) | unitSync 0.14 (max 3.3, 0.1/t) | autoCaster 0.13 (max 6.0, 1.0/t) | attacker/buildingScan 0.08 (max 5.4, 83/t) | attacker/retarget 0.03 (max 0.2, 42/t) (+7 smaller); elsewhere 27.8 ms
+[01:09:54] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_strategic 1792631394200
+[01:09:54] [Render thread/INFO]: [Eyes] 18_overlays_strategic: zoom 200, strategic view true, 505 units and 1705 buildings known to the client, 225 selected units, 0 selected buildings
+[01:09:54] [IO-Worker-6/INFO]: [Eyes] 18_overlays_strategic: Saved screenshot as bat_eyes_18_overlays_strategic.png
+[01:09:56] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[01:10:00] [Render thread/INFO]: [Frame] p50 79.0 ms (13 fps), p95 419.8 ms, max 936.8 ms over 240 frames; RTS view, zoom 30, 505 units known
+[01:10:00] [Render thread/INFO]: [Anim] 35 units/frame (max 51): animation p50 0.4 ms, p95 0.9 ms; unit render p50 55.5 ms, p95 83.9 ms; per unit 10.7 us anim, 1262.1 us render (anim 1%); RTS view, zoom 30, detail on, over 51 frames
+[01:10:00] [Render thread/INFO]: [FrameParts] 51 frames, mean 203.3 ms/frame; ours 60.7 ms (30%): unitBodies 44.64 (max 112.4, 36/f) | hud 11.50 (max 334.1, 1.0/f) | strategicIcons 1.83 (max 13.0, 0.3/f) | unitOverlays 0.92 (max 1.4, 11/f) | minimap 0.70 (max 3.9, 29/f) | unitRings 0.69 (max 3.9, 11/f) | buildingBoxes 0.44 (max 1.5, 1.0/f); elsewhere 142.6 ms; 0 section re-mesh requests/s
+[01:10:00] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.4 ms/tick: unitTick 0.45 (max 1.3, 505/t)
+[01:10:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:03] [Server thread/INFO]: saved 0 netherzones in serverevents
+[01:10:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:03] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1440|1044|0
+[01:10:03] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1135|534|0
+[01:10:03] [Server thread/INFO]: [Tick] p50 19.2 ms, p95 32.3 ms, max 36.1 ms over the last 100 ticks; 509 units, 6 buildings, 1 players
+[01:10:03] [Server thread/INFO]: [Sys] 200 ticks, mean 22.1 ms/tick; ours 4.4 ms (20%): attacker/entityScan 1.82 (max 12.0, 125/t) | unit 0.68 (max 6.6, 509/t) | attacker 0.36 (max 3.4, 509/t) | separation 0.33 (max 3.3, 509/t) | buildings 0.32 (max 4.3, 1.0/t) | unitGrid 0.27 (max 6.3, 1.0/t) | attacker/idleAggro 0.12 (max 6.1, 125/t) | unitSync 0.12 (max 5.8, 0.1/t) | unstick 0.08 (max 0.2, 509/t) | bots 0.07 (max 5.6, 0.1/t) | reactions 0.07 (max 0.9, 509/t) | autoCaster 0.06 (max 2.0, 1.0/t) | stuckNudge 0.04 (max 2.0, 509/t) (+8 smaller); elsewhere 17.7 ms
+[01:10:05] [Render thread/INFO]: [Eyes] 18_overlays slice 1/8: zoom 30 (reached 30, normal), 47 frames: p50 154.0 ms, p95 246.6 ms, max 265.8 ms | ms/frame: unitOverlays 0.73, buildingBoxes 0.44, strategicIcons 0.00, unitRings 0.84, minimap 0.67, hud 4.72, unitBodies 61.38
+[01:10:13] [Render thread/INFO]: [Frame] p50 131.9 ms (8 fps), p95 546.0 ms, max 1016.0 ms over 240 frames; RTS view, zoom 200, 505 units known
+[01:10:13] [Render thread/INFO]: [Anim] 26 units/frame (max 51): animation p50 0.1 ms, p95 0.5 ms; unit render p50 5.2 ms, p95 75.0 ms; per unit 11.1 us anim, 1213.9 us render (anim 1%); RTS view, zoom 200, icons, over 58 frames
+[01:10:13] [Render thread/INFO]: [FrameParts] 58 frames, mean 204.1 ms/frame; ours 38.1 ms (19%): unitBodies 30.25 (max 82.0, 25/f) | hud 4.15 (max 7.7, 1.0/f) | strategicIcons 1.65 (max 7.8, 0.5/f) | unitOverlays 0.80 (max 1.5, 11/f) | minimap 0.57 (max 0.9, 29/f) | unitRings 0.40 (max 1.7, 11/f) | buildingBoxes 0.29 (max 0.6, 1.0/f); elsewhere 166.0 ms; 0 section re-mesh requests/s
+[01:10:13] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.4 ms/tick: unitTick 0.36 (max 2.5, 505/t)
+[01:10:13] [Server thread/INFO]: [Tick] p50 15.0 ms, p95 25.8 ms, max 34.1 ms over the last 100 ticks; 509 units, 6 buildings, 1 players
+[01:10:13] [Server thread/INFO]: [Sys] 200 ticks, mean 17.4 ms/tick; ours 3.4 ms (19%): attacker/entityScan 1.40 (max 6.6, 125/t) | unit 0.52 (max 2.2, 509/t) | attacker 0.31 (max 5.1, 509/t) | buildings 0.29 (max 1.7, 1.0/t) | separation 0.26 (max 3.3, 509/t) | unitGrid 0.17 (max 3.0, 1.0/t) | unstick 0.08 (max 0.4, 509/t) | unitSync 0.07 (max 2.1, 0.1/t) | attacker/idleAggro 0.07 (max 0.2, 125/t) | reactions 0.05 (max 0.2, 509/t) | autoCaster 0.05 (max 0.1, 1.0/t) | stuckNudge 0.03 (max 0.0, 509/t) | economy 0.02 (max 0.2, 1.0/t) (+8 smaller); elsewhere 14.1 ms
+[01:10:16] [Render thread/INFO]: [Eyes] 18_overlays slice 2/8: zoom 200 (reached 200, strategic), 28 frames: p50 99.2 ms, p95 1091.7 ms, max 1123.0 ms | ms/frame: unitOverlays 0.85, buildingBoxes 0.17, strategicIcons 2.64, unitRings 0.01, minimap 0.53, hud 3.68, unitBodies 2.06
+[01:10:20] [Notification Thread/INFO]: [GC] 21 collections took 137 ms of the last 10 s
+[01:10:23] [Server thread/INFO]: [Tick] p50 14.9 ms, p95 22.3 ms, max 29.4 ms over the last 100 ticks; 510 units, 7 buildings, 1 players
+[01:10:23] [Server thread/INFO]: [Sys] 200 ticks, mean 16.5 ms/tick; ours 3.8 ms (23%): attacker/entityScan 1.51 (max 8.2, 125/t) | unit 0.50 (max 1.4, 509/t) | bots 0.40 (max 73.5, 0.1/t) | attacker 0.27 (max 1.3, 509/t) | buildings 0.25 (max 0.9, 1.0/t) | separation 0.24 (max 0.5, 509/t) | unitGrid 0.17 (max 5.2, 1.0/t) | unitSync 0.10 (max 7.0, 0.1/t) | unstick 0.08 (max 3.1, 509/t) | attacker/idleAggro 0.07 (max 0.2, 125/t) | reactions 0.05 (max 0.1, 509/t) | autoCaster 0.05 (max 0.1, 1.0/t) | stuckNudge 0.03 (max 0.0, 509/t) | economy 0.02 (max 0.2, 1.0/t) (+7 smaller); elsewhere 12.7 ms
+[01:10:27] [Render thread/INFO]: [Eyes] 18_overlays slice 3/8: zoom 200 (reached 200, strategic), 25 frames: p50 89.7 ms, p95 1235.6 ms, max 1251.0 ms | ms/frame: unitOverlays 1.53, buildingBoxes 0.15, strategicIcons 2.73, unitRings 0.01, minimap 0.52, hud 3.61, unitBodies 2.20
+[01:10:29] [Render thread/INFO]: [Frame] p50 145.1 ms (7 fps), p95 909.0 ms, max 1251.0 ms over 240 frames; RTS view, zoom 30, 505 units known
+[01:10:29] [Render thread/INFO]: [Anim] 10 units/frame (max 51): animation p50 0.0 ms, p95 0.5 ms; unit render p50 1.9 ms, p95 58.5 ms; per unit 10.7 us anim, 1119.9 us render (anim 1%); RTS view, zoom 30, detail on, over 55 frames
+[01:10:29] [Render thread/INFO]: [FrameParts] 55 frames, mean 302.4 ms/frame; ours 20.3 ms (7%): unitBodies 12.25 (max 78.2, 11/f) | hud 3.79 (max 5.6, 1.0/f) | strategicIcons 2.25 (max 5.8, 0.8/f) | unitOverlays 1.13 (max 6.9, 11/f) | minimap 0.54 (max 0.8, 29/f) | buildingBoxes 0.20 (max 0.6, 1.0/f) | unitRings 0.14 (max 1.0, 11/f); elsewhere 282.1 ms; 0 section re-mesh requests/s
+[01:10:29] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.4 ms/tick: unitTick 0.36 (max 2.3, 505/t)
+[01:10:33] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:33] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:33] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:33] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:33] [Server thread/INFO]: saved 0 netherzones in serverevents
+[01:10:33] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:10:33] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1104|0
+[01:10:33] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1544|431|0
+[01:10:33] [Server thread/INFO]: [Tick] p50 17.8 ms, p95 27.2 ms, max 44.6 ms over the last 100 ticks; 510 units, 8 buildings, 1 players
+[01:10:33] [Server thread/INFO]: [Sys] 200 ticks, mean 17.9 ms/tick; ours 3.8 ms (21%): attacker/entityScan 1.45 (max 7.5, 125/t) | unit 0.64 (max 6.7, 510/t) | buildings 0.44 (max 6.2, 1.0/t) | separation 0.29 (max 3.4, 510/t) | attacker 0.29 (max 3.5, 510/t) | unitGrid 0.23 (max 6.2, 1.0/t) | unstick 0.07 (max 0.3, 510/t) | attacker/idleAggro 0.07 (max 0.2, 125/t) | reactions 0.07 (max 3.1, 510/t) | unitSync 0.06 (max 3.8, 0.1/t) | autoCaster 0.06 (max 0.1, 1.0/t) | bots 0.04 (max 3.8, 0.1/t) | stuckNudge 0.03 (max 0.1, 510/t) (+8 smaller); elsewhere 14.1 ms
+[01:10:34] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[01:10:38] [Render thread/INFO]: [Eyes] 18_overlays slice 4/8: zoom 30 (reached 30, normal), 45 frames: p50 151.3 ms, p95 290.5 ms, max 317.5 ms | ms/frame: unitOverlays 0.66, buildingBoxes 0.43, strategicIcons 0.00, unitRings 0.76, minimap 0.54, hud 4.37, unitBodies 58.73
+[01:10:39] [Render thread/INFO]: [Frame] p50 152.1 ms (7 fps), p95 856.8 ms, max 1251.0 ms over 240 frames; RTS view, zoom 30, 505 units known
+[01:10:39] [Render thread/INFO]: [Anim] 51 units/frame (max 51): animation p50 0.5 ms, p95 0.7 ms; unit render p50 58.4 ms, p95 69.7 ms; per unit 10.7 us anim, 1162.8 us render (anim 1%); RTS view, zoom 30, detail on, over 55 frames
+[01:10:39] [Render thread/INFO]: [FrameParts] 55 frames, mean 179.9 ms/frame; ours 66.3 ms (37%): unitBodies 59.58 (max 77.4, 51/f) | hud 4.35 (max 7.5, 1.0/f) | unitRings 0.76 (max 1.0, 11/f) | unitOverlays 0.66 (max 1.1, 11/f) | minimap 0.55 (max 0.9, 29/f) | buildingBoxes 0.43 (max 1.7, 1.0/f); elsewhere 113.5 ms; 0 section re-mesh requests/s
+[01:10:39] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.4 ms/tick: unitTick 0.40 (max 0.6, 505/t)
+[01:10:43] [Server thread/INFO]: [Tick] p50 18.2 ms, p95 25.6 ms, max 32.0 ms over the last 100 ticks; 511 units, 9 buildings, 1 players
+[01:10:43] [Server thread/INFO]: [Sys] 200 ticks, mean 18.9 ms/tick; ours 3.8 ms (20%): attacker/entityScan 1.49 (max 7.5, 125/t) | unit 0.53 (max 3.6, 510/t) | buildings 0.41 (max 6.5, 1.0/t) | attacker 0.31 (max 5.9, 510/t) | separation 0.29 (max 3.3, 510/t) | unitGrid 0.23 (max 4.2, 1.0/t) | attacker/idleAggro 0.10 (max 3.2, 125/t) | bots 0.09 (max 10.0, 0.1/t) | unstick 0.07 (max 0.2, 510/t) | unitSync 0.06 (max 1.9, 0.1/t) | reactions 0.06 (max 0.1, 510/t) | autoCaster 0.05 (max 0.1, 1.0/t) | stuckNudge 0.04 (max 2.6, 510/t) (+8 smaller); elsewhere 15.1 ms
+[01:10:49] [Render thread/INFO]: [Frame] p50 147.5 ms (7 fps), p95 821.0 ms, max 1251.0 ms over 240 frames; RTS view, zoom 30, 505 units known
+[01:10:49] [Render thread/INFO]: [Anim] 51 units/frame (max 51): animation p50 0.4 ms, p95 0.5 ms; unit render p50 56.2 ms, p95 73.2 ms; per unit 8.9 us anim, 1141.6 us render (anim 1%); RTS view, zoom 30, detail on, over 57 frames
+[01:10:49] [Render thread/INFO]: [FrameParts] 57 frames, mean 176.4 ms/frame; ours 64.4 ms (36%): unitBodies 57.96 (max 88.2, 51/f) | hud 4.08 (max 6.8, 1.0/f) | unitRings 0.76 (max 1.0, 11/f) | unitOverlays 0.64 (max 1.7, 11/f) | minimap 0.53 (max 1.0, 29/f) | buildingBoxes 0.39 (max 0.5, 1.0/f); elsewhere 112.0 ms; 0 section re-mesh requests/s
+[01:10:49] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.3 ms/tick: unitTick 0.34 (max 0.9, 505/t)
+[01:10:49] [Render thread/INFO]: [Eyes] 18_overlays slice 5/8: zoom 30 (reached 30, normal), 46 frames: p50 146.3 ms, p95 296.2 ms, max 302.0 ms | ms/frame: unitOverlays 0.65, buildingBoxes 0.39, strategicIcons 0.00, unitRings 0.76, minimap 0.53, hud 3.94, unitBodies 57.98
+[01:10:53] [Server thread/INFO]: [Tick] p50 14.5 ms, p95 28.4 ms, max 32.7 ms over the last 100 ticks; 511 units, 10 buildings, 1 players
+[01:10:53] [Server thread/INFO]: [Sys] 200 ticks, mean 18.0 ms/tick; ours 3.7 ms (20%): attacker/entityScan 1.58 (max 9.7, 125/t) | unit 0.62 (max 8.5, 511/t) | buildings 0.29 (max 1.3, 1.0/t) | attacker 0.28 (max 0.6, 511/t) | separation 0.27 (max 2.8, 511/t) | unitGrid 0.14 (max 0.3, 1.0/t) | unstick 0.10 (max 5.1, 511/t) | unitSync 0.08 (max 4.0, 0.1/t) | attacker/idleAggro 0.07 (max 0.2, 125/t) | reactions 0.05 (max 0.1, 511/t) | bots 0.05 (max 6.1, 0.1/t) | autoCaster 0.05 (max 0.1, 1.0/t) | stuckNudge 0.03 (max 0.1, 511/t) (+8 smaller); elsewhere 14.3 ms
+[01:11:01] [Render thread/INFO]: [Eyes] 18_overlays slice 6/8: zoom 200 (reached 200, strategic), 20 frames: p50 108.4 ms, p95 1706.3 ms, max 1724.0 ms | ms/frame: unitOverlays 1.61, buildingBoxes 0.16, strategicIcons 2.67, unitRings 0.01, minimap 0.56, hud 3.44, unitBodies 2.06
+[01:11:02] [Notification Thread/INFO]: [GC] 22 collections took 111 ms of the last 10 s
+[01:11:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:11:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:11:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:11:03] [Server thread/INFO]: saved 0 netherzones in serverevents
+[01:11:03] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:11:03] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1164|0
+[01:11:03] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1611|435|0
+[01:11:03] [Server thread/INFO]: [Tick] p50 14.6 ms, p95 23.2 ms, max 39.0 ms over the last 100 ticks; 512 units, 10 buildings, 1 players
+[01:11:03] [Server thread/INFO]: [Sys] 200 ticks, mean 16.3 ms/tick; ours 3.5 ms (21%): attacker/entityScan 1.42 (max 7.6, 125/t) | unit 0.55 (max 2.7, 512/t) | attacker 0.32 (max 3.2, 512/t) | buildings 0.30 (max 1.3, 1.0/t) | separation 0.26 (max 0.4, 512/t) | unitGrid 0.15 (max 2.7, 1.0/t) | autoCaster 0.08 (max 0.3, 1.0/t) | reactions 0.08 (max 3.1, 512/t) | attacker/idleAggro 0.08 (max 0.3, 125/t) | unstick 0.07 (max 0.2, 512/t) | unitSync 0.06 (max 2.0, 0.1/t) | stuckNudge 0.03 (max 0.1, 512/t) | bots 0.02 (max 2.1, 0.1/t) (+8 smaller); elsewhere 12.9 ms
+[01:11:11] [Render thread/INFO]: [Frame] p50 140.7 ms (7 fps), p95 1233.5 ms, max 1930.9 ms over 240 frames; RTS view, zoom 200, 505 units known
+[01:11:11] [Render thread/INFO]: [Anim] 5 units/frame (max 51): animation p50 0.0 ms, p95 0.3 ms; unit render p50 1.9 ms, p95 53.5 ms; per unit 11.3 us anim, 1109.8 us render (anim 1%); RTS view, zoom 200, icons, over 57 frames
+[01:11:11] [Render thread/INFO]: [FrameParts] 57 frames, mean 396.6 ms/frame; ours 13.3 ms (3%): unitBodies 5.09 (max 60.1, 4.6/f) | hud 3.56 (max 5.7, 1.0/f) | strategicIcons 2.62 (max 5.8, 0.9/f) | unitOverlays 1.22 (max 8.0, 11/f) | minimap 0.56 (max 0.9, 29/f) | buildingBoxes 0.20 (max 1.3, 1.0/f) | unitRings 0.04 (max 0.9, 11/f); elsewhere 383.3 ms; 0 section re-mesh requests/s
+[01:11:11] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.4 ms/tick: unitTick 0.40 (max 2.5, 505/t)
+[01:11:12] [Notification Thread/INFO]: [GC] 23 collections took 121 ms of the last 10 s
+[01:11:13] [Server thread/INFO]: [Tick] p50 15.5 ms, p95 25.6 ms, max 31.4 ms over the last 100 ticks; 513 units, 11 buildings, 1 players
+[01:11:13] [Server thread/INFO]: [Sys] 200 ticks, mean 17.0 ms/tick; ours 3.6 ms (21%): attacker/entityScan 1.40 (max 7.5, 125/t) | unit 0.58 (max 3.6, 513/t) | buildings 0.41 (max 4.6, 1.0/t) | attacker 0.34 (max 3.3, 513/t) | separation 0.27 (max 3.1, 513/t) | unitGrid 0.14 (max 0.2, 1.0/t) | unstick 0.08 (max 0.9, 513/t) | attacker/idleAggro 0.07 (max 0.2, 125/t) | autoCaster 0.06 (max 0.1, 1.0/t) | reactions 0.06 (max 0.1, 513/t) | unitSync 0.06 (max 1.5, 0.1/t) | bots 0.04 (max 3.0, 0.1/t) | stuckNudge 0.03 (max 0.2, 513/t) (+8 smaller); elsewhere 13.4 ms
+[01:11:15] [Render thread/INFO]: [Eyes] 18_overlays slice 7/8: zoom 200 (reached 200, strategic), 20 frames: p50 101.9 ms, p95 1938.2 ms, max 1962.7 ms | ms/frame: unitOverlays 1.04, buildingBoxes 0.19, strategicIcons 2.91, unitRings 0.01, minimap 0.55, hud 3.63, unitBodies 2.72
+[01:11:19] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[01:11:23] [Server thread/INFO]: [Tick] p50 17.3 ms, p95 26.9 ms, max 37.1 ms over the last 100 ticks; 514 units, 12 buildings, 1 players
+[01:11:23] [Server thread/INFO]: [Sys] 200 ticks, mean 17.9 ms/tick; ours 3.7 ms (21%): attacker/entityScan 1.49 (max 7.0, 125/t) | unit 0.63 (max 4.8, 514/t) | attacker 0.32 (max 7.3, 514/t) | buildings 0.30 (max 3.8, 1.0/t) | separation 0.29 (max 5.6, 514/t) | unitGrid 0.20 (max 3.3, 1.0/t) | bots 0.11 (max 15.4, 0.1/t) | attacker/idleAggro 0.08 (max 0.2, 125/t) | unstick 0.07 (max 0.2, 514/t) | reactions 0.06 (max 0.1, 514/t) | unitSync 0.05 (max 1.8, 0.1/t) | autoCaster 0.05 (max 0.1, 1.0/t) | stuckNudge 0.03 (max 0.1, 514/t) | economy 0.02 (max 0.1, 1.0/t) (+7 smaller); elsewhere 14.1 ms
+[01:11:24] [Render thread/INFO]: [Frame] p50 144.3 ms (7 fps), p95 1251.0 ms, max 1962.7 ms over 240 frames; RTS view, zoom 30, 505 units known
+[01:11:24] [Render thread/INFO]: [Anim] 45 units/frame (max 51): animation p50 0.4 ms, p95 0.6 ms; unit render p50 54.9 ms, p95 65.0 ms; per unit 8.4 us anim, 1122.3 us render (anim 1%); RTS view, zoom 30, detail on, over 55 frames
+[01:11:24] [Render thread/INFO]: [FrameParts] 55 frames, mean 234.7 ms/frame; ours 57.7 ms (25%): unitBodies 51.21 (max 84.9, 46/f) | hud 3.93 (max 7.1, 1.0/f) | unitOverlays 0.68 (max 2.8, 11/f) | unitRings 0.63 (max 1.0, 11/f) | minimap 0.56 (max 0.9, 29/f) | buildingBoxes 0.39 (max 1.0, 1.0/f) | strategicIcons 0.32 (max 4.1, 0.1/f); elsewhere 177.0 ms; 0 section re-mesh requests/s
+[01:11:24] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.3 ms/tick: unitTick 0.32 (max 2.5, 505/t)
+[01:11:27] [Render thread/INFO]: [Eyes] 18_overlays slice 8/8: zoom 30 (reached 30, normal), 46 frames: p50 143.1 ms, p95 326.9 ms, max 330.7 ms | ms/frame: unitOverlays 0.65, buildingBoxes 0.42, strategicIcons 0.00, unitRings 0.72, minimap 0.55, hud 3.98, unitBodies 57.08
+[01:11:27] [Render thread/INFO]: [Eyes] 18_overlays zoom 30 (medians of 4 slices; 505 units and 1712 buildings known to the client, 225 selected units, 0 selected buildings): frame p50 148.8 ms, p95 293.4 ms | ms/frame: unitOverlays 0.66, buildingBoxes 0.42, strategicIcons 0.00, unitRings 0.76, minimap 0.54, hud 4.17, unitBodies 58.36 | overlays+HUD (no bodies) 6.56 ms
+[01:11:27] [Render thread/INFO]: [Eyes] 18_overlays zoom 200 (medians of 4 slices; 505 units and 1712 buildings known to the client, 225 selected units, 0 selected buildings): frame p50 100.5 ms, p95 1470.9 ms | ms/frame: unitOverlays 1.29, buildingBoxes 0.17, strategicIcons 2.70, unitRings 0.01, minimap 0.54, hud 3.62, unitBodies 2.13 | overlays+HUD (no bodies) 8.32 ms
+[01:11:29] [Render thread/INFO]: [Eyes] unit textures with mips: 9 of 21 registered (up to 3 levels)
+[01:11:29] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png]
+[01:11:29] [Render thread/INFO]: [Eyes] tour complete
+[01:11:29] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[01:11:29] [Render thread/INFO]: Stopping!
+[01:11:29] [Server thread/INFO]: Offline lost connection: Disconnected
+[01:11:29] [Server thread/INFO]: Offline left the game
+[01:11:29] [Server thread/INFO]: Player logged out: Offline, id: 2
+[01:11:29] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[01:11:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[01:11:29] [Server thread/INFO]: Saved 0 fallen hero units
+[01:11:29] [Server thread/INFO]: saved 0 netherzones in serverevents
+[01:11:29] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1214|0
+[01:11:29] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1596|374|0
+[01:11:29] [Server thread/INFO]: Stopping server
+[01:11:29] [Server thread/INFO]: Saving players
+[01:11:29] [Server thread/INFO]: Saving worlds
+[01:11:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[01:11:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[01:11:29] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[01:11:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[01:11:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[01:11:30] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[01:11:30] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
