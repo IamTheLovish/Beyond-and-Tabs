@@ -22,13 +22,28 @@ import java.util.List;
  *     eight;</li>
  * <li>NUDGE: small metal edits (a standard patch made rich on the poorest seat, a crowding patch removed from the
  *     richest...) while they narrow the spread;</li>
- * <li>SWAP_NUDGE / REROLL_NUDGE: the two in turn.</li>
+ * <li>SWAP_NUDGE / REROLL_NUDGE: the two in turn;</li>
+ * <li>SWAP_ROBUST (the lobby's): SWAP_NUDGE with every edit also judged under eight draws of the score's weights, so
+ *     the map is even across the range of our guesses, not only at the central one.</li>
  * </ul>
+ * A draw the balancer leaves invalid or outside the tolerance gives way to a fresh draw (up to FALLBACK_DRAWS).
  */
 public final class MapGenerator {
     private MapGenerator() { }
 
     static final int REROLLS = 12, NUDGE_STEPS = 48;
+    /**
+     * The weight draws the robust nudge also judges by (GenOptions.Balance.SWAP_ROBUST): eight from the weights' ranges,
+     * fixed (seeded) so the map stays a function of its seed, and drawn apart from the experiments' 40 test draws.
+     */
+    static final Fairness.Weights[] ROBUST_DRAWS = new Fairness.Weights[8];
+
+    static {
+        GenRng r = new GenRng(0x0B05750EDL);
+        for (int i = 0; i < ROBUST_DRAWS.length; i++)
+            ROBUST_DRAWS[i] = Fairness.Weights.CENTRAL.sample(r);
+    }
+
     /** Fresh draws tried when a balanced draw is invalid or outside the tolerance (see generate), numbered from 100. */
     static final int FALLBACK_DRAWS = 4, FALLBACK_BASE = 100;
 
@@ -79,6 +94,10 @@ public final class MapGenerator {
             case REROLL_NUDGE -> {
                 best = reroll(teams, seed, draw, o, metal, w, 4, tol);
                 nudge(best, tol, w);
+            }
+            case SWAP_ROBUST -> {
+                best = swap(teams, seed, draw, o, metal, w);
+                nudge(best, tol, w, true);
             }
             default -> throw new IllegalStateException();
         }
@@ -231,11 +250,25 @@ public final class MapGenerator {
      * step takes the edit that leaves the smallest spread; it stops when none helps.
      */
     static void nudge(Built b, double tol, Fairness.Weights w) {
+        nudge(b, tol, w, false);
+    }
+
+    /**
+     * {@code robust}: judge every edit by the central weights AND the eight ROBUST_DRAWS (the mean of their objectives),
+     * and keep going while the draws' mean spread is over the tolerance - so the map is even under the range of
+     * weights, not only under our best guess.
+     */
+    static void nudge(Built b, double tol, Fairness.Weights w, boolean robust) {
         GenMap m = b.m;
         if (b.p.mirror || !m.valid)
             return;
         GenEconomy e = b.e;
-        Fairness.Context ctx = new Fairness.Context(new Fairness.Geometry(m, b.g, b.dist), w);
+        Fairness.Geometry geo = new Fairness.Geometry(m, b.g, b.dist);
+        Fairness.Context ctx = new Fairness.Context(geo, w);
+        boolean liveWeights = w.creep() == 0 && w.hydra() == 0;
+        Fairness.Context[] more = new Fairness.Context[robust ? ROBUST_DRAWS.length : 0];
+        for (int i = 0; i < more.length; i++)
+            more[i] = new Fairness.Context(geo, liveWeights ? ROBUST_DRAWS[i].live() : ROBUST_DRAWS[i]);
         List<GenEconomy.Patch> live = new ArrayList<>();
         List<double[]> rows = new ArrayList<>();
         for (GenEconomy.Patch q : e.patches)
@@ -247,7 +280,9 @@ public final class MapGenerator {
                 rows.add(r);
             }
         Fairness.Report rep = ctx.report(rows);
-        for (int step = 0; step < NUDGE_STEPS && rep.spread() > tol * 0.8; step++) {
+        double repJ = judge(ctx, more, rows, rep);
+        for (int step = 0; step < NUDGE_STEPS && (rep.spread() > tol * 0.8 || (robust && drawSpread(more, rows) > tol));
+                step++) {
             int poor = 0, rich = 0;
             for (int s = 1; s < m.n; s++) {
                 if (rep.total(s) < rep.total(poor))
@@ -297,14 +332,14 @@ public final class MapGenerator {
             }
             // judge by the spread plus half the seats' coefficient of variation: with two seats tied at the top, cutting
             // one of them leaves the spread where it was, but it is still progress
-            double bestJ = objective(rep);
+            double bestJ = repJ;
             int bestEdit = -1;
             Fairness.Report bestRep = null;
             for (int k = 0; k < edits.size(); k++) {
                 edits.get(k)[0].run();
                 Fairness.Report r2 = ctx.report(rows);
+                double j = judge(ctx, more, rows, r2);
                 edits.get(k)[1].run();
-                double j = objective(r2);
                 if (j < bestJ - 1e-5) {
                     bestJ = j;
                     bestEdit = k;
@@ -315,8 +350,8 @@ public final class MapGenerator {
             for (int k = 0; k < addRows.size(); k++) {
                 rows.add(addRows.get(k));
                 Fairness.Report r2 = ctx.report(rows);
+                double j = judge(ctx, more, rows, r2);
                 rows.remove(rows.size() - 1);
-                double j = objective(r2);
                 if (j < bestJ - 1e-5) {
                     bestJ = j;
                     bestAdd = k;
@@ -354,10 +389,28 @@ public final class MapGenerator {
                 }
             }
             rep = bestRep;
+            repJ = bestJ;
             m.nudges++;
         }
         e.writeWith(b.g, b.dist);
         m.report = Fairness.score(m, b.g, b.dist, w);
+    }
+
+    /** The nudge's judgement of a state: the central objective, or its mean with the robust draws' objectives. */
+    private static double judge(Fairness.Context ctx, Fairness.Context[] more, List<double[]> rows, Fairness.Report central) {
+        double j = objective(central);
+        if (more.length == 0)
+            return j;
+        for (Fairness.Context c : more)
+            j += objective(c.report(rows));
+        return j / (more.length + 1);
+    }
+
+    private static double drawSpread(Fairness.Context[] more, List<double[]> rows) {
+        double s = 0;
+        for (Fairness.Context c : more)
+            s += c.report(rows).spread();
+        return more.length == 0 ? 0 : s / more.length;
     }
 
     /** What the nudge minimises: the spread, plus half the coefficient of variation of the seats' scores. */

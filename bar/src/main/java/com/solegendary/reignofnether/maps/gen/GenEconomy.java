@@ -791,12 +791,16 @@ final class GenEconomy {
 
     /**
      * Patches a seat may own in all (home ring and centre included): the pre-made maps' counts (20-24 a seat in a 1v1,
-     * 10-23 in a 4v4, design/maps.md / maps spec 1.2) scaled by the archetype's density and the lobby's richness. In a
-     * 1v1 the cap binds (a 1v1 seat has four times a 4v4 seat's ground), in big games the hole target does.
+     * 10-23 in a 4v4, design/maps.md / maps spec 1.2) scaled by the archetype's density and the lobby's richness.
+     * In team games the archetype's density counts at its square root: at full strength a 4v4 Prospector side drew 19
+     * patches a seat to the Warden side's 12, a 22% seat spread before balancing (Phase 1), and the balancer then had
+     * to undo most of it; at the root (17 to 13) the raw spread is 17%, the balancer needs half the edits and the map
+     * stays even under more of the weights' range (38% of draws within 5% against 32%).
      */
     int capOf(int s, double rich) {
         int base = p.n <= 2 ? 28 : p.n <= 4 ? 20 : 15;
-        return (int) Math.round(base * rich * Archetype.PLAIN.holeTarget / p.seat[s].holeTarget);
+        double density = Archetype.PLAIN.holeTarget / p.seat[s].holeTarget;
+        return (int) Math.round(base * rich * (p.n <= 2 ? density : Math.sqrt(density)));
     }
 
     /**
