@@ -58,13 +58,13 @@ public class LobbyBackdrop {
 
     // ---- shared with tools/gen_lobby_art.py
     private static final float ART_W = 2560f / 1100f;
-    private static final float MOON_X = -0.27f, MOON_Y = 0.205f, MOON_R = 0.14f;
+    private static final float MOON_X = 0.19f, MOON_Y = 0.175f, MOON_R = 0.15f;
     private static final float FRAME_W = 0.66f;
     private static final float HORIZON = 0.64f;
     private static final float[][] RIVER = {   // x, y, half width (round 6: zig-zags back to the fall)
         {0.372f, 0.800f, 0.030f}, {0.315f, 0.808f, 0.036f}, {0.200f, 0.818f, 0.046f}, {0.120f, 0.832f, 0.058f},
         {0.170f, 0.850f, 0.074f}, {0.250f, 0.870f, 0.094f}, {0.205f, 0.895f, 0.120f}, {0.060f, 0.925f, 0.155f},
-        {-0.020f, 0.962f, 0.205f}, {0.040f, 1.005f, 0.270f}, {0.100f, 1.050f, 0.340f}};
+        {-0.020f, 0.962f, 0.235f}, {0.040f, 1.005f, 0.310f}, {0.100f, 1.050f, 0.390f}};
     /** the cascade: top x, top y, top half width, bottom x, bottom y, bottom half width */
     private static final float[] CASCADE = {0.300f, 0.688f, 0.016f, 0.372f, 0.802f, 0.042f};
     /** the cathedral breathes about the facade's foot */
@@ -74,17 +74,17 @@ public class LobbyBackdrop {
     private static final float[][] CATH_RECT = {{-0.1546f, 0.2105f, 0.0729f, 0.6779f}, {-0.1041f, 0.1095f, 0.3636f, 0.6968f}, {-0.2020f, 0.1853f, 0.2214f, 0.6968f}, {0.3320f, 0.1663f, 0.4520f, 0.6937f}, {0.2182f, 0.2421f, 0.3762f, 0.6968f}, {0.2214f, 0.1663f, 0.3857f, 0.3905f}, {0.1013f, -0.0011f, 0.2466f, 0.7000f}, {0.2119f, 0.1947f, 0.4741f, 0.7411f}};
     private static final float[] CATH_Z = {0.0130f, 0.0170f, 0.0220f, 0.0250f, 0.0290f, 0.0320f, 0.0350f, 0.0400f};
     /** the rocks breaking the river's surface (x, y, r) - gen_lobby_art.river_rocks() */
-    private static final float[][] RIVER_ROCKS = {{0.2567f, 0.8620f, 0.0080f}, {0.1305f, 0.9000f, 0.0120f}, {0.1410f, 0.9280f, 0.0150f}, {-0.1351f, 0.9580f, 0.0180f}, {0.0785f, 0.9820f, 0.0220f}, {-0.0217f, 0.9980f, 0.0260f}};
+    private static final float[][] RIVER_ROCKS = {{0.2567f, 0.8620f, 0.0080f}, {0.1305f, 0.9000f, 0.0120f}, {0.1423f, 0.9280f, 0.0150f}, {-0.1517f, 0.9580f, 0.0180f}, {0.0889f, 0.9820f, 0.0220f}, {-0.0293f, 0.9980f, 0.0260f}};
     /** the rose window and the portal (artboard), where the light comes from */
     private static final float ROSE_X = 0.2981f, ROSE_Y = 0.3211f, DOOR_X = 0.3000f, DOOR_Y = 0.6735f;
     // </gen:cath>
     // <gen:title> written by tools/gen_lobby_title.py - do not edit by hand
     private static final float TITLE_TEXT_W = 0.9008f, TITLE_TOP_V = 0.1146f, TITLE_BOT_V = 0.8170f;
     /** the credits' pieces (texture width fractions of the text, cap top and baseline as v) */
-    private static final float BYLINE_TEXT_W = 0.8849f, BYLINE_TOP_V = 0.1854f, BYLINE_BOT_V = 0.7053f;
-    private static final float LOVISH_TEXT_W = 0.8082f, LOVISH_TOP_V = 0.1854f, LOVISH_BOT_V = 0.7053f;
-    private static final float AMP_TEXT_W = 0.3785f, AMP_TOP_V = 0.2090f, AMP_BOT_V = 0.6679f;
-    private static final float JOISCO_TEXT_W = 0.7897f, JOISCO_TOP_V = 0.1854f, JOISCO_BOT_V = 0.7053f;
+    private static final float BYLINE_TEXT_W = 0.8300f, BYLINE_TOP_V = 0.2286f, BYLINE_BOT_V = 0.6364f;
+    private static final float LOVISH_TEXT_W = 0.7279f, LOVISH_TOP_V = 0.2286f, LOVISH_BOT_V = 0.6364f;
+    private static final float AMP_TEXT_W = 0.2792f, AMP_TOP_V = 0.2507f, AMP_BOT_V = 0.6011f;
+    private static final float JOISCO_TEXT_W = 0.7048f, JOISCO_TOP_V = 0.2286f, JOISCO_BOT_V = 0.6364f;
     /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */
     private static final float[][] TITLE_DRIPS = {{0.1901f, 0.8232f, 0.0109f, 0.1167f}, {0.3077f, 0.8232f, 0.0096f, 0.1075f}, {0.3507f, 0.8232f, 0.0118f, 0.1190f}, {0.5996f, 0.8232f, 0.0098f, 0.0722f}, {0.6476f, 0.8232f, 0.0100f, 0.0902f}, {0.7122f, 0.8232f, 0.0105f, 0.0865f}};
     // </gen:title>
@@ -299,7 +299,7 @@ public class LobbyBackdrop {
         // the title layout's shifts: as far as the art reaches past the (zoomed) screen edge, less the parallax
         float slack = ART_W / 2f - w / (2f * A * zoom) - (motion ? 0.065f : 0f);
         float shift = titleLayout ? Mth.clamp(slack, 0f, 0.22f) : 0f;
-        xs = -shift;
+        xs = shift;     // round 6: sky and cathedral slide together, so the moon stays behind the towers
 
         // ---- sky, stars, moon
         art(SKY, -ART_W / 2, 0f, ART_W / 2, 1f, 0.003f, 1f);
@@ -332,7 +332,7 @@ public class LobbyBackdrop {
         art(HILLS, -ART_W / 2, 0.50f, ART_W / 2, 0.74f, 0.0125f, 1f);
         wrapped(CLOUDS_NEAR, 0.46f, 0.84f, windT * 0.014f, 0.012f, 1f);
 
-        moonShift = 2f * shift;
+        moonShift = 0f;
         xs = shift;
         // ---- the cathedral, back to front: each depth layer, its moon rim and its glass; mist sheets between
         float swell = 1f + 0.006f * breath;
@@ -350,9 +350,8 @@ public class LobbyBackdrop {
         additive();
         // light shafts from the rose, falling through the mist toward the viewer
         float rx = sx(ROSE_X) + ox(0.036f), ry = sy(ROSE_Y) + oy(0.036f);
-        float sway = motion ? 0.012f * Mth.sin(t * 0.21f) : 0f;
-        shaft(rx, ry, 0.03f * A, sx(ROSE_X - 0.22f + sway) + ox(0.045f), sx(ROSE_X + 0.20f + sway) + ox(0.045f),
-            sy(0.86f) + oy(0.045f), 0.20f + 0.22f * breath);
+        // (round 6: the fan of light shafts from the rose read as a flat cone over the door - left out; the glass
+        // glow and the breathing wave carry the light)
         // the wave of glass light breathing outward from the rose and the door on each exhale
         float ph = frac(t / BREATH_S - 0.5f);
         float wr = (0.04f + 0.34f * ph) * A, wa = motion ? 0.22f * (1f - ph) * (1f - ph) : 0f;
@@ -483,7 +482,7 @@ public class LobbyBackdrop {
         float cs = CREDIT_H * h / ((BYLINE_BOT_V - BYLINE_TOP_V) * Math.max(1, TEX_H[BYLINE]));
         float word = CREDIT_GAP * 0.32f * CREDIT_H * h, ampGap = CREDIT_GAP * 0.22f * CREDIT_H * h;
         float bW = textW(BYLINE, BYLINE_TEXT_W, cs), lW = textW(LOVISH, LOVISH_TEXT_W, cs);
-        float aW = textW(AMP, AMP_TEXT_W, cs), jW = textW(JOISCO, JOISCO_TEXT_W, cs);
+        float aW = textW(AMP, AMP_TEXT_W, cs), jW = textW(CREDIT, JOISCO_TEXT_W, cs);
         float names = lW + ampGap + aW + ampGap + jW;
         float one = bW + word + names;
         boolean stacked = one > 0.46f * w;
