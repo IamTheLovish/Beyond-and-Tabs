@@ -16,7 +16,6 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.server.packs.resources.ReloadInstance;
@@ -253,32 +252,15 @@ public class SplashArt {
     // ---------------------------------------------------------------- title screen buttons
 
     /**
-     * Repaints the title screen's text buttons as dark stone with a gold border (after they have rendered, so clicks,
-     * narration and tooltips stay vanilla). Square icon buttons (language, accessibility, our maps button) are left
-     * alone.
+     * Repaints the title screen's text buttons as dark stone with a gold border and a gothic, blood-dripping label
+     * (GothicText; lovish Oct 21: "gothic and bold, standing out", "blood dripping down"). Drawn after the buttons have
+     * rendered, so clicks, narration and tooltips stay vanilla. Square icon buttons (language, accessibility, our maps
+     * button) are left alone.
      */
     public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, float alpha) {
         if (state <= 0)
             return;
-        int a = Mth.clamp(Mth.ceil(alpha * 255f), 0, 255);
-        for (int i = 0; i < children.size(); i++) {
-            if (!(children.get(i) instanceof Button b) || !b.visible || b.getWidth() < 40)
-                continue;
-            int x0 = b.getX(), y0 = b.getY(), bw = b.getWidth(), bh = b.getHeight();
-            boolean hot = b.active && b.isHoveredOrFocused();
-            g.fill(x0, y0, x0 + bw, y0 + bh, argb(a * 0.94f, hot ? 0x2A211B : 0x1A1512));
-            g.fill(x0 + 1, y0 + 1, x0 + bw - 1, y0 + bh / 2, argb(a * 0.30f, 0x4A3D33));   // lit upper face
-            int gold = !b.active ? 0x5C4A2C : hot ? 0xF0CC72 : 0xB08A3E;
-            g.renderOutline(x0, y0, bw, bh, argb(a, gold));
-            if (hot)
-                g.renderOutline(x0 + 1, y0 + 1, bw - 2, bh - 2, argb(a * 0.45f, 0xF0CC72));
-            int text = !b.active ? 0x7A6C58 : hot ? 0xFFF2D6 : 0xE6CF9C;
-            g.drawCenteredString(font, b.getMessage(), x0 + bw / 2, y0 + (bh - 8) / 2, argb(Math.max(a, 8), text));
-        }
-    }
-
-    private static int argb(float a, int rgb) {
-        return (Mth.clamp((int) a, 0, 255) << 24) | (rgb & 0xFFFFFF);
+        GothicText.restyleButtons(g, font, children, null, null, true, alpha);
     }
 
     // ---------------------------------------------------------------- quads

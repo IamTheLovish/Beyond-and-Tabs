@@ -2221,10 +2221,108 @@ def compose(W, H, t=0.0, lobby=False):
     return S
 
 
+# ---------------------------------------------------------------- the gothic lettering, previewed (GothicText.java)
+
+FONT_DIR = os.path.join(REPO, "bar/src/main/resources/assets/reignofnether/font")
+
+
+def _blood_text(img, text, font_file, size_gui, x, y, gs, rim=(184, 137, 47), drips=0, drip_len=4, t=1.3, seed=0):
+    """GothicText.blood + drips at GUI scale gs, as the game draws them (top-left x, y in screen px)."""
+    from PIL import ImageFont
+    f = ImageFont.truetype(font_file, int(round(size_gui * gs * 1.25)))
+    d = ImageDraw.Draw(img)
+    bb = d.textbbox((0, 0), text, font=f)
+    ox, oy = x - bb[0], y - bb[1]
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    d.text((ox + gs, oy + 2 * gs), text, font=f, fill=(0, 0, 0, 190))
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if dx or dy:
+                d.text((ox + dx * gs, oy + dy * gs), text, font=f, fill=rim + (255,))
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(layer).text((ox, oy), text, font=f, fill=(126, 8, 18, 255))
+    for frac, c in ((0.62, (184, 20, 31)), (0.30, (232, 80, 90))):
+        band = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        ImageDraw.Draw(band).text((ox, oy), text, font=f, fill=c + (255,))
+        m = Image.new("L", img.size, 0)
+        ImageDraw.Draw(m).rectangle([0, 0, img.size[0], y + th * frac], fill=255)
+        layer = Image.composite(band, layer, Image.composite(band.getchannel("A"), Image.new("L", img.size, 0), m))
+    img.alpha_composite(layer)
+    r = np.random.default_rng(seed)
+    for i in range(drips):
+        sx = x + tw * (i + 0.3 + 0.4 * r.random()) / drips
+        L = drip_len * gs * r.uniform(0.6, 1.0)
+        base = y + th - gs
+        d.rectangle([sx, base, sx + gs * (2 if drip_len > 6 else 1), base + L], fill=(138, 10, 20, 255))
+        d.rectangle([sx - gs * 0.5, base + L - gs, sx + gs * 1.5 * (2 if drip_len > 6 else 1), base + L + gs], fill=(138, 10, 20, 255))
+        if i % 2 == 0:
+            dy = L + drip_len * gs * 1.6
+            d.rectangle([sx, base + dy, sx + gs * 1.5, base + dy + gs * 2], fill=(138, 10, 20, 200))
+    return tw
+
+
+def _stone_button(img, x0, y0, bw, bh, gs, hot=False):
+    d = ImageDraw.Draw(img)
+    d.rectangle([x0, y0, x0 + bw * gs, y0 + bh * gs], fill=(42, 26, 24, 255) if hot else (22, 17, 15, 255))
+    d.rectangle([x0 + gs, y0 + gs, x0 + (bw - 1) * gs, y0 + bh * gs / 2], fill=(52, 44, 38, 255))
+    d.rectangle([x0, y0, x0 + bw * gs, y0 + bh * gs], outline=(240, 204, 114) if hot else (176, 138, 62), width=gs)
+
+
+def gothic_button(img, label, x0, y0, bw, bh, gs, blackletter=True, hot=False, seed=0):
+    from PIL import ImageFont
+    _stone_button(img, x0, y0, bw, bh, gs, hot)
+    title_f = os.path.join(FONT_DIR, "unifrakturcook_bold.ttf")
+    caps_f = os.path.join(FONT_DIR, "cinzel_black.ttf")
+    f, size, text = title_f, 12, label
+    probe = ImageDraw.Draw(img)
+    if not blackletter or probe.textlength(text, font=ImageFont.truetype(f, int(12 * gs * 1.25))) > (bw - 8) * gs:
+        f, size, text = caps_f, 9.5, label.upper()
+    tw = probe.textlength(text, font=ImageFont.truetype(f, int(size * gs * 1.25)))
+    _blood_text(img, text, f, size, x0 + (bw * gs - tw) / 2, y0 + (bh - size) / 2 * gs, gs,
+                rim=(240, 204, 114) if hot else (184, 137, 47), drips=2, drip_len=4, seed=seed)
+
+
+def text_previews():
+    """The title screen's buttons and the lobby headings + main buttons in the gothic blood lettering."""
+    try:
+        sys.path.insert(0, HERE)
+        import gen_splash_art as SA
+        bg = SA.compose(SA.load_layers(), 1920, 1080, gui_scale=2).convert("RGBA")
+    except Exception as e:                       # the splash layers are always there, but never fail a regen on it
+        print("splash preview unavailable:", e)
+        bg = Image.new("RGBA", (1920, 1080), (20, 14, 14, 255))
+    gs = 2
+    gh = 1080 // gs
+    cx = 960
+    rows = [gh // 4 + 48 - 26, gh // 4 + 48, gh // 4 + 48 + 24, gh // 4 + 48 + 48, gh // 4 + 48 + 84]
+    labels = ["Skirmish", "Singleplayer", "Multiplayer", "Mods", None]
+    for i, ry in enumerate(rows):
+        if labels[i]:
+            gothic_button(bg, labels[i], cx - 100 * gs, ry * gs, 200, 20, gs, hot=(i == 1), seed=i)
+        else:
+            gothic_button(bg, "Options...", cx - 102 * gs, ry * gs, 98, 20, gs, seed=7)
+            gothic_button(bg, "Quit Game", cx + 4 * gs, ry * gs, 98, 20, gs, seed=8)
+    bg.convert("RGB").save(os.path.join(DESIGN, "lobby_text_preview_title.png"), optimize=True)
+
+    # the skirmish lobby over the backdrop: scrim, panel, the blackletter heading and Cinzel main buttons
+    S = compose(1920, 1080, lobby=True)
+    img = Image.fromarray(np.round(np.clip(S.img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
+    pw = 620
+    x0 = (960 // gs - pw // 2)
+    top = max(24, gh // 2 - 150)
+    _blood_text(img, "Skirmish", os.path.join(FONT_DIR, "unifrakturcook_bold.ttf"), 16, x0 * gs, (top - 21) * gs, gs,
+                rim=(154, 116, 40), drips=3, drip_len=9, seed=3)
+    by = (top + 300 - 22) * gs
+    for k, (lab, wdt) in enumerate((("Start Battle", 110), ("Spectate", 70), ("Back", 60))):
+        gothic_button(img, lab, (x0 + 380 + sum((110, 70, 60)[:k]) + 4 * k) * gs - 300, by, wdt, 20, gs, blackletter=False,
+                      hot=(k == 0), seed=20 + k)
+    img.convert("RGB").save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"), optimize=True)
+
+
 def previews():
     compose(1920, 1080).save(os.path.join(DESIGN, "lobby_preview_16x9.png"))
     compose(2520, 1080).save(os.path.join(DESIGN, "lobby_preview_21x9.png"))
-    compose(1920, 1080, lobby=True).save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"))
+    text_previews()
 
 
 SMOOTH = {"glow", "mist", "vignette", "glass_rose", "glass_lancets", "grain", "sparkle", "ring", "streak", "ripples",

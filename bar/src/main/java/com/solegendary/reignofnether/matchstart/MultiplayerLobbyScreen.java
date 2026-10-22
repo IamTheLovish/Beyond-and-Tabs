@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.GothicText;
 import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.player.PlayerPalette;
@@ -418,10 +419,9 @@ public class MultiplayerLobbyScreen extends Screen {
         gg.fill(left - 4, bottom + 4, rightX + RIGHT_W + 4, bottom + 5, EDGE);
         gg.fill(left, top, left + listW, bottom, PANEL);
         gg.fill(rightX, top, rightX + RIGHT_W, bottom, PANEL);
-        String title = "MULTIPLAYER LOBBY";
+        int titleW = GothicText.title(gg, font, "Multiplayer Lobby", left, top - 21);
         if (l != null && l.open)
-            title += "   host: " + l.hostName;
-        gg.drawString(font, title, left, top - 16, GOLD);
+            gg.drawString(font, "host: " + l.hostName, left + titleW + 10, top - 12, GOLD);
 
         if (l == null || !l.open) {
             gg.drawString(font, "Waiting for the host to open the lobby...", left + 8, top + 10, 0xFFFFFF, false);
@@ -473,6 +473,7 @@ public class MultiplayerLobbyScreen extends Screen {
         }
 
         super.render(gg, mx, my, pt);
+        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
 
         // faction icons left of each faction button; on rows you can't edit, the icon and the name as a label
         for (Object[] fi : factionIcons) {

@@ -38,12 +38,14 @@ import java.nio.file.Path;
  * anchored), the same rects and river geometry as the generator. The two framing layers are pinned to the screen edges
  * instead, so 16:9 and 21:9 both keep their framing.
  *
- * Motion: two cloud banks drift at different speeds, the rose window and the lancets pulse out of step, the moon's
- * halo breathes, stars twinkle, mist drifts, the cascade falls from the doorway, ripples and the moon's reflection run
- * down the river, the flower fields sway, petals blow across, now and then a few bats cross the sky, the whole scene
- * pushes in very slowly, and the layers parallax with the mouse by depth. `splash_reduce_motion` freezes all of it.
+ * Motion (lovish: "the castle is breathing with wind and water moving"): a 7 s breath swells the facade 0.6 % and its
+ * rim light, glass and portal haze together and thickens the mist; a gust crosses left to right every 9 s and everything
+ * wind-driven reads it at its own x (clouds and mist hurry, the trees and vines lean, the flowers ripple in a wave,
+ * petals and leaves lift); the cascade falls, glints flow down the river toward the viewer, the moon's reflection
+ * shimmers, rings spread from the rocks in the stream; stars twinkle, bats cross now and then, the whole scene pushes in
+ * very slowly and parallaxes with the mouse by depth. `splash_reduce_motion` freezes all of it.
  *
- * Cost: about 40 textured quads a frame through the shared Tesselator, no allocation (static matrix, indexed loops,
+ * Cost: about 70 textured quads a frame through the shared Tesselator, no allocation (static matrix, indexed loops,
  * time-derived state). The PNGs are read once from our own mod file and uploaded as plain GL textures (like SplashArt);
  * if any of them cannot be read the screens keep the vanilla background.
  */
@@ -55,11 +57,17 @@ public class LobbyBackdrop {
     private static final float FRAME_W = 0.66f;
     private static final float HORIZON = 0.70f;
     private static final float[][] RIVER = {   // x, y, half width
-        {0.000f, 0.792f, 0.030f}, {0.016f, 0.806f, 0.044f}, {-0.012f, 0.822f, 0.058f}, {-0.075f, 0.842f, 0.080f},
-        {-0.090f, 0.866f, 0.108f}, {-0.010f, 0.893f, 0.145f}, {0.120f, 0.926f, 0.195f}, {0.110f, 0.962f, 0.255f},
-        {-0.060f, 1.010f, 0.330f}};
+        {0.000f, 0.836f, 0.050f}, {0.020f, 0.850f, 0.070f}, {0.010f, 0.866f, 0.095f}, {-0.070f, 0.886f, 0.130f},
+        {-0.140f, 0.910f, 0.175f}, {-0.100f, 0.938f, 0.225f}, {0.060f, 0.966f, 0.285f}, {0.200f, 0.995f, 0.350f},
+        {0.240f, 1.030f, 0.420f}};
+    /** the rocks breaking the river's surface (x, y, r) - gen_lobby_art.river_rocks() */
+    private static final float[][] RIVER_ROCKS = {
+        {0.0128f, 0.875f, 0.010f}, {-0.1999f, 0.905f, 0.013f}, {0.0045f, 0.930f, 0.016f}, {-0.0813f, 0.955f, 0.018f},
+        {0.3810f, 0.985f, 0.024f}, {-0.0283f, 1.000f, 0.026f}};
     private static final float CASCADE_X = 0f, CASCADE_TOP = 0.736f, CASCADE_TOP_HW = 0.020f,
-        CASCADE_BOTTOM = 0.797f, CASCADE_BOTTOM_HW = 0.030f;
+        CASCADE_BOTTOM = 0.840f, CASCADE_BOTTOM_HW = 0.046f;
+    private static final float BREATH_S = 7f;    // the cathedral's slow inhale / exhale
+    private static final float GUST_S = 9f;      // a gust crosses the scene left to right this often
     private static final float RIPPLE_K = 8f, RIPPLE_SPEED = 0.35f, STREAK_HW = 0.035f;
     private static final float CASCADE_TILES = 1.6f, CASCADE_SPEED = 0.9f;
     private static final float[][] STARS = {
@@ -71,13 +79,16 @@ public class LobbyBackdrop {
     private static final String DIR = "assets/" + ReignOfNether.MOD_ID + "/textures/gui/lobby/";
     private static final String[] FILES = {"sky", "moon", "glow", "sparkle", "clouds_far", "spires_far", "clouds_near",
         "cathedral", "glass_rose", "glass_lancets", "mist", "ground", "cascade", "ripples", "streak", "field_far",
-        "field_near", "bats", "frame_left", "frame_right", "petal", "vignette", "grain"};
+        "field_near", "bats", "frame_left", "frame_right", "petal", "vignette", "grain", "cathedral_rim",
+        "frame_left_tree", "frame_right_tree", "frame_left_vines", "frame_right_vines", "leaf", "ring"};
     private static final int SKY = 0, MOON = 1, GLOW = 2, SPARKLE = 3, CLOUDS_FAR = 4, SPIRES_FAR = 5, CLOUDS_NEAR = 6,
         CATHEDRAL = 7, GLASS_ROSE = 8, GLASS_LANCETS = 9, MIST = 10, GROUND = 11, CASCADE = 12, RIPPLES = 13,
         STREAK = 14, FIELD_FAR = 15, FIELD_NEAR = 16, BATS = 17, FRAME_LEFT = 18, FRAME_RIGHT = 19, PETAL = 20,
-        VIGNETTE = 21, GRAIN = 22;
+        VIGNETTE = 21, GRAIN = 22, CATHEDRAL_RIM = 23, TREE_LEFT = 24, TREE_RIGHT = 25, VINES_LEFT = 26,
+        VINES_RIGHT = 27, LEAF = 28, RING = 29;
     /** wrap mode per texture: 0 clamp, 1 repeat, 2 clamp across / repeat along (the moon's reflection) */
-    private static final int[] WRAP = {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1};
+    private static final int[] WRAP = {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 0};
     private static final int[] TEX = new int[FILES.length];
     private static int state = 0;   // 0 not loaded yet, 1 ready, -1 failed (vanilla background)
 
@@ -85,9 +96,10 @@ public class LobbyBackdrop {
     private static final Matrix4f M = new Matrix4f();
     private static float parX = 0, parY = 0;
     private static long lastFrameMs = 0;
-    private static float A, top, cx, w, h;
+    private static float A, top, cx, w, h, gustFront;
+    private static final int SLICES = 16;
 
-    private static final int PETALS = 12;
+    private static final int PETALS = 16;
 
     /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
     public static boolean ensureLoaded() {
@@ -212,18 +224,32 @@ public class LobbyBackdrop {
         RenderSystem.defaultBlendFunc();
         quad(MOON, mx - MOON_R * A, my - MOON_R * A, mx + MOON_R * A, my + MOON_R * A, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
 
-        // ---- clouds and the distant spires
-        wrapped(CLOUDS_FAR, 0.28f, 0.80f, t * 0.006f, 0.008f, 1f);
-        art(SPIRES_FAR, -ART_W / 2, 0.12f, ART_W / 2, 0.80f, 0.010f, 1f);
-        wrapped(CLOUDS_NEAR, 0.46f, 0.84f, t * 0.014f, 0.012f, 1f);
+        // ---- wind: a gust front crosses left to right every GUST_S seconds; clouds and mist speed up with it
+        float gp = t / GUST_S;
+        gustFront = -1.7f + 3.4f * frac(gp);
+        float gustInt = t * 0.5f - GUST_S / (4f * Mth.PI) * Mth.sin(t * 6.2831855f / GUST_S);   // integral of the global gust
+        float windT = motion ? t + 0.6f * gustInt : t;
+        // ---- the breath: a slow inhale / exhale of the glass, the rim light, the portal's haze and the mist
+        float breath = motion ? 0.5f - 0.5f * Mth.cos(t * 6.2831855f / BREATH_S) : 0.5f;
 
-        // ---- the cathedral and its glass
-        art(CATHEDRAL, -0.40f, 0f, 0.40f, 0.80f, 0.014f, 1f);
+        // ---- clouds and the distant spires
+        wrapped(CLOUDS_FAR, 0.28f, 0.80f, windT * 0.006f, 0.008f, 1f);
+        art(SPIRES_FAR, -ART_W / 2, 0.12f, ART_W / 2, 0.80f, 0.010f, 1f);
+        wrapped(CLOUDS_NEAR, 0.46f, 0.84f, windT * 0.014f, 0.012f, 1f);
+
+        // ---- the cathedral (a 0.6 % swell on the breath, about its foot - the architecture itself never moves) and its glass
+        float swell = 1f + 0.006f * breath;
+        cathedralLayer(CATHEDRAL, swell, 1f);
         additive();
-        art(GLASS_ROSE, -0.40f, 0f, 0.40f, 0.80f, 0.014f, 0.40f + 0.12f * Mth.sin(t * 0.80f));
-        art(GLASS_LANCETS, -0.40f, 0f, 0.40f, 0.80f, 0.014f, 0.36f + 0.12f * Mth.sin(t * 0.63f + 2.1f));
+        cathedralLayer(CATHEDRAL_RIM, swell, 0.22f + 0.38f * breath);
+        cathedralLayer(GLASS_ROSE, swell, (0.34f + 0.26f * breath) * (0.92f + 0.08f * Mth.sin(t * 0.80f)));
+        cathedralLayer(GLASS_LANCETS, swell, (0.30f + 0.26f * breath) * (0.92f + 0.08f * Mth.sin(t * 0.63f + 2.1f)));
+        // a warm haze breathing out of the portal
+        float gpx0 = -parX * 0.016f * A;
+        float hx = sx(0f) + gpx0, hy = sy(0.725f), hr = 0.10f * A * (0.9f + 0.2f * breath);
+        quad(GLOW, hx - hr, hy - hr * 0.7f, hx + hr, hy + hr * 0.7f, 0f, 0f, 1f, 1f, 1f, 0.55f, 0.30f, 0.10f + 0.20f * breath);
         RenderSystem.defaultBlendFunc();
-        wrapped(MIST, 0.60f, 0.86f, t * 0.010f, 0.018f, 0.9f);
+        wrapped(MIST, 0.60f, 0.86f, windT * 0.010f + breath * 0.012f, 0.018f, 0.65f + 0.35f * breath);
 
         // ---- ground, cascade, river
         art(GROUND, -ART_W / 2, 0.56f, ART_W / 2, 1f, 0.020f, 1f);
@@ -233,21 +259,46 @@ public class LobbyBackdrop {
             cv, cv + CASCADE_TILES, 0.95f);
         additive();
         river(RIPPLES, gpx, t, 0.55f + 0.1f * Mth.sin(t * 0.9f));
-        river(STREAK, gpx, t, 0.75f * (0.85f + 0.15f * Mth.sin(t * 1.7f)));
+        float shimmer = 0.7f + 0.3f * Mth.sin(t * 5.3f) * Mth.sin(t * 3.1f + 1f);
+        river(STREAK, gpx, t, 0.75f * shimmer);
+        // foam churning at the foot of the fall
+        float fx0 = c0, fy0 = sy(CASCADE_BOTTOM + 0.004f), fr = 0.06f * A * (1f + 0.08f * Mth.sin(t * 4.1f));
+        quad(GLOW, fx0 - fr, fy0 - fr * 0.35f, fx0 + fr, fy0 + fr * 0.35f, 0f, 0f, 1f, 1f, 1f, 0.78f, 0.74f,
+            0.22f + 0.06f * Mth.sin(t * 6.7f));
+        // now and then a ring spreads from a rock in the stream
+        if (motion) {
+            for (int i = 0; i < RIVER_ROCKS.length; i++) {
+                float period = 3.7f + 0.6f * i;
+                float p = frac(t / period + i * 0.37f);
+                float rr = RIVER_ROCKS[i][2] * A * (1.2f + 2.4f * p);
+                float rx = sx(RIVER_ROCKS[i][0]) + gpx, ry = sy(RIVER_ROCKS[i][1] + RIVER_ROCKS[i][2] * 0.3f);
+                quad(RING, rx - rr, ry - rr * 0.32f, rx + rr, ry + rr * 0.32f, 0f, 0f, 1f, 1f, 1f, 0.72f, 0.68f,
+                    0.45f * (1f - p) * (1f - p));
+            }
+        }
         RenderSystem.defaultBlendFunc();
 
-        // ---- the flower fields, swaying
-        float sway1 = Mth.sin(t * 0.9f) + 0.4f * Mth.sin(t * 2.3f + 1f);
-        float sway2 = Mth.sin(t * 0.75f + 1.3f) + 0.4f * Mth.sin(t * 1.9f + 0.4f);
-        swayed(FIELD_FAR, 0.62f, 0.93f, 0.026f, sway1 * 0.0022f * A);
+        // ---- the flower fields: a gentle sway, and a wave rolling through behind each gust
+        swayed(FIELD_FAR, 0.62f, 0.93f, 0.026f, 0.0016f, 0.0030f, t, motion);
         if (motion)
             bats(t);
-        swayed(FIELD_NEAR, 0.78f, 1f, 0.034f, sway2 * 0.0055f * A);
+        swayed(FIELD_NEAR, 0.78f, 1f, 0.034f, 0.0040f, 0.0085f, t, motion);
 
-        // ---- the framing ruins, pinned to the screen edges
-        float fw = FRAME_W * A, fpx = -parX * 0.02f * A, fy0 = h - A;
-        quad(FRAME_LEFT, -0.03f * A + fpx, fy0, -0.03f * A + fpx + fw, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
-        quad(FRAME_RIGHT, w + 0.03f * A + fpx - fw, fy0, w + 0.03f * A + fpx, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        // ---- the framing: trees (behind) and vines (in front) sway with the wind; the ruined stone stays still
+        float fw = FRAME_W * A, fpx = -parX * 0.02f * A, ftop = h - A;
+        float lxL = -0.03f * A + fpx, lxR = w + 0.03f * A + fpx - fw;
+        float edgeL = (-w / 2f + fw * 0.5f) / A, edgeR = (w / 2f - fw * 0.5f) / A;   // the frames' centres in A
+        float leanL = motion ? A * (0.0035f * Mth.sin(t * 0.7f) + 0.014f * gust(edgeL)) : 0f;
+        float leanR = motion ? A * (0.0035f * Mth.sin(t * 0.7f + 1.9f) + 0.014f * gust(edgeR)) : 0f;
+        leaning(TREE_LEFT, lxL, ftop, lxL + fw, h, leanL, true);
+        leaning(TREE_RIGHT, lxR, ftop, lxR + fw, h, leanR, true);
+        quad(FRAME_LEFT, lxL, ftop, lxL + fw, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        quad(FRAME_RIGHT, lxR, ftop, lxR + fw, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        // vines hang from the top: their lower ends trail behind the gust (a little later than the trees)
+        float vL = motion ? A * (0.004f * Mth.sin(t * 1.1f) + 0.016f * gust(edgeL - 0.25f)) : 0f;
+        float vR = motion ? A * (0.004f * Mth.sin(t * 1.1f + 2.3f) + 0.016f * gust(edgeR - 0.25f)) : 0f;
+        leaning(VINES_LEFT, lxL, ftop, lxL + fw, h, vL, false);
+        leaning(VINES_RIGHT, lxR, ftop, lxR + fw, h, vR, false);
         if (motion)
             petals(t);
 
@@ -298,18 +349,61 @@ public class LobbyBackdrop {
         quad(tex, sx(xa) + px, sy(y0), sx(xb) + px, sy(y1), u0, 0f, u1, 1f, 1f, 1f, 1f, alpha);
     }
 
-    /** A flower field: the bottom edge stays put, the top edge leans with the wind. */
-    private static void swayed(int tex, float y0, float y1, float depth, float lean) {
+    /** The wind at artboard x right now: the travelling gust front plus its trailing eddy, 0..~1.2. */
+    private static float gust(float x) {
+        float d = (x - gustFront) / 0.35f, e = (x - gustFront + 0.5f) / 0.6f;
+        return (float) (Math.exp(-d * d) + 0.4 * Math.exp(-e * e));
+    }
+
+    /** A cathedral-frame layer (the facade, its rim light, its glass), swollen by `swell` about the facade's foot. */
+    private static void cathedralLayer(int tex, float swell, float alpha) {
+        float px = -parX * 0.014f * A, py = -parY * 0.014f * 0.3f * A;
+        float pvx = sx(0f) + px, pvy = sy(0.745f) + py;
+        float x0 = pvx + (sx(-0.40f) + px - pvx) * swell, x1 = pvx + (sx(0.40f) + px - pvx) * swell;
+        float y0 = pvy + (sy(0f) + py - pvy) * swell, y1 = pvy + (sy(0.80f) + py - pvy) * swell;
+        quad(tex, x0, y0, x1, y1, 0f, 0f, 1f, 1f, 1f, 1f, 1f, alpha);
+    }
+
+    /**
+     * A flower field in SLICES vertical strips: the bottom edge stays put, the top edge leans - a gentle sway that
+     * travels across (phase by x) plus a wave rolling through behind each gust. Shared strip edges keep it seamless.
+     */
+    private static void swayed(int tex, float y0, float y1, float depth, float sway, float gustAmp, float t, boolean motion) {
         float px = -parX * depth * A;
-        float x0 = sx(-ART_W / 2) + px, x1 = sx(ART_W / 2) + px, ya = sy(y0), yb = sy(y1);
+        float ya = sy(y0), yb = sy(y1);
         RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
         RenderSystem.setShaderTexture(0, TEX[tex]);
         BufferBuilder buf = Tesselator.getInstance().getBuilder();
         buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        buf.vertex(M, x0 + lean, ya, 0f).uv(0f, 0f).color(1f, 1f, 1f, 1f).endVertex();
-        buf.vertex(M, x0, yb, 0f).uv(0f, 1f).color(1f, 1f, 1f, 1f).endVertex();
-        buf.vertex(M, x1, yb, 0f).uv(1f, 1f).color(1f, 1f, 1f, 1f).endVertex();
-        buf.vertex(M, x1 + lean, ya, 0f).uv(1f, 0f).color(1f, 1f, 1f, 1f).endVertex();
+        float prevLean = 0f;
+        for (int i = 0; i <= SLICES; i++) {
+            float u = i / (float) SLICES;
+            float x = -ART_W / 2 + ART_W * u;
+            float lean = motion ? A * (sway * Mth.sin(t * 0.9f + x * 3f) + gustAmp * gust(x - 0.15f)) : 0f;
+            if (i > 0) {
+                float u0 = (i - 1) / (float) SLICES;
+                float xa = sx(-ART_W / 2 + ART_W * u0) + px, xb = sx(x) + px;
+                buf.vertex(M, xa + prevLean, ya, 0f).uv(u0, 0f).color(1f, 1f, 1f, 1f).endVertex();
+                buf.vertex(M, xa, yb, 0f).uv(u0, 1f).color(1f, 1f, 1f, 1f).endVertex();
+                buf.vertex(M, xb, yb, 0f).uv(u, 1f).color(1f, 1f, 1f, 1f).endVertex();
+                buf.vertex(M, xb + lean, ya, 0f).uv(u, 0f).color(1f, 1f, 1f, 1f).endVertex();
+            }
+            prevLean = lean;
+        }
+        BufferUploader.drawWithShader(buf.end());
+    }
+
+    /** A framing layer that leans: anchored at the bottom (a tree) or at the top (hanging vines). */
+    private static void leaning(int tex, float x0, float y0, float x1, float y1, float lean, boolean anchoredBottom) {
+        float lt = anchoredBottom ? lean : 0f, lb = anchoredBottom ? 0f : lean;
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShaderTexture(0, TEX[tex]);
+        BufferBuilder buf = Tesselator.getInstance().getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        buf.vertex(M, x0 + lt, y0, 0f).uv(0f, 0f).color(1f, 1f, 1f, 1f).endVertex();
+        buf.vertex(M, x0 + lb, y1, 0f).uv(0f, 1f).color(1f, 1f, 1f, 1f).endVertex();
+        buf.vertex(M, x1 + lb, y1, 0f).uv(1f, 1f).color(1f, 1f, 1f, 1f).endVertex();
+        buf.vertex(M, x1 + lt, y0, 0f).uv(1f, 0f).color(1f, 1f, 1f, 1f).endVertex();
         BufferUploader.drawWithShader(buf.end());
     }
 
@@ -409,19 +503,21 @@ public class LobbyBackdrop {
         }
     }
 
-    /** A dozen petals blowing across, each on its own looping path (all derived from time, nothing stored). */
+    /** Petals and copper leaves blowing across, each on its own looping path; a passing gust lifts and hurries them. */
     private static void petals(float t) {
         float span = w / A + 0.5f;
         for (int i = 0; i < PETALS; i++) {
             float speed = 0.05f + 0.035f * frac(i * 0.618f);
             float phase = frac(t * speed / span + i * 0.37f);
             float x = -span / 2f + phase * span;
-            float y = 0.38f + 0.58f * frac(i * 0.731f + 0.2f) + 0.03f * Mth.sin(t * 0.9f + i) + phase * 0.06f;
+            float g = gust(x);
+            x += 0.10f * g;
+            float y = 0.38f + 0.58f * frac(i * 0.731f + 0.2f) + 0.03f * Mth.sin(t * 0.9f + i) + phase * 0.06f - 0.06f * g;
             float s = (0.007f + 0.005f * frac(i * 0.29f)) * A;
-            float ang = t * (1f + frac(i * 0.41f)) * 1.6f + i;
+            float ang = t * (1f + frac(i * 0.41f)) * 1.6f + i + 2f * g;
             float fade = Math.min(1f, Math.min(phase, 1f - phase) * 8f);
             float px = x * A - parX * 0.04f * A + cx;
-            rotated(PETAL, px, sy(y), s, ang, 0.9f * fade);
+            rotated(i % 3 == 2 ? LEAF : PETAL, px, sy(y), s, ang, 0.9f * fade);
         }
     }
 
