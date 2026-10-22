@@ -416,6 +416,13 @@ public final class PacketHandler {
                 .consumerMainThread(FogBuildingClientboundPacket::handle)
                 .add();
 
+        // a blueprint's ghost (building/Blueprints): owner, allies and spectators only
+        INSTANCE.messageBuilder(BlueprintClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(BlueprintClientboundPacket::encode)
+                .decoder(BlueprintClientboundPacket::new)
+                .consumerMainThread(BlueprintClientboundPacket::handle)
+                .add();
+
         INSTANCE.messageBuilder(CustomButtonActionServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(CustomButtonActionServerboundPacket::encode)
                 .decoder(CustomButtonActionServerboundPacket::decode)

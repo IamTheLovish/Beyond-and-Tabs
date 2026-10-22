@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.goals;
 
+import com.solegendary.reignofnether.building.Blueprints;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
@@ -45,7 +46,7 @@ public class ExploreBuildLocationGoal extends MoveToTargetBlockGoal {
         }
         else if (!this.mob.level().isClientSide() && !fogQueuedBuildings.isEmpty() && !hasBuildingTarget) {
             BuildingPlacement bpl = fogQueuedBuildings.get(0);
-            boolean isPlaced = BuildingServerEvents.isRegistered(bpl);
+            boolean isPlaced = BuildingServerEvents.isRegistered(bpl) || Blueprints.isPending(bpl);   // explored: a blueprint, until the worker arrives
 
             // not placed and is explored -> place
             if (!isPlaced && FogOfWarServerEvents.isBlockVisibleFor(((Unit) mob).getOwnerName(), bpl.centrePos.getX(), bpl.centrePos.getZ())) {

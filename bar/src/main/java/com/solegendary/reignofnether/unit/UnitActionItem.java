@@ -427,7 +427,7 @@ public class UnitActionItem {
                 case BUILD_REPAIR -> {
                     // if the unit can't actually build/repair just treat this as a move action
                     if (unit instanceof WorkerUnit workerUnit) {
-                        BuildingPlacement building = BuildingUtils.findBuilding(level.isClientSide(), preselectedBlockPos);
+                        BuildingPlacement building = BuildingUtils.findBuildingOrBlueprint(level.isClientSide(), preselectedBlockPos);   // a pending site (Blueprints) too
                         if (building != null) {
                             workerUnit.getBuildRepairGoal().setBuildingTarget(building);
                         }
