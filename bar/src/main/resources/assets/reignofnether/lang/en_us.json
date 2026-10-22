@@ -1047,6 +1047,7 @@
   "hud.helperbuttons.reignofnether.idle_factories": "Idle Factories (click to cycle)",
   "hud.helperbuttons.reignofnether.select_all_military_units": "Select all military units",
   "hud.helperbuttons.reignofnether.select_all_military_units_shift": "(Shift-click to select only on screen)",
+  "hud.helperbuttons.reignofnether.select_idle_military_units": "(Ctrl-click to select only the idle ones - the number on the tile)",
   "hud.helperbuttons.reignofnether.cancel": "Cancel",
   "hud.helperbuttons.reignofnether.cancel.error": "Cannot delete this building",
   "hud.helperbuttons.reignofnether.beacon.beacon_level_title": "Beacon Level: %d/%d",

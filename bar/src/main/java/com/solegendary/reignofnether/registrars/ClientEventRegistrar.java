@@ -104,6 +104,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.MatchBanner.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleFactories.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleArmy.class);
         vanillaEventBus.register(CursorClientEvents.class);
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);

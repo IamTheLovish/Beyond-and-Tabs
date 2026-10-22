@@ -145,11 +145,18 @@ public class UnitActionItem {
         return true;
     }
 
-    private boolean isRedundantMove(Unit unit, BlockPos targetPos) {
+    /**
+     * A MOVE to (about) the spot this unit is already walking to, while it is really getting there: skipped, since a
+     * re-path is expensive and spam-clicking a moving army would only stall it. A unit that is NOT making progress
+     * (no live path, standing on a retry, or circling in a path loop - MoveToTargetBlockGoal.isMakingProgress) takes
+     * the order in full - reset and a new path - so clicking again rescues it (it used to be skipped too: "units
+     * sometimes don't listen to my commands").
+     */
+    public static boolean isRedundantMove(Unit unit, BlockPos targetPos) {
         LivingEntity le = (LivingEntity) unit;
         MoveToTargetBlockGoal goal = unit.getMoveGoal();
 
-        if (goal != null && !le.level().isClientSide()) {
+        if (goal != null && !le.level().isClientSide() && goal.isMakingProgress()) {
             BlockPos bp = goal.getMoveTarget();
             if (bp != null) {
                 double distToTarget = bp.distSqr(le.getOnPos());
@@ -260,6 +267,11 @@ public class UnitActionItem {
                     //}
                     if (shouldResetBehaviours && (NON_ABILITY_ACTIONS.contains(action) || foundAbility) && action != UnitAction.RETURN_RESOURCES_TO_CLOSEST) {
                         Unit.fullResetBehaviours(unit);
+                        // a new order replaces a big vanilla-mode formation move still waiting in the time-sliced
+                        // dispatch queue: else that stale move landed a few ticks later, over this order (a Stop
+                        // right after a 20+ unit move was undone). A new formation move re-queues the unit below.
+                        if (!level.isClientSide() && !autocast)
+                            UnitServerEvents.cancelQueuedFormationMove(((Entity) unit).getId());
                     }
                 }
             }

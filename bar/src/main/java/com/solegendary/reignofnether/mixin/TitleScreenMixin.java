@@ -232,8 +232,9 @@ public class TitleScreenMixin extends Screen {
                 ? (float) (Util.getMillis() - this.fadeInStart) / 1000.0F
                 : 1.0F;
 
-        // Beyond and Tabs: the cathedral rose window (hud/SplashArt, design/splash.md) replaces the panorama, the
-        // Minecraft logo and the yellow splash; the faction panorama stays as the fallback if the art cannot load
+        // Beyond and Tabs: the moonlit cathedral with the blood-red title (hud/SplashArt -> LobbyBackdrop, design/splash.md)
+        // replaces the panorama, the Minecraft logo and the yellow splash; the old rose window is its fallback, and the
+        // faction panorama the last resort if no art can load
         boolean rose = SplashArt.ensureLoaded();
         if (rose) {
             guiGraphics.flush();
@@ -309,6 +310,10 @@ public class TitleScreenMixin extends Screen {
                     widget.setAlpha(alpha);
                 }
             }
+
+            // a soft dark pad behind the button column so the plates read over the scene
+            if (rose)
+                SplashArt.buttonScrim(guiGraphics, this.children(), alpha);
 
             // Call the superclass render
             super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
