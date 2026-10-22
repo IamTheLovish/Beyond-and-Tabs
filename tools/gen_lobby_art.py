@@ -706,12 +706,136 @@ def clouds(name, w, h, seed, dark, lite, lo, hi, profile, streaks=1.0, alpha_max
     return save_rgba(rgb, a * alpha_max * fade, name)
 
 
+def drawn_clouds(name, w, h, seed, n, band, dark, lite, rim_rgb, size, haze, alpha_max=1.0):
+    """Drawn cloud banks (lovish, round 5: "drawn cloud shapes"): each cloud is a flat-bellied bank of overlapping
+    puffs laid down back to front like a pen drawing - every puff shaded as a ball lit from the moon (upper left),
+    its upper arc inked where it shows in front of the puffs behind it, the bellies hatched in ink, the edges facing
+    the moon caught by a pale rim. A faint billow of the old smoky banks (`haze`) stays underneath. Periodic in x."""
+    rect = RECTS[name]
+    rr = np.random.default_rng(seed)
+    ss = 2
+    W, H = w * ss, h * ss
+    rgb = np.zeros((H, W, 3), np.float32)
+    a = np.zeros((H, W), np.float32)
+    ink = np.zeros((H, W), np.float32)
+    lx, ly = -0.55, -0.83                         # towards the light (the moon, upper left)
+    clouds_ = []
+    for k in range(n):
+        L = rr.uniform(0.10, 0.26) * W * size
+        Hc = L * rr.uniform(0.16, 0.26)
+        yb = (band[0] + (band[1] - band[0]) * rr.random()) * H
+        clouds_.append((yb, rr.uniform(0, W), L, Hc))
+    shade_k = {}
+    clouds_.sort(key=lambda c: c[0])             # higher (farther) banks first, lower ones overlap them
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    for yb, cx, L, Hc in clouds_:
+        # the puffs: a back tier of big domes (drawn first), small cauliflower knobs along their tops, then a
+        # front tier of low, uneven lobes along the belly - many sizes, irregular spacing
+        puffs = []
+        m = int(rr.integers(4, 7))
+        tops = []
+        for i in range(m):
+            f = (i + rr.uniform(0.2, 0.8)) / m
+            env = math.sin(math.pi * f) ** 0.6
+            r = Hc * (0.30 + 0.75 * env) * rr.uniform(0.7, 1.25)
+            px = cx + (f - 0.5) * L * 0.8
+            py = yb - r * 0.75 - Hc * 0.25 * env
+            puffs.append((px, py, r))
+            tops.append((px, py, r))
+        for px, py, r in tops:
+            for _ in range(int(rr.integers(1, 4))):
+                ang = rr.uniform(-2.6, -0.5)
+                rk = r * rr.uniform(0.28, 0.5)
+                puffs.append((px + math.cos(ang) * r * 0.78, py + math.sin(ang) * r * 0.78, rk))
+        cnt = int(rr.integers(7, 13))
+        for i in range(cnt):
+            f = 0.1 + 0.8 * (i + rr.uniform(0.0, 1.0)) / cnt
+            env = math.sin(math.pi * f) ** 0.8
+            r = Hc * (0.18 + 0.42 * env) * rr.uniform(0.7, 1.3)
+            puffs.append((cx + (f - 0.5) * L, yb - r * 0.45 + rr.uniform(-0.05, 0.05) * Hc, r))
+        ctop = min(py - r for px, py, r in puffs)
+        belly = yb + Hc * 0.08
+        for px0, py, r in puffs:
+            for px in (px0 - W, px0, px0 + W):
+                x0, x1 = int(max(0, px - r - 2)), int(min(W, px + r + 3))
+                y0, y1 = int(max(0, py - r - 2)), int(min(H, py + r + 3))
+                if x0 >= x1 or y0 >= y1:
+                    continue
+                X, Y = xx[y0:y1, x0:x1], yy[y0:y1, x0:x1]
+                dx, dy = (X - px) / r, (Y - py) / r
+                d = np.sqrt(dx * dx + dy * dy)
+                d = d + 0.035 * np.sin(np.arctan2(dy, dx) * 7 + px) + 0.02 * np.sin(np.arctan2(dy, dx) * 13 + py)
+                # a soft-edged disc with a flattened, slightly ragged belly
+                wob = 0.02 * Hc * np.sin(X / (0.11 * Hc) + px)
+                cut = smoothstep(belly + wob + 1.5 * ss, belly + wob - 1.5 * ss, Y)
+                cov = np.clip((1 - d) * r / (1.2 * ss), 0, 1) * cut
+                if cov.max() <= 0:
+                    continue
+                # lit from the top of the bank and toward the moon; the lobes only round it a little
+                nz = np.sqrt(np.clip(1 - d * d, 0, 1))
+                vert = 1 - np.clip((Y - ctop) / max(1.0, belly - ctop), 0, 1)
+                lam = np.clip(0.62 * vert + 0.30 * np.clip(-(dx * lx + dy * ly), 0, 1) * nz + 0.12, 0, 1)
+                lam = lam * (0.9 + 0.1 * np.sin(X * 0.21 + Y * 0.17 + px))
+                c = lerp(col(dark), col(lite), lam * (0.62 + 0.38 * (yb / H - band[0]) / (band[1] - band[0] + 1e-6)))
+                # the moonlit rim: a thin pale edge on the upper side facing the light
+                edge = smoothstep(0.86, 0.98, d) * np.clip(-(dx * lx + dy * ly) - 0.2, 0, 1) * (dy < 0.1)
+                c = lerp(c, col(rim_rgb), edge * 0.85)
+                sub_rgb, sub_a, sub_i = rgb[y0:y1, x0:x1], a[y0:y1, x0:x1], ink[y0:y1, x0:x1]
+                sub_rgb[:] = lerp(sub_rgb, c, cov)
+                sub_a[:] = cov + sub_a * (1 - cov)
+                # ink: the new puff hides the lines behind it, then its own outline (strongest on the shadow side)
+                sub_i[:] *= 1 - cov
+                line = np.clip(1 - np.abs(d - 0.985) * r / (0.9 * ss), 0, 1) * cut
+                line *= np.clip(0.35 - dy * 1.2, 0, 1) * (0.55 + 0.45 * np.clip((dx * lx + dy * ly) + 0.6, 0, 1))
+                sub_i[:] = np.maximum(sub_i, line)
+        # the belly line: a ruled ink stroke along the flat underside
+        for bx in (cx - W, cx, cx + W):
+            x0, x1 = int(max(0, bx - L * 0.55)), int(min(W, bx + L * 0.55))
+            if x0 >= x1:
+                continue
+            X = xx[0, x0:x1]
+            yl = belly + 0.02 * Hc * np.sin(X / (0.11 * Hc) + cx) - 1.0 * ss
+            for xi, yv in zip(range(x0, x1), yl):
+                yi = int(yv)
+                if 0 <= yi < H - 1 and a[yi, xi] > 0.5:
+                    ink[yi, xi] = max(ink[yi, xi], 0.7)
+    # hatching in the shadowed bellies: diagonal ink lines, denser and crossed where darker
+    lum = rgb.mean(-1)
+    t = np.clip((col(lite).mean() * 0.62 - lum) / (col(lite).mean() * 0.5), 0, 1) * (a > 0.6)
+    h1 = (0.5 + 0.5 * np.sin((xx + yy * 0.55) / (2.6 * ss) * math.pi)) ** 8
+    h2 = (0.5 + 0.5 * np.sin((xx - yy * 0.9) / (2.9 * ss) * math.pi)) ** 8
+    hatch = h1 * smoothstep(0.15, 0.5, t) + h2 * smoothstep(0.55, 0.9, t)
+    inkv = np.clip(np.maximum(ink, hatch * 0.75), 0, 1)
+    rgb = lerp(rgb, col((18, 2, 6)), inkv * 0.85)
+    # the old smoky billow beneath, faint
+    if haze is not None:
+        hz_rgb, hz_a = haze
+        hz_rgb = np.asarray(Image.fromarray(np.round(hz_rgb * 255).astype(np.uint8)).resize((W, H), Image.BILINEAR),
+                            np.float32) / 255
+        hz_a = np.asarray(Image.fromarray(hz_a.astype(np.float32), "F").resize((W, H), Image.BILINEAR)) * 0.42
+        out_a = a + hz_a * (1 - a)
+        rgb = (rgb * a[..., None] + hz_rgb * (hz_a * (1 - a))[..., None]) / np.maximum(out_a, 1e-4)[..., None]
+        a = out_a
+    Y = yy / H * (rect[3] - rect[1]) + rect[1]
+    fade = smoothstep(rect[1], rect[1] + 0.05, Y) * (1 - smoothstep(rect[3] - 0.05, rect[3], Y))
+    return save_rgba(rgb, a * alpha_max * fade, name, size=(w, h))
+
+
+def _haze(name, w, h, seed, dark, lite, lo, hi, profile, streaks=1.0):
+    clouds(name, w, h, seed, dark, lite, lo, hi, profile, streaks)
+    im = np.asarray(Image.open(os.path.join(OUT, name + ".png")).convert("RGBA"), np.float32) / 255
+    return im[..., :3], im[..., 3]
+
+
 def all_clouds():
-    clouds("clouds_far", 1280, 286, 31, (60, 6, 12), (206, 40, 40), 0.46, 0.66,
-           lambda Y: 0.22 * smoothstep(0.34, 0.56, Y) - 0.18 * smoothstep(0.70, 0.80, Y) - 0.12)
-    clouds("clouds_near", 1280, 210, 41, (30, 5, 9), (140, 24, 30), 0.50, 0.68,
-           lambda Y: 0.20 * smoothstep(0.50, 0.64, Y) - 0.25 * smoothstep(0.74, 0.84, Y) - 0.08, streaks=0.8,
-           alpha_max=0.88)
+    hz = _haze("clouds_far", 1280, 286, 31, (60, 6, 12), (206, 40, 40), 0.46, 0.66,
+               lambda Y: 0.22 * smoothstep(0.34, 0.56, Y) - 0.18 * smoothstep(0.70, 0.80, Y) - 0.12)
+    drawn_clouds("clouds_far", 1280, 286, 33, 14, (0.30, 0.80), (44, 6, 12), (212, 64, 58), (255, 206, 190), 0.8, hz,
+                 alpha_max=0.88)
+    hz = _haze("clouds_near", 1280, 210, 41, (30, 5, 9), (140, 24, 30), 0.50, 0.68,
+               lambda Y: 0.20 * smoothstep(0.50, 0.64, Y) - 0.25 * smoothstep(0.74, 0.84, Y) - 0.08, streaks=0.8)
+    drawn_clouds("clouds_near", 1280, 210, 43, 8, (0.45, 0.82), (26, 4, 9), (168, 40, 42), (236, 170, 156), 1.15, hz,
+                 alpha_max=0.9)
 
 
 # ---------------------------------------------------------------- the cathedral
@@ -3033,8 +3157,8 @@ def hand_drawn_all(only=None):
             print("hand-drawing", name, flush=True)
             hand_drawn(name, *a, **kw)
     hd("sky", 0.0, pencil=0.9, ink=0.0, gel=0.0, L=14, seed=201, keep=0.6)
-    hd("clouds_far", 0.08, pencil=1.0, ink=0.4, gel=0.3, L=12, seed=202, keep=0.4)
-    hd("clouds_near", 0.05, pencil=1.0, ink=0.4, gel=0.0, L=12, seed=203, keep=0.4)
+    hd("clouds_far", 0.08, pencil=0.8, ink=0.2, gel=0.3, L=10, seed=202, keep=0.7)
+    hd("clouds_near", 0.05, pencil=0.8, ink=0.2, gel=0.0, L=10, seed=203, keep=0.7)
     hd("moon", 0.0, pencil=1.2, ink=0.6, gel=0.0, stipple=0.8, L=7, seed=204, keep=0.5,
        burnish=lambda l, a, s: smoothstep(0.55, 0.8, l) * 0.6)
     hd("spires_far", math.pi / 2, pencil=0.8, ink=0.7, gel=0.4, L=8, seed=205, chalk=1.0, keep=0.5)
