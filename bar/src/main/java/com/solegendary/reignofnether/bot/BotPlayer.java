@@ -600,10 +600,10 @@ public class BotPlayer {
             boolean researchingT2 = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
             if (!done && t1Req != null && t1Req != kit.armyBuilding() && (tier2 || researchingT2) && armyBuildings >= 1
                     && count(buildings, t1Req) < 1)
-                done = placeNear(level, t1Req, layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 1);
+                done = placeTechBuilding(level, t1Req, armyBuildings + 1, workers, 1);
             if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
                     && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
-                done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 3);   // 3 builders: the lab is 504 builder-seconds
+                done = placeTechBuilding(level, kit.t2Lab(), armyBuildings + 2, workers, 3);   // 3 builders: the lab is 504 builder-seconds
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
@@ -707,9 +707,11 @@ public class BotPlayer {
         // home extractors one at a time
         // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
-        if (!tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
-                && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings)
-                && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
+        // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
+        // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
+        techPending = !tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
+            && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
+        if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
             boolean upgrading = false;
@@ -886,8 +888,11 @@ public class BotPlayer {
         lab.startProductionItem(kit.t2Worker());
     }
 
+    /** The bot is ready for Tier 2 and waits only for the capitol's queue to empty (set each think by the tech step). */
+    boolean techPending = false;
+
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
-        if (workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
+        if (techPending || workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
             return;
         // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
         if (pp.productionQueue.size() < (floating() ? 2 : 1))
@@ -2486,6 +2491,20 @@ public class BotPlayer {
         boolean ok = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, index + labSlotShift), workers, 2);
         if (!ok)
             labSlotShift++;
+        return ok;
+    }
+
+    /** How far the tech buildings' (T2 prerequisite, T2 lab) slot has moved past the sites that failed. */
+    public int techSlotShift = 0;
+
+    /**
+     * A tech building at the army layout's slot {@code index}, shifted past the slots that had no valid site (the same slot
+     * would fail the same way on every think: the Horde's Hoglin Stables sat at "no valid site" for minutes).
+     */
+    boolean placeTechBuilding(ServerLevel level, Building building, int index, List<LivingEntity> workers, int builders) {
+        boolean ok = placeNear(level, building, layoutSlot(Layout.ARMY, index + techSlotShift), workers, builders);
+        if (!ok)
+            techSlotShift = (techSlotShift + 1) % 8;
         return ok;
     }
 
