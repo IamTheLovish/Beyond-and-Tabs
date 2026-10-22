@@ -56,7 +56,7 @@ TARGETS = {
     # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
     "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=0.8, lf=0.3),
     "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.31, std=0.070, sat=0.32, tilt=19.0, smooth=26, pore=56, soften=0.8, lf=0.3),
+    "dirt":             dict(luma=0.31, std=0.070, sat=0.32, tilt=16.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.4),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
     "stone":            dict(luma=0.52, std=0.045, sat=0.04, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12, soften=1.0),
@@ -565,9 +565,9 @@ def m_dirt_r24(F, n):
             y = int(round(y0 + math.sin(ang + bend) * t_ * ln)) % n
             roots[y, x] = 1.0
     roots = F.blur(roots, 0.6) * 2.5
-    H = 0.45 + 0.12 * dome + 0.04 * lumpy + 0.03 * crumb_tone - 0.05 * moist + 0.02 * np.clip(roots, 0, 1)
+    H = 0.45 + 0.06 * np.sqrt(dome) + 0.015 * lumpy + 0.03 * crumb_tone + 0.02 * np.clip(roots, 0, 1)
     H = np.where(stones, H + 0.15 * sdome, H)
-    shade = (0.94 + 0.08 * crumb_tone + 0.05 * dome + 0.06 * lumpy) - 0.08 * moist
+    shade = (0.94 + 0.08 * crumb_tone + 0.05 * dome + 0.03 * lumpy) - 0.04 * moist
     alb = tint((0.42, 0.35, 0.25), shade)              # umber: red/green 1.2 (the low sun warms it further)
     alb = np.where(stones[..., None], tint((0.42, 0.39, 0.35), 0.80 + 0.2 * sdome), alb)
     rc = np.clip(roots, 0, 1)[..., None]
