@@ -819,6 +819,15 @@ public class StrategicViewClientEvents {
     public static void onRenderLevel(RenderLevelStageEvent evt) {
         if (!OrthoviewClientEvents.isEnabled() || MC.level == null)
             return;
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.UNIT_RINGS);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void renderLevel(RenderLevelStageEvent evt) {
         // in strategic view the icons carry the selection, except for big units still drawn as models
         if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled
                 && (!strategic || !strategicBig))

@@ -44,7 +44,7 @@ import java.util.List;
  * Stills at a mid zoom (45) with the units selected, then with one of our houses selected; and at strategic zoom. Then
  * the measurement: eight 8-second slices alternating normal zoom (30) and strategic zoom (200) ABBA-wise, each after a
  * 3-second settle. Per slice: the frame times (vanilla's frame timer, p50 / p95 / max) and our handlers' milliseconds per
- * frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, minimap, hud, unitBodies); the
+ * frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, unitRings, minimap, hud, unitBodies); the
  * summary line gives each zoom's medians. The same scene on two builds (eyes.yml build_run) is a before / after.
  * <p>
  * Wall-clock timeline, like scenes 16 and 17 (a shader-lane client runs a few ticks a second).
@@ -60,7 +60,7 @@ final class EyesOverlaysScene {
             ZOOM_NORMAL, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_NORMAL };
     private static final double SETTLE_S = 3, SLICE_S = 8;
     private static final int[] SECTIONS = { FrameParts.UNIT_OVERLAYS, FrameParts.BUILDING_BOXES,
-            FrameParts.STRATEGIC_ICONS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES };
+            FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES };
     private static final int SUMMONS_PER_TICK = 25, HOUSES_PER_TICK = 100;
 
     private static int phase = 0;
