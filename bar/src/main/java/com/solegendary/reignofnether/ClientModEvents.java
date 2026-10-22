@@ -215,7 +215,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SentinelTreantRenderer::new);
         // the Sunforged Field Medic: a generated body (tools/gen_medic.py -> tools/dsl_to_game.py)
         evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), FieldMedicRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnitRenderer::new);
+        // the Dome Cleric: the human body since Oct 21 (tools/gen_cleric.py -> tools/dsl_to_game.py)
+        evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), DomeClericRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
@@ -272,7 +273,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
         // hero slice 2: the seven faction heroes, each on its body's renderer in its own skin
-        evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.DawnPaladin::new);
+        evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DawnPaladinRenderer::new);   // its own human body since Oct 21
         evt.registerEntityRenderer(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.Gravecaller::new);
         evt.registerEntityRenderer(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.HordeWarchief::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ThornheartDruid::new);
@@ -291,8 +292,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.JADE_QILIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.JadeQilinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.STEAM_HAULER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SteamHaulerRenderer::new);
         // combat engineers (design/combat_engineers.md): the illager engineers share one renderer, the Wrecker is a piglin
-        evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.FIELD_MASON_UNIT.get(),
-            ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "field_mason_unit"));
+        evt.registerEntityRenderer(EntityRegistrar.FIELD_MASON_UNIT.get(),
+            com.solegendary.reignofnether.unit.modelling.renderers.FieldMasonRenderer::new);   // the human body since Oct 21
         evt.<com.solegendary.reignofnether.unit.units.engineers.CombatEngineerUnit>registerEntityRenderer(EntityRegistrar.BONESETTER_UNIT.get(),
             ctx -> new com.solegendary.reignofnether.unit.modelling.renderers.CombatEngineerRenderer(ctx, "bonesetter_unit"));
         evt.registerEntityRenderer(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WreckerRenderer::new);
@@ -416,6 +417,15 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel::createBodyLayer);
+        // the four Sunforged men off the villager body (Oct 21, tools/human_kit.py)
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.DomeClericModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.DomeClericModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.RoyalArchitectModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.RoyalArchitectModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.FieldMasonModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.FieldMasonModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.DawnPaladinModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.DawnPaladinModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.MossbackBisonModel::createBodyLayer);
         // the White Angel capitol's marble statue (building/StatueRenderClientEvents; tools/gen_angel_statue.py)
