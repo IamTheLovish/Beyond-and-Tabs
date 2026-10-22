@@ -189,6 +189,23 @@ public class UnitServerEvents {
         }
     }
 
+    /**
+     * Drops this unit's formation move still waiting in the dispatch queue: called when the unit takes a newer order
+     * (UnitActionItem, at its behaviour reset - Stop included), so a stale move can't land after it.
+     */
+    public static void cancelQueuedFormationMove(int unitId) {
+        synchronized (formationDispatchQueue) {
+            formationDispatchQueue.remove(unitId);
+        }
+    }
+
+    /** For tests: whether this unit has a formation move waiting in the dispatch queue. */
+    public static boolean hasQueuedFormationMove(int unitId) {
+        synchronized (formationDispatchQueue) {
+            return formationDispatchQueue.containsKey(unitId);
+        }
+    }
+
     public static ArrayList<LivingEntity> getAllUnits() {
         return allUnits;
     }

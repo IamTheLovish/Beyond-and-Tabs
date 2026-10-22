@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.network;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import com.solegendary.reignofnether.unit.NonUnitServerEvents;
@@ -122,7 +123,8 @@ public final class PacketAuth {
     /**
      * True if {@code sp} may send one more {@code channel} packet now (and spends a token). {@code burst} packets can
      * arrive at once (a box-select of 200 units issues one order, a frantic player maybe 10 a second), then
-     * {@code perSecond} a second; anything over is dropped silently - the client never needs to know.
+     * {@code perSecond} a second; anything over is dropped (use {@link #allowLogged} where a drop loses a
+     * player's order, so it shows in the log).
      */
     public static boolean allow(ServerPlayer sp, String channel, double perSecond, double burst) {
         if (sp == null)
@@ -144,9 +146,39 @@ public final class PacketAuth {
         }
     }
 
+    // refusals per player per channel since the last log line, and when that line was written
+    private static final Map<String, long[]> refusals = new ConcurrentHashMap<>();
+
+    /**
+     * {@link #allow}, and a refusal is not silent: one INFO line per player and channel per second at most, with the
+     * player's name and how many packets were refused since the last line. For channels where a refusal means a
+     * player's order was lost (unit orders), so "my units didn't listen" shows in the log.
+     */
+    public static boolean allowLogged(ServerPlayer sp, String channel, double perSecond, double burst) {
+        if (allow(sp, channel, perSecond, burst))
+            return true;
+        if (sp == null)
+            return false;
+        String name = sp.getName().getString();
+        long now = System.nanoTime();
+        long[] r = refusals.computeIfAbsent(sp.getUUID() + "/" + channel, k -> new long[] { 0, now - 2_000_000_000L });
+        synchronized (r) {
+            r[0]++;
+            if (now - r[1] >= 1_000_000_000L) {
+                ReignOfNether.LOGGER.info("[PacketAuth] {} over the '{}' rate limit ({}/s, burst {}): {} packet(s) refused in the last second",
+                    name, channel, (int) perSecond, (int) burst, r[0]);
+                r[0] = 0;
+                r[1] = now;
+            }
+        }
+        return false;
+    }
+
     /** Forget a player's buckets (on logout). */
     public static void forget(UUID id) {
-        if (id != null)
+        if (id != null) {
             buckets.remove(id);
+            refusals.keySet().removeIf(k -> k.startsWith(id + "/"));
+        }
     }
 }
