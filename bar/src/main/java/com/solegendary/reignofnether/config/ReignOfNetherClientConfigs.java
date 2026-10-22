@@ -51,6 +51,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SHAKE;
+    public static final ForgeConfigSpec.ConfigValue<Double> RTS_CURSOR_SPEED;
 
     // display (DisplaySettings, DisplaySettingsScreen; design/hud.md "Settings")
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_MODE;
@@ -128,6 +129,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_ZOOM_OUT_FROM_CURSOR = BUILDER.define("camera_zoom_out_from_cursor", false);
         BUILDER.comment("Camera shake on big blasts and building collapses, 0-100% (0 = none; never grows with army size)");
         CAMERA_SHAKE = BUILDER.defineInRange("camera_shake", 100, 0, 100);
+        BUILDER.comment("RTS cursor speed, 0.25-3.0. The cursor uses raw mouse input (no Windows pointer acceleration): 1.0 = one mouse count per screen pixel, same as Windows' unaccelerated 6/11 setting");
+        RTS_CURSOR_SPEED = BUILDER.defineInRange("rts_cursor_speed", 1.0, 0.25, 3.0);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
         BUILDER.comment("BAR-style notifications (commander under attack, unit lost, construction complete...)");
         ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);
