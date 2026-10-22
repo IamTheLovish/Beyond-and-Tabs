@@ -65,9 +65,9 @@ class CanopyRulesTest {
     @Test
     void recentreOnlyForDriftAcrossTheView() {
         // moving straight along the view line (the cursor sliding down a slope toward the camera) changes nothing on screen
-        assertFalse(CanopyRules.needsRecentre(0, 2 * DY, 2 * DZ, 0, 0, 0, DX, DY, DZ));
-        assertFalse(CanopyRules.needsRecentre(2.9, 0, 0, 0, 0, 0, DX, DY, DZ));
-        assertTrue(CanopyRules.needsRecentre(3.1, 0, 0, 0, 0, 0, DX, DY, DZ));
+        assertFalse(CanopyRules.needsRecentre(0, 1.5 * DY, 1.5 * DZ, 0, 0, 0, DX, DY, DZ));
+        assertFalse(CanopyRules.needsRecentre(CanopyRules.HOLE_DRIFT - 0.1, 0, 0, 0, 0, 0, DX, DY, DZ));
+        assertTrue(CanopyRules.needsRecentre(CanopyRules.HOLE_DRIFT + 0.1, 0, 0, 0, 0, 0, DX, DY, DZ));
         assertTrue(CanopyRules.needsRecentre(0, 8 * DY, 8 * DZ, 0, 0, 0, DX, DY, DZ), "a big climb moves the hole's span");
     }
 

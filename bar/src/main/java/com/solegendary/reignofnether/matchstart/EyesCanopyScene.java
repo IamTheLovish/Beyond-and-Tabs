@@ -59,7 +59,7 @@ final class EyesCanopyScene {
     private static long lastRebuilds = -1, quietSince = 0;
 
     private static int slice = 0;
-    private static long sliceNanos = 0, sliceCanopyNs0 = 0, sliceFrames0 = 0;
+    private static long sliceNanos = 0, sliceCanopyNs0 = 0, sliceBodiesNs0 = 0, sliceFrames0 = 0;
     private static final boolean[] SLICE_ON = { true, false, false, true };
     private static final List<Double> frames = new ArrayList<>();
     private static int frameCursor = -1;
@@ -321,6 +321,7 @@ final class EyesCanopyScene {
         ReignOfNetherClientConfigs.UNIT_SILHOUETTES.set(SLICE_ON[i]);
         sliceNanos = System.nanoTime();
         sliceCanopyNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.CANOPY);
+        sliceBodiesNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.UNIT_BODIES);
         sliceFrames0 = FrameParts.framesLifetime();
         frames.clear();
         frameCursor = mc.getFrameTimer().getLogEnd();
@@ -340,16 +341,19 @@ final class EyesCanopyScene {
     private static void endSlice(Minecraft mc) {
         long n = Math.max(1, FrameParts.framesLifetime() - sliceFrames0);
         double canopyMs = (FrameParts.frameSectionLifetimeNs(FrameParts.CANOPY) - sliceCanopyNs0) / 1e6 / n;
+        // the capture copies vertices inside the units' own draw, so its share is in unitBodies: on minus off
+        double bodiesMs = (FrameParts.frameSectionLifetimeNs(FrameParts.UNIT_BODIES) - sliceBodiesNs0) / 1e6 / n;
         double[] ms = frames.stream().mapToDouble(Double::doubleValue).sorted().toArray();
         long covered = unitsOnPad(mc).stream().filter(CanopySilhouettes::isUnderCover).count();
-        results[slice] = new double[] { canopyMs, pct(ms, 0.5), pct(ms, 0.95), covered, ms.length };
-        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame, frames {}: p50 {} ms, "
-                        + "p95 {} ms; {} units under cover", slice + 1, SLICE_ON.length, SLICE_ON[slice] ? "on" : "off",
-                f2(canopyMs), ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)), covered);
+        results[slice] = new double[] { canopyMs, pct(ms, 0.5), pct(ms, 0.95), bodiesMs, covered };
+        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame, unitBodies {} ms/frame, "
+                        + "frames {}: p50 {} ms, p95 {} ms; {} units under cover", slice + 1, SLICE_ON.length,
+                SLICE_ON[slice] ? "on" : "off", f2(canopyMs), f2(bodiesMs), ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)),
+                covered);
     }
 
     private static void summary() {
-        double[] on = new double[3], off = new double[3];
+        double[] on = new double[4], off = new double[4];
         int nOn = 0, nOff = 0;
         double covered = 0;
         for (int i = 0; i < SLICE_ON.length; i++) {
@@ -357,20 +361,20 @@ final class EyesCanopyScene {
             if (r == null)
                 return;
             double[] t = SLICE_ON[i] ? on : off;
-            for (int k = 0; k < 3; k++)
+            for (int k = 0; k < 4; k++)
                 t[k] += r[k];
             if (SLICE_ON[i]) nOn++; else nOff++;
-            covered = Math.max(covered, r[3]);
+            covered = Math.max(covered, r[4]);
         }
-        for (int k = 0; k < 3; k++) {
+        for (int k = 0; k < 4; k++) {
             on[k] /= Math.max(1, nOn);
             off[k] /= Math.max(1, nOff);
         }
         ReignOfNether.LOGGER.info("[Eyes] 19_canopy cost ({} units under cover, {}{}): silhouettes on: canopy {} ms/frame, "
-                        + "frame p50 {} / p95 {} ms | off: canopy {} ms/frame, frame p50 {} / p95 {} ms",
+                        + "unitBodies {}, frame p50 {} / p95 {} ms | off: canopy {} ms/frame, unitBodies {}, frame p50 {} / p95 {} ms",
                 (long) covered, SectionRebuilds.renderer(),
                 com.solegendary.reignofnether.postfx.ShaderPacks.inUse() ? ", shader pack" : "",
-                f2(on[0]), f2(on[1]), f2(on[2]), f2(off[0]), f2(off[1]), f2(off[2]));
+                f2(on[0]), f2(on[3]), f2(on[1]), f2(on[2]), f2(off[0]), f2(off[3]), f2(off[1]), f2(off[2]));
     }
 
     private static double pct(double[] sorted, double p) {

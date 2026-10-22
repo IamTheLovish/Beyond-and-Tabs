@@ -18,16 +18,18 @@ public final class CanopyRules {
 
     // ---- the fade (LeafFade) -----------------------------------------------------------------------------------------
 
+    // Round 2 (coordinator's review of the eyes stills, Oct 22): a small hole round the cursor - round 1's 2.5 / 6 / 3
+    // cleared most of a grove once three units and the cursor each had one.
     /** Inside this distance from the view line through an anchor, leaves are fully faded (alpha 0). Blocks. */
-    public static final double FADE_INNER = 2.5;
+    public static final double FADE_INNER = 1.5;
     /** Beyond this distance leaves are fully solid (alpha 1); between the two a smoothstep. Blocks. */
-    public static final double FADE_OUTER = 6.0;
+    public static final double FADE_OUTER = 4.0;
     /**
      * How far an anchor (the cursor, a selected unit) may drift from its hole's centre before the hole is re-centred and
      * the chunk sections under it re-meshed. The hole is FADE_OUTER + HOLE_DRIFT wide, so while the anchor stays within
      * the drift the whole soft circle lies inside the hole and follows it every frame with no re-mesh at all.
      */
-    public static final double HOLE_DRIFT = 3.0;
+    public static final double HOLE_DRIFT = 2.0;
     public static final double HOLE_RADIUS = FADE_OUTER + HOLE_DRIFT;
     /** A hole reaches this far from its anchor toward the camera (blocks along the view line): any canopy height. */
     public static final double HOLE_LENGTH = 40.0;
