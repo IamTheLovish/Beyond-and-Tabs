@@ -38,13 +38,20 @@ public final class FrameParts {
     public static final int HUD = 4;               // HudClientEvents.onDrawScreen: the RTS HUD
     public static final int UNIT_BODIES = 5;       // the units' own render (AnimProfile's clock: posing + drawing)
     public static final int UNIT_RINGS = 6;        // StrategicViewClientEvents.onRenderLevel: selection and range rings
-    public static final int FRAME_SECTIONS = 7;
+    // Oct 22: lovish's capture had 13.6% of the frame "unspecified" in after_translucent_blocks - the handlers below
+    // were not measured. Each is one handler group, so the next [FrameParts] / [FrameAuto] line names the cost.
+    public static final int BUILDING_PARTS = 7;    // PartRenderClientEvents: animated building parts (real geometry)
+    public static final int BUILDING_DECOR = 8;    // statues, windmills, banners, scaffolds
+    public static final int BARS = 9;              // health bars, build / production progress bars
+    public static final int WORLD_FX = 10;         // BarFx glow/smoke/decals, ground memory
+    public static final int WORLD_MARKERS = 11;    // metal/resource markers, wrecks, map + start markers, grids, lines
+    public static final int FRAME_SECTIONS = 12;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 7;         // Unit.tick on the client
-    public static final int SECTIONS = 8;
+    public static final int UNIT_TICK = 12;        // Unit.tick on the client
+    public static final int SECTIONS = 13;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
