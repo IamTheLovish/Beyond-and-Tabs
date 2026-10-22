@@ -234,6 +234,9 @@ jobs:
                       continue
                   dest = os.path.join(out_dir, base)
                   shutil.copyfile(f, dest)
+                  if os.path.isfile(f + '.near'):   # close-up points (EyesDirector.readNearPoints): 15_<name>_near_*
+                      shutil.copyfile(f + '.near', dest + '.near')
+                      print('near points', f + '.near')
                   entries.append(dest)
                   print('file', f, '->', dest)
               elif re.fullmatch(r'[a-z0-9_]+', e):

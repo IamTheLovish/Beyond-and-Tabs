@@ -995,12 +995,30 @@ public final class EyesDirector {
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_34");
-                var server = mc.getSingleplayerServer();
-                server.execute(() -> {
-                    dayTimeBefore = server.overworld().getDayTime();
-                    server.overworld().setDayTime(13000);
-                });
-                nextPhase(5);
+                nearPoints = readNearPoints(entry);
+                nearIndex = 0;
+                if (!nearPoints.isEmpty()) {   // close-ups first, in daylight (a material sampler's .near file)
+                    standNear(mc, nearPoints.get(0));
+                    nextPhase(6);
+                    return;
+                }
+                startDusk(mc);
+            }
+            case 6 -> {   // close-ups: 3.5 blocks from each listed point, the 3/4 direction (Lane B, Oct 22 2026)
+                double[] p = nearPoints.get(nearIndex);
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    standNear(mc, p);   // again: the server's own position update may land in between
+                if (phaseSeconds() < 4)
+                    return;
+                shot(mc, label + "_near_" + nearNames.get(nearIndex));
+                nearIndex++;
+                if (nearIndex < nearPoints.size()) {
+                    standNear(mc, nearPoints.get(nearIndex));
+                    nextPhase(6);
+                } else {
+                    standThreeQuarter(mc);
+                    startDusk(mc);
+                }
             }
             case 5 -> {   // the client eases its sky toward the server's time (ClientLevelMixin.tickTime): wait for it
                 standThreeQuarter(mc);
@@ -1018,6 +1036,67 @@ public final class EyesDirector {
             }
             default -> nextStructure(mc);
         }
+    }
+
+    private static void startDusk(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> {
+            dayTimeBefore = server.overworld().getDayTime();
+            server.overworld().setDayTime(13000);
+        });
+        nextPhase(5);
+    }
+
+    // Close-up points (Lane B, Oct 22 2026 - lovish: textures look "plastic / painted-on up close"): a .nbt entry may
+    // come with a sidecar <file>.nbt.near, one "name x y z" per line (structure-local block coordinates of the point to
+    // look at; # comments). Each is shot as 15_<structure>_near_<name> from 3.5 blocks in the 3/4 direction, in
+    // daylight, between the _34 and _dusk stills. tools/gen_material_sampler.py writes design/eyes/terrain_sampler.nbt.near.
+    private static List<double[]> nearPoints = new ArrayList<>();
+    private static final List<String> nearNames = new ArrayList<>();
+    private static int nearIndex = 0;
+
+    static List<double[]> readNearPoints(String entry) {
+        List<double[]> out = new ArrayList<>();
+        nearNames.clear();
+        if (!entry.endsWith(".nbt"))
+            return out;
+        java.nio.file.Path p = java.nio.file.Path.of(entry + ".near");
+        if (!java.nio.file.Files.isRegularFile(p))
+            return out;
+        try {
+            for (String line : java.nio.file.Files.readAllLines(p)) {
+                String l = line.strip();
+                if (l.isEmpty() || l.startsWith("#"))
+                    continue;
+                String[] f = l.split("\\s+");
+                if (f.length != 4)
+                    continue;
+                out.add(new double[] { Double.parseDouble(f[1]), Double.parseDouble(f[2]), Double.parseDouble(f[3]) });
+                nearNames.add(f[0].replaceAll("[^a-z0-9_]", "_"));
+            }
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.warn("[Eyes] {}: unreadable near points: {}", p, e.toString());
+            out.clear();
+            nearNames.clear();
+        }
+        return out;
+    }
+
+    /** The close-up camera: 3.5 blocks from a structure-local point, from the south-west, 30 degrees down. */
+    private static void standNear(Minecraft mc, double[] local) {
+        Vec3 aim = new Vec3(structureOrigin.getX() + local[0], structureOrigin.getY() + local[1],
+            structureOrigin.getZ() + local[2]);
+        double d = 3.5;
+        double h = d * Math.cos(Math.toRadians(30)), up = d * Math.sin(Math.toRadians(30));
+        double px = aim.x - h / Math.sqrt(2), pz = aim.z + h / Math.sqrt(2);
+        double eyeY = aim.y + up;
+        double py = eyeY - mc.player.getEyeHeight();
+        double dx = aim.x - px, dz = aim.z - pz, dy = aim.y - eyeY;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) Math.toDegrees(Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)));
+        mc.player.moveTo(px, py, pz, yaw, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
+        mc.options.hideGui = true;
     }
 
     private static void nextStructure(Minecraft mc) {
