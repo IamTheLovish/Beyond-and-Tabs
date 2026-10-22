@@ -112,6 +112,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.fogofwar.FogRemesh.class);   // first-person flush, [FogRemesh] line
         vanillaEventBus.register(ResourcesClientEvents.class);
         vanillaEventBus.register(PlayerClientEvents.class);
         vanillaEventBus.register(TutorialClientEvents.class);

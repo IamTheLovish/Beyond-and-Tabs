@@ -68,6 +68,9 @@ import java.util.List;
  *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
  *     seconds later. The log line counts who stands in the water and on which bank - the army should cross in a
  *     line and fight on the far bank, not in the river.</li>
+ * <li>17_fog (Oct 21, perf plan R1, EyesFogScene): the last scene - fog of war on, a dozen marching out of our base
+ *     into the dark; the fog re-mesh A/B (surface band vs whole column) and the fog edge before and after a full
+ *     re-mesh.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -89,7 +92,7 @@ public final class EyesDirector {
     // ---- the staged scenes (06-11) ----
     // the match clock: totalTicks at which the match was at 0:00 (the 02 shot is labelled 0:30)
     private static int matchZeroTotalTick = -1;
-    private static BlockPos capitolCentre = null;
+    static BlockPos capitolCentre = null;          // (package: EyesFogScene)
     private static Vec3 armyCentre = null;        // where the player's army was spawned
     private static Vec3 enemyCentre = null;       // where the enemy army was spawned
     private static String enemyName = null;
@@ -183,6 +186,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (FOG_ONLY) {     // a fog run (eyes.yml input `fog`): only the fog scene, then the end
+                        step = STEP_FOG;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -224,7 +232,19 @@ public final class EyesDirector {
                 try {
                     sceneScars(mc);
                 } catch (Exception e) {
-                    ReignOfNether.LOGGER.error("[Eyes] 16 scars failed at tick {}, ending the tour", ticks, e);
+                    ReignOfNether.LOGGER.error("[Eyes] 16 scars failed at tick {}, going on to the fog scene", ticks, e);
+                    afterScars();
+                }
+            }
+            case STEP_FOG -> {
+                boolean done;
+                try {
+                    done = EyesFogScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 17_fog failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
                     step = 15;
                     ticks = 0;
                 }
@@ -529,6 +549,8 @@ public final class EyesDirector {
     // The timeline is wall-clock seconds, not ticks (the shader lane's client runs 4-6 ticks a second, see CUES).
     static final boolean SCARS_ONLY = Boolean.getBoolean("bat.eyes.scars");
     static final int STEP_SCARS = 21;
+    static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
+    static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;
@@ -548,7 +570,12 @@ public final class EyesDirector {
 
     private static void scarsEnd(String why) {
         ReignOfNether.LOGGER.warn("[Eyes] 16 scars: ending early ({})", why);
-        step = 15;
+        afterScars();
+    }
+
+    /** The full tour goes on to 17_fog (EyesFogScene, the last scene); a scars-only run ends here. */
+    private static void afterScars() {
+        step = SCARS_ONLY ? 15 : STEP_FOG;
         ticks = 0;
     }
 
@@ -813,8 +840,7 @@ public final class EyesDirector {
                 shot(mc, "16_scars_fp_steps");
                 ReignOfNether.LOGGER.info("[Eyes] 16 scars: done, client: {}",
                     com.solegendary.reignofnether.worldmemory.GroundMemoryClient.status());
-                step = 15;
-                ticks = 0;
+                afterScars();
             }
             default -> scarsEnd("unknown phase " + scarsPhase);
         }
@@ -1846,7 +1872,7 @@ public final class EyesDirector {
     }
 
     /** Zoom target in blocks of view height; below the player's floor (10) only for the close-ups, restored by any other. */
-    private static void setZoom(float zoom) {
+    static void setZoom(float zoom) {
         OrthoviewClientEvents.setScriptedZoom(zoom);
     }
 
@@ -1931,7 +1957,7 @@ public final class EyesDirector {
         return e.position().add(0, e.getBbHeight() / 2, 0);
     }
 
-    private static BlockPos findCapitol(Minecraft mc) {
+    static BlockPos findCapitol(Minecraft mc) {
         String me = mc.player.getName().getString();
         for (BuildingPlacement b : BuildingClientEvents.getBuildings())
             if (b.isCapitol && me.equals(b.ownerName))
@@ -1985,7 +2011,7 @@ public final class EyesDirector {
         return y;
     }
 
-    private static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
+    static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
         int y = surfaceY(mc, x, z);
         if (y == Integer.MIN_VALUE) {
             ReignOfNether.LOGGER.warn("[Eyes] no client height at {} {}; using {}", x, z, fallbackY);
@@ -2038,7 +2064,7 @@ public final class EyesDirector {
         return String.format("%.1f x %.1f blocks", maxX - minX, maxZ - minZ);
     }
 
-    private static Vec3 centroid(List<LivingEntity> units) {
+    static Vec3 centroid(List<LivingEntity> units) {
         if (units.isEmpty())
             return null;
         double x = 0, y = 0, z = 0;
@@ -2051,7 +2077,7 @@ public final class EyesDirector {
     }
 
     /** Sends a command as the client player types it (without the slash): the server runs it with the player's op. */
-    private static boolean runCommand(Minecraft mc, String cmd) {
+    static boolean runCommand(Minecraft mc, String cmd) {
         try {
             // the server echoes every /summon and /fill as a chat line ("Summoned ... for Bot1 at ..."), and those
             // lines were still over the river in run 38524157524 although the chat panel is cleared before each
@@ -2070,7 +2096,7 @@ public final class EyesDirector {
     }
 
     /** Living units within range of a point: the player's own fighters (no workers) when owned, else hostile ones. */
-    private static List<LivingEntity> unitsNear(Minecraft mc, Vec3 centre, double range, boolean owned) {
+    static List<LivingEntity> unitsNear(Minecraft mc, Vec3 centre, double range, boolean owned) {
         List<LivingEntity> out = new ArrayList<>();
         if (centre == null)
             return out;
@@ -2124,7 +2150,7 @@ public final class EyesDirector {
                 UnitClientEvents.getSelectedUnits().size());
     }
 
-    private static String fmt(Vec3 v) {
+    static String fmt(Vec3 v) {
         return v == null ? "?" : String.format("[%d, %d, %d]", (int) Math.floor(v.x), (int) Math.floor(v.y), (int) Math.floor(v.z));
     }
 
@@ -2189,7 +2215,7 @@ public final class EyesDirector {
         shotAt = -1;
     }
 
-    private static void shot(Minecraft mc, String name) {
+    static void shot(Minecraft mc, String name) {
         // the eyes video (tools/eyes_record.sh + eyes_cut.py) cuts a short clip around every still from this mark
         ReignOfNether.LOGGER.info("[Eyes] clip-mark {} {}", name, System.currentTimeMillis());
         // the director's own /summon and /fill feedback lines were sitting over the fight in every still and clip
