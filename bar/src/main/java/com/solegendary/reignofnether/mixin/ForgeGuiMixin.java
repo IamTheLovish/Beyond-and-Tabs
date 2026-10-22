@@ -55,7 +55,7 @@ public class ForgeGuiMixin extends Gui {
         // minimum = 4 lines; the player's own setting is put back straight after, and typing the full chat is untouched.
         var heightOpt = this.minecraft.options.chatHeightUnfocused();
         Double keep = heightOpt.get();
-        boolean shrink = !this.chat.isChatFocused() && keep > 0.0;
+        boolean shrink = !(this.minecraft.screen instanceof net.minecraft.client.gui.screens.ChatScreen) && keep > 0.0;
         if (shrink)
             heightOpt.set(0.0);
         try {
