@@ -75,6 +75,8 @@ public final class GothicText {
      * top-left of the glyphs; returns the width drawn.
      */
     public static int title(GuiGraphics gg, Font font, String text, int x, int y) {
+        // Cinzel capitals, not blackletter: at heading size the blackletter "k" read as "t" (lovish: "Stirmish")
+        text = text.toUpperCase(java.util.Locale.ROOT);
         Component c = styled(text, TITLE_FONT);
         int w = font.width(c);
         float t = seconds();

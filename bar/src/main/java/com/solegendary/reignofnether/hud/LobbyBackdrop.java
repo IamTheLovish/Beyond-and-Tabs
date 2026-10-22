@@ -62,8 +62,8 @@ public class LobbyBackdrop {
     private static final float FRAME_W = 0.66f;
     private static final float HORIZON = 0.64f;
     private static final float[][] RIVER = {   // x, y, half width
-        {0.372f, 0.800f, 0.040f}, {0.330f, 0.812f, 0.054f}, {0.200f, 0.826f, 0.068f}, {0.020f, 0.846f, 0.086f},
-        {-0.160f, 0.868f, 0.106f}, {-0.285f, 0.895f, 0.130f}, {-0.300f, 0.925f, 0.160f}, {-0.160f, 0.955f, 0.200f},
+        {0.372f, 0.800f, 0.048f}, {0.330f, 0.812f, 0.064f}, {0.200f, 0.826f, 0.080f}, {0.020f, 0.846f, 0.098f},
+        {-0.160f, 0.868f, 0.118f}, {-0.285f, 0.895f, 0.130f}, {-0.300f, 0.925f, 0.160f}, {-0.160f, 0.955f, 0.200f},
         {0.040f, 0.985f, 0.250f}, {0.170f, 1.030f, 0.320f}};
     /** the cascade: top x, top y, top half width, bottom x, bottom y, bottom half width */
     private static final float[] CASCADE = {0.300f, 0.688f, 0.016f, 0.372f, 0.802f, 0.042f};
@@ -74,7 +74,7 @@ public class LobbyBackdrop {
     private static final float[][] CATH_RECT = {{-0.1546f, 0.2105f, 0.0729f, 0.6779f}, {-0.1041f, 0.1095f, 0.3636f, 0.6968f}, {-0.2020f, 0.1853f, 0.2214f, 0.6968f}, {0.3320f, 0.1663f, 0.4520f, 0.6937f}, {0.2182f, 0.2421f, 0.3762f, 0.6968f}, {0.2214f, 0.1663f, 0.3857f, 0.3905f}, {0.1013f, -0.0011f, 0.2466f, 0.7000f}, {0.2119f, 0.1947f, 0.4741f, 0.7411f}};
     private static final float[] CATH_Z = {0.0130f, 0.0170f, 0.0220f, 0.0250f, 0.0290f, 0.0320f, 0.0350f, 0.0400f};
     /** the rocks breaking the river's surface (x, y, r) - gen_lobby_art.river_rocks() */
-    private static final float[][] RIVER_ROCKS = {{-0.1531f, 0.8750f, 0.0100f}, {-0.3530f, 0.9050f, 0.0130f}, {-0.1850f, 0.9300f, 0.0160f}, {-0.2200f, 0.9550f, 0.0180f}, {0.2150f, 0.9850f, 0.0240f}, {-0.0943f, 1.0000f, 0.0260f}};
+    private static final float[][] RIVER_ROCKS = {{-0.1500f, 0.8750f, 0.0100f}, {-0.3530f, 0.9050f, 0.0130f}, {-0.1850f, 0.9300f, 0.0160f}, {-0.2200f, 0.9550f, 0.0180f}, {0.2150f, 0.9850f, 0.0240f}, {-0.0943f, 1.0000f, 0.0260f}};
     /** the rose window and the portal (artboard), where the light comes from */
     private static final float ROSE_X = 0.2981f, ROSE_Y = 0.3211f, DOOR_X = 0.3000f, DOOR_Y = 0.6735f;
     // </gen:cath>
@@ -338,7 +338,7 @@ public class LobbyBackdrop {
         quad(MIST_POOL, sx(-1.0f + md) + ox(0.030f), sy(0.655f), sx(-0.12f + md) + ox(0.030f), sy(0.785f), 0f, 0f, 1f, 1f,
             1f, 1f, 1f, mp);
         quad(MIST_POOL, sx(-0.55f - md) + ox(0.045f), sy(0.78f), sx(0.62f - md) + ox(0.045f), sy(0.88f), 0f, 0f, 1f, 1f,
-            1f, 1f, 1f, mp * 0.6f);
+            1f, 1f, 1f, mp * 0.35f);
 
         // ---- the flower fields: a gentle sway, and a wave rolling through behind each gust
         swayed(FIELD_FAR, 0.62f, 0.93f, 0.0016f, 0.0030f, t, motion);

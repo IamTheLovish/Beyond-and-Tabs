@@ -51,8 +51,8 @@ RECTS = {                                   # x0, y0, x1, y1 in A (artboard laye
 }
 FRAME_W = 0.66                              # frame_left / frame_right: FRAME_W x 1 A, pinned to the screen edges
 # the river: centreline points (x, y, half width), from the foot of the cascade toward the viewer
-RIVER = [(0.372, 0.800, 0.040), (0.330, 0.812, 0.054), (0.200, 0.826, 0.068), (0.020, 0.846, 0.086),
-         (-0.160, 0.868, 0.106), (-0.285, 0.895, 0.130), (-0.300, 0.925, 0.160), (-0.160, 0.955, 0.200),
+RIVER = [(0.372, 0.800, 0.048), (0.330, 0.812, 0.064), (0.200, 0.826, 0.080), (0.020, 0.846, 0.098),
+         (-0.160, 0.868, 0.118), (-0.285, 0.895, 0.130), (-0.300, 0.925, 0.160), (-0.160, 0.955, 0.200),
          (0.040, 0.985, 0.250), (0.170, 1.030, 0.320)]
 HORIZON = 0.64                              # perspective for the river's flow coordinate
 CASCADE = (0.300, 0.688, 0.016, 0.372, 0.802, 0.042)  # top x, top y, top half width, bottom x, bottom y, bottom half width
@@ -2020,7 +2020,7 @@ def ground(w=2560, h=484):
     # the fallen log across the near bank, half in the water
     lg, lgl = Image.new("L", (b.W, b.H), 0), Image.new("L", (b.W, b.H), 0)
     dlg, dlgl = ImageDraw.Draw(lg), ImageDraw.Draw(lgl)
-    lx0, ly0, lx1, ly1 = 0.07, 0.835, 0.29, 0.852
+    lx0, ly0, lx1, ly1 = 0.15, 0.838, 0.30, 0.852
     n_ = 24
     top_, bot_ = [], []
     for i in range(n_ + 1):
@@ -2034,7 +2034,7 @@ def ground(w=2560, h=484):
     for (x, y), (x2, y2) in zip(top_[::3], bot_[::3]):
         dlgl.line(b.pts([(x, y), (x + 0.003, (y + y2) / 2), (x + 0.001, y2)]), fill=90, width=2)
     dlgl.line(b.pts(top_), fill=220, width=3)
-    for (x, y), ang, L in (((0.12, 0.835), -1.1, 0.03), ((0.19, 0.839), -0.6, 0.022), ((0.25, 0.842), -1.4, 0.04)):
+    for (x, y), ang, L in (((0.18, 0.839), -1.1, 0.03), ((0.22, 0.842), -0.6, 0.022), ((0.27, 0.846), -1.4, 0.04)):
         p2 = (x + math.cos(ang) * L, y + math.sin(ang) * L)
         dlg.line(b.pts([(x, y), p2]), fill=255, width=5)
         dlgl.line(b.pts([(x, y), p2]), fill=160, width=2)
@@ -2483,7 +2483,7 @@ def frame_side(name, mirror, seed, variant="ruin"):
     # ---------------- vines in front, hanging from the overhang and the arch
     vine = Image.new("RGBA", (b.W, b.H), (0, 0, 0, 0))
     dv = ImageDraw.Draw(vine)
-    for k in range(20 if variant == "ruin" else 9):
+    for k in range(20 if variant == "ruin" else 0):
         if k < 12:
             x0 = rr.uniform(0.02, 0.30)
             y0 = float(np.interp(x0, [0, 0.3], [0.06, 0.15])) + rr.uniform(-0.03, 0.04)
@@ -3148,7 +3148,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
             ya, yb = y0 + (y1 - y0) * va, y0 + (y1 - y0) * vb
             z = zg((ya + yb) / 2)
             crop = a.crop((0, int(round(va * a.height)), a.width, int(round(vb * a.height))))
-            S.place(crop, sx(x0) + ox(z), sy(ya) + oy(z), sx(x1) + ox(z), sy(yb) + oy(z), **kw)
+            S.place(crop, sx(x0) + ox(z), sy(ya) + oy(z), sx(x1) + ox(z), sy(yb) + oy(z) + 1.5, **kw)
 
     def wrapped(im, y0, y1, drift, z, alpha):
         S.place(im, 0, sy(y0) + oy(z), 0, sy(y1) + oy(z), alpha=alpha, wrap_dx=drift * S.A - ox(z), wrap_w=ART_W * S.A)
@@ -3223,7 +3223,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
     sample_strip(S, L["ripples"], t, "ripples", ox)
     sample_strip(S, L["streak"], t, "streak", ox)
     S.place(L["mist_pool"], sx(-1.0) + ox(0.03), sy(0.655), sx(-0.12) + ox(0.03), sy(0.785), alpha=0.55 + 0.35 * breath)
-    S.place(L["mist_pool"], sx(-0.55) + ox(0.045), sy(0.78), sx(0.62) + ox(0.045), sy(0.88), alpha=(0.55 + 0.35 * breath) * 0.6)
+    S.place(L["mist_pool"], sx(-0.55) + ox(0.045), sy(0.78), sx(0.62) + ox(0.045), sy(0.88), alpha=(0.55 + 0.35 * breath) * 0.35)
     banded(L["field_far"], RECTS["field_far"])
     banded(L["field_near"], RECTS["field_near"])
     bt = L["bats"]
@@ -3601,7 +3601,7 @@ def text_previews():
     pw = 620
     x0 = (960 // gs - pw // 2)
     top = max(24, gh // 2 - 150)
-    _blood_text(img, "Skirmish", os.path.join(FONT_DIR, "unifrakturcook_bold.ttf"), 16, x0 * gs, (top - 21) * gs, gs,
+    _blood_text(img, "SKIRMISH", CAPS_TTF, 15, x0 * gs, (top - 21) * gs, gs,
                 rim=(154, 116, 40), drips=3, drip_len=9, seed=3)
     cv = GuiCanvas(img, gs)
     by = top + 300 - 22
@@ -3676,7 +3676,9 @@ def main():
             if not only or k in only[0].split(","):
                 print("painting", k, flush=True)
                 fn()
-                if k == "cathedral":
+                if k in ("cathedral", "ground"):
+                    if "cath_back" not in CATH_BOXES:
+                        load_boxes()
                     write_java_cath()
         hand_drawn_all(only[0].split(",") if only else None)
         compact()
