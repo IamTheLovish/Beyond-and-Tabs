@@ -52,10 +52,11 @@ import java.util.List;
  *       2 metal/s - it cannot stand in for extractors or for the energy build-up.</li>
  * </ul>
  * Arrival (the T2 lab finished; the nominal fluid model of tools/t2_gate_sim.py): an all-in eco rush (7 extractors,
- * no army) reaches it at 4:32 before and ~5:05 at the earliest after (energy built first: ~5:15-5:30); a player with a
- * real T1 army (labs 1/2/3 at 0:30/2:30/4:30) who decides on T2 at 4:30 got it at ~7:00 and now at ~7:30-8:30,
- * later the more of the income stays on the army. The nightly bot ladder reports the bots' T2 minute so these can be
- * tuned from data rather than this model.
+ * no army) reached it at 4:32 before and gets it at 5:03-5:24 after (4-7 winds; more winds only delay it, because
+ * they are built first); a player with a real T1 army (labs 1/2/3 at 0:30/2:30/4:30) who decides on T2 at 4:30 got it
+ * at 6:59 and now at 7:26-7:28. The model keeps metal near the storage cap, so the research's 120 s and the lab's
+ * build time are the floors; a player who spends the metal on units instead arrives later (minute 8-10, the bots'
+ * readiness rules). The nightly bot ladder reports the bots' T2 minute so these can be tuned from data.
  */
 public final class TierGate {
     private TierGate() { }
