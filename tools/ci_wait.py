@@ -31,8 +31,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FAILED_RE = re.compile(r"(\b[a-z0-9_]+) failed!")
 
 
-def gh(path, method="GET"):
+def gh(path, method="GET", fields=None):
     args = ["gh", "api", "-X", method, path]
+    for k, v in (fields or {}).items():
+        args += ["-f", f"{k}={v}"]
     out = subprocess.run(args, capture_output=True, text=True)
     if out.returncode != 0:
         raise RuntimeError(f"gh api {method} {path}: {out.stderr.strip() or out.stdout.strip()}")
@@ -66,11 +68,14 @@ def latest_runs(sha):
         statuses = []
     for st in statuses:
         state = st.get("state")
-        newest["status:" + st["context"]] = {
+        entry = {
             "id": None, "status": "completed" if state in ("success", "failure", "error") else "in_progress",
             "conclusion": {"success": "success", "failure": "failure", "error": "failure"}.get(state),
             "html_url": st.get("target_url") or "", "started_at": st.get("updated_at") or "",
             "mirror": mirror_run(st.get("target_url") or "")}
+        if st["context"] == "ci-mirror" and state in ("failure", "error") and entry["mirror"]:
+            fresh_mirror_state(entry)
+        newest["status:" + st["context"]] = entry
     return newest
 
 
@@ -89,6 +94,25 @@ def annotation_tests(repo, check_run_id, names):
         for m in FAILED_RE.finditer(ann.get("message") or ""):
             if m.group(1) not in names:
                 names.append(m.group(1))
+
+
+def fresh_mirror_state(entry):
+    """The `ci-mirror` status is set by ci-mirror-report.yml every ~5 min (often much later), so after a re-run in the
+    mirror it still says failure. Read the mirror run itself (a public repo): a re-run in progress is pending, one that
+    passed is success - and the report workflow is dispatched so the status itself catches up."""
+    repo, rid = entry["mirror"]
+    try:
+        run = gh(f"repos/{repo}/actions/runs/{rid}")
+    except RuntimeError:
+        return
+    if run.get("status") != "completed":
+        entry["status"], entry["conclusion"] = "in_progress", None
+    elif run.get("conclusion") == "success":
+        entry["conclusion"] = "success"
+        try:
+            gh(f"repos/{REPO}/actions/workflows/ci-mirror-report.yml/dispatches", method="POST", fields={"ref": "main"})
+        except RuntimeError:
+            pass
 
 
 def failed_tests(run_id, mirror=None):
