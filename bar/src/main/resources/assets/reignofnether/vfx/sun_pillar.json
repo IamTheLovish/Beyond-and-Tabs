@@ -7,7 +7,7 @@
     { "type": "ground", "tile": "sigil_star", "radius": 3.5, "spin": -14, "color": "#FFD078", "alpha": 0.8, "grow": 0.6, "grow_from": 0.2 },
     { "type": "ground", "tile": "shockwave", "radius": 6.5, "color": "#FFE2B0", "alpha": 0.7, "start": "peak", "end": 1.6, "fade_in": 0.05, "fade_out": 0.5, "grow": 0.7, "grow_from": 0.15 },
     { "type": "ring", "tile": "ring_glyph", "radius": 2.4, "y": 0.9, "stack": 3, "spacing": 0.9, "radius_step": -0.5, "spin": 48, "alternate": true, "tilt": 3, "rise": 0.6, "color": "#FFDFA0", "alpha": 0.85, "start": 0.15, "grow": 0.6, "grow_from": 0.3, "ease": "back_out" },
-    { "type": "beam", "start": "peak", "fade_in": 0.12, "radius": 0.75, "height": 48, "scroll": 1.8, "core": 0.35, "core_color": "#FFF6E2", "color": "#FFC872", "alpha": 0.7, "grow": 0.3, "grow_from": 0.1,
+    { "type": "beam", "start": "peak", "fade_in": 0.12, "radius": 0.75, "height": 48, "scroll": 1.8, "core": 0.25, "core_color": "#FFE4B0", "color": "#FFB85A", "alpha": 0.55, "grow": 0.3, "grow_from": 0.1,
       "helix": { "strands": 2, "radius": 1.3, "turns": 7, "speed": 1.4, "points": 36, "size": 0.32, "color": "#FFF0C8" },
       "bands": { "count": 4, "radius": 1.6, "speed": 7, "tile": "ring_thin" } },
     { "type": "emitter", "particle": "glint", "shape": "disc", "radius": 3.2, "rate": 30, "end": "peak", "velocity": [0, 1.4, 0], "spread": 0.3, "swirl": 1.6, "life": [0.6, 1.1], "color": "#FFE6B0", "alpha": 0.8 },

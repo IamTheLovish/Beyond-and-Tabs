@@ -65,6 +65,20 @@ public final class BarFxRenderTypes extends RenderType {
                     .setTransparencyState(ADDITIVE_TRANSPARENCY).createCompositeState(false));
 
     /**
+     * The light pass while a shader pack is on: vanilla's entity-translucent-emissive state (NEW_ENTITY, alpha
+     * blended, full bright). Eyes run 39873260211 (Oculus + Complementary) logged 617 quads drawn through the eyes
+     * state and showed none of them, while the entity programs draw our ground scars; the pack's bloom makes the
+     * emissive layers glow. Not premultiplied in the vertex colour (the alpha does the blending).
+     */
+    public static final RenderType VFX_EMISSIVE = create("reignofnether_vfx_emissive", DefaultVertexFormat.NEW_ENTITY,
+            VertexFormat.Mode.QUADS, 1 << 18, false, true,
+            CompositeState.builder().setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                    .setTextureState(new TextureStateShard(VFX_ATLAS, true, true)).setCullState(NO_CULL)
+                    .setLightmapState(LIGHTMAP).setOverlayState(OVERLAY)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));
+
+    /**
      * Smoke, soot, heat veil: alpha blended and lit by the world (a smoke puff at night is dark) - vanilla's
      * entity-translucent state, the one the ground scars use under shader packs (worldmemory/ScarRenderTypes).
      */

@@ -230,6 +230,9 @@ public final class VfxClient {
         float c = in.heights[(iz + 1) * n + ix], d = in.heights[(iz + 1) * n + ix + 1];
         // a block step (a ledge) would stretch the sigil down a wall: clamp to the anchor's level +- 1.5
         float h = (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+        // at a ledge the blend runs under the higher block (eyes still: a wedge of the sigil missing): never below
+        // the top of the column the point stands on
+        h = Math.max(h, in.heights[Math.min(n - 1, Math.round(fz)) * n + Math.min(n - 1, Math.round(fx))]);
         return Math.max(in.ground - 1.5f, Math.min(in.ground + 1.5f, h));
     }
 
@@ -533,13 +536,16 @@ public final class VfxClient {
             buffers.endBatch(BarFxRenderTypes.VFX_TRANSLUCENT);
         }
         // 2. everything that is light
-        begin(buffers, BarFxRenderTypes.VFX_ADDITIVE);
-        additive = true;
+        // with a shader pack the light goes through the entity emissive program (see BarFxRenderTypes.VFX_EMISSIVE)
+        RenderType lightType = com.solegendary.reignofnether.postfx.ShaderPacks.inUse()
+            ? BarFxRenderTypes.VFX_EMISSIVE : BarFxRenderTypes.VFX_ADDITIVE;
+        begin(buffers, lightType);
+        additive = lightType == BarFxRenderTypes.VFX_ADDITIVE;
         light = 0xF000F0;
         for (Inst in : live) if (in.visible && BarFxClient.near(in.x, in.y, in.z, in.def.cullRadius * in.scale + 4)) drawInstance(in, now - in.born, now, quality);
         drawParticles(false);
         drawProjectiles(now);
-        buffers.endBatch(BarFxRenderTypes.VFX_ADDITIVE);
+        buffers.endBatch(lightType);
         vc = null;
         projQueue.clear(); projDefs.clear(); projPos.clear();
     }
