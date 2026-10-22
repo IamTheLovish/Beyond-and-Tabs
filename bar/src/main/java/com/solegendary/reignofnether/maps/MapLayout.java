@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.maps;
 
+import com.solegendary.reignofnether.maps.gen.GenMap;
+import com.solegendary.reignofnether.maps.gen.GenSeed;
+import com.solegendary.reignofnether.maps.gen.MapGenerator;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind;
 
 import java.util.ArrayList;
@@ -15,6 +18,11 @@ import java.util.List;
  * {@code v = |lateral offset|} - and the terrain is a function of (u, v) only, so the map is n-fold rotationally
  * symmetric with a mirror line through every slot. Mexes, capture sites, vents and pillars are listed once in slot
  * frame and rotated to every slot. Coordinates in the records are relative to the map centre.
+ * <p>
+ * A generated map (MapPreset.GENERATED, design/maps.md "Generated maps") is the exception: maps/gen/MapGenerator draws
+ * it from the seed as a natural, unfolded field whose seats differ and are evened out by a measured score. This class
+ * then carries its records and answers {@link #sample} and the arena-edge helpers from the generated grid ({@link #gen}),
+ * so the builder, the preview, the start phase and the tests read it like any other map.
  */
 public final class MapLayout {
 
@@ -85,6 +93,10 @@ public final class MapLayout {
     public final MetalOptions metal;
     /** Index in {@link #mexes} where the open-ground fill begins: everything before it is a template patch. */
     private int spreadFrom;
+    /** The generated map this layout reads (MapPreset.GENERATED), or null for a hand-made preset. */
+    public final GenMap gen;
+    /** Angle of slot 0 (slot i sits at rot + 2 pi i / n): due west on the hand-made maps; the generator's choice. */
+    public final double rot;
     /** The walkable ground of the whole arena, sampled once and flooded from any start on demand (see reachFrom). */
     private Ground ground;
 
@@ -96,7 +108,14 @@ public final class MapLayout {
 
     private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed,
                       MetalOptions metal) {
+        this(preset, slotTeams, ring, radius, slotsOverride, seed, metal, ROT, null);
+    }
+
+    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed,
+                      MetalOptions metal, double rot, GenMap gen) {
         this.preset = preset;
+        this.rot = rot;
+        this.gen = gen;
         this.seed = seed;
         this.metal = metal == null ? MetalOptions.DEFAULT : metal;
         this.seedMix = mixSeed(seed);
@@ -119,7 +138,7 @@ public final class MapLayout {
     }
 
     public double slotAngle(int i) {
-        return ROT + TAU * i / n;
+        return rot + TAU * i / n;
     }
 
     /** Start ring radius for {@code n} slots on this preset: the 1v1 ring, widened so neighbours stay apart. */
@@ -142,10 +161,31 @@ public final class MapLayout {
 
     /** As above with the open-ground metal's knobs (the lobby's metal richness, the rim limit, reserved zones). */
     public static MapLayout build(MapPreset preset, int[] slotTeams, long seed, MetalOptions metal) {
+        if (preset.generated())
+            return generated(slotTeams, seed, metal);
         int n = Math.max(2, slotTeams.length);
         int s = ringFor(preset, n);
         MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null, seed, metal);
         l.populate();
+        return l;
+    }
+
+    /**
+     * A generated map (design/maps.md "Generated maps"): the generator draws it from the seed's low 56 bits with the
+     * lobby options in its top byte (GenSeed), and this layout carries its seats, records and ground. A lone seat plays
+     * the two-seat map, as the hand-made maps do.
+     */
+    static MapLayout generated(int[] slotTeams, long seed, MetalOptions metal) {
+        int[] teams = slotTeams.length >= 2 ? slotTeams : new int[] { slotTeams.length == 1 ? slotTeams[0] : 0,
+            (slotTeams.length == 1 ? slotTeams[0] : 0) + 1 };
+        MetalOptions m = metal == null ? MetalOptions.DEFAULT : metal;
+        GenMap g = MapGenerator.generate(teams, GenSeed.generatorSeed(seed), GenSeed.options(seed), m);
+        MapLayout l = new MapLayout(MapPreset.GENERATED, teams, g.ring, g.half, g.slots, seed, m, g.rot, g);
+        l.mexes.addAll(g.mexes);
+        l.sites.addAll(g.sites);
+        l.vents.addAll(g.vents);
+        l.pillars.addAll(g.pillars);
+        l.spreadFrom = l.mexes.size();   // no template-and-spread split: every patch was placed by the generator
         return l;
     }
 
@@ -680,7 +720,32 @@ public final class MapLayout {
      * added by changing this method and {@link #arenaHalfExtent}, nothing else.
      */
     public double distanceToArenaEdge(double dx, double dz) {
+        if (gen != null)
+            return gen.distanceToEdge(dx, dz);
         return radius - Math.hypot(dx, dz);
+    }
+
+    /** A square arena (a generated map may be one, lovish Oct 21: "square maps ... as well as round"): straight walls. */
+    public boolean squareArena() {
+        return gen != null && gen.shape == GenMap.Shape.SQUARE;
+    }
+
+    /**
+     * The radius of the circle that holds the whole arena (a square's corners included): for whatever must cover all
+     * of it - the arena's pregeneration, the structure clearing, the clients' map bounds. The radius on a round arena.
+     */
+    public int outerRadius() {
+        return squareArena() ? (int) Math.ceil(radius * Math.sqrt(2)) : radius;
+    }
+
+    /**
+     * Whether a tree grows on the column (dx, dz) (u, v: its sample's frame coordinates): on a generated map the
+     * generator decided (its walk checks counted that stem), elsewhere the builder's sparse share of a grove.
+     */
+    public boolean treeAt(int dx, int dz, double u, double v, double density) {
+        if (gen != null)
+            return gen.treeAt(dx, dz);
+        return decorHash(u, v) < density;
     }
 
     public boolean insideArena(double dx, double dz) {
@@ -702,7 +767,8 @@ public final class MapLayout {
     /** A column nothing walks through: void, lava, deep water, or a tree stem (a grove column that grew one). */
     private boolean walkBlocked(Sample s) {
         return s.surface == Surface.VOID || s.surface == Surface.LAVA || (s.surface == Surface.WATER && s.height < -1)
-            || (s.forest && decorHash(s.u, s.v) < groveDensity());
+            || (s.forest && (gen != null ? gen.treeAt((int) Math.round(s.u), (int) Math.round(s.v))
+                : decorHash(s.u, s.v) < groveDensity()));
     }
 
     /** The arena's ground, sampled once: column height and whether a unit may stand in it. */
@@ -857,7 +923,7 @@ public final class MapLayout {
     /** Index of the slot whose wedge holds (dx, dz). */
     public int slotAt(double dx, double dz) {
         double step = TAU / n;
-        double th = Math.atan2(dz, dx) - ROT;
+        double th = Math.atan2(dz, dx) - rot;
         long k = Math.round(th / step);
         return (int) (((k % n) + n) % n);
     }
@@ -869,6 +935,10 @@ public final class MapLayout {
      * Every preset is a function of the folded (u, v) only - that is the symmetry.
      */
     public void sample(double dx, double dz, Sample out) {
+        if (gen != null) {
+            gen.sample(dx, dz, out);
+            return;
+        }
         double r = Math.sqrt(dx * dx + dz * dz);
         double step = TAU / n;
         double th = Math.atan2(dz, dx) - ROT;

@@ -31,10 +31,11 @@ public class MapSeedGameTests {
         return 0x5EED0000L + (i + 1) * 0x9E3779B97F4A7C15L;
     }
 
+    /** The hand-made maps (fair by construction); the generated map is measured instead (MapGenGameTests). */
     static List<MapPreset> premade() {
         List<MapPreset> out = new ArrayList<>();
         for (MapPreset p : MapPreset.values())
-            if (p.premade())
+            if (p.handmade())
                 out.add(p);
         return out;
     }

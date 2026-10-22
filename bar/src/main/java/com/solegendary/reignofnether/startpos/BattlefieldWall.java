@@ -133,7 +133,7 @@ public class BattlefieldWall {
         material = MATERIALS[rollMaterial(random)];
         gatehouseEvery = 4 + random.nextInt(4);
         columnSeed = 0;
-        planRing(level, cx, cz, radius, COLUMNS_PER_TICK, 0, true);
+        planWall(level, cx, cz, radius, false, COLUMNS_PER_TICK, 0, true);
     }
 
     /**
@@ -150,6 +150,11 @@ public class BattlefieldWall {
      * play speed, with the arena generated behind it - the classic formation's road.
      */
     public static void buildAt(ServerLevel level, double cx, double cz, double radius, int materialIndex) {
+        buildAt(level, cx, cz, radius, materialIndex, false);
+    }
+
+    /** As above; {@code square}: straight sides {@code radius} from the centre (a square generated map), corner towers. */
+    public static void buildAt(ServerLevel level, double cx, double cz, double radius, int materialIndex, boolean square) {
         if (level == null)
             return;
         towerEvery = 40 + random.nextInt(17);
@@ -158,7 +163,7 @@ public class BattlefieldWall {
         material = MATERIALS[Math.max(0, Math.min(MATERIALS.length - 1, materialIndex))];
         gatehouseEvery = 5;
         columnSeed = 0;
-        planRing(level, cx, cz, radius, COLUMNS_PER_TICK, 0, true);
+        planWall(level, cx, cz, radius, square, COLUMNS_PER_TICK, 0, true);
     }
 
     /**
@@ -172,6 +177,12 @@ public class BattlefieldWall {
      */
     public static void raise(ServerLevel level, double cx, double cz, double radius, int materialIndex, long seed,
                              int perTick, @Nullable CompoundTag resume) {
+        raise(level, cx, cz, radius, materialIndex, seed, perTick, resume, false);
+    }
+
+    /** As above; {@code square}: the wall of a square arena (straight sides {@code radius} from the centre). */
+    public static void raise(ServerLevel level, double cx, double cz, double radius, int materialIndex, long seed,
+                             int perTick, @Nullable CompoundTag resume, boolean square) {
         if (level == null)
             return;
         Random rolls = new Random(seed);
@@ -182,7 +193,7 @@ public class BattlefieldWall {
         gatehouseEvery = 5;
         columnSeed = seed == 0 ? 1 : seed;
         int fromColumn = resume == null ? 0 : Math.max(0, resume.getInt("columns"));
-        planRing(level, cx, cz, radius, Math.max(1, perTick), fromColumn, false);
+        planWall(level, cx, cz, radius, square, Math.max(1, perTick), fromColumn, false);
         if (resume != null) {
             int[] flat = resume.getIntArray("ground");
             for (int i = 0; i + 2 < flat.length; i += 3)
@@ -226,36 +237,71 @@ public class BattlefieldWall {
         return seen.size();
     }
 
-    static void planRing(ServerLevel level, double cx, double cz, double radius, int perTick, int fromColumn,
-                         boolean pregen) {
-        int steps = (int) Math.ceil(Math.PI * 2 * radius);
+    /** How many columns the wall of a square arena of half side {@code half} round (cx, cz) has. */
+    public static int squareLength(double cx, double cz, double half) {
+        return outline(cx, cz, half, true).size();
+    }
 
-        queue.clear();
-        ground.clear();
+    /**
+     * The wall's line, column by column in order round the arena: {x, z, outward normal angle, corner 0/1}. A ring
+     * samples the circle (each block column once); a square runs its four straight sides (lovish Oct 21: "square maps
+     * ... as well as round"), each corner the first column of a side, the normal square to the side so the inner face
+     * and the gatehouses' arches sit straight.
+     */
+    static java.util.List<double[]> outline(double cx, double cz, double radius, boolean square) {
+        java.util.List<double[]> out = new java.util.ArrayList<>();
+        if (square) {
+            int x0 = (int) Math.round(cx - radius), x1 = (int) Math.round(cx + radius);
+            int z0 = (int) Math.round(cz - radius), z1 = (int) Math.round(cz + radius);
+            for (int z = z0; z < z1; z++)
+                out.add(new double[] { x1, z, 0, z == z0 ? 1 : 0 });
+            for (int x = x1; x > x0; x--)
+                out.add(new double[] { x, z1, Math.PI / 2, x == x1 ? 1 : 0 });
+            for (int z = z1; z > z0; z--)
+                out.add(new double[] { x0, z, Math.PI, z == z1 ? 1 : 0 });
+            for (int x = x0; x < x1; x++)
+                out.add(new double[] { x, z0, -Math.PI / 2, x == x0 ? 1 : 0 });
+            return out;
+        }
+        int steps = (int) Math.ceil(Math.PI * 2 * radius);
         Set<Long> seen = new HashSet<>();
-        int col = 0;
-        int towers = 0;
         for (int i = 0; i < steps; i++) {
             double a = Math.PI * 2 * i / steps;
             int x = (int) Math.round(cx + Math.cos(a) * radius);
             int z = (int) Math.round(cz + Math.sin(a) * radius);
-            if (!seen.add(((long) x << 32) ^ (z & 0xffffffffL)))
-                continue;
-            boolean tower = col % towerEvery == 0;
-            boolean gatehouse = tower && towers++ % gatehouseEvery == gatehouseEvery - 1;
+            if (seen.add(((long) x << 32) ^ (z & 0xffffffffL)))
+                out.add(new double[] { x, z, a, 0 });
+        }
+        return out;
+    }
+
+    static void planWall(ServerLevel level, double cx, double cz, double radius, boolean square, int perTick,
+                         int fromColumn, boolean pregen) {
+        queue.clear();
+        ground.clear();
+        int col = 0;
+        int towers = 0;
+        for (double[] c : outline(cx, cz, radius, square)) {
+            boolean corner = c[3] > 0;
+            // a square's corners always carry a tower (and never a gatehouse: its arch would face one side only)
+            boolean tower = corner || col % towerEvery == 0;
+            boolean gatehouse = tower && !corner && towers++ % gatehouseEvery == gatehouseEvery - 1;
             if (col >= fromColumn)   // the columns before stand already (a resume)
-                queue.add(new Column(col, x, z, a, tower, col % 2 == 0, gatehouse));
+                queue.add(new Column(col, (int) c[0], (int) c[1], c[2], tower, col % 2 == 0, gatehouse));
             col++;
         }
         planned = col;
         columnsPerTick = perTick;
         buildLevel = level;
-        ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) radius);
+        // what must cover the whole arena covers a square's corners too
+        double cover = square ? radius * Math.sqrt(2) : radius;
+        ArenaStructureClearing.setArenaRadius(level, (float) cx, (float) cz, (float) cover);
         // the whole arena generated in the background, so a spectator's camera never waits on world generation
         if (pregen)
-            ArenaPregen.start(level, cx, cz, radius);
-        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns"
-            + " at {} a tick{}", material.name(), (int) cx, (int) cz, (int) radius, col, perTick,
+            ArenaPregen.start(level, cx, cz, cover);
+        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} {} wall: centre [{}, {}], {} {}, {} columns"
+            + " at {} a tick{}", material.name(), square ? "square" : "ring", (int) cx, (int) cz,
+            square ? "half side" : "radius", (int) radius, col, perTick,
             fromColumn > 0 ? " (resumed at column " + Math.min(fromColumn, col) + ")" : "");
     }
 
