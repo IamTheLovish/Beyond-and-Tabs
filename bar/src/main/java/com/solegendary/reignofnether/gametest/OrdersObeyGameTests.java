@@ -161,11 +161,11 @@ public class OrdersObeyGameTests {
     // --------------------------------------------------------------------------------- (b) a move into unloaded land
 
     /**
-     * RTS pathfinding on (as on a small world-border map). A vindicator in the arena is sent 4000 blocks east, into
-     * chunks no one has loaded (a stone wall across the arena makes it path round). Within 30 s it has walked toward
-     * the target - as far as the loaded chunks go, which grow round it as it walks - and is either idle (the order
-     * given up) or still walking; never standing with the order. Before the fix every request got no path at all,
-     * so it stood where it was and retried every 20 ticks forever, counted busy.
+     * RTS pathfinding on (as on a small world-border map). A vindicator in a closed stone pen is sent 4000 blocks
+     * east, into chunks no one has loaded. It walks to the pen's east wall (as far as it can toward the target) and,
+     * within 30 s, gives the order up (idle) - or at the least is still walking; never standing with the order.
+     * Before the fix every request got no path at all, so it stood where it was and retried every 20 ticks forever,
+     * counted busy.
      */
     @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
     public static void a_move_into_unloaded_chunks_walks_toward_it_never_stands_busy(GameTestHelper helper) {
@@ -174,9 +174,13 @@ public class OrdersObeyGameTests {
         UnitServerEvents.rtsPathfinding = true;
         // on the ground, not a sky pad: a pad near the build limit sits at the edge of the pathfinder's vertical band
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        for (int z = 0; z <= 15; z++)
-            for (int y = 2; y <= 4; y++)
-                helper.setBlock(new BlockPos(14, y, z), net.minecraft.world.level.block.Blocks.STONE);
+        // a closed stone pen (x 0..14, z 0..15): the unit must not walk out into fresh world - generating new
+        // chunks from a test crashed a CI server (ocean-ruin feature placement, run 39708206584)
+        for (int x = 0; x <= 14; x++)
+            for (int z = 0; z <= 15; z++)
+                if (x == 0 || x == 14 || z == 0 || z == 15)
+                    for (int y = 2; y <= 6; y++)
+                        helper.setBlock(new BlockPos(x, y, z), net.minecraft.world.level.block.Blocks.STONE);
         BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
         String mine = owner(helper, "unloaded");
         List<Entity> made = new ArrayList<>();
