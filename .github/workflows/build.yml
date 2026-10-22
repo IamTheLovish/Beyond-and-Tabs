@@ -71,6 +71,7 @@ jobs:
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+          python3 tools/ladder_report.py --selftest   # the nightly bot ladder's table (bot-ladder.yml)
           for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
       - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
         run: python3 tools/check_dep_pins.py

@@ -25,6 +25,7 @@ run "hud_layout"                  python3 tools/hud_layout.py
 run "animation lab data"          bash -c 'for f in design/anims/*.json; do [ -e "$f" ] || continue; python3 tools/anim_lab.py "$f" --check --motion || exit 1; done'
 run "dependency pins"             python3 tools/check_dep_pins.py
 run "gametest shard lists"        python3 tools/check_shards.py
+run "bot ladder report"           python3 tools/ladder_report.py --selftest
 if [ $quick = 0 ] && command -v javac >/dev/null; then
   run "engine compiles"           bash -c 'd=$(mktemp -d) && javac --release 17 -d "$d" $(find engine/src -name "*.java")'
 fi
