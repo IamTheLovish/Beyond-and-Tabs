@@ -44,7 +44,7 @@ LADDER = {
     "hills":   dict(black=(18, 7, 11), gain=0.58, haze=(56, 16, 24), hz=0.24, period=4.2),
     "mid":     dict(black=(12, 9, 11), gain=0.80, haze=(46, 26, 30), hz=0.12, period=3.8),
     "ground":  dict(black=(8, 6, 8), gain=0.86, haze=(36, 20, 24), hz=0.05, period=3.6),
-    "near":    dict(black=(5, 4, 6), gain=0.80, haze=(0, 0, 0), hz=0.0, period=3.2),
+    "near":    dict(black=(4, 3, 5), gain=0.66, haze=(0, 0, 0), hz=0.0, period=3.2),
     "frame":   dict(black=(3, 3, 4), gain=0.62, haze=(0, 0, 0), hz=0.0, period=3.0),
 }
 BONE = np.array((214, 206, 192), np.float32) / 255      # the burin's light on stone and bark (warm bone)
@@ -319,7 +319,7 @@ def tree(L, x, ybase, height, width, rr, lean=0.0, albedo=0.45, depth=4, crown=0
     own), roots spreading at the foot. Coordinates in A of the layer's canvas."""
     c = L.c
     limbs = []
-    tpts, ang = wander(x, ybase, -math.pi / 2 + lean, height, 10, rr, 0.06)
+    tpts, ang = wander(x, ybase, -math.pi / 2 + lean, height, 12, rr, 0.11)
     limbs.append((tpts, width, width * 0.42, 0))
     if roots:
         for k in range(rr.integers(3, 6)):
@@ -465,7 +465,7 @@ def rocks(L, cx, cy, spread, n, r, rr, albedo=0.5, flat=0.45, colour=BONE):
         m = Image.new("L", (L.c.W, L.c.H), 0)
         ImageDraw.Draw(m).polygon(L.c.pts(jag(rock(x, y, rad, rr, flat), rr, rad * 0.05, 2)), fill=255)
         fac = blur(np.random.default_rng(rr.integers(1 << 30)).random((L.c.H, L.c.W)).astype(np.float32), rad * L.c.k * 0.25) * rad * L.c.k * 3
-        L.stamp(m, albedo=albedo * rr.uniform(0.8, 1.15), relief=2.4, facets=fac, colour=colour, outline=1.0)
+        L.stamp(m, albedo=albedo * rr.uniform(0.8, 1.15), relief=2.4, facets=fac, colour=colour, outline=1.0, rim=0.45)
 
 
 def grass(L, x0, x1, ybase, ht, n, rr, albedo=0.35, lean=0.0, colour=None, ytop_jit=0.3):
@@ -620,7 +620,7 @@ def plane_rows(rgb, cov, blk, blk_k, c, stops):
 
 # ------------------------------------------------------------------ sky, clouds, far hills
 
-GLOW_C = (0.32, 0.40)          # the blood-red light behind the cathedral (artboard)
+GLOW_C = (0.36, 0.47)          # the blood-red light behind the cathedral (artboard)
 
 
 def sky_value(X, Y):
@@ -648,7 +648,17 @@ def sky():
     pale = np.array((226, 214, 190), np.float32) / 255
     colour = BLOOD[None, None, :] * red[..., None] + pale * moonw[..., None] + np.array((120, 96, 100), np.float32) / 255 * \
         np.clip(1 - red - moonw, 0, 1)[..., None]
-    theta = 0.04 * np.sin(X * 3.0) + (noise(c.H, c.W, 3, 502, 2) - 0.5) * 0.25
+    # the burin's path: rings round the moon near it, long curves following the glow's contours elsewhere, so the sky
+    # never reads as level scanlines
+    mx, my, mr = G.MOON
+    t_moon = np.arctan2(Y - my, X - mx) + math.pi / 2
+    gx, gy = GLOW_C
+    t_glow = np.arctan2((Y - gy) / 0.36 ** 2, (X - gx) / 0.50 ** 2) + math.pi / 2
+    wm = np.exp(-(np.hypot(X - mx, Y - my) / 0.42) ** 2)
+    jit = (noise(c.H, c.W, 3, 502, 2) - 0.5) * 0.35
+    vx = np.cos(2 * t_moon) * wm + np.cos(2 * t_glow) * (1 - wm) * 0.8 + 0.2 * (1 - wm)
+    vy = np.sin(2 * t_moon) * wm + np.sin(2 * t_glow) * (1 - wm) * 0.8
+    theta = 0.5 * np.arctan2(vy, vx) + jit
     A = np.ones_like(V)
     rgb, cov = etch(V, A, theta, colour, 3.4 * SS, 503, cross=0.95, stipple=0.25, contour=0, tooth_amt=0.45)
     blk = np.array((48, 6, 12), np.float32) / 255
@@ -690,35 +700,30 @@ def clouds():
     the edges stippled away. The far banks sit darker than the red glow behind them, so they read as shapes."""
     for name, rect, seed, banks, lad, alpha_max in (
             ("clouds_far", (-ART_W / 2, 0.28, ART_W / 2, 0.80), 601,
-             [(-0.95, 0.50, 0.46, 0.085), (0.70, 0.52, 0.60, 0.10), (1.02, 0.36, 0.30, 0.07),
-              (-0.30, 0.65, 0.55, 0.07), (0.10, 0.60, 0.30, 0.05)], "cloud", 0.96),
+             [(-0.80, 0.42, 0.70, 0.035), (0.80, 0.47, 0.80, 0.040), (-0.25, 0.30, 0.45, 0.022),
+              (-0.55, 0.57, 0.60, 0.030), (0.95, 0.30, 0.40, 0.022)], "cloud", 0.90),
             ("clouds_near", (-ART_W / 2, 0.46, ART_W / 2, 0.84), 602,
-             [(-0.62, 0.56, 0.40, 0.045), (0.22, 0.535, 0.26, 0.03), (0.9, 0.575, 0.34, 0.04)], "hills", 0.9)):
+             [(-0.70, 0.61, 0.70, 0.018), (0.95, 0.62, 0.60, 0.016)], "hills", 0.8)):
         rr = np.random.default_rng(seed)
         c = Canvas(rect, px=880)
         X, Y = c.grid()
         D = np.zeros_like(X)
         belly = np.zeros_like(X)
         for (x, y, length, height) in banks:
+            # a torn stratus band: a long lens of cloud, thicker in the middle, its upper edge in low swells
             bank = np.zeros_like(X)
-            for tier in (3, 2, 1, 0):
-                span = length * (1 - 0.22 * tier)
-                cnt = max(2, int(span / height * (1.5 + 0.5 * tier)))
-                for i in range(cnt):
-                    t = (i + rr.uniform(0.1, 0.9)) / cnt
-                    cx = x + (t - 0.5) * span
-                    env = math.sin(math.pi * t) ** 0.5
-                    r = height * rr.uniform(0.3, 0.8) * (1 - 0.2 * tier) * (0.55 + 0.45 * env)
-                    cy = y - height * (0.15 + 0.36 * tier) * (0.4 + 0.6 * env) - r * 0.2
-                    for dx in (-ART_W, 0.0, ART_W):
-                        bank += np.exp(-(((X - cx - dx) / (r * 1.7)) ** 2 + ((Y - cy) / (r * 1.15)) ** 2) * 1.4) * 0.8
-            # the flat belly: the bank is cut off below its base line, softly
-            bank *= smooth(y + 0.010, y - 0.006, Y)
+            for dx in (-ART_W, 0.0, ART_W):
+                t = (X - x - dx) / (length / 2)
+                env = np.clip(1 - t * t, 0, 1) ** 0.7
+                swell = 1 + 0.6 * np.clip(np.sin((X - dx) * 38 + x * 9), 0, 1) ** 2 + 0.4 * np.sin((X - dx) * 11 + y * 7)
+                yc = y - height * 0.3 * env
+                bank = np.maximum(bank, env * np.exp(-((Y - yc) / (height * 0.55 * swell * (0.4 + 0.6 * env))) ** 2))
             D = np.maximum(D, bank)
         U = (X - rect[0]) / ART_W
         erode = G.fbm(U, (Y - rect[1]) / (rect[3] - rect[1]), 10, seed + 1, True, 4, 0.55, ART_W / (rect[3] - rect[1]))
-        Dn = D * (0.50 + 0.95 * erode)
-        A = smooth(0.30, 0.55, Dn) * alpha_max
+        streak = G.fbm(U * 1.0, (Y - rect[1]) / (rect[3] - rect[1]) * 6.0, 6, seed + 4, True, 3, 0.5, ART_W / (rect[3] - rect[1]))
+        Dn = D * (0.35 + 1.1 * erode) * (0.6 + 0.7 * streak)
+        A = smooth(0.32, 0.62, Dn) * alpha_max
         hg = blur(np.minimum(Dn, 1.6), 14) * 1400
         gy, gx = np.gradient(hg)
         Lv = np.array((-0.35, -0.85, 0.40), np.float32)
@@ -739,10 +744,11 @@ def hills():
     c = Canvas((-ART_W / 2, 0.50, ART_W / 2, 0.74), px=1000)
     L = Layer(c)
     # a far ridge (lighter, softer) and a nearer one carrying a forest edge
-    for k, (base, amp, alb) in enumerate(((0.615, 0.035, 0.62), (0.655, 0.022, 0.50))):
-        xs = np.linspace(-ART_W / 2 - 0.05, ART_W / 2 + 0.05, 90)
-        ys = base - amp * (0.5 + 0.5 * np.sin(xs * (2.3 + k) + k * 1.7)) * (0.6 + 0.4 * np.sin(xs * 7.1 + k))
-        ys = ys - 0.01 * rr.random(len(xs))
+    for k, (base, amp, alb) in enumerate(((0.625, 0.060, 0.62), (0.672, 0.040, 0.46))):
+        xs = np.linspace(-ART_W / 2 - 0.05, ART_W / 2 + 0.05, 140)
+        ys = base - amp * (0.5 + 0.5 * np.sin(xs * (2.3 + k) + k * 1.7)) * (0.55 + 0.45 * np.sin(xs * 6.1 + 2 * k)) \
+            - amp * 0.35 * np.clip(np.sin(xs * 13.0 + k), 0, 1) ** 3
+        ys = ys - 0.006 * rr.random(len(xs))
         ps = list(zip(xs, ys)) + [(ART_W / 2 + 0.05, 0.75), (-ART_W / 2 - 0.05, 0.75)]
         m = Image.new("L", (c.W, c.H), 0)
         ImageDraw.Draw(m).polygon(c.pts(ps), fill=255)
@@ -753,7 +759,7 @@ def hills():
                 if math.sin(x * 9.0) + 0.6 * math.sin(x * 23 + 1) < -0.2:
                     continue
                 yb = float(np.interp(x, xs, ys)) + 0.004
-                ht = rr.uniform(0.012, 0.03)
+                ht = rr.uniform(0.012, 0.03) * (1.8 if math.sin(x * 4.0 + 1) > 0.6 else 1.0)
                 m = Image.new("L", (c.W, c.H), 0)
                 d = ImageDraw.Draw(m)
                 if rr.random() < 0.6:
@@ -776,9 +782,9 @@ def depth_s(y):
     return np.clip((np.asarray(y, np.float32) - HOR) / (1.0 - HOR), 0.02, 1.4)
 
 
-TERRAIN = [(-1.25, 0.712), (-0.95, 0.700), (-0.70, 0.706), (-0.42, 0.698), (-0.20, 0.702), (-0.04, 0.694),
-           (0.06, 0.684), (0.12, 0.690), (0.30, 0.693), (0.48, 0.690), (0.56, 0.684), (0.66, 0.698),
-           (0.90, 0.704), (1.25, 0.700)]
+TERRAIN = [(-1.25, 0.716), (-1.05, 0.694), (-0.92, 0.702), (-0.70, 0.712), (-0.52, 0.690), (-0.36, 0.700),
+           (-0.20, 0.706), (-0.04, 0.692), (0.06, 0.684), (0.12, 0.690), (0.30, 0.693), (0.48, 0.690),
+           (0.56, 0.682), (0.66, 0.700), (0.78, 0.690), (0.92, 0.708), (1.06, 0.696), (1.25, 0.704)]
 
 
 def terrain_top(x):
@@ -852,7 +858,7 @@ def ground():
     streaks = G.fbm(X * 3.0, v * 2.2, 1, 705, False, 4)          # long horizontal bands of light on the current
     refl = np.exp(-(u * 0.8) ** 2) * (0.35 + 0.65 * smooth(0.35, 0.7, streaks))
     near_fall = np.exp(-((Y - 0.80) / 0.03) ** 2) * 0.35
-    wv = np.clip(0.30 + 0.70 * refl + near_fall, 0, 1) * (1 - 0.55 * smooth(0.6, 1.0, np.abs(u)))
+    wv = np.clip(0.38 + 0.72 * refl + near_fall, 0, 1) * (1 - 0.50 * smooth(0.65, 1.0, np.abs(u)))
     wth = (G.fbm(X * 6, Y * 20, 3, 707, False, 2) - 0.5) * 0.25
     L.stamp(wm, albedo=1.0, colour=np.clip(BLOOD * 1.35, 0, 1), relief=0.0, theta=wth, outline=0.0, value=np.clip(wv * 1.15, 0, 1),
             black=((0.26, 0.02, 0.04), 1.0))
@@ -903,7 +909,7 @@ def grass_tufts(L, n, rr, rect):
     X, Y = c.grid()
     ds = depth_s(Y)
     patch = G.fbm(X * 2.5, Y * 8.0, 2, 709, False, 3)
-    alb = np.clip((0.70 - 0.48 * ds ** 1.2) * (0.55 + 0.8 * smooth(0.3, 0.7, patch)), 0.05, 1)
+    alb = np.clip((0.66 - 0.56 * ds ** 1.1) * (0.55 + 0.8 * smooth(0.3, 0.7, patch)), 0.03, 1)
     L.stamp(arr(m), albedo=alb, relief=0.3, theta=math.pi / 2, outline=0.2, colour=np.array((196, 192, 178), np.float32) / 255)
 
 
@@ -1066,13 +1072,13 @@ def _scatter(rect, n, seed, drift_cells, red_frac, size_k, y_bias=1.0, keep_out=
 def fields():
     """The flower fields on the ground plane: far drifts (specks to small blooms) and the near blooms; with the grass
     and stones of the near banks in front (field_near rides the ground's nearest depth)."""
-    for name, rect, n, seed, size_k, lad in (("field_far", (-ART_W / 2, 0.62, ART_W / 2, 0.93), 4200, 801, 0.0085, "ground"),
-                                             ("field_near", (-ART_W / 2, 0.78, ART_W / 2, 1.0), 520, 802, 0.020, "near")):
+    for name, rect, n, seed, size_k, lad in (("field_far", (-ART_W / 2, 0.62, ART_W / 2, 0.93), 4200, 801, 0.0090, "ground"),
+                                             ("field_near", (-ART_W / 2, 0.78, ART_W / 2, 1.0), 480, 802, 0.026, "near")):
         rr = np.random.default_rng(seed)
         c = Canvas(rect, px=1100)
         L = Layer(c)
         lo = rect[1] + (0.04 if name == "field_near" else 0.0)
-        fl = _scatter((rect[0], lo, rect[2], rect[3] - 0.01), n, seed, 6.0, 0.62, size_k,
+        fl = _scatter((rect[0], lo, rect[2], rect[3] - 0.01), n, seed, 6.0, 0.55, size_k,
                       keep_out=lambda x, y: (-0.02 < x < 0.62 and y < 0.80))
         if name == "field_near":
             # near grass along the bottom and the banks, under the blooms
@@ -1214,6 +1220,8 @@ def frames():
             for k in range(6):
                 rocks(L, X(0.08 + 0.055 * k), 0.66 + k * 0.05, 0.02, 2, 0.035, rr, albedo=0.34)
             tree(L, X(0.10), 0.66, 0.40, 0.04, rr, lean=-0.25, albedo=0.32, depth=4, crown=0.5, side_bias=0.45, roots=True)
+            # a near-black trunk up the very edge, leaning out, its crown off the top: the right wall of the tunnel
+            tree(L, X(0.075), 1.03, 1.08, 0.075, rr, lean=0.05, albedo=0.26, depth=2, crown=0.28, side_bias=0.6, roots=False)
             rocks(L, X(0.30), 0.985, 0.06, 6, 0.05, rr, albedo=0.32)
             grass(L, X(0.48), X(0.06), 1.0, 0.07, 600, rr, albedo=0.26)
         out, a = L.render("frame", 3.2 * SS, 420 + mir, default_theta=math.pi / 2, gamma=1.3)
@@ -1285,7 +1293,16 @@ def fg():
     for i in range(2, len(pts), 2):
         bp, _ = wander(pts[i][0], pts[i][1], 1.2 + rr.normal(0, 0.3), rr.uniform(0.06, 0.14), 5, rr, 0.2)
         L.stamp(limb_mask(c, bp, 0.008, 0.003), albedo=0.30, relief=0.8, outline=0.8)
-        foliage(L, bp[-1][0], bp[-1][1], rr.uniform(0.03, 0.05), rr.uniform(0.02, 0.03), rr, albedo=0.28, n=12, leaf=0.009)
+        for (qx, qy) in bp[1:]:
+            for _ in range(2):
+                a = rr.uniform(0.3, 2.8)
+                ln = rr.uniform(0.018, 0.03)
+                lm = Image.new("L", (c.W, c.H), 0)
+                tip = (qx + math.cos(a) * ln, qy + math.sin(a) * ln)
+                side = (math.cos(a + 1.5708) * ln * 0.28, math.sin(a + 1.5708) * ln * 0.28)
+                ImageDraw.Draw(lm).polygon(c.pts([(qx, qy), (qx + math.cos(a) * ln * 0.5 + side[0], qy + math.sin(a) * ln * 0.5 + side[1]),
+                                                  tip, (qx + math.cos(a) * ln * 0.5 - side[0], qy + math.sin(a) * ln * 0.5 - side[1])]), fill=255)
+                L.stamp(lm, albedo=0.30, relief=0.8, outline=0.9, theta=a)
     out, a = L.render("frame", 3.0 * SS, 904, default_theta=0.4, gamma=1.3)
     save(out, a, "fg_branch", (512, 512))
 

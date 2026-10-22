@@ -272,6 +272,11 @@ def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, r
     frgb *= (0.94 + 0.06 * np.clip(_noise(H, W, 0.9 * SS, seed + 7), -1, 1))[..., None]
     _lay(rgb, a, np.clip(frgb, 0, 1).astype(np.float32), allm)
 
+    # ---- the glow fades out before the texture's edge (no visible box round a glowing name)
+    ex = np.minimum(np.arange(W), np.arange(W)[::-1])[None, :] / (pad * 0.9)
+    ey = np.minimum(np.arange(H), np.arange(H)[::-1])[:, None] / (pad * 0.9)
+    win = np.clip(np.minimum(ex, ey), 0, 1)
+    a = np.maximum(a * win * win * (3 - 2 * win), allm * (a > 0))
     # ---- downsample (premultiplied) and save straight RGBA
     pm = np.concatenate([rgb * a[..., None], a[..., None]], -1)
     out_w, out_h = W // SS, H // SS
@@ -309,20 +314,20 @@ def title(write_java=True):
     # equally - same face, same size, same pad, so one scale draws every piece. "Developed by" in bone, Lovish in
     # blood and gold with drips, a small gold "&", Joisco in sapphire into violet with a platinum rim and a cool glow.
     F = 84
-    b = _lettering([([("Developed by", FRAK, F, 1)], 0)], pad=28 * SS, seed=23, drips_static=0, drips_anim=0,
+    b = _lettering([([("Developed by", FRAK, F, 1)], 0)], pad=44 * SS, seed=23, drips_static=0, drips_anim=0,
                    out_name="byline", glow=0.35, rim_r=4, outline_r=9, fill_top=(246, 236, 214), fill_mid=(214, 198, 170),
                    fill_bot=(150, 132, 108), hatch=False, rim_top=(120, 96, 60), rim_bot=(70, 52, 30),
                    bloom_rgb=(40, 26, 20), outline_rgb=(12, 8, 6), seam_rgb=(40, 30, 22), gloss_rgb=(255, 250, 236))
-    lv = _lettering([([("Lovish", FRAK, F, 1)], 0)], pad=28 * SS, seed=31, drips_static=3, drips_anim=0,
+    lv = _lettering([([("Lovish", FRAK, F, 1)], 0)], pad=44 * SS, seed=31, drips_static=3, drips_anim=0,
                     out_name="credit_lovish", glow=0.6, rim_r=5, outline_r=9, fill_top=(255, 186, 160),
                     fill_mid=(236, 78, 74), fill_bot=(170, 26, 32), hatch=False, swash_j=True)
-    am = _lettering([([("&", FRAK, F * 0.78, 0)], 0)], pad=28 * SS, seed=37, drips_static=0, drips_anim=0,
+    am = _lettering([([("&", FRAK, F * 0.78, 0)], 0)], pad=44 * SS, seed=37, drips_static=0, drips_anim=0,
                     out_name="credit_amp", glow=0.4, rim_r=3, outline_r=8, fill_top=(255, 236, 170),
                     fill_mid=(222, 172, 84), fill_bot=(150, 98, 34), hatch=False, rim_top=(255, 246, 210),
                     rim_bot=(120, 80, 30), bloom_rgb=(120, 80, 20), outline_rgb=(24, 14, 4), seam_rgb=(60, 40, 12),
                     gloss_rgb=(255, 250, 220))
-    j = _lettering([([("Joisco", FRAK, F, 1)], 0)], pad=28 * SS, seed=29, drips_static=0, drips_anim=0,
-                   out_name="credit_joisco", glow=1.25, rim_r=5, outline_r=9, fill_top=(196, 214, 255),
+    j = _lettering([([("Joisco", FRAK, F, 1)], 0)], pad=44 * SS, seed=29, drips_static=0, drips_anim=0,
+                   out_name="credit_joisco", glow=0.9, rim_r=5, outline_r=9, fill_top=(196, 214, 255),
                    fill_mid=(104, 136, 255), fill_bot=(156, 86, 236), hatch=False, rim_top=(250, 252, 255),
                    rim_bot=(150, 160, 186), bloom_rgb=(64, 110, 240), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
                    gloss_rgb=(220, 232, 255), swash_j=True)

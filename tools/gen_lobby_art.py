@@ -35,7 +35,7 @@ LAYOUT = "--layout" in sys.argv     # quick geometry check: flat tones, no ink p
 # ---------------------------------------------------------------- shared layout (LobbyBackdrop.java mirrors these)
 PX_PER_A = 1100.0
 ART_W = 2560 / PX_PER_A                     # 2.327 A: a 21:9 screen, a hair narrower
-MOON = (-0.27, 0.205, 0.14)                 # centre x, y, radius (upper left third)
+MOON = (0.19, 0.175, 0.15)                  # centre x, y, radius (round 6: behind the towers, so the spires cut it)
 RECTS = {                                   # x0, y0, x1, y1 in A (artboard layers)
     "sky": (-ART_W / 2, 0.0, ART_W / 2, 1.0),
     "clouds_far": (-ART_W / 2, 0.28, ART_W / 2, 0.80),     # wraps in x (tile = ART_W)
@@ -54,7 +54,7 @@ FRAME_W = 0.66                              # frame_left / frame_right: FRAME_W 
 # round 6: it zig-zags back to the cathedral, narrowing to a thread at the fall, widening toward the viewer
 RIVER = [(0.372, 0.800, 0.030), (0.315, 0.808, 0.036), (0.200, 0.818, 0.046), (0.120, 0.832, 0.058),
          (0.170, 0.850, 0.074), (0.250, 0.870, 0.094), (0.205, 0.895, 0.120), (0.060, 0.925, 0.155),
-         (-0.020, 0.962, 0.205), (0.040, 1.005, 0.270), (0.100, 1.050, 0.340)]
+         (-0.020, 0.962, 0.235), (0.040, 1.005, 0.310), (0.100, 1.050, 0.390)]
 HORIZON = 0.64                              # perspective for the river's flow coordinate
 CASCADE = (0.300, 0.688, 0.016, 0.372, 0.802, 0.042)  # top x, top y, top half width, bottom x, bottom y, bottom half width
 
@@ -1195,18 +1195,9 @@ def cathedral():
         g.lead([(x, 0.545), (x, 0.629)], 0.6)
     g.statue_niches(x0t + 0.004, x1t - 0.004, 0.655, 0.735, 3, 40, 165)
     g.blind_arcade(x0t + 0.003, x1t - 0.003, 0.415, 0.445, 5, 130)
-    # the medieval crane left on the unfinished top: a timber frame, a jib, a rope and a hanging stone
-    for x in (x0t + 0.014, x0t + 0.04):
+    # (round 6: the medieval crane on the unfinished top read as antennas against the moon - left out)
+    for x in () if True else (x0t + 0.014, x0t + 0.04):
         g.poly([(x - 0.0016, 0.258), (x + 0.0016, 0.258), (x + 0.001, 0.205), (x - 0.001, 0.205)], 58, 150, 0.6)
-    g.poly([(x0t + 0.012, 0.207), (x0t + 0.044, 0.203), (x0t + 0.044, 0.209), (x0t + 0.012, 0.212)], 58, 150, 0.6)
-    g.poly([(x0t + 0.026, 0.205), (x0t - 0.035, 0.168), (x0t - 0.036, 0.172), (x0t + 0.024, 0.211)], 58, 150, 0.6)
-    g.ln([(x0t + 0.014, 0.258), (x0t + 0.04, 0.205)], 130, 0.6)
-    g.ln([(x0t + 0.04, 0.258), (x0t + 0.014, 0.205)], 130, 0.6)
-    g.ln([(x0t - 0.033, 0.171), (x0t - 0.032, 0.232)], 120, 0.5)
-    g.rect(x0t - 0.037, 0.232, x0t - 0.027, 0.240, 46, 150, 0.6)
-    g.circle(x0t + 0.027, 0.245, 0.010, 30, 150, 0.6)        # the treadwheel
-    for a in range(6):
-        g.ln([(x0t + 0.027, 0.245), (x0t + 0.027 + 0.010 * math.cos(a), 0.245 + 0.010 * math.sin(a))], 110, 0.4)
     # its buttresses (only the left faces show)
     for x in (x0t, x1t - 0.002):
         box(g, x - 0.007, x + 0.007, -0.022, 0.0, 0.33 if x == x0t else 0.30, F, 44, 52, E)
@@ -3362,7 +3353,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     sx = lambda x: W / 2 + (x + xs[0]) * S.A
     sy = lambda y: S.top + y * S.A
     shift = min(0.22, max(0.0, ART_W / 2 - W / (2 * S.A) - (0.065 if motion else 0.0))) if title else 0.0
-    xs[0] = -shift
+    xs[0] = shift                    # round 6: the whole scene slides right together (the moon stays behind the towers)
 
     def art(im, rect, z, **kw):
         x0, y0, x1, y1 = rect
@@ -3418,7 +3409,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     xl, xr, yb = sx(rx - 0.22) + ox(0.045), sx(rx + 0.20) + ox(0.045), sy(0.86) + oy(0.045)
     hw = 0.03 * S.A
     yy0, yy1 = int(max(0, y_t)), int(min(H, yb))
-    for yy in range(yy0, yy1):
+    for yy in range(yy0, yy0):                 # round 6: no shafts (LobbyBackdrop leaves them out)
         v = (yy - y_t) / (yb - y_t)
         xa = (x_t - hw) + (xl - (x_t - hw)) * v
         xb = (x_t + hw) + (xr - (x_t + hw)) * v
