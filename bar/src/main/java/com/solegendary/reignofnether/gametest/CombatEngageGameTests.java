@@ -126,6 +126,30 @@ public class CombatEngageGameTests {
         return side;
     }
 
+    /**
+     * Runs {@code body} once all {@code expected} units are made and each has ticked a few ticks of its own
+     * (ArenaReady's rule): the first CI run gave the orders 2 ticks after spawning on a freshly held far pad and the
+     * movers never left their spawn ("move none, idle true" at the timeout) while units that needed no order fought.
+     */
+    static void whenReady(GameTestHelper helper, List<Mob> made, int expected, Runnable body) {
+        // registered from the test body itself: onEachTick schedules one callback per remaining tick, which must not
+        // happen from inside another scheduled callback (the schedule is being iterated then)
+        boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0] || made.size() < expected)
+                return;
+            for (Mob m : made)
+                if (m.isRemoved() || m.tickCount < ArenaReady.TICKS) {
+                    if (helper.getTick() > SETUP + 160)
+                        throw new GameTestAssertException("the units were not ticking after " + helper.getTick()
+                            + " test ticks: " + ArenaReady.describe(helper.getLevel(), List.of(m)));
+                    return;
+                }
+            done[0] = true;
+            body.run();
+        });
+    }
+
     static void cleanUp(List<Mob> made, ServerLevel level, Pad pad) {
         for (Mob m : made) {
             UnitServerEvents.clearQueuedActions(m.getId());
@@ -197,7 +221,7 @@ public class CombatEngageGameTests {
     }
 
     /** Attack-moving past an enemy that stands within its aggro range, a unit takes it on. */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 200, batch = "combat_engage")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 360, batch = "combat_engage")
     public static void attack_move_unit_engages_an_enemy_in_range(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 1, 32, 16);
@@ -210,7 +234,7 @@ public class CombatEngageGameTests {
             if (units[1] != null)
                 EngagementStance.set(units[1], EngagementStance.HOLD_FIRE);   // the attacker's choice alone
         });
-        helper.runAfterDelay(SETUP + 2, () -> {
+        whenReady(helper, made, 2, () -> {
             if (units[0] != null)
                 UnitServerEvents.addActionItem(a, UnitAction.ATTACK_MOVE, -1, new int[] { units[0].getId() },
                     pad.at(29.5, 5.5), BlockPos.ZERO);
@@ -229,7 +253,7 @@ public class CombatEngageGameTests {
      * An idle unit hit by an enemy standing outside its aggro range turns on it (retaliation), the way an idle BAR
      * unit answers fire it cannot see coming.
      */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 120, batch = "combat_engage")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 300, batch = "combat_engage")
     public static void idle_unit_hit_from_outside_its_aggro_range_retaliates(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 2, 24, 16);
@@ -247,7 +271,7 @@ public class CombatEngageGameTests {
             if (units[1] != null)
                 EngagementStance.set(units[1], EngagementStance.HOLD_FIRE);
         });
-        helper.runAfterDelay(SETUP + 6, () -> {
+        whenReady(helper, made, 2, () -> {
             if (units[0] != null && units[1] != null)
                 units[0].hurt(level.damageSources().mobAttack(units[1]), 2f);
         });
@@ -267,7 +291,7 @@ public class CombatEngageGameTests {
      * move gives up (three repaths, 7 s or more; in a crowd much longer). BAR's move does not chase, but its units
      * still fire at what is in range; for a melee unit that is what it touches.
      */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 400, batch = "combat_engage")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 520, batch = "combat_engage")
     public static void unit_blocked_on_a_move_order_fights_the_enemy_it_touches(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 3, 32, 16);
@@ -297,7 +321,7 @@ public class CombatEngageGameTests {
                     aggro.setBaseValue(1);
             }
         });
-        helper.runAfterDelay(SETUP + 2, () -> {
+        whenReady(helper, made, 2, () -> {
             if (units[0] != null)
                 UnitServerEvents.addActionItem(a, UnitAction.MOVE, -1, new int[] { units[0].getId() },
                     pad.at(24.5, 8.5), BlockPos.ZERO);
@@ -337,7 +361,7 @@ public class CombatEngageGameTests {
      * 95% of them: a starved scan - a per-tick budget, a throttle, a visibility check - would leave whole ranks
      * idle), and both sides must take damage.
      */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 400, batch = "combat_engage_big")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 420, batch = "combat_engage_big")
     public static void hundreds_in_contact_all_in_range_acquire_targets(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 4, 44, 24);
@@ -351,23 +375,27 @@ public class CombatEngageGameTests {
         helper.runAfterDelay(SETUP, () -> {
             sides.add(block(level, pad, a, PER_SIDE, PER_ROW, 21.4, true, true, made));
             sides.add(block(level, pad, b, PER_SIDE, PER_ROW, 22.6, false, true, made));
-            start[0] = level.getGameTime();
         });
-        // who has an enemy in its aggro range once everyone is in the unit lists
-        helper.runAfterDelay(SETUP + 2, () -> {
+        // the clock starts once every unit is ticking (ArenaReady); who has an enemy in its aggro range then is judged
+        whenReady(helper, made, 2 * PER_SIDE, () -> {
+            start[0] = level.getGameTime();
             for (int s = 0; s < sides.size(); s++)
                 for (Mob m : sides.get(s))
                     if (enemyWithin(m, sides.get(1 - s), ((AttackerUnit) m).getAggroRange()))
                         inRange.add(m);
         });
-        for (int t = 1; t <= 200; t++)
-            helper.runAfterDelay(SETUP + t, () -> {
-                for (List<Mob> side : sides)
-                    for (Mob m : side)
-                        if (!firstTarget.containsKey(m) && m.isAlive() && m.getTarget() != null)
-                            firstTarget.put(m, level.getGameTime() - start[0]);
-            });
-        helper.runAfterDelay(SETUP + 201, () -> {
+        boolean[] judged = { false };
+        helper.onEachTick(() -> {
+            if (start[0] < 0 || judged[0])
+                return;
+            long t = level.getGameTime() - start[0];
+            for (List<Mob> side : sides)
+                for (Mob m : side)
+                    if (!firstTarget.containsKey(m) && m.isAlive() && m.getTarget() != null)
+                        firstTarget.put(m, t);
+            if (t < 200)
+                return;
+            judged[0] = true;
             if (sides.size() < 2 || sides.get(0).size() < PER_SIDE || sides.get(1).size() < PER_SIDE) {
                 cleanUp(made, level, pad);
                 helper.fail("could not create the units");
@@ -376,11 +404,11 @@ public class CombatEngageGameTests {
             int got = 0, by100 = 0;
             List<Long> times = new ArrayList<>();
             for (Mob m : inRange) {
-                Long t = firstTarget.get(m);
-                if (t != null) {
+                Long first = firstTarget.get(m);
+                if (first != null) {
                     got++;
-                    times.add(t);
-                    if (t <= 100)
+                    times.add(first);
+                    if (first <= 100)
                         by100++;
                 }
             }
@@ -415,7 +443,7 @@ public class CombatEngageGameTests {
      * blocked by A's bodies; they must fight there - not stand in the blob until their moves give up. Both sides
      * must deal real damage in 15 s, and B (the movers) at least a third of what A deals.
      */
-    @GameTest(template = ARENA, timeoutTicks = SETUP + 500, batch = "combat_engage_big2")
+    @GameTest(template = ARENA, timeoutTicks = SETUP + 520, batch = "combat_engage_big2")
     public static void hundreds_moving_into_an_attack_moving_army_both_fight(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Pad pad = pad(helper, 5, 60, 24);
@@ -429,9 +457,7 @@ public class CombatEngageGameTests {
             sides.add(block(level, pad, a, PER_SIDE, PER_ROW, 20.0, true, true, made));
             sides.add(block(level, pad, b, PER_SIDE, PER_ROW, 40.0, false, true, made));
         });
-        helper.runAfterDelay(SETUP + 3, () -> {
-            if (sides.size() < 2)
-                return;
+        whenReady(helper, made, 2 * PER_SIDE, () -> {
             int[] idsA = sides.get(0).stream().mapToInt(Mob::getId).toArray();
             int[] idsB = sides.get(1).stream().mapToInt(Mob::getId).toArray();
             // each side is sent to the other's starting spot: A fights its way there, B just moves
@@ -439,15 +465,19 @@ public class CombatEngageGameTests {
             UnitServerEvents.addActionItem(b, UnitAction.MOVE, -1, idsB, pad.at(14, pad.d() / 2.0), BlockPos.ZERO);
             start[0] = level.getGameTime();
         });
-        for (int t = 4; t <= 300; t++)
-            helper.runAfterDelay(SETUP + t, () -> {
-                for (List<Mob> side : sides)
-                    for (Mob m : side)
-                        if (!firstTarget.containsKey(m) && m.isAlive() && m.getTarget() != null)
-                            firstTarget.put(m, level.getGameTime() - start[0]);
-            });
-        helper.runAfterDelay(SETUP + 303, () -> {
-            if (sides.size() < 2 || sides.get(0).size() < PER_SIDE || sides.get(1).size() < PER_SIDE) {
+        boolean[] judged = { false };
+        helper.onEachTick(() -> {
+            if (start[0] < 0 || judged[0])
+                return;
+            long t = level.getGameTime() - start[0];
+            for (List<Mob> side : sides)
+                for (Mob m : side)
+                    if (!firstTarget.containsKey(m) && m.isAlive() && m.getTarget() != null)
+                        firstTarget.put(m, t);
+            if (t < 300)
+                return;
+            judged[0] = true;
+            if (sides.get(0).size() < PER_SIDE || sides.get(1).size() < PER_SIDE) {
                 cleanUp(made, level, pad);
                 helper.fail("could not create the units");
                 return;

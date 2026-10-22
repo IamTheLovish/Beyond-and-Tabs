@@ -57,6 +57,10 @@ grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
 grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the bot soak (gametest/SkirmishGameTests bots_play_each_other_without_errors): one line per bot, one notice
 grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
+# contact fights at scale (gametest/CombatEngageGameTests): acquisition times and damage per side, one notice
+if grep -q "\[Engage\]" gametest.log; then
+  grep -oE "\[Engage\].*" gametest.log | head -4 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Engage]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the building-block mods' block ids (gametest/BuildingBlockModGameTests): counts and a sample per mod, one notice -
