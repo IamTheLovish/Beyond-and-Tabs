@@ -143,6 +143,11 @@ public class Keybindings {
     // alias (OrthoviewClientEvents.onInput) so nobody's muscle memory breaks.
     public static final Keybinding toggleCamera = new Keybinding("key.reignofnether.toggle_camera", GLFW.GLFW_KEY_BACKSPACE, CATEGORY_CAMERA, "BSP");
 
+    // Spectators only (match.Spectators, orthoview.SpectatorFreeFly): RTS view <-> free flight as a vanilla spectator. Caps Lock:
+    // on every 60% board, unbound by vanilla and by every hotkey (all the letters are taken; A must stay free for
+    // camera pan-left and F is Fight). Rebindable in Controls like every other key.
+    public static final Keybinding toggleFreeFly = new Keybinding("key.reignofnether.toggle_free_fly", GLFW.GLFW_KEY_CAPS_LOCK, CATEGORY_CAMERA, "Cap");
+
     public static final Keybinding item1 = new Keybinding("key.reignofnether.item1", GLFW.GLFW_KEY_T, CATEGORY_RTS, "T");
     public static final Keybinding item2 = new Keybinding("key.reignofnether.item2", GLFW.GLFW_KEY_Y, CATEGORY_RTS, "Y");
     public static final Keybinding item3 = new Keybinding("key.reignofnether.item3", GLFW.GLFW_KEY_F, CATEGORY_RTS, "F");
@@ -184,7 +189,7 @@ public class Keybindings {
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
             panUp, panLeft, panDown, panRight,
-            rotCW, rotCCW, reset, toggleCamera, overview,
+            rotCW, rotCCW, reset, toggleCamera, toggleFreeFly, overview,
             cameraAnchors[0], cameraAnchors[1], cameraAnchors[2], cameraAnchors[3],
             rotateBuildingCCW, rotateBuildingCW,
             cancelBuild,
