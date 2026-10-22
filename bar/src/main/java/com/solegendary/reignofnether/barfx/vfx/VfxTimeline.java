@@ -73,14 +73,13 @@ public final class VfxTimeline {
         return t >= l.start && t <= layerEnd(l, tl);
     }
 
-    /** Size factor: growFrom -> 1 over the layer's grow time (eased out: fast then settling), 1 without growth. */
+    /** Size factor: growFrom -> 1 over the layer's grow time along its easing (default cubic out), 1 without growth. */
     public static float layerScale(VfxDef.Layer l, float t) {
         if (l.grow <= 0) return 1;
         float x = (t - l.start) / l.grow;
         if (x <= 0) return l.growFrom;
         if (x >= 1) return 1;
-        float e = 1 - (1 - x) * (1 - x) * (1 - x);   // ease-out cubic
-        return l.growFrom + (1 - l.growFrom) * e;
+        return l.growFrom + (1 - l.growFrom) * l.ease.apply(x);
     }
 
     /** A light's brightness at effect time t (its own window, else the effect's envelope). */

@@ -71,6 +71,8 @@ public final class VfxDef {
         public float alpha = 1;
         /** Grows from growFrom x its size to full size over {@code grow} s from its start (0 = no growth). */
         public float grow = 0, growFrom = 0;
+        /** The growth curve (VfxEasing; "ease" in JSON) - cubic out: fast, then settling. */
+        public VfxEasing ease = VfxEasing.CUBIC_OUT;
         /** Height above the anchor (blocks, scaled with the effect). */
         public float y = 0;
         /** Snap the anchor to the ground under it (ground sigils, pillars rising from the ground). */
@@ -140,8 +142,9 @@ public final class VfxDef {
         /** Physics: gravity (blocks/s^2, positive pulls down; negative = buoyant), linear drag (1/s), wind response. */
         public float gravity = 4, drag = 1, wind = 0.5f;
         public float lifeMin = 1, lifeMax = 2, sizeMin = 0.1f, sizeMax = 0.2f;
-        /** Size multiplier at the end of life (smoke grows, embers shrink). */
+        /** Size multiplier at the end of life (smoke grows, embers shrink), reached along sizeEase. */
         public float sizeEnd = 1;
+        public VfxEasing sizeEase = VfxEasing.LINEAR;
         /** Colour at the end of life (embers cool from yellow-white to deep red). */
         public int colorEnd = -1;
     }

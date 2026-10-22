@@ -50,10 +50,14 @@ public final class BarFxRenderTypes extends RenderType {
         com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures.register(VFX_ATLAS);
     }
 
+    /** Vanilla's position_color_tex core shader (Oculus swaps in the pack's textured program for it). */
+    private static final ShaderStateShard VFX_SHADER =
+            new ShaderStateShard(net.minecraft.client.renderer.GameRenderer::getPositionColorTexShader);
+
     /** Sigils, rings, beams, sparks, glints, embers, light pools: added on top (reads as light). */
     public static final RenderType VFX_ADDITIVE = create("reignofnether_vfx_additive", DefaultVertexFormat.POSITION_COLOR_TEX,
             VertexFormat.Mode.QUADS, 1 << 18, false, false,
-            CompositeState.builder().setShaderState(POSITION_COLOR_TEX_SHADER)
+            CompositeState.builder().setShaderState(VFX_SHADER)
                     .setTextureState(new TextureStateShard(VFX_ATLAS, true, true)).setCullState(NO_CULL)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(LIGHTNING_TRANSPARENCY).createCompositeState(false));
@@ -61,7 +65,7 @@ public final class BarFxRenderTypes extends RenderType {
     /** Smoke, soot, heat shimmer: alpha blended (darkens / veils instead of glowing). */
     public static final RenderType VFX_TRANSLUCENT = create("reignofnether_vfx_translucent", DefaultVertexFormat.POSITION_COLOR_TEX,
             VertexFormat.Mode.QUADS, 1 << 16, false, false,
-            CompositeState.builder().setShaderState(POSITION_COLOR_TEX_SHADER)
+            CompositeState.builder().setShaderState(VFX_SHADER)
                     .setTextureState(new TextureStateShard(VFX_ATLAS, true, true)).setCullState(NO_CULL)
                     .setDepthTestState(LEQUAL_DEPTH_TEST).setWriteMaskState(COLOR_WRITE)
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY).createCompositeState(false));

@@ -96,7 +96,7 @@ public final class VfxParser {
     // ------------------------------------------------------------------ layers
 
     private static final String[] COMMON = { "type", "start", "end", "fade_in", "fade_out", "color", "alpha", "grow",
-            "grow_from", "y", "on_ground", "comment" };
+            "grow_from", "ease", "y", "on_ground", "comment" };
 
     static VfxDef.Layer layer(JsonObject o, VfxDef.Timeline tl, String where, List<String> errors) {
         String type = str(o, "type", "");
@@ -176,7 +176,7 @@ public final class VfxParser {
     static VfxDef.Emitter emitter(JsonObject o, String where, List<String> errors, boolean asLayer) {
         VfxDef.Emitter e = new VfxDef.Emitter();
         known(o, where, errors, COMMON, "particle", "shape", "rate", "burst", "radius", "height", "velocity", "spread",
-              "outward", "swirl", "gravity", "drag", "wind", "life", "size", "size_end", "color_end");
+              "outward", "swirl", "gravity", "drag", "wind", "life", "size", "size_end", "size_ease", "color_end");
         String k = str(o, "particle", "ember").toUpperCase(Locale.ROOT);
         try { e.kind = VfxDef.Emitter.Kind.valueOf(k); }
         catch (IllegalArgumentException ex) { errors.add(where + ": unknown particle \"" + k.toLowerCase(Locale.ROOT) + "\""); }
@@ -208,6 +208,7 @@ public final class VfxParser {
         float[] size = range(o, "size", e.sizeMin, e.sizeMax, where, errors);
         e.sizeMin = Math.max(0.005f, size[0]); e.sizeMax = Math.max(e.sizeMin, size[1]);
         e.sizeEnd = Math.max(0, f(o, "size_end", e.sizeEnd, where, errors));
+        e.sizeEase = ease(o, "size_ease", e.sizeEase, where, errors);
         e.colorEnd = o.has("color_end") ? color(o, "color_end", -1, where, errors) : -1;
         return e;
     }
@@ -225,6 +226,7 @@ public final class VfxParser {
         l.alpha = clamp01(f(o, "alpha", 1, where, errors));
         l.grow = Math.max(0, f(o, "grow", 0, where, errors));
         l.growFrom = clamp01(f(o, "grow_from", 0, where, errors));
+        l.ease = ease(o, "ease", l.ease, where, errors);
         l.y = f(o, "y", 0, where, errors);
         if (o.has("on_ground")) l.onGround = bool(o, "on_ground", l.onGround);
     }
@@ -332,6 +334,16 @@ public final class VfxParser {
             errors.add(where + "." + k + ": not a colour (\"#RRGGBB\" or [r, g, b])");
             return def;
         }
+    }
+
+    static VfxEasing ease(JsonObject o, String k, VfxEasing def, String where, List<String> errors) {
+        if (!o.has(k)) return def;
+        VfxEasing e = VfxEasing.byName(str(o, k, ""));
+        if (e == null) {
+            errors.add(where + "." + k + ": unknown easing \"" + str(o, k, "") + "\" (linear, smoothstep, cubic_out, back_out, ...)");
+            return def;
+        }
+        return e;
     }
 
     static int tile(JsonObject o, String k, int def, String where, List<String> errors) {

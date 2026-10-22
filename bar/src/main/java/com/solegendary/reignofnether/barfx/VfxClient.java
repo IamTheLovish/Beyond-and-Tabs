@@ -183,7 +183,7 @@ public final class VfxClient {
         in.def = def;
         in.x = x; in.y = y; in.z = z;
         in.scale = scale <= 0 ? 1 : scale;
-        in.born = BarFxClient.clock;
+        in.born = vclock;
         in.follow = follow;
         in.acc = new float[def.layers.size()];
         in.burst = new boolean[def.layers.size()];
@@ -244,6 +244,7 @@ public final class VfxClient {
     static final float[] pWind = new float[MAX_PARTICLES], pAlpha = new float[MAX_PARTICLES], pFloor = new float[MAX_PARTICLES];
     static final int[] pColor = new int[MAX_PARTICLES], pColorEnd = new int[MAX_PARTICLES];
     static final byte[] pKind = new byte[MAX_PARTICLES];
+    static final com.solegendary.reignofnether.barfx.vfx.VfxEasing[] pSizeEase = new com.solegendary.reignofnether.barfx.vfx.VfxEasing[MAX_PARTICLES];
     static final Inst[] pOwner = new Inst[MAX_PARTICLES];
 
     public static int liveParticles() { return pCount; }
@@ -279,6 +280,7 @@ public final class VfxClient {
             pLife[i] = e.lifeMin + R.nextFloat() * (e.lifeMax - e.lifeMin);
             pSize[i] = (e.sizeMin + R.nextFloat() * (e.sizeMax - e.sizeMin)) * Math.max(0.5f, Math.min(2f, scale));
             pSizeEnd[i] = e.sizeEnd;
+            pSizeEase[i] = e.sizeEase;
             pGrav[i] = e.gravity; pDrag[i] = e.drag; pWind[i] = e.wind;
             pAlpha[i] = e.alpha * alphaMul;
             pColor[i] = e.color; pColorEnd[i] = e.colorEnd < 0 ? e.color : e.colorEnd;
@@ -328,7 +330,7 @@ public final class VfxClient {
         pAge[to] = pAge[from]; pLife[to] = pLife[from]; pSize[to] = pSize[from]; pSizeEnd[to] = pSizeEnd[from];
         pGrav[to] = pGrav[from]; pDrag[to] = pDrag[from]; pWind[to] = pWind[from]; pAlpha[to] = pAlpha[from];
         pFloor[to] = pFloor[from]; pColor[to] = pColor[from]; pColorEnd[to] = pColorEnd[from]; pKind[to] = pKind[from];
-        pOwner[to] = pOwner[from];
+        pOwner[to] = pOwner[from]; pSizeEase[to] = pSizeEase[from];
     }
 
     // ------------------------------------------------------------------ lights
@@ -469,6 +471,13 @@ public final class VfxClient {
     // ------------------------------------------------------------------ frame
 
     static float lastClock = -1;
+    /** The effects' own clock (seconds): BarFx's clock times {@link #timeScale}. */
+    static float vclock = 0;
+    /**
+     * Playback speed of the effects (1 = real time). The eyes scene slows them (EyesVfxScene: 0.25) so a software-
+     * rendered client a few frames a second still photographs each phase; never changed in play.
+     */
+    public static float timeScale = 1f;
     static ClientLevel lastLevel = null;
 
     public static void clear() {
@@ -484,9 +493,11 @@ public final class VfxClient {
     public static void onRenderFrame(com.mojang.blaze3d.vertex.PoseStack poseStack, float partialTick) {
         ClientLevel level = MC.level;
         if (level == null || level != lastLevel) { clear(); lastLevel = level; lastClock = -1; if (level == null) return; }
-        float now = BarFxClient.clock;
-        float dt = lastClock < 0 ? 0 : Math.max(0, Math.min(0.1f, now - lastClock));
-        lastClock = now;
+        float bar = BarFxClient.clock;
+        float dt = lastClock < 0 ? 0 : Math.max(0, Math.min(0.1f, bar - lastClock)) * Math.max(0, timeScale);
+        lastClock = bar;
+        vclock += dt;
+        float now = vclock;
         int quality = quality();
         float q = QUALITY_SCALE[quality];
         if (BarFxClient.live.size() > BarFxClient.MAX * 3 / 4) q *= 0.5f;   // the battle effects are busy: spell particles give way
@@ -741,7 +752,7 @@ public final class VfxClient {
             if (!BarFxClient.near(px[i], py[i], pz[i], 1)) continue;
             float f = pAge[i] / pLife[i];
             float fade = Math.min(1, f * 8) * (f > 0.6f ? (1 - f) / 0.4f : 1);
-            float size = pSize[i] * (1 + (pSizeEnd[i] - 1) * f);
+            float size = pSize[i] * (1 + (pSizeEnd[i] - 1) * pSizeEase[i].apply(f));
             int c = lerpColor(pColor[i], pColorEnd[i], (float) Math.pow(f, 0.7));
             float a = pAlpha[i] * fade;
             switch (kind) {

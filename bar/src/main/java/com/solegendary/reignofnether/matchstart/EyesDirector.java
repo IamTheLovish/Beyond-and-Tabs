@@ -199,6 +199,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (EyesVfxScene.VFX_ONLY) {   // a vfx run (eyes.yml input `vfx`): only scene 19, then the end
+                        step = STEP_VFX;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -266,6 +271,20 @@ public final class EyesDirector {
                     done = true;
                 }
                 if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_VFX -> {
+                boolean done;
+                try {
+                    done = EyesVfxScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 19_vfx failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    com.solegendary.reignofnether.barfx.VfxClient.timeScale = 1f;
                     step = 15;
                     ticks = 0;
                 }
@@ -572,6 +591,7 @@ public final class EyesDirector {
     static final int STEP_SCARS = 21;
     static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
+    static final int STEP_VFX = 24;               // 19_vfx, EyesVfxScene: its own run only (input `vfx`)
     static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
     static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
