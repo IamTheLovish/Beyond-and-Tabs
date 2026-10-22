@@ -225,6 +225,22 @@ public final class GothicText {
         int a = Mth.clamp(Mth.ceil(alpha * 255f), 0, 255);
         if (a <= 3)
             return;
+        // The first real capture (eyes run 39741755064) showed the vanilla labels over our stone plates: vanilla text
+        // sits a hair in front (Font draws it at z +0.03) and wins the depth test against fills at z 0. So: flush what
+        // the buttons queued, then draw the plates, blood and our labels a step nearer the viewer.
+        g.flush();
+        g.pose().pushPose();
+        g.pose().translate(0f, 0f, 20f);
+        try {
+            restyle(g, font, children, only, primary, a);
+        } finally {
+            g.flush();
+            g.pose().popPose();
+        }
+    }
+
+    private static void restyle(GuiGraphics g, Font font, List<? extends GuiEventListener> children, Set<String> only,
+                                Set<String> primary, int a) {
         float t = seconds();
         boolean pressed = false;
         try {
