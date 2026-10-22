@@ -857,7 +857,7 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    /** Energy converters only burn energy above half storage, at TierGate's 100 energy per metal, 50 energy/s each. */
     @GameTest(template = ARENA)
     public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
@@ -866,8 +866,8 @@ public class SkirmishGameTests {
         res.addEnergy(900);
         for (int i = 0; i < 20; i++)
             com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
-        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
-            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+        if (Math.abs(res.getMetal() - 0.5f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~0.5 metal / 850 energy, got " + res.getMetal()
                 + " / " + res.getEnergy());
         var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
         low.addEnergy(400);
@@ -13663,6 +13663,9 @@ public class SkirmishGameTests {
         var pool = testPool(owner);
         var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
         var cost = item.getCost(false, owner);
+        // the refit needs Tier 2 on the server too (resources/TierGate)
+        com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         try {
             var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
             if (row == null)
@@ -13701,6 +13704,7 @@ public class SkirmishGameTests {
             for (var pp : row)
                 pp.productionQueue.clear();
         } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
         }
     }

@@ -260,6 +260,57 @@ public class BotPlayer {
         Building b = bp.getBuilding();
         return b == kit.armyBuilding() || (kit.armyBuilding() == Buildings.PORTAL_BASIC && b == Buildings.PORTAL_MILITARY);
     }
+    // ---- the tier gate (resources/TierGate): a bot techs when it is ready, not just when the clock says so ----
+
+    /**
+     * Whether the bot may start Tier 2: it has a finished army lab, has fielded {@code t2MinArmy} fighters (the army comes
+     * first - the tier gate's whole point) and its income can pay the research: TierGate.BOT_MIN_METAL_INCOME and
+     * BOT_MIN_ENERGY_INCOME. {@link BotTuning#T2_PATIENCE_MINUTES} after the earliest minute it goes anyway with a lab
+     * and half the army, so a map with few patches cannot stop it for ever.
+     */
+    boolean t2Ready(long minutes, int fighters, float energyIncome, List<BuildingPlacement> buildings) {
+        boolean labBuilt = false;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && isLab(bp))
+                labBuilt = true;
+        if (!labBuilt)
+            return false;
+        if (minutes >= tuning.t2Minute() + BotTuning.T2_PATIENCE_MINUTES)
+            return fighters >= tuning.t2MinArmy() / 2;
+        return fighters >= tuning.t2MinArmy()
+            && metalIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_METAL_INCOME
+            && energyIncome >= com.solegendary.reignofnether.resources.TierGate.BOT_MIN_ENERGY_INCOME;
+    }
+
+    /**
+     * The energy income (per second) the bot wants right now for its next tech step, or 0 for none: the research's
+     * before Tier 2 once it is within two minutes of its earliest start, the refits' after it.
+     */
+    float techEnergyTarget(boolean tier2, List<BuildingPlacement> buildings) {
+        if (!tier2)
+            return minutesIn + 2 >= tuning.t2Minute() ? com.solegendary.reignofnether.resources.TierGate.BOT_MIN_ENERGY_INCOME : 0f;
+        int refitted = 0;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && bp.getUpgradeLevel() > 0 && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor)
+                refitted++;
+        int homeExtractors = 0;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                    && bp.originPos.distSqr(home) < 45 * 45)
+                homeExtractors++;
+        return refitted >= homeExtractors ? 0f
+            : com.solegendary.reignofnether.resources.TierGate.botEnergyIncomeForRefit(refitted + 1);
+    }
+
+    /** Energy income counting wind generators still rising at the average wind (so one shortfall is one wind, not twelve). */
+    float plannedEnergyIncome(float energyIncome, List<BuildingPlacement> buildings) {
+        float planned = energyIncome;
+        for (BuildingPlacement bp : buildings)
+            if (!bp.isBuilt && bp.getBuilding() == kit.wind())
+                planned += com.solegendary.reignofnether.resources.Wind.MEAN;
+        return planned;
+    }
+
     // ---- building levels (design/building_upgrades.md): with two labs, level them up instead of spamming more ----
 
     /** The labs that can still level up (built, below their max level, not a Basic Portal awaiting its refit). */
@@ -459,7 +510,7 @@ public class BotPlayer {
         // the economy snapshot every step below reads: income, and how full the two pools are
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
         com.solegendary.reignofnether.resources.Resources res = pool();
-        metalIncome = eco.metalIncome + eco.metalConverted;
+        metalIncome = eco.effectiveMetalIncome() + eco.metalConverted;
         metalFill = res == null ? 0 : res.getMetal() / Math.max(1f, eco.metalStorage);
         energyFill = res == null ? 0 : res.getEnergy() / Math.max(1f, eco.energyStorage);
 
@@ -529,9 +580,17 @@ public class BotPlayer {
                 done = placeLab(level, 0, workers);
             // extractors: a couple plus one a minute (every free patch there is while floating - after the labs below)
             BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
-            // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
-            if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
-                done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
+            // the T2 lab first once Tier 2 is researched, after its faction's FINISHED T1 lab - the server refuses it
+            // otherwise (resources/TierGate). That is the army lab for every faction but the Horde, whose Flame Sanctuary
+            // wants a Hoglin Stables: raised as soon as the research starts, so it stands when the research is done
+            Building t1Req = kit.t2Lab() == null ? null : com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
+            boolean researchingT2 = com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(name);
+            if (!done && t1Req != null && t1Req != kit.armyBuilding() && (tier2 || researchingT2) && armyBuildings >= 1
+                    && count(buildings, t1Req) < 1)
+                done = placeNear(level, t1Req, layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 1);
+            if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
+                    && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
+                done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 3);   // 3 builders: the lab is 504 builder-seconds
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
@@ -578,6 +637,13 @@ public class BotPlayer {
                 if (!done)
                     badPatches.put(patch, gameTime);   // retry it later, not every think
             }
+            // the energy a tech step needs (resources/TierGate): before the research, ~110 energy/s for its drain plus the
+            // base's own spending; after it, 20 energy/s for every extractor refit or the refits run on crumbs. Winds still
+            // rising count at their average, so a bot does not pile a dozen sites on one shortfall
+            float energyTarget = techEnergyTarget(tier2, buildings);
+            if (!done && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
+                    && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             if (!done && winds < 2 + minutes && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // converters whenever energy floats (BAR players do this): one more each time it is over 80% full
@@ -629,6 +695,7 @@ public class BotPlayer {
         // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
         if (!tier2 && minutes >= tuning.t2Minute() && workers.size() >= Math.min(targetWorkers(), 8)
+                && t2Ready(minutes, army.size(), eco.energyIncome, buildings)
                 && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
@@ -637,7 +704,13 @@ public class BotPlayer {
                 if (bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
                         && bp instanceof ProductionPlacement pp && !pp.productionQueue.isEmpty())
                     upgrading = true;
-            if (!upgrading)
+            int refitted = 0;
+            for (BuildingPlacement bp : buildings)
+                if (bp.isBuilt && bp.getUpgradeLevel() > 0 && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor)
+                    refitted++;
+            // a refit only when the energy can carry one more drill (20 energy/s each): the tier gate's energy rule
+            boolean energyCarries = eco.energyIncome >= com.solegendary.reignofnether.resources.TierGate.botEnergyIncomeForRefit(refitted + 1);
+            if (!upgrading && energyCarries)
                 for (BuildingPlacement bp : buildings)
                     if (bp.isBuilt && bp.getUpgradeLevel() == 0 && bp.originPos.distSqr(home) < 45 * 45
                             && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor

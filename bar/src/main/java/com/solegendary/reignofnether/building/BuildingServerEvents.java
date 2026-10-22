@@ -502,6 +502,18 @@ public class BuildingServerEvents {
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
+            // a T2 lab needs the Tier 2 research and its faction's finished T1 lab (resources/TierGate): the build button
+            // greys it out, but a stale client, a crafted packet or an old fog-queued site must not skip that. A command
+            // placement (scenarios, spawners), the sandbox and the "modifythephasevariance" cheat are exempt as before
+            if (!fromCommand && !isSandbox
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")) {
+                String tierError = com.solegendary.reignofnether.resources.TierGate.placementError(ownerName, newBuilding.getBuilding());
+                if (tierError != null) {
+                    HudClientboundPacket.showTempMessageI18n(ownerName, tierError);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
+                    return null;
+                }
+            }
             // combat engineers start field defences only; with a worker among the builders they assist (design/combat_engineers.md)
             if (!fromCommand && !isSandbox && !fogRequeue
                     && !com.solegendary.reignofnether.unit.CombatEngineers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {

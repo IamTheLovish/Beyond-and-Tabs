@@ -488,6 +488,21 @@ public class BuildingPlacement {
             patchValueCache = v;
         return v;
     }
+    /**
+     * Energy per second this building drains while it runs (resources/TierGate): a finished metal extractor, T1 or T2 by
+     * its tower. 0 while the refit runs (the drill is stopped, like its income) and for every other building. The economy
+     * pays the sum each tick and the extractors' metal scales with the share it could pay
+     * (EconomyServerEvents.payExtractorUpkeep).
+     */
+    public float getEnergyUpkeep() {
+        if (!isBuilt || !(getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
+            return 0;
+        if (this instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp && !pp.productionQueue.isEmpty())
+            return 0;
+        return getUpgradeLevel() > 0 ? com.solegendary.reignofnether.resources.TierGate.T2_EXTRACTOR_ENERGY_UPKEEP
+            : com.solegendary.reignofnether.resources.TierGate.T1_EXTRACTOR_ENERGY_UPKEEP;
+    }
+
     public float getEnergyIncome() {
         if (!isBuilt)
             return 0;
