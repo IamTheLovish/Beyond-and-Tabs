@@ -3,8 +3,9 @@
 // What it does, in order:
 //  1. Creates %LOCALAPPDATA%\BeyondAndTabs
 //  2. Downloads Prism Launcher (portable) and unpacks it there
-//  3. Downloads the tester modpack (.mrpack) published by the game's author
-//  4. Creates a ready-to-play Prism instance: Minecraft 1.20.1 + Forge + every mod
+//  3. Reads the live modpack (the packwiz pack the game's builds publish) for its Minecraft and Forge versions
+//  4. Creates a Prism instance that updates itself from that pack before every launch (packwiz), so a tester always
+//     runs the same build as the host's server - the mods are fetched on the first launch
 //  5. Puts a "Beyond and Tabs" shortcut on the Desktop and in the Start Menu
 //  6. Opens Prism Launcher so you can sign in with your Microsoft account and play
 //
@@ -34,7 +35,12 @@ const (
 	instanceName = "BeyondAndTabs-test"
 	prismVersion = "11.1.1"
 	prismZipURL  = "https://github.com/PrismLauncher/PrismLauncher/releases/download/" + prismVersion + "/PrismLauncher-Windows-MSVC-Portable-" + prismVersion + ".zip"
-	mrpackURL    = "https://github.com/christiansaab-hue/Beyond-and-Tabs/releases/download/test-pack/BeyondAndTabs-test.mrpack"
+	mrpackURL    = "https://github.com/IamTheLovish/Beyond-and-Tabs/releases/download/test-pack/BeyondAndTabs-test.mrpack"
+	// the live pack (published by publish-pack.yml from main's builds) and packwiz's bootstrap, which updates the
+	// instance from it before every launch (Prism's pre-launch command)
+	packTomlURL  = "https://raw.githubusercontent.com/IamTheLovish/beyond-and-tabs-pack/main/windows/pack.toml"
+	bootstrapURL = "https://github.com/packwiz/packwiz-installer-bootstrap/releases/latest/download/packwiz-installer-bootstrap.jar"
+	preLaunch    = `PreLaunchCommand=\"$INST_JAVA\" -jar packwiz-installer-bootstrap.jar ` + packTomlURL
 )
 
 var httpClient = &http.Client{Timeout: 10 * time.Minute}
@@ -113,60 +119,32 @@ func run() error {
 		"",
 	}, "\n"))
 
-	// 2. Modpack
-	fmt.Println("\n[2/4] Downloading the " + appName + " modpack ...")
-	packPath := filepath.Join(tmp, "pack.mrpack")
-	if err := download(mrpackURL, packPath, ""); err != nil {
-		return fmt.Errorf("downloading modpack: %w", err)
+	// 2. The live pack: its Minecraft and Forge versions
+	fmt.Println("\n[2/3] Reading the " + appName + " modpack ...")
+	tomlPath := filepath.Join(tmp, "pack.toml")
+	mc, forge := "1.20.1", "47.4.0"
+	if err := download(packTomlURL, tomlPath, ""); err != nil {
+		fmt.Println("      (could not read the pack, using Minecraft", mc, "+ Forge", forge, ":", err, ")")
+	} else if m, f := packVersions(tomlPath); m != "" && f != "" {
+		mc, forge = m, f
 	}
-	idx, err := readIndex(packPath)
-	if err != nil {
-		return fmt.Errorf("reading modpack: %w", err)
-	}
-	fmt.Printf("      %s (%s) - Minecraft %s, Forge %s\n", idx.Name, idx.VersionID, idx.Dependencies.Minecraft, idx.Dependencies.Forge)
+	fmt.Printf("      Minecraft %s, Forge %s\n", mc, forge)
 
-	// 3. Instance files
-	fmt.Println("\n[3/4] Setting up the game instance ...")
-	if err := writeInstance(instDir, idx); err != nil {
+	// 3. Instance: updates itself from the pack before every launch
+	fmt.Println("\n[3/3] Setting up the game instance ...")
+	// an instance from the old installer has the frozen .mrpack's mods: move them aside so packwiz installs a clean set
+	// (an old copy of the game's own jar next to the new one would stop Forge from starting)
+	if exists(filepath.Join(mcDir, "mods")) && !exists(filepath.Join(mcDir, "packwiz.json")) {
+		old := filepath.Join(mcDir, "mods.old-"+time.Now().Format("20060102-150405"))
+		if err := os.Rename(filepath.Join(mcDir, "mods"), old); err == nil {
+			fmt.Println("      Moved the old mods to", old)
+		}
+	}
+	if err := writeInstance(instDir, mc, forge); err != nil {
 		return err
 	}
-	if err := extractOverrides(packPath, mcDir); err != nil {
-		return fmt.Errorf("copying pack files: %w", err)
-	}
-	// keep a copy of the pack index next to the instance for reference
-	os.MkdirAll(filepath.Join(instDir, "mrpack"), 0o755)
-	copyFile(packPath, filepath.Join(instDir, "mrpack", "BeyondAndTabs-test.mrpack"))
-
-	// 4. Mods
-	need := 0
-	for _, f := range idx.Files {
-		if f.Env["client"] != "unsupported" {
-			need++
-		}
-	}
-	fmt.Printf("\n[4/4] Downloading %d mods ...\n", need)
-	n := 0
-	for _, f := range idx.Files {
-		if f.Env["client"] == "unsupported" {
-			continue
-		}
-		n++
-		dest := filepath.Join(mcDir, filepath.FromSlash(f.Path))
-		name := filepath.Base(dest)
-		if exists(dest) && sha1Of(dest) == f.Hashes["sha1"] {
-			fmt.Printf("      (%2d/%d) %s - ok\n", n, need, name)
-			continue
-		}
-		fmt.Printf("      (%2d/%d) %s\n", n, need, name)
-		var last error
-		for _, u := range f.DL {
-			if last = download(u, dest, f.Hashes["sha1"]); last == nil {
-				break
-			}
-		}
-		if last != nil {
-			return fmt.Errorf("downloading %s: %w", name, last)
-		}
+	if err := download(bootstrapURL, filepath.Join(mcDir, "packwiz-installer-bootstrap.jar"), ""); err != nil {
+		return fmt.Errorf("downloading the pack updater: %w", err)
 	}
 	os.RemoveAll(tmp)
 
@@ -178,8 +156,9 @@ func run() error {
 
 	fmt.Println("\nAll done!")
 	fmt.Println("Prism Launcher will open now. Add your Microsoft (Minecraft) account when it asks,")
-	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a minute")
-	fmt.Println("while Java and Minecraft itself are fetched.")
+	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
+	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
+	fmt.Println("Every later launch updates the game to the newest build automatically.")
 	fmt.Println("\nNext time, use the \"" + appName + "\" shortcut on your Desktop.")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
@@ -369,7 +348,7 @@ func extractOverrides(packPath, mcDir string) error {
 	return nil
 }
 
-func writeInstance(instDir string, idx *mrIndex) error {
+func writeInstance(instDir, mc, forge string) error {
 	os.MkdirAll(instDir, 0o755)
 	cfgPath := filepath.Join(instDir, "instance.cfg")
 	if !exists(cfgPath) {
@@ -383,13 +362,24 @@ func writeInstance(instDir string, idx *mrIndex) error {
 			"iconKey=default",
 			"uuid=" + hex.EncodeToString(b),
 			"AutomaticJava=true",
-			"ManagedPack=true",
-			"ManagedPackType=modrinth",
-			"ManagedPackName=" + idx.Name,
-			"ManagedPackVersionName=" + idx.VersionID,
+			"OverrideCommands=true",
+			preLaunch,
 			"",
 		}, "\n")
 		if err := os.WriteFile(cfgPath, []byte(cfg), 0o644); err != nil {
+			return err
+		}
+	} else if data, err := os.ReadFile(cfgPath); err == nil && !strings.Contains(string(data), "packwiz-installer-bootstrap") {
+		// an instance from the old installer: add the updater, drop the frozen-modpack marker
+		var keep []string
+		for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
+			if strings.HasPrefix(line, "ManagedPack") || strings.HasPrefix(line, "PreLaunchCommand=") || strings.HasPrefix(line, "OverrideCommands=") {
+				continue
+			}
+			keep = append(keep, line)
+		}
+		out := strings.TrimRight(strings.Join(keep, "\n"), "\n") + "\nOverrideCommands=true\n" + preLaunch + "\n"
+		if err := os.WriteFile(cfgPath, []byte(out), 0o644); err != nil {
 			return err
 		}
 	}
@@ -397,14 +387,45 @@ func writeInstance(instDir string, idx *mrIndex) error {
 		"formatVersion": 1,
 		"components": []map[string]any{
 			{"uid": "org.lwjgl3", "version": "3.3.1", "cachedName": "LWJGL 3", "cachedVersion": "3.3.1", "cachedVolatile": true, "dependencyOnly": true},
-			{"uid": "net.minecraft", "version": idx.Dependencies.Minecraft, "cachedName": "Minecraft", "cachedVersion": idx.Dependencies.Minecraft, "important": true,
+			{"uid": "net.minecraft", "version": mc, "cachedName": "Minecraft", "cachedVersion": mc, "important": true,
 				"cachedRequires": []map[string]any{{"uid": "org.lwjgl3", "suggests": "3.3.1"}}},
-			{"uid": "net.minecraftforge", "version": idx.Dependencies.Forge, "cachedName": "Forge", "cachedVersion": idx.Dependencies.Forge,
-				"cachedRequires": []map[string]any{{"uid": "net.minecraft", "equals": idx.Dependencies.Minecraft}}},
+			{"uid": "net.minecraftforge", "version": forge, "cachedName": "Forge", "cachedVersion": forge,
+				"cachedRequires": []map[string]any{{"uid": "net.minecraft", "equals": mc}}},
 		},
 	}
 	j, _ := json.MarshalIndent(pack, "", "    ")
 	return os.WriteFile(filepath.Join(instDir, "mmc-pack.json"), j, 0o644)
+}
+
+// packVersions reads [versions] minecraft / forge from a packwiz pack.toml.
+func packVersions(path string) (mc, forge string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", ""
+	}
+	inVersions := false
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "[") {
+			inVersions = line == "[versions]"
+			continue
+		}
+		if !inVersions {
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		v = strings.Trim(strings.TrimSpace(v), `"`)
+		switch strings.TrimSpace(k) {
+		case "minecraft":
+			mc = v
+		case "forge":
+			forge = v
+		}
+	}
+	return mc, forge
 }
 
 func copyFile(src, dst string) error {
