@@ -32,6 +32,8 @@ public class MapExtraMetalGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
     static final long[] SEEDS = { 0L, 0x5EED0001L, 0xBA7C0DEL };
+    /** Two home patches closer than this crowd each other (7x7 pads, 1 block apart, need 8; the fan's closest pair is 9.5). */
+    static final double HOME_CROWD = 9;
     static final Set<MapPreset> LAND = Set.of(MapPreset.HIGHLANDS, MapPreset.NETHER_RIFT, MapPreset.VERDANT_VALLEY,
         MapPreset.DESERT_MESA, MapPreset.SOULFIRE_DELTAS);
 
@@ -102,7 +104,8 @@ public class MapExtraMetalGameTests {
     /**
      * The home set is one thing (HomeMetal): on every pre-made map, 2 to 16 players, three seeds, every seat has exactly
      * HomeMetal.COUNT home patches, all HomeMetal.VALUE, between MIN_DIST and MAX_DIST from its start, none crowding
-     * another, and the set is the same for every seat (the same distances from its start, to a block of rounding). Neither
+     * another (closer than HOME_CROWD; the fan's wrap-around pair sits about 9.5 apart), and the set is the same for every seat
+     * (the same distances from its start, to a block of rounding). Neither
      * the metal richness nor the extra-metal level moves it.
      */
     @GameTest(template = ARENA, batch = "maps_metal")
@@ -145,7 +148,7 @@ public class MapExtraMetalGameTests {
                                     + " differ from seat 0's " + Arrays.toString(dist.get(0)));
                     for (int i = 0; i < l.homeEnd(); i++)
                         for (int j = i + 1; j < l.homeEnd(); j++)
-                            if (Math.hypot(l.mexes.get(i).dx() - l.mexes.get(j).dx(), l.mexes.get(i).dz() - l.mexes.get(j).dz()) < 10)
+                            if (Math.hypot(l.mexes.get(i).dx() - l.mexes.get(j).dx(), l.mexes.get(i).dz() - l.mexes.get(j).dz()) < HOME_CROWD)
                                 problems.add(tag + "home patches " + i + " and " + j + " crowd");
                     for (MetalOptions.Extra level : MetalOptions.Extra.values()) {
                         MapLayout o = MapLayout.build(preset, teams, seed, extra(level).withRimInset(MetalOptions.AUTO_RIM));
