@@ -117,13 +117,6 @@ public class UnitClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    // list of vecs used in RenderChunkRegionMixin to replace leaf rendering
-    private static final int WINDOW_RADIUS = 5; // size of area to hide leaves
-    public static final int WINDOW_UPDATE_TICKS_MAX = 5; // size of area to hide leaves
-    public static final List<ArrayList<Vec3>> unitWindowVecs = Collections.synchronizedList(new ArrayList<>());
-    public static final List<BlockPos> windowPositions = Collections.synchronizedList(new ArrayList<>());
-    public static int windowUpdateTicks = UnitClientEvents.WINDOW_UPDATE_TICKS_MAX;
-
     // command lines for big selections (see the checkpoint loop in onRenderLevel and UnitQueueLinesClient):
     // past GROUP_LINES_FROM units the per-unit lines fade to GROUP_LINE_ALPHA, past GROUP_LINES_NONE they go
     public static final int GROUP_LINES_FROM = 8, GROUP_LINES_NONE = 40;
@@ -728,61 +721,6 @@ public class UnitClientEvents {
             selectedUnits.removeIf(e -> !FogOfWarClientEvents.isInBrightChunk(e) || isHiddenFromLocalPlayer(e));
         }
 
-        // calculate vecs used to hide leaf blocks around units
-        if (MC.player != null && OrthoviewClientEvents.hideLeavesMethod == OrthoviewClientEvents.LeafHideMethod.AROUND_UNITS_AND_CURSOR &&
-            OrthoviewClientEvents.isEnabled()) {
-
-            synchronized (windowPositions) {
-                windowPositions.clear();
-                UnitClientEvents.getAllUnits().forEach(u -> {
-                    if (FogOfWarClientEvents.isInBrightChunk(u))
-                        windowPositions.add(u.getOnPos());
-                });
-                BlockPos cursorBp = CursorClientEvents.getPreselectedBlockPos();
-                windowPositions.add(cursorBp);
-
-                synchronized (unitWindowVecs) {
-                    unitWindowVecs.clear();
-                    windowPositions.forEach(bp -> {
-                        float dist = Math.max(120, OrthoviewClientEvents.getZoom() * 2);
-                        if (bp.distSqr(MC.player.getOnPos()) < (dist * dist))
-                            unitWindowVecs.add(MyMath.prepIsPointInsideRect3d(Minecraft.getInstance(),
-                                    new Vector3d(bp.getX() - WINDOW_RADIUS, bp.getY(), bp.getZ() - WINDOW_RADIUS), // tl
-                                    new Vector3d(bp.getX() - WINDOW_RADIUS, bp.getY(), bp.getZ() + WINDOW_RADIUS), // bl
-                                    new Vector3d(bp.getX() + WINDOW_RADIUS, bp.getY(), bp.getZ() + WINDOW_RADIUS)  // br
-                            ));
-                    });
-                    // visible buildings get a window sized to their footprint: a base built in a forest (bots
-                    // often are) was hidden under the canopy while its units showed through (clip 15-51). Few
-                    // dozen at most, and only those in view range, so the leaf test in RenderChunkRegionMixin
-                    // stays cheap.
-                    float bDist = Math.max(120, OrthoviewClientEvents.getZoom() * 2);
-                    for (com.solegendary.reignofnether.building.BuildingPlacement b
-                            : com.solegendary.reignofnether.building.BuildingClientEvents.getBuildings()) {
-                        if (b.minCorner == null || b.maxCorner == null || b.centrePos == null)
-                            continue;
-                        BlockPos c = b.centrePos;
-                        if (c.distSqr(MC.player.getOnPos()) >= bDist * bDist || !FogOfWarClientEvents.isInBrightChunk(c))
-                            continue;
-                        int r = Math.max(WINDOW_RADIUS, Math.max(b.maxCorner.getX() - b.minCorner.getX(),
-                            b.maxCorner.getZ() - b.minCorner.getZ()) / 2 + 2);
-                        int by = b.minCorner.getY();
-                        windowPositions.add(new BlockPos(c.getX(), by, c.getZ()));
-                        unitWindowVecs.add(MyMath.prepIsPointInsideRect3d(Minecraft.getInstance(),
-                                new Vector3d(c.getX() - r, by, c.getZ() - r),
-                                new Vector3d(c.getX() - r, by, c.getZ() + r),
-                                new Vector3d(c.getX() + r, by, c.getZ() + r)));
-                    }
-                }
-            }
-        } else {
-            synchronized (windowPositions) {
-                windowPositions.clear();
-            }
-            synchronized (unitWindowVecs) {
-                unitWindowVecs.clear();
-            }
-        }
         markSelectedUnitsChanged();
     }
 

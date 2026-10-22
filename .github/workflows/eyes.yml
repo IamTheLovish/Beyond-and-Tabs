@@ -31,6 +31,11 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# Canopy (input `canopy`, Oct 22 2026): instead of the tour, a 3 x 3 grove planted beside our base with our units and
+# enemy workers under it - stills with unit silhouettes on and off, close, the leaf fade round selected units and all
+# leaves hidden, plus the silhouettes' cost A/B ("[Eyes] 19_canopy cost" in the log) - EyesDirector scene 19,
+# EyesCanopyScene. Plain (vanilla's mesher) or with `shaders` (Oculus + Embeddium's mesher). Publishes to eyes-canopy
+# (eyes-canopy-shaders). Dispatch on the feature branch: it uses that branch's build.
 name: eyes
 on:
   workflow_dispatch:
@@ -58,6 +63,10 @@ on:
         default: false
       overlays:
         description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
+        type: boolean
+        default: false
+      canopy:
+        description: "Units under canopies instead of the tour: a planted grove, unit silhouettes on / off, the leaf fade and all-leaves-hidden modes, the silhouettes' cost A/B (EyesDirector scene 19). Publishes to eyes-canopy (-shaders)"
         type: boolean
         default: false
       branch_pack:
@@ -102,7 +111,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.canopy && 'canopy-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -112,7 +121,8 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.canopy && 5 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      CANOPY: ${{ inputs.canopy && '1' || '0' }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
@@ -127,7 +137,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.canopy && (inputs.shaders && 'eyes-canopy-shaders' || 'eyes-canopy') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -261,6 +271,9 @@ jobs:
       - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
         if: env.OVERLAYS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
+      - name: Canopy scene only (dispatch input `canopy`; EyesDirector scene 19)
+        if: env.CANOPY == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.canopy=true' >> "$GITHUB_ENV"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -539,6 +552,12 @@ jobs:
             # the two summary lines (a step shows at most 10 notices; the slices are in eyes-lines.txt in the artifact)
             grep -h "18_overlays zoom" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -2 | sed 's/^/::notice::/' || true
             [ "$got" -ge 3 ] || { echo "::error::only $got overlays stills (expected 3)"; exit 1; }
+          fi
+          if [ "${CANOPY:-0}" = "1" ]; then   # a canopy run: the five stills of scene 19 and its cost A/B
+            got=$(find out -name 'bat_eyes_19_canopy_*.png' | wc -l)
+            ls out | grep '^bat_eyes_19_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "19_canopy cost" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^.*\[Eyes\]/[Eyes]/' | sed 's/^/::notice::/' || true
+            [ "$got" -ge 5 ] || { echo "::error::only $got canopy stills (expected 5)"; exit 1; }
           fi
           if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
             got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)

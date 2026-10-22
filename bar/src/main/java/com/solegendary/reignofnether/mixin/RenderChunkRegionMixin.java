@@ -1,27 +1,22 @@
 package com.solegendary.reignofnether.mixin;
 
-import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
-import com.solegendary.reignofnether.registrars.BlockRegistrar;
-import com.solegendary.reignofnether.unit.UnitClientEvents;
-import com.solegendary.reignofnether.util.MiscUtil;
-import com.solegendary.reignofnether.util.MyMath;
-import net.minecraft.client.Minecraft;
+import com.solegendary.reignofnether.orthoview.LeafFade;
 import net.minecraft.client.renderer.chunk.RenderChunkRegion;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
-
+/**
+ * The RTS leaf modes (orthoview/LeafFade) on vanilla's chunk mesher: a leaf inside a fade hole (or every leaf, in the
+ * ALL mode) is meshed as air, and a snow layer resting on one goes with it. Until Oct 22 this swapped leaves for green
+ * stained glass in windows round every unit and the cursor, re-meshing the chunks round each of them every 5 frames -
+ * see LeafFade for what replaced it. Embeddium meshes through its own WorldSlice: EmbeddiumWorldSliceMixin.
+ */
 @Mixin(RenderChunkRegion.class)
 public abstract class RenderChunkRegionMixin {
 
@@ -34,37 +29,17 @@ public abstract class RenderChunkRegionMixin {
             cancellable = true
     )
     private void getBlockState(BlockPos pPos, CallbackInfoReturnable<BlockState> cir) {
-        if (this.reignofnether$inLeafLookup) return;   // nested below() lookup: leave it untouched
-        if (!OrthoviewClientEvents.shouldHideLeaves()) return;
-
+        if (this.reignofnether$inLeafLookup || !LeafFade.meshActive())
+            return;   // a nested below() lookup, or no leaf mode on: one volatile read per block
         BlockState state = cir.getReturnValue();
-        if (state == null) return;
-
-        Block block = state.getBlock();
-        BlockState replacementBs = null;
-
-        if (block == BlockRegistrar.DECAYABLE_NETHER_WART_BLOCK.get()) {
-            replacementBs = Blocks.RED_STAINED_GLASS.defaultBlockState();
-        } else if (block instanceof LeavesBlock) {
-            replacementBs = Blocks.GREEN_STAINED_GLASS.defaultBlockState();
-        } else if (MiscUtil.isSnowLayerBlock(block)) {
-            if (reignofnether$below(pPos).getBlock() instanceof LeavesBlock)
-                replacementBs = Blocks.AIR.defaultBlockState();
-        }
-
-        if (replacementBs == null) return;
-
-        if (OrthoviewClientEvents.hideLeavesMethod == OrthoviewClientEvents.LeafHideMethod.ALL) {
-            cir.setReturnValue(replacementBs);
+        if (state == null)
             return;
-        }
-        synchronized (UnitClientEvents.unitWindowVecs) {
-            for (ArrayList<Vec3> vecs : UnitClientEvents.unitWindowVecs) {
-                if (MyMath.isPointInsideRect3d(vecs, Vec3.atCenterOf(pPos))) {
-                    cir.setReturnValue(replacementBs);
-                    return;
-                }
-            }
+        if (LeafFade.isFadeable(state)) {
+            if (LeafFade.hiddenInMesh(pPos.getX(), pPos.getY(), pPos.getZ()))
+                cir.setReturnValue(Blocks.AIR.defaultBlockState());
+        } else if (LeafFade.isSnowLayer(state) && LeafFade.hiddenInMesh(pPos.getX(), pPos.getY() - 1, pPos.getZ())
+                && LeafFade.isFadeable(reignofnether$below(pPos))) {
+            cir.setReturnValue(Blocks.AIR.defaultBlockState());
         }
     }
 

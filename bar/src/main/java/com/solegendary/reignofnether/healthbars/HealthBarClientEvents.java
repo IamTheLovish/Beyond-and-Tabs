@@ -76,6 +76,9 @@ public class HealthBarClientEvents {
         // map's reach got bars of their own. Only the view's draw queues a bar.
         if (com.solegendary.reignofnether.postfx.ShaderPacks.renderingShadowPass())
             return;
+        // the same for the silhouette redraw of units under canopies (it fires the render events a second time)
+        if (com.solegendary.reignofnether.orthoview.CanopySilhouettes.isDrawing())
+            return;
         prepareRenderInWorld(evt.getEntity());
     }
     @SubscribeEvent

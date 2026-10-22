@@ -60,6 +60,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
     public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
+    // units hidden by leaves or walls in the RTS view drawn as team/relationship-coloured silhouettes (orthoview/CanopySilhouettes)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_SILHOUETTES;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -221,6 +223,8 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Unit silhouettes: in the RTS view, units hidden under tree canopies or behind walls are drawn through them as a silhouette - your own in your team colour, allies cyan, enemies red (never units you cannot see). Mod Settings -> Display; works with and without shader packs.");
+        UNIT_SILHOUETTES = BUILDER.define("unit_silhouettes", true);
         SPEC = BUILDER.build();
     }
 
