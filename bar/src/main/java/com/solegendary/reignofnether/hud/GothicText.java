@@ -34,9 +34,8 @@ public final class GothicText {
     public static final ResourceLocation BUTTON_FONT = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lobby_button");
     public static final ResourceLocation CAPS_FONT = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lobby_caps");
     // glyph heights in GUI units (the providers' sizes)
-    private static final int TITLE_H = 16, BUTTON_H = 12, CAPS_H = 10;
+    private static final int TITLE_H = 16;
 
-    private static final int RIM = 0xFFB8892F, RIM_HOT = 0xFFF0CC72;
     private static final int BLOOD_DEEP = 0xFF7E0812, BLOOD = 0xFFB8141F, BLOOD_LIGHT = 0xFFE8505A;
     private static final int STRAND = 0xFF8A0A14, STRAND_HI = 0xFFD8444E;
 
@@ -207,7 +206,7 @@ public final class GothicText {
     private static final float BTN_SIZE = 25f, BTN_CAP = BTN_SIZE * 700f / 1348f, BTN_CAP_TOP = BTN_SIZE * 276f / 1348f;
     private static final int IVORY = 0xFFF8EED2, IVORY_GOLD = 0xFFEFD08A, GOLD = 0xFFD2A04A, GOLD_DEEP = 0xFFA87428;
     private static final int OUTLINE = 0xFF3A0309, OUTLINE_HOT = 0xFF6A0612;
-    private static final int PLATE_BLOOD = 0xFF9C0E1A, PLATE_BLOOD_DARK = 0xFF5E0610, PLATE_BLOOD_HI = 0xFFE0505A;
+    private static final int PLATE_BLOOD = 0xFFA8101C, PLATE_BLOOD_DARK = 0xFF5A0610, PLATE_BLOOD_HI = 0xFFF06070;
 
     /**
      * Repaints text buttons as carved dark stone plates (a bevel: light top edge, dark bottom; a thin gold inlay; a
@@ -257,9 +256,9 @@ public final class GothicText {
     /** the crimson glow round a hovered plate, breathing slowly */
     private static void glow(GuiGraphics g, int x0, int y0, int bw, int bh, float t, int a) {
         float pulse = t < 0 ? 0.6f : 0.6f + 0.4f * Mth.sin(t * 3.1f);
-        for (int i = 4; i >= 1; i--) {
-            int al = (int) ((14 + 16 * pulse) * (5 - i) / 4f * a / 255f);
-            g.fill(x0 - i - 1, y0 - i, x0 + bw + i + 1, y0 + bh + i, (al << 24) | 0xA00A18);
+        for (int i = 5; i >= 1; i--) {
+            int al = (int) ((22 + 26 * pulse) * (6 - i) / 5f * a / 255f);
+            g.fill(x0 - i - 1, y0 - i, x0 + bw + i + 1, y0 + bh + i, (al << 24) | 0xB00A18);
         }
     }
 
@@ -273,33 +272,34 @@ public final class GothicText {
         int u = (hash(seed) % Math.max(1, (PLATE_TW - uw) / PLATE_PX)) * PLATE_PX;
         g.blit(PLATE_TEX, x0, y0, bw, bh, u, (PLATE_TH - vh) / 2f, uw, vh, PLATE_TW, PLATE_TH);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        // the bevel: a lit top edge and left edge, a dark bottom and right, a black outer rim
+        // the bevel: a black outer rim, a lit top edge and left edge, a dark bottom and right
         g.fill(x0, y0, x1, y0 + 1, withAlpha(0xFF050304, a));
         g.fill(x0, y1 - 1, x1, y1, withAlpha(0xFF050304, a));
         g.fill(x0, y0, x0 + 1, y1, withAlpha(0xFF050304, a));
         g.fill(x1 - 1, y0, x1, y1, withAlpha(0xFF050304, a));
-        g.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, withAlpha(hot ? 0xD8B8A08A : 0xB08E8274, a));
-        g.fill(x0 + 1, y0 + 2, x1 - 1, y0 + 3, withAlpha(0x40A09080, a));
-        g.fill(x0 + 1, y0 + 2, x0 + 2, y1 - 2, withAlpha(0x705E544C, a));
+        g.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, withAlpha(hot ? 0xE0C8B49C : 0xC0A89886, a));
+        g.fill(x0 + 1, y0 + 2, x1 - 1, y0 + 3, withAlpha(0x50A09080, a));
+        g.fill(x0 + 1, y0 + 2, x0 + 2, y1 - 2, withAlpha(0x806E625A, a));
         g.fill(x0 + 1, y1 - 3, x1 - 1, y1 - 1, withAlpha(0xD0080506, a));
         g.fill(x1 - 2, y0 + 2, x1 - 1, y1 - 1, withAlpha(0xA0080506, a));
-        // the gold inlay, sunk into the stone: a dark groove under a thin gold line
-        int gold = !active ? 0xFF5C4A2C : hot ? 0xFFF0CC72 : 0xFFB08A3E;
+        // the sunken field inside the inlay: shadow under its top lip, light on its bottom lip
+        g.fill(x0 + 4, y0 + 4, x1 - 4, y0 + 5, withAlpha(0x90000000, a));
+        g.fill(x0 + 4, y0 + 5, x0 + 5, y1 - 5, withAlpha(0x60000000, a));
+        g.fill(x0 + 4, y1 - 5, x1 - 4, y1 - 4, withAlpha(0x58C0A890, a));
+        if (hot)
+            g.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, withAlpha(0x50B01020, a));
+        // the gold inlay, sunk into the stone: a dark groove under a thin gold line, studs at the corners
+        int gold = !active ? 0xFF5C4A2C : hot ? 0xFFF0CC72 : 0xFFB89040;
         g.renderOutline(x0 + 3, y0 + 4, bw - 6, bh - 7, withAlpha(0xC0000000, a));
         g.renderOutline(x0 + 3, y0 + 3, bw - 6, bh - 7, withAlpha(gold, a));
-        // corner studs on the inlay
-        int stud = hot ? 0xFFFFE6A0 : 0xFFD8B060;
         if (active) {
-            g.fill(x0 + 2, y0 + 2, x0 + 5, y0 + 5, withAlpha(stud, a));
-            g.fill(x1 - 5, y0 + 2, x1 - 2, y0 + 5, withAlpha(stud, a));
-            g.fill(x0 + 2, y1 - 6, x0 + 5, y1 - 3, withAlpha(stud, a));
-            g.fill(x1 - 5, y1 - 6, x1 - 2, y1 - 3, withAlpha(stud, a));
+            int stud = hot ? 0xFFFFE6A0 : 0xFFD8B060;
+            int[][] at = {{x0 + 2, y0 + 2}, {x1 - 5, y0 + 2}, {x0 + 2, y1 - 6}, {x1 - 5, y1 - 6}};
+            for (int[] p : at) {
+                g.fill(p[0], p[1], p[0] + 3, p[1] + 3, withAlpha(stud, a));
+                g.fill(p[0] + 1, p[1] + 1, p[0] + 2, p[1] + 2, withAlpha(0xFF5A3A14, a));
+            }
         }
-        if (hot)
-            g.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, withAlpha(0x30C01020, a));
-        // blood pooled along the bottom lip (where the strands start)
-        if (active)
-            g.fill(x0 + 1, y1 - 1, x1 - 1, y1, withAlpha(PLATE_BLOOD_DARK, a));
     }
 
     /** the label: big engraved capitals, ivory at the top to gold below, a dark crimson outline and a drop shadow */
@@ -355,25 +355,24 @@ public final class GothicText {
     }
 
     /**
-     * Blood seeping from the plate's bottom edge: 2-4 strands (by width) at hashed places, each growing (0-55 % of its
-     * cycle), swelling into a bead (55-70 %) and letting the drop fall (70-100 %), on its own 3-6 s cycle. Hovered: the
-     * strands hang longer and the cycle runs 3x faster; pressed: every strand lets a drop go at once. Reduce motion:
-     * still strands of middling length.
+     * Blood seeping from the plate's bottom edge: 2-4 strands (by width) at hashed places, each from a smear along the
+     * lip, growing (0-55 % of its cycle), swelling into a bead (55-70 %) and letting the drop fall (70-100 %), on its
+     * own 3-6 s cycle. Hovered: the strands hang longer and the cycle runs 3x faster; pressed: every strand lets a drop
+     * go at once. Reduce motion: still strands of middling length. Mirrored by tools/gen_lobby_art.py _plate_drips.
      */
     private static void plateDrips(GuiGraphics g, int x0, int y, int bw, String label, float t, boolean hot, boolean fast,
                                    boolean burst, int a) {
         int n = bw >= 150 ? 4 : bw >= 90 ? 3 : 2;
         int seed = label.hashCode() * 31 + 7;
-        float maxLen = hot ? 9f : 5.5f;
+        float maxLen = hot ? 12f : 7f;
         for (int i = 0; i < n; i++) {
             int h = hash(seed + i * 7919);
-            // spread across the plate, clear of the corner studs
             float fx = (i + 0.25f + 0.5f * ((h >>> 3) % 1000) / 1000f) / n;
             int sx = x0 + 6 + Math.round(fx * (bw - 12));
-            int wdt = (h % 3 == 0) ? 1 : 2;
-            float len = maxLen * (0.6f + 0.4f * ((hash(h + 3) % 100) / 100f));
-            // the seep: a small bulge on the lip above every strand
-            g.fill(sx - 1, y - 1, sx + wdt + 1, y + 1, withAlpha(PLATE_BLOOD, a));
+            int wdt = (h % 3 == 0) ? 2 : 1;
+            float len = maxLen * (0.55f + 0.45f * ((hash(h + 3) % 100) / 100f));
+            // the seep: a smear of blood along the lip above every strand
+            g.fill(sx - 2 - h % 5, y - 1, sx + wdt + 2 + (h >>> 5) % 5, y, withAlpha(PLATE_BLOOD, a));
             if (t < 0f) {
                 bloodStrand(g, sx, y, Math.round(len * 0.7f), wdt, a);
                 continue;
@@ -384,33 +383,35 @@ public final class GothicText {
                 p = Math.max(p, 0.70f + 0.30f * ((t * 2.5f + i * 0.21f) % 1f));
             if (p < 0.55f) {
                 float k = p / 0.55f;
-                bloodStrand(g, sx, y, Math.round(len * (0.3f + 0.7f * k * k * (3 - 2 * k))), wdt, a);
+                bloodStrand(g, sx, y, Math.round(len * (0.35f + 0.65f * k * k * (3 - 2 * k))), wdt, a);
             } else if (p < 0.70f) {
                 int L = Math.round(len);
                 bloodStrand(g, sx, y, L, wdt, a);
-                int bead = (p - 0.55f) / 0.15f > 0.5f ? 1 : 0;
-                g.fill(sx - 1 - bead, y + L - 1, sx + wdt + 1 + bead, y + L + 2 + bead, withAlpha(PLATE_BLOOD, a));
-                g.fill(sx - bead, y + L - 1, sx, y + L, withAlpha(PLATE_BLOOD_HI, a));
+                if ((p - 0.55f) / 0.15f > 0.5f)       // the bead swells
+                    g.fill(sx - 1, y + L + 2, sx + 2, y + L + 3, withAlpha(PLATE_BLOOD, a));
             } else {
                 float k = (p - 0.70f) / 0.30f;
-                bloodStrand(g, sx, y, Math.round(len * (0.3f + 0.15f * (1 - k))), wdt, a);
-                int dy = Math.round(len + 2 + k * k * 22f);
+                bloodStrand(g, sx, y, Math.round(len * (0.35f + 0.15f * (1 - k))), wdt, a);
+                int dy = Math.round(len + 4 + k * k * 22f);
                 int da = Math.round(a * (1f - k * k));
-                g.fill(sx - 1, y + dy, sx + wdt + 1, y + dy + 3, withAlpha(PLATE_BLOOD, da));
-                g.fill(sx, y + dy - 1, sx + wdt, y + dy, withAlpha(PLATE_BLOOD, da));
+                g.fill(sx, y + dy - 1, sx + 1, y + dy, withAlpha(PLATE_BLOOD, da));
+                g.fill(sx - 1, y + dy, sx + 2, y + dy + 2, withAlpha(PLATE_BLOOD, da));
                 g.fill(sx - 1, y + dy, sx, y + dy + 1, withAlpha(PLATE_BLOOD_HI, da));
             }
         }
     }
 
-    /** one strand: a dark edge, a crimson body, a wet highlight down its left side and a rounded bead at the tip */
+    /** one strand: a wide root, a crimson body (shaded on its right when 2 wide) and a rounded, lit bead at the tip */
     private static void bloodStrand(GuiGraphics g, int x, int y, int len, int wdt, int a) {
         if (len <= 0)
             return;
-        g.fill(x - 1, y, x + wdt + 1, y + Math.max(1, len / 3), withAlpha(PLATE_BLOOD_DARK, a));   // wider at the root
+        g.fill(x - 1, y, x + wdt + 1, y + 2, withAlpha(PLATE_BLOOD, a));
         g.fill(x, y, x + wdt, y + len, withAlpha(PLATE_BLOOD, a));
-        g.fill(x, y, x + 1, y + Math.max(1, len - 1), withAlpha(PLATE_BLOOD_HI, a * 0.7f));
-        g.fill(x - 1, y + len - 1, x + wdt + 1, y + len + 2, withAlpha(PLATE_BLOOD, a));
-        g.fill(x, y + len + 2, x + wdt, y + len + 3, withAlpha(PLATE_BLOOD_DARK, a));
+        if (wdt > 1)
+            g.fill(x + wdt - 1, y + 2, x + wdt, y + len, withAlpha(PLATE_BLOOD_DARK, a));
+        g.fill(x - 1, y + len - 1, x + 2, y + len + 2, withAlpha(PLATE_BLOOD, a));
+        g.fill(x - 1, y + len - 1, x, y + len, withAlpha(PLATE_BLOOD_HI, a));
+        g.fill(x + 1, y + len + 1, x + 2, y + len + 2, withAlpha(PLATE_BLOOD_DARK, a));
+        g.fill(x, y + len + 2, x + 1, y + len + 3, withAlpha(PLATE_BLOOD_DARK, a));
     }
 }

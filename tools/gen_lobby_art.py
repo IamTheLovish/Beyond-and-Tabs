@@ -2270,7 +2270,8 @@ def plate(w=1024, h=96):
     ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
     U, V = xs / h, ys / h
     m = fbm(U, V, 3, 911, octaves=5) * 0.6 + fbm(U, V, 14, 912, octaves=3) * 0.4          # 0..1 mottling
-    base = lerp(col((24, 19, 18)), col((50, 42, 38)), m)
+    m = smoothstep(0.22, 0.78, m)
+    base = lerp(col((30, 25, 24)), col((88, 76, 68)), m)
     face = smoothstep(1.0, 0.15, ys / h)[..., None]                                           # lit toward the top
     rgb = base * (0.78 + 0.34 * face)
     rgb = rgb + (fbm(U, V, 2, 913, octaves=2)[..., None] - 0.5) * col((14, 6, 4))         # warm / cool drift
@@ -2351,7 +2352,10 @@ class GuiCanvas:
         a = (argb >> 24) & 255
         c = ((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, a)
         g = self.gs
-        self.d.rectangle([round(x0 * g), round(y0 * g), round(x1 * g) - 1, round(y1 * g) - 1], fill=c)
+        X0, Y0 = max(0, round(x0 * g)), max(0, round(y0 * g))
+        X1, Y1 = min(self.img.width, round(x1 * g)), min(self.img.height, round(y1 * g))
+        if X1 > X0 and Y1 > Y0:
+            self.img.alpha_composite(Image.new("RGBA", (X1 - X0, Y1 - Y0), c), (X0, Y0))
 
     def outline(self, x, y, w, h, argb):
         self.fill(x, y, x + w, y + 1, argb)
@@ -2404,9 +2408,9 @@ def plate_button_pass(cv, pas, label, x0, y0, bw, bh, hot, active, t, tex):
     x1, y1 = x0 + bw, y0 + bh
     if pas == 0:
         if hot:
-            for i in range(4, 0, -1):
-                al = int((14 + 16 * 0.8) * (5 - i) / 4)
-                cv.fill(x0 - i - 1, y0 - i, x1 + i + 1, y1 + i, (al << 24) | 0xA00A18)
+            for i in range(5, 0, -1):
+                al = int((22 + 26 * 0.8) * (6 - i) / 5)
+                cv.fill(x0 - i - 1, y0 - i, x1 + i + 1, y1 + i, (al << 24) | 0xB00A18)
         return
     if pas == 1:
         tex = tex or Image.open(os.path.join(OUT, "plate.png")).convert("RGB")
@@ -2416,22 +2420,24 @@ def plate_button_pass(cv, pas, label, x0, y0, bw, bh, hot, active, t, tex):
         cv.blit(tex, x0, y0, bw, bh, u, (96 - vh) / 2, uw, vh, (lit, lit * (0.93 if hot else 1), lit * (0.92 if hot else 1)))
         for r_ in ((x0, y0, x1, y0 + 1), (x0, y1 - 1, x1, y1), (x0, y0, x0 + 1, y1), (x1 - 1, y0, x1, y1)):
             cv.fill(*r_, 0xFF050304)
-        cv.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, 0xD8B8A08A if hot else 0xB08E8274)
-        cv.fill(x0 + 1, y0 + 2, x1 - 1, y0 + 3, 0x40A09080)
-        cv.fill(x0 + 1, y0 + 2, x0 + 2, y1 - 2, 0x705E544C)
+        cv.fill(x0 + 1, y0 + 1, x1 - 1, y0 + 2, 0xE0C8B49C if hot else 0xC0A89886)
+        cv.fill(x0 + 1, y0 + 2, x1 - 1, y0 + 3, 0x50A09080)
+        cv.fill(x0 + 1, y0 + 2, x0 + 2, y1 - 2, 0x806E625A)
         cv.fill(x0 + 1, y1 - 3, x1 - 1, y1 - 1, 0xD0080506)
         cv.fill(x1 - 2, y0 + 2, x1 - 1, y1 - 1, 0xA0080506)
-        gold = 0xFF5C4A2C if not active else 0xFFF0CC72 if hot else 0xFFB08A3E
+        cv.fill(x0 + 4, y0 + 4, x1 - 4, y0 + 5, 0x90000000)
+        cv.fill(x0 + 4, y0 + 5, x0 + 5, y1 - 5, 0x60000000)
+        cv.fill(x0 + 4, y1 - 5, x1 - 4, y1 - 4, 0x58C0A890)
+        if hot:
+            cv.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, 0x50B01020)
+        gold = 0xFF5C4A2C if not active else 0xFFF0CC72 if hot else 0xFFB89040
         cv.outline(x0 + 3, y0 + 4, bw - 6, bh - 7, 0xC0000000)
         cv.outline(x0 + 3, y0 + 3, bw - 6, bh - 7, gold)
         if active:
             stud = 0xFFFFE6A0 if hot else 0xFFD8B060
             for sx, sy in ((x0 + 2, y0 + 2), (x1 - 5, y0 + 2), (x0 + 2, y1 - 6), (x1 - 5, y1 - 6)):
                 cv.fill(sx, sy, sx + 3, sy + 3, stud)
-        if hot:
-            cv.fill(x0 + 4, y0 + 4, x1 - 4, y1 - 4, 0x30C01020)
-        if active:
-            cv.fill(x0 + 1, y1 - 1, x1 - 1, y1, 0xFF5E0610)
+                cv.fill(sx + 1, sy + 1, sx + 2, sy + 2, 0xFF5A3A14)
         return
     # pass 2: blood, then the label
     if active:
@@ -2460,45 +2466,51 @@ def plate_button_pass(cv, pas, label, x0, y0, bw, bh, hot, active, t, tex):
         cv.text(text, CAPS_TTF, BTN_SIZE, tx, ty, s, bands[k], clip)
 
 
-def _plate_drips(cv, x0, y, bw, label, t, hot):
-    BLOOD, DARK, HI = 0xFF9C0E1A, 0xFF5E0610, 0xFFE0505A
+def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
+    """GothicText.plateDrips (mirrors the Java)."""
+    BLOOD, DARK, HI = 0xFFA8101C, 0xFF5A0610, 0xFFF06070
 
     def strand(x, L, wd):
         if L <= 0:
             return
-        cv.fill(x - 1, y, x + wd + 1, y + max(1, L // 3), DARK)
+        cv.fill(x - 1, y, x + wd + 1, y + 2, BLOOD)
         cv.fill(x, y, x + wd, y + L, BLOOD)
-        cv.fill(x, y, x + 1, y + max(1, L - 1), (int(255 * 0.7) << 24) | (HI & 0xFFFFFF))
-        cv.fill(x - 1, y + L - 1, x + wd + 1, y + L + 2, BLOOD)
-        cv.fill(x, y + L + 2, x + wd, y + L + 3, DARK)
+        cv.fill(x + wd - 1, y + 2, x + wd, y + L, DARK) if wd > 1 else None
+        cv.fill(x - 1, y + L - 1, x + 2, y + L + 2, BLOOD)
+        cv.fill(x - 1, y + L - 1, x, y + L, HI)
+        cv.fill(x + 1, y + L + 1, x + 2, y + L + 2, DARK)
+        cv.fill(x, y + L + 2, x + 1, y + L + 3, DARK)
 
     n = 4 if bw >= 150 else 3 if bw >= 90 else 2
     seed = (_jhash(label) * 31 + 7) & 0xFFFFFFFF
-    maxlen = 9.0 if hot else 5.5
+    maxlen = 12.0 if hot else 7.0
     for i in range(n):
         h = _h32((seed + i * 7919) & 0xFFFFFFFF)
         fx = (i + 0.25 + 0.5 * ((h >> 3) % 1000) / 1000) / n
         sx = x0 + 6 + round(fx * (bw - 12))
-        wd = 1 if h % 3 == 0 else 2
-        ln = maxlen * (0.6 + 0.4 * (_h32(h + 3) % 100) / 100)
-        cv.fill(sx - 1, y - 1, sx + wd + 1, y + 1, BLOOD)
+        wd = 2 if h % 3 == 0 else 1
+        ln = maxlen * (0.55 + 0.45 * (_h32(h + 3) % 100) / 100)
+        cv.fill(sx - 2 - h % 5, y - 1, sx + wd + 2 + (h >> 5) % 5, y, BLOOD)
         period = (3 + 3 * (h % 1000) / 1000) / (3 if hot else 1)
         p = (t / period + (_h32(h) % 1000) / 1000) % 1
+        if burst:
+            p = max(p, 0.70 + 0.30 * ((t * 2.5 + i * 0.21) % 1))
         if p < 0.55:
             k = p / 0.55
-            strand(sx, round(ln * (0.3 + 0.7 * k * k * (3 - 2 * k))), wd)
+            strand(sx, round(ln * (0.35 + 0.65 * k * k * (3 - 2 * k))), wd)
         elif p < 0.70:
             L = round(ln)
             strand(sx, L, wd)
-            bead = 1 if (p - 0.55) / 0.15 > 0.5 else 0
-            cv.fill(sx - 1 - bead, y + L - 1, sx + wd + 1 + bead, y + L + 2 + bead, BLOOD)
+            if (p - 0.55) / 0.15 > 0.5:
+                cv.fill(sx - 1, y + L + 2, sx + 2, y + L + 3, BLOOD)
         else:
             k = (p - 0.70) / 0.30
-            strand(sx, round(ln * (0.3 + 0.15 * (1 - k))), wd)
-            dy = round(ln + 2 + k * k * 22)
+            strand(sx, round(ln * (0.35 + 0.15 * (1 - k))), wd)
+            dy = round(ln + 4 + k * k * 22)
             da = round(255 * (1 - k * k))
-            cv.fill(sx - 1, y + dy, sx + wd + 1, y + dy + 3, (da << 24) | (BLOOD & 0xFFFFFF))
-            cv.fill(sx, y + dy - 1, sx + wd, y + dy, (da << 24) | (BLOOD & 0xFFFFFF))
+            cv.fill(sx, y + dy - 1, sx + 1, y + dy, (da << 24) | (BLOOD & 0xFFFFFF))
+            cv.fill(sx - 1, y + dy, sx + 2, y + dy + 2, (da << 24) | (BLOOD & 0xFFFFFF))
+            cv.fill(sx - 1, y + dy, sx, y + dy + 1, (da << 24) | (HI & 0xFFFFFF))
 
 
 def title_buttons(img, gs, t=1.3, hot_label="Singleplayer"):
