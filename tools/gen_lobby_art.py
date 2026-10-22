@@ -2766,7 +2766,7 @@ def fg_plants(name, w, h, seed, kind):
                 tip = (px + math.cos(la) * L2, py + math.sin(la) * L2)
                 m1 = ((px + tip[0]) / 2 - math.sin(la) * L2 * 0.25, (py + tip[1]) / 2 + math.cos(la) * L2 * 0.25)
                 m2 = ((px + tip[0]) / 2 + math.sin(la) * L2 * 0.25, (py + tip[1]) / 2 - math.cos(la) * L2 * 0.25)
-                d.polygon([(px, py), m1, tip, m2], fill=(18, 20, 14, 255))
+                d.polygon([(px, py), m1, tip, m2], fill=(30, 26, 18, 255))
                 dr.line([(px, py), m1, tip], fill=110, width=2)
         if depth > 0:
             for _ in range(2):
@@ -2791,7 +2791,7 @@ def fg_plants(name, w, h, seed, kind):
         pts = cane(W * 0.15, -H * 0.05, math.pi * 0.35, H * 0.9, 16, 3, down=True)
     a = np.asarray(img, np.float32) / 255
     rm = np.asarray(rim, np.float32) / 255
-    rgb = a[..., :3] + rm[..., None] * col((150, 36, 34)) * 0.7
+    rgb = a[..., :3] * 1.6 + rm[..., None] * col((190, 46, 40)) * 1.5
     al = a[..., 3]
     # out of focus: blur the premultiplied colour and the alpha together
     sig = 3.0 * ss
