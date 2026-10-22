@@ -352,6 +352,7 @@ public final class ServerTickProfile {
         pendingReport = null;
         lastCaptureAt = -AUTO_COOLDOWN_TICKS;
         Sys.onServerStopping();
+        com.solegendary.reignofnether.unit.Terrain.resetMemo();
     }
 
     static double[] sortedMs(long[] nanos) {
