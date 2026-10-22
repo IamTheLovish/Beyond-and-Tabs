@@ -78,6 +78,12 @@ public class LobbyBackdrop {
     /** the rose window and the portal (artboard), where the light comes from */
     private static final float ROSE_X = 0.2981f, ROSE_Y = 0.3211f, DOOR_X = 0.3000f, DOOR_Y = 0.6735f;
     // </gen:cath>
+    // <gen:title> written by tools/gen_lobby_title.py - do not edit by hand
+    private static final float TITLE_TEXT_W = 0.9008f, TITLE_TOP_V = 0.1146f, TITLE_BOT_V = 0.8170f;
+    private static final float BYLINE_TEXT_W = 0.9219f, BYLINE_TOP_V = 0.1880f, BYLINE_BOT_V = 0.7009f;
+    /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */
+    private static final float[][] TITLE_DRIPS = {{0.1901f, 0.8232f, 0.0109f, 0.1167f}, {0.3077f, 0.8232f, 0.0096f, 0.1075f}, {0.3507f, 0.8232f, 0.0118f, 0.1190f}, {0.5996f, 0.8232f, 0.0098f, 0.0722f}, {0.6476f, 0.8232f, 0.0100f, 0.0902f}, {0.7122f, 0.8232f, 0.0105f, 0.0865f}};
+    // </gen:title>
     private static final float TAU = 6.2831855f;
     private static final float BREATH_S = 7f;    // the cathedral's slow inhale / exhale
     private static final float GUST_S = 9f;      // a gust crosses the scene left to right this often
@@ -95,18 +101,21 @@ public class LobbyBackdrop {
     private static final String[] BASE_FILES = {"sky", "moon", "glow", "sparkle", "clouds_far", "spires_far",
         "clouds_near", "shafts", "mist", "ground", "cascade", "ripples", "streak", "field_far", "field_near", "bats",
         "frame_left", "frame_right", "petal", "vignette", "grain", "mist_pool", "frame_left_tree", "frame_right_tree",
-        "frame_left_vines", "frame_right_vines", "leaf", "ring", "fg_briar", "fg_thorns", "fg_branch"};
+        "frame_left_vines", "frame_right_vines", "leaf", "ring", "fg_briar", "fg_thorns", "fg_branch", "title", "byline",
+        "scrim"};
     private static final int SKY = 0, MOON = 1, GLOW = 2, SPARKLE = 3, CLOUDS_FAR = 4, SPIRES_FAR = 5, CLOUDS_NEAR = 6,
         SHAFTS = 7, MIST = 8, GROUND = 9, CASCADE_T = 10, RIPPLES = 11, STREAK = 12, FIELD_FAR = 13, FIELD_NEAR = 14,
         BATS = 15, FRAME_LEFT = 16, FRAME_RIGHT = 17, PETAL = 18, VIGNETTE = 19, GRAIN = 20, MIST_POOL = 21,
         TREE_LEFT = 22, TREE_RIGHT = 23, VINES_LEFT = 24, VINES_RIGHT = 25, LEAF = 26, RING = 27, FG_BRIAR = 28,
-        FG_THORNS = 29, FG_BRANCH = 30;
+        FG_THORNS = 29, FG_BRANCH = 30, TITLE = 31, BYLINE = 32, SCRIM = 33;
     /** wrap mode per base texture: 0 clamp, 1 repeat, 2 clamp across / repeat along (the moon's reflection) */
     private static final int[] WRAP = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0};
+        0, 0, 0, 0, 0, 0, 0, 0, 0};
     /** the cathedral's layers follow the base textures: per layer its stone, its moon rim and its glass glow */
     private static final int CATH0 = BASE_FILES.length;
     private static final int[] TEX = new int[BASE_FILES.length + CATH.length * 3];
+    /** width / height of each texture (the lettering is placed by its own aspect) */
+    private static final float[] ASPECT = new float[TEX.length];
     private static int state = 0;   // 0 not loaded yet, 1 ready, -1 failed (vanilla background)
 
     // ---- per-frame state (no allocation)
@@ -114,6 +123,9 @@ public class LobbyBackdrop {
     private static float parX = 0, parY = 0, camX = 0, camY = 0;
     private static long lastFrameMs = 0;
     private static float A, top, cx, w, h, gustFront;
+    /** the fade (title screen fade-in, loading overlay fade-out) and the title layout's horizontal shifts (in A) */
+    private static float fade = 1f, xs = 0f;
+    private static boolean titleLayout = false;
     private static final int SLICES = 16, ROWS = 12, PETALS = 16, EMBERS = 12;
 
     /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
@@ -147,6 +159,7 @@ public class LobbyBackdrop {
                     continue;
                 }
                 int iw = img.getWidth(), ih = img.getHeight();
+                ASPECT[i] = iw / (float) ih;
                 TEX[i] = TextureUtil.generateTextureId();
                 loaded = i + 1;
                 TextureUtil.prepareImage(TEX[i], iw, ih);
@@ -206,10 +219,28 @@ public class LobbyBackdrop {
             return;
         }
         gg.flush();
-        w = screen.width;
-        h = screen.height;
-        if (w <= 0 || h <= 0)
-            return;
+        renderScene(gg.pose().last().pose(), screen.width, screen.height, mouseX, mouseY, 1f, false);
+    }
+
+    /** True once the art is uploaded (and false for good if it cannot be read). */
+    public static boolean available() {
+        return state > 0;
+    }
+
+    /**
+     * The scene into a w x h area (GUI units, or framebuffer pixels on the launch overlay) through `pose`, faded by
+     * `alpha`. `title` is the title / loading layout (design/splash.md): the sky and its moon slide left and the
+     * cathedral and its ground slide right as far as the art allows, which leaves the centre column (the buttons)
+     * over the meadow and the dark sky, and the lettering goes on top. False if the art is unavailable.
+     */
+    public static boolean renderScene(Matrix4f pose, float sw, float sh, float mouseX, float mouseY, float alpha,
+                                      boolean title) {
+        if (!ensureLoaded())
+            return false;
+        w = sw;
+        h = sh;
+        if (w <= 0 || h <= 0 || alpha <= 0.003f)
+            return true;
         long now = Util.getMillis();
         boolean motion = !reduceMotion();
         // a fixed, pleasant moment when frozen; otherwise seconds, wrapped hourly so floats stay precise
@@ -228,7 +259,10 @@ public class LobbyBackdrop {
         } else {
             parX = parY = camX = camY = 0f;
         }
-        draw(t, motion, gg.pose().last().pose());
+        fade = alpha;
+        titleLayout = title;
+        draw(t, motion, pose);
+        return true;
     }
 
     /** The whole scene at time t for the current camera (shared by render). */
@@ -245,7 +279,11 @@ public class LobbyBackdrop {
         RenderSystem.disableCull();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.setShaderColor(1f, 1f, 1f, fade);
+        // the title layout's shifts: as far as the art reaches past the (zoomed) screen edge, less the parallax
+        float slack = ART_W / 2f - w / (2f * A * zoom) - (motion ? 0.065f : 0f);
+        float shift = titleLayout ? Mth.clamp(slack, 0f, 0.22f) : 0f;
+        xs = -shift;
 
         // ---- sky, stars, moon
         art(SKY, -ART_W / 2, 0f, ART_W / 2, 1f, 0.003f, 1f);
@@ -276,6 +314,7 @@ public class LobbyBackdrop {
         art(SPIRES_FAR, -ART_W / 2, 0.12f, ART_W / 2, 0.80f, 0.011f, 1f);
         wrapped(CLOUDS_NEAR, 0.46f, 0.84f, windT * 0.014f, 0.012f, 1f);
 
+        xs = shift;
         // ---- the cathedral, back to front: each depth layer, its moon rim and its glass; mist sheets between
         float swell = 1f + 0.006f * breath;
         for (int i = 0; i < CATH.length; i++) {
@@ -381,10 +420,130 @@ public class LobbyBackdrop {
         M.set(pose);
         quad(VIGNETTE, 0f, 0f, w, h, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
         quad(GRAIN, 0f, 0f, w, h, 0f, 0f, w / 128f, h / 128f, 1f, 1f, 1f, 1f);
+        if (titleLayout)
+            lettering(t, motion);
+        xs = 0f;
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableCull();
+        RenderSystem.enableDepthTest();
+    }
+
+    // ---------------------------------------------------------------- the title layout's lettering
+
+    /** where the title block (cap top of BEYOND to the foot of AND TABS) and the byline sit, as fractions of h */
+    private static final float TITLE_Y0 = 0.040f, TITLE_BLOCK_H = 0.160f, BYLINE_Y0 = 0.236f, BYLINE_BLOCK_H = 0.030f;
+
+    /**
+     * "BEYOND / AND TABS" and "Developed by Lovish" (textures from tools/gen_lobby_title.py) over the sky between the
+     * moon and the spires, with blood strands growing from the title's lower letters, each letting a drop fall on its
+     * own rhythm (still, short strands with reduce motion). The lettering leans a hair toward the camera: it is the
+     * nearest thing on screen.
+     */
+    private static void lettering(float t, boolean motion) {
+        RenderSystem.defaultBlendFunc();
+        float lx = camX * 0.006f * A, ly = camY * 0.002f * A;
+        // a breath of darkness behind the lettering so it reads against the moonlit cloud
+        float th = TITLE_BLOCK_H * h / (TITLE_BOT_V - TITLE_TOP_V), tw = th * ASPECT[TITLE];
+        if (tw * TITLE_TEXT_W > 0.86f * w) {
+            float k = 0.86f * w / (tw * TITLE_TEXT_W);
+            th *= k;
+            tw *= k;
+        }
+        float tx0 = w / 2f - tw / 2f + lx, ty0 = TITLE_Y0 * h - TITLE_TOP_V * th + ly;
+        quad(SCRIM, w / 2f - tw * TITLE_TEXT_W * 0.62f, TITLE_Y0 * h - 0.05f * h, w / 2f + tw * TITLE_TEXT_W * 0.62f,
+            (BYLINE_Y0 + BYLINE_BLOCK_H) * h + 0.05f * h, 0f, 0f, 1f, 1f, 0f, 0f, 0f, 0.45f);
+        quad(TITLE, tx0, ty0, tx0 + tw, ty0 + th, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        float bh = BYLINE_BLOCK_H * h / (BYLINE_BOT_V - BYLINE_TOP_V), bw = bh * ASPECT[BYLINE];
+        if (bw * BYLINE_TEXT_W > 0.8f * w) {
+            float k = 0.8f * w / (bw * BYLINE_TEXT_W);
+            bh *= k;
+            bw *= k;
+        }
+        float bx0 = w / 2f - bw / 2f + lx * 0.8f, by0 = BYLINE_Y0 * h - BYLINE_TOP_V * bh + ly;
+        quad(BYLINE, bx0, by0, bx0 + bw, by0 + bh, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        for (int i = 0; i < TITLE_DRIPS.length; i++) {
+            float[] d = TITLE_DRIPS[i];
+            float x = tx0 + d[0] * tw, y = ty0 + d[1] * th, hw = Math.max(0.6f, d[2] * th), reach = d[3] * th;
+            float len, drop = -1f;
+            if (!motion) {
+                len = reach * (0.3f + 0.3f * frac(i * 0.618f));
+            } else {
+                float period = 4.5f + 3f * frac(i * 0.618f + 0.1f);
+                float p = frac(t / period + i * 0.37f);
+                if (p < 0.8f) {
+                    float s = p / 0.8f;
+                    len = reach * (0.12f + 0.88f * s * s * (3f - 2f * s));
+                } else {
+                    float q = (p - 0.8f) / 0.2f;
+                    float back = 1f - q;
+                    len = reach * (0.12f + 0.88f * back * back * back);
+                    drop = q;
+                }
+            }
+            strand(x, y, hw, len);
+            if (drop >= 0f) {
+                float dy = y + reach + hw + drop * drop * 0.12f * th;
+                float r = hw * 1.15f * (1f - 0.3f * drop);
+                disc(x, dy, r, r * 1.35f, 0.50f, 0.02f, 0.05f, 1f - drop * drop);
+                disc(x - r * 0.35f, dy - r * 0.35f, r * 0.3f, r * 0.3f, 1f, 0.55f, 0.55f, 0.7f * (1f - drop));
+            }
+        }
+    }
+
+    /** one hanging strand: a tapering crimson body, lit down its left side, swelling into a bead at the tip */
+    private static void strand(float x, float y, float hw, float len) {
+        float tip = y + len;
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        BufferBuilder buf = Tesselator.getInstance().getBuilder();
+        buf.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        buf.vertex(M, x - hw, y, 0f).color(0.36f, 0.02f, 0.05f, 1f).endVertex();
+        buf.vertex(M, x - hw * 0.55f, tip, 0f).color(0.50f, 0.02f, 0.06f, 1f).endVertex();
+        buf.vertex(M, x + hw * 0.55f, tip, 0f).color(0.50f, 0.02f, 0.06f, 1f).endVertex();
+        buf.vertex(M, x + hw, y, 0f).color(0.36f, 0.02f, 0.05f, 1f).endVertex();
+        // the wet highlight
+        float hx = x - hw * 0.35f, hl = hw * 0.22f;
+        buf.vertex(M, hx - hl, y + len * 0.1f, 0f).color(0.95f, 0.35f, 0.38f, 0f).endVertex();
+        buf.vertex(M, hx - hl * 0.7f, tip - hw * 0.4f, 0f).color(0.95f, 0.35f, 0.38f, 0.75f).endVertex();
+        buf.vertex(M, hx + hl * 0.7f, tip - hw * 0.4f, 0f).color(0.95f, 0.35f, 0.38f, 0.75f).endVertex();
+        buf.vertex(M, hx + hl, y + len * 0.1f, 0f).color(0.95f, 0.35f, 0.38f, 0f).endVertex();
+        BufferUploader.drawWithShader(buf.end());
+        float r = hw * 1.25f;
+        disc(x, tip + r * 0.3f, r, r * 1.2f, 0.52f, 0.02f, 0.06f, 1f);
+        disc(x - r * 0.35f, tip, r * 0.3f, r * 0.3f, 1f, 0.6f, 0.6f, 0.8f);
+    }
+
+    /** a small filled ellipse (12 segments) in flat colour */
+    private static void disc(float x, float y, float rx, float ry, float r, float g, float b, float a) {
+        if (a <= 0.002f)
+            return;
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        BufferBuilder buf = Tesselator.getInstance().getBuilder();
+        buf.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+        for (int i = 0; i < 12; i++) {
+            float a0 = i * TAU / 12f, a1 = (i + 1) * TAU / 12f;
+            buf.vertex(M, x, y, 0f).color(r, g, b, a).endVertex();
+            buf.vertex(M, x + Mth.cos(a1) * rx, y + Mth.sin(a1) * ry, 0f).color(r, g, b, a).endVertex();
+            buf.vertex(M, x + Mth.cos(a0) * rx, y + Mth.sin(a0) * ry, 0f).color(r, g, b, a).endVertex();
+        }
+        BufferUploader.drawWithShader(buf.end());
+    }
+
+    /**
+     * A soft, rounded dark scrim (the scrim texture, feathered well past the rect) behind a column of buttons or a
+     * progress rule, in the given pose's units. Nothing if the art is unavailable.
+     */
+    public static void softScrim(Matrix4f pose, float x0, float y0, float x1, float y1, float alpha) {
+        if (state <= 0 || alpha <= 0.003f)
+            return;
+        M.set(pose);
+        float fx = (x1 - x0) * 0.30f + 14f, fy = (y1 - y0) * 0.30f + 14f;
+        RenderSystem.disableDepthTest();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        quad(SCRIM, x0 - fx, y0 - fy, x1 + fx, y1 + fy, 0f, 0f, 1f, 1f, 0f, 0f, 0f, alpha);
         RenderSystem.enableDepthTest();
     }
 
@@ -402,7 +561,7 @@ public class LobbyBackdrop {
     // ---------------------------------------------------------------- pieces
 
     private static float sx(float x) {
-        return cx + x * A;
+        return cx + (x + xs) * A;
     }
 
     private static float sy(float y) {
@@ -439,7 +598,7 @@ public class LobbyBackdrop {
         float xa = -w / 2f / A - 0.12f, xb = w / 2f / A + 0.12f;   // the screen edges in A, and beyond
         float off = (drift / ART_W) % 1f;
         float u0 = (xa + ART_W / 2) / ART_W - off, u1 = (xb + ART_W / 2) / ART_W - off;
-        quad(tex, sx(xa) + px, sy(y0) + py, sx(xb) + px, sy(y1) + py, u0, 0f, u1, 1f, 1f, 1f, 1f, alpha);
+        quad(tex, cx + xa * A + px, sy(y0) + py, cx + xb * A + px, sy(y1) + py, u0, 0f, u1, 1f, 1f, 1f, 1f, alpha);
     }
 
     /** The wind at artboard x right now: the travelling gust front plus its trailing eddy, 0..~1.2. */

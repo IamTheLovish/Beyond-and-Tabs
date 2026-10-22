@@ -3122,7 +3122,7 @@ def zg(y):
     return min(0.062, 0.029 * d ** 0.6)
 
 
-def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
+def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     """The scene as LobbyBackdrop.draw paints it (no sway; the ground and fields in 24 depth bands)."""
     L = {f[:-4]: Image.open(os.path.join(OUT, f)) for f in os.listdir(OUT) if f.endswith(".png")}
     S = Screen(W, H)
@@ -3133,8 +3133,11 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
     S.top = H / 2 - (H / 2 - (H - S.A / zoom)) * zoom
     ox = lambda z: -cx_ * z * S.A
     oy = lambda z: -cy_ * z * 0.4 * S.A
-    sx = lambda x: W / 2 + x * S.A
+    xs = [0.0]                       # LobbyBackdrop.xs: the title layout's shifts (sky left, cathedral right)
+    sx = lambda x: W / 2 + (x + xs[0]) * S.A
     sy = lambda y: S.top + y * S.A
+    shift = min(0.22, max(0.0, ART_W / 2 - W / (2 * S.A) - (0.065 if motion else 0.0))) if title else 0.0
+    xs[0] = -shift
 
     def art(im, rect, z, **kw):
         x0, y0, x1, y1 = rect
@@ -3154,6 +3157,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
         S.place(im, 0, sy(y0) + oy(z), 0, sy(y1) + oy(z), alpha=alpha, wrap_dx=drift * S.A - ox(z), wrap_w=ART_W * S.A)
 
     S.place(L["sky"], sx(-ART_W / 2) + ox(0.003), sy(0) + oy(0.003), sx(ART_W / 2) + ox(0.003), sy(1) + oy(0.003))
+    S.shift = shift
     sp = L["sparkle"]
     for i, (x, y) in enumerate(STARS):
         tw_ = 0.35 + 0.65 * max(0.0, math.sin(t * (0.7 + 0.13 * i) + i * 1.7)) ** 3
@@ -3168,6 +3172,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True):
     art(L["spires_far"], RECTS["spires_far"], 0.011)
     wrapped(L["clouds_near"], 0.46, 0.84, t * 0.014, 0.012, 1.0)
     breath = 0.5
+    xs[0] = shift
     for i, (nm, z, hz_) in enumerate(CATH_LAYERS):
         r = CATH_BOXES[nm]
         art(L[nm], r, z)
@@ -3580,19 +3585,17 @@ def title_buttons(img, gs, t=1.3, hot_label="Singleplayer"):
 def text_previews():
     """The title screen's buttons (full screen at GUI scale 2, 100 % crops at 2 and 4) and the skirmish lobby with its
     blackletter heading and plate buttons."""
-    sys.path.insert(0, HERE)
-    import gen_splash_art as SA
-    layers = SA.load_layers()
     for gs in (2, 4):
-        try:
-            bg = SA.compose(layers, 1920, 1080, gui_scale=gs).convert("RGBA")
-        except Exception as e:               # never fail a regen on the splash preview
-            print("splash preview unavailable:", e)
-            bg = Image.new("RGBA", (1920, 1080), (20, 14, 14, 255))
-        box = title_buttons(bg, gs)
+        bg = title_screen(1920, 1080, gs=gs)
+        gw, gh = 1920 // gs, 1080 // gs
+        cx, y = gw // 2, gh // 4 + 48
+        box = ((cx - 116) * gs, (y - 34) * gs, (cx + 116) * gs, (y + 84 + 34) * gs)
         if gs == 2:
-            bg.convert("RGB").save(os.path.join(DESIGN, "lobby_text_preview_title.png"), optimize=True)
-        bg.crop(box).convert("RGB").save(os.path.join(DESIGN, f"lobby_buttons_gui{gs}.png"), optimize=True)
+            bg.save(os.path.join(DESIGN, "title_preview_16x9.png"), optimize=True)
+        else:
+            bg.save(os.path.join(DESIGN, "title_preview_16x9_gui4.png"), optimize=True)
+        bg.crop(box).save(os.path.join(DESIGN, f"lobby_buttons_gui{gs}.png"), optimize=True)
+    loading_screen(1920, 1080).save(os.path.join(DESIGN, "loading_preview_16x9.png"), optimize=True)
 
     gs = 2
     gh = 1080 // gs
@@ -3614,6 +3617,101 @@ def text_previews():
     img.convert("RGB").save(os.path.join(DESIGN, "lobby_preview_16x9_lobby.png"), optimize=True)
 
 
+TITLE_Y0, TITLE_BLOCK_H, BYLINE_Y0, BYLINE_BLOCK_H = 0.040, 0.160, 0.236, 0.030     # LobbyBackdrop.lettering
+
+
+def _over(img, tex, x0, y0, x1, y1, tint=None, alpha=1.0):
+    """Alpha-composite a PIL RGBA texture into the float image (screen px), optionally tinted (rgb) and faded."""
+    S = Screen(img.shape[1], img.shape[0])
+    S.img = img
+    S.place(tex, x0, y0, x1, y1, tint=tint or (1, 1, 1), alpha=alpha)
+
+
+def lettering(img, t=1.3, motion=True):
+    """LobbyBackdrop.lettering on a float image (title layout): the title, the byline, the strands and their drops."""
+    sys.path.insert(0, HERE)
+    import gen_lobby_title as GT
+    ti, bi = GT.read_java()
+    H, W = img.shape[:2]
+    T = Image.open(os.path.join(OUT, "title.png")).convert("RGBA")
+    B = Image.open(os.path.join(OUT, "byline.png")).convert("RGBA")
+    sc = Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA")
+    th = TITLE_BLOCK_H * H / (ti["bot_v"] - ti["top_v"])
+    tw = th * T.width / T.height
+    if tw * ti["text_w"] > 0.86 * W:
+        k = 0.86 * W / (tw * ti["text_w"]); th *= k; tw *= k
+    tx0, ty0 = W / 2 - tw / 2, TITLE_Y0 * H - ti["top_v"] * th
+    _over(img, sc, W / 2 - tw * ti["text_w"] * 0.62, TITLE_Y0 * H - 0.05 * H, W / 2 + tw * ti["text_w"] * 0.62,
+          (BYLINE_Y0 + BYLINE_BLOCK_H) * H + 0.05 * H, tint=(0, 0, 0), alpha=0.45)
+    _over(img, T, tx0, ty0, tx0 + tw, ty0 + th)
+    bh = BYLINE_BLOCK_H * H / (bi["bot_v"] - bi["top_v"])
+    bw = bh * B.width / B.height
+    if bw * bi["text_w"] > 0.8 * W:
+        k = 0.8 * W / (bw * bi["text_w"]); bh *= k; bw *= k
+    bx0, by0 = W / 2 - bw / 2, BYLINE_Y0 * H - bi["top_v"] * bh
+    _over(img, B, bx0, by0, bx0 + bw, by0 + bh)
+    pil = Image.fromarray(np.round(np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
+    lay = Image.new("RGBA", (W * 4, H * 4), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    for i, (u, v, hw, reach) in enumerate(ti["anchors"]):
+        x, y, hw, reach = (tx0 + u * tw) * 4, (ty0 + v * th) * 4, max(0.6, hw * th) * 4, reach * th * 4
+        frac_ = lambda q: q - math.floor(q)
+        drop = -1
+        if not motion:
+            ln = reach * (0.3 + 0.3 * frac_(i * 0.618))
+        else:
+            per = 4.5 + 3 * frac_(i * 0.618 + 0.1)
+            p_ = frac_(t / per + i * 0.37)
+            if p_ < 0.8:
+                q = p_ / 0.8; ln = reach * (0.12 + 0.88 * q * q * (3 - 2 * q))
+            else:
+                q = (p_ - 0.8) / 0.2; ln = reach * (0.12 + 0.88 * (1 - q) ** 3); drop = q
+        tip = y + ln
+        d.polygon([(x - hw, y), (x - hw * 0.55, tip), (x + hw * 0.55, tip), (x + hw, y)], fill=(117, 6, 15, 255))
+        r = hw * 1.25
+        d.ellipse([x - r, tip + r * 0.3 - r * 1.2, x + r, tip + r * 0.3 + r * 1.2], fill=(133, 6, 16, 255))
+        d.ellipse([x - r * 0.65, tip - r * 0.3, x - r * 0.05, tip + r * 0.3], fill=(255, 153, 153, 200))
+        if drop >= 0:
+            dy = y + reach + hw + drop * drop * 0.12 * th * 4
+            rr = hw * 1.15 * (1 - 0.3 * drop)
+            d.ellipse([x - rr, dy - rr * 1.35, x + rr, dy + rr * 1.35], fill=(128, 5, 13, int(255 * (1 - drop * drop))))
+    pil.alpha_composite(lay.resize((W, H), Image.LANCZOS))
+    img[:] = np.asarray(pil.convert("RGB"), np.float32) / 255
+
+
+def title_screen(W=1920, H=1080, gs=2, t=1.3):
+    """The title screen as TitleScreenMixin draws it: the cathedral in the title layout, the lettering, the soft pad
+    behind the button column and the stone-plate buttons (GUI scale gs). Returns a PIL RGB image."""
+    S = compose(W, H, t=t, title=True)
+    lettering(S.img, t)
+    gw, gh = W // gs, H // gs
+    y = gh // 4 + 48
+    x0, y0, x1, y1 = (gw // 2 - 100) * gs, (y - 26) * gs, (gw // 2 + 100) * gs, (y + 104) * gs
+    fx, fy = (x1 - x0) * 0.30 + 14 * gs, (y1 - y0) * 0.30 + 14 * gs
+    _over(S.img, Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA"), x0 - fx, y0 - fy, x1 + fx, y1 + fy,
+          tint=(0, 0, 0), alpha=0.62)
+    img = Image.fromarray(np.round(np.clip(S.img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
+    title_buttons(img, gs, t=t)
+    return img.convert("RGB")
+
+
+def loading_screen(W=1920, H=1080, progress=0.62, t=1.3):
+    """SplashArt.renderLoading: the cathedral (title layout, lettering) and the gold progress rule on its pad."""
+    S = compose(W, H, t=t, title=True)
+    lettering(S.img, t)
+    cx, bw, by, bt = W / 2, H * 0.55, H * 0.905, max(2.0, H * 0.006)
+    fx, fy = bw * 0.30 + 14, bt * 8 * 0.30 + 14
+    _over(S.img, Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA"), cx - bw / 2 - fx, by - bt * 4 - fy,
+          cx + bw / 2 + fx, by + bt * 4 + fy, tint=(0, 0, 0), alpha=0.8)
+    im = S.img
+    def fill(x0, y0, x1, y1, c):
+        im[int(round(y0)):int(round(y1)), int(round(x0)):int(round(x1))] = np.array(c, np.float32)
+    fill(cx - bw / 2 - bt, by - bt * 1.5, cx + bw / 2 + bt, by + bt * 1.5, (0.75, 0.58, 0.27))
+    fill(cx - bw / 2, by - bt * 0.75, cx + bw / 2, by + bt * 0.75, (0.07, 0.05, 0.04))
+    fill(cx - bw / 2, by - bt * 0.75, cx - bw / 2 + bw * progress, by + bt * 0.75, (0.96, 0.80, 0.42))
+    return Image.fromarray(np.round(np.clip(im, 0, 1) * 255).astype(np.uint8), "RGB")
+
+
 def previews():
     if "cath_back" not in CATH_BOXES:
         load_boxes()
@@ -3629,7 +3727,7 @@ def previews():
         text_previews()
 
 
-SMOOTH = {"plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
+SMOOTH = {"title", "byline", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
           "fg_briar", "fg_thorns", "fg_branch"}
 
 

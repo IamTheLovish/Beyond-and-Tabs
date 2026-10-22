@@ -32,7 +32,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * "The cathedral rose window" (design/splash.md): the layered title / loading screen art - a stained-glass rose window
+ * The title / loading screen art (design/splash.md). By default the animated moonlit cathedral (LobbyBackdrop in its
+ * title layout, with the blood-red "BEYOND AND TABS" lettering); lovish (Oct 22): "I don't want this old one anymore
+ * ... use the cathedral". The older "cathedral rose window" below stays only as the fallback when the cathedral's art
+ * cannot be read: a stained-glass rose window
  * in a gothic arch, "BEYOND AND TABS" in 3D gold and "Developed by Lovish" beneath, candlelight around it. The layers are
  * drawn from code by tools/gen_splash_art.py; this class only puts them on screen.
  *
@@ -67,8 +70,15 @@ public class SplashArt {
     private static long reloadDoneMs = -1;
     private static float shownProgress = 0;
 
-    /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
+    /**
+     * True if either look can be drawn: the cathedral (the default) or the rose window (its fallback). Uploads on
+     * first use (render thread only).
+     */
     public static boolean ensureLoaded() {
+        return LobbyBackdrop.ensureLoaded() || ensureRoseLoaded();
+    }
+
+    private static boolean ensureRoseLoaded() {
         if (state != 0)
             return state > 0;
         if (!RenderSystem.isOnRenderThread())
@@ -131,6 +141,10 @@ public class SplashArt {
      */
     public static void renderScene(Matrix4f pose, float w, float h, float mouseX, float mouseY, float alpha) {
         if (alpha <= 0.003f)
+            return;
+        if (LobbyBackdrop.renderScene(pose, w, h, mouseX, mouseY, alpha, true))
+            return;
+        if (!ensureRoseLoaded())
             return;
         long now = Util.getMillis();
         boolean motion = !reduceMotion();
@@ -237,8 +251,9 @@ public class SplashArt {
         }
         renderScene(pose, w, h, w / 2f, h / 2f, alpha);
 
-        // a slim gold progress rule where the arch's jambs fade out
+        // a slim gold progress rule low in the meadow, on a soft dark pad so it reads over the flowers
         float cx = w / 2f, bw = h * 0.55f, by = h * 0.905f, bt = Math.max(2f, h * 0.006f);
+        LobbyBackdrop.softScrim(pose, cx - bw / 2, by - bt * 4f, cx + bw / 2, by + bt * 4f, alpha * 0.8f);
         RenderSystem.disableDepthTest();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -258,9 +273,31 @@ public class SplashArt {
      * button) are left alone.
      */
     public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, float alpha) {
-        if (state <= 0)
+        if (state <= 0 && !LobbyBackdrop.available())
             return;
         GothicText.restyleButtons(g, font, children, null, null, true, alpha);
+    }
+
+    /**
+     * A soft dark pad behind the title screen's column of text buttons (lovish's cathedral is busy; the stone plates
+     * must stay readable), feathered well past the column. Only with the cathedral look.
+     */
+    public static void buttonScrim(GuiGraphics g, List<? extends GuiEventListener> children, float alpha) {
+        if (!LobbyBackdrop.available())
+            return;
+        int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE;
+        for (GuiEventListener c : children) {
+            if (c instanceof net.minecraft.client.gui.components.AbstractWidget wd && wd.visible && wd.getWidth() >= 60) {
+                x0 = Math.min(x0, wd.getX());
+                y0 = Math.min(y0, wd.getY());
+                x1 = Math.max(x1, wd.getX() + wd.getWidth());
+                y1 = Math.max(y1, wd.getY() + wd.getHeight());
+            }
+        }
+        if (x0 >= x1 || y0 >= y1)
+            return;
+        g.flush();
+        LobbyBackdrop.softScrim(g.pose().last().pose(), x0, y0, x1, y1, alpha * 0.62f);
     }
 
     // ---------------------------------------------------------------- quads

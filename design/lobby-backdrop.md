@@ -15,7 +15,7 @@ screens keep the vanilla background.
 
 Previews (generated, committed): `design/lobby_preview_16x9.png`, `design/lobby_preview_21x9.png`,
 `design/lobby_preview_16x9_lobby.png` (scrim + mock panel + the gothic heading and buttons),
-`design/lobby_text_preview_title.png` (the title screen's buttons in the new lettering).
+`design/title_preview_16x9.png` (the title screen: the same scene in its title layout, design/splash.md).
 
 ## Layout (round 4: natural, asymmetric, in depth)
 
