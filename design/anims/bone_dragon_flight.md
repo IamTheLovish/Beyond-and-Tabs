@@ -8,7 +8,7 @@ unit/modelling/animations/Dragon.java (motion), tools/dragon_poses.py (its Pytho
 Body numbers at 1x (drawn x1.4): thorax 12 px tall (BH), wing span ~130 px, neck 8 links, tail 10 links.
 All times in ticks (20/s). Phase = share of the cycle. "Leads / follows" = which part moves first.
 
-## 1. Flap (cruise and climb) - T = 52 ticks (2.6 s): a 6 % hold, the power stroke 30 %, the recovery 64 % (r13 round 2: 40 -> 36 % to the bottom)
+## 1. Flap (cruise and climb) - T = 52 ticks (2.6 s): a 6 % hold, the power stroke 28 % (eases off the top, strikes INTO the bottom), the recovery 66 % (review rounds 1-2: the stroke must read asymmetric)
 
 | phase | ticks | wing (arm / fore / hand / fingers) | sail | body | neck (S) | tail |
 |---|---|---|---|---|---|---|

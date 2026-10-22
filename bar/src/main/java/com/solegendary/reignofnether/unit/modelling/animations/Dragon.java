@@ -63,7 +63,7 @@ public final class Dragon {
     public static final class Params {
         /** Ticks per wing beat; the hold at the top and the end of the downstroke, as shares of the beat. A big
          *  wyrm beats slowly; the power stroke is short and heavy, the recovery long (design/anims/bone_dragon_flight.md). */
-        public float beatTicks = 52f, hold = 0.06f, down = 0.36f;
+        public float beatTicks = 52f, hold = 0.06f, down = 0.34f;
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up), and in a glide. */
         public float flapUp = 38f, flapDown = -42f, glideArm = 6f;
         /** The cruise rhythm: this many beats, then a glide this many beat-lengths long. */
@@ -76,7 +76,7 @@ public final class Dragon {
         public float breathTicks = 90f;
         /** The chains: ticks of lag per link (the heave down the neck, the tail's vertical wave), the neck's lateral
          *  sway (deg per link) and the tail's lateral wave (deg per link at the root). */
-        public float neckLag = 2.5f, tailLag = 5f, neckSway = 8.5f, tailWave = 4.5f;
+        public float neckLag = 2.5f, tailLag = 5f, neckSway = 12f, tailWave = 6.5f;
         /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
         public float riseP = 10f, dropPx = 6f, pitchUp = 9f, pitchDown = 6f;
         /** The sail's billow (degrees per strip at the power stroke's peak speed). */
@@ -216,7 +216,7 @@ public final class Dragon {
             return -1f - 0.08f * Mth.sin(p / P.hold * (float) Math.PI);
         if (p < P.down) {
             float u = (p - P.hold) / (P.down - P.hold);
-            return -1f + 2f * (1f - (1f - u) * (1f - u));
+            return -1f + 2f * (u * u * (2.2f - 1.2f * u));     // eases off the top, strikes INTO the bottom
         }
         float u = (p - P.down) / (1f - P.down);
         return 1f - 2f * Life.smooth(u);
@@ -431,7 +431,7 @@ public final class Dragon {
         }
 
         // ---- the wings ----------------------------------------------------------------------------------------------
-        float phF = ph - 3f / T, phH = ph - 0.15f, phT = ph - 0.23f;
+        float phF = ph - 3f / T, phH = ph - 0.18f, phT = ph - 0.28f;
         float sA = s0, sF = shape(P, phF), sH = shape(P, phH), sT = shape(P, phT);
         float gF = gw(P, phF, cruise, gs), gH = gw(P, phH, cruise, gs), gT = gw(P, phT, cruise, gs);
         float up0 = upOf(P, ph), upF = upOf(P, phF), upH = upOf(P, phH), upT = upOf(P, phT), dn0 = downOf(P, ph);
@@ -442,7 +442,7 @@ public final class Dragon {
             float flapZ = Mth.lerp((sA + 1f) * 0.5f, P.flapUp, P.flapDown) * a;
             float armZ = flapZ * (1f - gw0) + (P.glideArm + 4.0f * Mth.sin((age + off) / 50f)) * gw0;
             armZ = armZ * (1f - atkW) + atkArm * atkW;
-            armZ += -16f * inner + 6f * outer + 16f * flare;
+            armZ += -16f * inner + 6f * outer + 16f * flare + 4f * gw0 * Mth.sin((age + off) / 70f + 0.6f) * s;
             // the stroke plane: cruising the arm sweeps back a little on the recovery; hovering it beats FORWARD and
             // down and comes back on the recovery; a flare holds the wings forward as brakes
             float armY = (-8f * up0 * (1f - idle) + idle * (18f * dn0 - 14f * up0)) * a * (1f - gw0) + 22f * flare;
@@ -451,7 +451,7 @@ public final class Dragon {
             float foreY = -34f * upF * a * (1f - gF) - 3f * gF - 22f * inner + 2f * outer + 10f * flare;
             // the wrist trails the elbow (the tips still rising as the downstroke begins), folds back hardest on the
             // recovery so the wing comes up narrow, and opens again at the top
-            float handZ = (55f * (sF - sH) - 8f * upH) * a * (1f - gH) - (6f - 4f * Mth.sin((age + off) / 50f - 1.2f)) * gH - 5f * inner + 3f * outer + 6f * flare;
+            float handZ = (70f * (sF - sH) - 8f * upH) * a * (1f - gH) - (6f - 4f * Mth.sin((age + off) / 50f - 1.2f)) * gH - 5f * inner + 3f * outer + 6f * flare;
             float handY = -58f * upH * a * (1f - gH) - 5f * gH - 20f * inner + 3f * outer + 12f * flare;
             // the twist about the wing's long axis: pronation on the power stroke, supination on the recovery
             float foreX = -30f * (sA - sF) * a * (1f - gF);
@@ -481,12 +481,12 @@ public final class Dragon {
                 }
             }
             for (int k = 0; k < 4; k++) {
-                float p1 = ph - 0.15f - (2f + k) / T, p0 = ph - 0.15f - (4f + k) / T;
+                float p1 = ph - 0.18f - (2f + k) / T, p0 = ph - 0.18f - (4f + k) / T;
                 float v = (shape(P, p1) - shape(P, p0)) / 0.30f;
                 float g = gw(P, p1, cruise, gs);
-                dsl(r.web[i][k], -0.6f * P.billow * v * a * (1f - g) - 3f * g + 3f * g * Mth.sin(rip - 0.9f - 0.7f * (k + 2))
+                dsl(r.web[i][k], -0.9f * P.billow * v * a * (1f - g) - 3f * g + 3f * g * Mth.sin(rip - 0.9f - 0.7f * (k + 2))
                     + 5f * flare, 0, 0);
-                dsl(r.webB[i][k], -P.billow * v * a * (1f - g) - 6f * g + 6f * g * Mth.sin(rip - 1.8f - 0.7f * (k + 2))
+                dsl(r.webB[i][k], -1.4f * P.billow * v * a * (1f - g) - 6f * g + 6f * g * Mth.sin(rip - 1.8f - 0.7f * (k + 2))
                     + 7f * flare + 4f * upOf(P, p1) * (1f - g) * Mth.sin((age + off) * 1.9f + 2.2f + 0.8f * k), 0, 0);
             }
             float v1 = (shape(P, ph - 2f / T) - shape(P, ph - 4f / T)) / 0.30f;
@@ -499,7 +499,7 @@ public final class Dragon {
         float heave = shape(P, phB) * amp * (1f - gw(P, phB, cruise, gs));
         move(r.body, 0, heave > 0f ? P.riseP * heave : P.dropPx * heave, 0);
         float pitch0 = (s0 > 0f ? P.pitchUp : P.pitchDown) * s0 * amp * (1f - gw0);
-        float roll = bank * 0.85f;
+        float roll = bank * 0.85f + 4f * gw0 * Mth.sin((age + off) / 70f);   // a glide rocks: small roll corrections
         float statePitch = 10f * climb + 16f * idle + 25f * takeoff * (1f - idle) + 26f * flare + 2f * gw0;
         dsl(r.body, pitch0 + statePitch, 0, roll);
 
@@ -546,7 +546,7 @@ public final class Dragon {
                 + hangT * (k < 4 ? 1.2f : 0.6f)
                 - 0.12f * pitch0;
             float tb = k < nt / 2 ? tailA : tailB;
-            float y = (P.tailWave + 0.3f * k) * (1f - 0.5f * gw0) * Mth.sin(t1 - 0.45f * k) - tb * 0.45f * (k + 1) / nt;
+            float y = (P.tailWave + 0.4f * k) * (1f - 0.5f * gw0) * Mth.sin(t1 - 0.45f * k) - tb * 0.45f * (k + 1) / nt;
             dsl(r.tail[k], x, y, -roll * 0.05f);
         }
         dsl(r.spine1, -0.6f * shape(P, phF) * amp * (1f - gw0), 1.2f * Mth.sin(t1 + 0.45f), 0);

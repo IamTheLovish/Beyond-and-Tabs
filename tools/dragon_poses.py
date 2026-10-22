@@ -16,10 +16,10 @@ import json
 import math
 import sys
 
-P = dict(beatTicks=52.0, down=0.36, hold=0.06, flapUp=38.0, flapDown=-42.0, glideArm=6.0,
+P = dict(beatTicks=52.0, down=0.34, hold=0.06, flapUp=38.0, flapDown=-42.0, glideArm=6.0,
          burstBeats=3.0, glideBeats=2.0,
          hoverRate=0.85, takeoffRate=0.8,
-         breathTicks=90.0, neckLag=2.5, tailLag=5.0, neckSway=8.5, tailWave=4.5,
+         breathTicks=90.0, neckLag=2.5, tailLag=5.0, neckSway=12.0, tailWave=6.5,
          riseP=10.0, dropPx=6.0, pitchUp=9.0, pitchDown=6.0,
          billow=13.0,
          shakeEvery=260.0, yawnEvery=210.0, attackTicks=22.0, attackWindup=8.0,
@@ -66,7 +66,7 @@ def shape(p):
         return -1.0 - 0.08 * math.sin(p / H * math.pi)
     if p < D:
         u = (p - H) / (D - H)
-        return -1.0 + 2.0 * (1.0 - (1.0 - u) ** 2.0)
+        return -1.0 + 2.0 * (u * u * (2.2 - 1.2 * u))        # eases off the top, strikes INTO the bottom
     u = (p - D) / (1.0 - D)
     return 1.0 - 2.0 * smooth(u)
 
@@ -212,14 +212,14 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         outer = bankF if s * bank > 0 else 0.0
         a = amp * (1 - 0.30 * inner + 0.10 * outer)
         # the arm leads; the elbow 3 ticks behind; the wrist (hand) 0.15 beat behind; the fingers 0.08 beat more
-        sA, sF, sH, sT = s0, shape(lag(3)), shape(ph - 0.15), shape(ph - 0.23)
-        gA, gF, gH, gT = gw0, gw_at(lag(3)), gw_at(ph - 0.15), gw_at(ph - 0.23)
-        up0, upF, upH, upT = up_of(ph), up_of(lag(3)), up_of(ph - 0.15), up_of(ph - 0.23)
+        sA, sF, sH, sT = s0, shape(lag(3)), shape(ph - 0.18), shape(ph - 0.28)
+        gA, gF, gH, gT = gw0, gw_at(lag(3)), gw_at(ph - 0.18), gw_at(ph - 0.28)
+        up0, upF, upH, upT = up_of(ph), up_of(lag(3)), up_of(ph - 0.18), up_of(ph - 0.28)
         dn0 = down_of(ph)
         flapZ = (P["flapUp"] + (P["flapDown"] - P["flapUp"]) * (sA + 1) * 0.5) * a
         armZ = flapZ * (1 - gA) + (P["glideArm"] + 4.0 * math.sin((age + offset(ID)) / 50)) * gA
         armZ = armZ * (1 - atk_w) + atk_arm * atk_w
-        armZ += -16 * inner + 6 * outer + 16 * flare
+        armZ += -16 * inner + 6 * outer + 16 * flare + 4.0 * gA * math.sin((age + offset(ID)) / 70.0 + 0.6) * s
         # the stroke plane: cruising the arm sweeps back a little on the recovery; hovering it beats FORWARD and down
         # and comes back on the recovery (the hover's figure of eight); a flare holds the wings forward as brakes
         armY = (-8 * up0 * (1 - idle) + idle * (18 * dn0 - 14 * up0)) * a * (1 - gA) + 22 * flare
@@ -228,7 +228,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         foreY = -34 * upF * a * (1 - gF) - 3 * gF - 22 * inner + 2 * outer + 10 * flare
         # the wrist trails the elbow (the tips still rising as the downstroke begins), folds back hardest on the
         # recovery so the wing comes up narrow, and opens again at the top
-        handZ = (55 * (sF - sH) - 8 * upH) * a * (1 - gH) - (6 - 4 * math.sin((age + offset(ID)) / 50 - 1.2)) * gH - 5 * inner + 3 * outer + 6 * flare
+        handZ = (70 * (sF - sH) - 8 * upH) * a * (1 - gH) - (6 - 4 * math.sin((age + offset(ID)) / 50 - 1.2)) * gH - 5 * inner + 3 * outer + 6 * flare
         handY = -58 * upH * a * (1 - gH) - 5 * gH - 20 * inner + 3 * outer + 12 * flare
         # the twist (pronation on the power stroke, supination on the recovery)
         foreX = -30 * (sA - sF) * a * (1 - gF)
@@ -257,11 +257,11 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         sail("mem_%s_2" % side, lag(3), 1)
         for k in range(4):
             name = "web_%s_%d" % (side, k + 2)
-            p1, p0 = ph - 0.15 - (2 + k) / T, ph - 0.15 - (4 + k) / T
+            p1, p0 = ph - 0.18 - (2 + k) / T, ph - 0.18 - (4 + k) / T
             v = (shape(p1) - shape(p0)) / 0.30
             g = gw_at(p1)
-            dsl(name, (-0.6 * P["billow"] * v * a * (1 - g) - 3 * g + 3 * g * ripple(1, k + 2) + 5 * flare))
-            dsl(name + "b", (-P["billow"] * v * a * (1 - g) - 6 * g + 6 * g * ripple(2, k + 2) + 7 * flare
+            dsl(name, (-0.9 * P["billow"] * v * a * (1 - g) - 3 * g + 3 * g * ripple(1, k + 2) + 5 * flare))
+            dsl(name + "b", (-1.4 * P["billow"] * v * a * (1 - g) - 6 * g + 6 * g * ripple(2, k + 2) + 7 * flare
                              + 4.0 * up_of(p1) * (1 - g) * math.sin((age + offset(ID)) * 1.9 + 2.2 + 0.8 * k)))
         v1 = (shape(lag(2)) - shape(lag(4))) / 0.30
         dsl("mem_%s_0" % side, -0.5 * P["billow"] * v1 * a * (1 - gw0) - 3 * gw0 + 3 * gw0 * ripple(0, 0))
@@ -272,7 +272,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
     heave = sB * amp * (1 - gw_at(lag(4)))
     move("body", 0, P["riseP"] * heave if heave > 0 else P["dropPx"] * heave, 0)
     pitch0 = (P["pitchUp"] if s0 > 0 else P["pitchDown"]) * s0 * amp * (1 - gw0)
-    roll = bank * 0.85
+    roll = bank * 0.85 + 4.0 * gw0 * math.sin((age + offset(ID)) / 70.0)   # a glide rocks: small roll corrections
     statePitch = 10 * climb + 16 * idle + 25 * takeoff * (1 - idle) + 26 * flare + 2 * gw0
     dsl("body", pitch0 + statePitch, 0, roll)
 
@@ -315,7 +315,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
              + (1.8 * idle + 2.2 * flare + 1.5 * takeoff + 2.0 * max(0.0, climb)) * (1.2 if k < 4 else 0.6))
         x -= 0.12 * pitch0
         tb = tailA if k < TAIL_N // 2 else tailB
-        y = ((P["tailWave"] + 0.3 * k) * (1 - 0.5 * gw0) * math.sin(t0 * 120 / 150 + math.pi - 0.45 * k)
+        y = ((P["tailWave"] + 0.4 * k) * (1 - 0.5 * gw0) * math.sin(t0 * 120 / 150 + math.pi - 0.45 * k)
              - tb * 0.45 * (k + 1) / TAIL_N)
         dsl("tail_%d" % (k + 1), x, y, -roll * 0.05)
     dsl("spine_1", -0.6 * shape(lag(3)) * amp * (1 - gw0), 1.2 * math.sin(t0 * 120 / 150 + math.pi + 0.45), 0)
