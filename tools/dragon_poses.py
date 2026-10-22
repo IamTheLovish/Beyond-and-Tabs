@@ -1,28 +1,44 @@
 #!/usr/bin/env python3
 """The dragon rig's animation (unit/modelling/animations/Dragon.java, pose()) in Python, frame by frame, so its key
-moments can be drawn offline by tools/game_preview.py before a build: the beat at its top, mid-downstroke, bottom
-and mid-upstroke, the glide, the bank, the idle yawn and head shake, the bite. The same formulas and numbers as the
-Java (DSL degrees, y up); keep the two in step when tuning.
+moments can be drawn offline by tools/game_preview.py before a build. The same formulas and numbers as the Java (DSL
+degrees, y up); keep the two in step when tuning. r13 (lovish, Oct 22: "the dragon animation was bad"): the phase
+tables in design/anims/bone_dragon_flight.md - a heavy 40 % downstroke and a slow folding recovery, flap bursts
+between glides, three-strip sails that billow, an eight-link neck that holds an S from above, a ten-link tail as
+rudder and counterweight, hover / flare / take-off as their own states.
 
-    python3 tools/dragon_poses.py > /tmp/dragon_poses.json
+    python3 tools/dragon_poses.py > /tmp/dragon_poses.json            # the key frames
+    python3 tools/dragon_poses.py --strip > /tmp/strip.json            # one cruise rhythm, a frame every 6 ticks
+    python3 tools/dragon_poses.py --turn > /tmp/turn.json              # a synthetic turn (the bank)
     python3 tools/game_preview.py design/models/gravebound_bone_dragon.json --team tabard,tabard_dark \\
-        --poses @/tmp/dragon_poses.json --views side,front,rts --out /tmp/dragon_anim.png
+        --poses @/tmp/dragon_poses.json --views side,rts,back --translucent "mem_,web_:0.88" --out /tmp/dragon_anim.png
 """
 import json
 import math
 import sys
 
-P = dict(beatTicks=52.0, down=0.64, flapUp=36.0, flapDown=-46.0, glideArm=7.0, glideFrom=0.16, glideFull=0.34, breathTicks=90.0, neckLag=2.0,
-         tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0,
-         attackTicks=22.0, attackWindup=6.0,
+P = dict(beatTicks=52.0, down=0.40, hold=0.06, flapUp=38.0, flapDown=-42.0, glideArm=6.0,
+         burstBeats=3.0, glideBeats=2.0,
+         hoverRate=0.85, takeoffRate=0.8,
+         breathTicks=90.0, neckLag=2.5, tailLag=5.0, neckSway=6.5, tailWave=4.5,
+         riseP=6.0, dropPx=4.0, pitchUp=8.0, pitchDown=5.0,
+         billow=13.0,
+         shakeEvery=260.0, yawnEvery=210.0, attackTicks=22.0, attackWindup=8.0,
          bankMax=50.0, bankPerDeg=5.0, bankOmega=0.5, headingTau=5.0, tailBankLag=4.0, bankHover=0.45, bankGround=0.12,
          climbSpeed=0.06)
-NECK_N, TAIL_N = 5, 7
+NECK_N, TAIL_N = 8, 10
 ID = 0
 # the bite's keys in ticks from the swing moment (Dragon.KEY_T): the wind-up before 0, the hold and snap after
-KEY_T = [-6, -1, 0, 6, 10, 22]
-STRIKE = [1.0, 0.6, 0.0, -0.9, -1.3]
-ATTACK = [[0, 0, 0, 0, 0], [-4, -14, 32, -1.5, 2], [6, 10, 44, 4.0, -3], [6, 16, 44, 4.0, -3], [5, 8, 2, 3.0, -2], [0, 0, 0, 0, 0]]
+KEY_T = [-8, -2, 0, 6, 10, 22]
+# {neck x (per link, spread by STRIKE), head x, jaw open, body forward px, body x, wing (0 none, + up to the top, - down)}
+ATTACK = [[0, 0, 0, 0, 0, 0], [-5, -16, 30, -2.0, 4, 1.0], [7, 10, 44, 4.0, -4, -1.0], [7, 16, 44, 4.0, -4, -0.6],
+          [5, 8, 2, 3.0, -2, 0.0], [0, 0, 0, 0, 0, 0]]
+# how the bite's neck key spreads down the eight links: the base rises, the far links drop, so the S unrolls forward
+STRIKE = [0.8, 0.6, 0.35, 0.1, -0.2, -0.5, -0.75, -0.9]
+# the neck's lateral S: the wave's phase step per link (radians) - about one wavelength over the eight links, so a
+# travelling wave always leaves an S from above, never a straight rod
+NECK_K = 0.8
+# the sail's three chord strips: how much of the billow each hinge takes (they add up - the hem curls the most)
+STRIP_W = [0.45, 0.8, 1.0]
 
 
 def smooth(x):
@@ -40,26 +56,48 @@ def breath(age, i, period):
     return smooth(s) * 2 - 1
 
 
+def shape(p):
+    """Dragon.shape: the stroke over one beat, -1 (top) .. 1 (bottom), p in [0, 1): a short hold at the top (a
+    little more rise - the anticipation), the HEAVY downstroke (snaps off the top, loads, ~34 % of the beat), and a
+    slow recovery (60 %) that lingers low - the wrist folds first and the arm rises last."""
+    H, D = P["hold"], P["down"]
+    p %= 1.0
+    if p < H:
+        return -1.0 - 0.08 * math.sin(p / H * math.pi)
+    if p < D:
+        u = (p - H) / (D - H)
+        return -1.0 + 2.0 * (1.0 - (1.0 - u) ** 2.0)
+    u = (p - D) / (1.0 - D)
+    return 1.0 - 2.0 * smooth(u)
 
 
-HOLD = 0.08
+def up_of(p):
+    """0..1 through the recovery (the folds), 0 on the downstroke."""
+    p %= 1.0
+    D = P["down"]
+    return math.sin((p - D) / (1 - D) * math.pi) if p >= D else 0.0
 
 
-def stroke(age, i, period, down):
-    """Dragon.stroke: a hold at the top, a fast power stroke that arrives early, a softer recovery."""
-    p = ((age + offset(i)) / period) % 1.0
-    if p < HOLD:
-        return -1.0 - 0.10 * math.sin(p / HOLD * math.pi)
-    if p < down:
-        u = (p - HOLD) / (down - HOLD)
-        return -1 + 2 * (1 - (1 - u) ** 2.4)
-    u = (p - down) / (1 - down)
-    return 1 - 2 * smooth(u)
+def down_of(p):
+    """0..1 through the power stroke."""
+    p %= 1.0
+    H, D = P["hold"], P["down"]
+    return math.sin((p - H) / (D - H) * math.pi) if H <= p < D else 0.0
 
 
-def upstroke(age, i, period, down):
-    p = ((age + offset(i)) / period) % 1.0
-    return 0.0 if p < down else math.sin((p - down) / (1 - down) * math.pi)
+def rhythm(ph):
+    """Dragon.rhythm: the cruise's glide weight at beat-phase ph (beats): burstBeats beats of flapping, then a glide
+    of glideBeats beat-lengths. The glide fades in over the last recovery (the wing comes up only to the glide angle)
+    and out over the last 0.3 beat (the arm rises from the glide to the top - the anticipation of the first beat)."""
+    B, G = P["burstBeats"], P["glideBeats"]
+    c = ph % (B + G)
+    if c < B - 0.45:
+        return 0.0
+    if c < B:
+        return smooth((c - (B - 0.45)) / 0.45)
+    if c < B + G - 0.3:
+        return 1.0
+    return 1.0 - smooth((c - (B + G - 0.3)) / 0.3)
 
 
 def chain(age, i, period, k, lag):
@@ -116,10 +154,13 @@ def bank_step(st, yaw, dt, scale=1.0):
     return x
 
 
-def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None, tailA=None, tailB=None, climb=0.0):
-    """{bone: [x, y, z]} DSL degrees plus _move / _scale, as Dragon.pose would add this frame. attack_t: ticks since
-    the bite's swing moment (negative in the wind-up), as Dragon.pose takes it. tailA / tailB: the tail's lagged banks
-    (default: the bank itself, a held turn)."""
+def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0.0, flare=0.0, takeoff=0.0,
+         attack_t=None, hurt=0, death=0, look_yaw=0.0, look_pitch=0.0):
+    """{bone: [x, y, z]} DSL degrees plus _move / _scale, as Dragon.pose adds them this frame.
+    ph: the beat phase in beats (Dragon keeps it per entity: it advances dt / the current beat length, so a change of
+    rate never jumps the wings); age: ticks (breath, sway, idle); glide 0..1 (speed), idle 0..1 (hovering), bank deg,
+    tailA / tailB the tail's lagged banks, climb -1..1, flare 0..1 (braking into a hover), takeoff 0..1, attack_t the
+    ticks since the bite's swing moment (negative in the wind-up)."""
     rot, mv, sc = {}, {}, {}
     tailA = bank if tailA is None else tailA
     tailB = bank if tailB is None else tailB
@@ -136,107 +177,195 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None, tailA=None, tailB=No
         m[1] += y
         m[2] += z
 
-    T, D = P["beatTicks"], P["down"]
-    beat, beat3, beat6 = stroke(age, ID, T, D), stroke(age - 3, ID, T, D), stroke(age - 6, ID, T, D)
-    lagH = T * 0.25
-    beatH, beatH3 = stroke(age - lagH, ID, T, D), stroke(age - lagH - 3, ID, T, D)
-    up0, up2, upH, upF = (upstroke(age - t, ID, T, D) for t in (0, 2, lagH, lagH + 2))
-    corrective = bump(age, ID, 6, 160, 40)
-    rest = bump(age, ID, 7, 180, 50) * (1 - idle) * (1 - glide)
-    amp0 = (1 - 0.85 * glide * (1 - corrective)) * (1 - 0.75 * rest) * (1 + 0.25 * max(0.0, climb))
-    glide = min(1.0, glide + 0.6 * rest)
-    st = (beat + 1) * 0.5
+    T = P["beatTicks"] * (1 + (P["hoverRate"] - 1) * idle) * (1 + (P["takeoffRate"] - 1) * takeoff)
+    lag = lambda ticks: ph - ticks / T                         # the beat phase `ticks` ago
+    # the glide weight: the cruise rhythm (only cruising - a hover, a climb, a take-off and a flare beat on), and the
+    # speed's own glide with a corrective beat every ~8 s
+    cruise = (1 - idle) * (1 - max(0.0, climb)) * (1 - takeoff) * (1 - flare)
+    corrective = bump(age, ID, 6, 160, 44)
+    gs = glide * (1 - corrective)
+
+    def gw_at(p):
+        return max(rhythm(p) * cruise, gs)
+
+    gw0 = gw_at(ph)
+    amp = (1 + 0.3 * max(0.0, climb)) * (1 + 0.25 * takeoff) * (1 - 0.15 * idle) * (1 - 0.35 * flare)
+    s0 = shape(ph)
     bankF = min(1.0, abs(bank) / P["bankMax"])
+    ripple = lambda j, k: math.sin((age + offset(ID)) / 26.0 * math.tau - 0.9 * j - 0.7 * k)   # the glide's slow billow
+
+    # the attack's wing override (wind-up: up to the top and held; strike: a downstroke lands with the bite)
+    atk_w, atk_arm = 0.0, 0.0
+    if attack_t is not None and -P["attackWindup"] <= attack_t < P["attackTicks"]:
+        t = attack_t * (-KEY_T[0] / P["attackWindup"]) if attack_t < 0 else attack_t * (KEY_T[-1] / P["attackTicks"])
+        k = 0
+        while k < len(KEY_T) - 2 and t > KEY_T[k + 1]:
+            k += 1
+        f = smooth((t - KEY_T[k]) / (KEY_T[k + 1] - KEY_T[k]))
+        wkey = ATTACK[k][5] + (ATTACK[k + 1][5] - ATTACK[k][5]) * f
+        atk_w = min(1.0, abs(wkey) * 1.5) * 0.8
+        atk_arm = P["flapUp"] if wkey > 0 else P["flapDown"]
+
     for i, side in enumerate(("left", "right")):
         s = 1 if i == 0 else -1
         inner = bankF if s * bank < 0 else 0.0
         outer = bankF if s * bank > 0 else 0.0
-        amp = amp0 * (1 - 0.30 * inner + 0.10 * outer)
-        armZ = ((P["flapUp"] + (P["flapDown"] - P["flapUp"]) * st) * amp + P["glideArm"] * glide + 2.5 * glide * math.sin((age + offset(ID)) / 50)
-                - 9 * inner + 6 * outer)
-        armY = -8 * up0 * amp
-        foreZ = 55 * (beat - beat3) * amp - 16 * up2 * amp - 3 * glide - 7 * inner + 4 * outer
-        handZ = 60 * (beatH - beatH3) * amp - 10 * upH * amp - 5 * glide - 5 * inner + 3 * outer
-        foreY = -35 * up2 * amp - 3 * glide - 12 * inner + 2 * outer
-        handY = -60 * upH * amp - 6 * glide - 10 * inner + 3 * outer
-        foreX = -34 * (beat - beat3) * amp
-        handX = -45 * (beatH - beatH3) * amp
+        a = amp * (1 - 0.30 * inner + 0.10 * outer)
+        # the arm leads; the elbow 3 ticks behind; the wrist (hand) 0.15 beat behind; the fingers 0.08 beat more
+        sA, sF, sH, sT = s0, shape(lag(3)), shape(ph - 0.15), shape(ph - 0.23)
+        gA, gF, gH, gT = gw0, gw_at(lag(3)), gw_at(ph - 0.15), gw_at(ph - 0.23)
+        up0, upF, upH, upT = up_of(ph), up_of(lag(3)), up_of(ph - 0.15), up_of(ph - 0.23)
+        dn0 = down_of(ph)
+        flapZ = (P["flapUp"] + (P["flapDown"] - P["flapUp"]) * (sA + 1) * 0.5) * a
+        armZ = flapZ * (1 - gA) + (P["glideArm"] + 2.5 * math.sin((age + offset(ID)) / 50)) * gA
+        armZ = armZ * (1 - atk_w) + atk_arm * atk_w
+        armZ += -9 * inner + 6 * outer + 16 * flare
+        # the stroke plane: cruising the arm sweeps back a little on the recovery; hovering it beats FORWARD and down
+        # and comes back on the recovery (the hover's figure of eight); a flare holds the wings forward as brakes
+        armY = (-8 * up0 * (1 - idle) + idle * (18 * dn0 - 14 * up0)) * a * (1 - gA) + 22 * flare
+        # the elbow bends against the stroke (it trails the arm by 3 ticks) and folds back through the recovery
+        foreZ = (60 * (sA - sF) - 14 * upF) * a * (1 - gF) - 3 * gF - 7 * inner + 4 * outer
+        foreY = -34 * upF * a * (1 - gF) - 3 * gF - 12 * inner + 2 * outer + 10 * flare
+        # the wrist trails the elbow (the tips still rising as the downstroke begins), folds back hardest on the
+        # recovery so the wing comes up narrow, and opens again at the top
+        handZ = (55 * (sF - sH) - 8 * upH) * a * (1 - gH) - 6 * gH - 5 * inner + 3 * outer + 6 * flare
+        handY = -58 * upH * a * (1 - gH) - 5 * gH - 10 * inner + 3 * outer + 12 * flare
+        # the twist (pronation on the power stroke, supination on the recovery)
+        foreX = -30 * (sA - sF) * a * (1 - gF)
+        handX = -40 * (sF - sH) * a * (1 - gH)
         dsl("wing_%s_arm" % side, 0, s * armY, s * armZ + bank * 0.15)
         dsl("wing_%s_fore" % side, foreX, s * foreY, s * foreZ)
         dsl("wing_%s_hand" % side, handX, s * handY, s * handZ)
-        fill1, fill1b = stroke(age - 2, ID, T, D) - beat, stroke(age - 4, ID, T, D) - stroke(age - 2, ID, T, D)
-        fill2, fill2b = stroke(age - 3, ID, T, D) - beat3, stroke(age - 6, ID, T, D) - stroke(age - 3, ID, T, D)
-        fill3, fill3b = stroke(age - lagH - 3, ID, T, D) - beatH, stroke(age - lagH - 6, ID, T, D) - stroke(age - lagH - 3, ID, T, D)
-        belly, bellyH = 9 * beat * amp, 9 * beatH * amp
-        flut, w0 = 4 * up0 * amp, (age + offset(ID)) * 1.9
-        dsl("mem_%s_1" % side, 28 * fill1 * amp + 0.5 * belly - 4 * glide)
-        dsl("mem_%s_1b" % side, 30 * fill1b * amp + belly + flut * math.sin(w0))
-        dsl("mem_%s_2" % side, 34 * fill2 * amp + 0.5 * belly - 5 * glide)
-        dsl("mem_%s_2b" % side, 34 * fill2b * amp + belly + flut * math.sin(w0 + 1.1))
-        for k in range(4):
-            dsl("web_%s_%d" % (side, k + 2), 36 * fill3 * amp + 0.5 * bellyH - 5 * glide)
-            dsl("web_%s_%db" % (side, k + 2), 36 * fill3b * amp + bellyH + flut * math.sin(w0 + 2.2 + 0.8 * k))
-        dsl("mem_%s_0" % side, 14 * fill1 * amp + 0.4 * belly - 3 * glide)
+        # the fingers: closed toward the leading one on the recovery (latest of all), spread in a flare, and each
+        # tip trails its finger - the trailing fingers lag more (a fan that ripples open)
         for k in range(3):
-            dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (18 + 14 * k) * upF * amp, 0)
-    amp = amp0
-    heave = beat3 * amp
+            spread = (18 + 16 * k) * upT * a * (1 - gT) - (4 + 3 * k) * flare
+            lift = 10 * (sH - sT) * a * (1 - gT) * (1 + 0.4 * k)
+            dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * spread, s * lift)
+        # the sail: each chord strip hinges on the one ahead; the load (the stroke's speed, a tick or two late per
+        # strip) billows it UP behind the power stroke and cups it DOWN behind the recovery; the glide holds it
+        # lifted with a slow ripple; the flare cups it hard (air brakes). x > 0 tips a strip's far edge down.
+        def sail(name_fmt, lead, k, wbase=1.0):
+            for j, suf in enumerate(("", "b", "c")):
+                p1, p0 = lead - (1 + 1.5 * j) / T, lead - (3 + 1.5 * j) / T
+                v = (shape(p1) - shape(p0)) / 0.30                   # ~ +1 at the power stroke's peak speed
+                g = gw_at(p1)
+                x = (-P["billow"] * v * a * (1 - g) - 5 * g + 4.0 * g * ripple(j, k) + 7 * flare - 3 * (1 - g) * (1 - idle)) * STRIP_W[j] * wbase
+                x += 4.0 * up_of(p1) * (1 - g) * math.sin((age + offset(ID)) * 1.9 + j + k) * (j == 2)   # the hem flutters
+                dsl(name_fmt + suf, x)
+        sail("mem_%s_1" % side, ph, 0, 0.9)
+        sail("mem_%s_2" % side, lag(3), 1)
+        for k in range(4):
+            name = "web_%s_%d" % (side, k + 2)
+            p1, p0 = ph - 0.15 - (2 + k) / T, ph - 0.15 - (4 + k) / T
+            v = (shape(p1) - shape(p0)) / 0.30
+            g = gw_at(p1)
+            dsl(name, (-0.6 * P["billow"] * v * a * (1 - g) - 3 * g + 3 * g * ripple(1, k + 2) + 5 * flare))
+            dsl(name + "b", (-P["billow"] * v * a * (1 - g) - 4 * g + 4 * g * ripple(2, k + 2) + 7 * flare
+                             + 4.0 * up_of(p1) * (1 - g) * math.sin((age + offset(ID)) * 1.9 + 2.2 + 0.8 * k)))
+        v1 = (shape(lag(2)) - shape(lag(4))) / 0.30
+        dsl("mem_%s_0" % side, -0.5 * P["billow"] * v1 * a * (1 - gw0) - 3 * gw0 + 3 * gw0 * ripple(0, 0))
+
+    # ---- the body: rises on the downstroke a quarter beat late and sinks through the recovery; nose up at the
+    # bottom; the states pitch it (a climb, a hover, a take-off, a flare: nose up); the bank rolls it
+    sB = shape(lag(4))
+    heave = sB * amp * (1 - gw_at(lag(4)))
     move("body", 0, P["riseP"] * heave if heave > 0 else P["dropPx"] * heave, 0)
-    pitch0 = (P["pitchUp"] if beat > 0 else P["pitchDown"]) * beat * amp
+    pitch0 = (P["pitchUp"] if s0 > 0 else P["pitchDown"]) * s0 * amp * (1 - gw0)
     roll = bank * 0.85
-    dsl("body", pitch0 + 3 * glide + 10 * climb, 0, roll)
+    statePitch = 10 * climb + 16 * idle + 25 * takeoff * (1 - idle) + 26 * flare + 2 * gw0
+    dsl("body", pitch0 + statePitch, 0, roll)
+
+    # ---- breath, always ------------------------------------------------------------------------------------------
     br = breath(age, ID, P["breathTicks"] * (1 - 0.3 * glide))
     swell = 0.5 + 0.5 * br
     sc["ribs"] = [1 + 0.10 * swell, 1 + 0.08 * swell, 1 + 0.02 * swell]
+
+    # ---- the neck: eight links. Vertical: the heave lags down the chain (the base flexes down as the body rises, the
+    # head counters it and stays level). Lateral: a travelling wave about one wavelength long, so from above it is
+    # ALWAYS an S (r12's five links swayed together and read as a rod). The bank: counter-roll, and a curve INTO the
+    # turn that grows toward the head (the head leads). Hover: up in a tall S, the head looking down.
     neckX = neckY = 0.0
-    neckRoll, neckLead = -roll * 0.6 / NECK_N, bank * 0.42 / NECK_N
+    neckRoll = -roll * 0.6 / NECK_N
+    t0 = (age + offset(ID)) / 120.0 * math.tau
     for k in range(NECK_N):
-        f = 1 - 0.1 * k
-        x = (-2.6 * f * stroke(age - P["neckLag"] * (k + 1), ID, T, D) * amp + P["neckWave"] * chain(age, ID, 64, k, P["neckLag"]) * (1 - 0.5 * glide)
-             + (2.5 * br if k < 2 else 0) - (0.35 * pitch0 if k < 2 else 0) - 1.2 * glide)
-        y = 2.4 * chain(age, ID, 110, k, 7) * (1 - 0.6 * glide)
-        dsl("neck_%d" % (k + 1), x, y + neckLead, neckRoll)
+        f = 1 - 0.06 * k
+        sk = shape(lag(P["neckLag"] * (k + 1)))
+        x = (-3.2 * f * sk * amp * (1 - gw_at(lag(P["neckLag"] * (k + 1))))
+             + (2.0 * br if k < 3 else 0) - (0.3 * pitch0 if k < 3 else 0)
+             - 1.0 * gw0 - 0.6 * statePitch / NECK_N * (1.6 if k < 4 else 0.4)
+             + (3.0 * idle if k < 3 else -2.0 * idle))
+        y = P["neckSway"] * (1 - 0.4 * gw0) * math.sin(t0 - NECK_K * k) + bank * 0.06 * (k + 1) / NECK_N * 2
+        dsl("neck_%d" % (k + 1), x, y, neckRoll)
         neckX += x
         neckY += y
     dsl("head", -0.85 * neckX, -0.85 * neckY, 0)
-    dsl("head", -0.6 * br, bank * 0.12, -roll * 0.3)
+    dsl("head", -0.6 * br - 8 * idle, bank * 0.10, -roll * 0.3)
+
+    # ---- the tail: ten links. Lateral: a travelling wave, slower than the neck's, half a wavelength over the tail,
+    # its base swinging AGAINST the neck's base (the counterweight); the rudder curls it into a bank on the two lagged
+    # banks. Vertical: the heave reaches it a quarter beat late and runs down it; it streams level in a glide, hangs
+    # low in a hover, a climb, a take-off and a flare.
     for k in range(TAIL_N):
-        f = 0.55 + 0.1 * k
-        x = (5 * f * stroke(age - T * 0.25 - P["tailLag"] * k, ID, T, D) * amp + 1.0 * chain(age, ID, 80, k, 6) * (1 - 0.5 * glide)
-             - 2.5 * glide * (1 if k < 3 else 0.5))
-        tb = tailA if k < TAIL_N // 2 else tailB
-        y = (P["tailWave"] + 0.6 * k) * chain(age, ID, 72, k, P["tailLag"]) * (1 - 0.6 * glide) - tb * 0.28 * (k + 1) / TAIL_N
+        f = 0.5 + 0.08 * k
+        sk = shape(ph - 0.25 - P["tailLag"] * k / T)
+        x = (4.0 * f * sk * amp * (1 - gw_at(ph - 0.25))
+             + 1.2 * chain(age, ID, 90, k, 6) * (1 - 0.5 * gw0)
+             - 2.0 * gw0 * (1 if k < 4 else 0.5)
+             + (1.8 * idle + 2.2 * flare + 1.5 * takeoff + 2.0 * max(0.0, climb)) * (1.2 if k < 4 else 0.6))
         x -= 0.12 * pitch0
-        x += 2.5 * climb * (k + 1) / TAIL_N
-        dsl("tail_%d" % (k + 1), x, y, -roll * 0.07)
-    dsl("spine_1", -0.6 * beat3 * amp, 1.0 * chain(age, ID, 72, 0, 0), 0)
-    dsl("spine_2", -0.8 * beat6 * amp, 1.4 * chain(age, ID, 72, 1, P["tailLag"]), 0)
-    d4, d7, d10 = (stroke(age - t, ID, T, D) * amp for t in (4, 7, 10))
-    swingG = 5 * wander(age, ID, 160) * glide
+        tb = tailA if k < TAIL_N // 2 else tailB
+        y = ((P["tailWave"] + 0.3 * k) * (1 - 0.5 * gw0) * math.sin(t0 * 120 / 150 + math.pi - 0.45 * k)
+             - tb * 0.30 * (k + 1) / TAIL_N)
+        dsl("tail_%d" % (k + 1), x, y, -roll * 0.05)
+    dsl("spine_1", -0.6 * shape(lag(3)) * amp * (1 - gw0), 1.2 * math.sin(t0 * 120 / 150 + math.pi + 0.45), 0)
+    dsl("spine_2", -0.8 * shape(lag(6)) * amp * (1 - gw0), 1.4 * math.sin(t0 * 120 / 150 + math.pi + 0.2), 0)
+
+    # ---- the legs: tucked in flight, trailing the heave; dangling in a hover / take-off, reaching in a flare -------
+    hang = max(idle, takeoff, flare)
+    d4, d7 = (shape(lag(t)) * amp * (1 - gw0) for t in (4, 7))
+    swingG = 4 * wander(age, ID, 160) * gw0
     for i, leg in enumerate(("front_left", "front_right", "hind_left", "hind_right")):
         front = i < 2
         dr = 1 if front else -1
-        dsl(leg + "_upper", -4 * d4 - 6 * glide * dr + swingG)
-        dsl(leg + "_lower", -5 * d7 * dr)
-        dsl(leg + "_foot", 6 * d10 + 3 * wander(age - 5 * i, ID, 90))
+        sway = 4 * wander(age - 9 * i, ID, 70) * hang
+        if front:
+            dsl(leg + "_upper", -4 * d4 - 6 * gw0 + swingG + 40 * hang + sway)
+            dsl(leg + "_lower", -5 * d7 - 70 * hang)
+            dsl(leg + "_foot", 6 * d4 + 3 * wander(age - 5 * i, ID, 90) - 10 * hang)
+        else:
+            dsl(leg + "_upper", -4 * d4 + 6 * gw0 + swingG + 55 * hang + 15 * flare + sway)
+            dsl(leg + "_lower", 5 * d7 + 25 * hang)
+            dsl(leg + "_foot", 6 * d4 + 3 * wander(age - 5 * i, ID, 90) - 55 * hang)
+
+    # ---- idle behaviours (fade with speed) --------------------------------------------------------------------------
     if idle > 0.02:
         sh = shake(age, ID, 2, P["shakeEvery"], 16, 2.5) * idle
         sh1 = shake(age - 1, ID, 2, P["shakeEvery"], 16, 2.5) * idle
         dsl("head", 0, 25 * sh, 6 * sh)
-        dsl("neck_%d" % NECK_N, 0, 8 * sh1, 0)
+        dsl("neck_%d" % NECK_N, 0, 6 * sh1, 0)
         dsl("neck_%d" % (NECK_N - 1), 0, 4 * sh1, 0)
+        dsl("neck_%d" % (NECK_N - 2), 0, 2 * sh1, 0)
         yawn = bump(age, ID, 1, P["yawnEvery"], 34) * idle
         dsl("jaw", -50 * yawn)
         dsl("head", 12 * yawn)
         for k in range(NECK_N // 2, NECK_N):
-            dsl("neck_%d" % (k + 1), 4 * yawn)
+            dsl("neck_%d" % (k + 1), 3 * yawn)
         look = wander(age, ID, 200) * idle
         for k in range(NECK_N // 2, NECK_N):
-            dsl("neck_%d" % (k + 1), 0, 5 * look, 0)
+            dsl("neck_%d" % (k + 1), 0, 3.5 * look, 0)
         dsl("head", 0, 6 * look, 0)
         fl = shake(age, ID, 5, 170, 24, 1.5) * idle
         for k in range(TAIL_N // 2, TAIL_N):
-            dsl("tail_%d" % (k + 1), 0, 7 * fl, 0)
+            dsl("tail_%d" % (k + 1), 0, 5 * fl, 0)
+
+    # ---- the look: the last links turn first, the head finishes it ------------------------------------------------
+    yaw, pitch = max(-55, min(55, look_yaw)), max(-35, min(35, look_pitch))
+    for k in range(max(0, NECK_N - 4), NECK_N):
+        dsl("neck_%d" % (k + 1), -pitch * 0.09, -yaw * 0.11, 0)
+    dsl("head", -pitch * 0.45, -yaw * 0.5, 0)
+
+    # ---- the bite -------------------------------------------------------------------------------------------------
     if attack_t is not None and -P["attackWindup"] <= attack_t < P["attackTicks"]:
         t = attack_t * (-KEY_T[0] / P["attackWindup"]) if attack_t < 0 else attack_t * (KEY_T[-1] / P["attackTicks"])
         k = 0
@@ -244,63 +373,78 @@ def pose(age, glide=0.0, idle=1.0, bank=0.0, attack_t=None, tailA=None, tailB=No
             k += 1
         f = smooth((t - KEY_T[k]) / (KEY_T[k + 1] - KEY_T[k]))
         key = lambda c: ATTACK[k][c] + (ATTACK[k + 1][c] - ATTACK[k][c]) * f
-        for i in range(NECK_N):
-            dsl("neck_%d" % (i + 1), key(0) * STRIKE[min(i, len(STRIKE) - 1)])
+        for n in range(NECK_N):
+            dsl("neck_%d" % (n + 1), key(0) * STRIKE[n])
         dsl("head", key(1))
         dsl("jaw", -key(2))
         move("body", 0, 0, -key(3))
         dsl("body", key(4))
+
+    # ---- the hit flinch and the death fold ------------------------------------------------------------------------
+    if hurt > 0 and death == 0:
+        h = math.sin(hurt / 10 * math.pi)
+        dsl("head", 4 * h, -14 * h, 6 * h)
+        dsl("neck_1", -5 * h, -4 * h, 0)
+        dsl("body", 0, 0, 5 * h)
+    if death > 0:
+        d = smooth(min(1.0, (death + 1) / 14))
+        for i, side in enumerate(("left", "right")):
+            s = 1 if i == 0 else -1
+            dsl("wing_%s_arm" % side, 0, 0, s * -30 * d)
+            dsl("wing_%s_fore" % side, 0, s * -60 * d, s * 20 * d)
+            dsl("wing_%s_hand" % side, 0, s * -70 * d, 0)
+            for k in range(3):
+                dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (20 + 10 * k) * d, 0)
+        for k in range(NECK_N):
+            dsl("neck_%d" % (k + 1), -6 * d, 2 * d, 0)
+        dsl("head", 10 * d)
+        dsl("jaw", -18 * d)
+        for k in range(TAIL_N):
+            dsl("tail_%d" % (k + 1), 2 * d)
+
     out = {b: [round(v, 2) for v in r] for b, r in rot.items()}
     out["_move"] = {b: [round(v, 2) for v in m] for b, m in mv.items()}
     out["_scale"] = {b: [round(v, 3) for v in m] for b, m in sc.items()}
     return out
 
 
-def _at_phase(phase, pred, span=40):
-    """The first age at beat phase `phase` (0 = top) where pred(age) is largest over `span` beats."""
-    T = P["beatTicks"]
-    base = -offset(ID) + phase * T
-    return max((base + n * T for n in range(span)), key=pred)
-
-
-def strip(n=8):
-    """n evenly spaced frames across one beat (phase 0 = the top of the hold), so the hold, the snap and the
-    recovery can be read side by side."""
-    T = P["beatTicks"]
-    base = -offset(ID)
-    return {"beat %d/%d" % (i, n): pose(base + T * i / n, idle=0.0) for i in range(n)}
+AGE0 = 100.0   # any age; the phase is what places the wings
 
 
 def frames():
-    """The moments worth looking at: the beat's four quarters, a glide, a bank, then the idles and the bite drawn at
-    the same mid-downstroke phase (the wings level) so what the head, neck and jaw do is what differs."""
-    T, D = P["beatTicks"], P["down"]
-    base = -offset(ID)                                   # age at which the beat's phase is 0 (the top)
-    out = {
-        "beat top": pose(base, idle=0.0),
-        "mid down": pose(base + (HOLD + (D - HOLD) * 0.55) * T, idle=0.0),
-        "beat bottom": pose(base + D * T, idle=0.0),
-        "mid up": pose(base + (D + (1 - D) * 0.5) * T, idle=0.0),
-        "glide": pose(base + 0.3 * T, glide=1.0, idle=0.0),
-        "bank left": pose(base + 0.3 * T, glide=0.3, idle=0.0, bank=-30.0),
-        "bank right": pose(base + 0.3 * T, glide=0.3, idle=0.0, bank=30.0),
-        "climb": pose(base + 0.3 * T, idle=0.0, climb=1.0),
-    }
-    yawn_age = _at_phase(0.3, lambda a: bump(a, ID, 1, P["yawnEvery"], 34))
-    out["yawn"] = pose(yawn_age, idle=1.0)
-    shake_age = _at_phase(0.3, lambda a: shake(a, ID, 2, P["shakeEvery"], 16, 2.5))
-    out["head shake"] = pose(shake_age, idle=1.0)
-    out["bite"] = pose(base + 0.3 * T, idle=0.0, attack_t=3.0)            # 3 ticks after the shot: the hold, jaw at its gape
-    out["bite windup"] = pose(base + 0.3 * T, idle=0.0, attack_t=-3.0)    # mid wind-up: rearing back, the jaw opening
+    """The key frames of every state (the phase tables' rows)."""
+    out = {}
+    for name, p in (("top", 0.03), ("early down", 0.14), ("mid down", 0.24), ("bottom", 0.42), ("early up", 0.58),
+                    ("mid up", 0.74), ("late up", 0.90)):
+        out["flap " + name] = pose(p, AGE0 + p * P["beatTicks"])
+    out["glide"] = pose(3.6, AGE0 + 3.6 * P["beatTicks"])
+    out["glide exit"] = pose(4.85, AGE0 + 4.85 * P["beatTicks"])
+    out["bank right"] = pose(0.24, AGE0, bank=40.0, tailA=30.0, tailB=20.0)
+    out["bank left glide"] = pose(3.6, AGE0, bank=-40.0, tailA=-30.0, tailB=-20.0)
+    out["hover down"] = pose(0.24, AGE0, idle=1.0)
+    out["hover up"] = pose(0.70, AGE0, idle=1.0)
+    out["attack windup"] = pose(0.7, AGE0, idle=1.0, attack_t=-3.0)
+    out["attack strike"] = pose(0.2, AGE0, idle=1.0, attack_t=3.0)
+    out["takeoff"] = pose(0.30, AGE0, takeoff=1.0)
+    out["flare"] = pose(0.10, AGE0, flare=1.0, idle=0.3)
     return out
 
 
-def turn(yaw_rate=6.0, hold=24, n=12, every=4, glide=0.3):
-    """A synthetic turn: the heading turns `yaw_rate` deg/tick for `hold` ticks then stops; a frame every `every`
-    ticks through the roll-in, the hold and the settle (what the game's bankStep sees: the body yaw, tick by tick).
-    Also prints the bank per tick to stderr."""
+def strip(state="cruise", every=4.0, n=None):
+    """A frame every `every` ticks: cruise = one whole rhythm (bursts then the glide), hover = two beats."""
     T = P["beatTicks"]
-    base = -offset(ID) + 0.3 * T
+    if state == "hover":
+        T *= P["hoverRate"]
+        n = n or int(2 * T / every)
+        return {"t%03d" % i: pose(i * every / T, AGE0 + i * every, idle=1.0) for i in range(n)}
+    n = n or int((P["burstBeats"] + P["glideBeats"]) * T / every)
+    return {"t%03d" % i: pose(i * every / T, AGE0 + i * every) for i in range(n)}
+
+
+def turn(yaw_rate=6.0, hold=24, n=12, every=4):
+    """A synthetic turn: the heading turns `yaw_rate` deg/tick for `hold` ticks then stops; a frame every `every`
+    ticks through the roll-in, the hold and the settle (what the game's bankStep sees). Bank per tick to stderr."""
+    T = P["beatTicks"]
     st, yaw, out = new_state(), 0.0, {}
     bank_step(st, yaw, 0.0)
     for t in range(n * every):
@@ -309,7 +453,7 @@ def turn(yaw_rate=6.0, hold=24, n=12, every=4, glide=0.3):
         bank_step(st, yaw, 1.0, 1.0)
         print("t %2d yaw %6.1f bank %6.2f tailA %6.2f tailB %6.2f" % (t + 1, yaw, st["bank"], st["tailA"], st["tailB"]), file=sys.stderr)
         if (t + 1) % every == 0:
-            out["turn t%02d" % (t + 1)] = pose(base + t + 1, glide=glide, idle=0.0, bank=st["bank"], tailA=st["tailA"], tailB=st["tailB"])
+            out["turn t%02d" % (t + 1)] = pose((t + 1) / T, AGE0 + t + 1, bank=st["bank"], tailA=st["tailA"], tailB=st["tailB"])
     return out
 
 
@@ -318,8 +462,8 @@ if __name__ == "__main__":
     if which[:1] == ["--turn"]:
         json.dump(turn(*[float(a) for a in which[1:]]) if len(which) > 1 else turn(), sys.stdout, indent=1)
         sys.exit(0)
-    if which == ["--strip"]:
-        json.dump(strip(), sys.stdout, indent=1)
+    if which[:1] == ["--strip"]:
+        json.dump(strip(*which[1:2]), sys.stdout, indent=1)
         sys.exit(0)
     fr = frames()
     if which:
