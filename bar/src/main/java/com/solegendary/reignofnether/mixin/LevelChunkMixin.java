@@ -31,6 +31,8 @@ public abstract class LevelChunkMixin {
         if (UnitServerEvents.rtsPathfinding)
             WalkabilityGrid.markChunkDirtyIfPresent(getLevel(), pos);
         ResourceIndex.onBlockChange(getLevel(), pos, state);
+        // the chase goals' per-tick cell memo (Terrain.classify) must not answer from before this change
+        com.solegendary.reignofnether.unit.Terrain.onBlockChanged();
         // client: a ground scar's decal follows the column's new top face (worldmemory/GroundMemoryClient)
         WorldMemoryHooks.onBlockChanged(getLevel(), pos);
     }
