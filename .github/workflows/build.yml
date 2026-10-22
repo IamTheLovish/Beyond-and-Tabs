@@ -129,6 +129,7 @@ jobs:
       code: ${{ steps.plan.outputs.code }}
       matrix: ${{ steps.plan.outputs.matrix }}
       shards: ${{ steps.plan.outputs.shards }}
+      where: ${{ steps.route.outputs.where }}
     steps:
       - uses: actions/checkout@v4
         with: { sparse-checkout: tools, fetch-depth: 1 }
@@ -138,14 +139,44 @@ jobs:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: python3 tools/ci_plan.py
+      # 40 runners (lovish Oct 22): this account's 20 and the org mirror's 20 - PR GameTests go where fewer wait
+      - id: route
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          HAS_MIRROR_TOKEN: ${{ secrets.CI_MIRROR_TOKEN != '' && 'yes' || '' }}
+        run: python3 tools/ci_route.py
+
+  # the GameTests of a PR routed to the mirror (tools/ci_route.py): copy the PR head there and start its build; the
+  # result comes back as the commit status `ci-mirror` (ci-mirror-report.yml), which ci_wait / merge_pr read
+  mirror:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where == 'mirror' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-mirror-${{ github.event.pull_request.number }}   # shared with ci-mirror.yml
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.pull_request.head.sha }}", fetch-depth: 0 }   # the mirror counts dev time from history
+      - env:
+          TOKEN: ${{ secrets.CI_MIRROR_TOKEN }}
+          GITHUB_TOKEN_HERE: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          MIRROR: ILovishThe/beyond-and-tabs-ci
+        run: bash tools/ci_mirror_send.sh
 
   # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
   bar:
     # no `needs: build` any more (it put the 1.5 min of the tools audits on the critical path): bar-publish waits for
     # build, so the two releases are still never updated at the same moment. Docs-only changes skip this job.
     needs: changes
-    # a PR labelled ci-mirror runs its GameTests in the mirror's runners instead (ci-mirror.yml)
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && !contains(github.event.pull_request.labels.*.name, 'ci-mirror') }}
+    # where=mirror: this PR's GameTests run on the org's runners instead (job mirror below, tools/ci_route.py)
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -232,7 +263,7 @@ jobs:
   # as bar; no jar is kept from here. Docs-only changes skip it.
   bar-tests:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && !contains(github.event.pull_request.labels.*.name, 'ci-mirror') }}
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures
