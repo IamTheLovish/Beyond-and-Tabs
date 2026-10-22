@@ -137,9 +137,9 @@ public final class RtsPathfinder {
     }
 
     /**
-     * The farthest point on the straight line from {@code start} toward {@code target} whose chunk (and every chunk
-     * before it on the line) is loaded, on the ground there (motion-blocking height); null when that is within two
-     * blocks of the start (nowhere to go). Ground out of vertical reach is replaced by the start height.
+     * The farthest point, at most one A* search radius out, on the straight line from {@code start} toward
+     * {@code target} whose chunk (and every chunk before it on the line) is loaded, on the ground there
+     * (motion-blocking height); null when that is within two blocks of the start (nowhere to go). Ground out of vertical reach is replaced by the start height.
      */
     @Nullable
     public static BlockPos lastLoadedToward(Level level, BlockPos start, BlockPos target) {
@@ -148,7 +148,11 @@ public final class RtsPathfinder {
         if (len < 1)
             return null;
         int bx = start.getX(), bz = start.getZ();
-        for (double t = 4; t < len; t += 4) {
+        // at most one search radius out: A* cannot look further in one go, and a far point (a GameTest server or a
+        // busy map keeps a wide area loaded) made the request warm a corridor of hundreds of chunks first - the unit
+        // stood for 30 s and more (CI, PR #118). The unit repaths from there and goes on as chunks load round it.
+        double maxT = Math.min(len, PathfinderConfig.MAX_RADIUS - 8);
+        for (double t = 4; t <= maxT; t += 4) {
             int x = Mth.floor(start.getX() + dx * t / len), z = Mth.floor(start.getZ() + dz * t / len);
             if (isUnloaded(level, new BlockPos(x, start.getY(), z)))
                 break;
