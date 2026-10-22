@@ -49,11 +49,11 @@ RECTS = {                                   # x0, y0, x1, y1 in A (artboard laye
 }
 FRAME_W = 0.66                              # frame_left / frame_right: FRAME_W x 1 A, pinned to the screen edges
 # the river: centreline points (x, y, half width), from the foot of the cascade toward the viewer
-RIVER = [(0.000, 0.792, 0.030), (0.016, 0.806, 0.044), (-0.012, 0.822, 0.058), (-0.075, 0.842, 0.080),
-         (-0.090, 0.866, 0.108), (-0.010, 0.893, 0.145), (0.120, 0.926, 0.195), (0.110, 0.962, 0.255),
-         (-0.060, 1.010, 0.330)]
+RIVER = [(0.000, 0.836, 0.046), (0.020, 0.850, 0.062), (0.010, 0.866, 0.082), (-0.070, 0.886, 0.110),
+         (-0.140, 0.910, 0.150), (-0.100, 0.938, 0.195), (0.060, 0.966, 0.250), (0.200, 0.995, 0.310),
+         (0.240, 1.030, 0.380)]
 HORIZON = 0.70                              # perspective for the river's flow coordinate
-CASCADE = (0.0, 0.736, 0.020, 0.797, 0.030)  # x, top y, top half width, bottom y, bottom half width
+CASCADE = (0.0, 0.736, 0.020, 0.840, 0.046)  # x, top y, top half width, bottom y, bottom half width
 
 INK = np.array((6, 5, 8), np.float32) / 255
 rng_global = np.random.default_rng(7)
@@ -1180,9 +1180,20 @@ def ground(w=2560, h=484):
                 places.append((cx + side * off, y, 0.006 + 0.03 * persp * rr.uniform(0.5, 1.1)))
         if rr.random() < 0.25:
             places.append((cx + rr.uniform(-1.4, 1.4) * hwr * 2.4, y, 0.004 + 0.02 * persp * rr.random()))
-    # rocks round the foot of the steps (the cascade breaks over them)
-    for k in range(-9, 10):
-        places.append((k * 0.016 + rr.uniform(-0.004, 0.004), 0.797 + rr.uniform(-0.004, 0.006), 0.008 + rr.random() * 0.006))
+    # stepped rock ledges below the stair: the fall breaks over them on its way to the river
+    for row, (yy, span, rad) in enumerate(((0.806, 0.11, 0.010), (0.822, 0.13, 0.012), (0.838, 0.15, 0.013))):
+        for k in range(-7, 8):
+            x = k * span / 7 + rr.uniform(-0.004, 0.004)
+            if abs(x) < 0.02 + row * 0.008:
+                continue
+            places.append((x, yy + rr.uniform(-0.003, 0.003), rad * rr.uniform(0.8, 1.2)))
+    # wet rocks breaking the river's surface
+    in_river = []
+    for yy, uu, rad in ((0.875, 0.35, 0.010), (0.905, -0.45, 0.013), (0.93, 0.55, 0.016), (0.955, -0.30, 0.018),
+                        (0.985, 0.70, 0.024), (1.0, -0.65, 0.026)):
+        c = river_at(yy)
+        in_river.append((c[0] + uu * c[1], yy, rad))
+    places += in_river
     for x, y, r in sorted(places, key=lambda p: p[1]):
         ps = b.pts(rock_poly(x, y, r, rr))
         tone = int(rr.uniform(40, 90))
@@ -1202,6 +1213,9 @@ def ground(w=2560, h=484):
     rock_rgb = lerp(col((7, 7, 10)), col((50, 48, 58)), rtone * 1.6)
     rock_rgb = lerp(rock_rgb, col((110, 106, 122)), hat * rtone * 0.5)
     rock_rgb = lerp(rock_rgb, col((196, 190, 200)), rline * 0.85)
+    # wet gloss: sharp specular glints along the lit top edges
+    gl_ = fbm(U01, V01, 300, 79, False, 2)
+    rock_rgb = lerp(rock_rgb, col((255, 236, 236)), rline * smoothstep(0.62, 0.72, gl_) * 0.9)
     # river-facing faces pick up the crimson
     rock_rgb = lerp(rock_rgb, col((150, 24, 30)), np.clip(1.6 - np.abs(u), 0, 1)[..., None][..., 0] * 0.35)
 
@@ -1230,7 +1244,7 @@ def ground(w=2560, h=484):
     sk = Image.new("L", (b.W, b.H), 0)
     skl = Image.new("L", (b.W, b.H), 0)
     dsk, dskl = ImageDraw.Draw(sk), ImageDraw.Draw(skl)
-    sx, sy, srad = 0.112, 0.948, 0.019
+    sx, sy, srad = 0.02, 0.962, 0.019
     dsk.ellipse(b.pts([(sx - srad, sy - srad * 1.05), (sx + srad, sy + srad * 0.9)]), fill=150)
     dsk.polygon(b.pts([(sx - srad * 0.7, sy + srad * 0.3), (sx + srad * 0.7, sy + srad * 0.3), (sx + srad * 0.45, sy + srad * 0.95), (sx - srad * 0.45, sy + srad * 0.95)]), fill=130)
     for ex in (-0.42, 0.42):
@@ -1249,14 +1263,34 @@ def ground(w=2560, h=484):
     dd = np.hypot((X - sx) / 2.6, (Y - (sy + srad * 0.58)))
     rings = np.clip((np.sin(dd / srad * 14) - 0.5) / 0.5, 0, 1) * smoothstep(srad * 1.6, srad * 0.7, dd) * smoothstep(srad * 0.3, srad * 0.5, dd)
 
+    # foam: round the rocks in the river (downstream streaks) and in a churned ring at the foot of the fall
+    foam = np.zeros_like(X)
+    for (fx, fy, fr) in in_river:
+        dx_, dy_ = (X - fx) / (fr * 2.2), (Y - fy - fr * 0.25) / (fr * 0.9)
+        dd = np.hypot(dx_, dy_)
+        foam += np.exp(-((dd - 1.0) / 0.25) ** 2) * smoothstep(-0.3, 0.6, dy_)
+    cx_, ty, thw, by, bhw = CASCADE
+    dd = np.hypot((X - cx_) / (bhw * 2.2), (Y - by - 0.004) / 0.012)
+    speck = fbm(U01, V01, 220, 78, False, 2)
+    foam += np.exp(-dd ** 2 * 1.5) * smoothstep(0.45, 0.65, speck) * 1.5
+    foam = np.clip(foam, 0, 1) * water
+    # the glass's amber light spilling down the steps and onto the head of the river
+    spillw = np.exp(-((X / 0.11) ** 2 + ((Y - 0.76) / 0.06) ** 2))
+    rgb = rgb + col((200, 120, 50)) * (spillw * 0.35 * land)[..., None]
+    wrgb = wrgb + col((230, 120, 60)) * (spillw * 0.4)[..., None]
+    # contact shadows: under the cathedral's foot and under every rock
+    rgb *= (1 - 0.6 * smoothstep(0.738, 0.744, Y) * (1 - smoothstep(0.744, 0.760, Y)) * (np.abs(X) < 0.30))[..., None]
+    rshadow = blur(np.roll(rcov, int(b.sy * 0.006), axis=0), b.ss * 4)
     out = lerp(rgb, wrgb, water)
+    out *= (1 - rshadow * 0.65)[..., None]
     out = lerp(out, col((220, 70, 70)), rings * water * 0.4)
+    out = lerp(out, col((255, 196, 186)), foam * 0.55)
     out = lerp(out, sk_rgb, sk_cov)
     out = lerp(out, rock_rgb, rcov)
     # the cascade's channel down the steps: dark wet red (the animated fall is drawn over it)
     cx_, ty, thw, by, bhw = CASCADE
     k = np.clip((Y - ty) / (by - ty), 0, 1)
-    ch = (np.abs(X - cx_) < thw + (bhw - thw) * k) & (Y > ty - 0.002) & (Y < by + 0.006)
+    ch = (np.abs(X - cx_) < thw + (bhw - thw) * k) & (Y > ty - 0.002) & (Y < by + 0.002)
     out = lerp(out, col((80, 6, 12)), ch.astype(np.float32) * 0.92)
     alpha = np.clip(land + rcov + water, 0, 1)
     save_rgba(out, alpha, "ground", (w, h))
@@ -1299,6 +1333,10 @@ def flower_layer(name, w, h, seed, y_from, y_to, scale_far, scale_near, count):
             blossom(d, b, x, y, sc * rr.uniform(0.9, 1.6), rr, min(1.0, shade * 1.15))
         else:
             red_cluster(d, b, x, y, sc * rr.uniform(0.8, 1.4), rr, shade)
+    if name == "field_near":
+        for side in (-1, 1):
+            for k in range(7):
+                briar(d, b, side * rr.uniform(0.42, 0.75), rr.uniform(0.985, 1.0), rr.uniform(0.10, 0.17), rr, -side)
     a = np.asarray(img, np.float32) / 255
     rgb, al = a[..., :3], a[..., 3]
     # etched shading: fine diagonal lines darken the lower parts of each clump
@@ -1325,25 +1363,63 @@ def leafy_tuft(d, b, x, y, s, rr, shade):
 
 
 def red_cluster(d, b, x, y, s, rr, shade):
-    # stems and dark leaves first
+    """Red blooms on dark stems: each petal lighter at its rim and darker toward a near-black heart; near the
+    viewer (big s) a few large single blooms, far away a dense cluster of small ones."""
     for i in range(rr.integers(2, 5)):
         lx = x + rr.uniform(-1, 1) * s
         d.polygon(b.pts([(lx, y), (lx - s * 0.25, y - s * 0.5), (lx + s * 0.1, y - s * 0.9), (lx + s * 0.2, y - s * 0.4)]),
                   fill=c8((18, 24, 18), shade, 0.3, rr))
-    n = rr.integers(5, 14)
+    big = s > 0.04
+    n = rr.integers(2, 4) if big else rr.integers(5, 14)
     for i in range(n):
         fx = x + rr.normal(0, 0.55) * s
         fy = y - s * 0.5 - abs(rr.normal(0, 0.45)) * s
-        r = s * rr.uniform(0.16, 0.30)
+        r = s * (rr.uniform(0.22, 0.34) if big else rr.uniform(0.16, 0.30))
         base = (rr.uniform(150, 205), rr.uniform(12, 30), rr.uniform(20, 34))
-        d.line(b.pts([(fx, fy), (fx + rr.uniform(-0.1, 0.1) * s, y)]), fill=c8((26, 34, 24), shade), width=2)
-        # five petals round a dark heart, a lit rim on top
-        for k in range(5):
-            a = 2 * math.pi * k / 5 + rr.uniform(0, 1)
+        d.line(b.pts([(fx, fy), (fx + rr.uniform(-0.1, 0.1) * s, y)]), fill=c8((26, 34, 24), shade), width=2 if not big else 4)
+        npet = 5 if not big else 7
+        for k in range(npet):
+            a = 2 * math.pi * k / npet + rr.uniform(0, 1)
             px, py = fx + math.cos(a) * r * 0.55, fy + math.sin(a) * r * 0.45
-            d.ellipse(b.pts([(px - r * 0.55, py - r * 0.45), (px + r * 0.55, py + r * 0.45)]), fill=c8(base, shade * 0.85, 0.15, rr))
-        d.ellipse(b.pts([(fx - r * 0.7, fy - r * 0.55), (fx + r * 0.7, fy + r * 0.2)]), fill=c8((base[0] * 1.15, base[1] * 2.2, base[2] * 1.6), shade, 0.1, rr))
-        d.ellipse(b.pts([(fx - r * 0.18, fy - r * 0.12), (fx + r * 0.18, fy + r * 0.14)]), fill=c8((40, 6, 8), 1.0))
+            rim = (min(255, base[0] * 1.3), base[1] * 1.6 + 10, base[2] * 1.4)
+            d.ellipse(b.pts([(px - r * 0.55, py - r * 0.45), (px + r * 0.55, py + r * 0.45)]), fill=c8(rim, shade * 0.95, 0.12, rr))
+            ix, iy = fx + math.cos(a) * r * 0.42, fy + math.sin(a) * r * 0.34
+            d.ellipse(b.pts([(ix - r * 0.40, iy - r * 0.32), (ix + r * 0.40, iy + r * 0.32)]), fill=c8(base, shade * 0.75, 0.1, rr))
+            if big:
+                d.line(b.pts([(fx, fy), (fx + math.cos(a) * r * 0.85, fy + math.sin(a) * r * 0.7)]), fill=c8((90, 8, 14), shade), width=2)
+        d.ellipse(b.pts([(fx - r * 0.5, fy - r * 0.4), (fx + r * 0.5, fy + r * 0.25)]), fill=c8((base[0] * 0.7, base[1] * 0.6, base[2] * 0.7), shade, 0.1, rr))
+        d.ellipse(b.pts([(fx - r * 0.2, fy - r * 0.15), (fx + r * 0.2, fy + r * 0.15)]), fill=c8((28, 4, 6), 1.0))
+        if big:
+            for k in range(8):
+                a = rr.uniform(0, 2 * math.pi)
+                d.ellipse(b.pts([(fx + math.cos(a) * r * 0.22 - r * 0.03, fy + math.sin(a) * r * 0.18 - r * 0.03),
+                                 (fx + math.cos(a) * r * 0.22 + r * 0.03, fy + math.sin(a) * r * 0.18 + r * 0.03)]),
+                          fill=c8((210, 160, 80), shade))
+
+
+def briar(d, b, x, y, s, rr, side):
+    """A thorny briar: arching dark canes with hooked thorns, a few leaves and a closed bud."""
+    for k in range(rr.integers(3, 6)):
+        L = s * rr.uniform(0.7, 1.3)
+        lean = side * rr.uniform(0.1, 0.6)
+        pts = []
+        for j in range(24):
+            t = j / 23
+            pts.append((x + lean * L * t * t + rr.uniform(-0.0005, 0.0005), y - L * math.sin(t * 1.4) * 0.9))
+        d.line(b.pts(pts), fill=(16, 14, 14, 255), width=5)
+        d.line(b.pts(pts), fill=(70, 50, 46, 255), width=1)
+        for j in range(2, 23, 3):
+            px, py = pts[j]
+            sd = 1 if j % 2 else -1
+            d.polygon(b.pts([(px, py - 0.002), (px + sd * 0.006, py - 0.004), (px, py + 0.002)]), fill=(20, 16, 16, 255))
+        for j in range(4, 22, 6):
+            px, py = pts[j]
+            sd = rr.choice([-1, 1])
+            r = 0.007
+            d.polygon(b.pts([(px, py), (px + sd * r, py - r * 0.5), (px + sd * r * 1.6, py + r * 0.1), (px + sd * r * 0.6, py + r * 0.5)]),
+                      fill=(22, 30, 20, 255), outline=(66, 78, 54, 255))
+        tx, ty = pts[-1]
+        d.ellipse(b.pts([(tx - 0.004, ty - 0.008), (tx + 0.004, ty + 0.002)]), fill=(120, 12, 22, 255), outline=(40, 50, 30, 255))
 
 
 def blossom(d, b, x, y, s, rr, shade):
@@ -1370,161 +1446,272 @@ def blossom(d, b, x, y, s, rr, shade):
 
 
 def fields():
-    flower_layer("field_far", 2560, 341, 81, 0.69, 0.93, 0.006, 0.016, 5200)
-    flower_layer("field_near", 2560, 242, 82, 0.84, 1.05, 0.016, 0.060, 1500)
+    flower_layer("field_far", 2560, 341, 81, 0.69, 0.93, 0.004, 0.016, 5600)
+    flower_layer("field_near", 2560, 242, 82, 0.84, 1.05, 0.014, 0.085, 1300)
 
 
 # ---------------------------------------------------------------- framing: ruined walls, gnarled trees, vines
+
+def shade_etched(b, sil, tone, line, ldx, ldy, rim_col, fill_col, seed, base=0.14):
+    """Etched shading for the framing ruins and trees: rim light from direction (ldx, ldy) (toward the light),
+    a softer fill from above, occlusion under ledges, engraving lines that thicken with the light."""
+    X, Y = b.grid()
+    ss = b.ss
+    f = blur(sil, ss * 1.3)
+    gy, gx = np.gradient(f)
+    mag = np.hypot(gx, gy) + 1e-6
+    nx, ny = -gx / mag, -gy / mag
+    edge = np.clip(mag * ss * 4, 0, 1)
+    tn = np.clip(tone * 1.6, 0, 1)
+    t2 = blur(tn, ss)
+    ty, tx = np.gradient(t2)
+    tm = np.hypot(tx, ty) + 1e-6
+    edge_in = np.clip(tm * ss * 6, 0, 1)
+    rim = np.clip(nx * ldx + ny * ldy, 0, 1) * edge + np.clip((-tx / tm) * ldx + (-ty / tm) * ldy, 0, 1) * edge_in * 0.6
+    top = np.clip(-ny, 0, 1) * edge * 0.5
+    shift = max(1, int(b.sy * 0.006))
+    above = np.roll(tn, shift, axis=0)
+    above[:shift] = 0
+    drop = blur(np.clip(above - tn, 0, 1), ss * 3)
+    U01, V01 = X / max(b.x1, 1e-6), Y
+    mott = fbm(U01, V01, 18, seed, False, 5)
+    Lv = np.clip((base + 0.16 * tn + 0.12 * (mott - 0.5) + rim * 0.9 + top * 0.4) * (1 - drop * 0.8), 0, 1)
+    stone = lerp(col((5, 5, 7)), col((34, 32, 38)), tn * 0.7 + mott * 0.3)
+    lc = lerp(col((90, 90, 104)), lerp(col(fill_col), col(rim_col), np.clip(rim * 1.5, 0, 1)), np.clip(Lv * 2, 0, 1))
+    eng = engrave(X, Y, b, Lv, 3.6)
+    rgb = lerp(stone, lc * 0.85, eng * np.clip(0.12 + Lv, 0, 1))
+    rgb = rgb + lc * (rim ** 2 * 0.3)[..., None]
+    rgb = lerp(rgb, lc * 1.1, line * (0.45 + 0.55 * np.clip(Lv * 2, 0, 1)))
+    return rgb
+
 
 def frame_side(name, mirror, seed):
     w, h = 726, 1100
     b = Board((0.0, 0.0, FRAME_W, 1.0), w, h, ss=2)
     rr = np.random.default_rng(seed)
-    cov = b.mask(); tone = b.mask(); line = b.mask()
-    dc, dt, dl = ImageDraw.Draw(cov), ImageDraw.Draw(tone), ImageDraw.Draw(line)
+
+    # ---------------- the tree (behind the ruins)
+    tc, tt, tl = b.mask(), b.mask(), b.mask()
+    dtc, dtt, dtl = ImageDraw.Draw(tc), ImageDraw.Draw(tt), ImageDraw.Draw(tl)
+    segs_all = []
+
+    def limb(x0, y0, ang, L, wdt, depth):
+        n = 8
+        pl, pr, cen = [], [], []
+        x, y, a = x0, y0, ang
+        kids = []
+        for k in range(n + 1):
+            ww = wdt * (1 - k / n * 0.8)
+            nx_, ny_ = math.cos(a), math.sin(a)
+            pl.append((x - ny_ * ww * 0 - nx_ * ww, y - ny_ * ww))
+            pr.append((x + nx_ * ww, y + ny_ * ww))
+            cen.append((x, y, ww))
+            if k < n:
+                a += rr.uniform(-0.32, 0.32)
+                x += math.sin(a) * L / n
+                y -= math.cos(a) * L / n
+            if 1 < k < n - 1 and depth > 0 and rr.random() < 0.5:
+                kids.append((x, y, a + rr.choice([-1, 1]) * rr.uniform(0.45, 1.0), L * rr.uniform(0.45, 0.7), ww * 0.75, depth - 1))
+        poly = b.pts(pl + pr[::-1])
+        dtc.polygon(poly, fill=255)
+        dtt.polygon(poly, fill=int(rr.uniform(45, 70)))
+        dtl.polygon(poly, fill=0)
+        dtl.line(poly + [poly[0]], fill=170, width=2)
+        # bark fissures: several wavering lines along the limb
+        for f_ in np.linspace(-0.7, 0.7, 5 if wdt > 0.008 else 2):
+            pts = []
+            for (cx_, cy_, ww), (l_, r_) in zip(cen, zip(pl, pr)):
+                jit = rr.uniform(-0.12, 0.12)
+                pts.append((cx_ + (r_[0] - cx_) * (f_ + jit), cy_ + (r_[1] - cy_) * (f_ + jit)))
+            dtl.line(b.pts(pts), fill=int(rr.uniform(70, 130)), width=2)
+        segs_all.append(cen)
+        for kd in kids:
+            limb(*kd)
+
+    limb(0.30, 1.03, -0.15, 0.36, 0.036, 3)
+    limb(0.30, 0.78, 0.55, 0.30, 0.017, 3)
+    limb(0.28, 0.86, -0.75, 0.22, 0.015, 2)
+    limb(0.05, 0.20, 0.95, 0.32, 0.013, 3)
+    # twigs
+    for cen in segs_all:
+        x, y, ww = cen[-1]
+        for k in range(rr.integers(2, 6)):
+            a = rr.uniform(-1.3, 1.5)
+            L = rr.uniform(0.015, 0.05)
+            dtl.line(b.pts([(x, y), (x + math.sin(a) * L * 0.5 + rr.uniform(-0.004, 0.004), y - math.cos(a) * L * 0.5),
+                            (x + math.sin(a) * L, y - math.cos(a) * L)]), fill=110, width=2)
+            dtc.line(b.pts([(x, y), (x + math.sin(a) * L, y - math.cos(a) * L)]), fill=255, width=2)
+    tree_rgb = shade_etched(b, arr(tc), arr(tt), arr(tl), 0.8, -0.6, (214, 120, 96), (150, 44, 40), seed + 1, 0.10)
+
+    # foliage: clumps placed ALONG the outer limbs, leaves oriented, dark under-shade, bright copper on top
     fol = Image.new("RGBA", (b.W, b.H), (0, 0, 0, 0))
     df = ImageDraw.Draw(fol)
+    for cen in segs_all:
+        if cen[0][2] > 0.02:
+            continue                         # the trunk stays bare
+        for (x, y, ww) in cen[2::2]:
+            if rr.random() < 0.45:
+                continue
+            ccx, ccy = x + rr.normal(0, 0.008), y - rr.uniform(0.0, 0.012)
+            R = rr.uniform(0.010, 0.022)
+            for k in range(int(R * 2400)):
+                lx, ly = ccx + rr.normal(0, R * 0.5), ccy + rr.normal(0, R * 0.38)
+                lit = np.clip(0.5 - (ly - ccy) / R * 0.9 + rr.uniform(-0.25, 0.25), 0.08, 1.2)
+                r = rr.uniform(0.0016, 0.0030)
+                a = rr.uniform(0, math.pi)
+                ca, sa = math.cos(a), math.sin(a)
+                leaf = [(lx + ca * r, ly + sa * r), (lx - sa * r * 0.4, ly + ca * r * 0.4), (lx - ca * r, ly - sa * r),
+                        (lx + sa * r * 0.4, ly - ca * r * 0.4)]
+                c = (int(min(255, 176 * lit + 8)), int(min(255, 82 * lit + 6)), int(min(255, 44 * lit + 4)), 255)
+                df.polygon(b.pts(leaf), fill=c)
+    # a few leaves already falling
+    for k in range(14):
+        lx, ly = rr.uniform(0.15, 0.6), rr.uniform(0.25, 0.8)
+        r = 0.0024
+        a = rr.uniform(0, math.pi)
+        ca, sa = math.cos(a), math.sin(a)
+        df.polygon(b.pts([(lx + ca * r, ly + sa * r), (lx - sa * r * 0.4, ly + ca * r * 0.4), (lx - ca * r, ly - sa * r),
+                          (lx + sa * r * 0.4, ly - ca * r * 0.4)]), fill=(180, 86, 46, 255))
+
+    # ---------------- the ruins (in front of the tree)
+    rc, rt, rl = b.mask(), b.mask(), b.mask()
+    drc, drt, drl = ImageDraw.Draw(rc), ImageDraw.Draw(rt), ImageDraw.Draw(rl)
 
     def shape(ps, t, e=170, wdt=2):
         p = b.pts(ps)
-        dc.polygon(p, fill=255)
-        dt.polygon(p, fill=int(t))
-        dl.polygon(p, fill=0)
+        drc.polygon(p, fill=255)
+        drt.polygon(p, fill=int(t))
+        drl.polygon(p, fill=0)
         if e:
-            dl.line(p + [p[0]], fill=int(e), width=wdt)
+            drl.line(p + [p[0]], fill=int(e), width=wdt)
 
     def ln(ps, v, wdt=2):
-        dl.line(b.pts(ps), fill=int(v), width=wdt)
+        drl.line(b.pts(ps), fill=int(v), width=wdt)
 
-    # x is measured from the screen edge inward (0 = edge). The ruin: a jagged cliff of masonry hugging the edge,
-    # thick at the bottom and over the top corner (a cave mouth), thinner in between.
+    def blocks(x0, x1, y0, y1, bh, chip=0.25):
+        """Masonry: courses of blocks with irregular, chipped outlines and their own tones."""
+        y = y0
+        row = 0
+        while y < y1:
+            x = x0 - (bh * 0.9 if row % 2 else 0)
+            while x < x1:
+                bw = bh * rr.uniform(1.4, 2.6)
+                xa, xb = max(x, x0), min(x + bw, x1)
+                if xb - xa > bh * 0.3:
+                    j = lambda: rr.uniform(-chip, chip) * bh * 0.3
+                    ps = [(xa + j(), y + j()), (xb + j(), y + j()), (xb + j(), y + bh + j()), (xa + j(), y + bh + j())]
+                    if rr.random() < 0.25:     # a chipped corner
+                        ps.insert(1, ((xa + xb) / 2, y + bh * rr.uniform(0.2, 0.5)))
+                    shape(ps, rr.uniform(30, 80), int(rr.uniform(120, 200)), 2)
+                x += bw
+            y += bh
+            row += 1
+
+    # the cliff of old masonry hugging the edge: thick at the bottom and over the top corner
     prof = []
     for i in range(41):
         y = i / 40
-        wdt = 0.10 + 0.26 * smoothstep(0.55, 1.0, y) + 0.16 * (1 - smoothstep(0.0, 0.28, y))
-        prof.append((wdt, y))
-    jag = rr.uniform(-1, 1, len(prof))
-    jag = np.convolve(jag, np.ones(5) / 5, mode="same") * 0.05
-    prof = [(w_ + j, y) for (w_, y), j in zip(prof, jag)]
-    cliff = [(-0.05, -0.01)] + [(x, y) for x, y in prof] + [(-0.05, 1.01)]
-    shape(cliff, 46, 160)
-    # masonry blocks inside the cliff
-    for y in np.arange(0.0, 1.0, 0.022):
-        wdt = np.interp(y, [p[1] for p in prof], [p[0] for p in prof])
-        x = -0.01 + (0.02 if int(y / 0.022) % 2 else 0)
-        while x < wdt - 0.02:
-            bw = rr.uniform(0.03, 0.06)
-            ln([(x, y), (min(x + bw, wdt - 0.01), y)], 110)
-            ln([(x, y), (x, y + 0.022)], 90)
-            x += bw
-    # a broken pointed arch springing from the wall (the ruin of an older church)
-    ax, ays, ahw = 0.20, 0.43, 0.13
-    arch_outer = arch_pts(ax + ahw, ays, ahw + 0.03, 1.0, 24)
-    arch_inner = arch_pts(ax + ahw, ays, ahw - 0.005, 1.0, 24)
-    cut = 15                                         # broken off part way over
-    shape(arch_outer[:cut] + arch_inner[:cut][::-1], 52, 180)
-    for k in range(0, cut, 2):
-        ln([arch_outer[k], arch_inner[k]], 120)
-    # its pier, with a colonette
-    shape([(ax - 0.035, ays), (ax + 0.005, ays), (ax + 0.012, 1.01), (ax - 0.04, 1.01)], 50, 170)
-    ln([(ax - 0.012, ays + 0.02), (ax - 0.010, 1.0)], 140)
-    for y in np.arange(ays + 0.02, 1.0, 0.05):
-        ln([(ax - 0.035, y), (ax + 0.005, y)], 100)
-    # rubble at the bottom
-    for i in range(18):
-        x, y, r = rr.uniform(0.0, 0.42), rr.uniform(0.86, 1.0), rr.uniform(0.012, 0.04)
-        shape(rock_poly(x, y, r, rr), rr.uniform(40, 70), 180)
+        wdt = 0.09 + 0.24 * smoothstep(0.62, 1.0, y) + 0.17 * (1 - smoothstep(0.0, 0.26, y))
+        prof.append([wdt, y])
+    jag = np.convolve(rr.uniform(-1, 1, len(prof)), np.ones(5) / 5, mode="same") * 0.05
+    for p_, j in zip(prof, jag):
+        p_[0] += j
+    # a dark core behind the blocks (no holes), then the blocks course by course
+    shape([(-0.05, -0.01)] + [(p_[0] - 0.006, p_[1]) for p_ in prof] + [(-0.05, 1.01)], 18, 0)
+    for i in range(len(prof) - 1):
+        y0_, y1_ = prof[i][1], prof[i + 1][1]
+        blocks(-0.02, prof[i][0], y0_, y1_, 0.025, 0.15)
+    # a tall broken arch springing inward (the ruin of an older church), voussoirs drawn block by block
+    ax, ays, ahw = 0.20, 0.40, 0.15
+    outer = arch_pts(ax + ahw, ays, ahw + 0.035, 1.0, 30)
+    inner = arch_pts(ax + ahw, ays, ahw - 0.002, 1.0, 30)
+    cut = 17
+    for k in range(cut):
+        shape([outer[k], outer[k + 1], inner[k + 1], inner[k]], rr.uniform(40, 75), 190, 2)
+    # broken end: a jagged stump
+    shape([outer[cut], (outer[cut][0] + 0.012, outer[cut][1] + 0.006), inner[cut]], 50, 190, 2)
+    # its pier with clustered colonettes and a capital
+    shape([(ax - 0.04, ays - 0.004), (ax + 0.006, ays - 0.004), (ax + 0.012, 1.02), (ax - 0.046, 1.02)], 52, 190, 2)
+    for xo in (-0.030, -0.017, -0.005):
+        shape([(ax + xo - 0.004, ays + 0.02), (ax + xo + 0.004, ays + 0.02), (ax + xo + 0.0045, 1.0), (ax + xo - 0.0045, 1.0)], 70, 180, 2)
+    shape([(ax - 0.048, ays - 0.004), (ax + 0.012, ays - 0.004), (ax + 0.006, ays + 0.022), (ax - 0.042, ays + 0.022)], 66, 200, 2)
+    for k in range(5):
+        ln([(ax - 0.044 + k * 0.012, ays + 0.002), (ax - 0.04 + k * 0.012, ays + 0.018)], 140)
+    # a ruined low wall with an empty lancet window further in
+    wx0, wx1, wtop = 0.24, 0.40, 0.70
+    edge_pts = [(wx0, 1.02), (wx0, wtop + 0.03), (wx0 + 0.03, wtop), (wx0 + 0.07, wtop + 0.015), (wx0 + 0.10, wtop - 0.01),
+                (wx1 - 0.03, wtop + 0.04), (wx1, wtop + 0.09), (wx1 + 0.01, 1.02)]
+    shape(edge_pts, 44, 190, 2)
+    blocks(wx0 + 0.004, wx1 - 0.004, wtop + 0.03, 1.0, 0.021, 0.35)
+    win = lancet_pts(wx0 + 0.085, wtop + 0.075, 0.025, 0.93)
+    p = b.pts(win)
+    drc.polygon(p, fill=0)
+    drl.line(p + [p[0]], fill=200, width=2)
+    # rubble at the foot
+    for i in range(22):
+        x, y, r = rr.uniform(0.0, 0.45), rr.uniform(0.88, 1.01), rr.uniform(0.010, 0.035)
+        shape(rock_poly(x, y, r, rr), rr.uniform(40, 80), 200, 2)
+    ruin_rgb = shade_etched(b, arr(rc), arr(rt), arr(rl), 0.85, -0.5, (232, 228, 240), (196, 60, 54), seed + 2, 0.12)
 
-    # the gnarled tree: a twisted trunk from the bottom, limbs reaching up and in, bare twigs
-    def limb(x0, y0, ang, L, wdt, depth):
-        segs = 6
-        pts_l, pts_r = [], []
-        x, y, a = x0, y0, ang
-        ends = []
-        for k in range(segs + 1):
-            ww = wdt * (1 - k / segs * 0.75)
-            nx, ny = math.cos(a), math.sin(a)
-            pts_l.append((x - ny * ww, y + nx * ww))
-            pts_r.append((x + ny * ww, y - nx * ww))
-            if k < segs:
-                a += rr.uniform(-0.35, 0.35)
-                x += math.sin(a) * L / segs
-                y -= math.cos(a) * L / segs
-            if 1 < k < segs and depth > 0 and rr.random() < 0.55:
-                ends.append((x, y, a + rr.choice([-1, 1]) * rr.uniform(0.5, 1.1), L * rr.uniform(0.45, 0.7), ww * 0.7, depth - 1))
-        shape(pts_l + pts_r[::-1], 62, 190, 3)
-        # bark: etched lines along the limb
-        for f in (-0.5, 0.0, 0.45):
-            ln([((l[0] + r_[0]) / 2 + (l[0] - r_[0]) * f * 0.5, (l[1] + r_[1]) / 2 + (l[1] - r_[1]) * f * 0.5)
-                for l, r_ in zip(pts_l, pts_r)], 100, 2)
-        tips.append((x, y))
-        for e in ends:
-            limb(*e)
-
-    tips = []
-    limb(0.30, 1.02, -0.12, 0.34, 0.034, 3)
-    limb(0.30, 0.80, 0.55, 0.30, 0.016, 3)
-    limb(0.27, 0.86, -0.75, 0.22, 0.014, 2)
-    limb(0.07, 0.22, 0.9, 0.30, 0.012, 3)      # a branch reaching out over the top corner
-    # twigs at every tip
-    for (x, y) in list(tips):
-        for k in range(rr.integers(3, 7)):
-            a = rr.uniform(-1.4, 1.6)
-            L = rr.uniform(0.02, 0.06)
-            ln([(x, y), (x + math.sin(a) * L * 0.5 + rr.uniform(-0.005, 0.005), y - math.cos(a) * L * 0.5),
-                (x + math.sin(a) * L, y - math.cos(a) * L)], 120, 2)
-    # sparse copper foliage round the tips
-    for (x, y) in tips:
-        for k in range(rr.integers(60, 160)):
-            fx, fy = x + rr.normal(0, 0.026), y + rr.normal(0, 0.02)
-            r = rr.uniform(0.0012, 0.0032)
-            t = rr.uniform(0.35, 1.1) if rr.random() < 0.85 else rr.uniform(1.1, 1.4)
-            c = (int(min(255, 160 * t)), int(min(255, 74 * t)), int(min(255, 42 * t)), 255)
-            df.ellipse(b.pts([(fx - r, fy - r * 0.7), (fx + r, fy + r * 0.7)]), fill=c)
-    # hanging vines from the cave-mouth overhang and the arch
-    for k in range(16):
-        x0 = rr.uniform(0.03, 0.30)
-        y0 = np.interp(x0, [0, 0.3], [0.05, 0.16]) + rr.uniform(-0.03, 0.05)
-        L = rr.uniform(0.12, 0.42)
+    # ---------------- vines in front, hanging from the overhang and the arch
+    vine = Image.new("RGBA", (b.W, b.H), (0, 0, 0, 0))
+    dv = ImageDraw.Draw(vine)
+    for k in range(20):
+        if k < 12:
+            x0 = rr.uniform(0.02, 0.30)
+            y0 = float(np.interp(x0, [0, 0.3], [0.06, 0.15])) + rr.uniform(-0.03, 0.04)
+        else:
+            j = rr.integers(2, cut)
+            x0, y0 = inner[j]
+        L = rr.uniform(0.10, 0.45)
         pts = []
-        for j in range(25):
-            t = j / 24
-            pts.append((x0 + math.sin(t * 5 + k) * 0.008 + t * 0.015, y0 + t * L))
-        ln(pts, 130, 2)
-        for j in range(2, 25, 2):
-            px, py = pts[j]
-            side = 1 if j % 4 else -1
-            df.polygon(b.pts([(px, py), (px + side * 0.007, py + 0.004), (px + side * 0.003, py + 0.009)]),
-                       fill=(30 + int(rr.uniform(0, 20)), 44, 28, 255))
-
-    # red and ivory flowers spilling over the rubble and up the ledges
-    for i in range(160):
+        for jj in range(30):
+            t = jj / 29
+            pts.append((x0 + math.sin(t * 5 + k) * 0.007 + t * 0.012 * (1 if k % 2 else -1), y0 + t * L))
+        dv.line(b.pts(pts), fill=(22, 26, 18, 255), width=3)
+        dv.line(b.pts(pts), fill=(70, 78, 56, 255), width=1)
+        for jj in range(1, 30):
+            if rr.random() < 0.55:
+                px, py = pts[jj]
+                side_ = rr.choice([-1, 1])
+                r = rr.uniform(0.003, 0.006)
+                lit = rr.uniform(0.5, 1.2)
+                dv.polygon(b.pts([(px, py), (px + side_ * r, py + r * 0.3), (px + side_ * r * 0.7, py + r * 1.2), (px, py + r * 0.6)]),
+                           fill=(int(26 * lit), int(36 * lit), int(22 * lit), 255), outline=(int(76 * lit), int(88 * lit), int(60 * lit), 255))
+    # flowers spilling over the rubble
+    flo = Image.new("RGBA", (b.W, b.H), (0, 0, 0, 0))
+    dfl = ImageDraw.Draw(flo)
+    for i in range(170):
         y = 0.80 + rr.random() ** 0.7 * 0.22
         x = rr.uniform(0.02, 0.36) * (0.5 + 0.5 * (y - 0.8) / 0.22)
         sc = 0.018 + 0.03 * (y - 0.8) / 0.22
         k = rr.random()
         if k < 0.3:
-            blossom(df, b, x, y, sc * rr.uniform(0.9, 1.4), rr, 0.95)
-        elif k < 0.45:
-            leafy_tuft(df, b, x, y, sc * 1.5, rr, 0.9)
+            blossom(dfl, b, x, y, sc * rr.uniform(0.9, 1.4), rr, 0.95)
+        elif k < 0.42:
+            leafy_tuft(dfl, b, x, y, sc * 1.5, rr, 0.9)
         else:
-            red_cluster(df, b, x, y, sc * rr.uniform(0.9, 1.3), rr, 0.9)
+            red_cluster(dfl, b, x, y, sc * rr.uniform(0.9, 1.3), rr, 0.9)
 
+    # ---------------- compose: tree, its foliage, the ruins (with a soft shadow cast on the tree), vines, flowers
     X, Y = b.grid()
-    cv, tv, lv = arr(cov), arr(tone), arr(line)
-    nz = fbm(X / FRAME_W, Y, 18, seed + 5, False, 4)
-    rgb = lerp(col((8, 8, 11)), col((92, 88, 100)), tv * 1.5)
-    rgb *= (0.6 + 0.7 * nz)[..., None]
-    hat = np.clip((np.sin((X * b.sx - Y * b.sy) / b.ss * 2 * math.pi / 3.6) - 0.5) / 0.5, 0, 1)
-    rgb *= (1 - hat * 0.35)[..., None]
-    # etched lines: cool grey, warmer where the red sky reaches them
-    lc = lerp(col((128, 126, 140)), col((176, 84, 72)), smoothstep(0.2, 0.7, Y)[..., None][..., 0] * 0.6)
-    rgb = lerp(rgb, lc * 1.25, lv * (0.6 + 0.4 * nz))
-    # darker toward the screen edge (the frame recedes into shadow)
-    rgb *= (0.6 + 0.4 * smoothstep(0.0, 0.22, X))[..., None]
+    rcov = arr(rc)
+    tcov = arr(tc)
     fa = np.asarray(fol, np.float32) / 255
+    rgb = tree_rgb * tcov[..., None]
+    a = tcov.copy()
     rgb = lerp(rgb, fa[..., :3], fa[..., 3])
-    a = np.clip(cv + fa[..., 3], 0, 1)
+    a = np.clip(a + fa[..., 3], 0, 1)
+    cast = blur(np.roll(np.roll(rcov, int(b.sx * 0.012), 1), int(b.sy * 0.008), 0), b.ss * 6)
+    rgb *= (1 - cast * 0.6)[..., None]
+    rgb = lerp(rgb, ruin_rgb, rcov)
+    a = np.clip(a + rcov, 0, 1)
+    for layer in (vine, flo):
+        la = np.asarray(layer, np.float32) / 255
+        rgb = lerp(rgb, la[..., :3], la[..., 3])
+        a = np.clip(a + la[..., 3], 0, 1)
+    # into shadow toward the screen edge
+    rgb *= (0.55 + 0.45 * smoothstep(0.0, 0.2, X))[..., None]
     if mirror:
         rgb, a = rgb[:, ::-1], a[:, ::-1]
     save_rgba(rgb, a, name, (w, h))
