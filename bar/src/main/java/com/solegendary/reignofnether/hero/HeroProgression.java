@@ -101,10 +101,19 @@ public final class HeroProgression {
         }
         String owner = hero.getOwnerName();
         if (owner != null && !owner.isBlank())
-            PlayerServerEvents.sendMessageToPlayer(owner, "hud.hero.reignofnether.boon", false, after);
+            sendBoonLine(owner, after);
         PossessionServer.Possession p = PossessionServer.ofUnit(le.getId());
         if (p != null && p.playerName != null && !p.playerName.equals(owner))
-            PlayerServerEvents.sendMessageToPlayer(p.playerName, "hud.hero.reignofnether.boon", false, after);
+            sendBoonLine(p.playerName, after);
+    }
+
+    // one "Boon received (level N)" chat line per player and level per 10 s, as a single line (the old send added a
+    // blank line either side, and two heroes reaching the same level together said it twice)
+    private static final com.solegendary.reignofnether.unit.AnnounceGate BOON_GATE = new com.solegendary.reignofnether.unit.AnnounceGate();
+
+    private static void sendBoonLine(String player, int level) {
+        if (BOON_GATE.allow(player + "|" + level, System.currentTimeMillis(), 10_000))
+            PlayerServerEvents.sendMessageToPlayerNoNewLines(player, "hud.hero.reignofnether.boon", false, level);
     }
 
     // client side: the last boon a hero received, for the possession HUD's banner (written on the client thread only,
