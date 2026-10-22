@@ -1,6 +1,10 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.BuildingValidators;
+import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant;
+import com.solegendary.reignofnether.maps.MapBuilder;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MapPreset;
 import com.solegendary.reignofnether.maps.MetalOptions;
@@ -11,8 +15,13 @@ import com.solegendary.reignofnether.maps.gen.MapGenerator;
 import com.solegendary.reignofnether.maps.gen.Modifier;
 import com.solegendary.reignofnether.startpos.BattlefieldWall;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -304,6 +313,156 @@ public class MapGenGameTests {
         if (!problems.isEmpty())
             helper.fail(MapMetalGameTests.fail(problems));
         helper.succeed();
+    }
+
+    /**
+     * MapBuilder raises a generated map as its layout says: 16x16 windows over a ford, a cliff, a geothermal vent (a
+     * Geothermal Rift draw) and the rim, high above this test's arena; every column shows the generated palette's block
+     * for its surface (the cliff block on a steep column, the bed under water with water standing to the water line),
+     * and a Geothermal Plant is accepted over the vent.
+     */
+    @GameTest(template = ARENA, batch = "maps_gen", timeoutTicks = 400)
+    public static void generated_map_raises_in_its_arena(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+        int x0 = origin.getX(), z0 = origin.getZ();
+        List<String> problems = new ArrayList<>();
+        MapBuilder.Palette pal = MapBuilder.paletteFor(MapPreset.GENERATED);
+        // a square 2v2 with every modifier off but the rift's vents searched across seeds (live modifiers only)
+        MapLayout l = null, withVent = null;
+        for (long s = 1; s <= 40 && (l == null || withVent == null); s++) {
+            MapLayout c = build(4, GenSeed.pack(0x5EED0300L + s, 2, 0));
+            if (l == null && ford(c) != null && cliff(c) != null)
+                l = c;
+            if (withVent == null && !c.vents.isEmpty())
+                withVent = c;
+        }
+        if (l == null) {
+            helper.fail("no generated map in 40 seeds had a ford and a cliff to raise");
+            return;
+        }
+        List<Object[]> windows = new ArrayList<>();
+        windows.add(new Object[] { l, ford(l), "a ford" });
+        windows.add(new Object[] { l, cliff(l), "a cliff" });
+        windows.add(new Object[] { l, new int[] { l.radius - 14, 0 }, "the rim" });
+        if (withVent != null) {
+            MapLayout.Spot v = withVent.vents.get(0);
+            windows.add(new Object[] { withVent, new int[] { v.dx(), v.dz() }, "a vent" });
+        }
+        int baseY = 120 - 32, checked = 0;
+        boolean ventAccepted = false;
+        for (Object[] w : windows) {
+            MapLayout lay = (MapLayout) w[0];
+            int[] at = (int[]) w[1];
+            String tag = w[2] + " at " + at[0] + "," + at[1] + ": ";
+            baseY += 32;
+            if (baseY + 24 >= level.getMaxBuildHeight()) {
+                problems.add("ran out of height for " + w[2]);
+                break;
+            }
+            for (int x = 0; x < 16; x++)
+                for (int z = 0; z < 16; z++)
+                    level.setBlock(new BlockPos(x0 + x, baseY - 10, z0 + z), Blocks.STONE.defaultBlockState(), 2);
+            int cx = x0 + 8 - at[0], cz = z0 + 8 - at[1];
+            try {
+                MapBuilder.buildWindow(level, lay, cx, cz, baseY, x0, z0, 16, 16);
+            } catch (Exception e) {
+                problems.add(tag + "the builder threw " + e);
+                continue;
+            }
+            checked += checkColumns(level, lay, pal, cx, cz, baseY, x0, z0, tag, problems);
+            for (MapLayout.Spot v : lay.vents) {
+                int vx = cx + v.dx(), vz = cz + v.dz();
+                if (vx - 2 < x0 || vx + 2 >= x0 + 16 || vz - 2 < z0 || vz + 2 >= z0 + 16)
+                    continue;
+                int g = RealmMapGameTests.topNonAir(level, vx, vz, baseY + 24, baseY - 8);
+                String err = BuildingValidators.getPlacementValidityError(level, Buildings.GEOTHERMAL_PLANT_VILLAGERS,
+                    new BlockPos(vx - 2, g, vz - 2), "gametest_gen_geo", Rotation.NONE, false, true, true);
+                if (err != null)
+                    problems.add(tag + "Geothermal Plant refused over the vent: " + err);
+                else
+                    ventAccepted = true;
+            }
+        }
+        if (withVent != null && !ventAccepted)
+            problems.add("the vent window tested no Geothermal Plant");
+        ReignOfNether.LOGGER.info("[MapGen] {} raised columns checked", checked);
+        if (!problems.isEmpty())
+            helper.fail(MapMetalGameTests.fail(problems));
+        helper.succeed();
+    }
+
+    /** A ford: shallow water (bed -1) beside land, away from the edge. */
+    static int[] ford(MapLayout l) {
+        MapLayout.Sample s = new MapLayout.Sample(), t = new MapLayout.Sample();
+        for (int x = -l.radius + 30; x < l.radius - 30; x += 3)
+            for (int z = -l.radius + 30; z < l.radius - 30; z += 3) {
+                l.sample(x, z, s);
+                if (s.surface != MapLayout.Surface.WATER || s.height != -1)
+                    continue;
+                l.sample(x + 4, z, t);
+                if (t.surface != MapLayout.Surface.WATER)
+                    return new int[] { x, z };
+            }
+        return null;
+    }
+
+    /** A cliff: a step of three or more between neighbours on dry ground. */
+    static int[] cliff(MapLayout l) {
+        MapLayout.Sample s = new MapLayout.Sample(), t = new MapLayout.Sample();
+        for (int x = -l.radius + 30; x < l.radius - 30; x += 2)
+            for (int z = -l.radius + 30; z < l.radius - 30; z += 2) {
+                l.sample(x, z, s);
+                l.sample(x + 1, z, t);
+                if (s.surface != MapLayout.Surface.WATER && t.surface != MapLayout.Surface.WATER
+                        && Math.abs(s.height - t.height) >= 3)
+                    return new int[] { x, z };
+            }
+        return null;
+    }
+
+    /** Every column of a window against the layout; the trees of the decoration stage are not grown by buildWindow. */
+    static int checkColumns(ServerLevel level, MapLayout l, MapBuilder.Palette pal, int cx, int cz, int baseY, int x0,
+                            int z0, String tag, List<String> problems) {
+        MapLayout.Sample s = new MapLayout.Sample(), t = new MapLayout.Sample();
+        int wrong = 0, n = 0;
+        String first = null;
+        for (int x = x0; x < x0 + 16; x++)
+            for (int z = z0; z < z0 + 16; z++) {
+                int dx = x - cx, dz = z - cz;
+                if (!l.insideArena(dx, dz))
+                    continue;
+                boolean vent = false;
+                for (MapLayout.Spot v : l.vents)
+                    vent |= Math.abs(v.dx() - dx) <= 2 && Math.abs(v.dz() - dz) <= 2;
+                if (vent)
+                    continue;
+                l.sample(dx, dz, s);
+                int slope = 0;
+                for (int[] d : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    l.sample(dx + d[0], dz + d[1], t);
+                    slope = Math.max(slope, Math.abs(t.height - s.height));
+                }
+                BlockState top = level.getBlockState(new BlockPos(x, baseY + s.height, z));
+                boolean steep = slope >= 3;
+                boolean ok = switch (s.surface) {
+                    case WATER -> top.equals(pal.bed()) && level.getBlockState(new BlockPos(x, baseY + s.fluidTop, z)).is(Blocks.WATER);
+                    case MESA -> top.equals(pal.mesaTop());
+                    case SAND -> top.equals(steep ? pal.cliff() : pal.sand());
+                    case GRASS -> top.equals(steep ? pal.cliff() : pal.grass());
+                    case CLIFF -> top.equals(pal.cliff());
+                    default -> top.equals(steep ? pal.cliff() : pal.top());
+                };
+                n++;
+                if (!ok) {
+                    wrong++;
+                    if (first == null)
+                        first = s.surface + " h" + s.height + " at " + dx + "," + dz + " shows " + top.getBlock();
+                }
+            }
+        if (wrong > 0)
+            problems.add(tag + wrong + " column(s) wrong, first " + first);
+        return n;
     }
 
     /** What the generator draws matches MapGenerator.generate's own call (the layout does not alter the map). */

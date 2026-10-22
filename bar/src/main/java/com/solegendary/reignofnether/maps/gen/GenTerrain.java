@@ -350,7 +350,7 @@ final class GenTerrain {
         if (p.river == null)
             return;
         double[] xs = p.river[0], zs = p.river[1];
-        stampDistance(xs, zs, 24, riverDist, null, null);
+        stampDistance(xs, zs, 24, riverDist);
         for (int x = -half; x <= half; x++)
             for (int z = -half; z <= half; z++) {
                 int i = idx(x, z);
@@ -574,7 +574,7 @@ final class GenTerrain {
     }
 
     /** Distance from every column within {@code reach} of a line to the line (min over its samples). */
-    private void stampDistance(double[] xs, double[] zs, int reach, float[] out, double[] vals, double[] valOut) {
+    private void stampDistance(double[] xs, double[] zs, int reach, float[] out) {
         for (int s = 0; s < xs.length; s++) {
             int cx = (int) Math.round(xs[s]), cz = (int) Math.round(zs[s]);
             for (int x = cx - reach; x <= cx + reach; x++)

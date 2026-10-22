@@ -400,7 +400,7 @@ final class GenEconomy {
         boolean garrisons = p.modifiers.contains(Modifier.GARRISON_RUINS);
         for (int k = 0; k < own; k++) {
             int[] pr = pairs.get(k);
-            Cand c = seamCandidate(pr, 0.6, null);
+            Cand c = seamCandidate(pr, 0.6);
             if (c == null)
                 continue;
             Kind kind = garrisons ? Kind.GARRISON : pick(
@@ -415,16 +415,16 @@ final class GenEconomy {
      * the ground offers nothing closer - a bastion's cliff can push every even spot toward the middle), about
      * {@code along} of the walk between them, nearer to the pair than to any third seat.
      */
-    Cand seamCandidate(int[] pr, double along, List<Cand> pool) {
+    Cand seamCandidate(int[] pr, double along) {
         for (double tol : new double[] { 0.08, 0.14, 0.2 }) {
-            Cand c = seamCandidate(pr, along, pool, tol);
+            Cand c = seamCandidate(pr, along, tol);
             if (c != null)
                 return c;
         }
         return null;
     }
 
-    private Cand seamCandidate(int[] pr, double along, List<Cand> pool, double tol) {
+    private Cand seamCandidate(int[] pr, double along, double tol) {
         int i = pr[0], j = pr[1];
         double between = g.blocks(dist[i], p.slotX(j), p.slotZ(j));
         if (Double.isInfinite(between))
@@ -432,7 +432,7 @@ final class GenEconomy {
         double want = along * between;
         Cand best = null;
         double bestF = Double.MAX_VALUE;
-        for (Cand c : pool == null ? siteCands : pool) {
+        for (Cand c : siteCands) {
             if (pr[2] != 0) {
                 double cross = c.x * p.axisZ - c.z * p.axisX;
                 if (Math.signum(cross) != pr[2])
@@ -528,7 +528,7 @@ final class GenEconomy {
                 }
                 case GEOTHERMAL -> {
                     if (own > 0) {
-                        Cand c = seamCandidate(pairs.get(rng.nextInt(own)), 0.5, null);
+                        Cand c = seamCandidate(pairs.get(rng.nextInt(own)), 0.5);
                         if (c != null)
                             addSite(c.x, c.z, Kind.VENT);
                     }
@@ -554,14 +554,14 @@ final class GenEconomy {
                 }
                 case MERCENARY_ROAD -> {
                     for (int k = 0; k < own; k++) {
-                        Cand c = seamCandidate(pairs.get(k), 0.4, null);
+                        Cand c = seamCandidate(pairs.get(k), 0.4);
                         if (c != null)
                             addSite(c.x, c.z, Kind.CAMP);
                     }
                 }
                 case GARRISON_RUINS -> {
                     for (int k = 0; k < own; k++) {
-                        Cand c = seamCandidate(pairs.get(k), 0.75, null);
+                        Cand c = seamCandidate(pairs.get(k), 0.75);
                         if (c != null)
                             addSite(c.x, c.z, Kind.GARRISON);
                     }
@@ -583,7 +583,7 @@ final class GenEconomy {
                 }
                 case HERO_RELIC -> {
                     if (own > 0) {
-                        Cand c = seamCandidate(pairs.get(rng.nextInt(own)), 0.5, null);
+                        Cand c = seamCandidate(pairs.get(rng.nextInt(own)), 0.5);
                         if (c != null)
                             addCamp(c.x, c.z, GenMap.CampKind.RELIC, -1);
                     }

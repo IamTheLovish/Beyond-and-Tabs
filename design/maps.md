@@ -350,3 +350,74 @@ renders every map to PNG):
   old holder nothing once neutralized; a recruit saved and loaded counts once.
 * `realm_maps_and_the_garrison_have_their_names`: every map has its lang name and blurb, every capture kind its
   long and short name.
+
+## 7. Generated maps (MapPreset.GENERATED, maps/gen; lovish Oct 21 22:28)
+
+> "you should be able to choose / add a way to automatically generate maps that are intricate and sometimes changes
+> rng with different buffs and bonuses. The random map can give one side more neutral objectives with the other side
+> giving more mexes."
+
+A new natural battlefield from every seed, built on lovish's Oct 21 map decisions: **balanced asymmetry** (the sides
+differ on purpose and are evened out by a measured per-seat score within a tolerance, default 5%), **square maps as
+well as round**, room kept for the **hero jungle** (MetalOptions.reserved), more metal along the edges and in empty
+ground, bots never cheat (the generator only shapes the map), 4v4 the design standard. Phase 1 (offline prototype and
+experiments, 200 seeds per cell) chose the defaults below; the report with every number is in the PR (#131).
+
+**Determinism.** `MapLayout.build(GENERATED, teams, seed)` calls `MapGenerator.generate`; the same seats and seed draw
+the same map on every JVM (SplitMix64 streams per stage, StrictMath trig, `sqrt` not `hypot`), so the lobby preview is
+the map built, and a save resumes the same map. The lobby options ride the seed's top byte (`GenSeed`: shape any /
+round / square, modifiers on / off / surprise); the low 56 bits are the landscape. The lobby shows the last four hex
+digits ("#1A2B"), the skirmish "New" button and the multiplayer host's "New" roll another seed (the multiplayer lobby
+now carries a seed for every stamped map; before, it always played the unseeded one).
+
+**One build** (`GenPlan` -> `GenTerrain` -> `GenEconomy` -> checks -> `Fairness`):
+* *Arena*: round (radius = ring + 90) or square (same area; seats in the corners, or between corners and sides at 4v4).
+  `distanceToArenaEdge` / `insideArena` / `outerRadius` answer for both; the wall raises straight sides with corner
+  towers (`BattlefieldWall.raise(..., square)`), the scout and the clients cover the corners.
+* *Ground*: a warped fractal tier field, mapped by percentile (5% lakes, 11% T-1 valleys at 1, 44% lowland at 4, 25% T1
+  at 8, 11.5% T2 at 12, 3.5% crests at 16; water at 0, fords and shores -1, deep -3), terraced by a "cliffiness" field:
+  where it is high the step between tiers is a cliff, where low a walkable slope. Base pads flat (52); a plaza (30) in
+  the middle; the rim shelf raises about half the edge to T1. Choke spurs across most main roads (a 14-20 gap); a
+  meandering river with fords on some maps (always on River maps); lakes; forests by noise kept off roads, pads, sites
+  and bases; the jungle grows thick.
+* *Roads*: every seat's main road to the plaza and a seam road to each neighbour, held to a slope of one block per 3.3
+  through anchors (pads, plaza, water crossings at 0 - fords -, roads already laid): **every road is walkable**, so a
+  bastion's plateau has exactly its ramps.
+* *Seat characters* (`Archetype`), one pair per map: **Prospector** (denser metal) vs **Warden** (two own capture sites on
+  its forward ground, less metal); **Open** (no cliffs round the base, denser metal) vs **Bastion** (a plateau a tier up
+  ringed by cliffs, two ramps, leaner metal); **Moated** (a river 70-90 in front, fords only) vs **Banks** (more land);
+  **Mixed** (each seat its own); **Mirror** (point-symmetric terrain and economy: the "tournament" control).
+* *Economy*: six patches round every start at 18, one 2.0x per seat round the plaza, a natural pair 42-66 out, then the
+  hole-driven fill (the reachable spot farthest from any patch goes in while any lies beyond its owner's hole target;
+  the rim band 20% denser; capped per seat at the hand-made maps' counts, scaled by the lobby's richness); values by
+  exposure (rich on the front line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within
+  7, reachable from its owner, off the roads, 12+ from the edge, never in a reserved zone (section 2's rules).
+* *Objectives*: a site on the plaza, a contested site on every front seam (where both neighbours walk about as far),
+  two more on the front line in team games, a warden's own two; **modifiers** add theirs.
+* *Jungle* (reserved for the hero slice, M12): one wild area per side (two in big team games) between the roads, with
+  an entry and an exit that differ every game and data-only creep camps; the fill leaves it alone.
+* *Modifiers* (`Modifier`), 1-2 per match when on (2-3 on surprise): Rich vein, Ley line (Ley Shrines along a line),
+  Geothermal rift (vents + a Lava Vent site), Gold rush, Mercenary road, Garrison ruins, Watch ridge - all built from
+  existing mechanics. Not rolled in the lobby until their mechanic exists: Hero relic, Hydra lair (the Oct 20 "hydras
+  in the middle that buff the hero who kills them": a lair replaces the centre gold), Fog valleys. Named in chat when
+  the map has risen; under the preview unless Surprise.
+
+**Fairness, measured.** `Fairness` prices a seat in metal per second averaged over 15 minutes: its patches (T1 then
+T2, built nearest first, shared with rivals by walk distance, front-line ones partly lost to raids), its objectives
+(income at 35 energy a metal, or an estimated worth), its defence (directions an enemy walks straight in), tempo (walk
+to the middle) and space. Spread = (best seat - worst seat) / mean. The balancer (`SWAP_NUDGE`, chosen in Phase 1):
+the same landscape with the seats turned round the ring and the sides' characters swapped, the most even of up to
+eight builds, then small metal edits (a standard patch made rich on the poorest seat, a crowding patch removed from the
+richest...) down to 80% of the tolerance; a draw still outside it gives way to a fresh draw (up to four). The
+data-only camps count zero on lobby maps.
+
+**Tests** (`gametest/MapGenGameTests.java`, batch `maps_gen`): the same map from the same seed; every seat reaches
+every seat, the middle and its whole economy by ground; level pads, no deep water near a patch, nothing past the rim
+inset; reserved zones (the jungle and a caller's zone) free of metal, jungle doors on its edge; seats and teams within
+the tolerance, starts on capitol ground inside their boxes; square edge helpers and the square wall's length; the
+options ride the seed (off rolls nothing, the lobby only live modifiers). The symmetric preset tests sweep
+`MapPreset.handmade()` only.
+
+**Cost.** A 4v4 build is ~150 ms on one core; SWAP_NUDGE builds up to eight, so ~1-2 s a map. The lobby preview draws
+it on a worker thread ("Generating..."); the server builds it once at Start.
+
