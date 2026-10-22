@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.hud.SplashArt;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.maps.MapClient;
@@ -527,7 +528,7 @@ public final class MatchLoadingScreen extends Screen {
     }
 
     /**
-     * Draws the whole veil into the window at {@code alpha}: the rose window with the title, then a dark stone panel
+     * Draws the whole veil into the window at {@code alpha}: the cathedral with the title (SplashArt), then a dark stone panel
      * (SplashArt's button look) with the map's name and blurb and the lineup, the stage line, the gold rule and a tip.
      * GUI units through GuiGraphics in both forms. Allocation-light: strings are built per frame but nothing else.
      */
@@ -549,6 +550,11 @@ public final class MatchLoadingScreen extends Screen {
         int pw = Math.min(w - 16, 460);
         int px0 = cx - pw / 2, px1 = cx + pw / 2;
         int py0 = Math.round(h * 0.585f), py1 = Math.round(h * 0.845f);
+        // a soft dark pad from the panel down past the tip, so the stage line, the rule and the tip read over the
+        // meadow and the river
+        gg.flush();
+        LobbyBackdrop.softScrim(gg.pose().last().pose(), px0, py0,
+                px1, Math.min(h - 4, Math.round(h * 0.97f)), alpha * 0.75f);
         gg.fill(px0, py0, px1, py1, argb(alpha * 0.86f, 0x1A1512));
         gg.fill(px0 + 1, py0 + 1, px1 - 1, py0 + (py1 - py0) / 4, argb(alpha * 0.25f, 0x4A3D33));
         gg.renderOutline(px0, py0, pw, py1 - py0, argb(alpha, 0xB08A3E));
