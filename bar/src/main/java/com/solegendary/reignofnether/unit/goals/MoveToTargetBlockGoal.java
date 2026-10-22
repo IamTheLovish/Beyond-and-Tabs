@@ -206,7 +206,7 @@ public class MoveToTargetBlockGoal extends Goal {
                 // standing still and counted busy. Now it backs off and gives up like any other stuck repath.
                 // (A unit in the air - a jump, a knockback - gets null from vanilla's canUpdatePath for that moment:
                 // that is neither progress nor stuck, it just retries.)
-                boolean airborne = !this.mob.onGround() && !this.mob.isInLiquid() && !this.mob.isPassenger();
+                boolean airborne = !this.mob.onGround() && !this.mob.isInWater() && !this.mob.isInLava() && !this.mob.isPassenger();
                 if ((newFinalNode == null && !airborne) || (newFinalNode != null && newFinalNode.equals(oldFinalNode)))
                     onStuckRepath();
                 else if (newFinalNode != null)
@@ -310,11 +310,11 @@ public class MoveToTargetBlockGoal extends Goal {
             if (++busyStreak >= BUSY_FALLBACK_AFTER && moveTarget != null && this.mob instanceof Unit u
                     && !this.mob.level().isClientSide() && takeSyncFallback(this.mob.level().getGameTime())) {
                 busyStreak = 0;
-                Path path = this.mob.getNavigation().createPath(moveTarget.getX(), moveTarget.getY(), moveTarget.getZ(), moveReachRange);
+                Path fallback = this.mob.getNavigation().createPath(moveTarget.getX(), moveTarget.getY(), moveTarget.getZ(), moveReachRange);
                 RtsDebugServerEvents.debugPathCalcsThisSecond += 1;
                 float speedMod = u.getSpeedModifier();
                 if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
-                this.mob.getNavigation().moveTo(path, speedMod);
+                this.mob.getNavigation().moveTo(fallback, speedMod);
             }
             return;
         }
