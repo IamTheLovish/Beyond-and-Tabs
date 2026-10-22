@@ -12,13 +12,8 @@ name: bot-ladder
 #
 # Cost: a match job is ~5 min of build and server start + up to 30 game minutes, which the headless server plays 3-7x
 # faster than real time (first run, Oct 22: 15 game minutes in 2.5 min), capped at 26 real minutes; the nightly 40 matches
-# are roughly 6-10 runner-hours, two waves of 20, free on this public repo.
+# are roughly 6-7 runner-hours (first full run: 394 runner-minutes with one 50-minute hang), two waves of 20, free on this public repo.
 on:
-  # TEMPORARY (this PR only): a workflow with only schedule / workflow_dispatch is not registered until it is on main, so
-  # the API cannot dispatch it from the branch. A push to the PR branch registers it (and runs the quick list); remove
-  # this trigger before the PR is merged.
-  push:
-    branches: [claude/bot-ladder]
   schedule:
     - cron: '3 7 * * *'     # 07:03 UTC, after the day's merges built and before lovish's morning
   workflow_dispatch:
@@ -74,7 +69,7 @@ jobs:
           LIST: ${{ inputs.matches }}
         run: |
           args=(--mode "${MODE:-nightly}")
-          if [ "$QUICK" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then args=(--mode quick)
+          if [ "$QUICK" = "true" ]; then args=(--mode quick)
           elif [ -n "$LIST" ]; then args=(--mode list --list "$LIST"); fi
           # (the script also writes the step outputs `matrix` and `count`)
           python3 tools/ladder_matrix.py "${args[@]}" --date "${{ steps.date.outputs.date }}" > matrix.json
@@ -90,7 +85,7 @@ jobs:
     needs: plan
     name: ${{ matrix.match.label }}
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 90   # two attempts of the step at most
     strategy:
       fail-fast: false      # each match reports on its own
       max-parallel: 20      # all the hosted runners the repo gets
@@ -119,10 +114,16 @@ jobs:
           BAT_LADDER_MINUTES: ${{ inputs.minutes || '30' }}
           BAT_LADDER_WALL_MINUTES: ${{ inputs.wall_minutes || '26' }}
           BAT_LADDER_OUT: ${{ github.workspace }}/ladder-out
-          GAMETEST_TIMEOUT: 50m
+          GAMETEST_TIMEOUT: 38m   # setup ~5 min + the 26 real-minute match cap + shutdown; one runner hung 50 min in gradle configure (Oct 22)
         run: |
           chmod +x gradlew
-          bash ../tools/ci_gametests.sh
+          # a run that never reached the match (Oct 22: ForgeGradle's asset download failed on 1 runner of 41) is run once
+          # more; a match that started and failed is not
+          bash ../tools/ci_gametests.sh || {
+            if grep -q "\[Ladder\]" gametest.log; then exit 1; fi
+            echo "::warning::the match never started (setup failed), running it once more"
+            bash ../tools/ci_gametests.sh
+          }
       - name: The match as annotations ([Sim], [Pace], [Stuck], [Ladder])
         if: always()
         run: |
@@ -159,7 +160,15 @@ jobs:
           python3 tools/ladder_report.py ladder-results --matrix ladder-results/ladder-plan/matrix.json --date "$DATE" \
             --run-url "$RUN_URL" --sha "$GITHUB_SHA" --out "bot-ladder-$DATE.md" > /dev/null
           cat "bot-ladder-$DATE.md" >> "$GITHUB_STEP_SUMMARY"
-          head -c 3500 "bot-ladder-$DATE.md" | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Ladder table]"} {printf "%%0A%s", $0} END{print ""}'
+          # the whole table as annotations too (artifacts cannot be fetched by the agents that read CI through the API):
+          # 3800-character pieces, at most 8 (a step keeps its first 10 notices)
+          python3 - "bot-ladder-$DATE.md" <<'PY'
+          import sys
+          text = open(sys.argv[1], encoding="utf-8").read()
+          pieces = [text[i:i + 3800] for i in range(0, len(text), 3800)][:8]
+          for n, piece in enumerate(pieces, 1):
+              print("::notice::[Ladder table %d/%d]%s" % (n, len(pieces), piece.replace("%", "%25").replace("\r", "").replace("\n", "%0A")))
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: bot-ladder-${{ needs.plan.outputs.date }}.md

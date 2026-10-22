@@ -92,6 +92,9 @@ def report(results, planned, date, run_url="", sha=""):
     n_draw = len(ok) - n_dec
     facts.append(f"{len(planned) or len(results)} matches planned, {len(ok)} finished ({n_dec} decided, {n_draw} draws), "
                  f"{len(errors)} could not start, {len(missing)} left no result")
+    speeds = [r["simSpeed"] for r in ok if r.get("simSpeed")]
+    if speeds:
+        facts.append(f"sim speed {min(speeds):.1f}x to {max(speeds):.1f}x real time (median {statistics.median(speeds):.1f}x)")
     L += [" - ".join(facts), ""]
     if not ok:
         L += ["No match finished.", ""]
@@ -241,6 +244,9 @@ def report(results, planned, date, run_url="", sha=""):
         if r["outcome"] == "draw":
             look.append(f"- {name}: draw by {r['reason']} at {r['clock']}, army {int(r['armyEnd'][0])} vs {int(r['armyEnd'][1])}, "
                         f"units {int(r['unitsEnd'][0])} vs {int(r['unitsEnd'][1])}, bots {'/'.join(r.get('botState', []))}")
+        if r["outcome"] != "draw" and r["ticks"] < 5 * 60 * 20:
+            look.append(f"- {name}: decided at {r['clock']}, before minute 5 (peak army {int(r['peakArmy'][0])} / {int(r['peakArmy'][1])}) - "
+                        f"a lost start or a commander picked off, not a battle")
         for s in r.get("stalls", []):
             look.append(f"- {name}: stall - {s}")
         for e in r.get("errors", []):
