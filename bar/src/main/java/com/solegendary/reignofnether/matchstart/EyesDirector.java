@@ -71,6 +71,9 @@ import java.util.List;
  * <li>17_fog (Oct 21, perf plan R1, EyesFogScene): the last scene - fog of war on, a dozen marching out of our base
  *     into the dark; the fog re-mesh A/B (surface band vs whole column) and the fog edge before and after a full
  *     re-mesh.</li>
+ * <li>18_overlays (Oct 21, perf plan R2, EyesOverlaysScene; its own run, eyes.yml input `overlays`): 500 units and
+ *     1,700 buildings, stills of the underlines and boxes at a mid zoom and at strategic zoom, and the frame and
+ *     per-handler times at zoom 30 and 200 - the before / after of the overlay loops.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -191,6 +194,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (OVERLAYS_ONLY) {   // an overlays run (eyes.yml input `overlays`): only scene 18, then the end
+                        step = STEP_OVERLAYS;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -242,6 +250,19 @@ public final class EyesDirector {
                     done = EyesFogScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 17_fog failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_OVERLAYS -> {
+                boolean done;
+                try {
+                    done = EyesOverlaysScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -551,6 +572,8 @@ public final class EyesDirector {
     static final int STEP_SCARS = 21;
     static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
+    static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
+    static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;
@@ -1966,7 +1989,7 @@ public final class EyesDirector {
         return mc.player.blockPosition();
     }
 
-    private static String findEnemyName(Minecraft mc) {
+    static String findEnemyName(Minecraft mc) {
         String me = mc.player.getName().getString();
         for (RTSPlayer p : new ArrayList<>(PlayerClientEvents.rtsPlayers))
             if (p.name != null && !p.name.equals(me))
@@ -1994,7 +2017,7 @@ public final class EyesDirector {
      * ~4 blocks up (Oct 15 log: armies at y 72 over ground at 68; 12's water spilled out of a raised pad; and
      * dryAround never saw water). MOTION_BLOCKING stops on leaves, so step down through a canopy.
      */
-    private static int surfaceY(Minecraft mc, int x, int z) {
+    static int surfaceY(Minecraft mc, int x, int z) {
         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         int floor = mc.level.getMinBuildHeight() + 1;
         if (y <= floor)

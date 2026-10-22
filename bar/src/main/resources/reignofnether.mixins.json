@@ -9,6 +9,7 @@
     "BaseSpawnerMixin",
     "BeaconBlockEntityMixin",
     "BearMixin",
+    "BlastFurnaceBlockMixin",
     "BlazeMixin",
     "ChunkMapAccessor",
     "CrossbowMixin",
@@ -108,6 +109,7 @@
     "LevelRendererSkyMixin",
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
-    "ForgeLoadingOverlayMixin"
+    "ForgeLoadingOverlayMixin",
+    "WaitingScreenBackdropMixin"
   ]
 }

@@ -8,6 +8,7 @@ eyes tour log and the CI game-test log; nothing here changes what the game does.
 | line | where | when | says |
 |---|---|---|---|
 | `[Tick]` | server | every 10 s while units exist | p50 / p95 / max of the last 100 server ticks (vanilla's own ring) |
+| `[Paths]` | server | with every `[Tick]` line | the units' vanilla `createPath` calls in the last 10 s, how many took the distance-scaled short search (`VanillaPathBudget`), how many of those found no complete path and re-ran at full range, and the chase cell memo's hit rate (`Terrain.classify`). Fallbacks near the short-search count mean the short range is too tight |
 | `[Sys]` | server | every 10 s **while the server is slow** (p95 of the last 100 ticks >= 25 ms; off again below 18) | milliseconds per tick each of our systems spent (self time), the worst tick, calls per tick, and how much of the whole tick the timed systems are. `elsewhere` is vanilla, other mods and GC |
 | `[PerfAuto]` | server | p95 >= 50 ms with 60+ units, at most every 5 min | a 10 s run of vanilla's metrics recorder (what `/perf start` runs), our `bat:` sections summed by name, the heaviest leaves, `logs/perf-auto-*.txt`, and the recorder's own zip under `debug/profiling/` |
 | `[Frame]` | client | every 10 s in a world | p50 / p95 / max frame, zoom, units known |

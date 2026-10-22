@@ -104,6 +104,32 @@ public final class PathfinderWorkerPool {
         return BUILD_QUEUE.size() + INFLIGHT.get();
     }
 
+    // Diagnostics (tests): when the last worker A* started / finished, and the nodes it chained through.
+    private static volatile long lastComputeStartNanos = 0, lastComputeEndNanos = 0;
+    private static volatile int lastComputeSegments = 0;
+
+    // A one-line state of the pool for a test's failure message: is the flag on, what is parked (and how far its
+    // corridor warming got), what is computing, what is waiting to be delivered. Main thread only (BUILD_QUEUE).
+    public static String debugState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("rts ").append(UnitServerEvents.rtsPathfinding)
+          .append(", pool ").append(POOL == null ? "none" : (POOL.isShutdown() ? "shut down" : currentThreads + " threads"))
+          .append(", parked ").append(BUILD_QUEUE.size());
+        PendingBuild head = BUILD_QUEUE.peekFirst();
+        if (head != null)
+            sb.append(" (head ").append(head.start).append("->").append(head.target).append(" warmed ").append(head.cursor)
+              .append("/").append(head.region.chunkCount()).append(" chunks, valid ")
+              .append(head.valid == null ? "n/a" : head.valid.getAsBoolean()).append(", age ")
+              .append((System.nanoTime() - head.submitNanos) / 1_000_000).append(" ms)");
+        long now = System.nanoTime();
+        sb.append(", in flight ").append(INFLIGHT.get()).append(", results waiting ").append(RESULTS.size())
+          .append(", chunk builds/tick ").append(PathfinderConfig.maxChunkBuildsPerTick)
+          .append(", last A* started ").append(lastComputeStartNanos == 0 ? "never" : (now - lastComputeStartNanos) / 1_000_000 + " ms ago")
+          .append(", ended ").append(lastComputeEndNanos == 0 ? "never" : (now - lastComputeEndNanos) / 1_000_000 + " ms ago")
+          .append(" (").append(lastComputeSegments).append(" segments)");
+        return sb.toString();
+    }
+
     // Swap in a fresh pool of the requested size and let the old one drain gracefully. In-flight tasks
     // on the old pool still finish, post seq-guarded results to RESULTS, and decrement INFLIGHT, so we
     // leave INFLIGHT/RESULTS/BUILD_QUEUE untouched. Main-thread only (called from tick START).
@@ -270,6 +296,8 @@ public final class PathfinderWorkerPool {
         pool.execute(() -> {
             Path result = null;
             long computeStart = System.nanoTime();
+            lastComputeStartNanos = computeStart;
+            int segsRun = 0;
             try {
                 // Chained A*: when the goal is outside the 96-block search radius, run a follow-up search from
                 // where the last one ended rather than returning a partial path. Up to MAX_CHAIN_SEGMENTS hops,
@@ -280,6 +308,7 @@ public final class PathfinderWorkerPool {
                 BlockPos cur = start;
                 boolean reached = false;
                 for (int seg = 0; seg < segLimit; seg++) {
+                    segsRun = seg + 1;
                     GridAStar.Result r = GridAStar.search(snapshot, cur, target, reach,
                             PathfinderConfig.MAX_RADIUS, maxNodes);
                     if (seg == 0) {
@@ -298,6 +327,8 @@ public final class PathfinderWorkerPool {
             } catch (Throwable t) {
                 ReignOfNether.LOGGER.error("Worker A* failed", t);
             } finally {
+                lastComputeEndNanos = System.nanoTime();
+                lastComputeSegments = segsRun;
                 INFLIGHT.decrementAndGet();
                 // worker-thread compute time (pure A*); accumulated thread-safely for the F7 "Path ms" stat.
                 RtsDebugServerEvents.recordPathCompute(System.nanoTime() - computeStart);
