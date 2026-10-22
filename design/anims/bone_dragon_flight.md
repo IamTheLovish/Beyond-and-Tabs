@@ -8,14 +8,14 @@ unit/modelling/animations/Dragon.java (motion), tools/dragon_poses.py (its Pytho
 Body numbers at 1x (drawn x1.4): thorax 12 px tall (BH), wing span ~130 px, neck 8 links, tail 10 links.
 All times in ticks (20/s). Phase = share of the cycle. "Leads / follows" = which part moves first.
 
-## 1. Flap (cruise and climb) - T = 52 ticks (2.6 s), the downstroke 40 %, the recovery 60 %
+## 1. Flap (cruise and climb) - T = 52 ticks (2.6 s): a 6 % hold, the power stroke 30 %, the recovery 64 % (r13 round 2: 40 -> 36 % to the bottom)
 
 | phase | ticks | wing (arm / fore / hand / fingers) | sail | body | neck (S) | tail |
 |---|---|---|---|---|---|---|
-| top hold 0-.06 | 3 | arm +38 up, elbow open, hand swept back, fingers trailing, tips still rising | slack, cupped down | lowest (-4 px = -0.33 BH), nose down 5 | base flexed up, head level | tip low |
-| downstroke .06-.40 | 18 | arm leads (snaps off the top then loads), fore 3 ticks behind, hand 0.15 T behind, finger tips 0.08 T more: tips trail UP | taut, billowed UP behind the bones (trailing strips 10-25 deg above), chord-wise wave root->hem | rises 6 px (0.5 BH) a quarter beat late, nose up 9 | base pitches down against the lift (-5 / link at base), head counters 85 %, stays level | wave starts down the chain, 3 ticks / link |
-| bottom .40-.46 | 3 | arm -42, tips curled under, fore bent down | belly full, tips flick | top of the rise | S tightest | tip up |
-| recovery .46-1 | 29 | wrist folds first (hand back 60), elbow back 35, fingers close 18-50 toward the leading one, arm rises last and slowly; wing comes up NARROW | slack, cups DOWN, flutters on the trailing strips | sinks | S relaxes, base lifts | tip settles |
+| top hold 0-.06 | 3 | arm +38 up, elbow open, hand swept back, fingers trailing, tips still rising | slack, cupped down | lowest (-6 px = -0.5 BH), nose down 5 | base flexed up, head level | tip low |
+| downstroke .06-.36 | 16 | arm leads (snaps off the top then loads), fore 3 ticks behind, hand 0.15 T behind, finger tips 0.08 T more: tips trail UP | taut, billowed UP behind the bones (trailing strips 10-25 deg above), chord-wise wave root->hem | rises 10 px (0.8 BH) 4 ticks late, nose up 9 (round 2: the review saw no weight at 6) | base pitches down against the lift (-5 / link at base), head counters 85 %, stays level | wave starts down the chain, 3 ticks / link |
+| bottom ~.36 | 1 | arm -42, tips curled under, fore bent down | belly full, tips flick | top of the rise | S tightest | tip up |
+| recovery .36-1 | 33 | wrist folds first (hand back 60), elbow back 35, fingers close 18-50 toward the leading one, arm rises last and slowly; wing comes up NARROW | slack, cups DOWN, flutters on the trailing strips | sinks | S relaxes, base lifts | tip settles |
 
 Lateral: the neck holds an S from above (base and tip curve opposite, 6-9 deg / link, a 140-tick wander) and the tail
 answers it on the other side (counterweight); both take the bank.
@@ -32,9 +32,9 @@ S shallower; legs tucked tight. Never dead still: the arm drifts +-2.5.
 ## 3. Banked turn
 
 Body roll to the turn rate (max 50, critically damped, no overshoot - Dragon.bankStep, unchanged). The WHOLE body tilts
-(the wings are its children). Inner wing: beats 30 % shallower, elbow and wrist folded 12 / 10 (it tucks); outer wing
+(the wings are its children). Inner wing: beats 30 % shallower, dropped 16, elbow and wrist folded 22 / 20 (it tucks); outer wing
 held out and beats 10 % deeper. Neck: counter-rolls so the skull is near level, and curves INTO the turn (yaw grows
-toward the head, 0.06 * bank per link) - the head leads. Tail: curls into the turn on two lagged copies of the bank
+toward the head, up to 0.2 * bank per link, the head 0.18 more) - the head leads. Tail: curls into the turn on two lagged copies of the bank
 (rudder), settling after the body.
 
 ## 4. Hover / attack (breath)

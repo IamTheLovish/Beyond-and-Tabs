@@ -44,7 +44,7 @@ PALETTE = {
     "tooth": "#f6f2e6", "claw": "#4a443b", "horn": "#dad3be",
     "deepslate": "#4f5055", "deepslate_dark": "#35363b", "blackstone": "#2a2729", "blackstone_edge": "#4b4448",
     # the sail: a saturated dusky lilac (r8's grey-pink dissolved into grass and terracotta from above)
-    "membrane": "#6a4e88", "membrane_dark": "#43305c", "membrane_hem": "#8a70aa",   # r11: darker, the sail one dark shape
+    "membrane": "#73579a", "membrane_dark": "#4f3a6e", "membrane_hem": "#9078b2",   # r11: darker, the sail one dark shape
     # r13: the chord shades dark by the bone -> mid -> a paler, thinner hem (only "_hem" strips get the torn edge and
     # its back-lit rim: tools/materials.py style "hem"), so the sail has facets and an outline at night
     # r10: the spine's thread is its own DIM colour (soul_thread: a desaturated soul-teal, luminance 121 vs
@@ -73,7 +73,7 @@ DRAGON = dict(
     # the neck (r12: 5 x 7 px), 10 in the tail (r12: 7 x 8 px), about the same lengths; the neck a little thinner
     tail_n=10, tail_seg=5.8, tail_w0=5.6, tail_w1=1.4,
     neck_n=8, neck_seg=4.7, neck_w0=6.2, neck_w1=4.0, neck_y=15.5,
-    head_len=13.0, head_w=8.4, head_h=6.4, jaw_len=13.0,
+    head_len=14.0, head_w=9.2, head_h=6.8, jaw_len=14.0,   # r13: a touch bigger - the head must read from above
     shoulder=(6.5, 9.5, -6.5), f_upper=9.0, f_lower=8.0, f_foot=5.0, f_w=3.0,
     hip=(5.0, 8.5, 20.0), h_upper=9.5, h_lower=8.5, h_foot=6.0, h_w=3.4,
     # r13 (the r12 wing read as a plank with a rake at its end): a bat's proportions - a short humerus, a long forearm,
