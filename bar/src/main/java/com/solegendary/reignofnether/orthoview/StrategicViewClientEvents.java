@@ -854,12 +854,13 @@ public class StrategicViewClientEvents {
         // in strategic view the icons carry the selection, except for big units still drawn as models
         if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled
                 && (!strategic || !strategicBig))
-            drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick());
+            drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick(), evt.getFrustum());
         else if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS && rangeRingsEnabled)
             drawRangeRings(evt.getPoseStack(), evt.getPartialTick());
     }
 
-    private static void drawSelectionPlates(PoseStack poseStack, float partialTick) {
+    private static void drawSelectionPlates(PoseStack poseStack, float partialTick,
+                                            @javax.annotation.Nullable net.minecraft.client.renderer.culling.Frustum frustum) {
         List<LivingEntity> selectedUnits = UnitClientEvents.getSelectedUnits();
         if (selectedUnits.isEmpty())
             return;
@@ -867,16 +868,22 @@ public class StrategicViewClientEvents {
         RenderType type = MyRenderer.LINES_UNDER_ENTITIES;
         VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(type);
         for (LivingEntity entity : selectedUnits) {
-            if (!FogOfWarClientEvents.isInBrightChunk(entity) || entity.isPassenger())
+            if (entity.isPassenger())
                 continue;
             if (strategic && !keepsModel(entity))
                 continue;   // its icon carries the selection ring
+            double radius = Math.max(0.5, entity.getBbWidth() * 0.75) + 0.15;
+            // off screen: no rings (perf plan R2 - a big selection drew every ring every frame, wherever it was); the
+            // box covers the outer ring and a tick of movement either way
+            if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(radius + 0.6, 0.6, radius + 0.6)))
+                continue;
+            if (!FogOfWarClientEvents.isInBrightChunk(entity))
+                continue;
             int rgb = teamColour(entity);
             float r = ((rgb >> 16) & 0xFF) / 255f, g = ((rgb >> 8) & 0xFF) / 255f, b = (rgb & 0xFF) / 255f;
             double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
             double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.05 - cp.y;
             double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
-            double radius = Math.max(0.5, entity.getBbWidth() * 0.75) + 0.15;
             ring(poseStack, vc, x, y, z, radius, 24, r, g, b, 0.95f);
             ring(poseStack, vc, x, y, z, radius - 0.07, 24, r, g, b, 0.95f);
             ring(poseStack, vc, x, y, z, radius + 0.07, 24, 1f, 1f, 1f, 0.6f);
@@ -918,15 +925,34 @@ public class StrategicViewClientEvents {
         ring(poseStack, vc, x, y, z, range, RING_SEGMENTS, 1f, 0.35f, 0.3f, 0.7f);
     }
 
+    // cos and sin of every ring vertex's angle (Math.PI * 2 * i / segments - the same doubles the loop used to compute),
+    // per segment count: three 24-segment rings under each selected unit took two cos / sin pairs a segment, every frame
+    private static final double[][][] RING_TRIG = new double[RING_SEGMENTS + 1][][];
+
+    private static double[][] ringTrig(int segments) {
+        double[][] t = segments < RING_TRIG.length ? RING_TRIG[segments] : null;
+        if (t == null) {
+            t = new double[2][segments + 1];
+            for (int i = 0; i <= segments; i++) {
+                double angle = Math.PI * 2 * i / segments;
+                t[0][i] = Math.cos(angle);
+                t[1][i] = Math.sin(angle);
+            }
+            if (segments < RING_TRIG.length)
+                RING_TRIG[segments] = t;
+        }
+        return t;
+    }
+
     private static void ring(PoseStack poseStack, VertexConsumer vc, double cx, double cy, double cz, double radius,
                              int segments, float r, float g, float b, float a) {
         Matrix4f pose = poseStack.last().pose();
         Matrix3f normal = poseStack.last().normal();
+        double[][] trig = ringTrig(segments);
+        double[] cos = trig[0], sin = trig[1];
         for (int i = 0; i < segments; i++) {
-            double a0 = Math.PI * 2 * i / segments;
-            double a1 = Math.PI * 2 * (i + 1) / segments;
-            float x0 = (float) (cx + Math.cos(a0) * radius), z0 = (float) (cz + Math.sin(a0) * radius);
-            float x1 = (float) (cx + Math.cos(a1) * radius), z1 = (float) (cz + Math.sin(a1) * radius);
+            float x0 = (float) (cx + cos[i] * radius), z0 = (float) (cz + sin[i] * radius);
+            float x1 = (float) (cx + cos[i + 1] * radius), z1 = (float) (cz + sin[i + 1] * radius);
             float nx = x1 - x0, nz = z1 - z0;
             float len = (float) Math.sqrt(nx * nx + nz * nz);
             if (len > 0) {

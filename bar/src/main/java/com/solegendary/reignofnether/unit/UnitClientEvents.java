@@ -1401,7 +1401,7 @@ public class UnitClientEvents {
                 float alpha = SELECTED_IDS.contains(entity.getId()) ? 1.0f : 0.5f;
                 // draw only the bottom of the outline boxes
                 entityAABB = entityAABB.setMaxY(entityAABB.minY);
-                int rgb = entity instanceof Unit unit ? UNDERLINE_COLOURS.unit(unit.getOwnerName()) : 0xFFFFFF;
+                int rgb = entity instanceof Unit owned ? UNDERLINE_COLOURS.unit(owned.getOwnerName()) : 0xFFFFFF;
                 float r = ((rgb >> 16) & 0xFF) / 255.0f;
                 float g = ((rgb >> 8) & 0xFF) / 255.0f;
                 float b = (rgb & 0xFF) / 255.0f;
