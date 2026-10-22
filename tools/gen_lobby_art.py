@@ -35,7 +35,7 @@ LAYOUT = "--layout" in sys.argv     # quick geometry check: flat tones, no ink p
 # ---------------------------------------------------------------- shared layout (LobbyBackdrop.java mirrors these)
 PX_PER_A = 1100.0
 ART_W = 2560 / PX_PER_A                     # 2.327 A: a 21:9 screen, a hair narrower
-MOON = (0.19, 0.175, 0.15)                  # centre x, y, radius (round 6: behind the towers, so the spires cut it)
+MOON = (0.19, 0.215, 0.16)                  # centre x, y, radius (round 6: behind the towers, so the spires cut it)
 RECTS = {                                   # x0, y0, x1, y1 in A (artboard layers)
     "sky": (-ART_W / 2, 0.0, ART_W / 2, 1.0),
     "clouds_far": (-ART_W / 2, 0.28, ART_W / 2, 0.80),     # wraps in x (tile = ART_W)
@@ -3040,7 +3040,9 @@ def mist_pool(w=1024, h=256):
 
 
 def sprites():
-    glow(); sparkle(); bats(); petal(); leaf(); ring(); cascade(); ripples(); streak(); grain_tex(); vignette(); mist()
+    glow(); sparkle(); bats(); petal(); leaf(); ring(); cascade(); ripples(); streak(); vignette(); mist()
+    import lobby_depth as D
+    D.paper_grain()                       # round 6: monochrome paper tooth instead of RGB noise
     shafts(); mist_pool()
     # the foreground pop-outs are round 6's (tools/lobby_depth.fg); fg_plants() is kept for reference
 

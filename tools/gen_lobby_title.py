@@ -327,8 +327,8 @@ def title(write_java=True):
                     rim_bot=(120, 80, 30), bloom_rgb=(120, 80, 20), outline_rgb=(24, 14, 4), seam_rgb=(60, 40, 12),
                     gloss_rgb=(255, 250, 220))
     j = _lettering([([("Joisco", FRAK, F, 1)], 0)], pad=44 * SS, seed=29, drips_static=0, drips_anim=0,
-                   out_name="credit_joisco", glow=0.9, rim_r=5, outline_r=9, fill_top=(196, 214, 255),
-                   fill_mid=(104, 136, 255), fill_bot=(156, 86, 236), hatch=False, rim_top=(250, 252, 255),
+                   out_name="credit_joisco", glow=0.9, rim_r=6, outline_r=9, fill_top=(220, 232, 255),
+                   fill_mid=(132, 162, 255), fill_bot=(178, 118, 250), hatch=False, rim_top=(250, 252, 255),
                    rim_bot=(150, 160, 186), bloom_rgb=(64, 110, 240), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
                    gloss_rgb=(220, 232, 255), swash_j=True)
     if write_java:

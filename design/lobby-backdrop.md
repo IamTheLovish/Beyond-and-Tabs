@@ -41,7 +41,9 @@ value structure are taken - never their composition, objects or shapes (no skull
    wobbling and broken by the paper's tooth. No flat colour areas. Foliage is cut in leaf-sized patches, each in its own
    direction; the sky's lines ring the moon and follow the glow's contours (never level scanlines).
 5. **Light**: the moon sits behind the towers (so the spires cut its disc) and a blood-red glow rises behind the
-   cathedral, which reads as a dark, intricate silhouette (`cathedral_grade`) with the red glass as the focal point;
+   cathedral, which reads as a dark, intricate silhouette (`cathedral_grade` re-cuts its stone as an engraving: light
+   lines along the drawing's own forms on near-black, the farther layers lifted into the haze) with the red glass as
+   the focal point;
    rims of light on the edges facing the moon. **Red is the only saturated colour**; everything else is near-monochrome
    bone, grey and black.
 
@@ -129,6 +131,9 @@ NativeImage reads them as RGBA), the smooth glows stay RGBA: about 7.6 MB in all
   blackletter "k" read as "t" at that size) with a soft pulsing red glow and drips;
   the main buttons (`GothicText.LOBBY_MAIN`) in Cinzel capitals; names, tooltips, stats and the small buttons stay in
   the vanilla font.
+
+The paper (`grain.png`, `lobby_depth.paper_grain`) is a warm monochrome tooth with fibres and pits, tiled in screen
+space at low alpha - not RGB noise.
 
 ## Motion (round 6 additions)
 

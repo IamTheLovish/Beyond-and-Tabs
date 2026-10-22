@@ -58,7 +58,7 @@ public class LobbyBackdrop {
 
     // ---- shared with tools/gen_lobby_art.py
     private static final float ART_W = 2560f / 1100f;
-    private static final float MOON_X = 0.19f, MOON_Y = 0.175f, MOON_R = 0.15f;
+    private static final float MOON_X = 0.19f, MOON_Y = 0.215f, MOON_R = 0.16f;
     private static final float FRAME_W = 0.66f;
     private static final float HORIZON = 0.64f;
     private static final float[][] RIVER = {   // x, y, half width (round 6: zig-zags back to the fall)

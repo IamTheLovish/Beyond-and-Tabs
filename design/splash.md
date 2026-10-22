@@ -29,7 +29,9 @@ but keep enhancing it". The title screen, the launch / reload loading screens an
   46 % of the width it stacks: "Developed by" above, "Lovish & Joisco" below (still one scale). The capital J and L
   are our own blackletter glyphs (`gen_lobby_title._swash_j` / `_swash_l`): UnifrakturCook's J read as an I or T and
   its L as a C at this size. The glow fades out before each texture's edge (no box round a name).
-- **Buttons**: the carved stone plates with Cinzel capitals and blood (`GothicText.restyleButtons`, unchanged) on a soft
+- **Buttons**: the carved stone plates with Cinzel capitals and blood (`GothicText.restyleButtons`; round 6: the drips
+  are drawn in quarter pixels - a root swelling up into the plate's lip, a tapering body, a round glossy bead, a
+  teardrop when one falls) on a soft
   rounded dark pad behind the whole column (`SplashArt.buttonScrim` -> `LobbyBackdrop.softScrim`, 62 %, feathered 30 %
   past the column) so they read over the scene. Hit areas, sizes and positions are vanilla.
 - **Motion**: everything the lobby has (breathing glass and rim light, wind gusts through the flowers and trees,

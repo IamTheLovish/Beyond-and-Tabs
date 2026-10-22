@@ -434,13 +434,13 @@ def gravestone(L, x, ybase, wd, ht, rr, lean=0.0, kind=0, albedo=0.55):
         L.ink = np.maximum(L.ink, cma * 0.9)
 
 
-def fence(L, x0, x1, ybase, ht, rr, lean=0.0, broken=(), albedo=0.32):
+def fence(L, x0, x1, ybase, ht, rr, lean=0.0, broken=(), albedo=0.45):
     """Wrought iron railings: bars with spear tips, two rails, a bar or two missing or bent."""
     c = L.c
     m = Image.new("L", (c.W, c.H), 0)
     d = ImageDraw.Draw(m)
     n = int((x1 - x0) / (ht * 0.16))
-    bw = max(2, int(ht * 0.022 * c.k))
+    bw = max(3, int(ht * 0.032 * c.k))
     yb = lambda x: ybase + (x - x0) * lean
     for i in range(n + 1):
         if i in broken:
@@ -731,9 +731,10 @@ def clouds():
         nz = 1 / np.sqrt(gx * gx + gy * gy + 1)
         lam = np.clip((-gx * Lv[0] - gy * Lv[1] + Lv[2]) * nz, 0, 1)
         V = np.clip(0.04 + 0.62 * lam ** 1.6, 0, 1) * smooth(0.25, 0.7, Dn)
-        theta = (G.fbm(U, Y * 3, 3, seed + 2, True, 2) - 0.5) * 0.5
+        theta = (G.fbm(U, Y * 3, 3, seed + 2, True, 2) - 0.5) * 1.4
         colour = np.broadcast_to(np.array((206, 178, 176), np.float32) / 255, V.shape + (3,))
-        rgb, cov = etch(V, A, theta, colour, 3.6 * SS, seed + 3, cross=0.6, stipple=0.3, wrap_w=c.W, contour=0.6)
+        rgb, cov = etch(V, A, theta, colour, 3.6 * SS, seed + 3, cross=0.5, stipple=0.6, wrap_w=c.W, contour=0.6,
+                        tooth_amt=0.7)
         out, _ = plane(rgb, cov, A, lad)
         save(out, A, name, c.size)
 
@@ -1147,11 +1148,20 @@ def cathedral_grade():
             rgb = np.stack([rgb[..., 0], rgb[..., 1] * 0.72, rgb[..., 2] * 0.8], -1)
         else:
             base = nm
+            # the stone re-cut as an engraving: light lines along the drawing's own forms (verticals on the piers,
+            # round the arches), their width carrying the old value, on near-black; the old drawing kept faintly under
+            # it so no tracery is lost
             lum = rgb @ np.array([0.30, 0.59, 0.11], np.float32)
-            stone = rgb * 0.62 * (1 - 0.45 * smooth(0.18, 0.5, lum))[..., None]
-            stone = stone ** 1.08
+            g1 = glass[..., 0]
+            V = np.clip(lum * 1.7, 0, 1) ** 1.2 * (1 - g1)
+            th = form_theta(blur(lum, 1.5), a, math.pi / 2, sigma=4, coh_min=0.3)
+            er, cov = etch(V, a, th, np.broadcast_to(BONE, V.shape + (3,)), 5.6, 77 + len(nm), cross=0.7, stipple=0.15,
+                           contour=0)
+            black = np.array((9, 7, 9), np.float32) / 255
+            stone = black + (er * 0.62 - black) * cov[..., None]
+            stone = np.maximum(stone, rgb * 0.28)
             hz = CATH_HAZE.get(base, 0.0)
-            stone = stone * (1 - hz) + np.array((70, 38, 44), np.float32) / 255 * hz
+            stone = stone * (1 - hz) + np.array((70, 30, 38), np.float32) / 255 * hz
             yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
             lines = 0.80 + 0.20 * (0.5 + 0.5 * np.cos((xx + 0.35 * yy) / 2.6))
             gl = np.stack([rgb[..., 0], rgb[..., 1] * 0.62, rgb[..., 2] * 0.85], -1) * lines[..., None]
@@ -1250,6 +1260,32 @@ def frames():
                     L.stamp(lm, albedo=0.32, relief=0.4, outline=0.6)
         out, a = L.render("frame", 3.0 * SS, 430 + mir, default_theta=0.3, gamma=1.3)
         save(out, a, f"frame_{side}_vines", c.size)
+
+
+def paper_grain(size=256):
+    """The paper the whole plate is printed on (screen space, tiled): a warm, monochrome tooth - soft mottling, a few
+    fibres, pits - not RGB noise. Light where the paper rises, dark in its pits; low alpha."""
+    rr = np.random.default_rng(951)
+    n = size
+    mott = noise(n, n, 6, 952, 4, wrap=True, aspect=1.0)
+    fine = blur(rr.random((n, n)).astype(np.float32), 0.7)
+    fine = (fine - fine.mean()) / (fine.std() + 1e-6)
+    im = Image.new("L", (n, n), 0)
+    d = ImageDraw.Draw(im)
+    for _ in range(70):                       # fibres
+        x, y = rr.uniform(0, n, 2)
+        a = rr.uniform(0, math.pi)
+        ln = rr.uniform(6, 22)
+        for dx in (-n, 0, n):
+            for dy in (-n, 0, n):
+                d.line([(x + dx, y + dy), (x + dx + math.cos(a) * ln, y + dy + math.sin(a) * ln)], fill=255, width=1)
+    fib = arr(im)
+    v = (mott - 0.5) * 0.8 + fine * 0.25 + fib * 0.6
+    lum = np.clip(0.5 + v * 0.5, 0, 1)
+    rgb = np.stack([lum * 1.0, lum * 0.93, lum * 0.84], -1)
+    alpha = np.clip(np.abs(v) * 0.16, 0, 0.14)
+    out = np.concatenate([rgb, alpha[..., None]], -1)
+    Image.fromarray(np.round(out * 255).astype(np.uint8), "RGBA").save(os.path.join(OUT, "grain.png"), optimize=True)
 
 
 def fg():
