@@ -54,7 +54,7 @@ public final class MapLayout {
     /** Slot 0 sits due west (-x); the rest follow counter-clockwise on the map. */
     static final double ROT = Math.PI;
     /** Distance from a start to its home ring of patches (as StartAreaClearing.HOME_RING_RADIUS). */
-    static final int HOME_RING = 18;
+    static final int HOME_RING = HomeMetal.RING;
     /** Neighbouring starts are at least this far apart (a capitol, its ring and room to build between). */
     static final int MIN_NEIGHBOUR = 116;
     /** Values of the three tiers of patch (design/maps.md section 2). */
@@ -84,7 +84,7 @@ public final class MapLayout {
     /** The open-ground metal's knobs (lobby richness, rim limit, reserved zones); {@link MetalOptions#DEFAULT} = the old map. */
     public final MetalOptions metal;
     /** Index in {@link #mexes} where the open-ground fill begins: everything before it is a template patch. */
-    private int spreadFrom;
+    private int spreadFrom, extraFrom, homeEnd;
     /** The walkable ground of the whole arena, sampled once and flooded from any start on demand (see reachFrom). */
     private Ground ground;
 
@@ -296,11 +296,47 @@ public final class MapLayout {
     /** Half the width of a patch's pad (MetalPatches.stamp levels a 7x7). */
     public static final int PAD = 3;
 
-    private void homeRing(int count) {
-        for (int k = 0; k < count; k++) {
-            double b = (k - (count - 1) / 2.0) * (Math.PI / 2.2);
-            mex(ring + Math.cos(b) * HOME_RING, Math.sin(b) * HOME_RING, STANDARD);
+    /**
+     * The standard home set (see {@link HomeMetal}): HomeMetal.COUNT patches in a fan round the start, all standard,
+     * identical on every map. A spot the ground refuses moves up to NUDGE_MAX toward the start, then tries the next
+     * angles either side and radii inside and outside the ring, so the count is never lower on a bad map.
+     */
+    private void homeSet() {
+        Sample s = new Sample();
+        for (int k = 0; k < HomeMetal.COUNT; k++) {
+            double b = (k - (HomeMetal.COUNT - 1) / 2.0) * HomeMetal.ARC;
+            boolean placed = tryHome(HomeMetal.RING, b, s, false);
+            for (int i = 1; i <= 12 && !placed; i++) {
+                double off = Math.toRadians(8) * ((i + 1) / 2) * (i % 2 == 1 ? 1 : -1);
+                for (int dr : new int[] { 0, -3, 3 }) {
+                    if (tryHome(HomeMetal.RING + dr, b + off, s, true)) {
+                        placed = true;
+                        break;
+                    }
+                }
+            }
         }
+        homeEnd = mexes.size();
+    }
+
+    private boolean tryHome(double r, double b, Sample s, boolean spaced) {
+        double u = ring + Math.cos(b) * r, v = Math.sin(b) * r;
+        if (spaced) {   // an alternative spot never crowds a home patch already down (slot 0's copy stands for all)
+            double[] w0 = toWorld(slots.get(0), u, v);
+            for (Mex m : mexes)
+                if (m.slot() == 0 && Math.hypot(m.dx() - w0[0], m.dz() - w0[1]) < HomeMetal.SPACING)
+                    return false;
+        }
+        double toStart = Math.hypot(ring - u, v);
+        for (int step = 0; step <= NUDGE_MAX; step++) {
+            double k = toStart > 0 ? step / toStart : 0;
+            double uu = u + (ring - u) * k, vv = v - v * k;
+            if (Math.hypot(ring - uu, vv) < HomeMetal.MIN_DIST)
+                break;
+            if (placeMex(uu, vv, HomeMetal.VALUE, step > 0, s))
+                return true;
+        }
+        return false;
     }
 
     /** One patch per slot near the centre at the closest radius where neighbours' patches don't collide. */
@@ -423,7 +459,7 @@ public final class MapLayout {
     private void populate() {
         switch (preset) {
             case ARCHIPELAGO -> {
-                homeRing(5);
+                homeSet();
                 mex(fordBank(), 0, STANDARD);
                 double[] p = polar(isletR(), half - 7.0 / isletR());
                 mexPair(p[0], p[1], RICH);
@@ -432,7 +468,7 @@ public final class MapLayout {
                 sites.add(new Site(0, 0, Kind.WATCHTOWER));
             }
             case HIGHLANDS -> {
-                homeRing(6);
+                homeSet();
                 mexPair(hillU(), 6, RICH);
                 double[] f = polar(0.7 * ring, 0.5 * half);
                 mexPair(f[0], f[1], STANDARD);
@@ -441,7 +477,7 @@ public final class MapLayout {
                 sites.add(new Site(0, 0, Kind.FORGE));
             }
             case NETHER_RIFT -> {
-                homeRing(5);
+                homeSet();
                 mexPair(riftR() + 12, 7, RICH);
                 centreRing();
                 boundarySite(0.6 * radius, Kind.VENT);
@@ -454,7 +490,7 @@ public final class MapLayout {
                 pillarPair(b[0], b[1], 12);
             }
             case END_SPIRES -> {
-                homeRing(5);
+                homeSet();
                 mexPair(spireU(), 6, RICH);
                 centreRing();
                 boundarySite(0.95 * ring, Kind.WATCHTOWER);
@@ -462,14 +498,14 @@ public final class MapLayout {
                 pillarPair(spireU(), Math.max(10, spireSize() - 3), 14);
             }
             case VERDANT_VALLEY -> {
-                homeRing(6);
+                homeSet();
                 mexPair(riverR() - 12, 8, RICH);
                 centreRing();
                 boundarySite(0.62 * radius, Kind.CAMP);
                 sites.add(new Site(0, 0, Kind.SHRINE));
             }
             case DESERT_MESA -> {
-                homeRing(5);
+                homeSet();
                 double[] m = mesa();
                 mexPair(m[0], m[1], RICH);
                 centreRing();
@@ -484,7 +520,7 @@ public final class MapLayout {
                 dLakeV = lakeR() * Math.sin(half);
                 dGarU = garrisonR() * Math.cos(half);
                 dGarV = garrisonR() * Math.sin(half);
-                homeRing(5);
+                homeSet();
                 double[] rich = deltaRich();
                 mexPair(rich[0], rich[1], RICH);
                 double[] flank = deltaFlank();
@@ -519,7 +555,7 @@ public final class MapLayout {
                 cGar = isleGarrisonSize();
                 cChorusU = chorusIsleR() * Math.cos(half);
                 cChorusV = chorusIsleR() * Math.sin(half);
-                homeRing(5);
+                homeSet();
                 // the lane island's rich pair sits beside the neck, so the neck's middle stays open
                 mexPair(laneIsleU(), Math.max(4, laneIsleSize() - 8), RICH);
                 // one standard patch per neighbour on every garrison islet big enough to hold one beside the ruin (the
@@ -543,21 +579,31 @@ public final class MapLayout {
 
     /**
      * Metal over the open ground (lovish, Oct 16: "Metal extractors ... should be all over the map I feel like I have
-     * alot of the map that is empty that doesnt need to be contested"). The templates above put a home ring, a lane
+     * alot of the map that is empty that doesnt need to be contested"). The templates above put the home set, a lane
      * pair or two and the centre in every wedge and left the rest bare; this fills it from a grid of candidates in
      * slot frame (SPREAD_GRID apart), each kept only if it sits clear of every site, vent, pillar and start, on
-     * flat dry ground with no void or lava within SPREAD_CLEARANCE, and on ground the flood from its own start reaches
-     * (so it is reachable by ground, hills and cliffs included) - farthest from every patch first, so the emptiest
-     * ground fills first, up to SPREAD_MAX (scaled by the lobby's metal richness) per slot, none closer than
-     * SPREAD_CLEAR to another, none inside a reserved zone, none nearer the arena's edge than the extractor clearance (MetalOptions.rimInset). Values pull toward the middle: LEAN behind the bases, STANDARD on the
-     * flanks, RICH in the inner half - every part of the map is worth holding, the middle most. Listed through mex /
-     * mexPair, so every slot gets the same patches (the fairness tests hold) and wedge-crowding drops apply alike.
+     * flat dry ground with no void or lava within SPREAD_CLEARANCE, on ground the flood from its own start reaches
+     * (so it is reachable by ground, hills and cliffs included), none closer than SPREAD_CLEAR to another, none inside
+     * a reserved zone, none nearer the arena's edge than the extractor clearance (MetalOptions.rimInset). Three
+     * passes over that one list, each farthest-from-every-patch first, so the emptiest ground fills first:
+     * <ol>
+     *   <li><b>The core fill</b>, exactly what the map had before extra metal: up to SPREAD_MAX (scaled by the lobby's
+     *       richness) per slot, not nearer the wall than the old R-22 limit, weighted toward the middle bands.</li>
+     *   <li><b>The rim fill</b> (lovish Oct 21: more metal along the edges, filling the empty parts): up to RIM_MAX per
+     *       slot (scaled by the extra-metal level) in the band between the clearance and the old limit.</li>
+     *   <li><b>The spread</b> (lovish Oct 22: "we can add more mexes than we have to the game", "spread all over the map"):
+     *       up to EXTRA_MAX per slot (scaled likewise) anywhere there is room, mid-map and lanes and outskirts alike.</li>
+     * </ol>
+     * The core fill never loses a patch to the other two (they run after it, on top of its cap). Every patch is paid by
+     * {@link #openValue}: the further from the bases and the nearer the rim, the richer. Listed through mex / mexPair,
+     * so every slot gets the same patches (the fairness tests hold) and wedge-crowding drops apply alike.
      */
     private void spread() {
         spreadFrom = mexes.size();
         Sample s = new Sample();
         Slot s0 = slots.get(0);
         Reach reach = reachFrom(s0.dx(), s0.dz());
+        int clear = metal.rimInset(), core = Math.max(CORE_INSET, clear);
         // the candidates: a fine grid over the wedge (slot frame, v >= 0), kept where the ground takes a patch
         List<double[]> cands = new ArrayList<>();
         for (double r = SPREAD_CLEAR; r <= radius; r += SPREAD_GRID)
@@ -565,32 +611,52 @@ public final class MapLayout {
                 double phi = arc / r;
                 double u = r * Math.cos(phi), v = r * Math.sin(phi);
                 double[] cw = toWorld(s0, u, v);
-                if (distanceToArenaEdge(cw[0], cw[1]) < metal.rimInset())
+                double edge = distanceToArenaEdge(cw[0], cw[1]);
+                if (edge < clear)
                     continue;   // too near the wall for an extractor to fit (ExtractorClearance: footprint, gap, worker, the wall's widest piece)
-                if (v > 0 && v < SPREAD_CLEAR / 2.0)
+                if (v > 0 && v < EXTRA_CLEAR / 2.0)
                     continue;   // its mirror twin would crowd it; the v = 0 candidates cover the axis
-                if (r * Math.sin(half - phi) < SPREAD_CLEAR / 2.0)
+                if (r * Math.sin(half - phi) < EXTRA_CLEAR / 2.0)
                     continue;   // the neighbour's copy across the boundary would crowd it
-                if (spreadSpotOk(s0, u, v, s, reach) && (v == 0 || spreadSpotOk(s0, u, -v, s, reach))
-                        && copiesPadOk(u, v, s) && (v == 0 || copiesPadOk(u, -v, s)))
-                    cands.add(new double[] { u, v, r });
+                if (!(spreadSpotOk(s0, u, v, s, reach, EXTRA_CLEAR) && (v == 0 || spreadSpotOk(s0, u, -v, s, reach, EXTRA_CLEAR))
+                        && copiesPadOk(u, v, s) && (v == 0 || copiesPadOk(u, -v, s))))
+                    continue;
+                // a core candidate keeps the old spacing and twin rules (the core fill is what the map had before); the
+                // rest may stand EXTRA_CLEAR from a neighbour
+                boolean core20 = !(v > 0 && v < SPREAD_CLEAR / 2.0) && !(r * Math.sin(half - phi) < SPREAD_CLEAR / 2.0)
+                    && spaced(s0, u, v, SPREAD_CLEAR) && (v == 0 || spaced(s0, u, -v, SPREAD_CLEAR));
+                cands.add(new double[] { u, v, r, edge, core20 ? 1 : 0 });
             }
-        // farthest first: the candidate furthest from every patch on the map goes in, then the next - the emptiest
-        // ground fills before any corner gets a second patch
-        int added = 0, cap = spreadMax();
+        pick(cands, s0, c -> c[3] >= core && c[4] == 1, spreadMax(), true, SPREAD_CLEAR);
+        extraFrom = mexes.size();
+        float f = metal.extra().count;
+        if (f > 0) {
+            pick(cands, s0, c -> c[3] < core, Math.round(RIM_MAX * f), false, EXTRA_CLEAR);
+            pick(cands, s0, c -> true, Math.round(EXTRA_MAX * f), false, EXTRA_CLEAR);
+        }
+    }
+
+    /**
+     * One pass of the fill: up to {@code cap} patches a slot from the eligible candidates, farthest from every patch
+     * first (times the middle-bands weight in the core pass, so the empty ground between the bases fills before the
+     * corners behind them - farthest-first alone gave Desert Mesa's six to the walls).
+     */
+    private void pick(List<double[]> cands, Slot s0, java.util.function.Predicate<double[]> eligible, int cap, boolean weighted,
+                      int spacing) {
+        int added = 0;
         while (added < cap && !cands.isEmpty()) {
             double bestD = -1;
             int best = -1;
             for (int i = 0; i < cands.size(); i++) {
                 double[] c = cands.get(i);
+                if (!eligible.test(c))
+                    continue;
                 double d = nearestMex(s0, c[0], c[1]);
                 if (c[1] > 0)
                     d = Math.min(d, nearestMex(s0, c[0], -c[1]));
-                if (d < SPREAD_CLEAR)
+                if (d < spacing)
                     continue;
-                // the empty ground between the bases first, the corners behind them last (farthest-first alone gave
-                // Desert Mesa's six to the walls)
-                double score = d * spreadWeight(c[2]);
+                double score = weighted ? d * spreadWeight(c[2]) : d;
                 if (score > bestD) {
                     bestD = score;
                     best = i;
@@ -599,18 +665,58 @@ public final class MapLayout {
             if (best < 0)
                 break;
             double[] c = cands.remove(best);
-            float value = spreadValue(c[2]);
+            double[] w = toWorld(s0, c[0], c[1]);
+            float value = openValue(w[0], w[1], c[3]);
             int before = mexes.size();
             mexPair(c[0], c[1], value, false);   // the candidate was judged where it stands: no nudging it off its spacing
             added += (mexes.size() - before) / n;
         }
     }
 
+    /** The old core fill's limit from the wall (R-22); the rim fill takes the band between the clearance and this. */
+    static final int CORE_INSET = 22;
+    /** Extra patches a slot at the NORMAL extra-metal level: the rim fill, and the whole-map spread on top of it. */
+    static final int RIM_MAX = 4, EXTRA_MAX = 8;
     /**
-     * Where a map's rich open-ground metal lies (lovish Oct 20: "not every map needs op middle mexes" - far patches are
-     * fine, "more map control = more advantages"). CENTRE: rich in the middle, lean behind the bases (the old rule for
-     * every map). FLANKS: rich on the sides between the bases' line and the edge. OUTER: rich far out round the rim -
-     * expanding away from the fight pays. EVEN: standard everywhere, the landmarks decide.
+     * The outskirts: within this many blocks of the wall a patch pays its full rim premium at the clearance line and
+     * none at this line. "Outskirts" in the tests and the tables is this band.
+     */
+    public static final int OUTSKIRTS = 50;
+    /** The rim band the tables count patches in (as the PR's measurement did). */
+    public static final int RIM_BAND = 40;
+    /** Premium (over 1.0 at NORMAL) a patch pays for distance from the bases, and for the rim on top of it. */
+    static final double MID_PREMIUM = 0.5, RIM_PREMIUM = 0.6, MID_FROM = 40, MID_TO = 90;
+
+    /**
+     * What an open-ground patch yields (lovish Oct 22: "extra metal to give bonuses to players that reach to the outskirts
+     * of the map"): 1.0 at the bases, rising with the distance from the nearest start (MID_PREMIUM) and, on top of that,
+     * toward the wall (RIM_PREMIUM, full at the clearance line, none beyond OUTSKIRTS, and less behind a base than out
+     * on the open rim). The premium is scaled by the extra-metal level; NONE pays 1.0 everywhere. Rounded to 0.05. Every
+     * slot's copy of a patch is the same distance from its own start and from the wall, so every side's reward is even.
+     */
+    float openValue(double wx, double wz, double edge) {
+        float f = metal.extra().premium;
+        if (f <= 0)
+            return STANDARD;
+        double ds = Double.MAX_VALUE;
+        for (Slot sl : slots)
+            ds = Math.min(ds, Math.hypot(sl.dx() - wx, sl.dz() - wz));
+        double tMid = smooth01((ds - MID_FROM) / (MID_TO - MID_FROM));
+        double tRim = smooth01((OUTSKIRTS - edge) / (OUTSKIRTS - metal.rimInset()));
+        double premium = MID_PREMIUM * tMid + RIM_PREMIUM * tRim * (0.4 + 0.6 * tMid);
+        return Math.round((1 + f * premium) * 20) / 20f;
+    }
+
+    private static double smooth01(double x) {
+        x = Math.max(0, Math.min(1, x));
+        return x * x * (3 - 2 * x);
+    }
+
+    /**
+     * Which part of the map the core fill (not the extra metal) fills first (lovish Oct 20: "not every map needs op middle
+     * mexes" - far patches are fine). CENTRE: the middle first. FLANKS: the sides between the bases' line and the edge.
+     * OUTER: far out round the rim - expanding away from the fight pays. EVEN: everywhere alike. It only orders the core
+     * fill now; what a patch yields is {@link #openValue} (the further out, the richer), the same on every map.
      */
     enum MetalBias { CENTRE, FLANKS, OUTER, EVEN }
 
@@ -627,16 +733,6 @@ public final class MapLayout {
     /** 0 = inner half of the base ring, 1 = the band up to just past the bases, 2 = the rim. */
     private int spreadBand(double r) {
         return r < 0.5 * ring ? 0 : r <= ring + 25 ? 1 : 2;
-    }
-
-    private float spreadValue(double r) {
-        int band = spreadBand(r);
-        return switch (metalBias()) {
-            case CENTRE -> band == 0 ? RICH : band == 2 ? LEAN : STANDARD;
-            case FLANKS -> band == 1 ? RICH : band == 2 ? LEAN : STANDARD;
-            case OUTER -> band == 2 ? RICH : band == 0 ? LEAN : STANDARD;
-            case EVEN -> STANDARD;
-        };
     }
 
     /** Which band fills first: the rich band of the map's bias leads, the rest follow by emptiness. */
@@ -663,6 +759,8 @@ public final class MapLayout {
     // 6 -> 14 per slot, 30 -> 20 apart (lovish Oct 20: "there needs to be more mexes spaced all around the map" - his
     // Oct 19 Verdant Valley match still showed wide bare ground); grid 12 -> 10 so the closer spacing has candidates
     static final int SPREAD_GRID = 10, SPREAD_CLEAR = 20, SPREAD_MAX = 14;
+    /** The extra patches (rim fill, spread) may stand this close to another patch: the core fill's 20 left the 8-seat wedges full. */
+    static final int EXTRA_CLEAR = 16;
 
     /**
      * Open-ground patches per slot: SPREAD_MAX at normal richness, scaled by the lobby's setting (lean 0.65 -> 9,
@@ -695,6 +793,24 @@ public final class MapLayout {
     /** Index in {@link #mexes} of the first open-ground patch: the ones before it came from the map's templates. */
     public int spreadFrom() {
         return spreadFrom;
+    }
+
+    /** Index in {@link #mexes} where the extra patches begin (the rim fill, then the spread): the core fill ends before it. */
+    public int extraFrom() {
+        return extraFrom;
+    }
+
+    /** Index in {@link #mexes} where the home sets end: the first {@code homeEnd()} patches are every seat's {@link HomeMetal}. */
+    public int homeEnd() {
+        return homeEnd;
+    }
+
+    /** Distance from (dx, dz) to the nearest seat's start. */
+    public double distanceToNearestStart(double dx, double dz) {
+        double d = Double.MAX_VALUE;
+        for (Slot sl : slots)
+            d = Math.min(d, Math.hypot(sl.dx() - dx, sl.dz() - dz));
+        return d;
     }
 
     // ------------------------------------------------------------------------------------------ walkable ground
@@ -800,13 +916,22 @@ public final class MapLayout {
     /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
     public static final float LEAN = 0.75f;
 
-    private boolean spreadSpotOk(Slot s0, double u, double v, Sample s, Reach reach) {
+    /** True when no patch listed so far is within {@code spacing} of slot 0's (u, v). */
+    private boolean spaced(Slot s0, double u, double v, int spacing) {
+        double[] w = toWorld(s0, u, v);
+        for (Mex m : mexes)
+            if (Math.hypot(m.dx() - w[0], m.dz() - w[1]) < spacing)
+                return false;
+        return true;
+    }
+
+    private boolean spreadSpotOk(Slot s0, double u, double v, Sample s, Reach reach, int spacing) {
         double[] w = toWorld(s0, u, v);
         double x = w[0], z = w[1];
         if (metal.reserved().reserves(x, z))
             return false;
         for (Mex m : mexes)
-            if (Math.hypot(m.dx() - x, m.dz() - z) < SPREAD_CLEAR)
+            if (Math.hypot(m.dx() - x, m.dz() - z) < spacing)
                 return false;
         for (Site st : sites)
             if (Math.hypot(st.dx() - x, st.dz() - z) < 18)

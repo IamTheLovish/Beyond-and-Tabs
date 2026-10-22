@@ -184,7 +184,8 @@ public class MapMetalGameTests {
 
     /**
      * The lobby's metal richness reaches pre-made maps (bug 3). Lean, normal and rich (0.65 / 1.0 / 1.5) give a
-     * non-decreasing patch count per slot on every map, with every lean patch also in the normal map and every normal
+     * non-decreasing core patch count per slot (the home set, templates and core fill; the extra metal on top is its own
+     * knob) on every map, with every lean patch also in the normal map and every normal
      * patch in the rich one (more metal never moves the metal that was there), strictly more rich than lean on
      * Verdant Valley and Highlands, and normal (1.0) is exactly the map every build drew before the setting applied.
      */
@@ -201,16 +202,19 @@ public class MapMetalGameTests {
                 String tag = preset + " n=" + n + ": ";
                 if (!MapSeedGameTests.fingerprint(normal).equals(MapSeedGameTests.fingerprint(legacy)))
                     problems.add(tag + "richness 1.0 is not the default map");
-                if (lean.mexes.size() > normal.mexes.size() || normal.mexes.size() > rich.mexes.size())
-                    problems.add(tag + "patches " + lean.mexes.size() + " / " + normal.mexes.size() + " / " + rich.mexes.size()
+                // the core fill (what richness scales); the extra metal is laid on top of it and depends on it
+                if (lean.extraFrom() > normal.extraFrom() || normal.extraFrom() > rich.extraFrom())
+                    problems.add(tag + "core patches " + lean.extraFrom() + " / " + normal.extraFrom() + " / " + rich.extraFrom()
                         + " are not lean <= normal <= rich");
                 if ((preset == MapPreset.VERDANT_VALLEY || preset == MapPreset.HIGHLANDS) && n <= 4
-                        && lean.mexes.size() >= rich.mexes.size())
-                    problems.add(tag + "the setting changed nothing: " + lean.mexes.size() + " vs " + rich.mexes.size());
-                if (!positions(normal).containsAll(positions(lean)))
+                        && lean.extraFrom() >= rich.extraFrom())
+                    problems.add(tag + "the setting changed nothing: " + lean.extraFrom() + " vs " + rich.extraFrom());
+                if (!corePositions(normal).containsAll(corePositions(lean)))
                     problems.add(tag + "a lean patch is missing from the normal map");
-                if (!positions(rich).containsAll(positions(normal)))
+                if (!corePositions(rich).containsAll(corePositions(normal)))
                     problems.add(tag + "a normal patch is missing from the rich map");
+                if (!homePositions(normal).equals(homePositions(lean)) || !homePositions(normal).equals(homePositions(rich)))
+                    problems.add(tag + "the metal setting moved the home metal");
                 checkEqualSlots(lean, tag + "lean ", problems);
                 checkEqualSlots(rich, tag + "rich ", problems);
             }
@@ -219,10 +223,18 @@ public class MapMetalGameTests {
         helper.succeed();
     }
 
-    static Set<String> positions(MapLayout l) {
+    /** Positions (and, for the core fill, yields) of the home set, the templates and the core fill: everything before the extra metal. */
+    static Set<String> corePositions(MapLayout l) {
         Set<String> out = new HashSet<>();
-        for (MapLayout.Mex m : l.mexes)
-            out.add(m.dx() + "," + m.dz() + "," + m.value());
+        for (int i = 0; i < l.extraFrom(); i++)
+            out.add(l.mexes.get(i).dx() + "," + l.mexes.get(i).dz());
+        return out;
+    }
+
+    static Set<String> homePositions(MapLayout l) {
+        Set<String> out = new HashSet<>();
+        for (int i = 0; i < l.homeEnd(); i++)
+            out.add(l.mexes.get(i).dx() + "," + l.mexes.get(i).dz() + "," + l.mexes.get(i).value());
         return out;
     }
 
