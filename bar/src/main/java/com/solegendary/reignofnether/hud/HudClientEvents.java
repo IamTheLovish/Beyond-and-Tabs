@@ -428,6 +428,7 @@ public class HudClientEvents {
         renderedButtons.clear();
         cardButtons.clear();
         hudZones.clear();
+        BuildTabs.beginFrame();
         unitPortraitZone = null;
         buildingPortraitZone = null;
 
@@ -1284,16 +1285,30 @@ public class HudClientEvents {
                         break;
                     }
                 }
-                List<Button> unitAbilities = abilityButtons.stream()
+                List<Button> allAbilities = abilityButtons.stream()
                         .filter(b -> !(b instanceof AbilityButton ab) || !(ab.ability instanceof CallToArmsUnit))
                         .toList();
+                // a worker's build menu is tabbed (BuildTabs): its own abilities first, then the tab strip and the
+                // selected tab's grid; only that tab's buildings are drawn, so only its slot keys are live
+                boolean buildTabs = allAbilities.stream().anyMatch(b -> b instanceof BuildingPlaceButton);
+                List<Button> unitAbilities = !buildTabs ? allAbilities
+                        : allAbilities.stream().filter(b -> !(b instanceof BuildingPlaceButton)).toList();
+                List<Button> tabBuildings = !buildTabs ? List.of() : BuildTabs.tabButtons(allAbilities);
 
-                int rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
-                rowsUp = Math.max(0, rowsUp);
+                int rowsUp;
+                if (buildTabs) {
+                    int abilityRows = (int) unitAbilities.stream().filter(b -> !b.isHidden.get()).count();
+                    abilityRows = (abilityRows + MAX_BUTTONS_PER_ROW - 1) / MAX_BUTTONS_PER_ROW;
+                    rowsUp = abilityRows + BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                } else {
+                    rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
+                    rowsUp = Math.max(0, rowsUp);
+                }
                 if (SandboxClientEvents.isSandboxPlayer() && (hudSelectedEntity != null || hudSelectedPlacement != null))
                     rowsUp += 1;
 
-                blitY -= iconFrameSize * rowsUp;
+                blitY -= iconFrameSize * rowsUp + (buildTabs ? BuildTabs.STRIP_H : 0);
+                int abilitiesTopY = blitY;
 
                 int i = 0;
                 for (Button button : unitAbilities) {
@@ -1323,6 +1338,13 @@ public class HudClientEvents {
                             blitY += iconFrameSize;
                         }
                     }
+                }
+                if (buildTabs) {
+                    int abilityRows = (i + MAX_BUTTONS_PER_ROW - 1) / MAX_BUTTONS_PER_ROW;
+                    BuildTabs.renderTabs(evt.getGuiGraphics(), abilitiesTopY + abilityRows * iconFrameSize,
+                            MAX_BUTTONS_PER_ROW, iconFrameSize, mouseX, mouseY, tabBuildings, renderedButtons, cardButtons);
+                    hudZones.add(RectZone.getZoneByLW(0, abilitiesTopY + abilityRows * iconFrameSize,
+                            MAX_BUTTONS_PER_ROW * iconFrameSize, BuildTabs.STRIP_H));
                 }
                 if (hudSelectedEntity instanceof HeroUnit hero) {
                     Button rankUpMenuButton = HeroAbility.getRankUpMenuButton(hero);
@@ -1370,6 +1392,18 @@ public class HudClientEvents {
             List<Button> shownAbilities = abilityButtons.stream()
                     .filter(b -> !b.isHidden.get() && !(b instanceof AbilityButton ab && ab.ability instanceof CallToArmsUnit))
                     .toList();
+            // the sandbox's faction building list is tabbed like a worker's (BuildTabs)
+            if (SandboxClientEvents.sandboxMenuType == SandboxMenuType.BUILDINGS) {
+                List<Button> tabBuildings = BuildTabs.tabButtons(shownAbilities);
+                int tabRowsUp = BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                if (SandboxClientEvents.isSandboxPlayer() && (hudSelectedEntity != null || hudSelectedPlacement != null))
+                    tabRowsUp += 1;
+                int stripY = blitY - iconFrameSize * tabRowsUp - BuildTabs.STRIP_H;
+                BuildTabs.renderTabs(evt.getGuiGraphics(), stripY, MAX_BUTTONS_PER_ROW, iconFrameSize, mouseX, mouseY,
+                        tabBuildings, renderedButtons, null);
+                hudZones.add(RectZone.getZoneByLW(0, stripY, MAX_BUTTONS_PER_ROW * iconFrameSize, BuildTabs.STRIP_H));
+                shownAbilities = List.of();
+            }
 
             int rowsUp = (int) Math.floor((float) (shownAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
             rowsUp = Math.max(0, rowsUp);
@@ -2155,6 +2189,8 @@ public class HudClientEvents {
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         if (!(MC.screen instanceof TopdownGui))
             return;
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1)
+            BuildTabs.click((int) evt.getMouseX(), (int) evt.getMouseY());
         for (Button button : renderedButtons) {
             if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
                 button.checkClicked((int) evt.getMouseX(), (int) evt.getMouseY(), true);
@@ -2176,6 +2212,9 @@ public class HudClientEvents {
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
+            return;
+        // Alt + Q / Z / E / R picked a build tab (BuildTabs.tick): its release must not press the slot as well
+        if (BuildTabs.consumeRelease(evt.getKeyCode()))
             return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
@@ -2230,6 +2269,7 @@ public class HudClientEvents {
         if (evt.phase != TickEvent.Phase.END) {
             return;
         }
+        BuildTabs.tick();
         if (OrthoviewClientEvents.isEnabled()) {
             portraitRendererUnit.tickAnimation();
         }

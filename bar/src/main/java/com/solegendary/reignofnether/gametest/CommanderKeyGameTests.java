@@ -83,7 +83,9 @@ public class CommanderKeyGameTests {
                     problems.add(who + ": no faction build menu to check against");
                 else
                     for (var entry : faction.getBuildHotkeys().entrySet())
-                        claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
+                        // the build menu is tabbed: slot keys repeat across tabs, only one tab shows at a time
+                        // (BuildGroupGameTests checks inside a tab), so a build key is claimed once per key
+                        claim.accept(entry.getValue(), "build slot " + entry.getValue().buttonLabel);
                 if (!dgun)
                     problems.add(who + ": the commander got no D-gun");
                 for (String c : clashes)

@@ -251,15 +251,15 @@ public final class Defences {
             if (f == null || f == Factions.NONE)
                 continue;
             for (Building b : set.all())
-                Factions.registerBuildings(f, b);
+                Factions.registerBuildings(f, b, com.solegendary.reignofnether.building.BuildGroup.DEFENCE);
             for (TowerSet towers : TOWER_SETS)
                 if (towers.factionName().equals(set.factionName()))
                     for (Building b : towers.all())
-                        Factions.registerBuildings(f, b);
+                        Factions.registerBuildings(f, b, com.solegendary.reignofnether.building.BuildGroup.DEFENCE);
             for (FortSet fort : FORT_SETS)
                 if (fort.factionName().equals(set.factionName()))
                     for (Building b : fort.all())
-                        Factions.registerBuildings(f, b);
+                        Factions.registerBuildings(f, b, com.solegendary.reignofnether.building.BuildGroup.DEFENCE);
         }
     }
 
