@@ -2,8 +2,9 @@ package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
+import com.solegendary.reignofnether.unit.support.PotionDelivery;
 import com.solegendary.reignofnether.unit.support.SupportBrain;
-import com.solegendary.reignofnether.unit.support.SupportFx;
+import com.solegendary.reignofnether.unit.support.SupportKind;
 import com.solegendary.reignofnether.unit.units.villagers.WitchUnit;
 import com.solegendary.reignofnether.util.MyMath;
 import net.minecraft.core.BlockPos;
@@ -11,7 +12,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,9 +22,9 @@ import java.util.Comparator;
 /**
  * The Field Medic's throw (WitchUnit): walk into range of the target - a unit it keeps aiming at, or a spot - stop for
  * a short wind-up facing it ({@link #WINDUP_TICKS}), then throw. This goal only carries a throw out; who to throw at is
- * decided by a click (the potion abilities' use()), or by the medic herself - her attack order and her autocast,
- * unit/support/MedicPotions on the support brain's look (claude/healer-ai-oct21.md). The old goal also chose its own
- * autocast targets here, only when fully idle and harming first, onto allies in melee with an enemy.
+ * decided by a click (the potion abilities' use()), or by the medic herself - her attack order and her autocast, which
+ * the support brain chooses and unit/support/PotionDelivery hands over (claude/healer-ai-oct21.md). The old goal also
+ * chose its own autocast targets here, only when fully idle and harming first, onto allies in melee with an enemy.
  * <p>
  * A throw pauses the medic's move for the wind-up (this goal holds the MOVE flag, above the move goal); the move goal
  * picks its order back up after the release - a throw never cancels an order. A throw the medic chose herself is
@@ -40,6 +40,9 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
     private LivingEntity targetEntity = null;
     /** Chosen by the medic herself (autocast or her attack order), not clicked by the player. */
     private boolean selfDecided = false;
+    /** What the brain chose this throw as (null for a click), and the area kept clear of friends at release (0: none). */
+    @Nullable private SupportKind kind = null;
+    private double recheckRadius = 0;
     /** A spot throw with an exact aim (the harming cloud's offset centre); else the target block's centre. */
     private boolean hasAim = false;
     private double aimX, aimZ;
@@ -59,6 +62,8 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
     public void setTarget(LivingEntity entity) {
         this.targetEntity = entity;
         this.selfDecided = false;
+        this.kind = null;
+        this.recheckRadius = 0;
         this.hasAim = false;
         this.releaseAt = -1;
     }
@@ -68,18 +73,25 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
         this.setMoveTarget(bpTarget);
     }
 
-    /** The medic's own throw at a unit (her autocast, or her attack order). */
-    public void selfThrow(Potion potion, LivingEntity target) {
+    /**
+     * The medic's own throw at a unit (her autocast, or her attack order), as {@code kind}; with {@code recheckRadius}
+     * above 0 no friend may stand within it of the aim at release.
+     */
+    public void selfThrow(Potion potion, LivingEntity target, SupportKind kind, double recheckRadius) {
         setPotion(potion);
         setTarget(target);
         selfDecided = true;
+        this.kind = kind;
+        this.recheckRadius = recheckRadius;
     }
 
     /** The medic's own throw at a spot: walks to {@code at} if out of range, aims at exactly (x, z). */
-    public void selfThrow(Potion potion, BlockPos at, double x, double z) {
+    public void selfThrow(Potion potion, BlockPos at, double x, double z, SupportKind kind, double recheckRadius) {
         setPotion(potion);
         setTarget(at);
         selfDecided = true;
+        this.kind = kind;
+        this.recheckRadius = recheckRadius;
         hasAim = true;
         aimX = x;
         aimZ = z;
@@ -150,7 +162,6 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
                 return;   // still walking into range
             releaseAt = now + WINDUP_TICKS;
             this.mob.getNavigation().stop();
-            SupportFx.telegraph(level, potion, aimX(), this.mob.getY(), aimZ(), targetEntity);
         }
         this.mob.getLookControl().setLookAt(aimX(), moveTarget.getY() + 1, aimZ());
         if (now >= releaseAt)
@@ -180,29 +191,17 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
     private void release(ServerLevel level, WitchUnit witch) {
         double x = aimX(), z = aimZ();
         double y = targetEntity != null ? targetEntity.getY() : moveTarget.getY() + 1;
-        if (selfDecided && potion == Potions.STRONG_HARMING && !SupportBrain.harmSafeAt(level, witch, witch, x, z)) {
+        if (selfDecided && recheckRadius > 0 && kind != null
+                && !SupportBrain.harmSafeAt(level, witch, witch, x, z, recheckRadius, PotionDelivery.undeadRule(kind))) {
             stop();   // a friend walked under the aim during the wind-up: no throw, no cooldown; the next look decides again
             return;
         }
         witch.throwPotion(new Vec3(x, y, z), potion);
-        // the four potions share the throw: each goes on its own cooldown (the Safe potions switch has none)
+        // the four potions share the throw: each goes on its own cooldown
         for (Ability potionAbility : witch.getAbilities().get())
-            if (potionAbility.cooldownMax > 0)
-                AbilityClientboundPacket.sendSetCooldownPacket(this.mob.getId(), potionAbility.action, potionAbility.cooldownMax);
-        SupportBrain.onThrow(witch, witch, kindOf(potion), selfDecided, x, z);
+            AbilityClientboundPacket.sendSetCooldownPacket(this.mob.getId(), potionAbility.action, potionAbility.cooldownMax);
+        SupportBrain.onCast(witch, witch, kind != null ? kind : PotionDelivery.kindOf(potion), selfDecided, x, z);
         stop();
-    }
-
-    static SupportBrain.Kind kindOf(Potion potion) {
-        if (potion == Potions.STRONG_HEALING || potion == Potions.HEALING)
-            return SupportBrain.Kind.HEAL;
-        if (potion == Potions.STRONG_REGENERATION || potion == Potions.REGENERATION)
-            return SupportBrain.Kind.REGEN;
-        if (potion == Potions.STRONG_HARMING || potion == Potions.HARMING)
-            return SupportBrain.Kind.HARM;
-        if (potion == Potions.WATER)
-            return SupportBrain.Kind.WATER;
-        return SupportBrain.Kind.OTHER;
     }
 
     /** The nearest fire block within 10 blocks across and 4 up or down (the water potion's other job), or null. */
@@ -229,6 +228,8 @@ public class ThrowPotionGoal extends MoveToTargetBlockGoal {
         this.targetEntity = null;
         this.setPotion(null);
         this.selfDecided = false;
+        this.kind = null;
+        this.recheckRadius = 0;
         this.hasAim = false;
         this.releaseAt = -1;
     }

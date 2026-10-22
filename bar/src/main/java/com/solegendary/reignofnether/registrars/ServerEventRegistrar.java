@@ -127,8 +127,6 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LanternDomeServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.TempestServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.OnceRevive.class);
-        // the Field Medic's Safe potions: her harming clouds spare her side (claude/healer-ai-oct21.md)
-        vanillaEventBus.register(com.solegendary.reignofnether.unit.support.SafePotions.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

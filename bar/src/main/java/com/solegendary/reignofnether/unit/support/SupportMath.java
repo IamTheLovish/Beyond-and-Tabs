@@ -3,11 +3,13 @@ package com.solegendary.reignofnether.unit.support;
 import static com.solegendary.reignofnether.unit.support.SupportField.*;
 
 /**
- * The healer AI's decisions as plain maths over one {@link SupportField} (claude/healer-ai-oct21.md, sections B and C):
- * where a harming cloud may land without touching a friend, which friend a healing splash should go to, where a
- * regeneration cloud covers the most hurt friends, which friend is the front line, which way to step out of danger and
- * where a healer stands behind a fight. No Minecraft types, no allocation: SupportBrain feeds it and acts on the answer,
- * and SupportMathTest checks every rule without a game.
+ * The healer AI's decisions as plain maths over one {@link SupportField} (claude/healer-ai-oct21.md, sections B and C),
+ * for any delivery (SupportKind): where an area harm may land without touching a friend, which friend a single heal
+ * should go to, where an area heal covers the most hurt friends, which friend needs a cleanse, which friend is the
+ * front line, which way to step out of danger and where a healer stands behind a fight. Each cast brings its own
+ * radius and its {@link Undead} rule (vanilla's potions work backwards on the undead; a plain heal does not). No
+ * Minecraft types, no allocation: SupportBrain feeds it and acts on the answer, and SupportMathTest checks every rule
+ * without a game.
  * <p>
  * Candidates are capped at {@link #MAX_CANDIDATES} (the nearest), so one look costs at most 12 x the field's size
  * distance tests per rule, whatever the crowd.
@@ -18,26 +20,37 @@ public final class SupportMath {
     /** At most this many candidate targets per rule (the nearest ones). */
     public static final int MAX_CANDIDATES = 12;
 
-    /** The harming / regeneration cloud's radius (ThrownPotionMixin: setRadius(3), kept by AdjustableAreaEffectCloud). */
-    public static final double CLOUD_RADIUS = 3.0;
-    /** A harming cloud is thrown only when no friend stands (or will stand in ~1 s) within the radius plus this. */
+    /** An area harm is cast only when no friend it would hurt stands (or will stand in ~1 s) within its radius plus this. */
     public static final double HARM_SAFETY = 1.5;
-    /** The cloud is aimed this far beyond the enemy cluster's centre, away from our side. */
+    /** An area harm is aimed this far beyond the enemy cluster's centre, away from our side. */
     public static final double AIM_OFFSET = 1.0;
-    /** A splash potion's reach (vanilla ThrownPotion.applySplash: entities within 4 blocks). */
-    public static final double SPLASH_RADIUS = 4.0;
-    /** A heal target with an enemy this close would heal the enemy too: its score is halved. */
+    /** A heal target with an enemy this close would heal the enemy too (a splash, a circle): its score is halved. */
     public static final double HEAL_ENEMY_NEAR = 2.0;
     /** The healer heals itself only below this fraction of its health, and then counts it this much more. */
     public static final float SELF_HEAL_FRACTION = 0.5f, SELF_HEAL_WEIGHT = 1.5f;
-    /** A regeneration cloud needs at least this many hurt friends under it. */
-    public static final int REGEN_MIN_HURT = 2;
-    /** One regeneration cloud gives a friend about this much (Regeneration II, 5 s of reapplication). */
-    public static final float REGEN_PER_FRIEND = 8f;
+    /** An area heal needs at least this many hurt friends under it (one is the single heal's job). */
+    public static final int AREA_HEAL_MIN_HURT = 2;
+    /** What an area heal is reckoned to give each friend under it at most (the score's cap). */
+    public static final float AREA_HEAL_PER_FRIEND = 8f;
     /** The front line: our unit with the most enemies within this many blocks. */
     public static final double ENGAGE_RADIUS = 6.0;
     /** A threat that only aims at the healer from afar (an archer) weighs this much of a melee threat next to it. */
     public static final double AIMED_WEIGHT = 0.5;
+
+    /** How a cast treats the undead. */
+    public enum Undead {
+        /** Like anyone else. */
+        NORMAL,
+        /** Not at all: a heal does not mend them, a harm does not hurt them (vanilla regeneration). */
+        IMMUNE,
+        /** Backwards (vanilla instant health and harming): a heal hurts them, a harm mends them. */
+        INVERTED
+    }
+
+    /** The flags to leave out of a cast's beneficiaries / victims under {@code rule}. */
+    static int skipUndead(Undead rule) {
+        return rule == Undead.NORMAL ? 0 : F_UNDEAD;
+    }
 
     /** A chosen point (and, when it is a unit, its index in the field). */
     public static final class Aim {
@@ -105,25 +118,25 @@ public final class SupportMath {
     }
 
     /**
-     * Where to throw a harming cloud (autocast), or false for "nowhere safe". Candidates are the nearest living
-     * (not undead: harming heals them) enemies within {@code reach} of the thrower at (sx, sz). For each, the cloud
-     * goes on the centre of the enemies round it, pushed {@link #AIM_OFFSET} further from our side at (ourX, ourZ) -
-     * then it is dropped if any friend that harming would hurt (undead friends are healed by it) stands, or will
-     * stand in about a second, within {@link #CLOUD_RADIUS} + {@link #HARM_SAFETY}. The cluster is taken where it will
-     * be when the potion lands (SupportField.px/pz, about a second ahead). Score: enemies under the cloud +
-     * the candidate's value - undead enemies under it (healed). The best positive score wins.
+     * Where to aim an area harm of {@code radius} (autocast), or false for "nowhere safe". Candidates are the nearest
+     * enemies it hurts within {@code reach} of the caster at (sx, sz). For each, the area goes on the centre of the
+     * enemies round it - where they will be in about a second - pushed {@link #AIM_OFFSET} further from our side at
+     * (ourX, ourZ); it is dropped if any friend it would hurt stands, or will stand in about a second, within
+     * {@code radius} + {@link #HARM_SAFETY}. Score: enemies under it + the candidate's value - undead enemies it would
+     * mend (INVERTED). The best positive score wins.
      */
-    public static boolean harmingAim(SupportField f, double sx, double sz, double reach, double ourX, double ourZ, Aim out) {
+    public static boolean harmAim(SupportField f, double sx, double sz, double reach, double radius, double ourX, double ourZ,
+                                  Undead rule, Aim out) {
         out.reset();
-        double reach2 = reach * reach, r2 = CLOUD_RADIUS * CLOUD_RADIUS;
-        int k = nearest(f, F_ENEMY, F_UNDEAD, sx, sz, reach, 0f);
+        int skip = skipUndead(rule);
+        double reach2 = reach * reach, r2 = radius * radius;
+        int k = nearest(f, F_ENEMY, skip, sx, sz, reach, 0f);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
-            // the cluster round this enemy, where it will be when the potion lands (about a second)
             double cx = 0, cz = 0;
             int m = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_ENEMY, F_UNDEAD) && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
+                if (has(f.flags[j], F_ENEMY, skip) && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
                     cx += f.px[j];
                     cz += f.pz[j];
                     m++;
@@ -144,13 +157,13 @@ public final class SupportMath {
                     az = f.z[i];
                 }
             }
-            if (countWithin(f, F_FRIEND, F_UNDEAD, ax, az, CLOUD_RADIUS + HARM_SAFETY, true) > 0)
+            if (!harmSafeAt(f, ax, az, radius, rule))
                 continue;
-            int foes = countWithin(f, F_ENEMY, F_UNDEAD, ax, az, CLOUD_RADIUS, false);
+            int foes = countWithin(f, F_ENEMY, skip, ax, az, radius, false);
             if (foes == 0)
                 continue;
-            int undead = countWithin(f, F_ENEMY | F_UNDEAD, 0, ax, az, CLOUD_RADIUS, false);
-            double score = foes + f.value[i] - undead;
+            int mended = rule == Undead.INVERTED ? countWithin(f, F_ENEMY | F_UNDEAD, 0, ax, az, radius, false) : 0;
+            double score = foes + f.value[i] - mended;
             if (score > out.score) {
                 out.index = i;
                 out.x = ax;
@@ -161,30 +174,29 @@ public final class SupportMath {
         return out.index >= 0;
     }
 
-    /** Whether a harming cloud at (x, z) would touch no friend that it hurts, now or in about a second. */
-    public static boolean harmSafeAt(SupportField f, double x, double z) {
-        return countWithin(f, F_FRIEND, F_UNDEAD, x, z, CLOUD_RADIUS + HARM_SAFETY, true) == 0;
+    /** Whether an area harm of {@code radius} at (x, z) would touch no friend it hurts, now or in about a second. */
+    public static boolean harmSafeAt(SupportField f, double x, double z, double radius, Undead rule) {
+        return countWithin(f, F_FRIEND, skipUndead(rule), x, z, radius + HARM_SAFETY, true) == 0;
     }
 
     /**
-     * The friend a healing splash should go to, or -1: a living (healing hurts the undead) friend within
-     * {@code reach} missing at least {@code minMissing} health, with the best missing health x value - the healer
-     * itself only below {@link #SELF_HEAL_FRACTION} of its health, then x {@link #SELF_HEAL_WEIGHT}; halved with an
-     * enemy within {@link #HEAL_ENEMY_NEAR} (the splash would mend it too). Never a friend with an undead friend
-     * within the splash (now or in a second): the heal would hurt it.
+     * The friend a single heal should go to, or -1: a friend the heal mends within {@code reach}, missing at least
+     * {@code minMissing} health, with the best missing health x value - the healer itself only below
+     * {@link #SELF_HEAL_FRACTION} of its health, then x {@link #SELF_HEAL_WEIGHT}; halved with an enemy within
+     * {@link #HEAL_ENEMY_NEAR}. A heal that hurts the undead (INVERTED) never goes where an undead friend stands within
+     * its {@code radius}, now or in a second.
      */
-    public static int healTarget(SupportField f, double sx, double sz, double reach, float minMissing) {
+    public static int healTarget(SupportField f, double sx, double sz, double reach, double radius, float minMissing, Undead rule) {
+        int skip = skipUndead(rule);
         double reach2 = reach * reach;
-        double undead2 = (SPLASH_RADIUS + 0.5) * (SPLASH_RADIUS + 0.5);
+        double undead2 = (radius + 0.5) * (radius + 0.5);
         double near2 = HEAL_ENEMY_NEAR * HEAL_ENEMY_NEAR;
-        boolean anyUndeadFriend = false;
-        for (int j = 0; j < f.n && !anyUndeadFriend; j++)
-            anyUndeadFriend = (f.flags[j] & (F_FRIEND | F_UNDEAD)) == (F_FRIEND | F_UNDEAD);
+        boolean guardUndead = rule == Undead.INVERTED && anyUndeadFriend(f);
         int best = -1;
         double bestScore = 0;
         for (int i = 0; i < f.n; i++) {
             int fl = f.flags[i];
-            if (!has(fl, F_FRIEND, F_UNDEAD))
+            if (!has(fl, F_FRIEND, skip))
                 continue;
             float miss = f.missing(i);
             if (miss < minMissing)
@@ -194,7 +206,7 @@ public final class SupportMath {
                 continue;
             if (d2(f.x[i], f.z[i], sx, sz) > reach2)
                 continue;
-            if (anyUndeadFriend && undeadFriendNear(f, f.x[i], f.z[i], undead2))
+            if (guardUndead && undeadFriendNear(f, f.x[i], f.z[i], undead2))
                 continue;
             double score = miss * Math.max(0.1f, f.value[i]);
             if (self)
@@ -212,6 +224,13 @@ public final class SupportMath {
         return best;
     }
 
+    static boolean anyUndeadFriend(SupportField f) {
+        for (int j = 0; j < f.n; j++)
+            if ((f.flags[j] & (F_FRIEND | F_UNDEAD)) == (F_FRIEND | F_UNDEAD))
+                return true;
+        return false;
+    }
+
     static boolean undeadFriendNear(SupportField f, double x, double z, double r2) {
         for (int j = 0; j < f.n; j++)
             if ((f.flags[j] & (F_FRIEND | F_UNDEAD)) == (F_FRIEND | F_UNDEAD)
@@ -221,46 +240,51 @@ public final class SupportMath {
     }
 
     /**
-     * Where a regeneration cloud covers the most hurt friends, or false: on the centre of at least
-     * {@link #REGEN_MIN_HURT} hurt living friends (missing at least {@code minMissing}) within {@link #CLOUD_RADIUS},
-     * within {@code reach} of the thrower, and never where the enemies under it outnumber the friends (a cloud on a
-     * melee brawl heals both sides). Score: the health it would give, each friend's share capped at
-     * {@link #REGEN_PER_FRIEND}, x value.
+     * Where an area heal of {@code radius} covers the most hurt friends, or false: on the centre of at least
+     * {@link #AREA_HEAL_MIN_HURT} hurt friends it mends (missing at least {@code minMissing}) - where they will be in a
+     * second, since a walking group walks on - within {@code reach} of the caster; never where the enemies under it
+     * outnumber the friends (it would heal both sides of a melee), nor, for one that hurts the undead, over an undead
+     * friend. Score: the health it would give, each friend's share capped at {@link #AREA_HEAL_PER_FRIEND}, x value.
      */
-    public static boolean regenAim(SupportField f, double sx, double sz, double reach, float minMissing, Aim out) {
+    public static boolean areaHealAim(SupportField f, double sx, double sz, double reach, double radius, float minMissing,
+                                      Undead rule, Aim out) {
         out.reset();
-        double reach2 = reach * reach, r2 = CLOUD_RADIUS * CLOUD_RADIUS;
-        // candidates within reach plus the cloud: a hurt friend just out of reach can still sit at a cloud's edge
-        int k = nearest(f, F_FRIEND, F_UNDEAD, sx, sz, reach + CLOUD_RADIUS, minMissing);
+        int skip = skipUndead(rule);
+        double reach2 = reach * reach, r2 = radius * radius;
+        double undead2 = (radius + 0.5) * (radius + 0.5);
+        boolean guardUndead = rule == Undead.INVERTED && anyUndeadFriend(f);
+        // candidates within reach plus the radius: a hurt friend just out of reach can still sit at the area's edge
+        int k = nearest(f, F_FRIEND, skip, sx, sz, reach + radius, minMissing);
         for (int c = 0; c < k; c++) {
             int i = f.cand[c];
-            // the hurt friends round this one, where they will be when the cloud lands (a walking group walks on)
             double cx = 0, cz = 0;
             int m = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_FRIEND, F_UNDEAD) && f.missing(j) >= minMissing
+                if (has(f.flags[j], F_FRIEND, skip) && f.missing(j) >= minMissing
                         && d2(f.x[j], f.z[j], f.x[i], f.z[i]) <= r2) {
                     cx += f.px[j];
                     cz += f.pz[j];
                     m++;
                 }
-            if (m < REGEN_MIN_HURT)
+            if (m < AREA_HEAL_MIN_HURT)
                 continue;
             cx /= m;
             cz /= m;
             if (d2(cx, cz, sx, sz) > reach2)
                 continue;
+            if (guardUndead && undeadFriendNear(f, cx, cz, undead2))
+                continue;
             int hurt = 0;
             double gain = 0;
             for (int j = 0; j < f.n; j++)
-                if (has(f.flags[j], F_FRIEND, F_UNDEAD) && f.missing(j) >= minMissing && d2(f.px[j], f.pz[j], cx, cz) <= r2) {
+                if (has(f.flags[j], F_FRIEND, skip) && f.missing(j) >= minMissing && d2(f.px[j], f.pz[j], cx, cz) <= r2) {
                     hurt++;
-                    gain += Math.min(REGEN_PER_FRIEND, f.missing(j)) * Math.max(0.1f, f.value[j]);
+                    gain += Math.min(AREA_HEAL_PER_FRIEND, f.missing(j)) * Math.max(0.1f, f.value[j]);
                 }
-            if (hurt < REGEN_MIN_HURT)
+            if (hurt < AREA_HEAL_MIN_HURT)
                 continue;
-            int friends = countWithin(f, F_FRIEND, F_UNDEAD, cx, cz, CLOUD_RADIUS, true);
-            int foes = countWithin(f, F_ENEMY, F_UNDEAD, cx, cz, CLOUD_RADIUS, true);
+            int friends = countWithin(f, F_FRIEND, skip, cx, cz, radius, true);
+            int foes = countWithin(f, F_ENEMY, skip, cx, cz, radius, true);
             if (foes > friends)
                 continue;
             if (gain > out.score) {
@@ -271,6 +295,26 @@ public final class SupportMath {
             }
         }
         return out.index >= 0;
+    }
+
+    /**
+     * The friend within {@code reach} with an affliction the cleanse lifts ({@code mask}: F_BURNING, F_AFFLICTED), the
+     * lowest on health first; -1 if none.
+     */
+    public static int cleanseTarget(SupportField f, double sx, double sz, double reach, int mask) {
+        int best = -1;
+        float bestFrac = Float.MAX_VALUE;
+        double reach2 = reach * reach;
+        for (int i = 0; i < f.n; i++) {
+            if ((f.flags[i] & F_FRIEND) == 0 || (f.flags[i] & mask) == 0 || d2(f.x[i], f.z[i], sx, sz) > reach2)
+                continue;
+            float frac = f.health[i] / Math.max(1f, f.maxHealth[i]);
+            if (frac < bestFrac) {
+                bestFrac = frac;
+                best = i;
+            }
+        }
+        return best;
     }
 
     /**

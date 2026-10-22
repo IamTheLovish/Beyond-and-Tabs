@@ -25,12 +25,15 @@ import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.unit.pathfinding.MobilityClass;
+import com.solegendary.reignofnether.unit.support.SupportMath.Undead;
 import com.solegendary.reignofnether.unit.support.SupportState.Mode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.MobType;
 import net.minecraft.world.phys.Vec3;
 
@@ -46,13 +49,15 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  * UnitGrid query flattened into a {@link SupportField}, and in that one look it
  * <ol>
  *   <li>steps out of danger: a melee enemy within {@link #DANGER_RADIUS} blocks, or an enemy within
- *       {@link #AIMED_RADIUS} that has it as its target, sends it {@link #KITE_STEP} blocks away from them and toward its own army (at most once per
- *       {@link #KITE_COOLDOWN} ticks; never on hold position, garrisoned, riding, or off a plain move the player
- *       gave - a player's move is the player's);</li>
- *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at throw range from the
+ *       {@link #AIMED_RADIUS} that has it as its target, sends it {@link #KITE_STEP} blocks away from them and toward
+ *       its own army (at most once per {@link #KITE_COOLDOWN} ticks; never on hold position, garrisoned, riding, or
+ *       off a plain move the player gave - a player's move is the player's);</li>
+ *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at cast range from the
  *       unit it was told to attack, behind the front of a Fight, or outside an attacked building's guns - remembering
- *       the spot, so after a throw pulled it forward it goes back;</li>
- *   <li>lets the unit decide its own casts on the same look (the Field Medic's potions: MedicPotions).</li>
+ *       the spot, so after a cast pulled it forward it goes back;</li>
+ *   <li>picks its next support cast on the same look - an attack order's harm when no friend is near the target, else
+ *       an area heal on a cluster, a single heal, a cleanse, and an area harm only where no friend is - and asks the
+ *       unit to deliver it (SupportUnit.castSupport; the Field Medic throws a potion today, PotionDelivery).</li>
  * </ol>
  * Its support itself keeps running while it moves: {@link #canAutocastNow} replaces the old "only when fully idle"
  * gate. Cost: one grid box of radius reach + {@link #SCAN_EXTRA} per support unit every 4 ticks, at most 64 entries,
@@ -92,13 +97,18 @@ public final class SupportBrain {
     static final double LEASH = 48;
     /** Only units within this height of the looker count (a tower's garrison, a cliff top). */
     static final double MAX_DY = 8;
-    /** An idle medic that walked further than this for a throw walks back to its post. */
+    /** An idle unit that walked further than this for a cast walks back to its post. */
     static final double HOME_DRIFT = 2.0;
+    /** A friend must miss at least this much health for a heal (not a scratch: a potion's cooldown is shared). */
+    public static final float HEAL_MIN_MISSING = 3f;
+    /** How far past a cast's range a unit may walk for a heal or cleanse: idle, and under a support order. */
+    public static final double IDLE_WALK = 4.0, ORDER_WALK = 2.0;
 
     static final SupportField FIELD = new SupportField(64);
     private static final SupportField CHECK = new SupportField(64);
     private static final List<LivingEntity> SCRATCH = new ArrayList<>();
-    private static final double[] P = new double[3], Q = new double[2];
+    private static final double[] P = new double[3], Q = new double[2], OURS = new double[2];
+    private static final SupportMath.Aim AIM = new SupportMath.Aim();
     private static final double[] STEP_ANGLES = { 0, 0.7, -0.7, 1.4, -1.4 };   // radians: ahead, ~40 and ~80 degrees aside
     private static final double[] STEP_SCALES = { 1.0, 0.6 };
 
@@ -133,7 +143,7 @@ public final class SupportBrain {
                 else if (s.homing)
                     home(level, mob, unit, s, now);
             }
-            unit.supportThink(level, FIELD, now);
+            cast(level, mob, unit, s, now);
         } finally {
             FIELD.clear();
         }
@@ -184,9 +194,19 @@ public final class SupportBrain {
         if (le != looker && le instanceof Mob m && m.getTarget() == looker)
             flags |= F_TARGETS_ME;
         if (le.isOnFire())
-            flags |= F_BURNING;
+            flags |= F_BURNING | F_AFFLICTED;
+        else if ((flags & F_FRIEND) != 0 && afflicted(le))
+            flags |= F_AFFLICTED;
         Vec3 v = le.getDeltaMovement();
         return f.add(le, le.getX(), le.getZ(), v.x, v.z, le.getHealth(), le.getMaxHealth(), valueOf(u), flags);
+    }
+
+    /** Under a harmful effect (a cleanse's job). Only asked of friends; a unit carries a handful of effects at most. */
+    static boolean afflicted(LivingEntity le) {
+        for (MobEffectInstance e : le.getActiveEffects())
+            if (e.getEffect().getCategory() == MobEffectCategory.HARMFUL)
+                return true;
+        return false;
     }
 
     /** What a unit is worth to save or to hit: 1 + its cost / 300 (capped at +4), +1 for a hero. */
@@ -490,35 +510,117 @@ public final class SupportBrain {
     }
 
     /**
-     * A fresh check at the moment of release (the wind-up gave a friend time to walk in): would a harming cloud at
-     * (x, z) touch a friend it hurts, now or in about a second? Its own small grid query.
+     * A fresh check at the moment a cast lands or is released (a wind-up gives a friend time to walk in): would an area
+     * harm of {@code radius} at (x, z) touch a friend it hurts, now or in about a second? Its own small grid query.
      */
-    public static boolean harmSafeAt(ServerLevel level, Mob thrower, SupportUnit unit, double x, double z) {
-        scan(CHECK, level, thrower, unit, x, z, SupportMath.CLOUD_RADIUS + SupportMath.HARM_SAFETY + SupportField.MAX_LOOKAHEAD);
-        // the thrower went in first wherever it stands: it counts only if it is near the cloud
-        boolean safe = SupportMath.harmSafeAt(CHECK, x, z);
+    public static boolean harmSafeAt(ServerLevel level, Mob caster, SupportUnit unit, double x, double z, double radius, Undead rule) {
+        scan(CHECK, level, caster, unit, x, z, radius + SupportMath.HARM_SAFETY + SupportField.MAX_LOOKAHEAD);
+        // the caster went in first wherever it stands: it counts only if it is near the spot
+        boolean safe = SupportMath.harmSafeAt(CHECK, x, z, radius, rule);
         CHECK.clear();
         return safe;
     }
 
+    // ------------------------------------------------------------------ the cast choice
+
     /**
-     * A throw was released (ThrowPotionGoal): the counters the game tests read, and an idle medic that walked away
-     * for it heads back to its post.
+     * The unit's next support cast on this look, delivery-agnostic (SupportKind): an attack order's area harm at its
+     * target whenever no friend it would hurt is near it; otherwise, when it may cast by itself (canAutocastNow), the
+     * first of SupportKind.PRIORITY it can cast that finds a target - an area heal on 2+ hurt friends, a single heal on
+     * the friend with the most missing health x value, a cleanse on an afflicted friend, an area harm only where no
+     * friend is. Nothing found: the unit's own last job (supportIdleCast).
      */
-    public static void onThrow(Mob mob, SupportUnit unit, Kind kind, boolean selfDecided, double x, double z) {
-        SupportState s = unit.getSupportState();
-        s.lastThrowX = x;
-        s.lastThrowZ = z;
-        switch (kind) {
-            case HEAL -> s.heals++;
-            case REGEN -> s.regens++;
-            case HARM -> s.harms++;
-            case WATER -> s.waters++;
-            default -> { }
+    static void cast(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now) {
+        if (unit.isSupportCasting() || now < s.kiteUntil || SealServerEvents.isSealed(mob))
+            return;
+        double sx = mob.getX(), sz = mob.getZ();
+        // 1. the attack order
+        if (s.mode == Mode.STANDOFF_UNIT && s.orderTarget != null && unit.canCastSupport(level, SupportKind.AREA_HARM, false)) {
+            LivingEntity t = s.orderTarget;
+            Undead rule = unit.supportUndeadRule(SupportKind.AREA_HARM);
+            double radius = unit.supportCastRadius(SupportKind.AREA_HARM);
+            boolean spared = rule != Undead.NORMAL && t.getMobType() == MobType.UNDEAD;   // it would not hurt (or would mend) it
+            if (!spared && SupportMath.harmSafeAt(FIELD, t.getX(), t.getZ(), radius, rule)
+                    && unit.castSupport(level, SupportKind.AREA_HARM, t, t.getX(), t.getY(), t.getZ(), true))
+                return;
         }
+        if (!canAutocastNow(mob, unit))
+            return;
+        boolean planted = unit.getHoldPosition() || unit.isGarrisoned();
+        double walk = planted ? 0 : s.mode != Mode.NONE ? ORDER_WALK : IDLE_WALK;
+        for (SupportKind kind : SupportKind.PRIORITY) {
+            if (!unit.canCastSupport(level, kind, true))
+                continue;
+            double range = unit.supportCastRange(kind), radius = unit.supportCastRadius(kind);
+            Undead rule = unit.supportUndeadRule(kind);
+            switch (kind) {
+                case AREA_HEAL -> {
+                    if (SupportMath.areaHealAim(FIELD, sx, sz, range + walk, radius, HEAL_MIN_MISSING, rule, AIM)
+                            && castAt(level, mob, unit, kind, AIM.index, AIM.x, AIM.z))
+                        return;
+                }
+                case SINGLE_HEAL -> {
+                    int t = SupportMath.healTarget(FIELD, sx, sz, range + walk, radius, HEAL_MIN_MISSING, rule);
+                    if (t >= 0 && castOn(level, mob, unit, kind, t))
+                        return;
+                }
+                case CLEANSE -> {
+                    int t = SupportMath.cleanseTarget(FIELD, sx, sz, range + walk, unit.supportCleanses());
+                    if (t >= 0 && castOn(level, mob, unit, kind, t))
+                        return;
+                }
+                case AREA_HARM -> {
+                    // our side: the friends round it that are not support units, else itself
+                    if (SupportMath.centroid(FIELD, F_FRIEND, F_SELF | F_SUPPORT, sx, sz, 1e4, OURS) == 0) {
+                        OURS[0] = sx;
+                        OURS[1] = sz;
+                    }
+                    // never a walk toward enemies for it: only within its own range
+                    if (SupportMath.harmAim(FIELD, sx, sz, range, radius, OURS[0], OURS[1], rule, AIM)
+                            && castAt(level, mob, unit, kind, AIM.index, AIM.x, AIM.z))
+                        return;
+                }
+            }
+        }
+        unit.supportIdleCast(level, now);
+    }
+
+    private static boolean castOn(ServerLevel level, Mob mob, SupportUnit unit, SupportKind kind, int i) {
+        LivingEntity t = (LivingEntity) FIELD.ref[i];
+        armHome(mob, unit);
+        return armed(unit, unit.castSupport(level, kind, t, t.getX(), t.getY(), t.getZ(), false));
+    }
+
+    private static boolean castAt(ServerLevel level, Mob mob, SupportUnit unit, SupportKind kind, int ref, double x, double z) {
+        armHome(mob, unit);
+        return armed(unit, unit.castSupport(level, kind, null, x, ((Entity) FIELD.ref[ref]).getY(), z, false));
+    }
+
+    /** A cast the unit refused leaves no walk home armed. */
+    private static boolean armed(SupportUnit unit, boolean cast) {
+        if (!cast)
+            unit.getSupportState().homeArmed = false;
+        return cast;
+    }
+
+    /**
+     * A cast went off (for the medic: the potion left her hand): the counters the game tests read, and an idle unit
+     * that walked away for it heads back to its post. {@code kind} null: a click the brain did not choose.
+     */
+    public static void onCast(Mob mob, SupportUnit unit, @Nullable SupportKind kind, boolean selfDecided, double x, double z) {
+        SupportState s = unit.getSupportState();
+        s.lastCastX = x;
+        s.lastCastZ = z;
+        if (kind != null)
+            switch (kind) {
+                case SINGLE_HEAL -> s.heals++;
+                case AREA_HEAL -> s.areaHeals++;
+                case AREA_HARM -> s.harms++;
+                case CLEANSE -> s.cleanses++;
+            }
         boolean ordered = s.mode != Mode.NONE || s.homing || unit.getFollowTarget() != null
             || PatrolServerEvents.isPatrolling(mob.getId()) || GuardServerEvents.isGuarding(mob.getId());
-        if (ordered && (kind == Kind.HEAL || kind == Kind.REGEN))
+        if (ordered && kind != null && kind.heals())
             s.healsWhileOrdered++;
         if (s.homeArmed) {
             s.homeArmed = false;
@@ -528,7 +630,7 @@ public final class SupportBrain {
         }
     }
 
-    /** An idle medic about to walk for a throw remembers where it stood (SupportBrain.onThrow sends it back). */
+    /** An idle unit about to walk for a cast remembers where it stood (onCast sends it back). */
     static void armHome(Mob mob, SupportUnit unit) {
         SupportState s = unit.getSupportState();
         if (s.mode != Mode.NONE || s.homing || !unit.isIdle())
@@ -538,7 +640,4 @@ public final class SupportBrain {
         s.homeY = mob.getY();
         s.homeZ = mob.getZ();
     }
-
-    /** What a released potion was, for the counters. */
-    public enum Kind { HEAL, REGEN, HARM, WATER, OTHER }
 }

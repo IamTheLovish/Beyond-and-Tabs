@@ -70,9 +70,6 @@ public abstract class ThrownPotionMixin extends ThrowableItemProjectile {
                 duration = WitchUnit.LINGERING_POTION_DURATION_EXTENDED;
             }
             aec.setDuration(duration);
-            // Safe potions (her card switch, default on): this cloud spares her side (unit/support/SafePotions)
-            if (!this.level().isClientSide())
-                aec.sparesFriendsOf = com.solegendary.reignofnether.unit.support.SafePotions.sparedSideOf(witchUnit);
         }
 
         aec.setRadiusPerTick(-aec.getRadius() / (float)aec.getDuration());

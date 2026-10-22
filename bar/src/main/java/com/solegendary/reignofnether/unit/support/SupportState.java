@@ -18,8 +18,8 @@ public final class SupportState {
         NONE,
         /** An attack order with fighters in the selection (pure healers): stay behind {@link #anchor}, out of melee. */
         ESCORT,
-        /** An attack order on {@link #orderTarget}: hold the throw-range standoff from it (the medic throws harming
-         * at it when that is safe - SupportBrain/MedicPotions). */
+        /** An attack order on {@link #orderTarget}: hold the cast-range standoff from it (a unit with an area harm
+         * casts it at the target whenever that is safe - SupportBrain.cast). */
         STANDOFF_UNIT,
         /** A Fight (attack-move) order: walk to {@link #destination}, the rear rank's spot; while our front is in a
          * fight, hold the standoff behind it instead. */
@@ -40,11 +40,11 @@ public final class SupportState {
     @Nullable BlockPos lastIssued;
     long lastIssueTick = Long.MIN_VALUE / 2;
 
-    // standoff memory: where it last held its standoff, to go back to after a throw pulled it forward
+    // standoff memory: where it last held its standoff, to go back to after a cast pulled it forward
     boolean hasStand;
     double standX, standY, standZ;
 
-    // an idle medic that walked a few blocks for a throw walks back to its post afterwards
+    // an idle unit that walked a few blocks for a cast walks back to its post afterwards
     boolean homing;
     double homeX, homeY, homeZ;
     boolean homeArmed;
@@ -54,11 +54,11 @@ public final class SupportState {
     long lastKite = Long.MIN_VALUE / 2;
 
     // counters for the game tests (SupportAiGameTests)
-    public int heals, regens, harms, waters, kites;
-    /** Heals or regeneration clouds released while the unit was under a moving order (support order, follow, patrol). */
+    public int heals, areaHeals, harms, cleanses, kites;
+    /** Heals (single or area) cast while the unit was under a moving order (support order, follow, patrol, guard). */
     public int healsWhileOrdered;
-    /** Where the last throw was aimed. */
-    public double lastThrowX, lastThrowZ;
+    /** Where the last cast was aimed. */
+    public double lastCastX, lastCastZ;
 
     public Mode mode() {
         return mode;

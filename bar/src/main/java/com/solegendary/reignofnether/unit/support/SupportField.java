@@ -30,6 +30,8 @@ public final class SupportField {
     public static final int F_BURNING = 1 << 7;
     /** A fighting unit (AttackerUnit). */
     public static final int F_ATTACKER = 1 << 8;
+    /** Under a harmful effect (poison, slow, wither, a root...) or burning: what a cleanse can lift. */
+    public static final int F_AFFLICTED = 1 << 9;
 
     /** How far ahead {@link #px}/{@link #pz} look, in ticks: about a thrown potion's flight. */
     public static final int LOOKAHEAD_TICKS = 20;

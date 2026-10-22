@@ -31,8 +31,9 @@ import java.util.List;
  * side, before its own switch. The dispatch used to treat a unit that cannot attack as "follow the enemy" on an attack
  * order and as a plain walk on Fight, so healers walked into melee and died (healer-ai root cause 1). Now:
  * <ul>
- *   <li><b>Attack</b> on an enemy unit: the Field Medic (a unit with {@link SupportUnit#hasSupportDamage}) holds her
- *       throw-range standoff from it and throws harming whenever no friend is near it (MedicPotions); a pure healer
+ *   <li><b>Attack</b> on an enemy unit: a unit with an area harm ({@link SupportUnit#hasSupportDamage}, the Field
+ *       Medic) holds its cast-range standoff from it and casts the harm whenever no friend is near it
+ *       (SupportBrain.cast); a pure healer
  *       escorts the nearest fighter of the selection, staying behind it - with no fighter selected it holds the same
  *       standoff from the target;</li>
  *   <li><b>Fight</b> (attack-move): the support units of the order take the rear rank, reach - 1.5 blocks short of the

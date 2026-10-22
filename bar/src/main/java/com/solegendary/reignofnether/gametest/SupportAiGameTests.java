@@ -2,9 +2,7 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.AutocastState;
-import com.solegendary.reignofnether.ability.abilities.SafePotionsAbility;
 import com.solegendary.reignofnether.building.production.ProductionItems;
-import com.solegendary.reignofnether.entities.AdjustableAreaEffectCloud;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
@@ -13,8 +11,8 @@ import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.support.PotionDelivery;
 import com.solegendary.reignofnether.unit.support.SupportBrain;
-import com.solegendary.reignofnether.unit.support.SupportMath;
 import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.unit.units.villagers.WitchUnit;
 import net.minecraft.core.BlockPos;
@@ -25,14 +23,11 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.phys.AABB;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * The healer AI (claude/healer-ai-oct21.md, F; lovish Oct 21 20:52: healers "don't work well with the attack command
@@ -87,16 +82,6 @@ public class SupportAiGameTests {
         }
         for (String o : owners)
             ResearchServerEvents.removeAllResearchFor(o);
-    }
-
-    /** The medic's harming / regeneration clouds in this test's column (owned by {@code medic}). */
-    static List<AdjustableAreaEffectCloud> cloudsOf(ServerLevel level, BlockPos p, Mob medic) {
-        AABB box = new AABB(p.getX() - 4, p.getY() - 3, p.getZ() - 4, p.getX() + 20, p.getY() + 4, p.getZ() + 20);
-        List<AdjustableAreaEffectCloud> out = new ArrayList<>();
-        for (AdjustableAreaEffectCloud c : level.getEntitiesOfClass(AdjustableAreaEffectCloud.class, box))
-            if (c.getOwner() == medic)
-                out.add(c);
-        return out;
     }
 
     static String f(double d) {
@@ -156,7 +141,7 @@ public class SupportAiGameTests {
                 if (!held[0])
                     problems.add("the attack order did not become a standoff");
                 if (s.harms < 1)
-                    problems.add("the medic threw no harming potion at the target");
+                    problems.add("the medic cast no harm at the target");
                 if (closest[0] < 4.0)
                     problems.add("the medic came within 4 blocks of an enemy melee unit");
                 if (!hurt)
@@ -227,7 +212,7 @@ public class SupportAiGameTests {
             try {
                 String where = "after " + t + " ticks: medics at x " + f(m1.getX() - p.getX()) + " / " + f(m2.getX() - p.getX())
                     + ", rearmost vindicator at x " + f(frontX - p.getX()) + ", heals on the way " + heals
-                    + " (all throws " + (state(m1).heals + state(m1).regens) + " + " + (state(m2).heals + state(m2).regens)
+                    + " (all throws " + (state(m1).heals + state(m1).areaHeals) + " + " + (state(m2).heals + state(m2).areaHeals)
                     + "), medic modes " + state(m1).mode() + " / " + state(m2).mode() + ", spread " + f(flat(m1, m2));
                 ReignOfNether.LOGGER.info("[SupportAI] fight order: {}", where);
                 List<String> problems = new ArrayList<>();
@@ -446,11 +431,12 @@ public class SupportAiGameTests {
         });
     }
 
-    // ------------------------------------------------------------------ C: friendly-fire-safe potions
+    // ------------------------------------------------------------------ C: friendly-fire-safe target scoring
 
     /**
-     * An enemy in melee with our vindicator and a lone enemy 9 blocks from it, both within the medic's throw: her
-     * autocast harming goes to the lone enemy, and no cloud of hers ever lands within its radius of a friend.
+     * An enemy in melee with our vindicator and a lone enemy 9 blocks from it, both within the medic's reach: her
+     * autocast area harm goes to the lone enemy and hurts it, is never aimed within its radius of a friend, and the
+     * friend in the brawl is never hurt.
      */
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 400)
     public static void harming_never_lands_on_allies(GameTestHelper helper) {
@@ -469,42 +455,47 @@ public class SupportAiGameTests {
         }
         for (Mob m : List.of(ally, brawler, lone))
             m.setNoAi(true);
-        int[] start = { -1 };
+        int[] start = { -1 }, casts = { 0 };
         boolean[] done = { false };
-        Set<Integer> seen = new HashSet<>();
         List<String> problems = new ArrayList<>();
         double[] nearLone = { Double.MAX_VALUE };
+        double radius = PotionDelivery.CLOUD_RADIUS;
         ArenaReady.whenTicking(helper, made, 150, tick -> start[0] = tick);
         helper.onEachTick(() -> {
             if (start[0] < 0 || done[0])
                 return;
-            for (AdjustableAreaEffectCloud c : cloudsOf(level, p, medic)) {
-                if (!seen.add(c.getId()))
-                    continue;
-                double toAlly = flat(ally, c.getX(), c.getZ()), toMedic = flat(medic, c.getX(), c.getZ());
-                nearLone[0] = Math.min(nearLone[0], flat(lone, c.getX(), c.getZ()));
-                ReignOfNether.LOGGER.info("[SupportAI] harming cloud at {} / {}: {} from the ally, {} from the medic, {} from the lone enemy",
-                    f(c.getX() - p.getX()), f(c.getZ() - p.getZ()), f(toAlly), f(toMedic), f(flat(lone, c.getX(), c.getZ())));
-                if (toAlly < SupportMath.CLOUD_RADIUS + 0.5)
-                    problems.add("a cloud landed " + f(toAlly) + " blocks from the ally");
-                if (toMedic < SupportMath.CLOUD_RADIUS + 0.5)
-                    problems.add("a cloud landed " + f(toMedic) + " blocks from the medic herself");
+            SupportState s = state(medic);
+            if (s.harms > casts[0]) {   // a harm went off: where was it aimed?
+                casts[0] = s.harms;
+                double toAlly = flat(ally, s.lastCastX, s.lastCastZ), toMedic = flat(medic, s.lastCastX, s.lastCastZ);
+                nearLone[0] = Math.min(nearLone[0], flat(lone, s.lastCastX, s.lastCastZ));
+                ReignOfNether.LOGGER.info("[SupportAI] harm aimed at {} / {}: {} from the ally, {} from the medic, {} from the lone enemy",
+                    f(s.lastCastX - p.getX()), f(s.lastCastZ - p.getZ()), f(toAlly), f(toMedic), f(flat(lone, s.lastCastX, s.lastCastZ)));
+                if (toAlly < radius + 0.5)
+                    problems.add("a harm was aimed " + f(toAlly) + " blocks from the ally");
+                if (toMedic < radius + 0.5)
+                    problems.add("a harm was aimed " + f(toMedic) + " blocks from the medic herself");
             }
             int t = (int) (helper.getTick() - start[0]);
-            if (seen.isEmpty() && t < 160)
+            boolean landed = lone.getHealth() < lone.getMaxHealth();
+            if ((casts[0] == 0 || !landed) && t < 200)
                 return;
-            if (t < 60)
-                return;   // a little longer: a second throw, if any, must not go to the brawl either
+            if (t < 80)
+                return;   // a little longer: a second harm, if any, must not go to the brawl either
             done[0] = true;
             try {
-                String where = "after " + t + " ticks: " + seen.size() + " clouds, harming throws " + state(medic).harms
-                    + ", nearest cloud to the lone enemy " + f(nearLone[0]) + ", lone hp " + f(lone.getHealth())
+                String where = "after " + t + " ticks: harms " + casts[0] + ", nearest aim to the lone enemy " + f(nearLone[0])
+                    + ", lone hp " + f(lone.getHealth()) + ", brawler hp " + f(brawler.getHealth())
                     + ", ally hp " + f(ally.getHealth()) + " / " + f(ally.getMaxHealth());
                 ReignOfNether.LOGGER.info("[SupportAI] harming: {}", where);
-                if (seen.isEmpty())
-                    problems.add("no harming cloud at all: the lone enemy should have had one");
-                else if (nearLone[0] > SupportMath.CLOUD_RADIUS)
-                    problems.add("no cloud covered the lone enemy");
+                if (casts[0] == 0)
+                    problems.add("no harm at all: the lone enemy should have had one");
+                else if (nearLone[0] > radius)
+                    problems.add("no harm was aimed on the lone enemy");
+                if (!landed)
+                    problems.add("the lone enemy was not hurt: the harm did not land");
+                if (ally.getHealth() < ally.getMaxHealth())
+                    problems.add("the ally in melee with the brawler was hurt");
                 if (problems.isEmpty())
                     helper.succeed();
                 else
@@ -561,8 +552,8 @@ public class SupportAiGameTests {
                 return;   // let a splash land fully before judging the undead friend
             done[0] = true;
             try {
-                String where = "after " + t + " ticks: heals " + s.heals + ", last throw at " + f(s.lastThrowX - p.getX())
-                    + " / " + f(s.lastThrowZ - p.getZ()) + ", hp: by the undead " + f(hp[0]) + " -> " + f(byUndead.getHealth())
+                String where = "after " + t + " ticks: heals " + s.heals + ", last cast at " + f(s.lastCastX - p.getX())
+                    + " / " + f(s.lastCastZ - p.getZ()) + ", hp: by the undead " + f(hp[0]) + " -> " + f(byUndead.getHealth())
                     + ", alone " + f(hp[1]) + " -> " + f(alone.getHealth()) + ", undead " + f(hp[2]) + " -> " + f(undead.getHealth());
                 ReignOfNether.LOGGER.info("[SupportAI] undead ally: {}", where);
                 List<String> problems = new ArrayList<>();
@@ -572,79 +563,14 @@ public class SupportAiGameTests {
                     problems.add("the lone hurt friend was not healed");
                 if (undead.getHealth() < hp[2])
                     problems.add("the undead friend was hurt by a healing splash");
-                if (s.heals > 0 && Math.hypot(s.lastThrowX - undead.getX(), s.lastThrowZ - undead.getZ()) < SupportMath.SPLASH_RADIUS)
-                    problems.add("a healing splash was aimed within its reach of the undead friend");
+                if (s.heals > 0 && Math.hypot(s.lastCastX - undead.getX(), s.lastCastZ - undead.getZ()) < PotionDelivery.SPLASH_RADIUS)
+                    problems.add("a heal was aimed within its splash of the undead friend");
                 if (problems.isEmpty())
                     helper.succeed();
                 else
                     helper.fail(String.join("; ", problems) + " (" + where + ")");
             } finally {
                 cleanUp(made, mine);
-            }
-        });
-    }
-
-    /**
-     * Safe potions: a harming potion clicked between our vindicator and an enemy's. With the switch on (the default)
-     * the cloud hurts only the enemy; a second medic with it off hurts both.
-     */
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 400)
-    public static void safe_potions_spare_friends_in_the_cloud(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        BlockPos p = ArenaReady.pad(helper, 296);
-        List<Entity> made = new ArrayList<>();
-        String mine = owner(helper, "safe"), theirs = mine + "_foe";
-        Mob safe = spawn(level, EntityRegistrar.WITCH_UNIT.get(), mine, p, 2.5, 4.5, made);
-        Mob ally = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 9.5, 4.5, made);
-        Mob foe = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 10.5, 4.5, made);
-        Mob unsafe = spawn(level, EntityRegistrar.WITCH_UNIT.get(), mine, p, 2.5, 11.5, made);
-        Mob ally2 = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 9.5, 11.5, made);
-        Mob foe2 = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 10.5, 11.5, made);
-        if (safe == null || ally == null || foe == null || unsafe == null || ally2 == null || foe2 == null) {
-            cleanUp(made);
-            helper.fail("could not create the medics and vindicators");
-            return;
-        }
-        for (Mob m : List.of(ally, foe, ally2, foe2))
-            m.setNoAi(true);
-        boolean onByDefault = AutocastState.isOn((Unit) safe, SafePotionsAbility.INSTANCE);
-        AutocastState.set((Unit) unsafe, SafePotionsAbility.INSTANCE, false);
-        int[] start = { -1 };
-        boolean[] done = { false };
-        ArenaReady.whenTicking(helper, made, 150, tick -> {
-            start[0] = tick;
-            order(level, mine, UnitAction.THROW_LINGERING_HARMING_POTION, -1, p.offset(10, -1, 4), safe);
-            order(level, mine, UnitAction.THROW_LINGERING_HARMING_POTION, -1, p.offset(10, -1, 11), unsafe);
-        });
-        helper.onEachTick(() -> {
-            if (start[0] < 0 || done[0])
-                return;
-            int t = (int) (helper.getTick() - start[0]);
-            boolean landed = foe.getHealth() < foe.getMaxHealth() && foe2.getHealth() < foe2.getMaxHealth();
-            if (!landed && t < 200)
-                return;
-            if (t < 70)
-                return;   // a few applications of each cloud
-            done[0] = true;
-            try {
-                String where = "after " + t + " ticks: safe lane - ally " + f(ally.getHealth()) + ", foe " + f(foe.getHealth())
-                    + "; unsafe lane - ally " + f(ally2.getHealth()) + ", foe " + f(foe2.getHealth()) + " (max " + f(foe.getMaxHealth()) + ")";
-                ReignOfNether.LOGGER.info("[SupportAI] safe potions: {}", where);
-                List<String> problems = new ArrayList<>();
-                if (!onByDefault)
-                    problems.add("Safe potions is not on by default");
-                if (!landed)
-                    problems.add("a clicked harming potion did not hurt the enemy under it");
-                if (ally.getHealth() < ally.getMaxHealth())
-                    problems.add("Safe potions on, yet the friend in the cloud was hurt");
-                if (ally2.getHealth() >= ally2.getMaxHealth())
-                    problems.add("Safe potions off, yet the friend in the cloud was spared");
-                if (problems.isEmpty())
-                    helper.succeed();
-                else
-                    helper.fail(String.join("; ", problems) + " (" + where + ")");
-            } finally {
-                cleanUp(made);
             }
         });
     }

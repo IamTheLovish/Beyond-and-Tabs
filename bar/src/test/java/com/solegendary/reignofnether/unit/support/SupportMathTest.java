@@ -2,18 +2,24 @@ package com.solegendary.reignofnether.unit.support;
 
 import org.junit.jupiter.api.Test;
 
+import com.solegendary.reignofnether.unit.support.SupportMath.Undead;
+
 import static com.solegendary.reignofnether.unit.support.SupportField.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * The healer AI's rules (claude/healer-ai-oct21.md, section C) on hand-built fields, no game: the GameTests in
- * gametest/SupportAiGameTests prove the same rules end to end with real units, potions and clouds.
+ * gametest/SupportAiGameTests prove the same rules end to end with real units. Casts here use the Field Medic's
+ * potion shapes (cloud radius 3, splash 4, instant heal and harm INVERTED on the undead) unless a case says otherwise.
  */
 class SupportMathTest {
 
     private static final int ME = F_FRIEND | F_SELF | F_SUPPORT;
     private static final int FRIEND = F_FRIEND | F_ATTACKER | F_MELEE;
     private static final int FOE = F_ENEMY | F_ATTACKER | F_MELEE;
+
+    private static final double CLOUD = 3.0, SPLASH = 4.0;
+    private static final Undead INV = Undead.INVERTED;
 
     private static SupportField field() {
         return new SupportField(64);
@@ -34,7 +40,7 @@ class SupportMathTest {
         add(f, 6, 0, FOE);
         add(f, 7, 0, FRIEND);   // a friend fighting it, one block away
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertFalse(SupportMath.harmingAim(f, 0, 0, 8, 0, 0, aim), "a cloud on that enemy covers the friend");
+        assertFalse(SupportMath.harmAim(f, 0, 0, 8, CLOUD, 0, 0, INV, aim), "a cloud on that enemy covers the friend");
     }
 
     @Test
@@ -44,10 +50,10 @@ class SupportMathTest {
         int foe = add(f, 6, 0, FOE);
         add(f, -1, 0, FRIEND);   // our side is behind the healer
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertTrue(SupportMath.harmingAim(f, 0, 0, 8, -1, 0, aim));
+        assertTrue(SupportMath.harmAim(f, 0, 0, 8, CLOUD, -1, 0, INV, aim));
         assertEquals(foe, aim.index);
         assertTrue(aim.x > 6.5, "the cloud goes a block beyond the enemy, away from our side: " + aim.x);
-        assertTrue(SupportMath.harmSafeAt(f, aim.x, aim.z));
+        assertTrue(SupportMath.harmSafeAt(f, aim.x, aim.z, CLOUD, INV));
     }
 
     @Test
@@ -58,7 +64,7 @@ class SupportMathTest {
         // a friend 6 blocks off the cloud now, walking at it: 0.25 blocks a tick puts it 1 block from the aim in a second
         f.add(null, 7, 6, 0, -0.25, 20f, 20f, 1f, FRIEND);
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertFalse(SupportMath.harmingAim(f, 0, 0, 8, 0, 0, aim), "the predicted spot is inside the safety ring");
+        assertFalse(SupportMath.harmAim(f, 0, 0, 8, CLOUD, 0, 0, INV, aim), "the predicted spot is inside the safety ring");
     }
 
     @Test
@@ -67,12 +73,12 @@ class SupportMathTest {
         add(f, 0, 0, ME);
         add(f, 5, 0, FOE | F_UNDEAD);   // harming heals it
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertFalse(SupportMath.harmingAim(f, 0, 0, 8, 0, 0, aim), "no living enemy, no throw");
+        assertFalse(SupportMath.harmAim(f, 0, 0, 8, CLOUD, 0, 0, INV, aim), "no living enemy, no throw");
         SupportField g = field();
         add(g, 0, 0, ME);
         add(g, 6, 0, FOE);
         add(g, 7, 0, FRIEND | F_UNDEAD);   // harming heals an undead friend, so it does not block the throw
-        assertTrue(SupportMath.harmingAim(g, 0, 0, 8, 0, 0, aim));
+        assertTrue(SupportMath.harmAim(g, 0, 0, 8, CLOUD, 0, 0, INV, aim));
     }
 
     @Test
@@ -84,7 +90,7 @@ class SupportMathTest {
         add(f, 7.5, 1, FOE);
         add(f, 7.5, -1, FOE);
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertTrue(SupportMath.harmingAim(f, 0, 0, 9, 0, 0, aim));
+        assertTrue(SupportMath.harmAim(f, 0, 0, 9, CLOUD, 0, 0, INV, aim));
         assertTrue(aim.x > 6, "the cloud goes on the group of three: " + aim.x + "," + aim.z);
         assertTrue(Math.abs(aim.z) < 1.5);
         assertTrue(aim.score >= 3, "three enemies under it");
@@ -98,7 +104,7 @@ class SupportMathTest {
         int nearUndead = addHurt(f, 5, 0, 4f, FRIEND);   // the most hurt
         add(f, 6, 0, FRIEND | F_UNDEAD);                // healing splash would hurt it
         int alone = addHurt(f, -5, 0, 10f, FRIEND);
-        int t = SupportMath.healTarget(f, 0, 0, 8, 3f);
+        int t = SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV);
         assertEquals(alone, t, "the splash must not land next to the undead friend");
         assertNotEquals(nearUndead, t);
     }
@@ -109,9 +115,9 @@ class SupportMathTest {
         int me = f.add(null, 0, 0, 0, 0, 12f, 20f, 1f, ME);   // 60%: not low enough
         int a = addHurt(f, 3, 0, 15f, FRIEND);
         int b = addHurt(f, -3, 0, 8f, FRIEND);
-        assertEquals(b, SupportMath.healTarget(f, 0, 0, 8, 3f));
+        assertEquals(b, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
         f.health[me] = 6f;   // 30%: 14 missing x 1.5 beats b's 12
-        assertEquals(me, SupportMath.healTarget(f, 0, 0, 8, 3f));
+        assertEquals(me, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
         assertNotEquals(-1, a);
     }
 
@@ -121,7 +127,7 @@ class SupportMathTest {
         add(f, 0, 0, ME);
         addHurt(f, 2, 0, 19f, FRIEND);   // 1 HP missing
         addHurt(f, 20, 0, 2f, FRIEND);   // far away
-        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, 3f));
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 12, SPLASH, 3f, INV));
     }
 
     @Test
@@ -131,36 +137,78 @@ class SupportMathTest {
         int brawling = addHurt(f, 5, 0, 8f, FRIEND);
         add(f, 6, 0, FOE);
         int safe = addHurt(f, -5, 0, 10f, FRIEND);
-        assertEquals(safe, SupportMath.healTarget(f, 0, 0, 8, 3f), "12 missing at half weight loses to 10 missing");
+        assertEquals(safe, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "12 missing at half weight loses to 10 missing");
         assertNotEquals(-1, brawling);
     }
 
     @Test
-    void regenNeedsTwoHurtFriendsAndNoOutnumberingEnemies() {
+    void areaHealNeedsTwoHurtFriendsAndNoOutnumberingEnemies() {
         SupportField f = field();
         add(f, 0, 0, ME);
         addHurt(f, 5, 0, 10f, FRIEND);
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertFalse(SupportMath.regenAim(f, 0, 0, 8, 3f, aim), "one hurt friend is the healing splash's job");
+        assertFalse(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "one hurt friend is the single heal's job");
         addHurt(f, 6, 1, 10f, FRIEND);
-        assertTrue(SupportMath.regenAim(f, 0, 0, 8, 3f, aim));
+        assertTrue(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim));
         assertTrue(aim.x > 4.5 && aim.x < 6.5, "on their centre: " + aim.x);
         add(f, 6, -1, FOE);
         add(f, 5.5, 1.5, FOE);
         add(f, 6.5, 0.5, FOE);
-        assertFalse(SupportMath.regenAim(f, 0, 0, 8, 3f, aim), "three enemies under the cloud outnumber the two friends");
+        assertFalse(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "three enemies under the cloud outnumber the two friends");
     }
 
     @Test
-    void regenLandsWhereAWalkingGroupWillBe() {
+    void areaHealLandsWhereAWalkingGroupWillBe() {
         SupportField f = field();
         add(f, 0, 0, ME);
         // two hurt friends walking east at 0.1 blocks a tick: in a second they are 2 blocks on
         f.add(null, 3, 0, 0.1, 0, 10f, 20f, 1f, FRIEND);
         f.add(null, 3, 1, 0.1, 0, 10f, 20f, 1f, FRIEND);
         SupportMath.Aim aim = new SupportMath.Aim();
-        assertTrue(SupportMath.regenAim(f, 0, 0, 8, 3f, aim));
+        assertTrue(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim));
         assertEquals(5.0, aim.x, 1e-9, "the cloud leads the group by its second of walking");
+    }
+
+    @Test
+    void undeadRulesDecideWhoAHealOrHarmTouches() {
+        // a plain heal (NORMAL) mends an undead friend and does not care who stands next to it
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        int undead = addHurt(f, 5, 0, 4f, FRIEND | F_UNDEAD);
+        assertEquals(undead, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, Undead.NORMAL));
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "a potion heal never goes to the undead");
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, Undead.IMMUNE), "nor a heal they are immune to");
+        // a plain harm (NORMAL) is blocked by an undead friend in reach of it; INVERTED and IMMUNE ones are not
+        SupportField g = field();
+        add(g, 0, 0, ME);
+        add(g, 6, 0, FOE);
+        add(g, 7, 0, FRIEND | F_UNDEAD);
+        SupportMath.Aim aim = new SupportMath.Aim();
+        assertFalse(SupportMath.harmAim(g, 0, 0, 8, CLOUD, 0, 0, Undead.NORMAL, aim));
+        assertTrue(SupportMath.harmAim(g, 0, 0, 8, CLOUD, 0, 0, Undead.IMMUNE, aim));
+    }
+
+    @Test
+    void theCastsRadiusSetsTheSafetyRing() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        add(f, 9, 0, FOE);
+        add(f, 9, 5, FRIEND);   // 5 off the enemy: clear of a 3 radius + 1.5, not of a 4.5 radius + 1.5
+        SupportMath.Aim aim = new SupportMath.Aim();
+        assertTrue(SupportMath.harmAim(f, 0, 0, 10, 3.0, 0, 0, INV, aim));
+        assertFalse(SupportMath.harmAim(f, 0, 0, 10, 4.5, 0, 0, INV, aim), "a bigger area keeps a bigger ring clear");
+    }
+
+    @Test
+    void cleanseTakesTheAfflictedFriendLowestOnHealth() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        addHurt(f, 3, 0, 18f, FRIEND | F_BURNING | F_AFFLICTED);
+        int poisoned = addHurt(f, -3, 0, 6f, FRIEND | F_AFFLICTED);
+        add(f, 2, 2, FOE | F_BURNING | F_AFFLICTED);   // never an enemy
+        assertEquals(poisoned, SupportMath.cleanseTarget(f, 0, 0, 8, F_AFFLICTED));
+        assertNotEquals(poisoned, SupportMath.cleanseTarget(f, 0, 0, 8, F_BURNING), "water only puts out fire");
+        assertEquals(-1, SupportMath.cleanseTarget(f, 0, 0, 2, F_AFFLICTED), "out of reach");
     }
 
     @Test
