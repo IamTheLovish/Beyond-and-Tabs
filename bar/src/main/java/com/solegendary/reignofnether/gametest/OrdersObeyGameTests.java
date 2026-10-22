@@ -161,9 +161,9 @@ public class OrdersObeyGameTests {
     // --------------------------------------------------------------------------------- (b) a move into unloaded land
 
     /**
-     * RTS pathfinding on (as on a small world-border map). A vindicator on a sky pad is sent 4000 blocks east, into
-     * chunks no one has loaded. It walks to the pad's east edge (as far as it can toward the target) and then gives
-     * the order up - idle, move target cleared - within 30 s. Before the fix every request got no path at all, so it
+     * RTS pathfinding on (as on a small world-border map). A vindicator in the arena is sent 4000 blocks east, into
+     * chunks no one has loaded; a stone wall closes the arena's east side. It walks to the wall (as far as it can
+     * toward the target) and then gives the order up - idle, move target cleared - within 30 s. Before the fix every request got no path at all, so it
      * stood where it was and retried every 20 ticks forever, counted busy.
      */
     @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
@@ -171,7 +171,12 @@ public class OrdersObeyGameTests {
         ServerLevel level = helper.getLevel();
         boolean wasRts = UnitServerEvents.rtsPathfinding;
         UnitServerEvents.rtsPathfinding = true;
-        BlockPos pad = ArenaReady.pad(helper, 301);
+        // on the ground, not a sky pad: a pad near the build limit sits at the edge of the pathfinder's vertical band
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        for (int z = 0; z <= 15; z++)
+            for (int y = 2; y <= 4; y++)
+                helper.setBlock(new BlockPos(14, y, z), net.minecraft.world.level.block.Blocks.STONE);
+        BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
         String mine = owner(helper, "unloaded");
         List<Entity> made = new ArrayList<>();
         Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
