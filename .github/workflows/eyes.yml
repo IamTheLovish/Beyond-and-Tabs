@@ -298,6 +298,20 @@ jobs:
               opts += ''.join(kv + '\n' for kv in extra)
               print('::notice::[Eyes] extra shader options: ' + '; '.join(extra))
           open('run/shaderpacks/%s.txt' % f['filename'], 'w').write(opts)
+          # DIAG (claude/diag-metal-mirror, never merge): list the pack's reflection / specular options as annotations
+          import zipfile, re as _re
+          try:
+              z = zipfile.ZipFile('run/shaderpacks/' + f['filename'])
+              hits = []
+              for zn in z.namelist():
+                  if zn.endswith(('.glsl', '.properties')) and ('settings' in zn.lower() or zn.endswith('shaders.properties')):
+                      for ln in z.read(zn).decode('utf-8', 'replace').splitlines():
+                          if _re.search(r'#define\s+\w*(REFLECT|SSR|SPECULAR|METAL|SKY_REF|RP_MODE)\w*', ln):
+                              hits.append(ln.strip()[:110])
+              for i in range(0, len(hits), 12):
+                  print('::notice::[Eyes] DIAG options: ' + ' | '.join(hits[i:i + 12]))
+          except Exception as ex:
+              print('::warning::[Eyes] DIAG option scan failed: %r' % ex)
           print(pack, 'options:', opts.replace('\n', ' ') or '(defaults)', '(%s)' % rp)
           # the exact files this tour ran, as an annotation: a green shader tour is the install list for lovish's PC
           for n in sorted(os.listdir('run/mods')):
