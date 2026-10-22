@@ -125,7 +125,7 @@ public class WorldBorderServerEvents {
     // The pad below must match what runtime requests want (ChunkSnapshot.regionFor pads refY by
     // VERTICAL_RADIUS + SLACK both ways, and refY ~= the surface feet Y this heightmap returns) - a shallower
     // prewarm band fails covers() on first touch and every prewarmed chunk gets union-rebuilt, wasting the prewarm.
-    private static int[] surfaceBand(ChunkAccess chunk) {
+    static int[] surfaceBand(ChunkAccess chunk) {   // also ArenaPathing's
         int[] xs = {0, 15, 0, 15, 8};
         int[] zs = {0, 0, 15, 15, 8};
         int minSurf = Integer.MAX_VALUE;
