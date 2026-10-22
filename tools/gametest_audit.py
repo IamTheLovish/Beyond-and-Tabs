@@ -27,11 +27,18 @@ TIME = re.compile(r"\[TestTime\] (\S+) (\d+) ms")
 
 
 def main(root):
-    reports = {}
+    # artifacts are named gametests-shard-<n>-a<attempt>: a rerun of a failed shard (ci_wait reruns known flakes) uploads
+    # a new report next to the failed one - keep only each shard's newest attempt (Oct 22: the old report won and a
+    # green rerun failed this audit). Names without an attempt (older runs) count as attempt 0.
+    reports, attempts = {}, {}
     for d, _, files in os.walk(root):
         for f in files:
             if f == "shard-report.txt":
-                reports[os.path.basename(d)] = os.path.join(d, f)
+                m = re.fullmatch(r"(.*?)(?:-a(\d+))?", os.path.basename(d))
+                shard, attempt = m.group(1), int(m.group(2) or 0)
+                if attempt >= attempts.get(shard, -1):
+                    attempts[shard] = attempt
+                    reports[shard] = os.path.join(d, f)
     if not reports:
         print(f"::error::[Shard audit] no shard reports under {root}")
         return 1
