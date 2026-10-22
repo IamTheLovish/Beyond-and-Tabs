@@ -41,6 +41,12 @@ public class WorldBorderServerEvents {
         if (level == null)
             return;
 
+        // Once per world load: how much column the game builds, lights and meshes. The battlefield dimension type
+        // (data/reignofnether/dimension_type/battlefield.json, design/battlefield-height.md) is 192 high = 12
+        // sections; vanilla's overworld is 384 = 24, which lovish saw "rendering blocks underground".
+        ReignOfNether.LOGGER.info("[Battlefield] dimension height {}, sections per chunk {} (y {}..{})",
+                level.getHeight(), level.getSectionsCount(), level.getMinBuildHeight(), level.getMaxBuildHeight() - 1);
+
         WorldBorder border = level.getWorldBorder();
         // A small world border marks an RTS-optimised map; a vanilla-sized border is left fully untouched.
         if (!isRtsOptimisedMap(level))

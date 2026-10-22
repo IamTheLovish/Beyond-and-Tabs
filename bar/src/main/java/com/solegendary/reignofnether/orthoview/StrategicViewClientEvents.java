@@ -200,6 +200,8 @@ public class StrategicViewClientEvents {
     private static float guiH;
     private static float pixelsPerBlock;
     private static float iconScale = 1f;   // Mod Settings -> Display -> Icon size
+    private static final int IDLE_AMBER = 0xFFFFB428;
+    private static int idlePulse = 0xFF;   // alpha of the idle marker this frame, 0xA0-0xFF at 1 Hz
 
     private static float projX(double x, double y, double z) {
         double rx = x - camPos.x, ry = y - camPos.y, rz = z - camPos.z;
@@ -263,6 +265,7 @@ public class StrategicViewClientEvents {
         iconScale = com.solegendary.reignofnether.config.DisplaySettings.iconScale();   // once per frame
         plateOpacityPct = plateOpacitySetting();                                        // once per frame
         COLOURS.clear();
+        idlePulse = 0xA0 + (int) (0x5F * (0.5 + 0.5 * Math.sin((System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2)));
 
         gg.flush();
         Matrix4f mat = gg.pose().last().pose();
@@ -717,6 +720,15 @@ public class StrategicViewClientEvents {
         drawShape(bb, mat, shape, sx, sy, r + ICON_OUTLINE_W, ICON_OUTLINE);
         drawShape(bb, mat, shape, sx, sy, r, fill);
 
+        // an owned army unit that has stood still for 10 s (hud/IdleArmy) carries a pulsing amber diamond on its
+        // top-right edge on a dark shadow: hundreds of same-size icons all looked busy, and rows of idle units sat
+        // there for minutes (playtest clip). Two triangles each, in the batch already open - no extra draw call.
+        if (idlePulse > 0 && com.solegendary.reignofnether.hud.IdleArmy.isIdle(entity)) {
+            float ir = Math.max(1.6f, r * 0.5f);
+            diamond(bb, mat, sx + r * 0.95f, sy - r * 0.95f, ir + 1f, ICON_OUTLINE);
+            diamond(bb, mat, sx + r * 0.95f, sy - r * 0.95f, ir, (idlePulse << 24) | (IDLE_AMBER & 0xFFFFFF));
+        }
+
         // an upgraded unit (unit/UpgradeVisuals: any researched look) wears a notch in its faction's glow colour on the
         // icon's top edge - BAR's veteran chevrons, one tick, since icons replace the glowing / trimmed model. Two
         // triangles, the dark one under it for contrast on a pale icon.
@@ -853,8 +865,10 @@ public class StrategicViewClientEvents {
     private static void renderLevel(RenderLevelStageEvent evt) {
         // in strategic view the icons carry the selection, except for big units still drawn as models
         if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS && selectionPlatesEnabled
-                && (!strategic || !strategicBig))
+                && (!strategic || !strategicBig)) {
             drawSelectionPlates(evt.getPoseStack(), evt.getPartialTick(), evt.getFrustum());
+            drawIdleRings(evt.getPoseStack(), evt.getPartialTick(), evt.getFrustum());
+        }
         else if (evt.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS && rangeRingsEnabled)
             drawRangeRings(evt.getPoseStack(), evt.getPartialTick());
     }
@@ -890,6 +904,46 @@ public class StrategicViewClientEvents {
         }
         MC.renderBuffers().bufferSource().endBatch(type);
     }
+
+    /**
+     * Normal zoom: a small pulsing amber ring under each idle army unit that is drawn as a model (and not selected -
+     * the selection ring already marks those). One batch for all of them, 10 line segments a unit.
+     */
+    private static void drawIdleRings(PoseStack poseStack, float partialTick,
+                                      @javax.annotation.Nullable net.minecraft.client.renderer.culling.Frustum frustum) {
+        List<LivingEntity> idle = com.solegendary.reignofnether.hud.IdleArmy.get();
+        if (idle.isEmpty())
+            return;
+        Vec3 cp = MC.gameRenderer.getMainCamera().getPosition();
+        float a = 0.55f + 0.4f * (float) (0.5 + 0.5 * Math.sin((System.currentTimeMillis() % 1000L) / 1000.0 * Math.PI * 2));
+        RenderType type = MyRenderer.LINES_UNDER_ENTITIES;
+        VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(type);
+        Set<LivingEntity> selectedUnits = IDLE_SELECTED_SCRATCH;
+        selectedUnits.clear();
+        selectedUnits.addAll(UnitClientEvents.getSelectedUnits());
+        int drawn = 0;
+        for (LivingEntity entity : idle) {
+            if (drawn >= MAX_IDLE_RINGS)
+                break;
+            if (entity.isRemoved() || entity.isPassenger() || !FogOfWarClientEvents.isInBrightChunk(entity)
+                    || (strategic && !keepsModel(entity)) || selectedUnits.contains(entity))
+                continue;
+            // off screen: no ring, and it doesn't use up the MAX_IDLE_RINGS budget (perf plan R2)
+            double ir = Math.max(0.4, entity.getBbWidth() * 0.55);
+            if (frustum != null && !frustum.isVisible(entity.getBoundingBox().inflate(ir + 0.6, 0.6, ir + 0.6)))
+                continue;
+            double x = Mth.lerp(partialTick, entity.xo, entity.getX()) - cp.x;
+            double y = Mth.lerp(partialTick, entity.yo, entity.getY()) + 0.05 - cp.y;
+            double z = Mth.lerp(partialTick, entity.zo, entity.getZ()) - cp.z;
+            ring(poseStack, vc, x, y, z, ir, 10, 1f, 0.71f, 0.16f, a);
+            drawn++;
+        }
+        selectedUnits.clear();
+        MC.renderBuffers().bufferSource().endBatch(type);
+    }
+
+    private static final int MAX_IDLE_RINGS = 400;
+    private static final Set<LivingEntity> IDLE_SELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
 
     /**
      * Attack range rings. Clip study Oct 13 (b5; 21-19-44 1:06, 21-37-00 0:30): a 12-unit selection drew ten
