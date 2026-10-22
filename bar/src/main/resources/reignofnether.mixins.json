@@ -88,6 +88,7 @@
     "RenderChunkRegionMixin",
     "EmbeddiumWorldSliceMixin",
     "GameRendererSilhouetteMixin",
+    "LevelRendererSilhouetteMixin",
     "SimpleTextureMixin",
     "ResourceLoadStateTrackerMixin",
     "SplashRendererAccessor",

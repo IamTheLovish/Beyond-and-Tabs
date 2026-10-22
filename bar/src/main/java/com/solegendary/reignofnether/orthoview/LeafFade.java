@@ -23,6 +23,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -469,22 +470,41 @@ public final class LeafFade {
         baseNormal.set(pose.normal());
         int overlay = OverlayTexture.NO_OVERLAY;
         try {
+            float[] va = new float[4];
             for (ShellBlock sb : shell.values()) {
-                double bx = sb.x + 0.5, by = sb.y + 0.5, bz = sb.z + 0.5;
-                float alpha = 1f;
-                for (int a = 0, n = anchors.size(); a < n && alpha > 0f; a++) {
-                    double[] p = anchors.get(a);
-                    double sq = CanopyRules.perpDistSq(bx - p[0], by - p[1], bz - p[2], dx, dy, dz,
-                            CanopyRules.HOLE_BEHIND, CanopyRules.HOLE_LENGTH);
-                    if (sq != Double.MAX_VALUE)
-                        alpha = Math.min(alpha, CanopyRules.fadeAlpha(Math.sqrt(sq)));
-                }
-                if (alpha < 0.02f)
+                // a whole block clear of every soft circle is skipped; a whole block beyond them is drawn solid
+                double reach = 0.9;   // half a block's diagonal: a corner is at most this much nearer or further
+                boolean uniform = alphaAt(sb.x + 0.5, sb.y + 0.5, sb.z + 0.5, dx, dy, dz, reach) >= 1f;
+                if (!uniform && alphaAt(sb.x + 0.5, sb.y + 0.5, sb.z + 0.5, dx, dy, dz, -reach) < 0.02f)
                     continue;
                 pose.pose().set(basePose).translate((float) (sb.x - cam.x), (float) (sb.y - cam.y), (float) (sb.z - cam.z));
-                for (int i = 0; i < sb.quads.length; i++)
-                    vc.putBulkData(pose, sb.quads[i], sb.rgb[i * 3], sb.rgb[i * 3 + 1], sb.rgb[i * 3 + 2], alpha,
-                            sb.light[i], overlay, false);
+                for (int i = 0; i < sb.quads.length; i++) {
+                    BakedQuad q = sb.quads[i];
+                    int[] v = q.getVertices();
+                    // alpha per VERTEX, from its own distance to the circles: the fade runs smoothly across a block
+                    // instead of stepping a whole block at a time (round 1 looked like missing chunks)
+                    float max = 0f;
+                    for (int k = 0; k < 4; k++) {
+                        int o = k * STRIDE;
+                        va[k] = uniform ? 1f : alphaAt(sb.x + Float.intBitsToFloat(v[o]), sb.y + Float.intBitsToFloat(v[o + 1]),
+                                sb.z + Float.intBitsToFloat(v[o + 2]), dx, dy, dz);
+                        max = Math.max(max, va[k]);
+                    }
+                    if (max < 0.02f)
+                        continue;
+                    Vec3i nrm = q.getDirection().getNormal();
+                    float r = sb.rgb[i * 3], g = sb.rgb[i * 3 + 1], b = sb.rgb[i * 3 + 2];
+                    for (int k = 0; k < 4; k++) {
+                        int o = k * STRIDE;
+                        vc.vertex(pose.pose(), Float.intBitsToFloat(v[o]), Float.intBitsToFloat(v[o + 1]), Float.intBitsToFloat(v[o + 2]))
+                                .color(r, g, b, va[k])
+                                .uv(Float.intBitsToFloat(v[o + 4]), Float.intBitsToFloat(v[o + 5]))
+                                .overlayCoords(overlay)
+                                .uv2(sb.light[i])
+                                .normal(pose.normal(), nrm.getX(), nrm.getY(), nrm.getZ())
+                                .endVertex();
+                    }
+                }
             }
         } finally {
             pose.pose().set(basePose);
@@ -492,6 +512,27 @@ public final class LeafFade {
             matrix.popPose();
             buffers.endBatch(CanopyRenderTypes.LEAF_FADE);
         }
+    }
+
+    // a baked quad's vertex: position (3 floats), colour, uv (2 floats), light, normal - DefaultVertexFormat.BLOCK
+    private static final int STRIDE = 8;
+
+    /** The fade's alpha at a world point: the softest (lowest) over every live anchor's circle. */
+    private static float alphaAt(double x, double y, double z, double dx, double dy, double dz) {
+        return alphaAt(x, y, z, dx, dy, dz, 0);
+    }
+
+    /** ... with the point's distance to each circle's axis shifted by {@code bias} blocks (a whole block's bounds). */
+    private static float alphaAt(double x, double y, double z, double dx, double dy, double dz, double bias) {
+        float alpha = 1f;
+        for (int a = 0, n = anchors.size(); a < n && alpha > 0f; a++) {
+            double[] p = anchors.get(a);
+            double sq = CanopyRules.perpDistSq(x - p[0], y - p[1], z - p[2], dx, dy, dz,
+                    CanopyRules.HOLE_BEHIND, CanopyRules.HOLE_LENGTH);
+            if (sq != Double.MAX_VALUE)
+                alpha = Math.min(alpha, CanopyRules.fadeAlpha(Math.max(0, Math.sqrt(sq) - bias)));
+        }
+        return alpha;
     }
 
     /** This frame's anchor points: the cursor's smoothed ground point and the selected units' interpolated feet. */
