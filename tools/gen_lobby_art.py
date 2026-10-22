@@ -260,6 +260,9 @@ class Gothic:
         self.dg = ImageDraw.Draw(self.glass)
         self.dgr = ImageDraw.Draw(self.grose)
         self.dgl = ImageDraw.Draw(self.glan)
+        self.depth = board.mask()            # 255 = set back (atmospheric perspective: greyer, bluer)
+        self.dd = ImageDraw.Draw(self.depth)
+        self.back = False
         self.lw = board.ss * 1.4    # a little over one output pixel: the etching must survive downscaling
 
     # primitives
@@ -269,6 +272,7 @@ class Gothic:
         self.dt.polygon(p, fill=int(tone))
         self.dl.polygon(p, fill=0)
         self.dgm.polygon(p, fill=0)
+        self.dd.polygon(p, fill=255 if self.back else 0)
         if edge:
             self.dl.line(p + [p[0]], fill=int(edge), width=max(1, int(round(self.lw * w))), joint="curve")
 
@@ -383,6 +387,92 @@ class Gothic:
             ys = y0 + (y1 - y0) * 0.0 + hw * 1.9
             self.ln([(cx - hw, y1)] + arch_pts(cx, ys, hw) + [(cx + hw, y1)], edge, 0.7)
 
+    def gargoyle(self, x, y, side, size, tone, edge=170):
+        """A little beast leaning out from a buttress top: body, neck, a gaping head, a spout."""
+        s = size
+        body = [(x, y - s * 0.3), (x + side * s * 1.0, y - s * 0.45), (x + side * s * 1.5, y - s * 0.7),
+                (x + side * s * 1.95, y - s * 0.55), (x + side * s * 1.9, y - s * 0.25), (x + side * s * 1.55, y - s * 0.2),
+                (x + side * s * 1.2, y + s * 0.05), (x + side * s * 0.6, y + s * 0.2), (x, y + s * 0.3)]
+        self.poly(body, tone, edge, 0.7)
+        self.poly([(x + side * s * 1.55, y - s * 0.65), (x + side * s * 1.6, y - s * 0.95), (x + side * s * 1.75, y - s * 0.62)], tone, edge, 0.6)
+        self.ln([(x + side * s * 0.5, y + s * 0.15), (x + side * s * 0.45, y + s * 0.55), (x + side * s * 0.6, y + s * 0.6)], edge * 0.8, 0.6)
+        self.ln([(x + side * s * 1.9, y - s * 0.4), (x + side * s * 2.3, y - s * 0.35)], edge * 0.6, 0.6)
+
+    def corbel_table(self, x0, x1, y, n, tone, edge=150):
+        """A carved corbel table: a row of little arches on brackets under a cornice."""
+        self.rect(x0, y - 0.0035, x1, y, tone + 8, edge, 0.8)
+        w = (x1 - x0) / n
+        for i in range(n):
+            cx = x0 + w * (i + 0.5)
+            self.ln(arch_pts(cx, y + w * 0.15, w * 0.42, 0.6, 8), edge * 0.85, 0.6)
+            bx = x0 + w * i
+            self.poly([(bx - w * 0.08, y), (bx + w * 0.08, y), (bx + w * 0.03, y + w * 0.5), (bx - w * 0.03, y + w * 0.5)],
+                      tone + 10, edge, 0.5)
+
+    def statue_niches(self, x0, x1, y0, y1, n, tone, edge=160):
+        """A row of canopied niches, each with a robed figure on a corbel."""
+        w = (x1 - x0) / n
+        for i in range(n):
+            cx = x0 + w * (i + 0.5)
+            hw = w * 0.38
+            ys = y0 + hw * 1.8
+            self.dark([(cx - hw, y1)] + arch_pts(cx, ys, hw) + [(cx + hw, y1)], 4, edge, 0.7)
+            # canopy gablet
+            self.poly([(cx - hw * 1.15, ys + hw * 0.2), (cx, y0 - hw * 0.6), (cx + hw * 1.15, ys + hw * 0.2)], tone, edge * 0.9, 0.6)
+            fh = (y1 - ys) * 0.82
+            fb = y1 - (y1 - ys) * 0.06
+            self.circle(cx, fb - fh + hw * 0.32, hw * 0.28, tone + 22, edge * 0.9, 0.5)
+            self.poly([(cx - hw * 0.3, fb - fh + hw * 0.6), (cx + hw * 0.3, fb - fh + hw * 0.6), (cx + hw * 0.55, fb),
+                       (cx - hw * 0.55, fb)], tone + 22, edge * 0.9, 0.5)
+            self.ln([(cx - hw * 0.1, fb - fh * 0.62), (cx + hw * 0.25, fb - fh * 0.15)], edge * 0.6, 0.4)
+            self.rect(cx - hw * 0.6, fb, cx + hw * 0.6, y1, tone + 12, edge * 0.8, 0.5)
+
+    def broken_spire(self, cx, base, cut, hw, tip_full, tone, edge=150, rr=None):
+        """A spire whose top has fallen: the taper stops at `cut` in a jagged break, a stump of the next stage above."""
+        h = base - tip_full
+        k = (cut - tip_full) / h
+        jag = [(cx + hw * k * f, cut + (rr.uniform(-0.006, 0.004) if rr is not None else 0)) for f in (0.9, 0.5, 0.1, -0.3, -0.7)]
+        self.poly([(cx - hw, base)] + [(cx - hw * k, cut + 0.002)] + jag[::-1] + [(cx + hw * k, cut)] + [(cx + hw, base)], tone, edge)
+        for f in (-0.42, 0.42):
+            self.ln([(cx + hw * f, base), (cx + hw * f * k, cut)], edge * 0.55, 0.7)
+        n = max(4, int((base - cut) / 0.012))
+        self.crockets((cx - hw, base), (cx - hw * k, cut), n, hw * 0.28, tone, edge * 0.85, -1)
+        self.crockets((cx + hw, base), (cx + hw * k, cut), n, hw * 0.28, tone, edge * 0.85, 1)
+        # the exposed iron rod and a fallen-away edge
+        self.ln([(cx, cut), (cx + hw * 0.1, cut - 0.02), (cx + hw * 0.25, cut - 0.024)], edge, 0.6)
+
+    def tympanum(self, cx, lintel, apex, hw, tone, edge=170):
+        """The sculpted tympanum over the door: a mandorla with an enthroned figure, angels each side, a carved lintel."""
+        self.rect(cx - hw, lintel - 0.006, cx + hw, lintel, tone + 14, edge, 0.8)
+        for i in range(7):                      # lintel figures
+            x = cx - hw + hw * 2 * (i + 0.5) / 7
+            self.circle(x, lintel - 0.0045, 0.0011, tone + 26, edge, 0.4)
+            self.ln([(x, lintel - 0.0034), (x, lintel - 0.0005)], edge * 0.8, 0.5)
+        my = (lintel - 0.006 + apex) / 2 + 0.002
+        mh = (lintel - 0.006 - apex) * 0.42
+        mw = hw * 0.36
+        ves = [(cx + mw * math.sin(a), my - mh * math.cos(a)) for a in np.linspace(0, 2 * math.pi, 28)]
+        self.poly(ves, tone + 10, edge, 0.7)
+        self.circle(cx, my - mh * 0.45, mw * 0.24, tone + 28, edge, 0.5)
+        self.poly([(cx - mw * 0.3, my - mh * 0.25), (cx + mw * 0.3, my - mh * 0.25), (cx + mw * 0.55, my + mh * 0.7),
+                   (cx - mw * 0.55, my + mh * 0.7)], tone + 28, edge, 0.5)
+        for k in range(-3, 4):
+            self.ln([(cx + k * mw * 0.12, my - mh * 0.15), (cx + k * mw * 0.18, my + mh * 0.68)], edge * 0.55, 0.35)
+        for side in (-1, 1):
+            ax = cx + side * hw * 0.62
+            self.circle(ax, my - mh * 0.1, mw * 0.17, tone + 22, edge * 0.9, 0.45)
+            self.poly([(ax - mw * 0.18, my), (ax + mw * 0.18, my), (ax + mw * 0.25, my + mh * 0.8), (ax - mw * 0.25, my + mh * 0.8)],
+                      tone + 22, edge * 0.9, 0.45)
+            self.poly([(ax, my - mh * 0.05), (ax - side * mw * 0.55, my - mh * 0.6), (ax - side * mw * 0.15, my + mh * 0.3)],
+                      tone + 16, edge * 0.8, 0.4)
+
+    def trefoil_lead(self, cx, cy, r, w=0.6):
+        for ang in (-90, 30, 150):
+            a = math.radians(ang)
+            pts = [(cx + r * 1.0 * math.cos(a) + r * 0.9 * math.cos(t), cy + r * 1.0 * math.sin(a) + r * 0.9 * math.sin(t))
+                   for t in np.linspace(0, 2 * math.pi, 14)]
+            self.lead(pts, w, 24)
+
     def pinnacle(self, cx, base, top, tip, hw, tone, edge=150, cross=False):
         self.rect(cx - hw, top, cx + hw, base, tone, edge)
         # set-offs (the shaft steps in as it rises)
@@ -399,6 +489,9 @@ class Gothic:
             self.rect(cx - hw * 0.22, ny + hw * 0.35, cx + hw * 0.22, ny + hw * 3.0, tone + 18, edge, 0.5)
             self.circle(cx, ny + hw * 0.1, hw * 0.24, tone + 18, edge, 0.5)
             self.poly([(cx - hw * 0.75, ny - hw * 0.9), (cx, ny - hw * 2.2), (cx + hw * 0.75, ny - hw * 0.9)], tone, edge * 0.85, 0.6)
+        if hw > 0.006 and base - top > 0.2 and not self.back:
+            side = 1 if cx >= 0 else -1
+            self.gargoyle(cx + side * hw, top + (base - top) * 0.12, side, hw * 1.1, tone, edge)
         self.gablet(cx, top, hw * 1.15, hw * 2.0, tone, edge, crock=hw > 0.006)
         self.spire(cx, top - hw * 0.4, tip, hw * 0.72, tone, edge, crock=True, bands=2, cross=cross)
 
@@ -532,9 +625,10 @@ GLASS_GOLD = (240, 192, 104)
 GLASS_EMBER = (200, 70, 28)
 
 
-def cathedral(size=1024):
+def cathedral(size=1536):
     b = Board(RECTS["cathedral"], size, size, ss=2)
     g = Gothic(b)
+    rr = np.random.default_rng(601)
     E = 175      # edge brightness of the front
     BT = 20      # back tone
 
@@ -544,7 +638,9 @@ def cathedral(size=1024):
                              (-0.165, 0.27, 0.145, 0.007), (0.165, 0.27, 0.145, 0.007), (-0.25, 0.40, 0.27, 0.008),
                              (0.25, 0.40, 0.27, 0.008), (-0.30, 0.50, 0.38, 0.008), (0.30, 0.50, 0.38, 0.008),
                              (-0.035, 0.26, 0.15, 0.006), (0.035, 0.26, 0.15, 0.006)):
+        g.back = True
         g.pinnacle(cx, 0.62, top, tip, hw, BT, 105)
+    g.back = False
 
     # --- outer chapels and aisles (step down to the sides)
     for s in (-1, 1):
@@ -588,6 +684,7 @@ def cathedral(size=1024):
     for x in (-0.088, -0.072, 0.072, 0.088):       # tall shafts up the facade
         g.ln([(x + 0.003, 0.27), (x + 0.003, 0.745)], 120, 0.7)
     g.gablet(0.0, 0.272, 0.088, 0.074, 36, E)
+    g.corbel_table(-0.088, 0.088, 0.276, 16, 36, E)
     # rose window frame: a deep pointed arch with three orders of moulding
     for i, (hw, tone) in enumerate(((0.071, 32), (0.065, 24), (0.059, 16))):
         g.poly(lancet_pts(0.0, 0.338, hw, 0.405), tone, E - i * 12, 1.0)
@@ -614,14 +711,20 @@ def cathedral(size=1024):
                 g.circle(x, 0.6975, 0.0026, tone + 16, 150, 0.6)
     g.gablet(0.0, 0.662, 0.062, 0.048, 32, E)
     g.dark(lancet_pts(0.0, 0.708, 0.025, 0.745), 3, 170)
-    g.glass_poly(lancet_pts(0.0, 0.711, 0.021, 0.745), (126, 14, 18))   # the lit nave seen through the door
-    g.lead([(0.0, 0.684), (0.0, 0.745)], 1.6, 12)                         # trumeau
+    g.tympanum(0.0, 0.716, 0.682, 0.024, 22, 185)
+    g.glass_poly([(-0.021, 0.7165), (0.021, 0.7165), (0.021, 0.745), (-0.021, 0.745)], (140, 18, 20))   # the lit nave
+    g.rect(-0.0028, 0.716, 0.0028, 0.745, 30, 170, 0.7)                                              # trumeau
+    g.circle(0.0, 0.722, 0.0022, 44, 170, 0.5)
+    g.rect(-0.0018, 0.724, 0.0018, 0.738, 44, 160, 0.5)
 
     # --- the two west towers
     for s in (-1, 1):
         cx = s * 0.132
         hw = 0.040
-        g.spire(cx, 0.21, 0.036, 0.031, 34, E, bands=5)
+        if s > 0:
+            g.broken_spire(cx, 0.21, 0.085, 0.031, 0.036, 34, E, rr)     # the right spire lost its top long ago
+        else:
+            g.spire(cx, 0.21, 0.036, 0.031, 34, E, bands=5)
         g.rect(cx - hw, 0.205, cx + hw, 0.745, 40, E)
         for x in (cx - hw * 0.55, cx + hw * 0.55):
             g.ln([(x, 0.21), (x, 0.745)], 105, 0.6)
@@ -637,7 +740,9 @@ def cathedral(size=1024):
             for yy in (0.355, 0.375):
                 g.lead([(x - 0.0065, yy), (x + 0.0065, yy)], 0.6)
         g.blind_arcade(cx - hw + 0.003, cx + hw - 0.003, 0.53, 0.64, 4, 135)
-        g.blind_arcade(cx - hw + 0.003, cx + hw - 0.003, 0.65, 0.742, 6, 128)
+        g.statue_niches(cx - hw + 0.003, cx + hw - 0.003, 0.655, 0.735, 4, 34, 165)
+        for y in (0.299, 0.409, 0.529):
+            g.corbel_table(cx - hw, cx + hw, y + 0.0125, 8, 40, 150)
         # a small rose on each tower
         ry = 0.465
         g.circle(cx, ry, 0.0185, 10, 170)
@@ -658,7 +763,9 @@ def cathedral(size=1024):
         g.pinnacle(s * 0.092, 0.745, 0.235, 0.088, 0.0085, 46, E)
     for x in (-0.048, 0.048):
         g.pinnacle(x, 0.275, 0.25, 0.20, 0.0038, 40, 150)
-    return finish_stone(b, g, "cathedral", size, size)
+    ivy = ivy_overlay(b, rr, [(-0.27, 0.745, 0.20, 0.03), (-0.20, 0.745, 0.13, 0.02), (-0.15, 0.745, 0.09, 0.02),
+                              (0.28, 0.745, 0.06, 0.01)])
+    return finish_stone(b, g, "cathedral", size, size, ivy=ivy, rr=rr)
 
 
 def rose(g, cx, cy, R):
@@ -724,7 +831,9 @@ def lancets(g):
         while y < 0.592:
             for k in range(-3, 4):
                 x = cx + k * step + (step / 2 if row % 2 else 0)
-                if abs(x - cx) > hw - 0.0015:
+                dy_ = max(0.0, ys - y)
+                lim = (math.sqrt(max(4 * hw * hw - dy_ * dy_, 0)) - hw) if dy_ > 0 else hw
+                if abs(x - cx) > lim - 0.0025:
                     continue
                 c = GLASS_DEEP if (k + row) % 3 == 0 else ((196, 36, 36) if (k * 7 + row) % 5 else GLASS_EMBER)
                 g.glass_poly([(x, y - step * 0.42), (x + step * 0.42, y), (x, y + step * 0.42), (x - step * 0.42, y)], c, "lancet")
@@ -752,65 +861,184 @@ def lancets(g):
         while y < 0.592:
             g.lead([(cx - hw, y), (cx + hw, y)], 0.7, 24)
             y += 0.013
+        g.trefoil_lead(cx, ys - hw * 0.95, hw * 0.28, 0.5)
         g.lead(body + [body[0]], 1.2, 24)
 
 
-def finish_stone(b, g, name, w, h, warm_rim=True):
-    """Turn the Gothic layers into an etched, moonlit stone image."""
+def engrave(X, Y, b, Lv, period=4.0):
+    """Engraving tone: hatch lines that appear in layers as the light value Lv rises (verticals, then one diagonal,
+    then the other). Returns line coverage 0..1. `period` is in output pixels."""
+    px = b.sx / b.ss
+    xs, ys = X * px, Y * px
+    def lines(ang, ph):
+        c, s_ = math.cos(ang), math.sin(ang)
+        d = (xs * c + ys * s_) / period
+        wob = 0.0
+        return np.clip((np.sin((d + ph) * 2 * math.pi) - 0.55) / 0.45, 0, 1)
+    v = lines(0.0, 0.0) * smoothstep(0.06, 0.18, Lv)
+    d1 = lines(math.radians(62), 0.3) * smoothstep(0.24, 0.42, Lv)
+    d2 = lines(math.radians(118), 0.6) * smoothstep(0.45, 0.65, Lv)
+    return np.clip(v + d1 + d2, 0, 1)
+
+
+def finish_stone(b, g, name, w, h, ivy=None, rr=None):
+    """Turn the Gothic layers into an etched, moonlit stone image with one light logic:
+    the moon BEHIND = cool silver rim on every edge facing it; the red sky = crimson fill on side-facing edges;
+    the glass = amber spill on the stone round it; occlusion in every recess; soft drop shadows under ledges."""
     X, Y = b.grid()
+    ss = b.ss
     sil = arr(g.sil)
     tone = arr(g.tone)
     line = arr(g.line)
     gm = arr(g.gmask)
+    dep = arr(g.depth)
     glass = np.asarray(g.glass, np.float32) / 255
-    # stone base: ink to dark slate, a little cooler low down
     tn = np.clip(tone * 2.0, 0, 1)
-    stone = lerp(col((7, 7, 10)), col((74, 70, 82)), tn)
-    # weathering: mottled value, streaks running down from ledges
-    mott = fbm(X * 0 + (X - b.x0) / (b.x1 - b.x0), (Y - b.y0) / (b.y1 - b.y0), 14, 53, False, 5)
-    drip = fbm((X - b.x0) / (b.x1 - b.x0), (Y - b.y0) / (b.y1 - b.y0) * 0.08, 60, 54, False, 3)
-    stone *= (0.62 + 0.62 * mott * (0.7 + 0.6 * drip))[..., None]
-    # engraved cross-hatching in the darker stone (darker lines across the grey)
-    d1 = np.clip((np.sin((X * b.sx + Y * b.sy) / b.ss * 2 * math.pi / 4.2) - 0.55) / 0.45, 0, 1)
-    stone *= (1 - d1 * (1 - mott) * 0.5)[..., None]
-    # engraved hatching: fine verticals that show more on lighter stone
-    hx = np.clip((np.sin(X * b.sx / b.ss * 2 * math.pi / 3.0) - 0.35) / 0.65, 0, 1)
-    nz = vnoise(b.H, b.W, 30, 30, 51, octaves=3)
-    stone = stone + (hx * np.clip(tone * 2.2, 0, 1) * (0.5 + nz) * 0.13)[..., None] * col((150, 150, 170))
-    # ashlar courses
-    cy = np.clip((np.sin(Y * b.sy / b.ss * 2 * math.pi / 7.0) - 0.92) / 0.08, 0, 1)
-    stone *= (1 - cy * 0.35)[..., None]
-    # the etched lines: cool slate, turning warm bone where the moon is behind, red at the low sides
     mx, my, mr = MOON
-    dm = np.hypot(X - mx, Y - my)
-    moonlit = (1 - smoothstep(mr * 0.7, mr * 1.35, dm)) if warm_rim else np.zeros_like(X)
-    redlit = smoothstep(0.08, 0.36, np.abs(X)) * smoothstep(0.30, 0.70, Y) * 0.8
-    lc = lerp(col((120, 122, 140)), col((236, 210, 168)), moonlit * 0.85)
-    lc = lerp(lc, col((178, 70, 62)), redlit * (1 - moonlit))
-    rgb = lerp(stone, lc, line * (0.55 + 0.45 * nz))
-    # a moonlit rim: the outer edge of the silhouette catches the light
-    sb = blur(sil, b.ss * 1.4)
-    rim = np.clip((sil - sb) * 3, 0, 1)
-    rgb = lerp(rgb, col((250, 228, 186)), rim * moonlit * 0.9)
-    rgb = lerp(rgb, col((190, 60, 54)), rim * redlit * 0.6)
-    # glass on top, with a soft inner glow and darker lead
-    gl = glass * (0.62 + 0.3 * nz[..., None])
+
+    # --- normals of the silhouette and of the element boundaries (outward = down the blurred coverage)
+    def normals(field, sigma):
+        f = blur(field, sigma)
+        gy, gx = np.gradient(f)
+        mag = np.hypot(gx, gy) + 1e-6
+        return -gx / mag, -gy / mag, mag
+    nx, ny, emag = normals(sil, ss * 1.2)
+    edge_sil = np.clip(emag * ss * 4.0, 0, 1)
+    tx_, ty_, tmag = normals(tn, ss * 1.0)
+    edge_in = np.clip(tmag * ss * 6.0, 0, 1) * smoothstep(0.08, 0.25, tn)
+    # direction to the moon
+    dmx, dmy = mx - X, my - Y
+    dl = np.hypot(dmx, dmy) + 1e-6
+    dmx, dmy = dmx / dl, dmy / dl
+    near_moon = 1 - smoothstep(mr * 0.9, mr * 2.4, dl)
+    rim = np.clip(nx * dmx + ny * dmy, 0, 1) ** 0.7 * edge_sil * (0.35 + 0.65 * near_moon)
+    rim_in = np.clip(tx_ * dmx + ty_ * dmy, 0, 1) * edge_in * (0.25 + 0.75 * near_moon) * 0.8
+    side = np.sign(X)
+    fill = (np.clip(nx * side, 0, 1) * edge_sil + np.clip(tx_ * side, 0, 1) * edge_in * 0.6) \
+        * smoothstep(0.03, 0.30, np.abs(X)) * smoothstep(0.15, 0.6, Y)
+    # --- glass spill (amber light on the mouldings and sills round each window)
+    glum = (glass.max(-1) * gm)
+    spill = blur(glum, ss * 6) * 1.6 + blur(glum, ss * 22) * 1.2
+    spill = np.clip(spill, 0, 1) * (1 - gm)
+    # --- occlusion: dark recesses darken their neighbours; ledges drop soft shadows downward
+    recess = (1 - smoothstep(0.05, 0.16, tn)) * sil * (1 - gm)
+    ao = blur(recess, ss * 3.0)
+    shift = max(1, int(b.sy * 0.004))
+    above = np.roll(tn, shift, axis=0)
+    above[:shift] = 0
+    drop = blur(np.clip(above - tn, 0, 1), ss * 2.5)
+    occl = np.clip(1 - ao * 0.55 - drop * 0.9, 0.15, 1)
+
+    # --- the light value that drives the engraving
+    base_light = 0.15 + 0.22 * tn
+    Lv = (base_light + rim * 0.95 + rim_in * 0.7 + fill * 0.55 + spill * 1.3) * occl
+    Lv = np.clip(Lv, 0, 1)
+    # --- textures in the stone: ashlar courses, weathering, cracks, damp moss
+    U01 = (X - b.x0) / (b.x1 - b.x0)
+    V01 = (Y - b.y0) / (b.y1 - b.y0)
+    mott = fbm(U01, V01, 16, 53, False, 5)
+    drip = fbm(U01, V01 * 0.06, 90, 54, False, 3)
+    course_h = 0.0055
+    row = np.floor(Y / course_h)
+    joint_h = 1 - smoothstep(0.0, 0.16, np.abs((Y / course_h) - np.round(Y / course_h)))
+    off = (row % 2) * 0.5
+    bx_ = X / (course_h * 2.2) + off
+    joint_v = 1 - smoothstep(0.0, 0.08, np.abs(bx_ - np.round(bx_)))
+    joints = np.clip(joint_h + joint_v, 0, 1) * sil * (1 - gm)
+    moss = smoothstep(0.58, 0.72, fbm(U01, V01, 26, 55, False, 4)) * smoothstep(0.50, 0.74, Y)
+    # stone body: near-black, cool; mid greys only where lit
+    stone = lerp(col((6, 6, 9)), col((30, 29, 36)), tn * 0.8 + mott * 0.25)
+    stone = lerp(stone, col((18, 22, 14)), moss * 0.45)
+    stone *= (0.75 + 0.5 * drip * mott)[..., None]
+    # the lit colour mixes the three lights
+    wsum = rim + rim_in + fill + spill + 1e-4
+    light_rgb = (col((206, 212, 228))[None, None] * (rim + rim_in)[..., None]
+                 + col((196, 58, 52))[None, None] * fill[..., None]
+                 + col((246, 170, 86))[None, None] * spill[..., None]) / wsum[..., None]
+    light_rgb = lerp(col((96, 96, 112)), light_rgb, np.clip(wsum * 2.5, 0, 1))
+    eng = engrave(X, Y, b, Lv, 3.4)
+    rgb = lerp(stone, light_rgb * 0.8, eng * np.clip(0.16 + Lv * 0.9, 0, 1))
+    rgb = rgb + light_rgb * (Lv ** 2 * 0.35)[..., None]
+    # block joints: dark on the lit stone, faintly pale in shadow
+    rgb = lerp(rgb, rgb * 0.45, joints * smoothstep(0.1, 0.4, Lv) * 0.8)
+    rgb = lerp(rgb, col((40, 40, 48)), joints * (1 - smoothstep(0.1, 0.4, Lv)) * 0.25)
+    # carved edges (mouldings): bright where lit, dim in shadow - value structure stays dark
+    lc = lerp(col((88, 90, 104)), light_rgb * 1.15, np.clip(Lv * 1.6, 0, 1))
+    rgb = lerp(rgb, lc, line * (0.5 + 0.5 * np.clip(Lv * 1.8 + 0.15, 0, 1)) * (0.75 + 0.25 * mott))
+    # cracks
+    if rr is not None:
+        ck = Image.new("L", (b.W, b.H), 0)
+        dc = ImageDraw.Draw(ck)
+        for i in range(260):
+            x, y = rr.uniform(b.x0, b.x1), rr.uniform(0.2, 0.78)
+            pts = [b.P(x, y)]
+            ang = rr.uniform(0.3, 2.8)
+            for k in range(rr.integers(3, 8)):
+                ang += rr.uniform(-0.7, 0.7)
+                x += math.cos(ang) * 0.003
+                y += abs(math.sin(ang)) * 0.004
+                pts.append(b.P(x, y))
+            dc.line(pts, fill=255, width=max(1, ss))
+        rgb *= (1 - arr(ck) * 0.6 * sil)[..., None]
+    rgb *= occl[..., None] ** 0.6
+    # atmospheric perspective: set-back masses greyer and bluer
+    rgb = lerp(rgb, rgb * 0.6 + col((34, 38, 56)) * 0.5, dep * 0.8)
+    # glass: glowing panes, darker leading, mottled
+    nz = fbm(U01, V01, 60, 56, False, 3)
+    gl = glass * (0.66 + 0.45 * nz[..., None])
     rgb = lerp(rgb, gl, gm)
-    # deeper at the foot (the mist and ground meet it)
-    rgb *= (1 - 0.35 * smoothstep(0.62, 0.75, Y))[..., None]
-    rgb += grain(b.H, b.W, 52, 0.018)[..., None] * sil[..., None]
-    save_rgba(rgb, sil, name, (w, h))
+    # the silhouette's outer rim against the moon (crisp silver) and the sides (crimson)
+    sb = blur(sil, ss * 1.0)
+    outer = np.clip((sil - sb) * 3, 0, 1)
+    rgb = lerp(rgb, col((236, 236, 246)), outer * near_moon * 0.85)
+    rgb = lerp(rgb, col((200, 64, 58)), outer * (1 - near_moon) * smoothstep(0.1, 0.35, np.abs(X)) * 0.5)
+    # deeper at the foot, where the mist and the ground meet it
+    rgb *= (1 - 0.3 * smoothstep(0.64, 0.75, Y))[..., None]
+    a = sil
+    if ivy is not None:
+        iv = np.asarray(ivy, np.float32) / 255
+        iv[..., 3] *= np.clip(blur(sil, ss * 2) * 1.5, 0, 1) * (1 - gm)
+        rgb = lerp(rgb, iv[..., :3], iv[..., 3])
+        a = np.clip(a + iv[..., 3], 0, 1)
+    save_rgba(rgb, a, name, (w, h))
     # the two glow layers for the additive pulse: the glass alone, softened
-    for which, m, nm in ((g.grose, arr(g.grose), "glass_rose"), (g.glan, arr(g.glan), "glass_lancets")):
+    for m, nm in ((arr(g.grose), "glass_rose"), (arr(g.glan), "glass_lancets")):
         if not m.any():
             continue
         glow_rgb = glass * m[..., None]
-        soft = np.stack([blur(glow_rgb[..., i], b.ss * 3) for i in range(3)], -1)
-        wide = np.stack([blur(glow_rgb[..., i], b.ss * 14) for i in range(3)], -1)
+        soft = np.stack([blur(glow_rgb[..., i], ss * 3) for i in range(3)], -1)
+        wide = np.stack([blur(glow_rgb[..., i], ss * 14) for i in range(3)], -1)
         out = glow_rgb * 0.35 + soft * 0.6 + wide * 1.2
-        a = np.clip(out.max(-1), 0, 1)
-        save_rgba(out / np.maximum(a, 1e-4)[..., None], a, nm, (w // 2, h // 2))
-    return None
+        al = np.clip(out.max(-1), 0, 1)
+        save_rgba(out / np.maximum(al, 1e-4)[..., None], al, nm, (512, 512))
+
+
+def ivy_overlay(b, rr, paths):
+    """Ivy climbing the stone: leaf clumps along wandering stems (dark green, a pale vein-lit edge)."""
+    img = Image.new("RGBA", (b.W, b.H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    for (x, y, up, spread) in paths:
+        for stem in range(6):
+            sx_, sy_ = x + rr.uniform(-spread, spread) * 0.3, y
+            ang = -math.pi / 2 + rr.uniform(-0.5, 0.5)
+            pts = [(sx_, sy_)]
+            for k in range(int(up / 0.006)):
+                ang += rr.uniform(-0.45, 0.45)
+                ang = max(-math.pi + 0.4, min(-0.4, ang))
+                sx_ += math.cos(ang) * 0.006
+                sy_ += math.sin(ang) * 0.006
+                pts.append((sx_, sy_))
+            d.line(b.pts(pts), fill=(24, 30, 20, 255), width=b.ss)
+            for (px, py) in pts:
+                for j in range(rr.integers(1, 4)):
+                    lx, ly = px + rr.normal(0, 0.003), py + rr.normal(0, 0.003)
+                    r = rr.uniform(0.0016, 0.0032)
+                    tone = rr.uniform(0.6, 1.2)
+                    leaf = [(lx, ly - r), (lx + r * 0.9, ly - r * 0.2), (lx + r * 0.5, ly + r * 0.7), (lx, ly + r * 0.4),
+                            (lx - r * 0.5, ly + r * 0.7), (lx - r * 0.9, ly - r * 0.2)]
+                    d.polygon(b.pts(leaf), fill=(int(22 * tone), int(34 * tone), int(22 * tone), 255),
+                              outline=(int(70 * tone), int(84 * tone), int(60 * tone), 255))
+    return img
 
 
 # ---------------------------------------------------------------- far spires (cool, hazy, behind the near clouds)
