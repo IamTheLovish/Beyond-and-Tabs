@@ -33,21 +33,25 @@ public final class RaidTuning {
 
     // ---------------------------------------------------------------- fragile economy buildings (health)
 
-    /** Energy converter: the fragile one - 4-6 infantry raiders razing it takes about 4-6 s. Unchanged since the flow economy. */
-    public static final double CONVERTER_HEALTH = 30d;
-    /** Windmill: 3-4 T1 vehicles take 5-8 s. (It was 30, which 4 raiders razed in 5 s.) */
-    public static final double WIND_HEALTH = 75d;
-    /** T1 metal extractor: softer than the rest, not as fragile as a converter - 4-6 infantry raiders take 12-18 s. */
-    public static final double EXTRACTOR_T1_HEALTH = 100d;
+    // (The game tests measure these in play: a fight runs about a third quicker than health / (units x damage rate),
+    // because the first blow of every unit lands at once and a building falls at half its blocks. The values below
+    // were set from those measurements - CI's "[Raid TTK]" notice - not from the arithmetic.)
+
+    /** Energy converter: the fragile one - 4-6 infantry raiders razing it takes about 4-6 s. (It was 30: 6 raiders razed that in 2.2 s.) */
+    public static final double CONVERTER_HEALTH = 50d;
+    /** Windmill: 3-4 T1 vehicles take 5-8 s. (It was 30, which 6 raiders razed in 3 s.) */
+    public static final double WIND_HEALTH = 110d;
+    /** T1 metal extractor: softer than the rest, not as fragile as a converter - 4-6 infantry raiders take 12-18 s. (It was 40.) */
+    public static final double EXTRACTOR_T1_HEALTH = 150d;
     /** Added once the extractor is T2 (a copper tower over the T1): twice the T1's health in all. */
-    public static final double EXTRACTOR_T2_BONUS_HEALTH = 100d;
+    public static final double EXTRACTOR_T2_BONUS_HEALTH = 150d;
 
     // ---------------------------------------------------------------- converter chain blast
 
     /** A dying converter damages every other converter whose centre is within this many blocks of its own (3x3 bodies one gap apart are inside, a spaced field is not). */
     public static final double CONVERTER_BLAST_RADIUS = 5.0;
-    /** The blast's damage (the attacker-less destroyRandomBlocks amount, health x2): enough to finish a 30-health converter. */
-    public static final double CONVERTER_BLAST_DAMAGE = 16.0;
+    /** The blast's damage (the attacker-less destroyRandomBlocks amount, health x2): enough to finish a 50-health converter (a building falls at half its blocks: 25 damage). */
+    public static final double CONVERTER_BLAST_DAMAGE = 28.0;
     /** The bot spaces its own converters this far apart (centre to centre): clear of the blast with a block to spare. */
     public static final int CONVERTER_SPACING = 8;
 
