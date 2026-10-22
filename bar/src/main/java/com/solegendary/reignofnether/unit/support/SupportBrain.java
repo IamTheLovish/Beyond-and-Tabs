@@ -84,6 +84,11 @@ public final class SupportBrain {
     static final int CORNERED_RETRY = 10;
     /** The standoff behind a fight is the unit's reach less this (blocks): its support just reaches the front. */
     public static final double STANDOFF_MARGIN = 1.5;
+    /**
+     * ...and never further back than this: the Field Medic's own standoff (throw range 8 - 1.5). A long-reach support
+     * (a Tide Priest, an Ink Scribe: 10) keeps close to its army instead of trailing it by 8.5, still clear of melee.
+     */
+    public static final double MAX_STANDOFF = 6.5;
     /** Walking with an escorted fighter that is not fighting: this far behind it. */
     public static final double TRAIL = 3.0;
     /** The look reaches this much past the unit's own reach. */
@@ -304,7 +309,7 @@ public final class SupportBrain {
         }
         P[2] = a.getY();
         if (fighting) {
-            SupportMath.behind(ax, az, ex, ez, reach - STANDOFF_MARGIN, mob.getX(), mob.getZ(), P);
+            SupportMath.behind(ax, az, ex, ez, standoff(reach), mob.getX(), mob.getZ(), P);
             return stand(mob, s);
         }
         double dx = mob.getX() - ax, dz = mob.getZ() - az, d = Math.sqrt(dx * dx + dz * dz);
@@ -374,9 +379,14 @@ public final class SupportBrain {
         if (fr < 0)
             return false;
         SupportMath.centroid(FIELD, F_ENEMY, 0, FIELD.x[fr], FIELD.z[fr], SupportMath.ENGAGE_RADIUS, Q);
-        SupportMath.behind(FIELD.x[fr], FIELD.z[fr], Q[0], Q[1], reach - STANDOFF_MARGIN, mob.getX(), mob.getZ(), P);
+        SupportMath.behind(FIELD.x[fr], FIELD.z[fr], Q[0], Q[1], standoff(reach), mob.getX(), mob.getZ(), P);
         P[2] = ((Entity) FIELD.ref[fr]).getY();
         return true;
+    }
+
+    /** How far behind its front a unit of this reach stands: reach - STANDOFF_MARGIN, at most MAX_STANDOFF. */
+    public static double standoff(double reach) {
+        return Math.min(reach - STANDOFF_MARGIN, MAX_STANDOFF);
     }
 
     /** Remembers P as the standoff and says whether the unit still has to walk there. */

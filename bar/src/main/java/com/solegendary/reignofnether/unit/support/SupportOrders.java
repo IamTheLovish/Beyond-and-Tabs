@@ -37,7 +37,8 @@ import java.util.List;
  *       escorts the nearest fighter of the selection, staying behind it - with no fighter selected it holds the same
  *       standoff from the target;</li>
  *   <li><b>Fight</b> (attack-move): the support units of the order take the rear rank, reach - 1.5 blocks short of the
- *       click, spread across the move; on the way, whenever our front is in a fight they hold that far behind it;</li>
+ *       click (at most 6.5), spread across the move; on the way, whenever our front is in a fight they hold that far behind
+ *       it;</li>
  *   <li><b>Attack building</b>: outside the building's own guns (a tower's range + 2, or just clear of its walls);</li>
  *   <li>an area attack is a Fight for them (AreaCommands).</li>
  * </ul>
@@ -118,8 +119,7 @@ public final class SupportOrders {
                 if (a < mine || (a == mine && le.getId() < self.getId()))
                     index++;
             }
-        SupportMath.rearRank(gx, gz, cx, cz, unit.getSupportReach() - SupportBrain.STANDOFF_MARGIN, index, count,
-            REAR_SPACING, P);
+        SupportMath.rearRank(gx, gz, cx, cz, SupportBrain.standoff(unit.getSupportReach()), index, count, REAR_SPACING, P);
         BlockPos dest = new BlockPos(Mth.floor(P[0]), pos.getY(), Mth.floor(P[1]));
         unit.getSupportState().fight(dest);
         unit.getMoveGoal().setMoveTarget(dest);   // on its way now; the brain takes over at its next look

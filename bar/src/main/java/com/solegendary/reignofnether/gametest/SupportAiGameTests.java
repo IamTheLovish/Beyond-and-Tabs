@@ -234,7 +234,7 @@ public class SupportAiGameTests {
 
     /**
      * Fight and attack orders for every other support unit (Moonwell Bearer, Bloom Priestess, Tide Priest, Ink Scribe):
-     * each, sent with a fighter at an enemy 10 blocks off, escorts the fighter from behind and never comes within 4 blocks
+     * each, sent with a fighter at an enemy 7 blocks off, escorts the fighter from behind and never comes within 4 blocks
      * of the enemy - the old order made it follow the enemy into melee.
      */
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 500)
@@ -250,10 +250,12 @@ public class SupportAiGameTests {
         kinds.add(EntityRegistrar.INK_SCRIBE_UNIT.get());
         List<Mob> supports = new ArrayList<>(), fighters = new ArrayList<>(), foes = new ArrayList<>();
         for (int i = 0; i < kinds.size(); i++) {
+            // the fighter starts 7 off its target, already within reach of a fight: the escort's spot behind it
+            // (reach - 1.5, at most 6.5) is on this 16-block floor from the first look
             double z = 1.5 + i * 4;
-            Mob s = spawn(level, kinds.get(i), mine, p, 1.5, z, made);
-            Mob fighter = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 2.5, z, made);
-            Mob foe = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 12.5, z, made);
+            Mob s = spawn(level, kinds.get(i), mine, p, 4.5, z, made);
+            Mob fighter = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 6.5, z, made);
+            Mob foe = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 13.5, z, made);
             if (s == null || fighter == null || foe == null)
                 continue;
             supports.add(s);
