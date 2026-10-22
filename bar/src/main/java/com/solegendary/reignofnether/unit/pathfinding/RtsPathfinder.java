@@ -36,8 +36,11 @@ public final class RtsPathfinder {
             onReady.onPath(null, false);
             return;
         }
-        if (isUnloaded(level, target)) {
-            // A target in an unloaded chunk used to get no path at all, every retry, so the unit stood still. Path
+        if (isUnloaded(level, target) || lineCrossesUnloaded(level, start, target)) {
+            // A target in (or beyond) an unloaded chunk used to get no path at all, every retry, so the unit stood
+            // still - or, with the target's own chunk loaded but chunks between unloaded, the request parked to warm
+            // its whole corridor first (4000 blocks out: 3419 chunks at 4 a tick, ~43 s with the unit standing and
+            // each cold chunk generated on the main thread; CI, PR #118). Path
             // to the last loaded ground on the way instead: the unit walks as far as it can (chunks load round it as
             // it goes, UnitChunkLoader), and when even that gets it no closer, MoveToTargetBlockGoal's stuck count
             // gives the order up and the unit goes idle where the player can see it.
@@ -169,6 +172,17 @@ public final class RtsPathfinder {
         if (Math.abs(y - start.getY()) > PathfinderConfig.VERTICAL_RADIUS)
             y = start.getY();
         return new BlockPos(bx, y, bz);
+    }
+
+    /** Is any chunk on the straight line from start to target (sampled every 8 blocks) not loaded? */
+    private static boolean lineCrossesUnloaded(Level level, BlockPos start, BlockPos target) {
+        double dx = target.getX() - start.getX(), dz = target.getZ() - start.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        for (double t = 8; t < len; t += 8)
+            if (isUnloaded(level, new BlockPos(Mth.floor(start.getX() + dx * t / len), start.getY(),
+                    Mth.floor(start.getZ() + dz * t / len))))
+                return true;
+        return false;
     }
 
     private static boolean isUnloaded(Level level, BlockPos bp) {
