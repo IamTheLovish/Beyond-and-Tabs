@@ -34,6 +34,7 @@ public class PlacementGridClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !OrthoviewClientEvents.isEnabled()
                 || MC.level == null || BuildingClientEvents.getBuildingToPlace() == null) {
             cachedFor = null;
