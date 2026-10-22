@@ -99,6 +99,24 @@ public final class FrameParts {
             FRAME.add(id, nanos);
     }
 
+    /**
+     * Self nanoseconds frame section {@code id} has spent since the game started (never reset, unlike the 10 s
+     * [FrameParts] window): the eyes overlay scene differences two readings round each of its slices. Client thread.
+     */
+    public static long frameSectionLifetimeNs(int id) {
+        return FRAME.lifetimeNs[id];
+    }
+
+    /** Frames closed since the game started (the denominator for {@link #frameSectionLifetimeNs}). Client thread. */
+    public static long framesLifetime() {
+        return FRAME.lifetimeTicks;
+    }
+
+    /** The section's name as the [FrameParts] line prints it. */
+    public static String name(int id) {
+        return NAMES[id];
+    }
+
     /** Counts section re-mesh requests (any thread). */
     public static void dirtySections(int count) {
         DIRTY_SECTIONS.addAndGet(count);
