@@ -2350,7 +2350,8 @@ def red_cluster(d, b, x, y, s, rr, shade):
             a = 2 * math.pi * k / npet + rr.uniform(0, 1)
             px, py = fx + math.cos(a) * r * 0.55, fy + math.sin(a) * r * 0.45
             rim = (min(255, base[0] * 1.3), base[1] * 1.6 + 10, base[2] * 1.4)
-            d.ellipse(b.pts([(px - r * 0.55, py - r * 0.45), (px + r * 0.55, py + r * 0.45)]), fill=c8(rim, shade * 0.95, 0.12, rr))
+            d.ellipse(b.pts([(px - r * 0.55, py - r * 0.45), (px + r * 0.55, py + r * 0.45)]), fill=c8(rim, shade * 0.95, 0.12, rr),
+                      outline=(26, 4, 8, 255) if big else None, width=2 if big else 1)
             ix, iy = fx + math.cos(a) * r * 0.42, fy + math.sin(a) * r * 0.34
             d.ellipse(b.pts([(ix - r * 0.40, iy - r * 0.32), (ix + r * 0.40, iy + r * 0.32)]), fill=c8(base, shade * 0.75, 0.1, rr))
             if big:
@@ -2391,26 +2392,68 @@ def briar(d, b, x, y, s, rr, side):
 
 
 def blossom(d, b, x, y, s, rr, shade):
-    """A clump of ivory umbels (elder-like): several small domes of florets, each shaded from the top."""
-    for i in range(rr.integers(2, 4)):
-        lx = x + rr.uniform(-0.8, 0.8) * s
-        d.polygon(b.pts([(lx, y), (lx - s * 0.35, y - s * 0.45), (lx + s * 0.05, y - s * 0.75), (lx + s * 0.3, y - s * 0.3)]),
-                  fill=c8((20, 26, 20), shade, 0.3, rr))
-    for u_ in range(rr.integers(3, 7)):
-        cxs = x + rr.normal(0, 0.45) * s
-        cys = y - s * (0.55 + abs(rr.normal(0, 0.35)))
-        R = s * rr.uniform(0.18, 0.32)
-        d.line(b.pts([(cxs, cys), (cxs + rr.uniform(-0.1, 0.1) * s, y)]), fill=c8((30, 38, 26), shade), width=2)
-        d.ellipse(b.pts([(cxs - R * 1.05, cys - R * 0.7), (cxs + R * 1.05, cys + R * 0.75)]), fill=c8((60, 50, 40), shade))
-        for i in range(int(14 + 900 * R * R / 0.0001 * 0.01)):
-            a = rr.uniform(0, 2 * math.pi)
-            rad = R * math.sqrt(rr.random())
-            fx, fy = cxs + math.cos(a) * rad, cys + math.sin(a) * rad * 0.7
-            lit = 1 - (fy - (cys - R * 0.7)) / (R * 1.4)
-            tone = 0.6 + 0.55 * lit + rr.uniform(-0.15, 0.12)
-            col_ = (242 * tone, 228 * tone, 192 * tone * 0.95)
-            fr = max(R * 0.16, 0.0007) * rr.uniform(0.7, 1.2)
-            d.ellipse(b.pts([(fx - fr, fy - fr * 0.8), (fx + fr, fy + fr * 0.8)]), fill=c8(col_, shade))
+    """A clump of ivory wild anemones (round 5: "readable flower clumps"): a fan of lance leaves at the foot, then
+    3-8 open flowers on wiry stems at different heights, facing different ways - each a ring of ink-outlined ivory
+    petals lit from the moon side, a darker cup low in each petal, a black heart ringed with gold stamens; a closed bud
+    or two. Small (far) clumps keep only the petal rings and hearts."""
+    ink = c8((22, 14, 12), 1.0)
+    for i in range(rr.integers(3, 6)):
+        ang = rr.uniform(-1.1, 1.1)
+        L = s * rr.uniform(0.5, 0.95)
+        lx = x + rr.uniform(-0.5, 0.5) * s
+        tip = (lx + math.sin(ang) * L, y - math.cos(ang) * L)
+        w_ = L * 0.16
+        m1 = ((lx + tip[0]) / 2 + math.cos(ang) * w_, (y + tip[1]) / 2 + math.sin(ang) * w_)
+        m2 = ((lx + tip[0]) / 2 - math.cos(ang) * w_, (y + tip[1]) / 2 - math.sin(ang) * w_)
+        d.polygon(b.pts([(lx, y), m1, tip, m2]), fill=c8((26, 36, 24), shade, 0.3, rr), outline=ink)
+        d.line(b.pts([(lx, y), tip]), fill=c8((64, 78, 52), shade, 0.2, rr), width=1)
+    big = s > 0.03
+    n = int(rr.integers(3, 6) if big else rr.integers(4, 9))
+    heads = []
+    for k in range(n):
+        fx = x + rr.normal(0, 0.5) * s
+        fy = y - s * (0.55 + abs(rr.normal(0, 0.4)))
+        heads.append((fy, fx))
+    heads.sort()
+    for fy, fx in heads:
+        R = s * (rr.uniform(0.20, 0.30) if big else rr.uniform(0.14, 0.24))
+        bend = rr.uniform(-0.15, 0.15) * s
+        d.line(b.pts([(fx, fy), (fx + bend, (fy + y) / 2), (fx + bend * 0.3, y)]),
+               fill=c8((34, 44, 28), shade), width=3 if big else 2)
+        tilt = rr.uniform(0.45, 0.85)                # the flower's face foreshortened (seen from the side a little)
+        npet = int(rr.integers(5, 7))
+        a0 = rr.uniform(0, 2 * math.pi)
+        # petals back to front (the upper ones are behind)
+        order = sorted(range(npet), key=lambda k: math.sin(a0 + 2 * math.pi * k / npet))
+        for k in order:
+            a = a0 + 2 * math.pi * k / npet
+            px, py = fx + math.cos(a) * R * 0.55, fy + math.sin(a) * R * 0.55 * tilt
+            pr = R * 0.52
+            lit = 0.72 + 0.28 * max(0.0, -math.cos(a) * 0.55 - math.sin(a) * 0.83)
+            tone = (246 * lit, 236 * lit, 210 * lit)
+            if big:
+                d.ellipse(b.pts([(px - pr, py - pr * tilt), (px + pr, py + pr * tilt)]), fill=c8(tone, shade, 0.06, rr),
+                          outline=ink, width=2)
+                cx2, cy2 = fx + math.cos(a) * R * 0.35, fy + math.sin(a) * R * 0.35 * tilt
+                d.ellipse(b.pts([(cx2 - pr * 0.45, cy2 - pr * 0.4 * tilt), (cx2 + pr * 0.45, cy2 + pr * 0.4 * tilt)]),
+                          fill=c8((tone[0] * 0.72, tone[1] * 0.70, tone[2] * 0.66), shade))
+            else:
+                d.ellipse(b.pts([(px - pr, py - pr * tilt), (px + pr, py + pr * tilt)]), fill=c8(tone, shade, 0.06, rr))
+        hr = R * 0.24
+        if big:
+            for k in range(10):
+                a = 2 * math.pi * k / 10 + rr.uniform(0, 0.3)
+                sx_, sy_ = fx + math.cos(a) * hr * 1.5, fy + math.sin(a) * hr * 1.5 * tilt
+                d.ellipse(b.pts([(sx_ - hr * 0.22, sy_ - hr * 0.22), (sx_ + hr * 0.22, sy_ + hr * 0.22)]),
+                          fill=c8((214, 168, 82), shade))
+        d.ellipse(b.pts([(fx - hr, fy - hr * tilt), (fx + hr, fy + hr * tilt)]), fill=c8((24, 12, 16), 1.0))
+    if big:
+        for k in range(rr.integers(0, 3)):
+            bx_, by_ = x + rr.normal(0, 0.6) * s, y - s * rr.uniform(0.4, 0.8)
+            d.line(b.pts([(bx_, by_), (bx_, y)]), fill=c8((34, 44, 28), shade), width=2)
+            r_ = s * 0.07
+            d.ellipse(b.pts([(bx_ - r_, by_ - r_ * 1.5), (bx_ + r_, by_ + r_ * 0.5)]), fill=c8((214, 204, 176), shade),
+                      outline=ink)
 
 
 def fields():
@@ -2855,7 +2898,7 @@ def streak(w=64, h=256):
         spread = abs(rr.normal(0, 0.16))
         cxp = 0.5 + rr.normal(0, 0.05 + spread * 0.5)
         L = (0.10 + 0.5 * rr.random() * (1 - min(spread * 3, 0.9))) * W
-        th = max(1, int(ss * rr.uniform(0.6, 1.4)))
+        th = max(1, int(ss * rr.uniform(0.9, 2.0)))
         v = int(255 * (1 - min(spread * 2.5, 0.75)) * rr.uniform(0.6, 1.0))
         for dy in (-H, 0, H):
             d.line([(cxp * W - L / 2, y + dy), (cxp * W + L / 2, y + dy + rr.uniform(-1, 1) * ss)], fill=v, width=th)
@@ -2865,9 +2908,12 @@ def streak(w=64, h=256):
         y += rr.uniform(0.6, 2.2) * ss * 2
     a = np.asarray(m.resize((w, h), Image.LANCZOS), np.float32) / 255
     U = (np.arange(w, dtype=np.float32) + 0.5) / w
-    a *= (np.exp(-((U - 0.5) / 0.3) ** 2) * smoothstep(0.0, 0.08, U) * smoothstep(1.0, 0.92, U))[None, :]
-    rgb = np.broadcast_to(col((255, 232, 206)), (h, w, 3)).copy()
-    save_rgba(rgb, np.clip(a * 1.2, 0, 1), "streak")
+    env = np.exp(-((U - 0.5) / 0.3) ** 2) * smoothstep(0.0, 0.08, U) * smoothstep(1.0, 0.92, U)
+    a *= env[None, :]
+    # a soft silver sheen under the dashes so the path reads as one column of light
+    sheen = (np.exp(-((U - 0.5) / 0.16) ** 2) * 0.22)[None, :] * np.ones((h, 1), np.float32)
+    rgb = np.broadcast_to(col((255, 238, 220)), (h, w, 3)).copy()
+    save_rgba(rgb, np.clip(np.maximum(a * 1.9, sheen), 0, 1), "streak")
 
 
 def grain_tex(size=256):
@@ -3235,7 +3281,7 @@ def load(name):
 
 # animation constants (LobbyBackdrop.java mirrors these)
 RIPPLE_K, RIPPLE_SPEED = 8.0, 0.35          # ripple tiles per unit of v; tiles per second
-STREAK_HW = 0.05                            # the moon reflection's half width (A)
+STREAK_HW = 0.065                           # the moon reflection's half width (A)
 CASCADE_TILES, CASCADE_SPEED = 1.6, 0.9      # v tiles over the fall; tiles per second
 STARS = [(-0.92, 0.06), (-0.71, 0.13), (-0.55, 0.04), (-0.48, 0.19), (-0.08, 0.07), (0.03, 0.16), (0.62, 0.12),
          (0.58, 0.03), (0.77, 0.09), (0.86, 0.22), (1.02, 0.05), (-1.05, 0.20), (0.69, 0.27), (-0.83, 0.27)]
@@ -3255,11 +3301,11 @@ def sample_strip(S, tex, t, kind, ox=lambda z: 0.0):
     if kind == "ripples":
         uu = np.clip((u * 0.5 + 0.5), 0, 0.999)
         vv = (v * RIPPLE_K + t * RIPPLE_SPEED) % 1.0
-        alpha_k = 0.6
+        alpha_k = 0.72
     else:
         uu = np.clip(0.5 + (X - MOON[0]) / (2 * STREAK_HW), 0, 0.999)
         vv = (v * RIPPLE_K * 0.7 + t * 0.12) % 1.0
-        alpha_k = 0.75 * smoothstep(0.84, 0.88, Y) * (1 - smoothstep(0.95, 0.99, Y))
+        alpha_k = 1.0 * smoothstep(0.84, 0.88, Y) * (1 - smoothstep(0.95, 0.99, Y))
     px = ta[(vv * th).astype(int).clip(0, th - 1), (uu * tw).astype(int)]
     add = px[..., :3] * (px[..., 3] * inside * alpha_k)[..., None]
     S.img[y0:] += add

@@ -88,7 +88,7 @@ public class LobbyBackdrop {
     private static final float TAU = 6.2831855f;
     private static final float BREATH_S = 7f;    // the cathedral's slow inhale / exhale
     private static final float GUST_S = 9f;      // a gust crosses the scene left to right this often
-    private static final float RIPPLE_K = 8f, RIPPLE_SPEED = 0.35f, STREAK_HW = 0.05f;
+    private static final float RIPPLE_K = 8f, RIPPLE_SPEED = 0.35f, STREAK_HW = 0.065f;
     private static final float CASCADE_TILES = 1.6f, CASCADE_SPEED = 0.9f;
     private static final float DRIFT_X_S = 26f, DRIFT_Y_S = 19f, DRIFT_X = 0.85f, DRIFT_Y = 0.55f;
     private static final float OVERSCAN = 1.05f;
@@ -361,9 +361,9 @@ public class LobbyBackdrop {
         float cv = -t * CASCADE_SPEED % 1f;
         cascade(cv, 0.95f);
         additive();
-        river(RIPPLES, t, 0.55f + 0.1f * Mth.sin(t * 0.9f));
+        river(RIPPLES, t, 0.66f + 0.1f * Mth.sin(t * 0.9f));
         float shimmer = 0.7f + 0.3f * Mth.sin(t * 5.3f) * Mth.sin(t * 3.1f + 1f);
-        river(STREAK, t, 0.75f * shimmer);
+        river(STREAK, t, shimmer);
         // foam churning at the foot of the fall
         float fx0 = sx(CASCADE[3]) + ox(zg(CASCADE[4])), fy0 = sy(CASCADE[4] + 0.004f);
         float fr = 0.06f * A * (1f + 0.08f * Mth.sin(t * 4.1f));
