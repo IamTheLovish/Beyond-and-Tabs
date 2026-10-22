@@ -86,6 +86,8 @@
     "PossessionParticleMixin",
     "PossessionPredictionMixin",
     "RenderChunkRegionMixin",
+    "EmbeddiumWorldSliceMixin",
+    "GameRendererSilhouetteMixin",
     "SimpleTextureMixin",
     "ResourceLoadStateTrackerMixin",
     "SplashRendererAccessor",
