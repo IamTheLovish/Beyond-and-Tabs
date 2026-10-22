@@ -3865,38 +3865,49 @@ def lettering(img, t=1.3, motion=True):
     """LobbyBackdrop.lettering on a float image (title layout): the title, the byline, the strands and their drops."""
     sys.path.insert(0, HERE)
     import gen_lobby_title as GT
-    ti, bi, ji = GT.read_java()
+    ti, bi, li, ai, ji = GT.read_java()
     H, W = img.shape[:2]
     T = Image.open(os.path.join(OUT, "title.png")).convert("RGBA")
-    B = Image.open(os.path.join(OUT, "byline.png")).convert("RGBA")
-    J = Image.open(os.path.join(OUT, "credit_joisco.png")).convert("RGBA")
+    P = {k: Image.open(os.path.join(OUT, f + ".png")).convert("RGBA")
+         for k, f in (("b", "byline"), ("l", "credit_lovish"), ("a", "credit_amp"), ("j", "credit_joisco"))}
+    I = {"b": bi, "l": li, "a": ai, "j": ji}
     sc = Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA")
     th = TITLE_BLOCK_H * H / (ti["bot_v"] - ti["top_v"])
     tw = th * T.width / T.height
     if tw * ti["text_w"] > 0.86 * W:
         k = 0.86 * W / (tw * ti["text_w"]); th *= k; tw *= k
     tx0, ty0 = W / 2 - tw / 2, TITLE_Y0 * H - ti["top_v"] * th
-    ch = CREDIT_H * H / (bi["bot_v"] - bi["top_v"])
-    lw, jw, gap = ch * B.width / B.height, ch * J.width / J.height, CREDIT_GAP * CREDIT_H * H
-    text_w = lw * bi["text_w"] + gap + jw * ji["text_w"]
-    if text_w > 0.92 * W:
-        k = 0.92 * W / text_w; ch *= k; lw *= k; jw *= k; gap *= k; text_w *= k
-    cy0 = CREDIT_Y0 * H - bi["top_v"] * ch
-    l_text0 = W / 2 - text_w / 2
-    j_text0 = l_text0 + lw * bi["text_w"] + gap
-    lx0, jx0 = l_text0 - lw * (1 - bi["text_w"]) / 2, j_text0 - jw * (1 - ji["text_w"]) / 2
-    pad = max(tw * ti["text_w"], text_w) * 0.58
-    _over(img, sc, W / 2 - pad, TITLE_Y0 * H - 0.05 * H, W / 2 + pad, CREDIT_Y0 * H + CREDIT_H * H + 0.05 * H,
-          tint=(0, 0, 0), alpha=0.5)
+    # the credits: one pixel scale for every piece (LobbyBackdrop.lettering)
+    cs = CREDIT_H * H / ((bi["bot_v"] - bi["top_v"]) * P["b"].height)
+    word, amp_gap = CREDIT_GAP * 0.32 * CREDIT_H * H, CREDIT_GAP * 0.22 * CREDIT_H * H
+    tw_ = lambda k_: P[k_].width * cs * I[k_]["text_w"]
+    names = tw_("l") + amp_gap + tw_("a") + amp_gap + tw_("j")
+    one = tw_("b") + word + names
+    stacked = one > 0.46 * W
+    line_w = max(tw_("b"), names) if stacked else one
+    if line_w > 0.92 * W:
+        k = 0.92 * W / line_w; cs *= k; word *= k; amp_gap *= k; names *= k; one *= k; line_w *= k
+    cap = (bi["bot_v"] - bi["top_v"]) * P["b"].height * cs
+    base1 = CREDIT_Y0 * H + cap
+    base2 = base1 + cap * 1.55 if stacked else base1
+    pad = max(tw * ti["text_w"], line_w) * 0.58
+    _over(img, sc, W / 2 - pad, TITLE_Y0 * H - 0.05 * H, W / 2 + pad, base2 + cap * 0.4 + 0.04 * H, tint=(0, 0, 0), alpha=0.5)
     _over(img, T, tx0, ty0, tx0 + tw, ty0 + th)
-    _over(img, B, lx0, cy0, lx0 + lw, cy0 + ch)
-    _over(img, J, jx0, cy0, jx0 + jw, cy0 + ch)
-    mx, my, lz = l_text0 + lw * bi["text_w"] + gap / 2, CREDIT_Y0 * H + CREDIT_H * H * 0.5, CREDIT_H * H * 0.16
-    yy, xx = np.mgrid[0:H, 0:W]
-    dd = ((xx - mx) / (lz * 1.5)) ** 2 + ((yy - my) / (lz * 1.5)) ** 2
-    img[dd < 1] = img[dd < 1] * 0.2 + np.array((0.05, 0.02, 0.03), np.float32) * 0.8
-    dd = ((xx - mx) / (lz * 0.75)) ** 2 + ((yy - my) / lz) ** 2
-    img[dd < 1] = np.array((0.86, 0.70, 0.36), np.float32)
+
+    def piece(k_, x, base):
+        ph = P[k_].height * cs
+        pw = P[k_].width * cs
+        x0 = x - pw * (1 - I[k_]["text_w"]) / 2
+        _over(img, P[k_], x0, base - I[k_]["bot_v"] * ph, x0 + pw, base - I[k_]["bot_v"] * ph + ph)
+    x = W / 2 - (names if stacked else one) / 2
+    if stacked:
+        piece("b", W / 2 - tw_("b") / 2, base1)
+    else:
+        piece("b", x, base1)
+        x += tw_("b") * 1 + word
+    for k_ in ("l", "a", "j"):
+        piece(k_, x, base2)
+        x += P[k_].width * cs * I[k_]["text_w"] + (amp_gap if k_ != "j" else 0)
     pil = Image.fromarray(np.round(np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
     lay = Image.new("RGBA", (W * 4, H * 4), (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
@@ -3974,7 +3985,7 @@ def previews():
         text_previews()
 
 
-SMOOTH = {"title", "byline", "credit_joisco", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
+SMOOTH = {"title", "byline", "credit_joisco", "credit_lovish", "credit_amp", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
           "fg_briar", "fg_thorns", "fg_branch"}
 
 

@@ -74,15 +74,76 @@ def _strand(d, x, y0, length, wd, col):
     d.ellipse([x - r, y0 + length - r * 0.7, x + r, y0 + length + r * 1.3], fill=col)
 
 
+def _swash_j(d, x, base, cap, fill=255):
+    """Our own blackletter capital J (UnifrakturCook's J reads as an I or a T at credit size): a broad-nib stem with a
+    lozenge head and a hairline lead-in, falling below the baseline and curling left into a hook with a teardrop end,
+    so it can only be a J. Drawn as broad-nib strokes (nib at 40 deg). Returns the advance width."""
+    nw = cap * 0.19
+    a = math.radians(40)
+    nx, ny = math.cos(a) * nw / 2, -math.sin(a) * nw / 2
+
+    def stroke(path, k=1.0):
+        mx, my = nx * k, ny * k
+        for (x0, y0), (x1, y1) in zip(path, path[1:]):
+            p0, p1 = (x + x0 * cap, base + y0 * cap), (x + x1 * cap, base + y1 * cap)
+            d.polygon([(p0[0] + mx, p0[1] + my), (p1[0] + mx, p1[1] + my), (p1[0] - mx, p1[1] - my),
+                       (p0[0] - mx, p0[1] - my)], fill=fill)
+    # hairline lead-in from the left, rising into the head
+    stroke([(-0.20, -0.74), (-0.10, -0.86), (0.02, -0.95), (0.14, -0.99)], 0.22)
+    # the lozenge head
+    hx, hy, r = x + 0.20 * cap, base - 0.93 * cap, cap * 0.14
+    d.polygon([(hx, hy - r), (hx + r * 0.85, hy), (hx, hy + r), (hx - r * 0.85, hy)], fill=fill)
+    # the stem, down past the baseline, then the hook curling left and up
+    path = [(0.21, -0.92), (0.22, -0.60), (0.22, -0.25), (0.21, 0.05), (0.18, 0.20), (0.11, 0.32), (0.00, 0.39),
+            (-0.13, 0.40), (-0.24, 0.35), (-0.31, 0.27)]
+    stroke(path)
+    # the teardrop at the hook's end
+    tx, ty, tr = x - 0.31 * cap, base + 0.24 * cap, cap * 0.085
+    d.ellipse([tx - tr, ty - tr, tx + tr, ty + tr], fill=fill)
+    # a thin spur off the stem (the blackletter's diamond notch on the right)
+    stroke([(0.22, -0.52), (0.33, -0.58)], 0.35)
+    return cap * 0.58
+
+
+def _swash_l(d, x, base, cap, fill=255):
+    """Our own blackletter capital L (UnifrakturCook's L reads as a C at credit size): a lozenge-headed broad-nib stem
+    and a foot running right along the baseline, turning up at its end. Returns the advance width."""
+    nw = cap * 0.19
+    a = math.radians(40)
+    nx, ny = math.cos(a) * nw / 2, -math.sin(a) * nw / 2
+
+    def stroke(path, k=1.0):
+        mx, my = nx * k, ny * k
+        for (x0, y0), (x1, y1) in zip(path, path[1:]):
+            p0, p1 = (x + x0 * cap, base + y0 * cap), (x + x1 * cap, base + y1 * cap)
+            d.polygon([(p0[0] + mx, p0[1] + my), (p1[0] + mx, p1[1] + my), (p1[0] - mx, p1[1] - my),
+                       (p0[0] - mx, p0[1] - my)], fill=fill)
+    stroke([(-0.12, -0.70), (-0.04, -0.84), (0.06, -0.95), (0.16, -0.99)], 0.22)
+    hx, hy, r = x + 0.20 * cap, base - 0.93 * cap, cap * 0.14
+    d.polygon([(hx, hy - r), (hx + r * 0.85, hy), (hx, hy + r), (hx - r * 0.85, hy)], fill=fill)
+    stroke([(0.21, -0.92), (0.22, -0.55), (0.21, -0.20), (0.19, -0.06), (0.26, 0.0)])
+    stroke([(0.24, -0.02), (0.40, 0.0), (0.56, -0.01), (0.66, -0.05), (0.72, -0.16)], 0.75)
+    stroke([(0.22, -0.50), (0.34, -0.56)], 0.35)
+    return cap * 0.80
+
+
+GLYPHS = {"J": (_swash_j, 0.58), "L": (_swash_l, 0.80)}
+
+
 def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, rim_r=7, outline_r=11,
                fill_top=(236, 84, 92), fill_mid=(186, 20, 32), fill_bot=(104, 6, 16), hatch=True,
                rim_top=(255, 230, 158), rim_bot=(158, 97, 31), bloom_rgb=(140, 8, 15), outline_rgb=(33, 3, 8),
-               seam_rgb=(56, 5, 10), gloss_rgb=(255, 191, 191), drip_mid=None, drip_bot=None):
+               seam_rgb=(56, 5, 10), gloss_rgb=(255, 191, 191), drip_mid=None, drip_bot=None, swash_j=False):
     """lines: [(parts, gap_before)], parts = [(text, font_file, size_px, tracking)] laid on one baseline, each line
     centred. Returns (texture info dict)."""
     # ---- measure
+    def adv(ch, f):
+        if swash_j and ch in GLYPHS:
+            return (f.getbbox("H")[3] - f.getbbox("H")[1]) * GLYPHS[ch][1]
+        return f.getlength(ch)
+
     def part_w(text, f, track):
-        return sum(f.getlength(ch) for ch in text) + track * (len(text) - 1)
+        return sum(adv(ch, f) for ch in text) + track * (len(text) - 1)
     laid = []
     y = pad
     width = 0
@@ -105,6 +166,11 @@ def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, r
         x = (W - lw) / 2
         for t, f, tr in fonts:
             for ch in t:
+                if swash_j and ch in GLYPHS:
+                    a_ = GLYPHS[ch][0](d, x + cap * (0.32 if ch == "J" else 0.10), base, cap)
+                    bottoms.append((x, x + a_, base, cap))
+                    x += a_ + tr
+                    continue
                 if ch != " ":
                     d.text((x, base), ch, font=f, fill=255, anchor="ls")
                     bb = f.getbbox(ch, anchor="ls")
@@ -239,32 +305,44 @@ def title(write_java=True):
     t = _lettering([([("B", CINZEL, s * 1.16, 4), ("EYOND", CINZEL, s, 4)], 0),
                     ([("AND ", CINZEL, s * 0.64, 6), ("T", CINZEL, s * 0.86, 3), ("ABS", CINZEL, s * 0.78, 3)], s * 0.26)],
                    pad=60 * SS, seed=17, drips_static=4, drips_anim=6, out_name="title", rim_r=10, outline_r=15)
-    b = _lettering([([("Developed by Lovish", FRAK, 84, 1)], 0)], pad=28 * SS, seed=23, drips_static=3, drips_anim=0,
-                   out_name="byline", glow=0.6, rim_r=5, outline_r=9, fill_top=(255, 186, 160), fill_mid=(236, 78, 74),
-                   fill_bot=(170, 26, 32), hatch=False)
-    # the contributor, billed equally (same face, same size) and set apart by colour: royal sapphire into violet, a
-    # platinum rim, a cool glow, no blood
-    j = _lettering([([("Contributions by Joisco", FRAK, 84, 1)], 0)], pad=28 * SS, seed=29, drips_static=0, drips_anim=0,
+    # the credits (lovish, Oct 22: "Joisco is also a developer"): "Developed by Lovish & Joisco", both names billed
+    # equally - same face, same size, same pad, so one scale draws every piece. "Developed by" in bone, Lovish in
+    # blood and gold with drips, a small gold "&", Joisco in sapphire into violet with a platinum rim and a cool glow.
+    F = 84
+    b = _lettering([([("Developed by", FRAK, F, 1)], 0)], pad=28 * SS, seed=23, drips_static=0, drips_anim=0,
+                   out_name="byline", glow=0.35, rim_r=4, outline_r=9, fill_top=(246, 236, 214), fill_mid=(214, 198, 170),
+                   fill_bot=(150, 132, 108), hatch=False, rim_top=(120, 96, 60), rim_bot=(70, 52, 30),
+                   bloom_rgb=(40, 26, 20), outline_rgb=(12, 8, 6), seam_rgb=(40, 30, 22), gloss_rgb=(255, 250, 236))
+    lv = _lettering([([("Lovish", FRAK, F, 1)], 0)], pad=28 * SS, seed=31, drips_static=3, drips_anim=0,
+                    out_name="credit_lovish", glow=0.6, rim_r=5, outline_r=9, fill_top=(255, 186, 160),
+                    fill_mid=(236, 78, 74), fill_bot=(170, 26, 32), hatch=False, swash_j=True)
+    am = _lettering([([("&", FRAK, F * 0.78, 0)], 0)], pad=28 * SS, seed=37, drips_static=0, drips_anim=0,
+                    out_name="credit_amp", glow=0.4, rim_r=3, outline_r=8, fill_top=(255, 236, 170),
+                    fill_mid=(222, 172, 84), fill_bot=(150, 98, 34), hatch=False, rim_top=(255, 246, 210),
+                    rim_bot=(120, 80, 30), bloom_rgb=(120, 80, 20), outline_rgb=(24, 14, 4), seam_rgb=(60, 40, 12),
+                    gloss_rgb=(255, 250, 220))
+    j = _lettering([([("Joisco", FRAK, F, 1)], 0)], pad=28 * SS, seed=29, drips_static=0, drips_anim=0,
                    out_name="credit_joisco", glow=1.25, rim_r=5, outline_r=9, fill_top=(196, 214, 255),
                    fill_mid=(104, 136, 255), fill_bot=(156, 86, 236), hatch=False, rim_top=(250, 252, 255),
                    rim_bot=(150, 160, 186), bloom_rgb=(64, 110, 240), outline_rgb=(6, 6, 30), seam_rgb=(14, 10, 52),
-                   gloss_rgb=(220, 232, 255))
+                   gloss_rgb=(220, 232, 255), swash_j=True)
     if write_java:
         f = lambda v: f"{v:.4f}f"
         anchors = ", ".join("{" + ", ".join(f(v) for v in an) + "}" for an in t["anchors"])
         body = ("    // <gen:title> written by tools/gen_lobby_title.py - do not edit by hand\n"
                 f"    private static final float TITLE_TEXT_W = {f(t['text_w'])}, TITLE_TOP_V = {f(t['top_v'])}, "
                 f"TITLE_BOT_V = {f(t['bot_v'])};\n"
-                f"    private static final float BYLINE_TEXT_W = {f(b['text_w'])}, BYLINE_TOP_V = {f(b['top_v'])}, "
-                f"BYLINE_BOT_V = {f(b['bot_v'])};\n"
-                f"    private static final float JOISCO_TEXT_W = {f(j['text_w'])}, JOISCO_TOP_V = {f(j['top_v'])}, "
-                f"JOISCO_BOT_V = {f(j['bot_v'])};\n"
+                "    /** the credits' pieces (texture width fractions of the text, cap top and baseline as v) */\n"
+                + "".join(f"    private static final float {k}_TEXT_W = {f(v['text_w'])}, {k}_TOP_V = {f(v['top_v'])}, "
+                          f"{k}_BOT_V = {f(v['bot_v'])};\n"
+                          for k, v in (("BYLINE", b), ("LOVISH", lv), ("AMP", am), ("JOISCO", j)))
+                +
                 "    /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */\n"
                 f"    private static final float[][] TITLE_DRIPS = {{{anchors}}};\n")
         src = open(JAVA).read()
         i0, i1 = src.index("    // <gen:title>"), src.index("    // </gen:title>")
         open(JAVA, "w").write(src[:i0] + body + src[i1:])
-    return t, b, j
+    return t, b, lv, am, j
 
 
 def read_java():
@@ -274,9 +352,8 @@ def read_java():
     rows = re.findall(r"\{([^{}]*)\}", re.search(r"TITLE_DRIPS = \{(.*?)\};\n", src).group(1))
     return ({"text_w": g("TITLE_TEXT_W"), "top_v": g("TITLE_TOP_V"), "bot_v": g("TITLE_BOT_V"),
              "anchors": [tuple(float(v.strip().rstrip("f")) for v in r.split(",")) for r in rows]},
-            {"text_w": g("BYLINE_TEXT_W"), "top_v": g("BYLINE_TOP_V"), "bot_v": g("BYLINE_BOT_V")},
-            {"text_w": g("JOISCO_TEXT_W"), "top_v": g("JOISCO_TOP_V"), "bot_v": g("JOISCO_BOT_V")})
-
+            *({"text_w": g(k + "_TEXT_W"), "top_v": g(k + "_TOP_V"), "bot_v": g(k + "_BOT_V")}
+              for k in ("BYLINE", "LOVISH", "AMP", "JOISCO")))
 
 if __name__ == "__main__":
     print(*title(), sep="\n")
