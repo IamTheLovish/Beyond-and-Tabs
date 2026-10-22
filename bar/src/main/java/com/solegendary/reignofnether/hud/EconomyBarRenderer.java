@@ -150,9 +150,17 @@ public final class EconomyBarRenderer {
 
         int bottom = top + panelH + 1;
         // stall warning under the bar
-        if (eco.stall < 0.99f) {
-            String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%  -  short on "
-                + (shortOnMetal(resources, eco) ? "metal" : "energy");
+        // ONE economy line at a time (EconomyWarning): a stall hides the overflow / wasting lines below it, and either
+        // hides the idle-factory toast. It names a pool only when that pool is really low.
+        boolean stalled = eco.stall < 0.99f;
+        boolean mine = mc.player != null && owner.equals(mc.player.getName().getString());
+        if (stalled && mine)
+            EconomyWarning.markBarLineUp();
+        if (stalled) {
+            EconomyWarning.Pool short_ = EconomyWarning.stallPool(
+                resources.ore / Math.max(1f, eco.metalStorage), resources.wood / Math.max(1f, eco.energyStorage));
+            String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%"
+                + (short_ == EconomyWarning.Pool.UNNAMED ? "" : "  -  short on " + (short_ == EconomyWarning.Pool.METAL ? "metal" : "energy"));
             int w = font.width(stallStr) + 10;
             int sx = screenWidth / 2 - w / 2;
             gg.fill(sx, bottom, sx + w, bottom + 12, 0xC0401010);
@@ -163,10 +171,10 @@ public final class EconomyBarRenderer {
 
         // BAR "wasting" warning: only TRUE waste - the server measures what overflowed with every ally full too.
         // Overflow that went to allies is not lost, so it gets a quiet "sharing" note instead
-        boolean metalWaste = updateWaste(true, eco.metalWasted);
-        boolean energyWaste = updateWaste(false, eco.energyWasted);
-        boolean metalShare = !metalWaste && eco.metalShared > 0.05f;
-        boolean energyShare = !energyWaste && eco.energyShared > 0.05f;
+        boolean metalWaste = updateWaste(true, eco.metalWasted) && !stalled;
+        boolean energyWaste = updateWaste(false, eco.energyWasted) && !stalled;
+        boolean metalShare = !metalWaste && !stalled && eco.metalShared > 0.05f;
+        boolean energyShare = !energyWaste && !stalled && eco.energyShared > 0.05f;
         long nowMs = System.currentTimeMillis();
         // clip study Oct 13 (b10): "WASTING" sat on the bar for 25 straight minutes next to the overflow banner.
         // Now it shows once when the waste starts, again only when the rate changes a lot or after a minute of
@@ -192,9 +200,9 @@ public final class EconomyBarRenderer {
         // 3499/3500 metal and 4499/4500 energy with five idle labs). After OVERFLOW_AFTER_MS at >95% of storage with
         // a positive net, an amber banner stays up until the pool drops. Own bar only - not an observer's view
         boolean ownBar = mc.player != null && owner.equals(mc.player.getName().getString());
-        boolean metalOver = updateOverflow(true, ownBar && resources.ore > eco.metalStorage * OVERFLOW_FILL
+        boolean metalOver = updateOverflow(true, !stalled && ownBar && resources.ore > eco.metalStorage * OVERFLOW_FILL
             && eco.metalIncome + eco.metalConverted > eco.metalExpense);
-        boolean energyOver = updateOverflow(false, ownBar && resources.wood > eco.energyStorage * OVERFLOW_FILL
+        boolean energyOver = updateOverflow(false, !stalled && ownBar && resources.wood > eco.energyStorage * OVERFLOW_FILL
             && eco.energyIncome > eco.energyExpense);
         // lovish's clip: "YOU ARE OVERFLOWING METAL AND ENERGY" sat there the whole game (1500 storage, +44 metal/s,
         // +550 energy/s) and told him nothing he could do. It says what to build and, like WASTING, shows once for
@@ -205,6 +213,8 @@ public final class EconomyBarRenderer {
         float surplus = (metalOver ? eco.metalIncome + eco.metalConverted - eco.metalExpense : 0)
             + (energyOver ? eco.energyIncome - eco.energyExpense : 0);
         boolean showOver = OVERFLOW_GATE.update(anyOver, surplus, nowMs) && !showWaste;
+        if (showOver && ownBar)
+            EconomyWarning.markBarLineUp();
         if (showOver) {
             String what = metalOver && energyOver ? I18n.get("hud.reignofnether.overflow.both")
                 : metalOver ? I18n.get("hud.reignofnether.overflow.metal") : I18n.get("hud.reignofnether.overflow.energy");

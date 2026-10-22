@@ -82,44 +82,50 @@ public class MetalPatchMarkerClientEvents {
     /** The rings, drawn after the entities (where the area-command circle draws its lines too). */
     @SubscribeEvent
     public static void onRenderRings(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
-            return;
-        if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
-            return;
-        if (MetalPatchesClient.getPatches().isEmpty())
-            return;
-        Vec3 cam = evt.getCamera().getPosition();
-        boolean strategic = StrategicViewClientEvents.isStrategicView();
-        float rad = strategic ? RING_STRATEGIC : RING;
-        PoseStack pose = evt.getPoseStack();
-        VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
-        pose.pushPose();
-        pose.translate(-cam.x, -cam.y, -cam.z);
-        Matrix4f m = pose.last().pose();
-        Matrix3f n = pose.last().normal();
-        boolean drewAny = false;
-        for (BlockPos patch : MetalPatchesClient.getPatches()) {
-            if (cam.distanceToSqr(patch.getX() + 0.5, patch.getY(), patch.getZ() + 0.5) > MAX_DIST_SQR)
-                continue;
-            float r, g, b, a;
-            BuildingPlacement on = buildingOn(patch);
-            if (on == null) {   // free: pale gold, the colour of the gem's light
-                r = 1.0f; g = 0.86f; b = 0.45f; a = 0.85f;
-            } else if (FogOfWarClientEvents.isInBrightChunk(patch)) {
-                int hex = PlayerColors.getPlayerDisplayColorHex(on.ownerName);
-                r = ((hex >> 16) & 255) / 255f; g = ((hex >> 8) & 255) / 255f; b = (hex & 255) / 255f; a = 0.95f;
-            } else {             // remembered in the fog: taken, by whom is not ours to know
-                r = 0.62f; g = 0.62f; b = 0.62f; a = 0.7f;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
+                return;
+            if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
+                return;
+            if (MetalPatchesClient.getPatches().isEmpty())
+                return;
+            Vec3 cam = evt.getCamera().getPosition();
+            boolean strategic = StrategicViewClientEvents.isStrategicView();
+            float rad = strategic ? RING_STRATEGIC : RING;
+            PoseStack pose = evt.getPoseStack();
+            VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+            pose.pushPose();
+            pose.translate(-cam.x, -cam.y, -cam.z);
+            Matrix4f m = pose.last().pose();
+            Matrix3f n = pose.last().normal();
+            boolean drewAny = false;
+            for (BlockPos patch : MetalPatchesClient.getPatches()) {
+                if (cam.distanceToSqr(patch.getX() + 0.5, patch.getY(), patch.getZ() + 0.5) > MAX_DIST_SQR)
+                    continue;
+                float r, g, b, a;
+                BuildingPlacement on = buildingOn(patch);
+                if (on == null) {   // free: pale gold, the colour of the gem's light
+                    r = 1.0f; g = 0.86f; b = 0.45f; a = 0.85f;
+                } else if (FogOfWarClientEvents.isInBrightChunk(patch)) {
+                    int hex = PlayerColors.getPlayerDisplayColorHex(on.ownerName);
+                    r = ((hex >> 16) & 255) / 255f; g = ((hex >> 8) & 255) / 255f; b = (hex & 255) / 255f; a = 0.95f;
+                } else {             // remembered in the fog: taken, by whom is not ours to know
+                    r = 0.62f; g = 0.62f; b = 0.62f; a = 0.7f;
+                }
+                float cx = patch.getX() + 0.5f, cy = patch.getY() + 1.06f, cz = patch.getZ() + 0.5f;
+                ring(vc, m, n, cx, cy, cz, rad, r, g, b, a);
+                if (MetalPatchesClient.valueOf(patch) > 1.01f)   // rich (1.5x) and centre (2.0x): a second ring
+                    ring(vc, m, n, cx, cy, cz, rad - RING_RICH_GAP, r, g, b, a);
+                drewAny = true;
             }
-            float cx = patch.getX() + 0.5f, cy = patch.getY() + 1.06f, cz = patch.getZ() + 0.5f;
-            ring(vc, m, n, cx, cy, cz, rad, r, g, b, a);
-            if (MetalPatchesClient.valueOf(patch) > 1.01f)   // rich (1.5x) and centre (2.0x): a second ring
-                ring(vc, m, n, cx, cy, cz, rad - RING_RICH_GAP, r, g, b, a);
-            drewAny = true;
+            pose.popPose();
+            if (drewAny)
+                MC.renderBuffers().bufferSource().endBatch(RenderType.lines());
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        pose.popPose();
-        if (drewAny)
-            MC.renderBuffers().bufferSource().endBatch(RenderType.lines());
     }
 
     private static void ring(VertexConsumer vc, Matrix4f m, Matrix3f n, float cx, float cy, float cz, float rad,
@@ -139,47 +145,53 @@ public class MetalPatchMarkerClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
-            return;
-        if (MetalPatchesClient.getPatches().isEmpty())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
+                return;
+            if (MetalPatchesClient.getPatches().isEmpty())
+                return;
 
-        PoseStack matrix = evt.getPoseStack();
-        // the RENDER camera, not the camera entity (WindmillRenderClientEvents: in the RTS view the player is not where
-        // the camera is, and translating by the entity's position put the gem somewhere off its patch)
-        Vec3 cam = evt.getCamera().getPosition();
-        BlockRenderDispatcher renderer = MC.getBlockRenderer();
-        BlockState gem = Blocks.RAW_IRON_BLOCK.defaultBlockState();
-        float time = MC.level.getGameTime() + evt.getPartialTick();
-        boolean strategic = StrategicViewClientEvents.isStrategicView();
-        float size = strategic ? 2.2f : 0.7f;   // 0.5 read as a speck at the default zoom (Oct 16)
-        boolean renderedAny = false;
+            PoseStack matrix = evt.getPoseStack();
+            // the RENDER camera, not the camera entity (WindmillRenderClientEvents: in the RTS view the player is not where
+            // the camera is, and translating by the entity's position put the gem somewhere off its patch)
+            Vec3 cam = evt.getCamera().getPosition();
+            BlockRenderDispatcher renderer = MC.getBlockRenderer();
+            BlockState gem = Blocks.RAW_IRON_BLOCK.defaultBlockState();
+            float time = MC.level.getGameTime() + evt.getPartialTick();
+            boolean strategic = StrategicViewClientEvents.isStrategicView();
+            float size = strategic ? 2.2f : 0.7f;   // 0.5 read as a speck at the default zoom (Oct 16)
+            boolean renderedAny = false;
 
-        for (BlockPos patch : MetalPatchesClient.getPatches()) {
-            if (cam.distanceToSqr(patch.getX(), patch.getY(), patch.getZ()) > MAX_DIST_SQR)
-                continue;
-            if (isTaken(patch))
-                continue;
-            float phase = (patch.hashCode() & 255) / 255f * Mth.TWO_PI;
-            float bob = strategic ? 0 : Mth.sin(time * 0.08f + phase) * 0.12f;
+            for (BlockPos patch : MetalPatchesClient.getPatches()) {
+                if (cam.distanceToSqr(patch.getX(), patch.getY(), patch.getZ()) > MAX_DIST_SQR)
+                    continue;
+                if (isTaken(patch))
+                    continue;
+                float phase = (patch.hashCode() & 255) / 255f * Mth.TWO_PI;
+                float bob = strategic ? 0 : Mth.sin(time * 0.08f + phase) * 0.12f;
 
-            matrix.pushPose();
-            matrix.translate(patch.getX() + 0.5 - cam.x,
-                patch.getY() + 1.9 + bob - cam.y,
-                patch.getZ() + 0.5 - cam.z);
-            matrix.mulPose(com.mojang.math.Axis.YP.rotation(time * 0.03f + phase));
-            matrix.mulPose(com.mojang.math.Axis.XP.rotation((Mth.HALF_PI / 2)));
-            matrix.mulPose(com.mojang.math.Axis.ZP.rotation((Mth.HALF_PI / 2)));
-            matrix.translate(-size / 2, -size / 2, -size / 2);
-            matrix.scale(size, size, size);
-            renderer.renderSingleBlock(gem, matrix, MC.renderBuffers().bufferSource(),
-                FULLBRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
-            matrix.popPose();
-            renderedAny = true;
+                matrix.pushPose();
+                matrix.translate(patch.getX() + 0.5 - cam.x,
+                    patch.getY() + 1.9 + bob - cam.y,
+                    patch.getZ() + 0.5 - cam.z);
+                matrix.mulPose(com.mojang.math.Axis.YP.rotation(time * 0.03f + phase));
+                matrix.mulPose(com.mojang.math.Axis.XP.rotation((Mth.HALF_PI / 2)));
+                matrix.mulPose(com.mojang.math.Axis.ZP.rotation((Mth.HALF_PI / 2)));
+                matrix.translate(-size / 2, -size / 2, -size / 2);
+                matrix.scale(size, size, size);
+                renderer.renderSingleBlock(gem, matrix, MC.renderBuffers().bufferSource(),
+                    FULLBRIGHT, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                matrix.popPose();
+                renderedAny = true;
+            }
+            if (renderedAny)
+                MC.renderBuffers().bufferSource().endBatch();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        if (renderedAny)
-            MC.renderBuffers().bufferSource().endBatch();
     }
 }
