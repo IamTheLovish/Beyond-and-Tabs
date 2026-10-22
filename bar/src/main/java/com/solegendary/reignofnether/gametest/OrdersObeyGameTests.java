@@ -162,12 +162,13 @@ public class OrdersObeyGameTests {
 
     /**
      * RTS pathfinding on (as on a small world-border map). A vindicator in the arena is sent 4000 blocks east, into
-     * chunks no one has loaded; a stone wall closes the arena's east side. It walks to the wall (as far as it can
-     * toward the target) and then gives the order up - idle, move target cleared - within 30 s. Before the fix every request got no path at all, so it
-     * stood where it was and retried every 20 ticks forever, counted busy.
+     * chunks no one has loaded (a stone wall across the arena makes it path round). Within 30 s it has walked toward
+     * the target - as far as the loaded chunks go, which grow round it as it walks - and is either idle (the order
+     * given up) or still walking; never standing with the order. Before the fix every request got no path at all,
+     * so it stood where it was and retried every 20 ticks forever, counted busy.
      */
     @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
-    public static void a_move_into_unloaded_chunks_goes_as_far_as_it_can_then_idles(GameTestHelper helper) {
+    public static void a_move_into_unloaded_chunks_walks_toward_it_never_stands_busy(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         boolean wasRts = UnitServerEvents.rtsPathfinding;
         UnitServerEvents.rtsPathfinding = true;
@@ -188,6 +189,7 @@ public class OrdersObeyGameTests {
         }
         BlockPos far = new BlockPos(pad.getX() + 4000, pad.getY(), pad.getZ() + 8);
         double startX = m.getX();
+        double[] xAt500 = { Double.NaN };
         int[] ordered = { -1 };
         boolean[] done = { false };
         ArenaReady.whenTicking(helper, made, 150, tick -> {
@@ -207,6 +209,8 @@ public class OrdersObeyGameTests {
             long t = helper.getTick() - ordered[0];
             MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
             boolean idle = goal.getMoveTarget() == null;
+            if (t == 500)
+                xAt500[0] = m.getX();
             if (!idle && t < 600)
                 return;
             done[0] = true;
@@ -217,10 +221,11 @@ public class OrdersObeyGameTests {
                     + goal.getLastRequestTime() + " (now " + level.getGameTime() + ")";
                 ReignOfNether.LOGGER.info("[Orders] a move into unloaded chunks: {}", state);
                 List<String> problems = new ArrayList<>();
-                if (!idle)
-                    problems.add("the unit still had its order after 30 s (standing busy forever?): " + state);
+                if (!idle && !(m.getX() - xAt500[0] > 1.0))
+                    problems.add("the unit still had its order after 30 s but stood still for its last 100 ticks "
+                        + "(busy forever?): " + state + ", x 100 ticks earlier " + TerrainGameTests.f(xAt500[0] - startX));
                 if (moved < 5)
-                    problems.add("the unit did not walk toward the target before giving up: " + state);
+                    problems.add("the unit did not walk toward the target: " + state);
                 TerrainGameTests.finish(helper, problems);
             } finally {
                 UnitServerEvents.rtsPathfinding = wasRts;
