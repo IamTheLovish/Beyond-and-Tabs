@@ -41,11 +41,11 @@ knobs, and the open problems.
     - a 4v4 map's teams about 98% of the time
     - a 4v4 map's individual seats only about 45% of the time
 - **The 4v4 seat figure is mostly geometry, not the asymmetry.**
-  - The point-symmetric control map (Mirror, no asymmetry at all) already spreads its 4v4 seats 7.5%, because front
-    seats sit next to an enemy and back seats do not. Its teams spread 0.3%.
+  - The point-symmetric control map (Mirror, no asymmetry at all) already spreads its 4v4 seats 7.5% on round maps
+    and 11% on square ones, because front seats sit next to an enemy and back seats do not. Its teams spread 0.3%.
   - At 4v4, team fairness is the bar that matters. Seat-level 5% is a stretch goal.
 - **What did not work.**
-  - At 4v4, re-rolling the landscape or turning the seats round is not enough on its own: 15-17% median spread, 0% of
+  - At 4v4, re-rolling the landscape or turning the seats round is not enough on its own: 14-16% median spread, 0% of
     maps within 5%. Small metal edits (the nudge) are what close the gap.
   - The full-strength contrast is too strong at 4v4. Prospector drew 19 patches a seat against Warden's 12, a 22% raw
     spread. Team games now use the square root of the density difference.
@@ -235,9 +235,22 @@ So the lobby preview is the map built, and a save resumes the same map.
 
 On the Mirror control (1v1, 400 maps) the seat spread is 0.3% and the sim spread 1.5%.
 
-4v4: see the table below.
+4v4, 1600 maps per balancer (the same cells at 4v4):
 
-<!-- 4V4 TABLE -->
+| Balancer | Median spread | p90 | Within 5% | Team median | Robust median | Robust within 5% | Sim team median | ms median |
+|---|---|---|---|---|---|---|---|---|
+| NONE | 21.0% | 28.7% | 0% | 11.6% | 23.0% | 0% | 10.4% | 170 |
+| REROLL | 14.1% | 18.2% | 0% | 8.0% | 16.3% | 0% | 7.0% | 2049 |
+| NUDGE | 3.5% | 3.9% | 100% | 1.7% | 6.1% | 36% | 4.6% | 189 |
+| SWAP | 16.4% | 20.5% | 0% | 8.5% | 18.3% | 0% | | 1348 |
+| **SWAP_NUDGE** | **3.5%** | **3.9%** | **100%** | **1.5%** | **6.0%** | **36%** | 4.6% | 1360 |
+| REROLL_NUDGE | 3.5% | 3.9% | 100% | 1.6% | 6.0% | 37% | | 699 |
+
+On the Mirror control (4v4, 400 maps) the seat spread is a median 9.4% (7.5% round, 10.9% square) and the team
+spread 0.3%. The sim's 4v4 seat spread is about 32% on every balancer, the Mirror included.
+
+These 4v4 figures are from before the team-game softening and the robust nudge. At the tip the lobby's 4v4 maps are
+robust 45% (seats) and 98% (teams): see the production check.
 
 Reading the two tables:
 - At 1v1 every balancer works. Swapping gives the most even maps for the time.
@@ -306,7 +319,8 @@ the density difference at its square root in team games:
 ### Is the 4v4 seat spread the asymmetry or the geometry?
 
 The Mirror control has no asymmetry. Its terrain and economy are point-symmetric, yet in exp1 its 4v4 seat spread is
-a median 7.5% raw and 5.1% after balancing, while its team spread is 0.3%.
+a median 7.5% raw on round maps and 10.9% on square maps (5.1% and 8.0% after balancing), while its team spread is
+0.3%.
 
 Front seats differ from back seats:
 - they have more frontage
@@ -349,7 +363,8 @@ So at 4v4:
 
   - No archetype side wins on average. The Mirror's +3.5% is the sim's own lean to team 0.
   - The sim's 4v4 seat spread is about 25-30% even on the Mirror, so it cannot judge single 4v4 seats.
-  - The sim gives front seats about 9% more strength than back seats; the score gives about 1%.
+  - The sim gives front seats (those with an enemy neighbour) about 8% more strength than back seats; the score gives
+    about 1%. One of the two misprices the front seats' contested sites.
 
 ### Modifiers
 
@@ -413,7 +428,7 @@ These are generator knobs. No unit or economy numbers change.
 ## Open questions for lovish
 
 1. **4v4 fairness bar.** Is "teams within 5%, seats within about 8%" acceptable? Even a perfectly symmetric 4v4 map
-   spreads its seats 7.5% front to back.
+   spreads its seats 7.5-11% front to back.
 2. **How strong should the sides feel?** Team games now soften the contrast: Prospector 17 patches a seat against
    Warden 13 at 4v4. Do you want it stronger (more flavour, leaning on the balancer) or weaker?
 3. **Show the contrast in the lobby?** For example "Prospector vs Warden" under the preview, or keep it to be

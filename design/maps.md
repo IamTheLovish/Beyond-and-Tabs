@@ -425,16 +425,18 @@ the weights (the guesses in the score, priced within their ranges), going on whi
 the tolerance; a draw still outside it gives way to a fresh draw (up to four). The data-only camps count zero on lobby
 maps.
 
-**What Phase 1 measured** (200 seeds a cell, 1v1 and 4v4, round and square, five contrasts, seven balancers; scored
+**What Phase 1 measured** (200 seeds a cell, 1v1 and 4v4, round and square, five contrasts, six balancers; scored
 again under 40 separate weight draws, and a crude 15-minute economy sim as a cross-check):
-* Unbalanced, 1v1 seeds already land within 5% three times in four (median 3.1%); 4v4 never does (median 22%: the
-  contrasts compound over four seats a side). Re-rolling the landscape alone barely helps at 4v4 (15%); turning the
-  seats and swapping the sides gets 17%; small metal edits are what close the gap, to 3.5% in about 0.2 s.
-* Swap + nudge gives the best central spread (1v1 median 1.1%); the robust nudge adds 3-11 points of "within 5% under
-  other weights" at 4v4 for ~7% more time. Under weight draws a 1v1 map stays within 5% about 80% of the time; a 4v4
-  map's *teams* about 98%, its *seats* only about 45% (median 5.5%).
-* That 4v4 seat limit is geometry, not the asymmetry: the point-symmetric Mirror control's seats already spread 7.5%
-  (front seats beside an enemy against back seats), its teams 0.3%. Team fairness is the bar that matters there.
+* Unbalanced, 1v1 seeds already land within 5% three times in four (median 3.1%); 4v4 never does (median 21%: the
+  contrasts compound over four seats a side). Re-rolling the landscape alone barely helps at 4v4 (14%); turning the
+  seats and swapping the sides gets 16%; small metal edits are what close the gap, to 3.5% in about 0.2 s.
+* Swap + nudge gives the best central spread (1v1 median 1.1%); the robust nudge adds 2-17 points of "within 5% under
+  other weights" (Prospector/Warden 1v1 0.51 -> 0.68; 3-11 at 4v4) for at most 7% more time. Under weight draws a 1v1
+  lobby map stays within 5% about 80% of the time; a 4v4 map's *teams* about 98%, its *seats* only about 45% (median
+  5.3%).
+* That 4v4 seat limit is geometry, not the asymmetry: the point-symmetric Mirror control's seats already spread
+  7.5% round and 11% square (front seats beside an enemy against back seats), its teams 0.3%. Team fairness is the
+  bar that matters there.
 * The sim agrees with the score on direction (correlation 0.36-0.58 on raw 1v1 maps) and after balancing finds no
   side that wins on average (4v4 team gap, archetype side A - B, means within +-0.5%), but it is too noisy to judge
   single 4v4 seats.
