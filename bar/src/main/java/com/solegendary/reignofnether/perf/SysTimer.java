@@ -35,6 +35,8 @@ final class SysTimer {
     /** The most self time one tick (or frame) spent in the section over the window (nanoseconds). */
     final long[] worstTickNs;
     private final long[] tickNs;
+    /** Per section, what the tick (frame) that closed last spent: the [Spike] line reads it (FrameSpikes). */
+    final long[] lastTickNs;
     /** Closed ticks (frames) in the window. */
     int ticks = 0;
     /** Begins refused because the stack was full (a runaway recursion), and ticks that closed with a section still open. */
@@ -54,6 +56,7 @@ final class SysTimer {
         this.worstCallNs = new long[sections];
         this.worstTickNs = new long[sections];
         this.tickNs = new long[sections];
+        this.lastTickNs = new long[sections];
         this.lifetimeNs = new long[sections];
     }
 
@@ -117,6 +120,7 @@ final class SysTimer {
             depth = 0;
         }
         for (int id = 0; id < tickNs.length; id++) {
+            lastTickNs[id] = tickNs[id];
             if (tickNs[id] > worstTickNs[id])
                 worstTickNs[id] = tickNs[id];
             tickNs[id] = 0;
