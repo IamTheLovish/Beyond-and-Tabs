@@ -39,7 +39,10 @@ public final class EconomyBarRenderer {
 
     static final int METAL_FILL = 0xFFB4BEC8, METAL_DIM = 0xFF2A2E33;
     static final int ENERGY_FILL = 0xFFF0C83C, ENERGY_DIM = 0xFF33301E;
-    static final int BG = 0xC0101216, PANEL_H = 34, POP_W = 58;
+    // Oct 22 (lovish: "make the metal bar and energy bar not as thick"): the bar is 5 px thick (was 7) and the strip 28 px
+    // tall (was 34): amount row, bar, income / expense row, each one pixel closer. Mirrored by ECO_PANEL_H in
+    // tools/hud_layout.py.
+    static final int BG = 0xC0101216, PANEL_H = 28, POP_W = 58, BAR_H = 5;
     // compact mode (HudPanels.economyCompact, the chevron right of the bar): one row - amount / storage and net, a
     // 2 px fill line under it - for players who read the economy from the net figure alone
     static final int COMPACT_H = 22;   // the stall row under it must still clear the control-group row (22 px)
@@ -57,8 +60,8 @@ public final class EconomyBarRenderer {
         int x = g.xOf(level);
         gg.fill(x - 1, g.y0() - 1, x + 2, g.y1() + 1, 0xFF101216);
         gg.fill(x, g.y0() - 1, x + 1, g.y1() + 1, colour);
-        gg.fill(x - 3, g.y0() - 4, x + 4, g.y0() - 2, 0xFF101216);
-        gg.fill(x - 2, g.y0() - 3, x + 3, g.y0() - 2, colour);
+        gg.fill(x - 3, g.y0() - 3, x + 4, g.y0() - 1, 0xFF101216);   // cap: 2 px, under the amount row's text
+        gg.fill(x - 2, g.y0() - 2, x + 3, g.y0() - 1, colour);
     }
 
     // the worker count under the population: a stream over every client unit (hundreds at 8v8) plus an owner lookup
@@ -137,16 +140,16 @@ public final class EconomyBarRenderer {
         gg.fill(px, top + 3, px + 1, top + panelH - 3, 0xFF3A3F46);
         gg.fill(px + POP_W - 1, top + 3, px + POP_W, top + panelH - 3, 0xFF3A3F46);
         ResourceLocation bed = PlayerColors.getPlayerColorBedIcon(owner);
-        MyRenderer.renderIcon(gg, bed, px + 4, top + 4, 12);
+        MyRenderer.renderIcon(gg, bed, px + 4, top + 3, 12);
         int pop = UnitClientEvents.getCurrentPopulation(owner);
         int supply = BuildingClientEvents.getTotalPopulationSupply(owner);
         boolean unlimited = supply >= com.solegendary.reignofnether.resources.ResourceCosts.UNLIMITED_POPULATION;
         String popStr = unlimited ? String.valueOf(pop) : pop + "/" + supply;   // no cap = just the count, like BAR
-        gg.drawString(font, popStr, px + 19, top + 4, !unlimited && pop >= supply ? 0xFF7A6A : 0xFFFFFF);
+        gg.drawString(font, popStr, px + 19, top + 3, !unlimited && pop >= supply ? 0xFF7A6A : 0xFFFFFF);
         int workers = workerCount(owner);
         String wStr = workers + " workers";
         if (!compact)
-            gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 18, 0xA8B0B8);
+            gg.drawString(font, wStr, px + POP_W / 2 - font.width(wStr) / 2, top + 16, 0xA8B0B8);
 
         int bottom = top + panelH + 1;
         // stall warning under the bar
@@ -321,15 +324,15 @@ public final class EconomyBarRenderer {
         int dimCol = metal ? METAL_DIM : ENERGY_DIM;
         ResourceLocation icon = ResourceLocation.fromNamespaceAndPath("minecraft",
             metal ? "textures/item/iron_ingot.png" : "textures/item/redstone.png");
-        MyRenderer.renderIcon(gg, icon, x + 5, y + 4, 12);
+        MyRenderer.renderIcon(gg, icon, x + 5, y + 3, 12);
 
         int textX = x + 21;
         int rightX = x + w - 6;
         // amount (bright) / storage (dim)
         String amt = String.valueOf(amount);
         String cap = " / " + Math.round(storage);
-        gg.drawString(font, amt, textX, y + 4, 0xFFFFFF);
-        gg.drawString(font, cap, textX + font.width(amt), y + 4, 0x9AA0A6);
+        gg.drawString(font, amt, textX, y + 2, 0xFFFFFF);
+        gg.drawString(font, cap, textX + font.width(amt), y + 2, 0x9AA0A6);
 
         // net at the far right of the top line, income/expense pair under it at the bar's end
         float net = income - expense;
@@ -337,10 +340,10 @@ public final class EconomyBarRenderer {
         // on a narrow panel (small windows / big GUI scale) the net ran over "amount / storage" (eyes, Oct 13: green
         // digits printed across "1500"); the income/expense pair below already tells the story, so drop the net there
         if (textX + font.width(amt) + font.width(cap) + 6 <= rightX - font.width(netStr))
-            gg.drawString(font, netStr, rightX - font.width(netStr), y + 4, net >= 0 ? 0x55FF55 : 0xFF5555);
+            gg.drawString(font, netStr, rightX - font.width(netStr), y + 2, net >= 0 ? 0x55FF55 : 0xFF5555);
 
         // the fill bar (a 2 px line in the compact bar)
-        int barY = compact ? y + 14 : y + 16, barH = compact ? 2 : 7;
+        int barY = compact ? y + 14 : y + 12, barH = compact ? 2 : BAR_H;
         float fill = storage > 0 ? Math.max(0, Math.min(1, amount / storage)) : 0;
         lastBar[metal ? 0 : 1] = new com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom(textX, rightX, barY, barY + barH);
         gg.fill(textX, barY, rightX, barY + barH, dimCol);
@@ -354,8 +357,8 @@ public final class EconomyBarRenderer {
         String inc = "+" + fmt(income), exp = "-" + fmt(expense);
         int ex = rightX - font.width(exp);
         int ix = ex - 5 - font.width(inc);
-        gg.drawString(font, inc, ix, y + 24, 0x55FF55, false);
-        gg.drawString(font, exp, ex, y + 24, 0xFF5555, false);
+        gg.drawString(font, inc, ix, y + 18, 0x55FF55, false);
+        gg.drawString(font, exp, ex, y + 18, 0xFF5555, false);
     }
 
     static final float OVERFLOW_FILL = 0.95f;
@@ -480,7 +483,7 @@ public final class EconomyBarRenderer {
      * Same geometry as renderResource's fill bar.
      */
     private static void renderOverchargeFrame(GuiGraphics gg, Font font, int x, int y, int w) {
-        int x1 = x + 21, x2 = x + w - 6, by = y + 16, bh = 7;
+        int x1 = x + 21, x2 = x + w - 6, by = y + 12, bh = BAR_H;
         double phase = (System.currentTimeMillis() % 900L) / 900.0 * Math.PI * 2;
         int alpha = 0x80 + (int) (0x7F * (0.5 + 0.5 * Math.sin(phase)));
         int col = (OVERCHARGE_GOLD & 0x00FFFFFF) | (alpha << 24);
@@ -492,9 +495,9 @@ public final class EconomyBarRenderer {
         float scale = 0.75f;
         // a solid gold plate under the word, so it reads on both the filled and the empty part of the bar
         int plateW = Math.round(font.width(s) * scale) + 4, plateX = (x1 + x2) / 2 - plateW / 2;
-        gg.fill(plateX, by, plateX + plateW, by + bh, OVERCHARGE_GOLD);
+        gg.fill(plateX, by - 1, plateX + plateW, by + bh + 1, OVERCHARGE_GOLD);   // 7 px: the word is 6 px tall, the bar only 5
         gg.pose().pushPose();
-        gg.pose().translate((x1 + x2) / 2f - font.width(s) * scale / 2f, by + 0.5f, 0);
+        gg.pose().translate((x1 + x2) / 2f - font.width(s) * scale / 2f, by - 0.5f, 0);
         gg.pose().scale(scale, scale, 1f);
         gg.drawString(font, s, 0, 0, 0xFF2A1A00, false);
         gg.pose().popPose();

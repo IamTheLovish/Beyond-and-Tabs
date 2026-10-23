@@ -27,13 +27,26 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import org.joml.Quaternionf;
 
-// Renders a Building's portrait including an animated block, name, healthbar, list of stats and UI frames
+// Renders a selected Building's block: its HUD icon (the one its buttons use) in a frame, its name above, and a slim
+// health bar with the numbers under it (Oct 22, lovish: "units don't need their models to pop up, just a picture of
+// their icon" - the spinning block portrait was 60 x 60 px). A frame beside the icon holds the Repeat / Steward
+// toggles of an own production building. The block is ICON + SIDE_W wide and frameHeight tall, bottom-anchored by the
+// caller; HudLayout.BUILDING_BLOCK_W mirrors it.
 
 public class PortraitRendererBuilding {
-    public int frameWidth = 60;
-    public int frameHeight = 60;
+    public static final int ICON = 32, SIDE_W = 52, HEALTH_ROW_H = 10;
+    public int frameWidth = ICON;                       // the icon frame (square)
+    public int frameHeight = ICON + HEALTH_ROW_H + 1;   // icon frame + the health row under it
+    public int sideWidth = SIDE_W;
+    /** The old portrait's height: the production queue and the multi-building grid are still laid out from it. */
+    public static final int LAYOUT_TOP = 60;
     public int xBlock = 31;
     public int yBlock = 25;
+
+    /** Width of the whole block: the icon frame plus the frame beside it. */
+    public int blockWidth() {
+        return frameWidth + sideWidth;
+    }
 
     public PortraitRendererBuilding() {
     }
@@ -45,13 +58,19 @@ public class PortraitRendererBuilding {
     // - building name
     // Must be called from DrawScreenEvent
     public RectZone render(GuiGraphics guiGraphics, int x, int y, BuildingPlacement building) {
-        return render(guiGraphics, x, y, building, Integer.MAX_VALUE);
+        return render(guiGraphics, x, y, building, Integer.MAX_VALUE, false);
     }
 
     // maxNameWidth: pixels available for the title line (the command panel's width) - long names like
     // "Conversion Pylon (+2 metal/s)" shrink then ellipsize at a word boundary instead of running over
     // the panel edge or neighbouring widgets
     public RectZone render(GuiGraphics guiGraphics, int x, int y, BuildingPlacement building, int maxNameWidth) {
+        return render(guiGraphics, x, y, building, maxNameWidth, false);
+    }
+
+    /** @param sideFrame draw the frame beside the icon (the caller puts the Repeat / Steward buttons in it) */
+    public RectZone render(GuiGraphics guiGraphics, int x, int y, BuildingPlacement building, int maxNameWidth,
+                           boolean sideFrame) {
         Relationship rs = BuildingClientEvents.getPlayerToBuildingRelationship(building);
 
         String name = "";
@@ -99,24 +118,34 @@ public class PortraitRendererBuilding {
         if (showOwner)
             drawOwnerLine(guiGraphics, building.ownerName, x+4, y-9, maxNameWidth);
         int bgCol = PlayerColors.getPlayerPortraitDisplayColorHex(building.ownerName);
-        MyRenderer.renderFrameWithBg(guiGraphics, x, y,
-                frameWidth,
-                frameHeight,
-                bgCol);
+        MyRenderer.renderFrameWithBg(guiGraphics, x, y, frameWidth, frameWidth, bgCol);
 
-        drawBlockOnScreen(x, y, building.getBuilding().portraitBlock, 5.5f);
+        ResourceLocation icon = building.getBuilding().icon;
+        if (icon != null) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 1);
+            MyRenderer.renderIcon(guiGraphics, icon, x + 2, y + 2, frameWidth - 4);
+            guiGraphics.pose().popPose();
+        } else {
+            drawBlockOnScreen(x - 15, y - 12, building.getBuilding().portraitBlock, 3.2f);   // no icon: the old block, smaller
+        }
+        if (sideFrame)
+            MyRenderer.renderFrameWithBg(guiGraphics, x + frameWidth, y, sideWidth, frameWidth, 0xA0000000);
 
-        // draw health bar and write min/max hp
+        // the health bar spans the icon and the frame beside it; the numbers sit on it
+        int rowW = blockWidth();
+        int rowY = y + frameWidth + 1;
         HealthBarClientEvents.renderForBuilding(guiGraphics.pose(), building,
-                x+(frameWidth/2f), y+frameHeight-15,
-                frameWidth-9, HealthBarClientEvents.RenderMode.GUI_PORTRAIT);
-
+                x + (rowW / 2f), rowY, rowW, HealthBarClientEvents.RenderMode.GUI_INFO);
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 10);
         guiGraphics.drawCenteredString(
                 Minecraft.getInstance().font,
                 building.getHealth() + "/" + building.getMaxHealth(),
-                x+(frameWidth/2), y+frameHeight-13,
+                x + (rowW / 2), rowY + 1,
                 0xFFFFFFFF
         );
+        guiGraphics.pose().popPose();
 
         return RectZone.getZoneByLW(x, y, frameWidth, frameHeight);
     }

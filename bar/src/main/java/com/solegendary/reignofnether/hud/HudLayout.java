@@ -17,7 +17,7 @@ public final class HudLayout {
 
     public static final int ICON_FRAME = 22;                              // Button.DEFAULT_ICON_FRAME_SIZE
     public static final int HUD_START_X = ICON_FRAME * 6 + ICON_FRAME / 2; // 143: the orders grid is 6 tiles wide
-    public static final int PORTRAIT_W = 60, PORTRAIT_H = 60, STATS_W = 44; // PortraitRendererUnit
+    public static final int PORTRAIT_W = 32, PORTRAIT_H = 43, STATS_W = 68; // PortraitRendererUnit: icon frame, block height, stats grid
     public static final int PANEL_H = Math.max(PORTRAIT_H, ICON_FRAME * 4 + 6) + 8;   // 102
     public static final int MIN_PER_ROW = 3, MAX_PER_ROW = 8;
     public static final int MAP_CORNER = 10, MAP_BG = 6;                  // MinimapClientEvents.CORNER_OFFSET / BG_OFFSET
@@ -34,10 +34,22 @@ public final class HudLayout {
     // the hovered-building card (HoverCards): at HUD_START_X like the hovered-unit card
     public static final int BUILDING_CARD_W = 136, BUILDING_CARD_H = 61;   // 61: + the BuildingStats line
 
+    // The selected unit's / building's info block (PortraitRendererUnit / PortraitRendererBuilding, Oct 22): the HUD
+    // icon in a 32 px frame, stats beside it, one slim health row under both - instead of the 60 px model portrait.
+    // The info part of the command panel (right of the orders column) is as tall as its content, so the backing is an
+    // L-shape: INFO_PAD_TOP above the block for the name line, more for a hero (experience bar between) and 9 more for
+    // passive-effect icons. The worst case, which tools/hud_layout.py draws: a hero with passives (53 + 17 + 9).
+    public static final int INFO_PAD_TOP = 13, INFO_PAD_TOP_HERO = 17, INFO_PAD_PASSIVES = 9;
+    public static final int HERO_EXTRA_H = 10;                             // a hero's mana row
+    public static final int SIDE_W = 44;                                   // carried-resources frame / inventory column
+    public static final int ITEMS_EXTRA_W = 24;                            // the Return-resources button's column after it
+    public static final int BUILDING_ICON = 32, BUILDING_SIDE_W = 52;      // PortraitRendererBuilding: icon frame + toggles frame
+    public static final int BUILDING_BLOCK_W = BUILDING_ICON + BUILDING_SIDE_W;
+
     // HUD declutter (design/hud.md, "Human-POV audit"). The stats table / its collapsed strip sit top-right where the
     // old always-on player list was (PlayerPanelClientEvents): TOP under the economy bar, dropped below the bar's
     // warning rows when they share x. Collapsed it is one 11 px strip at most STATS_STRIP_W_MAX wide.
-    public static final int STATS_TOP = 38, STATS_RIGHT_MARGIN = 60, STATS_PANEL_W = 206, STATS_ROW_H = 11;
+    public static final int STATS_TOP = 32, STATS_RIGHT_MARGIN = 60, STATS_PANEL_W = 206, STATS_ROW_H = 11;
     public static final int STATS_STRIP_W_MAX = 160, STATS_STRIP_H = 11;
     // the collapsed controls cheat-sheet: a "?" button in the command panel's corner
     public static final int HELP_BUTTON = 12;
@@ -94,6 +106,14 @@ public final class HudLayout {
         int mapLeft = screenWidth - MAP_CORNER - squareSide(mapRadius);
         int gridRight = mapLeft - GRID_PAD;
         return gridRight - ICON_FRAME - GRID_STRIDE * (GRID_COLS - 1);
+    }
+
+    /**
+     * Height of the info part of the command panel for the worst single-unit selection: a hero with passive icons
+     * (the block, its name, the experience bar and the icons above). Never more than the orders column's PANEL_H.
+     */
+    public static int infoHeightSingleWorst() {
+        return Math.min(PANEL_H, PORTRAIT_H + HERO_EXTRA_H + INFO_PAD_TOP_HERO + INFO_PAD_PASSIVES);
     }
 
     /** Where the selection strip / multi-building grid / production queue columns start (frame left edge is -5). */

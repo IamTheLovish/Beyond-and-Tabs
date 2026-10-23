@@ -34,7 +34,7 @@ import sys
 # ---- HudLayout.java ---------------------------------------------------------------------------------------------
 ICON_FRAME = 22
 HUD_START_X = ICON_FRAME * 6 + ICON_FRAME // 2          # 143
-PORTRAIT_W, PORTRAIT_H, STATS_W = 60, 60, 44
+PORTRAIT_W, PORTRAIT_H, STATS_W = 32, 43, 68             # the icon frame, the block's height, the stats grid
 PANEL_H = max(PORTRAIT_H, ICON_FRAME * 4 + 6) + 8       # 102
 MIN_PER_ROW, MAX_PER_ROW = 3, 8
 MAP_CORNER, MAP_BG = 10, 6
@@ -45,7 +45,7 @@ RIGHT_COL_X = 28
 RIGHT_COL_TOP = 40
 RIGHT_COL_STEP, RIGHT_COL_STEP_TIGHT, RIGHT_COL_COUNT = 30, 24, 5
 UNIT_CARD_MIN_W = 70
-STATS_TOP, STATS_RIGHT_MARGIN, STATS_PANEL_W, STATS_ROW_H = 38, 60, 206, 11
+STATS_TOP, STATS_RIGHT_MARGIN, STATS_PANEL_W, STATS_ROW_H = 32, 60, 206, 11   # 32: under the 28 px bar, was 38
 STATS_STRIP_W_MAX, STATS_STRIP_H = 160, 11
 HELP_BUTTON = 12
 OBS_X, OBS_BOTTOM, OBS_CELL_H, OBS_CELL_W_MIN, OBS_CELL_W_MAX, OBS_MAX_PER_ROW = 4, 4, 24, 52, 84, 8
@@ -53,7 +53,11 @@ CHEVRON = 9                                             # HudPanels.CHEVRON
 ONE_LINE_H = 15                                         # UnitInfoCard.ONE_LINE_H
 CHEAT_SHEET_X, CHEAT_SHEET_MAX_W, CHEAT_SHEET_H = 4, 180, 96   # HoverCards' controls cheat-sheet
 BUILDING_CARD_W, BUILDING_CARD_H = 136, 61                     # HoverCards' hovered-building card
-COMPACT_W, FULL_W = 124, 128                            # UnitInfoCard
+COMPACT_W, FULL_W = 108, 128                            # UnitInfoCard
+INFO_PAD_TOP, INFO_PAD_TOP_HERO, INFO_PAD_PASSIVES, HERO_EXTRA_H = 13, 17, 9, 10   # HudLayout: the info part's padding
+SIDE_W, ITEMS_EXTRA_W = 44, 24                          # carried-resources frame / inventory; the Return button's column
+BUILDING_ICON, BUILDING_SIDE_W = 32, 52                 # PortraitRendererBuilding
+BUILDING_BLOCK_W = BUILDING_ICON + BUILDING_SIDE_W
 
 
 def square_side(r):
@@ -76,6 +80,16 @@ def command_panel_limit(sw, r, square):
     map_left = sw - MAP_CORNER - square_side(r)
     grid_right = map_left - GRID_PAD
     return grid_right - ICON_FRAME - GRID_STRIDE * (GRID_COLS - 1)
+
+
+def info_height_single_worst():
+    """HudLayout.infoHeightSingleWorst: a hero with passive icons (block + mana row + name, exp bar + icons above)."""
+    return min(PANEL_H, PORTRAIT_H + HERO_EXTRA_H + INFO_PAD_TOP_HERO + INFO_PAD_PASSIVES)
+
+
+def info_height_multi(tile=ICON_FRAME):
+    """HudClientEvents.infoPanelHeight, a multi-selection: the 2-row type grid and its totals line above."""
+    return min(PANEL_H, tile * 2 + 31)
 
 
 def strip_x():
@@ -135,7 +149,7 @@ def alert_column_map_limit(sw, sh, r, square, bar_bottom):
 
 
 # ---- EconomyBarRenderer.java ------------------------------------------------------------------------------------
-ECO_PANEL_H, ECO_POP_W, ECO_W_MAX, ECO_W_MIN = 34, 58, 210, 130
+ECO_PANEL_H, ECO_POP_W, ECO_W_MAX, ECO_W_MIN = 28, 58, 210, 130   # 28: the bars are 5 px thick, was 34 / 7
 ECO_COMPACT_H = 22
 
 
@@ -283,20 +297,24 @@ def scene(sw, sh, r, square, selection):
     limit = command_panel_limit(sw, r, square)
     if selection == 'multi':
         n = buttons_per_row(limit)
-        rects['command_panel'] = (0, bottom_panel_top, multi_panel_right(n), sh)
+        # the L-shaped backing: the orders column full height, the info part (icon block, type grid) as tall as it is
+        rects['command_panel'] = (0, bottom_panel_top, HUD_START_X, sh)
+        rects['info_panel'] = (HUD_START_X, sh - info_height_multi(), multi_panel_right(n), sh)
         rects['command_chevron'] = (2, bottom_panel_top - CHEVRON - 1, 2 + CHEVRON, bottom_panel_top - 1)
         hover_h = min(113, sh // 3 + 11)
         hx = max(0, min(strip_x(), limit - MAP_GAP - FULL_W))
         rects['hover_type_card'] = (hx, bottom_panel_top - hover_h - 6, hx + FULL_W, bottom_panel_top - 6)
     elif selection in ('single', 'single_items'):
         right = HUD_START_X + PORTRAIT_W + STATS_W + 10
-        card_x = HUD_START_X + PORTRAIT_W + STATS_W + (STATS_W + 4 if selection == 'single_items' else 14 - 10)
+        card_x = HUD_START_X + PORTRAIT_W + STATS_W + (SIDE_W + 4 + ITEMS_EXTRA_W if selection == 'single_items' else 14 - 10)
         card_w = unit_card_width(card_x, limit, COMPACT_W)
+        info_top = sh - info_height_single_worst()
         if card_w >= UNIT_CARD_MIN_W:
             right = max(right, card_x + card_w + 5)
             card_right = card_x + card_w
-            rects['unitcard_chevron'] = (card_right - CHEVRON, bottom_panel_top - CHEVRON - 1, card_right, bottom_panel_top - 1)
-        rects['command_panel'] = (0, bottom_panel_top, right, sh)
+            rects['unitcard_chevron'] = (card_right - CHEVRON, info_top - CHEVRON - 1, card_right, info_top - 1)
+        rects['command_panel'] = (0, bottom_panel_top, HUD_START_X, sh)
+        rects['info_panel'] = (HUD_START_X, info_top, right, sh)
         rects['command_chevron'] = (2, bottom_panel_top - CHEVRON - 1, 2 + CHEVRON, bottom_panel_top - 1)
     else:
         card_h = min(102, sh // 3)
@@ -330,13 +348,13 @@ def scene(sw, sh, r, square, selection):
 # cards are transient popups that sit over the HUD like a tooltip: they only have to stay off the minimap and on
 # the screen (SOFT).
 HARD = ['economy_bar', 'economy_chevron', 'stall_row', 'control_groups', 'production_queue', 'player_panel',
-        'stats_strip', 'stats_strip_narrow', 'alert_column', 'command_panel', 'command_chevron', 'unitcard_chevron', 'cheat_sheet',
+        'stats_strip', 'stats_strip_narrow', 'alert_column', 'command_panel', 'info_panel', 'command_chevron', 'unitcard_chevron', 'cheat_sheet',
         'cheat_button', 'observer_bar', 'minimap', 'minimap_grid', 'idle_worker',
         'col_help', 'col_chat', 'col_army', 'col_idle_labs', 'col_attack_warning', 'beacon']
 # permanent elements the clearance test applies to (transient toasts / kill ticker / banners / hover cards are not)
 PERMANENT = ['economy_bar', 'economy_chevron', 'stall_row', 'control_groups', 'production_queue', 'stats_strip',
              'stats_strip_narrow',
-             'command_panel', 'cheat_button', 'observer_bar', 'idle_worker', 'minimap', 'minimap_grid',
+             'command_panel', 'info_panel', 'cheat_button', 'observer_bar', 'idle_worker', 'minimap', 'minimap_grid',
              'col_help', 'col_chat', 'col_army', 'col_idle_labs', 'col_attack_warning', 'beacon']
 SOFT = ['hover_card', 'hover_type_card', 'hover_building_card']
 
@@ -402,16 +420,19 @@ def declutter_scene(sw, sh, r, square, selection, mode, eco_compact):
         rects['alert_column'] = (col_l, a_top, col_r, a_bottom)
     if selection == 'multi':
         n = buttons_per_row(limit)
-        rects['command_panel'] = (0, bottom_panel_top, multi_panel_right(n), sh)
+        rects['command_panel'] = (0, bottom_panel_top, HUD_START_X, sh)
+        rects['info_panel'] = (HUD_START_X, sh - info_height_multi(), multi_panel_right(n), sh)
         rects['command_chevron'] = (2, bottom_panel_top - CHEVRON - 1, 2 + CHEVRON, bottom_panel_top - 1)
     elif selection == 'single':
         right = HUD_START_X + PORTRAIT_W + STATS_W + 10
         card_x = HUD_START_X + PORTRAIT_W + STATS_W + 4
         card_w = unit_card_width(card_x, limit, COMPACT_W)
+        info_top = sh - info_height_single_worst()
         if card_w >= UNIT_CARD_MIN_W:
             right = max(right, card_x + card_w + 5)
-            rects['unitcard_chevron'] = (card_x + card_w - CHEVRON, bottom_panel_top - CHEVRON - 1, card_x + card_w, bottom_panel_top - 1)
-        rects['command_panel'] = (0, bottom_panel_top, right, sh)
+            rects['unitcard_chevron'] = (card_x + card_w - CHEVRON, info_top - CHEVRON - 1, card_x + card_w, info_top - 1)
+        rects['command_panel'] = (0, bottom_panel_top, HUD_START_X, sh)
+        rects['info_panel'] = (HUD_START_X, info_top, right, sh)
         rects['command_chevron'] = (2, bottom_panel_top - CHEVRON - 1, 2 + CHEVRON, bottom_panel_top - 1)
     elif mode == 'collapsed':
         rects['cheat_button'] = (CHEAT_SHEET_X, sh - HELP_BUTTON - 4, CHEAT_SHEET_X + HELP_BUTTON, sh - 4)
