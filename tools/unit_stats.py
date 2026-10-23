@@ -96,6 +96,7 @@ ROSTER = [
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
     ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
+    ('Tidewrought', 't3', 'tide/AbyssalHydraUnit', 'experimental'),
     # Stormcallers (slices 1-3)
     ('Stormcallers', 'worker', 'storm/GeomancerUnit', 'builder'),
     ('Stormcallers', 't1', 'storm/PaperCraneUnit', 'scout'),
@@ -197,7 +198,8 @@ OVERRIDES = {
 
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
 COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
-                     'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B'}
+                     'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B',
+                     'AbyssalHydraUnit': 'TIDE_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')

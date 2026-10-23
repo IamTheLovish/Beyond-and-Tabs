@@ -199,6 +199,7 @@ public class DuelGameTests {
             EntityRegistrar.MAGMA_HURLER_UNIT,   // second T3 (T3b-2): artillery on the ground mix, an equal-metal duel row
             EntityRegistrar.JADE_SENTINEL_UNIT,   // second T3 (T3b-4): a slow melee wall on the ground mix, an equal-metal duel row
             EntityRegistrar.CATHEDRAL_WARDEN_UNIT,   // second T3 (T3b-5): a slow ranged support on the ground mix, an equal-metal duel row
+            EntityRegistrar.ABYSSAL_HYDRA_UNIT,   // second T3 (T3b-6): a ranged three-headed shooter on the ground mix, an equal-metal duel row
             EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT);
         for (var big : t3) {
             int cost = metalOf(level, big.get());

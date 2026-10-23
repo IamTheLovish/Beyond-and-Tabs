@@ -306,6 +306,7 @@ public class Factions {
 		registerEntity(MONSTERS, EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), ProductionItems.GRAVE_T3B);
 		registerEntity(STORMCALLERS, EntityRegistrar.JADE_SENTINEL_UNIT.get(), ProductionItems.STORM_T3B);
 		registerEntity(VILLAGERS, EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), ProductionItems.SUN_T3B);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), ProductionItems.TIDE_T3B);
 		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
 		// beasts-2: the other three
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), ProductionItems.SHELLBACK_TURTLE);

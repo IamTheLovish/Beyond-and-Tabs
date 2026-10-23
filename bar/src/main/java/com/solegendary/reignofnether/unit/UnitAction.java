@@ -242,5 +242,6 @@ public enum UnitAction {
     MIRROR_PLATE,           // Stormcallers Jade Sentinel: 4 s plate that turns frontal ranged shots back (second T3)
     THUNDERCLAP,            // Stormcallers Jade Sentinel: telegraphed ring round it, damage + 1 s stun (second T3)
     SANCTIFY,               // Sunforged Cathedral Warden: gold pulse heals 25% of max HP of friends in 10 and cleanses (second T3)
-    BELL_TOLL               // Sunforged Cathedral Warden: telegraphed bell slows enemies in 12 for 5 s (second T3)
+    BELL_TOLL,              // Sunforged Cathedral Warden: telegraphed bell slows enemies in 12 for 5 s (second T3)
+    BRINE_MIST              // Tidewrought Abyssal Hydra: 8-wide fog cloud for 6 s, friends hidden, enemy shots at them miss half (second T3)
 }

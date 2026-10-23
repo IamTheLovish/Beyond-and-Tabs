@@ -58,7 +58,7 @@ public final class T3Cap {
                 new Pair("Gravebound", ProductionItems.BONE_DRAGON, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.GRAVE_T3B, EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get()),
                 new Pair("Horde", ProductionItems.WAR_MAMMOTH, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.HORDE_T3B, EntityRegistrar.MAGMA_HURLER_UNIT.get()),
                 new Pair("Verdant", ProductionItems.WORLD_TREE_WALKER, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.VERDANT_T3B),
-                new Pair("Tidewrought", ProductionItems.LEVIATHAN, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.TIDE_T3B),
+                new Pair("Tidewrought", ProductionItems.LEVIATHAN, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.TIDE_T3B, EntityRegistrar.ABYSSAL_HYDRA_UNIT.get()),
                 new Pair("Stormcallers", ProductionItems.CELESTIAL_DRAGON, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), ProductionItems.STORM_T3B, EntityRegistrar.JADE_SENTINEL_UNIT.get()),
                 new Pair("Brassworks", ProductionItems.IRON_LEVIATHAN_ENGINE, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.BRASS_T3B));
         }
