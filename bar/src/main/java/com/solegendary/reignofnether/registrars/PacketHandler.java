@@ -64,13 +64,18 @@ import net.minecraftforge.network.simple.SimpleChannel;
 // Initialises all of the client-server packet-sending classes
 
 public final class PacketHandler {
-    private static final String PROTOCOL_VERSION = ModList.get()
-            .getModContainerById("reignofnether")
-            .map(c -> c.getModInfo().getVersion().toString())
-            .orElse("dev");
+    // Forge compares this string exactly, so it names our real build: the jar version is a constant and could never
+    // tell two test builds apart. Forge's mismatch screen does NOT show it (it shows mod versions), so the client check
+    // below hands the server's string to BuildId for JoinMismatchClientEvents.
+    private static final String PROTOCOL_VERSION = com.solegendary.reignofnether.BuildId.channelVersion(
+            com.solegendary.reignofnether.BuildId.current());
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals,
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), () -> PROTOCOL_VERSION,
+            serverVersion -> {
+                com.solegendary.reignofnether.BuildId.noteServerChannelVersion(serverVersion);
+                return PROTOCOL_VERSION.equals(serverVersion);
+            },
             PROTOCOL_VERSION::equals);
 
 
