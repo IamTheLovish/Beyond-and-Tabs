@@ -324,6 +324,82 @@ but can merge a branch. `sounds.json` already points every `announcer.*` event a
 `NotificationClientEvents` falls back to the alert's chord while a file is missing, so merging the branch is the whole
 switch-on.
 
+## Slim info panel and thinner bars (Oct 22)
+
+lovish, Oct 22: "the HUD for the units is so large, same with the buildings ... make them smaller without making them
+look odd ... make the metal bar and energy bar not as thick ... units don't need their models to pop up, just a picture
+of their icon with their stats", then "a lot of things are taking up space in the interface, which makes it more
+difficult to see what's going on" (his Oct 21 playtest clip: announcements across a third of the screen, three or four
+text rows down the middle under the bar, the bottom panel's model portrait).
+
+- **Unit block** (`PortraitRendererUnit`): the unit's HUD icon - the mob head the selection strip and the buttons use -
+  in a 32 px frame in the player's colour, the stats in a 2 x 3 grid beside it (attack, attack speed, range | armour,
+  speed; a hero's level leads the grid), one 9 px health bar with the numbers on it under both, a hero's mana bar under
+  that. 100 x 43 px (a hero 53) where the model portrait + stats column + health line were 104 x 60+. The name stays above
+  it, the passive-effect icons above the name. The animated 3D head is only the fallback for an entity with no mob head
+  (a player, a mob nobody drew one for): `PortraitRendererUnit.MODEL_FALLBACK`; set it false to find them.
+- **Building block** (`PortraitRendererBuilding`): the building's icon in the same frame, the same health bar, and a
+  frame beside the icon that holds the Repeat / Steward toggles of an own finished production building (they floated one
+  row above the panel before, which forced the panel to be 94 px tall). The production queue and the multi-building grid
+  are still laid out from the old 60 px portrait (`LAYOUT_TOP`) so they stay where they were (and where #140's compact
+  tiles will shrink them).
+- **L-shaped backing** (`HudClientEvents.infoPanelHeight`): the orders column keeps its 102 px, the info part right of it
+  is only as tall as its content: block + name (+ passive icons), the unit card, the type grid with its totals line, the
+  inventory or the queue's frame. The compact unit card is as tall as its lines (26 px, +10 per ability row; was the
+  panel's 94) and 108 px wide (was 124); the hovered-unit card likewise (62 px, +10 per row; was 102).
+  `HudLayout.infoHeightSingleWorst()` / `info_height_single_worst()` is the worst case the checker draws (a hero with
+  passive icons: 79 px).
+- **Economy bar**: the strip is 28 px tall (was 34) and each bar 5 px thick (was 7); amount row, bar and income / expense
+  row each sit a pixel closer, the slider markers' cap moved under the amount row, the OVERCHARGE plate overhangs the
+  thinner bar by a pixel each side. Colours, numbers and the income / drain alignment are unchanged. The stats strip under
+  it follows (`STATS_TOP` 38 -> 32).
+- **RTS chat feed** (`ForgeGuiMixin`): the unfocused chat is two lines at 75% (it was four at full size), drawn with a
+  pose scale and a scissor, not the `chatScale` option (setting that re-wraps every line, every frame). Typing the full
+  chat is unchanged. The announcement collapse rule (`ChatDedupe`) is unchanged.
+- **Audit** (`tools/hud_audit.py`, GUI scale 3 on 1080p, the sizes `tools/hud_layout.py` asserts; typical case = one unit
+  with two abilities, five control groups, the default collapsed panels):
+
+| Element | When | Before (px) | Before | After (px) | After | Saved |
+|---|---|---|---|---|---|---|
+| Economy bar (metal / pop / energy) | always | 440x35 | 6.7% | 440x29 | 5.5% | 17% |
+| Minimap (diamond backing) | always | 132x132 | 7.6% | 132x132 | 7.6% |  |
+| Control groups (5 in use) | always | 110x22 | 1.1% | 110x22 | 1.1% |  |
+| Stats strip (Allies / Enemies) | always | 160x11 | 0.8% | 160x11 | 0.8% |  |
+| Helper buttons: chat, army | always | 22x44 | 0.4% | 22x44 | 0.4% |  |
+| Production queue (3 queued) | on demand | 76x32 | 1.1% | 76x32 | 1.1% |  |
+| Stall / waste / overflow row | on demand | 200x12 | 1.0% | 200x12 | 1.0% |  |
+| Alert column: banner + 3 toasts + ticker | on demand | 192x82 | 6.8% | 192x82 | 6.8% |  |
+| Announcements (chat feed) | on demand | 320x36 | 5.0% | 240x14 | 1.5% | 71% |
+| Helper buttons: idle labs, attack, idle worker, beacon | on demand | 22x88 | 0.8% | 22x88 | 0.8% |  |
+| Hover card (a unit under the cursor) | on demand | 128x102 | 5.7% | 128x82 | 4.6% | 20% |
+| Controls cheat-sheet (opened with ?) | on demand | 180x96 | 7.5% | 180x96 | 7.5% |  |
+| Command panel, one unit: orders column | selection | 143x102 | 6.3% | 143x102 | 6.3% |  |
+| Command panel, one unit: info block + card | selection | 237x102 | 10.5% | 217x56 | 5.3% | 50% |
+| Command panel, multi: orders column | selection | 143x102 | 6.3% | 143x102 | 6.3% |  |
+| Command panel, multi: info block + type grid | selection | 304x102 | 13.5% | 300x75 | 9.8% | 27% |
+
+| Total HUD footprint | Before | After | Saved |
+|---|---|---|---|
+| Nothing selected (always-on elements) | 16.5% | 15.3% | 7% |
+| One unit selected | 33.3% | 26.9% | 19% |
+| Multi-selection | 36.3% | 31.4% | 13% |
+
+
+### Proposals for lovish (not built), ranked by space saved at scale 3 on 1080p
+
+1. **One slim status line under the bar** (about 2% of the screen typically, up to 5.8% in a busy fight): the Build
+   speed / wasting / overflow row, the two toasts and the kill ticker are up to four stacked rows in the middle of the
+   screen; make them one 12 px line that shows the most urgent thing and cycles (click or hover for the list).
+2. **Smaller default minimap** (2.5%, always on): the 132 x 132 backing is the biggest single element; radius 60 -> 48 gives
+   108 x 108, M still enlarges it. (A taste call: the map is how a BAR player reads the game.)
+3. **Economy bar folded by default** (1.1%): the existing chevron's one-row mode (22 px: amount / storage, net, a 2 px fill
+   line; income and expense in the tooltip), expanding itself while a stall / waste / overflow line is up.
+4. **A three-step HUD key** (about 2.7% at rest): full -> slim (stats strip, helper column and queue appear only when they
+   have something to say) -> clean (today's `=` view).
+5. **Compact tiles for the top-left cluster and the helper column** (about 0.6%): control groups, the production queue
+   and the five right-edge buttons at 18 px once #140's `Button.compactTiles` is merged; a follow-up of a few lines.
+   Not done here to stay out of #140's way.
+
 ## Windmill sails
 
 Every wind generator declares its rotor hub in `WindGenerator.SAIL_HUBS` (structure-relative hub block, the face the
