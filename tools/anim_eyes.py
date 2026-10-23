@@ -315,7 +315,7 @@ class CiError(Exception):
 
 
 def real_gh(args):
-    p = subprocess.run(["gh"] + list(args), capture_output=True, text=True, timeout=300)
+    p = subprocess.run(["gh"] + list(args), capture_output=True, text=True, timeout=300, cwd=ROOT)
     if p.returncode != 0:
         raise RuntimeError((p.stderr or p.stdout).strip() or "gh exited %d" % p.returncode)
     return p.stdout
@@ -349,16 +349,47 @@ def wait_run(run_id, gh=real_gh, sleep=time.sleep, timeout=2700, poll=20, now=ti
         sleep(poll)
 
 
-def download_args(run_id, dest):
-    return ["run", "download", str(run_id), "-n", "anim-%d" % run_id, "-D", dest]
+BRANCH = "eyes-anim"          # where the runner publishes folder anim-<run id>/ (eyes.yml)
 
 
-def download(run_id, dest, gh=real_gh):
+def list_folder_args(run_id):
+    return ["api", "repos/{owner}/{repo}/contents/anim-%d?ref=%s" % (run_id, BRANCH)]
+
+
+def raw_args(path):
+    return ["api", "-H", "Accept: application/vnd.github.raw", "repos/{owner}/{repo}/contents/%s?ref=%s" % (path, BRANCH)]
+
+
+def real_gh_raw(args):
+    p = subprocess.run(["gh"] + list(args), capture_output=True, timeout=300, cwd=ROOT)
+    if p.returncode != 0:
+        raise RuntimeError((p.stderr or p.stdout).decode("utf-8", "replace").strip() or "gh exited %d" % p.returncode)
+    return p.stdout
+
+
+def download(run_id, dest, gh=real_gh, raw=real_gh_raw):
+    """Fetch the run's published folder from branch eyes-anim (the Actions artifact host is not reachable from a Claude
+    session's sandbox; the contents API is). Top-level files only - the sheets, their json, the log; the kept frames
+    (sub-folders) are on the branch for anyone who wants one. Returns the local paths."""
     try:
-        gh(download_args(run_id, dest))
+        listing = json.loads(gh(list_folder_args(run_id)))
     except Exception as e:
-        raise CiError("no artifact anim-%d on run %s (%s) - the job died before it published; its log has why"
-                      % (run_id, run_id, e)) from e
+        raise CiError("no folder anim-%d on branch %s (%s) - the job died before it published; its log has why"
+                      % (run_id, BRANCH, e)) from e
+    os.makedirs(dest, exist_ok=True)
+    out = []
+    for ent in listing:
+        if ent.get("type") != "file":
+            continue
+        try:
+            data = raw(raw_args(ent["path"]))
+        except Exception as e:
+            raise CiError("could not fetch %s from %s: %s" % (ent["path"], BRANCH, e)) from e
+        path = os.path.join(dest, ent["name"])
+        with open(path, "wb") as f:
+            f.write(data)
+        out.append(path)
+    return out
 
 
 def _utc_now():

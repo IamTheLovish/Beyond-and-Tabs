@@ -148,6 +148,12 @@ public final class EyesAnimScene {
             return true;
         }
         phaseTicks++;
+        // First person has no GUI screen over the world, and an Xvfb window that never has focus makes the game open its
+        // pause menu after half a second - which freezes the world (the unit never moves, the game clock stops, and the
+        // frame pacing here, which runs on game time, stops with it). The RTS camera's screen kept that from happening.
+        mc.options.pauseOnLostFocus = false;
+        if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen)
+            mc.setScreen(null);
         switch (phase) {
             case 0 -> setUp(mc);
             case 1 -> waitPad(mc);
@@ -385,6 +391,10 @@ public final class EyesAnimScene {
     private static void rec(Minecraft mc) {
         Run r = current();
         Entity e = subject(mc);
+        if (phaseTicks % 20 == 1)   // a heartbeat: is the game clock running, are frames coming, does the unit move
+            ReignOfNether.LOGGER.info("[Eyes] anim-beat {} tick {} clock {} frames {} unit {} wall {} s screen {} paused {}", stepIdx,
+                    phaseTicks, mc.level.getGameTime(), frameNo, e == null ? "gone" : EyesDirector.fmt(e.position()),
+                    String.format("%.1f", seconds()), mc.screen == null ? "none" : mc.screen.getClass().getSimpleName(), mc.isPaused());
         switch (r.clip()) {
             case "attack" -> {
                 // the dummy dies under the blows: a fresh one when none is left near, and the order again

@@ -550,6 +550,39 @@ jobs:
           rc=$?
           grep -h "anim-run \|anim-run-end\|20_anim" out/latest.log 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -20 | sed 's/^/::notice::/' || true
           exit $rc
+      - name: Publish the animation sheets to branch eyes-anim (folder anim-<run id>/)
+        # a Claude session's sandbox cannot download Actions artifacts (the blob host is outside its proxy) but reads
+        # branches through the GitHub API - so tools/anim_eyes.py --ci fetches this folder. Each run ADDS its folder
+        # (fetch, commit, push, retry on a race); only the newest 12 folders are kept.
+        if: always() && env.ANIM != ''
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          dest="anim-${GITHUB_RUN_ID}"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pushed=0
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf "$RUNNER_TEMP/pub" && mkdir -p "$RUNNER_TEMP/pub"
+            ( cd "$RUNNER_TEMP/pub" || exit 1
+              git init -q -b eyes-anim
+              git config user.name "eyes-bot"
+              git config user.email "eyes-bot@users.noreply.github.com"
+              if git fetch -q --depth=1 "$url" eyes-anim 2>/dev/null; then git checkout -q -B eyes-anim FETCH_HEAD; fi
+              mkdir -p "$dest"
+              cp -r "$GITHUB_WORKSPACE"/out/anim-sheets/. "$dest"/ 2>/dev/null || true
+              cp "$GITHUB_WORKSPACE"/out/eyes-lines.txt "$dest"/ 2>/dev/null || true
+              grep -h "\[Eyes\] 20_anim\|anim-run\|anim-beat\|anim-leg\|render hook\|Exception" "$GITHUB_WORKSPACE"/out/latest.log 2>/dev/null | head -400 > "$dest"/anim-log.txt || true
+              # the first captured frame of each take, in case the sheets could not be made
+              for f in $(ls "$GITHUB_WORKSPACE"/out/bat_eyes_20_anim_*_f000.png 2>/dev/null | head -4); do cp "$f" "$dest"/; done
+              echo "- $dest: spec $ANIM, build ${BUILD_SHA::7}, $(date -u +%FT%TZ)" >> README.md
+              ls -d anim-* 2>/dev/null | sort | head -n -12 | xargs -r git rm -rq
+              git add -A
+              git commit -q -m "Eyes anim: $dest"
+              git push -q "$url" eyes-anim ) && { pushed=1; break; }
+            sleep $((attempt * 5))
+          done
+          [ "$pushed" = 1 ] && echo "::notice::[Eyes] animation sheets published to eyes-anim/$dest" \
+            || { echo "::warning::[Eyes] eyes-anim/$dest not pushed after 6 tries"; exit 1; }
       - name: Keep the animation sheets as an artifact (anim-<run id>)
         if: always() && env.ANIM != ''
         uses: actions/upload-artifact@v4
