@@ -122,6 +122,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.TIDE_T3B.define(BUILDER);
         UnitCosts.STORM_T3B.define(BUILDER);
         UnitCosts.BRASS_T3B.define(BUILDER);
+        UnitCosts.WORLDBREAKER.define(BUILDER);
         // big-units: the T2 beasts (design/big_units.md)
         UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
         UnitCosts.GOREHORN_RHINO.define(BUILDER);
@@ -290,6 +291,7 @@ public class ReignOfNetherCommonConfigs {
         ResearchCosts.RESEARCH_UPGRADED_WINDCALLERS.define(BUILDER);
         ResearchCosts.RESEARCH_TIER_2.define(BUILDER);
         ResearchCosts.RESEARCH_TIER_3.define(BUILDER);
+        ResearchCosts.RESEARCH_ASCENSION.define(BUILDER);
         ResearchCosts.UPGRADE_EXTRACTOR.define(BUILDER);
         ResearchCosts.RESEARCH_CASTLE_FLAG.define(BUILDER);
         ResearchCosts.RESEARCH_GRAND_LIBRARY.define(BUILDER);
@@ -544,6 +546,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry TIDE_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.TIDE_T3B, "Tidewrought T3b Config");
         public static final ResourceCostConfigEntry STORM_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.STORM_T3B, "Stormcallers T3b Config");
         public static final ResourceCostConfigEntry BRASS_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BRASS_T3B, "Brassworks T3b Config");
+        // Tier 4 Worldbreaker (slice H5a): 3500 metal / 9000 energy (wood 6000 gives 1800M + 9000E, ore 1700 adds 1700M), 120 s, 30 pop
+        public static final ResourceCostConfigEntry WORLDBREAKER = ResourceCostConfigEntry.Unit(0,6000,1700,120,30, ResourceCosts.WORLDBREAKER, "Worldbreaker Config");
         // big-units (design/big_units.md): the T2 beasts cost ~2-2.3x their faction's T2 heavy - 780M/730E elephant
         // (1.9x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
         // 465M/460E bison (2x the Stag Lancer)
@@ -694,6 +698,8 @@ public class ReignOfNetherCommonConfigs {
         // BAR tech: ore->metal, wood->energy at bake time
         // pacing (lovish, Oct 10: "I got to tier 3 so fast"): T2 takes 2 minutes, T3 a further 4 after it
         public static final ResourceCostConfigEntry RESEARCH_TIER_2 = ResourceCostConfigEntry.Research(0,800,160, 120, ResourceCosts.RESEARCH_TIER_2, "Tier 2 Technology Research Config");
+        // Tier 4: Ascension at the Fortress, 90 s. The conversion (metal = ore + 0.3 wood) cannot give 1500M with 15000E: 10000 wood is 3000M / 15000E
+        public static final ResourceCostConfigEntry RESEARCH_ASCENSION = ResourceCostConfigEntry.Research(0,10000,0, 90, ResourceCosts.RESEARCH_ASCENSION, "Ascension Research Config");
         public static final ResourceCostConfigEntry RESEARCH_TIER_3 = ResourceCostConfigEntry.Research(0,2400,600, 240, ResourceCosts.RESEARCH_TIER_3, "Tier 3 Technology Research Config");
         public static final ResourceCostConfigEntry UPGRADE_EXTRACTOR = ResourceCostConfigEntry.Research(0,200,120, 45, ResourceCosts.UPGRADE_EXTRACTOR, "Tier 2 Extractor Upgrade Config");
         public static final ResourceCostConfigEntry RESEARCH_GRAND_LIBRARY = ResourceCostConfigEntry.Research(0,200,100, 140, ResourceCosts.RESEARCH_GRAND_LIBRARY, "Grand Library Research Config");

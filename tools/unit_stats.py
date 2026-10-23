@@ -17,7 +17,7 @@ import math, os, re
 SRC = os.path.join(os.path.dirname(__file__), '..', 'bar/src/main/java/com/solegendary/reignofnether')
 
 # (faction, tier bucket, unit class, role) - role is the design job, used to excuse outliers and set flags
-# tiers: worker, worker2 (T2 constructor), engineer (combat engineer), t1, t2, t3. Scouts sit in t1 with role "scout".
+# tiers: worker, worker2 (T2 constructor), engineer (combat engineer), t1, t2, t3, t4. Scouts sit in t1 with role "scout".
 ROSTER = [
     # Sunforged (villagers)
     ('Sunforged', 'worker', 'villagers/VillagerUnit', 'builder'),
@@ -65,6 +65,7 @@ ROSTER = [
     ('Horde', 't2', 'piglins/GhastUnit', 'artillery'),
     ('Horde', 't3', 'piglins/WarMammothUnit', 'experimental'),
     ('Horde', 't3', 'piglins/MagmaHurlerUnit', 'experimental'),
+    ('Horde', 't4', 'piglins/WorldbreakerUnit', 'experimental'),
     # Verdant Court
     ('Verdant', 'worker', 'verdant/SeedshaperUnit', 'builder'),
     ('Verdant', 'worker2', 'verdant/ElderDruidUnit', 'builder'),

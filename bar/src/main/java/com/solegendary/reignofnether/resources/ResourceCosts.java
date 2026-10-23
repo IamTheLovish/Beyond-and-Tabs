@@ -304,6 +304,9 @@ public class ResourceCosts {
     public static final ResourceCost TIDE_T3B = new ResourceCost(ID, "TIDE_T3B");
     public static final ResourceCost STORM_T3B = new ResourceCost(ID, "STORM_T3B");
     public static final ResourceCost BRASS_T3B = new ResourceCost(ID, "BRASS_T3B");
+    // Tier 4 (hero-and-tier4-design.md, slice H5a): the Horde's Ascension research and its Worldbreaker
+    public static final ResourceCost RESEARCH_ASCENSION = new ResourceCost(ID, "RESEARCH_ASCENSION");
+    public static final ResourceCost WORLDBREAKER = new ResourceCost(ID, "WORLDBREAKER");
     public static final ResourceCost GREAT_FORGE = new ResourceCost(ID, "GREAT_FORGE");
     // big-units (design/big_units.md)
     public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
@@ -651,6 +654,8 @@ public class ResourceCosts {
         TIDE_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_T3B);
         STORM_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STORM_T3B);
         BRASS_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BRASS_T3B);
+        RESEARCH_ASCENSION.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_ASCENSION);
+        WORLDBREAKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLDBREAKER);
         GREAT_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GREAT_FORGE);
         ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
         GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);

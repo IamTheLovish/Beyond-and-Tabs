@@ -247,5 +247,9 @@ public enum UnitAction {
     GALE_WINGS,             // Verdant Thornwing Roc: wing-beat cone knocks ground units back and pushes flyers (second T3)
     SEED_RAIN,              // Verdant Thornwing Roc: telegraphed seed line, thickets root ground enemies 1 s and slow 3 s (second T3)
     CARPET_BOMB,            // Brassworks Brass Zeppelin: telegraphed 20-block line, bombs fall on ground units and buildings under it (second T3)
-    BALLAST_DUMP            // Brassworks Brass Zeppelin: 5 s of +40% speed, no firing, steam vent (second T3)
+    BALLAST_DUMP,           // Brassworks Brass Zeppelin: 5 s of +40% speed, no firing, steam vent (second T3)
+    // Tier 4 (hero-and-tier4-design.md, slice H5a): the Horde Worldbreaker
+    EARTHSPLITTER,          // Worldbreaker: telegraphed crack line toward the aimed spot, damage + 1 s slow, hits walls and buildings
+    WORLDBREAKER_HURL,      // Worldbreaker: boulder lob, 3-block splash + 5 s burning ground
+    RAMPAGE                 // Worldbreaker: 3 s charge toward the aimed spot, units hit are thrown aside, buildings take damage
 }

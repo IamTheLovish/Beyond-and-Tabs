@@ -197,6 +197,7 @@ public class DuelGameTests {
         var t3 = types(EntityRegistrar.SUN_COLOSSUS_UNIT, EntityRegistrar.BONE_DRAGON_UNIT, EntityRegistrar.WAR_MAMMOTH_UNIT,
             EntityRegistrar.PLAGUE_ABOMINATION_UNIT,   // second T3 (T3b-3): a slow melee rotter on the ground mix, an equal-metal duel row
             EntityRegistrar.MAGMA_HURLER_UNIT,   // second T3 (T3b-2): artillery on the ground mix, an equal-metal duel row
+            EntityRegistrar.WORLDBREAKER_UNIT,   // Tier 4 (H5a): a melee siege giant on the ground mix, an equal-metal duel row
             EntityRegistrar.JADE_SENTINEL_UNIT,   // second T3 (T3b-4): a slow melee wall on the ground mix, an equal-metal duel row
             EntityRegistrar.CATHEDRAL_WARDEN_UNIT,   // second T3 (T3b-5): a slow ranged support on the ground mix, an equal-metal duel row
             EntityRegistrar.ABYSSAL_HYDRA_UNIT,   // second T3 (T3b-6): a ranged three-headed shooter on the ground mix, an equal-metal duel row
