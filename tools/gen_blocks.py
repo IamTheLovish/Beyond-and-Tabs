@@ -893,10 +893,10 @@ GRASS_TOPS = GRASS_TOPS + ("grass_block_top_v3", "grass_block_top_v4")
 # soil is fitted on the soil alone, its turf (the overlay) sits in its own shade, darker than the lawn on top.
 DIRT_R26 = dict(TARGETS["dirt"])   # the snowy grass side keeps fitting its dirt to the old target (unchanged texture)
 TARGETS["stone"] = dict(luma=0.48, std=0.055, sat=0.015, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12, soften=0.6)
-TARGETS["dirt"] = dict(luma=0.33, std=0.060, sat=0.30, tilt=10.0, smooth=26, pore=56, soften=0.7, lf=0.3, ao=0.25,
+TARGETS["dirt"] = dict(luma=0.33, std=0.075, sat=0.30, tilt=10.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.25,
                        floor=(0.225, 0.04))
 for _g in GRASS_TOPS:
-    TARGETS[_g] = dict(TARGETS["grass_block_top"], luma=0.56, soften=1.4)
+    TARGETS[_g] = dict(TARGETS["grass_block_top"], luma=0.56, std=0.080, soften=1.8)
 TARGETS["grass_block_side"] = dict(luma=0.28, std=0.050, sat=0.32, tilt=16.0, smooth=26, pore=48, soften=1.2, lf=0.3,
                                    floor=(0.225, 0.03))
 TARGETS["grass_block_side_overlay"] = dict(luma=0.42, std=0.050, sat=0.00, tilt=14.0, smooth=24, pore=40, soften=0.8)
@@ -2479,9 +2479,9 @@ def grass_side_r27(F, n):
     Hd, ad = m_dirt_r27(F, n)
     u, v = F.u, F.v
     fade = smoothstep(0.0, 0.08, u) * smoothstep(0.0, 0.08, 1 - u)       # same depth at every block's edge
-    dep = 0.14 + fade * (0.025 * F.noise(2, 8, 0.6)[0:1, :] +
+    dep = 0.16 + fade * (0.025 * F.noise(2, 8, 0.6)[0:1, :] +
                          0.035 * (np.clip(F.noise(10, 34, 0.2)[0:1, :], 0, None) ** 1.5 - 0.3))
-    dep = np.clip(dep, 0.09, 0.20)
+    dep = np.clip(dep, 0.11, 0.21)
     turf = (v < dep).astype(np.float64)
     tips = np.zeros((n, n))
     for _ in range(int(0.6 * n)):
