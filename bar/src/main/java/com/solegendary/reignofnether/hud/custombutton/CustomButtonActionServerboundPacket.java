@@ -44,17 +44,21 @@ public class CustomButtonActionServerboundPacket {
 			if (player == null)
 				return;
 			
-			CustomButton button = CustomButtonServerEvents.customButtons.get(this.button);
-			if (button == null)
-				return;
-			List<CustomButtonActions.CustomButtonAction> actions = button.leftClickActions;
-			if (actions == null || actions.isEmpty())
-				return;
-			for (CustomButtonActions.CustomButtonAction action : actions) {
-				action.execute(player);
-			}
-			
+			accept(player);
 		});
 		ctx.setPacketHandled(true);
+	}
+
+	/** What the server does with this packet from {@code player} (the network handler's body, callable by game tests). */
+	public void accept(ServerPlayer player) {
+		CustomButton button = CustomButtonServerEvents.customButtons.get(this.button);
+		if (button == null)
+			return;
+		List<CustomButtonActions.CustomButtonAction> actions = button.leftClickActions;
+		if (actions == null || actions.isEmpty())
+			return;
+		for (CustomButtonActions.CustomButtonAction action : actions) {
+			action.execute(player);
+		}
 	}
 }

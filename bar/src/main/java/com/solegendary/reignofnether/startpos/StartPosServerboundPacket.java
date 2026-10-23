@@ -69,65 +69,68 @@ public class StartPosServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-
             ServerPlayer player = ctx.get().getSender();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("GameruleServerboundPacket: Sender was null");
                 success.set(false);
                 return;
             }
-            else if ((action == StartPosAction.ENABLE || action == StartPosAction.DISABLE) &&
-                    !player.hasPermissions(4)) {
-                ReignOfNether.LOGGER.warn("GameruleServerboundPacket: Tried to process packet from " + player.getName() + " with insufficient permissions");
-                success.set(false);
-                return;
-            }
-            // a player reserves, frees and readies only their own slot, whatever name the packet carried
-            this.playerName = player.getName().getString();
-            if (!com.solegendary.reignofnether.network.PacketAuth.allow(player, "start_pos", 10, 20))
-                return;
-
-            switch (action) {
-                case RESERVE -> {
-                    if (StartPosServerEvents.isStartingGame())
-                        return;
-                    // the lobby greys preview factions out; a modified client still mustn't reserve one
-                    if (faction.preview)
-                        return;
-                    for (StartPos startPos : StartPosServerEvents.startPoses) {
-                        if (startPos.pos.equals(blockPos) && startPos.enabled) {
-                            startPos.reset();
-                            startPos.faction = faction;
-                            startPos.playerName = playerName;
-                            StartPosClientboundPacket.reservePos(blockPos, faction, playerName);
-                        } else if (startPos.playerName.equals(playerName)) {
-                            startPos.reset();
-                        }
-                    }
-                    StartPosServerEvents.setPlayerReady(playerName, false);
-                }
-                case UNRESERVE -> {
-                    if (StartPosServerEvents.isStartingGame())
-                        return;
-                    for (StartPos startPos : StartPosServerEvents.startPoses) {
-                        // your own slot only (an op may still clear anyone's, e.g. an absent player's)
-                        if (startPos.pos.equals(blockPos)
-                                && (playerName.equals(startPos.playerName) || player.hasPermissions(4))) {
-                            startPos.reset();
-                            StartPosClientboundPacket.unreservePos(blockPos);
-                            break;
-                        }
-                    }
-                    StartPosServerEvents.setPlayerReady(playerName, false);
-                }
-                case PLAYER_READY -> StartPosServerEvents.setPlayerReady(playerName, true);
-                case PLAYER_UNREADY -> StartPosServerEvents.setPlayerReady(playerName, false);
-                case ENABLE -> StartPosServerEvents.setPosEnabled(blockPos, true);
-                case DISABLE -> StartPosServerEvents.setPosEnabled(blockPos, false);
-            }
-            success.set(true);
+            success.set(accept(player));
         });
         ctx.get().setPacketHandled(true);
         return success.get();
+    }
+
+    /** What the server does with this packet from {@code player} (the network handler's body, callable by game tests). */
+    public boolean accept(ServerPlayer player) {
+        if ((action == StartPosAction.ENABLE || action == StartPosAction.DISABLE) &&
+                !player.hasPermissions(4)) {
+            ReignOfNether.LOGGER.warn("GameruleServerboundPacket: Tried to process packet from " + player.getName() + " with insufficient permissions");
+            return false;
+        }
+        // a player reserves, frees and readies only their own slot, whatever name the packet carried
+        this.playerName = player.getName().getString();
+        if (!com.solegendary.reignofnether.network.PacketAuth.allow(player, "start_pos", 10, 20))
+            return false;
+
+        switch (action) {
+            case RESERVE -> {
+                if (StartPosServerEvents.isStartingGame())
+                    return false;
+                // the lobby greys preview factions out; a modified client still mustn't reserve one
+                if (faction.preview)
+                    return false;
+                for (StartPos startPos : StartPosServerEvents.startPoses) {
+                    if (startPos.pos.equals(blockPos) && startPos.enabled) {
+                        startPos.reset();
+                        startPos.faction = faction;
+                        startPos.playerName = playerName;
+                        StartPosClientboundPacket.reservePos(blockPos, faction, playerName);
+                    } else if (startPos.playerName.equals(playerName)) {
+                        startPos.reset();
+                    }
+                }
+                StartPosServerEvents.setPlayerReady(playerName, false);
+            }
+            case UNRESERVE -> {
+                if (StartPosServerEvents.isStartingGame())
+                    return false;
+                for (StartPos startPos : StartPosServerEvents.startPoses) {
+                    // your own slot only (an op may still clear anyone's, e.g. an absent player's)
+                    if (startPos.pos.equals(blockPos)
+                            && (playerName.equals(startPos.playerName) || player.hasPermissions(4))) {
+                        startPos.reset();
+                        StartPosClientboundPacket.unreservePos(blockPos);
+                        break;
+                    }
+                }
+                StartPosServerEvents.setPlayerReady(playerName, false);
+            }
+            case PLAYER_READY -> StartPosServerEvents.setPlayerReady(playerName, true);
+            case PLAYER_UNREADY -> StartPosServerEvents.setPlayerReady(playerName, false);
+            case ENABLE -> StartPosServerEvents.setPosEnabled(blockPos, true);
+            case DISABLE -> StartPosServerEvents.setPosEnabled(blockPos, false);
+        }
+        return true;
     }
 }
