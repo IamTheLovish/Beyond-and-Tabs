@@ -93,6 +93,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("overview", Keybindings.overview);
         bind("idle_worker", Keybindings.idleWorker);
         bind("select_army", Keybindings.selectArmy);
+        mouse("select_army_ctrl_w", t("ctrl") + " + W");   // HudClientEvents: hardcoded Ctrl+W, BAR's army key
 
         header("h_camera");
         mouse("zoom", t("wheel") + "  /  " + k(Keybindings.zoomIn) + " " + k(Keybindings.zoomOut));
@@ -136,6 +137,11 @@ public class ControlsReferenceScreen extends Screen {
 
         header("h_build");
         bind("build", Keybindings.build);
+        bind("build_metal", Keybindings.buildMetal);
+        bind("build_energy", Keybindings.buildEnergy);
+        bind("build_defence", Keybindings.buildDefence);
+        bind("build_factory", Keybindings.buildFactory);
+        mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
         bind("rotate_ccw", Keybindings.rotateBuildingCCW);
         bind("rotate_cw", Keybindings.rotateBuildingCW);

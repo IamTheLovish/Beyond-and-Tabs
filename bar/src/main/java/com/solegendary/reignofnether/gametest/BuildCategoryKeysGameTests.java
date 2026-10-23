@@ -221,4 +221,21 @@ public class BuildCategoryKeysGameTests {
         }
         verdict(helper, problems);
     }
+
+    /** Z is the box's same-type filter only while a box drag is in progress; a Z press at any other time is the metal key. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void category_key_z_is_a_box_filter_only_during_a_drag(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        if (com.solegendary.reignofnether.unit.SmartSelect.Mods.held(false, false, false, false, true, false).sameType())
+            problems.add("Z held with no box drag must not set the same-type filter");
+        if (!com.solegendary.reignofnether.unit.SmartSelect.Mods.held(true, false, false, false, true, false).sameType())
+            problems.add("Z held during a box drag is the same-type filter");
+        if (com.solegendary.reignofnether.unit.SmartSelect.Mods.held(true, false, false, false, false, false).sameType())
+            problems.add("no Z, no filter");
+        // the other modifiers pass through either way
+        var m = com.solegendary.reignofnether.unit.SmartSelect.Mods.held(false, true, true, true, true, true);
+        if (!m.shift() || !m.ctrl() || !m.alt() || !m.idleOnly() || m.sameType())
+            problems.add("shift/ctrl/alt/space pass through, only Z is gated: " + m);
+        verdict(helper, problems);
+    }
 }
