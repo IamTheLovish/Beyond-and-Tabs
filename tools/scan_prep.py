@@ -26,6 +26,7 @@ SCANS = {
     "Rock058": "stone",
     "Ground106": "dirt (and the soil of the grass side)",
     "Grass004": "grass top (and the turf of the grass side)",
+    "Rock035": "basalt (side and end)",
 }
 
 
