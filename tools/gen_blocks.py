@@ -199,8 +199,9 @@ TARGETS = {
     "chiseled_polished_blackstone": dict(luma=0.19, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
-    "basalt_side": dict(luma=0.30, std=0.069, sat=0.05, tilt=26.0, smooth=38, pore=10),
-    "basalt_top": dict(luma=0.30, std=0.081, sat=0.06, tilt=24.0, smooth=20, pore=10),
+    # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
+    "basalt_side": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=30, pore=10, soften=0.6, toe=0.245),
+    "basalt_top": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=26, pore=10, soften=0.6, toe=0.245),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
@@ -448,6 +449,16 @@ SEED_ORDER = (
     "grass_block_side_overlay_v4",
     "grass_block_side_overlay_v5",
     "grass_block_side_overlay_v6",
+    "basalt_side_v2",
+    "basalt_side_v3",
+    "basalt_side_v4",
+    "basalt_side_v5",
+    "basalt_side_v6",
+    "basalt_top_v2",
+    "basalt_top_v3",
+    "basalt_top_v4",
+    "basalt_top_v5",
+    "basalt_top_v6",
 )
 
 
@@ -980,7 +991,8 @@ TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.
 # Round 28: the photo scans' shared-border variants (the SCAN section: SCAN_VARIANTS textures per block, none turned)
 # - appended last (SEED_ORDER rule); each takes its base texture's targets
 SCAN_VARIANT_OF = {}
-for _base in ("stone", "dirt", "grass_block_top", "grass_block_side", "grass_block_side_overlay"):
+for _base in ("stone", "dirt", "grass_block_top", "grass_block_side", "grass_block_side_overlay", "basalt_side",
+              "basalt_top"):
     for _k in range(2, 7):
         if _base == "grass_block_top" and _k == 2:
             continue                                  # grass_block_top_v2 exists since round 19
@@ -1996,6 +2008,7 @@ SCAN_DIR = os.path.join(ROOT, "tools", "scans")
 SCAN_STONE = "Rock058"     # cool grey faceted rock, iron-stained fracture edges - stone that reads as rock
 SCAN_SOIL = "Ground106"    # brown topsoil with darker damp patches and leaf litter (its leaves turned brown)
 SCAN_GRASS = "Grass004"    # a meadow, not a lawn: dense blades of mixed green, dry straw and dark gaps
+SCAN_BASALT = "Rock035"    # dark fine-grained volcanic rock with hairline fractures - basalt's side and its end
 SCAN_VARIANTS = 6
 LUMA = np.array([0.2126, 0.7152, 0.0722])
 
@@ -2193,7 +2206,19 @@ def tone_limits(alb, t):
     return np.clip(alb * (L2 / np.maximum(L, 1e-4))[..., None], 0, 1)
 
 
-SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top}
+def m_scan_basalt(F, n, end=False):
+    """Basalt (round 28): Rock035, near black in the photo, lifted to basalt's grey by the fit; the end of the column
+    is the same rock turned a quarter, so its grain does not run on from the side's."""
+    d = scan_set(SCAN_BASALT, n)
+    d["alb"] = flatten(F, d["alb"], 3.0, keep=0.35)
+    if end:
+        (alb, H), nxy = turned([d["alb"], d["H"]], d["nxy"], 1)
+        d = dict(alb=alb, H=H, nxy=nxy)
+    return d
+
+
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top,
+              "basalt_side": m_scan_basalt, "basalt_top": lambda F, n: m_scan_basalt(F, n, end=True)}
 
 
 def scan_textures(base, i, n):
@@ -2668,7 +2693,7 @@ def write_models():
         with open(os.path.join(MODEL_DIR, name + ".json"), "w") as f:
             json.dump({"parent": parent, "textures": {k: "minecraft:block/" + v for k, v in textures.items()}}, f,
                       indent=1)
-    grass, stone, dirt = ["grass_block"], ["stone"], ["dirt"]
+    grass, stone, dirt, basalt = ["grass_block"], ["stone"], ["dirt"], ["basalt"]
     for k in range(2, SCAN_VARIANTS + 1):
         model("grass_block_v%d" % k, "minecraft:block/grass_block", {
             "top": "grass_block_top_v%d" % k, "side": "grass_block_side_v%d" % k,
@@ -2678,6 +2703,9 @@ def write_models():
         grass.append("grass_block_v%d" % k)
         stone.append("stone_v%d" % k)
         dirt.append("dirt_v%d" % k)
+        model("basalt_v%d" % k, "minecraft:block/cube_column",
+              {"end": "basalt_top_v%d" % k, "side": "basalt_side_v%d" % k})
+        basalt.append("basalt_v%d" % k)
 
     def blockstate(name, variants):
         with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
@@ -2686,6 +2714,9 @@ def write_models():
     blockstate("grass_block", {"snowy=false": pick(grass), "snowy=true": {"model": "minecraft:block/grass_block_snow"}})
     blockstate("stone", {"": pick(stone)})
     blockstate("dirt", {"": pick(dirt)})
+    # basalt: vanilla's axis turns of the column, the same turn for every variant (the shared band stays shared)
+    turn = {"axis=x": {"x": 90, "y": 90}, "axis=y": {}, "axis=z": {"x": 90}}
+    blockstate("basalt", {k: [dict({"model": "minecraft:block/" + m}, **r) for m in basalt] for k, r in turn.items()})
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -2781,6 +2812,7 @@ def recipes():
         "grass_block_side": _scan_grass_side(0),
         "grass_block_side_overlay": _scan_grass_overlay(0),
         "dirt": _scan("dirt"), "stone": _scan("stone"), "cobblestone": _plain(m_cobblestone),
+        "basalt_side": _scan("basalt_side"), "basalt_top": _scan("basalt_top"),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
         "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
@@ -2886,8 +2918,6 @@ def recipes():
         "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
-        "basalt_side": lambda F, n: m_basalt_rough(F, n, False),
-        "basalt_top": lambda F, n: m_basalt_rough(F, n, True),
         "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
         "soul_sand": m_soul_sand,
         "iron_block": lambda F, n: m_plate(F, n, (0.86, 0.86, 0.87)),
@@ -2955,7 +2985,8 @@ RECIPES = recipes()
 HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
 # round 28: the photo scans at 256 too (from 512 px sources) - at 128 the scans' grain fell under a texel and the mips
 # averaged it to mush; the grass side and its overlay match the top's resolution
-HIRES |= {"stone", "dirt", "grass_block_side", "grass_block_side_overlay"} | set(SCAN_VARIANT_OF)
+HIRES |= {"stone", "dirt", "grass_block_side", "grass_block_side_overlay", "basalt_side", "basalt_top"} \
+    | set(SCAN_VARIANT_OF)
 
 
 # Round 18d: the textures whose HEIGHT channel (normal map A) stays within a shallow top band. Complementary reads the
