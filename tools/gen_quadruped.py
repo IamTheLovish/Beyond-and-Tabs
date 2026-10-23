@@ -115,7 +115,7 @@ def ridge(bone, z0, z1, w, base, rise, color, n=7, peak=0.42, tiles=None):
     for i in range(n):
         za, zb = zs[i], zs[i + 1]
         ya, yb = h(i / n), h((i + 1) / n)
-        lo, hi = min(ya, yb), max(ya, yb)
+        lo, _hi = min(ya, yb), max(ya, yb)
         wi = w * (0.8 + 0.2 * (lo - base) / rise)
         barrel(bone, (base - 1.0 + lo) / 2, 0, za, zb + 0.05, wi, lo - base + 1.0, color, k=2)
         # the slope between the columns' tops: a slab along (0, yb - ya, zb - za), laid on the step
