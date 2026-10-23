@@ -231,6 +231,19 @@ jobs:
             grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
             exit 1
           }
+      # Error Prone trial (plan 002): its warnings are in build.log; summarise them and keep the full list (never fails)
+      - name: Error Prone warnings (measurement only)
+        if: always()
+        run: |
+          python3 tools/errorprone_summary.py bar/build.log >> "$GITHUB_STEP_SUMMARY" || true
+          grep -E "\.java:[0-9]+: warning: \[" bar/build.log > bar/build/errorprone-warnings.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: errorprone-warnings
+          path: bar/build/errorprone-warnings.txt
+          if-no-files-found: ignore
+          retention-days: 3
       # the animation cost bench (bar/src/test/.../perf/AnimationCostBench, a JUnit test the build above ran): ~500
       # units' posing and drawing per frame, on the real model classes without a window - a measurement, as notices
       - name: Animation cost bench (measurement only)
