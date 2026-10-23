@@ -61,7 +61,20 @@ final class EyesCanopyScene {
     private static int slice = 0;
     private static long sliceNanos = 0, sliceCanopyNs0 = 0, sliceBodiesNs0 = 0, sliceFrames0 = 0;
     private static long sliceDrawNs0 = 0, sliceCompositeNs0 = 0;
-    private static final boolean[] SLICE_ON = { true, false, false, true };
+    private static long sliceTickNs0 = 0, sliceModelNs0 = 0, sliceCapsuleNs0 = 0, sliceTargetNs0 = 0, sliceVerts0 = 0;
+    // the cost A/B, mirrored (ABCDE EDCBA) so a drift over the run cancels: off, the whole feature, and its parts alone -
+    // the cover rays only (nothing drawn), capsules only (no model shapes), the target's bind / clear / composite only
+    private static final CanopySilhouettes.EyesVariant FULL = CanopySilhouettes.EyesVariant.FULL;
+    private static final CanopySilhouettes.EyesVariant[] SLICE_VARIANT = { null, FULL,
+            CanopySilhouettes.EyesVariant.RAYS_ONLY, CanopySilhouettes.EyesVariant.CAPSULES_ONLY,
+            CanopySilhouettes.EyesVariant.TARGET_ONLY, CanopySilhouettes.EyesVariant.TARGET_ONLY,
+            CanopySilhouettes.EyesVariant.CAPSULES_ONLY, CanopySilhouettes.EyesVariant.RAYS_ONLY, FULL, null };
+    private static final boolean[] SLICE_ON = new boolean[SLICE_VARIANT.length];
+    static {
+        for (int i = 0; i < SLICE_VARIANT.length; i++)
+            SLICE_ON[i] = SLICE_VARIANT[i] != null;
+    }
+    private static final List<List<Double>> sliceFrames = new ArrayList<>();
     private static final List<Double> frames = new ArrayList<>();
     private static int frameCursor = -1;
     private static final double[][] results = new double[SLICE_ON.length][];
@@ -133,6 +146,7 @@ final class EyesCanopyScene {
                     return false;
                 }
                 summary();
+                CanopySilhouettes.eyesVariant = FULL;
                 ReignOfNetherClientConfigs.UNIT_SILHOUETTES.set(true);
                 EyesDirector.setZoom(CLOSE_ZOOM);
                 OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(site));
@@ -323,6 +337,12 @@ final class EyesCanopyScene {
     private static void startSlice(Minecraft mc, int i) {
         slice = i;
         ReignOfNetherClientConfigs.UNIT_SILHOUETTES.set(SLICE_ON[i]);
+        CanopySilhouettes.eyesVariant = SLICE_ON[i] ? SLICE_VARIANT[i] : FULL;
+        sliceTickNs0 = CanopySilhouettes.tickNanos;
+        sliceModelNs0 = CanopySilhouettes.modelDrawNanos;
+        sliceCapsuleNs0 = CanopySilhouettes.capsuleDrawNanos;
+        sliceTargetNs0 = CanopySilhouettes.targetNanos;
+        sliceVerts0 = CanopySilhouettes.modelVertices;
         sliceNanos = System.nanoTime();
         sliceCanopyNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.CANOPY);
         sliceBodiesNs0 = FrameParts.frameSectionLifetimeNs(FrameParts.UNIT_BODIES);
@@ -354,11 +374,21 @@ final class EyesCanopyScene {
         double drawMs = (CanopySilhouettes.drawNanos - sliceDrawNs0) / 1e6 / n;
         double compositeMs = (CanopySilhouettes.compositeNanos - sliceCompositeNs0) / 1e6 / n;
         results[slice] = new double[] { canopyMs, pct(ms, 0.5), pct(ms, 0.95), bodiesMs, covered };
-        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame (draw {}, composite {}), "
-                        + "unitBodies {} ms/frame, frames {}: p50 {} ms, p95 {} ms; {} units under cover, last frame {} capsules + {} models",
-                slice + 1, SLICE_ON.length, SLICE_ON[slice] ? "on" : "off", f2(canopyMs), f2(drawMs), f2(compositeMs), f2(bodiesMs),
-                ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)), covered, CanopySilhouettes.lastCapsules,
-                CanopySilhouettes.lastModels);
+        while (sliceFrames.size() <= slice)
+            sliceFrames.add(null);
+        sliceFrames.set(slice, new ArrayList<>(frames));
+        double tickMs = (CanopySilhouettes.tickNanos - sliceTickNs0) / 1e6 / n;   // cover rays, per FRAME
+        double modelMs = (CanopySilhouettes.modelDrawNanos - sliceModelNs0) / 1e6 / n;
+        double capsuleMs = (CanopySilhouettes.capsuleDrawNanos - sliceCapsuleNs0) / 1e6 / n;
+        double targetMs = (CanopySilhouettes.targetNanos - sliceTargetNs0) / 1e6 / n;
+        long verts = (CanopySilhouettes.modelVertices - sliceVerts0) / n;
+        String what = SLICE_ON[slice] ? SLICE_VARIANT[slice].name().toLowerCase() : "off";
+        ReignOfNether.LOGGER.info("[Eyes] 19_canopy slice {}/{} (silhouettes {}): canopy {} ms/frame (draw {}: target {}, models {}, "
+                        + "capsules {}; composite {}), rays {} ms/frame, unitBodies {} ms/frame, model vertices {}/frame, frames {}: "
+                        + "p50 {} ms, p95 {} ms; {} units under cover, last frame {} capsules + {} models",
+                slice + 1, SLICE_ON.length, what, f2(canopyMs), f2(drawMs), f2(targetMs), f2(modelMs), f2(capsuleMs),
+                f2(compositeMs), f2(tickMs), f2(bodiesMs), verts, ms.length, f2(pct(ms, 0.5)), f2(pct(ms, 0.95)), covered,
+                CanopySilhouettes.lastCapsules, CanopySilhouettes.lastModels);
     }
 
     private static void summary() {
@@ -369,6 +399,8 @@ final class EyesCanopyScene {
             double[] r = results[i];
             if (r == null)
                 return;
+            if (SLICE_ON[i] && SLICE_VARIANT[i] != FULL)
+                continue;   // a part alone: in the variants line below
             double[] t = SLICE_ON[i] ? on : off;
             for (int k = 0; k < 4; k++)
                 t[k] += r[k];
@@ -384,6 +416,28 @@ final class EyesCanopyScene {
                 (long) covered, String.format("%.1f", CanopySilhouettes.pxPerBlock), SectionRebuilds.renderer(),
                 com.solegendary.reignofnether.postfx.ShaderPacks.inUse() ? ", shader pack" : "",
                 f2(on[0]), f2(on[3]), f2(on[1]), f2(on[2]), f2(off[0]), f2(off[3]), f2(off[1]), f2(off[2]));
+        // every frame of a kind pooled (the slices' own p50s are noisy with ~7 frames a slice in the shader lane)
+        double[] offFrames = pooled(null);
+        double offP50 = pct(offFrames, 0.5), offP95 = pct(offFrames, 0.95);
+        StringBuilder sb = new StringBuilder();
+        for (CanopySilhouettes.EyesVariant v : CanopySilhouettes.EyesVariant.values()) {
+            double[] f = pooled(v);
+            if (f.length == 0)
+                continue;
+            sb.append(String.format(" | %s: p50 %+.1f%% p95 %+.1f%% (%d frames)", v.name().toLowerCase(),
+                    100 * (pct(f, 0.5) - offP50) / offP50, 100 * (pct(f, 0.95) - offP95) / offP95, f.length));
+        }
+        ReignOfNether.LOGGER.info("[Eyes] 19_canopy pooled vs off (p50 {} / p95 {} ms, {} frames){}", f2(offP50), f2(offP95),
+                offFrames.length, sb);
+    }
+
+    /** All frames of the slices of one variant (null: the off slices), sorted. */
+    private static double[] pooled(CanopySilhouettes.EyesVariant v) {
+        List<Double> all = new ArrayList<>();
+        for (int i = 0; i < SLICE_VARIANT.length && i < sliceFrames.size(); i++)
+            if (SLICE_VARIANT[i] == v && sliceFrames.get(i) != null)
+                all.addAll(sliceFrames.get(i));
+        return all.stream().mapToDouble(Double::doubleValue).sorted().toArray();
     }
 
     private static double pct(double[] sorted, double p) {

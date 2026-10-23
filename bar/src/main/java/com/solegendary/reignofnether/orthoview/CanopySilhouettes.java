@@ -74,8 +74,8 @@ import java.util.Map;
  * so a silhouette never gives away a hidden enemy.</li>
  * <li><b>Two looks, by size on screen.</b> A covered unit at the usual RTS zooms is a <b>capsule</b>: one camera-facing
  * quad, its rounded shape, fill and rim made by a distance field in the fragment shader (bat_silhouette_capsule), all
- * capsules in ONE draw - a few hundred vertices, nothing taken from the unit's own draw. Zoomed in, where a unit is at
- * least {@link #MODEL_MIN_PX} tall, up to {@link #MAX_MODEL} of them get their exact <b>model</b> shape instead: their
+ * capsules in ONE draw - a few hundred vertices, posed by the level's pose like an entity's, nothing taken from the
+ * unit's own draw. Zoomed in, where a unit is at least {@link #MODEL_MIN_PX} tall, up to {@link #MAX_MODEL} of them get their exact <b>model</b> shape instead: their
  * own draw is teed (LevelRendererSilhouetteMixin round LevelRenderer.renderEntity, the way vanilla tees the glowing
  * outline) into one flat-colour batch per texture. Measured on CI (eyes 19_canopy, ~45 covered units): round 1
  * redrew every covered unit through its renderer (canopy 70 ms/frame), round 2 teed every one (unitBodies 25 -> 130
@@ -145,6 +145,15 @@ public final class CanopySilhouettes {
     // counters the eyes scene reads (19_canopy): silhouettes of the last drawn frame, and our draw / composite time
     public static int lastCapsules = 0, lastModels = 0;
     public static long drawNanos = 0, compositeNanos = 0;
+    // the cost's parts (eyes 19_canopy slices): cover rays per tick, model batches, the capsule draw, target bind+clear
+    public static long tickNanos = 0, modelDrawNanos = 0, capsuleDrawNanos = 0, targetNanos = 0, modelVertices = 0;
+
+    /**
+     * Eyes 19_canopy only: which part of the feature runs, so the cost A/B can take it apart (silhouettes on in all of
+     * them). FULL is the game's behaviour; the others drop parts of it.
+     */
+    public enum EyesVariant { FULL, RAYS_ONLY, CAPSULES_ONLY, TARGET_ONLY }
+    public static EyesVariant eyesVariant = EyesVariant.FULL;
 
     // ---- settings and queries ---------------------------------------------------------------------------------------
 
@@ -213,6 +222,15 @@ public final class CanopySilhouettes {
         if (evt.phase != TickEvent.Phase.END)
             return;
         tick++;
+        long t0 = System.nanoTime();
+        try {
+            testCover();
+        } finally {
+            tickNanos += System.nanoTime() - t0;
+        }
+    }
+
+    private static void testCover() {
         ClientLevel level = MC.level;
         boolean wanted = enabled() || OrthoviewClientEvents.hideLeavesMethod == OrthoviewClientEvents.LeafHideMethod.FADE;
         if (level == null || !OrthoviewClientEvents.isEnabled() || !wanted) {
@@ -294,6 +312,8 @@ public final class CanopySilhouettes {
         capturing = null;
         if (!frameOpen || modelUnits.size() >= MAX_MODEL || !(entity instanceof LivingEntity le))
             return;
+        if (eyesVariant == EyesVariant.CAPSULES_ONLY || eyesVariant == EyesVariant.TARGET_ONLY)
+            return;
         // only units big on screen get the (costly) model shape; the others are capsules
         if (pxPerBlock <= 0f || le.getBbHeight() * pxPerBlock < MODEL_MIN_PX)
             return;
@@ -362,7 +382,7 @@ public final class CanopySilhouettes {
             discardCaptures();
             frameOpen = !failed && silhouetteShader != null && capsuleShader != null && compositeShader != null
                     && !coverUntil.isEmpty() && MC.level != null && enabled() && OrthoviewClientEvents.isEnabled()
-                    && CanopyRenderTypes.texturesReadable();
+                    && CanopyRenderTypes.texturesReadable() && eyesVariant != EyesVariant.RAYS_ONLY;
             return;
         }
         if (!frameOpen)
@@ -422,36 +442,48 @@ public final class CanopySilhouettes {
 
         for (LivingEntity e : modelUnits)
             markTiles(e, cam, pt, main, margin);
-        int capsules = buildCapsules(evt.getFrustum(), camera, cam, pt, main, margin, evt.getPoseStack().last().pose());
+        boolean targetOnly = eyesVariant == EyesVariant.TARGET_ONLY;
+        int capsules = targetOnly ? 0 : buildCapsules(evt.getFrustum(), camera, cam, pt, main, margin, evt.getPoseStack().last().pose());
+        if (targetOnly)
+            tiles.set(0);   // the bind, one tile's clear and composite: what the target costs with nothing in it
         lastCapsules = capsules;
         lastModels = modelUnits.size();
-        if ((capsules == 0 && modelUnits.isEmpty()) || tiles.isEmpty())
+        if ((capsules == 0 && modelUnits.isEmpty() && !targetOnly) || tiles.isEmpty())
             return;   // nothing, or all of it off screen (the builders are dropped by discardCaptures)
+        long tt = System.nanoTime();
         if (!prepareTarget(main))
             return;
 
         // our target: Oculus sees a non-main target bound and leaves our shaders alone (see the class comment)
         target.bindWrite(true);
         clearTiles();
+        targetNanos += System.nanoTime() - tt;
         try {
             VertexSorting sorting = RenderSystem.getVertexSorting();
+            long tm = System.nanoTime();
             for (Capture c : captures.values())
                 if (c.building) {
                     c.building = false;
                     c.type.end(c.builder, sorting);   // one draw per texture
                 }
+            long tc = System.nanoTime();
+            modelDrawNanos += tc - tm;
             if (capsules > 0) {
                 if (capFillU != null) capFillU.set(FILL_ALPHA);
                 if (capRimU != null) capRimU.set(RIM_ALPHA);
                 CanopyRenderTypes.CAPSULES.end(CAPSULES, sorting);   // every capsule in one draw
             }
+            capsuleDrawNanos += System.nanoTime() - tc;
             modelsThisFrame = !modelUnits.isEmpty();
             drawnThisFrame = true;
         } finally {
             // back to the main target, as vanilla does after its glowing-outline pass
+            long tb = System.nanoTime();
             main.bindWrite(false);
+            targetNanos += System.nanoTime() - tb;
         }
     }
+
 
     /**
      * One camera-facing quad per covered unit not shown as a model: centred on the unit, sized to its box as the RTS
@@ -741,6 +773,7 @@ public final class CanopySilhouettes {
 
         @Override
         public void endVertex() {
+            modelVertices++;
             if (delegate != null)
                 delegate.vertex(x, y, z).color(r, g, b, 255).uv(u, v).endVertex();
         }
