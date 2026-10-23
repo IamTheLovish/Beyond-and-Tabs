@@ -84,6 +84,15 @@ class LauncherBrandTest {
     }
 
     @Test
+    void helperNeverReplacesAnExistingLovishShortcut() {
+        // lovish's own desktop "lovish" shortcut starts his server (Play Beyond and Tabs.bat) - it must survive
+        String ps = LauncherBrand.helperScript(1L, Path.of("P"), Path.of("P", "i.cfg"), "x");
+        assertTrue(ps.contains("if (-not (Test-Path -LiteralPath $lnk))"), ps);
+        // only a "Beyond and Tabs" shortcut that opens THIS Prism is removed
+        assertTrue(ps.contains("$old.TargetPath -eq $exe"), ps);
+    }
+
+    @Test
     void helperWithoutAPrismPidDoesNotWait() {
         String ps = LauncherBrand.helperScript(-1L, Path.of("P"), Path.of("P", "i.cfg"), "x");
         assertFalse(ps.contains("Wait-Process"), ps);
