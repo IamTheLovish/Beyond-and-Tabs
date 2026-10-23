@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.maps.NewMatch;
 import com.solegendary.reignofnether.match.MatchPhase;
 import com.solegendary.reignofnether.match.MatchSetup;
 import com.solegendary.reignofnether.match.MatchState;
+import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
 import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
@@ -169,13 +170,16 @@ final class NewMatchCases {
                         problems.add(preset + ": start " + s.index() + " at " + start + " is still on the old arena's ground");
                 }
             }
-            // every map the lobby offers must fit its slot, at the most players a lobby seats
+            // every map the lobby offers must fit its slot, at the most sides a lobby seats
+            int[] allSeats = new int[MultiplayerLobby.MAX_SEATS];
+            for (int i = 0; i < allSeats.length; i++)
+                allSeats[i] = i;
             for (MapPreset preset : MapPreset.values())
                 if (preset.premade()) {
-                    MapLayout big = MapLayout.build(preset, new int[] { 0, 1, 2, 3, 4, 5, 6, 7 });
+                    MapLayout big = MapLayout.build(preset, allSeats);
                     if (big.radius + 8 > ArenaSlots.MAX_HALF_EXTENT)
-                        problems.add(preset + " with 8 sides is " + big.radius + " radius: wider than its slot ("
-                            + ArenaSlots.MAX_HALF_EXTENT + ")");
+                        problems.add(preset + " with " + allSeats.length + " sides is " + big.radius
+                            + " radius: wider than its slot (" + ArenaSlots.MAX_HALF_EXTENT + ")");
                 }
 
             // ---- the second new match: yet another slot
