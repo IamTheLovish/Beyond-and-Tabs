@@ -545,6 +545,23 @@ public class HudClientEvents {
             if (buildingButtons.size() >= 2) {
                 blitX += 20;
                 blitY += 6;
+                // Repeat stays with several buildings selected, as long as every one is an owned factory; one press
+                // sets all of them (mixed states -> all on). Same spot as the single-building button.
+                if (ProductionHudLogic.repeatVisible(selBuildings)) {
+                    boolean allRepeating = true;
+                    for (ProductionPlacement pp : ProductionHudLogic.repeatGroup(selBuildings))
+                        allRepeating &= pp.repeatQueue;
+                    final com.solegendary.reignofnether.building.BuildingPlacement shownForRepeat = hudSelectedPlacement;
+                    com.solegendary.reignofnether.hud.buttons.Button multiRepeat = new com.solegendary.reignofnether.hud.buttons.BooleanButton(
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue"),
+                            allRepeating,
+                            () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleRepeat(shownForRepeat.originPos),
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip"),
+                            true
+                    );
+                    multiRepeat.render(evt.getGuiGraphics(), blitX - 25, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
+                    renderedButtons.add(multiRepeat);
+                }
                 // background frame
                 hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
                     blitX - 5,
