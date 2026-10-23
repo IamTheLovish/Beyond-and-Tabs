@@ -41,6 +41,21 @@ public class BuildingValidators {
     private static final float MIN_BRIDGE_LIQUID_BLOCKS_PERCENT = 0.20f; // at least 20% of covered blocks must be liquid
     private static final float MAX_BRIDGE_LIQUID_BLOCKS_PERCENT = 0.95f; // at least 5% of covered blocks must be solid
 
+    private static boolean isFootprintLoaded(Level level, ArrayList<BuildingBlock> blocks, BlockPos origin) {
+        if (!level.hasChunkAt(origin))
+            return false;
+        if (blocks.isEmpty())
+            return true;
+        int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (BuildingBlock b : blocks) {
+            BlockPos p = b.getBlockPos();
+            minX = Math.min(minX, p.getX()); maxX = Math.max(maxX, p.getX());
+            minZ = Math.min(minZ, p.getZ()); maxZ = Math.max(maxZ, p.getZ());
+        }
+        return level.hasChunkAt(new BlockPos(minX, origin.getY(), minZ)) && level.hasChunkAt(new BlockPos(maxX, origin.getY(), minZ))
+            && level.hasChunkAt(new BlockPos(minX, origin.getY(), maxZ)) && level.hasChunkAt(new BlockPos(maxX, origin.getY(), maxZ));
+    }
+
     public static boolean isPlacementValid(Level level, Building building, BlockPos placementPos, String ownerName, Rotation rotation,
                                            boolean isDiagonalBridge, boolean isSandbox, boolean ignoreFog) {
         return getPlacementValidityError(level, building, placementPos, ownerName, rotation, isDiagonalBridge, isSandbox, ignoreFog) == null;
@@ -62,6 +77,10 @@ public class BuildingValidators {
             return "Unknown error";
 
         ArrayList<BuildingBlock> absoluteBlocks = BuildingUtils.getAbsoluteBlockData(relativeBlocks, level, originPos, rotation);
+
+        // diagnostic: ground past the loaded chunks reads as air, so say that instead of "not flat"
+        if (!isFootprintLoaded(level, absoluteBlocks, originPos))
+            return "building.reignofnether.not_loaded";
 
         // a geothermal plant taps lava: it says so first, before the ground checks (which would only say "not flat")
         if (building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
