@@ -219,6 +219,16 @@ public final class MetalPatches {
             z = dry[1];
         }
         String dim = level.dimension().location().toString();
+        // pads of patches already stamped: a neighbour 6 away shares a ring column, and re-levelling it to this
+        // patch's height would cut a step into that patch's pad (ExtractorFootprintGameTests: 2276,63,7208)
+        java.util.List<BlockPos> earlier;
+        java.util.List<BlockPos> existing = STAMPED.get(dim);
+        if (existing == null)
+            earlier = java.util.List.of();
+        else
+            synchronized (existing) {
+                earlier = new java.util.ArrayList<>(existing);
+            }
         // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
         int padY = solidTop(level, x, z);
         BlockPos centre = new BlockPos(x, padY, z);
@@ -241,6 +251,14 @@ public final class MetalPatches {
                     int bx = x + dx, bz = z + dz;
                     if (com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(bx, padY, bz))
                         continue;   // never carve a pad through a standing building
+                    boolean theirs = false;
+                    for (BlockPos o : earlier)
+                        if (Math.abs(bx - o.getX()) <= PAD_HALF && Math.abs(bz - o.getZ()) <= PAD_HALF) {
+                            theirs = true;
+                            break;
+                        }
+                    if (theirs)
+                        continue;   // an earlier patch's pad: leave it level
                     if (!wet && (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
                             || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty()))
                         continue;   // leave rivers and lakes alone (unless there is no dry ground anywhere near)
