@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.mojang.blaze3d.platform.Window;
+import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.matchstart.MatchEndClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraft.client.Minecraft;
@@ -21,6 +22,9 @@ public class ForgeGuiMixin extends Gui {
 
     private static final int RTS_CHAT_LINES = 2;
     private static final double RTS_CHAT_SCALE = 0.75;
+    // The unfocused feed fades after 6 s, not vanilla's 10: ChatComponent hides a line once (tickCount - addedTime) is 200,
+    // so the feed is drawn "this many ticks late" and every line is that much older than it is.
+    private static final int RTS_CHAT_AGE_SKIP = 80;
 
     public ForgeGuiMixin(Minecraft pMinecraft, ItemRenderer pItemRenderer) {
         super(pMinecraft, pItemRenderer);
@@ -61,6 +65,9 @@ public class ForgeGuiMixin extends Gui {
         double own = this.chat.getScale();
         double extra = slim ? Math.min(1.0, RTS_CHAT_SCALE / own) : 1.0;   // on top of the player's own chat scale
         int bottomY = event.getPosY() + OrthoviewClientEvents.CHAT_Y_OFFSET;   // where the newest line's bottom edge sits
+        // the feed rests on the command panel's top edge (the orders column is under its left half) instead of 7 px into it
+        if (slim && HudClientEvents.bottomPanelTop != Integer.MAX_VALUE)
+            bottomY = Math.min(bottomY, HudClientEvents.bottomPanelTop - 3);
         guiGraphics.pose().pushPose();
         if (slim)   // chat.render draws that bottom edge at (height - 40) in its own space, which the scale pulls up
             guiGraphics.pose().translate(event.getPosX(), bottomY - (event.getPosY()) * extra, 0.0);
@@ -79,7 +86,7 @@ public class ForgeGuiMixin extends Gui {
                 guiGraphics.enableScissor(0, bottomY - (int) Math.ceil(lineH * RTS_CHAT_LINES), window.getGuiScaledWidth(), height);
                 clipped = true;
             }
-            this.chat.render(guiGraphics, this.tickCount, mouseX, mouseY);
+            this.chat.render(guiGraphics, slim ? this.tickCount + RTS_CHAT_AGE_SKIP : this.tickCount, mouseX, mouseY);
         } finally {
             if (clipped)
                 guiGraphics.disableScissor();

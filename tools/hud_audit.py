@@ -45,24 +45,35 @@ def row(label, when, rect_or_wh):
 def elements(m):
     """[(label, when, (w, h), area)] for one version of the layout model."""
     new = hasattr(m, 'INFO_PAD_TOP')               # the L-shaped command panel and the slim info block
+    slim = hasattr(m, 'SLIM_TILE')                 # slim 18 px tiles, one status line, the side feed
+    tile = m.SLIM_TILE if slim else m.ICON_FRAME
     rows = []
     bar = m.economy_bar(SW, GROUPS)
     rows.append(row('Economy bar (metal / pop / energy)', 'always', bar))
     rows.append(row('Minimap (diamond backing)', 'always', (m.MAP_BG * 2 + R * 2, m.MAP_BG * 2 + R * 2)))
-    rows.append(row('Control groups (%d in use)' % GROUPS, 'always', (GROUPS * m.ICON_FRAME, m.ICON_FRAME)))
+    rows.append(row('Control groups (%d in use)' % GROUPS, 'always', (GROUPS * tile, tile)))
     rows.append(row('Stats strip (Allies / Enemies)', 'always', (m.STATS_STRIP_W_MAX, m.STATS_STRIP_H)))
-    rows.append(row('Helper buttons: chat, army', 'always', (m.ICON_FRAME, m.ICON_FRAME * 2)))
+    # the helper column under the help button: tile sizes only (the air between them is not counted)
+    rows.append(row('Helper buttons: chat, army', 'always', (tile, tile * 2)))
     # transient / on demand
     rects = m.declutter_scene(SW, SH, R, False, 'none', 'collapsed', False)
-    rows.append(row('Production queue (3 queued)', 'on demand', (3 * m.ICON_FRAME + 10, m.ICON_FRAME + 10)))
+    rows.append(row('Production queue (3 queued)', 'on demand', (3 * tile + 10, tile + 10)))
+    rows.append(row('Production queue (10 queued, as in the 18-12-12 clip)', 'on demand', (5 * tile + 10, 2 * tile + 10)))
     rows.append(row('Stall / waste / overflow row', 'on demand', size(rects['stall_row'])))
-    rows.append(row('Alert column: banner + 3 toasts + ticker', 'on demand', size(rects['alert_column'])))
+    # before: temp message, banner, three stacked toasts and the kill ticker in one column; after: the same column with
+    # ONE toast row (it takes the stall strip's row when that is up), and the ticker is a small feed at the side
+    # (the column's width is what it may use, which moves with the queue beside it: 200 px, the stall strip's, for both)
+    rows.append(row('Alert column: banner + toasts' + ('' if slim else ' + ticker'), 'on demand',
+                    (200, size(rects['alert_column'])[1])))
+    rows.append(row('Kill feed ticker (side, 0.75x)', 'on demand',
+                    size(rects['kill_feed']) if 'kill_feed' in rects else (0, 0)))
     if new:
         chat = (round(CHAT_WIDTH * CHAT_SCALE_AFTER), round(CHAT_LINES_AFTER * CHAT_LINE * CHAT_SCALE_AFTER))
     else:
         chat = (CHAT_WIDTH, CHAT_LINES_BEFORE * CHAT_LINE)
     rows.append(row('Announcements (chat feed)', 'on demand', chat))
-    rows.append(row('Helper buttons: idle labs, attack, idle worker, beacon', 'on demand', (m.ICON_FRAME, m.ICON_FRAME * 4)))
+    rows.append(row('Helper buttons: idle labs, attack, idle worker, beacon', 'on demand',
+                    (m.ICON_FRAME, tile * 2 + m.ICON_FRAME * 2)))   # idle labs + attack (slim); idle worker + beacon (22 px)
     hover_h = 62 + 10 * ABILITIES if new else min(102, SH // 3)
     rows.append(row('Hover card (a unit under the cursor)', 'on demand', (m.FULL_W, hover_h)))
     rows.append(row('Controls cheat-sheet (opened with ?)', 'on demand', (m.CHEAT_SHEET_MAX_W, m.CHEAT_SHEET_H)))
@@ -105,7 +116,7 @@ def totals(rows):
 def report(old, new):
     out = ['| Element | When | Before (px) | Before | After (px) | After | Saved |', '|---|---|---|---|---|---|---|']
     for (lo, when, (ow, oh), oa), (ln, _, (nw, nh), na) in zip(old, new):
-        saved = '' if oa == na else '%.0f%%' % (100.0 * (oa - na) / oa)
+        saved = '' if oa == na else ('moved' if oa == 0 else '%.0f%%' % (100.0 * (oa - na) / oa))
         out.append('| %s | %s | %dx%d | %.1f%% | %dx%d | %.1f%% | %s |' % (ln, when, ow, oh, pct(oa), nw, nh, pct(na), saved))
     ot, nt = totals(old), totals(new)
     out.append('')

@@ -262,11 +262,12 @@ prunes gone entities once a second, and matches the hovered block to the nearest
 `KillFeedServerEvents` queues a line for every unit killed by an enemy unit and every building an enemy unit brings
 down (not cancels or defeat clean-up), merges duplicates within a flush (`x3`), and every 5 ticks sends each player
 only the lines it may know about: it owns or is allied with either side, or the victim fell inside its vision
-(spectators see everything). `KillFeedClientEvents` shows up to 5 lines, newest on top, right-aligned in the alert
-column under the toasts, each name in light text - the owner's hue lightened to >= 4.5:1 contrast against the
+(spectators see everything). `KillFeedClientEvents` shows up to 5 lines, newest on top, small (0.75x, `HudLayout.FEED_SCALE`)
+and right-aligned at the side under the stats strip or table (`PlayerPanelClientEvents.feedTop`; it was in the alert column
+under the toasts, mid-screen), each name in light text - the owner's hue lightened to >= 4.5:1 contrast against the
 line's backing composited over a white world (`TextContrast`) - after a small swatch in the owner's true colour, on a
 0xC8 dark backing (lovish's dark-blue names on dark-green ground were unreadable), building kills in bold, promoted from a short queue at most
-one per 5 ticks, fading after 7 s. Names travel as translation keys.
+one per 5 ticks, fading after 4.5 s (was 7). A name too long for the 160 px column is cut with "...". Names travel as translation keys.
 
 ## LOS shading
 
@@ -356,6 +357,22 @@ text rows down the middle under the bar, the bottom panel's model portrait).
 - **RTS chat feed** (`ForgeGuiMixin`): the unfocused chat is two lines at 75% (it was four at full size), drawn with a
   pose scale and a scissor, not the `chatScale` option (setting that re-wraps every line, every frame). Typing the full
   chat is unchanged. The announcement collapse rule (`ChatDedupe`) is unchanged.
+- **Slim tiles** (`SlimTiles`, `HudLayout.SLIM_*`): the control groups, the global production queue and the helper column
+  under the help button (chat, army, idle labs, attack warning) are 18 px frames (`Button` iconSize 10 + 8, the icon 12 px
+  inside) instead of 22, the column's rows 22 px apart instead of 30. Same frame art, hotkey badge and hover light; the
+  command panel's own tiles are untouched (#140's). Empty control groups were already hidden.
+- **One status line** (`NotificationClientEvents`, `EconomyBarRenderer.stallRowY`): only the newest toast is drawn, as one
+  12 px chip with a "+1" for the one waiting under it (it was a 13 px line each, up to two, under the stall strip). While
+  the "Build speed N%" strip is up the toast is drawn IN its row for its few seconds and the strip steps aside (it keeps
+  its row and comes back); a resign-vote banner, or toasts folded to icons, keep the old stacking. Same toast rules
+  (priority, "x2" merge, `hud_toast_seconds`).
+- **Side feed** (`KillFeedClientEvents`): the kill ticker is 0.75x text at the right, under the stats strip (under the
+  table when it is open), out of the middle of the screen; it hides after 4.5 s. The chevron still opens the five-line
+  version. 0.75x is the smallest text the HUD draws anywhere (hotkey badges, chat feed, tab labels) and the floor for new
+  HUD text.
+- **Chat feed, placed and quicker** (`ForgeGuiMixin`): the two-line feed rests on the command panel's top edge instead of
+  7 px into the orders column, and a line fades after 6 s (vanilla 10): the feed is drawn 80 ticks "late" so each line is
+  older than it is. The announcement collapse (`ChatDedupe`: "x2" for a repeated "has fielded...") is unchanged.
 - **Audit** (`tools/hud_audit.py`, GUI scale 3 on 1080p, the sizes `tools/hud_layout.py` asserts; typical case = one unit
   with two abilities, five control groups, the default collapsed panels):
 
@@ -363,14 +380,16 @@ text rows down the middle under the bar, the bottom panel's model portrait).
 |---|---|---|---|---|---|---|
 | Economy bar (metal / pop / energy) | always | 440x35 | 6.7% | 440x29 | 5.5% | 17% |
 | Minimap (diamond backing) | always | 132x132 | 7.6% | 132x132 | 7.6% |  |
-| Control groups (5 in use) | always | 110x22 | 1.1% | 110x22 | 1.1% |  |
+| Control groups (5 in use) | always | 110x22 | 1.1% | 90x18 | 0.7% | 33% |
 | Stats strip (Allies / Enemies) | always | 160x11 | 0.8% | 160x11 | 0.8% |  |
-| Helper buttons: chat, army | always | 22x44 | 0.4% | 22x44 | 0.4% |  |
-| Production queue (3 queued) | on demand | 76x32 | 1.1% | 76x32 | 1.1% |  |
+| Helper buttons: chat, army | always | 22x44 | 0.4% | 18x36 | 0.3% | 33% |
+| Production queue (3 queued) | on demand | 76x32 | 1.1% | 64x28 | 0.8% | 26% |
+| Production queue (10 queued, as in the 18-12-12 clip) | on demand | 120x54 | 2.8% | 100x46 | 2.0% | 29% |
 | Stall / waste / overflow row | on demand | 200x12 | 1.0% | 200x12 | 1.0% |  |
-| Alert column: banner + 3 toasts + ticker | on demand | 192x82 | 6.8% | 192x82 | 6.8% |  |
+| Alert column: banner + toasts | on demand | 200x82 | 7.1% | 200x45 | 3.9% | 45% |
+| Kill feed ticker (side, 0.75x) | on demand | 0x0 | 0.0% | 160x9 | 0.6% | moved |
 | Announcements (chat feed) | on demand | 320x36 | 5.0% | 240x14 | 1.5% | 71% |
-| Helper buttons: idle labs, attack, idle worker, beacon | on demand | 22x88 | 0.8% | 22x88 | 0.8% |  |
+| Helper buttons: idle labs, attack, idle worker, beacon | on demand | 22x88 | 0.8% | 22x80 | 0.8% | 9% |
 | Hover card (a unit under the cursor) | on demand | 128x102 | 5.7% | 128x82 | 4.6% | 20% |
 | Controls cheat-sheet (opened with ?) | on demand | 180x96 | 7.5% | 180x96 | 7.5% |  |
 | Command panel, one unit: orders column | selection | 143x102 | 6.3% | 143x102 | 6.3% |  |
@@ -380,25 +399,26 @@ text rows down the middle under the bar, the bottom panel's model portrait).
 
 | Total HUD footprint | Before | After | Saved |
 |---|---|---|---|
-| Nothing selected (always-on elements) | 16.5% | 15.3% | 7% |
-| One unit selected | 33.3% | 26.9% | 19% |
-| Multi-selection | 36.3% | 31.4% | 13% |
+| Nothing selected (always-on elements) | 16.5% | 14.8% | 10% |
+| One unit selected | 33.3% | 26.5% | 21% |
+| Multi-selection | 36.3% | 30.9% | 15% |
 
 
-### Proposals for lovish (not built), ranked by space saved at scale 3 on 1080p
+### Bigger options for lovish (not built), ranked by space saved at scale 3 on 1080p
 
-1. **One slim status line under the bar** (about 2% of the screen typically, up to 5.8% in a busy fight): the Build
-   speed / wasting / overflow row, the two toasts and the kill ticker are up to four stacked rows in the middle of the
-   screen; make them one 12 px line that shows the most urgent thing and cycles (click or hover for the list).
-2. **Smaller default minimap** (2.5%, always on): the 132 x 132 backing is the biggest single element; radius 60 -> 48 gives
+Done in this pass, off the earlier list: the slim status line (toasts + stall strip + side feed) and the 18 px tiles for
+the control groups, queue and helper column. What is left, biggest first:
+
+1. **Smaller default minimap** (2.5%, always on): the 132 x 132 backing is the biggest single element; radius 60 -> 48 gives
    108 x 108, M still enlarges it. (A taste call: the map is how a BAR player reads the game.)
-3. **Economy bar folded by default** (1.1%): the existing chevron's one-row mode (22 px: amount / storage, net, a 2 px fill
+2. **A three-step HUD key** (1.7% at rest, 2.5% while producing): full -> slim (the stats strip, control groups, helper column
+   and queue appear only when they have something to say) -> clean (today's `=` view).
+3. **Merge panels** (about 1.1% always, 1.7% with every helper showing): fold the Allies / Enemies strip into the economy
+   bar's population block (0.8%) and move the chat / army / idle-labs / attack buttons onto the minimap's frame, where the
+   idle-worker cycler already lives.
+4. **Economy bar folded by default** (1.1%): the existing chevron's one-row mode (22 px: amount / storage, net, a 2 px fill
    line; income and expense in the tooltip), expanding itself while a stall / waste / overflow line is up.
-4. **A three-step HUD key** (about 2.7% at rest): full -> slim (stats strip, helper column and queue appear only when they
-   have something to say) -> clean (today's `=` view).
-5. **Compact tiles for the top-left cluster and the helper column** (about 0.6%): control groups, the production queue
-   and the five right-edge buttons at 18 px once #140's `Button.compactTiles` is merged; a follow-up of a few lines.
-   Not done here to stay out of #140's way.
+5. **One-line chat feed** (0.7%): the feed is two lines now; one line, newest only.
 
 ## Windmill sails
 

@@ -11,12 +11,15 @@ Mirrors, function for function:
   hud/playerdisplay/PlayerPanelClientEvents.java   the stats table (clipped above the minimap) / its collapsed strip
   hud/playerdisplay/ObserverBarClientEvents.java   the spectator observer bar
   hud/HudPanels.java              the chevrons that fold each panel, clean view
-  hud/NotificationClientEvents.java, KillFeedClientEvents.java, player/ResignVoteClientEvents.java  the alert stack
+  hud/NotificationClientEvents.java, player/ResignVoteClientEvents.java  the alert column; KillFeedClientEvents.java the side feed
+  hud/SlimTiles.java              the 18 px tiles (control groups, production queue, helper column)
   minimap/MinimapClientEvents.java  the diamond / square map geometry
 
 Change a constant in the Java, change it here. Run: python3 tools/hud_layout.py (exit 1 on any overlap).
-The worst case is modelled everywhere: ten control groups, a two-row production queue, a stall warning, a danger
-banner, a resign vote, three toasts, five kill-feed lines, a 16-player roster, every helper button showing.
+The worst case is modelled everywhere: ten control groups, a two-row production queue (18 px slim tiles), a stall
+warning, a danger banner, a resign vote, a toast row (one status line: the newest toast, drawn over the stall strip's
+row when that is up), five side-feed lines (0.75x kill feed under the stats table), a 16-player roster, every helper
+button showing.
 
 Clearance (design/hud.md, "Human-POV audit"): with the default collapsed panels, at 1920x1080 GUI scale 2 and 3 no
 permanent HUD element may enter the playfield centre - the ellipse inscribed in the central 70% x 70% of the screen
