@@ -74,6 +74,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ECONOMY_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_COMMAND_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_MINIMAP_LARGE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_MINIMAP_SIZE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_OBSERVER_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
@@ -197,6 +198,8 @@ public class ReignOfNetherClientConfigs {
         HUD_COMMAND_COMPACT = BUILDER.define("hud_command_compact", false);
         BUILDER.comment("HUD: the large minimap (M) was open when the game closed");
         HUD_MINIMAP_LARGE = BUILDER.define("hud_minimap_large", false);
+        BUILDER.comment("HUD: minimap size when the game closed: 0 small, 1 large, 2 expanded (0 with the old hud_minimap_large=true means 1)");
+        HUD_MINIMAP_SIZE = BUILDER.defineInRange("hud_minimap_size", 0, 0, 2);
         BUILDER.comment("HUD: the spectator observer bar (income, army, units, tier, powers per player) while spectating");
         HUD_OBSERVER_BAR = BUILDER.define("hud_observer_bar", true);
         BUILDER.comment("HUD: seconds an alert toast stays up before it fades, 1-10");
