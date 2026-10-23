@@ -77,6 +77,12 @@ public class CommanderKeyGameTests {
                     // the Villager's Call to Arms is drawn on hotkey 1 (HudClientEvents)
                     boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
                     claim.accept(callToArms ? Keybindings.hotkey1 : keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
+                    // the commander is a builder: Z / X / C / V open BAR's build lists while it is selected, so an ability
+                    // there never fires (orders, stockpiles and Call to Arms sharing them is by design, see Keybindings)
+                    if (!callToArms)
+                        for (Keybinding cat : Keybindings.buildCategoryKeys())
+                            if (keys.get(i).getKey() == cat.getDefaultKey() || keys.get(i).getAliasKey() == cat.getDefaultKey())
+                                clashes.add("ability " + list.get(i).getClass().getSimpleName() + " is on the build-list key " + cat.buttonLabel);
                 }
                 var faction = Factions.getFaction(unit);
                 if (faction == null || faction.getBuildHotkeys().isEmpty())

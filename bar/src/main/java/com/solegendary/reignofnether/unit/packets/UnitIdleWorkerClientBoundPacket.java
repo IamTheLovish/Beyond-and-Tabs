@@ -59,6 +59,15 @@ public class UnitIdleWorkerClientBoundPacket {
         return entity instanceof WorkerUnit wu && !CommanderServerEvents.isCommander(entity) && WorkerUnit.isIdle(wu);
     }
 
+    /**
+     * "Select idle builders" in the typed command bar (client side, where the commander is known by its translated name
+     * as well as by its tag): the same rule as the button, so the voice/typed group never pulls the commander in either.
+     */
+    public static boolean isSelectableIdleBuilder(LivingEntity entity) {
+        return entity instanceof WorkerUnit && entity instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+            && !CommanderServerEvents.isCommander(entity) && !CommanderServerEvents.looksLikeCommander(entity) && u.isIdle();
+    }
+
     // packet-handler functions
     public UnitIdleWorkerClientBoundPacket(
             int[] oldUnitIds

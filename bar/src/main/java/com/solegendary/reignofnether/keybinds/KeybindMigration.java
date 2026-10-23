@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 1;
+    public static final int LAYOUT_VERSION = 2;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -59,7 +59,10 @@ public final class KeybindMigration {
         new Stale(1, "key.reignofnether.hotkey_5", GLFW.GLFW_KEY_D, "Return resources D -> ; (D pans right)"),
         new Stale(1, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_Z, "Build slot 8 Z -> . (Z is ability slot 2)"),
         new Stale(1, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_X, "Build slot 9 X -> , (X is Attack)"),
-        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)")
+        new Stale(1, "key.reignofnether.open_shop", GLFW.GLFW_KEY_S, "Open shop S -> Space (S pans down)"),
+        // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layout 1 forgot the row,
+        // so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
+        new Stale(2, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
     );
 
     private KeybindMigration() { }
