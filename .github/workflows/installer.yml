@@ -52,7 +52,7 @@ jobs:
           else
             gh release edit installer --repo "$GITHUB_REPOSITORY" --notes "$notes"
           fi
-          gh release upload installer BeyondAndTabs-Setup.exe --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload installer BeyondAndTabs-Setup.exe "installer/Install Beyond and Tabs.cmd" --repo "$GITHUB_REPOSITORY" --clobber
 
   # the Windows one-liner (installer/install.ps1), run for real on a clean Windows machine: portable Prism is fetched,
   # the instance carries the cat and the pack updater (lovish, Oct 23: copy-paste setup that works for everyone)
