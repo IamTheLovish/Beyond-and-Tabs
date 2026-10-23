@@ -499,16 +499,24 @@ func installBrand(prismDir string) (string, error) {
 // "Beyond and Tabs" ones from earlier installers.
 func shortcutScript(prismExe, prismDir, icoPath string) string {
 	return `
+$exe = '` + prismExe + `'
 $ws = New-Object -ComObject WScript.Shell
 foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'))) {
-  Remove-Item -LiteralPath (Join-Path $dir '` + appName + `.lnk') -ErrorAction SilentlyContinue
-  $s = $ws.CreateShortcut((Join-Path $dir '` + shortcutName + `.lnk'))
-  $s.TargetPath = '` + prismExe + `'
-  $s.Arguments = '-l "` + instanceName + `"'
-  $s.WorkingDirectory = '` + prismDir + `'
-  $s.IconLocation = '` + icoPath + `,0'
-  $s.Description = 'Play ` + appName + `'
-  $s.Save()
+  $lnk = Join-Path $dir '` + shortcutName + `.lnk'
+  if ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe)) {
+    $s = $ws.CreateShortcut($lnk)
+    $s.TargetPath = $exe
+    $s.Arguments = '-l "` + instanceName + `"'
+    $s.WorkingDirectory = '` + prismDir + `'
+    $s.IconLocation = '` + icoPath + `,0'
+    $s.Description = 'Play ` + appName + `'
+    $s.Save()
+  }
+  $oldPath = Join-Path $dir '` + appName + `.lnk'
+  if (Test-Path -LiteralPath $oldPath) {
+    $old = $ws.CreateShortcut($oldPath)
+    if ($old.TargetPath -eq $exe) { Remove-Item -LiteralPath $oldPath -ErrorAction SilentlyContinue }
+  }
 }`
 }
 
