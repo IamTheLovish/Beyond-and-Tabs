@@ -32,6 +32,7 @@ import com.solegendary.reignofnether.hud.playerdisplay.PlayerDisplayClientEvents
 import com.solegendary.reignofnether.items.ItemClientEvents;
 import com.solegendary.reignofnether.items.ItemShopMenu;
 import com.solegendary.reignofnether.items.UnitInventory;
+import com.solegendary.reignofnether.keybinds.BuildCategoryKeys;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
@@ -2253,6 +2254,15 @@ public class HudClientEvents {
         // with a building ghost out, [ and ] rotate it (BuildingClientEvents) - the build card's "[" slot stays quiet
         if (com.solegendary.reignofnether.building.BuildingClientEvents.isGhostRotateKey(key))
             return;
+        // BAR's Z / X / C / V build lists win over the card's own buttons on those keys while a builder is selected
+        if (onBuildCategoryKey(key))
+            return;
+        // BAR's Ctrl+W: select the whole army ("-" stays the card's own key for it)
+        if (key == GLFW.GLFW_KEY_W && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
+                && OrthoviewClientEvents.isEnabled()) {
+            com.solegendary.reignofnether.hud.buttons.HelperButtons.selectWholeArmy();
+            return;
+        }
         boolean cardKey = isCardKey(key);
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
@@ -2264,6 +2274,66 @@ public class HudClientEvents {
         // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
         if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
+    }
+
+    private static final BuildCategoryKeys.Cycle buildCycle =
+        new BuildCategoryKeys.Cycle();
+
+    private static BuildCategoryKeys.Category buildCategoryOf(int key) {
+        if (Keybindings.buildMetal.matches(key)) return BuildCategoryKeys.Category.METAL;
+        if (Keybindings.buildEnergy.matches(key)) return BuildCategoryKeys.Category.ENERGY;
+        if (Keybindings.buildDefence.matches(key)) return BuildCategoryKeys.Category.DEFENCE;
+        if (Keybindings.buildFactory.matches(key)) return BuildCategoryKeys.Category.FACTORY;
+        return null;
+    }
+
+    /**
+     * BAR's build-category keys (keybinds/BuildCategoryKeys): with a builder (or the commander) selected, Z / X / C / V
+     * pick the first building of their list the builder can build now, and each further press of the same key the
+     * next, wrapping. Shift+key is the same list: Shift only changes how the click places it (queued). Returns true
+     * when the key was used; false (so Z / X / C / V keep their old meaning) with no builder selected, with Ctrl or Alt
+     * held, or when the key's list is empty for this builder.
+     */
+    private static boolean onBuildCategoryKey(int key) {
+        var category = buildCategoryOf(key);
+        if (category == null || !OrthoviewClientEvents.isEnabled())
+            return false;
+        boolean builder = false;
+        for (LivingEntity le : getSelectedUnits())
+            if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) {
+                builder = true;
+                break;
+            }
+        boolean ctrlOrAlt = Keybindings.ctrlMod.isDown() || Keybindings.altMod.isDown();
+        if (!builder || ctrlOrAlt)
+            return false;
+        if (com.solegendary.reignofnether.building.BuildingClientEvents.getBuildingToPlace() == null)
+            buildCycle.reset();   // the last pick was placed or dropped: the next press starts the list again
+        java.util.Map<String, com.solegendary.reignofnether.building.BuildingPlaceButton> byPath = new java.util.LinkedHashMap<>();
+        java.util.Set<String> onKey = new java.util.HashSet<>();
+        for (Button b : cardButtons) {
+            if (!(b instanceof com.solegendary.reignofnether.building.BuildingPlaceButton pb) || pb.building == null
+                    || (pb.isHidden != null && pb.isHidden.get()) || (pb.isEnabled != null && !pb.isEnabled.get()))
+                continue;
+            net.minecraft.resources.ResourceLocation rl =
+                com.solegendary.reignofnether.api.ReignOfNetherRegistries.BUILDING.getKey(pb.building);
+            if (rl == null)
+                continue;
+            byPath.putIfAbsent(rl.getPath(), pb);
+            if (pb.hotkey != null && pb.hotkey.matches(key))
+                onKey.add(rl.getPath());
+        }
+        java.util.List<String> list =
+            BuildCategoryKeys.listFor(category, byPath.keySet(), onKey);
+        if (!BuildCategoryKeys.claimsKey(builder, ctrlOrAlt, list))
+            return false;
+        String pick = buildCycle.press(category, list);
+        if (pick == null)
+            return false;
+        if (MC.player != null)
+            MC.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
+        byPath.get(pick).onLeftClick.run();
+        return true;
     }
 
     /** True when a button on the selected unit's / building's card has this key (primary or alias). */

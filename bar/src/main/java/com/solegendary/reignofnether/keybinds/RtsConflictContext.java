@@ -16,7 +16,10 @@ public enum RtsConflictContext implements IKeyConflictContext {
     BUILD_GHOST,
     // HUD panel toggles that share a key with a command-card slot (the stats table on I, ability slot 8): the card's
     // button wins while it shows (HudClientEvents.isCardKey), so the overlap is intentional
-    HUD_PANEL;
+    HUD_PANEL,
+    // BAR's build-category keys Z / X / C / V (BuildCategoryKeys): while a builder is selected they win over the ability
+    // and order slots on the same keys (HudClientEvents.onBuildCategoryKey), so the overlap is intentional
+    BUILDER;
 
     @Override
     public boolean isActive() {
