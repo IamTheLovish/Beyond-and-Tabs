@@ -59,8 +59,8 @@ instance of the variable font). Details: `design/lobby-backdrop.md`.
 ## Block textures: photo scans (CC0)
 
 Most of the realistic block pack (`resourcepacks/BeyondAndTabs-Realistic`, built by `tools/gen_blocks.py`) is
-original and procedurally generated. Since Oct 22 2026 (lovish's decision), **stone, dirt and the grass block** (top,
-side and side overlay, and their variants) are built from photo-scanned materials by **ambientCG**
+original and procedurally generated. Since Oct 22 2026 (lovish's decision), **stone, dirt, the grass block** (top,
+side and side overlay) **and basalt**, with their variants, are built from photo-scanned materials by **ambientCG**
 (https://ambientcg.com), released under **CC0 1.0 Universal** (public domain dedication; ambientcg.com/license):
 
 | ambientCG asset | becomes |
@@ -68,6 +68,7 @@ side and side overlay, and their variants) are built from photo-scanned material
 | Rock058 | stone |
 | Ground106 | dirt, and the soil of the grass block's side |
 | Grass004 | the grass block's top, and the blade tones of its side's turf |
+| Rock035 | basalt (side and end) |
 
 CC0 asks for no attribution; we credit the source anyway. `tools/scan_prep.py` makes 512 px copies of the colour,
 normal and displacement maps (downloaded Oct 22 2026, 1K JPG sets) in `tools/scans/`; `tools/gen_blocks.py` fits
