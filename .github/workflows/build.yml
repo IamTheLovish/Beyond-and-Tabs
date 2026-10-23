@@ -66,6 +66,7 @@ jobs:
         run: |
           python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
           python3 tools/check_guards.py
+          python3 tools/check_server_client_imports.py
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
           python3 tools/check_sail_hubs.py

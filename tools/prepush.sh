@@ -17,7 +17,8 @@ run "preflight (design sheets)"   python3 tools/preflight.py --allow-unverified
 run "generated code matches"      bash -c 'python3 tools/gen_java.py && git diff --exit-code engine/src/main/java/dev/beyondtabs/engine/gen'
 run "check_java"                  bash -c "python3 tools/check_java.py \$(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')"
 run "check_guards"                python3 tools/check_guards.py
-run "balance_audit"               python3 tools/balance_audit.py
+run "server client imports"       python3 tools/check_server_client_imports.py
+run "balance_audit"              python3 tools/balance_audit.py
 run "check_building_icons"        python3 tools/check_building_icons.py
 run "check_sail_hubs"             python3 tools/check_sail_hubs.py
 run "check_parts"                 python3 tools/check_parts.py
