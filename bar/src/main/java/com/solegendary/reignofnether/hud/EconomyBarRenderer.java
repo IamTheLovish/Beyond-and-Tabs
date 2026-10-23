@@ -51,6 +51,12 @@ public final class EconomyBarRenderer {
 
     public record Layout(int left, int right, int bottom) { }
 
+    /**
+     * Top of the "Build speed N%" strip this frame, or -1 when there is none: the status line's one row. A toast is
+     * drawn in it while one is up (NotificationClientEvents.coversStallRow) instead of stacking under it.
+     */
+    static int stallRowY = -1;
+
     // where renderResource drew the metal [0] and energy [1] bars this frame (the economy-bar sliders hang on them)
     private static final com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom[] lastBar =
         new com.solegendary.reignofnether.resources.EconomySliderClientEvents.BarGeom[2];
@@ -98,6 +104,8 @@ public final class EconomyBarRenderer {
                                 int screenWidth, int mouseX, int mouseY, List<RectZone> zones, int reservedLeft) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
+        stallRowY = -1;
+        stallRowY = -1;
         int panelW = Math.max(PANEL_W_MIN, Math.min(PANEL_W_MAX, (screenWidth - 200 - POP_W) / 2));
         int totalW = panelW * 2 + POP_W;
         int left = screenWidth / 2 - totalW / 2;
@@ -166,8 +174,13 @@ public final class EconomyBarRenderer {
                 + (short_ == EconomyWarning.Pool.UNNAMED ? "" : "  -  short on " + (short_ == EconomyWarning.Pool.METAL ? "metal" : "energy"));
             int w = font.width(stallStr) + 10;
             int sx = screenWidth / 2 - w / 2;
-            gg.fill(sx, bottom, sx + w, bottom + 12, 0xC0401010);
-            gg.drawString(font, stallStr, sx + 5, bottom + 2, eco.stall < 0.5f ? 0xFF6A6A : 0xFFD24A);
+            stallRowY = bottom;
+            // one status line: while a toast is up it is drawn in this row instead (NotificationClientEvents), so the
+            // strip steps aside for those few seconds - the row, and the zone, stay
+            if (!NotificationClientEvents.coversStallRow()) {
+                gg.fill(sx, bottom, sx + w, bottom + 12, 0xC0401010);
+                gg.drawString(font, stallStr, sx + 5, bottom + 2, eco.stall < 0.5f ? 0xFF6A6A : 0xFFD24A);
+            }
             zones.add(RectZone.getZoneByLW(sx, bottom, w, 12));
             bottom += 12;
         }

@@ -41,14 +41,23 @@ MAP_CORNER, MAP_BG = 10, 6
 SQUARE_SCALE = 1.2
 MAP_GAP = 4
 GRID_STRIDE, GRID_COLS, GRID_PAD = 28, 5, 12
-RIGHT_COL_X = 28
+RIGHT_COL_X = 28                                        # the help / diplomacy button (22 px)
 RIGHT_COL_TOP = 40
-RIGHT_COL_STEP, RIGHT_COL_STEP_TIGHT, RIGHT_COL_COUNT = 30, 24, 5
+RIGHT_COL_COUNT = 5
+# slim tiles (HudLayout.SLIM_*, hud/SlimTiles.java): control groups, the production queue and the helper column under the
+# help button are 18 px frames (Oct 22, lovish: "a lot of things are taking up space in the interface")
+SLIM_TILE, SLIM_ICON, SLIM_IMAGE = 18, 10, 12
+SLIM_COL_RIGHT = 6
+SLIM_COL_TOP = RIGHT_COL_TOP + ICON_FRAME + 2
+SLIM_COL_STEP, SLIM_COL_STEP_TIGHT = 22, 20
+SLIM_QUEUE_GAP = 4
 UNIT_CARD_MIN_W = 70
 STATS_TOP, STATS_RIGHT_MARGIN, STATS_PANEL_W, STATS_ROW_H = 32, 60, 206, 11   # 32: under the 28 px bar, was 38
 STATS_STRIP_W_MAX, STATS_STRIP_H = 160, 11
 HELP_BUTTON = 12
 OBS_X, OBS_BOTTOM, OBS_CELL_H, OBS_CELL_W_MIN, OBS_CELL_W_MAX, OBS_MAX_PER_ROW = 4, 4, 24, 52, 84, 8
+FEED_SCALE, FEED_LINE_H, FEED_MAX_W, FEED_MAX_LINES = 0.75, 10, 160, 5   # HudLayout: the side feed (kill ticker); 0.75 = the smallest HUD text
+STATUS_H = 12                                           # NotificationClientEvents.STATUS_H: the one-row status line
 CHEVRON = 9                                             # HudPanels.CHEVRON
 ONE_LINE_H = 15                                         # UnitInfoCard.ONE_LINE_H
 CHEAT_SHEET_X, CHEAT_SHEET_MAX_W, CHEAT_SHEET_H = 4, 180, 96   # HoverCards' controls cheat-sheet
@@ -110,12 +119,16 @@ def unit_card_width(card_x, limit, preferred):
 
 
 def right_column_step(map_top):
-    bottom = RIGHT_COL_TOP + RIGHT_COL_STEP * (RIGHT_COL_COUNT - 1) + ICON_FRAME
-    return RIGHT_COL_STEP if bottom <= map_top - MAP_GAP else RIGHT_COL_STEP_TIGHT
+    bottom = SLIM_COL_TOP + SLIM_COL_STEP * (RIGHT_COL_COUNT - 2) + SLIM_TILE
+    return SLIM_COL_STEP if bottom <= map_top - MAP_GAP else SLIM_COL_STEP_TIGHT
 
 
 def right_column_y(i, step):
-    return RIGHT_COL_TOP + step * i
+    return RIGHT_COL_TOP if i == 0 else SLIM_COL_TOP + step * (i - 1)
+
+
+def slim_column_x(sw):
+    return sw - SLIM_COL_RIGHT - SLIM_TILE
 
 
 def stats_top(bar_left, bar_right, bar_bottom, x, w):
@@ -157,7 +170,7 @@ def economy_bar(sw, ctrl_groups, compact=False):
     panel_w = max(ECO_W_MIN, min(ECO_W_MAX, (sw - 200 - ECO_POP_W) // 2))
     total_w = panel_w * 2 + ECO_POP_W
     left = sw // 2 - total_w // 2
-    reserved = ctrl_groups * ICON_FRAME + 4 if ctrl_groups else 0
+    reserved = ctrl_groups * SLIM_TILE + 4 if ctrl_groups else 0
     if left < reserved:
         left = reserved
         room = sw - 40 - left
@@ -237,7 +250,12 @@ def alert_column(sw, bar, panel_left, queue_right, map_limit=10 ** 9):
     return left, right
 
 
-def alert_stack(bar_bottom, under_queue, temp_msg, vote, toasts, kills, bottom_panel_top):
+def alert_stack(bar_bottom, under_queue, temp_msg, vote, toast):
+    """
+    The alert column: the red temp message, the resign-vote banner, then ONE status row (the newest toast; it is drawn
+    over the economy bar's stall strip when that is up, so this is the worst case with a banner, where it cannot be).
+    The kill feed is not in it any more: it is a small feed at the side (kill_feed).
+    """
     alert_bottom = bar_bottom + 3
     if under_queue is not None:
         alert_bottom = max(alert_bottom, under_queue + 4)
@@ -245,15 +263,21 @@ def alert_stack(bar_bottom, under_queue, temp_msg, vote, toasts, kills, bottom_p
     if temp_msg:
         alert_bottom += 14
     banner = 15 if vote else 0
-    toast_h = banner + toasts * 13 + (2 if (banner or toasts) else 0)
-    y = alert_bottom + 2 + toast_h
-    bottom = y
-    for _ in range(kills):
-        if y + 10 > bottom_panel_top - 2:
-            break
-        bottom = y + 10
-        y += 12
-    return top, max(bottom, alert_bottom + 2 + toast_h)
+    toast_h = banner + (STATUS_H if toast else 0) + (2 if (banner or toast) else 0)
+    return top, alert_bottom + 2 + toast_h
+
+
+def kill_feed(sw, sh, r, square, top, bottom_panel_top, lines):
+    """KillFeedClientEvents: lines of 0.75x text, 10 px apart, right edge at the stats strip's, under the strip / table."""
+    limit = min(bottom_panel_top, minimap_top(sh, r, square))
+    n, y = 0, top
+    while n < lines and y + FEED_LINE_H <= limit - 2:
+        n += 1
+        y += FEED_LINE_H
+    if n == 0:
+        return None
+    x2 = sw - STATS_RIGHT_MARGIN
+    return (x2 - FEED_MAX_W, top, x2, top + (n - 1) * FEED_LINE_H + round(12 * FEED_SCALE))
 
 
 # ---- geometry helpers ---------------------------------------------------------------------------------------------
@@ -273,6 +297,10 @@ def tile(x, y):
     return (x, y, x + ICON_FRAME, y + ICON_FRAME)
 
 
+def slim_tile(x, y):
+    return (x, y, x + SLIM_TILE, y + SLIM_TILE)
+
+
 # ---- one scene ------------------------------------------------------------------------------------------------------
 def scene(sw, sh, r, square, selection):
     """Returns {name: rect} plus the minimap description; mirrors HudClientEvents.onDrawScreen's positions."""
@@ -283,16 +311,20 @@ def scene(sw, sh, r, square, selection):
     rects['economy_chevron'] = economy_chevron(bar)
     rects['stall_row'] = stall_row(sw, bar)
     bar_bottom = rects['stall_row'][3]          # EconomyBarRenderer.Layout.bottom() includes the warning row
-    rects['control_groups'] = (0, 0, ctrl_groups * ICON_FRAME, ICON_FRAME)
-    queue = (0, ICON_FRAME + 6, 5 * ICON_FRAME + 10, ICON_FRAME + 6 + 2 * ICON_FRAME + 10)
+    rects['control_groups'] = (0, 0, ctrl_groups * SLIM_TILE, SLIM_TILE)
+    queue = (0, SLIM_TILE + SLIM_QUEUE_GAP, 5 * SLIM_TILE + 10, SLIM_TILE + SLIM_QUEUE_GAP + 2 * SLIM_TILE + 10)
     rects['production_queue'] = queue
     panel = player_panel(sw, sh, r, bar, bar_bottom, rows=18)
     rects['player_panel'] = panel
     bottom_panel_top = sh - PANEL_H
     col_l, col_r = alert_column(sw, bar, panel[0], queue[2], alert_column_map_limit(sw, sh, r, square, bar[3]))
     under_queue = queue[3] if col_l < queue[2] + 4 else None
-    a_top, a_bottom = alert_stack(bar_bottom, under_queue, True, True, 3, 5, bottom_panel_top)
+    a_top, a_bottom = alert_stack(bar_bottom, under_queue, True, True, True)
     rects['alert_column'] = (col_l, a_top, col_r, a_bottom)
+    # the side feed hangs under the open table (the worst case: it is the tallest thing in that corner)
+    feed = kill_feed(sw, sh, r, square, panel[3] + 2, bottom_panel_top, FEED_MAX_LINES)
+    if feed:
+        rects['kill_feed'] = feed
 
     limit = command_panel_limit(sw, r, square)
     if selection == 'multi':
@@ -339,7 +371,8 @@ def scene(sw, sh, r, square, selection):
     step = right_column_step(map_top)
     names = ['help', 'chat', 'army', 'idle_labs'] + ([] if square else ['attack_warning'])
     for i, name in enumerate(names):
-        rects['col_' + name] = tile(sw - RIGHT_COL_X, right_column_y(i, step))
+        rects['col_' + name] = (tile(sw - RIGHT_COL_X, right_column_y(i, step)) if i == 0 else
+                                slim_tile(slim_column_x(sw), right_column_y(i, step)))
     rects['beacon'] = tile(sw - 56, 40)
     return rects
 
@@ -348,7 +381,7 @@ def scene(sw, sh, r, square, selection):
 # cards are transient popups that sit over the HUD like a tooltip: they only have to stay off the minimap and on
 # the screen (SOFT).
 HARD = ['economy_bar', 'economy_chevron', 'stall_row', 'control_groups', 'production_queue', 'player_panel',
-        'stats_strip', 'stats_strip_narrow', 'alert_column', 'command_panel', 'info_panel', 'command_chevron', 'unitcard_chevron', 'cheat_sheet',
+        'stats_strip', 'stats_strip_narrow', 'alert_column', 'kill_feed', 'command_panel', 'info_panel', 'command_chevron', 'unitcard_chevron', 'cheat_sheet',
         'cheat_button', 'observer_bar', 'minimap', 'minimap_grid', 'idle_worker',
         'col_help', 'col_chat', 'col_army', 'col_idle_labs', 'col_attack_warning', 'beacon']
 # permanent elements the clearance test applies to (transient toasts / kill ticker / banners / hover cards are not)
@@ -405,8 +438,8 @@ def declutter_scene(sw, sh, r, square, selection, mode, eco_compact):
     bottom_panel_top = sh - PANEL_H
     limit = command_panel_limit(sw, r, square)
     if mode != 'clean':
-        rects['control_groups'] = (0, 0, ctrl_groups * ICON_FRAME, ICON_FRAME)
-        queue = (0, ICON_FRAME + 6, 5 * ICON_FRAME + 10, ICON_FRAME + 6 + 2 * ICON_FRAME + 10)
+        rects['control_groups'] = (0, 0, ctrl_groups * SLIM_TILE, SLIM_TILE)
+        queue = (0, SLIM_TILE + SLIM_QUEUE_GAP, 5 * SLIM_TILE + 10, SLIM_TILE + SLIM_QUEUE_GAP + 2 * SLIM_TILE + 10)
         rects['production_queue'] = queue
         strip = stats_strip(sw, bar, bar_bottom)
         rects['stats_strip'] = strip
@@ -415,9 +448,12 @@ def declutter_scene(sw, sh, r, square, selection, mode, eco_compact):
             rects['stats_strip_narrow'] = narrow
         col_l, col_r = alert_column(sw, bar, strip[0], queue[2], alert_column_map_limit(sw, sh, r, square, bar[3]))
         under_queue = queue[3] if col_l < queue[2] + 4 else None
-        # worst case for overlaps: banner, vote, three toasts and the ticker's one line
-        a_top, a_bottom = alert_stack(bar_bottom, under_queue, True, True, 3, 1, bottom_panel_top)
+        # worst case for overlaps: temp message, vote banner and a toast row; the ticker is one line at the side
+        a_top, a_bottom = alert_stack(bar_bottom, under_queue, True, True, True)
         rects['alert_column'] = (col_l, a_top, col_r, a_bottom)
+        feed = kill_feed(sw, sh, r, square, strip[3] + 2, bottom_panel_top, 1)
+        if feed:
+            rects['kill_feed'] = feed
     if selection == 'multi':
         n = buttons_per_row(limit)
         rects['command_panel'] = (0, bottom_panel_top, HUD_START_X, sh)
@@ -454,7 +490,8 @@ def declutter_scene(sw, sh, r, square, selection, mode, eco_compact):
         step = right_column_step(map_top)
         names = ['help', 'chat', 'army', 'idle_labs'] + ([] if square else ['attack_warning'])
         for i, name in enumerate(names):
-            rects['col_' + name] = tile(sw - RIGHT_COL_X, right_column_y(i, step))
+            rects['col_' + name] = (tile(sw - RIGHT_COL_X, right_column_y(i, step)) if i == 0 else
+                                    slim_tile(slim_column_x(sw), right_column_y(i, step)))
         rects['beacon'] = tile(sw - 56, 40)
     return rects
 

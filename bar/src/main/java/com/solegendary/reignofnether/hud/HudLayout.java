@@ -25,9 +25,18 @@ public final class HudLayout {
     public static final int MAP_GAP = 4;                                  // air between the command panel and the map
     // square-map button grid (HudClientEvents): 5 columns on a 28 px stride, 12 px left of the map
     public static final int GRID_STRIDE = 28, GRID_COLS = 5, GRID_PAD = 12;
-    public static final int RIGHT_COL_X = 28;                             // helper buttons: screenWidth - 28
+    public static final int RIGHT_COL_X = 28;                             // the help / diplomacy button (22 px): screenWidth - 28
     public static final int RIGHT_COL_TOP = 40;                           // help/diplomacy, chat, army, idle labs, alert
-    public static final int RIGHT_COL_STEP = 30, RIGHT_COL_STEP_TIGHT = 24, RIGHT_COL_COUNT = 5;
+    public static final int RIGHT_COL_COUNT = 5;
+    // Slim tiles (Oct 22, lovish: "a lot of things are taking up space in the interface"): the control groups, the
+    // global production queue and the helper column under the help button are 18 px frames (SLIM_ICON + 8, the icon
+    // 12 px inside) instead of 22 (Button: iconFrameSize = iconSize + 8; HudClientEvents / SlimTiles). Same frame
+    // art, same hotkey badge, same colours - only the size. The command panel's tiles are not touched here.
+    public static final int SLIM_TILE = 18, SLIM_ICON = 10, SLIM_IMAGE = 12;
+    public static final int SLIM_COL_RIGHT = 6;                           // air between a slim tile and the screen's edge
+    public static final int SLIM_COL_TOP = RIGHT_COL_TOP + ICON_FRAME + 2;   // chat starts under the 22 px help button
+    public static final int SLIM_COL_STEP = 22, SLIM_COL_STEP_TIGHT = 20;
+    public static final int SLIM_QUEUE_GAP = 4;                           // the production queue hangs this far under the groups
     public static final int UNIT_CARD_MIN_W = 70;
     // the controls cheat-sheet (HoverCards) when nothing is selected: bottom-left, 4 px in, up to 180 x 96
     public static final int CHEAT_SHEET_X = 4, CHEAT_SHEET_MAX_W = 180, CHEAT_SHEET_H = 96;
@@ -45,6 +54,13 @@ public final class HudLayout {
     public static final int ITEMS_EXTRA_W = 24;                            // the Return-resources button's column after it
     public static final int BUILDING_ICON = 32, BUILDING_SIDE_W = 52;      // PortraitRendererBuilding: icon frame + toggles frame
     public static final int BUILDING_BLOCK_W = BUILDING_ICON + BUILDING_SIDE_W;
+
+    // The side feed (kill ticker, KillFeedClientEvents): 0.75x text - the smallest the HUD draws anywhere (hotkey badges,
+    // the chat feed, tab labels: nothing below it) - on a 12 px chip scaled to 9, 10 px per line, right-aligned at the
+    // stats strip's right edge under it, up to FEED_MAX_W wide, at most 5 lines.
+    public static final float FEED_SCALE = 0.75f;
+    public static final int FEED_LINE_H = 10, FEED_MAX_W = 160, FEED_MAX_LINES = 5;   // 160 = STATS_STRIP_W_MAX: the alert column stops left of it
+    public static final int FEED_CHIP_MAX_W = (int) (FEED_MAX_W / FEED_SCALE);   // a line's width before scaling
 
     // HUD declutter (design/hud.md, "Human-POV audit"). The stats table / its collapsed strip sit top-right where the
     // old always-on player list was (PlayerPanelClientEvents): TOP under the economy bar, dropped below the bar's
@@ -145,17 +161,22 @@ public final class HudLayout {
     }
 
     /**
-     * Spacing of the right-edge helper column: 30 px when all five rows clear the minimap's top, else 24 (22 px
-     * tiles with 2 px air) so a large map, or GUI scale 4, doesn't put the attack warning on the diamond.
+     * Spacing of the helper column under the help button: 22 px (18 px tiles with 4 px air) when all four rows clear
+     * the minimap's top, else 20 so a large map, or GUI scale 4, doesn't put the attack warning on the diamond.
      */
     public static int rightColumnStep(int minimapTop) {
-        int bottom = RIGHT_COL_TOP + RIGHT_COL_STEP * (RIGHT_COL_COUNT - 1) + ICON_FRAME;
-        return bottom <= minimapTop - MAP_GAP ? RIGHT_COL_STEP : RIGHT_COL_STEP_TIGHT;
+        int bottom = SLIM_COL_TOP + SLIM_COL_STEP * (RIGHT_COL_COUNT - 2) + SLIM_TILE;
+        return bottom <= minimapTop - MAP_GAP ? SLIM_COL_STEP : SLIM_COL_STEP_TIGHT;
     }
 
     /** y of the n-th helper button on the right edge (0 = help/diplomacy, 1 = chat, 2 = army, 3 = idle labs, 4 = alert). */
     public static int rightColumnY(int index, int step) {
-        return RIGHT_COL_TOP + step * index;
+        return index == 0 ? RIGHT_COL_TOP : SLIM_COL_TOP + step * (index - 1);
+    }
+
+    /** Left edge of the slim helper tiles: their right edge stays where the 22 px help button's frame ends. */
+    public static int slimColumnX(int screenWidth) {
+        return screenWidth - SLIM_COL_RIGHT - SLIM_TILE;
     }
 
     /**

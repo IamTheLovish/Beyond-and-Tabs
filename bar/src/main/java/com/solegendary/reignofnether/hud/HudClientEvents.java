@@ -1532,8 +1532,8 @@ public class HudClientEvents {
             }
         }
 
-        // the top-left row is kept for control groups; the production queue starts under it
-        int resourcePanelBottomY = blitY + iconFrameSize;
+        // the top-left row is kept for control groups; the production queue starts under it (slim 18 px tiles, SlimTiles)
+        int resourcePanelBottomY = blitY + HudLayout.SLIM_TILE;
 
         // BAR-style top bar (metal | population | energy), centred at the top of the screen
         if (resources != null && MC.player != null) {
@@ -1542,7 +1542,7 @@ public class HudClientEvents {
             int ctrlGroupsW = 0;
             for (ControlGroup cg : controlGroups)
                 if (extras && !cg.isEmpty())   // clean view draws no control groups: the bar may centre
-                    ctrlGroupsW += iconFrameSize;
+                    ctrlGroupsW += HudLayout.SLIM_TILE;
             economyBar = EconomyBarRenderer.render(evt.getGuiGraphics(), resources, eco, selPlayerName,
                 screenWidth, mouseX, mouseY, hudZones, ctrlGroupsW + 4);
             if (viewingResourcesOf != null) {
@@ -1562,7 +1562,7 @@ public class HudClientEvents {
 
         // global production queue - visible to yourself, observers, sandbox players and allies
         int queuePanelStartX = 0;
-        int queuePanelStartY = resourcePanelBottomY + 6;
+        int queuePanelStartY = resourcePanelBottomY + HudLayout.SLIM_QUEUE_GAP;
         if (extras && (isSelPlayer ||
             !PlayerClientEvents.isRTSPlayer() ||
             SandboxClientEvents.isSandboxPlayer() ||
@@ -1632,9 +1632,9 @@ public class HudClientEvents {
 
             if (extras && !controlGroup.isEmpty()) {
                 Button ctrlGroupButton = controlGroup.getButton();
-                ctrlGroupButton.render(evt.getGuiGraphics(), blitX, 0, mouseX, mouseY);
+                ctrlGroupButton.render(evt.getGuiGraphics(), SlimTiles.at(blitX), SlimTiles.at(0), mouseX, mouseY);
                 renderedButtons.add(ctrlGroupButton);
-                blitX += iconFrameSize;
+                blitX += HudLayout.SLIM_TILE;
             }
         }
 
@@ -2017,7 +2017,7 @@ public class HudClientEvents {
             // clean view: no help / diplomacy / observer toggle (the displays they open stay as they are)
         }
         else if (!helpButton.isHidden.get()) {
-            int xi = screenWidth - (chatButton.iconSize * 2);
+            int xi = screenWidth - (Button.DEFAULT_ICON_SIZE * 2);   // not chatButton.iconSize: that is a slim tile now
             int yi = 40;
             helpButton.render(evt.getGuiGraphics(), xi, yi, mouseX, mouseY);
             renderedButtons.add(helpButton);
@@ -2046,24 +2046,22 @@ public class HudClientEvents {
         // the rows tighten from 30 to 24 px when the column would otherwise reach the minimap (large map, GUI
         // scale 4); the idle-worker cycler is drawn by the minimap block above, on the map's corner
         int colStep = HudLayout.rightColumnStep(HudLayout.minimapTop(screenHeight, MinimapClientEvents.getMapGuiRadius(), squareMinimap));
+        // slim 18 px tiles (SlimTiles) under the 22 px help button, right edges aligned with its frame
+        int colX = SlimTiles.at(HudLayout.slimColumnX(screenWidth));
         if (extras && !chatButton.isHidden.get()) {
-            int xi = screenWidth - HudLayout.RIGHT_COL_X;
-            chatButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(1, colStep), mouseX, mouseY);
+            SlimTiles.apply(chatButton).render(evt.getGuiGraphics(), colX, SlimTiles.at(HudLayout.rightColumnY(1, colStep)), mouseX, mouseY);
             renderedButtons.add(chatButton);
         }
         if (extras && !armyButton.isHidden.get()) {
-            int xi = screenWidth - HudLayout.RIGHT_COL_X;
-            armyButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(2, colStep), mouseX, mouseY);
+            SlimTiles.apply(armyButton).render(evt.getGuiGraphics(), colX, SlimTiles.at(HudLayout.rightColumnY(2, colStep)), mouseX, mouseY);
             renderedButtons.add(armyButton);
         }
         if (extras && idleFactoryButton != null && !idleFactoryButton.isHidden.get()) {
-            int xi = screenWidth - HudLayout.RIGHT_COL_X;
-            idleFactoryButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(3, colStep), mouseX, mouseY);
+            SlimTiles.apply(idleFactoryButton).render(evt.getGuiGraphics(), colX, SlimTiles.at(HudLayout.rightColumnY(3, colStep)), mouseX, mouseY);
             renderedButtons.add(idleFactoryButton);
         }
         if (extras && !squareMinimap && !attackWarningButton.isHidden.get()) {
-            int xi = screenWidth - HudLayout.RIGHT_COL_X;
-            attackWarningButton.render(evt.getGuiGraphics(), xi, HudLayout.rightColumnY(4, colStep), mouseX, mouseY);
+            SlimTiles.apply(attackWarningButton).render(evt.getGuiGraphics(), colX, SlimTiles.at(HudLayout.rightColumnY(4, colStep)), mouseX, mouseY);
             renderedButtons.add(attackWarningButton);
         }
 
