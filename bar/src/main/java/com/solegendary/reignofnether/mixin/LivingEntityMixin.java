@@ -359,4 +359,15 @@ public abstract class LivingEntityMixin extends Entity {
             ci.cancel();
         }
     }
+
+    /** Units look up the bodies they overlap in the shared UnitGrid, not the world (Separation.pushOverlapping). */
+    @Inject(
+            method = "pushEntities",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    protected void pushEntities(CallbackInfo ci) {
+        if (com.solegendary.reignofnether.unit.Separation.pushOverlapping((LivingEntity) (Object) this))
+            ci.cancel();
+    }
 }
