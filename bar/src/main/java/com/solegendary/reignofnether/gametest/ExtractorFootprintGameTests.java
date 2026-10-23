@@ -46,13 +46,9 @@ public class ExtractorFootprintGameTests {
     public static void every_stamped_patch_takes_every_factions_extractor_where_the_bot_looks(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        Vec3[] starts = null;
-        // z far from the soak and the T2 test's rows (they sit at origin z), so no other test's patches or buildings are near
-        for (int z : SkirmishGameTests.soakLines(origin.getZ() + 6000)) {
-            starts = SkirmishGameTests.soakRow(level, origin.getX() + 1500, z, 3);
-            if (starts != null)
-                break;
-        }
+        // z far from the soak and the T2 test's rows (they sit at origin z), so no other test's patches or buildings are near;
+        // the full scan of the soak (16 steps x 8 lines), as the T2 test does: one strip is often water or cliff
+        Vec3[] starts = SkirmishGameTests.soakAnyRow(level, origin.getX() + 1500, origin.getZ() + 6000, 3);
         if (starts == null) {
             helper.fail("no dry ground for three bases near x=" + (origin.getX() + 1500));
             return;
