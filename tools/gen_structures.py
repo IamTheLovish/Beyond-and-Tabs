@@ -9,7 +9,7 @@ Design notes:
   MetalExtractor.getUpgradeLevel() reads the placed blocks as the save-proof tier marker.
 - Omitted positions are left untouched by the game (sparse structures), so shapes can be open.
 """
-import gzip, struct, io, os
+import gzip, struct, os
 
 # Structures must exist in BOTH trees: the client reads buildings through its resource manager (assets/) and the
 # integrated/dedicated server through its data-pack manager (data/). Missing from data/ = the server can't place it.

@@ -23,7 +23,7 @@ import os
 import sys
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -725,7 +725,6 @@ def drawn_clouds(name, w, h, seed, n, band, dark, lite, rim_rgb, size, haze, alp
         Hc = L * rr.uniform(0.16, 0.26)
         yb = (band[0] + (band[1] - band[0]) * rr.random()) * H
         clouds_.append((yb, rr.uniform(0, W), L, Hc))
-    shade_k = {}
     clouds_.sort(key=lambda c: c[0])             # higher (farther) banks first, lower ones overlap them
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     for yb, cx, L, Hc in clouds_:
@@ -1508,7 +1507,6 @@ def engrave(X, Y, b, Lv, period=4.0):
     def lines(ang, ph):
         c, s_ = math.cos(ang), math.sin(ang)
         d = (xs * c + ys * s_) / period
-        wob = 0.0
         return np.clip((np.sin((d + ph) * 2 * math.pi) - 0.55) / 0.45, 0, 1)
     v = lines(0.0, 0.0) * smoothstep(0.06, 0.18, Lv)
     d1 = lines(math.radians(62), 0.3) * smoothstep(0.24, 0.42, Lv)
@@ -1561,7 +1559,6 @@ def ink_stone(b, g, name, haze, ivy=None, seed=0):
     - stone coursing drawn in each wall's own plane, weathering streaks, cracks; contour lines of varied weight;
     - atmospheric depth: `haze` greys, blues and softens the farther layers.
     Saves <name>.png, <name>_rim.png (the moon rim alone, additive) and <name>_glow.png (its glass)."""
-    from scipy import ndimage
     sil_full = np.asarray(g.sil)
     if not sil_full.any():
         return
@@ -2979,7 +2976,6 @@ def fg_plants(name, w, h, seed, kind):
     def cane(x, y, ang, L, wd, depth, down=False):
         pts = []
         for k in range(26):
-            t = k / 25
             pts.append((x, y))
             ang += r.uniform(-0.09, 0.09) + (0.045 if not down else -0.02)
             x += math.cos(ang) * L / 25

@@ -227,7 +227,7 @@ def fur(s, rng, part, c, rows=(0, 3)):
 
 # ------------------------------------------------------------------ per-unit recipes
 def make(u):
-    key, uid, role = u["tabs_key"], u["id"], u["role"]
+    key, uid, _role = u["tabs_key"], u["id"], u["role"]
     rng = random.Random(uid)
     s = Skin(); f = faction(key)
     tone = SKIN_TONES[rng.randrange(len(SKIN_TONES))]; hair = HAIR[rng.randrange(len(HAIR))]
