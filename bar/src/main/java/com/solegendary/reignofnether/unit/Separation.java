@@ -1,7 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.perf.Sys;
-import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
@@ -38,14 +37,14 @@ public final class Separation {
     /**
      * A unit's vanilla push ({@code LivingEntity.pushEntities}, every tick) finds the bodies it overlaps through
      * {@link UnitGrid} instead of a world entity query: the Oct 22 server profile had ~104 such queries per pillager
-     * per 10 s window. Same bodies, same cramming rule, same push; only other units are looked up (a unit
-     * is no longer nudged by an animal or item it overlaps). Returns false when vanilla should run (not a server unit).
+     * per 10 s window. Same bodies and cramming rule as vanilla; only other units are looked up (a unit is no longer
+     * nudged by an animal or item it overlaps). Returns the bodies for the caller to {@code doPush} one by one (the
+     * entity's own override, which is protected: TitanMass shoves, wraiths and bats have their own rules) and then
+     * clear, or null when vanilla should run (not a server unit).
      */
-    public static boolean pushOverlapping(LivingEntity self) {
+    public static List<LivingEntity> overlappingForPush(LivingEntity self) {
         if (!(self instanceof com.solegendary.reignofnether.unit.interfaces.Unit) || !(self.level() instanceof ServerLevel level))
-            return false;
-        if (self.hasEffect(MobEffectRegistrar.PHASING.get()))
-            return true;   // a phasing unit pushes nothing (LivingEntityMixin.doPush)
+            return null;
         int sys = Sys.begin(Sys.PUSH_SCAN);
         try {
             AABB box = self.getBoundingBox();
@@ -58,24 +57,20 @@ public final class Separation {
                     continue;
                 PUSH_SCRATCH.set(n++, le);
             }
-            if (n > 0) {
-                int max = level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
-                if (max > 0 && n > max - 1 && self.getRandom().nextInt(4) == 0) {
-                    int crammed = 0;
-                    for (int i = 0; i < n; i++)
-                        if (!PUSH_SCRATCH.get(i).isPassenger())
-                            crammed++;
-                    if (crammed > max - 1)
-                        self.hurt(self.damageSources().cramming(), 6.0F);
-                }
+            PUSH_SCRATCH.subList(n, PUSH_SCRATCH.size()).clear();
+            int max = level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            if (n > 0 && max > 0 && n > max - 1 && self.getRandom().nextInt(4) == 0) {
+                int crammed = 0;
                 for (int i = 0; i < n; i++)
-                    PUSH_SCRATCH.get(i).push(self);   // what doPush does (it is protected)
+                    if (!PUSH_SCRATCH.get(i).isPassenger())
+                        crammed++;
+                if (crammed > max - 1)
+                    self.hurt(self.damageSources().cramming(), 6.0F);
             }
-            PUSH_SCRATCH.clear();
         } finally {
             Sys.end(sys);
         }
-        return true;
+        return PUSH_SCRATCH;
     }
 
     public static void tick(Mob mob) {
