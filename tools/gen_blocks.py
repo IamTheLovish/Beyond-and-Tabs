@@ -726,7 +726,8 @@ def m_oak_planks_r24(F, n, base=(0.66, 0.51, 0.31)):
     joint_u = (F.u + off) % 1.0
     # r25: boards of different lengths - in some rows a second end joint splits the block's board in two
     rng0 = F.rng
-    second = np.where(rng0.random(rows) < 0.5, 0.35 + 0.3 * rng0.random(rows), -1.0)[row]
+    rng0.random(rows)                                    # r25's second joints (dropped in r26): the draws stay, so
+    rng0.random(rows)                                    # the boards keep their seeds (ruff F841, round 27)
     # r26 (review: brickwork at RTS): no second joints, and only two of the four rows have a butt joint in this
     # block - the others run on into the next block (boards a block and more long)
     ju2 = np.ones_like(joint_u)
