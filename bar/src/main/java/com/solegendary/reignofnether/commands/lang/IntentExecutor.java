@@ -206,7 +206,7 @@ public final class IntentExecutor {
                     boolean fighter = le instanceof AttackerUnit && !worker;
                     boolean take = switch (group.kind()) {
                         case ALL_WORKERS, WORKERS -> worker;
-                        case IDLE_WORKERS -> worker && ((Unit) le).isIdle();
+                        case IDLE_WORKERS -> com.solegendary.reignofnether.unit.packets.UnitIdleWorkerClientBoundPacket.isSelectableIdleBuilder(le);
                         case SOLDIERS -> fighter;
                         case EVERYONE -> true;
                         case HERO -> le instanceof HeroUnit;

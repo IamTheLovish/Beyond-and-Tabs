@@ -81,6 +81,10 @@ public class Keybindings {
     public static final Keybinding buildEnergy  = new Keybinding("key.reignofnether.build_energy",  GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
     public static final Keybinding buildDefence = new Keybinding("key.reignofnether.build_defence", GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
     public static final Keybinding buildFactory = new Keybinding("key.reignofnether.build_factory", GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
+    /** The four BAR build-category bindings (Z / X / C / V), for rules that keep a builder's card clear of them. */
+    public static List<Keybinding> buildCategoryKeys() {
+        return List.of(buildMetal, buildEnergy, buildDefence, buildFactory);
+    }
     public static final Keybinding hotkey1        = new Keybinding("key.reignofnether.hotkey_1",        GLFW.GLFW_KEY_V,             CATEGORY_RTS, "V");
     public static final Keybinding hotkey2        = new Keybinding("key.reignofnether.hotkey_2",        GLFW.GLFW_KEY_L,             CATEGORY_RTS, "L");
     public static final Keybinding minimapToggle  = new Keybinding("key.reignofnether.minimap_toggle",        GLFW.GLFW_KEY_M,             CATEGORY_RTS, "M");
@@ -155,7 +159,7 @@ public class Keybindings {
     public static final Keybinding item3 = new Keybinding("key.reignofnether.item3", GLFW.GLFW_KEY_F, CATEGORY_RTS, "F");
     public static final Keybinding item4 = new Keybinding("key.reignofnether.item4", GLFW.GLFW_KEY_G, CATEGORY_RTS, "G");
     public static final Keybinding item5 = new Keybinding("key.reignofnether.item5", GLFW.GLFW_KEY_C, CATEGORY_RTS, "C");
-    public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "V");
+    public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "B");
 
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
