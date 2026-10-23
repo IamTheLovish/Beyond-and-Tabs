@@ -857,7 +857,7 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    /** Energy converters only burn energy above half storage, at TierGate's 100 energy per metal, 50 energy/s each. */
     @GameTest(template = ARENA)
     public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
@@ -866,8 +866,8 @@ public class SkirmishGameTests {
         res.addEnergy(900);
         for (int i = 0; i < 20; i++)
             com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
-        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
-            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+        if (Math.abs(res.getMetal() - 0.5f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~0.5 metal / 850 energy, got " + res.getMetal()
                 + " / " + res.getEnergy());
         var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
         low.addEnergy(400);
@@ -5020,6 +5020,14 @@ public class SkirmishGameTests {
                 level.setBlock(helper.absolutePos(new BlockPos(x, 1, z)), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                 for (int y = 2; y <= 4; y++)
                     level.setBlock(helper.absolutePos(new BlockPos(x, y, z)), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                // a lid for the clearing: arenas sit in generated terrain, and a gravel or sand layer overhead loses its
+                // support when the pocket under it is cleared and falls in on the units - gravel in a Jade Guard's cell
+                // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
+                // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
+                // before its block tick can fire; whatever lies above that is then supported again.
+                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
+                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             }
     }
 
@@ -7340,9 +7348,13 @@ public class SkirmishGameTests {
             attackers.add(atk);
             foes.add(foe);
         }
+        // the order a player gives (UnitActionItem: right-click an enemy = setUnitAttackTargetForced). An unforced target is
+        // re-picked every RETARGET_TICKS (AttackerUnit.retargetToClosestUnit) to the nearest enemy, and in this test that is
+        // the NEIGHBOURING row's Villager (5 blocks off, nearer than the galley's own at 14): a shell fired in such a window
+        // lands on the wrong Villager, "mortar_galley_unit never hit its target ... strays 21" (CI Oct 21-22, 3 reds)
         helper.runAfterDelay(3, () -> {
             for (int i = 0; i < attackers.size(); i++)
-                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTargetForced(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
         int[] strays = new int[attackers.size()];
@@ -13663,6 +13675,9 @@ public class SkirmishGameTests {
         var pool = testPool(owner);
         var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
         var cost = item.getCost(false, owner);
+        // the refit needs Tier 2 on the server too (resources/TierGate)
+        com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         try {
             var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
             if (row == null)
@@ -13701,6 +13716,7 @@ public class SkirmishGameTests {
             for (var pp : row)
                 pp.productionQueue.clear();
         } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
         }
     }
@@ -14826,6 +14842,11 @@ public class SkirmishGameTests {
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
                         problems.add(tag + "patch on " + surf + " at " + m);
+                    // the whole 7x7 pad MetalPatches.stamp levels, not only the centre column (maps spec M1: 20 of
+                    // Highlands' 96 patches at 8 players had an 8-block drop inside the pad and this test passed)
+                    String fault = MapMetalGameTests.padFault(layout, m.dx(), m.dz(), sample);
+                    if (fault != null)
+                        problems.add(tag + "patch " + m + " has " + fault + " in its pad");
                 }
             }
         }

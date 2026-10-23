@@ -31,24 +31,30 @@ public class PlayerChunksClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!enabled || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        if (MC.level == null)
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (!enabled || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (MC.level == null)
+                return;
 
-        PoseStack poseStack = event.getPoseStack();
+            PoseStack poseStack = event.getPoseStack();
 
 
-        // sent chunks first (drawn underneath/behind in intent), live chunks on top
-        for (UUID uuid : edgeChunks.keySet())
-            if (uuid.equals(MC.player.getUUID()))
-                for (ChunkPos cp :  edgeChunks.get(uuid))
-                    drawChunkOutline(poseStack, cp, 1.0f, 1.0f, 0.0f, 0.5f); // yellow
+            // sent chunks first (drawn underneath/behind in intent), live chunks on top
+            for (UUID uuid : edgeChunks.keySet())
+                if (uuid.equals(MC.player.getUUID()))
+                    for (ChunkPos cp :  edgeChunks.get(uuid))
+                        drawChunkOutline(poseStack, cp, 1.0f, 1.0f, 0.0f, 0.5f); // yellow
 
-        for (UUID uuid : liveChunks.keySet())
-            if (uuid.equals(MC.player.getUUID()))
-                for (ChunkPos cp :  liveChunks.get(uuid))
-                    drawChunkOutline(poseStack, cp, 0.0f, 1.0f, 0.0f, 0.75f); // green
+            for (UUID uuid : liveChunks.keySet())
+                if (uuid.equals(MC.player.getUUID()))
+                    for (ChunkPos cp :  liveChunks.get(uuid))
+                        drawChunkOutline(poseStack, cp, 0.0f, 1.0f, 0.0f, 0.75f); // green
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
+        }
     }
 
     private static void drawChunkOutline(PoseStack poseStack, ChunkPos cp, float r, float g, float b, float a) {

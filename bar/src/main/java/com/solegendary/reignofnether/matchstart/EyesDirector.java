@@ -62,7 +62,8 @@ import java.util.List;
  *     in the level, a death on either side, or the armies' centroids within 8 blocks (20 s cap, the log says which) -
  *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
- *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
+ *     (counted from the 02 shot, labelled 0:30) passes 2:00. 11b_capitol_selected (Oct 22, slim HUD): the same
+ *     capitol selected, 30 ticks later - the building's icon block, health bar, Repeat toggle and production queue.</li>
  * <li>12_river_crossing (Oct 14, terrain_intelligence.md): a pad with a 4-wide, 1-deep water strip is laid with the
  *     op fill command 30 blocks west of the first fight, a dozen of the player's units are summoned on its west bank
  *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
@@ -71,6 +72,9 @@ import java.util.List;
  * <li>17_fog (Oct 21, perf plan R1, EyesFogScene): the last scene - fog of war on, a dozen marching out of our base
  *     into the dark; the fog re-mesh A/B (surface band vs whole column) and the fog edge before and after a full
  *     re-mesh.</li>
+ * <li>18_overlays (Oct 21, perf plan R2, EyesOverlaysScene; its own run, eyes.yml input `overlays`): 500 units and
+ *     1,700 buildings, stills of the underlines and boxes at a mid zoom and at strategic zoom, and the frame and
+ *     per-handler times at zoom 30 and 200 - the before / after of the overlay loops.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -191,6 +195,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (OVERLAYS_ONLY) {   // an overlays run (eyes.yml input `overlays`): only scene 18, then the end
+                        step = STEP_OVERLAYS;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -242,6 +251,19 @@ public final class EyesDirector {
                     done = EyesFogScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 17_fog failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_OVERLAYS -> {
+                boolean done;
+                try {
+                    done = EyesOverlaysScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -551,6 +573,8 @@ public final class EyesDirector {
     static final int STEP_SCARS = 21;
     static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
+    static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
+    static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;
@@ -1709,6 +1733,10 @@ public final class EyesDirector {
             OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(capitolCentre.getX() + 0.5, capitolCentre.getY(), capitolCentre.getZ() + 0.5));
             return;
         }
+        if (capitolSelAt > 0) {
+            capitolSelected(mc);
+            return;
+        }
         // the match clock runs from the 02 shot (labelled 0:30); -1 if that shot never happened (then shoot at once)
         int matchTick = matchZeroTotalTick < 0 ? -1 : totalTicks - matchZeroTotalTick;
         boolean late = ticks > 20 * 90;   // budget: never wait more than 90 s for the clock
@@ -1720,6 +1748,31 @@ public final class EyesDirector {
                     capitolCentre.toShortString(), OrthoviewClientEvents.getZoom(), battleLine(mc));
             shot(mc, "11_capitol_two_minutes");
             groundCensus(mc, "2:00");
+            capitolSelAt = ticks + 2;   // 11b: the capitol selected - the building's HUD block, its queue and toggles
+        }
+    }
+
+    private static int capitolSelAt = -1, capitolSelShotAt = -1;
+
+    /** 11b: select our capitol and photograph the HUD's building block (icon + health bar + Repeat toggle + queue). */
+    private static void capitolSelected(Minecraft mc) {
+        if (ticks == capitolSelAt) {
+            String me = mc.player.getName().getString();
+            for (var b : new ArrayList<>(BuildingClientEvents.getBuildings())) {
+                if (b instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement p
+                        && p.isCapitol && me.equals(p.ownerName)) {
+                    UnitClientEvents.clearSelectedUnits();
+                    BuildingClientEvents.clearSelectedBuildings();
+                    BuildingClientEvents.addSelectedBuilding(b);
+                    break;
+                }
+            }
+            capitolSelShotAt = ticks + 30;   // settle, then photograph
+        } else if (ticks == capitolSelShotAt) {
+            shot(mc, "11b_capitol_selected");
+            BuildingClientEvents.clearSelectedBuildings();
+            capitolSelAt = -1;
+            capitolSelShotAt = -1;
             next();
         }
     }
@@ -1966,7 +2019,7 @@ public final class EyesDirector {
         return mc.player.blockPosition();
     }
 
-    private static String findEnemyName(Minecraft mc) {
+    static String findEnemyName(Minecraft mc) {
         String me = mc.player.getName().getString();
         for (RTSPlayer p : new ArrayList<>(PlayerClientEvents.rtsPlayers))
             if (p.name != null && !p.name.equals(me))
@@ -1994,7 +2047,7 @@ public final class EyesDirector {
      * ~4 blocks up (Oct 15 log: armies at y 72 over ground at 68; 12's water spilled out of a raised pad; and
      * dryAround never saw water). MOTION_BLOCKING stops on leaves, so step down through a canopy.
      */
-    private static int surfaceY(Minecraft mc, int x, int z) {
+    static int surfaceY(Minecraft mc, int x, int z) {
         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         int floor = mc.level.getMinBuildHeight() + 1;
         if (y <= floor)

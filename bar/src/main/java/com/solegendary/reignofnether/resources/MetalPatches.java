@@ -160,13 +160,19 @@ public final class MetalPatches {
     public static final int MAX_DRY_RELOCATE = 12;
 
     /**
+     * Half-width of the pad {@link #stamp} levels round a patch centre (a 7x7): it clears everything above the ground
+     * in it, so a pad that reached the arena wall would cut a hole in it (maps.ExtractorClearance keeps patches off it).
+     */
+    public static final int PAD_HALF = 3;
+
+    /**
      * True when the 7x7 pad round (x, z) at ground height {@code padY} holds no water column: the pad leveller leaves
      * rivers and lakes alone, so a wet column stays wet and no 5x5 extractor footprint fits.
      */
     public static boolean padDry(ServerLevel level, int x, int z, int padY) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int dx = -3; dx <= 3; dx++)
-            for (int dz = -3; dz <= 3; dz++)
+        for (int dx = -PAD_HALF; dx <= PAD_HALF; dx++)
+            for (int dz = -PAD_HALF; dz <= PAD_HALF; dz++)
                 if (!level.getBlockState(p.set(x + dx, padY, z + dz)).getFluidState().isEmpty()
                         || !level.getBlockState(p.set(x + dx, padY + 1, z + dz)).getFluidState().isEmpty())
                     return false;
@@ -229,8 +235,8 @@ public final class MetalPatches {
                 fill = Blocks.DIRT.defaultBlockState();
             BlockState cap = capOverride != null ? capOverride : level.getBiome(p).is(net.minecraft.tags.BiomeTags.IS_NETHER)
                 ? Blocks.NETHERRACK.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
-            for (int dx = -3; dx <= 3; dx++)
-                for (int dz = -3; dz <= 3; dz++) {
+            for (int dx = -PAD_HALF; dx <= PAD_HALF; dx++)
+                for (int dz = -PAD_HALF; dz <= PAD_HALF; dz++) {
                     int bx = x + dx, bz = z + dz;
                     if (com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(bx, padY, bz))
                         continue;   // never carve a pad through a standing building
@@ -272,12 +278,20 @@ public final class MetalPatches {
     }
 
     /**
+     * The extractor's footprint reaches this far from the patch centre (5x5: the origin is the centre - 2, see
+     * SkirmishGameTests), and the validator keeps this many free blocks round it between buildings (the gap that also
+     * holds the worker who builds it: BuildRepairGoal.calcMoveTarget takes the cell one outside the footprint).
+     * MapMetalGameTests pins EXTRACTOR_HALF to the biggest structure file of every faction and tier.
+     */
+    public static final int EXTRACTOR_HALF = 2, BUILDING_GAP = 1;
+
+    /**
      * Half-width of the square round a patch centre that belongs to its extractor: the 5x5 footprint (centre +-2)
      * plus the 1-block gap BuildingValidators keeps between buildings. Nothing but an extractor may stand in it, or
      * the patch can never be mined (lovish's clip 15-51: a Heartwood Hall built hard against a home patch, then
      * "Can't build an extractor here: Too close to another building").
      */
-    public static final int RESERVED_HALF = 3;
+    public static final int RESERVED_HALF = EXTRACTOR_HALF + BUILDING_GAP;
 
     /**
      * The first patch centre whose reserved square the footprint [minX..maxX] x [minZ..maxZ] (standing at about

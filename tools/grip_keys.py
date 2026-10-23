@@ -49,7 +49,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import contact_check  # noqa: E402
-from gen_models import Model, euler, rot_mat  # noqa: E402
+from gen_models import euler, rot_mat  # noqa: E402
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 WRIST_FREE = 20.0          # degrees a wrist may bend before it reads broken (gen_models.WRIST_FREE)
@@ -422,7 +422,6 @@ def hal_left(J, fist, pose, d, start=None, lflex=None, rear=None):
         pen = max(0.0, 5.0 - flex) ** 2 + max(0.0, flex - 140.0) ** 2
         up = max(0.0, el[1] - S[1] + 1.0) ** 2            # the elbow below the shoulder
         inb = max(0.0, S[0] - el[0] + 0.5) ** 2            # and not in past it
-        ahead = max(0.0, el[2] - (S[2] - 2.6)) ** 2        # and ahead of the chest (the arm crosses it, not through)
         cont = sum((v[i] - start[i]) ** 2 for i in range(4)) if start else 0.0   # the same branch as the last key
         lock = (flex - lflex) ** 2 if lflex is not None else 0.0   # a key that wants the elbow locked (or set)
         if lflex is not None:                                   # a straight arm puts its elbow where the line goes

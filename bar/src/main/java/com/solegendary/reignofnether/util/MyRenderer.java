@@ -208,6 +208,29 @@ public class MyRenderer {
         matrixStack.popPose();
     }
 
+    // ---- many boxes in one loop (perf plan R2) ----
+    // The helpers above push a pose, translate it to the camera and pop it again for every box: three matrix
+    // allocations per box, ~1,200 a frame for the unit underlines alone with 600 units. A loop that draws many boxes
+    // pushes the same translation once (pushCameraRelative), draws with the *InCameraSpace variants, and pops once. The
+    // matrix is the one the per-box helpers build (same camera entity, same float translate), so every line lands on
+    // the same pixels.
+
+    /** Pushes the camera-relative translation the per-box helpers use; the caller pops it ({@code popPose}). */
+    public static void pushCameraRelative(PoseStack matrixStack) {
+        Entity camEntity = MC.getCameraEntity();
+        double d0 = camEntity.getX();
+        double d1 = camEntity.getY() + camEntity.getEyeHeight();
+        double d2 = camEntity.getZ();
+        matrixStack.pushPose();
+        matrixStack.translate(-d0, -d1, -d2);
+    }
+
+    /** {@link #drawLineBox(PoseStack, AABB, VertexConsumer, float, float, float, float)} inside {@link #pushCameraRelative}. */
+    public static void drawLineBoxInCameraSpace(PoseStack matrixStack, VertexConsumer vertexConsumer, AABB aabb,
+                                                float r, float g, float b, float a) {
+        LevelRenderer.renderLineBox(matrixStack, vertexConsumer, aabb, r, g, b, a);
+    }
+
     // draws an AABB but only the lines required to outline an entity from the perspective of the player in orthoview
     public static void drawLineBoxOutlineOnly(
             PoseStack matrixStack,
@@ -219,14 +242,22 @@ public class MyRenderer {
             float a,
             boolean excludeMaxY
     ) {
-        Entity camEntity = MC.getCameraEntity();
-        double d0 = camEntity.getX();
-        double d1 = camEntity.getY() + camEntity.getEyeHeight();
-        double d2 = camEntity.getZ();
+        pushCameraRelative(matrixStack); // because we start at 0,0,0 relative to camera
+        drawLineBoxOutlineOnlyInCameraSpace(matrixStack, vertexConsumer, aabb, r, g, b, a, excludeMaxY);
+        matrixStack.popPose();
+    }
 
-        matrixStack.pushPose();
-        matrixStack.translate(-d0, -d1, -d2); // because we start at 0,0,0 relative to camera
-
+    /** {@link #drawLineBoxOutlineOnly} inside {@link #pushCameraRelative}. */
+    public static void drawLineBoxOutlineOnlyInCameraSpace(
+            PoseStack matrixStack,
+            VertexConsumer vertexConsumer,
+            AABB aabb,
+            float r,
+            float g,
+            float b,
+            float a,
+            boolean excludeMaxY
+    ) {
         Matrix4f matrix4f = matrixStack.last().pose();
         Matrix3f matrix3f = matrixStack.last().normal();
         float minX = (float) aabb.minX;
@@ -318,7 +349,6 @@ public class MyRenderer {
                 vertexConsumer.vertex(matrix4f, maxX, maxY, maxZ).color(r, g, b, a).normal(matrix3f, 0.0F, 0.0F, 1.0F).endVertex();
             }
         }
-        matrixStack.popPose();
     }
 
     // remember white.png can still be used with RGBA values

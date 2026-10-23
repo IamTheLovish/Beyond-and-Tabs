@@ -100,6 +100,9 @@ public class UpgradeGlowLayer<T extends LivingEntity, M extends EntityModel<T>> 
             return;
         if (!UpgradeVisuals.has(unit.getUpgradeMask(), UpgradeVisuals.Kind.GLOW))
             return;
+        // the shader pack's shadow map: the glow re-draws the weapon on its own surface, which already casts this shadow
+        if (com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.skipOverlay(entity))
+            return;
         if (StrategicViewClientEvents.isStrategicView() && !StrategicViewClientEvents.keepsModel(entity))
             return;
 

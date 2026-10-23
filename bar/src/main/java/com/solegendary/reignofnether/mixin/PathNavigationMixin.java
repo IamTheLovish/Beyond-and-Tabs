@@ -1,11 +1,12 @@
 package com.solegendary.reignofnether.mixin;
 
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
+import com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget;
 import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -20,16 +21,59 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.Set;
+
 // No unit follows its path strictly: they aim at cell centres (PathConverter.CenteredPath, so they don't hug
 // walls) but follow LOOSELY - vanilla corner-cutting and reach tolerance, no per-node lock, no stuck-recovery
 // oscillation. Keeping the body off walls/edges/ceilings is the pathfinder's job (2x2 footprint + crowdingMalus),
 // not the follower's. The ONLY thing we still relax is the VERTICAL advance gate, so a unit perched on a stair
 // step (held up by its width ~1.0 above the next node) commits to the drop instead of spinning on the ledge.
 @Mixin(PathNavigation.class)
-public class PathNavigationMixin {
+public abstract class PathNavigationMixin {
 
     @Shadow @Final protected Mob mob;
     @Shadow protected Path path;
+    @Shadow private float maxVisitedNodesMultiplier;
+
+    @Shadow protected abstract Path createPath(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy, float followRange);
+    @Shadow protected abstract boolean canUpdatePath();
+
+    // Distance-scaled vanilla search for units (VanillaPathBudget): a short search first, the stock full-range one only
+    // when the short one finds no complete path. Every public createPath overload funnels through this one.
+    @Inject(method = "createPath(Ljava/util/Set;IZI)Lnet/minecraft/world/level/pathfinder/Path;", at = @At("HEAD"), cancellable = true)
+    private void reignofnether$scaledSearch(Set<BlockPos> targets, int regionOffset, boolean offsetUpward, int accuracy,
+                                            CallbackInfoReturnable<Path> cir) {
+        if (!(mob instanceof Unit) || mob.level().isClientSide() || targets.isEmpty())
+            return;
+        // vanilla answers this with the path in hand, no search at all: leave it to vanilla
+        if (this.path != null && !this.path.isDone() && targets.contains(((PathNavigation) (Object) this).getTargetPos()))
+            return;
+        VanillaPathBudget.calls++;
+        float full = (float) mob.getAttributeValue(Attributes.FOLLOW_RANGE);
+        float range = VanillaPathBudget.shortRange(VanillaPathBudget.farthest(mob, targets), full);
+        boolean wide = reignofnether$isWideUnit();
+        if (range >= full && !wide)
+            return;   // nothing to save: the stock search as before
+        float baseMultiplier = this.maxVisitedNodesMultiplier;
+        Path p;
+        try {
+            this.maxVisitedNodesMultiplier = VanillaPathBudget.nodeMultiplier(baseMultiplier, range, full, wide,
+                mob.getAttributeBaseValue(Attributes.FOLLOW_RANGE));
+            p = createPath(targets, regionOffset, offsetUpward, accuracy, range);
+        } finally {
+            this.maxVisitedNodesMultiplier = baseMultiplier;
+        }
+        VanillaPathBudget.shortSearches++;
+        // a complete path, or no path for a reason a wider search can not fix (airborne for a tick, below the world)
+        if ((p != null && p.canReach()) || (p == null && !canUpdatePath())) {
+            cir.setReturnValue(p);
+            return;
+        }
+        VanillaPathBudget.fallbacks++;
+        VanillaPathBudget.fallbacksTotal++;
+        Path again = createPath(targets, regionOffset, offsetUpward, accuracy, full);
+        cir.setReturnValue(again != null ? again : p);
+    }
 
     @Unique
     private boolean reignofnether$isWideUnit() {
@@ -42,29 +86,33 @@ public class PathNavigationMixin {
         return mob instanceof SpiderUnit spider && spider.isWallClimbing();
     }
 
-    // Vanilla auto-recompute must never touch an RTS-pathed unit. On any block change,
+    // Vanilla auto-recompute must never touch a unit (RTS or vanilla pathed). On any block change,
     // ServerLevel.sendBlockUpdated asks every mob's navigation shouldRecomputePath (true within
     // remaining-path-length blocks of the path midpoint - a huge sphere for a long march) and then
     // recomputePath() replaces the path with a synchronous vanilla createPath(targetPos). targetPos is
     // whatever the last vanilla createPath set (eg. an attack goal's chase target) and stop() never clears
     // it, so the unit veers back toward a STALE position - the multiplayer "units walk backwards /
     // oscillate" bug. Block-change reactions are the RTS system's job (dirty-chunk reclassify + the move
-    // goal's own repath); vanilla mode (gamerule off) keeps stock behaviour.
+    // goal's own repath). This holds in vanilla mode (gamerule off) too: every unit goal repaths itself on its own
+    // throttle (move goal when its path is done, chase goals every 5-20 ticks), so the stock recompute only added a
+    // second, unthrottled createPath per nearby unit on every block change - half of bat:buildings in the Oct 22
+    // 490-entity match was this, each placed building block re-pathing every unit within range. A path a new block
+    // cuts is still caught by vanilla's own stuck check (stop -> the goal repaths). Non-unit mobs keep stock behaviour.
     @Unique
-    private boolean reignofnether$usesRtsPaths() {
-        return mob instanceof Unit && UnitServerEvents.rtsPathfinding;
+    private boolean reignofnether$ownsRepath() {
+        return mob instanceof Unit;
     }
 
     @Inject(method = "shouldRecomputePath", at = @At("HEAD"), cancellable = true)
     private void reignofnether$noBlockUpdateRecompute(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-        if (reignofnether$usesRtsPaths()) cir.setReturnValue(false);
+        if (reignofnether$ownsRepath()) cir.setReturnValue(false);
     }
 
     // Also gate recomputePath itself: it can still fire via a pending hasDelayedRecomputation from before
     // the gamerule turned on, or any direct caller.
     @Inject(method = "recomputePath", at = @At("HEAD"), cancellable = true)
     private void reignofnether$noRecompute(CallbackInfo ci) {
-        if (reignofnether$usesRtsPaths()) ci.cancel();
+        if (reignofnether$ownsRepath()) ci.cancel();
     }
 
     @ModifyConstant(method = "followThePath", constant = @Constant(doubleValue = 1.0))

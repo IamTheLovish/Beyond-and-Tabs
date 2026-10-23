@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.perf.AnimProfile;
+import com.solegendary.reignofnether.unit.modelling.renderers.UnitLod;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -13,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Clocks for perf/AnimProfile: the whole of LivingEntityRenderer.render for a unit, and inside it the model's posing
- * (prepareMobModel through setupAnim). Four nanoTime reads per unit per frame, nothing else.
+ * (prepareMobModel through setupAnim). Four nanoTime reads per unit per frame. The head also tells
+ * unit/modelling/renderers/UnitLod which pass the unit is drawn in (the shader pack's shadow map or the view).
  */
 @Mixin(LivingEntityRenderer.class)
 public abstract class AnimProfileRendererMixin<T extends LivingEntity, M extends EntityModel<T>> {
@@ -24,6 +26,7 @@ public abstract class AnimProfileRendererMixin<T extends LivingEntity, M extends
     @Inject(method = RENDER, at = @At("HEAD"))
     private void bat$renderBegin(T entity, float yaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffers,
                                  int light, CallbackInfo ci) {
+        UnitLod.beginUnit(entity);   // first: AnimProfile files the draw under the pass UnitLod saw
         AnimProfile.beginRender(entity);
     }
 
