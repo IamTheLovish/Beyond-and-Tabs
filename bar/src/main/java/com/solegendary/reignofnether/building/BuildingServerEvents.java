@@ -502,6 +502,16 @@ public class BuildingServerEvents {
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
             }
+            // the Advanced Fusion Reactor is Tier 3 tech: the build button checks the research, this stops a crafted packet
+            if (!fromCommand && !isSandbox && !fogRequeue
+                    && newBuilding.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.FusionReactor fr
+                    && fr.kind.needsTier3
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")
+                    && !ResearchServerEvents.playerHasResearch(ownerName, com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3)) {
+                HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_tier3");
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
+                return null;
+            }
             // combat engineers start field defences only; with a worker among the builders they assist (design/combat_engineers.md)
             if (!fromCommand && !isSandbox && !fogRequeue
                     && !com.solegendary.reignofnether.unit.CombatEngineers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {

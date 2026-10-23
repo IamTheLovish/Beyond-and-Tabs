@@ -219,7 +219,8 @@ public class BuildingValidators {
         if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
                 || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
                 || building instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
-                || building instanceof com.solegendary.reignofnether.building.buildings.shared.SolarGenerator) {
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.SolarGenerator
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.FusionReactor) {
             return true;
         }
         return isOnNetherBlocks(level, blocks, originPos, true);

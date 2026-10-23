@@ -361,6 +361,8 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.GEOTHERMAL_PLANT_MONSTERS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(MONSTERS, Buildings.SOLAR_COLLECTOR_MONSTERS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(MONSTERS, Buildings.ADVANCED_SOLAR_MONSTERS);   // steady energy, T2 constructors
+		registerBuildings(MONSTERS, Buildings.FUSION_REACTOR_MONSTERS);   // endgame energy, T2 constructors
+		registerBuildings(MONSTERS, Buildings.ADVANCED_FUSION_REACTOR_MONSTERS);   // endgame energy, T3
 		registerBuildings(MONSTERS, Buildings.BEACON);
 		
 		//Piglins
@@ -384,6 +386,8 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.GEOTHERMAL_PLANT_PIGLINS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(PIGLINS, Buildings.SOLAR_COLLECTOR_PIGLINS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(PIGLINS, Buildings.ADVANCED_SOLAR_PIGLINS);   // steady energy, T2 constructors
+		registerBuildings(PIGLINS, Buildings.FUSION_REACTOR_PIGLINS);   // endgame energy, T2 constructors
+		registerBuildings(PIGLINS, Buildings.ADVANCED_FUSION_REACTOR_PIGLINS);   // endgame energy, T3
 		registerBuildings(PIGLINS, Buildings.BEACON);
 		registerBuilding(PIGLINS, Buildings.PORTAL_CIVILIAN);
 		registerBuilding(PIGLINS, Buildings.PORTAL_POCKET);
@@ -414,6 +418,8 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.GEOTHERMAL_PLANT_VILLAGERS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(VILLAGERS, Buildings.SOLAR_COLLECTOR_VILLAGERS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(VILLAGERS, Buildings.ADVANCED_SOLAR_VILLAGERS);   // steady energy, T2 constructors
+		registerBuildings(VILLAGERS, Buildings.FUSION_REACTOR_VILLAGERS);   // endgame energy, T2 constructors
+		registerBuildings(VILLAGERS, Buildings.ADVANCED_FUSION_REACTOR_VILLAGERS);   // endgame energy, T3
 		registerBuildings(VILLAGERS, Buildings.BEACON);
 		
 		// Verdant Court: the same hotkey slots as the others (capitol slot 1, army lab slot 6, economy 5/6/7)
@@ -431,6 +437,8 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.GEOTHERMAL_PLANT_VERDANT);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(VERDANT_COURT, Buildings.SOLAR_COLLECTOR_VERDANT);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_SOLAR_VERDANT);   // steady energy, T2 constructors
+		registerBuildings(VERDANT_COURT, Buildings.FUSION_REACTOR_VERDANT);   // endgame energy, T2 constructors
+		registerBuildings(VERDANT_COURT, Buildings.ADVANCED_FUSION_REACTOR_VERDANT);   // endgame energy, T3
 
 		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, T2 lab slot 9, T2 defence
 		// slot 5, T3 lab hotkey 2)
@@ -447,6 +455,8 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.GEOTHERMAL_PLANT_TIDE);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(TIDEWROUGHT, Buildings.SOLAR_COLLECTOR_TIDE);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_SOLAR_TIDE);   // steady energy, T2 constructors
+		registerBuildings(TIDEWROUGHT, Buildings.FUSION_REACTOR_TIDE);   // endgame energy, T2 constructors
+		registerBuildings(TIDEWROUGHT, Buildings.ADVANCED_FUSION_REACTOR_TIDE);   // endgame energy, T3
 
 		// Stormcallers: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
 		registerStartBuilding(STORMCALLERS, Buildings.JADE_PAGODA, Keybindings.abilitySlot1);
@@ -462,6 +472,8 @@ public class Factions {
 		registerBuildings(STORMCALLERS, Buildings.GEOTHERMAL_PLANT_STORM);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(STORMCALLERS, Buildings.SOLAR_COLLECTOR_STORM);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(STORMCALLERS, Buildings.ADVANCED_SOLAR_STORM);   // steady energy, T2 constructors
+		registerBuildings(STORMCALLERS, Buildings.FUSION_REACTOR_STORM);   // endgame energy, T2 constructors
+		registerBuildings(STORMCALLERS, Buildings.ADVANCED_FUSION_REACTOR_STORM);   // endgame energy, T3
 
 		// Brassworks: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7, storage 8); no T2/T3 lab yet
 		registerStartBuilding(BRASSWORKS, Buildings.FOUNDRY_HALL, Keybindings.abilitySlot1);
@@ -477,6 +489,8 @@ public class Factions {
 		registerBuildings(BRASSWORKS, Buildings.GEOTHERMAL_PLANT_BRASS);   // T2 constructors, over lava (design/lively_buildings.md); no hotkey left
 		registerBuildings(BRASSWORKS, Buildings.SOLAR_COLLECTOR_BRASS);   // steady energy, T1 (claude/solar-spec.md); no hotkey left
 		registerBuildings(BRASSWORKS, Buildings.ADVANCED_SOLAR_BRASS);   // steady energy, T2 constructors
+		registerBuildings(BRASSWORKS, Buildings.FUSION_REACTOR_BRASS);   // endgame energy, T2 constructors
+		registerBuildings(BRASSWORKS, Buildings.ADVANCED_FUSION_REACTOR_BRASS);   // endgame energy, T3
 
 		// the static defences of all seven factions (design/defences.md): walls, gates, traps, the T1 anti-raid tower and
 		// the anti-T3 emplacement, appended to each build menu with no hotkey (every key is taken)
