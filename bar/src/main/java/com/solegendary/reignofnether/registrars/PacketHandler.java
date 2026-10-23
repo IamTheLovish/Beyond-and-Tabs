@@ -64,10 +64,11 @@ import net.minecraftforge.network.simple.SimpleChannel;
 // Initialises all of the client-server packet-sending classes
 
 public final class PacketHandler {
-    private static final String PROTOCOL_VERSION = ModList.get()
-            .getModContainerById("reignofnether")
-            .map(c -> c.getModInfo().getVersion().toString())
-            .orElse("dev");
+    // Forge compares this string exactly and lists it on its "mismatched channel list" screen, so it names our
+    // real build: the screen shows "Beyond and Tabs <yours>" next to "Beyond and Tabs <the server's>". The jar
+    // version is a constant, so it could never tell two test builds apart.
+    private static final String PROTOCOL_VERSION = com.solegendary.reignofnether.BuildId.channelVersion(
+            com.solegendary.reignofnether.BuildId.current());
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals,
