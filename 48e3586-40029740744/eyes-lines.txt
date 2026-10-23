@@ -1,0 +1,89 @@
+[21:54:02] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[21:54:04] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[21:54:04] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[21:54:04] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[21:54:04] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[21:54:14] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[21:54:15] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[21:54:23] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[21:54:37] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[21:54:38] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[21:55:14] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[21:55:44] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[21:56:14] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[21:56:14] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1792792574400
+[21:56:14] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[21:56:18] [Render thread/INFO]: [Eyes] clip-mark 01_title 1792792578481
+[21:56:18] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/VNR, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[21:56:18] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[21:56:20] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[21:56:38] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[21:56:38] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[21:57:10] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 37 s left (client tick 177, camera at [-209, 88, -4]); our slot -201, -11; a bot's start 223, -11; markers: 2 boxes, 3 frames drawn; team 0 (mine) fill built (27540 columns, 1686 quads), 303 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[21:57:12] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 34 s left, zoom 35.96916, camera at [-208, 88, -4]; markers: 2 boxes, 6 frames drawn; team 0 (mine) fill built (39219 columns, 2147 quads), 475 perimeter heights known; team 1 fill built (1278 columns, 127 quads), 16 perimeter heights known
+[21:57:12] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1792792632628
+[21:57:13] [IO-Worker-8/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[21:57:15] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 32 s left, zoom 59.856037, camera at [-206, 88, -6]; markers: 2 boxes, 9 frames drawn; team 0 (mine) fill built (39219 columns, 2147 quads), 475 perimeter heights known; team 1 fill built (1278 columns, 127 quads), 16 perimeter heights known
+[21:57:15] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1792792635051
+[21:57:15] [IO-Worker-8/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[21:57:17] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 30 s left, zoom 97.95353, camera at [-205, 88, -7]; markers: 2 boxes, 11 frames drawn; team 0 (mine) fill built (39219 columns, 2147 quads), 475 perimeter heights known; team 1 fill built (1278 columns, 127 quads), 16 perimeter heights known
+[21:57:17] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1792792637003
+[21:57:17] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[21:57:21] [Render thread/INFO]: [Eyes] 01f: eye at [223, 70, 9] y 71 looking at the start 223, -11 (20 blocks away; ground there 71); 25 s left; markers: 2 boxes, 15 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (36409 columns, 2119 quads), 362 perimeter heights known
+[21:57:21] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1792792641662
+[21:57:22] [IO-Worker-10/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[21:57:24] [Render thread/INFO]: [Eyes] 01e: start placed at -201, -11 with 23 s left; the phase ends 3 s later
+[21:57:25] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 21 s left, zoom 36.172394, camera at [-207, 90, -5]; markers: 2 boxes, 18 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill none (0 columns, 0 quads), 485 perimeter heights known
+[21:57:25] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1792792645650
+[21:57:26] [IO-Worker-8/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[21:57:49] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[21:58:28] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1792792708911
+[21:58:28] [Server thread/INFO]: [Eyes] ground 0:30 round [-209, -4]: {minecraft:calcite=2, minecraft:diorite_wall=20, minecraft:dirt=16, minecraft:gold_block=5, minecraft:grass_block=2149, minecraft:lantern=20, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:quartz_stairs=44, minecraft:raw_iron_block=14, minecraft:smooth_quartz=36, minecraft:smooth_quartz_slab=8, minecraft:smooth_quartz_stairs=56, minecraft:stone_brick_stairs=8}
+[21:58:28] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1792792708931
+[21:58:29] [IO-Worker-2/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[21:58:29] [IO-Worker-11/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[21:58:33] [Render thread/INFO]: [Eyes] 18_overlays: 10 squads of 50 round [-206, 70, 109] (ring 70), ground loaded, enemy 'Bot1 (medium)'
+[21:58:42] [Render thread/INFO]: [Eyes] 18_overlays: 505 of our units in, 505 units known to the client
+[21:58:42] [Render thread/INFO]: [Eyes] 18_overlays: 1700 house sites, 7 x 5 footprint on a 9 x 7 grid
+[21:58:46] [Render thread/INFO]: [Eyes] 18_overlays: 1700 client-only houses placed, 1707 buildings known to the client
+[21:58:52] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_mid 1792792732150
+[21:58:52] [Render thread/INFO]: [Eyes] 18_overlays_mid: zoom 45, 225 selected, 505 units and 1707 buildings known to the client, 225 selected units, 0 selected buildings
+[21:58:53] [IO-Worker-10/INFO]: [Eyes] 18_overlays_mid: Saved screenshot as bat_eyes_18_overlays_mid.png
+[21:58:55] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_mid_building 1792792735352
+[21:58:55] [Render thread/INFO]: [Eyes] 18_overlays_mid_building: 1 building(s) selected at -206, 70, 95
+[21:58:55] [IO-Worker-10/INFO]: [Eyes] 18_overlays_mid_building: Saved screenshot as bat_eyes_18_overlays_mid_building.png
+[21:58:59] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[21:59:00] [Render thread/INFO]: [Eyes] clip-mark 18_overlays_strategic 1792792740967
+[21:59:00] [Render thread/INFO]: [Eyes] 18_overlays_strategic: zoom 200, strategic view true, 505 units and 1708 buildings known to the client, 225 selected units, 0 selected buildings
+[21:59:01] [IO-Worker-4/INFO]: [Eyes] 18_overlays_strategic: Saved screenshot as bat_eyes_18_overlays_strategic.png
+[21:59:13] [Render thread/INFO]: [Eyes] 18_overlays slice 1/12: zoom 30 (reached 30, normal), 7 frames: p50 1264.8 ms, p95 1384.5 ms, max 1384.5 ms | ms/frame: unitOverlays 1.02, buildingBoxes 0.41, strategicIcons 0.00, unitRings 0.59, minimap 1.13, hud 5.56, unitBodies 37.08, buildingDecor 1.42, worldMarkers 4.15
+[21:59:26] [Render thread/INFO]: [Eyes] 18_overlays slice 2/12: zoom 60 (reached 60, normal), 7 frames: p50 1244.2 ms, p95 1384.1 ms, max 1384.1 ms | ms/frame: unitOverlays 1.67, buildingBoxes 0.51, strategicIcons 0.00, unitRings 0.48, minimap 1.30, hud 6.00, unitBodies 27.07, buildingDecor 2.40, worldMarkers 4.73
+[21:59:38] [Render thread/INFO]: [Eyes] 18_overlays slice 3/12: zoom 200 (reached 200, strategic), 8 frames: p50 1155.3 ms, p95 1228.9 ms, max 1228.9 ms | ms/frame: unitOverlays 0.73, buildingBoxes 0.30, strategicIcons 6.27, unitRings 0.02, minimap 1.39, hud 5.07, unitBodies 0.73, buildingDecor 0.01, worldMarkers 2.82
+[21:59:49] [Render thread/INFO]: [Eyes] 18_overlays slice 4/12: zoom 200 (reached 200, strategic), 7 frames: p50 1110.0 ms, p95 1358.8 ms, max 1358.8 ms | ms/frame: unitOverlays 2.60, buildingBoxes 0.22, strategicIcons 3.80, unitRings 0.02, minimap 0.92, hud 4.79, unitBodies 0.38, buildingDecor 0.01, worldMarkers 2.54
+[22:00:02] [Render thread/INFO]: [Eyes] 18_overlays slice 5/12: zoom 60 (reached 60, normal), 7 frames: p50 1239.8 ms, p95 1319.0 ms, max 1319.0 ms | ms/frame: unitOverlays 0.94, buildingBoxes 0.66, strategicIcons 0.00, unitRings 0.44, minimap 0.94, hud 4.21, unitBodies 21.85, buildingDecor 2.03, worldMarkers 3.43
+[22:00:11] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[22:00:15] [Render thread/INFO]: [Eyes] 18_overlays slice 6/12: zoom 30 (reached 30, normal), 7 frames: p50 1241.0 ms, p95 1460.5 ms, max 1460.5 ms | ms/frame: unitOverlays 0.57, buildingBoxes 0.31, strategicIcons 0.00, unitRings 0.52, minimap 0.96, hud 4.40, unitBodies 39.04, buildingDecor 0.93, worldMarkers 3.02
+[22:00:27] [Render thread/INFO]: [Eyes] 18_overlays slice 7/12: zoom 30 (reached 30, normal), 7 frames: p50 1254.5 ms, p95 1295.2 ms, max 1295.2 ms | ms/frame: unitOverlays 1.10, buildingBoxes 0.32, strategicIcons 0.00, unitRings 0.54, minimap 1.07, hud 4.53, unitBodies 29.84, buildingDecor 0.74, worldMarkers 3.00
+[22:00:39] [Render thread/INFO]: [Eyes] 18_overlays slice 8/12: zoom 60 (reached 60, normal), 7 frames: p50 1227.9 ms, p95 1257.4 ms, max 1257.4 ms | ms/frame: unitOverlays 0.91, buildingBoxes 0.41, strategicIcons 0.00, unitRings 0.47, minimap 1.24, hud 5.68, unitBodies 21.63, buildingDecor 1.28, worldMarkers 3.29
+[22:00:53] [Render thread/INFO]: [Eyes] 18_overlays slice 9/12: zoom 200 (reached 200, strategic), 7 frames: p50 1296.8 ms, p95 1419.8 ms, max 1419.8 ms | ms/frame: unitOverlays 0.61, buildingBoxes 0.21, strategicIcons 4.99, unitRings 0.02, minimap 1.17, hud 4.70, unitBodies 0.75, buildingDecor 0.01, worldMarkers 2.72
+[22:01:06] [Render thread/INFO]: [Eyes] 18_overlays slice 10/12: zoom 200 (reached 200, strategic), 6 frames: p50 1563.7 ms, p95 1646.9 ms, max 1646.9 ms | ms/frame: unitOverlays 0.55, buildingBoxes 0.23, strategicIcons 5.62, unitRings 0.02, minimap 1.67, hud 5.76, unitBodies 0.83, buildingDecor 0.01, worldMarkers 2.52
+[22:01:18] [Render thread/INFO]: [Eyes] 18_overlays slice 11/12: zoom 60 (reached 60, normal), 7 frames: p50 1238.5 ms, p95 1310.8 ms, max 1310.8 ms | ms/frame: unitOverlays 0.86, buildingBoxes 0.35, strategicIcons 0.00, unitRings 0.49, minimap 1.24, hud 5.27, unitBodies 22.74, buildingDecor 2.12, worldMarkers 4.04
+[22:01:28] [Render thread/INFO]: [Eyes] step 23 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[22:01:31] [Render thread/INFO]: [Eyes] 18_overlays slice 12/12: zoom 30 (reached 30, normal), 7 frames: p50 1261.3 ms, p95 1483.0 ms, max 1483.0 ms | ms/frame: unitOverlays 0.48, buildingBoxes 0.29, strategicIcons 0.00, unitRings 0.54, minimap 1.36, hud 5.28, unitBodies 40.93, buildingDecor 1.72, worldMarkers 4.84
+[22:01:31] [Render thread/INFO]: [Eyes] 18_overlays zoom 30 (medians of 4 slices; 505 units and 1718 buildings known to the client, 225 selected units, 0 selected buildings): frame p50 1257.9 ms, p95 1422.5 ms | ms/frame: unitOverlays 0.80, buildingBoxes 0.32, strategicIcons 0.00, unitRings 0.54, minimap 1.10, hud 4.91, unitBodies 38.06, buildingDecor 1.17, worldMarkers 3.59 | overlays+HUD (no bodies) 7.66 ms
+[22:01:31] [Render thread/INFO]: [Eyes] 18_overlays zoom 60 (medians of 4 slices; 505 units and 1718 buildings known to the client, 225 selected units, 0 selected buildings): frame p50 1239.1 ms, p95 1314.9 ms | ms/frame: unitOverlays 0.92, buildingBoxes 0.46, strategicIcons 0.00, unitRings 0.47, minimap 1.24, hud 5.47, unitBodies 22.29, buildingDecor 2.08, worldMarkers 3.73 | overlays+HUD (no bodies) 8.57 ms
+[22:01:31] [Render thread/INFO]: [Eyes] 18_overlays zoom 200 (medians of 4 slices; 505 units and 1718 buildings known to the client, 225 selected units, 0 selected buildings): frame p50 1226.1 ms, p95 1389.3 ms | ms/frame: unitOverlays 0.67, buildingBoxes 0.23, strategicIcons 5.31, unitRings 0.02, minimap 1.28, hud 4.93, unitBodies 0.74, buildingDecor 0.01, worldMarkers 2.63 | overlays+HUD (no bodies) 12.44 ms
+[22:01:36] [Render thread/INFO]: [Eyes] unit textures with mips: 9 of 21 registered (up to 3 levels)
+[22:01:36] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png]
+[22:01:36] [Render thread/INFO]: [Eyes] tour complete
