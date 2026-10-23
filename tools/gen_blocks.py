@@ -48,13 +48,17 @@ TARGETS = {
     # 38735013028); 0.085 gives ~0.057 on screen at the default zoom (vanilla 0.048, round 3 0.070) - a little more
     # texture than vanilla, no camouflage (sim: nearest-mipmap sampling at 36 px per block matched the eyes stills)
     # round 19: std 0.085 -> 0.072 - the plain game's grass still read as speckle from the RTS camera
-    "grass_block_top":  dict(luma=0.56, std=0.072, sat=0.00, tilt=21.0, smooth=24, pore=40),
-    "grass_block_side": dict(luma=0.40, std=0.085, sat=0.36, tilt=22.0, smooth=26, pore=48),
-    "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
+    # round 28 (photo scans, SCAN section below): sat 0.05 keeps a little of the scan's own hue spread (dry and green
+    # blades) under the biome tint; the side is fitted by the dirt's targets (its soil IS the dirt texture) and only
+    # its tilt / smooth / pore are read here; lf 0 = the scan's relief as it is
+    "grass_block_top":  dict(luma=0.645, std=0.060, sat=0.05, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.7,
+                             shoulder=0.80),
+    "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
+    "grass_block_side_overlay": dict(luma=0.56, std=0.070, sat=0.00, lf=0.0, tilt=16.0, smooth=24, pore=40),
+    "dirt":             dict(luma=0.34, std=0.045, sat=0.36, lf=0.0, tilt=12.0, smooth=26, pore=56, soften=0.7, toe=0.25),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=40, pore=12),
+    "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=0.6),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     # round 24-26 (PR #160, eyes close-ups of the terrain sampler, run 39838783742; shipped by lovish Oct 22 20:23 "you
@@ -416,10 +420,34 @@ SEED_ORDER = (
     "acacia_leaves_v2",
     "jungle_leaves_v2",
     "dark_oak_leaves_v2",
-    "grass_block_top_v2",     # round 19: a second grass top (GRASS_VARIANTS)
+    "grass_block_top_v2",     # round 19: a second grass top (round 28: SCAN_VARIANT_OF)
     "cherry_log",             # Oct 21: map-tree cherries
     "cherry_log_top",
     "cherry_leaves",
+    "stone_v2",               # round 28: the photo scans' variants (SCAN_VARIANT_OF)
+    "stone_v3",
+    "stone_v4",
+    "stone_v5",
+    "stone_v6",
+    "dirt_v2",
+    "dirt_v3",
+    "dirt_v4",
+    "dirt_v5",
+    "dirt_v6",
+    "grass_block_top_v3",
+    "grass_block_top_v4",
+    "grass_block_top_v5",
+    "grass_block_top_v6",
+    "grass_block_side_v2",
+    "grass_block_side_v3",
+    "grass_block_side_v4",
+    "grass_block_side_v5",
+    "grass_block_side_v6",
+    "grass_block_side_overlay_v2",
+    "grass_block_side_overlay_v3",
+    "grass_block_side_overlay_v4",
+    "grass_block_side_overlay_v5",
+    "grass_block_side_overlay_v6",
 )
 
 
@@ -941,7 +969,6 @@ for _v, _b in LEAF_VARIANTS.items():
     TARGETS[_v] = dict(TARGETS[_b])
 # and the grass top (lovish Oct 21, item 2: grass is the largest area on screen; vanilla's 4 turns of one texture
 # repeat across a field): the pack's grass_block blockstate picks 2 textures x 4 turns when not snowy
-GRASS_VARIANTS = {"grass_block_top_v2": "grass_block_top"}
 TARGETS["grass_block_top_v2"] = dict(TARGETS["grass_block_top"])
 GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 # Oct 21: cherry for the map trees (lovish's cherry references) - without these the cherries drew vanilla's flat
@@ -949,6 +976,17 @@ GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 TARGETS["cherry_log"] = dict(luma=0.24, std=0.050, sat=0.42, tilt=22.0, smooth=50, pore=30)
 TARGETS["cherry_log_top"] = dict(luma=0.42, std=0.040, sat=0.45, tilt=10.0, smooth=45, pore=30)
 TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
+# Round 28: the photo scans' shared-border variants (the SCAN section: SCAN_VARIANTS textures per block, none turned)
+# - appended last (SEED_ORDER rule); each takes its base texture's targets
+SCAN_VARIANT_OF = {}
+for _base in ("stone", "dirt", "grass_block_top", "grass_block_side", "grass_block_side_overlay"):
+    for _k in range(2, 7):
+        if _base == "grass_block_top" and _k == 2:
+            continue                                  # grass_block_top_v2 exists since round 19
+        SCAN_VARIANT_OF["%s_v%d" % (_base, _k)] = _base
+        TARGETS["%s_v%d" % (_base, _k)] = dict(TARGETS[_base])
+SCAN_VARIANT_OF["grass_block_top_v2"] = "grass_block_top"
+GRASS_TOPS = GRASS_TOPS + tuple("grass_block_top_v%d" % k for k in range(3, 7))
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1939,6 +1977,301 @@ def m_cobweb(F, n):
 # Calibrated at MIP 2, not at full size (round 2, Oct 15): from the RTS camera at the default zoom a 128x texture is
 # sampled at mip 2 (32 texels per block - the reference's own resolution). Fitted at mip 0, round 1 lost ~25% of its
 # contrast and half or more of its relief there (grass top 7 deg vs 21; pack_study --mip 2).
+# ------------------------------------------------------------------ photo scans (round 28) -----------------------
+# lovish Oct 22 20:23 ("yes switch them and keep improving"): stone, dirt and grass come from CC0 photo scans
+# (ambientCG, public domain - NOTICE.md) instead of procedural noise; rounds 17-26 of procedural stone, dirt and
+# grass plateaued at ~5/10 (fresh review of PR #160's round 26: "soft procedural noise, not rock", "moss / felt").
+# tools/scan_prep.py keeps 512 px copies of the seamless ambientCG tiles in tools/scans/; one tile = one block. Every
+# map comes from the scan: the colour (fitted to the material's targets like any other texture), the scan's own
+# normals (scaled to the material's tilt target - maps(nxy=)) and its displacement as the height (kept shallow,
+# CALM_HEIGHT).
+# SEAMS: vanilla turns and mirrors stone, dirt and grass tops at random per block. On a photo that breaks every
+# border (the scan's texels on two sides of a border are unrelated) and mirroring drew kaleidoscope stars across a
+# stone floor (offline 8 x 8 preview, round 28 step 1). So these blocks are NOT turned (SCAN_BLOCKSTATES): each picks
+# one of SCAN_VARIANTS textures that all share the same border band - the seamless tile itself - and differ inside
+# an irregular blob, where the same scan shows turned a quarter, a half or three quarters. Any two neighbours then
+# meet seamlessly, and the repeat is broken inside the blocks.
+SCAN_DIR = os.path.join(ROOT, "tools", "scans")
+SCAN_STONE = "Rock058"     # cool grey faceted rock, iron-stained fracture edges - stone that reads as rock
+SCAN_SOIL = "Ground106"    # brown topsoil with darker damp patches and leaf litter (its leaves turned brown)
+SCAN_GRASS = "Grass004"    # a meadow, not a lawn: dense blades of mixed green, dry straw and dark gaps
+SCAN_VARIANTS = 6
+LUMA = np.array([0.2126, 0.7152, 0.0722])
+
+
+def scan_map(asset, kind, n):
+    """One map of a scan, resampled to n x n with its edges wrapped (it stays seamless): 'Color' -> rgb 0..1,
+    'Displacement' -> 0..1, 'NormalGL' -> (nx, ny) in this pack's convention (y DOWN the texture; GL's green points
+    up the image)."""
+    im = Image.open(os.path.join(SCAN_DIR, "%s_%s.jpg" % (asset, kind)))
+    im = im.convert("L" if kind == "Displacement" else "RGB")
+    w = im.size[0]
+    if w != n:
+        big = Image.new(im.mode, (3 * w, 3 * w))
+        for i in range(3):
+            for j in range(3):
+                big.paste(im, (i * w, j * w))
+        im = big.resize((3 * n, 3 * n), Image.LANCZOS).crop((n, n, 2 * n, 2 * n))
+    a = np.asarray(im, dtype=np.float64) / 255.0
+    if kind == "NormalGL":
+        return a[..., 0] * 2 - 1, -(a[..., 1] * 2 - 1)
+    return a
+
+
+def flatten(F, rgb, cycles, keep=0.0):
+    """Divides out a scan's light and dark patches larger than ~1/cycles of the block (on the luma; each texel keeps
+    its colour), keeping `keep` of them. The Gaussian's half-power point sits at `cycles` per tile."""
+    L = rgb @ LUMA
+    lo = F.blur(L, 0.1874 * F.n / cycles)
+    ratio = (lo.mean() / np.maximum(lo, 1e-4)) ** (1 - keep)
+    return np.clip(rgb * ratio[..., None], 0, 1)
+
+
+def neutral(rgb):
+    """The scan's mean colour divided out (a grey of the same luma), its hue SPREAD kept: a texture the biome colour
+    tints, whose dry blades still come out yellower and the dark gaps bluer than the average blade."""
+    mean = rgb.reshape(-1, 3).mean(0)
+    return np.clip(rgb / mean * (mean @ LUMA), 0, 1)
+
+
+def no_green(rgb):
+    """Soil only: moss flecks and fallen leaves turn olive-brown (green never above red) - the grass side's soil must
+    not read as grass below its turf (the S5 gate), and dirt is dirt."""
+    return np.stack([rgb[..., 0], np.minimum(rgb[..., 1], rgb[..., 0] * 0.97), rgb[..., 2]], -1)
+
+
+def periodic(a):
+    """A scan tile with the COHERENT step across its wrap taken out (Moisan's periodic + smooth decomposition, per
+    channel, on the edge mismatch smoothed along the edge): ambientCG's tiles wrap with a low-frequency step on some
+    sets (Rock058: border step 1.27 x the inside step at 256 texels - S7). The texel-to-texel steps across the wrap are
+    left as they are - the full decomposition, which takes them out too, left a SMOOTHER line than the texture on every
+    block edge (S7 0.51-0.57, offline round 28)."""
+    if a.ndim == 3:
+        return np.stack([periodic(a[..., c]) for c in range(a.shape[-1])], -1)
+    h, w = a.shape
+    sig = h / 64.0                                     # ~4 texels at 256: what the eye reads as a line, not grain
+
+    def along(x):                                      # circular Gaussian along the edge
+        f = np.fft.fftfreq(x.shape[0])
+        return np.real(np.fft.ifft(np.fft.fft(x) * np.exp(-2 * (np.pi * sig * f) ** 2)))
+    v = np.zeros_like(a)
+    dv, du = along(a[-1, :] - a[0, :]), along(a[:, -1] - a[:, 0])
+    v[0, :] += dv
+    v[-1, :] -= dv
+    v[:, 0] += du
+    v[:, -1] -= du
+    q = np.arange(h).reshape(-1, 1)
+    r = np.arange(w).reshape(1, -1)
+    den = 2 * np.cos(2 * np.pi * q / h) + 2 * np.cos(2 * np.pi * r / w) - 4
+    den[0, 0] = 1.0
+    s = np.fft.fft2(v) / den
+    s[0, 0] = 0.0
+    return a - np.real(np.fft.ifft2(s))
+
+
+def scan_set(asset, n):
+    """dict(alb=colour, H=height, nxy=(nx, ny)) of a scan at n texels, every map's wrap healed (periodic)."""
+    nx, ny = scan_map(asset, "NormalGL", n)
+    return dict(alb=np.clip(periodic(scan_map(asset, "Color", n)), 0, 1), H=periodic(scan_map(asset, "Displacement", n)),
+                nxy=(periodic(nx), periodic(ny)))
+
+
+# variant i's inside: the tile turned k quarters, mirrored first or not, and rolled half a block or not (8 of the 16
+# such copies; a multiple of 8 texels, so the fit's mip statistics stay the same)
+VARIANT_TRANSFORMS = [None, (1, False, True), (2, False, False), (3, False, True), (0, True, True), (2, True, False)]
+
+
+def turned(scalars, vec, k, mirror=False, roll=False):
+    """Maps turned k quarter turns (np.rot90: counter-clockwise as seen), mirrored (left-right) first and rolled half
+    a tile: every scalar map (2-D or with channels) as it is, the vector pair (x, y) turned with them (a quarter
+    turn: (x, y) -> (y, -x), y down the texture; a mirror: x -> -x)."""
+    nx, ny = vec
+    if roll:
+        h = nx.shape[0] // 2
+        scalars = [np.roll(a, (h, h), (0, 1)) for a in scalars]
+        nx, ny = np.roll(nx, (h, h), (0, 1)), np.roll(ny, (h, h), (0, 1))
+    if mirror:
+        scalars = [a[:, ::-1] for a in scalars]
+        nx, ny = -nx[:, ::-1], ny[:, ::-1]
+    for _ in range(k % 4):
+        nx, ny = ny, -nx
+    return [np.rot90(a, k) for a in scalars], (np.rot90(nx, k), np.rot90(ny, k))
+
+
+def variant_mask(n, i):
+    """Where variant i shows its own copy: 1 inside an irregular blob, 0 in a thin border band (4-11% of the block
+    from each edge, its width wandering), soft over ~3 texels. Variant 0 is the tile itself (all 0). The band is
+    thin so the share of every block that is the same tile stays small (S4: the repeat at one block)."""
+    if i == 0:
+        return np.zeros((n, n))
+    F = Field(n, 2800 + 31 * i)                      # its own seed: the same blob for every scan material
+    edge = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    margin = np.clip(0.075 + 0.03 * F.noise(1, 6, 0.6) + 0.012 * F.noise(6, 20, 0.3), 0.04, 0.11)
+    return smoothstep(margin, margin + 3.0 / n, edge)
+
+
+def variant_maps(alb, n_img, s_img, i):
+    """Variant i of a scan material's FINAL maps (albedo, LabPBR _n and _s of the tile): its own transformed copy
+    inside variant_mask's blob, the tile itself in the border band - bit for bit, so two neighbours always meet as the
+    seamless tile meets itself (colour, normals, AO, height and smoothness alike)."""
+    if i == 0:
+        return alb, n_img, s_img
+    n = alb.shape[0]
+    m = variant_mask(n, i)
+    nf = n_img.astype(np.float64) / 255.0
+    sf = s_img.astype(np.float64)
+    vec = (nf[..., 0] * 2 - 1, nf[..., 1] * 2 - 1)
+    (alb2, ao2, h2, s2), (nx2, ny2) = turned([alb, nf[..., 2], nf[..., 3], sf], vec, *VARIANT_TRANSFORMS[i])
+
+    def mix(a, b):
+        w = m if a.ndim == 2 else m[..., None]
+        return a * (1 - w) + b * w
+    nx, ny = mix(vec[0], nx2), mix(vec[1], ny2)
+    out_n = materials.encode_normal(nx, ny, mix(nf[..., 2], ao2), (mix(nf[..., 3], h2) * 255 - 1) / 254)
+    keep = m <= 0
+    out_n[keep] = n_img[keep]                          # the band exactly as the tile (no re-encoding round-off)
+    out_s = np.clip(np.rint(mix(sf, s2)), 0, 255).astype(np.uint8)
+    return mix(alb, alb2), out_n, out_s
+
+
+def m_scan_stone(F, n):
+    d = scan_set(SCAN_STONE, n)
+    d["alb"] = flatten(F, d["alb"], 3.0, keep=0.35)
+    return d
+
+
+def m_scan_dirt(F, n):
+    d = scan_set(SCAN_SOIL, n)
+    d["alb"] = no_green(flatten(F, d["alb"], 3.0, keep=0.4))
+    return d
+
+
+def m_scan_grass_top(F, n):
+    d = scan_set(SCAN_GRASS, n)
+    d["alb"] = neutral(flatten(F, d["alb"], 2.0, keep=0.3))
+    return d
+
+
+def tone_limits(alb, t):
+    """A scan's darkest and brightest texels eased in (keys `toe` / `shoulder`, luma 0..1): below the toe a texel's
+    distance to it is cut to 35%, above the shoulder likewise - a photo's deep crevices and sunlit blade tips land
+    inside the pack's albedo range (S3: 1st..99th percentile luma 55..220) without flattening the middle tones."""
+    L = alb @ LUMA
+    L2 = L.copy()
+    if "toe" in t:
+        L2 = np.where(L2 < t["toe"], t["toe"] - (t["toe"] - L2) * 0.35, L2)
+    if "shoulder" in t:
+        L2 = np.where(L2 > t["shoulder"], t["shoulder"] + (L2 - t["shoulder"]) * 0.35, L2)
+    return np.clip(alb * (L2 / np.maximum(L, 1e-4))[..., None], 0, 1)
+
+
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top}
+
+
+def scan_textures(base, i, n):
+    """Variant i of a scanned material, finished: the tile is fitted to the base's targets, softened, its extremes
+    eased in (tone_limits) and given its LabPBR maps (its own normals at one scale for every variant); variant_maps
+    then cuts the variant from those finished maps. Returns dict(alb, H, maps=(n_img, s_img), k)."""
+    t = targets_for(base)
+    F = Field(n, SEEDS[base])
+    d = SCAN_BASES[base](F, n)
+    alb = tone_limits(soften(F, fit_albedo(d["alb"], t), t), t)
+    n_img, s_img, k = maps(F, d["H"], t, None, d["nxy"])
+    alb, n_img, s_img = variant_maps(alb, n_img, s_img, i)
+    return dict(alb=alb, H=d["H"], maps=(n_img, s_img), k=k)
+
+
+def _scan(base, i=0):
+    return lambda F, n, t: scan_textures(base, i, n)
+
+
+def turf(n, i):
+    """The grass block's side, round 28: the turf seen edge-on - a band of grass ~1/8-1/5 of the block deep whose
+    blades run UP and DOWN (lovish: grass on the side must not look like it grows sideways; a top-down grass photo
+    on the side reads as blades lying sideways), its lower edge ragged with single blades hanging over the soil
+    (sod folds over a cut edge), tips pointing down. Returns (alpha 0/1, height, grey shade ~1 of the blades): the
+    shade is the grass scan's own luma stretched 6x along v, so every streak is a real blade's tone run vertical.
+    Variant i keeps the band and the hanging blades of the outer 12% of the block on each side (shared, so the turf
+    runs on from block to block) and draws its own in between."""
+    S = Field(n, SEEDS["grass_block_side_overlay"])
+    V = S if i == 0 else Field(n, SEEDS["grass_block_side_overlay_v%d" % (i + 1)])
+    inner = smoothstep(0.06, 0.14, np.minimum(S.u, 1 - S.u))[0:1, :]       # 0 near the block's left / right edge
+    # the band and its hanging blades end within the top quarter of the side (S5: no green below it)
+    depth = 0.13 + 0.025 * S.noise(1, 6, 0.6)[0:1, :] + 0.012 * S.noise(6, 24, 0.3)[0:1, :]
+    if i:
+        depth = depth + inner * (0.02 * V.noise(1, 6, 0.6)[0:1, :] + 0.01 * V.noise(6, 24, 0.3)[0:1, :])
+    depth = np.clip(depth, 0.08, 0.18)
+    alpha = (S.v < depth).astype(np.float64)
+    blades = np.zeros((n, n))
+
+    def strands(rng, keep):
+        for _ in range(int(0.9 * n)):                 # hanging blades: tapered, nearly vertical, from the band's edge
+            x, r1, r2, r3, r4 = rng.random(5)
+            if not keep(x):
+                continue
+            x *= n
+            top = depth[0, int(x) % n] * n - r1 * 0.03 * n
+            ln = n * (0.02 + 0.05 * r2 ** 1.5)
+            drift = (r3 - 0.5) * 0.25                 # a slight lean, never sideways
+            wid = 1.0 + 1.2 * r4 * n / 256
+            steps = int(ln)
+            for st in range(steps):
+                t = st / max(1, steps - 1)
+                w = wid * (1 - 0.85 * t)               # tapers to a tip
+                y = int(top + st)
+                if y >= n:
+                    break
+                xc = x + drift * st
+                for dx in range(int(math.floor(xc - w / 2)), int(math.ceil(xc + w / 2))):
+                    blades[y, dx % n] = max(blades[y, dx % n], 1.0 - 0.5 * t)
+
+    def edge_zone(x):
+        return x < 0.12 or x > 0.88
+    strands(np.random.default_rng(SEEDS["grass_block_side_overlay"]), (lambda x: True) if i == 0 else edge_zone)
+    if i:
+        strands(np.random.default_rng(SEEDS["grass_block_side_overlay_v%d" % (i + 1)]), lambda x: not edge_zone(x))
+    alpha = np.maximum(alpha, (blades > 0).astype(np.float64))
+    g = scan_map(SCAN_GRASS, "Color", n) @ LUMA
+    yy = (np.arange(n) // 6)[:, None] % n             # 6x along v: blade tones become vertical streaks
+    streak = g[yy, np.arange(n)[None, :]]
+    streak = streak / streak.mean()
+    below = np.clip((S.v - depth) / 0.12, 0, 1)        # the hanging blades darken toward their tips (in shadow)
+    shade = streak * (1.0 - 0.18 * S.v / np.maximum(depth, 1e-3) * (S.v < depth)) * (1 - 0.25 * below)
+    H = np.where(alpha > 0.5, 0.75 + 0.15 * np.clip(streak - 1, -1, 1) + 0.1 * blades, 0.0)
+    return alpha, H, shade
+
+
+def _scan_grass_side(i=0):
+    """The side's soil IS the dirt texture (variant i, finished - colour, normals, AO, height, smoothness), so a dirt
+    block under a grass block continues it with no seam; the top of the soil is a darker humus band (colour only),
+    and under the turf a dark green-brown base shows only through the turf's gaps at a distance (mipmaps)."""
+    def r(F, n, t):
+        soil = scan_textures("dirt", i, n)
+        n_img, s_img = soil["maps"][0].copy(), soil["maps"][1].copy()
+        alpha, Ht, _ = turf(n, i)
+        m = alpha > 0.5
+        humus = 1 - 0.22 * (1 - smoothstep(0.10, 0.50, F.v))
+        alb = tone_limits(soil["alb"] * humus[..., None], t)
+        alb = np.where(m[..., None], np.array([0.27, 0.29, 0.20]) * (0.8 + 0.4 * Ht[..., None]), alb)
+        n_img[m] = (128, 128, 255, 255)                 # under the turf: flat, unshaded, at the top of the relief
+        return dict(H=np.where(m, 1.0, soil["H"]), alb=alb, maps=(n_img, s_img), k=soil["k"])
+    return r
+
+
+def _scan_grass_overlay(i=0):
+    def r(F, n, t):
+        alpha, H, shade = turf(n, i)
+        grey = np.repeat(shade[..., None], 3, -1) * 0.5
+        m = alpha > 0.5
+        fitted = fit_albedo(grey, t, m)
+        # the cut-away texels take the turf's mean grey: the mipmaps average them in, and a stray value there would
+        # draw a dark or pale rim round the band from the RTS camera
+        alb = np.where(m[..., None], fitted, fitted[m].mean(0))
+        side = _scan_grass_side(i)(F, n, TARGETS["grass_block_side"])
+        return dict(H=H, alb=alb, alpha=alpha, under=side["alb"])
+    return r
+
+
 CAL_MIP = 2
 
 
@@ -2019,7 +2352,29 @@ def solve_strength(H, tilt_deg, mask=None):
     return min(_bisect(at_mip, tilt_deg), _bisect(full, tilt_deg * TILT_CAP))
 
 
-def maps(F, H, t, alpha=None):
+def scan_normals(nxy, tilt_deg, mask=None):
+    """Round 28: a photo scan's own normals with their slopes scaled by k, k solved like solve_strength's (the tilt
+    at CAL_MIP on target, the full-size tilt capped at TILT_CAP x the target). Returns (k, (nx, ny, nz))."""
+    m = np.ones(nxy[0].shape, bool) if mask is None else mask
+    nx0, ny0 = nxy
+    nz0 = np.sqrt(np.clip(1 - nx0 * nx0 - ny0 * ny0, 0.05, 1))
+    sx, sy = nx0 / nz0, ny0 / nz0
+
+    def at(k):
+        ln = np.sqrt(1 + k * k * (sx * sx + sy * sy))
+        return k * sx / ln, k * sy / ln, 1 / ln
+
+    def at_mip(k):
+        x, y, _ = at(k)
+        return mip_tilt(x, y, m)
+
+    def full(k):
+        return float(np.degrees(np.arccos(np.clip(at(k)[2][m], -1, 1))).mean())
+    k = min(_bisect(at_mip, tilt_deg), _bisect(full, tilt_deg * TILT_CAP))
+    return k, at(k)
+
+
+def maps(F, H, t, alpha=None, nxy=None):
     # visible texels: alpha above 0.02 - a translucent pane (stained glass, alpha ~0.4) is surface, not a hole
     vis = None if alpha is None else alpha > 0.02
     H = norm01(H)
@@ -2027,8 +2382,11 @@ def maps(F, H, t, alpha=None):
     # t["lf"] (round 18): a material may take less of that boost - on stone it raised the grain into lumps that
     # Complementary lit as crumpled foil (eyes structure run 39536435197)
     H = norm01(H + t.get("lf", LF_GAIN) * (lf - lf.mean()))
-    k = solve_strength(H, t["tilt"], vis)
-    nx, ny, nz = normals(H, k)
+    if nxy is None:
+        k = solve_strength(H, t["tilt"], vis)
+        nx, ny, nz = normals(H, k)
+    else:                                                 # a photo scan brings its own normals (round 28)
+        k, (nx, ny, nz) = scan_normals(nxy, t["tilt"], vis)
     cav = np.clip(F.blur(H, F.n / 48) - H, 0, None)        # below the local average = occluded
     # t["ao"] (round 18b): leaves and stone take a lighter AO - darkening every gap between leaves by up to 45% made
     # the dark flecks over the canopy (eyes structure run 39541067693)
@@ -2084,7 +2442,7 @@ PLAINS_TINT = (0.57, 0.74, 0.35)   # a plains-like biome colour for the tinted t
 FOLIAGE_TINT = (0.47, 0.67, 0.18)  # the plains foliage colour (#77AB2F) for the leaves
 
 
-ROTATED = {"grass_block_top", "grass_block_top_v2", "dirt", "sand", "gravel", "stone"}   # turned at random per block
+ROTATED = {"sand", "gravel"}   # turned at random per block (round 28: not stone, dirt or grass - SCAN section)
 ROTATED |= set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}  # and this pack turns the leaves (round 17)
 
 
@@ -2276,14 +2634,30 @@ def write_models():
     for v, base in LEAF_VARIANTS.items():      # the variant's own model: vanilla's leaves model on its texture
         with open(os.path.join(MODEL_DIR, v + ".json"), "w") as f:
             json.dump({"parent": "minecraft:block/leaves", "textures": {"all": "minecraft:block/" + v}}, f, indent=1)
-    for v, base in GRASS_VARIANTS.items():
-        with open(os.path.join(MODEL_DIR, "grass_block_v2.json"), "w") as f:
-            json.dump({"parent": "minecraft:block/grass_block", "textures": {"top": "minecraft:block/" + v}}, f, indent=1)
-    grass = [dict({"model": "minecraft:block/" + m}, **({"y": y} if y else {}))
-             for m in ("grass_block", "grass_block_v2") for y in (0, 90, 180, 270)]
-    with open(os.path.join(BLOCKSTATE_DIR, "grass_block.json"), "w") as f:   # vanilla's, with the second top added
-        json.dump({"variants": {"snowy=false": grass, "snowy=true": {"model": "minecraft:block/grass_block_snow"}}},
-                  f, indent=1)
+    # round 28 (the SCAN section): stone, dirt and grass pick one of SCAN_VARIANTS textures per block and are never
+    # turned or mirrored - their variants share a seamless border band, a turn or a mirror would break it
+    def model(name, parent, textures):
+        with open(os.path.join(MODEL_DIR, name + ".json"), "w") as f:
+            json.dump({"parent": parent, "textures": {k: "minecraft:block/" + v for k, v in textures.items()}}, f,
+                      indent=1)
+    grass, stone, dirt = ["grass_block"], ["stone"], ["dirt"]
+    for k in range(2, SCAN_VARIANTS + 1):
+        model("grass_block_v%d" % k, "minecraft:block/grass_block", {
+            "top": "grass_block_top_v%d" % k, "side": "grass_block_side_v%d" % k,
+            "overlay": "grass_block_side_overlay_v%d" % k, "particle": "dirt", "bottom": "dirt"})
+        model("stone_v%d" % k, "minecraft:block/cube_all", {"all": "stone_v%d" % k})
+        model("dirt_v%d" % k, "minecraft:block/cube_all", {"all": "dirt_v%d" % k})
+        grass.append("grass_block_v%d" % k)
+        stone.append("stone_v%d" % k)
+        dirt.append("dirt_v%d" % k)
+
+    def blockstate(name, variants):
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"variants": variants}, f, indent=1)
+    pick = lambda ms: [{"model": "minecraft:block/" + m} for m in ms]          # noqa: E731
+    blockstate("grass_block", {"snowy=false": pick(grass), "snowy=true": {"model": "minecraft:block/grass_block_snow"}})
+    blockstate("stone", {"": pick(stone)})
+    blockstate("dirt", {"": pick(dirt)})
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -2374,10 +2748,11 @@ def recipes():
     """name -> recipe(F, n, t) returning H (height), alb (albedo fitted to the target t) and, where a material needs
     them, f0 (a per-texel F0 code map) or alpha (cut-out), under (the preview's backdrop). One per TARGETS key."""
     R = {
-        "grass_block_top": _plain(m_grass_top), "grass_block_top_v2": _plain(m_grass_top),
-        "grass_block_side": _grass_side,
-        "grass_block_side_overlay": _grass_side_overlay,
-        "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
+        # round 28: photo scans (the SCAN section); their variants are added below the table
+        "grass_block_top": _scan("grass_block_top"),
+        "grass_block_side": _scan_grass_side(0),
+        "grass_block_side_overlay": _scan_grass_overlay(0),
+        "dirt": _scan("dirt"), "stone": _scan("stone"), "cobblestone": _plain(m_cobblestone),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
         "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
@@ -2529,6 +2904,14 @@ def recipes():
     R["lantern"] = _parts(lambda F, n: m_lantern(F, n, (1.0, 0.72, 0.32)), fit=False)
     R["soul_lantern"] = _parts(lambda F, n: m_lantern(F, n, (0.35, 0.85, 0.95)), fit=False)
     R["cobweb"] = _parts(m_cobweb, fit=False)
+    for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
+        i = int(name.rsplit("_v", 1)[1]) - 1
+        if base in SCAN_BASES:
+            R[name] = _scan(base, i)
+        elif base == "grass_block_side":
+            R[name] = _scan_grass_side(i)
+        else:
+            R[name] = _scan_grass_overlay(i)
     return R
 
 
@@ -2542,6 +2925,9 @@ RECIPES = recipes()
 # stepped. Each costs ~4x the memory of a 128x texture (x3 maps) - 13 textures, ~13 MB of atlas with mipmaps.
 # Not stone and the building blocks: their grain read worse, not better, at 256x (a maze of worms) and they are many.
 HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS} | {"birch_log"}
+# round 28: the photo scans at 256 too (from 512 px sources) - at 128 the scans' grain fell under a texel and the mips
+# averaged it to mush; the grass side and its overlay match the top's resolution
+HIRES |= {"stone", "dirt", "grass_block_side", "grass_block_side_overlay"} | set(SCAN_VARIANT_OF)
 
 
 # Round 18d: the textures whose HEIGHT channel (normal map A) stays within a shallow top band. Complementary reads the
@@ -2552,6 +2938,7 @@ HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS
 SHALLOW_HEIGHT = 0.12
 CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "grass_block_top_v2", "dirt", "coarse_dirt",
                "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}
+CALM_HEIGHT |= {v for v, b in SCAN_VARIANT_OF.items() if b in CALM_HEIGHT}
 
 
 # Round 20: every other opaque texture keeps its height within the top quarter. Complementary's POM (on by default in
@@ -2560,28 +2947,42 @@ CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "gr
 BUILDING_HEIGHT = 0.25
 
 
-def make(name, res, preview_dir):
-    """One texture, start to end: recipe -> LabPBR maps -> the three PNGs (+ previews); returns its report line.
-    Independent of every other texture (its own seeded Field), so the build runs them in parallel."""
+def targets_for(name):
+    """The targets a texture is built with: TARGETS plus the height band of rounds 18d / 20."""
     t = TARGETS[name]
     if name in CALM_HEIGHT and "hspan" not in t:
         t = dict(t, hspan=SHALLOW_HEIGHT)
     elif "hspan" not in t and name not in CUTOUT:
         t = dict(t, hspan=BUILDING_HEIGHT)
+    return t
+
+
+def make(name, res, preview_dir):
+    """One texture, start to end: recipe -> LabPBR maps -> the three PNGs (+ previews); returns its report line.
+    Independent of every other texture (its own seeded Field), so the build runs them in parallel."""
+    t = targets_for(name)
     F = Field(res, SEEDS[name])
     r = RECIPES[name](F, res, t)
     for key in ("f0", "smooth", "emit"):   # per-texel codes a recipe painted (see maps)
         if key in r:
             t = dict(t, **{key + "_map": r[key]})
     H, alb, alpha = r["H"], r["alb"], r.get("alpha")
-    n_img, s_img, k = maps(F, H, t, alpha)
+    if "maps" in r:     # round 28: a recipe that finishes its own maps (the scans' variants, the grass side)
+        n_img, s_img = r["maps"]
+        k = r["k"]
+        probs = materials.check_labpbr(n_img, s_img, None if alpha is None else alpha > 0.02)
+        if probs:
+            raise SystemExit("LabPBR check failed (%s): %s" % (name, "; ".join(probs)))
+    else:
+        n_img, s_img, k = maps(F, H, t, alpha, r.get("nxy"))
     to_png(alb, alpha).save(os.path.join(BLOCK_DIR, name + ".png"), **PNG_OPTS)
     Image.fromarray(n_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_n.png"), **PNG_OPTS)
     Image.fromarray(s_img, "RGBA").save(os.path.join(BLOCK_DIR, name + "_s.png"), **PNG_OPTS)
     nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
     nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
     vis = None if alpha is None else alpha > 0.5
-    tint = PLAINS_TINT if name in GRASS_TOPS + ("grass_block_side_overlay",) else \
+    overlays = ("grass_block_side_overlay",) + tuple(v for v in SCAN_VARIANT_OF if v.startswith("grass_block_side_ov"))
+    tint = PLAINS_TINT if name in GRASS_TOPS + overlays else \
         FOLIAGE_TINT if name in LEAVES else None
     seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
     rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
@@ -2590,7 +2991,7 @@ def make(name, res, preview_dir):
               "rts_luma_std": round(rts_std, 3)}
     if preview_dir:
         shown = alb
-        if name in GRASS_TOPS + ("grass_block_side_overlay",):
+        if name in GRASS_TOPS + overlays:
             shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
         if name in LEAVES:
             shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
