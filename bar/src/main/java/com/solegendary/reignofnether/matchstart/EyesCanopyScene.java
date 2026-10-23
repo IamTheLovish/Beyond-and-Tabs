@@ -142,8 +142,9 @@ final class EyesCanopyScene {
                 if (seconds() < 4)
                     return false;
                 EyesDirector.shot(mc, "19_canopy_close");
-                ReignOfNether.LOGGER.info("[Eyes] 19_canopy close: {} capsules + {} model silhouettes",
-                        CanopySilhouettes.lastCapsules, CanopySilhouettes.lastModels);
+                ReignOfNether.LOGGER.info("[Eyes] 19_canopy close: {} capsules + {} model silhouettes, {} px per block",
+                        CanopySilhouettes.lastCapsules, CanopySilhouettes.lastModels,
+                        String.format("%.1f", CanopySilhouettes.pxPerBlock));
                 EyesDirector.setZoom(ZOOM);
                 OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(site));
                 // the fade: three of ours under the middle oak selected, each gets its own soft hole
@@ -378,9 +379,9 @@ final class EyesCanopyScene {
             on[k] /= Math.max(1, nOn);
             off[k] /= Math.max(1, nOff);
         }
-        ReignOfNether.LOGGER.info("[Eyes] 19_canopy cost ({} units under cover, {}{}): silhouettes on: canopy {} ms/frame, "
+        ReignOfNether.LOGGER.info("[Eyes] 19_canopy cost ({} units under cover, {} px per block, {}{}): silhouettes on: canopy {} ms/frame, "
                         + "unitBodies {}, frame p50 {} / p95 {} ms | off: canopy {} ms/frame, unitBodies {}, frame p50 {} / p95 {} ms",
-                (long) covered, SectionRebuilds.renderer(),
+                (long) covered, String.format("%.1f", CanopySilhouettes.pxPerBlock), SectionRebuilds.renderer(),
                 com.solegendary.reignofnether.postfx.ShaderPacks.inUse() ? ", shader pack" : "",
                 f2(on[0]), f2(on[3]), f2(on[1]), f2(on[2]), f2(off[0]), f2(off[3]), f2(off[1]), f2(off[2]));
     }

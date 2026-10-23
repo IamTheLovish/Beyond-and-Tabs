@@ -114,7 +114,8 @@ public final class CanopySilhouettes {
     /** Model-shaped silhouettes per frame at most; the rest of the covered units are capsules. */
     public static final int MAX_MODEL = 12;
     /** A unit this tall on screen (pixels) or taller gets its model shape; smaller ones a capsule. */
-    public static final float MODEL_MIN_PX = 56f;
+    // round 3's 56 px still meant every unit at the default zoom (eyes: 12 models at zoom 30 cost +8.5 ms unitBodies)
+    public static final float MODEL_MIN_PX = 110f;
     /** Units shorter than this on screen (pixels) get no silhouette: a smudge, not a shape. */
     private static final float MIN_PX = 6f;
     /** A unit found under cover stays "under cover" this long without a new hit: the next test is at most 4 ticks away. */
@@ -286,7 +287,7 @@ public final class CanopySilhouettes {
     private static boolean frameOpen = false;    // AFTER_SKY .. AFTER_ENTITIES of a view frame with silhouettes on
     private static LivingEntity capturing = null;
     private static int captureRgb = 0xFFFFFF;
-    private static float pxPerBlock = 0f;        // the RTS view's scale, from the last frame's projection
+    public static float pxPerBlock = 0f;         // the RTS view's scale, from the last frame's projection
 
     /** LevelRenderer.renderEntity HEAD: is this entity's draw to be copied into a model silhouette? */
     public static void beginEntity(Entity entity) {
@@ -421,7 +422,7 @@ public final class CanopySilhouettes {
 
         for (LivingEntity e : modelUnits)
             markTiles(e, cam, pt, main, margin);
-        int capsules = buildCapsules(evt.getFrustum(), camera, cam, pt, main, margin);
+        int capsules = buildCapsules(evt.getFrustum(), camera, cam, pt, main, margin, evt.getPoseStack().last().pose());
         lastCapsules = capsules;
         lastModels = modelUnits.size();
         if ((capsules == 0 && modelUnits.isEmpty()) || tiles.isEmpty())
@@ -457,7 +458,8 @@ public final class CanopySilhouettes {
      * camera sees it, and pushed to the unit's camera-facing side so the unit's own body (and the ground at its feet)
      * stays behind it and only leaves or walls in front pass the depth test.
      */
-    private static int buildCapsules(Frustum frustum, Camera camera, Vec3 cam, float pt, RenderTarget main, int margin) {
+    private static int buildCapsules(Frustum frustum, Camera camera, Vec3 cam, float pt, RenderTarget main, int margin,
+                                     Matrix4f pose) {
         boolean strategic = StrategicViewClientEvents.isStrategicView();
         Vector3f look = camera.getLookVector(), up = camera.getUpVector(), left = camera.getLeftVector();
         double pitch = Math.toRadians(camera.getXRot());
@@ -495,7 +497,9 @@ public final class CanopySilhouettes {
                 double px = cx + rx * sx * halfW + ux * sy * halfH;
                 double py = cy + ry * sx * halfW + uy * sy * halfH;
                 double pz = cz + rz * sx * halfW + uz * sy * halfH;
-                CAPSULES.vertex(px, py, pz).color(r, g, b, a).uv(sx, (float) (sy * aspect)).endVertex();
+                // through the level's pose (the camera's rotation lives there, not in ModelViewMat - round 3 drew
+                // the capsules unrotated, off screen)
+                CAPSULES.vertex(pose, (float) px, (float) py, (float) pz).color(r, g, b, a).uv(sx, (float) (sy * aspect)).endVertex();
                 markPoint(px, py, pz, main, margin, k == 0);
             }
             flushMark();
@@ -569,15 +573,24 @@ public final class CanopySilhouettes {
     }
 
     /** Our colour target at the main target's size, with the main depth texture as its depth attachment. */
+    private static int attachedDepth = -1, attachedFbo = -1;
+
     private static boolean prepareTarget(RenderTarget main) {
         if (target == null)
             target = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
         else if (target.width != main.width || target.height != main.height)
             target.resize(main.width, main.height, Minecraft.ON_OSX);
-        // attached every frame: the main depth texture is recreated on a resize, or by a shader pack changing its format
+        // re-attached when it changes: the main depth texture is recreated on a resize, or by a shader pack changing
+        // its format (and our target's own framebuffer is new after a resize). The status check is a driver sync, so
+        // only then too.
+        int depthId = main.getDepthTextureId();
+        if (depthId == attachedDepth && target.frameBufferId == attachedFbo)
+            return true;
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, target.frameBufferId);
         GlStateManager._glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D,
-                main.getDepthTextureId(), 0);
+                depthId, 0);
+        attachedDepth = depthId;
+        attachedFbo = target.frameBufferId;
         int status = GlStateManager.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER);
         if (status != GL30.GL_FRAMEBUFFER_COMPLETE) {
             failed = true;
@@ -669,6 +682,7 @@ public final class CanopySilhouettes {
         if (target != null) {
             target.destroyBuffers();   // its depth attachment is the main target's: destroyBuffers only frees our own
             target = null;
+            attachedFbo = -1;
         }
     }
 
