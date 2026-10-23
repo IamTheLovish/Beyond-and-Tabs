@@ -339,11 +339,16 @@ public interface Unit {
             // one entity query per tick shared by all three pickup checks (was three identical AABB queries).
             // Each check re-tests isRemoved()/count, so an item consumed by an earlier check is skipped by later
             // ones exactly as when each check ran its own query.
-            List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
-            if (!nearbyItems.isEmpty()) {
-                checkAndPickupFood(unit, nearbyItems);
-                checkAndPickupResources(unit, nearbyItems);
-                checkAndPickupEquipment(unit, nearbyItems);
+            // Run on every 2nd tick, staggered by entity id so half the units query each tick: a pickup lands at most
+            // one tick (50 ms) later than before. Every check below is level-triggered (an item stays in range until
+            // taken), so none can be missed.
+            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0) {
+                List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
+                if (!nearbyItems.isEmpty()) {
+                    checkAndPickupFood(unit, nearbyItems);
+                    checkAndPickupResources(unit, nearbyItems);
+                    checkAndPickupEquipment(unit, nearbyItems);
+                }
             }
 
             // sync target variables between goals and Mob

@@ -9,6 +9,7 @@
     "BaseSpawnerMixin",
     "BeaconBlockEntityMixin",
     "BearMixin",
+    "BlastFurnaceBlockMixin",
     "BlazeMixin",
     "ChunkMapAccessor",
     "CrossbowMixin",
@@ -67,6 +68,7 @@
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",

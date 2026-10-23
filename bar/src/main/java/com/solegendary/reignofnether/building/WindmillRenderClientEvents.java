@@ -150,64 +150,69 @@ public class WindmillRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        if (MC.level == null || MC.cameraEntity == null)
-            return;
-        // at strategic zoom the moving parts are subpixel; skip them entirely (zoom-out performance)
-        if (com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
+        try {
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (MC.level == null || MC.cameraEntity == null)
+                return;
+            // at strategic zoom the moving parts are subpixel; skip them entirely (zoom-out performance)
+            if (com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView())
+                return;
 
-        PoseStack matrix = evt.getPoseStack();
-        // the RENDER camera: in the RTS view the camera entity (the player) is nowhere near it, and translating by the
-        // entity's position is what made the sails float off their towers by a camera-dependent amount
-        Vec3 cam = evt.getCamera().getPosition();
-        BlockRenderDispatcher renderer = MC.getBlockRenderer();
-        MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-        float time = MC.level.getGameTime() + evt.getPartialTick();
-        // wind-driven parts run on a wind clock (resources/Wind): it advances faster in a strong wind and slower in a
-        // calm one, so the sails speed up and slow down smoothly instead of jumping when the wind changes
-        float dt = lastFrameTime < 0 ? 0 : Math.max(0, Math.min(5, time - lastFrameTime));
-        lastFrameTime = time;
-        windClock += dt * com.solegendary.reignofnether.resources.Wind.multiplier();
-        if (windClock > 1.0e6)
-            windClock -= 1.0e6;   // keep float precision; a jump every ~14 hours of play is invisible
-        boolean renderedAny = false;
+            PoseStack matrix = evt.getPoseStack();
+            // the RENDER camera: in the RTS view the camera entity (the player) is nowhere near it, and translating by the
+            // entity's position is what made the sails float off their towers by a camera-dependent amount
+            Vec3 cam = evt.getCamera().getPosition();
+            BlockRenderDispatcher renderer = MC.getBlockRenderer();
+            MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
+            float time = MC.level.getGameTime() + evt.getPartialTick();
+            // wind-driven parts run on a wind clock (resources/Wind): it advances faster in a strong wind and slower in a
+            // calm one, so the sails speed up and slow down smoothly instead of jumping when the wind changes
+            float dt = lastFrameTime < 0 ? 0 : Math.max(0, Math.min(5, time - lastFrameTime));
+            lastFrameTime = time;
+            windClock += dt * com.solegendary.reignofnether.resources.Wind.multiplier();
+            if (windClock > 1.0e6)
+                windClock -= 1.0e6;   // keep float precision; a jump every ~14 hours of play is invisible
+            boolean renderedAny = false;
 
-        for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
-            if (!placement.isBuilt || !placement.isExploredClientside)
-                continue;
-            Part p;
-            if (placement.getBuilding() instanceof WindGenerator mill)
-                p = partOf(placement, mill);
-            else if (placement.isCapitol)
-                p = capitolPartOf(placement);
-            else
-                continue;
-            if (p == NONE)
-                continue;
-            BlockPos at = p.pos();
-            double d2 = cam.distanceToSqr(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
-            boolean small = p.kind() == Kind.BELL || p.kind() == Kind.PETALS;
-            if (d2 > (small ? SMALL_PART_DIST_SQR : MAX_RENDER_DIST_SQR))
-                continue;
-            // only on a standing building: a site being rebuilt (or the anchor knocked out) has nothing to move;
-            // a bell hangs in an empty cell from the beam above it
-            if (MC.level.getBlockState(p.kind() == Kind.BELL ? at.above() : at).isAir())
-                continue;
-            int light = LevelRenderer.getLightColor(MC.level, p.kind() == Kind.BELL ? at : at.above());
-            float t = placement.getBuilding() instanceof WindGenerator wg && wg.isWindDriven() ? (float) windClock : time;
-            switch (p.kind()) {
-                case SAILS -> renderSails(p, matrix, cam, renderer, buffers, t, light);
-                case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, t, light);
-                case BELL -> renderBell(p, matrix, cam, renderer, buffers, t, light);
-                case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, t, light);
-                case VANES -> renderVanes(p, matrix, cam, renderer, buffers, t, light);
+            for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
+                if (!placement.isBuilt || !placement.isExploredClientside)
+                    continue;
+                Part p;
+                if (placement.getBuilding() instanceof WindGenerator mill)
+                    p = partOf(placement, mill);
+                else if (placement.isCapitol)
+                    p = capitolPartOf(placement);
+                else
+                    continue;
+                if (p == NONE)
+                    continue;
+                BlockPos at = p.pos();
+                double d2 = cam.distanceToSqr(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
+                boolean small = p.kind() == Kind.BELL || p.kind() == Kind.PETALS;
+                if (d2 > (small ? SMALL_PART_DIST_SQR : MAX_RENDER_DIST_SQR))
+                    continue;
+                // only on a standing building: a site being rebuilt (or the anchor knocked out) has nothing to move;
+                // a bell hangs in an empty cell from the beam above it
+                if (MC.level.getBlockState(p.kind() == Kind.BELL ? at.above() : at).isAir())
+                    continue;
+                int light = LevelRenderer.getLightColor(MC.level, p.kind() == Kind.BELL ? at : at.above());
+                float t = placement.getBuilding() instanceof WindGenerator wg && wg.isWindDriven() ? (float) windClock : time;
+                switch (p.kind()) {
+                    case SAILS -> renderSails(p, matrix, cam, renderer, buffers, t, light);
+                    case WHEEL -> renderWheel(p, matrix, cam, renderer, buffers, t, light);
+                    case BELL -> renderBell(p, matrix, cam, renderer, buffers, t, light);
+                    case PETALS -> renderPetals(p, matrix, cam, renderer, buffers, t, light);
+                    case VANES -> renderVanes(p, matrix, cam, renderer, buffers, t, light);
+                }
+                renderedAny = true;
             }
-            renderedAny = true;
+            if (renderedAny)
+                buffers.endBatch();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        if (renderedAny)
-            buffers.endBatch();
     }
 
     /** A unit block scaled to a box: x from x0 (width w), y from y0 (height h), z from z0 (depth d), in the current pose. */

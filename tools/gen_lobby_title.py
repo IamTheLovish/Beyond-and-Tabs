@@ -88,7 +88,6 @@ def _lettering(lines, pad, seed, drips_static, drips_anim, out_name, glow=1.0, r
     width = 0
     for parts, gap in lines:
         fonts = [(t, ImageFont.truetype(ff, int(sz * SS)), tr * SS) for t, ff, sz, tr in parts]
-        asc = max(f.getmetrics()[0] for _, f, _ in fonts)
         cap = max(f.getbbox("H")[3] - f.getbbox("H")[1] for _, f, _ in fonts)
         lw = sum(part_w(t, f, tr) for t, f, tr in fonts)
         y += gap * SS

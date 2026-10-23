@@ -57,6 +57,11 @@ grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
 grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the bot soak (gametest/SkirmishGameTests bots_play_each_other_without_errors): one line per bot, one notice
 grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
+# the Tier 2 bots (gametest/TierGateGameTests bots_reach_tier_2...): when each began and finished the tech, then its state
+# once a game-minute (buildings, incomes, what held it back) - one notice per bot (a notice keeps only ~4 KB)
+for bot in hard medium easy; do
+  grep -oE "\[T2(Timing|Snap)\] $bot .*" gametest.log | head -20 | cut -c1-230 | sed 's/%/%25/g' | awk -v b="$bot" 'BEGIN{printf "::notice::[T2 " b "]"} {printf "%%0A%s", $0} END{print ""}' || true
+done
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the T1 raid measurements (gametest/RaidGameTests): time-to-kill per faction, short lines in ONE notice (a step keeps

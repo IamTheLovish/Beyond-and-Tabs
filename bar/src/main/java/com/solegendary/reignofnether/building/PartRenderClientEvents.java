@@ -333,33 +333,38 @@ public class PartRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        frames++;
-        if (disabled || MC.level == null)
-            return;
-        int setting = setting();
-        if (!announced) {
-            announced = true;
-            ReignOfNether.LOGGER.info("[Parts] extractor rigs: {} variants, setting {}{}", BuildingParts.RIGS.size(),
-                DisplaySettings.BUILDING_ANIMATION_NAMES[setting],
-                DisplaySettings.buildingAnimationChosen() ? "" : " (default, from building_ambience)");
-        }
-        // at strategic zoom the parts are a few pixels: icons carry the map there
-        if (setting == DisplaySettings.ANIM_OFF || CANDIDATES.isEmpty() || StrategicViewClientEvents.isStrategicView())
-            return;
-        long t0 = System.nanoTime();
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_PARTS);
         try {
-            draw(evt, setting);
-        } catch (RuntimeException | LinkageError e) {
-            disable(e);
-        }
-        if (com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED && pickedCount > 0) {
-            long dt = System.nanoTime() - t0;
-            nanosTotal += dt;
-            nanosPeak = Math.max(nanosPeak, dt);
-            timedFrames++;
-            rigsPeak = Math.max(rigsPeak, pickedCount);
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            frames++;
+            if (disabled || MC.level == null)
+                return;
+            int setting = setting();
+            if (!announced) {
+                announced = true;
+                ReignOfNether.LOGGER.info("[Parts] extractor rigs: {} variants, setting {}{}", BuildingParts.RIGS.size(),
+                    DisplaySettings.BUILDING_ANIMATION_NAMES[setting],
+                    DisplaySettings.buildingAnimationChosen() ? "" : " (default, from building_ambience)");
+            }
+            // at strategic zoom the parts are a few pixels: icons carry the map there
+            if (setting == DisplaySettings.ANIM_OFF || CANDIDATES.isEmpty() || StrategicViewClientEvents.isStrategicView())
+                return;
+            long t0 = System.nanoTime();
+            try {
+                draw(evt, setting);
+            } catch (RuntimeException | LinkageError e) {
+                disable(e);
+            }
+            if (com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED && pickedCount > 0) {
+                long dt = System.nanoTime() - t0;
+                nanosTotal += dt;
+                nanosPeak = Math.max(nanosPeak, dt);
+                timedFrames++;
+                rigsPeak = Math.max(rigsPeak, pickedCount);
+            }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

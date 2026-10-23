@@ -30,7 +30,7 @@ public class ZombieProd extends GraveyardUnitProductionItem implements IUnitProd
         super(cost);
         this.onComplete = (Level level, ProductionPlacement building) -> {
             if (!level.isClientSide()) {
-                if (building instanceof GraveyardPlacement gy && building.getUpgradeLevel() > 0) {
+                if (building instanceof GraveyardPlacement gy && banksAsSkull(building)) {
                     if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_HUSKS))
                         gy.createSkull(EntityRegistrar.HUSK_UNIT.get());
                     else if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_DROWNED))
