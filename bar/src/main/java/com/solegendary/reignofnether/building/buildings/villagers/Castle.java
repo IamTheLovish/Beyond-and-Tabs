@@ -82,6 +82,7 @@ public class Castle extends ProductionBuilding implements GarrisonableBuildingAd
         this.productions.add(ProductionItems.RESEARCH_RAVAGER_CAVALRY, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_CASTLE_FLAG, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.SUN_COLOSSUS, Keybindings.abilitySlot4);   // Sunforged T3 experimental
+        this.productions.add(ProductionItems.SUN_T3B, Keybindings.abilitySlot5);   // second T3 (placeholder body), capped one alive each (T3Cap)
 
         setActiveAddon(GarrisonableBuildingAddon.class, this, true);
     }

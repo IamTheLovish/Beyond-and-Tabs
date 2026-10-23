@@ -59,6 +59,7 @@ public class AbyssalShipyard extends ProductionBuilding {
         this.spawnRadiusOffset = 3f;
 
         this.productions.add(ProductionItems.LEVIATHAN, Keybindings.abilitySlot4);   // Tidewrought T3 experimental
+        this.productions.add(ProductionItems.TIDE_T3B, Keybindings.abilitySlot5);   // second T3 (placeholder body), capped one alive each (T3Cap)
     }
 
     /** Server and client: null if this lab's owner has Tier 3, else the message to show (the experimental's gate). */
