@@ -178,8 +178,6 @@ def rose_window(size=1024, ss=2):
     col = mix(col, RUBY, smooth_inside(oc, px))
     ob = circ(*on_boundary(0.875), 0.034)
     col = mix(col, AMBER, smooth_inside(ob, px))
-    quat = np.minimum.reduce([circ(0.87 + 0.022, 0, 0.021), circ(0.87 - 0.022, 0, 0.021),
-                              circ(0.87, 0.022, 0.021), np.hypot(lx - 0.87, ly + 0.022) - 0.021])
     col = mix(col, GOLD_GLASS, smooth_inside(circ(0.87, 0, 0.016), px))
 
     # middle band 0.42-0.80: twelve lancets (ruby, gold border), spandrel roundels on the sector lines
