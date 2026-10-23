@@ -207,6 +207,7 @@ public class Factions {
 		registerEntity(PIGLINS, EntityRegistrar.BRUTE_UNIT.get(), ProductionItems.BRUTE);
 		registerEntity(PIGLINS, EntityRegistrar.BONEWRIGHT_UNIT.get(), ProductionItems.BONEWRIGHT);
 		registerEntity(PIGLINS, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.WAR_MAMMOTH);
+		registerEntity(PIGLINS, EntityRegistrar.MAGMA_HURLER_UNIT.get(), ProductionItems.HORDE_T3B);
 		registerEntity(PIGLINS, EntityRegistrar.HEADHUNTER_UNIT.get(), ProductionItems.HEADHUNTER);
 		registerEntity(PIGLINS, EntityRegistrar.MARAUDER_UNIT.get(), ProductionItems.MARAUDER);
 		registerEntity(PIGLINS, EntityRegistrar.HOGLIN_UNIT.get(), ProductionItems.HOGLIN);

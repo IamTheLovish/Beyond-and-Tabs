@@ -62,6 +62,7 @@ ROSTER = [
     ('Horde', 't2', 'piglins/MagmaCubeUnit', 'merger'),
     ('Horde', 't2', 'piglins/GhastUnit', 'artillery'),
     ('Horde', 't3', 'piglins/WarMammothUnit', 'experimental'),
+    ('Horde', 't3', 'piglins/MagmaHurlerUnit', 'experimental'),
     # Verdant Court
     ('Verdant', 'worker', 'verdant/SeedshaperUnit', 'builder'),
     ('Verdant', 'worker2', 'verdant/ElderDruidUnit', 'builder'),
@@ -190,6 +191,9 @@ OVERRIDES = {
     # every third swing adds bigHitDamageMod (3): 7 + 3 / 3 = 8 average
     'MarauderUnit': {'attackDamage': 8.0},
 }
+
+# second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
+COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')
@@ -352,7 +356,7 @@ def unit_stats():
         if not st['maxHealth']:
             errors.append(f'{name}: no maxHealth found')
         prod = path.replace('Unit.java', 'Prod.java')
-        key = _cost_key(prod) if os.path.exists(prod) else None
+        key = _cost_key(prod) if os.path.exists(prod) else COST_KEY_OVERRIDES.get(name)
         cost = costs.get(key) if key else None
         if not cost:
             errors.append(f'{name}: no cost (Prod key {key})')

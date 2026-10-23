@@ -40,10 +40,22 @@ public class SecondT3Prod extends ProductionItem implements IUnitProductionItem 
     private final ProductionItem first;
     private final ResourceCost unitCost;
     private final ResourceLocation icon;
+    /** Lang key of the real unit's name (tooltips are {@code .tooltip1}/{@code .tooltip2}), null while this is a placeholder. */
+    @Nullable private final String langKey;
 
     public SecondT3Prod(String name, String mobhead, ResourceCost cost, ProductionItem first,
                         Supplier<? extends EntityType<? extends Unit>> type) {
+        this(name, mobhead, cost, first, type, null);
+    }
+
+    /**
+     * A REAL second T3 (slice T3b-2..8): its own entity type, so no {@link T3Cap#TAG_SECOND} tag (the cap counts by type)
+     * and no announcement here (the unit announces itself under its own name, as every T3 body does).
+     */
+    public SecondT3Prod(String name, String mobhead, ResourceCost cost, ProductionItem first,
+                        Supplier<? extends EntityType<? extends Unit>> type, @Nullable String langKey) {
         super(cost);
+        this.langKey = langKey;
         this.name = name;
         this.first = first;
         this.unitCost = cost;
@@ -52,8 +64,8 @@ public class SecondT3Prod extends ProductionItem implements IUnitProductionItem 
             if (level.isClientSide())
                 return;
             Entity e = placement.produceUnit((ServerLevel) level, type.get(), placement.ownerName, false);
-            if (e == null)
-                return;
+            if (e == null || langKey != null)
+                return;   // a real unit: counted by its own type, announces itself
             e.getPersistentData().putBoolean(T3Cap.TAG_SECOND, true);
             // the body would announce itself under the FIRST T3's name (wrong unit), so announce under this item's
             // name and mark the body as announced (every T3 body uses this key)
@@ -78,6 +90,12 @@ public class SecondT3Prod extends ProductionItem implements IUnitProductionItem 
     }
 
     private List<FormattedCharSequence> description() {
+        if (langKey != null)
+            return List.of(
+                Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                FormattedCharSequence.EMPTY,
+                Component.translatable(langKey + ".tooltip1").getVisualOrderText(),
+                Component.translatable(langKey + ".tooltip2").getVisualOrderText());
         return List.of(
             Component.literal(name).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
             FormattedCharSequence.EMPTY,
@@ -93,12 +111,20 @@ public class SecondT3Prod extends ProductionItem implements IUnitProductionItem 
             name, icon, hotkey,
             () -> false,
             () -> canProduce(prodBuilding),
-            List.of(
-                Component.literal(name).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
-                ResourceCosts.getFormattedCost(unitCost),
-                ResourceCosts.getFormattedPopAndTime(unitCost),
-                FormattedCharSequence.EMPTY,
-                Component.translatable("entity.reignofnether.second_t3_placeholder").getVisualOrderText()),
+            langKey != null
+                ? List.of(
+                    Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                    ResourceCosts.getFormattedCost(unitCost),
+                    ResourceCosts.getFormattedPopAndTime(unitCost),
+                    FormattedCharSequence.EMPTY,
+                    Component.translatable(langKey + ".tooltip1").getVisualOrderText(),
+                    Component.translatable(langKey + ".tooltip2").getVisualOrderText())
+                : List.of(
+                    Component.literal(name).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                    ResourceCosts.getFormattedCost(unitCost),
+                    ResourceCosts.getFormattedPopAndTime(unitCost),
+                    FormattedCharSequence.EMPTY,
+                    Component.translatable("entity.reignofnether.second_t3_placeholder").getVisualOrderText()),
             this);
     }
 

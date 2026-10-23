@@ -197,6 +197,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit>> MAGMA_HURLER_UNIT = ENTITIES.register("magma_hurler_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth() * com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.SCALE,
+                           EntityType.PIGLIN_BRUTE.getHeight() * com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "magma_hurler_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit>> SUN_COLOSSUS_UNIT = ENTITIES.register("sun_colossus_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.SCALE,
@@ -1150,6 +1157,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd.itemName -> EntityRegistrar.SHIELD_PROJECTOR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.SapperProd.itemName -> EntityRegistrar.SAPPER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.ITEM_NAME -> EntityRegistrar.MAGMA_HURLER_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
             case BruteProd.itemName -> EntityRegistrar.BRUTE_UNIT.get();

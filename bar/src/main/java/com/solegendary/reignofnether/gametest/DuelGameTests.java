@@ -195,6 +195,7 @@ public class DuelGameTests {
         // Wisp Choir and Flak Swivel are wind-type and ground it. The Iron Leviathan Engine (Brassworks T3, slice 4) is a
         // ground body: it meets the T2 mix, and its drones (launched every 30 s, so at most one wave in a duel) fight for it
         var t3 = types(EntityRegistrar.SUN_COLOSSUS_UNIT, EntityRegistrar.BONE_DRAGON_UNIT, EntityRegistrar.WAR_MAMMOTH_UNIT,
+            EntityRegistrar.MAGMA_HURLER_UNIT,   // second T3 (T3b-2): artillery on the ground mix, an equal-metal duel row
             EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT);
         for (var big : t3) {
             int cost = metalOf(level, big.get());

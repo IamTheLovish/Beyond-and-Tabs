@@ -40,7 +40,13 @@ public final class T3Cap {
     public static final String LIMIT_MSG = "hud.reignofnether.t3_limit";
 
     /** One faction's pair: the first item, its body, and the second item. */
-    public record Pair(String faction, ProductionItem first, EntityType<?> firstType, SecondT3Prod second) { }
+    public record Pair(String faction, ProductionItem first, EntityType<?> firstType, SecondT3Prod second,
+                       @Nullable EntityType<?> secondType) {
+        /** A pair whose second item still trains the first's body (tagged {@link #TAG_SECOND}). */
+        public Pair(String faction, ProductionItem first, EntityType<?> firstType, SecondT3Prod second) {
+            this(faction, first, firstType, second, null);
+        }
+    }
 
     private static List<Pair> pairs;
 
@@ -50,7 +56,7 @@ public final class T3Cap {
             pairs = List.of(
                 new Pair("Sunforged", ProductionItems.SUN_COLOSSUS, EntityRegistrar.SUN_COLOSSUS_UNIT.get(), ProductionItems.SUN_T3B),
                 new Pair("Gravebound", ProductionItems.BONE_DRAGON, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.GRAVE_T3B),
-                new Pair("Horde", ProductionItems.WAR_MAMMOTH, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.HORDE_T3B),
+                new Pair("Horde", ProductionItems.WAR_MAMMOTH, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.HORDE_T3B, EntityRegistrar.MAGMA_HURLER_UNIT.get()),
                 new Pair("Verdant", ProductionItems.WORLD_TREE_WALKER, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.VERDANT_T3B),
                 new Pair("Tidewrought", ProductionItems.LEVIATHAN, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.TIDE_T3B),
                 new Pair("Stormcallers", ProductionItems.CELESTIAL_DRAGON, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), ProductionItems.STORM_T3B),
@@ -76,11 +82,13 @@ public final class T3Cap {
         boolean second = item == p.second();
         int n = 0;
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (le.isRemoved() || !le.isAlive() || le.getType() != p.firstType() || !(le instanceof Unit u))
+            EntityType<?> want = second && p.secondType() != null ? p.secondType() : p.firstType();
+            if (le.isRemoved() || !le.isAlive() || le.getType() != want || !(le instanceof Unit u))
                 continue;
             if (!owner.equals(u.getOwnerName()))
                 continue;
-            if (le.getPersistentData().getBoolean(TAG_SECOND) == second)
+            // a real second unit has its own type (counted above); a placeholder body is told apart by its tag
+            if (second && p.secondType() != null || le.getPersistentData().getBoolean(TAG_SECOND) == second)
                 n++;
         }
         Set<ProductionPlacement> seen = Collections.newSetFromMap(new IdentityHashMap<>());

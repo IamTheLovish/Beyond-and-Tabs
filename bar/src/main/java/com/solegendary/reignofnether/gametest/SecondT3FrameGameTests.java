@@ -60,8 +60,10 @@ public class SecondT3FrameGameTests {
 
     @SuppressWarnings("unchecked")
     static Mob spawnBody(GameTestHelper helper, T3Cap.Pair pair, String owner, boolean second, double x) {
-        Mob m = BigUnitGameTests.spawn(helper, (EntityType<? extends Mob>) pair.firstType(), owner, x, 8.5);
-        if (m != null && second)
+        // a REAL second unit (T3b-2..8) has its own type and no tag; a placeholder second is the first's body, tagged
+        EntityType<?> type = second && pair.secondType() != null ? pair.secondType() : pair.firstType();
+        Mob m = BigUnitGameTests.spawn(helper, (EntityType<? extends Mob>) type, owner, x, 8.5);
+        if (m != null && second && pair.secondType() == null)
             m.getPersistentData().putBoolean(T3Cap.TAG_SECOND, true);
         return m;
     }
@@ -81,7 +83,7 @@ public class SecondT3FrameGameTests {
                 problems.add(pair.faction() + ": slot 4 (R) is not the first T3");
             if (lab.productions.forHotkey(Keybindings.abilitySlot5) != pair.second())
                 problems.add(pair.faction() + ": slot 5 (T) is not the second T3");
-            if (!pair.second().getItemName().contains("T3b (placeholder)") || pair.second().getItemName().equals(pair.first().getItemName()))
+            if ((pair.secondType() == null && !pair.second().getItemName().contains("T3b (placeholder)")) || pair.second().getItemName().equals(pair.first().getItemName()))
                 problems.add(pair.faction() + ": the second T3 has no distinct placeholder name: " + pair.second().getItemName());
             if (com.solegendary.reignofnether.api.ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(pair.second()) == null)
                 problems.add(pair.faction() + ": the second T3 is not registered");
