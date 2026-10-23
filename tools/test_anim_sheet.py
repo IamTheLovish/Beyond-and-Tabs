@@ -85,6 +85,31 @@ class Labels(unittest.TestCase):
         self.assertEqual(S.time_label(4, 0.55), "5  +0.55s  (tick 11)")
 
 
+class ComposeLabels(unittest.TestCase):
+    """Rows photographed in the game are separate takes: each row's captions carry its own times."""
+
+    def _sheet(self, labels):
+        from PIL import Image
+        lay = S.layout([3, 3])
+        cells = [Image.new("RGB", (lay.cell, lay.heights[0]), (90, 90, 90)) for _ in range(3)]
+        return S.compose("t", "l", [("side", cells), ("front", cells)], lay, labels), lay
+
+    def test_one_list_of_captions_serves_every_row(self):
+        sheet, lay = self._sheet(["a", "b", "c"])
+        self.assertEqual(sheet.size, (lay.width, lay.height))
+
+    def test_per_row_captions_are_drawn_per_row(self):
+        import numpy as np
+        same, lay = self._sheet([["wwwwwwww", "wwwwwwww", "wwwwwwww"], ["wwwwwwww", "wwwwwwww", "wwwwwwww"]])
+        diff, _ = self._sheet([["wwwwwwww", "wwwwwwww", "wwwwwwww"], ["", "", ""]])
+        y = lay.positions[1][0][1] + lay.heights[1]
+        a = np.asarray(same)[y:y + lay.label_h]
+        b = np.asarray(diff)[y:y + lay.label_h]
+        self.assertFalse((a == b).all(), "the second row's captions were not drawn from its own list")
+        y0 = lay.positions[0][0][1] + lay.heights[0]
+        self.assertTrue((np.asarray(same)[y0:y0 + lay.label_h] == np.asarray(diff)[y0:y0 + lay.label_h]).all())
+
+
 class SelectNearest(unittest.TestCase):
     def test_picks_the_closest_capture_to_each_target(self):
         times = [0.0, 0.07, 0.11, 0.30, 0.52, 0.55, 0.9]

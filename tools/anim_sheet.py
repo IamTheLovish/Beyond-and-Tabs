@@ -230,7 +230,8 @@ def draw_trails(im, paths, marks=(), width=2):
 
 
 def compose(title, legend, view_rows, lay, labels, hit_index=None, trail_cells=None, trail_key=(), ref=None):
-    """Draw the sheet. view_rows = [(view name, [cell images])]; labels = one caption per frame; hit_index = the frame
+    """Draw the sheet. view_rows = [(view name, [cell images])]; labels = one caption per frame (shared by the rows), or
+    one list of captions per row (rows that are separate takes, each with its own times); hit_index = the frame
     with the blow (orange frame); trail_cells = [one image per view] drawn on the line after the frame lines, and
     trail_key = the names of the paths in them, written in their colours after the legend; ref = a PIL image (or
     list) placed in the reference band(s)."""
@@ -251,7 +252,8 @@ def compose(title, legend, view_rows, lay, labels, hit_index=None, trail_cells=N
             sheet.paste(im if im.size == (lay.cell, h) else im.resize((lay.cell, h)), (x, y))
             if hit_index is not None and k == hit_index:
                 d.rectangle((x - 1, y - 1, x + lay.cell, y + h), outline=HIT, width=3)
-            d.text((x + 3, y + h + 1), labels[k], fill=HIT if k == hit_index else INK, font=small)
+            cap = labels[li][k] if labels and isinstance(labels[0], (list, tuple)) else labels[k]
+            d.text((x + 3, y + h + 1), cap, fill=HIT if k == hit_index else INK, font=small)
         x0, y0 = lay.positions[li][0]
         d.rectangle((x0, y0, x0 + 8 + 8 * len(vname), y0 + 16), fill=(0, 0, 0))
         d.text((x0 + 4, y0 + 1), vname, fill=INK, font=small)

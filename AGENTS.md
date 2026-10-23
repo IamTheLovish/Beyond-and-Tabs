@@ -214,6 +214,21 @@ All run on GitHub Actions, never on anyone's PC:
   first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
   new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
   dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
+  **Animation photos - LOOK at any unit's animation** (input `anim`; one command, Oct 22 2026):
+  `python3 tools/anim_eyes.py <unit> <clip>` prints `sheet <path>`; **Read the png** (<= 2000 px: ~10 frames a view, a
+  take per row, the time under every frame). Clips: idle, walk (= fly), attack, turn (a flier banks into a left then a
+  right turn), death. `halberdier` (or levy, medic, paladin, squire: the units with a `design/anims/*.json`) renders
+  OFFLINE in seconds from the data (the fast loop, with the blow marked and weapon / foot trails). **`--ci`** plays the
+  REAL game instead - any unit, including everything animated in Java (the dragons, `setupAnim` models): it dispatches
+  eyes.yml with `anim=unit:clip` on your current (pushed, PR-built) branch, waits (~7 min, one job, no queue behind other
+  runs), downloads artifact `anim-<run id>` and prints the sheets. `matchstart/EyesAnimScene.java` summons the unit on
+  a flat pad, orders it (a real MOVE / ATTACK_MOVE, a dummy to hit, a kill), locks a first-person camera to it (side,
+  front, rear - `--views side+rear`) and screenshots every few game ticks; the log gives each frame's exact game tick.
+  Examples: `anim_eyes.py bone_dragon_unit turn --ci --views rear+side` (flight bank), `anim_eyes.py zombie_unit attack
+  --ci`. Limits: the client draws 5-15 frames a second on software GL, so frames are picked by game time (the label has it)
+  and a 3-tick blow can fall between two; takes are separate (a column is not one instant); the camera distance comes from the
+  hitbox (`--dist` to override); ability / cast clips are not in the five; team colour is not applied offline. Tests:
+  `tools/test_anim_eyes.py`, `tools/test_anim_sheet.py` (`anim_lab.py --sheet` makes the offline sheets).
 - **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
   coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model
