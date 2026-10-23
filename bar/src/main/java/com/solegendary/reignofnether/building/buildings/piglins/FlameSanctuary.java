@@ -45,6 +45,7 @@ public class FlameSanctuary extends ProductionBuilding {
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;
+        this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
 
         this.productions.add(ProductionItems.RESEARCH_BLAZE_FIREWALL, Keybindings.abilitySlot1);
         // Horde T2 lab
