@@ -59,6 +59,28 @@ class WorldMarkerCostTest {
     }
 
     @Test
+    void refreshGateRebuildsOnlyWhenDue() {
+        RefreshGate g = new RefreshGate(5);
+        assertTrue(g.due(100, 7), "first call builds");
+        assertTrue(!g.due(101, 7) && !g.due(104, 7), "same list, inside the interval: reuse");
+        assertTrue(g.due(105, 7), "interval passed");
+        assertTrue(g.due(106, 8), "list size changed");
+        assertTrue(g.due(3, 8), "clock went backwards: a new world");
+        assertTrue(!g.due(3, 8));
+    }
+
+    @Test
+    void rangeIndicatorsAreFoundOnceNotPerFrame() throws IOException {
+        String s = src("blocks/BlockClientEvents.java");
+        int handler = s.indexOf("public static void onRenderLevel");
+        String h = s.substring(handler, s.indexOf("maintain a mapping of night sources"));
+        assertTrue(s.contains("RefreshGate"), "the subset of range-indicator buildings and units is cached");
+        assertTrue(!h.contains("for (BuildingPlacement building : BuildingClientEvents.getBuildings())")
+                && !h.contains("for (LivingEntity le : UnitClientEvents.getAllUnits())"),
+                "the frame does not walk every building and unit");
+    }
+
+    @Test
     void metalRingsUseTheTable() throws IOException {
         String s = src("resources/MetalPatchMarkerClientEvents.java");
         assertTrue(s.contains("UnitRing"), "rings read the precomputed circle");
