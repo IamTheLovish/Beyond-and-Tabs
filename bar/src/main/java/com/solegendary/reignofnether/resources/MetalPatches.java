@@ -209,9 +209,9 @@ public final class MetalPatches {
     public static void stamp(ServerLevel level, int x, int z) {
         ensureLoaded(level);
         int[] dry = drySpot(level, x, z);
-        boolean wet = dry == null;   // no dry pad nearby: the pad reclaims its water below, never leaves a wet column
+        boolean wet = dry == null;   // no dry pad nearby: the pad becomes an island, never leaves a wet column
         if (wet)
-            ReignOfNether.LOGGER.warn("[MetalPatches] no dry ground within {} of [{}, {}]: reclaiming the water under the pad",
+            ReignOfNether.LOGGER.warn("[MetalPatches] no dry ground within {} of [{}, {}]: raising an island",
                     MAX_DRY_RELOCATE, x, z);
         else if (dry[0] != x || dry[1] != z) {
             ReignOfNether.LOGGER.info("[MetalPatches] patch at [{}, {}] moved to dry ground at [{}, {}]", x, z, dry[0], dry[1]);
@@ -231,6 +231,13 @@ public final class MetalPatches {
             }
         // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
         int padY = solidTop(level, x, z);
+        if (wet) {
+            // no dry ground in reach (open water): the pad becomes an island flush with the water's surface
+            BlockPos.MutableBlockPos w = new BlockPos.MutableBlockPos(x, padY + 1, z);
+            while (w.getY() < padY + 40 && !level.getBlockState(w).getFluidState().isEmpty())
+                w.move(0, 1, 0);
+            padY = Math.max(padY, w.getY() - 1);
+        }
         BlockPos centre = new BlockPos(x, padY, z);
         STAMPED.computeIfAbsent(dim, k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()))
                 .add(centre);
@@ -267,23 +274,22 @@ public final class MetalPatches {
                         if (!level.getBlockState(p.set(bx, y, bz)).isAir())
                             level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
                     // raise low ground up to the pad
-                    for (int y = padY - 4; y < padY; y++)
+                    for (int y = wet ? Math.min(padY - 4, solidTop(level, bx, bz)) : padY - 4; y < padY; y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isSolidRender(level, p))
                             level.setBlock(p, fill, FLAGS);
                     level.setBlock(p.set(bx, padY, bz), cap, FLAGS);
                 }
             if (wet) {
-                // a ring of land round the reclaimed pad, as high as the pad is cleared, so the water beside it cannot
-                // flow back over the pad (any fluid in an extractor's footprint is refused as ground_not_flat)
+                // the island's shore: a ring of land to the pad's height, so the pad never stands on a one-column pillar
                 int ring = PAD_HALF + 1;
                 for (int dx = -ring; dx <= ring; dx++)
                     for (int dz = -ring; dz <= ring; dz++) {
+                        int bx = x + dx, bz = z + dz;
                         if (Math.max(Math.abs(dx), Math.abs(dz)) != ring
-                                || com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(x + dx, padY, z + dz))
+                                || com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(bx, padY, bz))
                             continue;
-                        for (int y = padY + 1; y <= padY + 8; y++)
-                            if (!level.getBlockState(p.set(x + dx, y, z + dz)).getFluidState().isEmpty())
-                                level.setBlock(p, fill, FLAGS);
+                        for (int y = solidTop(level, bx, bz) + 1; y <= padY; y++)
+                            level.setBlock(p.set(bx, y, bz), fill, FLAGS);
                     }
             }
             for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}})
