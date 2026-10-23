@@ -64,6 +64,11 @@ grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN
 if grep -q "\[ModBlocks\]" gametest.log; then
   grep -oE "\[ModBlocks\].*" gametest.log | head -6 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Mod blocks]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
+# order response latency (gametest/OrderLatencyGameTests: unit ticks from an order to moving / to the tracker sending
+# it) and graveyard exits (GraveyardExitGameTests), one notice - lovish Oct 22 20:23 "sometimes a delay in actions"
+if grep -qE "\[(Latency|GraveyardExit)\]" gametest.log; then
+  grep -oE "\[(Latency|GraveyardExit)\].*" gametest.log | head -20 | cut -c1-400 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Order latency]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # where the ~26 minutes go: wall time per test batch + the slowest tests, one notice (tools/gametest_timing.py)
 python3 ../tools/gametest_timing.py gametest.log || true
 if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then

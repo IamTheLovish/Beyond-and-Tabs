@@ -30,7 +30,14 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
     protected int ticksUntilNextPathRecalculation;
     protected final int tickPathRecalcMax = 5;
     protected int ticksUntilNextAttack;
+    // canUse's re-check timer (vanilla MeleeAttackGoal: a chase path at most once a second) and the target it last
+    // checked. The timer only holds back a re-check of the SAME target: a new one - an attack order, a target just
+    // picked up - is checked at once. It used to wait out the timer too, so an attack order on an idle melee unit
+    // started 0-20 ticks late depending on where the timer stood ("sometimes a delay in actions", lovish Oct 22 20:23;
+    // OrderLatencyGameTests). A target that can't be chased is still re-tried at most once a second.
+    private static final long CAN_USE_RECHECK_TICKS = 20L;
     private long lastCanUseCheck;
+    private int lastCanUseTargetId = -1;
 
     public AbstractMeleeAttackUnitGoal(Mob mob, boolean followingTargetEvenIfNotSeen) {
         this.mob = mob;
@@ -48,11 +55,14 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
 
     public boolean canUse() {
         long i = this.mob.level().getGameTime();
-        if (i - this.lastCanUseCheck < 20L) {
+        LivingEntity target = this.mob.getTarget();
+        int targetId = target == null ? -1 : target.getId();
+        if (targetId == this.lastCanUseTargetId && i - this.lastCanUseCheck < CAN_USE_RECHECK_TICKS) {
             return false;
         } else {
             this.lastCanUseCheck = i;
-            LivingEntity livingentity = this.mob.getTarget();
+            this.lastCanUseTargetId = targetId;
+            LivingEntity livingentity = target;
             if (livingentity == null) {
                 return false;
             } else if (!livingentity.isAlive()) {

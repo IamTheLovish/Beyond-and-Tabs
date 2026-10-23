@@ -173,11 +173,19 @@ public final class PathfinderWorkerPool {
     }
 
     private static void serverTick(TickEvent.ServerTickEvent evt) {
-        // START: rebuild settled dirty chunks, then classify a budget of cold corridor chunks and dispatch any
-        // request now warm. Drain first so paths captured this tick see freshest data.
+        // START: deliver the paths finished since the last END, rebuild settled dirty chunks, then classify a budget
+        // of cold corridor chunks and dispatch any request now warm. The dirty drain comes before the dispatch so
+        // paths captured this tick see freshest data.
         if (evt.phase == TickEvent.Phase.START) {
             // apply a pending pathfindingThreads change before any dispatch this tick.
             applyPendingResize();
+            // A player's order is handled between two ticks (the packet's server task), and a warm request goes to
+            // the pool right then (submit), so its path is usually done before this tick starts: handing it over
+            // here, before the entities tick, lets the unit take its first step this tick instead of waiting for
+            // the END delivery and stepping a tick later (OrderLatencyGameTests; lovish Oct 22 20:23, "sometimes a
+            // delay in actions").
+            if (UnitServerEvents.rtsPathfinding)
+                drainResults();
             // walkability caching + dispatch only run with the rtsPathfinding gamerule on (off = vanilla
             // pathfinding). the resource index is independent (used by gather goals either way), so always drains.
             if (UnitServerEvents.rtsPathfinding) {
@@ -189,9 +197,14 @@ public final class PathfinderWorkerPool {
             }
             return;
         }
-        // END: deliver finished paths back on the main thread.
+        // END: deliver finished paths back on the main thread (the ones dispatched during this tick).
         if (evt.phase != TickEvent.Phase.END) return;
         if (!UnitServerEvents.rtsPathfinding) return;
+        drainResults();
+    }
+
+    // Run finished paths' callbacks on the main thread, at most 256 a call (the rest wait for the next delivery).
+    private static void drainResults() {
         Runnable r;
         int drained = 0;
         while (drained < 256 && (r = RESULTS.poll()) != null) {
@@ -213,8 +226,34 @@ public final class PathfinderWorkerPool {
         }
         int dilation = PathfinderConfig.dilationFor(start, target);
         ChunkSnapshot.CaptureRegion region = ChunkSnapshot.regionFor(level, start, target, dilation);
-        BUILD_QUEUE.add(new PendingBuild(level, start, target, reach, mobility, clearanceCells,
-                footprintRadius, fireCost, canClimb, maxNodes, region, valid, onReady, System.nanoTime()));
+        PendingBuild pb = new PendingBuild(level, start, target, reach, mobility, clearanceCells,
+                footprintRadius, fireCost, canClimb, maxNodes, region, valid, onReady, System.nanoTime());
+        // A request whose whole corridor is already classified (cache hits are free: the usual case on a match map,
+        // prewarmed at load) goes to the pool now, not at the next tick's START - a player's order arrives between
+        // two ticks, and its A* then runs while the server waits for the next one (see serverTick). Behind parked
+        // requests it queues as before, so the queue stays first come, first served.
+        if (BUILD_QUEUE.isEmpty() && skipWarmChunks(pb)) {
+            dispatchToPool(pb);
+            return;
+        }
+        BUILD_QUEUE.add(pb);
+    }
+
+    // Advance the request's cursor over chunks that are already classified (free, as in processBuildQueue). True when
+    // that was all of them: the corridor is warm.
+    private static boolean skipWarmChunks(PendingBuild pb) {
+        WalkabilityGrid grid = WalkabilityGrid.get(pb.level);
+        ChunkSnapshot.CaptureRegion region = pb.region;
+        int width = region.cz1 - region.cz0 + 1;
+        int total = region.chunkCount();
+        while (pb.cursor < total) {
+            int cx = region.cx0 + pb.cursor / width;
+            int cz = region.cz0 + pb.cursor % width;
+            if (!grid.isBuilt(cx, cz, region.wantMinY, region.wantMaxY))
+                return false;
+            pb.cursor++;
+        }
+        return true;
     }
 
     // Classify up to maxChunkBuildsPerTick cold chunks across parked requests this tick. Cache hits are free
