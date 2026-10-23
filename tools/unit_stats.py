@@ -81,6 +81,7 @@ ROSTER = [
     ('Verdant', 't2', 'verdant/ShadeRangerUnit', 'sniper'),
     ('Verdant', 't2', 'verdant/BloomPriestessUnit', 'support'),
     ('Verdant', 't3', 'verdant/WorldTreeWalkerUnit', 'experimental'),
+    ('Verdant', 't3', 'verdant/ThornwingRocUnit', 'experimental'),
     # Tidewrought
     ('Tidewrought', 'worker', 'tide/ShipwrightUnit', 'builder'),
     ('Tidewrought', 't1', 'tide/GullSpotterUnit', 'scout'),
@@ -199,7 +200,7 @@ OVERRIDES = {
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
 COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
                      'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B',
-                     'AbyssalHydraUnit': 'TIDE_T3B'}
+                     'AbyssalHydraUnit': 'TIDE_T3B', 'ThornwingRocUnit': 'VERDANT_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')

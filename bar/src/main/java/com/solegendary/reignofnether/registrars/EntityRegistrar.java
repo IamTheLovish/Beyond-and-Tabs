@@ -1025,6 +1025,12 @@ public class EntityRegistrar {
                     .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.SCALE, EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "abyssal_hydra_unit").toString()));
+    // second Verdant T3 (T3b-7): the Thunder Dragon's spectre model in a bark skin at x2.2 (a flyer: no ground box needed)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit>> THORNWING_ROC_UNIT = ENTITIES.register("thornwing_roc_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit::new, MobCategory.CREATURE)
+                    .sized(1.6f * 1.4f, 1.0f * 1.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornwing_roc_unit").toString()));
     // Alex's Mobs' bison (RenderBison) drawn x1.3
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit>> MOSSBACK_BISON_UNIT = ENTITIES.register("mossback_bison_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit::new, MobCategory.CREATURE)
@@ -1186,6 +1192,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.ITEM_NAME -> EntityRegistrar.JADE_SENTINEL_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.ITEM_NAME -> EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.ITEM_NAME -> EntityRegistrar.ABYSSAL_HYDRA_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit.ITEM_NAME -> EntityRegistrar.THORNWING_ROC_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
             case BruteProd.itemName -> EntityRegistrar.BRUTE_UNIT.get();

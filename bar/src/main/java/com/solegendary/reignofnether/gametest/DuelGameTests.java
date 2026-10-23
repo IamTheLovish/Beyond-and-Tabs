@@ -200,10 +200,11 @@ public class DuelGameTests {
             EntityRegistrar.JADE_SENTINEL_UNIT,   // second T3 (T3b-4): a slow melee wall on the ground mix, an equal-metal duel row
             EntityRegistrar.CATHEDRAL_WARDEN_UNIT,   // second T3 (T3b-5): a slow ranged support on the ground mix, an equal-metal duel row
             EntityRegistrar.ABYSSAL_HYDRA_UNIT,   // second T3 (T3b-6): a ranged three-headed shooter on the ground mix, an equal-metal duel row
+            EntityRegistrar.THORNWING_ROC_UNIT,   // second T3 (T3b-7): a fast flyer, meets the AA mix, an equal-metal duel row
             EntityRegistrar.WORLD_TREE_WALKER_UNIT, EntityRegistrar.CELESTIAL_DRAGON_UNIT, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT);
         for (var big : t3) {
             int cost = metalOf(level, big.get());
-            boolean flyer = big == EntityRegistrar.BONE_DRAGON_UNIT || big == EntityRegistrar.CELESTIAL_DRAGON_UNIT;
+            boolean flyer = big == EntityRegistrar.BONE_DRAGON_UNIT || big == EntityRegistrar.CELESTIAL_DRAGON_UNIT || big == EntityRegistrar.THORNWING_ROC_UNIT;
             var mixTypes = flyer ? air : ground;
             Group mix = mix(level, mixTypes, cost, flyer ? "AA mix" : "T2 mix");
             Group one = new Group(name(big), types(big), List.of(1));
