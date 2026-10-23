@@ -9,6 +9,8 @@ buildscript {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath 'org.spongepowered:mixingradle:0.7.+'
         classpath 'org.parchmentmc:librarian:1.+'
+        // Error Prone trial (plan 002): static analysis as javac warnings only, never errors
+        classpath 'net.ltgt.gradle:gradle-errorprone-plugin:3.1.0'
     }
 }
 
@@ -20,6 +22,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'org.spongepowered.mixin'
 apply plugin: 'org.parchmentmc.librarian.forgegradle'
+apply plugin: 'net.ltgt.errorprone'
 
 version = '1.5.0-beta-4'
 group = 'com.solegendary.reignofnether' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
@@ -182,6 +185,8 @@ dependencies {
 
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    // Error Prone 2.23.0 (JDK 17 compatible): WARNINGS ONLY, see the JavaCompile block at the bottom
+    errorprone 'com.google.errorprone:error_prone_core:2.23.0'
 
     // Alex's Mobs 1.22.9 (GPL-3, sbom_xela) and its library Citadel 2.6.3 (LGPL-3) for Forge 1.20.1 - the exact
     // versions in lovish's instance. Plain implementation: on the compile + run classpath (runClient/runGameTestServer
@@ -251,4 +256,14 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
     options.compilerArgs += ["-Xmaxerrs", "500000"]
+    // Error Prone trial: every finding is a warning (allErrorsAsWarnings) so it can never fail the build; javac stops
+    // printing after 100 warnings by default, which would hide the count
+    options.compilerArgs += ["-Xmaxwarns", "500000"]
+    options.errorprone {
+        allErrorsAsWarnings = true
+        disableWarningsInGeneratedCode = true
+        excludedPaths = '.*/build/generated/.*'
+    }
 }
+// main code only; the tests are not part of the trial
+tasks.named('compileTestJava') { options.errorprone.enabled = false }
