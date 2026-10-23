@@ -49,17 +49,22 @@ TARGETS = {
     # texture than vanilla, no camouflage (sim: nearest-mipmap sampling at 36 px per block matched the eyes stills)
     # round 19: std 0.085 -> 0.072 - the plain game's grass still read as speckle from the RTS camera
     "grass_block_top":  dict(luma=0.56, std=0.072, sat=0.00, tilt=21.0, smooth=24, pore=40),
-    "grass_block_side": dict(luma=0.40, std=0.085, sat=0.36, tilt=22.0, smooth=26, pore=48),
-    "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.36, std=0.081, sat=0.38, tilt=19.0, smooth=26, pore=56),
+    # round 24 (eyes close-ups, terrain sampler run 39838783742): dirt and the grass side's dirt umber, not salmon
+    # (sat 0.38 / 0.36 -> 0.32 / 0.30, a browner base in m_dirt_r24); stone's smoothness 40 -> 22 and gravel's 50 -> 24
+    # (the floor patches took a blue sky sheen at the 30-degree view: rgb .27/.28/.32 in full sun) and gravel's tilt
+    # 26 -> 18 (bubble wrap); stone std 0.060 -> 0.045 (m_stone_r24's grain); oak planks sat 0.46 -> 0.40, smooth
+    # 70 -> 45 (orange, satin); oak bark sat 0.38 -> 0.30 (grey-brown) and tilt 27 -> 22 (m_oak_bark_r24)
+    "grass_block_side": dict(luma=0.34, std=0.080, sat=0.30, tilt=22.0, smooth=26, pore=48, soften=1.4, lf=0.3),
+    "grass_block_side_overlay": dict(luma=0.56, std=0.090, sat=0.00, tilt=18.0, smooth=24, pore=40, soften=1.0),
+    "dirt":             dict(luma=0.31, std=0.070, sat=0.32, tilt=10.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.25),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=40, pore=12),
+    "stone":            dict(luma=0.52, std=0.050, sat=0.015, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12, soften=0.9),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
-    "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
-    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.46, tilt=8.5, smooth=70, pore=24),
-    "oak_log":          dict(luma=0.33, std=0.060, sat=0.38, tilt=27.0, smooth=40, pore=36),
+    "gravel":           dict(luma=0.46, std=0.070, sat=0.07, tilt=16.0, smooth=24, pore=30, soften=0.8),
+    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
+    "oak_log":          dict(luma=0.33, std=0.060, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -191,7 +196,7 @@ TARGETS = {
     "chiseled_polished_blackstone": dict(luma=0.19, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
-    "basalt_side": dict(luma=0.30, std=0.069, sat=0.05, tilt=26.0, smooth=38, pore=10),
+    "basalt_side": dict(luma=0.28, soften=1.4, lf=0.3, std=0.040, sat=0.14, tilt=10.0, smooth=24, pore=10),   # r24: was foil (tilt 26)
     "basalt_top": dict(luma=0.30, std=0.081, sat=0.06, tilt=24.0, smooth=20, pore=10),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
@@ -416,6 +421,13 @@ SEED_ORDER = (
     "cherry_log",             # Oct 21: map-tree cherries
     "cherry_log_top",
     "cherry_leaves",
+    "grass_block_top_v3",     # round 25: two more grass tops, a shade darker / lighter (GRASS_VARIANTS)
+    "grass_block_top_v4",
+    # round 27: more textures per block (BLOCK_VARIANTS)
+    "stone_v2", "stone_v3", "dirt_v2", "dirt_v3",
+    "basalt_side_v2", "basalt_side_v3", "basalt_side_v4",
+    "grass_block_side_v2", "grass_block_side_v3", "grass_block_side_v4",
+    "grass_block_side_overlay_v2", "grass_block_side_overlay_v3", "grass_block_side_overlay_v4",
 )
 
 
@@ -626,6 +638,26 @@ def m_gravel(F, n):
     return H, alb
 
 
+def m_gravel_r25(F, n):
+    """Gravel, round 25 (reviewer: main's gravel read as Voronoi flagstones / bubble wrap). Gravel is MANY small
+    rounded pebbles, ~2-4 cm: two sizes of soft-domed stones packed together, each its own grey (a few warm, a few
+    dark), shaded rounder than outlined - the gaps between them a soft shadow, not a black grid."""
+    rng = F.rng
+    f1, f2, idx, k = F.voronoi(260, 1.0)                 # ~8 texels: the larger pebbles
+    g1, g2, gidx, gk = F.voronoi(700, 1.0)               # ~5 texels: the small ones
+    big = (rng.random(k) < 0.5)[idx]
+    a1, a2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    pid = np.where(big, idx, gidx + k)
+    dome = np.clip(1 - (2 * a1 / np.maximum(a1 + a2, 1e-6)) ** 2, 0, 1)
+    tone = rng.random(k + gk)
+    kind = rng.random(k + gk)
+    base = np.where(kind[pid][..., None] < 0.6, np.array([0.50, 0.49, 0.48]),
+                    np.where(kind[pid][..., None] < 0.85, np.array([0.52, 0.48, 0.44]), np.array([0.40, 0.39, 0.39])))
+    H = 0.3 + 0.5 * np.sqrt(dome) + 0.02 * F.noise(24, 64, 0.2)
+    shade = (0.85 + 0.25 * tone[pid]) * (0.72 + 0.28 * np.sqrt(dome))
+    return H, np.clip(base * shade[..., None], 0, 1)
+
+
 def m_sand(F, n, base=(0.86, 0.78, 0.58)):
     grains = F.noise(16, 40, 0.0)
     ripple_ph = F.v * 2 * math.pi * 5 + 1.2 * F.noise(1, 3, 0.5)
@@ -659,89 +691,6 @@ def grass_blades(F, count, length_px, width_px):
     return H
 
 
-def m_grass_top(F, n):
-    blades = grass_blades(F, int(9 * n), n / 36, 1)     # ~1100 blades of ~3-6 texels at 128x
-    clumps = F.fbm(3, 4, 0.55)
-    fine = F.noise(16, 40, 0.0)
-    soil = smoothstep(0.55, 0.9, F.noise(4, 12, 0.5))   # a few thin spots where the soil shows (darker)
-    H = 0.30 + 0.35 * blades + 0.18 * clumps + 0.05 * fine - 0.12 * soil
-    # the COLOUR is calmer than the relief (round 4, from the first real eyes stills, run 38735013028): painted from H,
-    # the blades and soil spots made a dark squiggly network that read as camouflage / moss from the RTS camera
-    # (on-screen luma std 0.124 vs vanilla's calm 0.072). Soft small tufts carry the colour; the blades stay in the
-    # normal map, where a shader's light turns them into real grain.
-    # small tufts at 1/6 - 1/16 block, nothing coarser: block-sized patches repeat on every block and drew a lattice
-    # across the field (a block texture cannot vary across many blocks - the biome tint does that)
-    # round 19 (plain game "per-pixel speckle"): the tufts' band (6-16 cycles) drew a dark worm network that read as
-    # speckle from the RTS camera - a broader, softer band; the blades' share of the colour halved again
-    tufts = F.noise(3, 14, 1.2)
-    # round 18: the blades' share of the colour 0.06 -> 0.03 - without shaders they drew a repeating dash pattern
-    # across a field (eyes structure run 39536432605); the normal map keeps them for the light
-    shade = 0.85 + 0.12 * norm01(tufts) + 0.015 * norm01(blades + 0.5 * fine) - 0.05 * soil
-    grey = np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)    # greyscale: the biome colour tints it in game
-    return H, grey
-
-
-def side_blades(F, count, roots, length, tilt_deg, down=0.0, width_px=1):
-    """Grass blades seen from the SIDE (round 17; claude/block-textures-2026-10-19.md: "the grass is growing sideways"
-    - the fringe used grass_blades(), the TOP's helper, whose blades lie at any angle): each blade stands within
-    +-tilt_deg of vertical, rooted at roots(u) (the fringe's lower edge, tile units), pointing UP - or, a `down` share
-    of them, hanging down over the dirt. Returns (H, mask): a ridge along each blade, highest at the root."""
-    n = F.n
-    rng = F.rng
-    H = np.zeros((n, n))
-    for _ in range(count):
-        u = rng.random()
-        hang = rng.random() < down
-        ln = length * (0.5 + rng.random()) * (0.35 if hang else 1.0)
-        ang = math.radians((rng.random() * 2 - 1) * (tilt_deg * (1.6 if hang else 1.0)))
-        r0 = roots(u) + (rng.random() - 0.3) * 0.02
-        dx, dy = math.sin(ang), (1.0 if hang else -1.0) * math.cos(ang)      # +v is down the texture
-        steps = int(ln * n * 2) + 1
-        for st in range(steps):
-            t = st / max(1, steps - 1)
-            x = int(round((u + dx * t * ln) * n)) % n
-            y = int(round((r0 + dy * t * ln) * n))
-            if not 0 <= y < n:                       # past the block's top edge: no wrap to the bottom
-                break
-            hgt = 1.0 - 0.6 * t
-            for w in range(width_px):
-                H[y, (x + w) % n] = max(H[y, (x + w) % n], hgt)
-    return H, H > 0
-
-
-def m_grass_overlay(F, n, fringe):
-    """The tinted fringe over the side texture: the lawn seen from the side, grey, alpha = the fringe. Its blades
-    stand upright (side_blades), not at the top texture's random angles."""
-    blades, _ = side_blades(F, int(4 * n), lambda u: 0.30, 0.30, 14, width_px=max(1, n // 128))
-    clumps = F.fbm(3, 3, 0.55)
-    H = 0.35 + 0.4 * blades + 0.15 * clumps
-    shade = 0.80 + 0.30 * norm01(H)
-    grey = np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)
-    return H, grey
-
-
-def side_fringe(F, n):
-    """How far the grass reaches down the side: a ragged edge ~3/16 of the block, with drips."""
-    depth = 0.17 + 0.05 * F.noise(4, 16, 0.6)[0:1, :] + 0.06 * np.clip(F.noise(10, 30, 0.2)[0:1, :], 0, None)
-    return (F.v < depth).astype(np.float64) * 1.0
-
-
-def m_grass_side(F, n):
-    Hd, ad = m_dirt(F, n)
-    fringe = side_fringe(F, n)
-    # the fringe's lower edge frays into blades: some stand up out of the band, a few hang over the dirt (the edge was
-    # a cut line of sideways blades before)
-    edge = (fringe > 0.5).sum(0) / n                                     # the band's depth in each column
-    _, tufts = side_blades(F, int(1.2 * n), lambda u: edge[int(u * n) % n], 0.10, 12, down=0.35,
-                           width_px=max(1, n // 128))
-    fringe = np.maximum(fringe, tufts.astype(np.float64))
-    # the untinted base under the overlay: a grey-green where the fringe is (seen only at its frayed edge)
-    grassy = np.clip(np.stack([np.full((n, n), 0.42), np.full((n, n), 0.50), np.full((n, n), 0.32)], -1), 0, 1)
-    alb = np.where(fringe[..., None] > 0.5, grassy * (0.85 + 0.3 * norm01(Hd))[..., None], ad)
-    H = np.where(fringe > 0.5, 0.75 + 0.1 * Hd, Hd)
-    return H, alb, fringe
-
-
 def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     rows = 4                                             # vanilla's four boards per block
     row = np.floor(F.v * rows).astype(int)
@@ -762,6 +711,49 @@ def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     alb = tint(base, shade, jit)
     alb = np.where(nails[..., None], np.array([0.33, 0.31, 0.29]), alb)
     return H, alb
+
+
+def m_oak_planks_r24(F, n, base=(0.66, 0.51, 0.31)):
+    """Oak planks, round 24 (eyes close-up, run 39838783742: m_planks' oak read as cartoon wood - a wavy marbled grain,
+    dark outlines round every board, nail dots, orange). Sawn oak boards: a fine STRAIGHT grain (long thin streaks of
+    early- and latewood, a ray fleck here and there), each board its own tone and grain, thin dark gaps, the board
+    edges a little darker where dirt and wear collect, no nails. Each board sits at its own height and is very
+    slightly cupped; the grain lives mostly in the colour, so the light does not emboss it."""
+    rows = 4                                             # vanilla's four boards per block
+    row = np.floor(F.v * rows).astype(int)
+    in_row = (F.v * rows) % 1.0
+    off = np.array([0.0, 0.5, 0.25, 0.75])[row % 4]
+    joint_u = (F.u + off) % 1.0
+    # r25: boards of different lengths - in some rows a second end joint splits the block's board in two
+    rng0 = F.rng
+    rng0.random(rows)                                    # r25's second joints (dropped in r26): the draws stay, so
+    rng0.random(rows)                                    # the boards keep their seeds (ruff F841, round 27)
+    # r26 (review: brickwork at RTS): no second joints, and only two of the four rows have a butt joint in this
+    # block - the others run on into the next block (boards a block and more long)
+    ju2 = np.ones_like(joint_u)
+    joint_u = np.where(np.isin(row, [0, 2]), joint_u, 0.5)
+    # the grain: very long along u, thin across v; a hair of waviness; two scales (latewood lines, broad streaks)
+    lines = F.warp(F.noise(16, 64, 0.5, sx=30.0, sy=1.0), 0.0, 0.004 * F.noise(2, 6, 0.5))
+    streak = F.noise(4, 20, 0.6, sx=12.0, sy=1.0)
+    fleck = smoothstep(1.6, 2.4, F.noise(10, 40, 0.3, sx=6.0, sy=1.0))   # the odd ray fleck (quartersawn oak)
+    rng = F.rng
+    board_tone = (rng.random(rows) - 0.5)[row]
+    board_hue = (rng.random(rows) - 0.5)[row]
+    gap = smoothstep(0.0, 0.06, in_row) * smoothstep(0.0, 0.06, 1 - in_row)
+    endgap = smoothstep(0.0, 0.022, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    seams = gap * endgap
+    edge = smoothstep(0.0, 0.22, np.minimum(in_row, 1 - in_row)) \
+        * smoothstep(0.0, 0.05, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    cup = 1 - 4 * (in_row - 0.5) ** 2                    # a board very slightly higher in its middle
+    # the gap in the HEIGHT is a narrow step, not a rounded bevel: a bevel the full colour-gap wide lit as a moulded
+    # plastic panel under the low sun
+    hgap = smoothstep(0.0, 0.025, in_row) * smoothstep(0.0, 0.025, 1 - in_row) \
+        * smoothstep(0.0, 0.010, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    H = 0.45 + 0.12 * hgap + 0.04 * board_tone + 0.03 * cup + 0.015 * lines
+    shade = (0.86 + 0.10 * board_tone + 0.06 * lines + 0.05 * streak + 0.05 * fleck) * (0.90 + 0.10 * edge) \
+        * (0.62 + 0.38 * seams)                          # r25: a soft dark gap, not a black line
+    jit = np.stack([0.04 * board_hue + 0.015 * streak, 0.01 * board_hue, -0.04 * board_hue - 0.015 * streak], -1)
+    return H, tint(base, shade, jit)
 
 
 def m_spruce_planks(F, n):
@@ -883,6 +875,47 @@ GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 TARGETS["cherry_log"] = dict(luma=0.24, std=0.050, sat=0.42, tilt=22.0, smooth=50, pore=30)
 TARGETS["cherry_log_top"] = dict(luma=0.42, std=0.040, sat=0.45, tilt=10.0, smooth=45, pore=30)
 TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
+# Round 25 (reviewer: grass is ~70% of the RTS screen and reads flat - field luma std 0.043, macro 0.022 - while its
+# own texture drew camouflage blobs): the blobs go (calmer tufts, std 0.072 -> 0.060) and the field's variation moves
+# to the BLOCK scale - four grass tops, two of them a shade darker / lighter (+-3.5% luma), picked at random per block
+# by the grass_block blockstate (4 textures x 4 turns). A texture alone cannot vary across several blocks; that would
+# take the mod (a BlockColor for grass_block adding a low-frequency world-position noise to the biome tint).
+for _g in ("grass_block_top", "grass_block_top_v2"):
+    TARGETS[_g] = dict(TARGETS[_g], std=0.058, soften=1.2)   # 256x: 1 texel = half a 128x texel
+TARGETS["grass_block_top_v3"] = dict(TARGETS["grass_block_top"], luma=0.54)
+TARGETS["grass_block_top_v4"] = dict(TARGETS["grass_block_top"], luma=0.58)
+GRASS_VARIANTS.update({"grass_block_top_v3": "grass_block_top", "grass_block_top_v4": "grass_block_top"})
+GRASS_TOPS = GRASS_TOPS + ("grass_block_top_v3", "grass_block_top_v4")
+# Round 27 (see the round-27 materials): new targets for stone, dirt, the grass top / side and basalt - the other
+# materials keep theirs. `floor` (lo, knee) is a soft luma floor (gate G3: no albedo darker than 55/255 at the 1st
+# percentile); the grass tops share one mean (their +-3.5% steps drew a block grid at RTS distance); the grass side's
+# soil is fitted on the soil alone, its turf (the overlay) sits in its own shade, darker than the lawn on top.
+DIRT_R26 = dict(TARGETS["dirt"])   # the snowy grass side keeps fitting its dirt to the old target (unchanged texture)
+TARGETS["stone"] = dict(luma=0.48, std=0.055, sat=0.015, lf=0.2, ao=0.5, tilt=6.0, smooth=22, pore=12, soften=0.6)
+TARGETS["dirt"] = dict(luma=0.33, std=0.075, sat=0.30, tilt=10.0, smooth=26, pore=56, soften=0.8, lf=0.3, ao=0.25,
+                       floor=(0.225, 0.04))
+for _g in GRASS_TOPS:
+    TARGETS[_g] = dict(TARGETS["grass_block_top"], luma=0.56, std=0.080, soften=1.8)
+TARGETS["grass_block_side"] = dict(luma=0.28, std=0.050, sat=0.32, tilt=16.0, smooth=26, pore=48, soften=1.2, lf=0.3,
+                                   floor=(0.225, 0.03))
+TARGETS["grass_block_side_overlay"] = dict(luma=0.42, std=0.050, sat=0.00, tilt=14.0, smooth=24, pore=40, soften=0.8)
+TARGETS["basalt_side"] = dict(luma=0.30, std=0.050, sat=0.05, tilt=10.0, smooth=24, pore=10, soften=1.5, lf=0.3,
+                              floor=(0.225, 0.03))
+TARGETS["basalt_top"] = dict(luma=0.30, std=0.045, sat=0.06, tilt=12.0, smooth=20, pore=10, soften=0.8,
+                             floor=(0.225, 0.03))
+# ... and more textures per block, picked at random by the pack's blockstates (write_models): appended last
+# (SEED_ORDER rule). r26's single texture repeated block after block - the same fracture nine times on a 3 x 3 panel.
+BLOCK_VARIANTS = {"stone": 3, "dirt": 3, "basalt_side": 4, "grass_block_side": 4}
+VARIANT_OF = {}
+for _b, _k in BLOCK_VARIANTS.items():
+    for _i in range(2, _k + 1):
+        VARIANT_OF["%s_v%d" % (_b, _i)] = _b
+        TARGETS["%s_v%d" % (_b, _i)] = dict(TARGETS[_b])
+for _i in range(2, BLOCK_VARIANTS["grass_block_side"] + 1):
+    VARIANT_OF["grass_block_side_overlay_v%d" % _i] = "grass_block_side_overlay"
+    TARGETS["grass_block_side_overlay_v%d" % _i] = dict(TARGETS["grass_block_side_overlay"])
+GRASS_SIDES = ("grass_block_side",) + tuple("grass_block_side_v%d" % i for i in range(2, BLOCK_VARIANTS["grass_block_side"] + 1))
+GRASS_OVERLAYS = tuple(s.replace("grass_block_side", "grass_block_side_overlay") for s in GRASS_SIDES)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1441,20 +1474,6 @@ def m_reinforced(F, n, top):
     return np.where(bar, H + 0.25, H), np.where(bar[..., None], bone, alb)
 
 
-def m_basalt_rough(F, n, top):
-    """Basalt: rough columns - vertical ridges and cracks on the side, a jointed polygon top."""
-    if top:
-        f1, f2, idx, k = F.voronoi(5, 0.8)
-        joint = 1 - smoothstep(0.0, 0.03, f2 - f1)
-        H = 0.55 + 0.05 * F.noise(8, 30, 0.4) - 0.3 * joint
-        shade = 0.88 + 0.06 * F.noise(8, 30, 0.4) - 0.4 * joint
-    else:
-        ridges = F.noise(3, 14, 0.6, sx=1.0, sy=10.0)
-        H = 0.5 + 0.15 * ridges + 0.03 * F.noise(16, 40, 0.2)
-        shade = 0.82 + 0.15 * norm01(ridges)
-    return H, tint((0.32, 0.32, 0.34), shade)
-
-
 def m_soul_sand(F, n):
     """Soul sand: dark, clumped grains with deep hollows."""
     H, alb = m_sand(F, n, (0.36, 0.27, 0.21))
@@ -1592,6 +1611,42 @@ def m_bark(F, n, base, style="oak"):
     col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
     alb = np.clip(col * shade[..., None], 0, 1)
     alb = np.stack([F.blur(alb[..., c], 0.5) for c in range(3)], -1)
+    return H, alb
+
+
+def m_oak_bark_r24(F, n, base=(0.42, 0.33, 0.21)):
+    """Oak bark, round 24 (eyes close-up, run 39838783742: m_bark's Voronoi plates read as carved flames - lens-shaped
+    plates domed to a point, dark V tips between them; a quieter version read as quilted leather). Mature oak bark is
+    long rough RIDGES split by deep, meandering furrows that run up the trunk and join and part again. Those furrows are
+    the zero-crossings of a noise stretched up the trunk: lines that wander, fork and merge on their own, at no fixed
+    spacing - no cell shapes at all. Ridge tops are flat and rough (scaly, with short horizontal checks), the furrows
+    dark and damp; sun and rain grey the ridge faces."""
+    warp = 0.02 * F.noise(2, 6, 0.6)
+    field = F.warp(F.noise(2, 8, 0.9, sx=1.0, sy=6.0), warp, 0.0)    # long along v (up the trunk)
+    gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) / 2
+    gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) / 2
+    a = np.abs(field) / np.maximum(np.sqrt(gx * gx + gy * gy), 0.02)   # ~distance to the furrow line, in texels
+    # r25: furrow width also drifts across the whole block (wide, deep runs and tight ones) - the ridges were uniform
+    w = (n / 40) * np.clip(1.0 + 0.5 * F.noise(4, 16, 0.5) + 0.45 * F.noise(1, 3, 0.8), 0.4, 2.0)
+    furrow = 1 - smoothstep(0.0, w, a)                                 # dark, deep
+    ridge = smoothstep(0.6 * w, 2.2 * w, a)                            # flat-topped ridges, a rounded shoulder
+    breaks = (1 - smoothstep(0.0, 0.12, np.abs(F.noise(2, 8, 0.6, sx=4.0, sy=1.0)))) \
+        * smoothstep(0.5, 1.2, F.noise(3, 10, 0.5))                    # a ridge broken across now and then
+    breaks = F.blur(breaks * ridge, 0.8)
+    scale = F.noise(10, 48, 0.4)                                       # scaly roughness on the ridge tops
+    checks = smoothstep(0.7, 1.5, F.noise(8, 40, 0.5, sx=1.0, sy=0.3))  # short checks ACROSS the ridges
+    fib = F.noise(10, 48, 0.4, sx=1.0, sy=8.0)
+    H = 0.30 + 0.45 * ridge - 0.20 * furrow + 0.06 * scale * ridge - 0.10 * checks * ridge - 0.25 * breaks \
+        + 0.02 * fib
+    rgb = np.asarray(base, dtype=np.float64)
+    grey = rgb.mean()
+    weathered = rgb + (grey - rgb) * 0.30 + 0.03                       # the faces sun-greyed (r25: less - too grey)
+    face = np.clip(ridge * (1 - breaks), 0, 1)
+    col = rgb[None, None, :] * (1 - face[..., None]) + weathered[None, None, :] * face[..., None]
+    lichen = F.blur(smoothstep(0.9, 1.6, F.noise(3, 9, 0.6)) * face, 1.5) * 0.35
+    col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
+    shade = (0.62 + 0.38 * face) * (1 + 0.06 * scale * face - 0.10 * checks * face + 0.03 * fib) - 0.10 * furrow
+    alb = np.clip(col * shade[..., None], 0, 1)
     return H, alb
 
 
@@ -1982,7 +2037,7 @@ PLAINS_TINT = (0.57, 0.74, 0.35)   # a plains-like biome colour for the tinted t
 FOLIAGE_TINT = (0.47, 0.67, 0.18)  # the plains foliage colour (#77AB2F) for the leaves
 
 
-ROTATED = {"grass_block_top", "grass_block_top_v2", "dirt", "sand", "gravel", "stone"}   # turned at random per block
+ROTATED = {"grass_block_top", "grass_block_top_v2", "grass_block_top_v3", "grass_block_top_v4", "dirt", "sand", "gravel", "stone"} | {"stone_v2", "stone_v3", "dirt_v2", "dirt_v3"}   # turned at random per block
 ROTATED |= set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}  # and this pack turns the leaves (round 17)
 
 
@@ -2174,14 +2229,48 @@ def write_models():
     for v, base in LEAF_VARIANTS.items():      # the variant's own model: vanilla's leaves model on its texture
         with open(os.path.join(MODEL_DIR, v + ".json"), "w") as f:
             json.dump({"parent": "minecraft:block/leaves", "textures": {"all": "minecraft:block/" + v}}, f, indent=1)
-    for v, base in GRASS_VARIANTS.items():
-        with open(os.path.join(MODEL_DIR, "grass_block_v2.json"), "w") as f:
-            json.dump({"parent": "minecraft:block/grass_block", "textures": {"top": "minecraft:block/" + v}}, f, indent=1)
+    # round 27: every grass top with every grass side (BLOCK_VARIANTS) - grass_block_vN (top N, side 1, as before),
+    # grass_block_sM / grass_block_vN_sM (side M with its own overlay)
+    grass_models = []
+    for top in GRASS_TOPS:
+        for side, ov in zip(GRASS_SIDES, GRASS_OVERLAYS):
+            m = "grass_block" + ("_" + top.rsplit("_", 1)[1] if top != "grass_block_top" else "") \
+                + ("_s" + side.rsplit("_v", 1)[1] if side != "grass_block_side" else "")
+            grass_models.append(m)
+            if m == "grass_block":
+                continue
+            with open(os.path.join(MODEL_DIR, m + ".json"), "w") as f:
+                json.dump({"parent": "minecraft:block/grass_block",
+                           "textures": {"top": "minecraft:block/" + top, "side": "minecraft:block/" + side,
+                                        "overlay": "minecraft:block/" + ov}}, f, indent=1)
     grass = [dict({"model": "minecraft:block/" + m}, **({"y": y} if y else {}))
-             for m in ("grass_block", "grass_block_v2") for y in (0, 90, 180, 270)]
+             for m in grass_models for y in (0, 90, 180, 270)]
     with open(os.path.join(BLOCKSTATE_DIR, "grass_block.json"), "w") as f:   # vanilla's, with the second top added
         json.dump({"variants": {"snowy=false": grass, "snowy=true": {"model": "minecraft:block/grass_block_snow"}}},
                   f, indent=1)
+    # round 27: stone and dirt - 3 textures x 16 turns (isotropic, like the leaves); basalt - 4 sides on each axis
+    for block in ("stone", "dirt"):
+        models = [block] + [v for v, b in VARIANT_OF.items() if b == block]
+        for m in models[1:]:
+            with open(os.path.join(MODEL_DIR, m + ".json"), "w") as f:
+                json.dump({"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/" + m}}, f, indent=1)
+        turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
+                 for m in models for x in (0, 90, 180, 270) for y in (0, 90, 180, 270)]
+        with open(os.path.join(BLOCKSTATE_DIR, block + ".json"), "w") as f:
+            json.dump({"variants": {"": turns}}, f, indent=1)
+    basalts = ["basalt"]
+    for v, b in VARIANT_OF.items():
+        if b == "basalt_side":
+            m = "basalt_" + v.rsplit("_", 1)[1]
+            basalts.append(m)
+            with open(os.path.join(MODEL_DIR, m + ".json"), "w") as f:
+                json.dump({"parent": "minecraft:block/cube_column",
+                           "textures": {"end": "minecraft:block/basalt_top", "side": "minecraft:block/" + v}}, f, indent=1)
+    with open(os.path.join(BLOCKSTATE_DIR, "basalt.json"), "w") as f:
+        json.dump({"variants": {
+            "axis=x": [{"model": "minecraft:block/" + m, "x": 90, "y": 90} for m in basalts],
+            "axis=y": [{"model": "minecraft:block/" + m} for m in basalts],
+            "axis=z": [{"model": "minecraft:block/" + m, "x": 90} for m in basalts]}}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -2203,10 +2292,385 @@ def _parts(fn, fit=True):
     return r
 
 
+def soften(F, alb, t):
+    """Round 25 (the owner's "dots of pepper", Oct 20; r24's plain-lane close-ups: stone's 4-neighbour Laplacian 14.8 ->
+    34): a material whose TARGETS entry has `soften` (texels, sigma) gets its fitted albedo low-passed - nearest-texel
+    magnification turns every texel-to-texel step into a hard screen step, so the colour's detail lives at 3+ texels
+    and the fine grain stays in the normal map for the light. No `soften`, no change."""
+    sg = t.get("soften")
+    if not sg:
+        return alb
+    return np.clip(np.stack([F.blur(alb[..., c], sg) for c in range(alb.shape[-1])], -1), 0, 1)
+
+
+# ------------------------------------------------------------------ round 27 -------------------------------------
+# Round 27 (Oct 22, review of r26: stone, dirt, grass and basalt plateaued at ~5/10 under procedural tweaks). What the
+# eye read as fake on the r26 stills (eyes runs 39869718908 plain / 39869716876 shaders), and what replaces it:
+# - EVERY BLOCK THE SAME: a 3 x 3 panel showed the same fracture "V" nine times; basalt's four columns repeated as
+#   twelve identical stripes; the grass side's profile and the grass tops' +-3.5% luma variants drew a block grid.
+#   -> several textures per block picked at random by the pack's blockstates (stone, dirt: 3 x 16 turns; basalt and
+#   the grass side: 4 sides; grass: 4 tops at the SAME mean, their variation inside each texture, not between them).
+# - Shapes no real material has: stone's fractures were embossed creases (a dark line with a pale rim: crumpled paper),
+#   basalt's joints wobbly drawn lines, the grass top band-limited blobs (camouflage), dirt one-scale noise (cork).
+#   -> real features at real scale for a 1 m block: stone = broad chipped planes, a mineral grain, one or two crisp
+#   joints, lichen and weathering stains; dirt = clods and crumbs at two scales with their own shading, pores, grit,
+#   pebbles, straw and twig bits, damp patches; grass = a dense field of blade strokes that lie in a flow; basalt =
+#   2-3 straight-jointed columns per block, each showing two planar faces (lit / turned away), curved cross-joints,
+#   water streaks running down, a brown weathering patina.
+# - The grass side: a turf band down to ~60% of the block with green blades hanging over the soil (the fringe read as
+#   a green curtain at RTS distance) -> a thin turf mat (~12-20%), sunlit blade tips at the top edge, the overhang's
+#   shadow under it, then the soil profile: dark humus fading into a lighter subsoil, pale roots, stones lit from above.
+#   The side's turf is in its own shade (darker than the lawn on top), so top vs side reads at RTS distance.
+# Plain lane (no normal maps) shows only the albedo, so each one carries baked, non-directional shading (cavities
+# dark, crowns light) - and basalt / the grass side, whose sides never turn, a little light from above.
+
+def luma_floor(alb, lo, knee):
+    """Soft floor on the luma (round 27, gate G3: 1st percentile >= 55/255): luma above lo + knee unchanged, below it
+    eased exponentially towards lo - the darkest cavities keep their order but never go black."""
+    L = alb[..., 0] * 0.2126 + alb[..., 1] * 0.7152 + alb[..., 2] * 0.0722
+    e = lo + knee
+    L2 = np.where(L < e, lo + knee * np.exp((L - e) / knee), L)
+    return np.clip(alb * (L2 / np.maximum(L, 1e-4))[..., None], 0, 1)
+
+
+def polyline(F, count, length, wander, start=None, taper=True, width=1.0):
+    """count near-straight lines, each `length` (tile units, a (lo, hi) range) drawn texel by texel from a random
+    point (or start()), its heading wandering by `wander` radians per texel; returns the max-composited mask."""
+    n, rng = F.n, F.rng
+    m = np.zeros((n, n))
+    for _ in range(count):
+        x, y = start() if start else (rng.random() * n, rng.random() * n)
+        ang = rng.random() * 2 * math.pi
+        ln = n * (length[0] + (length[1] - length[0]) * rng.random())
+        steps = max(2, int(ln))
+        for st in range(steps):
+            ang += (rng.random() - 0.5) * 2 * wander
+            x, y = x + math.cos(ang), y + math.sin(ang)
+            w = width * (min(1.0, 4.0 * min(st, steps - st) / steps + 0.25) if taper else 1.0)
+            m[int(y) % n, int(x) % n] = max(m[int(y) % n, int(x) % n], w)
+    return m
+
+
+def cells_dome(f1, f2):
+    """A soft dome per Voronoi cell: 1 at its centre, 0 at its border."""
+    return np.clip(1 - (2 * f1 / np.maximum(f1 + f2, 1e-6)) ** 2, 0, 1)
+
+
+def m_stone_r27(F, n):
+    """Stone, round 27: a weathered rock face at 1 m - a few broad chipped planes (each its own tone, meeting along
+    a fine chip line), a mineral grain of ~2-3 texel grains (dark mafic and pale quartz flecks among grey ones), one
+    or two crisp joints (dark, no pale rim), pale lichen crusts and darker weathering stains; tone drifts over the
+    whole block at low frequency. Isotropic (stone is turned at random per block)."""
+    rng = F.rng
+    macro = F.noise(1, 5, 1.0)
+    mid = F.noise(4, 40, 1.3)
+    c1, c2, cidx, ck = F.voronoi(7, 1.0)
+    wu, wv = 0.03 * F.noise(3, 12, 0.6), 0.03 * F.noise(3, 12, 0.6)
+    plane = F.warp((rng.random(ck) - 0.5)[cidx] * 2, wu, wv)
+    chip = F.warp(1 - smoothstep(0.0, 0.006, c2 - c1), wu, wv) * smoothstep(-0.2, 0.6, F.noise(2, 6, 0.5))
+    g1, g2, gidx, gk = F.voronoi(2600, 1.0)                # grains ~2.5 texels
+    gr = rng.random(gk)
+    grain = (rng.standard_normal(gk) * 0.5)[gidx]
+    grain = np.where((gr < 0.07)[gidx], -1.6, grain)        # dark mafic grains
+    grain = np.where((gr > 0.95)[gidx], 1.3, grain)         # pale quartz / feldspar
+    grain = grain * (0.55 + 0.45 * cells_dome(g1, g2))
+    joints = polyline(F, int(rng.random() < 0.75), (0.6, 1.1), 0.10)
+    joints = np.maximum(joints, polyline(F, int(rng.random() < 0.5), (0.15, 0.3), 0.14) * 0.7)
+    joint = np.clip(F.blur(joints, 0.6) * 2.0, 0, 1)
+    halo = np.clip(F.blur(joints, 2.0) * 3.0, 0, 1) * (1 - joint)    # the crack's shadowed lips
+    plane = F.blur(plane, 1.0)
+    l1, l2, lidx, lk = F.voronoi(24, 1.0)
+    rad = (0.015 + 0.03 * rng.random(lk))[lidx] * (1 + 0.45 * F.noise(8, 30, 0.3))
+    lichen = smoothstep(-0.004, 0.006, rad - l1) * (rng.random(lk) < 0.28)[lidx] * (0.5 + 0.5 * rng.random(lk))[lidx]
+    lichen = lichen * (0.75 + 0.25 * F.noise(20, 60, 0.0))
+    stain = smoothstep(0.3, 1.4, F.noise(2, 7, 0.8))
+    H = 0.6 + 0.015 * macro + 0.04 * plane + 0.012 * mid + 0.006 * grain - 0.12 * joint - 0.02 * chip \
+        + 0.01 * lichen
+    shade = 1.0 + 0.015 * macro + 0.015 * mid + 0.06 * plane + 0.045 * grain - 0.22 * joint - 0.07 * chip \
+        - 0.025 * stain - 0.05 * halo
+    alb = tint((0.50, 0.50, 0.49), shade)
+    lich = tint((0.62, 0.63, 0.57), 1.0 + 0.05 * F.noise(16, 60, 0.0))
+    return H, alb * (1 - 0.6 * lichen[..., None]) + lich * 0.6 * lichen[..., None]
+
+
+def m_dirt_r27(F, n, side=False):
+    """Dirt, round 27: bare topsoil at 1 m - clods ~1/10 block and crumbs ~1/30, each its own tone with a lit crown
+    and darker rim (baked, non-directional: dirt turns), dark pores where crumbs meet, a scatter of pale mineral grit,
+    5-8 rounded pebbles, pale straw and dark twig bits, larger damp (darker) patches. The height stays shallow (r26:
+    the crumb domes lit as a bead field under shaders) - pebbles and clods carry the relief."""
+    rng = F.rng
+    a1, a2, aidx, ak = F.voronoi(110, 1.0)
+    b1, b2, bidx, bk = F.voronoi(1300, 1.0)
+    clod = cells_dome(a1, a2)
+    crumb = cells_dome(b1, b2)
+    clod_t = (rng.random(ak) - 0.5)[aidx]
+    crumb_t = (rng.random(bk) - 0.5)[bidx]
+    raised = smoothstep(-0.3, 0.8, F.noise(3, 10, 0.6))      # where clods stand up out of the crumb
+    pore = 1 - smoothstep(0.0, 0.005, b2 - b1)
+    damp = smoothstep(-0.4, 1.2, F.fbm(1, 3, 0.6))
+    s1, s2, sidx, sk = F.voronoi(1800, 1.0)
+    grit = F.blur(((rng.random(sk) < 0.04)[sidx] & (s1 < 0.0045)).astype(np.float64), 0.6)
+    p1, p2, pidx, pk = F.voronoi(36, 1.0)
+    prad = (0.012 + 0.02 * rng.random(pk))[pidx]
+    peb_on = (rng.random(pk) < 0.12)[pidx]
+    peb = np.clip(1 - p1 / prad, 0, 1) * peb_on
+    pebm = peb > 0
+    straw = np.clip(F.blur(polyline(F, 9, (0.04, 0.11), 0.06, taper=False), 0.45) * 2.0, 0, 1)
+    twig = np.clip(F.blur(polyline(F, 6, (0.03, 0.07), 0.15, taper=False), 0.5) * 2.0, 0, 1)
+    clod_s = F.blur(raised * (0.84 + 0.34 * clod ** 0.8 + 0.22 * clod_t), 1.0)
+    body = clod_s + (1 - raised) * (0.90 + 0.16 * crumb_t)
+    body = body * (0.90 + 0.12 * crumb ** 0.6) - 0.08 * pore * (1 - 0.6 * raised)
+    shade = body * (1 - 0.10 * damp) + 0.08 * grit
+    H = 0.45 + 0.06 * raised * clod + 0.012 * crumb + 0.22 * peb ** 0.6
+    alb = tint((0.40, 0.33, 0.25), shade)
+    ptone = (0.80 + 0.30 * rng.random(pk))[pidx]
+    alb = np.where(pebm[..., None], tint((0.38, 0.35, 0.31), ptone * (0.85 + 0.15 * peb ** 0.5)), alb)
+    rim = (np.clip(1 - p1 / (prad * 1.35), 0, 1) > 0) & ~pebm & peb_on
+    alb = np.where(rim[..., None], alb * 0.82, alb)          # the soil's shadow round a pebble
+    alb = alb * (1 - 0.7 * straw[..., None]) + np.array([0.58, 0.50, 0.34]) * 0.7 * straw[..., None]
+    alb = alb * (1 - 0.6 * twig[..., None]) + np.array([0.22, 0.16, 0.11]) * 0.6 * twig[..., None]
+    return H, alb
+
+
+def m_grass_top_r27(F, n):
+    """The grass top, round 27 (r26 review: camouflage blobs / felt; the +-3.5% variants drew a block grid). A lawn
+    seen from 2-10 m is a dense field of blades: thousands of short strokes, 2 texels wide at 256x, lying in a slowly
+    turning flow (blades lean together in patches), each its own lightness, the gaps between them darker; a few dry
+    (lighter) blades; the tone drifts over the block. Greyscale: the biome colour tints it."""
+    rng = F.rng
+    flow = math.pi * 0.9 * F.noise(1, 4, 1.0)
+    H = np.zeros((n, n))
+    tone = np.zeros((n, n))
+    cover = np.zeros((n, n))
+    for _ in range(int(20 * n)):
+        x, y = rng.random() * n, rng.random() * n
+        ang = 0.5 * flow[int(y) % n, int(x) % n] + (rng.random() - 0.5) * 2.4
+        ln = n / 256 * (5 + 7 * rng.random())
+        t0 = rng.standard_normal() * 0.5 + (1.4 if rng.random() < 0.03 else 0.0)
+        dx, dy = math.cos(ang), math.sin(ang)
+        steps = int(ln) + 1
+        for st in range(steps):
+            t = st / max(1, steps - 1)
+            for w in (0, 1):
+                xx = int(round(x + dx * t * ln - dy * w)) % n
+                yy = int(round(y + dy * t * ln + dx * w)) % n
+                H[yy, xx] = max(H[yy, xx], 0.4 + 0.6 * t)       # the blade rises to its tip
+                tone[yy, xx] = t0 + 0.6 * t                       # the tip catches more light
+                cover[yy, xx] = 1.0
+    macro = F.noise(1, 4, 1.0)
+    gap = 1 - cover
+    # clumps (~1/16 block): the blades of a tuft lean and catch the light together - soft-edged cells of their own
+    # tone, the mid-scale structure of a real lawn (r26's blobs were thresholded noise: camouflage)
+    k1, k2, kidx, kk = F.voronoi(260, 1.0)
+    clump = F.blur((rng.random(kk) * 2 - 1)[kidx], 2.0) * (0.6 + 0.4 * cells_dome(k1, k2))
+    H = 0.3 + 0.5 * H + 0.15 * F.fbm(3, 3, 0.55) + 0.12 * clump
+    shade = (0.90 + 0.035 * tone) * (1 - 0.10 * gap) + 0.015 * macro + 0.08 * clump
+    return H, np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)
+
+
+def grass_side_r27(F, n):
+    """The grass block's side, round 27: (H, side albedo, turf mask, depth per column). The turf is a thin mat ~12-20%
+    of the block - its lower edge ragged, a few blade tips just below it, nothing hanging further (r26's fringe ran
+    to 60% and drew a green curtain). Under it the overhang's shadow, then the soil profile: dark humus (A horizon)
+    with fine pale roots fading down, a soft boundary into a lighter, warmer subsoil with faint layering and stones lit
+    from above (a side never turns). The soil is the round-27 dirt, softer."""
+    rng = F.rng
+    Hd, ad = m_dirt_r27(F, n)
+    u, v = F.u, F.v
+    fade = smoothstep(0.0, 0.08, u) * smoothstep(0.0, 0.08, 1 - u)       # same depth at every block's edge
+    dep = 0.16 + fade * (0.025 * F.noise(2, 8, 0.6)[0:1, :] +
+                         0.035 * (np.clip(F.noise(10, 34, 0.2)[0:1, :], 0, None) ** 1.5 - 0.3))
+    dep = np.clip(dep, 0.11, 0.21)
+    turf = (v < dep).astype(np.float64)
+    tips = np.zeros((n, n))
+    for _ in range(int(0.6 * n)):
+        x = int(rng.random() * n)
+        d0 = dep[0, x]
+        ln = 0.01 + 0.02 * rng.random()
+        for st in range(int(ln * n) + 1):
+            y = int(d0 * n) + st
+            if y < n:
+                tips[y, x] = 1.0
+    turf = np.maximum(turf, tips)
+    below = np.clip(v - dep, 0, None)
+    shadow = np.exp(-below / 0.025) * (v >= dep)
+    # humus -> subsoil: its depth differs per texture (the same at the block's edges, so the horizon runs on)
+    hdep = 0.48 + fade * (0.12 * (rng.random() - 0.5) + 0.06 * F.noise(1, 4, 0.8)[0:1, :])
+    hor_a = 1 - smoothstep(hdep - 0.15, hdep + 0.15, v + 0.05 * F.noise(2, 8, 0.6))
+    layers = F.noise(2, 12, 0.8, sx=10.0, sy=1.0)
+    roots = np.zeros((n, n))
+    for _ in range(18):
+        x = rng.random() * n
+        y = (0.13 + 0.05 * rng.random()) * n
+        ln = n * (0.10 + 0.30 * rng.random())
+        for _st in range(int(ln)):
+            x += (rng.random() - 0.5) * 1.4
+            y += 1
+            if y >= n:
+                break
+            roots[int(y), int(round(x)) % n] = max(0.0, 1.0 - _st / ln)
+    roots = np.clip(F.blur(roots, 0.5) * 1.8, 0, 1) * hor_a
+    s1, s2, sidx, sk = F.voronoi(30, 1.0)
+    srad = (0.025 + 0.05 * rng.random(sk))[sidx]
+    st_on = (rng.random(sk) < 0.35)[sidx] & (v > 0.36)
+    sd = np.clip(1 - s1 / srad, 0, 1) * st_on
+    stm = sd > 0
+    # the profile is a HUE step at nearly one luma (gate G4: a light / dark profile shared by every side texture
+    # repeats block after block along a bank): humus greyer and colder, the subsoil warmer
+    col_a = np.array([0.35, 0.28, 0.22])
+    col_b = np.array([0.38, 0.29, 0.18])
+    base = col_a[None, None, :] * hor_a[..., None] + col_b[None, None, :] * (1 - hor_a[..., None])
+    alb = base * (ad / np.maximum(ad.mean((0, 1)), 1e-6)) ** 0.6
+    patch = F.noise(3, 10, 0.8)                                      # clods and lenses at 1/8 - 1/4 block
+    alb = alb * (1 + 0.05 * layers * (1 - hor_a) + 0.07 * patch)[..., None] * (1 - 0.18 * shadow)[..., None]
+    alb = alb * (1 - 0.55 * roots[..., None]) + np.array([0.52, 0.42, 0.30]) * 0.55 * roots[..., None]
+    # stones: lit from above (their upper half lighter), a shadow under each
+    cnt = np.maximum(np.bincount(sidx.ravel(), minlength=sk), 1)
+    cy = np.bincount(sidx.ravel(), v.ravel(), sk) / cnt
+    sy = (v - cy[sidx]) / np.maximum(srad, 1e-3)
+    stone_sh = (0.88 + 0.14 * sd ** 0.5) * (1 - 0.22 * np.clip(sy, 0, 1))
+    stone_t = (0.60 + 0.65 * rng.random(sk))[sidx]
+    alb = np.where(stm[..., None], tint((0.42, 0.39, 0.35), stone_sh * stone_t), alb)
+    under = (np.clip(1 - s1 / (srad * 1.3), 0, 1) > 0) & ~stm & st_on & (sy > 0)
+    alb = np.where(under[..., None], alb * 0.78, alb)
+    alb = np.where(turf[..., None] > 0.5, col_a * 0.9, alb)               # never green under the overlay
+    H = Hd * 0.6 + 0.03 * layers - 0.06 * shadow + 0.04 * roots + 0.20 * sd ** 0.6
+    H = np.where(turf > 0.5, 0.80 + 0.05 * Hd, H)
+    return H, alb, turf, dep
+
+
+def m_grass_overlay_r27(F, n, turf, dep):
+    """The turf seen from the side (greyscale, tinted in game; alpha = the turf mask): upright blade strokes in the
+    mat's own shade - the side of a lawn is darker than its top - with sunlit tips along the block's top edge and a
+    darker base where the mat meets the soil."""
+    rng = F.rng
+    tone = np.zeros((n, n))
+    for _ in range(int(3 * n)):
+        x = rng.random() * n
+        ang = (rng.random() - 0.5) * 0.5
+        ln = 0.05 + 0.12 * rng.random()
+        t0 = rng.standard_normal() * 0.5
+        y0 = (dep[0, int(x) % n] + 0.01) * n
+        for st in range(int(ln * n) + 1):
+            y = int(y0 - st)
+            xx = int(round(x + math.sin(ang) * st)) % n
+            if 0 <= y < n:
+                tone[y, xx] = t0 + st / (ln * n)
+    rel = np.clip(F.v / np.maximum(dep, 1e-3), 0, 1.5)
+    shade = 0.80 + 0.05 * tone + 0.12 * (1 - smoothstep(0.0, 0.25, rel)) - 0.08 * smoothstep(0.6, 1.0, rel)
+    H = 0.4 + 0.2 * np.clip(tone, -1, 2) + 0.2 * (1 - rel)
+    return H, np.clip(np.stack([shade] * 3, -1) * 0.62, 0, 1)
+
+
+def m_basalt_side_r27(F, n):
+    """Basalt's side, round 27: 2-3 columns per metre block (real colonnade columns are ~0.3-0.6 m), joints straight
+    and narrow with chipped lips, each column showing two planar faces split by an arris - one face turned to the sky
+    (lighter), the other away - curved cross-joints at uneven heights, a rough fine grain with sparse vesicles, rain
+    streaks running down and a brown weathering patina. Never turns, so the faces' light is baked from above."""
+    rng = F.rng
+    # a joint on the block's edge (u = 0) in every variant: where two different variants meet, the seam is a joint
+    k = 2 + int(rng.random() < 0.6)
+    while True:
+        edges = np.sort(np.concatenate([[0.0], rng.random(k - 1)]))
+        w = np.diff(np.concatenate([edges, edges[:1] + 1]))
+        if w.min() > 0.24:
+            break
+    lean = 0.012 * (rng.random(k) - 0.5)
+    lean[0] = 0.0
+    uu = F.u
+    d_all = np.stack([np.abs((uu - e - l * (F.v - 0.5) + 0.5) % 1.0 - 0.5) for e, l in zip(edges, lean)])
+    d = d_all.min(0)
+    col = np.searchsorted(edges, uu) % k
+    left = edges[(col - 1) % k]
+    width = w[(col - 1) % k]
+    across = ((uu - left) % 1.0) / np.maximum(width, 1e-3)
+    arris = (0.35 + 0.3 * rng.random(k))[col]
+    face_b = across > arris
+    lit_a = (rng.random(k) < 0.5)[col]
+    face_lit = np.where(face_b, ~lit_a, lit_a)
+    col_t = (rng.random(k) - 0.5)[col]
+    gapw = 0.010 + 0.007 * np.clip(F.noise(8, 40, 0.4, sx=1.0, sy=0.3), -1, 2.5)
+    joint = 1 - smoothstep(0.0, 1.0, d / np.maximum(gapw, 0.004))
+    lip = (1 - smoothstep(0.0, 2.5, d / np.maximum(gapw, 0.004))) * smoothstep(0.4, 1.4, F.noise(10, 40, 0.3))
+    ar = 1 - smoothstep(0.0, 0.010, np.abs(across - arris) * width)
+    cross = np.zeros((n, n))
+    step = np.zeros((n, n))
+    for c in range(k):
+        for _ in range(int(rng.integers(1, 4))):
+            v0 = 0.1 + 0.8 * rng.random()
+            bow = 0.05 * (rng.random() - 0.3)
+            vy = v0 + bow * (1 - (2 * across - 1) ** 2)
+            dv = F.v - vy
+            cross = np.maximum(cross, (col == c) * (1 - smoothstep(0.0, 0.007, np.abs(dv))))
+            step += (col == c) * (dv > 0) * (rng.random() - 0.5) * 0.09
+    g1, g2, gidx, gk = F.voronoi(260, 1.0)
+    ves = ((rng.random(gk) < 0.08)[gidx] & (g1 < 0.006)).astype(np.float64)
+    rough = F.noise(4, 48, 1.1)
+    streak = F.noise(3, 20, 0.8, sx=1.0, sy=8.0)
+    patina = smoothstep(-0.2, 1.2, F.noise(2, 8, 0.8))                       # a weathering skin in patches
+    c1_, c2_, chidx, chk = F.voronoi(90, 1.0)                                  # blocky chips off the surface
+    chips = (rng.random(chk) < 0.10)[chidx] * (rng.random(chk) - 0.3)[chidx]
+    face = np.where(face_lit, 0.05, -0.04) + 0.03 * col_t
+    shade = 1.0 + face + step + 0.04 * rough - 0.03 * np.clip(streak, 0, None) - 0.45 * joint - 0.08 * lip \
+        + 0.05 * ar * face_lit - 0.22 * cross - 0.12 * ves - 0.06 * chips
+    H = 0.6 + np.where(face_b, -(across - arris), across - arris) * 0.08 + 0.02 * col_t + 0.012 * rough \
+        - 0.16 * joint - 0.10 * cross - 0.04 * ves - 0.03 * chips + 0.3 * step
+    base = tint((0.29, 0.29, 0.30), shade)
+    warm = tint((0.33, 0.31, 0.29), shade)
+    return H, base * (1 - 0.30 * patina[..., None]) + warm * 0.30 * patina[..., None]
+
+
+def m_basalt_top_r27(F, n):
+    """Basalt's end, round 27: the column tops of a colonnade - a few polygonal sections with narrow joints (not
+    black: gate G3), each its own tone, a rough grain, a few radial cracks and vesicles."""
+    rng = F.rng
+    f1, f2, idx, k = F.voronoi(6, 0.8)
+    joint = 1 - smoothstep(0.0, 0.012, f2 - f1)
+    tone = (rng.random(k) - 0.5)[idx]
+    cracks = np.clip(F.blur(polyline(F, 4, (0.08, 0.2), 0.1), 0.6) * 2.0, 0, 1)
+    rough = F.noise(4, 48, 1.1)
+    g1, g2, gidx, gk = F.voronoi(260, 1.0)
+    ves = ((rng.random(gk) < 0.08)[gidx] & (g1 < 0.006)).astype(np.float64)
+    H = 0.6 + 0.03 * tone + 0.012 * rough - 0.2 * joint - 0.08 * cracks - 0.04 * ves
+    shade = 1.0 + 0.08 * tone + 0.035 * rough - 0.30 * joint - 0.18 * cracks - 0.12 * ves
+    return H, tint((0.31, 0.30, 0.30), shade)
+
+
+def _plain27(fn):
+    """Round 27: fit, soften, then the material's luma floor (TARGETS "floor": (lo, knee)) if it has one."""
+    def r(F, n, t):
+        H, alb = fn(F, n)
+        alb = soften(F, fit_albedo(alb, t), t)
+        if "floor" in t:
+            alb = luma_floor(alb, *t["floor"])
+        return dict(H=H, alb=alb)
+    return r
+
+
+def _grass_side_r27(F, n, t):
+    H, alb, turf, _ = grass_side_r27(F, n)
+    soil = turf < 0.5
+    alb = np.where(soil[..., None], fit_albedo(alb, t, soil), alb)
+    alb = soften(F, alb, t)
+    if "floor" in t:
+        alb = luma_floor(alb, *t["floor"])
+    return dict(H=H, alb=alb)
+
+
+def _grass_overlay_r27(side_name):
+    def r(F, n, t):
+        side = Field(n, SEEDS[side_name])
+        _, side_alb, turf, dep = grass_side_r27(side, n)
+        H, alb = m_grass_overlay_r27(F, n, turf, dep)
+        m = turf > 0.5
+        return dict(H=H, alb=soften(F, fit_albedo(alb, t, m), t), alpha=turf, under=side_alb)
+    return r
+
+
 def _plain(fn):
     def r(F, n, t):
         H, alb = fn(F, n)
-        return dict(H=H, alb=fit_albedo(alb, t))
+        return dict(H=H, alb=soften(F, fit_albedo(alb, t), t))
     return r
 
 
@@ -2227,24 +2691,9 @@ def _cutout(fn):
     return r
 
 
-def _grass_side(F, n, t):
-    H, alb, _ = m_grass_side(F, n)
-    return dict(H=H, alb=fit_albedo(alb, t))
-
-
-def _grass_side_overlay(F, n, t):
-    # the overlay's fringe is the side's: rebuilt from the side's own seed (deterministic), so each texture is one
-    # independent job; the side's albedo is the preview's backdrop
-    side = Field(n, SEEDS["grass_block_side"])
-    _, side_alb, fringe = m_grass_side(side, n)
-    H, alb = m_grass_overlay(F, n, fringe)
-    return dict(H=H, alb=fit_albedo(alb, t, fringe > 0.5), alpha=fringe,
-                under=fit_albedo(side_alb, TARGETS["grass_block_side"]))
-
-
 def _grass_snow_side(F, n, t):
     H, ad, asn, band = m_grass_snow_side(F, n)
-    alb = np.where(band[..., None], fit_albedo(asn, TARGETS["snow"], band), fit_albedo(ad, TARGETS["dirt"], ~band))
+    alb = np.where(band[..., None], fit_albedo(asn, TARGETS["snow"], band), fit_albedo(ad, DIRT_R26, ~band))
     return dict(H=H, alb=alb)
 
 
@@ -2261,11 +2710,13 @@ def recipes():
     """name -> recipe(F, n, t) returning H (height), alb (albedo fitted to the target t) and, where a material needs
     them, f0 (a per-texel F0 code map) or alpha (cut-out), under (the preview's backdrop). One per TARGETS key."""
     R = {
-        "grass_block_top": _plain(m_grass_top), "grass_block_top_v2": _plain(m_grass_top),
-        "grass_block_side": _grass_side,
-        "grass_block_side_overlay": _grass_side_overlay,
-        "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
-        "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
+        # round 27: the grass tops, sides, dirt and stone (and their BLOCK_VARIANTS, added below)
+        "grass_block_top": _plain(m_grass_top_r27), "grass_block_top_v2": _plain(m_grass_top_r27),
+        "grass_block_top_v3": _plain(m_grass_top_r27), "grass_block_top_v4": _plain(m_grass_top_r27),
+        "grass_block_side": _grass_side_r27,
+        "grass_block_side_overlay": _grass_overlay_r27("grass_block_side"),
+        "dirt": _plain27(m_dirt_r27), "stone": _plain27(m_stone_r27), "cobblestone": _plain(m_cobblestone),
+        "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24), "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
@@ -2369,8 +2820,6 @@ def recipes():
         "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
-        "basalt_side": lambda F, n: m_basalt_rough(F, n, False),
-        "basalt_top": lambda F, n: m_basalt_rough(F, n, True),
         "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
         "soul_sand": m_soul_sand,
         "iron_block": lambda F, n: m_plate(F, n, (0.86, 0.86, 0.87)),
@@ -2400,6 +2849,10 @@ def recipes():
         plain["stripped_%s_log_top" % wood] = lambda F, n, e=end, s=side: m_log_top(F, n, e, s, rim=(0.58, 0.04))
     for name, fn in plain.items():
         R[name] = _plain(fn)
+    R["basalt_side"] = _plain27(m_basalt_side_r27)          # round 27
+    R["basalt_top"] = _plain27(m_basalt_top_r27)
+    for v, base in VARIANT_OF.items():                       # round 27: the same recipe on the variant's own seed
+        R[v] = _grass_overlay_r27(v.replace("_overlay", "")) if base == "grass_block_side_overlay" else R[base]
     R["grass_block_snow"] = _grass_snow_side
     # round 16: cut-out and see-through blocks
     R["mangrove_roots_side"] = _parts(lambda F, n: m_roots(F, n, False))
@@ -2436,8 +2889,9 @@ HIRES = set(GRASS_TOPS) | set(LEAVES) | {"oak_log"} | {w + "_log" for w in WOODS
 # worms (eyes structure runs 39546529592 and 39547379343 - channel-split tests on claude/pack-diagnostic-flat-stone).
 # The normals keep the relief for the light; the height keeps a little depth for players who turn parallax on.
 SHALLOW_HEIGHT = 0.12
-CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "grass_block_top_v2", "dirt", "coarse_dirt",
-               "podzol_top", "sand", "red_sand", "gravel"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}
+CALM_HEIGHT = {"stone", "granite", "diorite", "andesite", "tuff", "calcite", "grass_block_top", "grass_block_top_v2",
+               "grass_block_top_v3", "grass_block_top_v4", "dirt", "coarse_dirt",
+               "podzol_top", "sand", "red_sand", "gravel", "stone_v2", "stone_v3", "dirt_v2", "dirt_v3"} | set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leaves"}
 
 
 # Round 20: every other opaque texture keeps its height within the top quarter. Complementary's POM (on by default in
@@ -2467,7 +2921,7 @@ def make(name, res, preview_dir):
     nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
     nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
     vis = None if alpha is None else alpha > 0.5
-    tint = PLAINS_TINT if name in GRASS_TOPS + ("grass_block_side_overlay",) else \
+    tint = PLAINS_TINT if name in GRASS_TOPS + GRASS_OVERLAYS else \
         FOLIAGE_TINT if name in LEAVES else None
     seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
     rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
@@ -2476,7 +2930,7 @@ def make(name, res, preview_dir):
               "rts_luma_std": round(rts_std, 3)}
     if preview_dir:
         shown = alb
-        if name in GRASS_TOPS + ("grass_block_side_overlay",):
+        if name in GRASS_TOPS + GRASS_OVERLAYS:
             shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
         if name in LEAVES:
             shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
