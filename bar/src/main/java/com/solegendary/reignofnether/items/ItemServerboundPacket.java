@@ -194,7 +194,8 @@ public class ItemServerboundPacket {
                             actionableUnit,
                             this.itemUuid,
                             this.targetId,
-                            this.targetPos
+                            this.targetPos,
+                            player.getName().getString()
                     );
                 }
                 success.set(true);
