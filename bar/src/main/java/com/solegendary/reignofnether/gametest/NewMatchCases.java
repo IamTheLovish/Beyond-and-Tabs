@@ -14,7 +14,6 @@ import com.solegendary.reignofnether.match.MatchPhase;
 import com.solegendary.reignofnether.match.MatchSetup;
 import com.solegendary.reignofnether.match.MatchState;
 import com.solegendary.reignofnether.matchstart.MultiplayerLobby;
-import com.solegendary.reignofnether.matchstart.MultiplayerMatch;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -74,7 +73,6 @@ final class NewMatchCases {
         BlockPos spawn0 = level.getSharedSpawnPos();
         String a = "gametest_nm_a", b = "gametest_nm_b";
         List<String> problems = new ArrayList<>();
-        MultiplayerMatch[] played = { null };
         Runnable undo = () -> {
             border.setCenter(bx, bz);
             border.setSize(bs);
@@ -82,8 +80,6 @@ final class NewMatchCases {
             origins.restore(savedCursor);
             FogOfWarServerEvents.neutralFogUnits.remove(910_001);
             MatchState.live().reset();
-            if (played[0] != null)
-                played[0].end();
             MatchLifecycleCases.forget(a, b);
         };
         try {
@@ -105,16 +101,16 @@ final class NewMatchCases {
                 return;
             }
             FogOfWarServerEvents.neutralFogUnits.put(910_001, new AABB(old).inflate(3));
-            played[0] = new MultiplayerMatch(Set.of(a, b), Set.of()).register();
-            if (MatchState.live().seatNow(() -> played[0], MatchState.Origin.LOBBY) == null) {
+            // whatever an earlier test left in the world's live match is dropped; then a match is played and decided
+            // exactly as a bare start of a side makes one (MatchRoster.join -> sideJoined) and the roster decides it
+            MatchState live = MatchState.live();
+            live.reset();
+            live.sideJoined(a);
+            live.onDecided(null, Set.of(a));
+            if (live.phase() != MatchPhase.ENDED) {
+                MatchPhase was = live.phase();
                 undo.run();
-                helper.fail("test setup: the live match state was not idle: " + MatchState.live().phase());
-                return;
-            }
-            MatchState.live().onDecided(played[0], Set.of(a));
-            if (MatchState.live().phase() != MatchPhase.ENDED) {
-                undo.run();
-                helper.fail("test setup: the match did not end: " + MatchState.live().phase());
+                helper.fail("test setup: the played match did not end: " + was);
                 return;
             }
 
