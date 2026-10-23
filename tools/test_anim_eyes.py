@@ -336,14 +336,36 @@ class Ci(unittest.TestCase):
             E.wait_run(7, gh, sleep=lambda s: None, timeout=300, poll=100, now=lambda: next(clock))
         self.assertIn("7", str(cm.exception))
 
-    def test_download_args(self):
-        self.assertEqual(E.download_args(7, "/tmp/x"), ["run", "download", "7", "-n", "anim-7", "-D", "/tmp/x"])
+    def test_the_sheets_come_from_the_branch_not_the_artifact(self):
+        # a Claude session's sandbox cannot reach the Actions artifact host; branches it reads through the API
+        self.assertEqual(E.list_folder_args(7), ["api", "repos/{owner}/{repo}/contents/anim-7?ref=eyes-anim"])
+        self.assertEqual(E.raw_args("anim-7/a_sheet.png"),
+                         ["api", "-H", "Accept: application/vnd.github.raw", "repos/{owner}/{repo}/contents/anim-7/a_sheet.png?ref=eyes-anim"])
 
-    def test_no_artifact_is_explained(self):
-        gh = FakeGh([RuntimeError("no artifact matches anim-7")])
+    def test_download_fetches_files_and_recurses_one_level_only_for_frames(self):
+        import json
+        listing = [{"name": "a_unit_idle_sheet.png", "type": "file", "path": "anim-7/a_unit_idle_sheet.png"},
+                   {"name": "anim-log.txt", "type": "file", "path": "anim-7/anim-log.txt"},
+                   {"name": "a_unit_idle", "type": "dir", "path": "anim-7/a_unit_idle"}]
+        gh = FakeGh([json.dumps(listing)])
+        got = {}
+
+        def raw(args):
+            got[args[-1]] = True
+            return b"PNGDATA"
+        with tempfile.TemporaryDirectory() as d:
+            files = E.download(7, d, gh, raw)
+            self.assertEqual(sorted(os.path.basename(f) for f in files), ["a_unit_idle_sheet.png", "anim-log.txt"])
+            with open(os.path.join(d, "a_unit_idle_sheet.png"), "rb") as f:
+                self.assertEqual(f.read(), b"PNGDATA")
+        self.assertEqual(len(got), 2)             # the frames folder was not fetched
+
+    def test_no_folder_is_explained(self):
+        gh = FakeGh([RuntimeError("Not Found (HTTP 404)")])
         with self.assertRaises(E.CiError) as cm:
-            E.download(7, "/tmp/nowhere-anim", gh)
+            E.download(7, "/tmp/nowhere-anim", gh, lambda a: b"")
         self.assertIn("anim-7", str(cm.exception))
+        self.assertIn("eyes-anim", str(cm.exception))
 
 
 class Offline(unittest.TestCase):
