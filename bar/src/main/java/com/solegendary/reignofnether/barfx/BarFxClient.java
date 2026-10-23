@@ -123,6 +123,12 @@ public final class BarFxClient {
      * draws it smaller and shorter-lived than the old marks. Returns the mark (possibly the merged one).
      */
     static P scorchMark(float x, float y, float z, float life, float r, int c, float alpha) {
+        // a world that remembers (worldmemory/GroundMemoryClient): the server's field now draws every scorch mark for
+        // the match, textured and on the real ground; this untextured one-height disc only stands in with scars off
+        if (com.solegendary.reignofnether.worldmemory.GroundMemoryClient.enabled()) {
+            init(SCRATCH, DECAL, x, y, z, life, r, c);
+            return SCRATCH;
+        }
         r *= .85f;
         life = Math.min(life, SCORCH_MAX_LIFE);
         P oldest = null;
@@ -787,6 +793,8 @@ public final class BarFxClient {
     }
 
     static void crater(float x, float y, float z, float r, int groundCol) {
+        if (com.solegendary.reignofnether.worldmemory.GroundMemoryClient.enabled())
+            return;   // the field's crater (GroundMemoryClient) replaces this disc, see scorchMark
         float g = groundY(x, y + .5f, z);
         if (Math.abs(g - y) > 2) return;
         P oldest = null;

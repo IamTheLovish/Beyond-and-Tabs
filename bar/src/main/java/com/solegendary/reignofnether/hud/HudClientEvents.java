@@ -384,6 +384,15 @@ public class HudClientEvents {
         if (MC.level == null) {
             return;
         }
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.HUD);
+        try {
+            drawHud(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    private static void drawHud(ScreenEvent.Render.Post evt) {
         // clean view (HudPanels, "=" by default): only the economy bar, the minimap and the command card
         boolean extras = HudPanels.showExtras();
         
@@ -1935,6 +1944,14 @@ public class HudClientEvents {
             }
         }
 
+        // ------------------------------------------------------------
+        // Menu button (top right, always drawn - also in the clean view)
+        // ------------------------------------------------------------
+        if (menuButton != null) {
+            int xi = screenWidth - (menuButton.iconSize * 2);
+            menuButton.render(evt.getGuiGraphics(), xi, 8, mouseX, mouseY);
+            renderedButtons.add(menuButton);
+        }
         // --------------------
         // Tutorial Help button
         // --------------------
@@ -2166,8 +2183,9 @@ public class HudClientEvents {
         // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
         // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
         int key = evt.getKeyCode();
-        // A and S are WASD panning as well as Attack / Stop: a key held past a tap was a pan, not an order
-        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.heldMs(key) >= com.solegendary.reignofnether.keybinds.KeyTaps.TAP_MS)
+        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press the camera panned
+        // for, or one held past a tap once frame lag is allowed for, was a pan, not an order (keybinds/KeyTapTracker)
+        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
             return;
         // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
         // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)

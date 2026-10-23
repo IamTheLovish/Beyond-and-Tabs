@@ -82,6 +82,11 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameAuto.class);
+        com.solegendary.reignofnether.perf.GcLog.install();
         vanillaEventBus.register(com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearingClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.config.DisplaySettings.class);
@@ -100,6 +105,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.MatchBanner.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleFactories.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleArmy.class);
         vanillaEventBus.register(CursorClientEvents.class);
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
@@ -108,6 +114,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.fogofwar.FogRemesh.class);   // first-person flush, [FogRemesh] line
         vanillaEventBus.register(ResourcesClientEvents.class);
         vanillaEventBus.register(PlayerClientEvents.class);
         vanillaEventBus.register(TutorialClientEvents.class);
@@ -181,7 +188,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PlacementGridClientEvents.class);   // after BuildingClientEvents: reads the ghost validity it set this frame
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for A / S
+        vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D
+        vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeybindsClientEvents.class);   // saved keys -> new defaults, once
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);

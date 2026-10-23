@@ -17,6 +17,7 @@ import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.units.monsters.PhantomSummon;
 import com.solegendary.reignofnether.unit.units.villagers.RavagerUnit;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyMath;
 import net.minecraft.core.BlockPos;
@@ -267,6 +268,15 @@ public interface AttackerUnit {
     }
 
     static void tick(AttackerUnit attackerUnit) {
+        int sys = Sys.begin(Sys.ATTACKER);
+        try {
+            tickBody(attackerUnit);
+        } finally {
+            Sys.end(sys);
+        }
+    }
+
+    private static void tickBody(AttackerUnit attackerUnit) {
         Mob unitMob = (Mob) attackerUnit;
         Unit unit = (Unit) attackerUnit;
 
@@ -310,8 +320,14 @@ public interface AttackerUnit {
             // enact attack moving
             // prioritises units and will chase them, resuming attack move once dead or out of range/sight
             if (attackerUnit.getAttackMoveTarget() != null && !unit.hasLivingTarget() && !isAttackingBuilding) {
-                if (fireAtWill)
-                    attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
+                if (fireAtWill) {
+                    int sysAm = Sys.begin(Sys.ATTACK_MOVE);
+                    try {
+                        attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
+                    } finally {
+                        Sys.end(sysAm);
+                    }
+                }
 
                 if (unit.getTargetGoal().getTarget() == null &&
                     unit.getMoveGoal().getMoveTarget() == null &&
@@ -323,8 +339,14 @@ public interface AttackerUnit {
             // that unit cut down its friends, and only a hit on itself turned it round (Lane C playtest #26, Oct 20)
             else if (attackerUnit.getAttackMoveTarget() != null && !unit.hasLivingTarget() && isAttackingBuilding
                     && fireAtWill && !isBuildingTargetForced(attackerUnit)) {
-                LivingEntity foe = MiscUtil.findClosestAttackableEntity(unitMob, attackerUnit.getAggroRange(),
-                    (ServerLevel) unitMob.level());
+                LivingEntity foe;
+                int sysFoe = Sys.begin(Sys.ENTITY_SCAN);
+                try {
+                    foe = MiscUtil.findClosestAttackableEntity(unitMob, attackerUnit.getAggroRange(),
+                        (ServerLevel) unitMob.level());
+                } finally {
+                    Sys.end(sysFoe);
+                }
                 if (foe != null) {
                     if (!unitMob.isPassenger())
                         unit.getMoveGoal().stopMoving();
@@ -381,8 +403,14 @@ public interface AttackerUnit {
                 }
             }
             // idle auto-aggression
-            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob))
-                attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
+            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob)) {
+                int sysIdle = Sys.begin(Sys.IDLE_AGGRO);
+                try {
+                    attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
+                } finally {
+                    Sys.end(sysIdle);
+                }
+            }
 
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
             // Throttled from every 4 to every RETARGET_TICKS ticks: this runs for every unit already in combat (the
@@ -390,7 +418,12 @@ public interface AttackerUnit {
             // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Idle aggro and
             // attack-move acquisition above still run every 4 ticks, so reaction time to new enemies is unchanged.
             if (!forced && fireAtWill && unitMob.tickCount % RETARGET_TICKS == 0) {
-                attackerUnit.retargetToClosestUnit((ServerLevel) unitMob.level());
+                int sysRetarget = Sys.begin(Sys.RETARGET);
+                try {
+                    attackerUnit.retargetToClosestUnit((ServerLevel) unitMob.level());
+                } finally {
+                    Sys.end(sysRetarget);
+                }
             }
         }
 
@@ -405,10 +438,15 @@ public interface AttackerUnit {
                     attackerUnit.setAttackMoveTarget(null);
             }
             if (attackerUnit.getAttackMoveTarget() == null || unit.isIdle()) {
-                switch (attackerUnit.getEnemySearchBehaviour()) {
-                    case NEAREST_ENEMY_BUILDING -> attackerUnit.attackMoveNearestEnemyBuilding();
-                    case NEAREST_ENEMY_UNIT -> attackerUnit.attackMoveNearestEnemyUnit(false);
-                    case NEAREST_ENEMY_WORKER -> attackerUnit.attackMoveNearestEnemyUnit(true);
+                int sysSearch = Sys.begin(Sys.ATTACK_MOVE);
+                try {
+                    switch (attackerUnit.getEnemySearchBehaviour()) {
+                        case NEAREST_ENEMY_BUILDING -> attackerUnit.attackMoveNearestEnemyBuilding();
+                        case NEAREST_ENEMY_UNIT -> attackerUnit.attackMoveNearestEnemyUnit(false);
+                        case NEAREST_ENEMY_WORKER -> attackerUnit.attackMoveNearestEnemyUnit(true);
+                    }
+                } finally {
+                    Sys.end(sysSearch);
                 }
             }
         }
@@ -425,7 +463,13 @@ public interface AttackerUnit {
         boolean isAttackingBuilding = isAttackingBuilding(this);
         LivingEntity currentTarget = ((Mob) this).getTarget();
         if (currentTarget == null && !isAttackingBuilding) return;
-        LivingEntity closestTarget = MiscUtil.findClosestAttackableEntity((Mob) this, aggroRange, level);
+        LivingEntity closestTarget;
+        int sysScan = Sys.begin(Sys.ENTITY_SCAN);
+        try {
+            closestTarget = MiscUtil.findClosestAttackableEntity((Mob) this, aggroRange, level);
+        } finally {
+            Sys.end(sysScan);
+        }
         if (closestTarget == null) return;
         double distClosestTarget =  ((Mob) this).distanceToSqr(closestTarget.position());
         double distCurrentTarget = isAttackingBuilding ? (aggroRange / 2) : ((Mob) this).distanceToSqr(currentTarget.position());
@@ -444,7 +488,13 @@ public interface AttackerUnit {
         if (garr != null) {
             aggroRange = garr.getAttackRange();
         }
-        LivingEntity entity = MiscUtil.findClosestAttackableEntity((Mob) this, aggroRange, level);
+        LivingEntity entity;
+        int sysScan = Sys.begin(Sys.ENTITY_SCAN);
+        try {
+            entity = MiscUtil.findClosestAttackableEntity((Mob) this, aggroRange, level);
+        } finally {
+            Sys.end(sysScan);
+        }
         if (entity != null) {
             if (!((LivingEntity) this).isPassenger())
                 ((Unit) this).getMoveGoal().stopMoving();
@@ -454,7 +504,13 @@ public interface AttackerUnit {
         if (canAttackBuildings() && !(this instanceof RavagerUnit && ((LivingEntity) this).isVehicle()) &&
                 (!(((Unit) this).getOwnerName()).isEmpty() || level.getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get()))
         {
-            BuildingPlacement closestBuilding = MiscUtil.findClosestAttackableBuilding((Mob) this, aggroRange);
+            BuildingPlacement closestBuilding;
+            int sysBuilding = Sys.begin(Sys.BUILDING_SCAN);
+            try {
+                closestBuilding = MiscUtil.findClosestAttackableBuilding((Mob) this, aggroRange);
+            } finally {
+                Sys.end(sysBuilding);
+            }
             if (closestBuilding != null) {
                 if (!((LivingEntity) this).isPassenger())
                     ((Unit) this).getMoveGoal().stopMoving();
@@ -514,28 +570,10 @@ public interface AttackerUnit {
     }
 
     public default void attackMoveNearestEnemyBuilding() {
-        Mob mob = (Mob) this;
-        Unit unit = (Unit) this;
-        List<BuildingPlacement> buildings;
-        if (mob.level().isClientSide())
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
-
-        ArrayList<BuildingPlacement> eligibleTargets = new ArrayList<>();
-        List<BuildingPlacement> buildingsCopy = new ArrayList<>(buildings); // defensive copy
-        for (BuildingPlacement buildingPlacement : buildingsCopy) {
-            if (!unit.getOwnerName().equals(buildingPlacement.ownerName) &&
-                    !AlliancesServerEvents.isAllied(unit.getOwnerName(), buildingPlacement.ownerName) &&
-                    !buildingPlacement.ownerName.isBlank() &&
-                    buildingPlacement.isAttackable()) {
-                eligibleTargets.add(buildingPlacement);
-            }
-        }
-        eligibleTargets.sort(Comparator.comparing(b -> b.centrePos.distToCenterSqr(((Entity) unit).position())));
-
-        if (!eligibleTargets.isEmpty())
-            setAttackMoveTarget(eligibleTargets.get(0).getClosestGroundPos(((Entity) unit).getOnPos(), 1));
+        // the nearest enemy building through the BuildingGrid (it used to copy, filter and sort the whole list)
+        BuildingPlacement nearest = MiscUtil.nearestEnemyBuildingForAttackMove((Unit) this);
+        if (nearest != null)
+            setAttackMoveTarget(nearest.getClosestGroundPos(((Entity) this).getOnPos(), 1));
     }
 
     public default void attackMoveNearestEnemyUnit(boolean workersOnly) {

@@ -26,6 +26,7 @@ import com.solegendary.reignofnether.items.RandomItemDropRule;
 import com.solegendary.reignofnether.match.MatchOutcome;
 import com.solegendary.reignofnether.match.MatchRoster;
 import com.solegendary.reignofnether.match.MatchState;
+import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.match.Spectators;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
@@ -447,6 +448,29 @@ public class PlayerServerEvents {
         ReignOfNether.LOGGER.warn("[Player] world was Peaceful at an RTS start: set to Easy so units are not discarded");
     }
 
+    /**
+     * The game mode a seated commander needs: the RTS camera works only in creative (OrthoviewClientEvents). Skirmish
+     * worlds are created creative, but a dedicated server keeps each player's saved mode - lovish joined his own server
+     * in survival, sat down in a lobby match and got no RTS view (Oct 21). Survival / adventure become creative;
+     * creative and spectator are left alone.
+     */
+    public static net.minecraft.world.level.GameType commanderGameMode(net.minecraft.world.level.GameType current) {
+        return current == net.minecraft.world.level.GameType.SURVIVAL || current == net.minecraft.world.level.GameType.ADVENTURE
+                ? net.minecraft.world.level.GameType.CREATIVE : current;
+    }
+
+    /** Puts a seated commander in {@link #commanderGameMode}; returns whether it changed anything. */
+    public static boolean ensureCommanderGameMode(net.minecraft.server.level.ServerPlayer sp) {
+        net.minecraft.world.level.GameType now = sp.gameMode.getGameModeForPlayer();
+        net.minecraft.world.level.GameType want = commanderGameMode(now);
+        if (want == now)
+            return false;
+        sp.setGameMode(want);
+        ReignOfNether.LOGGER.info("[Player] {} was in {} at a lobby match start: set to {} for the RTS view",
+                sp.getName().getString(), now, want);
+        return true;
+    }
+
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
         if (faction == Factions.RANDOM)   // any live faction, so each new one joins the pool when it goes live
             faction = Factions.randomLive(random);
@@ -464,6 +488,12 @@ public class PlayerServerEvents {
                 serverPlayer = player;
 
         if (serverPlayer == null) {
+            return;
+        }
+        // NONE is the sandbox "faction" (a sandbox player may act for every owner) and NEUTRAL has no army: only the
+        // host or an op starts as either, whatever route the start came by (design/multiplayer.md)
+        if (!PacketAuth.mayPlayAs(serverPlayer, faction)) {
+            ReignOfNether.LOGGER.warn("[Player] startRTS refused: {} may not start as {}", serverPlayer.getName().getString(), faction.key);
             return;
         }
         leavePeaceful(serverPlayer.serverLevel());
@@ -1022,24 +1052,29 @@ public class PlayerServerEvents {
     public static void movePlayer(int playerId, double x, double y, double z) {
         ServerPlayer serverPlayer = getPlayerById(playerId);
         if (serverPlayer != null && (serverPlayer.isCreative() || serverPlayer.isSpectator())) {
-            boolean isOrtho = false;
-            for (ServerPlayer op : orthoviewPlayers)
-                if (op.getId() == playerId) { isOrtho = true; break; }
-            if (isOrtho) {
-                net.minecraft.world.level.border.WorldBorder border = serverPlayer.level().getWorldBorder();
-                double margin = 1.0D;
-                double minX = border.getMinX() + margin;
-                double maxX = border.getMaxX() - margin;
-                double minZ = border.getMinZ() + margin;
-                double maxZ = border.getMaxZ() - margin;
-                if (maxX > minX && maxZ > minZ) {
-                    x = net.minecraft.util.Mth.clamp(x, minX, maxX);
-                    z = net.minecraft.util.Mth.clamp(z, minZ, maxZ);
-                }
+            // the position is the client's word: NaN or infinity would break the player's position for good
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+                ReignOfNether.LOGGER.warn("[Player] {} sent a non-finite teleport [{}, {}, {}]: ignored", serverPlayer.getName().getString(), x, y, z);
+                return;
             }
+            // every sender, not only the ortho-view players, stays inside the world border and the build height range
+            net.minecraft.world.level.border.WorldBorder border = serverPlayer.level().getWorldBorder();
+            double margin = 1.0D;
+            double minX = border.getMinX() + margin;
+            double maxX = border.getMaxX() - margin;
+            double minZ = border.getMinZ() + margin;
+            double maxZ = border.getMaxZ() - margin;
+            if (maxX > minX && maxZ > minZ) {
+                x = net.minecraft.util.Mth.clamp(x, minX, maxX);
+                z = net.minecraft.util.Mth.clamp(z, minZ, maxZ);
+            }
+            y = net.minecraft.util.Mth.clamp(y, serverPlayer.level().getMinBuildHeight(), serverPlayer.level().getMaxBuildHeight() + MAX_CAMERA_ABOVE_BUILD_HEIGHT);
             serverPlayer.teleportTo(x, y, z);
         }
     }
+
+    /** How far above the build limit a camera body may be moved (the RTS camera hovers well above the terrain). */
+    private static final double MAX_CAMERA_ABOVE_BUILD_HEIGHT = 64.0D;
 
     public static void sendMessageToAllPlayers(String msg) {
         sendMessageToAllPlayers(msg, false);

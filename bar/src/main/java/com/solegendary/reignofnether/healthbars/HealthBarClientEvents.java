@@ -71,15 +71,26 @@ public class HealthBarClientEvents {
 
     @SubscribeEvent
     public static void entityRender(RenderLivingEvent.Post<? extends LivingEntity, ? extends EntityModel<?>> evt) {
+        // a shader pack draws every entity a second time into its shadow map, and that draw fires this event too:
+        // the unit was queued twice (its bar drawn twice, doubled alpha) and units off screen but inside the shadow
+        // map's reach got bars of their own. Only the view's draw queues a bar.
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.renderingShadowPass())
+            return;
         prepareRenderInWorld(evt.getEntity());
     }
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BARS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
 
-        Camera camera = MC.gameRenderer.getMainCamera();
-        renderBarsInWorld(evt.getPartialTick(), evt.getPoseStack(), camera);
+            Camera camera = MC.gameRenderer.getMainCamera();
+            renderBarsInWorld(evt.getPartialTick(), evt.getPoseStack(), camera);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
+        }
     }
     @SubscribeEvent
     public static void playerTick(PlayerTickEvent evt) {

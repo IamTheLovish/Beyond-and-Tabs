@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -448,7 +449,15 @@ public class FogOfWarServerEvents {
     public static void onWorldTick(TickEvent.LevelTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || evt.level.isClientSide() || evt.level.dimension() != Level.OVERWORLD)
             return;
+        int sys = Sys.begin(Sys.FOG_OF_WAR);
+        try {
+            worldTick(evt);
+        } finally {
+            Sys.end(sys);
+        }
+    }
 
+    private static void worldTick(TickEvent.LevelTickEvent evt) {
         serverLevel = (ServerLevel) evt.level;
 
         // Only attempt the forced auto-enable on an RTS-optimised map; otherwise setEnabled would refuse

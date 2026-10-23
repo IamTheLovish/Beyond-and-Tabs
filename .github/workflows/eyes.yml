@@ -15,6 +15,22 @@
 #   gh api -X POST repos/IamTheLovish/Beyond-and-Tabs/actions/workflows/eyes.yml/dispatches -f ref=<branch> \
 #     -f 'inputs[structure]=town_centre,data/reignofnether/structures/my_new_hall.nbt' -f 'inputs[shaders]=true'
 # then fetch the stills with the REST API: repos/IamTheLovish/Beyond-and-Tabs/contents/?ref=eyes-structures-shaders
+# Ground scars (input `scars`, Oct 21 2026, claude/world-that-remembers.md): instead of the tour, lay a pad beside our
+# base (steps, slabs, snow, a dirt path, a pond), fight a scripted battle on it through the same server calls BarFx makes
+# and photograph the aftermath (EyesDirector scene 16: RTS before / after / close / far, first person at the crater and
+# the steps) - plain, or with `shaders` (Oculus must draw the decals). Publishes to eyes-scars (eyes-scars-shaders).
+# Dispatch on the feature branch: it uses that branch's build, like the structure photos.
+# Fog of war (input `fog`, Oct 21 2026, perf plan R1): instead of the tour, fog on half a minute into the match, a dozen
+# of ours marching out into the dark, the fog re-mesh A/B (surface band vs whole column: sections marked, the renderer's
+# rebuilds, frame times - "[Eyes] 17_fog A/B" in the log) and the fog edge before / after a full re-mesh (EyesDirector
+# scene 17, EyesFogScene). The plain lane keeps Embeddium for it (the testers' renderer; the full tour's plain lane
+# measures vanilla's). Publishes to eyes-fog (eyes-fog-shaders). The full tour runs the same scene last.
+# Overlays (input `overlays`, Oct 21 2026, perf plan R2): instead of the tour, 500 of our units in ten squads and 1,700
+# houses round them (client-only placements), stills of the underlines and boxes at a mid zoom and at strategic zoom, then
+# the frame times and our handlers' ms per frame at zoom 30 and 200 ("[Eyes] 18_overlays zoom ..." lines, also run
+# annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
+# these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
+# branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
 name: eyes
 on:
   workflow_dispatch:
@@ -32,6 +48,18 @@ on:
         description: "Structure photos instead of the tour: comma-separated structure names in the jar (town_centre,metal_extractor) or .nbt paths in the checkout (data/reignofnether/structures/x.nbt); dispatch on a feature branch to use that branch's build. Publishes to eyes-structures (-shaders)"
         required: false
         default: ''
+      scars:
+        description: "Ground scars instead of the tour (a world that remembers): a pad, a scripted battle and its aftermath - RTS before / after / close / far and two first-person stills (EyesDirector scene 16). Publishes to eyes-scars (-shaders)"
+        type: boolean
+        default: false
+      fog:
+        description: "Fog of war instead of the tour: fog on, a dozen marching into the dark, the surface-band vs whole-column re-mesh A/B and the fog edge stills (EyesDirector scene 17); keeps Embeddium in the plain lane. Publishes to eyes-fog (-shaders)"
+        type: boolean
+        default: false
+      overlays:
+        description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
+        type: boolean
+        default: false
       branch_pack:
         description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
         type: boolean
@@ -74,7 +102,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -84,7 +112,10 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      SCARS: ${{ inputs.scars && '1' || '0' }}
+      FOG: ${{ inputs.fog && '1' || '0' }}
+      OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
       STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
@@ -96,7 +127,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -169,8 +200,10 @@ jobs:
               low = name.lower()
               # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel - except Embeddium in
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
-              # RenderSystem init without it (dispatch 38710333378, Oct 15)
-              skip = ('immediatelyfast', 'e4mc') if os.environ.get('SHADERS') == '1' else ('embeddium', 'immediatelyfast', 'e4mc')
+              # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
+              # meant for the testers' renderer
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'immediatelyfast', 'e4mc')
               if any(k in low for k in skip):
                   print('skip', name); continue
               data = urllib.request.urlopen(urllib.request.Request(f['downloads'][0],
@@ -219,6 +252,15 @@ jobs:
               env.write('STRUCTURE_STILLS=%d\n' % (4 * len(entries)))
           print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
           EOF
+      - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
+        if: env.SCARS == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"
+      - name: Fog scene only (dispatch input `fog`; EyesDirector scene 17)
+        if: env.FOG == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.fog=true' >> "$GITHUB_ENV"
+      - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
+        if: env.OVERLAYS == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -433,20 +475,76 @@ jobs:
           else
             echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
           fi
-          cd out
-          git init -q -b "$EYES_BRANCH"
-          git config user.name "eyes-bot"
-          git config user.email "eyes-bot@users.noreply.github.com"
-          echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
-          git add -A
-          git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
+          if [ "${OVERLAYS:-0}" = "1" ]; then
+            # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder
+            # <build sha>-<run id>/ to eyes-overlays instead of replacing the branch: fetch, commit, push, and on a race
+            # (another run pushed first) fetch again - a force push of a snapshot lost one of six runs (39703134278)
+            dest="${BUILD_SHA::7}-${GITHUB_RUN_ID}"
+            url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            pushed=0
+            for attempt in 1 2 3 4 5 6; do
+              rm -rf "$RUNNER_TEMP/pub" && mkdir -p "$RUNNER_TEMP/pub"
+              ( cd "$RUNNER_TEMP/pub"
+                git init -q -b eyes-overlays
+                git config user.name "eyes-bot"
+                git config user.email "eyes-bot@users.noreply.github.com"
+                if git fetch -q --depth=1 "$url" eyes-overlays 2>/dev/null; then git checkout -q -B eyes-overlays FETCH_HEAD; fi
+                mkdir -p "$dest"
+                cp "$GITHUB_WORKSPACE"/out/*.png "$GITHUB_WORKSPACE"/out/eyes-lines.txt "$GITHUB_WORKSPACE"/out/mem.log "$dest"/ 2>/dev/null || true
+                echo "- $dest: build ${BUILD_SHA::7} (build run ${BUILD_RUN:-bar-dev}), eyes run $GITHUB_RUN_ID, $(date -u +%FT%TZ)" >> README.md
+                git add -A
+                git commit -q -m "Eyes overlays: $dest"
+                git push -q "$url" eyes-overlays ) && { pushed=1; break; }
+              sleep $((attempt * 5))
+            done
+            [ "$pushed" = 1 ] && echo "::notice::[Eyes] 18_overlays published to eyes-overlays/$dest" \
+              || echo "::warning::[Eyes] eyes-overlays/$dest not pushed after 6 tries; the stills are in this run's artifact"
+          else
+            cd out
+            git init -q -b "$EYES_BRANCH"
+            git config user.name "eyes-bot"
+            git config user.email "eyes-bot@users.noreply.github.com"
+            echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
+            git add -A
+            git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
+            git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
+          fi
+      - name: Keep an overlays run's stills and full log as an artifact too
+        if: always() && env.OVERLAYS == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eyes-overlays-${{ github.run_id }}
+          path: |
+            out/*.png
+            out/eyes-lines.txt
+            out/latest.log
+            out/mem.log
+          retention-days: 14
       - name: Fail loudly if the tour did not finish (a green run must mean the game was seen)
         run: |
           echo "tour step: ${{ steps.tour.outcome }}, stills: ${STILLS:-0} (min $MIN_STILLS), tour complete: ${TOUR_COMPLETE:-0}"
           [ "${{ steps.tour.outcome }}" = "success" ] || { echo "::error::the client step failed or timed out"; exit 1; }
           [ "${TOUR_COMPLETE:-0}" = "1" ] || { echo "::error::no '[Eyes] tour complete' in the client log"; exit 1; }
           [ "${STILLS:-0}" -ge "$MIN_STILLS" ] || { echo "::error::only ${STILLS:-0} stills (expected >= $MIN_STILLS)"; exit 1; }
+          if [ "${FOG:-0}" = "1" ]; then   # a fog run: the three stills of scene 17 (the A/B is in the log)
+            got=$(find out -name 'bat_eyes_17_fog_*.png' | wc -l)
+            ls out | grep '^bat_eyes_17_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "17_fog A/B" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 3 ] || { echo "::error::only $got fog stills (expected 3)"; exit 1; }
+          fi
+          if [ "${OVERLAYS:-0}" = "1" ]; then   # an overlays run: the three stills of scene 18 and its numbers
+            got=$(find out -name 'bat_eyes_18_overlays*.png' | wc -l)
+            ls out | grep '^bat_eyes_18_' | sed 's/^/::notice::[Eyes] still /' || true
+            echo "::notice::[Eyes] 18_overlays tested the jar of build ${BUILD_SHA::7} (run ${BUILD_RUN:-bar-dev})"
+            # the two summary lines (a step shows at most 10 notices; the slices are in eyes-lines.txt in the artifact)
+            grep -h "18_overlays zoom" out/eyes-lines.txt 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -2 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 3 ] || { echo "::error::only $got overlays stills (expected 3)"; exit 1; }
+          fi
+          if [ "${SCARS:-0}" = "1" ]; then   # a scars run: the six stills of scene 16
+            got=$(find out -name 'bat_eyes_16_scars_*.png' | wc -l)
+            ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
+            [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
+          fi
           if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: four stills per structure
             got=$(find out -name 'bat_eyes_15_*.png' | wc -l)
             ls out | grep '^bat_eyes_15_' | sed 's/^/::notice::[Eyes] still /' || true

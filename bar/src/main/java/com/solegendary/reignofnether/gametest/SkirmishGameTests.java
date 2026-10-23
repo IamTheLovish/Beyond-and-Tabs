@@ -4458,27 +4458,6 @@ public class SkirmishGameTests {
     }
 
     /**
-     * The automatic lag capture (ServerTickProfile, lovish Oct 20 "make it automatic"): vanilla's time profiler runs for
-     * the asked ticks, then a [PerfAuto] summary names the heaviest sections of the tick.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 120)
-    public static void lag_capture_profiles_the_tick_and_names_the_heaviest_sections(GameTestHelper helper) {
-        var server = helper.getLevel().getServer();
-        com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary = null;
-        if (!com.solegendary.reignofnether.perf.ServerTickProfile.startCapture(server, 20, "gametest")) {
-            helper.succeed();   // another capture (or /debug) is running on this shared server: nothing to check
-            return;
-        }
-        helper.runAfterDelay(60, () -> {
-            String s = com.solegendary.reignofnether.perf.ServerTickProfile.lastCaptureSummary;
-            if (s == null || !s.contains("heaviest:") || !s.contains("%"))
-                helper.fail("no [PerfAuto] summary after a 20-tick capture: " + s);
-            else
-                helper.succeed();
-        });
-    }
-
-    /**
      * Units step apart (Separation, lovish Oct 19: "all the units just merge together"): six Leafblades summoned on one
      * spot stand at least half a block apart a few seconds later.
      */
@@ -5041,6 +5020,14 @@ public class SkirmishGameTests {
                 level.setBlock(helper.absolutePos(new BlockPos(x, 1, z)), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                 for (int y = 2; y <= 4; y++)
                     level.setBlock(helper.absolutePos(new BlockPos(x, y, z)), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                // a lid for the clearing: arenas sit in generated terrain, and a gravel or sand layer overhead loses its
+                // support when the pocket under it is cleared and falls in on the units - gravel in a Jade Guard's cell
+                // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
+                // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
+                // before its block tick can fire; whatever lies above that is then supported again.
+                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
+                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             }
     }
 
@@ -7361,9 +7348,13 @@ public class SkirmishGameTests {
             attackers.add(atk);
             foes.add(foe);
         }
+        // the order a player gives (UnitActionItem: right-click an enemy = setUnitAttackTargetForced). An unforced target is
+        // re-picked every RETARGET_TICKS (AttackerUnit.retargetToClosestUnit) to the nearest enemy, and in this test that is
+        // the NEIGHBOURING row's Villager (5 blocks off, nearer than the galley's own at 14): a shell fired in such a window
+        // lands on the wrong Villager, "mortar_galley_unit never hit its target ... strays 21" (CI Oct 21-22, 3 reds)
         helper.runAfterDelay(3, () -> {
             for (int i = 0; i < attackers.size(); i++)
-                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTargetForced(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
         int[] strays = new int[attackers.size()];

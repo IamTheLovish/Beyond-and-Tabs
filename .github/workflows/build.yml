@@ -10,23 +10,47 @@ on:
   pull_request:
   workflow_dispatch:
 concurrency:
-  # a newer push to a PR replaces that PR's older queued or running build; main and manual runs never cancel each other
-  group: build2-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
-  cancel-in-progress: true
+  # pull requests: a newer push to a PR replaces that PR's older queued or running build.
+  # main pushes share ONE group without cancel-in-progress (lovish Oct 21): at most one main build runs and ONE waits;
+  # a newer merge replaces the waiting one (GitHub cancels an older *pending* run of a group), the running one is never
+  # cut off - so a batch of quick merges costs two builds, not one per merge.
+  # manual runs get a group of their own, so they never cancel each other.
+  group: build2-${{ github.event_name == 'pull_request' && github.ref || (github.event_name == 'push' && 'main-push' || github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: write
   actions: write
 env:
-  # the headless tests run in three shards side by side (gametest/GameTestShards): job bar-tests runs SHARD_2 and
-  # SHARD_3 (one matrix entry each), job bar runs everything neither names - so a new test or batch lands in shard 1.
-  # The two lists must not overlap. Entries name whole batches ("duel_matrix") or tests by prefix ("test:..."). From
-  # the [GameTest timing] notices (Oct 15): unsplit, the suite took 16-29 min by runner; the eight
-  # production_buildings_place_every_unit tests run 110-320 s each (far chunk rows - generation bound) and slowed the
-  # whole default chunk around them (its other 75 tests: 1m12s without them); duel_matrix ~2.6 min, duel_counters ~2.
-  # Trial (run 38790271795, two shards): everything else 10m37s, production + duel_counters 8m38s. Re-balance from
-  # each shard's notice.
-  SHARD_2: "test:production_buildings_place_every_unit"
-  SHARD_3: "duel_matrix,duel_counters"
+  # The headless GameTests run in 8 shards side by side (gametest/GameTestShards); the public repo gets ~20 hosted
+  # runners, a build uses 9 jobs (build + 8 shards) so two builds fit at once. Job `bar` is shard 1 and runs everything
+  # no list names (so a new test or batch lands there); job `bar-tests` runs one matrix entry per SHARD_n below, n >= 2.
+  # ADDING A SHARD = ONE NEW LINE `SHARD_9: "..."` (the `changes` job builds the matrix from these lines, shard 1 skips
+  # them all). No test may be named by two lists (tools/check_shards.py checks, bar-audit proves every test ran once).
+  # An entry names a whole batch ("duel_matrix") or tests by prefix of the test's name ("test:bots_pl"): the lower-cased
+  # METHOD name, no class (the [TestTime] lines show it). Shards 6-8 are generated lists: the shortest prefixes that match
+  # nothing outside their slice, so no batch such as match_lifecycle is split and no list overlaps another
+  # (tools/check_shards.py proves it). Shard 1 keeps everything no list names: the small batches, an alphabetical
+  # slice of the quick tests, and every new test.
+  # Measured (PR #101 runs, Oct 21): about 40 tests take ~90-100 s each, the rest under 30 s, and they cluster: a batch
+  # lasts as long as its slowest test, so a shard pays a slow cluster ONCE - shard 7 holds the slow tests of vanilla's
+  # chunk 2 (hero_*, wide_units, melee_chase ...) and of chunk 5 (tidewrought_*, verdant_* ...), shard 6 the bots soak
+  # alone (170-300 s of game ticks, and it slows every test that shares its server), the rest is quick. A test's
+  # arena sits beside its batch neighbours', so a new mix can put another test's units within reach of one that
+  # assumes empty ground (striker_autocasts_on_an_enemy_in_range_and_not_out_of_range failed deterministically beside
+  # the wrong neighbour in one shard mix; alone in a batch in shard 6 it has none) - a red test that passed in an
+  # earlier cut is a neighbour problem: move it, do not retry. Production is far-chunk generation bound (264 s for the worst of 4 sharing a server): three,
+  # three and two tests per shard (2, 3, 8). Each duel simulator is one test of 3 min on its own server (4, 5).
+  # Re-balance from each shard's [GameTest timing] and [Test times] notices (every test's wall time, slowest first).
+  # Why 8 shards: each pays ~4.5 min before its first test (checkout with history, gradle, server start) and the
+  # longest single test is ~3.3 min (duel_counters), so no split finishes a build under ~8 min; 8 shards keep every
+  # shard's tests at or under that floor, and 9 jobs per build let two builds run at once in the ~20 hosted runners.
+  SHARD_2: "test:production_buildings_place_every_unit_6,test:production_buildings_place_every_unit_3,test:production_buildings_place_every_unit_1"
+  SHARD_3: "test:production_buildings_place_every_unit_0,test:production_buildings_place_every_unit_5,test:production_buildings_place_every_unit_7"
+  SHARD_4: "duel_matrix"
+  SHARD_5: "duel_counters"
+  SHARD_6: "test:bots_pl,test:striker_autocasts_on_an_enemy_in_range"
+  SHARD_7: "test:des,test:ear,test:enhanced_t,test:every_building_b,test:every_building_h,test:every_c,test:exp,test:faction_aura_s,test:fire,test:game_ender_c,test:hero_gains_x,test:hero_ge,test:hero_ra,test:heroe,test:holy_bell_reveals_f,test:melee_c,test:stac,test:statu,test:stea,test:storm_,test:structures_have_no_unit_pockets_0,test:structures_have_no_unit_pockets_1,test:structures_have_no_unit_pockets_2,test:sunr,test:t2_c,test:t3_r,test:t3_t,test:tidepool_c,test:tidewrought_b,test:tidewrought_harp,test:tidewrought_leviathan_i,test:tidewrought_r,test:tidewrought_u,test:verdant_m,test:verdant_o,test:wid,test:world_so,test:wr"
+  SHARD_8: "test:every_e,test:every_f,test:every_m,test:every_s,test:every_t,test:every_u,test:exi,test:ext,test:faction_aura_r,test:faction_l,test:fie,test:firs,test:fl,test:fo,test:fr,test:game_ender_a,test:gar,test:geo,test:go,test:gr,test:hd,test:hea,test:hero_a,test:hero_d,test:hero_gains_c,test:hero_ro,test:hero_s,test:hi,test:hold,test:holy_bell_reveals_t,test:hom,test:hor,test:hos,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:men,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
 jobs:
   build:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
@@ -42,6 +66,7 @@ jobs:
         run: |
           python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
           python3 tools/check_guards.py
+          python3 tools/check_server_client_imports.py
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
           python3 tools/check_sail_hubs.py
@@ -96,29 +121,111 @@ jobs:
           body: "Automatic build of the newest commit on main (${{ github.sha }}). Untested in-game unless noted in the commit."
           files: mod/build/libs/*.jar
 
-  # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
-  bar:
-    needs: build   # publish after the main job so the two releases are never updated at the same moment
-    if: always()
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
+  # What this run needs to test (tools/ci_plan.py): `code` = anything outside docs changed, so the GameTests (jobs bar and
+  # bar-tests) run; a docs-only change skips them (skipped counts as passing for ci_wait; nothing new to publish). The
+  # fast `build` checks always run. `matrix` = the shard numbers from the SHARD_n lines above. Unsure -> code.
+  # Ruff on the Python tools (bug-finding rules only, ruff.toml): seconds, so a script bug never costs a build.
+  # On a PR it only does work when tools/ or ruff.toml changed; pushes to main always lint.
+  ruff:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # the whole history, for the dev-time count below
-      - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - name: Count the development time (title screen, hud/DevTime)
+        with: { fetch-depth: 0 }
+      - id: scope
+        name: Did tools/ or ruff.toml change?
+        env: { EVENT: "${{ github.event_name }}", BASE: "${{ github.event.pull_request.base.sha }}", HEAD: "${{ github.event.pull_request.head.sha }}" }
+        run: |
+          run=true
+          if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.run == 'true'
+        run: pip install -q ruff==0.16.9 && ruff check tools
+
+  changes:
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
+    outputs:
+      code: ${{ steps.plan.outputs.code }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shards: ${{ steps.plan.outputs.shards }}
+      where: ${{ steps.route.outputs.where }}
+      devtime: ${{ steps.devtime.outputs.json }}
+    steps:
+      # the whole history, but treeless (commits only, no files of old commits): the dev-time count needs every commit's
+      # time and nothing else. Counted ONCE here for bar and every shard - each of those 8 jobs used to fetch the whole
+      # history itself (30-150 s apiece, Oct 22 run 39724663223) and now checks out one commit.
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools, fetch-depth: 0, filter: 'tree:0' }
+      - id: devtime
+        name: Count the development time (title screen, hud/DevTime)
         run: |
           # commits under 30 min apart count their real gap; each session gets 15 min before its first commit
           # (claude/dev-time-counter.md). Baked into the jar; nothing is computed at runtime.
-          git log --format=%ct | sort -n | python3 -c "
+          json=$(git log --format=%ct | sort -n | python3 -c "
           import sys, json
           t = [int(x) for x in sys.stdin if x.strip()]
           s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
-          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
-                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
-          print('dev time:', round(s / 3600, 1), 'h over', len(t), 'commits')
-          "
-          echo "::notice::[DevTime] $(cat bar/src/main/resources/assets/reignofnether/devtime.json)"
+          print(json.dumps({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0}))
+          ")
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+          echo "::notice::[DevTime] $json"
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python3 tools/ci_plan.py
+      # 40 runners (lovish Oct 22): this account's 20 and the org mirror's 20 - PR GameTests go where fewer wait
+      - id: route
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: python3 tools/ci_route.py
+
+  # the GameTests of a PR routed to the mirror (tools/ci_route.py): mark its head commit `ci-mirror` = "Queued for the
+  # mirror". The org repo ILovishThe/beyond-and-tabs-ci (mirror-tests.yml) picks it up within ~5 min, reads the code
+  # from this PUBLIC repo (no secrets anywhere) and runs the GameTests on its own 20 runners; ci-mirror-report.yml
+  # sets the status to the result, which ci_wait / merge_pr read.
+  mirror:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where == 'mirror' }}
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" -f state=pending -f context=ci-mirror \
+            -f description="Queued for the mirror" -f target_url="https://github.com/ILovishThe/beyond-and-tabs-ci/actions" >/dev/null
+          echo "::notice::[Mirror] GameTests queued for the org runners (ILovishThe/beyond-and-tabs-ci)"
+
+  # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
+  bar:
+    # no `needs: build` any more (it put the 1.5 min of the tools audits on the critical path): bar-publish waits for
+    # build, so the two releases are still never updated at the same moment. Docs-only changes skip this job.
+    needs: changes
+    # where=mirror: this PR's GameTests run on the org's runners instead (job mirror below, tools/ci_route.py)
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.changes.outputs.where != 'mirror' }}
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4   # one commit: the dev-time count comes from job changes
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          # Gradle's caches (Forge, Minecraft, the deobfuscated jars ForgeGradle makes): restored instead of rebuilt by
+          # every job of every build. Keyed on the build files, so a dependency change starts a fresh cache.
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: The development time (counted once, in job changes)
+        env: { DEVTIME: "${{ needs.changes.outputs.devtime }}" }
+        run: |
+          [ -n "$DEVTIME" ] || DEVTIME='{"hours": 0, "commits": 0, "since": 0}'
+          printf '%s' "$DEVTIME" > bar/src/main/resources/assets/reignofnether/devtime.json
       # mesh bodies (inbox/spec-1-mesh-bodies-2026-10-17.md): the .bmesh files are arithmetic on the design files, written
       # here, not kept in git - the jar carries them and MeshBodyTest (gradle test, below) checks the Paladin's draws
       # exactly like its cube model. Only this job's jar ships (bar-tests builds for its server tests, which never load one)
@@ -154,10 +261,12 @@ jobs:
           name: bar-mod
           path: bar/build/libs/*.jar
           retention-days: 3
-      - name: Headless smoke tests on a real server, shard 1 of 3 (everything SHARD_2 and SHARD_3 do not name)
+      - name: Headless smoke tests on a real server, shard 1 of ${{ needs.changes.outputs.shards }} (everything the SHARD_n lists do not name)
         working-directory: bar
-        env: { BAT_GAMETEST_SKIP: "${{ env.SHARD_2 }},${{ env.SHARD_3 }}" }
-        run: bash ../tools/ci_gametests.sh
+        run: |
+          # shard 1 skips every other shard's list (all SHARD_n variables of the env block above)
+          export BAT_GAMETEST_SKIP="$(env | grep -E '^SHARD_[0-9]+=' | cut -d= -f2- | paste -sd, -)"
+          bash ../tools/ci_gametests.sh
       # the duel simulator (gametest/DuelGameTests) is a balance measurement: its results become a handful of notices
       # (readable through the GitHub API), and this step never fails the build - only the test itself can, on a duel
       # that could not run
@@ -165,31 +274,50 @@ jobs:
         if: always()
         run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
           [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+      - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
+        if: always()
+        run: |
+          grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+          [ ! -f bar/gametest.log ] || python3 tools/gametest_audit.py --times bar/gametest.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gametests-shard-1-a${{ github.run_attempt }}   # per attempt: a rerun must not lose to the old report
+          path: shard-report.txt
+          retention-days: 3
+          if-no-files-found: warn
 
-  # shards 2 and 3 of the headless tests, side by side with bar's shard 1 (gametest/GameTestShards): the suite ran its
+  # shards 2..N of the headless tests, side by side with bar's shard 1 (gametest/GameTestShards): the suite ran its
   # batches one after another for 16-29 minutes of a build (Oct 15, the [GameTest timing] notice); split, the longest
-  # shard sets the time. Same checkout, dev-time count and script as bar; no jar is kept from here.
+  # shard sets the time. One matrix entry per SHARD_n line of the env block. Same checkout, dev-time count and script
+  # as bar; no jar is kept from here. Docs-only changes skip it.
   bar-tests:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'true' && needs.changes.outputs.where != 'mirror' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false   # each shard reports its own failures
       matrix:
-        shard: [2, 3]
+        shard: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }   # the whole history, for the dev-time count (the DevTime tests read it)
+      - uses: actions/checkout@v4   # one commit: the dev-time count (the DevTime tests read it) comes from job changes
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
-      - name: Count the development time (same as bar's)
+        with:
+          distribution: temurin
+          java-version: '17'
+          # Gradle's caches (Forge, Minecraft, the deobfuscated jars ForgeGradle makes): restored instead of rebuilt by
+          # every job of every build. Keyed on the build files, so a dependency change starts a fresh cache.
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: The development time (counted once, in job changes)
+        env: { DEVTIME: "${{ needs.changes.outputs.devtime }}" }
         run: |
-          git log --format=%ct | sort -n | python3 -c "
-          import sys, json
-          t = [int(x) for x in sys.stdin if x.strip()]
-          s = sum(b - a if b - a <= 1800 else 900 for a, b in zip(t, t[1:])) + 900 if t else 0
-          json.dump({'hours': round(s / 3600, 1), 'commits': len(t), 'since': t[0] if t else 0},
-                    open('bar/src/main/resources/assets/reignofnether/devtime.json', 'w'))
-          "
-      - name: Headless smoke tests on a real server, shard ${{ matrix.shard }} of 3
+          [ -n "$DEVTIME" ] || DEVTIME='{"hours": 0, "commits": 0, "since": 0}'
+          printf '%s' "$DEVTIME" > bar/src/main/resources/assets/reignofnether/devtime.json
+      - name: Headless smoke tests on a real server, shard ${{ matrix.shard }} of ${{ needs.changes.outputs.shards }}
         working-directory: bar
         env: { BAT_GAMETEST_ONLY: "${{ env[format('SHARD_{0}', matrix.shard)] }}" }
         run: |
@@ -199,13 +327,39 @@ jobs:
         if: always()
         run: |   # only in the shard that ran the duel simulator (no false "no duel results" warning elsewhere)
           [ ! -f bar/run-gametest/duel_results.json ] || python3 tools/duel_summary.py bar/run-gametest/duel_results.json || true
+      - name: Keep this shard's test list (bar-audit proves every test ran once; per-test wall times for re-balancing)
+        if: always()
+        run: |
+          grep -hE "\[TestTime\]|\[Shards\]" bar/gametest.log > shard-report.txt || true
+          [ ! -f bar/gametest.log ] || python3 tools/gametest_audit.py --times bar/gametest.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gametests-shard-${{ matrix.shard }}-a${{ github.run_attempt }}   # per attempt (gametest_audit keeps the newest)
+          path: shard-report.txt
+          retention-days: 3
+          if-no-files-found: warn
 
-  # publishes bar-dev only when every test shard passed (bar's jar, kept as the run's artifact bar-mod)
-  bar-publish:
+  # every test ran exactly once: the shards' test lists, side by side (tools/gametest_audit.py). Cheap (seconds).
+  bar-audit:
     needs: [bar, bar-tests]
-    # explicit: bar + every shard passed. The implicit success() would also wait on the `build` job (tools audits,
-    # mod/), which never gated bar-dev before the split
-    if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' }}
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: tools, fetch-depth: 1 }
+      - uses: actions/download-artifact@v4
+        with: { pattern: gametests-shard-*, path: shard-reports }
+      - run: python3 tools/gametest_audit.py shard-reports
+
+  # publishes bar-dev only when every test shard passed (bar's jar, kept as the run's artifact bar-mod). Never on a
+  # docs-only change (bar and bar-tests are skipped: nothing new to publish).
+  bar-publish:
+    needs: [build, bar, bar-tests, bar-audit]
+    # explicit: bar + every shard + the audit passed. The implicit success() would also wait on the `build` job (tools
+    # audits, mod/), which never gated bar-dev before the split - it is in needs only so the two releases are never
+    # updated at the same moment
+    if: ${{ !cancelled() && needs.bar.result == 'success' && needs.bar-tests.result == 'success' && needs.bar-audit.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push' }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4

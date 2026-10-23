@@ -49,6 +49,13 @@ nothing copied or traced). The lettering is set in two fonts under the **SIL Ope
 licences are in `tools/fonts/` and are used only by the generator; they are not packaged in the mod. The OFL places no
 restriction on images made with the fonts. Details: `design/splash.md`.
 
+The lobby backdrop in `bar/src/main/resources/assets/reignofnether/textures/gui/lobby/` is likewise **original and
+procedurally generated** by `tools/gen_lobby_art.py` (no input images; mood references were only looked at). The gothic
+button and heading lettering uses two fonts shipped in the mod under the **SIL Open Font License 1.1**, with their
+licences beside them in `bar/src/main/resources/assets/reignofnether/font/`: UnifrakturCook Bold (j. 'mach' wust,
+Reserved Font Name UnifrakturCook; Peter Wiegel; unmodified) and Cinzel (The Cinzel Project Authors; a static weight-900
+instance of the variable font). Details: `design/lobby-backdrop.md`.
+
 ## Reign of Nether
 
 `bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,

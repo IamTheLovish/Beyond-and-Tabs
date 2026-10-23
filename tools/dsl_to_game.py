@@ -61,6 +61,9 @@ NORMAL_STRENGTH = 8.0     # height slope -> normal tilt in the LabPBR _n map. Wa
 #                           on the five bodies (inside Patrix's p90 22-48); higher only steepens the rims (our heights
 #                           are flat faces with sharp features - mid-frequency relief is the body rebuild's job, T3.13)
 RIM_MIN_HEIGHT = 1.9      # px: a cube at least this tall gets a lit rim and a seam (thinner ones are slices of a form)
+# materials whose cubes are slices of ONE continuous form (a bone, a sail): no lit rim, seam or edge line per cube -
+# with them every drum of the Bone Dragon's spine read as a brick (the round-8 review: "beige stone brick / masonry")
+SMOOTH_MATERIALS = ("bone", "membrane")
 PANEL_THIN = 0.8          # px: a cube this thin behind a face makes the face a panel (a tabard's: a woven border)
 METAL_HINTS = render_concept.METAL_HINTS
 CLOTH_HINTS = ("tabard", "cloth", "cape", "sash", "leather", "linen", "wool", "silk")
@@ -299,7 +302,7 @@ class Painter:
             pbr.faces.append((x0, y0, x1, y1))
         for j in range(fh):
             for i in range(fw):
-                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i
+                edge_x = (i == 0 or i == fw - 1) and fw > 2 and not open_i and mat not in SMOOTH_MATERIALS
                 t = j / max(1, fh - 1)
                 if span is not None:
                     yy = span[0] - (j + 0.5) / fh * (span[0] - span[1])
@@ -314,7 +317,7 @@ class Painter:
                         k = (1.07 - 0.20 * tb) * 0.74
                     else:
                         k = 1.10 - 0.08 * (tb if span is not None else 0.0)
-                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j)):
+                        if (edge_x or ((j == 0 or j == fh - 1) and fh > 2 and not open_j and mat not in SMOOTH_MATERIALS)):
                             k -= 0.08
                     if mat:
                         k *= materials.MATERIALS.get(mat, {}).get("top", 1.0)   # a coat's top face: see materials.MATERIALS
@@ -342,6 +345,7 @@ class Painter:
                 elif material == "metal" and kind == "side" and detail is None:
                     k *= 0.985 + 0.03 * rng.random()                          # brushed, barely
                 hue = None
+                cut = detail is not None and detail.cut(i, j)
                 if detail is not None:
                     a, hgt, sm, hue = detail.texel(i, j)
                     k *= a
@@ -372,6 +376,12 @@ class Painter:
                             out = tuple(clamp8(c * (1 - 0.6 * mud)) for c in out[:3]) + (255,)
                         else:
                             out = tuple(clamp8(c * (1 - mud) + MUD[n] * k * mud) for n, c in enumerate(out[:3])) + (255,)
+                if cut:
+                    # a hole in a torn membrane: painted, but at alpha 1 - the cutout pass drops it (< 0.1) and the
+                    # translucent pass cannot see it, while every 8x8 mip block of the island stays wholly "painted"
+                    # (TextureMips.firstMixedBlock: alpha 0 is what counts as empty), so the mips never blend an
+                    # island's edge with empty space (gametest generated_unit_atlases_mip_three_levels_without_mixing_islands)
+                    out = (out[0], out[1], out[2], 1)
                 self.px[x0 + i, y0 + j] = out
 
     def island(self, u, v, w, h, d, rgb, material="plain", seed=0, flat=False, span=None, mat=None, pbr=None,
@@ -391,7 +401,7 @@ class Painter:
             return
         if flat:
             return
-        rims = h >= RIM_MIN_HEIGHT
+        rims = h >= RIM_MIN_HEIGHT and mat not in SMOOTH_MATERIALS
         top_span = None if span is None else (span[0], span[0], span[2], span[3])
         kw = dict(mat=mat, pbr=pbr, style=style, cube=(w, h, d))
         thin = PANEL_THIN       # a face whose cube is this thin behind it is a panel (a tabard's, a cape's)

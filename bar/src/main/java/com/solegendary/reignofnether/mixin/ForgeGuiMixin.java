@@ -50,7 +50,20 @@ public class ForgeGuiMixin extends Gui {
         guiGraphics.pose().translate(event.getPosX(), (double)(event.getPosY() - height + 40 + OrthoviewClientEvents.CHAT_Y_OFFSET) / this.chat.getScale(), 0.0);
         int mouseX = Mth.floor(this.minecraft.mouseHandler.xpos() * (double)window.getGuiScaledWidth() / (double)window.getScreenWidth());
         int mouseY = Mth.floor(this.minecraft.mouseHandler.ypos() * (double)window.getGuiScaledHeight() / (double)window.getScreenHeight());
-        this.chat.render(guiGraphics, this.tickCount, mouseX, mouseY);
+        // RTS view: the unfocused chat shows at most RTS_CHAT_LINES lines, so a burst of announcements cannot stack
+        // up over the map (clip: 10 lines of "has fielded..." / "Boon received" mid-left). Height 0 = the 40 px
+        // minimum = 4 lines; the player's own setting is put back straight after, and typing the full chat is untouched.
+        var heightOpt = this.minecraft.options.chatHeightUnfocused();
+        Double keep = heightOpt.get();
+        boolean shrink = !(this.minecraft.screen instanceof net.minecraft.client.gui.screens.ChatScreen) && keep > 0.0;
+        if (shrink)
+            heightOpt.set(0.0);
+        try {
+            this.chat.render(guiGraphics, this.tickCount, mouseX, mouseY);
+        } finally {
+            if (shrink)
+                heightOpt.set(keep);
+        }
         guiGraphics.pose().popPose();
         this.minecraft.getProfiler().pop();
     }

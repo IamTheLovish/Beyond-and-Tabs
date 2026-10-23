@@ -25,6 +25,15 @@ public class TopdownGuiClientEvents {
     private static boolean pauseJustClosed = false;
     private static final int MAX_GUI_SCALE_MOD = TopdownGuiScale.MAX_GUI_SCALE_MOD;
 
+    /** The HUD's Menu button: leave the RTS screen and open the match menu, the same path Esc used to take. */
+    public static void openMatchMenu() {
+        if (!OrthoviewClientEvents.isEnabled())
+            return;
+        shouldPause = true;
+        noScreenTicks = 3;   // open it on the next tick, not after the usual grace
+        MC.setScreen(null);
+    }
+
     // if no other screen is open and we've got orthoview enabled, open a screen based on shouldPause
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {

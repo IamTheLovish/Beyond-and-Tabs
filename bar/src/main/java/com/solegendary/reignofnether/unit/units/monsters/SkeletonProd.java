@@ -30,7 +30,7 @@ public class SkeletonProd extends GraveyardUnitProductionItem implements IUnitPr
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide()) {
-                if (placement instanceof GraveyardPlacement gy && placement.getUpgradeLevel() > 0) {
+                if (placement instanceof GraveyardPlacement gy && banksAsSkull(placement)) {
                     if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS))
                         gy.createSkull(EntityRegistrar.STRAY_UNIT.get());
                     else

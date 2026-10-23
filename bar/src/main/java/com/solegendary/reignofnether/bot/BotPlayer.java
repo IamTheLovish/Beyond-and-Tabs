@@ -434,7 +434,7 @@ public class BotPlayer {
             if (!workers.isEmpty() && !placeNear(level, kit.capitol(), capitolWant, workers, 3)) {
                 capitolFailures++;
                 if (capitolFailures == 1 || capitolFailures % 20 == 0) {
-                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant);
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant, true);
                     String why = BuildingValidators.getPlacementValidityError(level, kit.capitol(), surface, name,
                         Rotation.NONE, false, false, true);
                     com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {} cannot place its capitol near {}: {}",
@@ -443,7 +443,7 @@ public class BotPlayer {
                     lastBlockedReason = kit.capitol().structureName + ": cannot place near " + capitolWant.toShortString() + ": " + why;
                 }
                 if (capitolFailures >= 3) {
-                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant);
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, capitolWant, true);
                     int take = Math.min(3, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
@@ -2440,8 +2440,8 @@ public class BotPlayer {
                 double a = attempt * Math.PI / 4 + ring;
                 int x = want.getX() + (int) (Math.cos(a) * ring * 4);
                 int z = want.getZ() + (int) (Math.sin(a) * ring * 4);
-                level.getChunk(x >> 4, z >> 4);   // an unloaded column reads as y=-64 (every bot capitol failed its first try)
-                BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z));   // the ground block: structures sit at origin.y+1
+                level.getChunk(x >> 4, z >> 4);   // an unloaded column reads as the world floor (every bot capitol failed its first try)
+                BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);   // the ground block (leaves skipped, as the player's placement grid does: a bot site on a canopy sat 5 blocks over its builders, soak stalls Oct 21-22); structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
                 if (BuildingValidators.isPlacementValid(level, building, surface, name, Rotation.NONE, false, false, true)) {

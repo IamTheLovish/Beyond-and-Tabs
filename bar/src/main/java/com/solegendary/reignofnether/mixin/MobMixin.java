@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.blocks.BlockUtils;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.EvokerUnit;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -69,14 +70,31 @@ public abstract class MobMixin extends LivingEntity {
     )
     public void tick(CallbackInfo ci) {
         MobEffectInstance mei = this.getEffect(MobEffectRegistrar.FROST_DAMAGE.get());
-        BlockState inBlockState = level().getBlockState(getOnPos().above());
         if (mei != null && mei.getDuration() > 0 && mei.getDuration() % 20 == 0 && onGround()) {
+            // looked up only when the effect is due (was a block lookup for every mob every tick)
+            BlockState inBlockState = level().getBlockState(getOnPos().above());
             int layers = BlockUtils.getWraithSnowLayers(inBlockState);
             boolean inIce = inBlockState.getBlock() == Blocks.PACKED_ICE;
             if (layers > 0 || inIce) {
                 hurt(damageSources().magic(), layers + (inIce ? 3 : 0));
             }
         }
+    }
+
+    /**
+     * Units never despawn: every unit class resolves removeWhenFarAway to false (checked class by class), nothing
+     * listens for the despawn event, and nothing reads noActionTime. Vanilla still runs a nearest-player search for
+     * every mob every tick only to reach that "false". Peaceful difficulty is left to vanilla because it discards
+     * monster-type mobs outright, before the persistence rules.
+     */
+    @Inject(
+            method = "checkDespawn",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void bt$skipUnitDespawnCheck(CallbackInfo ci) {
+        if (((Object) this) instanceof Unit && level().getDifficulty() != Difficulty.PEACEFUL)
+            ci.cancel();
     }
 
     private static final Random RANDOM = new Random();

@@ -437,8 +437,7 @@ public class BuildingPlacement {
 
 
     public boolean canAfford(String ownerName) {
-        if (SandboxServer.isAnyoneASandboxPlayer() &&
-            (ownerName.isEmpty() || ownerName.equals("Enemy")))
+        if (SandboxServer.isNeutralSandboxOwner(ownerName))
             return true;
 
         if (SurvivalServerEvents.isEnabled() &&

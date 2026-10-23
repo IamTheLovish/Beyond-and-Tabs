@@ -54,6 +54,24 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   summoning units, they can be anything" (02:34). BAR's Marauder is the flanker model: fast, enough mass to push
   through and flank, still packs a punch.
 
+## Decisions to build toward (lovish, Oct 22)
+- **randomTickSpeed 3 (vanilla), not 12.** Answer "B" (14:24) to the audit (Project doc
+  claude/random-tick-speed-audit-2026-10-22.md): set 3, and our own blocks keep their look on their own timers
+  (soul fire lifetime, wraith-snow wisps). Vanilla grass/snow spread and wart decay are allowed to slow down.
+
+## Decisions to build toward (lovish, Oct 22 - battlefield depth)
+- **Battlefield floor y 48 (11 sections), plain stone underground.** After flying through the stone layer in spectator
+  (17:41): "maybe even 42-30" (17:44), "we dont need that many safe floors in the rts version of the game" (17:45).
+  min_y must be a multiple of 16, so 48. Budget: design/battlefield-height.md.
+
+## Standing rule (lovish, Oct 22 19:58) - tests first
+- **Write the test first, then the implementation.** "write the tests first and then implement it so you dont cheat
+  and write bad code, which is something I dislike alot". The test states the behaviour (from lovish's words, the bug
+  report or the plan) and must FAIL on the current code before any fix is written; then implement until it passes.
+  Never weaken, skip or delete a test to make code pass; never special-case code for the test. A PR's test commit
+  comes before (or with clear red evidence for) its fix. Visual/art work: the metric gates and stills are the "test",
+  defined before the round starts.
+
 ## Working habits for every session (from lovish's agent handbook, Oct 20)
 Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
 - **Check what changed, not what the agent says.** Before merging an agent's or a session's work, read the diff and
@@ -73,6 +91,9 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   #82) and the T3 rework twice (#81, #87). Check open PRs and claims first; take a claim; release it when done.
 - **Watch CI for terminal states only** (green / red per run), not every job step - each notification is a paid turn.
   Use `tools/ci_wait.py` (one result line; reruns known flakes from `tools/known_flakes.txt` once).
+- **Merge in quick succession** (lovish, Oct 21): when merging several PRs, merge them one right after another so main's
+  builds collapse into one; don't space merges out to wait for each build (see AGENTS.md section 4, "Main builds
+  collapse").
 - **Separate checkouts or disjoint files.** Sessions never stash, reset, checkout or `add -A` over a tree another
   session uses; commit by path.
 - **Proof per visual change:** every PR that changes what players see attaches eyes stills (or a short clip).
