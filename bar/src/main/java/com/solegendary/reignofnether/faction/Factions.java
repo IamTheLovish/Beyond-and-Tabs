@@ -353,7 +353,7 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.SLIME_PIT, Keybindings.abilitySlot9);
 		registerBuildings(MONSTERS, Buildings.LABORATORY, Keybindings.hotkey9);   // was P (abilitySlot10): Patrol is P now
 		registerBuildings(MONSTERS, Buildings.STRONGHOLD, Keybindings.hotkey2);
-		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, Keybindings.hotkey3);
+		registerBuildings(MONSTERS, Buildings.ALTAR_OF_DARKNESS, Keybindings.hotkey11);   // was F (hotkey3): F is Fight now
 		registerBuildings(MONSTERS, Buildings.SPRUCE_BRIDGE, Keybindings.hotkey4);
 		
 		registerBuildings(MONSTERS, Buildings.MONSTER_MARKET, Keybindings.hotkey10);
@@ -373,7 +373,7 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.WITHER_SHRINE, Keybindings.abilitySlot7);
 		registerBuildings(PIGLINS, Buildings.BASALT_SPRINGS, Keybindings.abilitySlot8);
 		registerBuildings(PIGLINS, Buildings.FORTRESS, Keybindings.abilitySlot9);
-		registerBuildings(PIGLINS, Buildings.INFERNAL_PORTAL, Keybindings.hotkey3);
+		registerBuildings(PIGLINS, Buildings.INFERNAL_PORTAL, Keybindings.hotkey11);   // was F (hotkey3): F is Fight now
 		registerBuildings(PIGLINS, Buildings.BLACKSTONE_BRIDGE, Keybindings.hotkey4);
 		registerBuildings(PIGLINS, Buildings.METAL_EXTRACTOR_PIGLINS, Keybindings.hotkey5);
 		registerBuildings(PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Keybindings.hotkey6);
@@ -406,7 +406,7 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.ARCANE_TOWER, Keybindings.abilitySlot9);
 		registerBuildings(VILLAGERS, Buildings.LIBRARY, Keybindings.hotkey11);    // was P (abilitySlot10): Patrol is P now
 		registerBuildings(VILLAGERS, Buildings.CASTLE, Keybindings.hotkey2);
-		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, Keybindings.hotkey3);
+		registerBuildings(VILLAGERS, Buildings.SHRINE_OF_PROSPERITY, Keybindings.abilitySlot3);   // was F (hotkey3): F is Fight now
 		registerBuildings(VILLAGERS, Buildings.IRON_GOLEM_BUILDING, Keybindings.hotkey9);
 		registerBuildings(VILLAGERS, Buildings.OAK_BRIDGE, Keybindings.hotkey4);
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, Keybindings.hotkey10);

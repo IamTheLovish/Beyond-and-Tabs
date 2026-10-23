@@ -30,31 +30,46 @@ class KeybindMigrationTest {
         return KeybindMigration.plan(version, name -> saved(overrides, name));
     }
 
+    private static final String FIGHT = "key.reignofnether.fight";
+
     @Test
-    void attackDefaultIsX() {
-        // #39: A is pure camera pan-left
-        assertEquals(GLFW.GLFW_KEY_X, Keybindings.attack.getDefaultKey());
+    void fightIsTheOnlyAttackOrderAndSitsOnF() {
+        // Oct 22: Attack (A, then X) was merged into Fight
+        assertNull(KeybindMigration.bindings().get(ATTACK));
+        assertEquals(GLFW.GLFW_KEY_F, Keybindings.fight.getDefaultKey());
     }
 
     @Test
-    void attackSavedOnTheOldDefaultAMovesToX() {
-        List<KeybindMigration.Move> moves = plan(0, Map.of(ATTACK, GLFW.GLFW_KEY_A));
-        assertEquals(1, moves.size(), moves.toString());
-        assertEquals(new KeybindMigration.Move(ATTACK, GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X), moves.get(0));
+    void attackSavedOnAnOldDefaultMovesNothing() {
+        // A (Oct 11-21) and X (Oct 21-22) were Attack's shipped keys: not a choice, Fight keeps F
+        for (int old : new int[] {GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X})
+            assertEquals(List.of(), plan(0, Map.of(ATTACK, old)), "attack saved on " + old);
     }
 
     @Test
-    void aKeyThePlayerChoseIsLeftAlone() {
-        // another letter, unbound, a modifier combination / mouse button (the glue passes CUSTOM for those)
-        for (int key : new int[] {GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_F, -1, KeybindMigration.CUSTOM})
+    void anAttackKeyThePlayerChoseNowStartsFight() {
+        List<KeybindMigration.Move> moves = plan(2, Map.of(ATTACK, GLFW.GLFW_KEY_Z));
+        assertEquals(List.of(new KeybindMigration.Move(FIGHT, GLFW.GLFW_KEY_F, GLFW.GLFW_KEY_Z)), moves);
+    }
+
+    @Test
+    void aFightKeyThePlayerAlreadyChoseIsLeftAlone() {
+        assertEquals(List.of(), plan(2, Map.of(ATTACK, GLFW.GLFW_KEY_Z, FIGHT, GLFW.GLFW_KEY_R)));
+    }
+
+    @Test
+    void anUnboundOrComboAttackKeyMovesNothing() {
+        // unbound, a modifier combination / mouse button (the glue passes CUSTOM for those), or no line in options.txt
+        for (int key : new int[] {-1, KeybindMigration.CUSTOM})
             assertEquals(List.of(), plan(0, Map.of(ATTACK, key)), "attack on " + key);
     }
 
     @Test
-    void anAlreadyMigratedInstallKeepsAnAChosenAfterwards() {
-        // layout 1 ran once; the player then put Attack back on A on purpose - the next launch must not undo that
-        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_A)));
+    void anAlreadyMigratedInstallIsNotCarriedAgain() {
+        // layout 3 ran once; a later launch must not move Fight again
+        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_Z)));
     }
+
 
     @Test
     void aFreshInstallMovesNothing() {
@@ -87,6 +102,10 @@ class KeybindMigrationTest {
             assertNotEquals(row.oldKey(), kb.getDefaultKey(), row.binding() + ": the old key equals today's default, nothing to move");
             assertTrue(row.version() >= 1 && row.version() <= KeybindMigration.LAYOUT_VERSION,
                 row.binding() + " is for layout " + row.version() + " but LAYOUT_VERSION is " + KeybindMigration.LAYOUT_VERSION);
+        }
+        for (KeybindMigration.Carry row : KeybindMigration.CARRY) {
+            assertNull(all.get(row.retired()), row.retired() + " is retired but still a binding");
+            assertNotNull(all.get(row.successor()), row.successor() + " is not a binding in Keybindings");
         }
     }
 }

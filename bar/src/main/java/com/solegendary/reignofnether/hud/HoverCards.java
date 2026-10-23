@@ -171,7 +171,7 @@ public final class HoverCards {
             I18n.get("hud.reignofnether.controls.left_drag"),
             I18n.get("hud.reignofnether.controls.right_click"),
             I18n.get("hud.reignofnether.controls.right_drag"),
-            Keybindings.attack.getDisplayName(),
+            Keybindings.fight.getDisplayName(),
             Keybindings.stop.getDisplayName(),
             Keybindings.hold.getDisplayName(),
             Keybindings.build.getDisplayName(),
