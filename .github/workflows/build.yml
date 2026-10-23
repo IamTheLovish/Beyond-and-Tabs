@@ -244,6 +244,13 @@ jobs:
           path: bar/build/errorprone-warnings.txt
           if-no-files-found: ignore
           retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bar-build-log
+          path: bar/build.log
+          if-no-files-found: ignore
+          retention-days: 3
       # the animation cost bench (bar/src/test/.../perf/AnimationCostBench, a JUnit test the build above ran): ~500
       # units' posing and drawing per frame, on the real model classes without a window - a measurement, as notices
       - name: Animation cost bench (measurement only)
