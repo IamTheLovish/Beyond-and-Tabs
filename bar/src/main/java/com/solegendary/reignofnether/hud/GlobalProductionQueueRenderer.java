@@ -75,11 +75,11 @@ public class GlobalProductionQueueRenderer {
         if (count <= 1) return;
         String countText = String.valueOf(count);
         int textWidth = MC.font.width(countText);
-        guiGraphics.drawString(MC.font, countText, x + iconFrameSize - textWidth - 3, y + iconFrameSize - 10, 0xFFFFFF);
+        guiGraphics.drawString(MC.font, countText, x + iconFrameSize - textWidth - 2, y + iconFrameSize - 9, 0xFFFFFF);
     }
 
     private static Button createQueueButton(ProductionQueueGroup group) {
-        Button btn = group.item.getCancelButton(group.placement, group.includesFront);
+        Button btn = SlimTiles.apply(group.item.getCancelButton(group.placement, group.includesFront));
         btn.onLeftClick = () -> {
             if (group.placements.isEmpty()) return;
             ProductionPlacement next = group.placements.get(0);
@@ -112,7 +112,7 @@ public class GlobalProductionQueueRenderer {
         if (groupedQueue.isEmpty())
             return new Pair<>(hudZone, renderedButtons);
 
-        int iconFrameSize = Button.DEFAULT_ICON_FRAME_SIZE;
+        int iconFrameSize = HudLayout.SLIM_TILE;   // slim 18 px tiles (SlimTiles): ten queued items were a 120 x 54 block
         int iconsPerRow = 5;
         int rows = (int) Math.ceil((double) groupedQueue.size() / iconsPerRow);
 
@@ -127,7 +127,7 @@ public class GlobalProductionQueueRenderer {
             int iconY = startY + (i / iconsPerRow) * iconFrameSize;
 
             Button btn = createQueueButton(group);
-            btn.render(guiGraphics, iconX, iconY, mouseX, mouseY);
+            btn.render(guiGraphics, SlimTiles.at(iconX), SlimTiles.at(iconY), mouseX, mouseY);
             renderedButtons.add(btn);
             renderQueueGroupCount(guiGraphics, iconX, iconY, iconFrameSize, group.count);
 

@@ -167,9 +167,9 @@ public class ControlGroup {
     }
 
     public Button getButton() {
-        return new Button(
+        Button b = new Button(
             "Control Group " + getKey(),
-            Button.itemIconSize,
+            HudLayout.SLIM_ICON,   // the slim 18 px tile (SlimTiles), the groups' icons are only a reminder of the unit type
             iconRl == null ? ResourceLocation.parse("") : iconRl,
             this.keybinding,
             () -> false,
@@ -188,5 +188,7 @@ public class ControlGroup {
                 Style.EMPTY
             ))
         );
+        b.imageSize = HudLayout.SLIM_IMAGE;
+        return b;
     }
 }

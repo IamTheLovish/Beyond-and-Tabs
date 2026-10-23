@@ -19,8 +19,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import java.util.ArrayDeque;
 
 /**
- * BAR kill feed: up to {@link #MAX_LINES} fading lines, newest on top, right-aligned in the alert column under the
- * economy bar and the toasts (HudClientEvents.alertColumn / NotificationClientEvents). A line reads
+ * BAR kill feed: up to {@link #MAX_LINES} fading lines, newest on top, small (HudLayout.FEED_SCALE) and right-aligned
+ * at the side under the stats strip (PlayerPanelClientEvents.feedTop), out of the middle of the screen where the
+ * economy bar's status line is. A line reads
  * "Stag Lancer x Zombie", " x3" when the server merged duplicates or the same kill arrives again while the line is
  * up, and in bold when the victim was a building. Each name is light text (its owner's hue lightened to a 4.5:1
  * contrast on the line's backing, TextContrast) after a small swatch in the owner's true colour: lovish's names were
@@ -34,7 +35,7 @@ public class KillFeedClientEvents {
 
     public static final int MAX_LINES = 5;
     public static final int PROMOTE_TICKS = 5;
-    static final long LINE_MS = 7000, FADE_MS = 1500;
+    static final long LINE_MS = 4500, FADE_MS = 900;   // was 7 s / 1.5 s: the feed hides itself sooner (Oct 22)
     static final int MAX_QUEUED = 10;
     static final int CROSS_COLOUR = 0x9AA0A8, NEUTRAL_COLOUR = 0xC8C8C8;
     // the line backing: dark and mostly opaque so the world behind can't wash the text out
@@ -118,17 +119,27 @@ public class KillFeedClientEvents {
         return owner == null || owner.isEmpty() ? NEUTRAL_COLOUR : PlayerColors.getPlayerDisplayColorHex(owner) & 0xFFFFFF;
     }
 
+    /** The text cut to {@code budget} px with "..." (a very long unit or building name must not push the chip out of its column). */
+    private static String fit(String text, int budget) {
+        if (MC.font.width(text) <= budget)
+            return text;
+        return MC.font.plainSubstrByWidth(text, Math.max(8, budget - MC.font.width("..."))) + "...";
+    }
+
     private static void layout(Line l) {
         Entry e = l.entry;
         Style base = e.building() ? Style.EMPTY.withBold(true) : Style.EMPTY;
-        l.killer = Component.literal(name(e.killerKey())).withStyle(base).getVisualOrderText();
-        l.victim = Component.literal(name(e.victimKey())).withStyle(base).getVisualOrderText();
-        l.cross = Component.literal(CROSS).withStyle(base).getVisualOrderText();
         l.countStr = l.count > 1 ? " x" + l.count : "";
+        l.countW = l.countStr.isEmpty() ? 0 : MC.font.width(l.countStr);
+        l.crossW = MC.font.width(CROSS);
+        // each name gets half of what is left of the chip's width (HudLayout.FEED_CHIP_MAX_W, before the 0.75 scale)
+        int budget = (HudLayout.FEED_CHIP_MAX_W - 8 - (SWATCH_W + SWATCH_GAP) * 2 - l.crossW - l.countW) / 2;
+        l.killer = Component.literal(fit(name(e.killerKey()), budget)).withStyle(base).getVisualOrderText();
+        l.victim = Component.literal(fit(name(e.victimKey()), budget)).withStyle(base).getVisualOrderText();
+        l.cross = Component.literal(CROSS).withStyle(base).getVisualOrderText();
         l.killerW = MC.font.width(l.killer);
         l.victimW = MC.font.width(l.victim);
         l.crossW = MC.font.width(l.cross);
-        l.countW = l.countStr.isEmpty() ? 0 : MC.font.width(l.countStr);
         l.killerSwatch = ownerColour(e.killerOwner());
         l.victimSwatch = ownerColour(e.victimOwner());
         l.killerText = TextContrast.readable(l.killerSwatch, READ_ON);
@@ -142,7 +153,7 @@ public class KillFeedClientEvents {
         queued.clear();
     }
 
-    // drawn after HudClientEvents (which sets alertBottom) and NotificationClientEvents (LOW) in the same frame
+    // drawn after the player panel (its strip / table sets the feed's top) in the same frame
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
         if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui) || !HudPanels.showExtras())
@@ -151,9 +162,14 @@ public class KillFeedClientEvents {
         boolean ticker = HudPanels.killFeedCollapsed;
         int drawn = 0;
         long now = System.currentTimeMillis();
-        int[] col = HudClientEvents.alertColumn(MC.getWindow().getGuiScaledWidth());
-        int right = col[1] - 2;
-        int y = HudClientEvents.alertBottom + 2 + NotificationClientEvents.visibleHeight();
+        int sw = MC.getWindow().getGuiScaledWidth(), sh = MC.getWindow().getGuiScaledHeight();
+        // the side feed (lovish, Oct 22: the kill lines sat in the middle of the screen under the economy bar and the
+        // toasts): small (FEED_SCALE), right-aligned under the stats strip, never over the minimap or the command panel
+        int right = sw - HudLayout.STATS_RIGHT_MARGIN;
+        int y = com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.feedTop(sw);
+        int limit = Math.min(HudClientEvents.bottomPanelTop, HudLayout.minimapTop(sh,
+            com.solegendary.reignofnether.minimap.MinimapClientEvents.getMapGuiRadius(),
+            com.solegendary.reignofnether.config.ReignOfNetherClientConfigs.SQUARE_MINIMAP.get()));
         GuiGraphics gg = evt.getGuiGraphics();
         for (Line l : lines) {
             if (l.entry == null)
@@ -163,8 +179,8 @@ public class KillFeedClientEvents {
                 l.entry = null;
                 continue;
             }
-            if (y + 10 > HudClientEvents.bottomPanelTop - 2)
-                break;   // out of room above the command panel (GUI scale 4 on 1080p): the oldest lines wait
+            if (y + HudLayout.FEED_LINE_H > limit - 2)
+                break;   // out of room above the map / command panel: the oldest lines wait
             if (ticker && drawn >= 1)
                 continue;   // aged (and expired) above like the rest, just not drawn
             drawn++;
@@ -172,24 +188,30 @@ public class KillFeedClientEvents {
             float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
             int alpha = Math.max(8, (int) (0xFF * a));   // the font treats alpha < 4 as opaque
             int w = l.width + 8;
-            gg.fill(right - w, y - 2, right, y + 10, ((int) (BACKING_ALPHA * a) << 24) | BACKING_RGB);
+            float sc = HudLayout.FEED_SCALE;
+            int chipLeft = right - Math.round(w * sc);
             if (drawn == 1)   // the chevron left of the newest line: ticker <-> five lines
-                HudPanels.chevron(gg, HudPanels.KILLFEED, right - w - HudPanels.CHEVRON - 2, y - 1, ticker);
-            int x = right - 4 - l.width;
+                HudPanels.chevron(gg, HudPanels.KILLFEED, chipLeft - HudPanels.CHEVRON - 2, y, ticker);
+            gg.pose().pushPose();
+            gg.pose().translate(chipLeft, y, 0);
+            gg.pose().scale(sc, sc, 1f);
+            gg.fill(0, 0, w, 12, ((int) (BACKING_ALPHA * a) << 24) | BACKING_RGB);
+            int x = 4;
             int swA = (int) (0xFF * a) << 24;
-            gg.fill(x, y, x + SWATCH_W, y + 7, swA | l.killerSwatch);
+            gg.fill(x, 2, x + SWATCH_W, 9, swA | l.killerSwatch);
             x += SWATCH_W + SWATCH_GAP;
-            gg.drawString(MC.font, l.killer, x, y, (alpha << 24) | l.killerText);
+            gg.drawString(MC.font, l.killer, x, 2, (alpha << 24) | l.killerText);
             x += l.killerW;
-            gg.drawString(MC.font, l.cross, x, y, (alpha << 24) | CROSS_COLOUR);
+            gg.drawString(MC.font, l.cross, x, 2, (alpha << 24) | CROSS_COLOUR);
             x += l.crossW;
-            gg.fill(x, y, x + SWATCH_W, y + 7, swA | l.victimSwatch);
+            gg.fill(x, 2, x + SWATCH_W, 9, swA | l.victimSwatch);
             x += SWATCH_W + SWATCH_GAP;
-            gg.drawString(MC.font, l.victim, x, y, (alpha << 24) | l.victimText);
+            gg.drawString(MC.font, l.victim, x, 2, (alpha << 24) | l.victimText);
             x += l.victimW;
             if (l.countW > 0)
-                gg.drawString(MC.font, l.countStr, x, y, (alpha << 24) | 0xFFFFFF);
-            y += 12;
+                gg.drawString(MC.font, l.countStr, x, 2, (alpha << 24) | 0xFFFFFF);
+            gg.pose().popPose();
+            y += HudLayout.FEED_LINE_H;
         }
     }
 }

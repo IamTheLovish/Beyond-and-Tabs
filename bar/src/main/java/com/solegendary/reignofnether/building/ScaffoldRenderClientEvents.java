@@ -87,97 +87,102 @@ public class ScaffoldRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        if (MC.level == null || StrategicViewClientEvents.isStrategicView())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
+        try {
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (MC.level == null || StrategicViewClientEvents.isStrategicView())
+                return;
 
-        long now = MC.level.getGameTime();
-        float partial = evt.getPartialTick();
-        Vec3 cam = evt.getCamera().getPosition();
-        camX = cam.x;
-        camY = cam.y;
-        camZ = cam.z;
+            long now = MC.level.getGameTime();
+            float partial = evt.getPartialTick();
+            Vec3 cam = evt.getCamera().getPosition();
+            camX = cam.x;
+            camY = cam.y;
+            camZ = cam.z;
 
-        pickedCount = 0;
-        List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
-        for (int i = 0; i < buildings.size(); i++) {
-            BuildingPlacement p = buildings.get(i);
-            Building building = p.getBuilding();
-            if (building == null || building instanceof AbstractBridge)
-                continue;   // a scaffold round a bridge span just looks like a fence across the river
-            State s = states.get(p);
-            float a;
-            if (!p.isBuilt) {
-                if (s == null) {
-                    s = new State();
-                    states.put(p, s);
+            pickedCount = 0;
+            List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
+            for (int i = 0; i < buildings.size(); i++) {
+                BuildingPlacement p = buildings.get(i);
+                Building building = p.getBuilding();
+                if (building == null || building instanceof AbstractBridge)
+                    continue;   // a scaffold round a bridge span just looks like a fence across the river
+                State s = states.get(p);
+                float a;
+                if (!p.isBuilt) {
+                    if (s == null) {
+                        s = new State();
+                        states.put(p, s);
+                    }
+                    s.seenUnbuilt = true;
+                    s.builtAt = -1;
+                    a = 1f;
+                } else {
+                    if (s == null || !s.seenUnbuilt)
+                        continue;
+                    if (s.builtAt < 0)
+                        s.builtAt = now;
+                    float age = (now - s.builtAt) + partial;
+                    if (age >= FADE_TICKS) {
+                        s.seenUnbuilt = false;
+                        continue;
+                    }
+                    a = 1f - age / FADE_TICKS;
                 }
-                s.seenUnbuilt = true;
-                s.builtAt = -1;
-                a = 1f;
-            } else {
-                if (s == null || !s.seenUnbuilt)
+                double dx = p.centrePos.getX() + 0.5 - camX;
+                double dy = p.centrePos.getY() + 0.5 - camY;
+                double dz = p.centrePos.getZ() + 0.5 - camZ;
+                double d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 > MAX_RENDER_DIST_SQR)
                     continue;
-                if (s.builtAt < 0)
-                    s.builtAt = now;
-                float age = (now - s.builtAt) + partial;
-                if (age >= FADE_TICKS) {
-                    s.seenUnbuilt = false;
+                if (pickedCount == MAX_SCAFFOLDS && d2 >= pickedDist[MAX_SCAFFOLDS - 1])
                     continue;
+                // a scaffold gives away construction progress, so only draw sites in sight (cached per site)
+                if (now - s.visCheckedAt >= VIS_RECHECK_TICKS || now < s.visCheckedAt) {
+                    s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
+                    s.visCheckedAt = now;
                 }
-                a = 1f - age / FADE_TICKS;
+                if (!s.visible)
+                    continue;
+                insert(p, d2, a);
             }
-            double dx = p.centrePos.getX() + 0.5 - camX;
-            double dy = p.centrePos.getY() + 0.5 - camY;
-            double dz = p.centrePos.getZ() + 0.5 - camZ;
-            double d2 = dx * dx + dy * dy + dz * dz;
-            if (d2 > MAX_RENDER_DIST_SQR)
-                continue;
-            if (pickedCount == MAX_SCAFFOLDS && d2 >= pickedDist[MAX_SCAFFOLDS - 1])
-                continue;
-            // a scaffold gives away construction progress, so only draw sites in sight (cached per site)
-            if (now - s.visCheckedAt >= VIS_RECHECK_TICKS || now < s.visCheckedAt) {
-                s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
-                s.visCheckedAt = now;
+            if (pickedCount == 0)
+                return;
+
+            PoseStack matrix = evt.getPoseStack();
+            renderer = MC.getBlockRenderer();
+            MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
+            // both are fixed buffers in RenderBuffers, so holding the two consumers at once is safe
+            VertexConsumer solid = buffers.getBuffer(Sheets.cutoutBlockSheet());
+            VertexConsumer fading = null;
+
+            matrix.pushPose();
+            pose = matrix.last();
+            basePose.set(pose.pose());
+            baseNormal.set(pose.normal());
+            for (int i = 0; i < pickedCount; i++) {
+                alpha = pickedAlpha[i];
+                if (alpha < 1f) {
+                    if (fading == null)
+                        fading = buffers.getBuffer(Sheets.translucentCullBlockSheet());
+                    consumer = fading;
+                } else {
+                    consumer = solid;
+                }
+                drawScaffold(picked[i], pickedDist[i] > LOD_DIST_SQR);
+                picked[i] = null;   // don't pin placements past their removal
             }
-            if (!s.visible)
-                continue;
-            insert(p, d2, a);
+            matrix.popPose();
+            pose = null;
+            consumer = null;
+
+            buffers.endBatch(Sheets.cutoutBlockSheet());
+            if (fading != null)
+                buffers.endBatch(Sheets.translucentCullBlockSheet());
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        if (pickedCount == 0)
-            return;
-
-        PoseStack matrix = evt.getPoseStack();
-        renderer = MC.getBlockRenderer();
-        MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-        // both are fixed buffers in RenderBuffers, so holding the two consumers at once is safe
-        VertexConsumer solid = buffers.getBuffer(Sheets.cutoutBlockSheet());
-        VertexConsumer fading = null;
-
-        matrix.pushPose();
-        pose = matrix.last();
-        basePose.set(pose.pose());
-        baseNormal.set(pose.normal());
-        for (int i = 0; i < pickedCount; i++) {
-            alpha = pickedAlpha[i];
-            if (alpha < 1f) {
-                if (fading == null)
-                    fading = buffers.getBuffer(Sheets.translucentCullBlockSheet());
-                consumer = fading;
-            } else {
-                consumer = solid;
-            }
-            drawScaffold(picked[i], pickedDist[i] > LOD_DIST_SQR);
-            picked[i] = null;   // don't pin placements past their removal
-        }
-        matrix.popPose();
-        pose = null;
-        consumer = null;
-
-        buffers.endBatch(Sheets.cutoutBlockSheet());
-        if (fading != null)
-            buffers.endBatch(Sheets.translucentCullBlockSheet());
     }
 
     /** Insertion into the distance-sorted pick list, dropping the furthest when full. */

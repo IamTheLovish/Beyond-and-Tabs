@@ -131,15 +131,20 @@ public class BuildProgressBarClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null || MC.player == null)
-            return;
-        if (StrategicViewClientEvents.isStrategicView() || (BUILD_ETAS.isEmpty() && PROD_ETAS.isEmpty()))
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BARS);
         try {
-            render(evt.getPoseStack(), evt.getCamera());
-        } catch (Exception ignored) {
-            // a cosmetic overlay must never break the frame
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null || MC.player == null)
+                return;
+            if (StrategicViewClientEvents.isStrategicView() || (BUILD_ETAS.isEmpty() && PROD_ETAS.isEmpty()))
+                return;
+            try {
+                render(evt.getPoseStack(), evt.getCamera());
+            } catch (Exception ignored) {
+                // a cosmetic overlay must never break the frame
+            }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

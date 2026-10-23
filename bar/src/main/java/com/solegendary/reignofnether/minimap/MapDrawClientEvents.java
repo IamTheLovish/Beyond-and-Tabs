@@ -338,16 +338,21 @@ public class MapDrawClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
-            return;
-        boolean preview = drawing && !drawingOnMinimap && curN >= 2;
-        if (drawings.isEmpty() && !preview)
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         try {
-            renderWorld(evt.getPoseStack(), evt.getCamera(), preview);
-        } catch (Exception ignored) {
-            // a cosmetic overlay must never break the frame
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
+                return;
+            boolean preview = drawing && !drawingOnMinimap && curN >= 2;
+            if (drawings.isEmpty() && !preview)
+                return;
+            try {
+                renderWorld(evt.getPoseStack(), evt.getCamera(), preview);
+            } catch (Exception ignored) {
+                // a cosmetic overlay must never break the frame
+            }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 
