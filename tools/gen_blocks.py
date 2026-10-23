@@ -799,9 +799,10 @@ def m_oak_planks_r24(F, n, base=(0.66, 0.51, 0.31)):
     in_row = (F.v * rows) % 1.0
     off = np.array([0.0, 0.5, 0.25, 0.75])[row % 4]
     joint_u = (F.u + off) % 1.0
-    # r25: boards of different lengths - in some rows a second end joint splits the block's board in two
-    rng0 = F.rng
-    second = np.where(rng0.random(rows) < 0.5, 0.35 + 0.3 * rng0.random(rows), -1.0)[row]
+    # r25 drew a second end joint in some rows; r26 dropped it - its two draws stay, so every board keeps the tone it
+    # had in round 26 (the build is pixel-identical to #160's round 26)
+    F.rng.random(rows)
+    F.rng.random(rows)
     # r26 (review: brickwork at RTS): no second joints, and only two of the four rows have a butt joint in this
     # block - the others run on into the next block (boards a block and more long)
     ju2 = np.ones_like(joint_u)
