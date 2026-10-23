@@ -2070,11 +2070,38 @@ def periodic(a):
     return a - np.real(np.fft.ifft2(s))
 
 
-def scan_set(asset, n):
-    """dict(alb=colour, H=height, nxy=(nx, ny)) of a scan at n texels, every map's wrap healed (periodic)."""
-    nx, ny = scan_map(asset, "NormalGL", n)
-    return dict(alb=np.clip(periodic(scan_map(asset, "Color", n)), 0, 1), H=periodic(scan_map(asset, "Displacement", n)),
-                nxy=(periodic(nx), periodic(ny)))
+def scan_set(asset, n, scale=1.0):
+    """dict(alb=colour, H=height, nxy=(nx, ny)) of a scan at n texels, every map's wrap healed (periodic). scale > 1
+    shows the scan that much larger (the block a 1/scale part of the tile), still as a seamless tile (enlarged)."""
+    m = int(round(n * scale))
+    maps = [scan_map(asset, "Color", m), scan_map(asset, "Displacement", m), *scan_map(asset, "NormalGL", m)]
+    if m != n:
+        maps = enlarged(maps, n)
+    alb, H, nx, ny = maps
+    return dict(alb=np.clip(periodic(alb), 0, 1), H=periodic(H), nxy=(periodic(nx), periodic(ny)))
+
+
+def enlarged(maps, n):
+    """An n x n seamless tile cut from larger seamless maps (period m > n), all maps alike: the n x n corner, rolled
+    half a tile so its four cut edges meet in a cross through the middle (the tile's own edges are then the corner's
+    insides - continuous); the cross is covered by the same maps from another place (half a period on), inside a
+    band 6-12% of the block wide each side of the cross that wanders, feathered over ~3 texels. Round 28: Grass004
+    at one tile per block put its blades at ~1 texel - speckle at 3.5 blocks (offline close-up preview)."""
+    m = maps[0].shape[0]
+    h = n // 2
+    F = Field(n, 2771)
+    w = np.clip(0.09 + 0.025 * F.noise(1, 5, 0.6), 0.06, 0.12)
+    du = np.abs(F.u - 0.5)
+    dv = np.abs(F.v - 0.5)
+    w2 = np.clip(0.09 + 0.025 * F.noise(1, 5, 0.6), 0.06, 0.12)
+    mask = np.maximum(1 - smoothstep(w - 1.5 / n, w + 1.5 / n, du), 1 - smoothstep(w2 - 1.5 / n, w2 + 1.5 / n, dv))
+    out = []
+    for a in maps:
+        corner = np.roll(a[:n, :n], (h, h), (0, 1))
+        other = np.roll(a, (m // 2, m // 2), (0, 1))[:n, :n]
+        w3 = mask if a.ndim == 2 else mask[..., None]
+        out.append(corner * (1 - w3) + other * w3)
+    return out
 
 
 # variant i's inside: the tile turned k quarters, mirrored first or not, and rolled half a block or not (8 of the 16
@@ -2148,7 +2175,7 @@ def m_scan_dirt(F, n):
 
 
 def m_scan_grass_top(F, n):
-    d = scan_set(SCAN_GRASS, n)
+    d = scan_set(SCAN_GRASS, n, scale=2.0)              # blades ~2.5 texels at 256: blades, not speckle (enlarged)
     d["alb"] = neutral(flatten(F, d["alb"], 2.0, keep=0.3))
     return d
 
