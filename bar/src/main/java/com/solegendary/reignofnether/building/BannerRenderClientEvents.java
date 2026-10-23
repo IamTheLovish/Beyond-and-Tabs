@@ -77,68 +77,73 @@ public class BannerRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        if (MC.level == null || MC.cameraEntity == null || StrategicViewClientEvents.isStrategicView())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
+        try {
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (MC.level == null || MC.cameraEntity == null || StrategicViewClientEvents.isStrategicView())
+                return;
 
-        PoseStack matrix = evt.getPoseStack();
-        // the RENDER camera, not the camera entity (see WindmillRenderClientEvents: the sails floated off their towers
-        // by a camera-dependent amount while they used the entity)
-        net.minecraft.world.phys.Vec3 cam = evt.getCamera().getPosition();
-        BlockRenderDispatcher renderer = MC.getBlockRenderer();
-        float time = MC.level.getGameTime() + evt.getPartialTick();
-        BlockState pole = Blocks.DARK_OAK_PLANKS.defaultBlockState();
-        boolean renderedAny = false;
+            PoseStack matrix = evt.getPoseStack();
+            // the RENDER camera, not the camera entity (see WindmillRenderClientEvents: the sails floated off their towers
+            // by a camera-dependent amount while they used the entity)
+            net.minecraft.world.phys.Vec3 cam = evt.getCamera().getPosition();
+            BlockRenderDispatcher renderer = MC.getBlockRenderer();
+            float time = MC.level.getGameTime() + evt.getPartialTick();
+            BlockState pole = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+            boolean renderedAny = false;
 
-        for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
-            if (!fliesBanner(placement))
-                continue;
-            BlockPos mount = mountFor(placement);
-            if (mount == null || cam.distanceToSqr(mount.getX(), mount.getY(), mount.getZ()) > MAX_RENDER_DIST_SQR)
-                continue;
+            for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
+                if (!fliesBanner(placement))
+                    continue;
+                BlockPos mount = mountFor(placement);
+                if (mount == null || cam.distanceToSqr(mount.getX(), mount.getY(), mount.getZ()) > MAX_RENDER_DIST_SQR)
+                    continue;
 
-            // colours per faction in FactionTraits (Sunforged white/gold, Gravebound soul-blue/black, Horde red/bone,
-            // Verdant green/silver); factions without an entry fly no banner rather than the Kingdom's
-            FactionTraits traits = FactionTraits.of(placement.getBuilding().getFaction());
-            BlockState cloth = traits.bannerCloth;
-            BlockState trim = traits.bannerTrim;
-            if (cloth == null || trim == null)
-                continue;
-            int light = LevelRenderer.getLightColor(MC.level, mount.above(2));
-            float phase = (mount.hashCode() & 255) / 255f * Mth.TWO_PI;
+                // colours per faction in FactionTraits (Sunforged white/gold, Gravebound soul-blue/black, Horde red/bone,
+                // Verdant green/silver); factions without an entry fly no banner rather than the Kingdom's
+                FactionTraits traits = FactionTraits.of(placement.getBuilding().getFaction());
+                BlockState cloth = traits.bannerCloth;
+                BlockState trim = traits.bannerTrim;
+                if (cloth == null || trim == null)
+                    continue;
+                int light = LevelRenderer.getLightColor(MC.level, mount.above(2));
+                float phase = (mount.hashCode() & 255) / 255f * Mth.TWO_PI;
 
-            matrix.pushPose();
-            matrix.translate(mount.getX() + 0.5 - cam.x, mount.getY() + 1.0 - cam.y, mount.getZ() + 0.5 - cam.z);
-
-            // the pole
-            matrix.pushPose();
-            matrix.translate(-0.06, 0, -0.06);
-            matrix.scale(0.12f, POLE_HEIGHT, 0.12f);
-            renderer.renderSingleBlock(pole, matrix, MC.renderBuffers().bufferSource(),
-                light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
-            matrix.popPose();
-
-            // the cloth: segments trailing off the pole, each bending a little further in the wind
-            float yaw = Mth.sin(time * 0.013f + phase) * 0.35f;   // slow drift of the wind direction
-            matrix.translate(0, POLE_HEIGHT - CLOTH_HEIGHT - 0.05, 0);
-            matrix.mulPose(com.mojang.math.Axis.YP.rotation(yaw));
-            float x = 0.06f;
-            for (int i = 0; i < SEGMENTS; i++) {
-                float wave = Mth.sin(time * 0.22f - i * 0.9f + phase) * 0.09f * (i + 1);
-                float droop = i * 0.03f;
                 matrix.pushPose();
-                matrix.translate(x, -droop, wave - 0.02);
-                matrix.scale(SEG_LEN + 0.01f, CLOTH_HEIGHT, 0.04f);
-                renderer.renderSingleBlock(i == SEGMENTS - 1 ? trim : cloth, matrix,
-                    MC.renderBuffers().bufferSource(), light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                matrix.translate(mount.getX() + 0.5 - cam.x, mount.getY() + 1.0 - cam.y, mount.getZ() + 0.5 - cam.z);
+
+                // the pole
+                matrix.pushPose();
+                matrix.translate(-0.06, 0, -0.06);
+                matrix.scale(0.12f, POLE_HEIGHT, 0.12f);
+                renderer.renderSingleBlock(pole, matrix, MC.renderBuffers().bufferSource(),
+                    light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
                 matrix.popPose();
-                x += SEG_LEN;
+
+                // the cloth: segments trailing off the pole, each bending a little further in the wind
+                float yaw = Mth.sin(time * 0.013f + phase) * 0.35f;   // slow drift of the wind direction
+                matrix.translate(0, POLE_HEIGHT - CLOTH_HEIGHT - 0.05, 0);
+                matrix.mulPose(com.mojang.math.Axis.YP.rotation(yaw));
+                float x = 0.06f;
+                for (int i = 0; i < SEGMENTS; i++) {
+                    float wave = Mth.sin(time * 0.22f - i * 0.9f + phase) * 0.09f * (i + 1);
+                    float droop = i * 0.03f;
+                    matrix.pushPose();
+                    matrix.translate(x, -droop, wave - 0.02);
+                    matrix.scale(SEG_LEN + 0.01f, CLOTH_HEIGHT, 0.04f);
+                    renderer.renderSingleBlock(i == SEGMENTS - 1 ? trim : cloth, matrix,
+                        MC.renderBuffers().bufferSource(), light, OverlayTexture.NO_OVERLAY, ModelData.EMPTY, null);
+                    matrix.popPose();
+                    x += SEG_LEN;
+                }
+                matrix.popPose();
+                renderedAny = true;
             }
-            matrix.popPose();
-            renderedAny = true;
+            if (renderedAny)
+                MC.renderBuffers().bufferSource().endBatch();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        if (renderedAny)
-            MC.renderBuffers().bufferSource().endBatch();
     }
 }

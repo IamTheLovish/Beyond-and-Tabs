@@ -9,6 +9,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseFireBlock;
@@ -36,8 +37,26 @@ public class UnextinguishableSoulFireBlock extends BaseFireBlock {
         return true;
     }
 
+    // Mean lifetime in ticks. This fire used to burn out on a random tick, and at randomTickSpeed 12 each block got one
+    // every 4096 / 12 = ~341 ticks on average. The world now runs at vanilla's 3, so the fire keeps its own timer with
+    // the same (exponential) lifetime instead of depending on the gamerule.
+    private static final double MEAN_LIFETIME_TICKS = 4096.0 / 12.0;
+
+    private static int nextBurnOutDelay(RandomSource random) {
+        double u = random.nextDouble();
+        return Math.max(1, (int) Math.round(-Math.log(1.0 - u) * MEAN_LIFETIME_TICKS));
+    }
+
     @Override
-    public void randomTick(BlockState pState, ServerLevel pLevel, BlockPos pPos, RandomSource pRandom) {
+    public void onPlace(BlockState pState, Level pLevel, BlockPos pPos, BlockState pOldState, boolean pIsMoving) {
+        super.onPlace(pState, pLevel, pPos, pOldState, pIsMoving);
+        if (!pLevel.isClientSide() && !pOldState.is(this)) {
+            pLevel.scheduleTick(pPos, this, nextBurnOutDelay(pLevel.getRandom()));
+        }
+    }
+
+    @Override
+    public void tick(BlockState pState, ServerLevel pLevel, BlockPos pPos, RandomSource pRandom) {
         boolean inRangeOfWildfireUlt = false;
         for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
             if (unit instanceof WildfireUnit wildfireUnit && wildfireUnit.hasEffect(MobEffectRegistrar.SOULS_AFLAME.get()) &&
@@ -46,7 +65,9 @@ public class UnextinguishableSoulFireBlock extends BaseFireBlock {
                 break;
             }
         }
-        if (!inRangeOfWildfireUlt) {
+        if (inRangeOfWildfireUlt) {
+            pLevel.scheduleTick(pPos, this, nextBurnOutDelay(pRandom));
+        } else {
             pLevel.setBlockAndUpdate(pPos, Blocks.FIRE.defaultBlockState());
         }
     }

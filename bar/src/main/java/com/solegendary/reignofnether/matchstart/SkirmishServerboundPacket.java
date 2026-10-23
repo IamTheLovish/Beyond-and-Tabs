@@ -201,6 +201,17 @@ public class SkirmishServerboundPacket {
         };
     }
 
+    /**
+     * The lobby's metal setting as the open-ground metal of a pre-made map (maps spec M1): lean, normal and rich scale
+     * how many patches the fill places in every slot. Random keeps the normal map - a pre-made map is the same map the
+     * lobby preview drew for its seed, so the roll that random terrain makes at formation has no place here.
+     */
+    public static com.solegendary.reignofnether.maps.MetalOptions premadeMetal(int metal) {
+        float richness = metalRichness(metal);
+        return richness < 0 ? com.solegendary.reignofnether.maps.MetalOptions.DEFAULT
+            : com.solegendary.reignofnether.maps.MetalOptions.ofRichness(richness);
+    }
+
     /** Spawn-distance code (0 close, 1 normal, 2 far) to the inner and outer radius of the bot spawn ring. */
     public static int spawnMinR(int spawnDistance) {
         return switch (spawnDistance) { case 0 -> 140; case 2 -> 300; default -> 180; };

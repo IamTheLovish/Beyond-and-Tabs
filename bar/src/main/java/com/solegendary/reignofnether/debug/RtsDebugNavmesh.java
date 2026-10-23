@@ -142,6 +142,7 @@ public class RtsDebugNavmesh {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (MC.level == null || evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES
                 || RtsDebugClientEvents.displayMode != DebugDisplayMode.NAVMESH
                 || !OrthoviewClientEvents.isEnabled())

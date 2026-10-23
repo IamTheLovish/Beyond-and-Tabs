@@ -26,7 +26,8 @@ import java.util.stream.Collectors;
  * its textures; claude/paladin-radiant.md tells the story): the texture paths by convention
  * ({@code textures/entities/<name>.png}, {@code _team.png} for TeamColourLayer, {@code _glow.png} drawn full-bright
  * and additive), and the one rule for the small detail parts ("lod"): drawn while the RTS camera is zoomed in to
- * {@link #DETAIL_ZOOM} or closer, or, outside the RTS view, within {@link #DETAIL_DISTANCE} blocks.
+ * {@link #DETAIL_ZOOM} or closer, or, outside the RTS view, while big enough on screen (UnitLod: within
+ * {@link #DETAIL_DISTANCE} blocks on a 1080p screen at FOV 70, further on a bigger screen or a narrower FOV).
  */
 @OnlyIn(Dist.CLIENT)
 public final class GeneratedBodies {
@@ -80,6 +81,8 @@ public final class GeneratedBodies {
             public void render(PoseStack pose, MultiBufferSource buffers, int light, T entity, float limbSwing,
                                float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw,
                                float headPitch) {
+                if (UnitLod.skipOverlay(entity))   // shader shadow map: the body pass already casts this silhouette
+                    return;
                 SplitPasses split = this.getParentModel() instanceof SplitPasses sp ? sp : null;
                 if (split != null)
                     split.beginPass(split.glowParts());
@@ -97,8 +100,9 @@ public final class GeneratedBodies {
     public static boolean wantsDetail(Entity entity) {
         if (OrthoviewClientEvents.isEnabled())
             return OrthoviewClientEvents.getZoom() <= DETAIL_ZOOM;
+        // outside the RTS view: by on-screen size (UnitLod; 40 blocks on a 1080p screen at FOV 70, as before)
         Minecraft mc = Minecraft.getInstance();
-        return mc.gameRenderer.getMainCamera().getPosition().distanceToSqr(entity.position())
-            < DETAIL_DISTANCE * DETAIL_DISTANCE;
+        return UnitLod.firstPersonDetail(Math.sqrt(mc.gameRenderer.getMainCamera().getPosition()
+            .distanceToSqr(entity.position())));
     }
 }

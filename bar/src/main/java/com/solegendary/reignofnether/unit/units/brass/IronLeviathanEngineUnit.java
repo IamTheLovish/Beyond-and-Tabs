@@ -325,8 +325,7 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
-            com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToAllPlayers(
-                "server.reignofnether.t3_arrived", true, owner,
+            com.solegendary.reignofnether.unit.T3ServerEvents.announceFielded(owner,
                 net.minecraft.network.chat.Component.translatable("entity.reignofnether.iron_leviathan_engine_unit"));
         }
         if (--droneTimer <= 0) {
