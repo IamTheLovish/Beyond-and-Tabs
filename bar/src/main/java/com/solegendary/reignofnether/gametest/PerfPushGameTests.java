@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 
 import net.minecraft.core.BlockPos;
@@ -10,6 +11,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -88,6 +91,53 @@ public class PerfPushGameTests {
                 helper.fail("only " + calls + " push neighbour lookups were counted for " + UNITS + " units over 40 ticks");
             else
                 helper.succeed();
+        });
+    }
+
+    /**
+     * A unit's own doPush override still runs in its push pass: a standing War Mammoth shoves the small bodies it
+     * overlaps at TitanMass.SHOVE (0.12 a tick), where vanilla's push is at most 0.05. The pass is the mammoth's real
+     * tick; each Brute starts at rest, so its velocity afterwards is the push alone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void a_titan_still_shoves_small_bodies_in_the_push_pass(GameTestHelper helper) {
+        String owner = BigUnitFeelGameTests.owner(helper, "pushtitan");
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        Mob mammoth = BigUnitGameTests.spawn(helper, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), owner, 8.5, 8.5);
+        double[][] offsets = { { 0.8, 0.0 }, { -0.7, 0.5 }, { 0.2, -0.9 } };
+        List<Mob> brutes = new ArrayList<>();
+        for (double[] o : offsets) {
+            Mob b = BigUnitGameTests.spawn(helper, EntityRegistrar.BRUTE_UNIT.get(), owner, 8.5 + o[0], 8.5 + o[1]);
+            if (b != null) {
+                ((Unit) b).setHoldPosition(true);
+                brutes.add(b);
+            }
+        }
+        if (mammoth == null || brutes.size() != offsets.length) {
+            if (mammoth != null)
+                mammoth.discard();
+            brutes.forEach(Mob::discard);
+            helper.fail("could not create the units");
+            return;
+        }
+        helper.runAfterDelay(10, () -> {
+            for (Mob b : brutes)
+                b.setDeltaMovement(Vec3.ZERO);
+            mammoth.setDeltaMovement(Vec3.ZERO);
+            mammoth.tick();   // its push pass runs inside the tick
+            List<String> weak = new ArrayList<>();
+            for (Mob b : brutes) {
+                Vec3 v = b.getDeltaMovement();
+                double push = Math.sqrt(v.x * v.x + v.z * v.z);
+                if (push < 0.1)
+                    weak.add(String.format(java.util.Locale.ROOT, "%.3f", push));
+            }
+            mammoth.discard();
+            brutes.forEach(Mob::discard);
+            if (weak.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("the mammoth did not shove " + weak.size() + " of 3 Brutes by its 0.12 (pushed only " + weak + "; vanilla is at most 0.05)");
         });
     }
 }
