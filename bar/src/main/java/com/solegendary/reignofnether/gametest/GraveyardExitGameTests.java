@@ -19,6 +19,7 @@ import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
@@ -211,6 +212,8 @@ public class GraveyardExitGameTests {
             layout = gy.currentStructureName + " " + gate + " (footprint " + gy.minCorner.toShortString() + ".."
                 + gy.maxCorner.toShortString() + ", gate " + exits + ", open to the outside " + openExits + ", rally "
                 + rally.toShortString() + ")";
+        } catch (GameTestAssertException e) {
+            throw e;   // helper.fail's own way of failing the test
         } catch (Throwable t) {
             finish.accept("setting up: " + t);
             return;
@@ -241,6 +244,8 @@ public class GraveyardExitGameTests {
                     EngagementStance.set(made, EngagementStance.HOLD_FIRE);
                     made.setInvulnerable(true);
                     raised.add(made);
+                } catch (GameTestAssertException e) {
+                    throw e;   // helper.fail's own way of failing the test
                 } catch (Throwable t) {
                     finish.accept("raising unit " + n + ": " + t);
                 }
@@ -276,6 +281,8 @@ public class GraveyardExitGameTests {
                     layout, stuck.size(), UNITS, LIMIT);
                 finish.accept(layout + ": " + stuck.size() + " of " + UNITS + " Zombies not out of the graveyard and at "
                     + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck));
+            } catch (GameTestAssertException e) {
+                throw e;   // helper.fail's own way of failing the test
             } catch (Throwable t) {
                 finish.accept("checking: " + t);
             }
