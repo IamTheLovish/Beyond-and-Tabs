@@ -35,6 +35,29 @@ import java.util.Set;
 public class BlockClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
+    // Almost no building or unit carries a range indicator, but the frame used to walk all 1,700 buildings and 500 units
+    // (scene 18: 0.87 ms). The few that do are found every 5 ticks, or when either list changes size.
+    private static final com.solegendary.reignofnether.perf.RefreshGate RANGE_GATE =
+        new com.solegendary.reignofnether.perf.RefreshGate(5);
+    private static final ArrayList<BuildingPlacement> rangeBuildings = new ArrayList<>();
+    private static final ArrayList<LivingEntity> rangeUnits = new ArrayList<>();
+
+    private static void refreshRangeSubsets() {
+        java.util.List<BuildingPlacement> all = BuildingClientEvents.getBuildings();
+        ArrayList<LivingEntity> units = UnitClientEvents.getAllUnits();
+        long t = MC.level == null ? 0 : MC.level.getGameTime();
+        if (!RANGE_GATE.due(t, all.size() * 31 + units.size()))
+            return;
+        rangeBuildings.clear();
+        for (BuildingPlacement b : all)
+            if (b.getBuilding().getActiveAddon(RangeIndicatorAddon.class) != null)
+                rangeBuildings.add(b);
+        rangeUnits.clear();
+        for (LivingEntity le : units)
+            if (le instanceof RangeIndicator)
+                rangeUnits.add(le);
+    }
+
     private static final ResourceLocation WHITE = ResourceLocation.parse("forge:textures/white.png");
 
     public static NightCircleMode nightCircleMode = NightCircleMode.NO_OVERLAPS;
@@ -53,9 +76,9 @@ public class BlockClientEvents {
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
                 return;
             }
+            refreshRangeSubsets();
             // draw range indicators for buildings with abilities and monster night sources
-            for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
-                // the cheap question first: almost no building has a range indicator, and the fog check scans a footprint
+            for (BuildingPlacement building : rangeBuildings) {
                 RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
                 if (ria != null && FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
                     for (BlockPos bp : ria.getHighlightBps(building)) {
@@ -78,8 +101,8 @@ public class BlockClientEvents {
                     MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                 }
             }
-            for (LivingEntity le : UnitClientEvents.getAllUnits()) {
-                if (!(le instanceof RangeIndicator ri)) continue;   // almost no unit is one: ask before the fog lookup
+            for (LivingEntity le : rangeUnits) {
+                if (!(le instanceof RangeIndicator ri) || le.isRemoved()) continue;
                 if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
                 boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
                 if (selected || !ri.showOnlyWhenSelected()) {
