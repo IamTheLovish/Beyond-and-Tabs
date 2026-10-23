@@ -118,6 +118,7 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/LanternFortressUnit', 'support'),
     ('Stormcallers', 't2', 'storm/PhoenixUnit', 'skirmisher'),
     ('Stormcallers', 't3', 'storm/CelestialDragonUnit', 'experimental'),
+    ('Stormcallers', 't3', 'storm/JadeSentinelUnit', 'experimental'),
     # Brassworks (slice 1): Heat (vents after a burst of fire) is what the table can't see on the machines
     ('Brassworks', 'worker', 'brass/TinkerUnit', 'builder'),
     ('Brassworks', 't1', 'brass/GyroScoutUnit', 'scout'),
@@ -194,7 +195,8 @@ OVERRIDES = {
 }
 
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
-COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B'}
+COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
+                     'JadeSentinelUnit': 'STORM_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')

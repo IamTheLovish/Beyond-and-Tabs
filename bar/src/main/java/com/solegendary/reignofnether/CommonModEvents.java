@@ -130,6 +130,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.RAVAGER_UNIT.get(), RavagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.WAR_MAMMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.createAttributes().build());
         evt.put(EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.createAttributes().build());
+        evt.put(EntityRegistrar.JADE_SENTINEL_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.createAttributes().build());
         evt.put(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.createAttributes().build());
         evt.put(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRUNT_UNIT.get(), GruntUnit.createAttributes().build());

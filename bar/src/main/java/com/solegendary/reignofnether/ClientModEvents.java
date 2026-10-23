@@ -221,6 +221,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WAR_MAMMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WarMammothRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.JADE_SENTINEL_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeSentinelRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRUNT_UNIT.get(), PiglinUnitRenderer::new);

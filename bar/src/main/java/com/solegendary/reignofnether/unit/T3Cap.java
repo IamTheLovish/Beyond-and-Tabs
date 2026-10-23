@@ -59,7 +59,7 @@ public final class T3Cap {
                 new Pair("Horde", ProductionItems.WAR_MAMMOTH, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.HORDE_T3B, EntityRegistrar.MAGMA_HURLER_UNIT.get()),
                 new Pair("Verdant", ProductionItems.WORLD_TREE_WALKER, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.VERDANT_T3B),
                 new Pair("Tidewrought", ProductionItems.LEVIATHAN, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.TIDE_T3B),
-                new Pair("Stormcallers", ProductionItems.CELESTIAL_DRAGON, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), ProductionItems.STORM_T3B),
+                new Pair("Stormcallers", ProductionItems.CELESTIAL_DRAGON, EntityRegistrar.CELESTIAL_DRAGON_UNIT.get(), ProductionItems.STORM_T3B, EntityRegistrar.JADE_SENTINEL_UNIT.get()),
                 new Pair("Brassworks", ProductionItems.IRON_LEVIATHAN_ENGINE, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.BRASS_T3B));
         }
         return pairs;
