@@ -524,7 +524,7 @@ public class BotGameTests {
                 return;
             }
             var brain = new BotPlayer(owner, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, near.offset(-6, 0, 0));
-            var site = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(brain.kit.extractor(), level,
+            var site = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.METAL_EXTRACTOR_VILLAGERS, level,
                 near.offset(-2, 4, -2), Rotation.NONE, owner, false);
             var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
             if (site == null || worker == null) {

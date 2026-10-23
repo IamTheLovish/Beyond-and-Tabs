@@ -986,7 +986,7 @@ public class BotPlayer {
      * worth walking twice as far for - BARbarian's expansion rule. Patches next to enemy buildings are skipped (don't
      * send workers to die), and a patch whose placement failed waits two minutes.
      */
-    BlockPos freePatch(ServerLevel level) {
+    public BlockPos freePatch(ServerLevel level) {
         long now = level.getGameTime();
         return bestPatch(home, MetalPatches.getPatches(level), MetalPatches::valueOf, p -> {
             if (patchFailures.getOrDefault(p, 0) >= PATCH_GIVE_UP)
