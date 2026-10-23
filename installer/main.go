@@ -7,7 +7,9 @@
 //  4. Creates a Prism instance that updates itself from that pack before every launch (packwiz), so a tester always
 //     runs the same build as the host's server - the mods are fetched on the first launch
 //  5. Puts a "lovish" shortcut (his cat as the icon) on the Desktop and in the Start Menu
-//  6. Opens Prism Launcher so you can sign in with your Microsoft account and play
+//  6. Sets up the cat bubble: a round, always-on-top bubble that starts the game when clicked (bubble/bubble.ps1),
+//     with a "Beyond and Tabs bubble" Desktop shortcut to bring it back
+//  7. Opens Prism Launcher so you can sign in with your Microsoft account and play
 //
 // Re-running it is safe: anything already in place is kept, anything missing is fetched.
 package main
@@ -162,13 +164,17 @@ func run() error {
 	if err := shortcuts(prismExe, prismDir); err != nil {
 		fmt.Println("      (could not create shortcuts:", err, ")")
 	}
+	if err := bubble(root, filepath.Join(prismDir, shortcutName+".ico")); err != nil {
+		fmt.Println("      (could not set up the cat bubble:", err, ")")
+	}
 
 	fmt.Println("\nAll done!")
 	fmt.Println("Prism Launcher will open now. Add your Microsoft (Minecraft) account when it asks,")
 	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
 	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
 	fmt.Println("Every later launch updates the game to the newest build automatically.")
-	fmt.Println("\nNext time, use the \"" + shortcutName + "\" shortcut on your Desktop.")
+	fmt.Println("\nNext time, click the cat bubble on your screen (or the \"" + shortcutName + "\" shortcut on your Desktop).")
+	fmt.Println("Drag the bubble to move it; right-click it to start it with Windows or close it.")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
 	cmd.Dir = prismDir
