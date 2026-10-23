@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.TitanMass;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 
@@ -124,6 +125,11 @@ public class PerfPushGameTests {
             for (Mob b : brutes)
                 b.setDeltaMovement(Vec3.ZERO);
             mammoth.setDeltaMovement(Vec3.ZERO);
+            StringBuilder why = new StringBuilder();
+            for (Mob b : brutes)
+                why.append(String.format(java.util.Locale.ROOT, "[small %b pushable %b overlap %b y %.2f/%.2f w %.2f/%.2f] ",
+                    TitanMass.isSmallBody(mammoth, b), b.isPushable(), b.getBoundingBox().intersects(mammoth.getBoundingBox()),
+                    b.getY(), mammoth.getY(), b.getBbWidth(), mammoth.getBbWidth()));
             mammoth.tick();   // its push pass runs inside the tick
             List<String> weak = new ArrayList<>();
             for (Mob b : brutes) {
@@ -137,7 +143,7 @@ public class PerfPushGameTests {
             if (weak.isEmpty())
                 helper.succeed();
             else
-                helper.fail("the mammoth did not shove " + weak.size() + " of 3 Brutes by its 0.12 (pushed only " + weak + "; vanilla is at most 0.05)");
+                helper.fail("the mammoth did not shove " + weak.size() + " of 3 Brutes by its 0.12 (pushed only " + weak + "; vanilla is at most 0.05) " + why);
         });
     }
 }
