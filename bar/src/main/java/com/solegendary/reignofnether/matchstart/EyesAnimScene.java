@@ -121,6 +121,9 @@ public final class EyesAnimScene {
     private static int leg = 0, legTicks = 0;
     private static int dummyCheckAt = 0;
     // the camera + capture hooks run on the render thread (static fields read by both)
+    // The scene's own clock in client ticks. NOT level.getGameTime(): ClientLevelMixin.tickTime replaces the client's game
+    // time with the day clock tracking TimeClientEvents.targetClientTime (it read 500 for ever in the first photo run).
+    private static volatile int sceneClock = 0;
     private static volatile double[] lastPose = null;   // x, feet y, z, yaw, pitch of the last camera
     private static volatile boolean camOn = false;
     private static volatile boolean recording = false;
@@ -148,6 +151,7 @@ public final class EyesAnimScene {
             return true;
         }
         phaseTicks++;
+        sceneClock++;
         // First person has no GUI screen over the world, and an Xvfb window that never has focus makes the game open its
         // pause menu after half a second - which freezes the world (the unit never moves, the game clock stops, and the
         // frame pacing here, which runs on game time, stops with it). The RTS camera's screen kept that from happening.
@@ -196,6 +200,7 @@ public final class EyesAnimScene {
             OrthoviewClientEvents.toggleEnable();
         OrthoviewClientEvents.centreCameraOnPosInstant(spot);   // loads the pad's chunks
         mc.options.hideGui = true;
+        mc.getEntityRenderDispatcher().setRenderHitBoxes(false);   // the RTS view draws hitboxes; a photo of a model needs none
         UnitClientEvents.clearSelectedUnits();
         placePad(mc);
         ReignOfNether.LOGGER.info("[Eyes] 20_anim: {} run(s) on a pad at {}: {}", STEPS.size(), EyesDirector.fmt(spot), SPEC);
@@ -366,7 +371,7 @@ public final class EyesAnimScene {
             return;
         Entity now = subject(mc);
         captureEvery = Math.max(1.0, r.rec() / (double) FRAMES);
-        double clock = mc.level.getGameTime();
+        double clock = sceneClock;
         nextCapture = clock;
         frameNo = 0;
         recording = true;
@@ -391,10 +396,25 @@ public final class EyesAnimScene {
     private static void rec(Minecraft mc) {
         Run r = current();
         Entity e = subject(mc);
-        if (phaseTicks % 20 == 1)   // a heartbeat: is the game clock running, are frames coming, does the unit move
-            ReignOfNether.LOGGER.info("[Eyes] anim-beat {} tick {} clock {} frames {} unit {} wall {} s screen {} paused {}", stepIdx,
-                    phaseTicks, mc.level.getGameTime(), frameNo, e == null ? "gone" : EyesDirector.fmt(e.position()),
+        if (phaseTicks % 20 == 1) {   // a heartbeat: is the clock running, are frames coming, does the unit move (client and server side)
+            ReignOfNether.LOGGER.info("[Eyes] anim-beat {} tick {} frames {} unit {} wall {} s screen {} paused {}", stepIdx,
+                    phaseTicks, frameNo, e == null ? "gone" : EyesDirector.fmt(e.position()),
                     String.format("%.1f", seconds()), mc.screen == null ? "none" : mc.screen.getClass().getSimpleName(), mc.isPaused());
+            int id = camId;
+            var server = mc.getSingleplayerServer();
+            server.execute(() -> {
+                try {
+                    Entity se = server.overworld().getEntity(id);
+                    ReignOfNether.LOGGER.info("[Eyes] anim-beat-server tick {} unit {} noAi {} navDone {} owner-side game time {}",
+                            server.getTickCount(), se == null ? "gone" : EyesDirector.fmt(se.position()),
+                            se instanceof net.minecraft.world.entity.Mob m ? m.isNoAi() : "-",
+                            se instanceof net.minecraft.world.entity.Mob m2 ? m2.getNavigation().isDone() : "-",
+                            server.overworld().getGameTime());
+                } catch (Exception ex) {
+                    ReignOfNether.LOGGER.error("[Eyes] anim-beat-server failed", ex);
+                }
+            });
+        }
         switch (r.clip()) {
             case "attack" -> {
                 // the dummy dies under the blows: a fresh one when none is left near, and the order again
@@ -540,7 +560,7 @@ public final class EyesAnimScene {
     }
 
     private static void capture(Minecraft mc, float partial) {
-        double clock = mc.level.getGameTime() + partial;
+        double clock = sceneClock + partial;
         if (clock < nextCapture)
             return;
         nextCapture = clock + captureEvery;
