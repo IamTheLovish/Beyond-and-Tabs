@@ -227,7 +227,15 @@ public class BotArmy {
                 if (lastOrderAt < 0 || gameTime - lastOrderAt >= 40) {
                     lastOrderAt = gameTime;
                     stance(fighters, EngagementStance.FIRE_AT_WILL);
-                    bot.order(fighters, UnitAction.ATTACK_MOVE, meetingPoint(level, intruder));
+                    // only the fighters not already in a fight: a new order resets a unit's behaviours (its target,
+                    // a melee windup in progress, its path), and this repeats every 2 s for as long as the intruder
+                    // is near - the whole home guard dropped its fight every 40 ticks (lovish's Oct 22 1v1, "units
+                    // weren't attacking each other"). A unit whose fight ends picks up the next order 2 s later.
+                    List<LivingEntity> free = new ArrayList<>(fighters.size());
+                    for (LivingEntity le : fighters)
+                        if (!inFight(le))
+                            free.add(le);
+                    bot.order(free, UnitAction.ATTACK_MOVE, meetingPoint(level, intruder));
                 }
                 return;
             }
@@ -613,6 +621,14 @@ public class BotArmy {
     }
 
     /** Sets a fire state on the units (applied at once, like a player's toggle; skipped for units already in it). */
+    /** Fighting right now: a live unit target, or a building it is hitting. */
+    static boolean inFight(LivingEntity le) {
+        if (le instanceof net.minecraft.world.entity.Mob m && m.getTarget() != null && m.getTarget().isAlive())
+            return true;
+        return le instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit au
+            && com.solegendary.reignofnether.unit.interfaces.AttackerUnit.isAttackingBuilding(au);
+    }
+
     void stance(List<LivingEntity> units, EngagementStance s) {
         int n = 0;
         for (LivingEntity le : units)

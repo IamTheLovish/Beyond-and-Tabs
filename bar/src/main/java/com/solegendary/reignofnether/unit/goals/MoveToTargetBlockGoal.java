@@ -102,6 +102,12 @@ public class MoveToTargetBlockGoal extends Goal {
     private long lastRequestTime = Long.MIN_VALUE / 2;   // game time of the last path request
     private long lastProgressTime = Long.MIN_VALUE / 2;  // game time the unit last got closer than ever to moveTarget
     private double bestDistSq = Double.MAX_VALUE;        // closest it has been to moveTarget (horizontal, squared)
+    // headway, for the contact rule (ticksWithoutProgress): the last time it got HEADWAY blocks closer than at the
+    // previous mark. Stricter than the 0.3-block progress above, which a unit squeezing through an enemy army inches
+    // out every few samples (CI, CombatEngageGameTests: 43 of 150 movers stood in contact with no target at 15 s)
+    public static final double HEADWAY = 1.0;
+    private double headwayMarkDist = Double.MAX_VALUE;
+    private long lastHeadwayTime = Long.MIN_VALUE / 2;
 
     // Async requests answered "busy" (pool/queue saturated) in a row. Each busy answer used to retry in 20 ticks with
     // the unit stood still - forever while the pool stayed saturated. After BUSY_FALLBACK_AFTER in a row, the unit
@@ -132,6 +138,11 @@ public class MoveToTargetBlockGoal extends Goal {
             bestDistSq = d;
             lastProgressTime = this.mob.level().getGameTime();
         }
+        double dist = Math.sqrt(d);
+        if (headwayMarkDist == Double.MAX_VALUE || dist < headwayMarkDist - HEADWAY) {
+            headwayMarkDist = dist;
+            lastHeadwayTime = this.mob.level().getGameTime();
+        }
     }
 
     /**
@@ -147,6 +158,18 @@ public class MoveToTargetBlockGoal extends Goal {
         if (this.mob.getNavigation().isDone())
             return false;
         return now - lastProgressTime <= PROGRESS_WINDOW;
+    }
+
+    /**
+     * How long this unit has held a move target without real headway: ticks since it last got {@link #HEADWAY} blocks
+     * closer (or since the order, or since its last path request while one is in flight). 0 with no move target.
+     * AttackerUnit's contact rule reads it: a unit blocked on a move order fights what it touches.
+     */
+    public long ticksWithoutProgress() {
+        if (moveTarget == null)
+            return 0;
+        long since = pathPending ? Math.max(lastHeadwayTime, lastRequestTime) : lastHeadwayTime;
+        return Math.max(0, this.mob.level().getGameTime() - since);
     }
 
     public MoveToTargetBlockGoal(Mob mob, boolean persistent, int reachRange) {
@@ -420,6 +443,8 @@ public class MoveToTargetBlockGoal extends Goal {
             // is still redundant while the first path comes in)
             bestDistSq = Double.MAX_VALUE;
             lastProgressTime = this.mob.level().getGameTime();
+            headwayMarkDist = Double.MAX_VALUE;
+            lastHeadwayTime = lastProgressTime;
         }
         this.moveTarget = bp;
 

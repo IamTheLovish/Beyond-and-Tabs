@@ -257,6 +257,52 @@ public interface AttackerUnit {
         return CommandQueues.queuedCount(unitMob.getId()) > 0;
     }
 
+    /**
+     * The contact rule. A unit on a plain move order used to ignore the enemy completely until the move ended: no idle
+     * aggro and no retaliation, both of which wait for {@link Unit#isIdle}. A move that runs into the enemy army never
+     * ends on time - the unit is body-blocked short of its formation cell, Separation keeps it twitching (so isIdle's
+     * "standing still" test fails too), and the move only gives up after three repaths that end on the same node:
+     * 7 s at best, far longer in a crowd. So in lovish's Oct 22 1v1 (hundreds a side) his right-clicked army stood
+     * pressed into the bot's wave, taking hits and not swinging back. BAR's move does not chase, but its units still
+     * fire at whatever is in range; here a unit whose move has made no headway (a block closer,
+     * MoveToTargetBlockGoal.ticksWithoutProgress) for {@link #CONTACT_STALL_TICKS} ticks (a shooter
+     * {@link #RANGED_STALL_TICKS}) fights: it answers whoever hits it and takes the nearest enemy within
+     * {@link #contactRange} - arm's length for melee, weapon range for a shooter. The blocked move is dropped (it
+     * would have given up anyway); a unit that is getting closer keeps walking past the enemy, as before (a move away
+     * from a fight still works).
+     */
+    int CONTACT_STALL_TICKS = 30;
+    int RANGED_STALL_TICKS = 60;
+    /** Past the melee swing (two body widths): the rule takes an enemy the unit is touching, not one a step off. */
+    double CONTACT_MARGIN = 1.0;
+
+    static boolean isMelee(AttackerUnit attackerUnit) {
+        return attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal;
+    }
+
+    /** Arm's length for melee (its swing plus {@link #CONTACT_MARGIN}), weapon range for a shooter. */
+    static double contactRange(AttackerUnit attackerUnit) {
+        if (!isMelee(attackerUnit))
+            return attackerUnit.getAttackRange();
+        Mob mob = (Mob) attackerUnit;
+        return Math.max(attackerUnit.getAttackRange(),
+            mob.getBbWidth() * 2.0 + attackerUnit.getBonusMeleeRange() + CONTACT_MARGIN);
+    }
+
+    /** On a plain move order that stopped getting closer (see the contact rule above) and doing nothing else. */
+    static boolean blockedOnMove(AttackerUnit attackerUnit) {
+        Unit unit = (Unit) attackerUnit;
+        Mob mob = (Mob) attackerUnit;
+        MoveToTargetBlockGoal moveGoal = unit.getMoveGoal();
+        if (moveGoal == null || moveGoal.getMoveTarget() == null)
+            return false;
+        if (attackerUnit.getAttackMoveTarget() != null || unit.hasLivingTarget() || isAttackingBuilding(attackerUnit)
+                || unit.getFollowTarget() != null || unit.getHoldPosition() || mob.isPassenger() || unit.isFlyingUnit()
+                || GarrisonableBuildingAddon.getGarrison(unit) != null)
+            return false;   // (a flyer is never body-blocked, and its move goal keeps no headway clock)
+        return moveGoal.ticksWithoutProgress() >= (isMelee(attackerUnit) ? CONTACT_STALL_TICKS : RANGED_STALL_TICKS);
+    }
+
     /** True when the building being attacked was ordered (forced), not picked up on the way. */
     static boolean isBuildingTargetForced(AttackerUnit attackerUnit) {
         Goal attackBuildingGoal = attackerUnit.getAttackBuildingGoal();
@@ -374,12 +420,15 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
+            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove)
+            boolean blocked = !isCasting && blockedOnMove(attackerUnit);
+
             // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
-            // unit's queue counts: see ordersWaiting
+            // unit's queue counts: see ordersWaiting. A move order that is blocked does not count (the contact rule)
             if (unitMob.getLastDamageSource() != null &&
                     attackerUnit.getWillRetaliate() && EngagementStance.mayRetaliate(unitMob) &&
                     unit.getTargetGoal().getTarget() == null &&
-                    !isCasting && ((unit.isIdle() && !ordersWaiting(unitMob)) || (isAttackingBuilding && !forced))) {
+                    !isCasting && ((unit.isIdle() && !ordersWaiting(unitMob)) || (isAttackingBuilding && !forced) || blocked)) {
 
                 Entity lastDSEntity = unitMob.getLastDamageSource().getEntity();
 
@@ -399,7 +448,24 @@ public interface AttackerUnit {
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {
 
+                    if (blocked)
+                        unit.getMoveGoal().stopMoving();   // the blocked move is over: it fights where it stands
                     attackerUnit.setUnitAttackTarget((LivingEntity) lastDSEntity);
+                }
+            }
+            // the contact rule: a blocked mover takes the nearest enemy it touches (a shooter: in weapon range)
+            if (blocked && fireAtWill && attackerUnit.getAggressiveWhenIdle() && unit.getTargetGoal().getTarget() == null) {
+                LivingEntity foe;
+                int sysContact = Sys.begin(Sys.ENTITY_SCAN);
+                try {
+                    foe = MiscUtil.findClosestAttackableEntity(unitMob, (float) contactRange(attackerUnit),
+                        (ServerLevel) unitMob.level());
+                } finally {
+                    Sys.end(sysContact);
+                }
+                if (foe != null) {
+                    unit.getMoveGoal().stopMoving();
+                    attackerUnit.setUnitAttackTarget(foe);
                 }
             }
             // idle auto-aggression
