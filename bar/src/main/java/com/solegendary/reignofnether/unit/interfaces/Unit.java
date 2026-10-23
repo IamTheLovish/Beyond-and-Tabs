@@ -425,6 +425,9 @@ public interface Unit {
         if (!unitMob.level().isClientSide())
             com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
         if (!unitMob.level().isClientSide() && !possessed) {
+            // the first step or turn answering an order goes to the players at once, not on the tracker's 3-tick beat
+            // (before Separation below, which may push the unit: only its own movement this tick counts)
+            com.solegendary.reignofnether.unit.OrderAck.tick(unitMob);
             // each of these is a named section for the profiler and the [Sys] line (perf/Sys)
             // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
             int sysUnstick = Sys.begin(Sys.UNSTICK);
