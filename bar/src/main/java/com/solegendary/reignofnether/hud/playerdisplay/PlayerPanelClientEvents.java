@@ -7,12 +7,14 @@ import com.solegendary.reignofnether.building.buildings.placements.ProductionPla
 import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.hud.HoverCards;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.HudLayout;
 import com.solegendary.reignofnether.hud.HudPanels;
 import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.match.PlayerListRule;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
@@ -110,6 +112,14 @@ public class PlayerPanelClientEvents {
         }
     }
 
+    /** This player brought the list up with its key while the match option "Player list" is off (match.PlayerListRule). */
+    public static boolean playerOpened = false;
+
+    /** Whether the strip / table is drawn at all: the match shows it for everyone, or this player opened it. */
+    static boolean listVisible() {
+        return PlayerListRule.visible(GameruleClient.showPlayerList, playerOpened);
+    }
+
     private static List<Line> lines = List.of();
     private static List<Row> playersRows = List.of(), ecoRows = List.of(), armyRows = List.of();
     private static List<Row> prodRows = List.of();
@@ -150,7 +160,7 @@ public class PlayerPanelClientEvents {
      * centre-top alert banner and toasts left of it (HudClientEvents.alertColumn) so they never draw over it.
      */
     public static int visibleLeft(int screenWidth) {
-        if (!HudPanels.showExtras() || lines.isEmpty() || !OrthoviewClientEvents.isEnabled() || isAnyMenuOpen())
+        if (!HudPanels.showExtras() || !listVisible() || lines.isEmpty() || !OrthoviewClientEvents.isEnabled() || isAnyMenuOpen())
             return Integer.MAX_VALUE;
         return screenWidth - RIGHT_MARGIN - (HudPanels.statsOpen ? PANEL_W : stripW);
     }
@@ -162,6 +172,8 @@ public class PlayerPanelClientEvents {
     public static int feedTop(int screenWidth) {
         if (zoneOn)
             return zoneY + zoneH + 2;
+        if (!listVisible())   // nothing drawn up there: the feed takes the corner
+            return HudLayout.STATS_TOP;
         var bar = HudClientEvents.economyBar;
         int x = screenWidth - RIGHT_MARGIN - HudLayout.FEED_MAX_W;
         return (bar == null ? HudLayout.STATS_TOP
@@ -380,6 +392,7 @@ public class PlayerPanelClientEvents {
     }
 
     public static void clear() {
+        playerOpened = false;
         lines = List.of();
         playersRows = List.of();
         ecoRows = List.of();
@@ -442,7 +455,7 @@ public class PlayerPanelClientEvents {
     @SubscribeEvent
     public static void onDrawScreen(ScreenEvent.Render.Post evt) {
         zoneOn = false;
-        if (!HudPanels.showExtras() || lines.isEmpty() || !OrthoviewClientEvents.isEnabled()
+        if (!HudPanels.showExtras() || !listVisible() || lines.isEmpty() || !OrthoviewClientEvents.isEnabled()
                 || !(evt.getScreen() instanceof TopdownGui) || MC.level == null)
             return;
         // step aside for every menu or overlay drawn over the RTS view: it rendered on top of the diplomacy screen's

@@ -96,6 +96,7 @@ public class MultiplayerLobby {
     static boolean choosePositions = true;   // BAR's start-position phase before the match
     static int timeOfDay = 0;                // match.TimeOfDay id: the light at Start (morning)
     static int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id
+    static boolean playerList = com.solegendary.reignofnether.match.PlayerListRule.DEFAULT;   // lobby "Player list": drawn from the start
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -147,7 +148,8 @@ public class MultiplayerLobby {
         SET_PACE,  // appended: actions travel by ordinal
         SET_MAP, SET_STARTPOS,
         SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
-        SET_TIME, SET_CYCLE   // the match sun: match.TimeOfDay id, match.DayCycle id
+        SET_TIME, SET_CYCLE,  // the match sun: match.TimeOfDay id, match.DayCycle id
+        SET_PLAYER_LIST       // appended: 1 = the player list is drawn for everyone from the start (match.PlayerListRule)
     }
 
     static Seat seat(int id) {
@@ -314,6 +316,11 @@ public class MultiplayerLobby {
                 if (!host || value < 0 || value >= com.solegendary.reignofnether.match.DayCycle.count())
                     return false;
                 dayCycle = value;
+            }
+            case SET_PLAYER_LIST -> {
+                if (!host || value < 0 || value > 1)
+                    return false;
+                playerList = value == 1;
             }
             case SET_ROLE -> {
                 // only a human may play the hero, and only from a team seat (a spectator has no team to serve)
@@ -540,6 +547,7 @@ public class MultiplayerLobby {
         // the host's light and day/night cycle (match.DayClock moves the sun once the match is played)
         com.solegendary.reignofnether.match.DayClock.apply(level, com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay),
             com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
+        com.solegendary.reignofnether.gamerules.GameruleServerEvents.applyShowPlayerList(server, playerList);
         com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
         if (preset.premade() || choosePositions) {
             // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated

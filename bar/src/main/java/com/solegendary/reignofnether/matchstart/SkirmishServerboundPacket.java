@@ -53,6 +53,7 @@ public class SkirmishServerboundPacket {
     private final long mapSeed;               // the pre-made map's seed, rolled by the lobby (its preview shows it)
     private final int timeOfDay;              // match.TimeOfDay id: the light at Start
     private final int dayCycle;               // match.DayCycle id: whether and how fast the sun then moves
+    private final boolean playerList;         // lobby "Player list": the stats strip is drawn from the start (match.PlayerListRule)
 
     public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance, int pace) {
         this(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace, 0, false);
@@ -67,6 +68,14 @@ public class SkirmishServerboundPacket {
     public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
                                      int spawnDistance, int pace, int map, boolean choosePositions, long mapSeed,
                                      int timeOfDay, int dayCycle) {
+        this(faction, colorMapId, team, bots, arena, metal, spawnDistance, pace, map, choosePositions, mapSeed,
+            timeOfDay, dayCycle, com.solegendary.reignofnether.match.PlayerListRule.DEFAULT);
+    }
+
+    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                                     int spawnDistance, int pace, int map, boolean choosePositions, long mapSeed,
+                                     int timeOfDay, int dayCycle, boolean playerList) {
+        this.playerList = playerList;
         this.mapSeed = mapSeed;
         this.timeOfDay = timeOfDay;
         this.dayCycle = dayCycle;
@@ -99,6 +108,13 @@ public class SkirmishServerboundPacket {
             spawnDistance, pace, map, choosePositions, mapSeed, timeOfDay, dayCycle));
     }
 
+    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal,
+                            int spawnDistance, int pace, int map, boolean choosePositions, long mapSeed, int timeOfDay,
+                            int dayCycle, boolean playerList) {
+        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal,
+            spawnDistance, pace, map, choosePositions, mapSeed, timeOfDay, dayCycle, playerList));
+    }
+
     public SkirmishServerboundPacket(FriendlyByteBuf buf) {
         faction = buf.readByte();
         colorMapId = buf.readInt();
@@ -116,6 +132,7 @@ public class SkirmishServerboundPacket {
         mapSeed = buf.readLong();
         timeOfDay = buf.readByte();
         dayCycle = buf.readByte();
+        playerList = buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -138,6 +155,7 @@ public class SkirmishServerboundPacket {
         buf.writeLong(mapSeed);
         buf.writeByte(timeOfDay);
         buf.writeByte(dayCycle);
+        buf.writeBoolean(playerList);
     }
 
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
@@ -292,6 +310,7 @@ public class SkirmishServerboundPacket {
             com.solegendary.reignofnether.match.TimeOfDay light = com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay);
             com.solegendary.reignofnether.match.DayClock.apply(player.serverLevel(), light,
                 com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
+            com.solegendary.reignofnether.gamerules.GameruleServerEvents.applyShowPlayerList(player.getServer(), playerList);
             ReignOfNether.LOGGER.info("[Skirmish] time of day {}, map seed {}", light.name(), mapSeed);
             // a pre-made map and/or the start-position phase: the same road as the multiplayer lobby, with this
             // lobby's line-up as seats (design/maps.md). Random terrain with Auto starts keeps the instant path below
