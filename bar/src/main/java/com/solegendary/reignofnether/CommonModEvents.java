@@ -177,6 +177,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit.createAttributes().build());
         evt.put(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit.createDroneAttributes().build());
         // big-units: the T2 beasts
         evt.put(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit.createAttributes().build());

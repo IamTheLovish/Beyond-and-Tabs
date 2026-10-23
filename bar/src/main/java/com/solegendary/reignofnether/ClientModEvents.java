@@ -286,6 +286,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
         evt.registerEntityRenderer(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ArchEngineer::new);
         evt.registerEntityRenderer(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.IronLeviathanEngineRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BrassZeppelinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkDroneRenderer::new);
         // big-units: the T2 beasts
         evt.registerEntityRenderer(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OriflammeElephantRenderer::new);

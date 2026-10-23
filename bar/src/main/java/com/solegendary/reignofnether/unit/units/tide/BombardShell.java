@@ -50,6 +50,8 @@ public class BombardShell extends ThrowableItemProjectile {
     private double splashRadius = SPLASH_RADIUS;
     /** > 0: a molten shell (Magma Hurler): units it hits burn this long and the ground burns for as long. */
     private int burnTicks = 0;
+    /** True for a bomb (Brass Zeppelin): flying units are neither hit in flight nor hurt by the burst - bombs fall on the ground. */
+    private boolean groundOnly = false;
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results (server thread)
 
@@ -78,6 +80,14 @@ public class BombardShell extends ThrowableItemProjectile {
         this.burnTicks = burn;
         return this;
     }
+
+    /** Makes this a bomb that spares flyers (the Brass Zeppelin's carpet). Returns itself. */
+    public BombardShell groundOnly() {
+        this.groundOnly = true;
+        return this;
+    }
+
+    public boolean isGroundOnly() { return groundOnly; }
 
     public double getSplashRadius() { return splashRadius; }
     public int getBurnTicks() { return burnTicks; }
@@ -132,6 +142,8 @@ public class BombardShell extends ThrowableItemProjectile {
     protected boolean canHitEntity(@NotNull Entity e) {
         if (!super.canHitEntity(e))
             return false;
+        if (groundOnly && e instanceof Unit f && f.isFlyingUnit())
+            return false;
         return !(e instanceof Unit u) || isEnemy(u.getOwnerName());
     }
 
@@ -166,6 +178,8 @@ public class BombardShell extends ThrowableItemProjectile {
         List<LivingEntity> hit = new ArrayList<>();
         for (LivingEntity le : UnitGrid.near(sl, x, z, r + 1, scratch)) {
             if (!le.isAlive() || !(le instanceof Unit u) || le.level() != sl || !isEnemy(u.getOwnerName()))
+                continue;
+            if (groundOnly && u.isFlyingUnit())
                 continue;
             if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > r + 1)
                 continue;
@@ -210,6 +224,7 @@ public class BombardShell extends ThrowableItemProjectile {
         tag.putInt("BombardFuse", fuseTicks);
         tag.putDouble("BombardRadius", splashRadius);
         tag.putInt("BombardBurn", burnTicks);
+        tag.putBoolean("BombardGroundOnly", groundOnly);
     }
 
     @Override
@@ -220,5 +235,6 @@ public class BombardShell extends ThrowableItemProjectile {
         fuseTicks = tag.contains("BombardFuse") ? tag.getInt("BombardFuse") : 80;
         splashRadius = tag.contains("BombardRadius") ? tag.getDouble("BombardRadius") : SPLASH_RADIUS;
         burnTicks = tag.getInt("BombardBurn");
+        groundOnly = tag.getBoolean("BombardGroundOnly");
     }
 }

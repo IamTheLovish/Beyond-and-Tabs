@@ -143,6 +143,7 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
+    ('Brassworks', 't3', 'brass/BrassZeppelinUnit', 'experimental'),
     # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an
     # aura, a lane charge through buildings, growth from wrecks, carrying infantry), so 'beast' is exempt from the tier
     # medians and is never a faction's "T2 heavy" for the T3 cost rule
@@ -200,7 +201,8 @@ OVERRIDES = {
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
 COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
                      'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B',
-                     'AbyssalHydraUnit': 'TIDE_T3B', 'ThornwingRocUnit': 'VERDANT_T3B'}
+                     'AbyssalHydraUnit': 'TIDE_T3B', 'ThornwingRocUnit': 'VERDANT_T3B',
+                     'BrassZeppelinUnit': 'BRASS_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')

@@ -245,5 +245,7 @@ public enum UnitAction {
     BELL_TOLL,              // Sunforged Cathedral Warden: telegraphed bell slows enemies in 12 for 5 s (second T3)
     BRINE_MIST,             // Tidewrought Abyssal Hydra: 8-wide fog cloud for 6 s, friends hidden, enemy shots at them miss half (second T3)
     GALE_WINGS,             // Verdant Thornwing Roc: wing-beat cone knocks ground units back and pushes flyers (second T3)
-    SEED_RAIN               // Verdant Thornwing Roc: telegraphed seed line, thickets root ground enemies 1 s and slow 3 s (second T3)
+    SEED_RAIN,              // Verdant Thornwing Roc: telegraphed seed line, thickets root ground enemies 1 s and slow 3 s (second T3)
+    CARPET_BOMB,            // Brassworks Brass Zeppelin: telegraphed 20-block line, bombs fall on ground units and buildings under it (second T3)
+    BALLAST_DUMP            // Brassworks Brass Zeppelin: 5 s of +40% speed, no firing, steam vent (second T3)
 }

@@ -298,6 +298,7 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
 		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
 		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
+		registerEntity(BRASSWORKS, EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), ProductionItems.BRASS_T3B);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
 		// big-units (design/big_units.md): the T2 beasts
 		registerEntity(VILLAGERS, EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), ProductionItems.ORIFLAMME_ELEPHANT);
