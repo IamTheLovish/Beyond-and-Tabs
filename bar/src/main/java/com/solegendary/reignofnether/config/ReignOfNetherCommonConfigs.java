@@ -115,6 +115,13 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.REPAIR_CRAWLER.define(BUILDER);
         UnitCosts.CLOCKWORK_SPIDER.define(BUILDER);
         UnitCosts.IRON_LEVIATHAN_ENGINE.define(BUILDER);
+        UnitCosts.SUN_T3B.define(BUILDER);
+        UnitCosts.GRAVE_T3B.define(BUILDER);
+        UnitCosts.HORDE_T3B.define(BUILDER);
+        UnitCosts.VERDANT_T3B.define(BUILDER);
+        UnitCosts.TIDE_T3B.define(BUILDER);
+        UnitCosts.STORM_T3B.define(BUILDER);
+        UnitCosts.BRASS_T3B.define(BUILDER);
         // big-units: the T2 beasts (design/big_units.md)
         UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
         UnitCosts.GOREHORN_RHINO.define(BUILDER);
@@ -529,6 +536,14 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
         // slice 4: the Iron Leviathan Engine is the standard experimental price (the World Tree Walker's / Celestial Dragon's)
         public static final ResourceCostConfigEntry IRON_LEVIATHAN_ENGINE = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.IRON_LEVIATHAN_ENGINE, "Iron Leviathan Engine Config");
+        // the second T3 per faction (slice T3b-1): the standard experimental price, tunable on its own
+        public static final ResourceCostConfigEntry SUN_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.SUN_T3B, "Sunforged T3b Config");
+        public static final ResourceCostConfigEntry GRAVE_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.GRAVE_T3B, "Gravebound T3b Config");
+        public static final ResourceCostConfigEntry HORDE_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.HORDE_T3B, "Horde T3b Config");
+        public static final ResourceCostConfigEntry VERDANT_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.VERDANT_T3B, "Verdant T3b Config");
+        public static final ResourceCostConfigEntry TIDE_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.TIDE_T3B, "Tidewrought T3b Config");
+        public static final ResourceCostConfigEntry STORM_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.STORM_T3B, "Stormcallers T3b Config");
+        public static final ResourceCostConfigEntry BRASS_T3B = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BRASS_T3B, "Brassworks T3b Config");
         // big-units (design/big_units.md): the T2 beasts cost ~2-2.3x their faction's T2 heavy - 780M/730E elephant
         // (1.9x the Siege Ox), 540M/490E rhino (2.2x the Wither Skeleton), 550M/400E behemoth (1.9x the Warden: it grows),
         // 465M/460E bison (2x the Stag Lancer)

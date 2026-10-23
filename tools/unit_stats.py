@@ -32,6 +32,7 @@ ROSTER = [
     ('Sunforged', 't2', 'villagers/IronGolemUnit', 'tank'),
     ('Sunforged', 't2', 'villagers/RavagerUnit', 'siege'),
     ('Sunforged', 't3', 'villagers/SunColossusUnit', 'experimental'),
+    ('Sunforged', 't3', 'villagers/CathedralWardenUnit', 'experimental'),
     # Gravebound (monsters)
     ('Gravebound', 'worker', 'monsters/ZombieVillagerUnit', 'builder'),
     ('Gravebound', 'worker2', 'monsters/EmbalmerUnit', 'builder'),
@@ -48,6 +49,7 @@ ROSTER = [
     ('Gravebound', 't2', 'monsters/CreeperUnit', 'suicide'),
     ('Gravebound', 't2', 'monsters/WraithUnit', 'caster'),
     ('Gravebound', 't2', 'monsters/WardenUnit', 'tank'),
+    ('Gravebound', 't3', 'monsters/PlagueAbominationUnit', 'experimental'),
     ('Gravebound', 't3', 'monsters/BoneDragonUnit', 'experimental'),
     # Horde (piglins)
     ('Horde', 'worker', 'piglins/GruntUnit', 'builder'),
@@ -62,6 +64,7 @@ ROSTER = [
     ('Horde', 't2', 'piglins/MagmaCubeUnit', 'merger'),
     ('Horde', 't2', 'piglins/GhastUnit', 'artillery'),
     ('Horde', 't3', 'piglins/WarMammothUnit', 'experimental'),
+    ('Horde', 't3', 'piglins/MagmaHurlerUnit', 'experimental'),
     # Verdant Court
     ('Verdant', 'worker', 'verdant/SeedshaperUnit', 'builder'),
     ('Verdant', 'worker2', 'verdant/ElderDruidUnit', 'builder'),
@@ -78,6 +81,7 @@ ROSTER = [
     ('Verdant', 't2', 'verdant/ShadeRangerUnit', 'sniper'),
     ('Verdant', 't2', 'verdant/BloomPriestessUnit', 'support'),
     ('Verdant', 't3', 'verdant/WorldTreeWalkerUnit', 'experimental'),
+    ('Verdant', 't3', 'verdant/ThornwingRocUnit', 'experimental'),
     # Tidewrought
     ('Tidewrought', 'worker', 'tide/ShipwrightUnit', 'builder'),
     ('Tidewrought', 't1', 'tide/GullSpotterUnit', 'scout'),
@@ -93,6 +97,7 @@ ROSTER = [
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
     ('Tidewrought', 't3', 'tide/LeviathanUnit', 'experimental'),
+    ('Tidewrought', 't3', 'tide/AbyssalHydraUnit', 'experimental'),
     # Stormcallers (slices 1-3)
     ('Stormcallers', 'worker', 'storm/GeomancerUnit', 'builder'),
     ('Stormcallers', 't1', 'storm/PaperCraneUnit', 'scout'),
@@ -116,6 +121,7 @@ ROSTER = [
     ('Stormcallers', 't2', 'storm/LanternFortressUnit', 'support'),
     ('Stormcallers', 't2', 'storm/PhoenixUnit', 'skirmisher'),
     ('Stormcallers', 't3', 'storm/CelestialDragonUnit', 'experimental'),
+    ('Stormcallers', 't3', 'storm/JadeSentinelUnit', 'experimental'),
     # Brassworks (slice 1): Heat (vents after a burst of fire) is what the table can't see on the machines
     ('Brassworks', 'worker', 'brass/TinkerUnit', 'builder'),
     ('Brassworks', 't1', 'brass/GyroScoutUnit', 'scout'),
@@ -137,6 +143,7 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
+    ('Brassworks', 't3', 'brass/BrassZeppelinUnit', 'experimental'),
     # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an
     # aura, a lane charge through buildings, growth from wrecks, carrying infantry), so 'beast' is exempt from the tier
     # medians and is never a faction's "T2 heavy" for the T3 cost rule
@@ -190,6 +197,12 @@ OVERRIDES = {
     # every third swing adds bigHitDamageMod (3): 7 + 3 / 3 = 8 average
     'MarauderUnit': {'attackDamage': 8.0},
 }
+
+# second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
+COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
+                     'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B',
+                     'AbyssalHydraUnit': 'TIDE_T3B', 'ThornwingRocUnit': 'VERDANT_T3B',
+                     'BrassZeppelinUnit': 'BRASS_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')
@@ -352,7 +365,7 @@ def unit_stats():
         if not st['maxHealth']:
             errors.append(f'{name}: no maxHealth found')
         prod = path.replace('Unit.java', 'Prod.java')
-        key = _cost_key(prod) if os.path.exists(prod) else None
+        key = _cost_key(prod) if os.path.exists(prod) else COST_KEY_OVERRIDES.get(name)
         cost = costs.get(key) if key else None
         if not cost:
             errors.append(f'{name}: no cost (Prod key {key})')

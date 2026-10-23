@@ -567,6 +567,11 @@ public class ProductionPlacement extends BuildingPlacement {
                     HudClientboundPacket.showTempMessageI18n(ownerName,
                         com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem));
                 }
+                else if (com.solegendary.reignofnether.unit.T3Cap.productionError(this, prodItem) != null) {
+                    // one alive of EACH T3 type per player, queued ones counted (unit/T3Cap)
+                    HudClientboundPacket.showTempMessageI18n(ownerName,
+                        com.solegendary.reignofnether.unit.T3Cap.productionError(this, prodItem));
+                }
                 else if (!prodItem.canProduce(this)) {
                     String errorMsg = prodItem.getProduceErrorMsg(this);
                     if (errorMsg != null) {

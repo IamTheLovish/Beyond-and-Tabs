@@ -129,6 +129,12 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WARDEN_UNIT.get(), WardenUnit.createAttributes().build());
         evt.put(EntityRegistrar.RAVAGER_UNIT.get(), RavagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.WAR_MAMMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.createAttributes().build());
+        evt.put(EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.createAttributes().build());
+        evt.put(EntityRegistrar.JADE_SENTINEL_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.createAttributes().build());
+        evt.put(EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THORNWING_ROC_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.createAttributes().build());
         evt.put(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRUNT_UNIT.get(), GruntUnit.createAttributes().build());
         evt.put(EntityRegistrar.BONEWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit.createAttributes().build());
@@ -171,6 +177,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ArchEngineerUnit.createAttributes().build());
         evt.put(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit.createDroneAttributes().build());
         // big-units: the T2 beasts
         evt.put(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantUnit.createAttributes().build());

@@ -220,6 +220,12 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WAR_MAMMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WarMammothRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.JADE_SENTINEL_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.JadeSentinelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.CathedralWardenRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.AbyssalHydraRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THORNWING_ROC_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornwingRocRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRUNT_UNIT.get(), PiglinUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BONEWRIGHT_UNIT.get(), PiglinUnitRenderer::new);
@@ -280,6 +286,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
         evt.registerEntityRenderer(EntityRegistrar.ARCH_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ArchEngineer::new);
         evt.registerEntityRenderer(EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.IronLeviathanEngineRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BrassZeppelinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_DRONE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkDroneRenderer::new);
         // big-units: the T2 beasts
         evt.registerEntityRenderer(EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.OriflammeElephantRenderer::new);

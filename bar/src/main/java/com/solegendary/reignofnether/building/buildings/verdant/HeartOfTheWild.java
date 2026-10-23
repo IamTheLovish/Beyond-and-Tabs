@@ -53,6 +53,7 @@ public class HeartOfTheWild extends ProductionBuilding {
         this.maxHealth = 800d;
 
         this.productions.add(ProductionItems.WORLD_TREE_WALKER, Keybindings.abilitySlot4);   // Court T3 experimental
+        this.productions.add(ProductionItems.VERDANT_T3B, Keybindings.abilitySlot5);   // second T3 (placeholder body), capped one alive each (T3Cap)
     }
 
     /** Server and client: null if this lab's owner has Tier 3, else the message to show (the experimental's gate). */

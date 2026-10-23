@@ -1273,6 +1273,12 @@ public class UnitServerEvents {
             float accuracyRoll = evt.getProjectile().getPersistentData().getFloat("accuracyRoll");
             if (accuracyRoll < unit.getEvasionChance())
                 evt.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
+            // Brine Mist (Abyssal Hydra): enemy shots at units inside it miss half the time (a second roll from the same fixed one)
+            else if (hit instanceof net.minecraft.world.entity.LivingEntity target && target.level() instanceof ServerLevel mistLevel
+                    && !com.solegendary.reignofnether.tide.FogBankServerEvents.isEmpty()
+                    && com.solegendary.reignofnether.tide.FogBankServerEvents.shotSpoiled(mistLevel, target, unit.getOwnerName(),
+                        (accuracyRoll * 7919f) % 1f))
+                evt.setImpactResult(ProjectileImpactEvent.ImpactResult.SKIP_ENTITY);
         }
     }
 

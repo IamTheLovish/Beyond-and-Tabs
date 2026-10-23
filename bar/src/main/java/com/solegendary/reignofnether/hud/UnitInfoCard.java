@@ -61,7 +61,7 @@ public final class UnitInfoCard {
      */
     private static final Map<String, Role> ROLE_TABLE = Map.ofEntries(
         Map.entry("WardenUnit", Role.EXPERIMENTAL), Map.entry("BoneDragonUnit", Role.EXPERIMENTAL),
-        Map.entry("WarMammothUnit", Role.EXPERIMENTAL), Map.entry("SunColossusUnit", Role.EXPERIMENTAL),
+        Map.entry("WarMammothUnit", Role.EXPERIMENTAL), Map.entry("MagmaHurlerUnit", Role.EXPERIMENTAL), Map.entry("JadeSentinelUnit", Role.EXPERIMENTAL), Map.entry("CathedralWardenUnit", Role.EXPERIMENTAL), Map.entry("AbyssalHydraUnit", Role.EXPERIMENTAL), Map.entry("ThornwingRocUnit", Role.EXPERIMENTAL), Map.entry("PlagueAbominationUnit", Role.EXPERIMENTAL), Map.entry("SunColossusUnit", Role.EXPERIMENTAL),
         Map.entry("WorldTreeWalkerUnit", Role.EXPERIMENTAL), Map.entry("LeviathanUnit", Role.EXPERIMENTAL),
         Map.entry("GhastUnit", Role.ARTILLERY), Map.entry("WildfireUnit", Role.ARTILLERY),
         Map.entry("WitchUnit", Role.SUPPORT), Map.entry("EvokerUnit", Role.SUPPORT),
@@ -128,7 +128,7 @@ public final class UnitInfoCard {
         Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),
         Map.entry("PhoenixUnit", Role.RAIDER), Map.entry("CelestialDragonUnit", Role.EXPERIMENTAL),
         // Brassworks slice 4: the Iron Leviathan Engine is the experimental, its drones skirmish round it
-        Map.entry("IronLeviathanEngineUnit", Role.EXPERIMENTAL), Map.entry("ClockworkDroneUnit", Role.SKIRMISHER)
+        Map.entry("IronLeviathanEngineUnit", Role.EXPERIMENTAL), Map.entry("BrassZeppelinUnit", Role.EXPERIMENTAL), Map.entry("ClockworkDroneUnit", Role.SKIRMISHER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();
