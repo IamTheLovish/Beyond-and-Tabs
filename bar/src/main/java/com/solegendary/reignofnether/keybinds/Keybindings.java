@@ -150,6 +150,9 @@ public class Keybindings {
     public static final Keybinding item5 = new Keybinding("key.reignofnether.item5", GLFW.GLFW_KEY_C, CATEGORY_RTS, "C");
     public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "V");
 
+    // cursor diagnostics overlay (cursor/CursorDiagClient); no default key - set one in Controls, or use /rts-cursordiag
+    public static final Keybinding cursorDiag = new Keybinding("key.reignofnether.cursor_diag", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "");
+
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
         new Keybinding("key.reignofnether.control_group_1", GLFW.GLFW_KEY_1, CATEGORY_RTS, "1"),
@@ -194,7 +197,8 @@ public class Keybindings {
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
-            item1, item2, item3, item4, item5, item6
+            item1, item2, item3, item4, item5, item6,
+            cursorDiag
         ));
         Collections.addAll(list, nums);
         Collections.addAll(list, fnums);

@@ -281,22 +281,33 @@ public class CursorClientEvents {
             if (GLFW.glfwRawMouseMotionSupported())
                 GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_TRUE);
             GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+            SystemCursors.reset(window); // menus get the OS arrow back
+            CursorDiagClient.setRtsState(false, false, 0, 0);
             virtualValid = false;
             return;
         }
         if (MC.player == null || MC.level == null) return;
+
+        // rts_system_cursor: the OS cursor (user's own pointer settings, no lag) instead of the locked virtual one
+        final boolean systemCursor = CursorModePolicy.useSystemCursor(ReignOfNetherClientConfigs.RTS_SYSTEM_CURSOR.get(), true);
+        if (!systemCursor)
+            SystemCursors.dispose(window); // setting turned off while playing
 
         // ************************************
         // Manage cursor icons based on actions
         // ************************************
 
         // hides default cursor and locks it to the window to allow edge panning
-        GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+        GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, CursorModePolicy.glfwCursorMode(systemCursor));
         // raw input skips Windows' pointer acceleration (which made box-select drags speed up);
-        // rts_cursor_speed scales it instead
+        // rts_cursor_speed scales it instead. The system cursor wants the user's own settings, so no raw motion.
         if (GLFW.glfwRawMouseMotionSupported())
-            GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_TRUE);
-        updateVirtualCursor(window);
+            GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION,
+                    CursorModePolicy.wantRawMotion(systemCursor) ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+        if (systemCursor)
+            virtualValid = false; // pick, box and edge-pan read vanilla's xpos/ypos, which is the OS position
+        else
+            updateVirtualCursor(window);
 
         // blitting like this will cause it to be rendered 1 frame behind realtime (this hopefully shouldn't be noticeable...)
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -304,8 +315,13 @@ public class CursorClientEvents {
 
         // draw at edge of screen even if mouse is off it, from the fractional position so it moves in
         // window pixels rather than GUI-scaled steps
-        float cursorDrawX = CursorMath.clampDraw(virtualGuiX(), MC.getWindow().getGuiScaledWidth(), 5);
-        float cursorDrawY = CursorMath.clampDraw(virtualGuiY(), MC.getWindow().getGuiScaledHeight(), 5);
+        float cursorDrawX = CursorMath.clampDraw(
+                systemCursor ? CursorMath.windowToGui(MC.mouseHandler.xpos(), MC.getWindow().getScreenWidth(), MC.getWindow().getGuiScaledWidth()) : virtualGuiX(),
+                MC.getWindow().getGuiScaledWidth(), 5);
+        float cursorDrawY = CursorMath.clampDraw(
+                systemCursor ? CursorMath.windowToGui(MC.mouseHandler.ypos(), MC.getWindow().getScreenHeight(), MC.getWindow().getGuiScaledHeight()) : virtualGuiY(),
+                MC.getWindow().getGuiScaledHeight(), 5);
+        CursorDiagClient.setRtsState(true, systemCursor, cursorDrawX, cursorDrawY);
         ResourceLocation texture;
 
         int cursorXoffset = 0;
@@ -333,17 +349,22 @@ public class CursorClientEvents {
             RenderSystem.setShaderTexture(0, TEXTURE_CURSOR);
             texture = TEXTURE_CURSOR;
         }
-        evt.getGuiGraphics().pose().pushPose();
-        evt.getGuiGraphics().pose().translate(cursorDrawX, cursorDrawY, 2500);
-        evt.getGuiGraphics().blit(texture,
-                cursorXoffset,
-                cursorYoffset,
-                16,
-                16, 16,
-                16, 16,
-                16, 16
-        );
-        evt.getGuiGraphics().pose().popPose();
+        if (systemCursor) {
+            // the OS draws it: same sprite as a hardware cursor, hotspot where the sprite's offset puts its tip
+            SystemCursors.use(window, texture, -cursorXoffset, -cursorYoffset);
+        } else {
+            evt.getGuiGraphics().pose().pushPose();
+            evt.getGuiGraphics().pose().translate(cursorDrawX, cursorDrawY, 2500);
+            evt.getGuiGraphics().blit(texture,
+                    cursorXoffset,
+                    cursorYoffset,
+                    16,
+                    16, 16,
+                    16, 16,
+                    16, 16
+            );
+            evt.getGuiGraphics().pose().popPose();
+        }
 
         // ***********************************************
         // Convert cursor on-screen 2d pos to world 3d pos

@@ -52,6 +52,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SHAKE;
     public static final ForgeConfigSpec.ConfigValue<Double> RTS_CURSOR_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> RTS_SYSTEM_CURSOR;
 
     // display (DisplaySettings, DisplaySettingsScreen; design/hud.md "Settings")
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_MODE;
@@ -133,6 +134,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SHAKE = BUILDER.defineInRange("camera_shake", 100, 0, 100);
         BUILDER.comment("RTS cursor speed, 0.25-3.0. The cursor uses raw mouse input (no Windows pointer acceleration): 1.0 = one mouse count per screen pixel, same as Windows' unaccelerated 6/11 setting");
         RTS_CURSOR_SPEED = BUILDER.defineInRange("rts_cursor_speed", 1.0, 0.25, 3.0);
+        BUILDER.comment("RTS view uses the operating system's own mouse cursor (your Windows pointer speed and acceleration, no one-frame lag) instead of Minecraft's locked virtual cursor. Turn off to get the locked cursor with rts_cursor_speed back");
+        RTS_SYSTEM_CURSOR = BUILDER.define("rts_system_cursor", true);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
         BUILDER.comment("BAR-style notifications (commander under attack, unit lost, construction complete...)");
         ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);

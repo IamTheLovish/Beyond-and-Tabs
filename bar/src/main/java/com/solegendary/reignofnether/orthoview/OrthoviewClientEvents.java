@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.RangeIndicatorAddon;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
+import com.solegendary.reignofnether.cursor.CursorModePolicy;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
@@ -565,7 +566,11 @@ public class OrthoviewClientEvents {
         }
 
         boolean grabbed = cursorMode == GLFW.GLFW_CURSOR_DISABLED;
-        if (MC.screen == null && !grabbed && MC.isWindowActive()) {
+        // never while the RTS view runs on the OS cursor (rts_system_cursor): that mode wants the mouse free
+        boolean systemCursorActive = CursorModePolicy.useSystemCursor(
+                ReignOfNetherClientConfigs.RTS_SYSTEM_CURSOR.get(), enabled && MC.screen instanceof TopdownGui);
+        if (CursorModePolicy.shouldRegrab(systemCursorActive, MC.screen == null, grabbed, MC.isWindowActive())) {
+            com.solegendary.reignofnether.cursor.CursorDiagClient.grabCall("regrab");
             MC.mouseHandler.releaseMouse();
             MC.mouseHandler.grabMouse();
         }
