@@ -74,6 +74,13 @@ public class Keybindings {
     public static final Keybinding abilitySlot8        = new Keybinding("key.reignofnether.ability_8",    GLFW.GLFW_KEY_I,             CATEGORY_RTS, "I");
     public static final Keybinding abilitySlot9        = new Keybinding("key.reignofnether.ability_9",    GLFW.GLFW_KEY_O,             CATEGORY_RTS, "O");
     public static final Keybinding abilitySlot10       = new Keybinding("key.reignofnether.ability_10",   GLFW.GLFW_KEY_P,             CATEGORY_RTS, "P");
+    // BAR's build-category keys (BuildCategoryKeys): with a builder (or the commander) selected Z / X / C / V open the
+    // metal / energy / defence / factory build list instead of ability slot 2, Attack, hotkey 4 and hotkey 1. They
+    // share the keys on purpose, so they have their own conflict context.
+    public static final Keybinding buildMetal   = new Keybinding("key.reignofnether.build_metal",   GLFW.GLFW_KEY_Z, CATEGORY_RTS, RtsConflictContext.BUILDER, "Z");
+    public static final Keybinding buildEnergy  = new Keybinding("key.reignofnether.build_energy",  GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
+    public static final Keybinding buildDefence = new Keybinding("key.reignofnether.build_defence", GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
+    public static final Keybinding buildFactory = new Keybinding("key.reignofnether.build_factory", GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
     public static final Keybinding hotkey1        = new Keybinding("key.reignofnether.hotkey_1",        GLFW.GLFW_KEY_V,             CATEGORY_RTS, "V");
     public static final Keybinding hotkey2        = new Keybinding("key.reignofnether.hotkey_2",        GLFW.GLFW_KEY_L,             CATEGORY_RTS, "L");
     public static final Keybinding minimapToggle  = new Keybinding("key.reignofnether.minimap_toggle",        GLFW.GLFW_KEY_M,             CATEGORY_RTS, "M");
@@ -190,6 +197,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
+            buildMetal, buildEnergy, buildDefence, buildFactory,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,

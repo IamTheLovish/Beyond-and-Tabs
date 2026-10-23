@@ -47,6 +47,21 @@ public class HelperButtons {
     public static Button chatButton;
     public static Button buildingCancelButton;
     public static Button armyButton;
+
+    /** True while BAR's Ctrl+W runs the army button: Ctrl then means "chord", not the idle-army modifier. */
+    private static boolean wholeArmyChord = false;
+
+    /** BAR's Ctrl+W: select the whole army (every own non-worker unit), whatever Ctrl does to the button itself. */
+    public static void selectWholeArmy() {
+        if (armyButton == null || armyButton.onLeftClick == null)
+            return;
+        wholeArmyChord = true;
+        try {
+            armyButton.onLeftClick.run();
+        } finally {
+            wholeArmyChord = false;
+        }
+    }
     public static Button menuButton;
 
     /**
@@ -199,7 +214,7 @@ public class HelperButtons {
                 () -> {
                     List<LivingEntity> militaryUnits = new ArrayList<>();
 
-                    if (Keybindings.ctrlMod.isDown()) {   // only the army standing idle (hud/IdleArmy), e.g. to send it out
+                    if (Keybindings.ctrlMod.isDown() && !wholeArmyChord) {   // only the army standing idle (hud/IdleArmy), e.g. to send it out
                         militaryUnits.addAll(com.solegendary.reignofnether.hud.IdleArmy.get());
                     } else if (Keybindings.shiftMod.isDown()) {
                         militaryUnits.addAll(UnitClientEvents.getMilitaryUnitsOnScreen());
