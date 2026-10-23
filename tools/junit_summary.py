@@ -36,8 +36,14 @@ def main() -> int:
           f"{seconds:.1f} s total (slowest: {slowest})")
     for f in files:
         for case in ET.parse(f).getroot().iter("testcase"):
+            name = f"{case.get('classname', '').rsplit('.', 1)[-1]}.{case.get('name')}"
             if case.find("skipped") is not None:
-                print(f"::notice::JUnit skipped: {case.get('classname', '').rsplit('.', 1)[-1]}.{case.get('name')}")
+                print(f"::notice::JUnit skipped: {name}")
+            for bad in list(case.findall("failure")) + list(case.findall("error")):
+                # one line per failure (annotations can be read where job logs can't)
+                why = (bad.get("message") or (bad.text or "").strip().split("\n")[0] or bad.get("type", "?"))
+                why = " ".join(why.split())[:300]
+                print(f"::error::JUnit failed: {name}: {why}")
     return 0
 
 
