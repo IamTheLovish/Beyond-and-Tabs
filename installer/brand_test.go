@@ -74,6 +74,18 @@ func TestShortcutIsNamedLovishWithTheCat(t *testing.T) {
 	}
 }
 
+func TestShortcutNeverReplacesSomeoneElsesLovishShortcut(t *testing.T) {
+	// lovish's own desktop "lovish" shortcut starts his server - only a "lovish" shortcut that opens THIS Prism is
+	// rewritten, and the old "Beyond and Tabs" one goes only when it opens this Prism
+	ps := shortcutScript(`C:\P\prismlauncher.exe`, `C:\P`, `C:\P\lovish.ico`)
+	if !strings.Contains(ps, "(-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe)") {
+		t.Fatalf("an existing lovish shortcut could be overwritten:\n%s", ps)
+	}
+	if !strings.Contains(ps, "$old.TargetPath -eq $exe") {
+		t.Fatalf("the old shortcut is removed even when it isn't ours:\n%s", ps)
+	}
+}
+
 func TestInstallBrandWritesTheIcons(t *testing.T) {
 	dir := t.TempDir()
 	ico, err := installBrand(dir)
