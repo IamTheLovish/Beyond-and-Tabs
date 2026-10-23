@@ -123,8 +123,7 @@ public class ControlsReferenceScreen extends Screen {
         header("h_orders");
         mouse("move", t("right_click"));
         mouse("formation", t("right_drag"));
-        mouse("attack_move", k(Keybindings.attack) + ", " + t("then_click"));
-        bind("attack", Keybindings.attack);
+        mouse("attack_move", k(Keybindings.fight) + ", " + t("then_click"));
         bind("fight", Keybindings.fight);
         bind("stop", Keybindings.stop);
         bind("move_key", Keybindings.move);

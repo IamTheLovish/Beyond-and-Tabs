@@ -282,6 +282,9 @@ public class ItemClientEvents {
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
         if (!shouldRenderUnitInventory(HudClientEvents.hudSelectedEntity))
             return;
+        // one key press does one thing: the card's button (item3 = F is Fight) wins over an inventory slot on the key
+        if (!com.solegendary.reignofnether.keybinds.KeyPress.inventoryKeyMayFire(HudClientEvents.isCardKey(evt.getKeyCode())))
+            return;
         for (Button button : renderedButtons)
             button.checkPressed(evt.getKeyCode());
     }

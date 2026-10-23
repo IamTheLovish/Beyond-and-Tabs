@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 2;
+    public static final int LAYOUT_VERSION = 3;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -44,8 +44,7 @@ public final class KeybindMigration {
     public record Move(String binding, int from, int to) { }
 
     static final List<Stale> STALE = List.of(
-        // Oct 11 (c4d0b47) to Oct 21 (#39): Attack was A. Every install of those builds saved it.
-        new Stale(1, "key.reignofnether.attack", GLFW.GLFW_KEY_A, "Attack A -> X, so A is pure camera pan-left (#39)"),
+        // (Attack A -> X, layout 1, is gone with the Attack binding itself: see CARRY below, layout 3.)
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
         // BAR's S / P / G and the gather toggle gave G up, but an install of those days keeps the old keys.
         new Stale(1, "key.reignofnether.stop", GLFW.GLFW_KEY_SPACE, "Stop Space -> S (BAR)"),
@@ -63,6 +62,20 @@ public final class KeybindMigration {
         // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layout 1 forgot the row,
         // so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
         new Stale(2, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
+    );
+
+    /**
+     * A binding that no longer exists, whose saved key goes to its successor if the player chose it. Oct 22 (lovish:
+     * "we dont need f and x, only f"): the Attack order was merged into Fight, so an install that rebound Attack to a
+     * key of its own keeps that key, now on Fight. {@code oldDefaults} are the keys older builds shipped Attack on (A,
+     * then X): saved on one of them it is the default of a binding that is gone, not a choice, and Fight keeps F.
+     * The saved key of the retired binding is read from options.txt by KeybindsClientEvents (no mapping exists any more).
+     */
+    public record Carry(int version, String retired, String successor, List<Integer> oldDefaults, String history) { }
+
+    static final List<Carry> CARRY = List.of(
+        new Carry(3, "key.reignofnether.attack", "key.reignofnether.fight", List.of(GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X),
+            "Attack merged into Fight: your Attack key now starts Fight / Attack-move")
     );
 
     private KeybindMigration() { }
@@ -96,6 +109,19 @@ public final class KeybindMigration {
             if (now == row.oldKey() && now != target)
                 moves.add(new Move(row.binding(), now, target));
         }
+        for (Carry row : CARRY) {
+            if (row.version() <= savedVersion || row.version() > LAYOUT_VERSION)
+                continue;
+            Keybinding successor = all.get(row.successor());
+            if (successor == null)
+                continue;
+            int theirs = savedKey.applyAsInt(row.retired());
+            int now = savedKey.applyAsInt(row.successor());
+            // only a real keyboard key the player chose, onto a successor still on its default
+            if (theirs >= 0 && theirs != CUSTOM && !row.oldDefaults().contains(theirs)
+                    && now == successor.getDefaultKey() && theirs != now)
+                moves.add(new Move(row.successor(), now, theirs));
+        }
         return moves;
     }
 
@@ -103,6 +129,9 @@ public final class KeybindMigration {
     public static String history(String binding) {
         for (Stale row : STALE)
             if (row.binding().equals(binding))
+                return row.history();
+        for (Carry row : CARRY)
+            if (row.successor().equals(binding))
                 return row.history();
         return binding;
     }

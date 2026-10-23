@@ -63,12 +63,41 @@ public class KeybindsClientEvents {
         return key.getType() == InputConstants.Type.KEYSYM ? key.getValue() : KeybindMigration.CUSTOM;
     }
 
+    /**
+     * The keys options.txt still holds for bindings this build no longer has (KeybindMigration.CARRY): Minecraft only
+     * loads the mappings that exist, so the retired Attack key is only readable from the file itself, and only until
+     * the first save drops it. Lines look like {@code key_key.reignofnether.attack:key.keyboard.k}; a combo
+     * ({@code :SHIFT} suffix) or a mouse button is left out (CUSTOM).
+     */
+    private static Map<String, Integer> retiredKeysInOptionsFile(Minecraft mc) {
+        Map<String, Integer> out = new HashMap<>();
+        java.nio.file.Path file = mc.gameDirectory.toPath().resolve("options.txt");
+        try {
+            for (String line : java.nio.file.Files.readAllLines(file)) {
+                for (KeybindMigration.Carry row : KeybindMigration.CARRY) {
+                    String prefix = "key_" + row.retired() + ":";
+                    if (!line.startsWith(prefix))
+                        continue;
+                    String value = line.substring(prefix.length());
+                    InputConstants.Key key = InputConstants.getKey(value);
+                    out.put(row.retired(), !value.contains(":") && key.getType() == InputConstants.Type.KEYSYM
+                        ? key.getValue() : KeybindMigration.CUSTOM);
+                }
+            }
+        } catch (java.io.IOException | RuntimeException e) {
+            LOGGER.warn("[Keys] could not read options.txt for retired bindings: {}", e.toString());
+        }
+        return out;
+    }
+
     private static void migrate(Minecraft mc) {
         int saved = ReignOfNetherClientConfigs.KEYBIND_LAYOUT.get();
         if (saved >= KeybindMigration.LAYOUT_VERSION)
             return;
         Map<String, KeyMapping> mappings = mappings();
-        List<KeybindMigration.Move> moves = KeybindMigration.plan(saved, name -> keyOf(mappings.get(name)));
+        Map<String, Integer> retired = retiredKeysInOptionsFile(mc);
+        List<KeybindMigration.Move> moves = KeybindMigration.plan(saved, name ->
+            mappings.containsKey(name) ? keyOf(mappings.get(name)) : retired.getOrDefault(name, KeybindMigration.CUSTOM));
         StringBuilder toast = new StringBuilder();
         for (KeybindMigration.Move move : moves) {
             KeyMapping m = mappings.get(move.binding());
