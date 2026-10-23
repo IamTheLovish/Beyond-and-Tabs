@@ -732,7 +732,7 @@ public class HudClientEvents {
                     }
                     evt.getGuiGraphics().drawString(
                         MC.font,
-                        Math.round(100 - (percentageDoneInv * 100f)) + "% " + productionButtons.get(0).name,  // TODO: translatable
+                        ProductionLabel.text(Math.round(100 - (percentageDoneInv * 100f)), productionButtons.get(0).name, productionButtons.get(0).tooltipLines),
                         blitX + iconFrameSize + 5,
                         blitY + 2,
                         colour
