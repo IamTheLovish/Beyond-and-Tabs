@@ -15,7 +15,6 @@ Faces follow ModelPart.Cube (1.20.1): top at (u+d, v), bottom at (u+d+w, v), the
 """
 import argparse
 import json
-import math
 import os
 import sys
 

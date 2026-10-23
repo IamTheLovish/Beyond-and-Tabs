@@ -19,8 +19,6 @@ This module is the maths and the drawing; it knows nothing about models. Two cal
     compose(...)                 draws the sheet
 Tested by tools/test_anim_sheet.py (written first, red, then this).
 """
-import math
-import os
 
 MAX_SIDE = 2000            # an image viewer downsizes past ~2000 px: the sheet is built to survive that untouched
 TARGET_CELL = 240          # px per figure we want at least (the old strip had ~60)

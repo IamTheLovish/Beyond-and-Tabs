@@ -297,7 +297,6 @@ class Tracking(unittest.TestCase):
         drawn pixel of the arm hanging straight down."""
         import numpy as np
         import game_preview as gp
-        import dsl_to_game as d2g
         from PIL import Image
         root = self.arm()
         tags = []
