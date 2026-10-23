@@ -17,3 +17,18 @@ print('\n```')
 for r in rows[:40]:
     print(f'{r[1]}:{r[2]}: [{r[0]}] {r[3]}')
 print('```')
+
+# CI can read job annotations through the API but not logs/artifacts: repeat the summary, and the gradle failure text if
+# the build failed, as two multi-line annotations (workflow-command escaping)
+def _esc(t):
+    return t.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+import io, contextlib
+if len(sys.argv) > 2 and sys.argv[2] == '--annotate':
+    lines = open(sys.argv[1], errors='replace').read().splitlines()
+    body = [l for l in lines if 'What went wrong' in l]
+    idx = next((i for i, l in enumerate(lines) if 'What went wrong' in l), None)
+    if idx is not None:
+        print('::error title=gradle failure::' + _esc('\n'.join(lines[max(0, idx - 15):idx + 30])[:30000]))
+    else:
+        print('::warning title=gradle log tail::' + _esc('\n'.join(lines[-30:])[:30000]))
+    print('::warning title=Error Prone summary::' + _esc(f'{len(rows)} warnings\n' + '\n'.join(f'{c} {n}' for c, n in by.most_common(40)) + '\n\n' + '\n'.join(f'{r[1]}:{r[2]}: [{r[0]}] {r[3]}' for r in rows[:40])))
