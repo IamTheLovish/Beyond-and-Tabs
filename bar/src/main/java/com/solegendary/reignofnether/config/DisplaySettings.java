@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.config;
 
+import com.solegendary.reignofnether.fogofwar.FogExploration;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 
@@ -33,6 +34,8 @@ public class DisplaySettings {
     // multipliers on the world's colours in fogged chunks: Clear is the original look; Subtle keeps most of the
     // colour (for players who find the fog gloomy), Strong is clearly darker so seen-vs-unseen reads at a glance
     private static final int[] FOG_TINTS = { 0xA8B0C4, FogOfWarClientEvents.FOG_TINT_CLEAR, 0x4C5672 };
+    // the same styles for ground never in sight ("dark but visible", about 15% brightness; Strong darker still)
+    private static final int[] FOG_TINTS_UNEXPLORED = { 0x2E323C, FogExploration.TINT_UNEXPLORED, 0x161820 };
 
     private static final Minecraft MC = Minecraft.getInstance();
     private static int appliedFogStyle = FOG_CLEAR;
@@ -124,9 +127,14 @@ public class DisplaySettings {
         return v >= ANIM_OFF && v <= ANIM_FULL;
     }
 
-    /** The minimap hatches never-seen ground (Strong only). Read by the minimap's terrain pass, not per frame. */
+    /** The minimap hatches never-seen ground in every style (lovish, Oct 22: dark but visible). Read by the terrain pass, not per frame. */
     public static boolean hatchUnexplored() {
-        return appliedFogStyle == FOG_STRONG;
+        return true;
+    }
+
+    /** Strong shades never-seen ground on the minimap darker still (1 = the base shade). */
+    public static float unexploredMinimapScale() {
+        return appliedFogStyle == FOG_STRONG ? 0.55f : 1f;
     }
 
     @SubscribeEvent
@@ -138,6 +146,7 @@ public class DisplaySettings {
             return;
         appliedFogStyle = style;
         FogOfWarClientEvents.FOG_TINT_RGB = FOG_TINTS[style];
+        FogOfWarClientEvents.FOG_TINT_UNEXPLORED = FOG_TINTS_UNEXPLORED[style];
         MinimapClientEvents.forceFullRedraw();
         // the tint lives in the chunk meshes: rebuild them once (only matters while fog is on)
         if (MC.level != null && MC.levelRenderer != null)

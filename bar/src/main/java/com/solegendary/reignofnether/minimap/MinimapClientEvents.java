@@ -640,6 +640,7 @@ public class MinimapClientEvents {
         // from producing a half-shaded map
         final boolean fogEnabled = FogOfWarClientEvents.isEnabled();
         final boolean hatchUnexplored = com.solegendary.reignofnether.config.DisplaySettings.hatchUnexplored();
+        final float unexploredScale = com.solegendary.reignofnether.config.DisplaySettings.unexploredMinimapScale();
         final BlockPos.MutableBlockPos borderPos = new BlockPos.MutableBlockPos();
 
         // fog state for the chunk the scan is currently inside; refreshed only on chunk boundaries
@@ -802,10 +803,10 @@ public class MinimapClientEvents {
                 if (!MC.level.getWorldBorder().isWithinBounds(borderPos)) {
                     rgb = MiscUtil.shadeHexRGB(rgb, EXTRA_DARK);
                 } else if (!columnVisible) {
-                    // Fog style Strong (config.DisplaySettings): never-seen ground gets diagonal hatching so it
+                    // Never-seen ground gets diagonal hatching in every fog style (config.DisplaySettings) so it
                     // can't be mistaken for dark terrain. Baked into the terrain pass, so no per-frame cost
                     boolean hatch = !chunkExplored && hatchUnexplored && ((x + z) & 15) < 4;   // wide enough to survive the downscale
-                    rgb = MiscUtil.shadeHexRGB(rgb, chunkExplored ? DARK : hatch ? UNEXPLORED * 3f : UNEXPLORED);
+                    rgb = MiscUtil.shadeHexRGB(rgb, chunkExplored ? DARK : (hatch ? UNEXPLORED * 3f : UNEXPLORED) * unexploredScale);
                 }
 
                 // append 0xFF to include 100% alpha (<< 4 shifts by 1 hex digit)
