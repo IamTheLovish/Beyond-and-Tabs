@@ -35,6 +35,7 @@ import java.util.Set;
 public class BlockClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
+    private static final ResourceLocation WHITE = ResourceLocation.parse("forge:textures/white.png");
 
     public static NightCircleMode nightCircleMode = NightCircleMode.NO_OVERLAPS;
 
@@ -46,16 +47,15 @@ public class BlockClientEvents {
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
-            ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
-            var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
+            var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(WHITE));
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
                 return;
             }
             // draw range indicators for buildings with abilities and monster night sources
             for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
-                if (!FogOfWarClientEvents.isBuildingInBrightChunk(building)) continue;
-                RangeIndicatorAddon ria;
-                if ((ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class)) != null) {
+                // the cheap question first: almost no building has a range indicator, and the fog check scans a footprint
+                RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
+                if (ria != null && FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
                     for (BlockPos bp : ria.getHighlightBps(building)) {
                         int snowLayers = BlockUtils.getSnowLayers(building.level.getBlockState(bp.above()));
                         float yOffset = snowLayers * 0.125f;
@@ -77,9 +77,10 @@ public class BlockClientEvents {
                 }
             }
             for (LivingEntity le : UnitClientEvents.getAllUnits()) {
+                if (!(le instanceof RangeIndicator ri)) continue;   // almost no unit is one: ask before the fog lookup
                 if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
                 boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
-                if (le instanceof RangeIndicator ri && (selected || !ri.showOnlyWhenSelected())) {
+                if (selected || !ri.showOnlyWhenSelected()) {
                     for (BlockPos bp : ri.getHighlightBps()) {
                         int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
                         float yOffset = snowLayers * 0.125f;

@@ -144,16 +144,18 @@ public class MetalPatchMarkerClientEvents {
         }
     }
 
+    private static final com.solegendary.reignofnether.perf.UnitRing CIRCLE =
+        com.solegendary.reignofnether.perf.UnitRing.of(RING_SEGMENTS);
+
     private static void ring(VertexConsumer vc, Matrix4f m, Matrix3f n, float cx, float cy, float cz, float rad,
                              float r, float g, float b, float a) {
+        float[] ux = CIRCLE.x, uz = CIRCLE.z, nx = CIRCLE.nx, nz = CIRCLE.nz;
         float px = cx + rad, pz = cz;
         for (int i = 1; i <= RING_SEGMENTS; i++) {
-            double ang = Math.PI * 2 * i / RING_SEGMENTS;
-            float x = cx + (float) (Math.cos(ang) * rad), z = cz + (float) (Math.sin(ang) * rad);
+            float x = cx + ux[i] * rad, z = cz + uz[i] * rad;
             // the lines shader widens a segment along its normal: the normal is the segment's direction
-            float dx = x - px, dz = z - pz, len = Mth.sqrt(dx * dx + dz * dz);
-            vc.vertex(m, px, cy, pz).color(r, g, b, a).normal(n, dx / len, 0f, dz / len).endVertex();
-            vc.vertex(m, x, cy, z).color(r, g, b, a).normal(n, dx / len, 0f, dz / len).endVertex();
+            vc.vertex(m, px, cy, pz).color(r, g, b, a).normal(n, nx[i], 0f, nz[i]).endVertex();
+            vc.vertex(m, x, cy, z).color(r, g, b, a).normal(n, nx[i], 0f, nz[i]).endVertex();
             px = x;
             pz = z;
         }
