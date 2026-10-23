@@ -732,7 +732,7 @@ public class HudClientEvents {
                     }
                     evt.getGuiGraphics().drawString(
                         MC.font,
-                        ProductionLabel.text(Math.round(100 - (percentageDoneInv * 100f)), productionButtons.get(0).name, productionButtons.get(0).tooltipLines),
+                        ProductionLabel.text(Math.round(100 - (percentageDoneInv * 100f)), productionButtons.get(0).name, ProductionLabel.title(firstProdItem.item, selProdBuilding)),
                         blitX + iconFrameSize + 5,
                         blitY + 2,
                         colour
