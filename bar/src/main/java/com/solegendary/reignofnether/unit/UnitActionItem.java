@@ -281,6 +281,9 @@ public class UnitActionItem {
                 PatrolServerEvents.clear(((Entity) unit).getId());
             if (action != UnitAction.GUARD && !isStateCommand && !autocast)
                 GuardServerEvents.clear(((Entity) unit).getId());
+            // its first step on this order is sent to the players at once (OrderAck)
+            if (!level.isClientSide() && !isStateCommand && !autocast)
+                OrderAck.expect((Mob) unit);
             switch (action) {
                 case AUTOCAST_ENABLE, AUTOCAST_DISABLE -> {
                     // the generic autocast switch (ability/AutocastState): the ability's action ordinal rides in x
