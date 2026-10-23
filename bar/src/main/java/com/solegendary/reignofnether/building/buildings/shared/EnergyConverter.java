@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.raid.RaidTuning;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.resources.TierGate;
 import com.solegendary.reignofnether.util.MyRenderer;
 
 import net.minecraft.core.particles.ParticleTypes;
@@ -37,7 +38,7 @@ public class EnergyConverter extends Building {
     public final static String buildingName = "Energy Converter";
     public final static String structureName = "energy_converter";
     public final static ResourceCost cost = ResourceCosts.ENERGY_CONVERTER;
-    public static final float CONVERSION = 50f;
+    public static final float CONVERSION = TierGate.CONVERTER_ENERGY_PER_SECOND;   // energy/s one converter drains (resources/TierGate)
 
     public EnergyConverter() {
         this("");

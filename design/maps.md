@@ -74,6 +74,49 @@ premade_maps_spread_metal_over_the_open_ground). Every patch now also has **BAR'
 (MetalPatchMarkerClientEvents): pale gold when free, a double ring when rich, the owner's colour when taken and in
 sight (grey in the fog), and the floating gem is bigger.
 
+**Metal placement rules (Oct 21, maps spec M1; `MapLayout`, `MetalOptions`, GameTests in `MapMetalGameTests`):**
+- *Reach by flood.* An open-ground patch is valid only on a column the 4-connected flood from its slot's start reaches
+  (steps of one block, no void / lava / deep water / tree stem; `MapLayout.reachFrom`). This replaced the straight line
+  back to the start, which refused every patch behind a cliff or ridge (Highlands at 1v1: 256 of 270 candidates).
+- *Level ground under the whole pad.* Every patch, template or open-ground, needs its 7x7 pad (what
+  `MetalPatches.stamp` levels) to be land within one block of the centre's height, checked at every slot's rounded copy.
+  A template patch that fails moves up to 6 blocks toward its start, else it is dropped for every slot alike.
+- *The lobby's metal richness applies to pre-made maps.* Lean 0.65 / normal 1.0 / rich 1.5 scale the open-ground fill
+  (14 patches a slot at normal -> 9 / 21); templates are untouched. Random keeps the normal map. The lobby preview and
+  the server build the same layout (`SkirmishServerboundPacket.premadeMetal`).
+- *Metal reaches the wall (Oct 22, lovish: "edgeline means maybe enough blocks away that the extractor doesn't get
+  blocked by the wall").* The fill may place a patch as close to the wall as `ExtractorClearance.blocks()` = **11
+  blocks**, derived in code: the biggest extractor structure of any faction and tier (all fourteen `metal_extractor*`
+  files, 5x5, read from the registry), the 1-block placement gap, the 7x7 pad, a worker lane, the wall's widest piece
+  (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
+  every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
+  patches stamped exactly that far from a real ring wall.
+- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized").* `HomeMetal`: 6 patches
+  a seat, 1.0 each, in a fan 18 blocks from the start (11 to 24 after a nudge), on every pre-made map and player count.
+  A spot the ground refuses moves toward the start, then to the next angle or radius: count and yield never change.
+  The extra-metal level and the lobby's richness never touch it.
+- *Extra metal, spread over the whole map, with a bonus for the outskirts (lovish Oct 22: "we can add more mexes than we
+  have to the game", "spread all over the map", "bonuses to players that reach to the outskirts", "he does want massive
+  armies").* `MapLayout.spread` runs three passes over one candidate list: the core fill (the map as it was: <= 14 a slot,
+  richness-scaled, not nearer the wall than 22), the rim fill (<= 4 a slot between the clearance and 22) and the spread
+  (<= 8 a slot anywhere with room, 16 apart), each farthest-from-every-patch first. The core fill never loses a patch to
+  the others. A patch yields `1 + level x (0.5 x distance-from-bases + 0.6 x rim)` (`MapLayout.openValue`): 1.0 at the
+  bases, rising to ~1.5 mid-map and ~2.0 at the clearance line on a land map at the normal level. Maps whose open ground is
+  cut by water or void (Archipelago, End Spires, Chorus Isles) have little room, so little extra: the flood rule stands.
+- *Extra-metal level* `MetalOptions.Extra`: LOW (half the extra patches and premium), NORMAL (default), HIGH (twice the
+  extra patches, 1.25x the premium); NONE is the old map (tests). Not in the lobby UI yet; tune it from the bot ladder.
+- *Metal reaches the wall (Oct 22, lovish: "edgeline means maybe enough blocks away that the extractor doesn't get
+  blocked by the wall").* The fill may place a patch as close to the wall as `ExtractorClearance.blocks()` = **11
+  blocks**, derived in code: the biggest extractor structure of any faction and tier (all fourteen `metal_extractor*`
+  files, 5x5, read from the registry), the 1-block placement gap, the 7x7 pad, a worker lane, the wall's widest piece
+  (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
+  every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
+  patches stamped exactly that far from a real ring wall.
+- *Other knobs on `MetalOptions`*: `rimInset` (default `AUTO_RIM` = the clearance; a larger number keeps the fill further
+  in, a smaller one is lifted to the clearance) and `reserved` (areas the fill must leave alone - the hook for the hero
+  jungle; nothing reserved today). The arena's edge is asked of one helper, `MapLayout.distanceToArenaEdge`, a circle
+  today.
+
 ## 3. Map-specific capture sites
 
 Existing kinds kept: **Ancient Mine** (+3 metal/s), **Ley Shrine / Ley Nexus** (+30 energy/s), **Mercenary

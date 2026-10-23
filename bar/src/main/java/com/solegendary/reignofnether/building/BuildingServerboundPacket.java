@@ -217,7 +217,7 @@ public class BuildingServerboundPacket {
                     BuildingServerEvents.placeBuilding(CustomBuildingServerEvents.getCustomBuilding(this.itemName), this.buildingPos, this.rotation, this.ownerName, this.builderUnitIds, true, isDiagonalBridge, false, false);
                 }
                 case DESTROY -> {
-                    BuildingServerEvents.cancelBuilding(building, this.ownerName);
+                    BuildingServerEvents.cancelBuilding(building, player.getName().getString());   // the sender decides the sandbox rules, not the building's owner
                 }
                 case DECOMMISSION -> {
                     BuildingReclaim.start(building, player.getName().getString());

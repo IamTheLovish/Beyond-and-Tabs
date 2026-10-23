@@ -1,0 +1,13 @@
+# Bug-finding lint for the Python tools (CI: job `ruff`, local: tools/prepush.sh). No formatting rules.
+target-version = "py310"
+line-length = 120
+extend-exclude = ["resourcepacks", "bar", "design"]
+
+[lint]
+select = ["E9", "F", "B", "PLE"]
+ignore = [
+  "B007",  # unused loop variable: style (names kept for readability in the generators)
+  "B905",  # zip() without strict=: style, py310 target
+  "B008",  # call in default argument: the eco_* / lab_* tables pass pure constructors on purpose
+  "B023",  # closure over loop variable: every flagged closure is called inside the same iteration
+]

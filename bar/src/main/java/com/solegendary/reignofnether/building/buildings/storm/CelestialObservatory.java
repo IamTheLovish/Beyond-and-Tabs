@@ -51,7 +51,7 @@ public class CelestialObservatory extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE);
         this.startingBlockTypes.add(Blocks.STONE_BRICKS);
 
-        this.buildTimeModifier = 0.7f;   // as the other T2 labs
+        this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
         this.explodeChance = 0.2f;
         this.maxHealth = 340d;
         // the Lantern Fortress is 2 blocks wide: it walks out clear of the tower's walls (the Abyssal Shipyard's rule)

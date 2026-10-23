@@ -104,6 +104,9 @@ public final class ServerTickProfile {
             ReignOfNether.LOGGER.info("[Tick] p50 {} ms, p95 {} ms, max {} ms over the last {} ticks; {} units, {} buildings, {} players",
                 fmt(percentile(sorted, 0.50)), fmt(p95), fmt(sorted[sorted.length - 1]), sorted.length,
                 units, BuildingServerEvents.getBuildings().size(), server.getPlayerCount());
+            // how much vanilla A* the units asked for, and how often the short search had to fall back to full range
+            ReignOfNether.LOGGER.info(com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget.report()
+                + "; chase cell memo " + com.solegendary.reignofnether.unit.Terrain.memoReport());
         }
         Sys.report();   // the per-system line, while the server is slow
         if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && captureTicksLeft == 0 && !captureAwaiting()
@@ -352,6 +355,7 @@ public final class ServerTickProfile {
         pendingReport = null;
         lastCaptureAt = -AUTO_COOLDOWN_TICKS;
         Sys.onServerStopping();
+        com.solegendary.reignofnether.unit.Terrain.resetMemo();
     }
 
     static double[] sortedMs(long[] nanos) {
