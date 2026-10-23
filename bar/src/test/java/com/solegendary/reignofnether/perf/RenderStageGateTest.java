@@ -30,7 +30,10 @@ class RenderStageGateTest {
             "building/ScaffoldRenderClientEvents.java", "building/StatueRenderClientEvents.java",
             "building/WindmillRenderClientEvents.java");
 
-    private static final Pattern HANDLER = Pattern.compile("\\(RenderLevelStageEvent\\s+(\\w+)\\)\\s*\\{");
+    // only the @SubscribeEvent handlers: a private helper taking the event (StatueRenderClientEvents.draw) runs after
+    // its handler's gate and has no section of its own
+    private static final Pattern HANDLER = Pattern.compile(
+            "@SubscribeEvent(?:\\([^)]*\\))?\\s+public\\s+static\\s+void\\s+\\w+\\(RenderLevelStageEvent\\s+(\\w+)\\)\\s*\\{");
 
     @Test
     void everyLevelStageHandlerChecksItsStageBeforeAnyWork() throws IOException {
