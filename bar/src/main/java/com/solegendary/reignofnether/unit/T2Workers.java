@@ -34,6 +34,7 @@ public final class T2Workers {
     public static boolean needsT2Builder(Building b) {
         return isT3Lab(b) || b instanceof com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant
             || (b instanceof com.solegendary.reignofnether.building.buildings.shared.SolarGenerator sg && sg.kind.needsT2Builder)   // the Advanced Solar
+            || b instanceof com.solegendary.reignofnether.building.buildings.shared.FusionReactor   // both fusion reactors
             || b instanceof com.solegendary.reignofnether.building.gameender.GameEnder   // big-units: game enders
             || (b instanceof com.solegendary.reignofnether.building.buildings.defence.DefenceBuilding d && d.needsT2Builder());
     }

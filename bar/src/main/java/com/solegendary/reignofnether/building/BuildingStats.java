@@ -78,6 +78,11 @@ public final class BuildingStats {
                 append(sb, "+" + trim(m) + " " + I18n.get("hud.reignofnether.metal_per_s"));
             if (e > 0)
                 append(sb, "+" + trim(e) + " " + I18n.get("hud.reignofnether.energy_per_s"));
+            if (e > 0 && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg
+                    && wg.isWindDriven())
+                append(sb, I18n.get("hud.reignofnether.stats.wind_range",
+                    Math.round(com.solegendary.reignofnether.resources.Wind.energyAt(wg.getEnergyIncome(), com.solegendary.reignofnether.resources.Wind.MIN)),
+                    Math.round(com.solegendary.reignofnether.resources.Wind.energyAt(wg.getEnergyIncome(), com.solegendary.reignofnether.resources.Wind.MAX))));
         }
         // a section of a merged complex (building/merge): the shape, its sections and the bonus every section earns
         var complex = com.solegendary.reignofnether.building.merge.MergedBuildings.CLIENT.complexOf(bp);
