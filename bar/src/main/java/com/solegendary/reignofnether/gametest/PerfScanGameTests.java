@@ -12,7 +12,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.monster.Spider;
+import net.minecraft.world.entity.monster.Husk;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -57,51 +57,42 @@ public class PerfScanGameTests {
     }
 
     /**
-     * With neutralAggro on, a wild hostile mob beside a unit picks the closest non-unit it can see as its target (a mob
-     * never targets a unit itself: NonUnitServerEvents.onChangeTarget cancels that). Two spiders 2 apart hunt each other;
-     * the unit stands 6 away so the pass has a unit to start from.
+     * With neutralAggro on, a wild hostile mob beside a unit picks the closest non-unit it can see as its target. It can
+     * never pick a unit: NonUnitServerEvents.onChangeTarget cancels every non-unit mob's change of target to a Unit, so
+     * the pass's only visible effect is mob-on-mob. Two husks (they do not burn or drop a target in daylight, unlike
+     * spiders) 2 apart hunt each other; the unit stands 6 away so the pass has a unit to start from. On a glass pad so
+     * no neighbouring test's units are near.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
+    @GameTest(template = ARENA, timeoutTicks = 300)
     public static void neutral_aggro_points_a_hostile_mob_at_a_neighbour(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         var rule = level.getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO);
         boolean before = rule.get();
         rule.set(true, level.getServer());
+        BlockPos pad = ArenaReady.pad(helper, 135);
         VillagerUnit worker = EntityRegistrar.VILLAGER_UNIT.get().create(level);
-        Spider a = EntityType.SPIDER.create(level);
-        Spider b = EntityType.SPIDER.create(level);
+        Husk a = EntityType.HUSK.create(level);
+        Husk b = EntityType.HUSK.create(level);
         if (worker == null || a == null || b == null) {
             helper.fail("could not create the mobs");
             return;
         }
-        place(helper, worker, 8, 14);
-        place(helper, a, 8, 8);
-        place(helper, b, 8, 10);
+        worker.moveTo(pad.getX() + 8.5, pad.getY(), pad.getZ() + 14.5, 0, 0);
+        a.moveTo(pad.getX() + 8.5, pad.getY(), pad.getZ() + 8.5, 0, 0);
+        b.moveTo(pad.getX() + 8.5, pad.getY(), pad.getZ() + 10.5, 0, 0);
         worker.setOwnerName("gametest_neutral_aggro");
         a.setPersistenceRequired();
         b.setPersistenceRequired();
         for (var e : new net.minecraft.world.entity.Mob[] { worker, a, b })
             level.addFreshEntity(e);
-        boolean[] hunted = { false };
-        helper.onEachTick(() -> {
-            // a spider in daylight drops its target now and then, so look every tick and keep the first sighting
-            if (a.getTarget() == b || b.getTarget() == a)
-                hunted[0] = true;
-        });
-        helper.runAfterDelay(120, () -> {
+        helper.succeedWhen(() -> {
+            if (a.getTarget() != b && b.getTarget() != a)
+                helper.fail("neither husk took the other as a target with neutralAggro on (worker tick "
+                    + worker.tickCount + ", a target " + a.getTarget() + ", b target " + b.getTarget() + ")");
             rule.set(before, level.getServer());
-            String why = "worker tick " + worker.tickCount + " listed "
-                + com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().contains(worker)
-                + ", a removed " + a.isRemoved() + " target " + a.getTarget() + ", b removed " + b.isRemoved()
-                + " target " + b.getTarget() + ", closest for a "
-                + com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(a, 10, level)
-                + ", difficulty " + level.getDifficulty();
             worker.discard();
             a.discard();
             b.discard();
-            if (!hunted[0])
-                helper.fail("neither spider took the other as a target with neutralAggro on: " + why);
-            helper.succeed();
         });
     }
 
