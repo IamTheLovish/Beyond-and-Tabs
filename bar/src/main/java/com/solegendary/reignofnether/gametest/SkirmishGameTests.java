@@ -1560,6 +1560,22 @@ public class SkirmishGameTests {
     }
 
     /**
+     * A dry row of {@code count} base sites ({@link #soakRow}) near (x, z): every candidate row (16 steps of 96 blocks
+     * along each of {@link #soakLines}) is tried, the same scan {@link #soakFiveStarts} makes, so a test that wants only
+     * a row finds ground wherever the soak does. Trying just the first step of each line failed the tier-2 bot test every
+     * run (the world is the same each time, and that strip is water or cliff); null only if no candidate row is dry.
+     */
+    static net.minecraft.world.phys.Vec3[] soakAnyRow(ServerLevel level, int x, int z, int count) {
+        for (int bz : soakLines(z))
+            for (int step = 0; step < 16; step++) {
+                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, count);
+                if (row != null)
+                    return row;
+            }
+        return null;
+    }
+
+    /**
      * Five base sites for the soak: a dry row of three ({@link #soakRow}) and two more seats beside it
      * ({@link #soakExtraStart}). Every candidate row (16 steps of 96 blocks along each of {@link #soakLines}) is
      * tried until one has both seats - stopping at the first row failed a build when that row sat on a coast (Oct 16,
