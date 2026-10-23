@@ -45,8 +45,10 @@ public class BlockClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE);
             var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(WHITE));
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
                 return;
@@ -114,6 +116,7 @@ public class BlockClientEvents {
                 }
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

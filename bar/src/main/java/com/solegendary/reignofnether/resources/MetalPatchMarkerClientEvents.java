@@ -97,8 +97,10 @@ public class MetalPatchMarkerClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_METAL);
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
                 return;
             if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
@@ -140,6 +142,7 @@ public class MetalPatchMarkerClientEvents {
             if (drewAny)
                 MC.renderBuffers().bufferSource().endBatch(RenderType.lines());
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
@@ -166,8 +169,10 @@ public class MetalPatchMarkerClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_METAL);
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
                 return;
             if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
@@ -212,6 +217,7 @@ public class MetalPatchMarkerClientEvents {
             if (renderedAny)
                 MC.renderBuffers().bufferSource().endBatch();
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
