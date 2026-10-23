@@ -1,0 +1,200 @@
+[00:35:15] [Server thread/INFO]: [Offline: Summoned reignofnether:villager_unit for Enemy at (-168, 72, 5)]
+[00:35:15] [Server thread/INFO]: [Offline: Summoned reignofnether:villager_unit for Enemy at (-160, 72, 5)]
+[00:35:15] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-182, 72, -18)]
+[00:35:15] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-156, 72, -18)]
+[00:35:15] [IO-Worker-2/INFO]: [Eyes] 19_canopy_trees: Saved screenshot as bat_eyes_19_canopy_trees.png
+[00:35:16] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[00:35:16] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[00:35:16] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[00:35:19] [Server thread/INFO]: [Tick] p50 5.6 ms, p95 9.8 ms, max 13.7 ms over the last 100 ticks; 23 units, 4 buildings, 1 players
+[00:35:19] [Server thread/INFO]: [Paths] last 10 s: 16 unit vanilla createPath, 16 short searches, 0 full-range fallbacks; chase cell memo 132/280 hits
+[00:35:27] [Server thread/INFO]: [Sys] the server is slow (tick p95 44.6 ms): per-system timing on
+[00:35:29] [Render thread/INFO]: [Frame] p50 516.0 ms (2 fps), p95 942.1 ms, max 5644.4 ms over 240 frames; RTS view, zoom 30, 18 units known
+[00:35:29] [Render thread/INFO]: [Anim] 24 units/frame (max 30): animation p50 0.3 ms, p95 1.0 ms; unit render p50 5.0 ms, p95 8.3 ms; per unit 16.3 us anim, 205.5 us render (anim 8%); RTS view, zoom 30, detail on, over 24 frames
+[00:35:29] [Render thread/INFO]: [FrameParts] 20 frames, mean 725.4 ms/frame; ours 18.2 ms (3%): worldMarkers 6.92 (max 100.9, 165/f) | canopy 4.86 (max 84.2, 1.8/f) | unitBodies 3.02 (max 9.7, 13/f) | unitShadow 2.47 (max 5.9, 13/f) | buildingDecor 0.42 (max 1.0, 60/f) | bars 0.27 (max 1.5, 30/f) | unitOverlays 0.11 (max 0.2, 11/f) | buildingBoxes 0.09 (max 0.1, 1.0/f) | worldFx 0.05 (max 0.2, 15/f) | unitRings 0.03 (max 0.2, 11/f) (+1 smaller); elsewhere 707.1 ms; 0 section re-mesh requests/s
+[00:35:29] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 0.3, 19/t)
+[00:35:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:29] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:35:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:29] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1380|1038|0
+[00:35:29] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1007|539|0
+[00:35:29] [Server thread/INFO]: [Tick] p50 6.1 ms, p95 44.6 ms, max 60.7 ms over the last 100 ticks; 22 units, 6 buildings, 1 players
+[00:35:29] [Server thread/INFO]: [Paths] last 10 s: 69 unit vanilla createPath, 69 short searches, 0 full-range fallbacks; chase cell memo 382/794 hits
+[00:35:29] [Server thread/INFO]: [Sys] 40 ticks, mean 8.1 ms/tick; ours 2.0 ms (25%): pathfinder 1.38 (max 36.0, 2.0/t) | attacker 0.17 (max 3.1, 22/t) | attacker/idleAggro 0.13 (max 3.7, 3.0/t) | buildings 0.10 (max 1.8, 1.0/t) | unit 0.06 (max 0.1, 22/t) | unstick 0.02 (max 0.1, 22/t) | attacker/entityScan 0.02 (max 0.1, 3.0/t) | separation 0.02 (max 0.0, 22/t) | economy 0.02 (max 0.1, 1.0/t) (+12 smaller); elsewhere 6.1 ms
+[00:35:32] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 12.7 ms): per-system timing off
+[00:35:39] [Server thread/INFO]: [Tick] p50 5.7 ms, p95 9.3 ms, max 10.6 ms over the last 100 ticks; 22 units, 6 buildings, 1 players
+[00:35:39] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:35:39] [Server thread/INFO]: [Sys] 60 ticks, mean 6.0 ms/tick; ours 0.6 ms (9%): unit 0.12 (max 2.1, 22/t) | attacker 0.10 (max 4.3, 22/t) | pathfinder 0.09 (max 2.1, 2.0/t) | unstick 0.05 (max 2.1, 22/t) | buildings 0.05 (max 0.1, 1.0/t) | economy 0.02 (max 0.3, 1.0/t) | attacker/entityScan 0.02 (max 0.1, 3.0/t) (+14 smaller); elsewhere 5.5 ms
+[00:35:40] [Render thread/INFO]: [Eyes] 19_canopy: 9 units on the pad, 7 under cover; renderer embeddium, shader pack: true
+[00:35:40] [Render thread/INFO]: [Eyes] clip-mark 19_canopy_silhouettes 1792715740698
+[00:35:41] [IO-Worker-4/INFO]: [Eyes] 19_canopy_silhouettes: Saved screenshot as bat_eyes_19_canopy_silhouettes.png
+[00:35:42] [Render thread/INFO]: [Eyes] clip-mark 19_canopy_plain 1792715742768
+[00:35:42] [Render thread/INFO]: [Eyes] 19_canopy: 48 more of ours summoned for the cost A/B
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -13)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-180, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-177, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -13)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-174, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -13)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-171, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -13)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-168, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -16)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -13)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -10)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -7)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -4)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, -1)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 2)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-165, 72, 5)]
+[00:35:42] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-162, 72, -16)]
+[00:35:42] [Render thread/INFO]: [Frame] p50 540.0 ms (2 fps), p95 942.1 ms, max 5644.4 ms over 240 frames; RTS view, zoom 30, 18 units known
+[00:35:42] [Render thread/INFO]: [Anim] 26 units/frame (max 26): animation p50 0.1 ms, p95 1.5 ms; unit render p50 5.4 ms, p95 11.5 ms; per unit 13.0 us anim, 243.5 us render (anim 5%); RTS view, zoom 30, detail on, over 20 frames
+[00:35:42] [Render thread/INFO]: [FrameParts] 20 frames, mean 676.0 ms/frame; ours 9.8 ms (1%): unitBodies 3.96 (max 11.1, 13/f) | unitShadow 2.37 (max 5.2, 13/f) | worldMarkers 1.71 (max 2.4, 165/f) | canopy 0.93 (max 4.2, 1.7/f) | buildingDecor 0.36 (max 0.5, 60/f) | worldFx 0.14 (max 1.2, 15/f) | buildingBoxes 0.10 (max 0.3, 1.0/f) | unitOverlays 0.09 (max 0.1, 11/f) | unitRings 0.09 (max 0.1, 11/f) | bars 0.02 (max 0.0, 30/f) (+1 smaller); elsewhere 666.3 ms; 0 section re-mesh requests/s
+[00:35:42] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[00:35:43] [IO-Worker-4/INFO]: [Eyes] 19_canopy_plain: Saved screenshot as bat_eyes_19_canopy_plain.png
+[00:35:49] [Server thread/INFO]: [Tick] p50 7.3 ms, p95 13.2 ms, max 24.7 ms over the last 100 ticks; 71 units, 7 buildings, 1 players
+[00:35:49] [Server thread/INFO]: [Paths] last 10 s: 38 unit vanilla createPath, 38 short searches, 0 full-range fallbacks; chase cell memo 206/568 hits
+[00:35:51] [Render thread/INFO]: [Eyes] step 24 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:35:57] [Render thread/INFO]: [Frame] p50 568.4 ms (2 fps), p95 903.6 ms, max 5644.4 ms over 240 frames; RTS view, zoom 30, 65 units known
+[00:35:57] [Render thread/INFO]: [Anim] 111 units/frame (max 122): animation p50 0.3 ms, p95 0.5 ms; unit render p50 19.0 ms, p95 25.8 ms; per unit 4.7 us anim, 161.2 us render (anim 3%); RTS view, zoom 30, detail on, over 20 frames
+[00:35:57] [Render thread/INFO]: [FrameParts] 20 frames, mean 742.4 ms/frame; ours 23.3 ms (3%): unitBodies 9.80 (max 14.8, 58/f) | unitShadow 9.29 (max 14.9, 57/f) | worldMarkers 1.66 (max 2.2, 165/f) | canopy 1.57 (max 6.5, 2.0/f) | buildingDecor 0.36 (max 0.6, 60/f) | unitOverlays 0.23 (max 0.3, 11/f) | unitRings 0.11 (max 0.5, 11/f) | buildingBoxes 0.11 (max 0.2, 1.0/f) | bars 0.10 (max 0.3, 30/f) | worldFx 0.06 (max 0.1, 15/f) (+1 smaller); elsewhere 719.1 ms; 0 section re-mesh requests/s
+[00:35:57] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 66/t)
+[00:35:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:59] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:35:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:35:59] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1098|0
+[00:35:59] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1535|425|0
+[00:35:59] [Server thread/INFO]: [Tick] p50 7.8 ms, p95 11.9 ms, max 16.9 ms over the last 100 ticks; 70 units, 8 buildings, 1 players
+[00:35:59] [Server thread/INFO]: [Paths] last 10 s: 15 unit vanilla createPath, 15 short searches, 0 full-range fallbacks; chase cell memo 56/208 hits
+[00:36:01] [Render thread/INFO]: [Eyes] 19_canopy slice 1/4 (silhouettes on): canopy 1.35 ms/frame (draw 1.20, composite 0.15), unitBodies 12.43 ms/frame, frames 11: p50 726.68 ms, p95 811.08 ms; 42 units under cover, last frame 42 capsules + 0 models
+[00:36:09] [Server thread/INFO]: [Tick] p50 7.6 ms, p95 12.0 ms, max 17.9 ms over the last 100 ticks; 70 units, 9 buildings, 1 players
+[00:36:09] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:36:09] [Render thread/INFO]: [Eyes] 19_canopy slice 2/4 (silhouettes off): canopy 0.00 ms/frame (draw 0.00, composite 0.00), unitBodies 17.12 ms/frame, frames 11: p50 740.67 ms, p95 805.97 ms; 0 units under cover, last frame 42 capsules + 0 models
+[00:36:12] [Render thread/INFO]: [Frame] p50 623.8 ms (2 fps), p95 903.6 ms, max 5644.4 ms over 240 frames; RTS view, zoom 30, 65 units known
+[00:36:12] [Render thread/INFO]: [Anim] 118 units/frame (max 118): animation p50 0.3 ms, p95 0.5 ms; unit render p50 28.7 ms, p95 36.3 ms; per unit 2.7 us anim, 227.3 us render (anim 1%); RTS view, zoom 30, detail on, over 20 frames
+[00:36:12] [Render thread/INFO]: [FrameParts] 20 frames, mean 747.9 ms/frame; ours 29.3 ms (4%): unitBodies 17.61 (max 26.6, 60/f) | unitShadow 8.76 (max 11.5, 58/f) | worldMarkers 1.75 (max 3.1, 165/f) | buildingDecor 0.36 (max 0.5, 60/f) | canopy 0.33 (max 3.2, 0.5/f) | unitOverlays 0.16 (max 0.2, 11/f) | unitRings 0.15 (max 0.2, 11/f) | buildingBoxes 0.09 (max 0.1, 1.0/f) | bars 0.05 (max 0.6, 30/f) | worldFx 0.04 (max 0.1, 15/f) (+1 smaller); elsewhere 718.6 ms; 0 section re-mesh requests/s
+[00:36:12] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.2, 65/t)
+[00:36:17] [Render thread/INFO]: [Eyes] 19_canopy slice 3/4 (silhouettes off): canopy 0.00 ms/frame (draw 0.00, composite 0.00), unitBodies 14.11 ms/frame, frames 11: p50 742.84 ms, p95 789.12 ms; 0 units under cover, last frame 42 capsules + 0 models
+[00:36:19] [Server thread/INFO]: [Tick] p50 7.4 ms, p95 11.1 ms, max 58.3 ms over the last 100 ticks; 71 units, 10 buildings, 1 players
+[00:36:19] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:36:26] [Render thread/INFO]: [Eyes] 19_canopy slice 4/4 (silhouettes on): canopy 1.21 ms/frame (draw 1.08, composite 0.13), unitBodies 15.26 ms/frame, frames 11: p50 729.44 ms, p95 784.02 ms; 42 units under cover, last frame 42 capsules + 0 models
+[00:36:26] [Render thread/INFO]: [Eyes] 19_canopy cost (42 units under cover, 30.0 px per block, embeddium, shader pack): silhouettes on: canopy 1.28 ms/frame, unitBodies 13.84, frame p50 728.06 / p95 797.55 ms | off: canopy 0.00 ms/frame, unitBodies 15.61, frame p50 741.76 / p95 797.54 ms
+[00:36:27] [Render thread/INFO]: [Frame] p50 658.0 ms (2 fps), p95 903.6 ms, max 5644.4 ms over 240 frames; RTS view, zoom 14, 65 units known
+[00:36:27] [Render thread/INFO]: [Anim] 117 units/frame (max 118): animation p50 0.2 ms, p95 0.3 ms; unit render p50 20.6 ms, p95 34.0 ms; per unit 3.0 us anim, 194.7 us render (anim 2%); RTS view, zoom 14, detail on, over 20 frames
+[00:36:27] [Render thread/INFO]: [FrameParts] 20 frames, mean 748.1 ms/frame; ours 25.6 ms (3%): unitBodies 13.33 (max 27.4, 59/f) | unitShadow 9.08 (max 14.2, 57/f) | worldMarkers 1.68 (max 3.7, 165/f) | canopy 0.78 (max 4.0, 1.3/f) | buildingDecor 0.34 (max 0.4, 60/f) | unitOverlays 0.16 (max 0.2, 11/f) | unitRings 0.12 (max 0.2, 11/f) | buildingBoxes 0.10 (max 0.2, 1.0/f) | worldFx 0.03 (max 0.1, 15/f) | bars 0.03 (max 0.1, 30/f) (+1 smaller); elsewhere 722.4 ms; 0 section re-mesh requests/s
+[00:36:27] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.04 (max 2.4, 65/t)
+[00:36:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:29] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:36:29] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:29] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1158|0
+[00:36:29] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1573|423|0
+[00:36:29] [Server thread/INFO]: [Tick] p50 6.4 ms, p95 10.4 ms, max 15.6 ms over the last 100 ticks; 72 units, 10 buildings, 1 players
+[00:36:29] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:36:30] [Render thread/INFO]: [Eyes] clip-mark 19_canopy_close 1792715790608
+[00:36:30] [Render thread/INFO]: [Eyes] 19_canopy close: 24 capsules + 12 model silhouettes, 64.3 px per block
+[00:36:30] [Render thread/INFO]: Stopping worker threads
+[00:36:30] [Render thread/INFO]: Started 1 worker threads
+[00:36:30] [Render thread/INFO]: [Eyes] 19_canopy: fade mode, 3 selected under the middle oak
+[00:36:30] [IO-Worker-5/INFO]: [Eyes] 19_canopy_close: Saved screenshot as bat_eyes_19_canopy_close.png
+[00:36:33] [Notification Thread/INFO]: [GC] pause 53 ms (G1 Young Generation, end of minor GC: G1 Evacuation Pause); heap now 1276 MB of 4096 MB
+[00:36:36] [Render thread/INFO]: [Eyes] step 24 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:36:39] [Server thread/INFO]: [Tick] p50 7.6 ms, p95 11.8 ms, max 20.7 ms over the last 100 ticks; 73 units, 11 buildings, 1 players
+[00:36:39] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:36:42] [Render thread/INFO]: [Frame] p50 673.6 ms (1 fps), p95 947.4 ms, max 2378.8 ms over 240 frames; RTS view, zoom 30, 65 units known
+[00:36:42] [Render thread/INFO]: [Anim] 104 units/frame (max 116): animation p50 0.2 ms, p95 0.8 ms; unit render p50 20.7 ms, p95 39.8 ms; per unit 3.9 us anim, 220.1 us render (anim 2%); RTS view, zoom 30, detail on, over 20 frames
+[00:36:42] [Render thread/INFO]: [FrameParts] 20 frames, mean 761.2 ms/frame; ours 53.5 ms (7%): worldMarkers 19.84 (max 345.6, 165/f) | unitBodies 13.67 (max 54.8, 50/f) | unitShadow 9.39 (max 15.7, 55/f) | canopy 7.78 (max 62.8, 2.9/f) | bars 1.80 (max 31.6, 30/f) | buildingDecor 0.36 (max 0.5, 60/f) | unitOverlays 0.33 (max 2.4, 11/f) | unitRings 0.19 (max 0.6, 11/f) | buildingBoxes 0.10 (max 0.5, 1.0/f) (+2 smaller); elsewhere 707.8 ms; 0 section re-mesh requests/s
+[00:36:42] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 65/t)
+[00:36:49] [Server thread/INFO]: [Tick] p50 7.0 ms, p95 9.7 ms, max 10.5 ms over the last 100 ticks; 74 units, 12 buildings, 1 players
+[00:36:49] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:36:50] [Render thread/INFO]: [Eyes] clip-mark 19_canopy_fade 1792715810969
+[00:36:50] [Render thread/INFO]: Stopping worker threads
+[00:36:50] [Render thread/INFO]: Started 1 worker threads
+[00:36:51] [IO-Worker-11/INFO]: [Eyes] 19_canopy_fade: Saved screenshot as bat_eyes_19_canopy_fade.png
+[00:36:55] [Render thread/INFO]: [Frame] p50 668.5 ms (1 fps), p95 859.2 ms, max 1898.8 ms over 240 frames; RTS view, zoom 30, 65 units known
+[00:36:55] [Render thread/INFO]: [Anim] 106 units/frame (max 116): animation p50 0.2 ms, p95 0.3 ms; unit render p50 15.1 ms, p95 31.1 ms; per unit 2.0 us anim, 160.3 us render (anim 1%); RTS view, zoom 30, detail on, over 21 frames
+[00:36:55] [Render thread/INFO]: [FrameParts] 21 frames, mean 621.2 ms/frame; ours 24.1 ms (4%): unitShadow 8.79 (max 12.1, 57/f) | unitBodies 8.48 (max 23.6, 49/f) | worldMarkers 4.25 (max 33.5, 165/f) | canopy 1.53 (max 7.5, 2.6/f) | buildingDecor 0.42 (max 2.1, 60/f) | bars 0.21 (max 0.3, 30/f) | unitOverlays 0.20 (max 0.4, 11/f) | unitRings 0.16 (max 0.2, 11/f) | buildingBoxes 0.07 (max 0.1, 1.0/f) (+2 smaller); elsewhere 597.0 ms; 0 section re-mesh requests/s
+[00:36:55] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 65/t)
+[00:36:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:59] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:36:59] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:36:59] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1218|0
+[00:36:59] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1566|391|0
+[00:36:59] [Server thread/INFO]: [Tick] p50 7.4 ms, p95 11.0 ms, max 15.1 ms over the last 100 ticks; 75 units, 12 buildings, 1 players
+[00:36:59] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:37:07] [Render thread/INFO]: [Frame] p50 662.7 ms (2 fps), p95 859.2 ms, max 1898.8 ms over 240 frames; RTS view, zoom 30, 65 units known
+[00:37:07] [Render thread/INFO]: [Anim] 116 units/frame (max 116): animation p50 0.2 ms, p95 0.3 ms; unit render p50 19.6 ms, p95 30.9 ms; per unit 2.1 us anim, 182.0 us render (anim 1%); RTS view, zoom 30, detail on, over 20 frames
+[00:37:07] [Render thread/INFO]: [FrameParts] 20 frames, mean 574.6 ms/frame; ours 25.1 ms (4%): unitBodies 12.47 (max 25.1, 59/f) | unitShadow 9.09 (max 11.7, 57/f) | worldMarkers 1.52 (max 2.0, 165/f) | canopy 0.87 (max 3.4, 2.0/f) | bars 0.36 (max 2.1, 30/f) | buildingDecor 0.34 (max 0.4, 60/f) | unitRings 0.16 (max 0.2, 11/f) | unitOverlays 0.15 (max 0.2, 11/f) | buildingBoxes 0.07 (max 0.1, 1.0/f) (+2 smaller); elsewhere 549.6 ms; 0 section re-mesh requests/s
+[00:37:07] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.03 (max 0.1, 65/t)
+[00:37:09] [Server thread/INFO]: [Tick] p50 7.9 ms, p95 12.4 ms, max 56.2 ms over the last 100 ticks; 76 units, 14 buildings, 1 players
+[00:37:09] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[00:37:11] [Render thread/INFO]: [Eyes] clip-mark 19_canopy_all 1792715831427
+[00:37:11] [Render thread/INFO]: Stopping worker threads
+[00:37:11] [Render thread/INFO]: Started 1 worker threads
+[00:37:11] [IO-Worker-5/INFO]: [Eyes] 19_canopy_all: Saved screenshot as bat_eyes_19_canopy_all.png
+[00:37:12] [Render thread/INFO]: [Eyes] step 15 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[00:37:13] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 21 registered (up to 3 levels)
+[00:37:13] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png]
+[00:37:13] [Render thread/INFO]: [Eyes] tour complete
+[00:37:13] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[00:37:13] [Render thread/INFO]: Stopping!
+[00:37:13] [Server thread/INFO]: Offline lost connection: Disconnected
+[00:37:13] [Server thread/INFO]: Offline left the game
+[00:37:13] [Server thread/INFO]: Player logged out: Offline, id: 2
+[00:37:13] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[00:37:14] [Server thread/INFO]: RTSPlayerSaveData.load
+[00:37:14] [Server thread/INFO]: Saved 0 fallen hero units
+[00:37:14] [Server thread/INFO]: saved 0 netherzones in serverevents
+[00:37:14] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1247|0
+[00:37:14] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|1601|409|0
+[00:37:14] [Server thread/INFO]: Stopping server
+[00:37:14] [Server thread/INFO]: Saving players
+[00:37:14] [Server thread/INFO]: Saving worlds
+[00:37:14] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[00:37:14] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[00:37:14] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[00:37:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[00:37:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[00:37:14] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[00:37:14] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[00:37:14] [Render thread/INFO]: Stopping worker threads
