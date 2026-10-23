@@ -54,25 +54,40 @@ public final class BuildId {
         return clean(mine).equals(clean(theirs));
     }
 
-    /** Plain-words mismatch text, English form (what the lang key says). */
-    public static String mismatchText(String have, String need) {
-        return "You have " + PREFIX + clean(have) + "; this server needs " + clean(need)
-                + ". Update with the installer or the test pack link.";
+    public static final String KEY_MISMATCH = "multiplayer.reignofnether.version_mismatch";
+    public static final String KEY_MISMATCH_UNKNOWN = "multiplayer.reignofnether.version_mismatch_unknown";
+
+    /** A translation key plus its arguments: the rule is pure, the client turns it into a Component. */
+    public record Parts(String key, Object... args) { }
+
+    private static volatile String lastServerChannelVersion;
+
+    /**
+     * Called by our channel's client-side version check with the server's channel string. Forge's mismatch screen
+     * keeps only MOD versions (constant 1.5.0-beta-4 on every build), never the channel string, so this is the one
+     * place the server's build id is visible. Recorded on every check, accepted or not, so the latest join attempt wins.
+     */
+    public static void noteServerChannelVersion(String serverChannelVersion) {
+        lastServerChannelVersion = serverChannelVersion;
+    }
+
+    public static String lastServerChannelVersion() {
+        return lastServerChannelVersion;
     }
 
     /**
-     * The sentence shown on the join-failure screen. serverChannelVersion is the server's channel string from
-     * Forge's mismatch data, or null when it is not known (registry mismatch); a value equal to ours cannot explain
-     * the failure, so it also counts as unknown.
+     * What the join-failure screen says. serverChannelVersion is the server's channel string, or null/blank when not
+     * known (registry mismatch, server without the mod); a value equal to ours cannot explain the failure, so it also
+     * counts as unknown.
      */
-    public static String joinFailureText(String mine, String serverChannelVersion) {
+    public static Parts joinFailureParts(String mine, String serverChannelVersion) {
         if (serverChannelVersion == null || serverChannelVersion.isBlank()
                 || matches(mine, parse(serverChannelVersion)))
-            return "You have " + PREFIX + clean(mine) + "; this server runs a different build.";
-        return mismatchText(mine, parse(serverChannelVersion));
+            return new Parts(KEY_MISMATCH_UNKNOWN, clean(mine));
+        return new Parts(KEY_MISMATCH, clean(mine), parse(serverChannelVersion));
     }
 
-    public static Component mismatchMessage(String have, String need) {
-        return Component.translatable("multiplayer.reignofnether.version_mismatch", clean(have), clean(need));
+    public static Component toComponent(Parts p) {
+        return Component.translatable(p.key(), p.args());
     }
 }

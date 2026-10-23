@@ -40,30 +40,42 @@ public class BuildIdGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 20)
-    public static void buildid_mismatch_message_names_both_versions(GameTestHelper helper) {
-        String msg = BuildId.mismatchText("2026.10.23-0443-911d903", "2026.10.22-1210-abc1234");
-        if (!msg.contains("You have Beyond and Tabs 2026.10.23-0443-911d903"))
-            helper.fail("must name what the player has: " + msg);
-        else if (!msg.contains("this server needs 2026.10.22-1210-abc1234"))
-            helper.fail("must name what the server needs: " + msg);
-        else if (!msg.contains("installer"))
-            helper.fail("must say how to update: " + msg);
+    public static void buildid_join_failure_parts_use_server_id_or_fall_back(GameTestHelper helper) {
+        BuildId.Parts known = BuildId.joinFailureParts("A-1", "Beyond and Tabs B-2");
+        BuildId.Parts unknown = BuildId.joinFailureParts("A-1", null);
+        BuildId.Parts same = BuildId.joinFailureParts("A-1", "Beyond and Tabs A-1");
+        BuildId.Parts blank = BuildId.joinFailureParts("A-1", "  ");
+        if (!known.key().equals(BuildId.KEY_MISMATCH) || known.args().length != 2
+                || !known.args()[0].equals("A-1") || !known.args()[1].equals("B-2"))
+            helper.fail("known server id must give (have, need) = (A-1, B-2): " + known);
+        else if (!unknown.key().equals(BuildId.KEY_MISMATCH_UNKNOWN) || unknown.args().length != 1
+                || !unknown.args()[0].equals("A-1"))
+            helper.fail("unknown server id fallback wrong: " + unknown);
+        else if (!same.key().equals(unknown.key()) || !blank.key().equals(unknown.key()))
+            helper.fail("a server id equal to ours or blank is no explanation");
         else
             helper.succeed();
     }
 
     @GameTest(template = ARENA, timeoutTicks = 20)
-    public static void buildid_join_failure_text_uses_server_id_or_falls_back(GameTestHelper helper) {
-        String known = BuildId.joinFailureText("A-1", "Beyond and Tabs B-2");
-        String unknown = BuildId.joinFailureText("A-1", null);
-        String same = BuildId.joinFailureText("A-1", "Beyond and Tabs A-1");
-        if (!known.contains("You have Beyond and Tabs A-1") || !known.contains("this server needs B-2"))
-            helper.fail("known server id must be named: " + known);
-        else if (!unknown.equals("You have Beyond and Tabs A-1; this server runs a different build."))
-            helper.fail("unknown server id fallback wrong: " + unknown);
-        else if (!same.equals(unknown))
-            helper.fail("a server id equal to ours is no explanation: " + same);
-        else
-            helper.succeed();
+    public static void buildid_lang_keys_exist_and_take_the_args(GameTestHelper helper) {
+        // read the shipped lang file directly: the dedicated test server does not load mod lang for Component.getString
+        try (var in = BuildId.class.getResourceAsStream("/assets/reignofnether/lang/en_us.json")) {
+            var json = com.google.gson.JsonParser.parseReader(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            String a = json.has(BuildId.KEY_MISMATCH) ? json.get(BuildId.KEY_MISMATCH).getAsString() : null;
+            String b = json.has(BuildId.KEY_MISMATCH_UNKNOWN) ? json.get(BuildId.KEY_MISMATCH_UNKNOWN).getAsString() : null;
+            if (a == null || b == null)
+                helper.fail("lang key missing: " + BuildId.KEY_MISMATCH + " / " + BuildId.KEY_MISMATCH_UNKNOWN);
+            else if (String.format(a, "A-1", "B-2").contains("%") || !String.format(a, "A-1", "B-2").contains("needs B-2")
+                    || !a.contains("installer"))
+                helper.fail("mismatch line must take (have, need) and say how to update: " + a);
+            else if (!String.format(b, "A-1").contains("Beyond and Tabs A-1") || !b.contains("different build"))
+                helper.fail("fallback line must take (have) and say different build: " + b);
+            else
+                helper.succeed();
+        } catch (Exception e) {
+            helper.fail("could not read the lang file: " + e);
+        }
     }
 }
