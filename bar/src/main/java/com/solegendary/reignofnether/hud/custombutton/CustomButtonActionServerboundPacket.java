@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.hud.custombutton;
 
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.network.PacketAuth;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -62,10 +65,18 @@ public class CustomButtonActionServerboundPacket {
 	public record Actions(List<CustomButtonActions.CustomButtonAction> left, List<CustomButtonActions.CustomButtonAction> right) { }
 
 	public void accept(ServerPlayer player, Function<ResourceLocation, Actions> lookup) {
+		// a button's actions can run functions at permission level 2 (CustomButtonActions): only a player in the
+		// match, or the host/an op, may press one, and not faster than a hand can click
+		if (!PlayerServerEvents.isRTSPlayer(player.getName().getString()) && !PacketAuth.isHostOrOp(player, 2)) {
+			ReignOfNether.LOGGER.warn("CustomButtonActionServerboundPacket: {} is not in the match and pressed {}", player.getName().getString(), this.button);
+			return;
+		}
+		if (!PacketAuth.allowLogged(player, "custom_button", 10, 20))
+			return;
 		Actions found = lookup.apply(this.button);
 		if (found == null)
 			return;
-		List<CustomButtonActions.CustomButtonAction> actions = found.left();
+		List<CustomButtonActions.CustomButtonAction> actions = this.isLeft ? found.left() : found.right();
 		if (actions == null || actions.isEmpty())
 			return;
 		for (CustomButtonActions.CustomButtonAction action : actions) {

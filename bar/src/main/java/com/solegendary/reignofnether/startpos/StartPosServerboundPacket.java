@@ -54,7 +54,7 @@ public class StartPosServerboundPacket {
     public StartPosServerboundPacket(FriendlyByteBuf buffer) {
         this.action = buffer.readEnum(StartPosAction.class);
         this.blockPos = buffer.readBlockPos();
-        this.faction = Factions.getFaction(buffer.readResourceLocation());
+        this.faction = Factions.findFaction(buffer.readResourceLocation());   // null: not a faction (RESERVE refuses it)
         this.playerName = buffer.readUtf();
     }
 
@@ -96,6 +96,12 @@ public class StartPosServerboundPacket {
         switch (action) {
             case RESERVE -> {
                 if (StartPosServerEvents.isStartingGame())
+                    return false;
+                // "neutral" is the host's and a key no faction has is nobody's. NONE stays allowed: it is how the lobby
+                // holds a slot before a faction is picked (and drops the pick), and a slot with no faction never starts
+                // anything (StartPosServerEvents skips it at the countdown); it is startRTS that guards sandbox.
+                if (faction == null || (faction != Factions.NONE
+                        && !com.solegendary.reignofnether.network.PacketAuth.mayPlayAs(player, faction)))
                     return false;
                 // the lobby greys preview factions out; a modified client still mustn't reserve one
                 if (faction.preview)

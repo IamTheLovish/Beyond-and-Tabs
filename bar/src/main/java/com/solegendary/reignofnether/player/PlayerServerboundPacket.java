@@ -273,7 +273,7 @@ public class PlayerServerboundPacket {
     public PlayerServerboundPacket(FriendlyByteBuf buffer) {
         this.action = buffer.readEnum(PlayerAction.class);
 		if (this.action == PlayerAction.START_RTS)
-			this.faction = Factions.getFaction(buffer.readResourceLocation());
+			this.faction = Factions.findFaction(buffer.readResourceLocation());   // null: not a faction (refused in accept)
         this.playerId = buffer.readInt();
         this.x = buffer.readDouble();
         this.y = buffer.readDouble();
@@ -333,8 +333,19 @@ public class PlayerServerboundPacket {
         } else if (hostOnlyActions.contains(action) && !PacketAuth.isHostOrOp(player, 2)) {
             ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " is not the host and tried to run action: " + this.action.name());
             return false;
-        } else if (action != PlayerAction.TELEPORT && !PacketAuth.allow(player, "player_action", 10, 30)) {
-            // (TELEPORT only moves the sender's own camera body and follows a held portrait every tick)
+        }
+        if (action == PlayerAction.START_RTS && !PacketAuth.mayPlayAs(player, this.faction)) {
+            // START_RTS carries the faction: "none" (sandbox), "neutral" or a made-up key would otherwise make the sender
+            // a sandbox player, who may act for every owner. Sandbox starts go through START_RTS_SANDBOX (host only).
+            ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " may not start as faction "
+                + (this.faction == null ? "(unknown)" : this.faction.key));
+            return false;
+        }
+        if (action == PlayerAction.TELEPORT) {
+            // follows a held portrait every tick and a minimap drag ten times a second: 60/s, a burst of two seconds
+            if (!PacketAuth.allow(player, "player_teleport", 60, 120))
+                return false;
+        } else if (!PacketAuth.allow(player, "player_action", 10, 30)) {
             return false;   // starts, votes and market requests are a few a second at most
         }
         // a packet with playerId -1 used to pass the check above and then act on id -1; whatever the client
