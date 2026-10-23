@@ -1,0 +1,28 @@
+[21:52:46] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[21:52:47] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[21:52:47] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[21:52:47] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[21:52:47] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/compile/pipeline/FluidRenderer (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer)
+[21:52:47] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[21:52:47] [main/WARN]: Error loading class: me/jellysquid/mods/sodium/client/render/chunk/RenderSectionManager (java.lang.ClassNotFoundException: me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager)
+[21:52:52] [Render thread/WARN]: Error loading class: net/caffeinemc/mods/sodium/api/memory/MemoryIntrinsics (java.lang.ClassNotFoundException: net.caffeinemc.mods.sodium.api.memory.MemoryIntrinsics)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: java.lang.RuntimeException: java.lang.reflect.InvocationTargetException
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:32)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:53)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.LaunchServiceHandler.launch(LaunchServiceHandler.java:71)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.Launcher.run(Launcher.java:108)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.Launcher.main(Launcher.java:78)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:26)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.BootstrapLaunchConsumer.accept(BootstrapLaunchConsumer.java:23)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1077]: 	at cpw.mods.bootstraplauncher@1.1.2/cpw.mods.bootstraplauncher.BootstrapLauncher.main(BootstrapLauncher.java:141)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: Caused by: java.lang.reflect.InvocationTargetException
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at MC-BOOTSTRAP/fmlloader@1.20.1-47.4.26/net.minecraftforge.fml.loading.targets.CommonLaunchHandler.runTarget(CommonLaunchHandler.java:111)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at MC-BOOTSTRAP/fmlloader@1.20.1-47.4.26/net.minecraftforge.fml.loading.targets.CommonLaunchHandler.clientService(CommonLaunchHandler.java:99)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at MC-BOOTSTRAP/fmlloader@1.20.1-47.4.26/net.minecraftforge.fml.loading.targets.CommonClientLaunchHandler.lambda$makeService$0(CommonClientLaunchHandler.java:25)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	at MC-BOOTSTRAP/cpw.mods.modlauncher@10.0.9/cpw.mods.modlauncher.LaunchServiceHandlerDecorator.launch(LaunchServiceHandlerDecorator.java:30)
+[21:52:52] [Render thread/INFO]: [java.lang.ThreadGroup:uncaughtException:1086]: 	... 7 more
+[21:52:52] [Render thread/INFO]: [java.lang.Throwable:printStackTrace:682]: Caused by: java.lang.ExceptionInInitializerError: Exception org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical error was encountered [in thread "Render thread"]
