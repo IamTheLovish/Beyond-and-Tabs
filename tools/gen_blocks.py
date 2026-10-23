@@ -833,7 +833,6 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # round 18 (eyes structure run 39536435197: oak and birch tops "covered in dense dark flecks"): the flecks were
     # the many pin-sized gaps between leaves - in game each shows the dark inside of the crown. Gaps smaller than
     # about 1/20 block are filled with leaves deeper in the crown (a little darker, never black); the real gaps stay.
-    cover = F.blur(leaf.astype(np.float64), n / 64)
     # round 19: no gaps at all - the few big ones left were the same pits on every block (birch "moth-eaten"); the
     # canopy's depth now comes from the deeper, darker fill leaves, not from holes onto the dark inside of the crown
     keep_gap = np.zeros_like(leaf)

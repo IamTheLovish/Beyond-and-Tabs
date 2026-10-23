@@ -62,7 +62,8 @@ import java.util.List;
  *     in the level, a death on either side, or the armies' centroids within 8 blocks (20 s cap, the log says which) -
  *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
- *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
+ *     (counted from the 02 shot, labelled 0:30) passes 2:00. 11b_capitol_selected (Oct 22, slim HUD): the same
+ *     capitol selected, 30 ticks later - the building's icon block, health bar, Repeat toggle and production queue.</li>
  * <li>12_river_crossing (Oct 14, terrain_intelligence.md): a pad with a 4-wide, 1-deep water strip is laid with the
  *     op fill command 30 blocks west of the first fight, a dozen of the player's units are summoned on its west bank
  *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
@@ -1732,6 +1733,10 @@ public final class EyesDirector {
             OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(capitolCentre.getX() + 0.5, capitolCentre.getY(), capitolCentre.getZ() + 0.5));
             return;
         }
+        if (capitolSelAt > 0) {
+            capitolSelected(mc);
+            return;
+        }
         // the match clock runs from the 02 shot (labelled 0:30); -1 if that shot never happened (then shoot at once)
         int matchTick = matchZeroTotalTick < 0 ? -1 : totalTicks - matchZeroTotalTick;
         boolean late = ticks > 20 * 90;   // budget: never wait more than 90 s for the clock
@@ -1743,6 +1748,31 @@ public final class EyesDirector {
                     capitolCentre.toShortString(), OrthoviewClientEvents.getZoom(), battleLine(mc));
             shot(mc, "11_capitol_two_minutes");
             groundCensus(mc, "2:00");
+            capitolSelAt = ticks + 2;   // 11b: the capitol selected - the building's HUD block, its queue and toggles
+        }
+    }
+
+    private static int capitolSelAt = -1, capitolSelShotAt = -1;
+
+    /** 11b: select our capitol and photograph the HUD's building block (icon + health bar + Repeat toggle + queue). */
+    private static void capitolSelected(Minecraft mc) {
+        if (ticks == capitolSelAt) {
+            String me = mc.player.getName().getString();
+            for (var b : new ArrayList<>(BuildingClientEvents.getBuildings())) {
+                if (b instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement p
+                        && p.isCapitol && me.equals(p.ownerName)) {
+                    UnitClientEvents.clearSelectedUnits();
+                    BuildingClientEvents.clearSelectedBuildings();
+                    BuildingClientEvents.addSelectedBuilding(b);
+                    break;
+                }
+            }
+            capitolSelShotAt = ticks + 30;   // settle, then photograph
+        } else if (ticks == capitolSelShotAt) {
+            shot(mc, "11b_capitol_selected");
+            BuildingClientEvents.clearSelectedBuildings();
+            capitolSelAt = -1;
+            capitolSelShotAt = -1;
             next();
         }
     }

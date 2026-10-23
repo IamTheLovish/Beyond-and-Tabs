@@ -574,6 +574,15 @@ public class Factions {
 		registerBuildings(faction, building, null);
 	}
 	
+	/**
+	 * The faction with this key, or null when there is none. Packet decoders use this, not {@link #getFaction}: that one
+	 * turns a key nobody has into NONE (the sandbox "faction"), so a client could make up its way into a sandbox.
+	 */
+	public static Faction findFaction(ResourceLocation pKey) {
+		if (pKey == null) return null;
+		return ReignOfNetherRegistries.FACTIONS.get(pKey);
+	}
+
 	public static Faction getFaction(ResourceLocation pKey) {
 		if (pKey == null) return Factions.NONE;
 		Faction faction = ReignOfNetherRegistries.FACTIONS.get(pKey);
