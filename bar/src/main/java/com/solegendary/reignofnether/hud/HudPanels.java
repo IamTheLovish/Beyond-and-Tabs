@@ -1,7 +1,10 @@
 package com.solegendary.reignofnether.hud;
 
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
+import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
+import com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents;
+import com.solegendary.reignofnether.match.PlayerListRule;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 
@@ -105,6 +108,22 @@ public final class HudPanels {
         save(ReignOfNetherClientConfigs.HUD_STATS_OPEN, open);
     }
 
+    /**
+     * The list key / chevron. With the match option "Player list" on this folds and opens the table as before. With it
+     * off (the default) the list is hidden until the key brings it up as the open table, and the next press hides it
+     * again (match.PlayerListRule).
+     */
+    private static void toggleStats() {
+        boolean matchShows = GameruleClient.showPlayerList;
+        if (matchShows) {
+            setStatsOpen(!statsOpen);
+            return;
+        }
+        boolean next = PlayerListRule.afterKey(false, PlayerPanelClientEvents.playerOpened);
+        PlayerPanelClientEvents.playerOpened = next;
+        setStatsOpen(next);
+    }
+
     public static void setStatsTab(int tab) {
         statsTab = Math.max(0, Math.min(TABS - 1, tab));
         try {
@@ -115,7 +134,7 @@ public final class HudPanels {
     public static void toggle(int id) {
         ensureLoaded();
         switch (id) {
-            case STATS -> setStatsOpen(!statsOpen);
+            case STATS -> toggleStats();
             case KILLFEED -> save(ReignOfNetherClientConfigs.HUD_KILLFEED_COLLAPSED, killFeedCollapsed = !killFeedCollapsed);
             case ALERTS -> save(ReignOfNetherClientConfigs.HUD_ALERTS_COLLAPSED, alertsCollapsed = !alertsCollapsed);
             case CHEAT -> save(ReignOfNetherClientConfigs.HUD_CHEATSHEET_COLLAPSED, cheatSheetCollapsed = !cheatSheetCollapsed);

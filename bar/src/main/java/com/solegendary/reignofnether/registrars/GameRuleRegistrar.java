@@ -20,6 +20,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.BooleanValue> SLANTED_BUILDING;
     public static GameRules.Key<GameRules.IntegerValue> ALLOWED_HEROES;
     public static GameRules.Key<GameRules.BooleanValue> LOCK_ALLIANCES;
+    public static GameRules.Key<GameRules.BooleanValue> SHOW_PLAYER_LIST;
     public static GameRules.Key<GameRules.BooleanValue> SCENARIO_MODE;
     public static GameRules.Key<GameRules.BooleanValue> COOP_MODE;
     public static GameRules.Key<GameRules.BooleanValue> DO_NETHER_CONVERSION;
@@ -88,6 +89,12 @@ public class GameRuleRegistrar {
         // only allow alliances to be made/broken with non-RTS players (ie. before a game starts)
         LOCK_ALLIANCES = GameRules.register("lockAlliances", GameRules.Category.PLAYER,
                 GameRules.BooleanValue.create(false)
+        );
+        // Beyond and Tabs: the player list (stats strip / table, top right) is drawn from the start of the match for
+        // everyone - the lobby's "Player list" option (match.PlayerListRule). Off by default: it covers the screen
+        // (tester Joisco); the list key still opens it for one player. A game rule so the world keeps it on reload.
+        SHOW_PLAYER_LIST = GameRules.register("showPlayerList", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(com.solegendary.reignofnether.match.PlayerListRule.DEFAULT)
         );
         // map is set to be played as a scenario by the player that opens it
         SCENARIO_MODE = GameRules.register("scenarioMode", GameRules.Category.MISC,
