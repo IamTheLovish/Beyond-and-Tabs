@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class CustomButtonActionServerboundPacket {
@@ -51,10 +52,20 @@ public class CustomButtonActionServerboundPacket {
 
 	/** What the server does with this packet from {@code player} (the network handler's body, callable by game tests). */
 	public void accept(ServerPlayer player) {
-		CustomButton button = CustomButtonServerEvents.customButtons.get(this.button);
-		if (button == null)
+		accept(player, id -> {
+			CustomButton button = CustomButtonServerEvents.customButtons.get(id);
+			return button == null ? null : new Actions(button.leftClickActions, button.rightClickActions);
+		});
+	}
+
+	/** A button's two action lists (the lookup is a parameter because a CustomButton is a client class: game tests can't build one). */
+	public record Actions(List<CustomButtonActions.CustomButtonAction> left, List<CustomButtonActions.CustomButtonAction> right) { }
+
+	public void accept(ServerPlayer player, Function<ResourceLocation, Actions> lookup) {
+		Actions found = lookup.apply(this.button);
+		if (found == null)
 			return;
-		List<CustomButtonActions.CustomButtonAction> actions = button.leftClickActions;
+		List<CustomButtonActions.CustomButtonAction> actions = found.left();
 		if (actions == null || actions.isEmpty())
 			return;
 		for (CustomButtonActions.CustomButtonAction action : actions) {
