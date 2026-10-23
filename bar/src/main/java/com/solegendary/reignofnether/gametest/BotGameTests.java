@@ -506,6 +506,66 @@ public class BotGameTests {
     }
 
     /**
+     * A bot whose extractor site its workers cannot reach (the site sits on a rise: the Oct 23 CI run 40027854308 hard
+     * bot's 2749,70,-456, worker stuck at y64 below it) must not pick that patch again after the watch cancels the site,
+     * and must pick the next patch instead. The site is raised 4 blocks over the patch, so its centre is well above the
+     * patch it covers; the watch cancels it after 45 s with no progress. Placements never put in the world.
+     */
+    @GameTest(template = ARENA)
+    public static void bot_leaves_the_patch_of_an_extractor_site_its_workers_could_not_reach(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bot_unreach_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        BlockPos near = com.solegendary.reignofnether.resources.MetalPatches.stamp(level, at.getX(), at.getZ(), 1f);
+        BlockPos far = com.solegendary.reignofnether.resources.MetalPatches.stamp(level, at.getX() + 24, at.getZ(), 1f);
+        try {
+            if (near == null || far == null) {
+                helper.fail("could not stamp the two patches");
+                return;
+            }
+            var brain = new BotPlayer(owner, Factions.VILLAGERS, BotPlayer.Difficulty.HARD, near.offset(-6, 0, 0));
+            var site = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(brain.kit.extractor(), level,
+                near.offset(-2, 4, -2), Rotation.NONE, owner, false);
+            var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (site == null || worker == null) {
+                helper.fail("could not make the site or the worker");
+                return;
+            }
+            worker.setOwnerName(owner);
+            worker.moveTo(near.getX() + 0.5, near.getY() + 1, near.getZ() + 3.5, 0, 0);
+            List<LivingEntity> workers = new ArrayList<>(List.of(worker));
+            brain.metalFill = 1f;
+            brain.energyFill = 1f;
+            List<BuildingPlacement> dropped = new ArrayList<>();
+            brain.siteWatch.canceller = dropped::add;
+            brain.siteWatch.treatEveryWorkerAsIdle();
+            long t0 = level.getGameTime();
+            long stuck = com.solegendary.reignofnether.bot.BotSiteWatch.STUCK_TICKS;
+            brain.siteWatch.think(level, t0, List.of(site), workers);
+            brain.siteWatch.think(level, t0 + stuck, List.of(site), workers);
+            List<String> problems = new ArrayList<>();
+            if (dropped.size() != 1)
+                problems.add("the unreachable extractor site was not cancelled: dropped " + dropped.size());
+            BlockPos next = brain.freePatch(level);
+            if (near.equals(next))
+                problems.add("the bot would pick the patch of the site it just gave up on again (site centre y "
+                    + site.centrePos.getY() + ", patch y " + near.getY() + ")");
+            else if (!far.equals(next))
+                problems.add("the next patch should be the other one at " + far.toShortString() + ", got "
+                    + (next == null ? "none" : next.toShortString()));
+            worker.discard();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            var list = com.solegendary.reignofnether.resources.MetalPatches.getPatches(level);
+            list.remove(near);
+            list.remove(far);
+        }
+    }
+
+    /**
      * BotPlayer.queueLabLevel with BotEconomy's upgrade-or-new-lab rule: one Barracks gets no level (a second door
      * first); two Barracks with metal nearly empty get none; two with spare metal queue Level 2 on one of them; and a
      * bot defending its base levels nothing (the lab would stop making units). Placements never put in the world, a
