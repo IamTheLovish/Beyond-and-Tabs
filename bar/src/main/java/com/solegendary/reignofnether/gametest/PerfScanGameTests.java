@@ -90,11 +90,17 @@ public class PerfScanGameTests {
         });
         helper.runAfterDelay(120, () -> {
             rule.set(before, level.getServer());
+            String why = "worker tick " + worker.tickCount + " listed "
+                + com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().contains(worker)
+                + ", a removed " + a.isRemoved() + " target " + a.getTarget() + ", b removed " + b.isRemoved()
+                + " target " + b.getTarget() + ", closest for a "
+                + com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(a, 10, level)
+                + ", difficulty " + level.getDifficulty();
             worker.discard();
             a.discard();
             b.discard();
             if (!hunted[0])
-                helper.fail("neither spider took the other as a target with neutralAggro on");
+                helper.fail("neither spider took the other as a target with neutralAggro on: " + why);
             helper.succeed();
         });
     }
