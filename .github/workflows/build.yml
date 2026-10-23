@@ -237,6 +237,11 @@ jobs:
         if: always()
         run: |
           [ ! -f bar/build/anim-bench.txt ] || while IFS= read -r line; do echo "::notice::$line"; done < bar/build/anim-bench.txt
+      # the fast JUnit suite (bar/src/test, plan 008) ran inside the build above: one notice with the count, so a green
+      # build proves the tests really executed (readable from the check-run annotations when job logs are not)
+      - name: JUnit summary (count and time, as a notice)
+        if: always()
+        run: python3 tools/junit_summary.py bar/build/test-results/test
       - name: Keep this run's own jar (the eyes run tests exactly this build, not whatever bar-dev holds by then)
         uses: actions/upload-artifact@v4
         with:
