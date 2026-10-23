@@ -160,8 +160,10 @@ public class BotSiteWatch {
                 + ", cancelled: " + seen);
             if (bp.getBuilding() == bot.kit.extractor())
                 for (BlockPos patch : MetalPatches.getPatches(level))
-                    if (patchUnderSite(patch.getX(), patch.getY(), patch.getZ(), bp.centrePos.getX(), bp.centrePos.getY(), bp.centrePos.getZ()))
+                    if (patchUnderSite(patch.getX(), patch.getY(), patch.getZ(), bp.centrePos.getX(), bp.centrePos.getY(), bp.centrePos.getZ())) {
                         bot.badPatches.put(patch, avoidUntil(gameTime));   // not this patch again for a while
+                        bot.patchFailures.merge(patch, 1, Integer::sum);   // and given up after BotPlayer.PATCH_GIVE_UP cancels
+                    }
             // not the same ground again either (the next think would re-lay a lab on the very spot its builders
             // could not reach, and the watch would cancel it again 45 s later, for the whole match)
             bot.siteCancelled(bp, gameTime);
@@ -171,7 +173,7 @@ public class BotSiteWatch {
     }
 
     /** Extra ticks a cancelled site's patch is avoided beyond the two minutes a failed placement waits (BotPlayer.freePatch). */
-    static final long PATCH_AVOID_TICKS = 0;
+    static final long PATCH_AVOID_TICKS = 20 * 180;
 
     /** The time stamp a cancelled site's patch is recorded with in {@link BotPlayer#badPatches}. Pure. */
     static long avoidUntil(long gameTime) {
@@ -180,8 +182,10 @@ public class BotSiteWatch {
 
     /** Whether a metal patch is the one an extractor site (centred at c) was laid over. Pure, for the unit test. */
     static boolean patchUnderSite(int px, int py, int pz, int cx, int cy, int cz) {
-        long dx = px - cx, dy = py - cy, dz = pz - cz;
-        return dx * dx + dy * dy + dz * dz <= 4 * 4;
+        // flat: a site raised over the ground (a rise, a pillar its workers cannot climb) has its centre at the middle of
+        // its height, several blocks above the patch it covers - 3D distance missed it and the bot laid the same site again
+        long dx = px - cx, dz = pz - cz;
+        return dx * dx + dz * dz <= 4 * 4;
     }
 
     void cancel(ServerLevel level, BuildingPlacement bp) {
