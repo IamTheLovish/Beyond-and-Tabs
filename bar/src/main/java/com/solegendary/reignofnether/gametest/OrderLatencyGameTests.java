@@ -12,6 +12,7 @@ import com.solegendary.reignofnether.unit.packets.UnitActionServerboundPacket;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.protocol.game.ClientboundMoveEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
@@ -107,6 +108,7 @@ public class OrderLatencyGameTests {
         final Mob mob;
         final ServerEntity tracker;
         boolean sent;           // the tracker sent a move or teleport packet in its last sendChanges
+        boolean refused;        // the server refused the order
         int orderTick = -1;     // the unit's tickCount when the order was handled (its last finished tick)
         int firstMove = -1, firstSeen = -1;
         Vec3 orderPos;
@@ -196,9 +198,19 @@ public class OrderLatencyGameTests {
                     targets.add(t);
                 }
             }
+        } catch (GameTestAssertException e) {
+            throw e;   // helper.fail's own way of failing the test
         } catch (Throwable t) {
             finish.accept("setting up: " + t);
             return;
+        }
+        // a scout, not measured: its warm-up walk along the arena's south edge has the pathfinder classify the whole
+        // corridor the measured orders use, as a match's map is prewarmed at load (ArenaPathing)
+        Mob scout = TerrainGameTests.spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, o.getX() + 15.5, o.getY(),
+            o.getZ() + 15.5, made);
+        if (scout != null) {
+            EngagementStance.set(scout, EngagementStance.HOLD_FIRE);
+            scout.setInvulnerable(true);
         }
         ServerPlayer player = FakePlayerFactory.get(level,
             new GameProfile(UUID.nameUUIDFromBytes(mine.getBytes(StandardCharsets.UTF_8)), mine));
@@ -207,10 +219,13 @@ public class OrderLatencyGameTests {
         int[] warmedAt = { -1 }, quietFrom = { -1 }, firstOrderAt = { -1 };
 
         ArenaReady.whenTicking(helper, made, 150, tick -> {
-            // the warm-up: two blocks east, given directly (not measured)
+            // the warm-up: two blocks east, given directly (not measured); the scout across the arena
             for (Mob m : units)
                 CommandQueues.issue(level, mine, UnitAction.MOVE, -1, new int[] { m.getId() },
                     m.blockPosition().east(2), BlockPos.ZERO, QueueMode.REPLACE);
+            if (scout != null)
+                CommandQueues.issue(level, mine, UnitAction.MOVE, -1, new int[] { scout.getId() },
+                    new BlockPos(o.getX() + 1, o.getY(), o.getZ() + 15), BlockPos.ZERO, QueueMode.REPLACE);
             warmedAt[0] = tick;
         });
         helper.onEachTick(() -> {
@@ -221,7 +236,7 @@ public class OrderLatencyGameTests {
                 if (phase[0] == 0) {
                     if (warmedAt[0] < 0 || t < warmedAt[0] + 10)
                         return;
-                    boolean settled = true;
+                    boolean settled = scout == null || scout.getNavigation().isDone();
                     for (Mob m : units)
                         settled &= m.getNavigation().isDone() && m.getDeltaMovement().horizontalDistanceSqr() < 1e-6;
                     if (!settled && t < warmedAt[0] + 200)
@@ -256,9 +271,9 @@ public class OrderLatencyGameTests {
                                 int targetId = action == UnitAction.ATTACK ? targets.get(n).getId() : -1;
                                 BlockPos to = action == UnitAction.ATTACK ? targets.get(n).blockPosition()
                                     : new BlockPos(o.getX() + targetX, o.getY(), m.getBlockZ());
-                                if (!UnitActionServerboundPacket.accept(player, mine, action, targetId, new int[] { m.getId() },
-                                        to, BlockPos.ZERO, QueueMode.REPLACE))
-                                    finish.accept("the order for unit " + n + " was refused");
+                                // (a server task, not a test tick: a refusal is reported by the tick that measures)
+                                p.refused = !UnitActionServerboundPacket.accept(player, mine, action, targetId,
+                                    new int[] { m.getId() }, to, BlockPos.ZERO, QueueMode.REPLACE);
                             }));
                         });
                     }
@@ -278,6 +293,8 @@ public class OrderLatencyGameTests {
                     seen[i] = p.seenLatency();
                     if (p.orderTick < 0)
                         problems.add("unit " + i + " never got its order");
+                    else if (p.refused)
+                        problems.add("the order for unit " + i + " was refused");
                     else if (seen[i] < 0)
                         problems.add(String.format(Locale.ROOT, "unit %d (#%d) was not seen moving %d ticks after its order (moved at %d, "
                                 + "at %.2f/%.2f, target %s, nav done %s, attack target %s)", i, p.mob.getId(), WAIT, move[i],
@@ -291,6 +308,8 @@ public class OrderLatencyGameTests {
                         + "median %d)", name, Arrays.toString(move), Arrays.toString(seen), max(seen), median(seen));
                 ReignOfNether.LOGGER.info("[Latency] {}", line);
                 finish.accept(problems.isEmpty() ? null : line + " - " + String.join("; ", problems));
+            } catch (GameTestAssertException e) {
+                throw e;   // helper.fail's own way of failing the test
             } catch (Throwable e) {
                 finish.accept("measuring: " + e);
             }
