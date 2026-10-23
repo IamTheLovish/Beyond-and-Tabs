@@ -66,6 +66,7 @@ jobs:
         run: |
           python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
           python3 tools/check_guards.py
+          python3 tools/check_server_client_imports.py
           python3 tools/balance_audit.py
           python3 tools/check_building_icons.py
           python3 tools/check_sail_hubs.py
@@ -128,6 +129,23 @@ jobs:
   # What this run needs to test (tools/ci_plan.py): `code` = anything outside docs changed, so the GameTests (jobs bar and
   # bar-tests) run; a docs-only change skips them (skipped counts as passing for ci_wait; nothing new to publish). The
   # fast `build` checks always run. `matrix` = the shard numbers from the SHARD_n lines above. Unsure -> code.
+  # Ruff on the Python tools (bug-finding rules only, ruff.toml): seconds, so a script bug never costs a build.
+  # On a PR it only does work when tools/ or ruff.toml changed; pushes to main always lint.
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: scope
+        name: Did tools/ or ruff.toml change?
+        env: { EVENT: "${{ github.event_name }}", BASE: "${{ github.event.pull_request.base.sha }}", HEAD: "${{ github.event.pull_request.head.sha }}" }
+        run: |
+          run=true
+          if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - if: steps.scope.outputs.run == 'true'
+        run: pip install -q ruff==0.16.9 && ruff check tools
+
   changes:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     outputs:
