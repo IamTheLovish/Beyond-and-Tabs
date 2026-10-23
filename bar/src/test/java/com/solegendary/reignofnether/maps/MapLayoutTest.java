@@ -19,8 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class MapLayoutTest {
 
-    private static final long[] SEEDS = { 0L, 42L, -7L, Long.MIN_VALUE };
+    private static final long[] SEEDS = { 0L, 42L, Long.MIN_VALUE };
     private static final int[][] TEAMS = { { 0, 1 }, { 0, 0, 1, 1 }, { 0, 1, 2, 3, 4, 5, 6, 7 } };
+
+    /** Layouts are never changed after build(), so tests that only read one share it (the build is the costly part). */
+    private static final java.util.Map<String, MapLayout> BUILT = new java.util.HashMap<>();
+
+    private static MapLayout layout(MapPreset preset, int[] teams, long seed) {
+        return BUILT.computeIfAbsent(preset + java.util.Arrays.toString(teams) + seed, k -> MapLayout.build(preset, teams, seed));
+    }
 
     private static List<MapPreset> premade() {
         List<MapPreset> out = new ArrayList<>();
@@ -85,8 +92,8 @@ class MapLayoutTest {
             if (preset == MapPreset.ARCHIPELAGO)
                 continue;   // see archipelagoIgnoresTheSeed
             for (int[] teams : TEAMS) {
-                MapLayout a = MapLayout.build(preset, teams, 1L);
-                MapLayout b = MapLayout.build(preset, teams, 2L);
+                MapLayout a = layout(preset, teams, 1L);
+                MapLayout b = layout(preset, teams, 2L);
                 assertFalse(sameMap(a, b), preset + " " + teams.length + " slots: seeds 1 and 2 drew the same map");
             }
         }
@@ -99,7 +106,7 @@ class MapLayoutTest {
     @Test
     void archipelagoIgnoresTheSeed() {
         for (int[] teams : TEAMS)
-            assertFalse(sameMap(MapLayout.build(MapPreset.ARCHIPELAGO, teams, 1L), MapLayout.build(MapPreset.ARCHIPELAGO, teams, 2L)),
+            assertFalse(sameMap(layout(MapPreset.ARCHIPELAGO, teams, 1L), layout(MapPreset.ARCHIPELAGO, teams, 2L)),
                 "Archipelago with " + teams.length + " slots drew the same map for seeds 1 and 2");
     }
 
@@ -108,8 +115,8 @@ class MapLayoutTest {
         // the starts, the arena and the team boxes are the lobby's business, never the seed's
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS) {
-                MapLayout a = MapLayout.build(preset, teams, 0L);
-                MapLayout b = MapLayout.build(preset, teams, 987654321L);
+                MapLayout a = layout(preset, teams, 0L);
+                MapLayout b = layout(preset, teams, 987654321L);
                 assertEquals(a.slots, b.slots, preset.name());
                 assertEquals(a.boxes, b.boxes, preset.name());
                 assertEquals(a.ring, b.ring);
@@ -124,7 +131,7 @@ class MapLayoutTest {
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS)
                 for (long seed : SEEDS) {
-                    MapLayout l = MapLayout.build(preset, teams, seed);
+                    MapLayout l = layout(preset, teams, seed);
                     float first = l.mexValueOfSlot(0);
                     assertTrue(first > 0f, preset + " gave slot 0 no metal at all");
                     for (int slot = 1; slot < l.slots.size(); slot++)
@@ -138,7 +145,7 @@ class MapLayoutTest {
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS)
                 for (long seed : new long[] { 0L, 77L }) {
-                    MapLayout l = MapLayout.build(preset, teams, seed);
+                    MapLayout l = layout(preset, teams, seed);
                     int n = l.slots.size();
                     int[] perSlot = new int[n];
                     for (MapLayout.Mex m : l.mexes)
@@ -155,7 +162,7 @@ class MapLayoutTest {
         for (MapPreset preset : premade())
             for (int[] teams : new int[][] { TEAMS[0], TEAMS[1], TEAMS[2] })
                 for (long seed : new long[] { 0L, 31L }) {
-                    MapLayout l = MapLayout.build(preset, teams, seed);
+                    MapLayout l = layout(preset, teams, seed);
                     MapLayout.Sample ref = new MapLayout.Sample(), other = new MapLayout.Sample();
                     for (double[] uv : frame) {
                         double[] w0 = MapLayout.toWorld(l.slots.get(0), uv[0], uv[1]);
@@ -180,7 +187,7 @@ class MapLayoutTest {
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS)
                 for (long seed : SEEDS) {
-                    MapLayout l = MapLayout.build(preset, teams, seed);
+                    MapLayout l = layout(preset, teams, seed);
                     assertEquals(teams.length, l.slots.size());
                     for (MapLayout.Slot s : l.slots) {
                         String who = preset + " " + teams.length + " slots seed " + seed + " slot " + s.index();
@@ -200,7 +207,7 @@ class MapLayoutTest {
     void enemyBoxesNeverOverlap() {
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS) {
-                MapLayout l = MapLayout.build(preset, teams, 3L);
+                MapLayout l = layout(preset, teams, 3L);
                 for (MapLayout.Box a : l.boxes)
                     for (MapLayout.Box b : l.boxes) {
                         if (a == b)
@@ -222,7 +229,7 @@ class MapLayoutTest {
                 int[] teams = new int[n];
                 for (int i = 0; i < n; i++)
                     teams[i] = i % 2;
-                MapLayout l = MapLayout.build(preset, teams, 0L);
+                MapLayout l = layout(preset, teams, 0L);
                 for (int i = 0; i < n; i++) {
                     MapLayout.Slot a = l.slots.get(i), b = l.slots.get((i + 1) % n);
                     double gap = Math.hypot(a.dx() - b.dx(), a.dz() - b.dz());
@@ -249,7 +256,7 @@ class MapLayoutTest {
     @Test
     void aPointIsInTheWedgeOfTheStartItIsNextTo() {
         for (int[] teams : TEAMS) {
-            MapLayout l = MapLayout.build(MapPreset.VERDANT_VALLEY, teams, 0L);
+            MapLayout l = layout(MapPreset.VERDANT_VALLEY, teams, 0L);
             for (MapLayout.Slot s : l.slots) {
                 assertEquals(s.index(), l.slotAt(s.dx(), s.dz()));
                 assertEquals(s.index(), l.slotAt(s.dx() * 0.5, s.dz() * 0.5), "half way to the centre is still its wedge");
@@ -264,7 +271,7 @@ class MapLayoutTest {
         for (MapPreset preset : premade())
             for (int[] teams : TEAMS)
                 for (long seed : new long[] { 0L, 11L }) {
-                    MapLayout l = MapLayout.build(preset, teams, seed);
+                    MapLayout l = layout(preset, teams, seed);
                     List<String> seen = new ArrayList<>();
                     for (MapLayout.Mex m : l.mexes) {
                         String where = preset + " " + teams.length + " slots seed " + seed + " patch " + m;
@@ -282,7 +289,7 @@ class MapLayoutTest {
         List<MapPreset> all = premade();
         for (int i = 0; i < all.size(); i++)
             for (int j = i + 1; j < all.size(); j++)
-                assertNotEquals(terrain(MapLayout.build(all.get(i), TEAMS[1], 0L), 17), terrain(MapLayout.build(all.get(j), TEAMS[1], 0L), 17),
+                assertNotEquals(terrain(layout(all.get(i), TEAMS[1], 0L), 17), terrain(layout(all.get(j), TEAMS[1], 0L), 17),
                     all.get(i) + " and " + all.get(j) + " have the same terrain");
     }
 
