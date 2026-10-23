@@ -236,5 +236,7 @@ public enum UnitAction {
     // Beyond and Tabs T3 roles (claude/t3-roles.md)
     DEEP_DIVE,              // Tidewrought Leviathan: dives from the water and surfaces by the aimed spot with a slam (T3)
     GROW_GROVE,             // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
-    ERUPTION                // Horde Magma Hurler: a telegraphed ring at the aimed spot erupts, damage + knock-up (second T3)
+    ERUPTION,               // Horde Magma Hurler: a telegraphed ring at the aimed spot erupts, damage + knock-up (second T3)
+    BILE_LOB,               // Gravebound Plague Abomination: lobs an acid pool at the aimed spot (second T3)
+    CARRION_BURST           // Gravebound Plague Abomination: gives up 20% of its HP to raise skeletons round it (second T3)
 }

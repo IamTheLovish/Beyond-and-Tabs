@@ -1001,6 +1001,12 @@ public class EntityRegistrar {
                     .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth_unit").toString()));
+    // second Gravebound T3 (T3b-3): the zoglin at x2.6
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit>> PLAGUE_ABOMINATION_UNIT = ENTITIES.register("plague_abomination_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "plague_abomination_unit").toString()));
     // Alex's Mobs' bison (RenderBison) drawn x1.3
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit>> MOSSBACK_BISON_UNIT = ENTITIES.register("mossback_bison_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit::new, MobCategory.CREATURE)
@@ -1158,6 +1164,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.SapperProd.itemName -> EntityRegistrar.SAPPER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.ITEM_NAME -> EntityRegistrar.MAGMA_HURLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.ITEM_NAME -> EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
             case BruteProd.itemName -> EntityRegistrar.BRUTE_UNIT.get();

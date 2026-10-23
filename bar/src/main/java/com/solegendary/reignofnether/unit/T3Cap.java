@@ -55,7 +55,7 @@ public final class T3Cap {
         if (pairs == null) {
             pairs = List.of(
                 new Pair("Sunforged", ProductionItems.SUN_COLOSSUS, EntityRegistrar.SUN_COLOSSUS_UNIT.get(), ProductionItems.SUN_T3B),
-                new Pair("Gravebound", ProductionItems.BONE_DRAGON, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.GRAVE_T3B),
+                new Pair("Gravebound", ProductionItems.BONE_DRAGON, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.GRAVE_T3B, EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get()),
                 new Pair("Horde", ProductionItems.WAR_MAMMOTH, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.HORDE_T3B, EntityRegistrar.MAGMA_HURLER_UNIT.get()),
                 new Pair("Verdant", ProductionItems.WORLD_TREE_WALKER, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.VERDANT_T3B),
                 new Pair("Tidewrought", ProductionItems.LEVIATHAN, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.TIDE_T3B),

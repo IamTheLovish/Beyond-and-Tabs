@@ -48,6 +48,7 @@ ROSTER = [
     ('Gravebound', 't2', 'monsters/CreeperUnit', 'suicide'),
     ('Gravebound', 't2', 'monsters/WraithUnit', 'caster'),
     ('Gravebound', 't2', 'monsters/WardenUnit', 'tank'),
+    ('Gravebound', 't3', 'monsters/PlagueAbominationUnit', 'experimental'),
     ('Gravebound', 't3', 'monsters/BoneDragonUnit', 'experimental'),
     # Horde (piglins)
     ('Horde', 'worker', 'piglins/GruntUnit', 'builder'),
@@ -193,7 +194,7 @@ OVERRIDES = {
 }
 
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
-COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B'}
+COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')

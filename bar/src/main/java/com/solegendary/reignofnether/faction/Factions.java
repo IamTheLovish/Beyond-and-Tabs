@@ -303,6 +303,7 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), ProductionItems.ORIFLAMME_ELEPHANT);
 		registerEntity(PIGLINS, EntityRegistrar.GOREHORN_RHINO_UNIT.get(), ProductionItems.GOREHORN_RHINO);
 		registerEntity(MONSTERS, EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), ProductionItems.OSSUARY_BEHEMOTH);
+		registerEntity(MONSTERS, EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), ProductionItems.GRAVE_T3B);
 		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
 		// beasts-2: the other three
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), ProductionItems.SHELLBACK_TURTLE);
