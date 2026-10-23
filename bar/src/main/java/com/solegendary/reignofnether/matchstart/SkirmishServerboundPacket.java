@@ -260,7 +260,8 @@ public class SkirmishServerboundPacket {
         // placed resumes on reload (code_review CR-13)
         boolean started = com.solegendary.reignofnether.maps.MapMatch.begin(player.serverLevel(), lineup,
             com.solegendary.reignofnether.maps.MapPreset.byId(map), choosePositions, arena, metal, spawnDistance,
-            new net.minecraft.core.BlockPos(gx, gy, gz), rng,
+            com.solegendary.reignofnether.maps.ArenaOrigins.centreFor(player.serverLevel(),   // the slot once a new match moved the arena
+                new net.minecraft.core.BlockPos(gx, gy, gz)), rng,
             com.solegendary.reignofnether.match.MatchState.Origin.SKIRMISH, mapSeed,
             com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay), m -> ReignOfNether.LOGGER.info(
                 "[Skirmish] {} started on {} with {} side(s)", player.getName().getString(),

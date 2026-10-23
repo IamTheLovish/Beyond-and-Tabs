@@ -530,7 +530,9 @@ public class MultiplayerLobby {
         ServerPlayer host = hostUuid == null ? null : server.getPlayerList().getPlayer(hostUuid);
         // the ring is centred where the host stands (a fresh skirmish world: its spawn) - on the ground
         BlockPos c = host != null ? host.blockPosition() : level.getSharedSpawnPos();
-        BlockPos centre = new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ());
+        // once a new match has moved the arena to fresh ground (maps.NewMatch), the slot is the centre, not the host
+        BlockPos centre = com.solegendary.reignofnether.maps.ArenaOrigins.centreFor(level,
+            new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ()));
         List<Seat> lineup = new ArrayList<>(seats);
         open = false;
         seats.clear();

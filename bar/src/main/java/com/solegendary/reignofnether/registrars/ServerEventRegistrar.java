@@ -80,6 +80,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapBuilder.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.StartPhase.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
+        // a new match on a running server moves the arena to fresh ground (issue #35): /rts-newmatch + the slow demolition
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.NewMatch.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.ArenaRetirement.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderAntiAir.class);   // commanders shoot flyers
