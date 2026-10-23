@@ -36,3 +36,17 @@ if len(sys.argv) > 2 and sys.argv[2] == '--annotate':
     import re as _re
     hits = [l for l in lines if _re.search(r'error|warning|ErrorProne|errorprone|exception|EP-PROCPATH', l, _re.I) and not l.lstrip().startswith('at ')]
     print('::warning title=compiler lines::' + _esc('\n'.join(l[:300] for l in hits[:60])[:30000]))
+    # the checks that point at real bugs, with their locations (the trial's report)
+    wanted = {'IdentityBinaryExpression': 20, 'ModifyCollectionInEnhancedForLoop': 20, 'BadInstanceof': 20,
+              'NonAtomicVolatileUpdate': 20, 'ReturnValueIgnored': 20, 'ObjectToString': 20, 'NonOverridingEquals': 20,
+              'ModifiedButNotUsed': 20, 'MissingCasesInEnumSwitch': 40, 'FutureReturnValueIgnored': 40,
+              'ReferenceEquality': 60, 'NarrowingCompoundAssignment': 25, 'IntLongMath': 15, 'MathRoundIntLong': 15,
+              'LongDoubleConversion': 10, 'EmptyCatch': 12, 'HidingField': 15, 'InconsistentCapitalization': 8,
+              'UnnecessaryAsync': 8, 'CatchAndPrintStackTrace': 5, 'JdkObsolete': 5, 'StringSplitter': 5}
+    out = []
+    for c, cap in wanted.items():
+        for r in [x for x in rows if x[0] == c][:cap]:
+            out.append(r[1].replace('src/main/java/com/solegendary/reignofnether/', '') + ':' + r[2] + ': [' + c + '] ' + r[3][:90])
+    half = len(out) // 2
+    print('::warning title=serious A::' + _esc('\n'.join(out[:half])[:60000]))
+    print('::warning title=serious B::' + _esc('\n'.join(out[half:])[:60000]))
