@@ -82,4 +82,46 @@ public class FogDefaultGameTests {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    /**
+     * The Quick Battle / skirmish instant start (SkirmishServerboundPacket.handle): the border is fitted round the arena
+     * BEFORE the first side joins, and that first side (MatchState.sideJoined, called by MatchRoster.join) turns fog on.
+     * Walks those two calls on a throwaway MatchState; the level's border and fog flag are restored inside the same
+     * server tick, so no other test sees either. (The packet itself needs a host player and a network context.)
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void fog_on_after_quick_battle_start(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        var level = helper.getLevel();
+        var border = level.getWorldBorder();
+        double size = border.getSize(), cx = border.getCenterX(), cz = border.getCenterZ();
+        boolean wasOn = FogOfWarServerEvents.isEnabled();
+        int rts = com.solegendary.reignofnether.worldborder.WorldBorderServerEvents.RTS_OPTIMIZED_BORDER;
+        try {
+            if (size <= rts || wasOn) {
+                problems.add("the test level already has a small border or fog on; cannot show the start");
+            } else {
+                // the packet's order: border first (medium arena 320, far ring 420 + one extra bot), then the first side
+                if (!FogOfWarServerEvents.fitBorderForMatch(level, 10.5, 10.5, 320, 420 + 35, true))
+                    problems.add("no border was fitted for the instant start");
+                new com.solegendary.reignofnether.match.MatchState(com.solegendary.reignofnether.maps.MapMatch.EFFECTS)
+                    .sideJoined("gametest_fog_quick");
+                if (!FogOfWarServerEvents.isEnabled())
+                    problems.add("fog is not on after the first side joined an instant start");
+                if (border.getSize() > rts)
+                    problems.add("border after the start is " + border.getSize() + ", above the RTS size " + rts);
+            }
+        } finally {
+            if (FogOfWarServerEvents.isEnabled() && !wasOn)
+                FogOfWarServerEvents.setEnabled(false);
+            border.setCenter(cx, cz);
+            border.setSize(size);
+        }
+        if (FogOfWarServerEvents.isEnabled() != wasOn)
+            problems.add("fog flag was not restored");
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
 }
