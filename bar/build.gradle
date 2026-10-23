@@ -184,9 +184,7 @@ dependencies {
     implementation 'org.junit.jupiter:junit-jupiter:5.9.2'
 
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
-    // Guava excluded from the mixin processor: it pulls Guava 21, which shadows the newer one Error Prone needs on the
-    // same processor path (NoSuchMethodError ImmutableMap$Builder.buildOrThrow); Error Prone's own Guava serves both
-    annotationProcessor('org.spongepowered:mixin:0.8.5:processor') { exclude group: 'com.google.guava' }
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     // Error Prone 2.23.0 (JDK 17 compatible): WARNINGS ONLY, see the JavaCompile block at the bottom
     errorprone 'com.google.errorprone:error_prone_core:2.23.0'
 
@@ -261,7 +259,11 @@ tasks.withType(JavaCompile).configureEach {
     // Error Prone trial: every finding is a warning (allErrorsAsWarnings) so it can never fail the build; javac stops
     // printing after 100 warnings by default, which would hide the count
     options.compilerArgs += ["-Xmaxwarns", "500000"]
-    doFirst { println 'EP-PROCPATH ' + name + ' ' + options.annotationProcessorPath?.files*.name + ' CP-GUAVA ' + classpath.files.findAll { it.name.contains('guava') }*.name }
+    // the mixin processor jar is a fat jar that BUNDLES Guava 21 and sits first on the processor path, shadowing the Guava
+    // Error Prone needs (NoSuchMethodError buildOrThrow, found by printing the path): put Error Prone's jars first
+    if (name == 'compileJava') {
+        doFirst { options.annotationProcessorPath = files(configurations.errorprone, options.annotationProcessorPath) }
+    }
     options.errorprone {
         allErrorsAsWarnings = true
         disableWarningsInGeneratedCode = true
