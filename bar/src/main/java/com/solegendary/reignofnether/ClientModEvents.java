@@ -439,6 +439,7 @@ public class ClientModEvents {
     @OnlyIn(Dist.CLIENT)
     public static void registerShaders(RegisterShadersEvent evt) {
         com.solegendary.reignofnether.postfx.WorldLookPass.registerShader(evt);
+        com.solegendary.reignofnether.orthoview.CanopySilhouettes.registerShaders(evt);
     }
 
     @SubscribeEvent
