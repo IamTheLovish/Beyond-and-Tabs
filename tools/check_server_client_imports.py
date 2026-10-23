@@ -27,6 +27,8 @@ SRC = os.path.join(ROOT, "bar/src/main/java/com/solegendary/reignofnether")
 
 CLIENT_IMPORT = re.compile(r"^\s*import\s+(net\.minecraft\.client\.[\w.]+|com\.mojang\.blaze3d\.[\w.]+)\s*;", re.M)
 SUBSCRIBER = re.compile(r"@Mod\.EventBusSubscriber")
+# client-only CLASS (not a client method inside a server class): client bus subscriber or class-level @OnlyIn
+CLIENT_ONLY = re.compile(r"@Mod\.EventBusSubscriber\([^)]*Dist\.CLIENT|@OnlyIn\(Dist\.CLIENT\)\s*(public\s+)?(final\s+)?(abstract\s+)?class\s")
 
 # packet file (relative to SRC) -> why its client import is fine: only static client-side senders use it
 CLIENT_HELPER_PACKETS = {
@@ -39,7 +41,7 @@ CLIENT_HELPER_PACKETS = {
 
 def is_server_side(rel, text):
     name = os.path.basename(rel)
-    if "Dist.CLIENT" in text:
+    if CLIENT_ONLY.search(text):
         return False
     if rel.startswith("mixin/"):
         return False
