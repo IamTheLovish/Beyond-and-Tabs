@@ -31,6 +31,13 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# Animation photos (input `anim`, Oct 22 2026): instead of the tour, a real entity of any unit doing idle / walk / attack /
+# turn / death on a flat pad, a first-person camera locked to it (side, front, rear), a screenshot every few game ticks -
+# EyesAnimScene. The Animation sheets step (tools/anim_eyes.py --collect) makes <= 2000 px review sheets; artifact
+# anim-<run id> (no branch is pushed; one job per dispatch, never queued behind another). Use the one command:
+#   python3 tools/anim_eyes.py bone_dragon_unit turn --ci
+# (it dispatches this on your branch, waits, downloads the sheets). The branch's PR build must have kept a jar: a PR routed
+# to the org mirror (tools/ci_route.py) has none here - put the label `ci-here` on it first.
 name: eyes
 on:
   workflow_dispatch:
