@@ -32,6 +32,7 @@ ROSTER = [
     ('Sunforged', 't2', 'villagers/IronGolemUnit', 'tank'),
     ('Sunforged', 't2', 'villagers/RavagerUnit', 'siege'),
     ('Sunforged', 't3', 'villagers/SunColossusUnit', 'experimental'),
+    ('Sunforged', 't3', 'villagers/CathedralWardenUnit', 'experimental'),
     # Gravebound (monsters)
     ('Gravebound', 'worker', 'monsters/ZombieVillagerUnit', 'builder'),
     ('Gravebound', 'worker2', 'monsters/EmbalmerUnit', 'builder'),
@@ -196,7 +197,7 @@ OVERRIDES = {
 
 # second T3s trained by a SecondT3Prod (no <Name>Prod.java of their own): the cost entry they pay
 COST_KEY_OVERRIDES = {'MagmaHurlerUnit': 'HORDE_T3B', 'PlagueAbominationUnit': 'GRAVE_T3B',
-                     'JadeSentinelUnit': 'STORM_T3B'}
+                     'JadeSentinelUnit': 'STORM_T3B', 'CathedralWardenUnit': 'SUN_T3B'}
 
 STAT_FIELDS = ('attackDamage', 'attacksPerSecond', 'maxHealth', 'armorValue', 'movementSpeed', 'attackRange',
                'rangedResist')
