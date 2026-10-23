@@ -1,0 +1,96 @@
+[01:49:32] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[01:49:34] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[01:49:34] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[01:49:34] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[01:49:34] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[01:49:43] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[01:49:44] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[01:49:51] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[01:50:04] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[01:50:06] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[01:50:35] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[01:51:05] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[01:51:35] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[01:51:35] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1792720295834
+[01:51:35] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[01:51:39] [Render thread/INFO]: [Eyes] clip-mark 01_title 1792720299936
+[01:51:39] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[01:51:40] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[01:51:42] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[01:51:58] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[01:51:58] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[01:52:14] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 42 s left (client tick 289, camera at [-232, 86, 4]); our slot -225, -2; a bot's start 199, -2; markers: 2 boxes, 5 frames drawn; team 0 (mine) fill built (34055 columns, 1888 quads), 364 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[01:52:16] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 39 s left, zoom 36.0, camera at [-231, 86, 4]; markers: 2 boxes, 22 frames drawn; team 0 (mine) fill built (36415 columns, 1936 quads), 416 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[01:52:16] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1792720336870
+[01:52:17] [IO-Worker-8/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[01:52:18] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 38 s left, zoom 60.0, camera at [-230, 86, 3]; markers: 2 boxes, 34 frames drawn; team 0 (mine) fill built (36415 columns, 1936 quads), 440 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[01:52:18] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1792720338798
+[01:52:19] [IO-Worker-8/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[01:52:20] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 35 s left, zoom 100.0, camera at [-229, 86, 2]; markers: 2 boxes, 45 frames drawn; team 0 (mine) fill built (36415 columns, 1936 quads), 448 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[01:52:20] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1792720340898
+[01:52:21] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[01:52:25] [Render thread/INFO]: [Eyes] 01f: eye at [199, 70, 18] y 71 looking at the start 199, -2 (20 blocks away; ground there 70); 31 s left; markers: 2 boxes, 98 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (37879 columns, 2156 quads), 426 perimeter heights known
+[01:52:25] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1792720345531
+[01:52:25] [Render thread/INFO]: [Eyes] step 1 screen none level true
+[01:52:25] [IO-Worker-9/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[01:52:27] [Render thread/INFO]: [Eyes] 01e: start placed at -225, -2 with 29 s left; the phase ends 3 s later
+[01:52:29] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 27 s left, zoom 36.0, camera at [-233, 90, 6]; markers: 2 boxes, 123 frames drawn; team 0 (mine) fill built (36640 columns, 1956 quads), 436 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[01:52:29] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1792720349380
+[01:52:29] [IO-Worker-9/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[01:52:55] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[01:52:59] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1792720379462
+[01:52:59] [Server thread/INFO]: [Eyes] ground 0:30 round [-233, 5]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:coal_ore=6, minecraft:diorite_wall=2, minecraft:grass_block=2159, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=44, minecraft:stone_brick_stairs=8}
+[01:52:59] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1792720379708
+[01:52:59] [Render thread/INFO]: [Eyes] 20_anim: 2 run(s) on a pad at [-165, 71, -1]: bone_dragon_unit:turn:rear+side:0:0
+[01:52:59] [IO-Worker-10/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[01:53:00] [IO-Worker-9/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[01:53:03] [Render thread/INFO]: [Eyes] 20_anim: run 0 - bone_dragon_unit / turn / rear summoned at [-165, 71, -1]
+[01:53:03] [Render thread/INFO]: [Eyes] 20_anim: run 0 - bone_dragon_unit is BoneDragonUnit (id 151), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+[01:53:05] [Render thread/INFO]: [Eyes] anim-run 0 bone_dragon_unit turn rear window 240 ticks from game tick 500, a frame every 6.7 ticks, unit at [-165, 71, -1]
+[01:53:05] [Render thread/INFO]: [Eyes] anim-beat 0 tick 1 clock 500 frames 0 unit [-165, 71, -1] wall 0.0 s screen none paused false
+[01:53:05] [Render thread/INFO]: [Eyes] anim-frame 0 rear 0 bat_eyes_20_anim_r00_rear_f000.png t=500.72 swing=0.00 limb=0.00 yaw=-90.0 pos=-164.5,71.0,-0.5
+[01:53:06] [Render thread/INFO]: [Eyes] anim-beat 0 tick 21 clock 500 frames 1 unit [-165, 71, -1] wall 1.0 s screen none paused false
+[01:53:07] [Render thread/INFO]: [Eyes] anim-beat 0 tick 41 clock 500 frames 1 unit [-165, 71, -1] wall 2.0 s screen none paused false
+[01:53:08] [Render thread/INFO]: [Eyes] anim-beat 0 tick 61 clock 500 frames 1 unit [-165, 71, -1] wall 3.0 s screen none paused false
+[01:53:09] [Render thread/INFO]: [Eyes] anim-beat 0 tick 81 clock 500 frames 1 unit [-165, 71, -1] wall 4.0 s screen none paused false
+[01:53:10] [Render thread/INFO]: [Eyes] anim-beat 0 tick 101 clock 500 frames 1 unit [-165, 71, -1] wall 5.0 s screen none paused false
+[01:53:11] [Render thread/INFO]: [Eyes] anim-leg 0 1 to 28, -28
+[01:53:11] [Render thread/INFO]: [Eyes] anim-beat 0 tick 121 clock 500 frames 1 unit [-165, 71, -1] wall 6.0 s screen none paused false
+[01:53:12] [Render thread/INFO]: [Eyes] anim-beat 0 tick 141 clock 500 frames 1 unit [-165, 71, -1] wall 7.0 s screen none paused false
+[01:53:13] [Render thread/INFO]: [Eyes] anim-beat 0 tick 161 clock 500 frames 1 unit [-165, 71, -1] wall 8.0 s screen none paused false
+[01:53:14] [Render thread/INFO]: [Eyes] anim-beat 0 tick 181 clock 500 frames 1 unit [-165, 71, -1] wall 9.0 s screen none paused false
+[01:53:15] [Render thread/INFO]: [Eyes] anim-beat 0 tick 201 clock 500 frames 1 unit [-165, 71, -1] wall 10.0 s screen none paused false
+[01:53:16] [Render thread/INFO]: [Eyes] anim-beat 0 tick 221 clock 500 frames 1 unit [-165, 71, -1] wall 11.0 s screen none paused false
+[01:53:16] [Render thread/INFO]: [Eyes] anim-leg 0 2 to 56, -28
+[01:53:17] [Render thread/INFO]: [Eyes] anim-run-end 0 1 frames in 240 ticks (12 s wall)
+[01:53:17] [Render thread/ERROR]: [Eyes] 20_anim: run 0 captured only 1 frames
+[01:53:18] [Render thread/INFO]: [Eyes] 20_anim: run 1 - bone_dragon_unit / turn / side summoned at [-165, 71, -1]
+[01:53:18] [Render thread/INFO]: [Eyes] 20_anim: run 1 - bone_dragon_unit is BoneDragonUnit (id 162), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+[01:53:19] [Render thread/INFO]: [Eyes] anim-run 1 bone_dragon_unit turn side window 240 ticks from game tick 500, a frame every 6.7 ticks, unit at [-165, 71, -1]
+[01:53:19] [Render thread/INFO]: [Eyes] anim-frame 1 side 0 bat_eyes_20_anim_r01_side_f000.png t=500.02 swing=0.00 limb=0.00 yaw=-90.0 pos=-164.5,71.0,-0.5
+[01:53:19] [Render thread/INFO]: [Eyes] anim-beat 1 tick 1 clock 500 frames 1 unit [-165, 71, -1] wall 0.1 s screen none paused false
+[01:53:20] [Render thread/INFO]: [Eyes] anim-beat 1 tick 21 clock 500 frames 1 unit [-165, 71, -1] wall 1.1 s screen none paused false
+[01:53:21] [Render thread/INFO]: [Eyes] anim-beat 1 tick 41 clock 500 frames 1 unit [-165, 71, -1] wall 2.1 s screen none paused false
+[01:53:22] [Render thread/INFO]: [Eyes] anim-beat 1 tick 61 clock 500 frames 1 unit [-165, 71, -1] wall 3.1 s screen none paused false
+[01:53:23] [Render thread/INFO]: [Eyes] anim-beat 1 tick 81 clock 500 frames 1 unit [-165, 71, -1] wall 4.1 s screen none paused false
+[01:53:24] [Render thread/INFO]: [Eyes] anim-beat 1 tick 101 clock 500 frames 1 unit [-165, 71, -1] wall 5.1 s screen none paused false
+[01:53:25] [Render thread/INFO]: [Eyes] anim-leg 1 1 to 28, -28
+[01:53:25] [Render thread/INFO]: [Eyes] step 25 screen none level true
+[01:53:25] [Render thread/INFO]: [Eyes] anim-beat 1 tick 121 clock 500 frames 1 unit [-165, 71, -1] wall 6.1 s screen none paused false
+[01:53:27] [Render thread/INFO]: [Eyes] anim-beat 1 tick 141 clock 500 frames 1 unit [-165, 71, -1] wall 7.2 s screen none paused false
+[01:53:27] [Render thread/INFO]: [Eyes] anim-beat 1 tick 161 clock 500 frames 1 unit [-165, 71, -1] wall 8.1 s screen none paused false
+[01:53:28] [Render thread/INFO]: [Eyes] anim-beat 1 tick 181 clock 500 frames 1 unit [-165, 71, -1] wall 9.1 s screen none paused false
+[01:53:29] [Render thread/INFO]: [Eyes] anim-beat 1 tick 201 clock 500 frames 1 unit [-165, 71, -1] wall 10.1 s screen none paused false
+[01:53:30] [Render thread/INFO]: [Eyes] anim-beat 1 tick 221 clock 500 frames 1 unit [-165, 71, -1] wall 11.1 s screen none paused false
+[01:53:31] [Render thread/INFO]: [Eyes] anim-leg 1 2 to 56, -28
+[01:53:31] [Render thread/INFO]: [Eyes] anim-run-end 1 1 frames in 240 ticks (12 s wall)
+[01:53:31] [Render thread/ERROR]: [Eyes] 20_anim: run 1 captured only 1 frames
+[01:53:32] [Render thread/INFO]: [Eyes] 20_anim: done, 2 of 2 runs failed
+[01:53:34] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 21 registered (up to 3 levels)
+[01:53:34] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/squire_runner_unit.png, reignofnether:textures/entities/squire_runner_unit_glow.png, reignofnether:textures/entities/squire_runner_unit_team.png]
+[01:53:34] [Render thread/INFO]: [Eyes] tour complete

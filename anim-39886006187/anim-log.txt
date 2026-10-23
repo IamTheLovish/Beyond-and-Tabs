@@ -1,0 +1,52 @@
+[01:49:34] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[01:49:34] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[01:49:34] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[01:49:34] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+java.io.IOException: Could not retrieve profile key pair
+java.lang.IllegalStateException: Failed to open OpenAL device
+[01:50:06] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[01:51:58] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[01:51:58] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[01:52:59] [Render thread/INFO]: [Eyes] 20_anim: 2 run(s) on a pad at [-165, 71, -1]: bone_dragon_unit:turn:rear+side:0:0
+[01:53:03] [Render thread/INFO]: [Eyes] 20_anim: run 0 - bone_dragon_unit / turn / rear summoned at [-165, 71, -1]
+[01:53:03] [Render thread/INFO]: [Eyes] 20_anim: run 0 - bone_dragon_unit is BoneDragonUnit (id 151), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+[01:53:05] [Render thread/INFO]: [Eyes] anim-run 0 bone_dragon_unit turn rear window 240 ticks from game tick 500, a frame every 6.7 ticks, unit at [-165, 71, -1]
+[01:53:05] [Render thread/INFO]: [Eyes] anim-beat 0 tick 1 clock 500 frames 0 unit [-165, 71, -1] wall 0.0 s screen none paused false
+[01:53:06] [Render thread/INFO]: [Eyes] anim-beat 0 tick 21 clock 500 frames 1 unit [-165, 71, -1] wall 1.0 s screen none paused false
+[01:53:07] [Render thread/INFO]: [Eyes] anim-beat 0 tick 41 clock 500 frames 1 unit [-165, 71, -1] wall 2.0 s screen none paused false
+[01:53:08] [Render thread/INFO]: [Eyes] anim-beat 0 tick 61 clock 500 frames 1 unit [-165, 71, -1] wall 3.0 s screen none paused false
+[01:53:09] [Render thread/INFO]: [Eyes] anim-beat 0 tick 81 clock 500 frames 1 unit [-165, 71, -1] wall 4.0 s screen none paused false
+[01:53:10] [Render thread/INFO]: [Eyes] anim-beat 0 tick 101 clock 500 frames 1 unit [-165, 71, -1] wall 5.0 s screen none paused false
+[01:53:11] [Render thread/INFO]: [Eyes] anim-leg 0 1 to 28, -28
+[01:53:11] [Render thread/INFO]: [Eyes] anim-beat 0 tick 121 clock 500 frames 1 unit [-165, 71, -1] wall 6.0 s screen none paused false
+[01:53:12] [Render thread/INFO]: [Eyes] anim-beat 0 tick 141 clock 500 frames 1 unit [-165, 71, -1] wall 7.0 s screen none paused false
+[01:53:13] [Render thread/INFO]: [Eyes] anim-beat 0 tick 161 clock 500 frames 1 unit [-165, 71, -1] wall 8.0 s screen none paused false
+[01:53:14] [Render thread/INFO]: [Eyes] anim-beat 0 tick 181 clock 500 frames 1 unit [-165, 71, -1] wall 9.0 s screen none paused false
+[01:53:15] [Render thread/INFO]: [Eyes] anim-beat 0 tick 201 clock 500 frames 1 unit [-165, 71, -1] wall 10.0 s screen none paused false
+[01:53:16] [Render thread/INFO]: [Eyes] anim-beat 0 tick 221 clock 500 frames 1 unit [-165, 71, -1] wall 11.0 s screen none paused false
+[01:53:16] [Render thread/INFO]: [Eyes] anim-leg 0 2 to 56, -28
+[01:53:17] [Render thread/INFO]: [Eyes] anim-run-end 0 1 frames in 240 ticks (12 s wall)
+[01:53:17] [Render thread/ERROR]: [Eyes] 20_anim: run 0 captured only 1 frames
+[01:53:18] [Render thread/INFO]: [Eyes] 20_anim: run 1 - bone_dragon_unit / turn / side summoned at [-165, 71, -1]
+[01:53:18] [Render thread/INFO]: [Eyes] 20_anim: run 1 - bone_dragon_unit is BoneDragonUnit (id 162), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+[01:53:19] [Render thread/INFO]: [Eyes] anim-run 1 bone_dragon_unit turn side window 240 ticks from game tick 500, a frame every 6.7 ticks, unit at [-165, 71, -1]
+[01:53:19] [Render thread/INFO]: [Eyes] anim-beat 1 tick 1 clock 500 frames 1 unit [-165, 71, -1] wall 0.1 s screen none paused false
+[01:53:20] [Render thread/INFO]: [Eyes] anim-beat 1 tick 21 clock 500 frames 1 unit [-165, 71, -1] wall 1.1 s screen none paused false
+[01:53:21] [Render thread/INFO]: [Eyes] anim-beat 1 tick 41 clock 500 frames 1 unit [-165, 71, -1] wall 2.1 s screen none paused false
+[01:53:22] [Render thread/INFO]: [Eyes] anim-beat 1 tick 61 clock 500 frames 1 unit [-165, 71, -1] wall 3.1 s screen none paused false
+[01:53:23] [Render thread/INFO]: [Eyes] anim-beat 1 tick 81 clock 500 frames 1 unit [-165, 71, -1] wall 4.1 s screen none paused false
+[01:53:24] [Render thread/INFO]: [Eyes] anim-beat 1 tick 101 clock 500 frames 1 unit [-165, 71, -1] wall 5.1 s screen none paused false
+[01:53:25] [Render thread/INFO]: [Eyes] anim-leg 1 1 to 28, -28
+[01:53:25] [Render thread/INFO]: [Eyes] anim-beat 1 tick 121 clock 500 frames 1 unit [-165, 71, -1] wall 6.1 s screen none paused false
+[01:53:27] [Render thread/INFO]: [Eyes] anim-beat 1 tick 141 clock 500 frames 1 unit [-165, 71, -1] wall 7.2 s screen none paused false
+[01:53:27] [Render thread/INFO]: [Eyes] anim-beat 1 tick 161 clock 500 frames 1 unit [-165, 71, -1] wall 8.1 s screen none paused false
+[01:53:28] [Render thread/INFO]: [Eyes] anim-beat 1 tick 181 clock 500 frames 1 unit [-165, 71, -1] wall 9.1 s screen none paused false
+[01:53:29] [Render thread/INFO]: [Eyes] anim-beat 1 tick 201 clock 500 frames 1 unit [-165, 71, -1] wall 10.1 s screen none paused false
+[01:53:30] [Render thread/INFO]: [Eyes] anim-beat 1 tick 221 clock 500 frames 1 unit [-165, 71, -1] wall 11.1 s screen none paused false
+[01:53:31] [Render thread/INFO]: [Eyes] anim-leg 1 2 to 56, -28
+[01:53:31] [Render thread/INFO]: [Eyes] anim-run-end 1 1 frames in 240 ticks (12 s wall)
+[01:53:31] [Render thread/ERROR]: [Eyes] 20_anim: run 1 captured only 1 frames
+[01:53:32] [Render thread/INFO]: [Eyes] 20_anim: done, 2 of 2 runs failed

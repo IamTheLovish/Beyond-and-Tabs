@@ -1,0 +1,24 @@
+{
+ "title": "bone_dragon_unit / turn   real game client   window 240 ticks (12.0 s)   views rear/side   1 frames",
+ "views": [
+  "rear",
+  "side"
+ ],
+ "frames": 1,
+ "labels": [
+  "1  +0.00s  (tick 0)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)"
+  ],
+  [
+   "1  +0.00s  (tick 0)"
+  ]
+ ],
+ "size": [
+  428,
+  928
+ ],
+ "warnings": []
+}

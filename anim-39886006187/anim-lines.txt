@@ -1,0 +1,14 @@
+20_anim: 2 run(s) on a pad at [-165, 71, -1]: bone_dragon_unit:turn:rear+side:0:0
+20_anim: run 0 - bone_dragon_unit / turn / rear summoned at [-165, 71, -1]
+20_anim: run 0 - bone_dragon_unit is BoneDragonUnit (id 151), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+anim-leg 0 1 to 28, -28
+anim-leg 0 2 to 56, -28
+anim-run-end 0 1 frames in 240 ticks (12 s wall)
+20_anim: run 0 captured only 1 frames
+20_anim: run 1 - bone_dragon_unit / turn / side summoned at [-165, 71, -1]
+20_anim: run 1 - bone_dragon_unit is BoneDragonUnit (id 162), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+anim-leg 1 1 to 28, -28
+anim-leg 1 2 to 56, -28
+anim-run-end 1 1 frames in 240 ticks (12 s wall)
+20_anim: run 1 captured only 1 frames
+20_anim: done, 2 of 2 runs failed
