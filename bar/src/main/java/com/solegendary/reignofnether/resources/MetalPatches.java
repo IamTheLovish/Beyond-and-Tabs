@@ -209,8 +209,9 @@ public final class MetalPatches {
     public static void stamp(ServerLevel level, int x, int z) {
         ensureLoaded(level);
         int[] dry = drySpot(level, x, z);
-        if (dry == null)
-            ReignOfNether.LOGGER.warn("[MetalPatches] no dry ground within {} of [{}, {}]: stamping a wet patch anyway",
+        boolean wet = dry == null;   // no dry pad nearby: the pad reclaims its water below, never leaves a wet column
+        if (wet)
+            ReignOfNether.LOGGER.warn("[MetalPatches] no dry ground within {} of [{}, {}]: reclaiming the water under the pad",
                     MAX_DRY_RELOCATE, x, z);
         else if (dry[0] != x || dry[1] != z) {
             ReignOfNether.LOGGER.info("[MetalPatches] patch at [{}, {}] moved to dry ground at [{}, {}]", x, z, dry[0], dry[1]);
@@ -240,9 +241,9 @@ public final class MetalPatches {
                     int bx = x + dx, bz = z + dz;
                     if (com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(bx, padY, bz))
                         continue;   // never carve a pad through a standing building
-                    if (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
-                            || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty())
-                        continue;   // leave rivers and lakes alone
+                    if (!wet && (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
+                            || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty()))
+                        continue;   // leave rivers and lakes alone (unless there is no dry ground anywhere near)
                     // clear everything above the pad (grass, flowers, logs, leaves - up to 8 high for trees)
                     for (int y = padY + 1; y <= padY + 8; y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isAir())
@@ -253,6 +254,20 @@ public final class MetalPatches {
                             level.setBlock(p, fill, FLAGS);
                     level.setBlock(p.set(bx, padY, bz), cap, FLAGS);
                 }
+            if (wet) {
+                // a ring of land round the reclaimed pad, as high as the pad is cleared, so the water beside it cannot
+                // flow back over the pad (any fluid in an extractor's footprint is refused as ground_not_flat)
+                int ring = PAD_HALF + 1;
+                for (int dx = -ring; dx <= ring; dx++)
+                    for (int dz = -ring; dz <= ring; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != ring
+                                || com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(x + dx, padY, z + dz))
+                            continue;
+                        for (int y = padY + 1; y <= padY + 8; y++)
+                            if (!level.getBlockState(p.set(x + dx, y, z + dz)).getFluidState().isEmpty())
+                                level.setBlock(p, fill, FLAGS);
+                    }
+            }
             for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}})
                 level.setBlock(p.set(x + d[0], padY, z + d[1]), PATCH_BLOCK.defaultBlockState(), FLAGS);
         }
