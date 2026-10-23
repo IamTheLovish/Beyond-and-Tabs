@@ -297,16 +297,25 @@ public class MatchEndScreen extends Screen {
 
             // party total line
             String totalLabel = Component.translatable("matchend.reignofnether.party_total").getString();
-            g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
             drawNum(g, t.units, cl + COL_UNITS, y, ACCENT);
             drawNum(g, t.military, cl + COL_MIL, y, ACCENT);
             drawNum(g, t.buildings, cl + COL_BLDG, y, ACCENT);
             // party resource total: own line, or after the total label when compact
-            String res = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
+            String amount = String.format("%,d", t.resources);
+            String res = Component.translatable("matchend.reignofnether.resources", amount).getString();
             if (compact) {
-                g.drawString(font, res, nameX + font.width(totalLabel) + 8, y, TEXT_DIM, true);
+                // the line ends before the units total; long text falls back to shorter forms, never over the numbers
+                int room = cl + COL_UNITS - font.width(String.format("%,d", t.units)) - 6 - nameX;
+                String shortRes = Component.translatable("matchend.reignofnether.resources_short", amount).getString();
+                int pick = MatchEndLayout.compactTotalForm(font.width(totalLabel), font.width(res), font.width(shortRes), room);
+                if (pick <= 1)
+                    g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
+                String text = pick == 0 ? res : shortRes;
+                int x = pick <= 1 ? nameX + font.width(totalLabel) + 8 : nameX;
+                g.drawString(font, font.plainSubstrByWidth(text, Math.max(0, nameX + room - x)), x, y, TEXT_DIM, true);
                 y += LINE_H + TEAM_GAP_C;
             } else {
+                g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
                 y += LINE_H;
                 g.drawString(font, res, nameX, y, TEXT_DIM, true);
                 y += LINE_H + TEAM_GAP;
