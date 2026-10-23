@@ -50,15 +50,20 @@ TARGETS = {
     # round 19: std 0.085 -> 0.072 - the plain game's grass still read as speckle from the RTS camera
     # round 28 (photo scans, SCAN section below): sat 0.05 keeps a little of the scan's own hue spread (dry and green
     # blades) under the biome tint; the side is fitted by the dirt's targets (its soil IS the dirt texture) and only
-    # its tilt / smooth / pore are read here; lf 0 = the scan's relief as it is
-    "grass_block_top":  dict(luma=0.645, std=0.060, sat=0.05, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.7,
-                             shoulder=0.80),
+    # its tilt / smooth / pore are read here; lf 0 = the scan's relief as it is. Round 28b (eyes run 39884443333, the
+    # plain close-ups: grass top Laplacian 39.7 vs main's 8.6 - speckle; stone +10-22%, dirt +8% with 26% less
+    # mid-band): softer at the texel (soften) with the forms 3-12 texels across raised again (mid), calibrated on the
+    # close-up's sampling offline (150 / 250 px per block, nearest texel + mips)
+    "grass_block_top":  dict(luma=0.645, std=0.045, sat=0.05, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=2.4,
+                             mid=1.5, shoulder=0.80),
     "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
     "grass_block_side_overlay": dict(luma=0.56, std=0.070, sat=0.00, lf=0.0, tilt=16.0, smooth=24, pore=40),
-    "dirt":             dict(luma=0.34, std=0.045, sat=0.36, lf=0.0, tilt=12.0, smooth=26, pore=56, soften=0.7, toe=0.25),
+    "dirt":             dict(luma=0.34, std=0.045, sat=0.36, lf=0.0, tilt=12.0, smooth=26, pore=56, soften=1.4, mid=1.5,
+                             toe=0.285),
     # round 18: tilt 16 -> 10 and less low-frequency boost (lf): in game with shaders the relief read as crumpled
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
-    "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=0.6),
+    "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=1.2,
+                             mid=0.3),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     # round 24-26 (PR #160, eyes close-ups of the terrain sampler, run 39838783742; shipped by lovish Oct 22 20:23 "you
@@ -200,8 +205,10 @@ TARGETS = {
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
-    "basalt_side": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=30, pore=10, soften=0.6, toe=0.245),
-    "basalt_top": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=26, pore=10, soften=0.6, toe=0.245),
+    "basalt_side": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=30, pore=10, soften=2.5, mid=1.0,
+                        toe=0.245),
+    "basalt_top": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=26, pore=10, soften=2.5, mid=1.0,
+                       toe=0.245),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
@@ -2182,15 +2189,27 @@ def m_scan_stone(F, n):
 
 
 def m_scan_dirt(F, n):
-    d = scan_set(SCAN_SOIL, n)
+    d = scan_set(SCAN_SOIL, n, scale=1.5)                # crumbs and stones half as large again (round 28b, S2)
     d["alb"] = no_green(flatten(F, d["alb"], 3.0, keep=0.4))
     return d
 
 
 def m_scan_grass_top(F, n):
-    d = scan_set(SCAN_GRASS, n, scale=2.0)              # blades ~2.5 texels at 256: blades, not speckle (enlarged)
+    d = scan_set(SCAN_GRASS, n, scale=3.0)              # blades ~4 texels at 256: soft strokes, not speckle (enlarged)
     d["alb"] = neutral(flatten(F, d["alb"], 2.0, keep=0.3))
     return d
+
+
+def mid_band(F, alb, t):
+    """Key `mid` (round 28): the scan's structure 3-12 texels across (blades, crumbs, grain) raised by that factor
+    AFTER `soften` - the texel-to-texel steps that read as pepper in the plain game (S1) stay soft while the forms a
+    few texels wide keep their contrast (S2), so a calm texture is not a blurred one. No `mid`, no change."""
+    k = t.get("mid")
+    if not k:
+        return alb
+    L = alb @ LUMA
+    band = F.blur(L, 2.0) - F.blur(L, 7.0)
+    return np.clip(alb * (1 + k * band / np.maximum(L, 1e-3))[..., None], 0, 1)
 
 
 def tone_limits(alb, t):
@@ -2228,7 +2247,7 @@ def scan_textures(base, i, n):
     t = targets_for(base)
     F = Field(n, SEEDS[base])
     d = SCAN_BASES[base](F, n)
-    alb = tone_limits(soften(F, fit_albedo(d["alb"], t), t), t)
+    alb = tone_limits(mid_band(F, soften(F, fit_albedo(d["alb"], t), t), t), t)
     n_img, s_img, k = maps(F, d["H"], t, None, d["nxy"])
     alb, n_img, s_img = variant_maps(alb, n_img, s_img, i)
     return dict(alb=alb, H=d["H"], maps=(n_img, s_img), k=k)
