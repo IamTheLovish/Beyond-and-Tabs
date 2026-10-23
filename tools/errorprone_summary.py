@@ -34,5 +34,5 @@ if len(sys.argv) > 2 and sys.argv[2] == '--annotate':
     print('::warning title=Error Prone summary::' + _esc(f'{len(rows)} warnings\n' + '\n'.join(f'{c} {n}' for c, n in by.most_common(40)) + '\n\n' + '\n'.join(f'{r[1]}:{r[2]}: [{r[0]}] {r[3]}' for r in rows[:40])))
     # the compiler's own lines (javac prints them before gradle's failure report)
     import re as _re
-    hits = [l for l in lines if _re.search(r'error|warning|ErrorProne|errorprone|exception', l, _re.I) and not l.lstrip().startswith('at ')]
+    hits = [l for l in lines if _re.search(r'error|warning|ErrorProne|errorprone|exception|EP-PROCPATH', l, _re.I) and not l.lstrip().startswith('at ')]
     print('::warning title=compiler lines::' + _esc('\n'.join(l[:300] for l in hits[:60])[:30000]))

@@ -261,6 +261,7 @@ tasks.withType(JavaCompile).configureEach {
     // Error Prone trial: every finding is a warning (allErrorsAsWarnings) so it can never fail the build; javac stops
     // printing after 100 warnings by default, which would hide the count
     options.compilerArgs += ["-Xmaxwarns", "500000"]
+    doFirst { println 'EP-PROCPATH ' + name + ' ' + options.annotationProcessorPath?.files*.name + ' CP-GUAVA ' + classpath.files.findAll { it.name.contains('guava') }*.name }
     options.errorprone {
         allErrorsAsWarnings = true
         disableWarningsInGeneratedCode = true
