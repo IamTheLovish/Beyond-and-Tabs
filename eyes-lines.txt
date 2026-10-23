@@ -1,0 +1,103 @@
+[02:20:11] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[02:20:14] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[02:20:14] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[02:20:14] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[02:20:14] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[02:20:21] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[02:20:22] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[02:20:29] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[02:20:43] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[02:20:44] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[02:21:13] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:21:43] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:22:13] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[02:22:13] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1792722133902
+[02:22:14] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[02:22:17] [Render thread/INFO]: [Eyes] clip-mark 01_title 1792722137972
+[02:22:17] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[02:22:18] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[02:22:20] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[02:22:36] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[02:22:36] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[02:22:52] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 45 s left (client tick 280, camera at [-228, 86, 15]); our slot -221, 9; a bot's start 203, 9; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (34202 columns, 1867 quads), 364 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending
+[02:22:54] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 40 s left, zoom 36.0, camera at [-227, 86, 15]; markers: 2 boxes, 14 frames drawn; team 0 (mine) fill built (34202 columns, 1867 quads), 373 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[02:22:54] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1792722174592
+[02:22:55] [IO-Worker-6/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[02:22:56] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 38 s left, zoom 60.0, camera at [-226, 86, 14]; markers: 2 boxes, 25 frames drawn; team 0 (mine) fill built (35779 columns, 1894 quads), 407 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[02:22:56] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1792722176668
+[02:22:57] [IO-Worker-9/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[02:22:58] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 36 s left, zoom 100.0, camera at [-225, 86, 13]; markers: 2 boxes, 36 frames drawn; team 0 (mine) fill built (36254 columns, 1901 quads), 441 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[02:22:58] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1792722178605
+[02:22:59] [IO-Worker-2/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[02:23:03] [Render thread/INFO]: [Eyes] 01f: eye at [203, 70, 29] y 71 looking at the start 203, 9 (20 blocks away; ground there 70); 31 s left; markers: 2 boxes, 88 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending; team 1 fill built (37734 columns, 2206 quads), 472 perimeter heights known, rebuild pending
+[02:23:03] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1792722183349
+[02:23:03] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:23:03] [IO-Worker-11/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[02:23:05] [Render thread/INFO]: [Eyes] 01e: start placed at -221, 9 with 29 s left; the phase ends 3 s later
+[02:23:07] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 27 s left, zoom 36.0, camera at [-228, 89, 16]; markers: 2 boxes, 112 frames drawn; team 0 (mine) fill built (24412 columns, 1310 quads), 316 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[02:23:07] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1792722187155
+[02:23:07] [IO-Worker-4/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[02:23:33] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[02:23:37] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1792722217248
+[02:23:37] [Server thread/INFO]: [Eyes] ground 0:30 round [-229, 16]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:diorite_wall=3, minecraft:dirt=4, minecraft:grass_block=2161, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[02:23:37] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1792722217482
+[02:23:37] [IO-Worker-9/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[02:23:37] [Render thread/INFO]: [Eyes] 15_terrain_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/terrain_sampler.nbt' 44x12x12 placed at -287, 70, 48 (pad centre -265, 70, 54)
+[02:23:37] [IO-Worker-12/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[02:23:42] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts 1792722222926
+[02:23:43] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_rts: Saved screenshot as bat_eyes_15_terrain_sampler_rts.png
+[02:23:47] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_rts_close 1792722227010
+[02:23:47] [IO-Worker-11/INFO]: [Eyes] 15_terrain_sampler_rts_close: Saved screenshot as bat_eyes_15_terrain_sampler_rts_close.png
+[02:23:52] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_34 1792722232106
+[02:23:52] [IO-Worker-5/INFO]: [Eyes] 15_terrain_sampler_34: Saved screenshot as bat_eyes_15_terrain_sampler_34.png
+[02:23:56] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_dirt 1792722236113
+[02:23:56] [IO-Worker-11/INFO]: [Eyes] 15_terrain_sampler_near_floor_dirt: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_dirt.png
+[02:24:00] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_sand 1792722240129
+[02:24:00] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_floor_sand: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_sand.png
+[02:24:03] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:24:04] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_gravel 1792722244159
+[02:24:04] [IO-Worker-6/INFO]: [Eyes] 15_terrain_sampler_near_floor_gravel: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_gravel.png
+[02:24:08] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_stone 1792722248163
+[02:24:08] [IO-Worker-6/INFO]: [Eyes] 15_terrain_sampler_near_floor_stone: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_stone.png
+[02:24:12] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_cobblestone 1792722252233
+[02:24:12] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_floor_cobblestone: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_cobblestone.png
+[02:24:16] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_floor_grass_block 1792722256285
+[02:24:16] [IO-Worker-6/INFO]: [Eyes] 15_terrain_sampler_near_floor_grass_block: Saved screenshot as bat_eyes_15_terrain_sampler_near_floor_grass_block.png
+[02:24:20] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_water_edge 1792722260334
+[02:24:20] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_water_edge: Saved screenshot as bat_eyes_15_terrain_sampler_near_water_edge.png
+[02:24:24] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_oak_log 1792722264407
+[02:24:24] [IO-Worker-6/INFO]: [Eyes] 15_terrain_sampler_near_oak_log: Saved screenshot as bat_eyes_15_terrain_sampler_near_oak_log.png
+[02:24:28] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_oak_leaves 1792722268438
+[02:24:28] [IO-Worker-12/INFO]: [Eyes] 15_terrain_sampler_near_oak_leaves: Saved screenshot as bat_eyes_15_terrain_sampler_near_oak_leaves.png
+[02:24:32] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_hillside 1792722272499
+[02:24:32] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_hillside: Saved screenshot as bat_eyes_15_terrain_sampler_near_hillside.png
+[02:24:33] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:24:36] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_stone_bricks 1792722276502
+[02:24:36] [IO-Worker-4/INFO]: [Eyes] 15_terrain_sampler_near_wall_stone_bricks: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_stone_bricks.png
+[02:24:40] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_deepslate 1792722280559
+[02:24:40] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_wall_deepslate: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_deepslate.png
+[02:24:44] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_quartz_block 1792722284594
+[02:24:45] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_wall_quartz_block: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_quartz_block.png
+[02:24:48] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_mossy_stone_bricks 1792722288612
+[02:24:49] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_near_wall_mossy_stone_bricks: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_mossy_stone_bricks.png
+[02:24:52] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_sandstone 1792722292615
+[02:24:53] [IO-Worker-12/INFO]: [Eyes] 15_terrain_sampler_near_wall_sandstone: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_sandstone.png
+[02:24:56] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_basalt 1792722296660
+[02:24:57] [IO-Worker-4/INFO]: [Eyes] 15_terrain_sampler_near_wall_basalt: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_basalt.png
+[02:25:00] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_cobblestone 1792722300747
+[02:25:01] [IO-Worker-4/INFO]: [Eyes] 15_terrain_sampler_near_wall_cobblestone: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_cobblestone.png
+[02:25:03] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[02:25:04] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_oak_planks 1792722304814
+[02:25:05] [IO-Worker-4/INFO]: [Eyes] 15_terrain_sampler_near_wall_oak_planks: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_oak_planks.png
+[02:25:08] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_near_wall_stone 1792722308833
+[02:25:09] [IO-Worker-12/INFO]: [Eyes] 15_terrain_sampler_near_wall_stone: Saved screenshot as bat_eyes_15_terrain_sampler_near_wall_stone.png
+[02:25:15] [Render thread/INFO]: [Eyes] clip-mark 15_terrain_sampler_dusk 1792722315372
+[02:25:15] [IO-Worker-10/INFO]: [Eyes] 15_terrain_sampler_dusk: Saved screenshot as bat_eyes_15_terrain_sampler_dusk.png
+[02:25:17] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 21 registered (up to 3 levels)
+[02:25:17] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[02:25:17] [Render thread/INFO]: [Eyes] tour complete
