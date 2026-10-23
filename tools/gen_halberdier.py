@@ -435,7 +435,7 @@ def halberd(m, gx, gz, grip_y):
     hb.cube([x1 - 2.4, y0, gz - t / 2], [2.4, H, t], "steel")                                         # the body
     hb.cube([x1 - 3.0, y0 + 0.5, gz - t / 2], [3.0, H - 1.0, t], "steel")
     hb.cube([x1 - 4.2, y0 + 1.7, gz - t / 2], [4.2, H - 3.4, t], "steel")
-    R, sag = 4.8, 2.0                                    # the edge: a circle through both blade tips and the belly
+    R, _sag = 4.8, 2.0                                    # the edge: a circle through both blade tips and the belly
     ecx, ecy = x1 - 4.6 + R, y0 + H / 2
     a_max = math.asin(min(1.0, (H / 2) / R))
     n = 6
@@ -447,7 +447,6 @@ def halberd(m, gx, gz, grip_y):
         L = 2 * R * math.sin((a1 - a0) / 2) + 0.12
         hb.box_at((px + 0.12 * math.cos(am), py, gz), (0.42, L, t + 0.08), "steel_edge",
                   rotation=[0, 0, -math.degrees(am)], pivot=[px + 0.12 * math.cos(am), py, gz])
-    blade_top = y0 + H
     # "Diamond Axes" research (UpgradeVisuals SHAPE, tag "tempered"): the blade gilded along its edge and the sun
     # struck on both faces
     yb = top + 0.4
@@ -496,7 +495,7 @@ def halberdier():
     # the forearm rising to it from an elbow at the ribs - the haft 2.9 px out from the shoulder joint, 2.9 forward
     # (before: -6.5 / -2.8 / 18.3, the fist by the belt in a hammer grip)
     gx, gz, grip_y = -7.4, -3.6, 24.0
-    hb = halberd(m, gx, gz, grip_y)
+    halberd(m, gx, gz, grip_y)
     m.contact_ok += [("halberd", "right_fore"), ("halberd", "tassel"),
                      ("halberd", "left_fore")]                  # both fists on the haft; the tassel tied on
     # the fist closed round the haft and the arm solved onto its cuff: the wrist where the hand's cuff ends, the
