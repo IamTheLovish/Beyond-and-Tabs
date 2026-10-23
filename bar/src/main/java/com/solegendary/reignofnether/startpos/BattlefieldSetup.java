@@ -70,6 +70,12 @@ public class BattlefieldSetup {
         settleTicksLeft = SETTLE_TICKS;
     }
 
+    /** Forget starts that have not formed their battlefield yet (an abandoned start; the security game tests clean up with it). */
+    public static synchronized void discardPending() {
+        pending.clear();
+        settleTicksLeft = -1;
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         pending.clear();

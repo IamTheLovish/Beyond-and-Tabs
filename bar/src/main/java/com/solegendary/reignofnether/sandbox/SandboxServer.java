@@ -27,6 +27,21 @@ public class SandboxServer {
         return false;
     }
 
+    /**
+     * True when something placed for {@code ownerName} is a sandbox placement: its owner is a sandbox player, or it is
+     * for the map's neutral owner ("" or "Enemy", which only a sandbox player or the server itself can place for -
+     * PacketAuth.mayActFor refuses everyone else) while a sandbox is running. Placement checks follow the OWNER, never
+     * "somebody is in sandbox": that switched them off for every other player on the server.
+     */
+    public static boolean isSandboxOwner(String ownerName) {
+        return ownerName != null && (isSandboxPlayer(ownerName) || isNeutralSandboxOwner(ownerName));
+    }
+
+    /** {@link #isSandboxOwner} for the neutral owners only ("" / "Enemy" while a sandbox is running). */
+    public static boolean isNeutralSandboxOwner(String ownerName) {
+        return ownerName != null && (ownerName.isEmpty() || ownerName.equals("Enemy")) && isAnyoneASandboxPlayer();
+    }
+
     public static boolean isAnyoneASandboxPlayer() {
         for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers)
             if (rtsPlayer.faction == Factions.NONE)
