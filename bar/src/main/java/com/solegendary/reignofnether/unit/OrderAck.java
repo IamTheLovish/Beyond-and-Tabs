@@ -46,6 +46,7 @@ public final class OrderAck {
         if (until == null)
             return;
         boolean moved = mob.getX() != mob.xo || mob.getZ() != mob.zo;
+        // the body only: an idle mob's head drifts on its own (random look-around), and a head turn spent the send on that
         boolean turned = Math.abs(Mth.wrapDegrees(mob.getYRot() - mob.yRotO)) >= TURN_DEGREES;
         if (moved || turned) {
             mob.hasImpulse = true;
