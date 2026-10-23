@@ -19,6 +19,8 @@ eyes tour log and the CI game-test log; nothing here changes what the game does.
 | `[Spike]` | client | every frame of 50 ms or more, at most 1 line/s | see below |
 | `[Gfx]` | client | once per world join | see below |
 
+See also `design/diagnostics.md`: `[Screen]`, the Xmx / shader lines in `[Gfx]`, `/rts-report` and `tools/diagnose_log.py`.
+
 `/rts-perf <seconds>` (op) still records every tick to `logs/perf-*.json`, and forces `[Sys]` on for its length.
 
 ## `[Spike]`, `[Gfx]` and `tools/lag_report.py` (Oct 22: "why is it choppy?")
