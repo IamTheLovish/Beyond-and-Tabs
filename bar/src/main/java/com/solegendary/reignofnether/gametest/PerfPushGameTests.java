@@ -122,8 +122,11 @@ public class PerfPushGameTests {
             return;
         }
         helper.runAfterDelay(10, () -> {
-            for (Mob b : brutes)
-                b.setDeltaMovement(Vec3.ZERO);
+            // ten ticks of pushing have parted them: put each back inside the mammoth's body, at rest
+            for (int i = 0; i < brutes.size(); i++) {
+                brutes.get(i).moveTo(mammoth.getX() + offsets[i][0], mammoth.getY(), mammoth.getZ() + offsets[i][1], 0, 0);
+                brutes.get(i).setDeltaMovement(Vec3.ZERO);
+            }
             mammoth.setDeltaMovement(Vec3.ZERO);
             StringBuilder why = new StringBuilder();
             for (Mob b : brutes)
