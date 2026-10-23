@@ -662,5 +662,7 @@ public class ResourceCosts {
         EARTHCRACKER.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.EARTHCRACKER);
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
+        // the tier gate's prices win over the config entries (resources/TierGate: Tier 2 research, the T2 labs, the extractor refit)
+        TierGate.bake();
     }
 }
