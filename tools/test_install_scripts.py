@@ -19,6 +19,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SH = ROOT / "installer" / "install.sh"
 PS1 = ROOT / "installer" / "install.ps1"
+CMD = ROOT / "installer" / "Install Beyond and Tabs.cmd"
 INSTANCE = "BeyondAndTabs-test"
 PACK = "https://raw.githubusercontent.com/IamTheLovish/beyond-and-tabs-pack/main/windows/pack.toml"
 
@@ -119,6 +120,31 @@ class WindowsScript(unittest.TestCase):
     def test_ci_switches(self):
         self.assertIn("BAT_NO_LAUNCH", self.ps)
         self.assertIn("BAT_ROOT", self.ps)
+
+
+class ClickToInstall(unittest.TestCase):
+    """lovish, Oct 23 00:37: "make the launcher a point and click so they can click the attached file it does everything
+    itself" - a file people double-click (no .exe for SmartScreen to block): it runs the same install.ps1."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cmd = CMD.read_bytes().decode("ascii")   # plain ASCII: cmd.exe misreads UTF-8 / a BOM
+
+    def test_runs_the_real_installer(self):
+        self.assertIn("raw.githubusercontent.com/IamTheLovish/Beyond-and-Tabs/main/installer/install.ps1", self.cmd)
+        self.assertIn("powershell", self.cmd.lower())
+        self.assertIn("-ExecutionPolicy Bypass", self.cmd)
+
+    def test_windows_line_endings(self):
+        # a .cmd with bare LF line endings can run lines wrongly in cmd.exe
+        self.assertNotIn("\n", self.cmd.replace("\r\n", ""))
+
+    def test_window_stays_open_to_read(self):
+        self.assertIn("pause", self.cmd.lower())
+
+    def test_published_with_the_installer(self):
+        wf = (ROOT / ".github/workflows/installer.yml").read_text()
+        self.assertIn("Install Beyond and Tabs.cmd", wf)
 
 
 if __name__ == "__main__":
