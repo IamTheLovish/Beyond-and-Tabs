@@ -152,10 +152,9 @@ public class PortraitRendererBuilding {
 
     private static final float NAME_SHRINK_SCALE = 0.8f;
 
-    // Draws the title within maxWidth: full size if it fits, else scaled down, else scaled down and cut at the
-    // last whole word with an ellipsis ("Conversion Pylon (+2 metal/s, ...)" -> "Conversion Pylon..."), only
-    // falling back to a mid-word cut when even the first word is wider than the space. Allocates only when
-    // the name is too long, which is a single string on the HUD - not a hot path.
+    // Draws the title within maxWidth: full size if it fits, else scaled down, else scaled down and scrolled
+    // (NameScroll: hold, scroll to the end, hold, loop) inside a clip, so the whole name stays readable instead of
+    // being cut ("Centro Urbano (Capital)" beside a production queue). No allocation.
     static void drawFittedName(GuiGraphics guiGraphics, String name, int x, int y, int maxWidth) {
         net.minecraft.client.gui.Font font = Minecraft.getInstance().font;
         int w = font.width(name);
@@ -165,31 +164,17 @@ public class PortraitRendererBuilding {
         }
         // in scaled space the available width grows by 1/scale
         int scaledMax = (int) (maxWidth / NAME_SHRINK_SCALE);
-        String text = name;
-        if (w > scaledMax) {
-            final String ellipsis = "..."; // MC font periods are 2px wide, cheaper than a unifont glyph
-            String cut = name;
-            while (true) {
-                int sp = cut.lastIndexOf(' ');
-                if (sp <= 0)
-                    break;
-                cut = cut.substring(0, sp);
-                // don't leave a dangling "(" or "," before the ellipsis
-                String trimmed = cut.replaceAll("[\\s(,]+$", "");
-                if (font.width(trimmed + ellipsis) <= scaledMax) {
-                    text = trimmed + ellipsis;
-                    break;
-                }
-            }
-            if (font.width(text) > scaledMax) // a single word too long for the space: cut mid-word as last resort
-                text = font.plainSubstrByWidth(name, Math.max(0, scaledMax - font.width(ellipsis))) + ellipsis;
-        }
+        int scroll = NameScroll.offset(w, scaledMax, net.minecraft.Util.getMillis());
+        if (scroll > 0 || w > scaledMax)
+            guiGraphics.enableScissor(x, y - 1, x + maxWidth, y + 10);
         guiGraphics.pose().pushPose();
         // shift down a pixel so the smaller text stays vertically centred on the title line
         guiGraphics.pose().translate(x, y + 1, 0);
         guiGraphics.pose().scale(NAME_SHRINK_SCALE, NAME_SHRINK_SCALE, 1.0f);
-        guiGraphics.drawString(font, text, 0, 0, 0xFFFFFFFF);
+        guiGraphics.drawString(font, name, -scroll, 0, 0xFFFFFFFF);
         guiGraphics.pose().popPose();
+        if (scroll > 0 || w > scaledMax)
+            guiGraphics.disableScissor();
     }
 
     private static final float OWNER_SCALE = 0.75f;
