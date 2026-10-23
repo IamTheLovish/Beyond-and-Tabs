@@ -72,6 +72,10 @@ jobs:
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
           for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
+      - name: Animation review sheet tests (tools/test_anim_sheet.py - the sheet maths, the fast renderer == the old one)
+        run: |
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          ANIM_SKIP_TIMING=1 python3 tools/test_anim_sheet.py
       - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
         run: python3 tools/check_dep_pins.py
       - name: Engine benches (no Minecraft)
