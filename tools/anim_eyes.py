@@ -238,7 +238,7 @@ def collect(frames_dir, spec, log_text, out_dir, n=10, crop=0.6):
     allsteps = steps(runs)
     sheets, problems, warnings, used = [], [], [], set()
     for ri, run in enumerate(runs):
-        rows, labels, kept = [], [], []
+        rows = []
         for si, (rj, _r, view) in enumerate(allsteps):
             if rj != ri:
                 continue
@@ -357,7 +357,8 @@ def download(run_id, dest, gh=real_gh):
     try:
         gh(download_args(run_id, dest))
     except Exception as e:
-        raise CiError("no artifact anim-%d on run %s (%s) - the job died before it published; its log has why" % (run_id, run_id, e))
+        raise CiError("no artifact anim-%d on run %s (%s) - the job died before it published; its log has why"
+                      % (run_id, run_id, e)) from e
 
 
 def _utc_now():
