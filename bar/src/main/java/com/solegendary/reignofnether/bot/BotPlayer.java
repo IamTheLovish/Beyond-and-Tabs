@@ -2572,6 +2572,11 @@ public class BotPlayer {
 
     enum Layout { WIND, CONVERTER, VAULT, FARM, HOUSE, ARMY }
 
+    /** Where the bot's index-th converter goes (public for the game tests: converters must stay clear of each other's death blast). */
+    public BlockPos converterSlot(int index) {
+        return layoutSlot(Layout.CONVERTER, index);
+    }
+
     /**
      * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
      * Wind generators fill rows of six behind the capitol (4-block pitch for their 3x3), converters sit at the
@@ -2590,7 +2595,9 @@ public class BotPlayer {
         double back, side;
         switch (kind) {
             case WIND -> { back = 14 + (index / 6) * 4; side = (index % 6 - 2.5) * 4; }
-            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * 4); }
+            // converters are the fragile eco building and blow up their neighbours (RaidTuning.CONVERTER_BLAST_RADIUS 5): spaced
+            // 8 apart so one lost to a raid stays one lost
+            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * com.solegendary.reignofnether.raid.RaidTuning.CONVERTER_SPACING); }
             // vaults: a row past the converters, deepest in the base (they lose what they hold when they fall)
             case VAULT -> { back = 14 + 4 * 3 + 7; side = (index % 2 == 0 ? 1 : -1) * (2 + (index / 2) * 4); }
             case FARM -> { back = 4 + index * 12; side = 27; }

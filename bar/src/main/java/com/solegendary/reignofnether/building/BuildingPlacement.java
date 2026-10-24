@@ -985,7 +985,8 @@ public class BuildingPlacement {
             int z = block.getBlockPos().getZ();
             boolean solid = !block.getBlockState().isAir();
             if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
-                serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
+                serverLevel.explode(null, null, null, x, y, z, 1.0f, false,
+                    getBuilding().keepsGroundIntact() ? Level.ExplosionInteraction.NONE : Level.ExplosionInteraction.TNT);
             }
             // removed without the per-block break crack and debris (hundreds of them per building)
             if (solid)

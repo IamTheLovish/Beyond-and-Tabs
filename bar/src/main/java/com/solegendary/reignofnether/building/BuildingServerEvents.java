@@ -997,6 +997,7 @@ public class BuildingServerEvents {
         for (BuildingPlacement building : buildingsToDestroy) {
             // BAR kill feed: only a building that fell to damage (not a cancel or a defeat clean-up) is a kill line
             com.solegendary.reignofnether.hud.KillFeedServerEvents.onBuildingDestroyed(building, building.lastAttacker);
+            building.getBuilding().onFellToDamage(serverLevel, building);   // death blasts (EnergyConverter's chain)
             building.destroy(serverLevel);
         }
 

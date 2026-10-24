@@ -49,7 +49,10 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
         this.metalIncome = 2.0f;
 
         this.explodeChance = 0.2f;
-        this.maxHealth = 40d;
+        // softer than the rest but not a converter: 4-6 infantry raiders take 12-18 s, 3-4 T1 vehicles 6-10 s; the
+        // T2 copper tower adds the same again (getUpgradeLevel reads the placed blocks) - RaidTuning
+        this.maxHealth = com.solegendary.reignofnether.raid.RaidTuning.EXTRACTOR_T1_HEALTH;
+        this.maxHealthBonusPerUpgradeLevel = com.solegendary.reignofnether.raid.RaidTuning.EXTRACTOR_T2_BONUS_HEALTH;
         this.buildTimeBlocks = 40;   // the original 40-block derrick's build time, for every faction's take
         this.canSetRallyPoint = false;
 
@@ -68,6 +71,12 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
                 return 1;
         }
         return 0;
+    }
+
+    /** A destroyed extractor leaves its patch rebuildable at once: its collapse must not crater the ground under it (RaidTuning). */
+    @Override
+    public boolean keepsGroundIntact() {
+        return true;
     }
 
     @Override
