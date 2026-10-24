@@ -260,6 +260,26 @@ are within reach. Never while a player possesses it.
 
 Unit card: a faction hero's role line reads "Hero - Vanguard / Raider / Caster / Support / Skirmisher".
 
+## 5b. Hero AI (Oct 24 2026)
+
+lovish (Oct 24): "Id allow for heros to be complex ai's that use their abilities and act extremely smart when there is
+no hero player this can be a toggle players can set if they dont want this option".
+
+- **Who:** every hero nobody possesses. A bot's hero always; a human player's hero while that player's **Hero AI**
+  switch is on (default on; Settings > HUD... > "Hero AI on/off", config `hero_ai`; the client tells the server on
+  login and on every click, `HeroAction.HERO_AI_ON/OFF`). Possessing the hero stops it the same second; letting go
+  hands the hero back. One brain for both: `HeroBot.useAbilities`.
+- **Points:** a bot's hero spends its own; a player's stay manual (the rank-up choice is part of playing a hero).
+- **What it does, once a second, most urgent first:** below 30% health with enemies on it, it saves itself (escape
+  ability aimed away from the enemies, else its shield or heal on itself, else a nova/wave to peel, else it walks back
+  10 blocks unless the player gave it a move); heals go where they mend the most hurt friends; the fourth ability
+  (long cooldown) waits for a real fight (3+ enemies within 14, or a hurt hero/team for the shields); area bursts
+  need two or more enemies in reach; strikes go to the best target (one it can finish, then enemy heroes and
+  commanders, then the weakest, plus a cluster bonus for chain and splash); gap closers only for melee heroes above
+  half health and never into a crowd bigger than its own; while hurt it keeps the escape's mana in reserve.
+- **Tests:** `HeroAiGameTests` (casts unpossessed, switch off, possession, bots and manual points, focus, saved
+  ultimate).
+
 ## 6. Balance rules
 
 1. Possession is a **control** upgrade, not a stat upgrade: +10% damage and -15% attack cooldown, nothing else.

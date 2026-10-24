@@ -64,6 +64,12 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   (17:41): "maybe even 42-30" (17:44), "we dont need that many safe floors in the rts version of the game" (17:45).
   min_y must be a multiple of 16, so 48. Budget: design/battlefield-height.md.
 
+## Decisions to build toward (lovish, Oct 24)
+- **Heroes fight smart by themselves when nobody plays them, with an off switch.** "Id allow for heros to be complex
+  ai's that use their abilities and act extremely smart when there is no hero player this can be a toggle players can
+  set if they dont want this option". Built as HeroBot for every unpossessed hero, per-player switch default on
+  (design/hero_mode.md 5b).
+
 ## Standing rule (lovish, Oct 22 19:58) - tests first
 - **Write the test first, then the implementation.** "write the tests first and then implement it so you dont cheat
   and write bad code, which is something I dislike alot". The test states the behaviour (from lovish's words, the bug
