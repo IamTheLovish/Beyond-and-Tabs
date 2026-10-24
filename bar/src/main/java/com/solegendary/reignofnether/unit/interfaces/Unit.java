@@ -287,6 +287,7 @@ public interface Unit {
 
     private static void tickBody(Unit unit) {
         Mob unitMob = (Mob) unit;
+        com.solegendary.reignofnether.unit.SetUp.tick(unitMob);   // artillery set-up time: did it move this tick
         // Chunk loading around units (formerly 25 addRegionTicket calls per unit per tick here) is now done once
         // per second for all units together by UnitChunkLoader (driven from UnitServerEvents.onServerTick).
         for (Map.Entry<Ability, Float> cooldownEntry : unit.getAbilityCooldowns().entrySet()) {

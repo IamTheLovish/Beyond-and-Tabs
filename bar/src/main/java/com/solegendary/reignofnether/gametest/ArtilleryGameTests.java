@@ -254,10 +254,12 @@ public class ArtilleryGameTests {
             g.discard();
         };
         boolean[] groundTarget = { false };
-        for (int t = 1; t < 140; t++) {
+        for (int t = 1; t < 160; t++) {
             int tick = t;
             helper.runAfterDelay(t, () -> {
-                hold(g, gx, gy, gz);
+                hold(g, gx, gy, gz);   // the gull hovers on its spot for the whole test
+                if (tick >= 140)
+                    return;
                 if (tick == 5)    // the gull "hurts" the crew: retaliation must not pick it
                     b.hurt(level.damageSources().indirectMagic(g, g), 1f);
                 if (tick == 10)   // a direct attack order on the gull, for all four
@@ -288,12 +290,11 @@ public class ArtilleryGameTests {
             // a shell flying straight through the gull: it passes through and does not burst on it
             var through = new com.solegendary.reignofnether.unit.units.tide.BombardShell(level, b, 9f);
             through.setPos(gx - 1.5, gy + g.getBbHeight() / 2, gz);
-            through.setDeltaMovement(0.5, 0, 0);
+            through.setDeltaMovement(0.3, 0, 0);
             level.addFreshEntity(through);
         });
         helper.runAfterDelay(150, () -> {
             try {
-                hold(g, gx, gy, gz);
                 if (g.getHealth() < gullFull)
                     throw new GameTestAssertException("a shell burst on the gull it flew through: health "
                         + g.getHealth() + "/" + gullFull);
