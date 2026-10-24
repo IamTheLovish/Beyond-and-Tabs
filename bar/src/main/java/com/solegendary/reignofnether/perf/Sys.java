@@ -59,13 +59,14 @@ public final class Sys {
     public static final int PUSH_SCAN = 21;        // a unit's vanilla push looking up the bodies it overlaps
     public static final int MOUNT_SCAN = 22;       // a unit looking for a mount (MountGoal autofind)
     public static final int NEUTRAL_AGGRO = 23;    // the once-a-second query for the wild mobs near each unit (neutral aggro)
-    public static final int SECTIONS = 24;
+    public static final int TARGET_GRID = 24;      // the rebuild of TargetScan's per-tick grid of living entities
+    public static final int SECTIONS = 25;
 
     static final String[] NAMES = {
         "unit", "attacker", "attacker/attackMove", "attacker/idleAggro", "attacker/retarget", "attacker/entityScan",
         "attacker/buildingScan", "separation", "stuckNudge", "unstick", "reactions", "pathfinder", "buildings", "bots",
         "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar", "pushScan",
-        "mountScan", "neutralAggro" };
+        "mountScan", "neutralAggro", "targetGrid" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
@@ -195,6 +196,14 @@ public final class Sys {
     /** Calls recorded for a section since the last report (tests). */
     public static long calls(int id) {
         return TIMER.calls[id];
+    }
+
+    /**
+     * A section's self nanoseconds and calls while measuring, summed since the server started - never reset by a
+     * report, so a benchmark can difference two readings across the 10-second [Sys] windows. {calls, nanos}.
+     */
+    public static long[] lifetime(int id) {
+        return new long[] { TIMER.lifetimeCalls[id], TIMER.lifetimeNs[id] };
     }
 
     static void onServerStopping() {
