@@ -108,8 +108,9 @@ public class ProductionPlacement extends BuildingPlacement {
         if (building instanceof ProductionBuilding productionBuilding) {
             productionButtons = productionBuilding.productions.getButtons(this);
         }
-        if (isCapitol)
-            this.allowProdWhileBuilding = true;
+        // every production building takes a queue while it is still going up (Joisco, 2026-10-23: "pre queue units in
+        // workshops while the building is being built"); ProductionItem.tick keeps the queue frozen until isBuilt
+        this.allowProdWhileBuilding = true;
     }
 
     @Nullable
