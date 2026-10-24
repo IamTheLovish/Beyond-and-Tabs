@@ -703,9 +703,9 @@ public class BotPlayer {
                 done = BotDefences.think(this, level, buildings, workers, home, minutes);
         }
 
-        // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit
+        // 4b) tech: research tier 2 at the difficulty's minute (hard: 5 since Oct 24, so the T2 lab stands by ~9-10), then refit
         // home extractors one at a time
-        // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
+        // (not before eight workers: the research holds the capitol's queue for three minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
