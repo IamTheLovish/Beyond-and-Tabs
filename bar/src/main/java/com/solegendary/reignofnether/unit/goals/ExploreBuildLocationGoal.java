@@ -4,9 +4,11 @@ import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.unit.UnitChunkLoader;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 
 import javax.annotation.Nullable;
@@ -24,7 +26,30 @@ public class ExploreBuildLocationGoal extends MoveToTargetBlockGoal {
     private final ArrayList<BuildingPlacement> fogQueuedBuildings = new ArrayList<>();
     public ArrayList<BuildingPlacement> getFogQueuedBuildings() { return fogQueuedBuildings; }
     private final Map<BlockPos, List<BuildingBlock>> fogQueuedBlocksToDraw = new HashMap<>();
-    public Map<BlockPos, List<BuildingBlock>> getFogQueuedBlocksToDraw() { return fogQueuedBlocksToDraw; }
+
+    /**
+     * Client side only: the ghosts of the sites this player queued in the fog, per worker id. They used to live on the
+     * worker's client entity, and a client entity is thrown away and rebuilt whenever the server stops and starts
+     * tracking it (the camera scrolling off, the worker leaving then re-entering view), which wiped the ghosts and
+     * made a still-running server queue look cancelled. Keyed by the entity id (the same on both sides), dropped when
+     * the server says the unit left the level ({@link #forgetGhosts}).
+     */
+    private static final Map<Integer, Map<BlockPos, List<BuildingBlock>>> CLIENT_GHOSTS = new HashMap<>();
+
+    public Map<BlockPos, List<BuildingBlock>> getFogQueuedBlocksToDraw() {
+        if (this.mob.level().isClientSide())
+            return CLIENT_GHOSTS.computeIfAbsent(this.mob.getId(), id -> new HashMap<>());
+        return fogQueuedBlocksToDraw;
+    }
+
+    public static void forgetGhosts(int entityId) {
+        CLIENT_GHOSTS.remove(entityId);
+    }
+
+    /** Client side: a new world or server (ids start over). */
+    public static void forgetAllGhosts() {
+        CLIENT_GHOSTS.clear();
+    }
 
     @Override
     public boolean canUse() {
@@ -60,6 +85,11 @@ public class ExploreBuildLocationGoal extends MoveToTargetBlockGoal {
                 workerUnit.getBuildRepairGoal().queuedBuildings.add(0, bpl);
                 workerUnit.getBuildRepairGoal().startNextQueuedBuilding();
             } else { // not explored -> go explore
+                // keep the site's chunks loaded while the worker walks there (it is not placed, so no building holds
+                // them): an unloaded target is "no path" and the worker would stand, however long the owner's
+                // camera is away
+                if (this.mob.level() instanceof ServerLevel sl && mob.tickCount % 20 == 0)
+                    UnitChunkLoader.holdSite(sl, bpl.centrePos);
                 setMoveTarget(bpl.centrePos);
             }
         }
@@ -83,6 +113,8 @@ public class ExploreBuildLocationGoal extends MoveToTargetBlockGoal {
     public void reset() {
         fogQueuedBuildings.clear();
         fogQueuedBlocksToDraw.clear();
+        if (this.mob.level().isClientSide())
+            CLIENT_GHOSTS.remove(this.mob.getId());
         super.stopMoving();
     }
 }
