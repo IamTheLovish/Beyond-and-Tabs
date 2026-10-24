@@ -172,22 +172,30 @@ public class StartPosClientEvents {
     public static void onRenderLevel(RenderLevelStageEvent evt) {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
-        if (!OrthoviewClientEvents.isEnabled() || MC.player == null)
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (!OrthoviewClientEvents.isEnabled() || MC.player == null)
+                return;
 
-        for (StartPos startPos : startPoses) {
-            if (startPos.faction != Factions.NONE) {
-                Building capitolBuilding = startPos.faction.getBuilding(startPos.faction.capitolBuilding);
-                int forceColour = 2;
-                if (startPos.playerName.equals(MC.player.getName().getString()))
-                    forceColour = 1;
-                if (capitolBuilding != null) {
-                    ArrayList<BuildingBlock> blocksToDraw = capitolBuilding.getRelativeBlockData(MC.level);
-                    Vec3i dimensions = BuildingUtils.getBuildingSize(blocksToDraw);
-                    BlockPos bp = BuildingUtils.getBuildingOriginPos(startPos.pos, false, Rotation.NONE, dimensions);
-                    BuildingClientEvents.drawBuilding(capitolBuilding.getRelativeBlockData(MC.level), evt.getPoseStack(), bp, forceColour);
+            for (StartPos startPos : startPoses) {
+                if (startPos.faction != Factions.NONE) {
+                    Building capitolBuilding = startPos.faction.getBuilding(startPos.faction.capitolBuilding);
+                    int forceColour = 2;
+                    if (startPos.playerName.equals(MC.player.getName().getString()))
+                        forceColour = 1;
+                    if (capitolBuilding != null) {
+                        ArrayList<BuildingBlock> blocksToDraw = capitolBuilding.getRelativeBlockData(MC.level);
+                        Vec3i dimensions = BuildingUtils.getBuildingSize(blocksToDraw);
+                        BlockPos bp = BuildingUtils.getBuildingOriginPos(startPos.pos, false, Rotation.NONE, dimensions);
+                        BuildingClientEvents.drawBuilding(capitolBuilding.getRelativeBlockData(MC.level), evt.getPoseStack(), bp, forceColour);
+                    }
                 }
             }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

@@ -30,6 +30,22 @@ public class T3ServerEvents {
 
     private static final List<SunColossusUnit> COLOSSI = new ArrayList<>();
 
+    /** One "has fielded an experimental" line per player and unit type per this long (see AnnounceGate). */
+    public static final long ANNOUNCE_WINDOW_MS = 60_000;
+    private static final AnnounceGate ANNOUNCE_GATE = new AnnounceGate();
+
+    /**
+     * A T3 unit just arrived: tell everyone, once per owner and unit type per {@link #ANNOUNCE_WINDOW_MS} (the
+     * second Colossus no longer repeats the first one's line), and as one chat line, not three (the blank lines
+     * either side of sendMessageToAllPlayers tripled the space it took over the map).
+     */
+    public static void announceFielded(String owner, net.minecraft.network.chat.Component unitName) {
+        if (!ANNOUNCE_GATE.allow(owner + "|" + unitName.getString(), System.currentTimeMillis(), ANNOUNCE_WINDOW_MS))
+            return;
+        com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToAllPlayersNoNewlines(
+            "server.reignofnether.t3_arrived", true, owner, unitName);
+    }
+
     /** Called by each Colossus' server tick while it lives (idempotent). */
     public static void trackColossus(SunColossusUnit c) {
         if (!COLOSSI.contains(c))
@@ -85,5 +101,6 @@ public class T3ServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         COLOSSI.clear();
+        ANNOUNCE_GATE.clear();
     }
 }

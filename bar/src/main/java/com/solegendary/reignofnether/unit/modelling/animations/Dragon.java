@@ -60,7 +60,7 @@ public final class Dragon {
     /** What differs between dragons on the one rig. */
     public static final class Params {
         /** Ticks per wing beat and the downstroke's share of it. A big wyrm beats slowly. */
-        public float beatTicks = 36f, down = 0.64f;
+        public float beatTicks = 52f, down = 0.64f;   // r12d: ~2.6 s, between the medium (~2 s) and Drogon (~3 s) refs
         /** The arm's angle at the top and the bottom of the stroke (degrees, left wing: + is up). */
         public float flapUp = 36f, flapDown = -46f;   // r12: deeper, so the beat reads from the RTS camera
         /** The glide: the arm's held angle, and the horizontal speed (blocks per tick) where the glide begins / is full. */
@@ -83,7 +83,7 @@ public final class Dragon {
         /** The bank: the roll's ceiling in flight (degrees), degrees of roll per degree-per-tick of yaw rate, the
          *  critically damped follow's natural rate (per tick: ~95% settled in 4.7 / bankOmega ticks), the heading
          *  filter's time constant (ticks: a snapped yaw becomes a turn this long), and the tail's lag per stage. */
-        public float bankMax = 30f, bankPerDeg = 5f, bankOmega = 0.5f, headingTau = 5f, tailBankLag = 4f;
+        public float bankMax = 50f, bankPerDeg = 5f, bankOmega = 0.5f, headingTau = 5f, tailBankLag = 4f;
         /** How much of the flight bank the body keeps while hovering in place, and on the ground. */
         public float bankHover = 0.45f, bankGround = 0.12f;
         /** The climb: the vertical speed (blocks per tick) that counts as a full climb / dive. */

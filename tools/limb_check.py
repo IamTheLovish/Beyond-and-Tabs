@@ -90,7 +90,7 @@ def check(m):
         if name not in bones or not bones[name].get("cubes"):
             continue
         lo = min(bones[name]["cubes"], key=lambda c: c["from"][1])
-        (x0, y0, z0), (sx, sy, sz) = lo["from"], lo["size"]
+        (x0, y0, z0), (sx, _sy, sz) = lo["from"], lo["size"]
         heel = _world(m, bones, name, (x0 + sx / 2, y0, z0 + sz))
         toe = _world(m, bones, name, (x0 + sx / 2, y0, z0))
         pitch = math.degrees(math.atan2(heel[1] - toe[1], heel[2] - toe[2]))

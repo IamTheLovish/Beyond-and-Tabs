@@ -82,6 +82,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
         // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameAuto.class);
@@ -104,6 +105,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.MatchBanner.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleFactories.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleArmy.class);
         vanillaEventBus.register(CursorClientEvents.class);
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);

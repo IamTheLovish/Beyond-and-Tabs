@@ -562,6 +562,11 @@ public class ProductionPlacement extends BuildingPlacement {
                 else if (productionQueue.size() >= MAX_QUEUE) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
                 }
+                else if (com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem) != null) {
+                    // a T2 lab, or the extractor refit, without Tier 2 (resources/TierGate): the same on all seven factions
+                    HudClientboundPacket.showTempMessageI18n(ownerName,
+                        com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem));
+                }
                 else if (!prodItem.canProduce(this)) {
                     String errorMsg = prodItem.getProduceErrorMsg(this);
                     if (errorMsg != null) {

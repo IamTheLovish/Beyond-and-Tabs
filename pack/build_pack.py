@@ -40,17 +40,23 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 # fresh Sound Culling (3 days old) or Particle Core could change under testers between two pack builds.
 # Canary (server tick) is NOT here: it changes vanilla code our mod also hooks, so it waits for a CI run of every
 # GameTest with it loaded. Dynamic Lights Reforged is CurseForge-only, and this pack uses Modrinth only.
+#   oculus                   LGPL-3   shader loader (Iris for Forge), client-only: lovish Oct 22 "the game needs better
+#                            graphics, everything still feels flat" - the PBR maps (_n/_s) only show under a shader
+#                            pack. Pinned to 1.8.0, Embeddium 0.3.31's pair (the eyes shader lane's exact setup).
+#                            Complementary Reimagined (the shader pack itself) is added by build_packwiz.py.
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
-                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge")
+                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge",
+                  "oculus")
 # project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
 PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
-                   "fallingleavesforge": "1.20.1-2.1.2"}
+                   "fallingleavesforge": "1.20.1-2.1.2", "oculus": "1.20.1-1.8.0"}
 # top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
-CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge")
+CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge", "oculus")
 # files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
 # Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
 # One list for macpack.yml, build_packwiz.py and publish-pack's guard.
-MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra")
+# Oculus needs Embeddium, so it goes too (and with it the shader pack: build_packwiz.py)
+MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra", "oculus")
 HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen

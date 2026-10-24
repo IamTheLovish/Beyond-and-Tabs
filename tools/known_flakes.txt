@@ -1,8 +1,7 @@
 # GameTests that fail at random on CI. tools/ci_wait.py reruns a run once when every failed test is on this list.
 # A flake is a bug (in the game or the test) - fix it and take its line off. Add a line only after you have seen
 # the same test fail and pass on the same commit, and say where you saw it.
-bots_play_each_other_without_errors          # soak stall; #55, #68 (Oct 21)
-mirror_images_decoys_draw_fire_deal_nothing_and_fade  # decoy dies inWall; #10 (Oct 21)
-stuck_chaser_is_nudged_then_drops_its_target # #38 (Oct 21); red again on #94 before it got its own glass pad (the free vindicator stopped 3 blocks short, nudged and sidestepped, all ticking); now on a pad at 135; cause unproven: a red run carries chase state and what stands round the unit
-shift_move_after_an_attack_waits_for_the_kill  # queued move 4 blocks short; #77 (Oct 21); hardened Oct 21 (flake-stop-short), cause unproven: a red run now carries the attacker's orders and ticks
+bots_play_each_other_without_errors          # soak stall; #55, #68 (Oct 21), mirror 39860849689 (Oct 22). Cause found, fix on claude/flake-fixes: the bot laid a site on a tree canopy ~5 blocks over its builders (leaves are solid for getHighestNonAirBlock); 10/10 in stress but it never failed there on the old code either (site depends on the arena layout) - take this line off after a few green main builds
+bots_reach_tier_2_after_fielding_t1_units_and_not_before_minute_5   # "medium (MEDIUM piglins) never finished its T2 lab": flake-stress 40022354822 on main 5ce0ea3 failed 1/5; PR #202 0db999e failed then passed on rerun (Oct 23). Bot economy timing - cause not found
+artillery_fires_over_a_wall_without_walking_in   # "no shell has landed on the target yet": PR #212 0e8a90fb failed then passed on rerun (Oct 23). Cause not found
 attack_move_stops_to_fight_then_carries_on  # "stopped 3 blocks short"; red then green on the same commit, PR #119 run 39704723375 (Oct 22), 6 of 6 alone in flake-stress 39706417949; stop-short family, cause unproven: a red run now names its orders, path and the units round it

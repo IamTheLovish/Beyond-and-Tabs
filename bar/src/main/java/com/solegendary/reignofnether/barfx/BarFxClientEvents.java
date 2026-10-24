@@ -16,29 +16,35 @@ public class BarFxClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
-            return;
-        // the ground memory's decal mesh first (worldmemory/GroundMemoryClient): BarFx's glow and smoke sit on top of
-        // the scar they leave
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_FX);
         try {
-            com.solegendary.reignofnether.worldmemory.GroundMemoryClient.render(evt.getPoseStack(), evt.getCamera(),
-                evt.getProjectionMatrix(), evt.getFrustum());
-        } catch (Exception e) {
-            if (!scarsFailedOnce) {
-                scarsFailedOnce = true;
-                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("World memory render failed", e);
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            // the ground memory's decal mesh first (worldmemory/GroundMemoryClient): BarFx's glow and smoke sit on top of
+            // the scar they leave
+            try {
+                com.solegendary.reignofnether.worldmemory.GroundMemoryClient.render(evt.getPoseStack(), evt.getCamera(),
+                    evt.getProjectionMatrix(), evt.getFrustum());
+            } catch (Exception e) {
+                if (!scarsFailedOnce) {
+                    scarsFailedOnce = true;
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.error("World memory render failed", e);
+                }
+                com.solegendary.reignofnether.worldmemory.GroundMemoryClient.clear();
             }
-            com.solegendary.reignofnether.worldmemory.GroundMemoryClient.clear();
-        }
-        try {
-            BarFxClient.onRenderFrame(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
-        } catch (Exception e) {
-            // never take the game down over a visual effect
-            if (!failedOnce) {
-                failedOnce = true;
-                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("BarFx render failed", e);
+            try {
+                BarFxClient.onRenderFrame(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
+            } catch (Exception e) {
+                // never take the game down over a visual effect
+                if (!failedOnce) {
+                    failedOnce = true;
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.error("BarFx render failed", e);
+                }
+                BarFxClient.clear();
             }
-            BarFxClient.clear();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

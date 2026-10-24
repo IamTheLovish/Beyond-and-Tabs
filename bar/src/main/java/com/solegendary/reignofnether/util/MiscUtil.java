@@ -223,7 +223,7 @@ public class MiscUtil {
 
     // excludes trees and buildings
     public static BlockPos getHighestGroundBlock(Level level, BlockPos blockPos) {
-        int y = level.getHeight();
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
@@ -237,12 +237,12 @@ public class MiscUtil {
                 (!isSolidBlocking(level, bp) &&
                         bs.getFluidState().isEmpty()) ||
                 bs.is(BlockTags.LEAVES) ||
-                bs.is(BlockTags.LOGS) || bs.is(BlockTags.PLANKS)) && y > -63);
+                bs.is(BlockTags.LOGS) || bs.is(BlockTags.PLANKS)) && y > level.getMinBuildHeight() + 1);
         return new BlockPos(blockPos.getX(), y, blockPos.getZ());
     }
 
     public static BlockPos getHighestNonAirBlock(Level level, BlockPos blockPos, boolean ignoreLeaves, boolean ignoreStructureVoid) {
-        int y = level.getHeight();
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
@@ -255,7 +255,7 @@ public class MiscUtil {
         } while ((bs.isAir() ||
                 bs.getBlock() == Blocks.LIGHT ||
                 (!isSolidBlocking(level, bp) && bs.getFluidState().isEmpty()) ||
-                (ignoreLeaves && bs.is(BlockTags.LEAVES))) && y > -63);
+                (ignoreLeaves && bs.is(BlockTags.LEAVES))) && y > level.getMinBuildHeight() + 1);
         return new BlockPos(blockPos.getX(), y, blockPos.getZ());
     }
 
