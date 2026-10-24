@@ -171,4 +171,248 @@ public class ArtilleryGameTests {
             v.discard();
         });
     }
+
+    // ------------------------------------------------------------------ the artillery nerf (lovish, Oct 24)
+    // "massed shell artillery forms an unapproachable death ball": the four BombardShell units (Bombard Crew, Mortar
+    // Crawler, Rocket Battery, Mortar Galley) cannot hit air and need 2 s of standing still after moving before they
+    // fire. SET_UP is lovish's 2 s written out, so the tests do not read the number back from the code they check.
+
+    static final int SET_UP = 40;
+
+    static com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit bombard(GameTestHelper helper, String owner,
+                                                                                 double x, double z) {
+        var b = EntityRegistrar.BOMBARD_CREW_UNIT.get().create(helper.getLevel());
+        if (b == null)
+            return null;
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        b.moveTo(o.getX() + x, o.getY(), o.getZ() + z, -90, 0);
+        b.setOwnerName(owner);
+        helper.getLevel().addFreshEntity(b);
+        b.setupEquipmentAndUpgradesServer();   // the bow UnitBowAttackGoal needs (see galley())
+        return b;
+    }
+
+    static void hold(net.minecraft.world.entity.Mob m, double x, double y, double z) {
+        m.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        m.moveTo(x, y, z, m.getYRot(), 0);
+    }
+
+    static boolean flyer(net.minecraft.world.entity.Entity e) {
+        return e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && u.isFlyingUnit();
+    }
+
+    /** Shells in flight that this unit fired. */
+    static int shellsOf(net.minecraft.world.entity.Mob shooter) {
+        return shooter.level().getEntitiesOfClass(com.solegendary.reignofnether.unit.units.tide.BombardShell.class,
+            shooter.getBoundingBox().inflate(40), s -> s.getOwner() == shooter).size();
+    }
+
+    /**
+     * Cannot hit air: with only an enemy flyer in reach a Bombard Crew never takes it as a target - not by itself, not
+     * in retaliation when the flyer hurts it, not on a direct attack order - and never fires; the other three shell
+     * units refuse the direct order too. A shell passes through a flyer in its path, and a burst right beside a flyer
+     * leaves it unhurt while a ground enemy in the same splash is hit.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void artillery_never_targets_or_hurts_a_flyer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_arty_air_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        var g = EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        if (b == null || g == null) {
+            if (b != null) b.discard();
+            helper.fail("could not create the Bombard Crew or the Gull Spotter");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        double gx = o.getX() + 13.5, gy = o.getY() + 2.5, gz = o.getZ() + 8.5;
+        g.moveTo(gx, gy, gz, 90, 0);
+        g.setOwnerName(foeOwner);
+        level.addFreshEntity(g);
+        float gullFull = g.getMaxHealth();
+        // the other three shell units, each given the same direct order on the gull
+        java.util.List<net.minecraft.world.entity.Mob> all = new java.util.ArrayList<>();
+        all.add(b);
+        int row = 0;
+        for (var type : java.util.List.of(EntityRegistrar.MORTAR_CRAWLER_UNIT.get(),
+                EntityRegistrar.ROCKET_BATTERY_UNIT.get(), EntityRegistrar.MORTAR_GALLEY_UNIT.get())) {
+            var m = type.create(level);
+            if (m == null)
+                continue;
+            BlockPos at = helper.absolutePos(new BlockPos(4, 2, 1 + row * 5));
+            m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setOwnerName(owner);
+            level.addFreshEntity(m);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setupEquipmentAndUpgradesServer();
+            all.add(m);
+            row++;
+        }
+        Runnable cleanUp = () -> {
+            for (var m : all)
+                m.discard();
+            g.discard();
+        };
+        boolean[] groundTarget = { false };
+        for (int t = 1; t < 160; t++) {
+            int tick = t;
+            helper.runAfterDelay(t, () -> {
+                hold(g, gx, gy, gz);   // the gull hovers on its spot for the whole test
+                if (tick >= 140)
+                    return;
+                if (tick == 5)    // the gull "hurts" the crew: retaliation must not pick it
+                    b.hurt(level.damageSources().indirectMagic(g, g), 1f);
+                if (tick == 10)   // a direct attack order on the gull, for all four
+                    for (var m : all)
+                        ((AttackerUnit) m).setUnitAttackTargetForced(g);
+                for (var m : all) {
+                    var goalTarget = ((com.solegendary.reignofnether.unit.interfaces.Unit) m).getTargetGoal().getTarget();
+                    if (flyer(m.getTarget()) || flyer(goalTarget)) {
+                        cleanUp.run();
+                        throw new GameTestAssertException(m.getType().toShortString() + " took the flyer as its target"
+                            + " at tick " + tick + (tick >= 10 ? " (after a direct attack order)" : tick >= 5
+                                ? " (in retaliation)" : " (by itself)"));
+                    }
+                    if (m == b && m.getTarget() != null)
+                        groundTarget[0] = true;   // a neighbouring test's ground unit came into reach: a shot is fair
+                }
+                if (!groundTarget[0] && shellsOf(b) > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the Bombard Crew fired with only a flyer in reach (tick " + tick + ")");
+                }
+            });
+        }
+        helper.runAfterDelay(140, () -> {
+            if (g.getHealth() < gullFull) {
+                cleanUp.run();
+                throw new GameTestAssertException("the gull was hurt while the artillery stood by: " + g.getHealth());
+            }
+            // a shell flying straight through the gull: it passes through and does not burst on it
+            var through = new com.solegendary.reignofnether.unit.units.tide.BombardShell(level, b, 9f);
+            through.setPos(gx - 1.5, gy + g.getBbHeight() / 2, gz);
+            through.setDeltaMovement(0.3, 0, 0);
+            level.addFreshEntity(through);
+        });
+        helper.runAfterDelay(150, () -> {
+            try {
+                if (g.getHealth() < gullFull)
+                    throw new GameTestAssertException("a shell burst on the gull it flew through: health "
+                        + g.getHealth() + "/" + gullFull);
+                // a burst right beside the gull, a ground enemy in the same splash: the walker is hit, the gull is not
+                VillagerUnit v = foe(helper, foeOwner, 13.5, 6.5);
+                if (v == null)
+                    throw new GameTestAssertException("could not create the ground foe");
+                all.add(v);
+                float vFull = v.getHealth();
+                var shell = new com.solegendary.reignofnether.unit.units.tide.BombardShell(level, b, 9f);
+                shell.setPos(gx, gy - 1.0, gz - 1.0);
+                level.addFreshEntity(shell);
+                shell.burst();
+                if (g.getHealth() < gullFull)
+                    throw new GameTestAssertException("a shell bursting beside the gull hurt it: " + g.getHealth() + "/" + gullFull);
+                if (v.getHealth() >= vFull)
+                    throw new GameTestAssertException("the same burst missed the ground enemy a block away - the test proves nothing");
+                cleanUp.run();
+                helper.succeed();
+            } catch (GameTestAssertException e) {
+                cleanUp.run();
+                throw e;
+            }
+        });
+    }
+
+    /**
+     * Shared by the two set-up tests: a Bombard Crew walks ~3 blocks and stops, then gets {@code order} with its
+     * cooldown cleared, so only the set-up can hold the shot. It must not fire in the first SET_UP ticks after it
+     * stopped, and must fire soon after. Slack of 2 ticks: the test sees "stopped" a tick or two after the last step.
+     */
+    static void setUpTest(GameTestHelper helper, String tag, java.util.function.BiConsumer<
+            com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit, VillagerUnit> order, boolean withFoe) {
+        String owner = "gametest_arty_setup_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        VillagerUnit v = withFoe ? foe(helper, owner + "_foe", 15.5, 8.5) : null;
+        if (b == null || (withFoe && v == null)) {
+            if (b != null) b.discard();
+            if (v != null) v.discard();
+            helper.fail("could not create the units");
+            return;
+        }
+        boolean[] done = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            b.discard();
+            if (v != null)
+                v.discard();
+        };
+        double sx = b.getX(), sz = b.getZ();
+        BlockPos dest = helper.absolutePos(new BlockPos(4, 2, 8));
+        double vx = v == null ? 0 : v.getX(), vy = v == null ? 0 : v.getY(), vz = v == null ? 0 : v.getZ();
+        helper.runAfterDelay(3, () -> b.setMoveTarget(dest));
+        int[] stoppedAt = { -1 };
+        int[] tick = { 0 };
+        double[] last = { sx, sz };
+        int slack = 2;
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            tick[0]++;
+            if (v != null)
+                hold(v, vx, vy, vz);
+            double step = Math.hypot(b.getX() - last[0], b.getZ() - last[1]);
+            last[0] = b.getX();
+            last[1] = b.getZ();
+            int shells = shellsOf(b);
+            if (stoppedAt[0] < 0) {
+                if (shells > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("fired before it had even stopped walking (tick " + tick[0] + ")");
+                }
+                if (tick[0] > 5 && Math.hypot(b.getX() - sx, b.getZ() - sz) > 1.5 && b.getNavigation().isDone()
+                        && step < 0.01) {
+                    stoppedAt[0] = tick[0];
+                    order.accept(b, v);
+                    ((com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal<?>) b.getAttackGoal()).resetCooldown();
+                }
+                if (tick[0] > 160) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the crew never walked to its move target and stopped");
+                }
+                return;
+            }
+            int since = tick[0] - stoppedAt[0];
+            if (step > 0.05) {
+                cleanUp.run();
+                throw new GameTestAssertException("the crew moved again " + since + " ticks after it stopped - the test needs it standing");
+            }
+            if (shells > 0 && since < SET_UP - slack) {
+                cleanUp.run();
+                throw new GameTestAssertException("fired " + since + " ticks after it stopped walking: it needs "
+                    + SET_UP + " ticks to set up");
+            }
+            if (shells > 0) {
+                cleanUp.run();
+                helper.succeed();
+                return;
+            }
+            if (since > SET_UP + 40) {
+                cleanUp.run();
+                throw new GameTestAssertException("still had not fired " + since + " ticks after it stopped (set-up is "
+                    + SET_UP + "); target " + (b.getTarget() == null ? "none" : "set") + ", using item " + b.isUsingItem());
+            }
+        });
+    }
+
+    /** Set-up time on an attack order: a crew that just stopped walking holds fire 2 s, then shells the target. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
+        setUpTest(helper, "atk", (b, v) -> ((AttackerUnit) b).setUnitAttackTarget(v), true);
+    }
+
+    /** Set-up time on Attack Ground: the same 2 s before the first shell goes at the ordered spot. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void attack_ground_waits_for_the_set_up(GameTestHelper helper) {
+        setUpTest(helper, "ground", (b, v) -> b.getRangedAttackGroundGoal().setGroundTarget(
+            b.blockPosition().offset(10, -1, 0)), false);
+    }
 }
