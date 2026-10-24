@@ -53,13 +53,21 @@ public final class FrameParts {
     // the sum of the three is the old worldMarkers number
     public static final int MARKERS_RANGE = 13;    // BlockClientEvents: range indicator highlights
     public static final int MARKERS_METAL = 14;    // MetalPatchMarkerClientEvents: rings and gems
-    public static final int FRAME_SECTIONS = 15;
+    public static final int MARKERS_LINE = 15;
+    public static final int MARKERS_GRID = 16;
+    public static final int MARKERS_CHUNKS = 17;
+    public static final int MARKERS_MAP = 18;
+    public static final int MARKERS_DRAW = 19;
+    public static final int MARKERS_FLOATTEXT = 20;
+    public static final int MARKERS_WRECK = 21;
+    public static final int MARKERS_STARTPOS = 22;
+    public static final int FRAME_SECTIONS = 23;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 15;        // Unit.tick on the client
-    public static final int SECTIONS = 16;
+    public static final int UNIT_TICK = 23;        // Unit.tick on the client
+    public static final int SECTIONS = 24;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "markersLine", "markersGrid", "markersChunks", "markersMap", "markersDraw", "markersFloatText", "markersWreck", "markersStartPos", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
