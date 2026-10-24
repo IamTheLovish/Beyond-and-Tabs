@@ -50,12 +50,13 @@ public interface AttackerUnit {
     int RETARGET_TICKS = 12;
 
     /**
-     * GAMEPLAY NUMBER (lovish to approve, Oct 21 perf plan PR 5): how often an idle unit looks for something to attack
-     * by itself - 8 ticks = 0.4 s (BAR's slow update is 0.5 s); it was every 4 ticks (0.2 s). A unit that was fighting
-     * a moment ago (unit/TargetScan.inCombat) still looks every 4 ticks, and explicit attack orders, attack-move,
-     * retaliation and retargeting never wait on it. A multiple of 4. Set it back to 4 to undo the change.
+     * GAMEPLAY NUMBER (lovish's call, Oct 21 perf plan PR 5): how often an idle unit looks for something to attack
+     * by itself - 4 ticks = 0.2 s, as before. 8 (0.4 s, BAR's slow update is 0.5 s) halves idle lookups again - waiting
+     * on lovish's OK (gen-012, Oct 23). A unit that was fighting a moment ago (unit/TargetScan.inCombat) always looks
+     * every 4 ticks, and explicit attack orders, attack-move, retaliation and retargeting never wait on it. A multiple
+     * of 4.
      */
-    int IDLE_AGGRO_TICKS = 8;
+    int IDLE_AGGRO_TICKS = 4;
 
     public static final float ATTACK_DAMAGE_REDUCTION_PER_WEAK = 0.2f;
     public static final float ATTACK_DAMAGE_INCREASE_PER_STRENGTH = 0.2f;
