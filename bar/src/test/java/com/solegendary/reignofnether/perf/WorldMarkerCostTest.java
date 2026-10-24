@@ -81,6 +81,16 @@ class WorldMarkerCostTest {
     }
 
     @Test
+    void buffersAreFetchedWhenSomethingIsDrawnNotEveryFrame() throws IOException {
+        String s = src("blocks/BlockClientEvents.java");
+        String h = s.substring(s.indexOf("public static void onRenderLevel"), s.indexOf("maintain a mapping of night sources"));
+        assertTrue(!h.contains("getBuffer("), "BlockClientEvents: a getBuffer with nothing drawn flushes the open batch");
+        String m = src("resources/MetalPatchMarkerClientEvents.java");
+        assertTrue(m.indexOf("getBuffer(RenderType.lines())") > m.indexOf("for (BlockPos patch : MetalPatchesClient.getPatches())"),
+                "metal rings: the lines buffer is fetched at the first ring, inside the loop");
+    }
+
+    @Test
     void metalRingsUseTheTable() throws IOException {
         String s = src("resources/MetalPatchMarkerClientEvents.java");
         assertTrue(s.contains("UnitRing"), "rings read the precomputed circle");

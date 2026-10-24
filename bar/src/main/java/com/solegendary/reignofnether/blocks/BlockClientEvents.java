@@ -58,6 +58,19 @@ public class BlockClientEvents {
                 rangeUnits.add(le);
     }
 
+    private static com.mojang.blaze3d.vertex.VertexConsumer frameBuffer = null;
+
+    /**
+     * The translucent buffer, fetched when the first highlight is drawn. Fetching it every frame whether or not
+     * anything drew made the buffer source end (flush) whatever batch was open and begin an empty one: most of this
+     * handler's 1.2 ms in scene 18, where no hero or tower has a range to show.
+     */
+    private static com.mojang.blaze3d.vertex.VertexConsumer vc() {
+        if (frameBuffer == null)
+            frameBuffer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(WHITE));
+        return frameBuffer;
+    }
+
     private static final ResourceLocation WHITE = ResourceLocation.parse("forge:textures/white.png");
 
     public static NightCircleMode nightCircleMode = NightCircleMode.NO_OVERLAPS;
@@ -72,7 +85,7 @@ public class BlockClientEvents {
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE);
-            var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(WHITE));
+            frameBuffer = null;   // fetched on the first highlight drawn: see vc()
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
                 return;
             }
@@ -85,9 +98,9 @@ public class BlockClientEvents {
                         int snowLayers = BlockUtils.getSnowLayers(building.level.getBlockState(bp.above()));
                         float yOffset = snowLayers * 0.125f;
                         if (BuildingClientEvents.getSelectedBuildings().contains(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                         } else if (!ria.showOnlyWhenSelected(building)) {
-                            MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0f, 0f, 0.6f);
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0f, 0f, 0.6f);
                         }
                     }
                 }
@@ -98,7 +111,7 @@ public class BlockClientEvents {
                 for (BlockPos bp : bps) {
                     int snowLayers = BlockUtils.getSnowLayers(MC.level.getBlockState(bp.above()));
                     float yOffset = snowLayers * 0.125f;
-                    MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                    MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                 }
             }
             for (LivingEntity le : rangeUnits) {
@@ -109,7 +122,7 @@ public class BlockClientEvents {
                     for (BlockPos bp : ri.getHighlightBps()) {
                         int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
                         float yOffset = snowLayers * 0.125f;
-                        MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                        MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                     }
                 }
             }
@@ -120,7 +133,7 @@ public class BlockClientEvents {
                 for (BlockPos bp : ri.getHighlightBps()) {
                     int snowLayers = BlockUtils.getSnowLayers(MC.level.getBlockState(bp.above()));
                     float yOffset = snowLayers * 0.125f;
-                    MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumer, Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                    MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
                 }
             }
 

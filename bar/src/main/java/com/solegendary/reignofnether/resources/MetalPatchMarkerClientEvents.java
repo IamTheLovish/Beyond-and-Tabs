@@ -112,7 +112,7 @@ public class MetalPatchMarkerClientEvents {
             boolean strategic = StrategicViewClientEvents.isStrategicView();
             float rad = strategic ? RING_STRATEGIC : RING;
             PoseStack pose = evt.getPoseStack();
-            VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+            VertexConsumer vc = null;   // fetched at the first ring: a fetch with nothing drawn flushes the open batch
             pose.pushPose();
             pose.translate(-cam.x, -cam.y, -cam.z);
             Matrix4f m = pose.last().pose();
@@ -132,6 +132,8 @@ public class MetalPatchMarkerClientEvents {
                 } else {             // remembered in the fog: taken, by whom is not ours to know
                     r = 0.62f; g = 0.62f; b = 0.62f; a = 0.7f;
                 }
+                if (vc == null)
+                    vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
                 float cx = patch.getX() + 0.5f, cy = patch.getY() + 1.06f, cz = patch.getZ() + 0.5f;
                 ring(vc, m, n, cx, cy, cz, rad, r, g, b, a);
                 if (MetalPatchesClient.valueOf(patch) > 1.01f)   // rich (1.5x) and centre (2.0x): a second ring
