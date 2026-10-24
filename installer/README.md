@@ -7,7 +7,10 @@
 3. writes a Prism instance (`BeyondAndTabs-test`) for Minecraft 1.20.1 + Forge, copies the pack overrides
    (our jar) and downloads every Modrinth mod listed in the pack, checking each sha1
 4. puts a "lovish" shortcut (lovish's cat as the icon, `brand/cat.ico`) on the Desktop and in the Start Menu (`prismlauncher.exe -l BeyondAndTabs-test`), removing the old "Beyond and Tabs" one; the instance icon in Prism is the cat too (`brand/cat.png` -> `icons/lovish_cat.png`)
-5. opens Prism Launcher, which asks for the Microsoft account and then launches
+5. sets up the cat bubble (`bubble/bubble.ps1` + `brand/cat.png` -> `%LOCALAPPDATA%\BeyondAndTabs\Bubble`): a round,
+   always-on-top bubble that starts the game when clicked (the Desktop "lovish" shortcut, else Prism directly), drags
+   to move, and right-clicks for Play / Start with Windows / Close; a "Beyond and Tabs bubble" Desktop shortcut brings it back
+6. opens Prism Launcher, which asks for the Microsoft account and then launches
 
 Re-running it is safe and is the "repair / update to the current pack" path: existing files are kept, missing or
 changed mods are fetched.
