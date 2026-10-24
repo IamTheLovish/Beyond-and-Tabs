@@ -56,12 +56,13 @@ public final class Sys {
     public static final int CHUNK_LOADER = 18;     // keeping the chunks around units loaded
     public static final int ECONOMY = 19;          // income, stalls and the resource sync
     public static final int FOG_OF_WAR = 20;       // the server half of fog of war
-    public static final int SECTIONS = 21;
+    public static final int PUSH_SCAN = 21;        // a unit's vanilla push looking up the bodies it overlaps
+    public static final int SECTIONS = 22;
 
     static final String[] NAMES = {
         "unit", "attacker", "attacker/attackMove", "attacker/idleAggro", "attacker/retarget", "attacker/entityScan",
         "attacker/buildingScan", "separation", "stuckNudge", "unstick", "reactions", "pathfinder", "buildings", "bots",
-        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar" };
+        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar", "pushScan" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
