@@ -437,8 +437,12 @@ public final class MapClient {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAP);
         try {
-            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
+            boolean skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            if (skip) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
                 return;
             // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
@@ -446,6 +450,7 @@ public final class MapClient {
                 StartMarkers.render(evt.getPoseStack(), evt.getCamera());
             if (!OrthoviewClientEvents.isEnabled())
                 return;
+            int fw = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAPWORLD);
             try {
                 renderWorld(evt.getPoseStack(), evt.getCamera());
             } catch (Exception e) {
@@ -453,15 +458,22 @@ public final class MapClient {
                 if (!renderFailed)
                     ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
                 renderFailed = true;
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fw);
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 
     private static void renderWorld(PoseStack pose, Camera camera) {
+        int p2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P2);
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
+        com.solegendary.reignofnether.perf.FrameParts.end(p2);
+        int p1 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P1);
         String me = MC.player == null ? "" : MC.player.getName().getString();
+        com.solegendary.reignofnether.perf.FrameParts.end(p1);
         // your capitol's ghost where you placed (as the classic flow's StartPosClientEvents draws it): the pick knows
         // its seat's faction, unless that is Random, which the seating rolls later
         if (phase)

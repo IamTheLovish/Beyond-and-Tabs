@@ -64,7 +64,10 @@ final class EyesOverlaysScene {
     private static final double SETTLE_S = 3, SLICE_S = 8;
     private static final int[] SECTIONS = { FrameParts.UNIT_OVERLAYS, FrameParts.BUILDING_BOXES,
             FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES,
-            FrameParts.BUILDING_DECOR, FrameParts.WORLD_MARKERS, FrameParts.MARKERS_RANGE, FrameParts.MARKERS_METAL };
+            FrameParts.BUILDING_DECOR, FrameParts.WORLD_MARKERS, FrameParts.MARKERS_RANGE, FrameParts.MARKERS_METAL,
+            FrameParts.MARKERS_LINE, FrameParts.MARKERS_GRID, FrameParts.MARKERS_CHUNKS, FrameParts.MARKERS_MAP, FrameParts.MARKERS_DRAW, FrameParts.MARKERS_FLOATTEXT, FrameParts.MARKERS_WRECK, FrameParts.MARKERS_STARTPOS,
+            FrameParts.MARKERS_GATE, FrameParts.MARKERS_MAPWORLD, FrameParts.MARKERS_RANGE_REFRESH, FrameParts.MARKERS_RANGE_UNITS,
+            FrameParts.MARKERS_P1, FrameParts.MARKERS_P2, FrameParts.MARKERS_P3 };
     private static final int SUMMONS_PER_TICK = 25, HOUSES_PER_TICK = 100;
 
     private static int phase = 0;
@@ -434,7 +437,7 @@ final class EyesOverlaysScene {
                 double m = median(rows, 7 + k);
                 if (SECTIONS[k] != FrameParts.UNIT_BODIES && SECTIONS[k] != FrameParts.BUILDING_DECOR
                         && SECTIONS[k] != FrameParts.WORLD_MARKERS && SECTIONS[k] != FrameParts.MARKERS_RANGE
-                        && SECTIONS[k] != FrameParts.MARKERS_METAL)
+                        && SECTIONS[k] != FrameParts.MARKERS_METAL && !FrameParts.name(SECTIONS[k]).startsWith("markers"))
                     ours += m;   // the overlays+HUD total stays comparable with the runs before Oct 23
                 parts.append(k == 0 ? "" : ", ").append(FrameParts.name(SECTIONS[k])).append(' ').append(f2(m));
             }
