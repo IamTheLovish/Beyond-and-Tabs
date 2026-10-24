@@ -215,6 +215,7 @@ public class PossessionClientEvents {
         MC.player.xRotO = 0;
         lookThrough(e);
         MC.options.setCameraType(CameraType.FIRST_PERSON);
+        com.solegendary.reignofnether.cursor.CursorDiagClient.grabCall("grab"); // diagnostics log only
         MC.mouseHandler.grabMouse();
         sinceSent = 99;
         slotsAge = 0;

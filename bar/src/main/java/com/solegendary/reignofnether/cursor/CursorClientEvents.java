@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.cursor;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
@@ -237,36 +239,89 @@ public class CursorClientEvents {
     private static final ResourceLocation TEXTURE_CROSS = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/cursors/customcursor_cross.png");
     private static final ResourceLocation TEXTURE_SHOVEL = ResourceLocation.fromNamespaceAndPath("reignofnether", "textures/cursors/customcursor_shovel.png");
 
+    // RTS cursor position in window pixels after rts_cursor_speed (the DISABLED-mode cursor is virtual)
+    private static double virtualX = 0;
+    private static double virtualY = 0;
+    private static boolean virtualValid = false;
+
+    // scales this frame's raw mouse delta by rts_cursor_speed and writes it back to GLFW. Vanilla's own xpos/ypos
+    // catch up on the next move event, so hit-tests lag at most one mouse move behind the drawn cursor.
+    private static void updateVirtualCursor(long window) {
+        double[] x = new double[1];
+        double[] y = new double[1];
+        GLFW.glfwGetCursorPos(window, x, y);
+        double speed = ReignOfNetherClientConfigs.RTS_CURSOR_SPEED.get();
+        if (virtualValid && speed != 1.0) {
+            double nx = CursorMath.clamp(CursorMath.scaleDelta(virtualX, x[0], speed), MC.getWindow().getScreenWidth());
+            double ny = CursorMath.clamp(CursorMath.scaleDelta(virtualY, y[0], speed), MC.getWindow().getScreenHeight());
+            if (nx != x[0] || ny != y[0])
+                GLFW.glfwSetCursorPos(window, nx, ny);
+            x[0] = nx;
+            y[0] = ny;
+        }
+        virtualX = x[0];
+        virtualY = y[0];
+        virtualValid = true;
+    }
+
+    // fractional GUI-scaled cursor position
+    private static float virtualGuiX() {
+        return CursorMath.windowToGui(virtualX, MC.getWindow().getScreenWidth(), MC.getWindow().getGuiScaledWidth());
+    }
+
+    private static float virtualGuiY() {
+        return CursorMath.windowToGui(virtualY, MC.getWindow().getScreenHeight(), MC.getWindow().getGuiScaledHeight());
+    }
+
     @SubscribeEvent
     public static void onDrawScreen(ScreenEvent.Render evt) {
         long window = MC.getWindow().getWindow();
 
         if (!OrthoviewClientEvents.isEnabled() || !(evt.getScreen() instanceof TopdownGui)) {
-            if (GLFW.glfwRawMouseMotionSupported()) // raw mouse increases sensitivity massively for some reason
+            if (GLFW.glfwRawMouseMotionSupported())
                 GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_TRUE);
             GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+            SystemCursors.reset(window); // menus get the OS arrow back
+            CursorDiagClient.setRtsState(false, false, 0, 0);
+            virtualValid = false;
             return;
         }
         if (MC.player == null || MC.level == null) return;
+
+        // rts_system_cursor: the OS cursor (user's own pointer settings, no lag) instead of the locked virtual one
+        final boolean systemCursor = CursorModePolicy.useSystemCursor(ReignOfNetherClientConfigs.RTS_SYSTEM_CURSOR.get(), true);
+        if (!systemCursor)
+            SystemCursors.dispose(window); // setting turned off while playing
 
         // ************************************
         // Manage cursor icons based on actions
         // ************************************
 
         // hides default cursor and locks it to the window to allow edge panning
-        GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
-        // raw mouse increases sensitivity massively for some reason
-        GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION, GLFW.GLFW_FALSE);
+        GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, CursorModePolicy.glfwCursorMode(systemCursor));
+        // raw input skips Windows' pointer acceleration (which made box-select drags speed up);
+        // rts_cursor_speed scales it instead. The system cursor wants the user's own settings, so no raw motion.
+        if (GLFW.glfwRawMouseMotionSupported())
+            GLFW.glfwSetInputMode(window, GLFW.GLFW_RAW_MOUSE_MOTION,
+                    CursorModePolicy.wantRawMotion(systemCursor) ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+        if (systemCursor)
+            virtualValid = false; // pick, box and edge-pan read vanilla's xpos/ypos, which is the OS position
+        else
+            updateVirtualCursor(window);
 
         // blitting like this will cause it to be rendered 1 frame behind realtime (this hopefully shouldn't be noticeable...)
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // draw at edge of screen even if mouse is off it
-        int cursorDrawX = Math.min(evt.getMouseX(), MC.getWindow().getGuiScaledWidth() - 5);
-        int cursorDrawY = Math.min(evt.getMouseY(), MC.getWindow().getGuiScaledHeight() - 5);
-        cursorDrawX = Math.max(0, cursorDrawX);
-        cursorDrawY = Math.max(0, cursorDrawY);
+        // draw at edge of screen even if mouse is off it, from the fractional position so it moves in
+        // window pixels rather than GUI-scaled steps
+        float cursorDrawX = CursorMath.clampDraw(
+                systemCursor ? CursorMath.windowToGui(MC.mouseHandler.xpos(), MC.getWindow().getScreenWidth(), MC.getWindow().getGuiScaledWidth()) : virtualGuiX(),
+                MC.getWindow().getGuiScaledWidth(), 5);
+        float cursorDrawY = CursorMath.clampDraw(
+                systemCursor ? CursorMath.windowToGui(MC.mouseHandler.ypos(), MC.getWindow().getScreenHeight(), MC.getWindow().getGuiScaledHeight()) : virtualGuiY(),
+                MC.getWindow().getGuiScaledHeight(), 5);
+        CursorDiagClient.setRtsState(true, systemCursor, cursorDrawX, cursorDrawY);
         ResourceLocation texture;
 
         int cursorXoffset = 0;
@@ -294,16 +349,22 @@ public class CursorClientEvents {
             RenderSystem.setShaderTexture(0, TEXTURE_CURSOR);
             texture = TEXTURE_CURSOR;
         }
-        evt.getGuiGraphics().pose().translate(0,0,2500);
-        evt.getGuiGraphics().blit(texture,
-                cursorDrawX + cursorXoffset,
-                cursorDrawY + cursorYoffset,
-                16,
-                16, 16,
-                16, 16,
-                16, 16
-        );
-        evt.getGuiGraphics().pose().translate(0,0,-2500);
+        if (systemCursor) {
+            // the OS draws it: same sprite as a hardware cursor, hotspot where the sprite's offset puts its tip
+            SystemCursors.use(window, texture, -cursorXoffset, -cursorYoffset);
+        } else {
+            evt.getGuiGraphics().pose().pushPose();
+            evt.getGuiGraphics().pose().translate(cursorDrawX, cursorDrawY, 2500);
+            evt.getGuiGraphics().blit(texture,
+                    cursorXoffset,
+                    cursorYoffset,
+                    16,
+                    16, 16,
+                    16, 16,
+                    16, 16
+            );
+            evt.getGuiGraphics().pose().popPose();
+        }
 
         // ***********************************************
         // Convert cursor on-screen 2d pos to world 3d pos
@@ -462,12 +523,20 @@ public class CursorClientEvents {
     public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
 
         if (leftClickDown && boxArmed) {
-            evt.getGuiGraphics().fill( // x1,y1, x2,y2,
-                    Math.round(cursorLeftClickDownPos.x),
-                    Math.round(cursorLeftClickDownPos.y),
-                    Math.round(cursorLeftClickDragPos.x),
-                    Math.round(cursorLeftClickDragPos.y),
+            // the dragged corner follows the fractional cursor; the anchor corner is the clicked integer pos.
+            // fill() only takes ints, so draw a whole-pixel rect and scale it to the fractional size.
+            float x1 = cursorLeftClickDownPos.x, y1 = cursorLeftClickDownPos.y;
+            float x2 = virtualValid ? virtualGuiX() : cursorLeftClickDragPos.x;
+            float y2 = virtualValid ? virtualGuiY() : cursorLeftClickDragPos.y;
+            float w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
+            int iw = Math.max(1, Math.round(w)), ih = Math.max(1, Math.round(h));
+            PoseStack pose = evt.getGuiGraphics().pose();
+            pose.pushPose();
+            pose.translate(Math.min(x1, x2), Math.min(y1, y2), 0);
+            pose.scale(w / iw, h / ih, 1);
+            evt.getGuiGraphics().fill(0, 0, iw, ih,
                     0x0341e868); //ARGB(hex); note that alpha ranges between ~0-16, not 0-255
+            pose.popPose();
         }
     }
 
