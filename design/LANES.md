@@ -103,8 +103,9 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   and hand-built files live apart.
 
 ## Decisions to build toward (lovish, Oct 24) - winning pays
-- **Like Beyond All Reason, winning a fight should pay off so the winner techs faster; decisive kills matter**
-  (paraphrased from lovish by the session). Built as: wrecks you can read in the RTS view, idle workers reclaim nearby
+- **"I want tier 2 to feel like beyond all reason where theres action in tier 1 and if you win by sniping the
+  commander your able to transition to tier 2 more efficiently. [...] Taking decisive battles becomes more important
+  rather than everyone just ramming their units into each other."** Built as: wrecks you can read in the RTS view, idle workers reclaim nearby
   wrecks by themselves (gamerule `idleReclaim`, default on), a fallen commander leaves a 600 metal wreck and a hero
   150 + 50 x level, and an enemy hero within 28 blocks gets a one-time XP burst (commander 400, hero 150 + 50 x
   level). The normal per-kill XP is not raised (it would deepen hero snowballing). All numbers are tunable picks;

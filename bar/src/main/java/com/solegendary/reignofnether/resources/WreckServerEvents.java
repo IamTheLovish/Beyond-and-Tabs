@@ -50,7 +50,7 @@ import java.util.Map;
  * They decay after {@link #LIFETIME_TICKS} and at most {@link #MAX_WRECKS} exist (oldest go first), so a long
  * 8v8 cannot pile them up into a frame-rate problem.
  *
- * Winning pays (lovish, Oct 24, paraphrased: like Beyond All Reason, decisive kills matter): a commander leaves a
+ * Winning pays (lovish, Oct 24: like Beyond All Reason, decisive kills matter): a commander leaves a
  * {@link #COMMANDER_WRECK_METAL} heap and a hero {@link #heroWreckMetal} (150 + 50 per level) - never less than the
  * normal half-cost heap - and an idle worker within {@link #IDLE_RECLAIM_RANGE} blocks of a wreck walks over and strips
  * it by itself ({@link #autoReclaimIdle}, the {@code idleReclaim} gamerule, on by default).
@@ -71,7 +71,7 @@ public class WreckServerEvents {
 
     /**
      * What a fallen commander leaves, in metal: BAR's commander wreck is a prize worth fighting over, so the side that
-     * kills one can tech up from it (lovish, Oct 24, paraphrased: like Beyond All Reason, winning a fight should pay off so the
+     * kills one can tech up from it (lovish, Oct 24: winning a fight should pay off, as in Beyond All Reason, so the
      * winner techs faster). A pick for lovish to tune; an ordinary worker's heap is {@code cost * WRECK_SHARE} (25).
      */
     public static final float COMMANDER_WRECK_METAL = 600f;

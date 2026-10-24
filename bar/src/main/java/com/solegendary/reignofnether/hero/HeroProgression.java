@@ -35,8 +35,8 @@ import java.util.Map;
  * it is held - to a hero within {@link #CAPTURE_RANGE} blocks only, so it rewards the hero being there
  * (CapturePointServerEvents calls {@link #onCapture} and {@link #onHold}).
  * <p>
- * Decisive kills pay a one-time <b>burst</b> (lovish, Oct 24, paraphrased: like Beyond All Reason, winning a fight should pay off
- * so the winner techs faster; decisive kills matter): when a commander or a hero dies, every enemy hero within
+ * Decisive kills pay a one-time <b>burst</b> (lovish, Oct 24: winning a fight should pay off, as in Beyond All Reason,
+ * so the winner techs faster and decisive kills matter): when a commander or a hero dies, every enemy hero within
  * {@link #BURST_RANGE} blocks gains {@link #COMMANDER_KILL_XP} (a commander) or {@link #killBurstXp} (a hero: 150 + 50
  * per level it had) XP at once ({@link #onDecisiveKill}, called from HeroServerEvents). It is on top of the normal
  * per-kill orbs, which are unchanged - the general XP rate stays put, so a snowballing hero is not fed more by
