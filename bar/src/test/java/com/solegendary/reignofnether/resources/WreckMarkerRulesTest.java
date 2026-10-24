@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Readable wrecks (lovish, Oct 24: winning a fight should pay, and "players don't notice" the wrecks): in the RTS view
+ * Readable wrecks (lovish, Oct 24: winning a fight should pay, and players do not notice the wrecks): in the RTS view
  * every known wreck carries a compact metal marker, not only the hovered one with a worker selected. The frame cost
  * is bounded by one pure rule - which wrecks get a marker (in range, in the frustum and the fog's light, richest
  * first, at most MAX_MARKERS) - written from that requirement before WreckClientEvents drew anything.

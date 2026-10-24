@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.hero;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
@@ -32,6 +34,13 @@ import java.util.Map;
  * Capture points pay the team's heroes: {@link #CAPTURE_XP} when a site is taken and {@link #HOLD_XP_PER_SECOND} while
  * it is held - to a hero within {@link #CAPTURE_RANGE} blocks only, so it rewards the hero being there
  * (CapturePointServerEvents calls {@link #onCapture} and {@link #onHold}).
+ * <p>
+ * Decisive kills pay a one-time <b>burst</b> (lovish, Oct 24, paraphrased: like Beyond All Reason, winning a fight should pay off
+ * so the winner techs faster; decisive kills matter): when a commander or a hero dies, every enemy hero within
+ * {@link #BURST_RANGE} blocks gains {@link #COMMANDER_KILL_XP} (a commander) or {@link #killBurstXp} (a hero: 150 + 50
+ * per level it had) XP at once ({@link #onDecisiveKill}, called from HeroServerEvents). It is on top of the normal
+ * per-kill orbs, which are unchanged - the general XP rate stays put, so a snowballing hero is not fed more by
+ * ordinary kills. Numbers are picks for lovish to tune.
  */
 public final class HeroProgression {
     private HeroProgression() { }
@@ -39,6 +48,48 @@ public final class HeroProgression {
     public static final int CAPTURE_XP = 100;
     public static final float HOLD_XP_PER_SECOND = 1.0f;   // 10 XP per 10 s on the point
     public static final double CAPTURE_RANGE = 24;
+
+    /** XP an enemy hero gains once when a commander falls near it. */
+    public static final int COMMANDER_KILL_XP = 400;
+    /** A fallen hero pays {@code HERO_KILL_XP_BASE + HERO_KILL_XP_PER_LEVEL * its level} XP. */
+    public static final int HERO_KILL_XP_BASE = 150;
+    public static final int HERO_KILL_XP_PER_LEVEL = 50;
+    /** Enemy heroes this close (blocks) to the fallen commander or hero get the burst; wider than the normal orbs' 20. */
+    public static final double BURST_RANGE = 28;
+
+    /** The burst for a commander kill, or for a hero kill of a victim that was at {@code victimLevel}. */
+    public static int killBurstXp(boolean commander, int victimLevel) {
+        return commander ? COMMANDER_KILL_XP : HERO_KILL_XP_BASE + HERO_KILL_XP_PER_LEVEL * Math.max(1, victimLevel);
+    }
+
+    /**
+     * A commander or hero {@code dead} has just died (and was not saved by a totem): each enemy hero within
+     * {@link #BURST_RANGE} gets the one-time burst through {@link HeroUnit#addExperience}, which already respects
+     * {@link HeroUnit#MAX_LEVEL}. Own and allied heroes get nothing; neither does a neutral victim (no owner), which
+     * never happens for a commander or a faction hero but keeps the neutral-XP rules out of this path. Server side, once
+     * per such death, so a scan of the unit list is fine.
+     */
+    public static void onDecisiveKill(LivingEntity dead) {
+        boolean commander = CommanderServerEvents.isCommander(dead);
+        if (dead.level().isClientSide() || (!commander && !(dead instanceof HeroUnit)) || !(dead instanceof Unit deadUnit))
+            return;
+        String deadOwner = deadUnit.getOwnerName();
+        if (deadOwner == null || deadOwner.isBlank())
+            return;
+        int xp = killBurstXp(commander, dead instanceof HeroUnit victim ? victim.getHeroLevel() : 0);
+        double r2 = BURST_RANGE * BURST_RANGE;
+        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (!(le instanceof HeroUnit hero) || !(le instanceof Unit heroUnit) || le == dead || !le.isAlive()
+                    || le.level() != dead.level() || le.distanceToSqr(dead) > r2)
+                continue;
+            String heroOwner = heroUnit.getOwnerName();
+            if (heroOwner == null || heroOwner.isBlank() || heroOwner.equals(deadOwner)
+                    || AlliancesServerEvents.isAllied(heroOwner, deadOwner) || hero.getHeroLevel() >= HeroUnit.MAX_LEVEL)
+                continue;
+            hero.addExperience(xp);
+            PlayerServerEvents.sendMessageToPlayerNoNewLines(heroOwner, "hud.hero.reignofnether.kill_burst", false, xp);
+        }
+    }
 
     // the dip: per-boon stat growth by the level just reached
     public static final float GROWTH_EARLY = 0.08f;   // levels 2-5

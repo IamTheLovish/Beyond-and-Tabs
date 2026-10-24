@@ -109,6 +109,12 @@ Code: `hero/HeroProgression.java` (curve, boons, capture XP), `hero/FactionHero.
 
 - **XP from kills**: Reign of Nether's orbs, unchanged - a unit dying within 20 blocks of an enemy hero drops orbs worth
   (pop + 1) x 5 (+5 per level of a killed hero) that fly to the hero.
+- **Decisive-kill burst** (Oct 24, "winning pays"): when a **commander** or a **hero** dies, every enemy hero within
+  **28 blocks** (`HeroProgression.BURST_RANGE`) gains a one-time extra **400 XP** (commander) or **150 + 50 x the
+  victim's level** (hero), straight through `addExperience` (so level 10 stays level 10). It sits on top of the orbs
+  above, which are unchanged; own and allied heroes get nothing. Numbers are picks for lovish. The same two deaths also
+  leave a big wreck (`WreckServerEvents`: commander 600 metal, hero 150 + 50 x level, never below the normal half-cost
+  heap), so the winner can reclaim it and tech - see design/hud.md "Reclaim labels".
 - **XP from capture points**: taking an Ancient Mine / Ley Shrine / Mercenary Camp (any capture site) pays every hero
   of the taker's team within 24 blocks **100 XP**; holding it pays **1 XP a second** to the team's heroes within 24
   blocks (CapturePointServerEvents.setOwner / reward -> HeroProgression.onCapture / onHold). An early capture is a third
