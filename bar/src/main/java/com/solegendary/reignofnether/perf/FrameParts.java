@@ -61,13 +61,17 @@ public final class FrameParts {
     public static final int MARKERS_FLOATTEXT = 20;
     public static final int MARKERS_WRECK = 21;
     public static final int MARKERS_STARTPOS = 22;
-    public static final int FRAME_SECTIONS = 23;
+    public static final int MARKERS_GATE = 23;     // the shadow-pass query (reflective Iris call) in MapClient and BlockClientEvents
+    public static final int MARKERS_MAPWORLD = 24; // MapClient.renderWorld
+    public static final int MARKERS_RANGE_REFRESH = 25;  // BlockClientEvents.refreshRangeSubsets
+    public static final int MARKERS_RANGE_UNITS = 26;    // BlockClientEvents: the rangeUnits loop
+    public static final int FRAME_SECTIONS = 27;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 23;        // Unit.tick on the client
-    public static final int SECTIONS = 24;
+    public static final int UNIT_TICK = 27;        // Unit.tick on the client
+    public static final int SECTIONS = 28;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "markersLine", "markersGrid", "markersChunks", "markersMap", "markersDraw", "markersFloatText", "markersWreck", "markersStartPos", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "markersLine", "markersGrid", "markersChunks", "markersMap", "markersDraw", "markersFloatText", "markersWreck", "markersStartPos", "markersGate", "markersMapWorld", "markersRangeRefresh", "markersRangeUnits", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)

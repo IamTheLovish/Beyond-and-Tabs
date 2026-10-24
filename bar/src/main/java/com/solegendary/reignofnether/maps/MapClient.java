@@ -439,7 +439,10 @@ public final class MapClient {
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAP);
         try {
-            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
+            boolean skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            if (skip) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
                 return;
             // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
@@ -447,6 +450,7 @@ public final class MapClient {
                 StartMarkers.render(evt.getPoseStack(), evt.getCamera());
             if (!OrthoviewClientEvents.isEnabled())
                 return;
+            int fw = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_MAPWORLD);
             try {
                 renderWorld(evt.getPoseStack(), evt.getCamera());
             } catch (Exception e) {
@@ -454,6 +458,8 @@ public final class MapClient {
                 if (!renderFailed)
                     ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
                 renderFailed = true;
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fw);
             }
         } finally {
             com.solegendary.reignofnether.perf.FrameParts.end(fpS);
