@@ -479,6 +479,15 @@ public class BotPlayer {
             if (!bp.isBuilt)
                 unbuilt++;
         }
+        // sites ordered but not started (no worker has reached them yet: building/Blueprints) are sites like any other for
+        // the bot: they count toward the allowance and the layout, get builders, and are watched and cancelled when stuck.
+        // Without this the next think would not see its own capitol order and lay another
+        for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name)) {
+            buildings.add(bp);
+            if (bp.getBuilding().isCapitol)
+                capitol = bp;
+            unbuilt++;
+        }
         if (capitol != null)
             home = capitol.originPos;
         BotCombatEngineers.think(this, level, gameTime, workers, army, buildings);   // takes them out of workers (design/combat_engineers.md)
@@ -997,6 +1006,9 @@ public class BotPlayer {
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
                 if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10)
                     return false;
+            for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name))
+                if (bp.originPos.distSqr(p) < 10 * 10)
+                    return false;   // an extractor already ordered there
             BlockPos enemy = nearestEnemyBuildingAny(p);
             return enemy == null || enemy.distSqr(p) >= 45 * 45 || enemy.distSqr(p) >= p.distSqr(home);
         });
