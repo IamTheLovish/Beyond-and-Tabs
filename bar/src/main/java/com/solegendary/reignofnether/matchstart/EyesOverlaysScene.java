@@ -66,7 +66,8 @@ final class EyesOverlaysScene {
             FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES,
             FrameParts.BUILDING_DECOR, FrameParts.WORLD_MARKERS, FrameParts.MARKERS_RANGE, FrameParts.MARKERS_METAL,
             FrameParts.MARKERS_LINE, FrameParts.MARKERS_GRID, FrameParts.MARKERS_CHUNKS, FrameParts.MARKERS_MAP, FrameParts.MARKERS_DRAW, FrameParts.MARKERS_FLOATTEXT, FrameParts.MARKERS_WRECK, FrameParts.MARKERS_STARTPOS,
-            FrameParts.MARKERS_GATE, FrameParts.MARKERS_MAPWORLD, FrameParts.MARKERS_RANGE_REFRESH, FrameParts.MARKERS_RANGE_UNITS };
+            FrameParts.MARKERS_GATE, FrameParts.MARKERS_MAPWORLD, FrameParts.MARKERS_RANGE_REFRESH, FrameParts.MARKERS_RANGE_UNITS,
+            FrameParts.MARKERS_P1, FrameParts.MARKERS_P2, FrameParts.MARKERS_P3 };
     private static final int SUMMONS_PER_TICK = 25, HOUSES_PER_TICK = 100;
 
     private static int phase = 0;
