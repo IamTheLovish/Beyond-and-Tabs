@@ -468,8 +468,12 @@ public final class MapClient {
     }
 
     private static void renderWorld(PoseStack pose, Camera camera) {
+        int p2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P2);
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
+        com.solegendary.reignofnether.perf.FrameParts.end(p2);
+        int p1 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P1);
         String me = MC.player == null ? "" : MC.player.getName().getString();
+        com.solegendary.reignofnether.perf.FrameParts.end(p1);
         // your capitol's ghost where you placed (as the classic flow's StartPosClientEvents draws it): the pick knows
         // its seat's faction, unless that is Random, which the seating rolls later
         if (phase)

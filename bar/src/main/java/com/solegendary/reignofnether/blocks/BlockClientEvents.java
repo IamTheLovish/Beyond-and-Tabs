@@ -95,6 +95,7 @@ public class BlockClientEvents {
             int fr = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE_REFRESH);
             refreshRangeSubsets();
             com.solegendary.reignofnether.perf.FrameParts.end(fr);
+            int p3 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P3);
             // draw range indicators for buildings with abilities and monster night sources
             for (BuildingPlacement building : rangeBuildings) {
                 RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
@@ -111,6 +112,7 @@ public class BlockClientEvents {
                 }
             }
 
+            com.solegendary.reignofnether.perf.FrameParts.end(p3);
             if (tempMouseCircleOrigin != null && MC.level != null) {
                 Set<BlockPos> bps = MiscUtil.CircleUtil.getCircle(tempMouseCircleOrigin.getFirst(), tempMouseCircleOrigin.getSecond());
                 for (BlockPos bp : bps) {
