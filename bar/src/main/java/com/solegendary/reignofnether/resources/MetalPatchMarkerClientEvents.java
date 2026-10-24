@@ -97,8 +97,10 @@ public class MetalPatchMarkerClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_METAL);
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
                 return;
             if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
@@ -110,7 +112,7 @@ public class MetalPatchMarkerClientEvents {
             boolean strategic = StrategicViewClientEvents.isStrategicView();
             float rad = strategic ? RING_STRATEGIC : RING;
             PoseStack pose = evt.getPoseStack();
-            VertexConsumer vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+            VertexConsumer vc = null;   // fetched at the first ring: a fetch with nothing drawn flushes the open batch
             pose.pushPose();
             pose.translate(-cam.x, -cam.y, -cam.z);
             Matrix4f m = pose.last().pose();
@@ -130,6 +132,8 @@ public class MetalPatchMarkerClientEvents {
                 } else {             // remembered in the fog: taken, by whom is not ours to know
                     r = 0.62f; g = 0.62f; b = 0.62f; a = 0.7f;
                 }
+                if (vc == null)
+                    vc = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
                 float cx = patch.getX() + 0.5f, cy = patch.getY() + 1.06f, cz = patch.getZ() + 0.5f;
                 ring(vc, m, n, cx, cy, cz, rad, r, g, b, a);
                 if (MetalPatchesClient.valueOf(patch) > 1.01f)   // rich (1.5x) and centre (2.0x): a second ring
@@ -140,20 +144,23 @@ public class MetalPatchMarkerClientEvents {
             if (drewAny)
                 MC.renderBuffers().bufferSource().endBatch(RenderType.lines());
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 
+    private static final com.solegendary.reignofnether.perf.UnitRing CIRCLE =
+        com.solegendary.reignofnether.perf.UnitRing.of(RING_SEGMENTS);
+
     private static void ring(VertexConsumer vc, Matrix4f m, Matrix3f n, float cx, float cy, float cz, float rad,
                              float r, float g, float b, float a) {
+        float[] ux = CIRCLE.x, uz = CIRCLE.z, nx = CIRCLE.nx, nz = CIRCLE.nz;
         float px = cx + rad, pz = cz;
         for (int i = 1; i <= RING_SEGMENTS; i++) {
-            double ang = Math.PI * 2 * i / RING_SEGMENTS;
-            float x = cx + (float) (Math.cos(ang) * rad), z = cz + (float) (Math.sin(ang) * rad);
+            float x = cx + ux[i] * rad, z = cz + uz[i] * rad;
             // the lines shader widens a segment along its normal: the normal is the segment's direction
-            float dx = x - px, dz = z - pz, len = Mth.sqrt(dx * dx + dz * dz);
-            vc.vertex(m, px, cy, pz).color(r, g, b, a).normal(n, dx / len, 0f, dz / len).endVertex();
-            vc.vertex(m, x, cy, z).color(r, g, b, a).normal(n, dx / len, 0f, dz / len).endVertex();
+            vc.vertex(m, px, cy, pz).color(r, g, b, a).normal(n, nx[i], 0f, nz[i]).endVertex();
+            vc.vertex(m, x, cy, z).color(r, g, b, a).normal(n, nx[i], 0f, nz[i]).endVertex();
             px = x;
             pz = z;
         }
@@ -164,8 +171,10 @@ public class MetalPatchMarkerClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fp2 = 0;
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_METAL);
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
                 return;
             if (MC.level == null || MC.cameraEntity == null || !OrthoviewClientEvents.isEnabled())
@@ -210,6 +219,7 @@ public class MetalPatchMarkerClientEvents {
             if (renderedAny)
                 MC.renderBuffers().bufferSource().endBatch();
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp2);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
