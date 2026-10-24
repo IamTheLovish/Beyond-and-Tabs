@@ -12,6 +12,8 @@ import com.solegendary.reignofnether.player.PlayerColors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
@@ -75,6 +77,16 @@ public class MetalPatchMarkerClientEvents {
         return ON.get(patch.asLong());
     }
 
+    /**
+     * Is this patch's ring and gem (inside 4 blocks of its centre, 5 high) in the camera's view? With metal spread over the
+     * whole map a frame used to build every ring (32 segments, twice for a rich patch) and every gem within 260
+     * blocks, on screen or not: the worldMarkers cost of lovish's Oct 23 log (2.2-2.8 ms a frame).
+     */
+    private static boolean inView(Frustum frustum, BlockPos patch) {
+        return frustum == null || frustum.isVisible(new AABB(patch.getX() - 3.5, patch.getY(), patch.getZ() - 3.5,
+            patch.getX() + 4.5, patch.getY() + 5, patch.getZ() + 4.5));
+    }
+
     static boolean isTaken(BlockPos patch) {
         return buildingOn(patch) != null;
     }
@@ -82,6 +94,8 @@ public class MetalPatchMarkerClientEvents {
     /** The rings, drawn after the entities (where the area-command circle draws its lines too). */
     @SubscribeEvent
     public static void onRenderRings(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
@@ -92,6 +106,7 @@ public class MetalPatchMarkerClientEvents {
             if (MetalPatchesClient.getPatches().isEmpty())
                 return;
             Vec3 cam = evt.getCamera().getPosition();
+            Frustum frustum = evt.getFrustum();
             boolean strategic = StrategicViewClientEvents.isStrategicView();
             float rad = strategic ? RING_STRATEGIC : RING;
             PoseStack pose = evt.getPoseStack();
@@ -102,7 +117,8 @@ public class MetalPatchMarkerClientEvents {
             Matrix3f n = pose.last().normal();
             boolean drewAny = false;
             for (BlockPos patch : MetalPatchesClient.getPatches()) {
-                if (cam.distanceToSqr(patch.getX() + 0.5, patch.getY(), patch.getZ() + 0.5) > MAX_DIST_SQR)
+                if (cam.distanceToSqr(patch.getX() + 0.5, patch.getY(), patch.getZ() + 0.5) > MAX_DIST_SQR
+                        || !inView(frustum, patch))
                     continue;
                 float r, g, b, a;
                 BuildingPlacement on = buildingOn(patch);
@@ -145,6 +161,8 @@ public class MetalPatchMarkerClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
@@ -159,6 +177,7 @@ public class MetalPatchMarkerClientEvents {
             // the RENDER camera, not the camera entity (WindmillRenderClientEvents: in the RTS view the player is not where
             // the camera is, and translating by the entity's position put the gem somewhere off its patch)
             Vec3 cam = evt.getCamera().getPosition();
+            Frustum frustum = evt.getFrustum();
             BlockRenderDispatcher renderer = MC.getBlockRenderer();
             BlockState gem = Blocks.RAW_IRON_BLOCK.defaultBlockState();
             float time = MC.level.getGameTime() + evt.getPartialTick();
@@ -167,7 +186,7 @@ public class MetalPatchMarkerClientEvents {
             boolean renderedAny = false;
 
             for (BlockPos patch : MetalPatchesClient.getPatches()) {
-                if (cam.distanceToSqr(patch.getX(), patch.getY(), patch.getZ()) > MAX_DIST_SQR)
+                if (cam.distanceToSqr(patch.getX(), patch.getY(), patch.getZ()) > MAX_DIST_SQR || !inView(frustum, patch))
                     continue;
                 if (isTaken(patch))
                     continue;
