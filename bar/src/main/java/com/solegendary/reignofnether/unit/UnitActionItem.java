@@ -281,6 +281,12 @@ public class UnitActionItem {
                 PatrolServerEvents.clear(((Entity) unit).getId());
             if (action != UnitAction.GUARD && !isStateCommand && !autocast)
                 GuardServerEvents.clear(((Entity) unit).getId());
+            // healers and other support units read attack, Fight and attack-building orders their own way - a standoff
+            // behind the front, never a chase into melee (lovish, Oct 21: they "end up killing themselves"). Server
+            // side; every other order just ends their support order and runs below (unit/support/SupportOrders)
+            if (unit instanceof SupportUnit supportUnit && com.solegendary.reignofnether.unit.support.SupportOrders
+                    .order(level, supportUnit, action, unitId, preselectedBlockPos, actionableUnits, autocast))
+                continue;
             switch (action) {
                 case AUTOCAST_ENABLE, AUTOCAST_DISABLE -> {
                     // the generic autocast switch (ability/AutocastState): the ability's action ordinal rides in x
