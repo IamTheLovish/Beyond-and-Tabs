@@ -7,7 +7,6 @@ import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hero.FactionHero;
 import com.solegendary.reignofnether.hero.FactionHeroAbility;
 import com.solegendary.reignofnether.hero.HeroBot;
-import com.solegendary.reignofnether.hero.HeroKit;
 import com.solegendary.reignofnether.hero.HeroKits;
 import com.solegendary.reignofnether.hero.HeroProgression;
 import com.solegendary.reignofnether.hero.PossessionServer;
