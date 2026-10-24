@@ -26,6 +26,7 @@ run "hud_layout"                  python3 tools/hud_layout.py
 run "animation lab data"          bash -c 'for f in design/anims/*.json; do [ -e "$f" ] || continue; python3 tools/anim_lab.py "$f" --check --motion || exit 1; done'
 run "dependency pins"             python3 tools/check_dep_pins.py
 run "gametest shard lists"        python3 tools/check_shards.py
+run "bot ladder report"           python3 tools/ladder_report.py --selftest
 if command -v ruff >/dev/null; then run "ruff (tools)"             ruff check tools
 else echo "skip  ruff (not installed: pip install ruff==0.16.9)"; fi
 if [ $quick = 0 ] && command -v javac >/dev/null; then
