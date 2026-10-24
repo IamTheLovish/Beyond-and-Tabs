@@ -309,6 +309,11 @@ public class ClientModEvents {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onClientSetupEvent(FMLClientSetupEvent evt) {
+        // lovish, Oct 23: installs made before the launcher had his cat get it now, without reinstalling
+        Thread brand = new Thread(() -> com.solegendary.reignofnether.launcher.LauncherBrand.applyOnce(
+                net.minecraftforge.fml.loading.FMLPaths.GAMEDIR.get()), "lovish-launcher-brand");
+        brand.setDaemon(true);
+        brand.start();
         evt.enqueueWork(() -> {
             MenuScreens.register(ContainerRegistrar.TOPDOWNGUI_CONTAINER.get(), TopdownGui::new);
             ItemBlockRenderTypes.setRenderLayer(

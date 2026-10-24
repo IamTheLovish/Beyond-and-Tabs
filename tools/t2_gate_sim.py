@@ -7,7 +7,6 @@ It is a model: the real timings come from the nightly bot ladder (T2 minute per 
 bots_reach_tier_2_after_fielding_t1_units_and_not_before_minute_5. Run: python3 tools/t2_gate_sim.py
 The numbers below must match TierGate.java; the PR table is this output.
 """
-import sys, copy
 # fluid sim of the flow economy (dt=1s). Mirrors EconomyServerEvents: global stall = min(1, M/dM, E/dE).
 WIND=14.0; CAP_M=2.0; CAP_E=20.0; MEX=2.0; MOHO=7.0
 class Job:
@@ -18,16 +17,14 @@ def run(pol, P, horizon=900, verbose=False):
     mex=0; winds=0; labs=0; moho=0
     workers=5; wq=0.0
     jobs=[]; queue=list(pol['order'])   # list of (name,cost m,e,work)
-    log={}; army=0.0; unitsm=0.0
+    log={}; army=0.0
     research=None  # progress
     t2=False; t2lab=False
-    wq_time=0; 
-    labsBuilt=[]
     while t<horizon:
         # start jobs from queue (max concurrent)
         while queue and len([j for j in jobs if j.kind=='build'])<pol['sites']:
             q=queue[0]
-            if q.get('after') and not q['after'](locals_state:=dict(t=t,mex=mex,winds=winds,labs=labs,t2=t2,army=army,M=M,E=E,t2lab=t2lab)): break
+            if q.get('after') and not q['after'](dict(t=t,mex=mex,winds=winds,labs=labs,t2=t2,army=army,M=M,E=E,t2lab=t2lab)): break
             queue.pop(0); jobs.append(Job(q['n'],q['m'],q['e'],q['w']))
         # research
         if research is None and not t2 and pol['research_when'](dict(t=t,mex=mex,winds=winds,labs=labs,t2=t2,army=army,M=M,E=E)):
@@ -37,7 +34,6 @@ def run(pol, P, horizon=900, verbose=False):
         wantw=pol['workers'](t)
         if workers+ (1 if wq>0 else 0) < wantw and research is None and wq==0: wq=22.0
         # labs produce units
-        nunits_rate=0
         incM=CAP_M+mex*MEX+moho*(MOHO)   # moho counted separately
         incE=CAP_E+winds*WIND
         upkeep=moho*P['moho_up']
