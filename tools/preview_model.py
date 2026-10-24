@@ -6,7 +6,6 @@ the body or a rotation with the wrong sign before the concepts workflow spends f
     python3 tools/preview_model.py design/models/sunforged_paladin_templar.json --out /tmp/preview.png
 """
 import argparse
-import json
 import math
 import os
 import sys

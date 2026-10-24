@@ -112,20 +112,19 @@ public class WraithSnowLayerBlock extends BaseEntityBlock {
         }
     }
 
+    // Soul wisps drawn on the client (no server particle packets). They used to come from random ticks at
+    // randomTickSpeed 12 (one per block every ~341 ticks); animateTick reaches a nearby block ~0.023 times a tick,
+    // so 1 in 8 keeps about the same rate now that the world runs at vanilla's 3.
     @Override
-    public void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+    public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+        if (random.nextInt(8) != 0) {
+            return;
+        }
         int layers = state.getValue(LAYERS);
         double x = pos.getX() + random.nextDouble();
         double y = pos.getY() + ((layers + 1) * 0.125D);
         double z = pos.getZ() + random.nextDouble();
-
-        level.sendParticles(
-                ParticleTypes.SOUL,
-                x, y, z,
-                1,
-                0.0D, 0.01D, 0.0D,
-                0
-        );
+        level.addParticle(ParticleTypes.SOUL, x, y, z, 0.0D, 0.0D, 0.0D);
     }
 
     public static final IntegerProperty LAYERS;

@@ -51,6 +51,7 @@ public class NonUnitClientEvents {
     // override attack and random move goals while we have an active command
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (MC.level == null)
             return;
 

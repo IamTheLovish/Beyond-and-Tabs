@@ -70,48 +70,57 @@ public abstract class ProductionItem {
         return false;
     }
 
-    public boolean canAffordPopulation(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
-            return true;
+    /** This item's population cost, as the side the placement lives on knows it (a research is 0). */
+    protected int populationCost(ProductionPlacement pp) {
+        return getCost(pp.getLevel().isClientSide(), pp.ownerName).population;
+    }
 
-        int currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
-        int popSupply = BuildingServerEvents.getTotalPopulationSupply(pp.ownerName);
+    /** The owner's population (units plus everything queued) as the placement's side counts it. */
+    protected int populationInUse(ProductionPlacement pp) {
+        return pp.getLevel().isClientSide() ? UnitClientEvents.getCurrentPopulation(pp.ownerName)
+            : UnitServerEvents.getCurrentPopulation(pp.ownerName);
+    }
+
+    /** The owner's population cap as the placement's side knows it (BAR: the host's maxPopulation for everyone). */
+    protected int populationSupply(ProductionPlacement pp) {
+        return pp.getLevel().isClientSide() ? BuildingClientEvents.getTotalPopulationSupply(pp.ownerName)
+            : BuildingServerEvents.getTotalPopulationSupply(pp.ownerName);
+    }
+
+    // the rules themselves are PopulationRules (one tested copy for client, server and graveyards); the counting is
+    // asked only for items that cost population - getCurrentPopulation walks every building's queue
+
+    public boolean canAffordPopulation(ProductionPlacement pp) {
+        int cost = populationCost(pp);
+        if (cost == 0)
+            return true;
 
         for (Resources resources : ResourcesServerEvents.resourcesList)
             if (resources.ownerName.equals(pp.ownerName))
-                return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= popSupply;
+                return PopulationRules.verdict(UnitServerEvents.getCurrentPopulation(pp.ownerName),
+                    BuildingServerEvents.getTotalPopulationSupply(pp.ownerName), cost, 0, 0).canQueue();
         return false;
     }
 
     // check we didn't dip below pop supply after starting production
     public boolean isBelowPopulationSupply(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
+        int cost = populationCost(pp);
+        if (cost == 0)
             return true;
-
-        int currentPop;
-        int popSupply;
-        if (pp.getLevel().isClientSide()) {
-            currentPop = UnitClientEvents.getCurrentPopulation(pp.ownerName);
-            popSupply = BuildingClientEvents.getTotalPopulationSupply(pp.ownerName);
-        } else {
-            currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
-            popSupply = BuildingServerEvents.getTotalPopulationSupply(pp.ownerName);
-        }
-        return currentPop <= popSupply;
+        return PopulationRules.keepsProducing(populationInUse(pp), populationSupply(pp), cost, 0, 0);
     }
 
     public boolean isBelowMaxPopulation(ProductionPlacement pp) {
-        if (getCost(pp.getLevel().isClientSide(), pp.ownerName).population == 0)
+        int cost = populationCost(pp);
+        if (cost == 0)
             return true;
 
         int currentPop = UnitServerEvents.getCurrentPopulation(pp.ownerName);
 
         for (Resources resources : ResourcesServerEvents.resourcesList) {
             if (resources.ownerName.equals(pp.ownerName)) {
-                if (pp.getLevel().isClientSide())
-                    return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= GameruleClient.maxPopulation;
-                else
-                    return (currentPop + getCost(pp.getLevel().isClientSide(), pp.ownerName).population) <= UnitServerEvents.maxPopulation;
+                int max = pp.getLevel().isClientSide() ? GameruleClient.maxPopulation : UnitServerEvents.maxPopulation;
+                return PopulationRules.withinMax(currentPop, cost, max);
             }
         }
         return false;

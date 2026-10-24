@@ -950,8 +950,14 @@ public class CommandQueueGameTests {
         // enough. So the rule is the one GameTestChunks.awaitLoaded uses: keep waiting while chunks keep becoming
         // ticking, give up only after 60 s (1200 ticks) with NO progress, hard cap 10 min - a stuck future shows as
         // no progress, honest generation never trips it.
+        // "ticking" alone is blind for most of a load: the first chunk turns entity-ticking only once its whole region is
+        // FULL, so a slow runner showed "0 of 24, no progress since tick 20" while the cone was still generating
+        // (the failure of Oct 22/23 on main and PR #174). Generation progress anywhere in the cone counts too, and
+        // the message says where the cone stood, so slow reads differently from stuck.
         final int firstTry = 20, lastTry = 12000, stallTicks = 1200;
         int[] best = { -1 }, lastProgressTick = { firstTry };
+        GameTestChunks.ConeMeter cone = new GameTestChunks.ConeMeter(chunks);
+        long[] bestScore = { -1 };
         for (int t = firstTry; t <= lastTry; t += 5) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
@@ -961,8 +967,10 @@ public class CommandQueueGameTests {
                 for (long[] c : chunks)
                     if (level.isPositionEntityTicking(new BlockPos(((int) c[0] << 4) + 8, (int) y, ((int) c[1] << 4) + 8)))
                         ticking++;
-                if (ticking > best[0]) {
-                    best[0] = ticking;
+                long score = cone.score(level);
+                if (ticking > best[0] || score > bestScore[0]) {
+                    best[0] = Math.max(best[0], ticking);
+                    bestScore[0] = Math.max(bestScore[0], score);
                     lastProgressTick[0] = tick;
                 }
                 if (ticking == chunks.size()) {
@@ -972,7 +980,7 @@ public class CommandQueueGameTests {
                     ran[0] = true;
                     GameTestChunks.releaseAll(level, chunks);   // keeps the ticket of a chunk still loading: see there
                     helper.fail("the benchmark's chunks never became entity-ticking (" + ticking + " of " + chunks.size()
-                        + " after " + tick + " ticks, no progress since tick " + lastProgressTick[0] + ")");
+                        + " after " + tick + " ticks, no progress since tick " + lastProgressTick[0] + "; " + cone.describe() + ")");
                 }
             });
         }

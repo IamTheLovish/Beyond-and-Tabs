@@ -74,12 +74,24 @@ public class ItemServerEvents {
             inv.swapSlots(invIndex1, invIndex2);
     }
     
+    /** The unit's own owner is the one acting (server code); see the overload for a player's packet. */
+    public static void doAction(
+            ItemAction action,
+            Unit unit,
+            UUID itemUuid,
+            int targetId,
+            BlockPos blockTarget
+    ) {
+        doAction(action, unit, itemUuid, targetId, blockTarget, unit.getOwnerName());
+    }
+
     public static void doAction(
             ItemAction action,
             Unit unit, // unit performing the action
             UUID itemUuid, // uuid of the item in the unit's inventory (unused for PICKUP/NONE)
             int targetId, // GIVE/USE_ON_ENTITY: target unit, PICKUP: target ItemEntity (-1 if unused)
-            BlockPos blockTarget // DROP/USE_ON_BLOCK: block, SELL/USE_ON_BUILDING: building pos (null if unused)) {
+            BlockPos blockTarget, // DROP/USE_ON_BLOCK: block, SELL/USE_ON_BUILDING: building pos (null if unused)) {
+            String senderName // the player whose packet this is: only a sandbox player may delete an item with DROP
     ) {
         if (!ENABLED) return;
 
@@ -105,7 +117,7 @@ public class ItemServerEvents {
                     unit.getItemGoal().start(itemInHand, itemTarget, leTarget, blockTarget, buildingTarget, useItem);
                 }
             }
-        } else if (unit instanceof UnitInventory inv && action == ItemAction.DROP && SandboxServer.isAnyoneASandboxPlayer()) {
+        } else if (unit instanceof UnitInventory inv && action == ItemAction.DROP && SandboxServer.isSandboxPlayer(senderName)) {
             inv.deleteItem(itemUuid);
         }
     }

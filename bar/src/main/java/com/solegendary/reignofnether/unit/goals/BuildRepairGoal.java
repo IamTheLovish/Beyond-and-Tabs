@@ -10,10 +10,12 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.villagers.OakStockpile;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.UnitChunkLoader;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 
 import javax.annotation.Nullable;
@@ -113,6 +115,10 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
             }
             return;
         }
+        // the site's surroundings stay loaded while the worker heads for it, whatever the owner's camera does: the
+        // building holds only its centre chunk, and a route or approach cell in an unloaded chunk is "no path"
+        if (this.mob.level() instanceof ServerLevel sl && this.mob.tickCount % 20 == 0 && !isBuilding())
+            UnitChunkLoader.holdSite(sl, buildingTarget.centrePos);
         calcMoveTarget();
         if (!this.mob.level().isClientSide() && checkUnreachable())
             return;

@@ -495,7 +495,7 @@ public class BuildingServerEvents {
             // is constructed (BuildingPlacement.tickFlowConstruction) and simply stalls when resources run out.
             newBuilding.freeBuild = fromCommand;
 
-            boolean isSandbox = SandboxServer.isAnyoneASandboxPlayer();
+            boolean isSandbox = SandboxServer.isSandboxOwner(ownerName);   // the placing owner, not "somebody is in sandbox"
             // only a T2 constructor may raise a T3 lab (the build button checks the selection; this stops a crafted
             // packet). A fog-queued site re-placed by its worker (ignoreFog, no builder ids) was checked when queued.
             boolean fogRequeue = ignoreFog && (builderUnitIds == null || builderUnitIds.length == 0);
@@ -505,6 +505,18 @@ public class BuildingServerEvents {
                 HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_t2_worker");
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
+            }
+            // a T2 lab needs the Tier 2 research and its faction's finished T1 lab (resources/TierGate): the build button
+            // greys it out, but a stale client, a crafted packet or an old fog-queued site must not skip that. A command
+            // placement (scenarios, spawners), the sandbox and the "modifythephasevariance" cheat are exempt as before
+            if (!fromCommand && !isSandbox
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")) {
+                String tierError = com.solegendary.reignofnether.resources.TierGate.placementError(ownerName, newBuilding.getBuilding());
+                if (tierError != null) {
+                    HudClientboundPacket.showTempMessageI18n(ownerName, tierError);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
+                    return null;
+                }
             }
             // combat engineers start field defences only; with a worker among the builders they assist (design/combat_engineers.md)
             if (!fromCommand && !isSandbox && !fogRequeue
@@ -556,7 +568,7 @@ public class BuildingServerEvents {
             assignBuilderUnits(builderUnitIds, queue, newBuilding);
             settleSite(newBuilding, ownerName, builderUnitIds);
 
-            if (SandboxServer.isAnyoneASandboxPlayer() && builderUnitIds.length == 0) {
+            if (isSandbox && builderUnitIds.length == 0) {
                 newBuilding.getBuilding().shouldDestroyOnReset = false;
                 saveBuildings(serverLevel);
             }
@@ -596,7 +608,8 @@ public class BuildingServerEvents {
                     placeScaffoldingUnder(block, newBuilding);
 
         boolean hasFastBuildCheat = ResearchServerEvents.playerHasCheat(ownerName, "warpten");
-        if (SandboxServer.isAnyoneASandboxPlayer() && hasFastBuildCheat) {
+        boolean isSandbox = SandboxServer.isSandboxOwner(ownerName);   // the placing owner, not "somebody is in sandbox" (27c90f43)
+        if (isSandbox && hasFastBuildCheat) {
             newBuilding.maxBlocksPerTick = 4;
             newBuilding.queueAllBlocks(serverLevel);
         } else {
@@ -633,7 +646,7 @@ public class BuildingServerEvents {
                 originPos
         );
 
-        if (SandboxServer.isAnyoneASandboxPlayer() && (ownerName.isEmpty() || ownerName.equals("Enemy")))
+        if (SandboxServer.isNeutralSandboxOwner(ownerName))
             newBuilding.selfBuilding = true;
     }
 
@@ -833,12 +846,12 @@ public class BuildingServerEvents {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }
-        if (building.getBuilding().capturable && !SandboxServer.isAnyoneASandboxPlayer()) {
+        if (building.getBuilding().capturable && !SandboxServer.isSandboxPlayer(playerName)) {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }
         NightSourceAddon nsa = building.getBuilding().getActiveAddon(NightSourceAddon.class);
-        if (nsa != null && nsa.getNightRange(building) > 0 && building.isBuilt && !SandboxServer.isAnyoneASandboxPlayer()) {
+        if (nsa != null && nsa.getNightRange(building) > 0 && building.isBuilt && !SandboxServer.isSandboxPlayer(playerName)) {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }

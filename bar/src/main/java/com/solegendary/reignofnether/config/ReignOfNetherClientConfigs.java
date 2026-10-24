@@ -58,6 +58,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_SCALE;
     public static final ForgeConfigSpec.ConfigValue<Integer> FOG_STYLE;
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
+    // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
+    public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -217,6 +219,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
         BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
         GROUND_SCARS = BUILDER.define("ground_scars", true);
+        BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
+        UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         SPEC = BUILDER.build();
     }
 
