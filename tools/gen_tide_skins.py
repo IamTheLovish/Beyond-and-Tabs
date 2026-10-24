@@ -17,7 +17,7 @@ usage: python3 tools/gen_tide_skins.py [--preview DIR]
   writes bar/.../textures/entities/<unit>_unit.png and bar/.../textures/mobheads/<unit>.png (16x16 art at 4x);
   --preview also writes a contact sheet (front/back mock-ups and the portraits) into DIR.
 """
-import importlib.util, math, os, random, sys
+import importlib.util, os, random, sys
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))

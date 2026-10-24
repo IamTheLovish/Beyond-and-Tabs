@@ -857,7 +857,7 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    /** Energy converters only burn energy above half storage, at TierGate's 100 energy per metal, 50 energy/s each. */
     @GameTest(template = ARENA)
     public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
@@ -866,8 +866,8 @@ public class SkirmishGameTests {
         res.addEnergy(900);
         for (int i = 0; i < 20; i++)
             com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
-        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
-            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+        if (Math.abs(res.getMetal() - 0.5f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~0.5 metal / 850 energy, got " + res.getMetal()
                 + " / " + res.getEnergy());
         var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
         low.addEnergy(400);
@@ -1557,6 +1557,22 @@ public class SkirmishGameTests {
                 return null;
         }
         return out;
+    }
+
+    /**
+     * A dry row of {@code count} base sites ({@link #soakRow}) near (x, z): every candidate row (16 steps of 96 blocks
+     * along each of {@link #soakLines}) is tried, the same scan {@link #soakFiveStarts} makes, so a test that wants only
+     * a row finds ground wherever the soak does. Trying just the first step of each line failed the tier-2 bot test every
+     * run (the world is the same each time, and that strip is water or cliff); null only if no candidate row is dry.
+     */
+    static net.minecraft.world.phys.Vec3[] soakAnyRow(ServerLevel level, int x, int z, int count) {
+        for (int bz : soakLines(z))
+            for (int step = 0; step < 16; step++) {
+                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, count);
+                if (row != null)
+                    return row;
+            }
+        return null;
     }
 
     /**
@@ -13675,6 +13691,9 @@ public class SkirmishGameTests {
         var pool = testPool(owner);
         var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
         var cost = item.getCost(false, owner);
+        // the refit needs Tier 2 on the server too (resources/TierGate)
+        com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         try {
             var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
             if (row == null)
@@ -13713,6 +13732,7 @@ public class SkirmishGameTests {
             for (var pp : row)
                 pp.productionQueue.clear();
         } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
         }
     }
@@ -14838,6 +14858,11 @@ public class SkirmishGameTests {
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
                         problems.add(tag + "patch on " + surf + " at " + m);
+                    // the whole 7x7 pad MetalPatches.stamp levels, not only the centre column (maps spec M1: 20 of
+                    // Highlands' 96 patches at 8 players had an 8-block drop inside the pad and this test passed)
+                    String fault = MapMetalGameTests.padFault(layout, m.dx(), m.dz(), sample);
+                    if (fault != null)
+                        problems.add(tag + "patch " + m + " has " + fault + " in its pad");
                 }
             }
         }

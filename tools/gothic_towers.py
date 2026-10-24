@@ -28,7 +28,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gothic_parts import Part, palette, hsh, toward, VEC, OPP, LANTERN   # noqa: E402
+from gothic_parts import Part, palette, hsh, toward, VEC, OPP   # noqa: E402
 
 DIAG = ((1, 1), (1, -1), (-1, 1), (-1, -1))
 

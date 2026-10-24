@@ -56,14 +56,15 @@ public final class Sys {
     public static final int CHUNK_LOADER = 18;     // keeping the chunks around units loaded
     public static final int ECONOMY = 19;          // income, stalls and the resource sync
     public static final int FOG_OF_WAR = 20;       // the server half of fog of war
-    public static final int MOUNT_SCAN = 21;       // a unit looking for a mount (MountGoal autofind)
-    public static final int NEUTRAL_AGGRO = 22;    // the once-a-second query for the wild mobs near each unit (neutral aggro)
-    public static final int SECTIONS = 23;
+    public static final int PUSH_SCAN = 21;        // a unit's vanilla push looking up the bodies it overlaps
+    public static final int MOUNT_SCAN = 22;       // a unit looking for a mount (MountGoal autofind)
+    public static final int NEUTRAL_AGGRO = 23;    // the once-a-second query for the wild mobs near each unit (neutral aggro)
+    public static final int SECTIONS = 24;
 
     static final String[] NAMES = {
         "unit", "attacker", "attacker/attackMove", "attacker/idleAggro", "attacker/retarget", "attacker/entityScan",
         "attacker/buildingScan", "separation", "stuckNudge", "unstick", "reactions", "pathfinder", "buildings", "bots",
-        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar",
+        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar", "pushScan",
         "mountScan", "neutralAggro" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
