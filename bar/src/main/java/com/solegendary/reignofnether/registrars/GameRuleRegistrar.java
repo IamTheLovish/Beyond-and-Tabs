@@ -33,6 +33,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
     public static GameRules.Key<GameRules.BooleanValue> PLANT_COVER;
     public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
+    public static GameRules.Key<GameRules.BooleanValue> IDLE_RECLAIM;
     public static GameRules.Key<GameRules.BooleanValue> DO_FACTION_TERRAFORM;
     public static GameRules.Key<GameRules.IntegerValue> MATCH_DAY_CYCLE;
 
@@ -145,6 +146,11 @@ public class GameRuleRegistrar {
                 GameRules.BooleanValue.create(true)
         );
         COMMANDER_DEFEAT = GameRules.register("commanderDefeat", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // Beyond and Tabs: an idle worker with a wreck within 8 blocks strips it on its own (WreckServerEvents.autoReclaimIdle,
+        // lovish Oct 24: winning a fight should pay). Off: workers only reclaim what they are ordered to (or stand next to)
+        IDLE_RECLAIM = GameRules.register("idleReclaim", GameRules.Category.MISC,
                 GameRules.BooleanValue.create(true)
         );
         // Beyond and Tabs: the ground round a faction's capitol and labs slowly takes the faction's look (FactionAura,
