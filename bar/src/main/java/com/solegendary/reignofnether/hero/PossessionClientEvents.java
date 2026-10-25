@@ -874,6 +874,9 @@ public class PossessionClientEvents {
             double dx = le.getX() - mob.getX(), dz = le.getZ() - mob.getZ();
             if (dx * dx + dz * dz > RADAR_RANGE * RADAR_RANGE)
                 continue;
+            // no blips from the fog (own and allied units always pass isInBrightChunk)
+            if (!com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isInBrightChunk(le))
+                continue;
             int px = cx + Math.round((float) (dx * rx + dz * rz) * scale);
             int py = cy - Math.round((float) (dx * fx + dz * fz) * scale);
             String owner = u.getOwnerName();
