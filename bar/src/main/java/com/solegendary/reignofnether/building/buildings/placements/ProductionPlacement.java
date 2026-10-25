@@ -372,7 +372,7 @@ public class ProductionPlacement extends BuildingPlacement {
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
         byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ());
-        if (kind == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER)
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind))
             return spawnPoint;
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
@@ -570,6 +570,11 @@ public class ProductionPlacement extends BuildingPlacement {
                 }
                 else if (productionQueue.size() >= MAX_QUEUE) {
                     HudClientboundPacket.showTempMessageI18n(ownerName, "hud.reignofnether.queue_full");
+                }
+                else if (com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem) != null) {
+                    // a T2 lab, or the extractor refit, without Tier 2 (resources/TierGate): the same on all seven factions
+                    HudClientboundPacket.showTempMessageI18n(ownerName,
+                        com.solegendary.reignofnether.resources.TierGate.productionError(this, prodItem));
                 }
                 else if (!prodItem.canProduce(this)) {
                     String errorMsg = prodItem.getProduceErrorMsg(this);

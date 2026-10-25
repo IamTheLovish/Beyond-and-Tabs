@@ -49,6 +49,16 @@ public class BuildingValidators {
     @Nullable
     public static String getPlacementValidityError(Level level, Building building, BlockPos originPos, String ownerName, Rotation rotation,
                                                    boolean isDiagonalBridge, boolean isSandbox, boolean ignoreFog) {
+        return getPlacementValidityError(level, building, originPos, ownerName, rotation, isDiagonalBridge, isSandbox, ignoreFog, true);
+    }
+
+    /**
+     * {@code includeBlueprints}: the owner's side's own pending sites (Blueprints) keep their footprint against this
+     * placement. False when a blueprint is re-checked on its worker's arrival - it is in that list itself.
+     */
+    @Nullable
+    public static String getPlacementValidityError(Level level, Building building, BlockPos originPos, String ownerName, Rotation rotation,
+                                                   boolean isDiagonalBridge, boolean isSandbox, boolean ignoreFog, boolean includeBlueprints) {
         if (level == null || building == null)
             return "Unknown error";
 
@@ -79,6 +89,8 @@ public class BuildingValidators {
                     && com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5))
                 return "building.reignofnether.patch_blocked";
             return "building.reignofnether.too_close";
+        } else if (includeBlueprints && !isSandbox && ownerName != null && isOverlappingOwnBlueprint(level, building, ownerName, absoluteBlocks)) {
+            return "building.reignofnether.overlaps_blueprint";
         } else if (!isSandbox && isBlockingMetalPatch(level, building, absoluteBlocks)) {
             return "building.reignofnether.blocks_metal_patch";
         } else if (!isNonPiglinOrOnNetherBlocks(level, building, originPos, absoluteBlocks)) {
@@ -180,6 +192,18 @@ public class BuildingValidators {
             }
         }
         return false;
+    }
+
+    // the owner's side's own pending sites (Blueprints) reserve their footprint, as a standing building would; to anyone
+    // else they do not exist. A bridge ignores every overlap, as in isOverlappingAnyOtherBuilding
+    private static boolean isOverlappingOwnBlueprint(Level level, Building building, String ownerName, List<BuildingBlock> blocks) {
+        if (isBridge(building))
+            return false;
+        BlockPos minPos = BuildingUtils.getMinCorner(blocks);
+        BlockPos maxPos = BuildingUtils.getMaxCorner(blocks);
+        return level.isClientSide()
+            ? BlueprintClientEvents.reserves(ownerName, minPos, maxPos)
+            : Blueprints.reserves(ownerName, minPos, maxPos);
     }
 
     // A metal patch's extractor square (MetalPatches.RESERVED_HALF) is kept free of every other building, so a patch

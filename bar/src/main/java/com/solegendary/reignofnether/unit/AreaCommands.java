@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.resources.WreckServerEvents;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
@@ -62,6 +63,7 @@ public class AreaCommands {
         radius = Math.max(1, Math.min(MAX_RADIUS, radius));
         List<LivingEntity> workers = new ArrayList<>();
         List<LivingEntity> fighters = new ArrayList<>();
+        List<LivingEntity> supports = new ArrayList<>();
         for (int id : unitIds) {
             Entity e = level.getEntity(id);
             if (!(e instanceof Unit u) || !e.isAlive() ||
@@ -71,6 +73,8 @@ public class AreaCommands {
                 workers.add((LivingEntity) e);
             else if (e instanceof AttackerUnit)
                 fighters.add((LivingEntity) e);
+            else if (e instanceof SupportUnit)
+                supports.add((LivingEntity) e);
         }
         int handed = 0;
         if (!workers.isEmpty() && mode != MODE_ATTACK)
@@ -80,6 +84,15 @@ public class AreaCommands {
             handed += issueDrains(level, owner, centre, radius, workers, shift);
         if (!fighters.isEmpty() && mode != MODE_RECLAIM && mode != MODE_REPAIR)
             handed += issueAttack(level, owner, centre, radius, fighters, shift);
+        // healers in the selection were left standing (they are not fighters): an area attack is a Fight for them -
+        // the rear rank behind the fighters clearing the circle (unit/support/SupportOrders, claude/healer-ai-oct21.md)
+        if (!supports.isEmpty() && mode != MODE_RECLAIM && mode != MODE_REPAIR) {
+            int[] ids = new int[supports.size()];
+            for (int i = 0; i < ids.length; i++)
+                ids[i] = supports.get(i).getId();
+            CommandQueues.issue(level, owner, UnitAction.ATTACK_MOVE, -1, ids, centre, BlockPos.ZERO,
+                shift ? QueueMode.APPEND : QueueMode.REPLACE);
+        }
         return handed;
     }
 

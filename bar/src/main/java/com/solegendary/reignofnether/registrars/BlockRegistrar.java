@@ -126,7 +126,6 @@ public class BlockRegistrar {
             () -> new WraithSnowLayerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.SNOW)
                     .replaceable()
                     .forceSolidOff()
-                    .randomTicks()
                     .strength(0.1F)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.SNOW)
@@ -306,7 +305,6 @@ public class BlockRegistrar {
                             .replaceable()
                             .noCollission()
                             .instabreak()
-                            .randomTicks()
                             .lightLevel((p_152605_) -> 10)));
 
     public static final RegistryObject<Block> DROWNED_HEAD = registerBlock("drowned_head", () ->

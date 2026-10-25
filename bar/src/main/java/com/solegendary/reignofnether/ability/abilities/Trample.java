@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -46,6 +47,16 @@ public class Trample extends Ability {
         this.showRangeCircle = true;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "Charges at the spot: enemies in the way take " + (int) DAMAGE + " and are flung aside.";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Trample",
@@ -58,8 +69,8 @@ public class Trample extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Trample  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("Charges up to " + (int) LENGTH + " blocks at the spot: enemies in the way take "
-                    + (int) DAMAGE + " and are flung aside.", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("A wall stops it. The lane shows first: step aside.", Style.EMPTY.withItalic(true))
             ),
             this,

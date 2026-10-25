@@ -37,6 +37,10 @@ import java.util.List;
  *       {@code logs/perf-<date>-<time>.json} next to the game's logs (every sample, the percentiles, the counts) and
  *       answers with one chat line. This is what lovish runs at minute 15 of a 4v4 and hands to a session.</li>
  * </ul>
+ * Since Oct 21 the capture below runs vanilla's metrics recorder (what /perf uses), the only profiler that splits the
+ * tick into sections, and our own systems appear in it as {@code bat:<name>} sections (see {@link Sys}). The old
+ * time profiler behind /debug start is only a tick-rate timer: it returned an empty profile, which the lag capture
+ * printed as "heaviest:  0.0%" while its test passed.
  * No behaviour change: this class only reads.
  */
 public final class ServerTickProfile {
@@ -68,6 +72,7 @@ public final class ServerTickProfile {
         recording = new ArrayList<>(seconds * 20);
         recordTicksLeft = seconds * 20;
         recorder = source;
+        Sys.capture(true);   // the [Sys] lines run for the whole recording
         source.sendSuccess(() -> Component.literal("rts-perf: recording " + seconds + " s of server ticks..."), true);
         return 1;
     }
@@ -82,60 +87,130 @@ public final class ServerTickProfile {
         long[] times = server.tickTimes;
         int tick = server.getTickCount();
         double lastMs = times[Math.floorMod(tick - 1, times.length)] / 1.0e6;
+        Sys.onServerTickEnd(server, lastMs);
         if (recording != null) {
             recording.add(lastMs);
             if (--recordTicksLeft <= 0)
                 finishRecording(server);
         }
-        if (captureTicksLeft > 0 && --captureTicksLeft == 0)
-            finishCapture(server);
+        pollCapture(server);
         if (++ticks % LOG_EVERY_TICKS != 0)
             return;
         int units = UnitServerEvents.getAllUnits().size();
-        if (units == 0)
-            return;   // nothing of ours is running: the lobby, a menu world
-        double[] sorted = sortedMs(times);
-        ReignOfNether.LOGGER.info("[Tick] p50 {} ms, p95 {} ms, max {} ms over the last {} ticks; {} units, {} buildings, {} players",
-            fmt(percentile(sorted, 0.50)), fmt(percentile(sorted, 0.95)), fmt(sorted[sorted.length - 1]), sorted.length,
-            units, BuildingServerEvents.getBuildings().size(), server.getPlayerCount());
-        double p95 = percentile(sorted, 0.95);
-        if (p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && captureTicksLeft == 0
-                && ticks - lastCaptureAt >= AUTO_COOLDOWN_TICKS && !server.isTimeProfilerRunning()) {
+        double p95 = 0;
+        if (units > 0) {   // nothing of ours is running otherwise: the lobby, a menu world
+            double[] sorted = sortedMs(times);
+            p95 = percentile(sorted, 0.95);
+            ReignOfNether.LOGGER.info("[Tick] p50 {} ms, p95 {} ms, max {} ms over the last {} ticks; {} units, {} buildings, {} players",
+                fmt(percentile(sorted, 0.50)), fmt(p95), fmt(sorted[sorted.length - 1]), sorted.length,
+                units, BuildingServerEvents.getBuildings().size(), server.getPlayerCount());
+            // how much vanilla A* the units asked for, and how often the short search had to fall back to full range
+            ReignOfNether.LOGGER.info(com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget.report()
+                + "; chase cell memo " + com.solegendary.reignofnether.unit.Terrain.memoReport());
+        }
+        Sys.report();   // the per-system line, while the server is slow
+        if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && !autoCaptureHeld && captureTicksLeft == 0 && !captureAwaiting()
+                && ticks - lastCaptureAt >= AUTO_COOLDOWN_TICKS && !server.isTimeProfilerRunning()
+                && !server.isRecordingMetrics()) {
             lastCaptureAt = ticks;
             startCapture(server, AUTO_CAPTURE_TICKS, "p95 " + fmt(p95) + " ms with " + units + " units");
         }
     }
 
     // ---- automatic lag capture (lovish Oct 20: "can you just add this to the game so its automatic") --------------
-    // When a match gets slow, switch on vanilla's own time profiler (the one behind /debug start: it splits every tick
+    // When a match gets slow, run vanilla's metrics recorder (the profiler behind /perf start: it splits every tick
     // into sections - per level, per entity TYPE, and inside each mob "goalSelector", "targetSelector", "navigation",
-    // "push", "travel"...) for AUTO_CAPTURE_TICKS, then write its full report to logs/perf-auto-<time>.txt and log the
-    // heaviest sections on one [PerfAuto] line, which is all a session needs from latest.log. At most once every
-    // AUTO_COOLDOWN_TICKS; never while someone runs /debug themselves. The profiler's own cost is only paid during
-    // the 10 s capture.
+    // "push", "travel"... - and our own systems as "bat:<name>", see Sys) for AUTO_CAPTURE_TICKS, then write its report
+    // to logs/perf-auto-<time>.txt and log our sections and the heaviest ones on one [PerfAuto] line, which is all a
+    // session needs from latest.log. The recorder also saves its own zip under debug/profiling. At most once every
+    // AUTO_COOLDOWN_TICKS; never while someone runs /debug or /perf themselves. The profiler's own cost is only paid
+    // during the 10 s capture. (It used to start the time profiler behind /debug start, which only times the tick
+    // rate: an empty profile, "heaviest:  0.0%".)
     static final double AUTO_P95_MS = 50.0;
     static final int AUTO_MIN_UNITS = 60;
     static final int AUTO_CAPTURE_TICKS = 200;
     static final int AUTO_COOLDOWN_TICKS = 20 * 60 * 5;
     static final int SUMMARY_TOP = 12;
+    /** How long after asking the recorder to stop its results may take to arrive. */
+    static final int RESULTS_WAIT_TICKS = 200;
+    /** A section must hold this share of the tick to count as part of a profile (an empty profile has none). */
+    static final double MIN_SECTION_PCT = 1.0;
     private static int captureTicksLeft = 0;
+    private static int resultsWaitLeft = 0;
     private static int lastCaptureAt = -AUTO_COOLDOWN_TICKS;
     private static String captureReason = "";
+    // the recorder hands its results to these (any thread); the next tick end picks them up
+    private static volatile net.minecraft.util.profiling.ProfileResults pendingResults = null;
+    private static volatile java.nio.file.Path pendingReport = null;
     public static volatile String lastCaptureSummary = null;
+    /** The last capture came back with no section above {@link #MIN_SECTION_PCT} (the GameTest fails on it). */
+    public static volatile boolean lastCaptureEmpty = false;
+    /** Leaves of the last capture's tree at or above {@link #MIN_SECTION_PCT} of the tick. */
+    public static volatile int lastCaptureSections = 0;
+    /** The bat: sections found in the last capture ("bat:attacker", ...). */
+    public static volatile List<String> lastCaptureBat = List.of();
+
+    /**
+     * Holds the automatic capture off: a benchmark that compares phases of one run (the [Stress] target scans) would
+     * otherwise pay the recorder's cost in some phases and not in others. Reset when the server stops.
+     */
+    public static volatile boolean autoCaptureHeld = false;
+
+    private static boolean captureAwaiting() {
+        return resultsWaitLeft > 0;
+    }
 
     /** Starts a capture of {@code ticksToCapture} ticks (also used by the GameTest). False if one cannot start now. */
     public static boolean startCapture(MinecraftServer server, int ticksToCapture, String reason) {
-        if (captureTicksLeft > 0 || server.isTimeProfilerRunning())
+        if (captureTicksLeft > 0 || captureAwaiting() || server.isTimeProfilerRunning() || server.isRecordingMetrics())
             return false;
-        server.startTimeProfiler();
-        captureTicksLeft = ticksToCapture + 1;   // the profiler starts on the next tick
+        pendingResults = null;
+        pendingReport = null;
+        server.startRecordingMetrics(results -> pendingResults = results, path -> pendingReport = path);
+        captureTicksLeft = ticksToCapture + 2;   // the recorder starts on the next tick
         captureReason = reason;
+        Sys.capture(true);
         ReignOfNether.LOGGER.info("[PerfAuto] the server is slow ({}): profiling the next {} s", reason, ticksToCapture / 20);
         return true;
     }
 
-    private static void finishCapture(MinecraftServer server) {
-        net.minecraft.util.profiling.ProfileResults results = server.stopTimeProfiler();
+    /** Every tick end: stops the recorder when its time is up, and writes the report when its results arrive. */
+    private static void pollCapture(MinecraftServer server) {
+        java.nio.file.Path report = pendingReport;
+        if (report != null) {
+            pendingReport = null;
+            ReignOfNether.LOGGER.info("[PerfAuto] the recorder's own report (zip with the section tree and metrics): {}", report);
+        }
+        net.minecraft.util.profiling.ProfileResults results = pendingResults;
+        if (results != null) {
+            pendingResults = null;
+            captureTicksLeft = 0;
+            resultsWaitLeft = 0;
+            Sys.capture(false);
+            finishCapture(server, results);
+            return;
+        }
+        if (captureTicksLeft > 0 && --captureTicksLeft == 0) {
+            // time is up: the recorder ends on this call (it also ends itself after 10 s), results follow at a tick end
+            if (server.isRecordingMetrics())
+                server.finishRecordingMetrics();
+            resultsWaitLeft = RESULTS_WAIT_TICKS;
+        } else if (resultsWaitLeft > 0 && --resultsWaitLeft == 0) {
+            Sys.capture(false);
+            fail("the metrics recorder returned no results " + RESULTS_WAIT_TICKS + " ticks after it was stopped");
+        }
+    }
+
+    private static void fail(String why) {
+        lastCaptureEmpty = true;
+        lastCaptureSections = 0;
+        lastCaptureBat = List.of();
+        String summary = "[PerfAuto] " + captureReason + "; EMPTY PROFILE: " + why;
+        lastCaptureSummary = summary;
+        ReignOfNether.LOGGER.warn(summary);
+    }
+
+    private static void finishCapture(MinecraftServer server, net.minecraft.util.profiling.ProfileResults results) {
         String stamp = new SimpleDateFormat("yyyy-MM-dd-HHmmss").format(new Date());
         File out = new File(new File(server.getServerDirectory(), "logs"), "perf-auto-" + stamp + ".txt");
         boolean saved = false;
@@ -147,17 +222,46 @@ public final class ServerTickProfile {
         List<String[]> leaves = new ArrayList<>();
         collectLeaves(results, "root", 0, leaves);
         leaves.sort((a, b) -> Double.compare(Double.parseDouble(b[1]), Double.parseDouble(a[1])));
+        int sections = 0;
+        for (String[] leaf : leaves)
+            if (Double.parseDouble(leaf[1]) >= MIN_SECTION_PCT)
+                sections++;
         StringBuilder top = new StringBuilder();
         for (int i = 0; i < Math.min(SUMMARY_TOP, leaves.size()); i++) {
             if (i > 0)
                 top.append(" | ");
             top.append(leaves.get(i)[0]).append(' ').append(fmt(Double.parseDouble(leaves.get(i)[1]))).append('%');
         }
+        List<BatSections.Row> bat = BatSections.aggregate(path -> children(results, path));
+        List<String> batNames = new ArrayList<>();
+        for (BatSections.Row row : bat)
+            batNames.add(row.name());
         double msPerTick = results.getTickDuration() <= 0 ? 0 : results.getNanoDuration() / 1.0e6 / results.getTickDuration();
+        boolean empty = sections == 0;
         String summary = "[PerfAuto] " + captureReason + "; " + results.getTickDuration() + " ticks profiled, "
-            + fmt(msPerTick) + " ms per tick; heaviest: " + top + (saved ? " -> " + out.getPath() : "");
+            + fmt(msPerTick) + " ms per tick; " + (empty ? "EMPTY PROFILE (no section above " + fmt(MIN_SECTION_PCT) + "%); " : "")
+            + "ours: " + (bat.isEmpty() ? "none" : BatSections.text(bat, 10)) + "; heaviest: " + top
+            + (saved ? " -> " + out.getPath() : "");
+        lastCaptureEmpty = empty;
+        lastCaptureSections = sections;
+        lastCaptureBat = batNames;
         lastCaptureSummary = summary;
-        ReignOfNether.LOGGER.info(summary);
+        if (empty)
+            ReignOfNether.LOGGER.warn(summary);
+        else
+            ReignOfNether.LOGGER.info(summary);
+    }
+
+    /** The children of the node at {@code path} with their share of the whole tick (BatSections reads the tree through this). */
+    private static List<BatSections.Node> children(net.minecraft.util.profiling.ProfileResults results, String path) {
+        List<net.minecraft.util.profiling.ResultField> fields = results.getTimes(path);
+        // getTimes lists the node itself first, then its children
+        if (fields.size() <= 1)
+            return List.of();
+        List<BatSections.Node> out = new ArrayList<>(fields.size() - 1);
+        for (int i = 1; i < fields.size(); i++)
+            out.add(new BatSections.Node(fields.get(i).name, fields.get(i).globalPercentage));
+        return out;
     }
 
     // the leaves of vanilla's section tree with their share of the whole tick; a leaf is named by its last 3 sections
@@ -193,6 +297,7 @@ public final class ServerTickProfile {
         CommandSourceStack source = recorder;
         recording = null;
         recorder = null;
+        Sys.capture(false);
         double[] sorted = new double[samples.size()];
         for (int i = 0; i < sorted.length; i++)
             sorted[i] = samples.get(i);
@@ -251,7 +356,13 @@ public final class ServerTickProfile {
         recordTicksLeft = 0;
         ticks = 0;
         captureTicksLeft = 0;
+        resultsWaitLeft = 0;
+        pendingResults = null;
+        pendingReport = null;
         lastCaptureAt = -AUTO_COOLDOWN_TICKS;
+        autoCaptureHeld = false;
+        Sys.onServerStopping();
+        com.solegendary.reignofnether.unit.Terrain.resetMemo();
     }
 
     static double[] sortedMs(long[] nanos) {

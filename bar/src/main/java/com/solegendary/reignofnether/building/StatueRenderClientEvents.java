@@ -161,12 +161,19 @@ public class StatueRenderClientEvents {
     public static void onRenderLevel(RenderLevelStageEvent evt) {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
-        if (disabled || MC.level == null || CANDIDATES.isEmpty() || StrategicViewClientEvents.isStrategicView())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
         try {
-            draw(evt);
-        } catch (RuntimeException | LinkageError e) {
-            disable(e);
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+                return;
+            if (disabled || MC.level == null || CANDIDATES.isEmpty() || StrategicViewClientEvents.isStrategicView())
+                return;
+            try {
+                draw(evt);
+            } catch (RuntimeException | LinkageError e) {
+                disable(e);
+            }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

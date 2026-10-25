@@ -46,7 +46,7 @@ public final class ChargeServerEvents {
         sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y + 0.5, at.z, 1, 0, 0, 0, 0);
         sl.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 0.5, at.z, 12, 0.8, 0.6, 0.8, 0.05);
         sl.playSound(null, BlockPos.containing(at), SoundEvents.GENERIC_EXPLODE, SoundSource.NEUTRAL, 2.0f, 0.9f);
-        if (target == null || target.isDestroyedServerside || !BuildingServerEvents.getBuildings().contains(target))
+        if (target == null || target.isDestroyedServerside || !BuildingServerEvents.isRegistered(target))
             return;
         target.destroyRandomBlocks(CHARGE_DAMAGE, sapper);
     }

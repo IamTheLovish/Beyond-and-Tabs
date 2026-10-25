@@ -24,6 +24,8 @@ import com.solegendary.reignofnether.items.UnitInventory;
 import com.solegendary.reignofnether.items.UnitItem;
 import com.solegendary.reignofnether.items.unititems.EdibleFoodItem;
 import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.perf.FrameParts;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
@@ -273,6 +275,17 @@ public interface Unit {
     }
 
     static void tick(Unit unit) {
+        int sys = Sys.begin(Sys.UNIT);
+        int part = FrameParts.begin(FrameParts.UNIT_TICK);   // the client's half (each is a no-op off its own thread)
+        try {
+            tickBody(unit);
+        } finally {
+            FrameParts.end(part);
+            Sys.end(sys);
+        }
+    }
+
+    private static void tickBody(Unit unit) {
         Mob unitMob = (Mob) unit;
         // Chunk loading around units (formerly 25 addRegionTicket calls per unit per tick here) is now done once
         // per second for all units together by UnitChunkLoader (driven from UnitServerEvents.onServerTick).
@@ -326,11 +339,16 @@ public interface Unit {
             // one entity query per tick shared by all three pickup checks (was three identical AABB queries).
             // Each check re-tests isRemoved()/count, so an item consumed by an earlier check is skipped by later
             // ones exactly as when each check ran its own query.
-            List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
-            if (!nearbyItems.isEmpty()) {
-                checkAndPickupFood(unit, nearbyItems);
-                checkAndPickupResources(unit, nearbyItems);
-                checkAndPickupEquipment(unit, nearbyItems);
+            // Run on every 2nd tick, staggered by entity id so half the units query each tick: a pickup lands at most
+            // one tick (50 ms) later than before. Every check below is level-triggered (an item stays in range until
+            // taken), so none can be missed.
+            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0) {
+                List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
+                if (!nearbyItems.isEmpty()) {
+                    checkAndPickupFood(unit, nearbyItems);
+                    checkAndPickupResources(unit, nearbyItems);
+                    checkAndPickupEquipment(unit, nearbyItems);
+                }
             }
 
             // sync target variables between goals and Mob
@@ -407,15 +425,40 @@ public interface Unit {
         if (!unitMob.level().isClientSide())
             com.solegendary.reignofnether.unit.Terrain.tick(unitMob);
         if (!unitMob.level().isClientSide() && !possessed) {
+            // each of these is a named section for the profiler and the [Sys] line (perf/Sys)
             // frees a unit trapped in a block or a basin (cheap: one check per unit every 2 s, see UnitUnstick)
-            com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
+            int sysUnstick = Sys.begin(Sys.UNSTICK);
+            try {
+                com.solegendary.reignofnether.unit.UnitUnstick.tick(unitMob);
+            } finally {
+                Sys.end(sysUnstick);
+            }
             // the nudge for a unit that stopped making progress
-            com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
+            int sysNudge = Sys.begin(Sys.STUCK_NUDGE);
+            try {
+                com.solegendary.reignofnether.unit.StuckNudge.tick(unitMob);
+                // the move goal's own progress sample (every 10 ticks): a re-click of the spot a unit is already
+                // heading to is skipped only while it is really getting closer (UnitActionItem.isRedundantMove)
+                if (unit.getMoveGoal() != null)
+                    unit.getMoveGoal().sampleProgress();
+            } finally {
+                Sys.end(sysNudge);
+            }
             // bodies that overlap step apart (the Oct 19 "units merge together" blob)
-            com.solegendary.reignofnether.unit.Separation.tick(unitMob);
+            int sysSeparation = Sys.begin(Sys.SEPARATION);
+            try {
+                com.solegendary.reignofnether.unit.Separation.tick(unitMob);
+            } finally {
+                Sys.end(sysSeparation);
+            }
             // combat reactions (claude/combat-reactions.md): Kite and Brace decide from the unit's own tick
-            com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
-            com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
+            int sysReactions = Sys.begin(Sys.REACTIONS);
+            try {
+                com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
+                com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
+            } finally {
+                Sys.end(sysReactions);
+            }
         }
 
         if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_II ||

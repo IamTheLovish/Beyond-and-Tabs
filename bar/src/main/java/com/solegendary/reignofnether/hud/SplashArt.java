@@ -16,7 +16,6 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.server.packs.resources.ReloadInstance;
@@ -33,7 +32,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * "The cathedral rose window" (design/splash.md): the layered title / loading screen art - a stained-glass rose window
+ * The title / loading screen art (design/splash.md). By default the animated moonlit cathedral (LobbyBackdrop in its
+ * title layout, with the blood-red "BEYOND AND TABS" lettering); lovish (Oct 22): "I don't want this old one anymore
+ * ... use the cathedral". The older "cathedral rose window" below stays only as the fallback when the cathedral's art
+ * cannot be read: a stained-glass rose window
  * in a gothic arch, "BEYOND AND TABS" in 3D gold and "Developed by Lovish" beneath, candlelight around it. The layers are
  * drawn from code by tools/gen_splash_art.py; this class only puts them on screen.
  *
@@ -68,8 +70,15 @@ public class SplashArt {
     private static long reloadDoneMs = -1;
     private static float shownProgress = 0;
 
-    /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
+    /**
+     * True if either look can be drawn: the cathedral (the default) or the rose window (its fallback). Uploads on
+     * first use (render thread only).
+     */
     public static boolean ensureLoaded() {
+        return LobbyBackdrop.ensureLoaded() || ensureRoseLoaded();
+    }
+
+    private static boolean ensureRoseLoaded() {
         if (state != 0)
             return state > 0;
         if (!RenderSystem.isOnRenderThread())
@@ -132,6 +141,10 @@ public class SplashArt {
      */
     public static void renderScene(Matrix4f pose, float w, float h, float mouseX, float mouseY, float alpha) {
         if (alpha <= 0.003f)
+            return;
+        if (LobbyBackdrop.renderScene(pose, w, h, mouseX, mouseY, alpha, true))
+            return;
+        if (!ensureRoseLoaded())
             return;
         long now = Util.getMillis();
         boolean motion = !reduceMotion();
@@ -238,8 +251,9 @@ public class SplashArt {
         }
         renderScene(pose, w, h, w / 2f, h / 2f, alpha);
 
-        // a slim gold progress rule where the arch's jambs fade out
+        // a slim gold progress rule low in the meadow, on a soft dark pad so it reads over the flowers
         float cx = w / 2f, bw = h * 0.55f, by = h * 0.905f, bt = Math.max(2f, h * 0.006f);
+        LobbyBackdrop.softScrim(pose, cx - bw / 2, by - bt * 4f, cx + bw / 2, by + bt * 4f, alpha * 0.8f);
         RenderSystem.disableDepthTest();
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -250,35 +264,59 @@ public class SplashArt {
         RenderSystem.enableDepthTest();
     }
 
+    // ---------------------------------------------------------------- waiting screens
+
+    /**
+     * The backdrop of the waiting screens on the way into a game (WaitingScreenBackdropMixin: connecting, loading
+     * terrain, joining / saving world, preparing spawn, the chunk square): the scene (cathedral, else the rose window)
+     * with a soft dark pad behind the middle of the screen, where those screens put their status text and progress.
+     * False if no art is available (the caller keeps vanilla's dirt).
+     */
+    public static boolean renderWaiting(GuiGraphics g, int w, int h) {
+        if (!ensureLoaded() || w <= 0 || h <= 0)
+            return false;
+        g.flush();
+        // no lettering: these screens put their own title and status near the top and middle
+        if (!LobbyBackdrop.renderScene(g.pose().last().pose(), w, h, w / 2f, h / 2f, 1f, true, false))
+            renderScene(g.pose().last().pose(), w, h, w / 2f, h / 2f, 1f);
+        LobbyBackdrop.softScrim(g.pose().last().pose(), w * 0.20f, h * 0.18f, w * 0.80f, h * 0.72f, 0.62f);
+        return true;
+    }
+
     // ---------------------------------------------------------------- title screen buttons
 
     /**
-     * Repaints the title screen's text buttons as dark stone with a gold border (after they have rendered, so clicks,
-     * narration and tooltips stay vanilla). Square icon buttons (language, accessibility, our maps button) are left
-     * alone.
+     * Repaints the title screen's text buttons as dark stone with a gold border and a gothic, blood-dripping label
+     * (GothicText; lovish Oct 21: "gothic and bold, standing out", "blood dripping down"). Drawn after the buttons have
+     * rendered, so clicks, narration and tooltips stay vanilla. Square icon buttons (language, accessibility, our maps
+     * button) are left alone.
      */
     public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, float alpha) {
-        if (state <= 0)
+        if (state <= 0 && !LobbyBackdrop.available())
             return;
-        int a = Mth.clamp(Mth.ceil(alpha * 255f), 0, 255);
-        for (int i = 0; i < children.size(); i++) {
-            if (!(children.get(i) instanceof Button b) || !b.visible || b.getWidth() < 40)
-                continue;
-            int x0 = b.getX(), y0 = b.getY(), bw = b.getWidth(), bh = b.getHeight();
-            boolean hot = b.active && b.isHoveredOrFocused();
-            g.fill(x0, y0, x0 + bw, y0 + bh, argb(a * 0.94f, hot ? 0x2A211B : 0x1A1512));
-            g.fill(x0 + 1, y0 + 1, x0 + bw - 1, y0 + bh / 2, argb(a * 0.30f, 0x4A3D33));   // lit upper face
-            int gold = !b.active ? 0x5C4A2C : hot ? 0xF0CC72 : 0xB08A3E;
-            g.renderOutline(x0, y0, bw, bh, argb(a, gold));
-            if (hot)
-                g.renderOutline(x0 + 1, y0 + 1, bw - 2, bh - 2, argb(a * 0.45f, 0xF0CC72));
-            int text = !b.active ? 0x7A6C58 : hot ? 0xFFF2D6 : 0xE6CF9C;
-            g.drawCenteredString(font, b.getMessage(), x0 + bw / 2, y0 + (bh - 8) / 2, argb(Math.max(a, 8), text));
-        }
+        GothicText.restyleButtons(g, font, children, null, null, true, alpha);
     }
 
-    private static int argb(float a, int rgb) {
-        return (Mth.clamp((int) a, 0, 255) << 24) | (rgb & 0xFFFFFF);
+    /**
+     * A soft dark pad behind the title screen's column of text buttons (lovish's cathedral is busy; the stone plates
+     * must stay readable), feathered well past the column. Only with the cathedral look.
+     */
+    public static void buttonScrim(GuiGraphics g, List<? extends GuiEventListener> children, float alpha) {
+        if (!LobbyBackdrop.available())
+            return;
+        int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE;
+        for (GuiEventListener c : children) {
+            if (c instanceof net.minecraft.client.gui.components.AbstractWidget wd && wd.visible && wd.getWidth() >= 60) {
+                x0 = Math.min(x0, wd.getX());
+                y0 = Math.min(y0, wd.getY());
+                x1 = Math.max(x1, wd.getX() + wd.getWidth());
+                y1 = Math.max(y1, wd.getY() + wd.getHeight());
+            }
+        }
+        if (x0 >= x1 || y0 >= y1)
+            return;
+        g.flush();
+        LobbyBackdrop.softScrim(g.pose().last().pose(), x0, y0, x1, y1, alpha * 0.62f);
     }
 
     // ---------------------------------------------------------------- quads
