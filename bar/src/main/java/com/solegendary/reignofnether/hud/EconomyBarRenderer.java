@@ -250,7 +250,7 @@ public final class EconomyBarRenderer {
             NotificationClientEvents.onOverflowBanner(metalOver, energyOver);   // spoken / toast line, once a minute
         }
 
-        // Pause-units chip (lovish: "pause all production in case you are stalling metal, so you can upgrade what really
+        // Pause-units chip (Joisco: "pause all production in case you are stalling metal, so you can upgrade what really
         // matters"): own bar only, left under the metal readout, on the Overcharge chip's row. Red while paused.
         boolean manaOwner = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).mana;
         boolean overchargeChipShown = manaOwner && mc.player != null && owner.equals(mc.player.getName().getString())

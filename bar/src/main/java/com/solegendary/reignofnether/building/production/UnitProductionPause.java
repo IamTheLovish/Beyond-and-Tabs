@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * "Pause unit production" (lovish, Oct 23: "a button to pause all production in case you are stalling metal, so you
+ * "Pause unit production" (Joisco, Oct 23: "a button to pause all production in case you are stalling metal, so you
  * can upgrade what really matters"). One flag per player: while it is on, every unit item in that player's production
  * buildings makes no progress and spends nothing ({@link ProductionItem#tick}); research and upgrades (anything that is
  * not an {@link IUnitProductionItem}) keep running. The server holds the flag; the owner's HUD gets it with the

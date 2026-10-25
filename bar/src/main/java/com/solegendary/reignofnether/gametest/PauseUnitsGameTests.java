@@ -17,7 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Rotation;
 
 /**
- * "Pause unit production" (UnitProductionPause; lovish, Oct 23: a button to pause production while stalling metal so
+ * "Pause unit production" (UnitProductionPause; Joisco, Oct 23: a button to pause production while stalling metal so
  * the upgrades that matter get it). One flag per owner: their unit items make no progress and spend nothing, research
  * and upgrades run on, and another player's queues are untouched. Placements are never put in the world; the queue is
  * run by calling the item's tick directly, as the lab-level test does.
