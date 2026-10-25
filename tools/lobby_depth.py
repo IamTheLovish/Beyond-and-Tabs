@@ -343,7 +343,6 @@ def tree(L, x, ybase, height, width, rr, lean=0.0, albedo=0.45, depth=4, crown=0
     fork(tpts, width * 0.7, ang, 0)
     for pts, w0, w1, kind in limbs:
         m = limb_mask(c, pts, w0, w1, rr, 0.15)
-        th = None
         L.stamp(m, albedo=albedo * (0.85 if kind else 1.0), colour=colour, relief=2.6, theta=None, outline=1.0)
     return limbs
 
@@ -387,9 +386,7 @@ def leaf_theta(c, leaf, rr):
     cell = max(3, int(leaf * c.k * 1.4))
     gh, gw = c.H // cell + 2, c.W // cell + 2
     g = rr.uniform(-math.pi / 2, math.pi / 2, (gh, gw)).astype(np.float32)
-    jit = (np.random.default_rng(rr.integers(1 << 30)).random((c.H, c.W)) * 0.6).astype(np.float32)
-    ys = (np.arange(c.H)[:, None] / cell + jit[:, :1] * 0.0).astype(np.int32)
-    xs = (np.arange(c.W)[None, :] / cell).astype(np.int32)
+    rr.integers(1 << 30)                       # the unused jitter's draw, kept so the patches below stay the same
     # warp the grid so the patches are irregular
     wy = (blur(np.random.default_rng(rr.integers(1 << 30)).random((c.H, c.W)), cell) - 0.5) * cell * 6
     wx = (blur(np.random.default_rng(rr.integers(1 << 30)).random((c.H, c.W)), cell) - 0.5) * cell * 6
@@ -704,11 +701,9 @@ def clouds():
               (-0.55, 0.57, 0.60, 0.030), (0.95, 0.30, 0.40, 0.022)], "cloud", 0.90),
             ("clouds_near", (-ART_W / 2, 0.46, ART_W / 2, 0.84), 602,
              [(-0.70, 0.61, 0.70, 0.018), (0.95, 0.62, 0.60, 0.016)], "hills", 0.8)):
-        rr = np.random.default_rng(seed)
         c = Canvas(rect, px=880)
         X, Y = c.grid()
         D = np.zeros_like(X)
-        belly = np.zeros_like(X)
         for (x, y, length, height) in banks:
             # a torn stratus band: a long lens of cloud, thicker in the middle, its upper edge in low swells
             bank = np.zeros_like(X)
@@ -873,7 +868,6 @@ def ground():
     # stones breaking the surface (the ripple rings in game spread from these)
     for x, y, r in G.river_rocks():
         rocks(L, x, y, 0.0, 1, r * 0.9, rr, albedo=0.6, flat=0.32)
-    rgb_cov = {}
 
     def rows(rgb, cov, blk, blk_k):
         return plane_rows(rgb, cov, blk, blk_k, c, GROUND_STOPS)
