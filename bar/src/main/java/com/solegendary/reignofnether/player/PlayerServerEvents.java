@@ -1273,6 +1273,7 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.tide.TidepoolServerEvents.clearAll();   // tidepools never outlive a match
         com.solegendary.reignofnether.tide.FogBankServerEvents.clearAll();
         com.solegendary.reignofnether.mana.ManaServerEvents.clearAll();   // nor does Overcharge
+        com.solegendary.reignofnether.building.production.UnitProductionPause.clearAll();   // nor a paused unit queue
         com.solegendary.reignofnether.mana.WardServerEvents.clearAll();
         com.solegendary.reignofnether.mana.DecoyServerEvents.clearAll();
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();

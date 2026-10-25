@@ -119,6 +119,7 @@ public class MatchStateSaveData extends SavedData {
         // statics outlive an integrated server: a world opened after another in the same game must not inherit its
         // wells or links (ManaServerEvents' well registry has no stop handler of its own)
         ManaServerEvents.clearAll();
+        com.solegendary.reignofnether.building.production.UnitProductionPause.clearAll();   // likewise a paused queue
         com.solegendary.reignofnether.resources.EconomyPace.reset();   // likewise the pace of the last world
         MatchStateSaveData data = getInstance(server.overworld());
         data.stopSnapshot = null;

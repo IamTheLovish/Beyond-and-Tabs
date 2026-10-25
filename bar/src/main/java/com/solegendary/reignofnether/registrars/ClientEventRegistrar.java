@@ -110,6 +110,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.production.UnitPauseClientEvents.class);   // pause-units chip + key
         vanillaEventBus.register(com.solegendary.reignofnether.resources.EconomySliderClientEvents.class);   // the economy bar's sliders
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);

@@ -730,9 +730,14 @@ public class HudClientEvents {
                             percentageDoneInv = 0.01f;
                         }
                     }
+                    // "Pause unit production": the head unit is on hold (research and upgrades are never paused)
+                    boolean unitsPaused = com.solegendary.reignofnether.building.production.UnitProductionPause
+                        .blocks(firstProdItem.item, selProdBuilding);
+                    if (unitsPaused)
+                        colour = 0xFFB060;
                     evt.getGuiGraphics().drawString(
                         MC.font,
-                        Math.round(100 - (percentageDoneInv * 100f)) + "% " + productionButtons.get(0).name,  // TODO: translatable
+                        (unitsPaused ? "Paused " : "") + Math.round(100 - (percentageDoneInv * 100f)) + "% " + productionButtons.get(0).name,  // TODO: translatable
                         blitX + iconFrameSize + 5,
                         blitY + 2,
                         colour

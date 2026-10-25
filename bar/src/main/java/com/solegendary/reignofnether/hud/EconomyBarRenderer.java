@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.hud;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.building.production.UnitPauseClientEvents;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.mana.ManaClientEvents;
@@ -249,11 +250,38 @@ public final class EconomyBarRenderer {
             NotificationClientEvents.onOverflowBanner(metalOver, energyOver);   // spoken / toast line, once a minute
         }
 
-        // Overcharge toggle chip: only on your own bar, only for a Mana faction (the server re-checks both)
+        // Pause-units chip (lovish: "pause all production in case you are stalling metal, so you can upgrade what really
+        // matters"): own bar only, left under the metal readout, on the Overcharge chip's row. Red while paused.
         boolean manaOwner = FactionTraits.of(PlayerClientEvents.getPlayerFaction(owner)).mana;
+        boolean overchargeChipShown = manaOwner && mc.player != null && owner.equals(mc.player.getName().getString())
+            && ManaClientEvents.localIsMana();
+        UnitPauseClientEvents.chip = null;
+        if (ownBar) {
+            boolean paused = eco.unitsPaused;
+            String key = Keybindings.pauseUnits.getCurrentLabel();
+            String s = (paused ? "UNITS PAUSED" : "Pause units") + (key.isEmpty() ? "" : "  [" + key + "]");
+            int w = font.width(s) + 10;
+            int cx = left + 4;
+            boolean hover = mouseX >= cx && mouseX < cx + w && mouseY >= bottom && mouseY < bottom + 12;
+            gg.fill(cx, bottom, cx + w, bottom + 12, paused ? 0xD0601818 : (hover ? 0xD0303640 : 0xC0101216));
+            gg.fill(cx, bottom + 11, cx + w, bottom + 12, paused ? 0xFFFF5A5A : 0xFF6A6450);
+            gg.drawString(font, s, cx + 5, bottom + 2, paused ? 0xFFFF7A7A : 0xD8D0B8);
+            RectZone pauseChip = RectZone.getZoneByLW(cx, bottom, w, 12);
+            zones.add(pauseChip);
+            UnitPauseClientEvents.chip = pauseChip;
+            if (hover)
+                HudClientEvents.deferTooltip(List.of(
+                    line(paused ? "Unit production paused - research continues" : "Pause unit production"),
+                    line(paused ? "Click to resume training units." : "Click to stop all unit training in your buildings."),
+                    line("Research and upgrades keep running, and nothing is spent on units while paused.")),
+                    mouseX + 6, mouseY + 12);
+            if (!overchargeChipShown)
+                bottom += 12;
+        }
+
+        // Overcharge toggle chip: only on your own bar, only for a Mana faction (the server re-checks both)
         ManaClientEvents.overchargeChip = null;
-        if (manaOwner && mc.player != null && owner.equals(mc.player.getName().getString())
-                && ManaClientEvents.localIsMana()) {
+        if (overchargeChipShown) {
             String key = Keybindings.overcharge.getCurrentLabel();
             String s = (eco.overcharge ? "OVERCHARGE ON" : "Overcharge") + (key.isEmpty() ? "" : "  [" + key + "]");
             int w = font.width(s) + 10;

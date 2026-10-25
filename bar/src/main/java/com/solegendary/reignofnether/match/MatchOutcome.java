@@ -133,6 +133,7 @@ public final class MatchOutcome {
         com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(playerName);   // pools dry up at once
         com.solegendary.reignofnether.tide.FogBankServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(playerName);       // Overcharge, wells, ley links
+        com.solegendary.reignofnether.building.production.UnitProductionPause.clearOwner(playerName);
         com.solegendary.reignofnether.mana.WardServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.FrostServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
