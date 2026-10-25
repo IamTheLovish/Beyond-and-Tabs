@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
@@ -53,6 +54,16 @@ public class Rootquake extends Ability {
         this.autoRule(AutoRule.CROWD);   // autocast: roots round the walker: worth it with three or more enemies inside
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "After a 1 s warning, roots burst up round the walker: enemies take " + (int) DAMAGE + " damage and are rooted for " + ROOT_TICKS / 20 + " s.";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.selfLine(RADIUS);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Rootquake",
@@ -65,8 +76,8 @@ public class Rootquake extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Rootquake  (" + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("After a 1 s warning, roots burst up within " + (int) RADIUS + " blocks: enemies take "
-                    + (int) DAMAGE + " damage and are rooted for " + ROOT_TICKS / 20 + " s.", Style.EMPTY),
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
                 FormattedCharSequence.forward("The ground cracks first - quick enemies step out.", Style.EMPTY.withItalic(true))
             ),
             this,
