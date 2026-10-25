@@ -373,7 +373,7 @@ public class ProductionPlacement extends BuildingPlacement {
     public static BlockPos safeSpawnPoint(ServerLevel level, BlockPos spawnPoint) {
         byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, spawnPoint.getX(),
                 spawnPoint.getY(), spawnPoint.getZ());
-        if (kind == com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER)
+        if (com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind))
             return spawnPoint;
         if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_BLOCKED
                 && !com.solegendary.reignofnether.unit.UnitUnstick.isPocketed(level, spawnPoint))
