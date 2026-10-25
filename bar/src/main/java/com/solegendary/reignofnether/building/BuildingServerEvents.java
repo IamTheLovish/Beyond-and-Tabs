@@ -386,6 +386,7 @@ public class BuildingServerEvents {
             saveBuildings(level);
             netherZones.clear();
             buildings.clear();
+            Blueprints.clear();
             com.solegendary.reignofnether.building.merge.MergedBuildings.SERVER.clear();
         }
     }
@@ -447,6 +448,9 @@ public class BuildingServerEvents {
         boolean ignoreFog
     ) {
         boolean buildingExists = false;
+        for (BuildingPlacement pending : Blueprints.all())   // a pending site on this spot counts too
+            if (pending.originPos.equals(originPos))
+                buildingExists = true;
         for (BuildingPlacement placement : buildings) {
             if (placement.originPos.equals(originPos)) {
                 buildingExists = true;
@@ -491,7 +495,7 @@ public class BuildingServerEvents {
             // is constructed (BuildingPlacement.tickFlowConstruction) and simply stalls when resources run out.
             newBuilding.freeBuild = fromCommand;
 
-            boolean isSandbox = SandboxServer.isAnyoneASandboxPlayer();
+            boolean isSandbox = SandboxServer.isSandboxOwner(ownerName);   // the placing owner, not "somebody is in sandbox"
             // only a T2 constructor may raise a T3 lab (the build button checks the selection; this stops a crafted
             // packet). A fog-queued site re-placed by its worker (ignoreFog, no builder ids) was checked when queued.
             boolean fogRequeue = ignoreFog && (builderUnitIds == null || builderUnitIds.length == 0);
@@ -501,6 +505,18 @@ public class BuildingServerEvents {
                 HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_t2_worker");
                 FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
                 return null;
+            }
+            // a T2 lab needs the Tier 2 research and its faction's finished T1 lab (resources/TierGate): the build button
+            // greys it out, but a stale client, a crafted packet or an old fog-queued site must not skip that. A command
+            // placement (scenarios, spawners), the sandbox and the "modifythephasevariance" cheat are exempt as before
+            if (!fromCommand && !isSandbox
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")) {
+                String tierError = com.solegendary.reignofnether.resources.TierGate.placementError(ownerName, newBuilding.getBuilding());
+                if (tierError != null) {
+                    HudClientboundPacket.showTempMessageI18n(ownerName, tierError);
+                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
+                    return null;
+                }
             }
             // combat engineers start field defences only; with a worker among the builders they assist (design/combat_engineers.md)
             if (!fromCommand && !isSandbox && !fogRequeue
@@ -529,90 +545,137 @@ public class BuildingServerEvents {
                 }
             }
 
-            // trees in the footprint and a 2-block ring are felled as reclaim for the owner (TreeClearing) - before
-            // the site clears/levels its footprint, so the logs are credited rather than erased
-            if (!(newBuilding.getBuilding() instanceof AbstractBridge))
-                com.solegendary.reignofnether.resources.TreeClearing.clearForBuilding(serverLevel, newBuilding);
-
-            if (fromCommand ||
-                    (serverLevel.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get() &&
-                            !(newBuilding.getBuilding() instanceof AbstractBridge))) {
-                BuildingUtils.clearBuildingArea(newBuilding);
-            } else if (!(newBuilding.getBuilding() instanceof AbstractBridge)) {
-                levelFootprint(newBuilding);
+            // BLUEPRINTS (lovish, Oct 22: "Blueprints shouldn't drop physical prints until the worker gets there, and you
+            // shouldn't be able to see enemy blueprints"). A worker-built site is now only an ORDER until a worker
+            // reaches it: nothing below touches the world, the registry or the network. The placement waits in
+            // Blueprints (owner + allies + spectators see its ghost, nobody else), the worker walks to it, and
+            // Blueprints.arrive re-checks the site and calls beginConstruction - the code that used to run right here.
+            // Not for command-placed sites (match start, tests, spawners, the tutorial's script: fromCommand) or sandbox
+            // editing, which raise at once as before. A player's order with no worker behind it has nobody to ever
+            // reach the site, and a physical stub would be exactly the print this rule forbids: it is refused.
+            boolean workerOrder = !fromCommand && !isSandbox;
+            if (workerOrder && !fogRequeue && (builderUnitIds == null || builderUnitIds.length == 0)) {
+                HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_worker");
+                return null;
             }
-            buildings.add(newBuilding);
-            newBuilding.forceChunk(true);
-            int minY = BuildingUtils.getMinCorner(newBuilding.blocks).getY();
-
-            if (!(newBuilding.getBuilding() instanceof AbstractBridge))
-                for (BuildingBlock block : newBuilding.blocks)
-                    if (block.getBlockPos().getY() == minY && !block.getBlockState().isAir())
-                        placeScaffoldingUnder(block, newBuilding);
-
-            boolean hasFastBuildCheat = ResearchServerEvents.playerHasCheat(ownerName, "warpten");
-            if (SandboxServer.isAnyoneASandboxPlayer() && hasFastBuildCheat) {
-                newBuilding.maxBlocksPerTick = 4;
-                newBuilding.queueAllBlocks(serverLevel);
-            } else {
-                // speed up first capitol
-                if (newBuilding.isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) == 0) {
-                    newBuilding.blocksPerBuild = 2;
-                    newBuilding.maxBlocksPerTick = 2;
-                    newBuilding.buildSpeedMult = 2f;
-                }
-                // a building that names no starting block types (our generated extractor and wind generator) lays its
-                // whole foundation layer instead - with an empty queue and nothing placed, RoN counts a fresh site as
-                // destroyed on its first tick (the windmill that blew up the moment it was placed)
-                // (a starting-type block the biome palette changed still counts: BiomePalette.joinsStartQueue)
-                boolean anyStartType = !newBuilding.getBuilding().startingBlockTypes.isEmpty();
-                for (BuildingBlock block : newBuilding.blocks) {
-                    if (block.getBlockPos().getY() <= minY + (newBuilding.getBuilding().foundationYLayers - 1)
-                            && !block.getBlockState().isAir()
-                            && (!anyStartType || BiomePalette.joinsStartQueue(newBuilding.getBuilding(), block, newBuilding.biomePaletteStarts))) {
-                        newBuilding.addToBlockPlaceQueue(block);
-                    }
-                }
+            if (workerOrder) {
+                Blueprints.add(newBuilding);
+                assignBuilderUnits(builderUnitIds, queue, newBuilding);
+                return newBuilding;
             }
 
-            BuildingClientboundPacket.placeBuilding(originPos,
-                    newBuilding.getBuilding(),
-                    rotation,
-                    newBuilding.getBuilding() instanceof AbstractBridge ? "" : ownerName,
-                    -1,
-                    newBuilding.blockPlaceQueue.size(),
-                    isDiagonalBridge,
-                    0,
-                    false,
-                    PortalPlacement.PortalType.BASIC,
-                    originPos
-            );
-
-            if (SandboxServer.isAnyoneASandboxPlayer() && (ownerName.isEmpty() || ownerName.equals("Enemy")))
-                newBuilding.selfBuilding = true;
-
+            raiseSite(newBuilding, originPos, rotation, ownerName, fromCommand, isDiagonalBridge);
             assignBuilderUnits(builderUnitIds, queue, newBuilding);
+            settleSite(newBuilding, ownerName, builderUnitIds);
 
-            for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
-                if (entity instanceof Unit unit && unit.getOwnerName().equals(ownerName) &&
-                        newBuilding.isPosInsideBuilding(entity.getOnPos().above().above()) &&
-                        (unit.getMoveGoal().getMoveTarget() == null ||
-                                newBuilding.isPosInsideBuilding(unit.getMoveGoal().getMoveTarget()))) {
-                    moveNonBuildersAwayFromBuildingFoundations(entity, builderUnitIds, newBuilding);
-                }
-            }
-            moveAnimalsAwayFromBuildingFoundations(newBuilding);
-
-            if (newBuilding.getBuilding() instanceof AbstractBridge)
-                newBuilding.ownerName = "";
-
-            if (SandboxServer.isAnyoneASandboxPlayer() && builderUnitIds.length == 0) {
+            if (isSandbox && builderUnitIds.length == 0) {
                 newBuilding.getBuilding().shouldDestroyOnReset = false;
                 saveBuildings(serverLevel);
             }
             return newBuilding;
         }
         return null;
+    }
+
+    /**
+     * Physical construction starts: everything a placement used to do the moment it was ordered - fell the trees on
+     * the site, level or clear the footprint, register the building (pathing, overlap tests, fog, the economy all see
+     * it from here), lay scaffolding under the floating bottom layer, queue the foundation layer and tell the clients.
+     * Called when the order is for a site that needs no walk (fromCommand, no workers) and, for a blueprint, by
+     * {@link Blueprints#arrive} when the first assigned worker reaches it.
+     */
+    private static void raiseSite(BuildingPlacement newBuilding, BlockPos originPos, Rotation rotation, String ownerName,
+                                  boolean fromCommand, boolean isDiagonalBridge) {
+        // trees in the footprint and a 2-block ring are felled as reclaim for the owner (TreeClearing) - before
+        // the site clears/levels its footprint, so the logs are credited rather than erased
+        if (!(newBuilding.getBuilding() instanceof AbstractBridge))
+            com.solegendary.reignofnether.resources.TreeClearing.clearForBuilding(serverLevel, newBuilding);
+
+        if (fromCommand ||
+                (serverLevel.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get() &&
+                        !(newBuilding.getBuilding() instanceof AbstractBridge))) {
+            BuildingUtils.clearBuildingArea(newBuilding);
+        } else if (!(newBuilding.getBuilding() instanceof AbstractBridge)) {
+            levelFootprint(newBuilding);
+        }
+        buildings.add(newBuilding);
+        newBuilding.forceChunk(true);
+        int minY = BuildingUtils.getMinCorner(newBuilding.blocks).getY();
+
+        if (!(newBuilding.getBuilding() instanceof AbstractBridge))
+            for (BuildingBlock block : newBuilding.blocks)
+                if (block.getBlockPos().getY() == minY && !block.getBlockState().isAir())
+                    placeScaffoldingUnder(block, newBuilding);
+
+        boolean hasFastBuildCheat = ResearchServerEvents.playerHasCheat(ownerName, "warpten");
+        boolean isSandbox = SandboxServer.isSandboxOwner(ownerName);   // the placing owner, not "somebody is in sandbox" (27c90f43)
+        if (isSandbox && hasFastBuildCheat) {
+            newBuilding.maxBlocksPerTick = 4;
+            newBuilding.queueAllBlocks(serverLevel);
+        } else {
+            // speed up first capitol
+            if (newBuilding.isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) == 0) {
+                newBuilding.blocksPerBuild = 2;
+                newBuilding.maxBlocksPerTick = 2;
+                newBuilding.buildSpeedMult = 2f;
+            }
+            // a building that names no starting block types (our generated extractor and wind generator) lays its
+            // whole foundation layer instead - with an empty queue and nothing placed, RoN counts a fresh site as
+            // destroyed on its first tick (the windmill that blew up the moment it was placed)
+            // (a starting-type block the biome palette changed still counts: BiomePalette.joinsStartQueue)
+            boolean anyStartType = !newBuilding.getBuilding().startingBlockTypes.isEmpty();
+            for (BuildingBlock block : newBuilding.blocks) {
+                if (block.getBlockPos().getY() <= minY + (newBuilding.getBuilding().foundationYLayers - 1)
+                        && !block.getBlockState().isAir()
+                        && (!anyStartType || BiomePalette.joinsStartQueue(newBuilding.getBuilding(), block, newBuilding.biomePaletteStarts))) {
+                    newBuilding.addToBlockPlaceQueue(block);
+                }
+            }
+        }
+
+        BuildingClientboundPacket.placeBuilding(originPos,
+                newBuilding.getBuilding(),
+                rotation,
+                newBuilding.getBuilding() instanceof AbstractBridge ? "" : ownerName,
+                -1,
+                newBuilding.blockPlaceQueue.size(),
+                isDiagonalBridge,
+                0,
+                false,
+                PortalPlacement.PortalType.BASIC,
+                originPos
+        );
+
+        if (SandboxServer.isNeutralSandboxOwner(ownerName))
+            newBuilding.selfBuilding = true;
+    }
+
+    /**
+     * What happens round a site that just rose: own units standing on the footprint are walked off it (the builders
+     * stay), huntable animals are herded away, and a bridge becomes neutral (anyone's workers may finish it).
+     */
+    private static void settleSite(BuildingPlacement newBuilding, String ownerName, int[] builderUnitIds) {
+        for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
+            if (entity instanceof Unit unit && unit.getOwnerName().equals(ownerName) &&
+                    newBuilding.isPosInsideBuilding(entity.getOnPos().above().above()) &&
+                    (unit.getMoveGoal().getMoveTarget() == null ||
+                            newBuilding.isPosInsideBuilding(unit.getMoveGoal().getMoveTarget()))) {
+                moveNonBuildersAwayFromBuildingFoundations(entity, builderUnitIds, newBuilding);
+            }
+        }
+        moveAnimalsAwayFromBuildingFoundations(newBuilding);
+
+        if (newBuilding.getBuilding() instanceof AbstractBridge)
+            newBuilding.ownerName = "";
+    }
+
+    /**
+     * A blueprint's first worker is on the site: raise it (raiseSite + settleSite). Called only by
+     * {@link Blueprints#arrive}, after it re-validated the site and took the placement off the pending list.
+     */
+    static void beginConstruction(BuildingPlacement bp, int[] builderUnitIds) {
+        raiseSite(bp, bp.originPos, bp.rotation, bp.ownerName, false, bp.isDiagonalBridge);
+        settleSite(bp, bp.ownerName, builderUnitIds);
     }
 
     /**
@@ -773,17 +836,22 @@ public class BuildingServerEvents {
     public static void cancelBuilding(BuildingPlacement building, String playerName) {
         if (building == null)
             return;
+        // a blueprint nobody has started: nothing was built, paid or reserved, so cancelling it costs and refunds nothing
+        if (Blueprints.isPending(building)) {
+            Blueprints.cancel(building, null);
+            return;
+        }
         if (building.isBuilt && !SandboxServer.isSandboxPlayer(playerName) &&
             BuildingUtils.getTotalCompletedBuildingsOwned(false, building.ownerName) == 1) {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }
-        if (building.getBuilding().capturable && !SandboxServer.isAnyoneASandboxPlayer()) {
+        if (building.getBuilding().capturable && !SandboxServer.isSandboxPlayer(playerName)) {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }
         NightSourceAddon nsa = building.getBuilding().getActiveAddon(NightSourceAddon.class);
-        if (nsa != null && nsa.getNightRange(building) > 0 && building.isBuilt && !SandboxServer.isAnyoneASandboxPlayer()) {
+        if (nsa != null && nsa.getNightRange(building) > 0 && building.isBuilt && !SandboxServer.isSandboxPlayer(playerName)) {
             HudClientboundPacket.showTempMessageI18n(playerName,"hud.helperbuttons.reignofnether.cancel.error");
             return;
         }
@@ -914,6 +982,13 @@ public class BuildingServerEvents {
         } else {
             placeBuildingsClientside();
         }
+        // a late joiner gets the ghosts of their own side too (Blueprints.syncTo checks who may see each)
+        if (evt.getEntity() instanceof ServerPlayer joined) {
+            if (server == null || !server.isDedicatedServer())
+                TaskSchedulerServerEvents.schedule(20, () -> Blueprints.syncTo(joined));   // as the buildings above: the client is not ready yet
+            else
+                Blueprints.syncTo(joined);
+        }
         //ReignOfNether.LOGGER.info("Synced " + buildings.size() + " buildings with player logged in");
     }
 
@@ -987,6 +1062,8 @@ public class BuildingServerEvents {
             com.solegendary.reignofnether.hud.KillFeedServerEvents.onBuildingDestroyed(building, building.lastAttacker);
             building.destroy(serverLevel);
         }
+
+        Blueprints.tick(serverLevel);
 
         ArrayList<BuildingPlacement> bpls = new ArrayList<>(buildings);
         int sysBuildings = Sys.begin(Sys.BUILDINGS);

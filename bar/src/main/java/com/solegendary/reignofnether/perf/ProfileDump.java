@@ -24,8 +24,10 @@ import java.util.regex.Pattern;
  */
 final class ProfileDump {
 
+    // vanilla writes "name(284/1) - 77.91%/77.91%" (a space before the dash); the dash-only form is kept too. Oct 22:
+    // the space-less pattern matched no real dump, so every client capture logged "EMPTY PROFILE".
     private static final Pattern LINE = Pattern.compile(
-        "^\\[(\\d+)] ((?:\\|   )*)(.+?)\\((\\d+)/(\\d+)\\)- ([0-9.]+)%/([0-9.]+)%\\s*$");
+        "^\\[(\\d+)] ((?:\\|   )*)(.+?)\\((\\d+)/(\\d+)\\)\\s*- ([0-9.]+)%/([0-9.]+)%\\s*$");
 
     private ProfileDump() { }
 
@@ -36,7 +38,7 @@ final class ProfileDump {
 
     static List<Row> parse(String text) {
         List<Row> rows = new ArrayList<>();
-        for (String line : text.split("\n")) {
+        for (String line : text.split("\r?\n")) {
             Matcher m = LINE.matcher(line);
             if (!m.matches())
                 continue;

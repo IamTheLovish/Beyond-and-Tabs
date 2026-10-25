@@ -65,6 +65,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.MomentumServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitGrid.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.TargetScan.class);   // target acquisition's grid (perf plan PR 5)
         vanillaEventBus.register(com.solegendary.reignofnether.unit.VeterancyServerEvents.class);
         // BAR HUD pass 4: per-unit kill counters, the kill feed and the wreck metal labels
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitKills.class);
@@ -147,6 +148,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(CommandsServerEvents.class);
         vanillaEventBus.register(ScenarioServerEvents.class);
         vanillaEventBus.register(WorldBorderServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.worldborder.ArenaPathing.class);
         vanillaEventBus.register(CustomButtonServerEvents.class);
         vanillaEventBus.register(ItemServerEvents.class);
         vanillaEventBus.register(TaskSchedulerServerEvents.class);

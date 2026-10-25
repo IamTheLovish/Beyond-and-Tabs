@@ -434,20 +434,28 @@ public final class MapClient {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
-        // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
-        if (phase)
-            StartMarkers.render(evt.getPoseStack(), evt.getCamera());
-        if (!OrthoviewClientEvents.isEnabled())
-            return;
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
         try {
-            renderWorld(evt.getPoseStack(), evt.getCamera());
-        } catch (Exception e) {
-            // a cosmetic overlay must never break the frame - but say so once, so a CI log shows what went wrong
-            if (!renderFailed)
-                ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
-            renderFailed = true;
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || MC.level == null)
+                return;
+            // the start markers show from the ground too (a hero sees the rim, fence and pillars); the rest is RTS-only
+            if (phase)
+                StartMarkers.render(evt.getPoseStack(), evt.getCamera());
+            if (!OrthoviewClientEvents.isEnabled())
+                return;
+            try {
+                renderWorld(evt.getPoseStack(), evt.getCamera());
+            } catch (Exception e) {
+                // a cosmetic overlay must never break the frame - but say so once, so a CI log shows what went wrong
+                if (!renderFailed)
+                    ReignOfNether.LOGGER.error("[Maps] the map overlay failed to draw", e);
+                renderFailed = true;
+            }
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
 

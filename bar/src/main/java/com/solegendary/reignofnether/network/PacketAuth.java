@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.network;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 import com.solegendary.reignofnether.unit.NonUnitServerEvents;
@@ -104,6 +105,20 @@ public final class PacketAuth {
         return sp != null && (isHost(sp) || sp.hasPermissions(level));
     }
 
+    /**
+     * May {@code sp} start or reserve a start position as {@code faction}? A real faction: anyone. NONE (the sandbox
+     * "faction": a sandbox player edits and takes over the whole map) and NEUTRAL: the host or an op only. null (a key
+     * no faction has, see {@link com.solegendary.reignofnether.faction.Factions#findFaction}): nobody.
+     */
+    public static boolean mayPlayAs(ServerPlayer sp, com.solegendary.reignofnether.faction.Faction faction) {
+        if (sp == null || faction == null)
+            return false;
+        if (faction == com.solegendary.reignofnether.faction.Factions.NONE
+                || faction == com.solegendary.reignofnether.faction.Factions.NEUTRAL)
+            return isHostOrOp(sp, 2);
+        return true;
+    }
+
     // ---- rate limits ----
 
     /** Token buckets per player per channel: refill {@code perSecond}, hold at most {@code burst}. */
@@ -122,7 +137,8 @@ public final class PacketAuth {
     /**
      * True if {@code sp} may send one more {@code channel} packet now (and spends a token). {@code burst} packets can
      * arrive at once (a box-select of 200 units issues one order, a frantic player maybe 10 a second), then
-     * {@code perSecond} a second; anything over is dropped silently - the client never needs to know.
+     * {@code perSecond} a second; anything over is dropped (use {@link #allowLogged} where a drop loses a
+     * player's order, so it shows in the log).
      */
     public static boolean allow(ServerPlayer sp, String channel, double perSecond, double burst) {
         if (sp == null)
@@ -144,9 +160,39 @@ public final class PacketAuth {
         }
     }
 
+    // refusals per player per channel since the last log line, and when that line was written
+    private static final Map<String, long[]> refusals = new ConcurrentHashMap<>();
+
+    /**
+     * {@link #allow}, and a refusal is not silent: one INFO line per player and channel per second at most, with the
+     * player's name and how many packets were refused since the last line. For channels where a refusal means a
+     * player's order was lost (unit orders), so "my units didn't listen" shows in the log.
+     */
+    public static boolean allowLogged(ServerPlayer sp, String channel, double perSecond, double burst) {
+        if (allow(sp, channel, perSecond, burst))
+            return true;
+        if (sp == null)
+            return false;
+        String name = sp.getName().getString();
+        long now = System.nanoTime();
+        long[] r = refusals.computeIfAbsent(sp.getUUID() + "/" + channel, k -> new long[] { 0, now - 2_000_000_000L });
+        synchronized (r) {
+            r[0]++;
+            if (now - r[1] >= 1_000_000_000L) {
+                ReignOfNether.LOGGER.info("[PacketAuth] {} over the '{}' rate limit ({}/s, burst {}): {} packet(s) refused in the last second",
+                    name, channel, (int) perSecond, (int) burst, r[0]);
+                r[0] = 0;
+                r[1] = now;
+            }
+        }
+        return false;
+    }
+
     /** Forget a player's buckets (on logout). */
     public static void forget(UUID id) {
-        if (id != null)
+        if (id != null) {
             buckets.remove(id);
+            refusals.keySet().removeIf(k -> k.startsWith(id + "/"));
+        }
     }
 }

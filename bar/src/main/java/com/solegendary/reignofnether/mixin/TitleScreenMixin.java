@@ -232,8 +232,9 @@ public class TitleScreenMixin extends Screen {
                 ? (float) (Util.getMillis() - this.fadeInStart) / 1000.0F
                 : 1.0F;
 
-        // Beyond and Tabs: the cathedral rose window (hud/SplashArt, design/splash.md) replaces the panorama, the
-        // Minecraft logo and the yellow splash; the faction panorama stays as the fallback if the art cannot load
+        // Beyond and Tabs: the moonlit cathedral with the blood-red title (hud/SplashArt -> LobbyBackdrop, design/splash.md)
+        // replaces the panorama, the Minecraft logo and the yellow splash; the old rose window is its fallback, and the
+        // faction panorama the last resort if no art can load
         boolean rose = SplashArt.ensureLoaded();
         if (rose) {
             guiGraphics.flush();
@@ -310,8 +311,24 @@ public class TitleScreenMixin extends Screen {
                 }
             }
 
-            // Call the superclass render
-            super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+            // a soft dark pad behind the button column so the plates read over the scene
+            if (rose)
+                SplashArt.buttonScrim(guiGraphics, this.children(), alpha);
+
+            // Call the superclass render. With the art up, the text buttons draw no vanilla label: the gothic pass
+            // below paints it (lovish Oct 23: "the old minecraft on is on top of our art so its reprinted twice")
+            if (rose) {
+                try (var labels = com.solegendary.reignofnether.util.HiddenLabels.<GuiEventListener, Component>hide(
+                        this.children(),
+                        c -> ((net.minecraft.client.gui.components.Button) c).getMessage(),
+                        (c, m) -> ((net.minecraft.client.gui.components.Button) c).setMessage(m),
+                        c -> c instanceof net.minecraft.client.gui.components.Button b && b.visible && b.getWidth() >= 40,
+                        Component.empty())) {
+                    super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+                }
+            } else {
+                super.render(guiGraphics, pMouseX, pMouseY, pPartialTick);
+            }
             if (rose)
                 SplashArt.restyleButtons(guiGraphics, this.font, this.children(), alpha);
 

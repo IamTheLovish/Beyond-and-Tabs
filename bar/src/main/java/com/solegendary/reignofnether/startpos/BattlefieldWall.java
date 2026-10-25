@@ -42,6 +42,13 @@ public class BattlefieldWall {
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     static final int WALL_HEIGHT = 7;        // rampart body above ground
+    /**
+     * Blocks either side of a ring column that the widest wall pieces fill: a watchtower is 3x3 round its column
+     * (TOWER_HALF), a gatehouse 5x5 (GATEHOUSE_HALF); the plain wall is the column and one towards the centre. Plain
+     * ints (inlined by javac), so maps.ExtractorClearance asks them without loading this class: the metal fill keeps an
+     * extractor's whole footprint clear of the widest piece, wherever on the ring one stands.
+     */
+    public static final int TOWER_HALF = 1, GATEHOUSE_HALF = 2;
     static final int COLUMNS_PER_TICK = 40;  // build speed in play (~30-90s for a full ring)
     static final int MAX_RADIUS = 520;
     // every match rolls its own arena: breathing room, tower spacing and weathering all vary
@@ -215,19 +222,33 @@ public class BattlefieldWall {
 
     /** How many columns a ring of {@code radius} round (cx, cz) has (distinct block columns on the circle). */
     public static int ringLength(double cx, double cz, double radius) {
+        return ringColumns(cx, cz, radius).size();
+    }
+
+    /**
+     * The distinct block columns {x, z} of a ring of {@code radius} round (cx, cz), in ring order - the cells
+     * planRing visits, without the world. A watchtower or gatehouse is centred on one of them, and the plain wall's
+     * second layer is one block towards the centre; the game tests lay the widest piece on every one of them to prove
+     * what the metal fill keeps clear.
+     */
+    public static List<int[]> ringColumns(double cx, double cz, double radius) {
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
         Set<Long> seen = new HashSet<>();
+        List<int[]> out = new java.util.ArrayList<>();
         for (int i = 0; i < steps; i++) {
             double a = Math.PI * 2 * i / steps;
             int x = (int) Math.round(cx + Math.cos(a) * radius);
             int z = (int) Math.round(cz + Math.sin(a) * radius);
-            seen.add(((long) x << 32) ^ (z & 0xffffffffL));
+            if (seen.add(((long) x << 32) ^ (z & 0xffffffffL)))
+                out.add(new int[] { x, z });
         }
-        return seen.size();
+        return out;
     }
 
     static void planRing(ServerLevel level, double cx, double cz, double radius, int perTick, int fromColumn,
                          boolean pregen) {
+        // every arena gets the RTS pathfinder and a warm navmesh, whatever its size (worldborder/ArenaPathing)
+        com.solegendary.reignofnether.worldborder.ArenaPathing.onArena(level, cx, cz, radius);
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
 
         queue.clear();
@@ -365,12 +386,12 @@ public class BattlefieldWall {
         int top = base + WALL_HEIGHT + 4;
         // the eight cells round the centre are read (cached) before anything is written: the next columns of the
         // ring share them and must see the ground, not this tower
-        for (int x = tx - 1; x <= tx + 1; x++)
-            for (int z = tz - 1; z <= tz + 1; z++)
+        for (int x = tx - TOWER_HALF; x <= tx + TOWER_HALF; x++)
+            for (int z = tz - TOWER_HALF; z <= tz + TOWER_HALF; z++)
                 groundY(level, x, z);
-        for (int x = tx - 1; x <= tx + 1; x++)
-            for (int z = tz - 1; z <= tz + 1; z++) {
-                boolean edge = x == tx - 1 || x == tx + 1 || z == tz - 1 || z == tz + 1;
+        for (int x = tx - TOWER_HALF; x <= tx + TOWER_HALF; x++)
+            for (int z = tz - TOWER_HALF; z <= tz + TOWER_HALF; z++) {
+                boolean edge = x == tx - TOWER_HALF || x == tx + TOWER_HALF || z == tz - TOWER_HALF || z == tz + TOWER_HALF;
                 fillColumn(level, x, z, base - 2, top);
                 // corner crenellations and a lit beacon so towers read at night
                 if (edge && (x != tx && z != tz))
@@ -387,19 +408,19 @@ public class BattlefieldWall {
         int base = groundY(level, gx, gz);
         int top = base + WALL_HEIGHT + 3;
         // every cell of the block read (cached) before the first write, as the tower does
-        for (int x = gx - 2; x <= gx + 2; x++)
-            for (int z = gz - 2; z <= gz + 2; z++)
+        for (int x = gx - GATEHOUSE_HALF; x <= gx + GATEHOUSE_HALF; x++)
+            for (int z = gz - GATEHOUSE_HALF; z <= gz + GATEHOUSE_HALF; z++)
                 groundY(level, x, z);
-        for (int x = gx - 2; x <= gx + 2; x++)
-            for (int z = gz - 2; z <= gz + 2; z++) {
+        for (int x = gx - GATEHOUSE_HALF; x <= gx + GATEHOUSE_HALF; x++)
+            for (int z = gz - GATEHOUSE_HALF; z <= gz + GATEHOUSE_HALF; z++) {
                 int b = groundY(level, x, z);
                 fillColumn(level, x, z, Math.min(b, base) - 2, top);
             }
         // twin turrets on the two ends along the wall line, with accent bands and crenellations
         double tx = -Math.sin(angle), tz = Math.cos(angle);   // tangent to the ring
         for (int side = -1; side <= 1; side += 2) {
-            int cx = (int) Math.round(gx + tx * 2 * side);
-            int cz = (int) Math.round(gz + tz * 2 * side);
+            int cx = (int) Math.round(gx + tx * GATEHOUSE_HALF * side);
+            int cz = (int) Math.round(gz + tz * GATEHOUSE_HALF * side);
             for (int y = top + 1; y <= top + 3; y++)
                 level.setBlock(new BlockPos(cx, y, cz), body(), FLAGS);
             level.setBlock(new BlockPos(cx, top + 2, cz), mat().accent(), FLAGS);
@@ -408,8 +429,8 @@ public class BattlefieldWall {
         // the sealed portcullis on the inner face: iron bars set into a dark recess, an accent keystone above
         double inX = -Math.cos(angle), inZ = -Math.sin(angle);   // towards the ring centre
         for (int w = -1; w <= 1; w++) {
-            int fx = (int) Math.round(gx + inX * 2 + tx * w);
-            int fz = (int) Math.round(gz + inZ * 2 + tz * w);
+            int fx = (int) Math.round(gx + inX * GATEHOUSE_HALF + tx * w);
+            int fz = (int) Math.round(gz + inZ * GATEHOUSE_HALF + tz * w);
             int fb = groundY(level, fx, fz);
             for (int y = fb + 1; y <= fb + 4; y++)
                 level.setBlock(new BlockPos(fx, y, fz), Blocks.IRON_BARS.defaultBlockState(), FLAGS);
