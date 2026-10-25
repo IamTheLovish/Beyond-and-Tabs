@@ -1,7 +1,7 @@
 {
   "dimensions": {
     "minecraft:overworld": {
-      "type": "minecraft:overworld",
+      "type": "reignofnether:battlefield",
       "generator": {
         "type": "minecraft:noise",
         "settings": "reignofnether:battlefield",

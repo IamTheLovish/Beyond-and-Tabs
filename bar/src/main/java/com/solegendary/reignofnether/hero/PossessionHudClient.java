@@ -459,6 +459,7 @@ public final class PossessionHudClient {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (numLive == 0 || evt.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES || MC.level == null)
             return;
         if (!PossessionClientEvents.isPossessing()) {

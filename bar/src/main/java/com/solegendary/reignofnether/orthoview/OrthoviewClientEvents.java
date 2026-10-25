@@ -95,7 +95,10 @@ public class OrthoviewClientEvents {
         return hideLeavesMethod != LeafHideMethod.NONE;
     }
 
-    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.AROUND_UNITS_AND_CURSOR;   // RTS default: the canopy never hides a fight
+    // Default NONE (lovish Oct 22 17:52): the old default swapped every leaf near the cursor/units for green stained
+    // glass, so trees turned see-through as the cursor moved, and each swap re-meshed the chunk. Trees stay solid;
+    // units under canopies get silhouettes instead (planned). The HUD leaves button still cycles the other modes.
+    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.NONE;
     public static int enabledCount = 0;
     public static boolean enabled = false;
     private static boolean cameraMovingByMouse = false; // excludes edgepanning
@@ -643,8 +646,15 @@ public class OrthoviewClientEvents {
         if (!pan.isDown())
             return false;
         int key = pan.getKey();
-        // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it pans
-        return !(KeyTaps.inTapWindow(key) && HudClientEvents.isCardKey(key));
+        if (!HudClientEvents.isCardKey(key))
+            return true;
+        // a WASD key that is also an order on the selected card (S stop, or one the player moved onto W/A/S/D) waits
+        // out a tap before it pans; once it pans, that press is a hold and fires no order (KeyTaps.isHold), however
+        // short lag made it measure
+        if (KeyTaps.inTapWindow(key))
+            return false;
+        KeyTaps.markPan(key);
+        return true;
     }
 
     private static void updateCamera(float dt) {

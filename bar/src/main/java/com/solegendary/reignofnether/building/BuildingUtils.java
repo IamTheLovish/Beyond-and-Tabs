@@ -7,7 +7,6 @@ import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
 import com.solegendary.reignofnether.building.buildings.monsters.Stronghold;
 import com.solegendary.reignofnether.building.buildings.piglins.Fortress;
 import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.FarmPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.villagers.Castle;
@@ -105,19 +104,23 @@ public class BuildingUtils {
     }
 
     public static boolean isBuildingBuildable(boolean isClientSide, BuildingPlacement building) {
-        List<BuildingPlacement> buildings;
-        if (isClientSide)
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
-        var flag = false;
-        for (BuildingPlacement buildingPlacement : buildings) {
-            if (buildingPlacement.originPos.equals(building.originPos)) {
-                flag = true;
-                break;
-            }
-        }
+        // is a building standing at its origin (the cell of the BuildingGrid, not the whole list)
+        boolean flag = BuildingGrid.legacyScans
+            ? BuildingScansLegacy.hasOrigin(getBuildingsList(isClientSide), building.originPos)
+            : BuildingGrid.of(isClientSide).hasOrigin(building.originPos);
+        // a blueprint (a pending site, Blueprints) is buildable too: that is how a worker gets sent to start it
+        if (!flag && !isClientSide)
+            flag = Blueprints.isPending(building);
         return flag && building.getBlocksPlaced() < building.getBlocksTotal() && (!building.isBuilt || building.getBuilding().repairable);
+    }
+
+    /** The registered building at {@code pos} (as {@link #findBuilding}), else the server's blueprint there, else null. */
+    @Nullable
+    public static BuildingPlacement findBuildingOrBlueprint(boolean isClientSide, BlockPos pos) {
+        BuildingPlacement b = findBuilding(isClientSide, pos);
+        if (b == null && !isClientSide)
+            b = Blueprints.findAt(pos);
+        return b;
     }
 
     // returns a list of BPs that may reside in unique chunks for fog of war calcs
@@ -166,13 +169,11 @@ public class BuildingUtils {
     }
 
     // note originPos may be an air block
+    // the first building in list order with its origin at pos or its box round it, from the BuildingGrid cell of pos
     public static BuildingPlacement findBuilding(boolean isClientSide, BlockPos pos) {
-        List<BuildingPlacement> buildings = isClientSide ? BuildingClientEvents.getBuildings() : BuildingServerEvents.getBuildings();
-
-        for (BuildingPlacement building : buildings)
-            if (building.originPos.equals(pos) || building.isPosInsideBuilding(pos))
-                return building;
-        return null;
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.findBuilding(getBuildingsList(isClientSide), pos);
+        return BuildingGrid.of(isClientSide).findAt(pos);
     }
 
     // functions for corners/centrePos given only blocks
@@ -286,55 +287,43 @@ public class BuildingUtils {
     }
 
 
-    // returns whether the given pos is part of ANY building in the level
+    // returns whether the given pos is inside ANY building's box in the level
+    // (43 call sites, some per unit per tick: reads the BuildingGrid cell of bp instead of every building)
     public static boolean isPosInsideAnyBuilding(boolean isClientSide, BlockPos bp) {
-        List<BuildingPlacement> buildings;
-        if (isClientSide)
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
-
-        for (BuildingPlacement building : buildings)
-            if (building.isPosInsideBuilding(bp))
-                return true;
-        return false;
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.isPosInsideAnyBuilding(getBuildingsList(isClientSide), bp);
+        return BuildingGrid.of(isClientSide).anyInside(bp, 0, false);
     }
 
     public static boolean isPosInsideFarm(boolean isClientSide, BlockPos bp) {
-        List<BuildingPlacement> buildings;
-        if (isClientSide)
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
-
-        for (BuildingPlacement building : buildings)
-            if (building instanceof FarmPlacement && building.isPosInsideBuilding(bp))
-                return true;
-        return false;
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.isPosInsideFarm(getBuildingsList(isClientSide), bp);
+        return BuildingGrid.of(isClientSide).anyInside(bp, 0, true);
     }
 
+    /**
+     * The building passing {@code condition} whose centre is closest to {@code pos} (squared distance under 9999,
+     * about 100 blocks); on a tie the one earlier in the list. A ring search of the BuildingGrid's centre cells: it
+     * stops once nothing unread can be closer, instead of testing every building (idle builders ask every 5 ticks).
+     */
     @Nullable
     public static BuildingPlacement findClosestBuilding(boolean isClientSide, Vec3 pos, Predicate<BuildingPlacement> condition) {
-        List<BuildingPlacement> buildings;
-        if (isClientSide)
-            buildings = BuildingClientEvents.getBuildings();
-        else
-            buildings = BuildingServerEvents.getBuildings();
+        if (BuildingGrid.legacyScans)
+            return BuildingScansLegacy.findClosestBuilding(getBuildingsList(isClientSide), pos, condition);
+        return findClosestBuilding(BuildingGrid.of(isClientSide), pos, condition);
+    }
 
-        double closestDist = 9999;
-        BuildingPlacement closestBuilding = null;
-        for (BuildingPlacement building : buildings) {
-            if (condition.test(building)) {
-                BlockPos bp = building.centrePos;
-                Vec3 bpVec3 = new Vec3(bp.getX(), bp.getY(), bp.getZ());
-                double dist = bpVec3.distanceToSqr(pos);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closestBuilding = building;
-                }
-            }
-        }
-        return closestBuilding;
+    /** {@link #findClosestBuilding(boolean, Vec3, Predicate)} over the given grid (the GameTests pass their own). */
+    @Nullable
+    public static BuildingPlacement findClosestBuilding(BuildingGrid grid, Vec3 pos, Predicate<BuildingPlacement> condition) {
+        return grid.nearestByCentre(pos.x, pos.y, pos.z, 0, 9999, building -> {
+            // the old new Vec3(centrePos).distanceToSqr(pos), without the Vec3
+            BlockPos bp = building.centrePos;
+            double d0 = pos.x - bp.getX();
+            double d1 = pos.y - bp.getY();
+            double d2 = pos.z - bp.getZ();
+            return d0 * d0 + d1 * d1 + d2 * d2;
+        }, condition);
     }
 
     public static boolean isInNetherRange(boolean isClientSide, BlockPos bp) {

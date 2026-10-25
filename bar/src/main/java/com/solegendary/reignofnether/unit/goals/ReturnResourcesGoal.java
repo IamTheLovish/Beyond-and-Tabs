@@ -90,7 +90,7 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
         if (buildingTarget != null && this.moveTarget != null)
             if (buildingTarget.isBuilt && buildingTarget.getBuilding().canAcceptResources &&
                 BuildingServerEvents.getUnitToBuildingRelationship((Unit) this.mob, buildingTarget) == Relationship.OWNED &&
-                BuildingServerEvents.getBuildings().contains(buildingTarget))
+                BuildingServerEvents.isRegistered(buildingTarget))
                 return buildingTarget.isPosInsideBuilding(mob.getOnPos()) || MiscUtil.isMobInRangeOfPos(moveTarget, mob, 1.5f);
         return false;
     }
