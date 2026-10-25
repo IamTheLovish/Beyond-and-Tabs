@@ -3958,5 +3958,9 @@
   "hud.reignofnether.merged.toggle.how": "Pair +%s%%, Farm (2x2) +%s%%, Row (3x2) +%s%%, Quarter (3x3) +%s%% output. Each section keeps its own health; a lost section shrinks the complex.",
   "hud.reignofnether.merged.toggle.click": "Click to switch it for every selected building of this kind.",
   "hud.reignofnether.merged.toggle.now_on": "Merging on: grids of these grow into one complex",
-  "hud.reignofnether.merged.toggle.now_off": "Merging off: these stay separate buildings"
+  "hud.reignofnether.merged.toggle.now_off": "Merging off: these stay separate buildings",
+  "lobby.reignofnether.player_list": "Player list",
+  "lobby.reignofnether.player_list.on": "List: On",
+  "lobby.reignofnether.player_list.off": "List: Off",
+  "lobby.reignofnether.player_list.tooltip": "Player list (allies / enemies, top right). Off: hidden at the start to keep the screen clear; each player can still open it with I. On: shown for everyone from the start. The host sets this for the match."
 }

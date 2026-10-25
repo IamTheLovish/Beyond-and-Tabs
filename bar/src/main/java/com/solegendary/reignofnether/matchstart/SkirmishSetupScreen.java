@@ -68,6 +68,7 @@ public class SkirmishSetupScreen extends Screen {
         public long mapSeed = 0;
         public int timeOfDay = 0;        // match.TimeOfDay id: 0 morning (default), 1 noon, 2 dusk, 3 night
         public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id: off / slow (default) / normal
+        public boolean playerList = com.solegendary.reignofnether.match.PlayerListRule.DEFAULT;   // lobby "Player list": drawn from the start
         public Long seed = null;         // a fixed world seed (the eyes tour: runs compare, tools/eyes_diff.py); null = random
         public boolean choosePositions = true;   // BAR's start-position phase before the match
 
@@ -146,6 +147,15 @@ public class SkirmishSetupScreen extends Screen {
             .withValues(range(n)).withInitialValue(Math.max(0, Math.min(initial, n - 1))).displayOnlyValue()
             .withTooltip(i -> Tooltip.create(Component.literal("Start time: " + com.solegendary.reignofnether.match.TimeOfDay.byId(i).blurb)))
             .create(x, y, w, h, Component.literal("Time"), (b, v) -> onSet.accept(v));
+    }
+
+    /** The lobby's "Player list" switch (match.PlayerListRule): the stats strip drawn from the start, or only on the list key. */
+    static CycleButton<Boolean> playerListButton(boolean initial, int x, int y, int w, int h,
+                                                 java.util.function.Consumer<Boolean> onChange) {
+        return CycleButton.<Boolean>builder(v -> Component.translatable(v ? "lobby.reignofnether.player_list.on" : "lobby.reignofnether.player_list.off"))
+            .withValues(true, false).withInitialValue(initial).displayOnlyValue()
+            .withTooltip(v -> Tooltip.create(Component.translatable("lobby.reignofnether.player_list.tooltip")))
+            .create(x, y, w, h, Component.translatable("lobby.reignofnether.player_list"), (b, v) -> onChange.accept(v));
     }
 
     /** The lobby's day/night cycle button (match.DayCycle): "Day: Slow", half a row wide. */
@@ -267,7 +277,10 @@ public class SkirmishSetupScreen extends Screen {
             .withTooltip(v -> Tooltip.create(Component.literal(v
                 ? "A 45 s phase before the match: click inside your team's start box to place your commander"
                 : "Everyone starts at their slot straight away")))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Starts"), (b, v) -> settings.choosePositions = v));
+            .create(rightX + 4, ry, half, 20, Component.literal("Starts"), (b, v) -> settings.choosePositions = v));
+        // next to it: whether the player list (top right) is drawn from the start, off by default (tester Joisco:
+        // "minimize elements that block the screen"); the I key still opens it in play
+        addRenderableWidget(playerListButton(settings.playerList, rightX + 4 + half + 2, ry, rw - half - 2, 20, v -> settings.playerList = v));
 
         Button start = addRenderableWidget(Button.builder(Component.literal(settings.spectating() ? "Watch Battle" : "Start Battle"),
                 b -> QuickBattle.launch(this, settings))

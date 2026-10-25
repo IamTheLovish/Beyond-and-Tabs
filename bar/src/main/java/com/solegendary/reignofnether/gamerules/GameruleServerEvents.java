@@ -87,6 +87,12 @@ public class GameruleServerEvents {
                 boolean value = (boolean) args.get("value").getResult();
                 GameruleClientboundPacket.setLockAlliances(value);
             }
+        } else if (nodes.get(1).getNode().getName().equals("showPlayerList")) {
+            Map<String, ParsedArgument<CommandSourceStack, ?>> args = evt.getParseResults().getContext().getArguments();
+            if (args.containsKey("value")) {
+                boolean value = (boolean) args.get("value").getResult();
+                GameruleClientboundPacket.setShowPlayerList(value);
+            }
         } else if (nodes.get(1).getNode().getName().equals("scenarioMode")) {
             Map<String, ParsedArgument<CommandSourceStack, ?>> args = evt.getParseResults().getContext().getArguments();
             if (args.containsKey("value")) {
@@ -151,6 +157,12 @@ public class GameruleServerEvents {
             .set(false, evt.getServer());
     }
 
+    /** Start of a match: the host's lobby "Player list" choice into the saved rule and out to every client. */
+    public static void applyShowPlayerList(MinecraftServer server, boolean show) {
+        server.getGameRules().getRule(GameRuleRegistrar.SHOW_PLAYER_LIST).set(show, server);
+        GameruleClientboundPacket.setShowPlayerList(show);
+    }
+
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent evt) {
         MinecraftServer server = evt.getEntity().level().getServer();
@@ -181,6 +193,7 @@ public class GameruleServerEvents {
             GameruleClientboundPacket.setAllowedHeroes(allowHeroes);
             boolean lockAlliances = server.getGameRules().getRule(GameRuleRegistrar.LOCK_ALLIANCES).get();
             GameruleClientboundPacket.setLockAlliances(lockAlliances);
+            GameruleClientboundPacket.setShowPlayerList(server.getGameRules().getRule(GameRuleRegistrar.SHOW_PLAYER_LIST).get());
             boolean scenarioMode = server.getGameRules().getRule(GameRuleRegistrar.SCENARIO_MODE).get();
             GameruleClientboundPacket.setScenarioMode(scenarioMode);
             boolean coopMode = server.getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get();

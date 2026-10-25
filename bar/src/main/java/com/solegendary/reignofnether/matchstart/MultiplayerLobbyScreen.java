@@ -139,8 +139,11 @@ public class MultiplayerLobbyScreen extends Screen {
                 .withTooltip(v -> Tooltip.create(Component.literal(v
                     ? "A 45 s phase before the match: everyone clicks inside their team's start box to place their commander"
                     : "Everyone starts at their slot straight away")))
-                .create(rx, ry, rw, 18, Component.literal("Starts"), (b, v) -> send(MultiplayerLobby.Action.SET_STARTPOS, 0, v ? 1 : 0)));
+                .create(rx, ry, (rw - 2) / 2, 18, Component.literal("Starts"), (b, v) -> send(MultiplayerLobby.Action.SET_STARTPOS, 0, v ? 1 : 0)));
             starts.active = host && !l.starting;
+            CycleButton<Boolean> list = addRenderableWidget(SkirmishSetupScreen.playerListButton(l.playerList,
+                rx + (rw - 2) / 2 + 2, ry, rw - (rw - 2) / 2 - 2, 18, v -> send(MultiplayerLobby.Action.SET_PLAYER_LIST, 0, v ? 1 : 0)));
+            list.active = host && !l.starting;
             ry += 20;
             CycleButton<Integer> map = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.ARENAS.get(i)))
                 .withValues(SkirmishSetupScreen.range(5)).withInitialValue(clamp(l.arena, 5))
