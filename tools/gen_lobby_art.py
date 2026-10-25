@@ -3406,7 +3406,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     x_t, y_t = sx(rx) + ox(0.036), sy(ry) + oy(0.036)
     xl, xr, yb = sx(rx - 0.22) + ox(0.045), sx(rx + 0.20) + ox(0.045), sy(0.86) + oy(0.045)
     hw = 0.03 * S.A
-    yy0, yy1 = int(max(0, y_t)), int(min(H, yb))
+    yy0 = int(max(0, y_t))
     for yy in range(yy0, yy0):                 # round 6: no shafts (LobbyBackdrop leaves them out)
         v = (yy - y_t) / (yb - y_t)
         xa = (x_t - hw) + (xl - (x_t - hw)) * v

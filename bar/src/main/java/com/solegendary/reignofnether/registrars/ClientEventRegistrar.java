@@ -187,6 +187,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.HudPanels.class);   // collapsible panels, I / = keys
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.BlueprintClientEvents.class);   // the ghosts of sites no worker has started (building/Blueprints)
         vanillaEventBus.register(com.solegendary.reignofnether.building.PlacementGridClientEvents.class);   // after BuildingClientEvents: reads the ghost validity it set this frame
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D
