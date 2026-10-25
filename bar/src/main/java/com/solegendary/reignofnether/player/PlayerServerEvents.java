@@ -1300,6 +1300,8 @@ public class PlayerServerEvents {
         }
         if (!isSandboxOrScenario)
             BuildingServerEvents.getBuildings().removeIf(b -> b.getBuilding().shouldDestroyOnReset || hardReset);
+        if (!isSandboxOrScenario)
+            com.solegendary.reignofnether.building.Blueprints.clear();   // their workers are gone: no order outlives the match
 
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())

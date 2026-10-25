@@ -1120,6 +1120,11 @@ public class UnitClientEvents {
                     else
                         resolveMoveActionDeferred();
                 }
+                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
+                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
+                    sendUnitCommand(UnitAction.BUILD_REPAIR);
+                }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else
                     resolveMoveActionDeferred();

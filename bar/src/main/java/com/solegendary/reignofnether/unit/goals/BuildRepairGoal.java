@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.Blueprints;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
@@ -121,6 +122,14 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
         calcMoveTarget();
         if (!this.mob.level().isClientSide() && checkUnreachable())
             return;
+        // a blueprint (Blueprints) comes to life when its worker is in range: the site is checked again and physical
+        // construction starts, or it is cancelled and the worker moves on to its next order
+        if (!this.mob.level().isClientSide() && buildingTarget != null && Blueprints.isPending(buildingTarget)
+                && isBuilding() && Blueprints.arrive(buildingTarget) == Blueprints.Arrival.CANCELLED) {
+            if (!startNextQueuedBuilding())
+                stopBuilding();
+            return;
+        }
         if (isBuilding() && buildingTarget != null) {
             BlockPos bp = buildingTarget.centrePos;
             this.mob.getLookControl().setLookAt(bp.getX(), bp.getY(), bp.getZ());
