@@ -259,19 +259,22 @@ public final class EconomyBarRenderer {
         if (ownBar) {
             boolean paused = eco.unitsPaused;
             String key = Keybindings.pauseUnits.getCurrentLabel();
-            String s = (paused ? "UNITS PAUSED" : "Pause units") + (key.isEmpty() ? "" : "  [" + key + "]");
-            int w = font.width(s) + 10;
+            // a small square pause icon (two bars), Joisco's pick over a text chip; the words live in the tooltip
+            int w = 14;
             int cx = left + 4;
             boolean hover = mouseX >= cx && mouseX < cx + w && mouseY >= bottom && mouseY < bottom + 12;
             gg.fill(cx, bottom, cx + w, bottom + 12, paused ? 0xD0601818 : (hover ? 0xD0303640 : 0xC0101216));
             gg.fill(cx, bottom + 11, cx + w, bottom + 12, paused ? 0xFFFF5A5A : 0xFF6A6450);
-            gg.drawString(font, s, cx + 5, bottom + 2, paused ? 0xFFFF7A7A : 0xD8D0B8);
+            int bar = paused ? 0xFFFF7A7A : 0xFFD8D0B8;
+            gg.fill(cx + 4, bottom + 2, cx + 6, bottom + 10, bar);
+            gg.fill(cx + 8, bottom + 2, cx + 10, bottom + 10, bar);
             RectZone pauseChip = RectZone.getZoneByLW(cx, bottom, w, 12);
             zones.add(pauseChip);
             UnitPauseClientEvents.chip = pauseChip;
             if (hover)
                 HudClientEvents.deferTooltip(List.of(
-                    line(paused ? "Unit production paused - research continues" : "Pause unit production"),
+                    line((paused ? "Unit production paused - research continues" : "Pause unit production")
+                        + (key.isEmpty() ? "" : "  [" + key + "]")),
                     line(paused ? "Click to resume training units." : "Click to stop all unit training in your buildings."),
                     line("Research and upgrades keep running, and nothing is spent on units while paused.")),
                     mouseX + 6, mouseY + 12);
