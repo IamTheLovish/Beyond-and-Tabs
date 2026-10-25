@@ -26,6 +26,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> KEYBIND_LAYOUT;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HOST_PORT;
+    public static final ForgeConfigSpec.ConfigValue<Integer> AREA_MEX_RADIUS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
@@ -106,6 +107,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
         CAMERA_ZOOM_SPEED = BUILDER.defineInRange("camera_zoom_speed", 10, 1, 30);
+        BUILDER.comment("Area mex circle radius in blocks (Shift with a metal extractor armed; Shift+wheel resizes it), 4-32");
+        AREA_MEX_RADIUS = BUILDER.defineInRange("area_mex_radius", 12, 4, 32);
         BUILDER.comment("Invert the mouse wheel: wheel forward zooms out (also flips Ctrl+wheel tilt)");
         CAMERA_ZOOM_INVERT = BUILDER.define("camera_zoom_invert", false);
         BUILDER.comment("Middle-mouse drag speed, 1-30 (10 = the ground stays under the cursor)");
