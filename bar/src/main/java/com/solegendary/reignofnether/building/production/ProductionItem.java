@@ -184,10 +184,6 @@ public abstract class ProductionItem {
     // the metal/energy matching the progress it wants to make (production build power * cheat speed); progress is
     // slowed down by the owner's stall when they are short of resources.
     public boolean tick(ProductionPlacement placement, ActiveProduction active) {
-        // a queue made while the building is still going up waits whole: no progress, no payment, and no completing a
-        // zero-tick item (those skipped the isBuilt check below)
-        if (!placement.isBuilt)
-            return false;
         boolean isClientSide = placement.getLevel().isClientSide();
         boolean hasCheat = (isClientSide && ResearchClient.hasCheat("warpten")) ||
                 (!isClientSide && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"));

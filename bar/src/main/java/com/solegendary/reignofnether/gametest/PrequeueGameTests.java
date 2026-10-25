@@ -54,7 +54,7 @@ public class PrequeueGameTests {
         return null;
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 40)
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = "prequeue")
     public static void prequeue_item_waits_on_an_unbuilt_production_building_then_advances(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String owner = "gametest_prequeue_a_" + Long.toHexString(helper.absolutePos(BlockPos.ZERO).asLong());
@@ -96,7 +96,7 @@ public class PrequeueGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 40)
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = "prequeue")
     public static void prequeue_cancelling_the_unbuilt_building_refunds_the_queue(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String owner = "gametest_prequeue_b_" + Long.toHexString(helper.absolutePos(BlockPos.ZERO).asLong());
@@ -139,7 +139,7 @@ public class PrequeueGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    @GameTest(template = ARENA, timeoutTicks = 40)
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = "prequeue")
     public static void prequeue_cancelling_a_prequeued_item_refunds_it(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         String owner = "gametest_prequeue_c_" + Long.toHexString(helper.absolutePos(BlockPos.ZERO).asLong());
