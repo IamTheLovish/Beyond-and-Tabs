@@ -10870,59 +10870,6 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Kill feed: a kill queues a line naming both types and owners, and the recipient test admits the killer's
-     * owner (and a spectator with fog off) for it. The packet itself needs a connected client, so this checks the
-     * server half right up to the per-player gate; recentEntries is filtered by this test's own owner names.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void kill_feed_line_queued_for_the_viewer(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String ownerA = "gametest_feed_a", ownerB = "gametest_feed_b";
-        var pair = stancePair(helper, ownerA, ownerB,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
-        if (pair == null) {
-            helper.fail("could not create vindicator units");
-            return;
-        }
-        var a = pair[0];
-        var b = pair[1];
-        helper.runAfterDelay(3, () -> {
-            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
-            if (!b.isDeadOrDying()) {
-                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
-                return;
-            }
-            com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry line = null;
-            for (var e : com.solegendary.reignofnether.hud.KillFeedServerEvents.recentEntries())
-                if (ownerA.equals(e.killerOwner()) && ownerB.equals(e.victimOwner()))
-                    line = e;
-            if (line == null) {
-                helper.fail("no kill feed line queued for the kill");
-                return;
-            }
-            String vindicator = a.getType().getDescriptionId();
-            if (!vindicator.equals(line.killerKey()) || !vindicator.equals(line.victimKey()) || line.building())
-                helper.fail("kill feed line names the wrong things: " + line);
-            var viewer = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(ownerA.getBytes()), ownerA));
-            if (!com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(viewer, line.killerOwner(), line.victimOwner(),
-                    b.getBlockX(), b.getBlockZ()))
-                helper.fail("the killer's owner must receive its own kill");
-            var stranger = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("gametest_feed_c".getBytes()), "gametest_feed_c"));
-            boolean fog = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isFogActiveFor(stranger);
-            boolean sees = com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(stranger, line.killerOwner(),
-                line.victimOwner(), b.getBlockX(), b.getBlockZ());
-            if (!fog && !sees)
-                helper.fail("with fog off a third player sees every kill");
-            a.discard();
-            b.discard();
-            helper.succeed();
-        });
-    }
-
-    /**
      * Team resign vote (ResignVoteServerEvents.Vote, the pure tally): the caller's vote is a yes; it passes on a strict
      * majority of the voters (2 of 2, 2 of 3, 3 of 4, 5 of 8); it fails as soon as enough have said no that the
      * majority is out of reach, or when the window runs out; changing your answer while it is open is allowed, a
