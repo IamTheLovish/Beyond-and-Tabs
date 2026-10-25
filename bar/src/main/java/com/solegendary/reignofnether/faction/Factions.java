@@ -321,6 +321,7 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.DAWN_PALADIN_UNIT.get());
 		registerEntity(MONSTERS, EntityRegistrar.GRAVECALLER_UNIT.get());
 		registerEntity(PIGLINS, EntityRegistrar.HORDE_WARCHIEF_UNIT.get());
+		registerEntity(PIGLINS, EntityRegistrar.ASH_SHAMAN_UNIT.get());
 		registerEntity(VERDANT_COURT, EntityRegistrar.THORNHEART_DRUID_UNIT.get());
 		registerEntity(TIDEWROUGHT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get());
 		registerEntity(STORMCALLERS, EntityRegistrar.STORM_WITCH_UNIT.get());

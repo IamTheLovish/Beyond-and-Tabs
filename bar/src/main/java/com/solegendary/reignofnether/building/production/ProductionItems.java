@@ -228,6 +228,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.hero.HeroReviveProd GRAVECALLER_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravecaller_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.GRAVECALLER, EntityRegistrar.GRAVECALLER_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroProd HORDE_WARCHIEF = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.HORDE_WARCHIEF, EntityRegistrar.HORDE_WARCHIEF_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroReviveProd HORDE_WARCHIEF_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.HORDE_WARCHIEF, EntityRegistrar.HORDE_WARCHIEF_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroProd ASH_SHAMAN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ash_shaman"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.ASH_SHAMAN, EntityRegistrar.ASH_SHAMAN_UNIT));
+    public static final com.solegendary.reignofnether.hero.HeroReviveProd ASH_SHAMAN_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ash_shaman_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.ASH_SHAMAN, EntityRegistrar.ASH_SHAMAN_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroProd THORNHEART_DRUID = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornheart_druid"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.THORNHEART_DRUID, EntityRegistrar.THORNHEART_DRUID_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroReviveProd THORNHEART_DRUID_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornheart_druid_revive"), new com.solegendary.reignofnether.hero.HeroReviveProd(com.solegendary.reignofnether.hero.HeroKits.THORNHEART_DRUID, EntityRegistrar.THORNHEART_DRUID_UNIT));
     public static final com.solegendary.reignofnether.hero.HeroProd CORSAIR_CAPTAIN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "corsair_captain"), new com.solegendary.reignofnether.hero.HeroProd(com.solegendary.reignofnether.hero.HeroKits.CORSAIR_CAPTAIN, EntityRegistrar.CORSAIR_CAPTAIN_UNIT));
@@ -391,6 +393,8 @@ public class ProductionItems {
         GRAVECALLER_REVIVE,
         HORDE_WARCHIEF,
         HORDE_WARCHIEF_REVIVE,
+        ASH_SHAMAN,
+        ASH_SHAMAN_REVIVE,
         THORNHEART_DRUID,
         THORNHEART_DRUID_REVIVE,
         CORSAIR_CAPTAIN,
