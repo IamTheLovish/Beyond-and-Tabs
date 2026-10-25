@@ -1012,6 +1012,7 @@
   "hud.reignofnether.resign_vote_answered": "Resign vote (%2$s/%3$s) - you have voted  %4$ss",
   "hud.reignofnether.resign_vote_passed": "Team resigned",
   "hud.reignofnether.resign_vote_failed": "Resign vote failed",
+  "hud.reignofnether.tooltip_hotkey": "Hotkey: %s",
   "hud.reignofnether.player_panel.metal": "Metal %s / %s  (+%s/s)",
   "hud.reignofnether.player_panel.energy": "Energy %s / %s  (+%s/s)",
   "fogofwar.reignofnether.warning": "[WARNING]",
