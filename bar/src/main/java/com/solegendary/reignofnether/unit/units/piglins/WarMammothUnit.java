@@ -204,8 +204,7 @@ public class WarMammothUnit extends RavagerUnit {
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED)
                 && getOwnerName() != null && !getOwnerName().isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
-            com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToAllPlayers(
-                "server.reignofnether.t3_arrived", true, getOwnerName(),
+            com.solegendary.reignofnether.unit.T3ServerEvents.announceFielded(getOwnerName(),
                 net.minecraft.network.chat.Component.translatable("entity.reignofnether.war_mammoth_unit"));
         }
         if (trampleWindup > 0 || trampleSteps > 0)

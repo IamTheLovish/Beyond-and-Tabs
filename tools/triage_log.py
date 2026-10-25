@@ -10,7 +10,7 @@ every mod ERROR with the first frames of its stack (deduplicated with a count), 
 """
 import re
 import sys
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 
 NOISE = re.compile(r"blockstate|SpriteLoader|Missing pack_format|JsonSyntax|Unknown item id|Error loading class|"
                    r"uses unexpected schema|VersionChecker|Found non-pack entry|does not exist, cannot add it|"

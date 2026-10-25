@@ -662,6 +662,8 @@ public class MultiplayerLobby {
                     continue;   // left during the countdown
                 // keep the base's chunks loaded until the player's camera gets there
                 UnitChunkLoader.holdArea(level, BlockPos.containing(pos));
+                // a dedicated server keeps each player's saved game mode: the RTS camera needs creative
+                PlayerServerEvents.ensureCommanderGameMode(sp);
                 PlayerServerEvents.startRTS(sp.getId(), pos, faction, colours.get(s));
                 if (PlayerServerEvents.isRTSPlayer(sp.getName().getString())) {
                     name = sp.getName().getString();

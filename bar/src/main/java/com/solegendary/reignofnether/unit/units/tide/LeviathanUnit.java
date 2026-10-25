@@ -384,8 +384,7 @@ public class LeviathanUnit extends EntityLobster implements Unit, AttackerUnit, 
         String owner = getOwnerName();
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED) && owner != null && !owner.isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
-            com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToAllPlayers(
-                "server.reignofnether.t3_arrived", true, owner,
+            com.solegendary.reignofnether.unit.T3ServerEvents.announceFielded(owner,
                 net.minecraft.network.chat.Component.translatable("entity.reignofnether.leviathan_unit"));
         }
         if (diveTicks > 0) {

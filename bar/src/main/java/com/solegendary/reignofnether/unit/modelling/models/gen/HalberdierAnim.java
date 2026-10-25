@@ -8,6 +8,8 @@ public final class HalberdierAnim {
     private HalberdierAnim() {
     }
 
+    /** The data's bones, the order of every _ROT / _MOVE table. */
+    public static final String[] BONES = {"body", "chest", "halberd", "right_arm", "right_fore", "left_arm", "left_fore", "head", "tassel", "left_thigh", "left_shin", "left_foot", "right_thigh", "right_shin", "right_foot", "tabard_front", "tabard_back", "plume"};
     public static final float[] READY_BODY = {-4, 16, 0};
     public static final float[] READY_BODY_MOVE = {0, -0.6f, 0};
     public static final float[] READY_CHEST = {-3, 20, 0};
@@ -52,6 +54,8 @@ public final class HalberdierAnim {
     public static final float[][] IDLE_TABF = {{0, 0, 0}, {0.5f, 0, 0}, {1, 0, 0}, {0.5f, 0, 0}, {-0.5f, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     public static final float[][] IDLE_TABB = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0.5f, 0, 0}, {0.5f, 0, 0}, {0, 0, 0}};
     public static final float[][] IDLE_PLUME = {{0, 0, 0}, {0.5f, 0, 0}, {1, 0, 0}, {0, 0, 0}, {-1, 0, 0}, {-0.5f, 0, 0}, {0, 0, 0}};
+    public static final float[][][] IDLE_ROT = {IDLE_BODY, IDLE_CHEST, IDLE_POLE, IDLE_RARM, IDLE_RFORE, IDLE_LARM, IDLE_LFORE, IDLE_HEAD, IDLE_TASSEL, IDLE_LTHIGH, IDLE_LSHIN, IDLE_LFOOT, IDLE_RTHIGH, IDLE_RSHIN, IDLE_RFOOT, IDLE_TABF, IDLE_TABB, IDLE_PLUME};
+    public static final float[][][] IDLE_MOVE = {IDLE_BODY_MOVE, null, IDLE_POLE_MOVE, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null};
 
     public static final int WALK_TICKS = 24;
     public static final boolean WALK_LOOP = true;
@@ -77,6 +81,8 @@ public final class HalberdierAnim {
     public static final float[][] WALK_TABF = {{10.886760120394772f, 0, 0}, {11.99802615127361f, 0, 0}, {10.69827834144456f, 0, 0}, {7.335783066915438f, 0, 0}, {3.1884817789502105f, 0, 0}, {7.66224308435817f, 0, 0}, {10.88676012039477f, 0, 0}, {11.99802615127361f, 0, 0}, {10.698278341444562f, 0, 0}, {7.335783066915438f, 0, 0}, {3.1884817789502153f, 0, 0}, {7.6622430843581695f, 0, 0}, {10.886760120394772f, 0, 0}};
     public static final float[][] WALK_TABB = {{-9.010453440350908f, 0, 0}, {-9.998245467798764f, 0, 0}, {-8.842914081284054f, 0, 0}, {-5.854029392813723f, 0, 0}, {-2.1675393590668537f, 0, 0}, {-6.1442160749850405f, 0, 0}, {-9.010453440350908f, 0, 0}, {-9.998245467798764f, 0, 0}, {-8.842914081284054f, 0, 0}, {-5.854029392813722f, 0, 0}, {-2.167539359066858f, 0, 0}, {-6.14421607498504f, 0, 0}, {-9.010453440350908f, 0, 0}};
     public static final float[][] WALK_PLUME = {{11, 0, 0}, {9.5f, 0, 0}, {6.500000000000001f, 0, 0}, {5, 0, 0}, {6.499999999999998f, 0, 0}, {9.5f, 0, 0}, {11, 0, 0}, {9.5f, 0, 0}, {6.500000000000002f, 0, 0}, {5, 0, 0}, {6.5f, 0, 0}, {9.499999999999996f, 0, 0}, {11, 0, 0}};
+    public static final float[][][] WALK_ROT = {WALK_BODY, WALK_CHEST, WALK_POLE, WALK_RARM, WALK_RFORE, WALK_LARM, WALK_LFORE, WALK_HEAD, WALK_TASSEL, WALK_LTHIGH, WALK_LSHIN, WALK_LFOOT, WALK_RTHIGH, WALK_RSHIN, WALK_RFOOT, WALK_TABF, WALK_TABB, WALK_PLUME};
+    public static final float[][][] WALK_MOVE = {WALK_BODY_MOVE, null, WALK_POLE_MOVE, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null};
 
     public static final int THRUST_TICKS = 18;
     public static final boolean THRUST_LOOP = false;
@@ -102,4 +108,6 @@ public final class HalberdierAnim {
     public static final float[][] THRUST_TABF = {{0, 0, 0}, {2, 0, 0}, {5, 0, 0}, {8, 0, 0}, {10, 0, 0}, {6, 0, 0}, {2, 0, 0}, {-2, 0, 0}, {-6, 0, 0}, {-2, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     public static final float[][] THRUST_TABB = {{0, 0, 0}, {2, 0, 0}, {-4, 0, 0}, {-10, 0, 0}, {-14, 0, 0}, {-12, 0, 0}, {-8, 0, 0}, {0, 0, 0}, {24, 0, 0}, {8, 0, 0}, {-2, 0, 0}, {-1, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     public static final float[][] THRUST_PLUME = {{0, 0, 0}, {-2, 0, 0}, {3, 0, 0}, {7, 0, 0}, {11, 0, 0}, {12, 0, 0}, {4, 0, 0}, {-8, 0, 0}, {-6, 0, 0}, {1, 0, 0}, {0.8f, 0, 0}, {0.4f, 0, 0}, {0.2f, 0, 0}, {0, 0, 0}};
+    public static final float[][][] THRUST_ROT = {THRUST_BODY, THRUST_CHEST, THRUST_POLE, THRUST_RARM, THRUST_RFORE, THRUST_LARM, THRUST_LFORE, THRUST_HEAD, THRUST_TASSEL, THRUST_LTHIGH, THRUST_LSHIN, THRUST_LFOOT, THRUST_RTHIGH, THRUST_RSHIN, THRUST_RFOOT, THRUST_TABF, THRUST_TABB, THRUST_PLUME};
+    public static final float[][][] THRUST_MOVE = {THRUST_BODY_MOVE, null, THRUST_POLE_MOVE, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null};
 }

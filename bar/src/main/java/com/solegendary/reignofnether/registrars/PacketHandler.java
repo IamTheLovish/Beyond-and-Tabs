@@ -416,6 +416,13 @@ public final class PacketHandler {
                 .consumerMainThread(FogBuildingClientboundPacket::handle)
                 .add();
 
+        // a blueprint's ghost (building/Blueprints): owner, allies and spectators only
+        INSTANCE.messageBuilder(BlueprintClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(BlueprintClientboundPacket::encode)
+                .decoder(BlueprintClientboundPacket::new)
+                .consumerMainThread(BlueprintClientboundPacket::handle)
+                .add();
+
         INSTANCE.messageBuilder(CustomButtonActionServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(CustomButtonActionServerboundPacket::encode)
                 .decoder(CustomButtonActionServerboundPacket::decode)
@@ -600,6 +607,13 @@ public final class PacketHandler {
                 .encoder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.resources.EconomySliderServerboundPacket::handle)
+                .add();
+        // a world that remembers (worldmemory/): the ground memory field's deltas and snapshots, per player, per
+        // sync pass, only for the chunk columns the player's fog shows (GroundMemorySync rules)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::handle)
                 .add();
     }
 }

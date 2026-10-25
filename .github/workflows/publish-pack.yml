@@ -207,8 +207,17 @@ jobs:
             test -f "resourcepacks/BeyondAndTabs-Realistic.zip"
             test -f options.txt
             n=$(ls mods | wc -l); echo "$variant: $n mods"; ls mods
-            if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra'; then
-              echo "::error::mac pack contains Embeddium, ImmediatelyFast or Embeddium Extra"; exit 1
+            if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra|oculus'; then
+              echo "::error::mac pack contains Embeddium, ImmediatelyFast, Embeddium Extra or Oculus"; exit 1
+            fi
+            # the shader look (build_packwiz.SHADER_*): Windows gets Oculus + Complementary in labPBR mode, Mac neither
+            if [ "$variant" = windows ]; then
+              ls mods | grep -qi '^oculus-' || { echo "::error::windows pack has no Oculus"; exit 1; }
+              ls shaderpacks/ComplementaryReimagined_*.zip >/dev/null || { echo "::error::windows pack has no shader pack"; exit 1; }
+              grep -q '^RP_MODE=3' shaderpacks/ComplementaryReimagined_*.zip.txt
+              grep -q '^enableShaders=true' config/oculus.properties
+            elif [ -d shaderpacks ] && ls shaderpacks | grep -q .; then
+              echo "::error::mac pack has a shader pack"; exit 1
             fi
             cd ../..
           done

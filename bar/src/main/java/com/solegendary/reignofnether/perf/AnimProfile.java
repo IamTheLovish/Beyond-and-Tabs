@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.modelling.renderers.GeneratedBodies;
+import com.solegendary.reignofnether.unit.modelling.renderers.UnitLod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
@@ -72,8 +73,11 @@ public final class AnimProfile {
         if (!(entity instanceof Unit))
             return;
         if (--depth == 0 && animSeen) {
-            frameRenderNs += System.nanoTime() - renderStart;
+            long took = System.nanoTime() - renderStart;
+            frameRenderNs += took;
             frameUnits++;
+            // the [FrameParts] line counts the unit bodies too: the view and the shader pack's shadow map apart
+            FrameParts.add(UnitLod.inShadowPass() ? FrameParts.UNIT_SHADOW : FrameParts.UNIT_BODIES, took);
         }
         if (depth < 0)
             depth = 0;

@@ -365,7 +365,6 @@ def hill_h1(x, z):
 
 def hill_h4(x, z):
     h = hill_h1(x, z)
-    d = dist(x, z, *HC)
     # the west spur (the west wing's rock) and the east spur (the east turret's crag)
     dw = dist(x, z, -11, -6)
     if dw <= 5.5:

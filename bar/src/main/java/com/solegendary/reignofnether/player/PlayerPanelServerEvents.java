@@ -249,7 +249,7 @@ public class PlayerPanelServerEvents {
         float metal = 0, energy = 0, mStored = 0, mStorage = 0, eStored = 0, eStorage = 0;
         if (alive) {
             EconomyServerEvents.PlayerEconomy eco = EconomyServerEvents.getEconomy(p.name);
-            metal = eco.metalIncome + eco.metalConverted;   // same "income" the economy bar shows
+            metal = eco.effectiveMetalIncome() + eco.metalConverted;   // same "income" the economy bar shows
             energy = eco.energyIncome;
             mStorage = eco.metalStorage;
             eStorage = eco.energyStorage;

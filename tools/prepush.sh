@@ -17,6 +17,7 @@ run "preflight (design sheets)"   python3 tools/preflight.py --allow-unverified
 run "generated code matches"      bash -c 'python3 tools/gen_java.py && git diff --exit-code engine/src/main/java/dev/beyondtabs/engine/gen'
 run "check_java"                  bash -c "python3 tools/check_java.py \$(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')"
 run "check_guards"                python3 tools/check_guards.py
+run "server client imports"       python3 tools/check_server_client_imports.py
 run "balance_audit"               python3 tools/balance_audit.py
 run "check_building_icons"        python3 tools/check_building_icons.py
 run "check_sail_hubs"             python3 tools/check_sail_hubs.py
@@ -24,6 +25,9 @@ run "check_parts"                 python3 tools/check_parts.py
 run "hud_layout"                  python3 tools/hud_layout.py
 run "animation lab data"          bash -c 'for f in design/anims/*.json; do [ -e "$f" ] || continue; python3 tools/anim_lab.py "$f" --check --motion || exit 1; done'
 run "dependency pins"             python3 tools/check_dep_pins.py
+run "gametest shard lists"        python3 tools/check_shards.py
+if command -v ruff >/dev/null; then run "ruff (tools)"             ruff check tools
+else echo "skip  ruff (not installed: pip install ruff==0.16.9)"; fi
 if [ $quick = 0 ] && command -v javac >/dev/null; then
   run "engine compiles"           bash -c 'd=$(mktemp -d) && javac --release 17 -d "$d" $(find engine/src -name "*.java")'
 fi

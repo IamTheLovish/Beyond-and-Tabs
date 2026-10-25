@@ -137,14 +137,22 @@ production item and distinct hotkeys, so the grid never empties once research is
 lovish's clip 5: "I can't use formation when using attack command, which I don't even see an attack command" - the
 orders row read X (sword), B, G, N, Y, P and a cut-off "Spc", seven tiles in a row the portrait starts 6.5 tiles in.
 The card is now laid out from `CommandCard` (side-neutral, shared with the hotkey GameTest) in rows of 6 from the
-bottom: **Attack (A)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
+bottom: **Attack (X)**, **Move (M)**, **Stop (S)**, **Hold (H)** for fighters or **Build (B)** for workers,
 **Patrol (P)**, **Guard (G)**; above them the fire state (click), the gather target (click; it lost G to Guard) and
 **Garrison (N)**. Ability and build-menu rows start above the order rows.
 
-- **A and S are also WASD panning.** `KeyTaps` times every key: a press shorter than 180 ms fires the card's order
-  on that key, anything longer is a pan and fires nothing; the camera waits out the tap window before an order key
-  pans (`OrthoviewClientEvents.panKeyDown`), so tapping A doesn't nudge the view. X still works for Attack
-  (`Keybinding.withAlias`, never drawn); the badge shows the primary key only.
+- **S is also WASD panning** (and so is any order a player puts on W/A/S/D). `KeyTaps` times the key in real
+  wall-clock time: a press shorter than 180 ms fires the card's order on that key, a press the camera panned for fires
+  nothing, and the camera waits out the tap window before an order key pans (`OrthoviewClientEvents.panKeyDown`), so
+  tapping S doesn't nudge the view. Key events reach the game once per frame, so in lag a tap is only seen when its
+  frame ends: the verdict forgives the frame the release landed in (up to 150 ms; `KeyTapTracker`, tested on scripted
+  frame times) and never calls a press a tap once the camera has moved for it. Oct 21 playtest: at 30-50 ms frames with
+  spikes, a 120 ms tap measured over 180 ms, the camera had not moved yet and no order fired.
+- **Attack is X** (A is pan-left), but only the DEFAULT moved in #39: Minecraft saves every key in options.txt, so
+  lovish's card kept reading "A". `KeybindMigration` moves a saved binding still on an old default to the new one once
+  (client config `keybind_layout`, toast "Controls updated"); a key the player chose is never touched. Moving a default
+  later = bump `LAYOUT_VERSION` and add the old key to `KeybindMigration.STALE`. Controls marks a card key a player put
+  on a pan key red (`KeyConflicts`); Stop on S, as shipped, is not flagged.
 - **Space** looks at the last alert (`Keybindings.lastAlert`), so Stop lost its Space default.
 - **Card keys win**: a key used by the selected card's own buttons (`HudClientEvents.cardButtons`: orders, abilities,
   build menu, production) never also fires a HUD-wide button - the minimap toggle on M, the idle-worker cycler on
@@ -254,11 +262,12 @@ prunes gone entities once a second, and matches the hovered block to the nearest
 `KillFeedServerEvents` queues a line for every unit killed by an enemy unit and every building an enemy unit brings
 down (not cancels or defeat clean-up), merges duplicates within a flush (`x3`), and every 5 ticks sends each player
 only the lines it may know about: it owns or is allied with either side, or the victim fell inside its vision
-(spectators see everything). `KillFeedClientEvents` shows up to 5 lines, newest on top, right-aligned in the alert
-column under the toasts, each name in light text - the owner's hue lightened to >= 4.5:1 contrast against the
+(spectators see everything). `KillFeedClientEvents` shows up to 5 lines, newest on top, small (0.75x, `HudLayout.FEED_SCALE`)
+and right-aligned at the side under the stats strip or table (`PlayerPanelClientEvents.feedTop`; it was in the alert column
+under the toasts, mid-screen), each name in light text - the owner's hue lightened to >= 4.5:1 contrast against the
 line's backing composited over a white world (`TextContrast`) - after a small swatch in the owner's true colour, on a
 0xC8 dark backing (lovish's dark-blue names on dark-green ground were unreadable), building kills in bold, promoted from a short queue at most
-one per 5 ticks, fading after 7 s. Names travel as translation keys.
+one per 5 ticks, fading after 4.5 s (was 7). A name too long for the 160 px column is cut with "...". Names travel as translation keys.
 
 ## LOS shading
 
@@ -315,6 +324,101 @@ pushed to main) under `assets/reignofnether/sounds/announcer/`: a sandbox sessio
 but can merge a branch. `sounds.json` already points every `announcer.*` event at `announcer/<key>`, and
 `NotificationClientEvents` falls back to the alert's chord while a file is missing, so merging the branch is the whole
 switch-on.
+
+## Slim info panel and thinner bars (Oct 22)
+
+lovish, Oct 22: "the HUD for the units is so large, same with the buildings ... make them smaller without making them
+look odd ... make the metal bar and energy bar not as thick ... units don't need their models to pop up, just a picture
+of their icon with their stats", then "a lot of things are taking up space in the interface, which makes it more
+difficult to see what's going on" (his Oct 21 playtest clip: announcements across a third of the screen, three or four
+text rows down the middle under the bar, the bottom panel's model portrait).
+
+- **Unit block** (`PortraitRendererUnit`): the unit's HUD icon - the mob head the selection strip and the buttons use -
+  in a 32 px frame in the player's colour, the stats in a 2 x 3 grid beside it (attack, attack speed, range | armour,
+  speed; a hero's level leads the grid), one 9 px health bar with the numbers on it under both, a hero's mana bar under
+  that. 100 x 43 px (a hero 53) where the model portrait + stats column + health line were 104 x 60+. The name stays above
+  it, the passive-effect icons above the name. The animated 3D head is only the fallback for an entity with no mob head
+  (a player, a mob nobody drew one for): `PortraitRendererUnit.MODEL_FALLBACK`; set it false to find them.
+- **Building block** (`PortraitRendererBuilding`): the building's icon in the same frame, the same health bar, and a
+  frame beside the icon that holds the Repeat / Steward toggles of an own finished production building (they floated one
+  row above the panel before, which forced the panel to be 94 px tall). The production queue and the multi-building grid
+  are still laid out from the old 60 px portrait (`LAYOUT_TOP`) so they stay where they were (and where #140's compact
+  tiles will shrink them).
+- **L-shaped backing** (`HudClientEvents.infoPanelHeight`): the orders column keeps its 102 px, the info part right of it
+  is only as tall as its content: block + name (+ passive icons), the unit card, the type grid with its totals line, the
+  inventory or the queue's frame. The compact unit card is as tall as its lines (26 px, +10 per ability row; was the
+  panel's 94) and 108 px wide (was 124); the hovered-unit card likewise (62 px, +10 per row; was 102).
+  `HudLayout.infoHeightSingleWorst()` / `info_height_single_worst()` is the worst case the checker draws (a hero with
+  passive icons: 79 px).
+- **Economy bar**: the strip is 28 px tall (was 34) and each bar 5 px thick (was 7); amount row, bar and income / expense
+  row each sit a pixel closer, the slider markers' cap moved under the amount row, the OVERCHARGE plate overhangs the
+  thinner bar by a pixel each side. Colours, numbers and the income / drain alignment are unchanged. The stats strip under
+  it follows (`STATS_TOP` 38 -> 32).
+- **RTS chat feed** (`ForgeGuiMixin`): the unfocused chat is two lines at 75% (it was four at full size), drawn with a
+  pose scale and a scissor, not the `chatScale` option (setting that re-wraps every line, every frame). Typing the full
+  chat is unchanged. The announcement collapse rule (`ChatDedupe`) is unchanged.
+- **Slim tiles** (`SlimTiles`, `HudLayout.SLIM_*`): the control groups, the global production queue and the helper column
+  under the help button (chat, army, idle labs, attack warning) are 18 px frames (`Button` iconSize 10 + 8, the icon 12 px
+  inside) instead of 22, the column's rows 22 px apart instead of 30. Same frame art, hotkey badge and hover light; the
+  command panel's own tiles are untouched (#140's). Empty control groups were already hidden.
+- **One status line** (`NotificationClientEvents`, `EconomyBarRenderer.stallRowY`): only the newest toast is drawn, as one
+  12 px chip with a "+1" for the one waiting under it (it was a 13 px line each, up to two, under the stall strip). While
+  the "Build speed N%" strip is up the toast is drawn IN its row for its few seconds and the strip steps aside (it keeps
+  its row and comes back); a resign-vote banner, or toasts folded to icons, keep the old stacking. Same toast rules
+  (priority, "x2" merge, `hud_toast_seconds`).
+- **Side feed** (`KillFeedClientEvents`): the kill ticker is 0.75x text at the right, under the stats strip (under the
+  table when it is open), out of the middle of the screen; it hides after 4.5 s. The chevron still opens the five-line
+  version. 0.75x is the smallest text the HUD draws anywhere (hotkey badges, chat feed, tab labels) and the floor for new
+  HUD text.
+- **Chat feed, placed and quicker** (`ForgeGuiMixin`): the two-line feed rests on the command panel's top edge instead of
+  7 px into the orders column, and a line fades after 6 s (vanilla 10): the feed is drawn 80 ticks "late" so each line is
+  older than it is. The announcement collapse (`ChatDedupe`: "x2" for a repeated "has fielded...") is unchanged.
+- **Audit** (`tools/hud_audit.py`, GUI scale 3 on 1080p, the sizes `tools/hud_layout.py` asserts; typical case = one unit
+  with two abilities, five control groups, the default collapsed panels):
+
+| Element | When | Before (px) | Before | After (px) | After | Saved |
+|---|---|---|---|---|---|---|
+| Economy bar (metal / pop / energy) | always | 440x35 | 6.7% | 440x29 | 5.5% | 17% |
+| Minimap (diamond backing) | always | 132x132 | 7.6% | 132x132 | 7.6% |  |
+| Control groups (5 in use) | always | 110x22 | 1.1% | 90x18 | 0.7% | 33% |
+| Stats strip (Allies / Enemies) | always | 160x11 | 0.8% | 160x11 | 0.8% |  |
+| Helper buttons: chat, army | always | 22x44 | 0.4% | 18x36 | 0.3% | 33% |
+| Production queue (3 queued) | on demand | 76x32 | 1.1% | 64x28 | 0.8% | 26% |
+| Production queue (10 queued, as in the 18-12-12 clip) | on demand | 120x54 | 2.8% | 100x46 | 2.0% | 29% |
+| Stall / waste / overflow row | on demand | 200x12 | 1.0% | 200x12 | 1.0% |  |
+| Alert column: banner + toasts | on demand | 200x82 | 7.1% | 200x45 | 3.9% | 45% |
+| Kill feed ticker (side, 0.75x) | on demand | 0x0 | 0.0% | 160x9 | 0.6% | moved |
+| Announcements (chat feed) | on demand | 320x36 | 5.0% | 240x14 | 1.5% | 71% |
+| Helper buttons: idle labs, attack, idle worker, beacon | on demand | 22x88 | 0.8% | 22x80 | 0.8% | 9% |
+| Hover card (a unit under the cursor) | on demand | 128x102 | 5.7% | 128x82 | 4.6% | 20% |
+| Controls cheat-sheet (opened with ?) | on demand | 180x96 | 7.5% | 180x96 | 7.5% |  |
+| Command panel, one unit: orders column | selection | 143x102 | 6.3% | 143x102 | 6.3% |  |
+| Command panel, one unit: info block + card | selection | 237x102 | 10.5% | 217x56 | 5.3% | 50% |
+| Command panel, multi: orders column | selection | 143x102 | 6.3% | 143x102 | 6.3% |  |
+| Command panel, multi: info block + type grid | selection | 304x102 | 13.5% | 300x75 | 9.8% | 27% |
+
+| Total HUD footprint | Before | After | Saved |
+|---|---|---|---|
+| Nothing selected (always-on elements) | 16.5% | 14.8% | 10% |
+| One unit selected | 33.3% | 26.5% | 21% |
+| Multi-selection | 36.3% | 30.9% | 15% |
+
+
+### Bigger options for lovish (not built), ranked by space saved at scale 3 on 1080p
+
+Done in this pass, off the earlier list: the slim status line (toasts + stall strip + side feed) and the 18 px tiles for
+the control groups, queue and helper column. What is left, biggest first:
+
+1. **Smaller default minimap** (2.5%, always on): the 132 x 132 backing is the biggest single element; radius 60 -> 48 gives
+   108 x 108, M still enlarges it. (A taste call: the map is how a BAR player reads the game.)
+2. **A three-step HUD key** (1.7% at rest, 2.5% while producing): full -> slim (the stats strip, control groups, helper column
+   and queue appear only when they have something to say) -> clean (today's `=` view).
+3. **Merge panels** (about 1.1% always, 1.7% with every helper showing): fold the Allies / Enemies strip into the economy
+   bar's population block (0.8%) and move the chat / army / idle-labs / attack buttons onto the minimap's frame, where the
+   idle-worker cycler already lives.
+4. **Economy bar folded by default** (1.1%): the existing chevron's one-row mode (22 px: amount / storage, net, a 2 px fill
+   line; income and expense in the tooltip), expanding itself while a stall / waste / overflow line is up.
+5. **One-line chat feed** (0.7%): the feed is two lines now; one line, newest only.
 
 ## Windmill sails
 
