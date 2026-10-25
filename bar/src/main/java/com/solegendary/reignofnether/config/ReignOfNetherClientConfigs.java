@@ -67,7 +67,6 @@ public class ReignOfNetherClientConfigs {
     // remembers whether it is collapsed, so a player who tidied the screen once keeps it tidy across restarts
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_STATS_OPEN;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_STATS_TAB;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_KILLFEED_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ALERTS_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_CHEATSHEET_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_UNITCARD_COMPACT;
@@ -183,8 +182,6 @@ public class ReignOfNetherClientConfigs {
         HUD_STATS_OPEN = BUILDER.define("hud_stats_open", false);
         BUILDER.comment("HUD: the stats table's tab, 0 players, 1 economy, 2 army, 3 production");
         HUD_STATS_TAB = BUILDER.defineInRange("hud_stats_tab", 0, 0, 3);
-        BUILDER.comment("HUD: kill feed collapsed to a one-line ticker");
-        HUD_KILLFEED_COLLAPSED = BUILDER.define("hud_killfeed_collapsed", true);
         BUILDER.comment("HUD: alert toasts collapsed to icons with count badges");
         HUD_ALERTS_COLLAPSED = BUILDER.define("hud_alerts_collapsed", false);
         BUILDER.comment("HUD: the controls cheat-sheet collapsed to a ? button");
