@@ -79,6 +79,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -1345,6 +1346,8 @@ public class HudClientEvents {
                 List<Button> unitAbilities = abilityButtons.stream()
                         .filter(b -> !(b instanceof AbilityButton ab) || !(ab.ability instanceof CallToArmsUnit))
                         .toList();
+                // BAR mixed builders: several builder types selected = their build menus together (BuilderCardUnion)
+                unitAbilities = withOtherBuildersMenus(unitAbilities, selUnits);
 
                 int rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
                 rowsUp = Math.max(0, rowsUp);
@@ -2264,6 +2267,94 @@ public class HudClientEvents {
         // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
         if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
+    }
+
+    /**
+     * BAR mixed builder selection (tester: "multiple builders including different types ... it only sends one"): with
+     * two or more owned builder types selected, the card's build buttons are every selected builder type's, so a
+     * building from another type's menu is placed by the whole selection instead of sub-selecting that type first.
+     * hudSelectedEntity's buttons come first and keep their keys; the other types' new buildings follow in selection
+     * order, deduplicated by building, and keep their key only if the card does not use it yet (BuilderCardUnion).
+     * Abilities stay hudSelectedEntity's. A placement button's action is BuildingClientEvents.setBuildingToPlace,
+     * which does not depend on the button's owner, and placing sends every selected builder.
+     */
+    private static List<Button> withOtherBuildersMenus(List<Button> primary, List<LivingEntity> selUnits) {
+        if (hudSelectedEntity == null)
+            return primary;
+        Set<EntityType<?>> builderTypes = new LinkedHashSet<>();
+        List<LivingEntity> firstOfType = new ArrayList<>();
+        for (LivingEntity le : selUnits) {
+            if (!(le instanceof WorkerUnit) || !(le instanceof Unit))
+                continue;
+            if (getPlayerToEntityRelationship(le) != Relationship.OWNED && !AlliancesClient.canControlAlly(le))
+                continue;
+            if (builderTypes.add(le.getType()))
+                firstOfType.add(le);
+        }
+        if (builderTypes.size() < 2)
+            return primary; // one builder type (or none): the card is unchanged
+        List<List<Button>> others = new ArrayList<>();
+        for (LivingEntity le : firstOfType) {
+            if (le.getType() == hudSelectedEntity.getType())
+                continue;
+            List<Button> menu = new ArrayList<>();
+            for (Button b : ((Unit) le).getAbilityButtons())
+                if (b instanceof BuildingPlaceButton)
+                    menu.add(b);
+            others.add(menu);
+        }
+        // keys the card already shows: the order buttons laid out above (primary's keys are counted by the helper)
+        List<Integer> reserved = new ArrayList<>();
+        for (Button b : cardButtons) {
+            if (b.hotkey == null)
+                continue;
+            reserved.add(b.hotkey.getKey());
+            if (b.hotkey.getAliasKey() > 0)
+                reserved.add(b.hotkey.getAliasKey());
+        }
+        for (Button b : primary)
+            if (b.hotkey != null && b.hotkey.getAliasKey() > 0)
+                reserved.add(b.hotkey.getAliasKey());
+        List<BuilderCardUnion.Added<Button>> added = BuilderCardUnion.added(primary, others,
+                b -> b instanceof BuildingPlaceButton ? b.name : null,
+                b -> b.hotkey == null ? BuilderCardUnion.NO_KEY : b.hotkey.getKey(),
+                reserved);
+        if (added.isEmpty())
+            return primary;
+        List<Button> out = new ArrayList<>(primary);
+        for (BuilderCardUnion.Added<Button> a : added)
+            out.add(a.keepsKey() || a.item().hotkey == null ? a.item() : keylessCopy(a.item()));
+        return out;
+    }
+
+    // the faction / engineer build buttons are shared and cached, so a clashing key is dropped on a copy, made once
+    private static final Map<Button, Button> KEYLESS_COPIES = new IdentityHashMap<>();
+
+    private static Button keylessCopy(Button b) {
+        return KEYLESS_COPIES.computeIfAbsent(b, o -> {
+            Button c = new Button(o.name, o.iconSize, o.iconResource, o.frameResource, null, o.isSelected, o.isHidden,
+                    o.isEnabled, o.onLeftClick, o.onRightClick, o.tooltipLines);
+            c.tooltipOffsetY = o.tooltipOffsetY;
+            c.imageSize = o.imageSize;
+            c.innerIconSizeModifier = o.innerIconSizeModifier;
+            c.playerNameForHeadIcon = o.playerNameForHeadIcon;
+            c.bgColour = o.bgColour;
+            c.bottomLeftText = o.bottomLeftText;
+            c.bottomLeftTextColor = o.bottomLeftTextColor;
+            c.bgIconResource = o.bgIconResource;
+            c.iconItem = o.iconItem;
+            c.iconItemScale = o.iconItemScale;
+            c.onLeftClickRelease = o.onLeftClickRelease;
+            c.lightUpOnHover = o.lightUpOnHover;
+            c.isFlashing = o.isFlashing;
+            c.isActive = o.isActive;
+            c.greyPercent = o.greyPercent;
+            c.getGreyPercent = o.getGreyPercent;
+            c.greyWhenDisabled = o.greyWhenDisabled;
+            c.greyInverted = o.greyInverted;
+            c.showSelectedFrameWhenDisabled = o.showSelectedFrameWhenDisabled;
+            return c;
+        });
     }
 
     /** True when a button on the selected unit's / building's card has this key (primary or alias). */
