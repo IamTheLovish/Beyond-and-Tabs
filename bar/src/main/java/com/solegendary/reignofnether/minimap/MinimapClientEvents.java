@@ -87,6 +87,9 @@ public class MinimapClientEvents {
 
     private static boolean largeMap = false;
     public static boolean isLargeMap() { return largeMap; }
+    private static boolean expandedMap = false;
+    public static boolean isExpandedMap() { return expandedMap; }
+    public static int getSizeLevel() { return expandedMap ? MinimapSize.EXPANDED : largeMap ? MinimapSize.LARGE : MinimapSize.SMALL; }
     private static boolean shouldToggleSize = false;
     private static boolean markerMode = false;
 
@@ -367,13 +370,91 @@ public class MinimapClientEvents {
 
     private static boolean sizeRestored = false;
 
+    private static void saveSizeConfig() {
+        if (!sizeRestored)
+            return;
+        try {
+            ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.set(largeMap);
+            ReignOfNetherClientConfigs.HUD_MINIMAP_SIZE.set(getSizeLevel());
+        } catch (IllegalStateException ignored) { }
+    }
+
+    /** Moves to a size level: 0 small, 1 large, 2 expanded. The corner map stays at the large size when expanded. */
+    private static void setSizeLevel(int level) {
+        boolean wantLarge = level >= MinimapSize.LARGE;
+        if (largeMap != wantLarge)
+            toggleMapSize();   // also clears expandedMap when going small
+        expandedMap = level == MinimapSize.EXPANDED;
+        saveSizeConfig();
+    }
+
+    private static boolean shouldToggleExpand = false;
+
+    private static int[] expandedRect() {
+        return MinimapSize.expandedRect(MC.getWindow().getGuiScaledWidth(), MC.getWindow().getGuiScaledHeight());
+    }
+
+    public static Button getExpandButton() {
+        return new Button("Expand map",
+                14,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/compass.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png"),
+                null,
+                () -> expandedMap,
+                () -> !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK),
+                () -> true,
+                () -> shouldToggleExpand = true,
+                null,
+                List.of(FormattedCharSequence.forward(I18n.get(expandedMap
+                        ? "hud.map.reignofnether.expand_close" : "hud.map.reignofnether.expand"), Style.EMPTY))
+        );
+    }
+
+    private static void renderExpandedMap(GuiGraphics g) {
+        if (!expandedMap || !isMapReady())
+            return;
+        int[] r = expandedRect();
+        g.fill(r[0] - BG_OFFSET, r[1] - BG_OFFSET, r[0] + r[2] + BG_OFFSET, r[1] + r[2] + BG_OFFSET, 0xE0000000);
+        renderMapInto(g, r[0], r[1], r[2], r[2]);
+        // the player's position
+        if (MC.player != null) {
+            Vector2f p = worldToRect(MC.player.blockPosition().getX(), MC.player.blockPosition().getZ(),
+                r[0], r[1], r[2], r[2]);
+            g.fill((int) p.x - 2, (int) p.y - 2, (int) p.x + 3, (int) p.y + 3, 0xFFFFFFFF);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onExpandedKey(ScreenEvent.KeyPressed.Pre evt) {
+        if (expandedMap && evt.getKeyCode() == GLFW.GLFW_KEY_ESCAPE && MC.screen instanceof TopdownGui) {
+            setSizeLevel(MinimapSize.LARGE);
+            evt.setCanceled(true);
+        }
+    }
+
+    // a click inside the expanded overlay moves the camera there, like the corner map
+    @SubscribeEvent
+    public static void onExpandedClick(ScreenEvent.MouseButtonPressed.Pre evt) {
+        if (!expandedMap || !(MC.screen instanceof TopdownGui) || MC.player == null
+                || evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1 || HudClientEvents.isMouseOverAnyButton())
+            return;
+        int[] r = expandedRect();
+        if (!MinimapSize.inside(r, evt.getMouseX(), evt.getMouseY()))
+            return;
+        BlockPos moveTo = rectToWorld((int) evt.getMouseX(), (int) evt.getMouseY(), r[0], r[1], r[2], r[2]);
+        if (!OrthoviewClientEvents.isCameraLocked()) {
+            TutorialClientEvents.clickedMinimap = true;
+            OrthoviewClientEvents.cancelGlide();
+            PlayerServerboundPacket.teleportPlayer((double) moveTo.getX(), MC.player.getY(), (double) moveTo.getZ());
+        }
+        evt.setCanceled(true);
+    }
+
     private static void toggleMapSize() {
         largeMap = !largeMap;
-        if (sizeRestored) {
-            try {
-                ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.set(largeMap);
-            } catch (IllegalStateException ignored) { }
-        }
+        if (!largeMap)
+            expandedMap = false;   // the overlay only exists on top of the large map
+        saveSizeConfig();
         if (largeMap) {
             worldRadius = 240;
             mapGuiRadius = 120;
@@ -1581,19 +1662,26 @@ public class MinimapClientEvents {
         if (!sizeRestored) {
             sizeRestored = true;
             try {
-                if (ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.get() != largeMap)
-                    shouldToggleSize = true;
+                int saved = MinimapSize.restoreLevel(MinimapSize.fromConfig(
+                    ReignOfNetherClientConfigs.HUD_MINIMAP_SIZE.get(), ReignOfNetherClientConfigs.HUD_MINIMAP_LARGE.get()));
+                if ((saved == MinimapSize.LARGE) != largeMap)
+                    toggleMapSize();   // same spot as the user toggle below, so not mid-update
             } catch (IllegalStateException ignored) { }
         }
         // toggle here to ensure it doesn't happen in the middle of the updates
         if (shouldToggleSize) {
             shouldToggleSize = false;
-            toggleMapSize();
+            setSizeLevel(MinimapSize.next(getSizeLevel()));   // M / the size button: small -> large -> expanded
+        }
+        if (shouldToggleExpand) {
+            shouldToggleExpand = false;
+            setSizeLevel(expandedMap ? MinimapSize.LARGE : MinimapSize.EXPANDED);
         }
 
         int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MINIMAP);
         try {
             renderMap(evt.getGuiGraphics());
+            renderExpandedMap(evt.getGuiGraphics());
             MapDrawClientEvents.renderMinimapLabels(evt.getGuiGraphics());
         } finally {
             com.solegendary.reignofnether.perf.FrameParts.end(sys);

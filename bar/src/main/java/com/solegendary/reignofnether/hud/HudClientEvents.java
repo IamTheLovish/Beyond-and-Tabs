@@ -1643,6 +1643,7 @@ public class HudClientEvents {
         // -------------------------
         Button attackWarningButton = AttackWarningClientEvents.getWarningButton();
         Button toggleMapSizeButton = MinimapClientEvents.getToggleSizeButton();
+        Button expandMapButton = MinimapClientEvents.getExpandButton();
         Button markerModeButton = MinimapClientEvents.getMarkerModeButton();
         Button camSensitivityButton = MinimapClientEvents.getCamSensitivityButton();
         Button mapLockButton = MinimapClientEvents.getMapLockButton();
@@ -1699,6 +1700,11 @@ public class HudClientEvents {
             if (extras && !rotateCW.isHidden.get()) {
                 rotateCW.render(evt.getGuiGraphics(), c4x, r0y, mouseX, mouseY);
                 renderedButtons.add(rotateCW);
+            }
+
+            if (!expandMapButton.isHidden.get()) {
+                expandMapButton.render(evt.getGuiGraphics(), c3x, r2y, mouseX, mouseY);
+                renderedButtons.add(expandMapButton);
             }
 
             // top row: view toggles
@@ -1803,6 +1809,13 @@ public class HudClientEvents {
                         screenHeight - (leavesHidingButton.iconSize * 2),
                         mouseX, mouseY);
                 renderedButtons.add(leavesHidingButton);
+            }
+            if (!expandMapButton.isHidden.get()) {
+                expandMapButton.render(evt.getGuiGraphics(),
+                        screenWidth - (expandMapButton.iconSize * 6),
+                        screenHeight - (expandMapButton.iconSize * 6),
+                        mouseX, mouseY);
+                renderedButtons.add(expandMapButton);
             }
             if (extras && !toggleTeamColorsButton.isHidden.get()) {
                 toggleTeamColorsButton.render(evt.getGuiGraphics(),
