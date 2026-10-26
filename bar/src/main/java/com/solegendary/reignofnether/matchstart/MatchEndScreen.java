@@ -194,6 +194,15 @@ public class MatchEndScreen extends Screen {
                 .bounds(panelL + panelW - 26 - 62 - 66, panelT + 5, 62, 20).build());
         spectate.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                 Component.translatable("matchend.reignofnether.spectate.tooltip")));
+        // "Back to lobby" (host only; the tester's Oct 26 ask): reset the battlefield on this server and reopen the
+        // lobby with the same lineup and settings for a rematch (MultiplayerLobby.backToLobby)
+        if (LobbyClientEvents.isHost()) {
+            Button lobby = addRenderableWidget(Button.builder(Component.literal("Back to lobby"),
+                            b -> LobbyClientEvents.backToLobby())
+                    .bounds(panelL + panelW - 26 - 62 - 66 - 84, panelT + 5, 80, 20).build());
+            lobby.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                    "Reset the battlefield and reopen the lobby with the same players, bots and settings")));
+        }
         if (graphPage) {
             // Metal / Energy / Army tabs; the selected one is greyed out
             int tabW = 70, tabY = panelT + PAD + 18;
