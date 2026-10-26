@@ -31,8 +31,12 @@ import java.util.function.Supplier;
 public class MapStateClientboundPacket {
 
     public record BoxInfo(int team, float a0, float a1, float r0, float r1) { }
-    /** {@code faction} is the lobby's faction code (SkirmishServerboundPacket.factionForCode); Random stays Random. */
-    public record PickInfo(String name, int team, int colour, int x, int z, boolean placed, boolean bot, int faction) { }
+    /**
+     * {@code faction} is the lobby's faction code (SkirmishServerboundPacket.factionForCode); Random stays Random.
+     * {@code ready}: pressed Ready (bots always); {@code left}: logged out during the phase (out of the ready count).
+     */
+    public record PickInfo(String name, int team, int colour, int x, int z, boolean placed, boolean bot, int faction,
+                           boolean ready, boolean left) { }
 
     final int preset, cx, cz, radius;
     final boolean phase;
@@ -68,7 +72,7 @@ public class MapStateClientboundPacket {
                 boxes.add(new BoxInfo(b.team(), (float) b.a0(), (float) b.a1(), (float) b.r0(), (float) b.r1()));
             for (StartPhase.Pick p : ph.picks) {
                 int faction = p.seat instanceof MultiplayerLobby.Seat s ? s.faction : SkirmishServerboundPacket.RANDOM_CODE;
-                picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot, faction));
+                picks.add(new PickInfo(p.name, p.team, p.colourHex, p.x, p.z, p.placed, p.bot, faction, p.ready, p.left));
             }
         } else if (MatchState.live().isPreparing() && MatchState.live().setup() != null) {
             // before the phase exists: the lineup at its slots, unplaced, for the loading screen and the camera
@@ -106,7 +110,7 @@ public class MapStateClientboundPacket {
         picks = new ArrayList<>(np);
         for (int i = 0; i < np; i++)
             picks.add(new PickInfo(buf.readUtf(64), buf.readByte(), buf.readInt(), buf.readVarInt(), buf.readVarInt(),
-                buf.readBoolean(), buf.readBoolean(), buf.readByte()));
+                buf.readBoolean(), buf.readBoolean(), buf.readByte(), buf.readBoolean(), buf.readBoolean()));
         // appended last, so every older field keeps its place
         prepStage = buf.readByte();
         prepPct = buf.readByte();
@@ -137,6 +141,8 @@ public class MapStateClientboundPacket {
             buf.writeBoolean(p.placed());
             buf.writeBoolean(p.bot());
             buf.writeByte(p.faction());
+            buf.writeBoolean(p.ready());
+            buf.writeBoolean(p.left());
         }
         buf.writeByte(prepStage);
         buf.writeByte(Math.max(0, Math.min(100, prepPct)));

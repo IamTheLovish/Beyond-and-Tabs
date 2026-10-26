@@ -14996,7 +14996,8 @@ public class SkirmishGameTests {
         if (picks.get(1).x != cx + layout.slots.get(1).dx() || picks.get(1).z != cz + layout.slots.get(1).dz())
             problems.add("an unplaced human was not put on their slot");
 
-        // everyone places: the phase ends a few seconds later, long before the clock
+        // everyone places and presses Ready: the phase ends a few seconds later, long before the clock (placing
+        // alone no longer ends it - tester Joisco's Ready rule, gametest/SpawnReadyGameTests)
         List<com.solegendary.reignofnether.maps.StartPhase.Pick> picks2 = new ArrayList<>(List.of(
             new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_d", false, 0, 0, 0xFF0000, null),
             new com.solegendary.reignofnether.maps.StartPhase.Pick("AI 2", true, 1, 1, 0x0000FF, null)));
@@ -15008,8 +15009,14 @@ public class SkirmishGameTests {
             problems.add("phase 2: the click was refused");
         for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
             phase2.tick();
+        if (phase2.isFinished())
+            problems.add("placing without Ready ended the phase");
+        if (!phase2.setReady("gametest_sp_d", true))
+            problems.add("phase 2: Ready was refused after placing");
+        for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
+            phase2.tick();
         if (!phase2.isFinished() || done2[0] != 1)
-            problems.add("all placed did not end the phase early");
+            problems.add("all placed and ready did not end the phase early");
         if (problems.isEmpty())
             helper.succeed();
         else
