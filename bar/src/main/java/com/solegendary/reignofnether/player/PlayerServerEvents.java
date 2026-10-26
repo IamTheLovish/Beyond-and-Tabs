@@ -240,6 +240,9 @@ public class PlayerServerEvents {
         if (FogChunkSnapshot.shouldRecapture) {
             FogChunkSnapshot.captureFogChunks(serverLevel);
         }
+        // the fog snapshot is captured over several ticks with a per-tick time budget (FogChunkSnapshot)
+        if (evt.phase == TickEvent.Phase.END)
+            FogChunkSnapshot.tick();
 
         // the match clock, its graph samples and its sync run in match.MatchServerEvents; the roster walks below are
         // snapshots (MatchRoster), so the beacon victory may beat sides from inside them

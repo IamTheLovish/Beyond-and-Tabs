@@ -23,6 +23,15 @@ public abstract class LevelChunkMixin {
 
     @Shadow public abstract Level getLevel();
 
+    // server: a border chunk the fog snapshot has not captured yet is captured before its first change, so the
+    // snapshot (spread over ticks, FogChunkSnapshot) still holds the pre-match state
+    @Inject(method = "setBlockState", at = @At("HEAD"))
+    private void reignofnether$captureFogSnapshotFirst(BlockPos pos, BlockState state, boolean isMoving,
+                                                       CallbackInfoReturnable<BlockState> cir) {
+        if (com.solegendary.reignofnether.fogofwar.FogChunkSnapshot.isCapturing())
+            com.solegendary.reignofnether.fogofwar.FogChunkSnapshot.beforeBlockChange((LevelChunk) (Object) this);
+    }
+
     @Inject(method = "setBlockState", at = @At("TAIL"))
     private void reignofnether$invalidateWalkability(BlockPos pos, BlockState state, boolean isMoving,
                                                      CallbackInfoReturnable<BlockState> cir) {
