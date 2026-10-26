@@ -42,7 +42,7 @@ public class ArcaneTower extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE_STAIRS);
         this.startingBlockTypes.add(Blocks.POLISHED_ANDESITE);
 
-        this.buildTimeModifier = 0.7f;
+        this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
         this.explodeChance = 0.2f;
         this.maxHealth = 340d;
 

@@ -65,12 +65,19 @@ public class HealthBarClientEvents {
     public enum RenderMode {
         GUI_ICON,
         GUI_PORTRAIT,
+        /** The slim bar under the selected unit's / building's icon (PortraitRendererUnit / Building): 9 px, numbers drawn on it. */
+        GUI_INFO,
         IN_WORLD_ORTHOVIEW,
         IN_WORLD_FIRST_PERSON
     }
 
     @SubscribeEvent
     public static void entityRender(RenderLivingEvent.Post<? extends LivingEntity, ? extends EntityModel<?>> evt) {
+        // a shader pack draws every entity a second time into its shadow map, and that draw fires this event too:
+        // the unit was queued twice (its bar drawn twice, doubled alpha) and units off screen but inside the shadow
+        // map's reach got bars of their own. Only the view's draw queues a bar.
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.renderingShadowPass())
+            return;
         prepareRenderInWorld(evt.getEntity());
     }
     @SubscribeEvent
@@ -379,6 +386,8 @@ public class HealthBarClientEvents {
             h = 4;
         else if (renderMode == RenderMode.GUI_PORTRAIT)
             h = 12;
+        else if (renderMode == RenderMode.GUI_INFO)
+            h = 9;
         else if (renderMode == RenderMode.IN_WORLD_FIRST_PERSON)
             h = 6;
         else if (renderMode == RenderMode.IN_WORLD_ORTHOVIEW)

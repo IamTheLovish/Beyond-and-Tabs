@@ -24,6 +24,8 @@ import com.solegendary.reignofnether.blocks.NightCircleMode;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.NonUnitServerEvents;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.TargetScan;
+import com.solegendary.reignofnether.unit.TargetScansLegacy;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.goals.AbstractMeleeAttackUnitGoal;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -221,7 +223,7 @@ public class MiscUtil {
 
     // excludes trees and buildings
     public static BlockPos getHighestGroundBlock(Level level, BlockPos blockPos) {
-        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 192 high from y 32)
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
@@ -240,7 +242,7 @@ public class MiscUtil {
     }
 
     public static BlockPos getHighestNonAirBlock(Level level, BlockPos blockPos, boolean ignoreLeaves, boolean ignoreStructureVoid) {
-        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 192 high from y 32)
+        int y = level.getMaxBuildHeight() - 1;   // top block (getHeight() is the column size, not a y: the battlefield is 176 high from y 48)
         BlockState bs;
         BlockPos bp;
         do {
@@ -338,91 +340,86 @@ public class MiscUtil {
         return retBps;
     }
 
+    /**
+     * The closest entity within {@code range} this unit may pick a fight with by itself (idle aggression, attack-move,
+     * retargeting): hostile, or neutral when the neutralAggro rule is on; in its line of sight; not garrisoned or
+     * concealed; scouts, bees, phantom summons and (for melee) flyers only when nothing else is in reach; a unit with a
+     * priority kind ({@link #targetPriority}) takes the closest of that kind first. Ties in distance go to the lower
+     * entity id. Null when there is nothing to attack.
+     *
+     * Every attacker asks this every few ticks, so it reads unit/TargetScan's per-tick grid instead of walking the
+     * level's entity sections (Oct 21 perf plan PR 5); the full scan it replaced is kept in unit/TargetScansLegacy for
+     * the A/B benchmark and the equivalence test, which hold the two to the same answers.
+     */
     public static LivingEntity findClosestAttackableEntity(Mob unitMob, float range, ServerLevel level) {
-        Vector3d unitPosition = new Vector3d(unitMob.position().x, unitMob.position().y, unitMob.position().z);
-        var pos = new Vec3(unitPosition.x, unitPosition.y, unitPosition.z);
-        boolean neutralAggro = unitMob.level().getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get();
-        AABB aabb = new AABB(
-                unitPosition.x - range,
-                unitPosition.y - range,
-                unitPosition.z - range,
-                unitPosition.x + range,
-                unitPosition.y + range,
-                unitPosition.z + range
-        );
-        var rawEntities = level.getEntitiesOfClass(LivingEntity.class, aabb);
-        boolean isMelee = unitMob instanceof AttackerUnit aUnit && aUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal;
-        // Hot path in big battles (every attacker, every few ticks). Same result as before, cheaper:
-        //  - entities outside the sphere (the cube's corners) are dropped up front; every pass below required
-        //    distance <= range anyway, so they could never be returned;
-        //  - each sort key is computed once (it used to be recomputed, with a sqrt, inside every comparison).
-        // List.sort is stable, so ties keep the same relative order as the original sort.
-        record Candidate(LivingEntity entity, double key) {}
-        ArrayList<Candidate> candidates = new ArrayList<>(rawEntities.size());
-        for (LivingEntity e : rawEntities) {
-            double dist = e.position().distanceTo(pos);
-            if (dist > range)
-                continue;
-            boolean isMeleeAgainstFlyer = isMelee && e instanceof Unit unit && unit.isFlyingUnit();
-            // deprioritise over actual enemy units
-            if (e instanceof PhantomSummon || (e instanceof Unit unit && unit.isScout()) || isMeleeAgainstFlyer || (e instanceof BeeUnit))
-                dist += 100;
-            candidates.add(new Candidate(e, dist));
-        }
-        candidates.sort(Comparator.comparingDouble(Candidate::key));
-        ArrayList<LivingEntity> entities = new ArrayList<>(candidates.size());
-        for (Candidate c : candidates)
-            entities.add(c.entity());
+        if (TargetScan.legacyScans)
+            return TargetScansLegacy.findClosestAttackableEntity(unitMob, range, level);
+        return TargetScan.findClosestAttackableEntity(unitMob, range, level);
+    }
 
-        // Determine priority effect filter for specific unit types
-        Predicate<LivingEntity> priorityFilter = null;
-        if (unitMob instanceof BoggedUnit) {
-            priorityFilter = e -> !e.hasEffect(MobEffects.POISON);
-        } else if (unitMob instanceof WraithUnit) {
-            priorityFilter = e -> !e.hasEffect(MobEffectRegistrar.FEARFUL.get());
-        } else if (unitMob instanceof WitherSkeletonUnit) {
-            priorityFilter = e -> e.hasEffect(MobEffects.WITHER);
-        } else if (unitMob instanceof WindcallerUnit) {
-            priorityFilter = e -> !e.hasEffect(MobEffects.LEVITATION);
-        } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit) {
-            // anti-air: a flyer in range beats a closer walker
-            priorityFilter = com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
-        } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit
+    /** Is this attacker a melee one (it never auto-targets a flyer: {@link #isIdleOrMoveAttackable}). */
+    public static boolean isMeleeAttacker(Mob unitMob) {
+        return unitMob instanceof AttackerUnit aUnit && aUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal;
+    }
+
+    /**
+     * Scouts, bees, phantom summons and - for a melee attacker - flyers are attacked only when nothing else is in reach:
+     * their sort key is the distance plus 100 (findClosestAttackableEntity, both scans).
+     */
+    public static boolean isDeprioritisedTarget(LivingEntity e, boolean attackerIsMelee) {
+        boolean isMeleeAgainstFlyer = attackerIsMelee && e instanceof Unit unit && unit.isFlyingUnit();
+        return e instanceof PhantomSummon || (e instanceof Unit scout && scout.isScout()) || isMeleeAgainstFlyer
+            || e instanceof BeeUnit;
+    }
+
+    /**
+     * The kind of target this unit takes before a closer one of any other kind (findClosestAttackableEntity's first
+     * pass), or null when it has none. One list for both scans, so a new anti-air unit is never added to only one.
+     */
+    @Nullable
+    public static Predicate<LivingEntity> targetPriority(Mob unitMob) {
+        if (unitMob instanceof BoggedUnit)
+            return e -> !e.hasEffect(MobEffects.POISON);
+        if (unitMob instanceof WraithUnit)
+            return e -> !e.hasEffect(MobEffectRegistrar.FEARFUL.get());
+        if (unitMob instanceof WitherSkeletonUnit)
+            return e -> e.hasEffect(MobEffects.WITHER);
+        if (unitMob instanceof WindcallerUnit)
+            return e -> !e.hasEffect(MobEffects.LEVITATION);
+        // anti-air: a flyer in range beats a closer walker - the Verdant's, and the Tidewrought's, the Stormcallers' and
+        // the Brassworks' T1 anti-air, same rule
+        if (unitMob instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit
+                || unitMob instanceof com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit
                 || unitMob instanceof com.solegendary.reignofnether.unit.units.storm.WindMonkUnit
-                || unitMob instanceof com.solegendary.reignofnether.unit.units.brass.FlakCartUnit) {
-            // the Tidewrought's, the Stormcallers' and the Brassworks' T1 anti-air, same rule
-            priorityFilter = com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
-        }
-
-        Vec3 unitVec = new Vec3(unitPosition.x, unitPosition.y, unitPosition.z);
-
-        Predicate<LivingEntity> baseFilter = e ->
-                e.position().distanceTo(unitVec) <= range &&
-                e.level().getWorldBorder().isWithinBounds(e.blockPosition());
-
-        // Try priority pass first, then fall back to base filter
-        List<Predicate<LivingEntity>> passes = priorityFilter != null
-                ? List.of(baseFilter.and(priorityFilter), baseFilter)
-                : List.of(baseFilter);
-
-        for (Predicate<LivingEntity> filter : passes) {
-            for (LivingEntity entity : entities) {
-                if (filter.test(entity) &&
-                        isIdleOrMoveAttackable(unitMob, entity, neutralAggro) &&
-                        hasLineOfSightForAttacks(unitMob, entity) &&
-                        !(entity instanceof Unit unit && unit.isGarrisoned()) &&
-                        // cloaked, under cover, tunnelling or diving: one rule (Concealment.isConcealed), so a new way
-                        // to hide is never forgotten here (the Leviathan's Deep Dive was, when the three were listed by hand)
-                        !com.solegendary.reignofnether.unit.Concealment.isConcealed(entity)) {
-                    return entity;
-                }
-            }
-        }
+                || unitMob instanceof com.solegendary.reignofnether.unit.units.brass.FlakCartUnit)
+            return com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
         return null;
     }
 
-    // does not cover explicit attack commands
-    private static boolean isIdleOrMoveAttackable(Mob unitMob, LivingEntity targetEntity, boolean neutralAggro) {
+    /**
+     * False when no unit could ever pick this entity - which is not a {@link Unit} - by itself: a necessary condition of
+     * {@link #isIdleOrMoveAttackable} for such a target, whoever asks. Any entity that is not a unit or a player is
+     * NEUTRAL to everyone, so only neutralAggro can make it a target, and never a vex, an armor stand, a phantom summon
+     * or a passive animal, fish or villager. unit/TargetScan leaves the rest out of its grid; change the two together.
+     */
+    public static boolean mayBeAutoTargeted(LivingEntity nonUnit, boolean neutralAggro) {
+        if (nonUnit instanceof Player player)
+            return !player.isCreative() && !player.isSpectator();
+        return neutralAggro && !(nonUnit instanceof Vex) && !(nonUnit instanceof ArmorStand)
+            && !(nonUnit instanceof PhantomSummon) && !isPassiveNonUnit(nonUnit);
+    }
+
+    private static boolean isPassiveNonUnit(LivingEntity targetEntity) {
+        return !(targetEntity instanceof Unit) &&
+                (targetEntity instanceof Animal || targetEntity instanceof AbstractFish || targetEntity instanceof Villager);
+    }
+
+    /**
+     * May this unit pick a fight with this entity by itself (relationship, neutralAggro and the kinds never picked)?
+     * Does not cover explicit attack commands. {@link #mayBeAutoTargeted} is its necessary condition for non-units:
+     * change the two together.
+     */
+    public static boolean isIdleOrMoveAttackable(Mob unitMob, LivingEntity targetEntity, boolean neutralAggro) {
         Relationship rs = Relationship.NEUTRAL;
         if (unitMob instanceof Unit) {
             rs = UnitServerEvents.getUnitToEntityRelationship((Unit) unitMob, targetEntity);
@@ -452,8 +449,7 @@ public class MiscUtil {
                 attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal) {
             return false;
         }
-        boolean isPassiveNonUnit = !(targetEntity instanceof Unit) &&
-                (targetEntity instanceof Animal || targetEntity instanceof AbstractFish || targetEntity instanceof Villager);
+        boolean isPassiveNonUnit = isPassiveNonUnit(targetEntity);
 
 
 
@@ -475,7 +471,7 @@ public class MiscUtil {
 
     /**
      * The closest building within {@code range} (to its attack spot, getClosestGroundPos) that this unit may pick a
-     * fight with by itself; on a tie the one earlier in the building list. Every idle attacker asks this every 4 ticks
+     * fight with by itself; on a tie the one earlier in the building list. Every idle attacker asks this on each idle scan
      * when no enemy unit is in reach, so it reads only the BuildingGrid cells its reach touches, and skips a building
      * whose footprint ring is already farther than the best so far before the relationship check and the footprint
      * walk (block reads). It used to do both for every building on the map (Oct 21 perf plan 3.1): ~1,000 enemy
@@ -601,7 +597,8 @@ public class MiscUtil {
     }
 
 
-    private static boolean hasLineOfSightForAttacks(Mob mob, LivingEntity targetEntity) {
+    /** Line of sight for a self-picked target: a ghast and a garrisoned unit see over everything. */
+    public static boolean hasLineOfSightForAttacks(Mob mob, LivingEntity targetEntity) {
         return mob.hasLineOfSight(targetEntity) || mob instanceof GhastUnit ||
                 (mob instanceof Unit unit && GarrisonableBuildingAddon.getGarrison((Unit) mob) != null);
     }

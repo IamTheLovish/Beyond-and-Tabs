@@ -4,6 +4,10 @@ name: flake-stress
 # Costs no Claude usage: public-repo runner minutes only. Manual only (never on push).
 #   gh workflow run flake-stress.yml -f ref=<branch> -f tests="test:six_melee,test:stuck_chaser" -f runners=8
 # Each runner compiles bar/ and runs only BAT_GAMETEST_ONLY (gametest/GameTestShards: batch names or test:<prefix>).
+# A flake that only shows inside a full shard (its neighbours' units, the shard's load and arena layout) is repeated as
+# that whole shard: `-f shard=1 -f focus=tidewrought_t2` runs shard 1 (everything no SHARD_n line names) on every runner,
+# exactly as build.yml cuts it from the SHARD_n lines of the checked-out ref, and the summary then lists only the tests
+# `focus` names (prefixes, comma-separated) plus every failure. With `shard` set, `tests` is ignored.
 on:
   workflow_dispatch:
     inputs:
@@ -16,6 +20,12 @@ on:
       runners:
         description: Parallel runners (1-10); each run of each test is one sample
         default: "6"
+      shard:
+        description: Optional - repeat a whole CI shard (2-9, or 1 = everything the other SHARD_n lines do not name) instead of `tests`
+        default: ""
+      focus:
+        description: Optional - test-name prefixes (comma-separated) whose passes the summary lists; failures are always listed
+        default: ""
 
 jobs:
   plan:
@@ -41,14 +51,31 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: "${{ inputs.ref }}" }
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
+        with:
+          distribution: temurin
+          java-version: '17'
+          # the same Gradle cache as build.yml's test jobs: ten samples starting at once otherwise download Minecraft's
+          # assets ten times over (the Oct 22 "downloadAssets ... Read timed out" reds)
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
       - name: The chosen tests, sample ${{ matrix.run }}
         id: t
         working-directory: bar
-        env: { BAT_GAMETEST_ONLY: "${{ inputs.tests }}" }
+        env:
+          ST_ONLY: ${{ inputs.tests }}
+          ST_SHARD: ${{ inputs.shard }}
         continue-on-error: true
         run: |
           chmod +x gradlew
+          if [ -n "$ST_SHARD" ]; then
+            # a whole CI shard, cut from build.yml's SHARD_n lines (tools/ci_shard_env.py)
+            eval "$(python3 ../tools/ci_shard_env.py "$ST_SHARD")"
+          else
+            export BAT_GAMETEST_ONLY="$ST_ONLY"
+          fi
           bash ../tools/ci_gametests.sh
       - name: Record which tests ran and which failed
         if: always()
@@ -80,6 +107,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { pattern: "stress-*", merge-multiple: true }
       - name: Fail rate per test
+        env: { ST_FOCUS: "${{ inputs.focus }}" }
         run: |
           python3 - <<'EOF'
           import glob, json, collections
@@ -88,8 +116,12 @@ jobs:
           fails = collections.Counter(t for r in runs for t in r["failed"])
           passes = collections.Counter(t for r in runs for t in r["passed"])
           bad_runs = sum(1 for r in runs if r["outcome"] != "success")
+          focus = [f.strip() for f in __import__("os").environ.get("ST_FOCUS", "").lower().split(",") if f.strip()]
           lines = [f"{n} runners; {bad_runs} with any failure"]
           for t in sorted(set(fails) | set(passes), key=lambda t: (-fails[t], t)):
+              # a whole-shard run has hundreds of tests: list the failures and the focus tests only
+              if focus and not fails[t] and not any(t.startswith(f) for f in focus):
+                  continue
               lines.append(f"{t}: failed {fails[t]}, passed {passes[t]}")
           if not fails:
               lines.append("no test failed in any run")

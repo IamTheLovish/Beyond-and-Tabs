@@ -40,8 +40,8 @@ public final class ArenaReady {
      * The height must be above the terrain: the arena is cut into the ground at y = -60 of an ordinary world (ocean at
      * sea level 63, caves below), and a pad at 24-88 put units in water and in rock (Oct 21, #94: "in water true", a
      * villager on its glass at 41 and the vindicators floating at 62). Every other pad is 120 or higher, and each caller
-     * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 135 and 301 are
-     * the slots left. Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
+     * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 301 is the slot
+     * left (WaterPathingGameTests' basin took 135: 132-141). Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
      */
     public static BlockPos pad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);

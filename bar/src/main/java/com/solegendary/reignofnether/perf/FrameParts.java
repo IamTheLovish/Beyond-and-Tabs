@@ -36,7 +36,7 @@ public final class FrameParts {
     public static final int STRATEGIC_ICONS = 2;   // StrategicViewClientEvents: the icon overlay at far zoom
     public static final int MINIMAP = 3;           // MinimapClientEvents.onRenderOverlay
     public static final int HUD = 4;               // HudClientEvents.onDrawScreen: the RTS HUD
-    public static final int UNIT_BODIES = 5;       // the units' own render (AnimProfile's clock: posing + drawing)
+    public static final int UNIT_BODIES = 5;       // the units' own render in the view (AnimProfile: posing + drawing)
     public static final int UNIT_RINGS = 6;        // StrategicViewClientEvents.onRenderLevel: selection and range rings
     // Oct 22: lovish's capture had 13.6% of the frame "unspecified" in after_translucent_blocks - the handlers below
     // were not measured. Each is one handler group, so the next [FrameParts] / [FrameAuto] line names the cost.
@@ -45,13 +45,21 @@ public final class FrameParts {
     public static final int BARS = 9;              // health bars, build / production progress bars
     public static final int WORLD_FX = 10;         // BarFx glow/smoke/decals, ground memory
     public static final int WORLD_MARKERS = 11;    // metal/resource markers, wrecks, map + start markers, grids, lines
-    public static final int FRAME_SECTIONS = 12;
+    // Oct 22 (unit render LOD): with a shader pack every unit is drawn a second time into the pack's shadow map.
+    // That draw is filed here instead of under unitBodies, which is now the view's draw alone (the same as before
+    // without a pack), so the shadow cost and what the LOD saves there show on their own.
+    public static final int UNIT_SHADOW = 12;      // the unit bodies drawn into the shader pack's shadow map
+    // Oct 23: worldMarkers split by handler (nested inside it, so worldMarkers itself is the dispatch + gating rest):
+    // the sum of the three is the old worldMarkers number
+    public static final int MARKERS_RANGE = 13;    // BlockClientEvents: range indicator highlights
+    public static final int MARKERS_METAL = 14;    // MetalPatchMarkerClientEvents: rings and gems
+    public static final int FRAME_SECTIONS = 15;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 12;        // Unit.tick on the client
-    public static final int SECTIONS = 13;
+    public static final int UNIT_TICK = 15;        // Unit.tick on the client
+    public static final int SECTIONS = 16;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)

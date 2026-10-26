@@ -10,7 +10,10 @@ import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.MiscUtil;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
@@ -18,6 +21,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -327,7 +331,40 @@ public class Button {
 
     public void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         if (tooltipLines != null)
-            MyRenderer.renderTooltip(guiGraphics, tooltipLines, mouseX, mouseY + tooltipOffsetY);
+            MyRenderer.renderTooltip(guiGraphics, withHotkeyLine(tooltipLines), mouseX, mouseY + tooltipOffsetY);
+    }
+
+    /** The tooltip plus a last gray "Hotkey: Q" line; a new list, the button's own lines are never changed. */
+    protected List<FormattedCharSequence> withHotkeyLine(List<FormattedCharSequence> lines) {
+        if (hotkey == null)
+            return lines;
+        List<String> plain = new ArrayList<>();
+        for (FormattedCharSequence line : lines) {
+            StringBuilder sb = new StringBuilder();
+            line.accept((i, style, cp) -> { sb.appendCodePoint(cp); return true; });
+            plain.add(sb.toString());
+        }
+        String text = hotkeyLineText(hotkey.getCurrentLabel(), I18n.get("hud.reignofnether.tooltip_hotkey"), plain);
+        if (text == null)
+            return lines;
+        List<FormattedCharSequence> out = new ArrayList<>(lines);
+        out.add(FormattedCharSequence.forward(text, Style.EMPTY.withColor(ChatFormatting.GRAY)));
+        return out;
+    }
+
+    /**
+     * The hotkey line's text ("Hotkey: Q"), or null for no line: no key bound, or the tooltip already names it
+     * ("[Q]" or an earlier hotkey line). pattern has one %s for the label.
+     */
+    public static String hotkeyLineText(String label, String pattern, List<String> existingLines) {
+        if (label == null || label.isBlank())
+            return null;
+        String text = String.format(pattern, label);
+        for (String line : existingLines) {
+            if (line.contains("[" + label + "]") || line.equals(text))
+                return null;
+        }
+        return text;
     }
 
     public boolean isMouseOver(int mouseX, int mouseY) {

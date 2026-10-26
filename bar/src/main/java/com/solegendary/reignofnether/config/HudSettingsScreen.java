@@ -39,8 +39,6 @@ public class HudSettingsScreen extends Screen {
 
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_STATS_OPEN,
                 "Stats table open", "Stats table collapsed").pos(left, y).size(colW, rowH));
-        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_KILLFEED_COLLAPSED,
-                "Kill feed: one line", "Kill feed: five lines").pos(right, y).size(colW, rowH));
         y += step;
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_ALERTS_COLLAPSED,
                 "Alerts as icons", "Alerts as text").pos(left, y).size(colW, rowH));

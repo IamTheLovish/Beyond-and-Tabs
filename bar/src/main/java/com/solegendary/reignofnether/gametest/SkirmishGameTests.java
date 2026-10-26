@@ -857,7 +857,7 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    /** Energy converters only burn energy above half storage, at TierGate's 100 energy per metal, 50 energy/s each. */
     @GameTest(template = ARENA)
     public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
@@ -866,8 +866,8 @@ public class SkirmishGameTests {
         res.addEnergy(900);
         for (int i = 0; i < 20; i++)
             com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
-        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
-            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+        if (Math.abs(res.getMetal() - 0.5f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~0.5 metal / 850 energy, got " + res.getMetal()
                 + " / " + res.getEnergy());
         var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
         low.addEnergy(400);
@@ -1557,6 +1557,22 @@ public class SkirmishGameTests {
                 return null;
         }
         return out;
+    }
+
+    /**
+     * A dry row of {@code count} base sites ({@link #soakRow}) near (x, z): every candidate row (16 steps of 96 blocks
+     * along each of {@link #soakLines}) is tried, the same scan {@link #soakFiveStarts} makes, so a test that wants only
+     * a row finds ground wherever the soak does. Trying just the first step of each line failed the tier-2 bot test every
+     * run (the world is the same each time, and that strip is water or cliff); null only if no candidate row is dry.
+     */
+    static net.minecraft.world.phys.Vec3[] soakAnyRow(ServerLevel level, int x, int z, int count) {
+        for (int bz : soakLines(z))
+            for (int step = 0; step < 16; step++) {
+                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, count);
+                if (row != null)
+                    return row;
+            }
+        return null;
     }
 
     /**
@@ -5020,6 +5036,14 @@ public class SkirmishGameTests {
                 level.setBlock(helper.absolutePos(new BlockPos(x, 1, z)), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                 for (int y = 2; y <= 4; y++)
                     level.setBlock(helper.absolutePos(new BlockPos(x, y, z)), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                // a lid for the clearing: arenas sit in generated terrain, and a gravel or sand layer overhead loses its
+                // support when the pocket under it is cleared and falls in on the units - gravel in a Jade Guard's cell
+                // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
+                // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
+                // before its block tick can fire; whatever lies above that is then supported again.
+                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
+                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             }
     }
 
@@ -7340,9 +7364,13 @@ public class SkirmishGameTests {
             attackers.add(atk);
             foes.add(foe);
         }
+        // the order a player gives (UnitActionItem: right-click an enemy = setUnitAttackTargetForced). An unforced target is
+        // re-picked every RETARGET_TICKS (AttackerUnit.retargetToClosestUnit) to the nearest enemy, and in this test that is
+        // the NEIGHBOURING row's Villager (5 blocks off, nearer than the galley's own at 14): a shell fired in such a window
+        // lands on the wrong Villager, "mortar_galley_unit never hit its target ... strays 21" (CI Oct 21-22, 3 reds)
         helper.runAfterDelay(3, () -> {
             for (int i = 0; i < attackers.size(); i++)
-                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTargetForced(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
         int[] strays = new int[attackers.size()];
@@ -10039,7 +10067,7 @@ public class SkirmishGameTests {
                     .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                 byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                     spawn.getX(), spawn.getY(), spawn.getZ());
-                if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER
+                if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind)
                         && !audit.escapes(spawn))
                     problems.add(building.structureName + ": units spawn at " + audit.rel(spawn) + " and can't leave");
             }
@@ -10835,59 +10863,6 @@ public class SkirmishGameTests {
             if (tag.getInt(com.solegendary.reignofnether.unit.EngagementStance.KEY)
                     != com.solegendary.reignofnether.unit.EngagementStance.RETURN_FIRE.ordinal())
                 helper.fail("stance not in the unit's save data: " + tag.get(com.solegendary.reignofnether.unit.EngagementStance.KEY));
-            a.discard();
-            b.discard();
-            helper.succeed();
-        });
-    }
-
-    /**
-     * Kill feed: a kill queues a line naming both types and owners, and the recipient test admits the killer's
-     * owner (and a spectator with fog off) for it. The packet itself needs a connected client, so this checks the
-     * server half right up to the per-player gate; recentEntries is filtered by this test's own owner names.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void kill_feed_line_queued_for_the_viewer(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String ownerA = "gametest_feed_a", ownerB = "gametest_feed_b";
-        var pair = stancePair(helper, ownerA, ownerB,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
-        if (pair == null) {
-            helper.fail("could not create vindicator units");
-            return;
-        }
-        var a = pair[0];
-        var b = pair[1];
-        helper.runAfterDelay(3, () -> {
-            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
-            if (!b.isDeadOrDying()) {
-                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
-                return;
-            }
-            com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry line = null;
-            for (var e : com.solegendary.reignofnether.hud.KillFeedServerEvents.recentEntries())
-                if (ownerA.equals(e.killerOwner()) && ownerB.equals(e.victimOwner()))
-                    line = e;
-            if (line == null) {
-                helper.fail("no kill feed line queued for the kill");
-                return;
-            }
-            String vindicator = a.getType().getDescriptionId();
-            if (!vindicator.equals(line.killerKey()) || !vindicator.equals(line.victimKey()) || line.building())
-                helper.fail("kill feed line names the wrong things: " + line);
-            var viewer = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(ownerA.getBytes()), ownerA));
-            if (!com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(viewer, line.killerOwner(), line.victimOwner(),
-                    b.getBlockX(), b.getBlockZ()))
-                helper.fail("the killer's owner must receive its own kill");
-            var stranger = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("gametest_feed_c".getBytes()), "gametest_feed_c"));
-            boolean fog = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isFogActiveFor(stranger);
-            boolean sees = com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(stranger, line.killerOwner(),
-                line.victimOwner(), b.getBlockX(), b.getBlockZ());
-            if (!fog && !sees)
-                helper.fail("with fog off a third player sees every kill");
             a.discard();
             b.discard();
             helper.succeed();
@@ -13663,6 +13638,9 @@ public class SkirmishGameTests {
         var pool = testPool(owner);
         var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
         var cost = item.getCost(false, owner);
+        // the refit needs Tier 2 on the server too (resources/TierGate)
+        com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         try {
             var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
             if (row == null)
@@ -13701,6 +13679,7 @@ public class SkirmishGameTests {
             for (var pp : row)
                 pp.productionQueue.clear();
         } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
         }
     }
@@ -14219,7 +14198,7 @@ public class SkirmishGameTests {
                         .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                     byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                         spawn.getX(), spawn.getY(), spawn.getZ());
-                    if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER && !audit.escapes(spawn))
+                    if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind) && !audit.escapes(spawn))
                         problems.add(name + ": units spawn at " + audit.rel(spawn) + " and can't leave");
                 }
             }
@@ -14826,6 +14805,11 @@ public class SkirmishGameTests {
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
                         problems.add(tag + "patch on " + surf + " at " + m);
+                    // the whole 7x7 pad MetalPatches.stamp levels, not only the centre column (maps spec M1: 20 of
+                    // Highlands' 96 patches at 8 players had an 8-block drop inside the pad and this test passed)
+                    String fault = MapMetalGameTests.padFault(layout, m.dx(), m.dz(), sample);
+                    if (fault != null)
+                        problems.add(tag + "patch " + m + " has " + fault + " in its pad");
                 }
             }
         }

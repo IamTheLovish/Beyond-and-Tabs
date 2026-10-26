@@ -331,6 +331,7 @@ public class PlayerClientEvents {
         resetRTS(true);
         UnitClientEvents.getAllUnits().clear();
         BuildingClientEvents.getBuildings().clear();
+        com.solegendary.reignofnether.building.BlueprintClientEvents.clear();
         FogOfWarClientEvents.movedToCapitol = false;
         FogOfWarClientEvents.brightChunks.clear();
         OrthoviewClientEvents.unlockCam();
@@ -418,6 +419,8 @@ public class PlayerClientEvents {
         BuildingClientEvents.getSelectedBuildings().clear();
         if (!isSandboxOrScenario)
             BuildingClientEvents.getBuildings().removeIf(b -> b.getBuilding().shouldDestroyOnReset || hardReset);
+        if (!isSandboxOrScenario)
+            com.solegendary.reignofnether.building.BlueprintClientEvents.clear();
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingClientEvents.getBuildings())
                 building.ownerName = "";

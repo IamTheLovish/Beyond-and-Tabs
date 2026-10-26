@@ -26,6 +26,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> KEYBIND_LAYOUT;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HOST_PORT;
+    public static final ForgeConfigSpec.ConfigValue<Integer> AREA_MEX_RADIUS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
@@ -58,6 +59,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_SCALE;
     public static final ForgeConfigSpec.ConfigValue<Integer> FOG_STYLE;
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
+    // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
+    public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -65,13 +68,13 @@ public class ReignOfNetherClientConfigs {
     // remembers whether it is collapsed, so a player who tidied the screen once keeps it tidy across restarts
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_STATS_OPEN;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_STATS_TAB;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_KILLFEED_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ALERTS_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_CHEATSHEET_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_UNITCARD_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ECONOMY_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_COMMAND_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_MINIMAP_LARGE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_MINIMAP_SIZE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_OBSERVER_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
@@ -105,6 +108,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
         CAMERA_ZOOM_SPEED = BUILDER.defineInRange("camera_zoom_speed", 10, 1, 30);
+        BUILDER.comment("Area mex circle radius in blocks (Shift with a metal extractor armed; Shift+wheel resizes it), 4-32");
+        AREA_MEX_RADIUS = BUILDER.defineInRange("area_mex_radius", 12, 4, 32);
         BUILDER.comment("Invert the mouse wheel: wheel forward zooms out (also flips Ctrl+wheel tilt)");
         CAMERA_ZOOM_INVERT = BUILDER.define("camera_zoom_invert", false);
         BUILDER.comment("Middle-mouse drag speed, 1-30 (10 = the ground stays under the cursor)");
@@ -181,8 +186,6 @@ public class ReignOfNetherClientConfigs {
         HUD_STATS_OPEN = BUILDER.define("hud_stats_open", false);
         BUILDER.comment("HUD: the stats table's tab, 0 players, 1 economy, 2 army, 3 production");
         HUD_STATS_TAB = BUILDER.defineInRange("hud_stats_tab", 0, 0, 3);
-        BUILDER.comment("HUD: kill feed collapsed to a one-line ticker");
-        HUD_KILLFEED_COLLAPSED = BUILDER.define("hud_killfeed_collapsed", true);
         BUILDER.comment("HUD: alert toasts collapsed to icons with count badges");
         HUD_ALERTS_COLLAPSED = BUILDER.define("hud_alerts_collapsed", false);
         BUILDER.comment("HUD: the controls cheat-sheet collapsed to a ? button");
@@ -195,6 +198,8 @@ public class ReignOfNetherClientConfigs {
         HUD_COMMAND_COMPACT = BUILDER.define("hud_command_compact", false);
         BUILDER.comment("HUD: the large minimap (M) was open when the game closed");
         HUD_MINIMAP_LARGE = BUILDER.define("hud_minimap_large", false);
+        BUILDER.comment("HUD: minimap size when the game closed: 0 small, 1 large, 2 expanded (0 with the old hud_minimap_large=true means 1)");
+        HUD_MINIMAP_SIZE = BUILDER.defineInRange("hud_minimap_size", 0, 0, 2);
         BUILDER.comment("HUD: the spectator observer bar (income, army, units, tier, powers per player) while spectating");
         HUD_OBSERVER_BAR = BUILDER.define("hud_observer_bar", true);
         BUILDER.comment("HUD: seconds an alert toast stays up before it fades, 1-10");
@@ -217,6 +222,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_WORLD = BUILDER.define("onboarding_world", "");
         BUILDER.comment("Ground scars: the scorch and craters blasts leave stay on the ground for the match (a world that remembers); false = the old 12-second marks");
         GROUND_SCARS = BUILDER.define("ground_scars", true);
+        BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
+        UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
         SPEC = BUILDER.build();
     }
 
