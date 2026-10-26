@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MapPreset;
+import com.solegendary.reignofnether.maps.MapStateClientboundPacket;
 import com.solegendary.reignofnether.maps.StartPhase;
 
 import net.minecraft.core.BlockPos;
@@ -169,6 +170,45 @@ public class SpawnReadyGameTests {
             if (!p.placed)
                 problems.add(p.name + " was not seated by the force start");
         report(helper, problems);
+    }
+
+    /**
+     * The live path, ticked by the server itself: one human and a bot, the human places and presses Ready; the phase
+     * must end through onServerTick, start the match (onDone, which is MatchState.startsPlaced in play), drop the live
+     * phase and broadcast the phase-off map state (the client's Ready panel and start ghost go on that packet).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = BATCH)
+    public static void all_ready_on_the_live_phase_sends_phase_off_and_starts(GameTestHelper helper) {
+        if (StartPhase.live() != null) {
+            helper.fail("a live start phase is already running");
+            return;
+        }
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        int cx = base.getX() + 40000, cz = base.getZ() + 40000;
+        MapLayout layout = MapLayout.build(MapPreset.HIGHLANDS, new int[] { 0, 1 });
+        int[] done = { 0 };
+        StartPhase ph = new StartPhase(level, cx, cz, layout, new ArrayList<>(List.of(
+            new StartPhase.Pick("gt_live_solo", false, 0, 0, 0xFF0000, null),
+            new StartPhase.Pick("AI 1", true, 1, 1, 0x00FF00, null))), StartPhase.SECONDS, p -> done[0]++);
+        StartPhase.resume(ph);   // live without the camera teleport or the bot re-pick (nothing outside the phase)
+        if (StartPhase.live() != ph || !MapStateClientboundPacket.lastBroadcastPhase()) {
+            StartPhase.cancel();
+            helper.fail("the live phase did not start or its phase-on state was not sent");
+            return;
+        }
+        if (!placeAtSlot(ph, "gt_live_solo") || !ph.setReady("gt_live_solo", true)) {
+            StartPhase.cancel();
+            helper.fail("place or Ready was refused");
+            return;
+        }
+        helper.succeedWhen(() -> {
+            helper.assertTrue(ph.isFinished(), "the live phase did not end after everyone was ready");
+            helper.assertTrue(done[0] == 1, "the match was not started (starts " + done[0] + ")");
+            helper.assertTrue(StartPhase.live() == null, "the finished phase is still the live one");
+            helper.assertFalse(MapStateClientboundPacket.lastBroadcastPhase(),
+                "the phase-off map state was not sent to the clients");
+        });
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)

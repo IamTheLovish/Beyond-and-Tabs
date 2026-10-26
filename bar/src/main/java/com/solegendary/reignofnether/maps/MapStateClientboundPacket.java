@@ -85,8 +85,17 @@ public class MapStateClientboundPacket {
             prep == null ? -1 : prep.stage().ordinal(), prep == null ? 0 : prep.pct());
     }
 
+    /** The phase flag of the last {@link #broadcast} (the game test checks the phase-off state went out). */
+    private static volatile boolean lastBroadcastPhase = false;
+
+    public static boolean lastBroadcastPhase() {
+        return lastBroadcastPhase;
+    }
+
     public static void broadcast() {
-        PacketHandler.INSTANCE.send(Audience.all(), current()); // design/maps.md 5: picks show for everyone
+        MapStateClientboundPacket p = current();
+        lastBroadcastPhase = p.phase;
+        PacketHandler.INSTANCE.send(Audience.all(), p); // design/maps.md 5: picks show for everyone
     }
 
     public static void sendTo(ServerPlayer sp) {
