@@ -86,6 +86,8 @@ public final class Sys {
 
     // all below: server thread
     private static boolean forced = false, slow = false;
+    /** Who is forcing measuring on right now ({@link #force}); forced = not empty. */
+    private static final java.util.Set<Object> HOLDERS = new java.util.HashSet<>();
     private static int captureRefs = 0;
     private static double windowTickMs = 0;
     /** The last [Sys] line written (tests and the lag-capture summary read it). */
@@ -122,10 +124,20 @@ public final class Sys {
         return on;
     }
 
-    /** Switch measuring on for a test, whatever the tick times are. Call from the server thread. */
-    public static void force(boolean value) {
+    /**
+     * Switch measuring on (true) or off (false) for one holder - a test - whatever the tick times are. Measuring stays
+     * forced while ANY holder holds it: the game-test server runs a batch's tests side by side, and one global flag let
+     * a test that finished switch measuring off in the middle of another's window (unit_push_neighbour_lookups_are_counted
+     * counted 174 of 1600 lookups on main 5421b13f, Oct 26). Releasing twice, or a holder that never held, is harmless.
+     * Call from the server thread.
+     */
+    public static void force(Object holder, boolean value) {
         serverThread = Thread.currentThread();
-        forced = value;
+        if (value)
+            HOLDERS.add(holder);
+        else
+            HOLDERS.remove(holder);
+        forced = !HOLDERS.isEmpty();
         refresh();
     }
 
@@ -210,6 +222,7 @@ public final class Sys {
         on = false;
         serverThread = null;
         forced = false;
+        HOLDERS.clear();
         captureRefs = 0;
         slow = false;
         windowTickMs = 0;
