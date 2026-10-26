@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.building;
 
 import com.solegendary.reignofnether.alliance.AlliancesClient;
+import com.solegendary.reignofnether.cursor.CursorClientEvents;
+import com.solegendary.reignofnether.util.MiscUtil;
+import org.joml.Vector3d;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
@@ -89,18 +92,42 @@ public class BlueprintClientEvents {
         return false;
     }
 
-    /** Is the player's own ghost under {@code pos}? (right-clicking it with a worker sends the worker to build it) */
-    public static boolean isOwnGhostAt(@Nullable BlockPos pos) {
+    /**
+     * The friendly ghost (own or allied) the cursor points at, else null: right-clicking it with a builder sends the
+     * builder to build it (or join the builder already on its way). A ghost has no blocks, so the cursor's picked block
+     * is the ground behind or under it; the test is the ray against the ghost's drawn box (GhostHit), nearest first.
+     */
+    @Nullable
+    public static BuildingPlacement ghostUnderCursor() {
         Minecraft mc = Minecraft.getInstance();
-        if (pos == null || mc.player == null)
-            return false;
+        if (mc.player == null || GHOSTS.isEmpty())
+            return null;
         String me = mc.player.getName().getString();
+        // the cursor's world pos is where the ray hit the ground; the ray runs along the look vector through it
+        Vector3d hit = CursorClientEvents.getCursorWorldPos();
+        Vector3d look = MiscUtil.getPlayerLookVector(mc);
+        BlockPos picked = CursorClientEvents.getPreselectedBlockPos();
+        double back = 200, ox = hit.x - look.x * back, oy = hit.y - look.y * back, oz = hit.z - look.z * back;
+        BuildingPlacement best = null;
+        double bestT = Double.MAX_VALUE;
         for (int i = 0, n = GHOSTS.size(); i < n; i++) {
             BuildingPlacement g = GHOSTS.get(i);
-            if (g.ownerName.equals(me) && (g.originPos.equals(pos) || g.isPosInsideBuilding(pos)))
-                return true;
+            if (!sameSide(me, g.ownerName))
+                continue;
+            BlockPos lo = g.minCorner, hi = g.maxCorner;
+            double t = GhostHit.rayEntry(ox, oy, oz, look.x, look.y, look.z,
+                    lo.getX(), lo.getY(), lo.getZ(), hi.getX(), hi.getY(), hi.getZ());
+            boolean holds = picked != null && GhostHit.footprintHolds(lo.getX(), lo.getY(), lo.getZ(),
+                    hi.getX(), hi.getY(), hi.getZ(), picked.getX(), picked.getY(), picked.getZ());
+            if (!GhostHit.hits(t, back, holds))
+                continue;
+            double rank = t >= 0 ? t : back;
+            if (rank < bestT) {
+                bestT = rank;
+                best = g;
+            }
         }
-        return false;
+        return best;
     }
 
     @SubscribeEvent

@@ -282,7 +282,8 @@ public class CursorClientEvents {
         } else if (leftClickAction != null && (leftClickAction.equals(UnitAction.ATTACK) || leftClickAction.equals(UnitAction.ATTACK_MOVE))) {
             RenderSystem.setShaderTexture(0, TEXTURE_SWORD);
             texture = TEXTURE_SWORD;
-        } else if (leftClickAction != null && leftClickAction.equals(UnitAction.BUILD_REPAIR)) {
+        } else if ((leftClickAction != null && leftClickAction.equals(UnitAction.BUILD_REPAIR))
+                || (leftClickAction == null && leftClickSandboxAction == null && isBuilderOverGhost())) {
             RenderSystem.setShaderTexture(0, TEXTURE_SHOVEL);
             texture = TEXTURE_SHOVEL;
         } else if (leftClickAction != null || leftClickSandboxAction != null || ItemClientEvents.hasLeftClickAction()) {
@@ -567,6 +568,17 @@ public class CursorClientEvents {
     }
 
     // prevent moused over blocks being outlined in the usual way (ie. by raytracing from player to block)
+    /**
+     * A builder is selected and the cursor is on a friendly blueprint ghost (and on nothing real in front of it):
+     * a right-click sends it to build/assist that ghost (UnitClientEvents), so the cursor shows the build shovel.
+     */
+    public static boolean isBuilderOverGhost() {
+        return HudClientEvents.hudSelectedEntity instanceof WorkerUnit
+                && UnitClientEvents.getPreselectedUnits().isEmpty()
+                && BuildingClientEvents.getPreselectedBuilding() == null
+                && com.solegendary.reignofnether.building.BlueprintClientEvents.ghostUnderCursor() != null;
+    }
+
     @SubscribeEvent
     public static void onHighlightBlockEvent(RenderHighlightEvent.Block evt) {
         if (MC.level != null && OrthoviewClientEvents.isEnabled())
@@ -618,7 +630,7 @@ public class CursorClientEvents {
                     UnitClientEvents.getPreselectedUnits().size() == 0 &&
                     BuildingClientEvents.getPreselectedBuilding() == null &&
                     ItemClientEvents.getPreselectedItems().isEmpty() &&
-                    !buildingTargetedByWorker && !buildingTargetedByAttacker) || isLeftClickActionStartRTS || getLeftClickSandboxAction() != null) {
+                    !buildingTargetedByWorker && !buildingTargetedByAttacker && !isBuilderOverGhost()) || isLeftClickActionStartRTS || getLeftClickSandboxAction() != null) {
 
                 ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
                 var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
