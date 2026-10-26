@@ -85,6 +85,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -786,6 +787,12 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
+    // entity ids start over in the next world: fog-site ghosts kept per worker id must not outlive this one
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut evt) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetAllGhosts();
+    }
+
     @SubscribeEvent
     public static void onEntityLeaveEvent(EntityLeaveLevelEvent evt) {
         try {
@@ -802,6 +809,7 @@ public class UnitClientEvents {
      * Therefore, only remove entities if they leave serverside via UnitClientboundPacket.
      */
     public static void onEntityLeave(int entityId) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetGhosts(entityId);
         selectedUnits.removeIf(e -> e.getId() == entityId);
         //System.out.println("selectedUnits removed entity: " + entityId);
         preselectedUnits.removeIf(e -> e.getId() == entityId);
@@ -1111,6 +1119,11 @@ public class UnitClientEvents {
                         sendUnitCommand(UnitAction.BUILD_REPAIR);
                     else
                         resolveMoveActionDeferred();
+                }
+                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
+                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
+                    sendUnitCommand(UnitAction.BUILD_REPAIR);
                 }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else

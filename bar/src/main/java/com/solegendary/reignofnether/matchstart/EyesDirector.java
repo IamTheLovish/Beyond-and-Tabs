@@ -74,7 +74,7 @@ import java.util.List;
  *     re-mesh.</li>
  * <li>18_overlays (Oct 21, perf plan R2, EyesOverlaysScene; its own run, eyes.yml input `overlays`): 500 units and
  *     1,700 buildings, stills of the underlines and boxes at a mid zoom and at strategic zoom, and the frame and
- *     per-handler times at zoom 30 and 200 - the before / after of the overlay loops.</li>
+ *     per-handler times at zoom 30, 60 (crowd) and 200 - the before / after of the overlay loops and unit LOD.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.

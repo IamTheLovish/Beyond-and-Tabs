@@ -92,6 +92,11 @@ public class Keybindings {
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
     public static final Keybinding selectArmy     = new Keybinding("key.reignofnether.select_army",     GLFW.GLFW_KEY_MINUS,         CATEGORY_RTS, "-");
+    // The worker's "Return resources" button was on hotkey5 (;), the metal extractor's build slot on all seven factions
+    // (Lane C tester, Oct 21: the extractor key does nothing). It has its own key now: "]" is on no worker card (every
+    // letter, the punctuation slots and the abilities are used), and while a building ghost is out "]" rotates it
+    // (BuildingClientEvents) before the HUD sees the key. ReturnResourcesKeyGameTests checks this key against each faction's worker.
+    public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
     // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
     // (KeybindMigration, layout 1) - #39 changed only this default, so lovish's card still read "A" until then.
@@ -190,7 +195,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy, returnResources,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,

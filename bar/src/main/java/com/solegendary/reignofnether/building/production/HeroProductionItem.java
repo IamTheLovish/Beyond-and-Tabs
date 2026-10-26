@@ -3,19 +3,26 @@ package com.solegendary.reignofnether.building.production;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.gamerules.GameruleClient;
+import com.solegendary.reignofnether.hero.HeroKit;
+import com.solegendary.reignofnether.hero.HeroKits;
+import com.solegendary.reignofnether.hero.HeroTypes;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.unit.HeroUnitSave;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
@@ -47,9 +54,10 @@ public abstract class HeroProductionItem extends ProductionItem {
             return "hud.hero.reignofnether.error.duplicate";
 
         int allowedHeroes = pp.level.getGameRules().getInt(GameRuleRegistrar.ALLOWED_HEROES);
-        if (!BuildingUtils.castleOwned(pp.level.isClientSide(), pp.ownerName)) {
-            allowedHeroes = Math.min(1, allowedHeroes);
-        }
+        // without a castle only one T1-lab hero; a T2-lab hero (H13) skips that clamp and does not count toward it
+        if (!isT2LabHero() && !BuildingUtils.castleOwned(pp.level.isClientSide(), pp.ownerName)
+                && t1LabHeroesCounted(pp, this) >= Math.min(1, allowedHeroes))
+            return "hud.hero.reignofnether.error.too_many_heroes";
         if (heroesCountedAgainstCap(pp, this) >= allowedHeroes)
             return "hud.hero.reignofnether.error.too_many_heroes";
 
@@ -90,6 +98,32 @@ public abstract class HeroProductionItem extends ProductionItem {
                 HeroUnit.getFallenHero(isClientside, ownerName, heroName) != null;
     }
 
+    /** Like heroesCountedAgainstCap, but only T1-lab heroes: the castle clamp limits these to one (H13). */
+    public static int t1LabHeroesCounted(ProductionPlacement pp, ProductionItem item) {
+        int n = t1LabHeroCount(pp.level.isClientSide(), pp.ownerName);
+        return finishing(pp, item) && !(item instanceof HeroProductionItem h && h.isT2LabHero()) ? n - 1 : n;
+    }
+
+    /** The owner's heroes alive, fallen or in training, leaving out T2-lab heroes. */
+    public static int t1LabHeroCount(boolean isClientside, String ownerName) {
+        Set<String> t2 = new HashSet<>();
+        for (HeroKit kit : HeroKits.T2_LAB)
+            t2.add(HeroTypes.heroTypeOf(kit).getDescriptionId());
+        int n = 0;
+        for (HeroUnit h : HeroUnit.getHeroes(isClientside, ownerName))
+            if (!t2.contains(((LivingEntity) h).getType().getDescriptionId())) n++;
+        for (HeroUnitSave s : HeroUnit.getFallenHeroes(isClientside, ownerName))
+            if (!t2.contains(s.name)) n++;
+        for (ActiveProduction p : HeroUnit.getHeroesInTraining(isClientside, ownerName))
+            if (!(p.item instanceof HeroProductionItem h && h.isT2LabHero())) n++;
+        return n;
+    }
+
+    /** A hero trained at a T2 lab (H13): the lab is gate enough, so the second-hero castle clamp does not apply. */
+    protected boolean isT2LabHero() {
+        return false;
+    }
+
     // can't make this a member as we can't refer to other registered objects at init time
     protected EntityType<? extends HeroUnit> getHeroEntityType() {
         return null;
@@ -113,8 +147,8 @@ public abstract class HeroProductionItem extends ProductionItem {
                 () -> itemIsBeingProduced(prodBuilding.ownerName) ||
                         heroOwned(prodBuilding.level.isClientSide(), prodBuilding.ownerName) ||
                         HeroUnit.getNumHeroesOwnedOrInTraining(true, prodBuilding.ownerName) >= GameruleClient.allowedHeroes,
-                () -> HeroUnit.getNumHeroesOwnedOrInTraining(true, prodBuilding.ownerName) == 0 ||
-                        BuildingUtils.castleOwned(true, prodBuilding.ownerName),
+                () -> t1LabHeroCount(true, prodBuilding.ownerName) == 0 ||
+                        isT2LabHero() || BuildingUtils.castleOwned(true, prodBuilding.ownerName),
                 fcs,
                 this
         );
