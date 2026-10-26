@@ -197,9 +197,14 @@ public class MatchEndScreen extends Screen {
         // "Back to lobby" (host only; the tester's Oct 26 ask): reset the battlefield on this server and reopen the
         // lobby with the same lineup and settings for a rematch (MultiplayerLobby.backToLobby)
         if (LobbyClientEvents.isHost()) {
+            // centred under the panel: in the header row it covered the title's "Standard pace" (shot Oct 26); only
+            // a panel that fills the screen keeps it in the header, left of Spectate
+            int lobbyW = 100, below = panelT + panelH + 4;
+            boolean fitsBelow = below + 20 <= this.height;
             Button lobby = addRenderableWidget(Button.builder(Component.literal("Back to lobby"),
                             b -> LobbyClientEvents.backToLobby())
-                    .bounds(panelL + panelW - 26 - 62 - 66 - 84, panelT + 5, 80, 20).build());
+                    .bounds(fitsBelow ? panelL + (panelW - lobbyW) / 2 : panelL + panelW - 26 - 62 - 66 - 84,
+                            fitsBelow ? below : panelT + 5, fitsBelow ? lobbyW : 80, 20).build());
             lobby.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                     "Reset the battlefield and reopen the lobby with the same players, bots and settings")));
         }
