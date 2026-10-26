@@ -1071,6 +1071,11 @@ public class BuildingPlacement {
     // should only be run serverside
     public void onBlockBreak(ServerLevel level, BlockPos pos, boolean breakBlocks) {
         totalBlocksEverBroken += 1;
+        // a block lost while the site is unbuilt takes its share of the paid build progress with it: otherwise
+        // tickFlowConstruction re-queued it for free next tick (no builder, no cost), so any hit worth up to two blocks
+        // grew straight back and a partly built site could never be brought down (the user's 20% metal extractor)
+        if (!isBuilt && placedBlockPosSet.contains(pos) && getBlocksTotal() > 0)
+            buildProgress = Math.max(0f, buildProgress - 1f / getBlocksTotal());
         Random rand = new Random();
 
         if (this.getFaction().equals(Factions.MONSTERS) && ResearchServerEvents.playerHasResearch(this.ownerName,
