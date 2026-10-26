@@ -349,6 +349,85 @@ public class FogOfWarServerEvents {
             FogChunkSnapshot.rebuildIndex(level);
     }
 
+    /** Whether a new match turns fog on by itself (gamerule reignofnetherFogByDefault, default true). */
+    public static boolean isFogByDefault(ServerLevel level) {
+        return level != null && level.getGameRules().getBoolean(GameRuleRegistrar.FOG_BY_DEFAULT);
+    }
+
+    /**
+     * A match was just seated (MatchState.adopt): fog on unless the host switched the default off. Silent on a map
+     * fog cannot cover (setEnabled would refuse it with a chat line), so ordinary-border worlds are unchanged.
+     */
+    public static void enableForNewMatch() {
+        if (serverLevel == null) {
+            var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null)
+                serverLevel = server.overworld();
+        }
+        boolean byDefault = isFogByDefault(serverLevel);
+        boolean rtsMap = WorldBorderServerEvents.isRtsOptimisedMap(serverLevel);
+        if (shouldEnableForNewMatch(enabled, byDefault, rtsMap)) {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: turning fog of war on (default on, border {})",
+                (int) serverLevel.getWorldBorder().getSize());
+            setEnabled(true);
+        } else {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: fog of war not turned on - {}",
+                enabled ? "already on" : !byDefault ? "reignofnetherFogByDefault is false"
+                    : serverLevel == null ? "no level yet" : "world border " + (int) serverLevel.getWorldBorder().getSize()
+                        + " is above " + WorldBorderServerEvents.RTS_OPTIMIZED_BORDER + " (no fitting border was set)");
+        }
+    }
+
+    /** Room kept round the arena wall / the farthest start, so no base or wall block sits on the border line. */
+    public static final int BORDER_MARGIN = 80;   // the huge arena (560) still fits the 1280 limit
+    /** A rolled ("random") arena is at most BattlefieldWall.MAX_RADIUS (520) round the bases. */
+    public static final int RANDOM_ARENA_RADIUS = 520;
+
+    /**
+     * The border size (blocks) that holds a match: its arena wall ({@code arenaRadius}, -1 = a random one) and its
+     * farthest start ({@code reach}, blocks from the centre) plus a margin. Above WorldBorderServerEvents.RTS_OPTIMIZED_BORDER
+     * (the fog snapshot's bound: 80 x 80 chunks, each written to disk at ~50-500 KB, FogChunkSnapshot) there is no
+     * fitting border: returns -1 rather than a border that would cut the arena.
+     */
+    public static int borderSizeFor(int arenaRadius, int reach) {
+        int half = Math.max(arenaRadius > 0 ? arenaRadius : RANDOM_ARENA_RADIUS, reach) + BORDER_MARGIN;
+        return 2 * half <= WorldBorderServerEvents.RTS_OPTIMIZED_BORDER ? 2 * half : -1;
+    }
+
+    /**
+     * Gives a match world a border that holds its arena, so fog (which needs a bounded play area to snapshot, see
+     * {@link #setEnabled}) can run in lobby and skirmish matches, whose worlds otherwise keep the vanilla ~60M border
+     * (the arena wall is only blocks). Called before the first side is seated: FogChunkSnapshot captures the
+     * border's chunks at the first start. Does nothing when the host turned reignofnetherFogByDefault off, when the
+     * world already has a small (map-made) border, or when no border up to the fog limit holds the arena. The border
+     * stays with the world; the cost is the snapshot (arena area in chunks x ~50-500 KB, written once at the first start)
+     * and, on a reload of the saved world, the navmesh prewarm WorldBorderServerEvents runs for small borders.
+     * Skipped on the GameTest server unless {@code allowInGameTest}. Returns whether the border was set.
+     */
+    public static boolean fitBorderForMatch(ServerLevel level, double cx, double cz, int arenaRadius, int reach,
+                                            boolean allowInGameTest) {
+        if (level == null || !isFogByDefault(level) || WorldBorderServerEvents.isRtsOptimisedMap(level))
+            return false;
+        if (!allowInGameTest && level.getServer() instanceof net.minecraft.gametest.framework.GameTestServer)
+            return false;
+        int size = borderSizeFor(arenaRadius, reach);
+        if (size < 0) {
+            ReignOfNether.LOGGER.warn("[FogOfWar] no border up to {} holds an arena of radius {} (reach {}): fog stays off "
+                + "for this match", WorldBorderServerEvents.RTS_OPTIMIZED_BORDER, arenaRadius, reach);
+            return false;
+        }
+        level.getWorldBorder().setCenter(cx, cz);
+        level.getWorldBorder().setSize(size);
+        ReignOfNether.LOGGER.info("[FogOfWar] match border set to {} blocks round [{}, {}] so fog of war can run",
+            size, (int) cx, (int) cz);
+        return true;
+    }
+
+    /** The decision of {@link #enableForNewMatch}, pure so a GameTest can walk it. */
+    public static boolean shouldEnableForNewMatch(boolean alreadyOn, boolean byDefault, boolean rtsOptimisedMap) {
+        return !alreadyOn && byDefault && rtsOptimisedMap;
+    }
+
     public static void setEnabled(boolean value) {
         if (!value && isForceFog()) {
             ReignOfNether.LOGGER.info("[FogOfWar] Disable refused: gamerule reignofnetherForceFog is true");
