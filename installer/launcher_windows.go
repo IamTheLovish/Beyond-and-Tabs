@@ -29,3 +29,17 @@ func alert(title, msg string) {
 	m, _ := syscall.UTF16PtrFromString(msg)
 	procMessageBox.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x10) // MB_ICONERROR
 }
+
+// displayDPI is the system DPI (96 = 100%). SetProcessDPIAware first: an unaware process is told 96 whatever the scaling.
+// The launcher has no window of its own, so this changes nothing visible.
+func displayDPI() int {
+	user32.NewProc("SetProcessDPIAware").Call()
+	p := user32.NewProc("GetDpiForSystem")
+	if p.Find() != nil {
+		return 96
+	}
+	if d, _, _ := p.Call(); d >= 96 {
+		return int(d)
+	}
+	return 96
+}

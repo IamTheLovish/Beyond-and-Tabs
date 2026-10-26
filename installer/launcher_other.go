@@ -15,3 +15,5 @@ func hideConsole() {}
 func hideWindow(*exec.Cmd) {}
 
 func alert(title, msg string) { fmt.Fprintln(os.Stderr, title+": "+msg) }
+
+func displayDPI() int { return 96 }
