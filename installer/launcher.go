@@ -458,6 +458,60 @@ func buildPageState(p gamePaths, g *ghClient) pageState {
 	return ps
 }
 
+// ---------- high-performance GPU ----------
+
+// gpuPrefValue is Windows' "High performance" choice for one app (DirectX\UserGpuPreferences). 0 = let Windows decide,
+// 1 = power saving.
+const gpuPrefValue = "GpuPreference=2;"
+
+// gpuPrefStore is the registry as decideGPUPref sees it: one value per exe path.
+type gpuPrefStore interface {
+	Get(exe string) (value string, found bool, err error)
+	Set(exe, value string) error
+}
+
+// decideGPUPref writes gpuPrefValue for exe only when no choice exists yet. An existing value (the user's choice,
+// including "Let Windows decide") is left alone. Read and write errors are returned, never swallowed.
+func decideGPUPref(store gpuPrefStore, exe string) (wrote bool, err error) {
+	_, found, err := store.Get(exe)
+	if err != nil {
+		return false, fmt.Errorf("reading the GPU setting: %w", err)
+	}
+	if found {
+		return false, nil
+	}
+	if err := store.Set(exe, gpuPrefValue); err != nil {
+		return false, fmt.Errorf("writing the GPU setting: %w", err)
+	}
+	return true, nil
+}
+
+// javaExe is the Java Prism runs the game with: JavaPath from the instance's instance.cfg or from prismlauncher.cfg when
+// set, else Prism's bundled java-runtime-gamma.
+func javaExe(p gamePaths) string {
+	inst := filepath.Join(p.prismDir, "instances", instanceName)
+	for _, cfg := range []string{filepath.Join(inst, "instance.cfg"), filepath.Join(p.prismDir, "prismlauncher.cfg")} {
+		if v := readCfgValue(cfg, "JavaPath"); v != "" {
+			return v
+		}
+	}
+	return filepath.Join(p.prismDir, "java", "java-runtime-gamma", "bin", "javaw.exe")
+}
+
+// readCfgValue returns key's value in a Prism .cfg file (key=value lines); "" when the file or the key is missing.
+func readCfgValue(path, key string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if k, v, ok := strings.Cut(strings.TrimSpace(line), "="); ok && strings.TrimSpace(k) == key {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
 // ---------- window ----------
 
 // findEdge: the standard install folders, then the App Paths registry key.
@@ -748,6 +802,7 @@ func runLauncher(args []string) error {
 		return errors.New("LOCALAPPDATA is not set")
 	}
 	l := newLauncher(newGamePaths(base), &ghClient{base: ghAPI, client: &http.Client{Timeout: 15 * time.Second}})
+	gpuNote := ensureHighGPU(l.paths) // before Prism starts; a failure is shown on the page and the launch goes on
 	l.load() // fetch while the window opens
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -763,7 +818,7 @@ func runLauncher(args []string) error {
 	if !noWindow {
 		note, err := openWindow(pageURL)
 		l.mu.Lock()
-		l.windowNote = note
+		l.windowNote = strings.TrimSpace(gpuNote + " " + note)
 		l.mu.Unlock()
 		if err != nil {
 			srv.Close()
