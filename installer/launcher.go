@@ -498,10 +498,38 @@ func openURL(u string) error {
 	return cmd.Start()
 }
 
+// Default window: the Beyond All Reason launcher size, 1190x610 LOGICAL px. Edge's --window-size is already in logical
+// px (seen on a 150% display: 1190x610 gave a 1785x915-logical window when multiplied); the page scales its stage to fit.
+const (
+	winLogicalW = 1190
+	winLogicalH = 610
+)
+
+func windowSize(dpi int) (w, h int) {
+	return winLogicalW, winLogicalH // Edge applies the display scale itself; dpi is kept for the caller's log only
+}
+
+// edgeArgs: a private Edge profile, so --window-size applies even when the user's own Edge is already running
+// (an --app window joining a running profile ignores it). Device scale is not forced.
+func edgeArgs(u, localAppData string, dpi int) []string {
+	w, h := windowSize(dpi)
+	return []string{
+		"--app=" + u,
+		"--user-data-dir=" + filepath.Join(localAppData, "BeyondAndTabs", "launcher-app"),
+		"--no-first-run",
+		"--no-default-browser-check",
+		// the private profile must never sign in to the user's Microsoft account or sync (a fresh profile did, 2026-10-26;
+		// checked on screen). Do not add msEdgeOnRamp* here: with them Edge exits at once and no window opens.
+		"--disable-sync",
+		"--disable-features=msImplicitSignin",
+		fmt.Sprintf("--window-size=%d,%d", w, h),
+	}
+}
+
 // openWindow opens the page as an Edge app window, else in the default browser; the note says which.
 func openWindow(u string) (note string, err error) {
 	if edge := findEdge(); edge != "" {
-		cmd := exec.Command(edge, "--app="+u, "--window-size=1200,640")
+		cmd := exec.Command(edge, edgeArgs(u, os.Getenv("LOCALAPPDATA"), displayDPI())...)
 		if err := cmd.Start(); err == nil {
 			return "", nil
 		} else {

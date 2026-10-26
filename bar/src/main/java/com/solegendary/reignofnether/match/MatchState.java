@@ -262,6 +262,9 @@ public final class MatchState {
         setup = newSetup;
         origin = newSetup.origin;
         this.onSeated = onSeated;
+        // a new battlefield is formed: what an earlier match changed is this one's starting ground (BattlefieldJournal)
+        if (this == live)
+            BattlefieldJournal.discard();
         match = null;
         winners.clear();
         endClock = 0;
@@ -302,6 +305,9 @@ public final class MatchState {
     }
 
     private void afterMap() {
+        // the battlefield is ready: from here every block the match changes is kept for Back to lobby
+        if (this == live)
+            BattlefieldJournal.arm();
         StartPhase ph = effects.newStartPhase(this);
         if (setup.runsStartPhase()) {
             if (!enter(MatchPhase.START_POSITIONS, ph.picks.size() + " sides placing starts"))
@@ -361,6 +367,9 @@ public final class MatchState {
             return null;
         }
         MultiplayerMatch m;
+        // an instant lobby start: the bases are about to land, so the journal records from before them
+        if (this == live)
+            BattlefieldJournal.arm();
         seating = true;
         try {
             m = seat.get();
