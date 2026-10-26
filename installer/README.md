@@ -39,14 +39,32 @@ repointed; any other "lovish" shortcut is left alone. A plain run of `BeyondAndT
 - **Look:** styled on the Beyond All Reason launcher; background `brand/launcher-bg.jpg` (embedded), page
   `launcher.html` (embedded).
 - **Data:** your build = sha + UTC date-time from the game jar's name in the instance's `mods` folder; GitHub (public
-  API, no login, at most 3 calls a launch): main's head, then `compare/{last played}...{main}` (merge commits "Merge pull
-  request #N" -> #N + title) or, before the first PLAY, the last 8 merged PRs; then the open PRs ("Coming soon", tagged
-  draft / ready). Per-PR test status would cost one call per PR, so it is not shown. GitHub unreachable: amber status
-  line, PLAY still works.
-- **PLAY** writes `%LOCALAPPDATA%\BeyondAndTabs\launcher-state.json` (main's head sha + time) and starts
-  `prismlauncher.exe -l BeyondAndTabs-test`; the instance's packwiz pre-launch command updates the game. There is no
-  "Update" checkbox: Prism runs the pre-launch command without a shell, so it can't be skipped per launch without
-  rewriting `instance.cfg`.
+  API, no login, at most 4 calls a launch): main's head, the newest tester pack (the last commit on
+  `IamTheLovish/beyond-and-tabs-pack` main, "Tester pack <date>-<sha>", published by CI from main's builds), then
+  `compare/{last played}...{main}` (merge commits "Merge pull request #N" -> #N + title) or, before the first PLAY, the
+  last 8 merged PRs; then the open PRs ("Coming soon", tagged draft / ready). Per-PR test status would cost one call per
+  PR, so it is not shown. GitHub unreachable: amber status line, PLAY still works.
+- **Status line** compares your game jar with the newest pack (not with main, which is often ahead for ~25 min while CI
+  builds the pack): "Up to date: pack <sha> (<date>)" (green), "Update ready: pack <sha> - press PLAY to install it"
+  (gold). When main has merges the pack does not have yet, " · main has newer merges still being packed (usually ~25
+  min)" is added.
+- **PLAY** runs the packwiz update itself before Prism starts: the same command as the instance's `PreLaunchCommand`
+  (read from `instance.cfg`, `$INST_JAVA` replaced by the game's Java), in the game's `minecraft` folder, console
+  hidden. Its output is written to `%LOCALAPPDATA%\BeyondAndTabs\packwiz-update.log` (overwritten each PLAY). Then the
+  launcher re-reads the game jar's name and checks it is the newest pack:
+  - match: "Installed pack <sha>." and Prism starts (`prismlauncher.exe -l BeyondAndTabs-test`);
+  - no match: nothing starts. The warning reads "Update did not install pack <sha> (you have <sha>): <last packwiz
+    output line>". Press PLAY again to launch anyway; that second press says "Launching anyway" and does not run the
+    update again;
+  - the newest pack unknown (GitHub unreachable): Prism starts with a warning that the install is not checked.
+  
+  It writes `%LOCALAPPDATA%\BeyondAndTabs\launcher-state.json` (the installed pack's sha + time) before Prism starts.
+  Prism's own pre-launch command still runs; after the PLAY update it does nothing. There is no "Update" checkbox:
+  Prism runs the pre-launch command without a shell, so it can't be skipped per launch without rewriting `instance.cfg`.
+- **Manual update** (without the launcher): in `%LOCALAPPDATA%\BeyondAndTabs\PrismLauncher\instances\BeyondAndTabs-test\minecraft`
+  run `"<javaw.exe>" -jar packwiz-installer-bootstrap.jar https://raw.githubusercontent.com/IamTheLovish/beyond-and-tabs-pack/main/windows/pack.toml`
+  (`<javaw.exe>` is the instance's `JavaPath`, else `PrismLauncher\java\java-runtime-gamma\bin\javaw.exe`; the
+  bootstrap jar is in that folder). Then check the jar name in `mods` ends with the sha of "Tester pack" on the pack repo.
 - **Buttons:** Open log (the instance's `logs` folder), Open game folder, Troubleshooting
   (`pack/INSTALL-for-testers.txt` on GitHub), Report a bug (new issue).
 - **Stops** when the page stops its 5 s heartbeat (20 s grace), after PLAY, or after 30 minutes at most.

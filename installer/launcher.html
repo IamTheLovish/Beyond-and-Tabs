@@ -167,13 +167,20 @@ $("play").onclick = async () => {
   if (dead) return;
   $("play").disabled = true;
   bar("bar1", 40);
-  setStatus("Starting Prism Launcher ...", "wait");
+  setStatus("Updating the game...", "wait");
   try {
-    await post("api/play");
-    bar("bar1", 100);
-    setStatus("Prism Launcher is starting: it updates the game, then Minecraft opens.", "ok");
-    dead = true;
-    setTimeout(() => window.close(), 1200);
+    const r = await post("api/play");
+    if (r.launched) {
+      bar("bar1", 100);
+      setStatus(r.text, r.level || "ok");
+      dead = true;
+      setTimeout(() => window.close(), 1200);
+    } else {
+      // the check failed: say why; PLAY again launches anyway
+      bar("bar1", 100, true);
+      setStatus(r.text, r.level || "warn");
+      $("play").disabled = false;
+    }
   } catch (e) {
     bar("bar1", 100, true);
     setStatus("PLAY failed: " + e.message, "warn");
