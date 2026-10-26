@@ -15,4 +15,9 @@ public final class MatchEndLayout {
             return 1;
         return 2;
     }
+
+    /** A party of one gets no "Party total" row (it repeats the player's row), only its resources line. */
+    public static boolean showsPartyTotal(int members) {
+        return members > 1;
+    }
 }

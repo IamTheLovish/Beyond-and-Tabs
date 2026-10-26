@@ -209,9 +209,9 @@ public class MatchEndScreen extends Screen {
 
     private int contentHeight(boolean c) {
         int h = PAD + (c ? HEADER_H_C : HEADER_H) + LINE_H; // header + column-header row
-        for (Team t : teams)   // team header, rows, party total (+ resources line unless compact), gap
+        for (Team t : teams)   // team header, rows, party total (+ resources line unless compact; party of one: resources only), gap
             h += (c ? TEAM_HEADER_H_C : TEAM_HEADER_H) + t.members.size() * (c ? ROW_H_C : ROW_H)
-                + (c ? LINE_H : LINE_H * 2) + (c ? TEAM_GAP_C : TEAM_GAP);
+                + (c || !MatchEndLayout.showsPartyTotal(t.members.size()) ? LINE_H : LINE_H * 2) + (c ? TEAM_GAP_C : TEAM_GAP);
         if (!awards.isEmpty())
             h += LINE_H + 4 + awards.size() * LINE_H; // "Awards" header + divider + one line each
         return h + PAD;
@@ -293,6 +293,14 @@ public class MatchEndScreen extends Screen {
                 drawNum(g, row.score(SCORE_MILITARY), cl + COL_MIL, textY, TEXT_NORMAL);
                 drawNum(g, row.score(SCORE_BUILDINGS), cl + COL_BLDG, textY, TEXT_NORMAL);
                 y += rowH;
+            }
+
+            // a party of one: its resources line only, no total row that repeats the player's numbers
+            if (!MatchEndLayout.showsPartyTotal(t.members.size())) {
+                String solo = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
+                g.drawString(font, solo, nameX, y, TEXT_DIM, true);
+                y += LINE_H + (compact ? TEAM_GAP_C : TEAM_GAP);
+                continue;
             }
 
             // party total line

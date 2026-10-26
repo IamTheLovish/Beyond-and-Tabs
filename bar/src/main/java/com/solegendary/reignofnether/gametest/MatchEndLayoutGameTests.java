@@ -37,4 +37,15 @@ public class MatchEndLayoutGameTests {
         else
             helper.fail(String.join("; ", problems));
     }
+
+    // Joisco 2026-10-25: a one-player party showed a "Party total" row with the same numbers as the player's row
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void match_end_party_of_one_has_no_party_total(GameTestHelper helper) {
+        if (MatchEndLayout.showsPartyTotal(1))
+            helper.fail("a party of one still gets a Party total row");
+        else if (!MatchEndLayout.showsPartyTotal(2))
+            helper.fail("a party of two lost its Party total row");
+        else
+            helper.succeed();
+    }
 }
