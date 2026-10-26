@@ -11,12 +11,12 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** matchstart/MatchEndScreen: the compact party-total line never runs into the units total. */
+/** matchstart/MatchEndScreen layout rules. Own batch: pure checks with no world, so they never change defaultBatch's line-up. */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
 public class MatchEndLayoutGameTests {
 
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20, batch = "match_end_layout")
     public static void match_end_compact_total_falls_back_before_overlapping(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         // "Party total" 60 px, "Resources harvested: 301,360" 150 px, "Harvested 301,360" 90 px
@@ -39,7 +39,7 @@ public class MatchEndLayoutGameTests {
     }
 
     // Joisco 2026-10-25: a one-player party showed a "Party total" row with the same numbers as the player's row
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20, batch = "match_end_layout")
     public static void match_end_party_of_one_has_no_party_total(GameTestHelper helper) {
         if (MatchEndLayout.showsPartyTotal(1))
             helper.fail("a party of one still gets a Party total row");
