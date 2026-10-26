@@ -7,9 +7,11 @@ import java.util.Collections;
 import java.util.List;
 
 // Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
-// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (attack and stop are back on
-// A and S as taps, see the order keys below),
+// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (Stop is back on S as a tap, see
+// the order keys below; Attack moved to X on Oct 21),
 // return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
+// A changed default does NOT reach an install that already saved the old one (Minecraft keeps every mapping in
+// options.txt): add the old key to KeybindMigration.STALE and bump its LAYOUT_VERSION whenever a default moves.
 public class Keybindings {
 
     public static final String CATEGORY_CAMERA = "key.categories.reignofnether.camera";
@@ -90,13 +92,19 @@ public class Keybindings {
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
     public static final Keybinding selectArmy     = new Keybinding("key.reignofnether.select_army",     GLFW.GLFW_KEY_MINUS,         CATEGORY_RTS, "-");
+    // The worker's "Return resources" button was on hotkey5 (;), the metal extractor's build slot on all seven factions
+    // (Lane C tester, Oct 21: the extractor key does nothing). It has its own key now: "]" is on no worker card (every
+    // letter, the punctuation slots and the abilities are used), and while a building ghost is out "]" rotates it
+    // (BuildingClientEvents) before the HUD sees the key. ReturnResourcesKeyGameTests checks this key against each faction's worker.
+    public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
-    // on F. S (Stop) still shares the tap/hold rule below.
+    // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
+    // (KeybindMigration, layout 1) - #39 changed only this default, so lovish's card still read "A" until then.
     // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
-    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). A attack, S stop, M move, H hold,
-    // P patrol, G guard, as BAR ships them. A and S are also WASD panning: a TAP (< KeyTaps.TAP_MS) fires the order
-    // when the card has one on that key, a hold pans (KeyTaps, OrthoviewClientEvents). X stays an alias for attack
-    // for anyone used to it; Space now jumps to the last alert (lastAlert), as in BAR.
+    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, S stop, M move, H hold,
+    // P patrol, G guard (BAR's Attack is A, which is camera pan-left here). S is also WASD panning: a TAP
+    // (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card has one on that key, a hold pans (KeyTaps,
+    // OrthoviewClientEvents). Space jumps to the last alert (lastAlert), as in BAR.
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, RtsConflictContext.COMMAND, "X");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
@@ -187,7 +195,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy, returnResources,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,

@@ -23,7 +23,8 @@ import java.util.WeakHashMap;
  * are physically trapped; this is the lighter, faster rule for a unit that is free but not making progress. Every
  * {@link #CHECK_INTERVAL} ticks (staggered by entity id) a unit following a path, or chasing a target it is not in
  * range of, that moved less than {@link #MOVED} blocks since the last check gets, in order, one re-path, one
- * {@link #SIDESTEP}-block step perpendicular to its heading, then its chase target dropped. One stage per check, so
+ * {@link #SIDESTEP}-block step perpendicular to its heading, then its chase target dropped - unless the player ordered
+ * that target (forced): then its ring slot is released and the cycle starts over. One stage per check, so
  * at most one nudge per 2 s per unit and never an oscillation; a unit that moves resets to the first stage. A unit
  * that is where its chase put it (a bank slot beside a wading target, or a deliberate hold) is not stuck.
  * The sidestep is served to the chase goals through {@link Engage}, since their own repath would otherwise undo it
@@ -52,6 +53,7 @@ public final class StuckNudge {
     private static final Map<Mob, State> STATES = new WeakHashMap<>();
     // outside the state, which is dropped as soon as the unit no longer wants to move (right after a give-up)
     private static final Map<Mob, Integer> GIVE_UPS = new WeakHashMap<>();
+    private static final Map<Mob, Integer> KEPT = new WeakHashMap<>();
 
     /** Server side, every tick from Unit.tick: does nothing except on the unit's staggered check tick. */
     public static void tick(Mob mob) {
@@ -88,8 +90,18 @@ public final class StuckNudge {
         if (stage == STAGE_GIVE_UP && mob.getTarget() != null) {
             // a plain move order is not dropped here: MoveToTargetBlockGoal has its own give-up after three repaths
             // that end on the same node, and dropping it would also drop an attack-move's resume point
-            giveUp(mob, unit);
-            GIVE_UPS.merge(mob, 1, Integer::sum);
+            if (isOrderedTarget(mob, unit)) {
+                // The player picked this target (an attack click: forced). Dropping it made the unit ignore the
+                // order after ~6 s of being blocked - "units sometimes don't listen". Instead its ring slot is
+                // released (the chase picks another cell next to the target, Engage) and the cycle starts again:
+                // re-path, sidestep, ... - still at most one nudge per CHECK_INTERVAL.
+                keepOrderedTarget(mob);
+                KEPT.merge(mob, 1, Integer::sum);
+                stage = 0;
+            } else {
+                giveUp(mob, unit);
+                GIVE_UPS.merge(mob, 1, Integer::sum);
+            }
         }
         s.stage = stage;
         if (now - s.lastLog >= LOG_INTERVAL) {
@@ -115,6 +127,11 @@ public final class StuckNudge {
     /** For tests: how many chase targets this unit has given up. */
     public static int giveUps(Mob mob) {
         return GIVE_UPS.getOrDefault(mob, 0);
+    }
+
+    /** For tests: how many times this unit reached the give-up stage on a player-ordered target and kept it. */
+    public static int keptOrderedTargets(Mob mob) {
+        return KEPT.getOrDefault(mob, 0);
     }
 
     /** For tests: the game tick of the last nudge, negative when there was none. */
@@ -184,6 +201,17 @@ public final class StuckNudge {
         if (h.lengthSqr() < 1.0E-4)
             h = new Vec3(1, 0, 0);
         return h.normalize();
+    }
+
+    /** The chase target is the one the player ordered (forced), not one the unit picked up on its own. */
+    private static boolean isOrderedTarget(Mob mob, Unit unit) {
+        return unit.getTargetGoal() != null && unit.getTargetGoal().forced
+            && unit.getTargetGoal().getTarget() == mob.getTarget();
+    }
+
+    private static void keepOrderedTarget(Mob mob) {
+        Engage.release(mob);
+        mob.getNavigation().stop();
     }
 
     private static void giveUp(Mob mob, Unit unit) {

@@ -64,7 +64,7 @@ public class BuildingLineClientEvents {
     @SubscribeEvent
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         if (evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1 || BuildingClientEvents.getBuildingToPlace() == null
-                || !Keybindings.shiftMod.isDown() || HudClientEvents.isMouseOverAnyButtonOrHud())
+                || AreaMexClientEvents.active() || !Keybindings.shiftMod.isDown() || HudClientEvents.isMouseOverAnyButtonOrHud())
             return;
         startCentre = CursorClientEvents.getPreselectedBlockPos();
     }
@@ -259,11 +259,19 @@ public class BuildingLineClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !active())
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
-        for (BlockPos origin : formationOrigins())
-            BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), origin, 0);
-        drawMergePreview(evt.getPoseStack());
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS || !active())
+                return;
+            for (BlockPos origin : formationOrigins())
+                BuildingClientEvents.drawBuildingToPlace(evt.getPoseStack(), origin, 0);
+            drawMergePreview(evt.getPoseStack());
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
+        }
     }
 
     @SubscribeEvent

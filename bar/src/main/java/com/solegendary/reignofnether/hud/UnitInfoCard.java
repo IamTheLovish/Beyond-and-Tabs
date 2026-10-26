@@ -42,7 +42,7 @@ public final class UnitInfoCard {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    public static final int COMPACT_W = 124;   // was 112: four-word ability names were cut off (lovish's clip)
+    public static final int COMPACT_W = 108;   // was 124 (112 before lovish's clip cut a four-word name): the card beside the slim icon block (Oct 22)
     public static final int FULL_W = 128;
     static final int BG = 0xD0101216, EDGE = 0xFF3A3F46;
     static final int STAR_ON = 0xFFFFD040, STAR_OFF = 0xFF404448;
@@ -187,6 +187,34 @@ public final class UnitInfoCard {
     }
 
     // ------------------------------------------------------------------ cards
+
+    /** How many ability rows {@link #abilities} will draw for this unit (same filter, same cap). */
+    public static int abilityRowCount(Unit unit) {
+        List<Button> buttons = unit.getAbilityButtons();
+        int rows = 0;
+        for (int i = 0; i < buttons.size() && rows < MAX_ABILITY_ROWS; i++)
+            if (buttons.get(i) instanceof AbilityButton ab && ab.ability != null && !ab.isHidden.get())
+                rows++;
+        return rows;
+    }
+
+    /**
+     * Height the compact card needs: role line, cost line and one 10 px row per ability, instead of filling the whole
+     * 94 px of the command panel (Oct 22: a unit with no abilities left a tall empty box). 26 px for role + cost,
+     * 27 + 10 per row once there is an ability (the last row must end 2 px inside the frame, see {@link #abilities}).
+     */
+    public static int compactHeight(LivingEntity le) {
+        if (HudPanels.unitCardCompact)
+            return ONE_LINE_H;
+        int rows = le instanceof Unit u ? abilityRowCount(u) : 0;
+        return rows == 0 ? 26 : 27 + 10 * rows;
+    }
+
+    /** Height the full (hover) card needs: name, role, health, cost, stats lines and the ability rows. */
+    public static int fullHeight(LivingEntity le) {
+        int rows = le instanceof Unit u ? abilityRowCount(u) : 0;
+        return 62 + 10 * rows;
+    }
 
     /** Card for the single selected unit, beside the portrait. @return its zone (for click-blocking) */
     public static RectZone renderCompact(GuiGraphics gg, int x, int y, int h, LivingEntity le, int mouseX, int mouseY) {

@@ -41,6 +41,8 @@ public class FogOfWarClientEvents {
     // nothing per frame. Volatile: the off-thread chunk mesher reads it.
     public static final int FOG_TINT_CLEAR = 0x7882A0;
     public static volatile int FOG_TINT_RGB = FOG_TINT_CLEAR;
+    // the same for ground never in sight ("dark but visible", ~15% brightness; FogExploration), set with the style
+    public static volatile int FOG_TINT_UNEXPLORED = FogExploration.TINT_UNEXPLORED;
 
     private static final Minecraft MC = Minecraft.getInstance();
 
@@ -80,6 +82,9 @@ public class FogOfWarClientEvents {
         brightChunks.clear();
         brightChunks.addAll(bright);
 
+        // ground in sight for the first time leaves the never-explored tint: re-mesh it once, as any flip does
+        List<ChunkPos> firstExplored = FogExploration.markExplored(bright);
+
         // Publish the server's edge masks atomically with the bright set (same packet), so there is never
         // a window where a chunk is bright but its mask hasn't caught up.
         Map<ChunkPos, long[]> oldMasks = edgeMasks;
@@ -89,6 +94,7 @@ public class FogOfWarClientEvents {
         // re-dirty the same sections 9× each
         Set<ChunkPos> toRerender = new HashSet<>();
         for (ChunkPos cpos : newlyDark) addWithNeighbors(toRerender, cpos);
+        for (ChunkPos cpos : firstExplored) addWithNeighbors(toRerender, cpos);
         for (ChunkPos cpos : newlyBright) {
             addWithNeighbors(toRerender, cpos);
             if (MC.level != null) {
@@ -104,6 +110,10 @@ public class FogOfWarClientEvents {
         // sampling in BiomeColorsMixin)
         for (ChunkPos cpos : diffMasks(oldMasks, masks)) addWithNeighbors(toRerender, cpos);
         markSectionsDirty(toRerender);
+        // the ground scars bake the same tint into their mesh (worldmemory/ScarRegionMesh): re-mesh those regions too
+        try {
+            com.solegendary.reignofnether.worldmemory.WorldMemoryHooks.onFogChanged(toRerender);
+        } catch (Exception ignored) { }
     }
 
     private static void addWithNeighbors(Set<ChunkPos> set, ChunkPos cpos) {
@@ -112,15 +122,9 @@ public class FogOfWarClientEvents {
                 set.add(new ChunkPos(cpos.x + dx, cpos.z + dz));
     }
 
+    // only the sections the camera can show: the surface band in the RTS view, the whole column in first person (R1)
     private static void markSectionsDirty(Set<ChunkPos> chunks) {
-        if (MC.level == null || MC.levelRenderer == null || chunks.isEmpty()) return;
-        int minSection = MC.level.getMinSection();
-        int maxSection = MC.level.getMaxSection();
-        for (ChunkPos cpos : chunks) {
-            for (int y = minSection; y < maxSection; y++) {
-                MC.levelRenderer.setSectionDirty(cpos.x, y, cpos.z);
-            }
-        }
+        FogRemesh.markDirty(chunks);   // counts what it marks for [FrameParts] too
     }
 
     // Block-level visibility used by the fog tint hooks (FogTintingBlockColor, BiomeColorsMixin,
@@ -128,6 +132,15 @@ public class FogOfWarClientEvents {
     // off-thread chunk mesher, so it only reads immutable published state. O(1).
     public static boolean isBlockVisible(BlockPos pos) {
         return isBlockVisible(pos.getX(), pos.getZ());
+    }
+
+    /**
+     * The fog tint for the block column at x, z: 0 in sight (or fog off), else the explored or the never-explored tint
+     * (FogExploration). Same off-thread, allocation-free contract as isBlockVisible.
+     */
+    public static int fogTintAt(int x, int z) {
+        if (isBlockVisible(x, z)) return 0;
+        return FogExploration.pickTint(false, FogExploration.isExplored(x >> 4, z >> 4), FOG_TINT_RGB, FOG_TINT_UNEXPLORED);
     }
 
     public static boolean isBlockVisible(int x, int z) {
@@ -138,6 +151,19 @@ public class FogOfWarClientEvents {
         if (mask == null) return true;                             // live chunk (no mask): fully visible
         int i = ((x & 15) << 4) | (z & 15);
         return (mask[i >> 6] & (1L << (i & 63))) != 0;
+    }
+
+    /**
+     * A fingerprint of the fog state the meshes are built from (the bright set and the edge masks), order-independent:
+     * two equal values mean nothing changed in between (the eyes fog scene logs it beside its before / after stills).
+     */
+    public static long stateFingerprint() {
+        long h = brightChunks.size();
+        for (ChunkPos cp : brightChunks)
+            h += cp.toLong() * 0x9E3779B97F4A7C15L;
+        for (Map.Entry<ChunkPos, long[]> e : edgeMasks.entrySet())
+            h += (e.getKey().toLong() + 31L * Arrays.hashCode(e.getValue())) * 0xC2B2AE3D27D4EB4FL;
+        return h;
     }
 
     private static final long[] ALL_FOGGED = new long[4]; // read-only; every column masked
@@ -199,6 +225,7 @@ public class FogOfWarClientEvents {
     // reload chunks like player pressed F3 + A
     public static void resetFogChunks() {
         MC.levelRenderer.allChanged();
+        FogRemesh.forgetStale();   // everything re-meshes from scratch
     }
 
     public static void setEnabled(boolean value) {
@@ -207,6 +234,7 @@ public class FogOfWarClientEvents {
 
         if (enabled != value) {
             enabled = value;
+            FogExploration.clear();   // a new fog: nothing has been seen yet
             resetFogChunks();
 
             if (!enabled) {
@@ -255,15 +283,24 @@ public class FogOfWarClientEvents {
                 })));
     }
 
+    /**
+     * Whether any of the building's sample points is in sight: a point every 16 blocks across the footprint from its
+     * min corner, plus the three far corners - the points of BuildingUtils.getUniqueChunkBps, walked in place. The
+     * strategic plates and the building boxes ask this per building per frame, and the list version allocated an AABB,
+     * a list and a BlockPos per point each time (perf plan R2).
+     */
     public static boolean isBuildingInBrightChunk(BuildingPlacement building) {
-        if (!isEnabled())
+        if (!isEnabled() || MC.level == null)
             return true;
-
-        for (BlockPos bp : BuildingUtils.getUniqueChunkBps(building))
-            if (isInBrightChunk(bp))
-                return true;
-
-        return false;
+        // the box getUniqueChunkBps built: new AABB(minCorner, maxCorner + 1), which orders its corners
+        int ax = building.minCorner.getX(), az = building.minCorner.getZ();
+        int bx = building.maxCorner.getX() + 1, bz = building.maxCorner.getZ() + 1;
+        int minX = Math.min(ax, bx), minZ = Math.min(az, bz), maxX = Math.max(ax, bx), maxZ = Math.max(az, bz);
+        for (int z = minZ; z <= maxZ; z += 16)
+            for (int x = minX; x <= maxX; x += 16)
+                if (isBlockVisible(x, z))
+                    return true;
+        return isBlockVisible(maxX, minZ) || isBlockVisible(minX, maxZ) || isBlockVisible(maxX, maxZ);
     }
 
     // Kept named isInBrightChunk for its many callers, but now block-granular: a position is "bright" only

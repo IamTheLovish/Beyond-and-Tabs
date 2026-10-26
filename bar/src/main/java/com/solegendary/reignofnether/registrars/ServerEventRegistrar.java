@@ -48,6 +48,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(GameruleServerEvents.class);
         // the whole-tick profile and /rts-perf (inbox/spec-5 section 3): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.ServerTickProfile.class);
+        com.solegendary.reignofnether.perf.GcLog.install();   // [GC] pause lines
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
@@ -64,8 +65,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.MomentumServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitGrid.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.TargetScan.class);   // target acquisition's grid (perf plan PR 5)
         vanillaEventBus.register(com.solegendary.reignofnether.unit.VeterancyServerEvents.class);
-        // BAR HUD pass 4: per-unit kill counters, the kill feed and the wreck metal labels
+        // BAR HUD pass 4: per-unit kill counters, the kill tally and the wreck metal labels
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitKills.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.KillFeedServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckSyncServerEvents.class);
@@ -146,6 +148,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(CommandsServerEvents.class);
         vanillaEventBus.register(ScenarioServerEvents.class);
         vanillaEventBus.register(WorldBorderServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.worldborder.ArenaPathing.class);
         vanillaEventBus.register(CustomButtonServerEvents.class);
         vanillaEventBus.register(ItemServerEvents.class);
         vanillaEventBus.register(TaskSchedulerServerEvents.class);

@@ -1,12 +1,18 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.perf.Sys;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Keeps units from melting into one blob (lovish's Oct 19 match: "all the units just merge together"). Vanilla's
@@ -26,6 +32,46 @@ public final class Separation {
     static final double MAX_NEIGHBOUR_HALF_WIDTH = 2.0;
 
     private static final List<LivingEntity> SCRATCH = new ArrayList<>();
+    private static final List<LivingEntity> PUSH_SCRATCH = new ArrayList<>();
+
+    /**
+     * A unit's vanilla push ({@code LivingEntity.pushEntities}, every tick) finds the bodies it overlaps through
+     * {@link UnitGrid} instead of a world entity query: the Oct 22 server profile had ~104 such queries per pillager
+     * per 10 s window. Same bodies and cramming rule as vanilla; only other units are looked up (a unit is no longer
+     * nudged by an animal or item it overlaps). Returns the bodies for the caller to {@code doPush} one by one (the
+     * entity's own override, which is protected: TitanMass shoves, wraiths and bats have their own rules) and then
+     * clear, or null when vanilla should run (not a server unit).
+     */
+    public static List<LivingEntity> overlappingForPush(LivingEntity self) {
+        if (!(self instanceof com.solegendary.reignofnether.unit.interfaces.Unit) || !(self.level() instanceof ServerLevel level))
+            return null;
+        int sys = Sys.begin(Sys.PUSH_SCAN);
+        try {
+            AABB box = self.getBoundingBox();
+            UnitGrid.inBox(level, box.minX, box.minZ, box.maxX, box.maxZ, PUSH_SCRATCH);
+            Predicate<Entity> pushable = EntitySelector.pushableBy(self);
+            int n = 0;
+            for (int i = 0; i < PUSH_SCRATCH.size(); i++) {
+                LivingEntity le = PUSH_SCRATCH.get(i);
+                if (le == self || !le.getBoundingBox().intersects(box) || !pushable.test(le))
+                    continue;
+                PUSH_SCRATCH.set(n++, le);
+            }
+            PUSH_SCRATCH.subList(n, PUSH_SCRATCH.size()).clear();
+            int max = level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            if (n > 0 && max > 0 && n > max - 1 && self.getRandom().nextInt(4) == 0) {
+                int crammed = 0;
+                for (int i = 0; i < n; i++)
+                    if (!PUSH_SCRATCH.get(i).isPassenger())
+                        crammed++;
+                if (crammed > max - 1)
+                    self.hurt(self.damageSources().cramming(), 6.0F);
+            }
+        } finally {
+            Sys.end(sys);
+        }
+        return PUSH_SCRATCH;
+    }
 
     public static void tick(Mob mob) {
         if ((mob.tickCount + mob.getId()) % INTERVAL != 0)

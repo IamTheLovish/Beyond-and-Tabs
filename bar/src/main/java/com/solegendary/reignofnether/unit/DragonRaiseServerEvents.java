@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.production.PopulationRules;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit;
@@ -63,7 +64,8 @@ public class DragonRaiseServerEvents {
         long mine = risen.stream().filter(e -> e instanceof Unit u && owner.equals(u.getOwnerName())).count();
         if (mine >= MAX_RISEN)
             return null;
-        if (UnitServerEvents.getCurrentPopulation(owner) + 1 > BuildingServerEvents.getTotalPopulationSupply(owner))
+        if (!PopulationRules.hasRoom(UnitServerEvents.getCurrentPopulation(owner),
+                BuildingServerEvents.getTotalPopulationSupply(owner), 1))
             return null;
         Entity e = UnitServerEvents.spawnMob(EntityRegistrar.SKELETON_UNIT.get(), level, at.below(), owner);
         if (e == null)

@@ -62,12 +62,19 @@ import java.util.List;
  *     in the level, a death on either side, or the armies' centroids within 8 blocks (20 s cap, the log says which) -
  *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
- *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
+ *     (counted from the 02 shot, labelled 0:30) passes 2:00. 11b_capitol_selected (Oct 22, slim HUD): the same
+ *     capitol selected, 30 ticks later - the building's icon block, health bar, Repeat toggle and production queue.</li>
  * <li>12_river_crossing (Oct 14, terrain_intelligence.md): a pad with a 4-wide, 1-deep water strip is laid with the
  *     op fill command 30 blocks west of the first fight, a dozen of the player's units are summoned on its west bank
  *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
  *     seconds later. The log line counts who stands in the water and on which bank - the army should cross in a
  *     line and fight on the far bank, not in the river.</li>
+ * <li>17_fog (Oct 21, perf plan R1, EyesFogScene): the last scene - fog of war on, a dozen marching out of our base
+ *     into the dark; the fog re-mesh A/B (surface band vs whole column) and the fog edge before and after a full
+ *     re-mesh.</li>
+ * <li>18_overlays (Oct 21, perf plan R2, EyesOverlaysScene; its own run, eyes.yml input `overlays`): 500 units and
+ *     1,700 buildings, stills of the underlines and boxes at a mid zoom and at strategic zoom, and the frame and
+ *     per-handler times at zoom 30, 60 (crowd) and 200 - the before / after of the overlay loops and unit LOD.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -89,7 +96,7 @@ public final class EyesDirector {
     // ---- the staged scenes (06-11) ----
     // the match clock: totalTicks at which the match was at 0:00 (the 02 shot is labelled 0:30)
     private static int matchZeroTotalTick = -1;
-    private static BlockPos capitolCentre = null;
+    static BlockPos capitolCentre = null;          // (package: EyesFogScene)
     private static Vec3 armyCentre = null;        // where the player's army was spawned
     private static Vec3 enemyCentre = null;       // where the enemy army was spawned
     private static String enemyName = null;
@@ -178,6 +185,21 @@ public final class EyesDirector {
                     shot(mc, "02b_rts_default_look_off");
                     com.solegendary.reignofnether.postfx.WorldLookPass.lookOverride = null;
                     lookOffAt = -1;
+                    if (SCARS_ONLY) {   // a scars run (eyes.yml input `scars`): only the aftermath scene, then the end
+                        step = STEP_SCARS;
+                        ticks = 0;
+                        return;
+                    }
+                    if (FOG_ONLY) {     // a fog run (eyes.yml input `fog`): only the fog scene, then the end
+                        step = STEP_FOG;
+                        ticks = 0;
+                        return;
+                    }
+                    if (OVERLAYS_ONLY) {   // an overlays run (eyes.yml input `overlays`): only scene 18, then the end
+                        step = STEP_OVERLAYS;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -215,6 +237,40 @@ public final class EyesDirector {
             }
             case 6, 7, 8, 9, 10, 11, 12, 13 -> staged(mc);
             case 14 -> firstPerson(mc);
+            case STEP_SCARS -> {
+                try {
+                    sceneScars(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 16 scars failed at tick {}, going on to the fog scene", ticks, e);
+                    afterScars();
+                }
+            }
+            case STEP_FOG -> {
+                boolean done;
+                try {
+                    done = EyesFogScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 17_fog failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_OVERLAYS -> {
+                boolean done;
+                try {
+                    done = EyesOverlaysScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
             case STEP_STRUCTURES -> {
                 try {
                     sceneStructures(mc);
@@ -448,7 +504,8 @@ public final class EyesDirector {
                 ReignOfNether.LOGGER.info("[Eyes] 14_first_person: eye at {} y {} looking at the capitol {}",
                         fmt(mc.player.position()), (int) mc.player.getEyeY(), capitolCentre.toShortString());
                 shot(mc, "14_first_person");
-                next();
+                step = STEP_SCARS;   // the aftermath scene is the last one now (16, a world that remembers)
+                ticks = 0;
             }
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[Eyes] 14_first_person failed at tick {}, skipping it", ticks, e);
@@ -496,6 +553,323 @@ public final class EyesDirector {
             next();
         }
     }
+
+    // ---- 16: scars (a world that remembers, claude/world-that-remembers.md slice 1; eyes.yml input `scars`) ----
+    // The ground memory field is server state drawn by a client mesh, so the stills prove what a player sees of it: a
+    // flat pad with the ground's awkward shapes (steps rising 1-4, a slab row, snow layers, a dirt path, a pond) is laid
+    // beside our base, photographed clean, hit by a scripted battle - a barrage of blasts, artillery walking a line,
+    // three T3 deaths, a fallen building, a game ender's crater - through the SAME server calls BarFx makes
+    // (GroundMemoryServer.blast / heavyImpact / death / collapse / groundImpact: stamp, sync pass, packet, client mesh),
+    // and photographed again:
+    //   16_scars_before_rts   the clean pad, RTS default zoom
+    //   16_scars_rts          the aftermath, the same camera
+    //   16_scars_rts_close    zoomed in on the steps, slabs and snow (a decal that floats shows here)
+    //   16_scars_rts_crater   zoomed in on the game ender's crater and the dirt path beside it
+    //   16_scars_rts_far      strategic zoom: does the battlefield still read
+    //   16_scars_fp_crater    first person, a person's eye height, looking into the big crater
+    //   16_scars_fp_steps     first person at the steps, slab row and snow
+    // The timeline is wall-clock seconds, not ticks (the shader lane's client runs 4-6 ticks a second, see CUES).
+    static final boolean SCARS_ONLY = Boolean.getBoolean("bat.eyes.scars");
+    static final int STEP_SCARS = 21;
+    static final int STEP_FOG = 22;               // 17_fog, EyesFogScene: after the scars, the last scene of the full tour
+    static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
+    static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
+    static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
+    private static final int SCARS_HALF = 16;     // the pad is 33 x 33
+    private static int scarsPhase = 0;
+    private static long scarsNanos = 0;
+    private static BlockPos scarsSite = null;     // the pad's centre, on the ground (the first free block above the grass)
+    private static volatile boolean scarsPadReady = false, scarsStamped = false;
+    private static volatile String scarsError = null;
+    private static volatile int scarsMarkedChunks = 0;
+
+    private static double scarsSeconds() {
+        return (System.nanoTime() - scarsNanos) / 1e9;
+    }
+
+    private static void scarsNext(int phase) {
+        scarsPhase = phase;
+        scarsNanos = System.nanoTime();
+    }
+
+    private static void scarsEnd(String why) {
+        ReignOfNether.LOGGER.warn("[Eyes] 16 scars: ending early ({})", why);
+        afterScars();
+    }
+
+    /** The full tour goes on to 17_fog (EyesFogScene, the last scene); a scars-only run ends here. */
+    private static void afterScars() {
+        step = SCARS_ONLY ? 15 : STEP_FOG;
+        ticks = 0;
+    }
+
+    /** 44 blocks from our capitol along the first dry axis: the 33-wide pad clears the base (and its buildings, whose blocks the pad would take). */
+    private static BlockPos scarsSite(Minecraft mc) {
+        if (capitolCentre == null)
+            capitolCentre = findCapitol(mc);
+        int[][] axes = { { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 } };
+        int[] axis = axes[0];
+        for (int[] a : axes)
+            if (dryAround(mc, capitolCentre.getX() + a[0] * 44, capitolCentre.getZ() + a[1] * 44)) {
+                axis = a;
+                break;
+            }
+        int x = capitolCentre.getX() + axis[0] * 44, z = capitolCentre.getZ() + axis[1] * 44;
+        int y = surfaceY(mc, x, z);
+        return new BlockPos(x, y == Integer.MIN_VALUE ? capitolCentre.getY() : y, z);
+    }
+
+    private static BlockPos scarsAt(int dx, int y, int dz) {
+        return new BlockPos(scarsSite.getX() + dx, y, scarsSite.getZ() + dz);
+    }
+
+    /** On the server thread: the flat grass pad (33 x 33, trees and plants cleared) with its awkward shapes. */
+    private static void layScarsPad(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        final int gy = scarsSite.getY();   // the first free block above the ground; the grass block is at gy - 1
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                var grass = net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState();
+                var dirt = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+                var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                for (int dx = -SCARS_HALF; dx <= SCARS_HALF; dx++)
+                    for (int dz = -SCARS_HALF; dz <= SCARS_HALF; dz++) {
+                        level.setBlock(scarsAt(dx, gy - 1, dz), grass, 2);
+                        for (int y = gy - 4; y < gy - 1; y++)
+                            level.setBlock(scarsAt(dx, y, dz), dirt, 2);
+                        for (int y = gy; y <= gy + 24; y++) {
+                            BlockPos p = scarsAt(dx, y, dz);
+                            if (!level.getBlockState(p).isAir())
+                                level.setBlock(p, air, 2);
+                        }
+                    }
+                // a staircase rising east, four steps of one block (the fourth is a cliff top for a blast at its foot)
+                for (int dx = 6; dx <= 9; dx++)
+                    for (int dz = -4; dz <= -1; dz++)
+                        for (int y = gy; y < gy + (dx - 5); y++)
+                            level.setBlock(scarsAt(dx, y, dz), y == gy + (dx - 6) ? grass : dirt, 2);
+                // a row of slabs, bottom and top halves alternating
+                for (int dx = 6; dx <= 9; dx++)
+                    level.setBlock(scarsAt(dx, gy, 3), net.minecraft.world.level.block.Blocks.STONE_SLAB.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.SlabBlock.TYPE, dx % 2 == 0
+                            ? net.minecraft.world.level.block.state.properties.SlabType.BOTTOM
+                            : net.minecraft.world.level.block.state.properties.SlabType.TOP), 2);
+                // snow, one to four layers
+                for (int dx = 6; dx <= 9; dx++)
+                    level.setBlock(scarsAt(dx, gy, 7), net.minecraft.world.level.block.Blocks.SNOW.defaultBlockState()
+                        .setValue(net.minecraft.world.level.block.SnowLayerBlock.LAYERS, dx - 5), 2);
+                // a dirt path
+                for (int dx = -9; dx <= -3; dx++)
+                    level.setBlock(scarsAt(dx, gy - 1, 6), net.minecraft.world.level.block.Blocks.DIRT_PATH.defaultBlockState(), 2);
+                // a pond (flush with the grass, so its water stays put)
+                for (int dx = -11; dx <= -8; dx++)
+                    for (int dz = -9; dz <= -6; dz++)
+                        level.setBlock(scarsAt(dx, gy - 1, dz), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
+                scarsPadReady = true;
+            } catch (Exception e) {
+                scarsError = e.toString();
+                ReignOfNether.LOGGER.error("[Eyes] 16 scars: the pad failed", e);
+            }
+        });
+    }
+
+    /** On the server thread: the battle's marks, through the same calls BarFx makes. */
+    private static void stampScarsBattle(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        final int gy = scarsSite.getY();
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                java.util.Random rnd = new java.util.Random(1021);
+                // a barrage over the northern half: blasts of radius 2-4 (grenades, rockets, fireballs)
+                for (int i = 0; i < 26; i++) {
+                    double dx = -14 + rnd.nextDouble() * 22, dz = -14 + rnd.nextDouble() * 12;
+                    float r = 2f + rnd.nextInt(3);
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, scarsSite.getX() + dx,
+                        gy, scarsSite.getZ() + dz, r, i % 3 == 0 ? com.solegendary.reignofnether.barfx.BarFx.K_MAGIC
+                            : com.solegendary.reignofnether.barfx.BarFx.K_TNT);
+                }
+                // artillery walking a line across the pad, west to east
+                for (int i = 0; i < 9; i++)
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryServer.heavyImpact(level,
+                        scarsSite.getX() - 14 + i * 3.4, gy, scarsSite.getZ() + 4 + Math.sin(i * 0.9) * 2.5, 3f + (i % 2));
+                // shells and fireballs that landed without a blast of their own
+                for (int i = 0; i < 12; i++)
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryServer.groundImpact(level,
+                        scarsSite.getX() - 12 + rnd.nextDouble() * 24, gy, scarsSite.getZ() - 12 + rnd.nextDouble() * 24,
+                        i % 2 == 0 ? com.solegendary.reignofnether.barfx.BarFx.K_FIREBALL : com.solegendary.reignofnether.barfx.BarFx.K_BIG_FIREBALL, 1.4f);
+                // three T3 deaths and a golem
+                for (int i = 0; i < 3; i++)
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryServer.death(level, scarsSite.getX() - 6 + i * 5, gy,
+                        scarsSite.getZ() - 5 + (i % 2) * 3, com.solegendary.reignofnether.barfx.BarFx.D_FLESH, 3, 1.8f);
+                com.solegendary.reignofnether.worldmemory.GroundMemoryServer.death(level, scarsSite.getX() + 2, gy,
+                    scarsSite.getZ() + 10, com.solegendary.reignofnether.barfx.BarFx.D_CONSTRUCT, 2, 1.4f);
+                // the foot of the stairs, the slab row and the snow take hits (a decal on a step shows or floats here)
+                com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, scarsSite.getX() + 5.5, gy, scarsSite.getZ() - 2.5, 4f,
+                    com.solegendary.reignofnether.barfx.BarFx.K_TNT);
+                com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, scarsSite.getX() + 6.5, gy, scarsSite.getZ() + 5.5, 3f,
+                    com.solegendary.reignofnether.barfx.BarFx.K_TNT);
+                // a fallen building, and a game ender's crater
+                com.solegendary.reignofnether.worldmemory.GroundMemoryServer.collapse(level, scarsSite.getX() - 3, gy, scarsSite.getZ() - 11, 5f);
+                com.solegendary.reignofnether.worldmemory.GroundMemoryServer.blast(level, scarsSite.getX() - 4, gy, scarsSite.getZ() + 11, 7f,
+                    com.solegendary.reignofnether.barfx.BarFx.K_BIG_FIREBALL);
+                scarsMarkedChunks = com.solegendary.reignofnether.worldmemory.GroundMemoryServer.markedChunks(level);
+                scarsStamped = true;
+            } catch (Exception e) {
+                scarsError = e.toString();
+                ReignOfNether.LOGGER.error("[Eyes] 16 scars: the battle failed", e);
+            }
+        });
+    }
+
+    /** Logs what the heightmaps, the top-block finder and the field say about the awkward columns, on both sides (a still shows a decal missing; this says why). */
+    private static void probeScars(Minecraft mc) {
+        final int[][] cols = { { -6, 6 }, { 6, 7 }, { 7, 7 }, { 9, 7 }, { 7, 3 }, { 8, 3 }, { 7, -2 }, { 0, 0 }, { -4, 11 } };
+        final String[] names = { "dirt path", "snow 1", "snow 2", "snow 4", "top slab", "bottom slab", "stairs", "flat grass", "game ender centre" };
+        for (int i = 0; i < cols.length; i++)
+            ReignOfNether.LOGGER.info("[Eyes] 16 probe client {}: {}", names[i],
+                com.solegendary.reignofnether.worldmemory.GroundSurface.probe(mc.level, scarsSite.getX() + cols[i][0], scarsSite.getZ() + cols[i][1]));
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> {
+            try {
+                var level = server.overworld();
+                for (int i = 0; i < cols.length; i++) {
+                    int x = scarsSite.getX() + cols[i][0], z = scarsSite.getZ() + cols[i][1];
+                    var mem = com.solegendary.reignofnether.worldmemory.GroundMemoryCapability.of(level.getChunkAt(new BlockPos(x, 0, z)));
+                    int cell = com.solegendary.reignofnether.worldmemory.GroundMemory.index(x & 15, z & 15);
+                    ReignOfNether.LOGGER.info("[Eyes] 16 probe server {}: {}, scorch {} crater {}", names[i],
+                        com.solegendary.reignofnether.worldmemory.GroundSurface.probe(level, x, z),
+                        mem == null ? -1 : mem.scorch(cell), mem == null ? -1 : mem.crater(cell));
+                }
+            } catch (Exception e) {
+                ReignOfNether.LOGGER.error("[Eyes] 16 probe failed", e);
+            }
+        });
+    }
+
+    /** Stands the player on the pad at (dx, dz), eyes at a person's height, looking at (ax, ay, az) offsets from the site. */
+    private static void scarsStand(Minecraft mc, double dx, double dz, double aimX, double aimY, double aimZ) {
+        double px = scarsSite.getX() + 0.5 + dx, pz = scarsSite.getZ() + 0.5 + dz, py = scarsSite.getY();
+        double ex = scarsSite.getX() + 0.5 + aimX - px, ez = scarsSite.getZ() + 0.5 + aimZ - pz;
+        double ey = (scarsSite.getY() + aimY) - (py + mc.player.getEyeHeight());
+        float yaw = (float) Math.toDegrees(Math.atan2(-ex, ez));
+        float pitch = (float) Math.toDegrees(Math.atan2(-ey, Math.sqrt(ex * ex + ez * ez)));
+        mc.player.moveTo(px, py, pz, yaw, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
+        mc.options.hideGui = true;
+    }
+
+    private static void sceneScars(Minecraft mc) {
+        if (mc.level == null || mc.player == null || mc.getSingleplayerServer() == null) {
+            scarsEnd("no level, player or integrated server");
+            return;
+        }
+        if (scarsError != null) {
+            scarsEnd(scarsError);
+            return;
+        }
+        switch (scarsPhase) {
+            case 0 -> {   // the site: chunks load under the camera, then the pad goes down
+                if (ticks == 1) {
+                    scarsSite = scarsSite(mc);
+                    OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
+                    ReignOfNether.LOGGER.info("[Eyes] 16 scars: pad at {} (capitol {}), fog of war on the client: {}",
+                        scarsSite.toShortString(), capitolCentre.toShortString(),
+                        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled());
+                    scarsNext(0);
+                    scarsPhase = 0;
+                }
+                if (scarsSeconds() < 3)
+                    return;
+                layScarsPad(mc);
+                scarsNext(1);
+            }
+            case 1 -> {   // the pad is down: the RTS view over it, then a few seconds for the chunks to re-mesh
+                if (!scarsPadReady) {
+                    if (scarsSeconds() > 40)
+                        scarsEnd("the server never laid the pad");
+                    return;
+                }
+                if (!OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                mc.options.hideGui = true;
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
+                scarsNext(2);
+            }
+            case 2 -> {
+                if (scarsSeconds() < 6)
+                    return;
+                shot(mc, "16_scars_before_rts");
+                stampScarsBattle(mc);
+                scarsNext(3);
+            }
+            case 3 -> {   // the sync pass runs every half second; the mesh builds a region a frame
+                if (!scarsStamped) {
+                    if (scarsSeconds() > 40)
+                        scarsEnd("the server never stamped the battle");
+                    return;
+                }
+                if (scarsSeconds() < 8)
+                    return;
+                ReignOfNether.LOGGER.info("[Eyes] 16 scars: {} chunks marked on the server; client: {}", scarsMarkedChunks,
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryClient.status());
+                shot(mc, "16_scars_rts");
+                probeScars(mc);
+                setZoom(15);
+                OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(scarsSite.getX() + 7.5, scarsSite.getY(), scarsSite.getZ() + 0.5));
+                scarsNext(4);
+            }
+            case 4 -> {
+                if (scarsSeconds() < 4)
+                    return;
+                shot(mc, "16_scars_rts_close");
+                setZoom(15);
+                OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(scarsSite.getX() - 4, scarsSite.getY(), scarsSite.getZ() + 11));
+                scarsNext(8);
+            }
+            case 8 -> {   // the game ender's crater, close
+                if (scarsSeconds() < 4)
+                    return;
+                shot(mc, "16_scars_rts_crater");
+                setZoom(ZOOM_STRATEGIC);
+                OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(scarsSite));
+                scarsNext(5);
+            }
+            case 5 -> {
+                if (scarsSeconds() < 5)
+                    return;
+                shot(mc, "16_scars_rts_far");
+                setZoom(ZOOM_NORMAL);
+                if (OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                scarsStand(mc, -4, 3, -4, 0, 11);   // from the middle of the pad, down on the game ender's crater
+                scarsNext(6);
+            }
+            case 6 -> {
+                if (scarsSeconds() > 1.5 && scarsSeconds() < 2.5)
+                    scarsStand(mc, -4, 3, -4, 0, 11);   // again: the server's own position update may land in between
+                if (scarsSeconds() < 5)
+                    return;
+                shot(mc, "16_scars_fp_crater");
+                scarsStand(mc, 1, -8, 8, 0.5, 3);      // from the south-west of the stairs, across them to the slabs and snow
+                scarsNext(7);
+            }
+            case 7 -> {
+                if (scarsSeconds() > 1.5 && scarsSeconds() < 2.5)
+                    scarsStand(mc, 1, -8, 8, 0.5, 3);
+                if (scarsSeconds() < 5)
+                    return;
+                shot(mc, "16_scars_fp_steps");
+                ReignOfNether.LOGGER.info("[Eyes] 16 scars: done, client: {}",
+                    com.solegendary.reignofnether.worldmemory.GroundMemoryClient.status());
+                afterScars();
+            }
+            default -> scarsEnd("unknown phase " + scarsPhase);
+        }
+    }
+
 
     // ---- 15: structure photographs (eyes.yml input `structure`, -Dbat.eyes.structures=a,b,...) ----
     // lovish, Oct 20 2026: new building designs are judged with real textures, lighting and glass - in the real game,
@@ -1062,6 +1436,8 @@ public final class EyesDirector {
         // another squire, swapped to the bow on the integrated server first (the side-on aim, the drawn arrow), made a
         // captain (the banner on the helm)
         { "MilitiaUnit:bow", "07q_squire_bow_close", "07r_squire_bow_run", "07s_squire_shoot", "militia_unit" },
+        // the dragon rig (Lane B, PR #79): flight beat, glide and bite need to be seen moving, not judged from stills
+        { "BoneDragonUnit", "07t_bone_dragon_close", "07u_bone_dragon_fly", "07v_bone_dragon_bite", "bone_dragon_unit" },
         // the quadruped rig (Lane B, PR #76): the Mossback Bison's coat, grove and gait need to be seen moving, not
         // judged from stills (07t-v are the dragon's on claude/dragon-rig, 07z the mesh A/B)
         { "MossbackBisonUnit", "07w_mossback_bison_close", "07x_mossback_bison_walk", "07y_mossback_bison_attack", "mossback_bison_unit" },
@@ -1357,6 +1733,10 @@ public final class EyesDirector {
             OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(capitolCentre.getX() + 0.5, capitolCentre.getY(), capitolCentre.getZ() + 0.5));
             return;
         }
+        if (capitolSelAt > 0) {
+            capitolSelected(mc);
+            return;
+        }
         // the match clock runs from the 02 shot (labelled 0:30); -1 if that shot never happened (then shoot at once)
         int matchTick = matchZeroTotalTick < 0 ? -1 : totalTicks - matchZeroTotalTick;
         boolean late = ticks > 20 * 90;   // budget: never wait more than 90 s for the clock
@@ -1368,6 +1748,31 @@ public final class EyesDirector {
                     capitolCentre.toShortString(), OrthoviewClientEvents.getZoom(), battleLine(mc));
             shot(mc, "11_capitol_two_minutes");
             groundCensus(mc, "2:00");
+            capitolSelAt = ticks + 2;   // 11b: the capitol selected - the building's HUD block, its queue and toggles
+        }
+    }
+
+    private static int capitolSelAt = -1, capitolSelShotAt = -1;
+
+    /** 11b: select our capitol and photograph the HUD's building block (icon + health bar + Repeat toggle + queue). */
+    private static void capitolSelected(Minecraft mc) {
+        if (ticks == capitolSelAt) {
+            String me = mc.player.getName().getString();
+            for (var b : new ArrayList<>(BuildingClientEvents.getBuildings())) {
+                if (b instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement p
+                        && p.isCapitol && me.equals(p.ownerName)) {
+                    UnitClientEvents.clearSelectedUnits();
+                    BuildingClientEvents.clearSelectedBuildings();
+                    BuildingClientEvents.addSelectedBuilding(b);
+                    break;
+                }
+            }
+            capitolSelShotAt = ticks + 30;   // settle, then photograph
+        } else if (ticks == capitolSelShotAt) {
+            shot(mc, "11b_capitol_selected");
+            BuildingClientEvents.clearSelectedBuildings();
+            capitolSelAt = -1;
+            capitolSelShotAt = -1;
             next();
         }
     }
@@ -1520,7 +1925,7 @@ public final class EyesDirector {
     }
 
     /** Zoom target in blocks of view height; below the player's floor (10) only for the close-ups, restored by any other. */
-    private static void setZoom(float zoom) {
+    static void setZoom(float zoom) {
         OrthoviewClientEvents.setScriptedZoom(zoom);
     }
 
@@ -1605,7 +2010,7 @@ public final class EyesDirector {
         return e.position().add(0, e.getBbHeight() / 2, 0);
     }
 
-    private static BlockPos findCapitol(Minecraft mc) {
+    static BlockPos findCapitol(Minecraft mc) {
         String me = mc.player.getName().getString();
         for (BuildingPlacement b : BuildingClientEvents.getBuildings())
             if (b.isCapitol && me.equals(b.ownerName))
@@ -1614,7 +2019,7 @@ public final class EyesDirector {
         return mc.player.blockPosition();
     }
 
-    private static String findEnemyName(Minecraft mc) {
+    static String findEnemyName(Minecraft mc) {
         String me = mc.player.getName().getString();
         for (RTSPlayer p : new ArrayList<>(PlayerClientEvents.rtsPlayers))
             if (p.name != null && !p.name.equals(me))
@@ -1642,7 +2047,7 @@ public final class EyesDirector {
      * ~4 blocks up (Oct 15 log: armies at y 72 over ground at 68; 12's water spilled out of a raised pad; and
      * dryAround never saw water). MOTION_BLOCKING stops on leaves, so step down through a canopy.
      */
-    private static int surfaceY(Minecraft mc, int x, int z) {
+    static int surfaceY(Minecraft mc, int x, int z) {
         int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         int floor = mc.level.getMinBuildHeight() + 1;
         if (y <= floor)
@@ -1659,7 +2064,7 @@ public final class EyesDirector {
         return y;
     }
 
-    private static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
+    static Vec3 ground(Minecraft mc, int x, int z, int fallbackY) {
         int y = surfaceY(mc, x, z);
         if (y == Integer.MIN_VALUE) {
             ReignOfNether.LOGGER.warn("[Eyes] no client height at {} {}; using {}", x, z, fallbackY);
@@ -1712,7 +2117,7 @@ public final class EyesDirector {
         return String.format("%.1f x %.1f blocks", maxX - minX, maxZ - minZ);
     }
 
-    private static Vec3 centroid(List<LivingEntity> units) {
+    static Vec3 centroid(List<LivingEntity> units) {
         if (units.isEmpty())
             return null;
         double x = 0, y = 0, z = 0;
@@ -1725,7 +2130,7 @@ public final class EyesDirector {
     }
 
     /** Sends a command as the client player types it (without the slash): the server runs it with the player's op. */
-    private static boolean runCommand(Minecraft mc, String cmd) {
+    static boolean runCommand(Minecraft mc, String cmd) {
         try {
             // the server echoes every /summon and /fill as a chat line ("Summoned ... for Bot1 at ..."), and those
             // lines were still over the river in run 38524157524 although the chat panel is cleared before each
@@ -1744,7 +2149,7 @@ public final class EyesDirector {
     }
 
     /** Living units within range of a point: the player's own fighters (no workers) when owned, else hostile ones. */
-    private static List<LivingEntity> unitsNear(Minecraft mc, Vec3 centre, double range, boolean owned) {
+    static List<LivingEntity> unitsNear(Minecraft mc, Vec3 centre, double range, boolean owned) {
         List<LivingEntity> out = new ArrayList<>();
         if (centre == null)
             return out;
@@ -1798,7 +2203,7 @@ public final class EyesDirector {
                 UnitClientEvents.getSelectedUnits().size());
     }
 
-    private static String fmt(Vec3 v) {
+    static String fmt(Vec3 v) {
         return v == null ? "?" : String.format("[%d, %d, %d]", (int) Math.floor(v.x), (int) Math.floor(v.y), (int) Math.floor(v.z));
     }
 
@@ -1863,7 +2268,7 @@ public final class EyesDirector {
         shotAt = -1;
     }
 
-    private static void shot(Minecraft mc, String name) {
+    static void shot(Minecraft mc, String name) {
         // the eyes video (tools/eyes_record.sh + eyes_cut.py) cuts a short clip around every still from this mark
         ReignOfNether.LOGGER.info("[Eyes] clip-mark {} {}", name, System.currentTimeMillis());
         // the director's own /summon and /fill feedback lines were sitting over the fight in every still and clip

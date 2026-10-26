@@ -61,6 +61,7 @@ public final class BaseWildlifeControl {
         synchronized (BaseWildlifeControl.class) {
             starts.clear();
         }
+        capitolSnapshot = java.util.List.of();
     }
 
     /** Wild clutter: hostile, or big enough to get in the way. Never a unit or anyone's pet. */
@@ -78,16 +79,42 @@ public final class BaseWildlifeControl {
         return m.getBbWidth() >= LARGE_WIDTH || m.getMaxHealth() >= LARGE_HEALTH;
     }
 
-    /** Whether (x, z) at height y is inside a guarded base. */
+    /**
+     * Capitol centres as of the last sweep, for callers OFF the server thread. Structure and chunk-generation spawns
+     * run FinalizeSpawn on worldgen worker threads (Worker-Main-N) while the server thread adds and clears buildings:
+     * walking the live building list there threw ConcurrentModificationException mid feature placement (mirror CI,
+     * Oct 22). An immutable copy published at each sweep and on every capitol change keeps the same answer.
+     */
+    private static volatile java.util.List<BlockPos> capitolSnapshot = java.util.List.of();
+
+    /** Re-publishes the capitol centres (server thread only). */
+    static void refreshCapitolSnapshot() {
+        java.util.List<BlockPos> centres = new java.util.ArrayList<>();
+        for (BuildingPlacement b : BuildingServerEvents.getBuildings())
+            if (b.getBuilding().isCapitol && !b.isDestroyedServerside && b.centrePos != null)
+                centres.add(b.centrePos.immutable());
+        capitolSnapshot = java.util.List.copyOf(centres);
+    }
+
+    /** Whether (x, z) at height y is inside a guarded base. Safe from any thread. */
     static boolean inBase(double x, double y, double z) {
         double r2 = BASE_RADIUS * BASE_RADIUS;
-        for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
-            if (!b.getBuilding().isCapitol || b.isDestroyedServerside || b.centrePos == null)
-                continue;
-            BlockPos c = b.centrePos;
-            double dx = c.getX() + 0.5 - x, dz = c.getZ() + 0.5 - z;
-            if (dx * dx + dz * dz <= r2 && Math.abs(c.getY() - y) <= VERTICAL)
-                return true;
+        net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null && server.isSameThread()) {
+            for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
+                if (!b.getBuilding().isCapitol || b.isDestroyedServerside || b.centrePos == null)
+                    continue;
+                BlockPos c = b.centrePos;
+                double dx = c.getX() + 0.5 - x, dz = c.getZ() + 0.5 - z;
+                if (dx * dx + dz * dz <= r2 && Math.abs(c.getY() - y) <= VERTICAL)
+                    return true;
+            }
+        } else {
+            for (BlockPos c : capitolSnapshot) {
+                double dx = c.getX() + 0.5 - x, dz = c.getZ() + 0.5 - z;
+                if (dx * dx + dz * dz <= r2 && Math.abs(c.getY() - y) <= VERTICAL)
+                    return true;
+            }
         }
         synchronized (BaseWildlifeControl.class) {
             for (BlockPos c : starts) {
@@ -122,6 +149,7 @@ public final class BaseWildlifeControl {
             return;
         sweepTicks = 0;
         ServerLevel level = (ServerLevel) evt.level;
+        refreshCapitolSnapshot();
         for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
             if (b.getBuilding().isCapitol && !b.isDestroyedServerside && b.centrePos != null)
                 sweep(level, b.centrePos.getX() + 0.5, b.centrePos.getY(), b.centrePos.getZ() + 0.5);

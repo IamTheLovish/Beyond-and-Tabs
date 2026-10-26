@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
@@ -34,8 +35,8 @@ import com.solegendary.reignofnether.items.ItemUtil;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.player.OwnerColours;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
-import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.player.PlayerServerboundPacket;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
@@ -66,6 +67,7 @@ import com.solegendary.reignofnether.util.MyMath;
 import com.solegendary.reignofnether.util.MyRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -83,6 +85,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -92,6 +95,7 @@ import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import org.joml.Vector3d;
 import org.lwjgl.glfw.GLFW;
 
@@ -531,8 +535,14 @@ public class UnitClientEvents {
         }
         // follow friendly unit
         if (preselectedUnits.size() == 1 && !targetingSelf()) {
+            LivingEntity clicked = preselectedUnits.get(0);
+            Relationship rel = getPlayerToEntityRelationship(clicked);
             if (hudSelectedEntity instanceof WitchUnit) {
                 sendUnitCommand(UnitAction.THROW_LINGERING_REGEN_POTION);
+            } else if (GuardServerEvents.rightClickGuards(selectedUnits, clicked,
+                    rel == Relationship.OWNED || rel == Relationship.FRIENDLY)) {
+                // builders + a friendly builder under the cursor: assist it (BAR guard), not just walk behind it
+                sendUnitCommand(UnitAction.GUARD);
             } else {
                 sendUnitCommand(UnitAction.FOLLOW);
             }
@@ -694,10 +704,7 @@ public class UnitClientEvents {
     // dying (health <= 0, death animation playing) or removed for good (killed/discarded). Entities that merely left
     // render distance (UNLOADED_*) are kept on purpose - see onEntityLeave.
     public static boolean isDeadForSelection(LivingEntity e) {
-        if (e.isDeadOrDying())
-            return true;
-        Entity.RemovalReason reason = e.getRemovalReason();
-        return reason != null && reason.shouldDestroy();
+        return SelectionKeep.shouldDrop(e.isDeadOrDying(), e.getRemovalReason());
     }
 
     private static final int VIS_CHECK_TICKS_MAX = 10;
@@ -783,6 +790,12 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
+    // entity ids start over in the next world: fog-site ghosts kept per worker id must not outlive this one
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut evt) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetAllGhosts();
+    }
+
     @SubscribeEvent
     public static void onEntityLeaveEvent(EntityLeaveLevelEvent evt) {
         try {
@@ -799,6 +812,7 @@ public class UnitClientEvents {
      * Therefore, only remove entities if they leave serverside via UnitClientboundPacket.
      */
     public static void onEntityLeave(int entityId) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetGhosts(entityId);
         selectedUnits.removeIf(e -> e.getId() == entityId);
         //System.out.println("selectedUnits removed entity: " + entityId);
         preselectedUnits.removeIf(e -> e.getId() == entityId);
@@ -1109,6 +1123,11 @@ public class UnitClientEvents {
                     else
                         resolveMoveActionDeferred();
                 }
+                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
+                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
+                    sendUnitCommand(UnitAction.BUILD_REPAIR);
+                }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else
                     resolveMoveActionDeferred();
@@ -1304,106 +1323,159 @@ public class UnitClientEvents {
     }
 
 
+    /**
+     * The white (red for an attack target) outline round each selected and preselected unit, once per unit. Selected
+     * units first, then the preselected ones not already drawn (the old HashSet union drew each once too).
+     */
+    private static void drawSelectionOutlines(PoseStack poseStack, VertexConsumer vc, @Nullable Frustum frustum,
+                                              List<LivingEntity> selectedUnits, List<LivingEntity> preselectedUnits) {
+        // evaluate conditions that will remain constant during the rendering stage
+        boolean isMouseOverAnyButtonOrHud = HudClientEvents.isMouseOverAnyButtonOrHud();
+        boolean isLeftClickAttack = isLeftClickAttack();
+        boolean targetingSelf = targetingSelf();
+        boolean isRightClickDown = MiscUtil.isRightClickDown(MC);
+        // membership by set, not List.contains: with 500 selected units the old loop made 250,000 compares a frame
+        PRESELECTED_IDS.clear();
+        for (LivingEntity entity : preselectedUnits)
+            PRESELECTED_IDS.add(entity.getId());
+        OUTLINED_IDS.clear();
+        MyRenderer.pushCameraRelative(poseStack);
+        try {
+            for (LivingEntity entity : selectedUnits)
+                if (OUTLINED_IDS.add(entity.getId()))
+                    drawSelectionOutline(poseStack, vc, frustum, entity, true, PRESELECTED_IDS.contains(entity.getId()),
+                            isMouseOverAnyButtonOrHud, isLeftClickAttack, targetingSelf, isRightClickDown);
+            for (LivingEntity entity : preselectedUnits)
+                if (OUTLINED_IDS.add(entity.getId()))
+                    drawSelectionOutline(poseStack, vc, frustum, entity, false, true,
+                            isMouseOverAnyButtonOrHud, isLeftClickAttack, targetingSelf, isRightClickDown);
+        } finally {
+            poseStack.popPose();
+        }
+    }
+
+    private static void drawSelectionOutline(PoseStack poseStack, VertexConsumer vc, @Nullable Frustum frustum,
+                                             LivingEntity entity, boolean isSelected, boolean isPreselected,
+                                             boolean isMouseOverAnyButtonOrHud, boolean isLeftClickAttack,
+                                             boolean targetingSelf, boolean isRightClickDown) {
+        if (entity.isRemoved())
+            return;   // kept selected after leaving tracking range (SelectionKeep): not drawn
+        AABB entityAABB = entity.getBoundingBox();
+        if (entity instanceof Unit unit)
+            entityAABB = unit.getInflatedSelectionBox();
+        else if (entity instanceof Chicken)
+            entityAABB = entityAABB.inflate(0.2f, 0, 0.2f);   // (a setMaxY here discarded its result: the box was never raised)
+        if (frustum != null && !frustum.isVisible(entityAABB))
+            return;
+        if (!FogOfWarClientEvents.isInBrightChunk(entity))
+            return;
+        if (isPreselected && isLeftClickAttack && !targetingSelf && !isMouseOverAnyButtonOrHud)
+            MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vc, entityAABB, 1.0f, 0.3f, 0.3f, 1.0f, false);
+        else if (isSelected)
+            MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vc, entityAABB, 1.0f, 1.0f, 1.0f, 1.0f, false);
+        else if (isPreselected && !isMouseOverAnyButtonOrHud)
+            MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vc, entityAABB, 1.0f, 1.0f, 1.0f, isRightClickDown ? 1.0f : 0.5f, false);
+    }
+
+    /**
+     * The underline under every unit in sight: its owner's colour (grey for a non-player owner), and in the RTS view a
+     * white flat outline on top, opaque under selected units. In lovish's Oct 21 match this loop ran over all ~600 units
+     * every frame - also in strategic view, where the icons cover it (perf plan R2). Now:
+     * <ul>
+     * <li>a unit outside the level renderer's frustum is skipped before anything is looked up;</li>
+     * <li>in strategic view a unit drawn as an icon is skipped: the icon carries the team colour and, for a selected
+     *     unit, a white selection ring (StrategicViewClientEvents.drawUnitIcon). A big unit that still draws as a model
+     *     there (StrategicViewClientEvents.keepsModel) keeps its underline, as the selection plates do;</li>
+     * <li>colours are looked up once per owner per frame (OwnerColours), the selection is an id set, and the camera
+     *     translation is pushed once for the loop instead of once per box.</li>
+     * </ul>
+     * The outlines are still written through {@code vcNoDepthTest} and the bottoms through the LINES_UNDER_ENTITIES
+     * buffer, in the same order as before: in vanilla both are the BufferSource's one shared builder, so both end up in
+     * the LINES_UNDER_ENTITIES batch, and a batching mod that splits them (ImmediatelyFast) sees what it saw before.
+     */
+    private static void drawUnderlines(PoseStack poseStack, VertexConsumer vcNoDepthTest, @Nullable Frustum frustum,
+                                       List<LivingEntity> selectedUnits) {
+        SELECTED_IDS.clear();
+        for (LivingEntity selectedUnit : selectedUnits)
+            SELECTED_IDS.add(selectedUnit.getId());
+        UNDERLINE_COLOURS.clear();
+        var vc = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_UNDER_ENTITIES);
+        boolean ortho = OrthoviewClientEvents.isEnabled();
+        boolean strategic = com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView();
+
+        MyRenderer.pushCameraRelative(poseStack);
+        try {
+            for (LivingEntity entity : allUnits) {
+                if (entity.isPassenger())
+                    continue;
+                if (strategic && !com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.keepsModel(entity))
+                    continue;
+                AABB entityAABB = entity instanceof Unit unit ? unit.getInflatedSelectionBox() : entity.getBoundingBox();
+                if (frustum != null && !frustum.isVisible(entityAABB))
+                    continue;
+                if (!FogOfWarClientEvents.isInBrightChunk(entity))
+                    continue;
+
+                float alpha = SELECTED_IDS.contains(entity.getId()) ? 1.0f : 0.5f;
+                // draw only the bottom of the outline boxes
+                entityAABB = entityAABB.setMaxY(entityAABB.minY);
+                int rgb = entity instanceof Unit owned ? UNDERLINE_COLOURS.unit(owned.getOwnerName()) : 0xFFFFFF;
+                float r = ((rgb >> 16) & 0xFF) / 255.0f;
+                float g = ((rgb >> 8) & 0xFF) / 255.0f;
+                float b = (rgb & 0xFF) / 255.0f;
+
+                // always-shown highlights to indicate unit relationships
+                if (ortho)
+                    MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vcNoDepthTest, entityAABB, 1.0f, 1.0f, 1.0f, alpha, true);
+                MyRenderer.drawLineBoxInCameraSpace(poseStack, vc, entityAABB, r, g, b, 0.5f);
+            }
+        } finally {
+            poseStack.popPose();
+        }
+        MinimapClientEvents.highlightNeutralFogUnits(poseStack, vc);
+        MC.renderBuffers().bufferSource().endBatch(MyRenderer.LINES_UNDER_ENTITIES);
+    }
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+        int sys = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.UNIT_OVERLAYS);
+        try {
+            renderLevel(evt);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(sys);
+        }
+    }
+
+    // renderLevel's per-frame scratch (client render thread only), reused so neither a big selection nor the army costs a
+    // set or a colour object per frame. Ids, not entities: the old sets were HashSet<Entity> / HashSet<Integer>, and an
+    // Entity is equal by id - the same answers.
+    private static final IntOpenHashSet SELECTED_IDS = new IntOpenHashSet();
+    private static final IntOpenHashSet PRESELECTED_IDS = new IntOpenHashSet();
+    private static final IntOpenHashSet OUTLINED_IDS = new IntOpenHashSet();
+    private static final OwnerColours UNDERLINE_COLOURS = new OwnerColours();
+
+    private static void renderLevel(RenderLevelStageEvent evt) {
         if (MC.level == null)
             return;
         if (evt.getStage() == AFTER_CUTOUT_BLOCKS ||
             evt.getStage() == AFTER_ENTITIES) {
             ArrayList<LivingEntity> selectedUnits = getSelectedUnits();
             ArrayList<LivingEntity> preselectedUnits = getPreselectedUnits();
-
-            Set<Entity> unitsToDraw = new HashSet<>();
-            unitsToDraw.addAll(selectedUnits);
-            unitsToDraw.addAll(preselectedUnits);
+            // the level renderer's own culling frustum, which already culls the unit bodies: a unit off screen costs a
+            // few plane tests here instead of a fog lookup, two AABBs, a colour lookup and its lines (perf plan R2)
+            Frustum frustum = evt.getFrustum();
 
             var vcNoDepthTest = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
 
             if (evt.getStage() == AFTER_ENTITIES) {
                 // draw outlines on all (pre)selected units but only draw once per unit based on conditions
                 // don't render preselection outlines if mousing over HUD
-
-                if (OrthoviewClientEvents.isEnabled()) {
-                    // evaluate conditions that will remain constant during the rendering stage
-                    boolean isMouseOverAnyButtonOrHud = HudClientEvents.isMouseOverAnyButtonOrHud();
-                    boolean isLeftClickAttack = isLeftClickAttack();
-                    boolean targetingSelf = targetingSelf();
-                    boolean isRightClickDown = MiscUtil.isRightClickDown(MC);
-                    // render outline for each selected and preselected entities
-                    for (Entity entity : unitsToDraw) {
-                        if (!FogOfWarClientEvents.isInBrightChunk(entity))
-                            continue;
-
-                        AABB entityAABB = entity.getBoundingBox();
-                        if (entity instanceof Unit unit) {
-                            entityAABB = unit.getInflatedSelectionBox();
-                        } else if (entity instanceof Chicken) {
-                            entityAABB = entityAABB.inflate(0.2f, 0, 0.2f);
-                            entityAABB.setMaxY(entityAABB.maxY + 0.6f);
-                        }
-
-                        boolean isPreselected = preselectedUnits.contains(entity);
-                        boolean isSelected = selectedUnits.contains(entity);
-
-                        if (isPreselected && isLeftClickAttack && !targetingSelf && !isMouseOverAnyButtonOrHud)
-                            MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vcNoDepthTest, entityAABB, 1.0f, 0.3f, 0.3f, 1.0f, false);
-                        else if (isSelected)
-                            MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vcNoDepthTest, entityAABB, 1.0f, 1.0f, 1.0f, 1.0f, false);
-                        else if (isPreselected && !isMouseOverAnyButtonOrHud)
-                            MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vcNoDepthTest, entityAABB, 1.0f, 1.0f, 1.0f, isRightClickDown ? 1.0f : 0.5f, false);
-                    }
-                }
+                if (OrthoviewClientEvents.isEnabled() && !(selectedUnits.isEmpty() && preselectedUnits.isEmpty()))
+                    drawSelectionOutlines(evt.getPoseStack(), vcNoDepthTest, frustum, selectedUnits, preselectedUnits);
             } else if (evt.getStage() == AFTER_CUTOUT_BLOCKS) {
-                if (MinimapClientEvents.shouldUnderline()) {
-                    var selectedEntityIds = new HashSet<>();
-                    for (LivingEntity selectedUnit : selectedUnits) {
-                        Integer id = selectedUnit.getId();
-                        selectedEntityIds.add(id);
-                    }
-                    var vc = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_UNDER_ENTITIES);
-
-                    for (LivingEntity entity : allUnits) {
-                        if (!FogOfWarClientEvents.isInBrightChunk(entity) ||
-                                entity.isPassenger())
-                            continue;
-
-                        float alpha = 0.5f;
-                        if (selectedEntityIds.contains(entity.getId()))
-                            alpha = 1.0f;
-
-                        // draw only the bottom of the outline boxes
-                        AABB entityAABB = entity.getBoundingBox();
-                        if (entity instanceof Unit unit) {
-                            entityAABB = unit.getInflatedSelectionBox();
-                        }
-                        entityAABB = entityAABB.setMaxY(entityAABB.minY);
-                        boolean excludeMaxY = OrthoviewClientEvents.isEnabled();
-
-                        Color colorHex;
-                        if (entity instanceof Unit unit) {
-                            if (PlayerClientEvents.isRTSPlayer(unit.getOwnerName())) {
-                                colorHex = new Color(PlayerColors.getPlayerDisplayColorHex(unit.getOwnerName()));
-                            } else {
-                                colorHex = new Color(PlayerColors.COLOR_GRAY.hexCode, false);
-                            }
-                        } else {
-                            colorHex = new Color(0xFFFFFF, false);
-                        }
-
-                        float r = colorHex.getRed() / 255.0f;
-                        float g = colorHex.getGreen() / 255.0f;
-                        float b = colorHex.getBlue() / 255.0f;
-
-                        // always-shown highlights to indicate unit relationships
-                        if (OrthoviewClientEvents.isEnabled()) {
-                            MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vcNoDepthTest, entityAABB, 1.0f, 1.0f, 1.0f, alpha, excludeMaxY);
-                        }
-
-                        MyRenderer.drawBoxBottom(evt.getPoseStack(), entityAABB, vc, r, g, b, 0.5f);
-                    }
-                    MinimapClientEvents.highlightNeutralFogUnits(evt.getPoseStack(), vc);
-                    MC.renderBuffers().bufferSource().endBatch(MyRenderer.LINES_UNDER_ENTITIES);
-                }
+                if (MinimapClientEvents.shouldUnderline())
+                    drawUnderlines(evt.getPoseStack(), vcNoDepthTest, frustum, selectedUnits);
             }
 
             // render items in front of face for eating units
@@ -1433,6 +1505,7 @@ public class UnitClientEvents {
             int gn = 0, gTicks = 0;
             boolean gGreen = true;
             for (LivingEntity entity : getSelectedUnits()) {
+                if (entity.isRemoved()) continue;   // kept selected after leaving tracking range: nothing to draw
                 if (entity instanceof Unit unit) {
                     float entityYOffset1 = 1.74f - ((LivingEntity) unit).getEyeHeight() - 1;
                     Vec3 firstPos = ((LivingEntity) unit).getEyePosition().add(0, entityYOffset1,0);

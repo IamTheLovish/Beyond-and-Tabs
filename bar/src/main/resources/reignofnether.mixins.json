@@ -9,6 +9,7 @@
     "BaseSpawnerMixin",
     "BeaconBlockEntityMixin",
     "BearMixin",
+    "BlastFurnaceBlockMixin",
     "BlazeMixin",
     "ChunkMapAccessor",
     "CrossbowMixin",
@@ -59,6 +60,8 @@
     "fogofwar.ChunkMapInitialSendMixin",
     "fogofwar.ChunkMapMixin",
     "fogofwar.ServerLevelParticleMixin",
+    "fogofwar.ServerLevelSoundMixin",
+    "fogofwar.TrackedEntityInvoker",
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
@@ -67,6 +70,7 @@
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",
     "ClientLevelMixin",
@@ -102,10 +106,13 @@
     "fogofwar.LiquidBlockRendererMixin",
     "fogofwar.SingleQuadParticleMixin",
     "fogofwar.WorldBorderRenderMixin",
+    "perf.EmbeddiumRebuildCountMixin",
+    "perf.RenderChunkRebuildCountMixin",
     "LightTextureMixin",
     "LevelRendererSkyMixin",
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
-    "ForgeLoadingOverlayMixin"
+    "ForgeLoadingOverlayMixin",
+    "WaitingScreenBackdropMixin"
   ]
 }

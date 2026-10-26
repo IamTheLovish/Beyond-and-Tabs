@@ -95,7 +95,10 @@ public class OrthoviewClientEvents {
         return hideLeavesMethod != LeafHideMethod.NONE;
     }
 
-    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.AROUND_UNITS_AND_CURSOR;   // RTS default: the canopy never hides a fight
+    // Default NONE (lovish Oct 22 17:52): the old default swapped every leaf near the cursor/units for green stained
+    // glass, so trees turned see-through as the cursor moved, and each swap re-meshed the chunk. Trees stay solid;
+    // units under canopies get silhouettes instead (planned). The HUD leaves button still cycles the other modes.
+    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.NONE;
     public static int enabledCount = 0;
     public static boolean enabled = false;
     private static boolean cameraMovingByMouse = false; // excludes edgepanning
@@ -351,9 +354,9 @@ public class OrthoviewClientEvents {
         double c = d0 * d0 - renderRadius * renderRadius;
         double disc = b * b - 4 * a * c;
         double h = disc < 0 ? 0 : (-b + Math.sqrt(disc)) / (2 * a);
-        // let the player zoom well past the strictly-loaded view: the strategic icon view keeps it readable
-        // and distance fog is already pushed out, so a soft edge beats a hard zoom stop mid-battle
-        return (float) Mth.clamp(h * 1.5, ZOOM_MAX * 1.5f, ZOOM_MAX_HARD);
+        // the view must stay inside the loaded radius (no 1.5x allowance: ground past it is not loaded, so a
+        // building ghost placed there is red, see ZoomLimit and BuildingValidators "not_loaded")
+        return ZoomLimit.max(h, ZOOM_MAX, ZOOM_MAX_HARD);
     }
 
     public static void panCam(float x, float y, float z) { // pan camera relative to rotation
@@ -643,8 +646,15 @@ public class OrthoviewClientEvents {
         if (!pan.isDown())
             return false;
         int key = pan.getKey();
-        // a WASD key that is also an order on the selected card (A attack, S stop) waits out a tap before it pans
-        return !(KeyTaps.inTapWindow(key) && HudClientEvents.isCardKey(key));
+        if (!HudClientEvents.isCardKey(key))
+            return true;
+        // a WASD key that is also an order on the selected card (S stop, or one the player moved onto W/A/S/D) waits
+        // out a tap before it pans; once it pans, that press is a hold and fires no order (KeyTaps.isHold), however
+        // short lag made it measure
+        if (KeyTaps.inTapWindow(key))
+            return false;
+        KeyTaps.markPan(key);
+        return true;
     }
 
     private static void updateCamera(float dt) {
@@ -1234,6 +1244,10 @@ public class OrthoviewClientEvents {
             delta = -delta;
         if (CustomBuildingClientEvents.isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY()))
             return;
+        if (com.solegendary.reignofnether.building.AreaMexClientEvents.onScroll(evt.getScrollDelta())) {   // Shift+wheel sizes the area-mex circle
+            evt.setCanceled(true);
+            return;
+        }
         evt.setCanceled(true);
 
         if (isCtrlDown()) {

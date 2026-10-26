@@ -232,7 +232,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.BLAZE_UNIT.get(), BlazeUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WITHER_SKELETON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WitherSkeletonUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GHAST_UNIT.get(), GhastUnitRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.BONE_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.BoneDragonRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BONE_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BoneDragonRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MAGMA_CUBE_UNIT.get(), MagmaCubeUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SLIME_UNIT.get(), SlimeUnitRenderer::new);
 
@@ -275,6 +275,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.DawnPaladin::new);
         evt.registerEntityRenderer(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.Gravecaller::new);
         evt.registerEntityRenderer(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.HordeWarchief::new);
+        evt.registerEntityRenderer(EntityRegistrar.ASH_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.AshShaman::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ThornheartDruid::new);
         evt.registerEntityRenderer(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.CorsairCaptain::new);
         evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
@@ -309,6 +310,11 @@ public class ClientModEvents {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onClientSetupEvent(FMLClientSetupEvent evt) {
+        // lovish, Oct 23: installs made before the launcher had his cat get it now, without reinstalling
+        Thread brand = new Thread(() -> com.solegendary.reignofnether.launcher.LauncherBrand.applyOnce(
+                net.minecraftforge.fml.loading.FMLPaths.GAMEDIR.get()), "lovish-launcher-brand");
+        brand.setDaemon(true);
+        brand.start();
         evt.enqueueWork(() -> {
             MenuScreens.register(ContainerRegistrar.TOPDOWNGUI_CONTAINER.get(), TopdownGui::new);
             ItemBlockRenderTypes.setRenderLayer(
@@ -410,6 +416,8 @@ public class ClientModEvents {
             com.solegendary.reignofnether.unit.modelling.models.gen.FieldMedicModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel::createBodyLayer);
+        event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel.LAYER_LOCATION,
+            com.solegendary.reignofnether.unit.modelling.models.gen.BoneDragonModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel.LAYER_LOCATION,
             com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel::createBodyLayer);
         event.registerLayerDefinition(com.solegendary.reignofnether.unit.modelling.models.gen.SquireRunnerModel.LAYER_LOCATION,

@@ -21,4 +21,20 @@ public class BuildingPlaceButton extends Button {
         // generate x/y based on given position (starting at 0 which is bottom left 1 row above generic action buttons)
         super(name, Button.itemIconSize, rl, hotkey, isSelected, isHidden, isEnabled, () -> BuildingClientEvents.setBuildingToPlace(building), null, tooltipLines);
     }
+
+    /**
+     * Another builder type's building on a mixed card whose key is taken (HudClientEvents.keylessCopy,
+     * BuilderCardUnion): no key, same tab, no slot, so BuildTabs draws it after the tab's last slot. The caller copies
+     * the remaining look fields.
+     */
+    public BuildingPlaceButton keylessCopy() {
+        return new BuildingPlaceButton(this);
+    }
+
+    private BuildingPlaceButton(BuildingPlaceButton o) {
+        super(o.name, o.iconSize, o.iconResource, o.frameResource, null, o.isSelected, o.isHidden, o.isEnabled,
+            o.onLeftClick, o.onRightClick, o.tooltipLines);
+        this.group = o.group;
+        this.slot = -1;
+    }
 }

@@ -192,10 +192,42 @@ public final class Engage {
             mob.getNavigation().stop();
             return false;
         }
+        // the shooters call this every tick while out of range: keep walking the path in hand while it still ends
+        // where this approach wants to go (see keepPath) instead of a fresh vanilla A* every tick
+        if (keepPath(mob, approach.cell(), speed))
+            return true;
         if (approach.direct())
             return mob.getNavigation().moveTo(target, speed);
         // accuracy 0: the path must end IN the slot cell (moveTo(x, y, z) would accept a node a block short of it)
         return mob.getNavigation().moveTo(mob.getNavigation().createPath(approach.cell(), 0), speed);
+    }
+
+    /** How far (blocks) the goal may drift from the end of the path in hand before a chase repaths. */
+    public static final double KEEP_PATH_DRIFT = 1.5;
+    /** ...and when the goal is more than {@link #KEEP_PATH_FAR} blocks off: a block of drift is noise at that range. */
+    public static final double KEEP_PATH_DRIFT_FAR = 3.0;
+    public static final double KEEP_PATH_FAR = 16.0;
+
+    /**
+     * Whether {@code mob} may keep walking the path it is on instead of repathing to {@code goal}: the path is not
+     * done, it ends within {@link #KEEP_PATH_DRIFT} blocks of the goal ({@link #KEEP_PATH_DRIFT_FAR} when the goal is
+     * more than {@link #KEEP_PATH_FAR} away). A path that can not reach repaths as before. When it keeps the path it
+     * sets the speed the caller asked for, which is all a same-target moveTo changed. The shooters' approach goals
+     * repathed every tick while out of range; vanilla's own moveTo kept the old path when the new one was the same
+     * anyway (Path.sameAs), so a fresh A* bought nothing until the target had really moved.
+     */
+    public static boolean keepPath(Mob mob, BlockPos goal, double speed) {
+        Path current = mob.getNavigation().getPath();
+        if (current == null || current.isDone() || mob.getNavigation().isDone() || !current.canReach())
+            return false;
+        BlockPos end = current.getTarget();
+        double dx = end.getX() - goal.getX(), dy = end.getY() - goal.getY(), dz = end.getZ() - goal.getZ();
+        double mx = goal.getX() + 0.5 - mob.getX(), mz = goal.getZ() + 0.5 - mob.getZ();
+        double drift = mx * mx + mz * mz > KEEP_PATH_FAR * KEEP_PATH_FAR ? KEEP_PATH_DRIFT_FAR : KEEP_PATH_DRIFT;
+        if (dx * dx + dy * dy + dz * dz > drift * drift)
+            return false;
+        mob.getNavigation().setSpeedModifier(speed);
+        return true;
     }
 
     /** The vanilla path to the approach (for goals that keep the Path), or null to hold. */

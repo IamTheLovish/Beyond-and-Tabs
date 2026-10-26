@@ -322,6 +322,7 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.DAWN_PALADIN_UNIT.get());
 		registerEntity(MONSTERS, EntityRegistrar.GRAVECALLER_UNIT.get());
 		registerEntity(PIGLINS, EntityRegistrar.HORDE_WARCHIEF_UNIT.get());
+		registerEntity(PIGLINS, EntityRegistrar.ASH_SHAMAN_UNIT.get());
 		registerEntity(VERDANT_COURT, EntityRegistrar.THORNHEART_DRUID_UNIT.get());
 		registerEntity(TIDEWROUGHT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get());
 		registerEntity(STORMCALLERS, EntityRegistrar.STORM_WITCH_UNIT.get());
@@ -582,6 +583,15 @@ public class Factions {
 	
 
 	
+	/**
+	 * The faction with this key, or null when there is none. Packet decoders use this, not {@link #getFaction}: that one
+	 * turns a key nobody has into NONE (the sandbox "faction"), so a client could make up its way into a sandbox.
+	 */
+	public static Faction findFaction(ResourceLocation pKey) {
+		if (pKey == null) return null;
+		return ReignOfNetherRegistries.FACTIONS.get(pKey);
+	}
+
 	public static Faction getFaction(ResourceLocation pKey) {
 		if (pKey == null) return Factions.NONE;
 		Faction faction = ReignOfNetherRegistries.FACTIONS.get(pKey);

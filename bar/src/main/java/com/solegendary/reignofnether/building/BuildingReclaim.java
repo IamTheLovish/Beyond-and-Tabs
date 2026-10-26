@@ -173,7 +173,7 @@ public final class BuildingReclaim {
     public static void tick(float seconds) {
         for (int i = active.size() - 1; i >= 0; i--) {
             BuildingPlacement bp = active.get(i);
-            if (bp.isDestroyedServerside || !BuildingServerEvents.getBuildings().contains(bp)) {
+            if (bp.isDestroyedServerside || !BuildingServerEvents.isRegistered(bp)) {
                 active.remove(i);   // killed first: the rest of the refund dies with it
                 continue;
             }

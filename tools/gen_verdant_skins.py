@@ -892,7 +892,7 @@ def icon_moonwell_bearer():
 @icon
 def icon_fox_courier():
     i = Icon(BG_T, BG_B)
-    O, OD, W, K = (226, 124, 48), (170, 80, 30), (244, 236, 222), INK
+    O, _OD, W, K = (226, 124, 48), (170, 80, 30), (244, 236, 222), INK
     i.art(["................",
            "..OO........OO..",
            "..OKO......OKO..",
@@ -990,7 +990,7 @@ def icon_elder_treant():
 @icon
 def icon_stag_lancer():
     i = Icon(BG_T, BG_B)
-    A, B, BD, W, K = (230, 220, 192), (130, 90, 56), (92, 62, 38), (232, 222, 200), INK
+    A, B, _BD, W, K = (230, 220, 192), (130, 90, 56), (92, 62, 38), (232, 222, 200), INK
     i.art(["A.A........A.A..",
            ".AA.A....A.AA...",
            "..AAA....AAA....",

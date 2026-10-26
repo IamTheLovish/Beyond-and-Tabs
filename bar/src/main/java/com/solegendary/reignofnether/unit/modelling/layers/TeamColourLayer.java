@@ -78,6 +78,9 @@ public class TeamColourLayer<T extends LivingEntity, M extends EntityModel<T>> e
                        float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
         if (!(entity instanceof Unit unit) || entity.isInvisible())
             return;
+        // the shader pack's shadow map: the cloth lies on the body's own surface, which already casts this shadow
+        if (com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.skipOverlay(entity))
+            return;
         // a phasing unit is drawn translucent (LivingEntityRendererMixin); an opaque tabard on it would give it away
         if (entity.hasEffect(MobEffectRegistrar.PHASING.get()))
             return;

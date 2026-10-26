@@ -26,14 +26,23 @@ public class FogTintingBlockColor implements BlockColor {
     public int getColor(BlockState state, @Nullable BlockAndTintGetter level, @Nullable BlockPos pos, int tintIndex) {
         boolean fogOnly = tintIndex == FOG_ONLY_TINT_INDEX;
         int base = (delegate != null && !fogOnly) ? delegate.getColor(state, level, pos, tintIndex) : -1;
-        if (pos == null || level == null || (biomeTinted && !fogOnly)) return base;
+        if (pos == null || level == null) return base;
+        if (biomeTinted && !fogOnly) {
+            // BiomeColorsMixin already applied the explored tint; never-explored ground goes on to the darker one
+            if (base != -1 && !WorldBorderClientEvents.isOutsideWorldBorder(pos) && FogOfWarClientEvents.isEnabled()
+                    && !FogOfWarClientEvents.isBlockVisible(pos)
+                    && !FogExploration.isExplored(pos.getX() >> 4, pos.getZ() >> 4))
+                return FogExploration.dimToUnexplored(base, FogOfWarClientEvents.FOG_TINT_RGB,
+                        FogOfWarClientEvents.FOG_TINT_UNEXPLORED);
+            return base;
+        }
 
         int tint = 0;
         if (WorldBorderClientEvents.isOutsideWorldBorder(pos)) {
             tint = WorldBorderClientEvents.OUTSIDE_WORLD_BORDER_TINT;
         }
-        else if (FogOfWarClientEvents.isEnabled() && !FogOfWarClientEvents.isBlockVisible(pos)) {
-            tint = FogOfWarClientEvents.FOG_TINT_RGB;
+        else if (FogOfWarClientEvents.isEnabled()) {
+            tint = FogOfWarClientEvents.fogTintAt(pos.getX(), pos.getZ());
         }
         if (tint == 0) return base;
 

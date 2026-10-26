@@ -55,16 +55,16 @@ public final class BuildTabs {
         drawnThisFrame = false;
     }
 
-    /** Grid cell of every button of a tab: its slot, or after the last slot for buttons with none (custom buildings). */
+    /**
+     * Grid cell of every button of a tab: its slot, or after the last slot for buttons with none (custom buildings,
+     * another builder type's keyless copies on a mixed card) or whose slot an earlier button already holds
+     * (BuilderCardUnion.tabCells).
+     */
     public static int[] cells(List<? extends Button> tabButtons) {
-        int next = 0;
-        for (Button b : tabButtons)
-            if (b instanceof BuildingPlaceButton bp && bp.slot >= 0)
-                next = Math.max(next, bp.slot + 1);
-        int[] out = new int[tabButtons.size()];
-        for (int i = 0; i < out.length; i++)
-            out[i] = tabButtons.get(i) instanceof BuildingPlaceButton bp && bp.slot >= 0 ? bp.slot : next++;
-        return out;
+        int[] slots = new int[tabButtons.size()];
+        for (int i = 0; i < slots.length; i++)
+            slots[i] = tabButtons.get(i) instanceof BuildingPlaceButton bp ? bp.slot : -1;
+        return BuilderCardUnion.tabCells(slots);
     }
 
     /** Rows the visible buttons of a tab need (at least one, so the strip keeps its place over an empty tab). */

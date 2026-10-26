@@ -111,14 +111,47 @@ NOTES.md                  older session log; README.md is out of date (this file
   the MC classpath, guards, parts, icons, anims, dep pins, the engine compile; it lists every failure). At minimum
   `python3 tools/check_java.py` (must report 0 structural errors). If you touch balance numbers: `python3 tools/balance_audit.py`.
 - CI = `.github/workflows/build.yml`:
-  - job `build`: tools and audits (no bar/ compile);
+  - job `build`: tools and audits (no bar/ compile); always runs;
+  - job `changes` (`tools/ci_plan.py`): decides what the run must test. A change that touches **only documentation**
+    (`*.md` anywhere, `docs/**`, the design sheets `design/*.png`) skips the GameTests - jobs `bar`, `bar-tests`,
+    `bar-audit` and `bar-publish` are skipped, which `tools/ci_wait.py` counts as passing (nothing new to publish).
+    Anything else - java, json, py, gradle, workflows, resources, `design/*.json`, nbt - runs everything. Unsure
+    (API error, 300+ files, no base) also runs everything. PRs compare against their merge base; a push to main
+    compares against the last *successful* main build, so a docs-only merge right after a replaced code merge still
+    tests that code;
   - job `bar`: compiles `bar/`, keeps the jar as the run's artifact `bar-mod` (what the eyes tours test) and runs
-    shard 1 of the headless **GameTests**; job `bar-tests` runs shards 2 and 3 side by side (since Oct 15: the
-    suite ran 16-29 min in one job, ~10 split). The split is the `SHARD_2` / `SHARD_3` lists at the top of
-    build.yml (whole batches, or tests by `test:<prefix>` - `gametest/GameTestShards`); anything they do not name
-    runs in shard 1. On `main`, job `bar-publish` publishes the jar to the GitHub release **`bar-dev`** once every
-    shard passed. Each shard's `[GameTest timing]` notice gives its batches' wall time and its slowest tests -
-    re-balance the lists from it, and name a new slow test there if it holds a shard up.
+    **shard 1** of the headless **GameTests**: everything no `SHARD_n` list names (so a new test or batch lands
+    here). Job `bar-tests` runs shards 2..N side by side, one matrix entry per `SHARD_n` line.
+  - **The shard split (Oct 21, lovish: "I just want all twenty runners being used"):** 8 shards, so a build is 9 jobs
+    (`build` + 8) and two builds fit in the ~20 hosted runners of the public repo at once. Before: 3 shards of very
+    unequal length, 15-19 min a build; now ~9.4 min (measured, PR #101). The lists are the `SHARD_2` ... `SHARD_8` lines
+    at the top of build.yml: whole batches (`duel_matrix`), or `test:<prefix>` of the test's lower-cased **method name**
+    (no class prefix in CI). Shards 2/3: the eight far-chunk `production_buildings_place_every_unit` tests, three per
+    shard (they slow each other: 2 sharing a server take ~85 s, 4 take ~300 s) and the last two in shard 8; 4 and 5:
+    one duel simulator each (3 min, the floor); 6: the bots soak alone; 7: the ~40 slow (90-100 s) tests, which
+    cluster in vanilla chunks 2 and 5; 8: 190 quick tests; shard 1 (`bar`, which also builds the jar) keeps the rest,
+    the small batches and everything new. **Adding a shard is one new `SHARD_9: "..."` line** (the matrix and shard 1's
+    skip list are built from the `SHARD_*` variables). Why 8: each shard pays ~4.5 min before its first test
+    (checkout with history, gradle, server start) and the longest single tests (duel simulators, bots soak) run 3-5 min,
+    so a build cannot get under ~8-9 min whatever the count; 8 shards keep every shard's tests under that floor, while
+    a 9th would only shave seconds and take a runner other builds wait for. `python3 tools/check_shards.py` (also in
+    prepush) fails when two lists name the same test or an entry names none; CI's `bar-audit` proves from the shards'
+    `gametests-shard-N` artifacts that every test ran exactly once. **Re-balance** from each shard's `[GameTest
+    timing]` and `[Test times]` notices (every test's wall time). A vanilla chunk name (`defaultBatch:3`) in a list
+    moves as tests are added - prefer prefixes. **A test's arena sits beside its batch neighbours'**, so a new shard
+    mix can put another test's units within reach of one that assumes empty ground
+    (`striker_autocasts_on_an_enemy_in_range_and_not_out_of_range` failed deterministically that way and now runs
+    alone in shard 6): a test that fails right after a re-cut, passed before and fails again on a rerun, is a
+    neighbour problem - move it to another shard, do not retry.
+  - On `main`, job `bar-publish` publishes the jar to the GitHub release **`bar-dev`** once every shard and the audit
+    passed (it also waits for `build` so the two releases are never updated at the same moment; `bar` itself no
+    longer does, which took 1.5 min off every build).
+  - **Main builds collapse while queued:** pushes to main share one concurrency group without cancel-in-progress, so at
+    most one main build runs plus **one** pending; a newer merge replaces the pending one, the running one is never
+    cut off. The cost: per-commit attribution on main is lost in a fast batch of merges (a commit whose build was
+    replaced has a CANCELLED run, `ci_wait --sha` says so) - bisect with `flake-stress.yml` if a regression has to be
+    pinned to one commit. PR builds still cancel their own older run on a new push; manual runs never cancel each other.
+    So **merge several PRs in quick succession** (design/LANES.md).
   - Read failures from check-run annotations (`gh api repos/<owner>/<repo>/check-runs/<job-id>/annotations`) of
     the job that ran the test (`bar` or one of the `bar-tests` entries) - test failures appear as
     `... failed! <message>`; measurements from passing tests appear as `[Melee]`, `[Stress]`, `[Soak]` notices.
@@ -126,6 +159,12 @@ NOTES.md                  older session log; README.md is out of date (this file
     tool allows it - never a hand-written polling loop (each check-in is a paid turn). It prints one line at the end
     (GREEN / RED with the failed tests / TIMEOUT) and reruns a run once when every failed test is in
     `tools/known_flakes.txt`. A failure that names no test is never rerun.
+- **Fast JUnit tests** (`bar/src/test/java`, JUnit 5, plan 008): pure rules in seconds, not the minutes of a GameTest.
+  They run inside job `bar`'s `./gradlew build` (no extra job or runner); the `JUnit summary` step posts the count as a
+  notice (`tools/junit_summary.py`). A rule that touches the world cannot load here - pull the arithmetic into a plain
+  class (`PopulationRules`, `EconomyMath`, `PlacementGrid`, `MergeGrid`...) and test that; do not mock the world. Table-
+  driven, written from the rule before the code; a real bug found by a test stays `@Disabled("BUG: ...")` in the PR for
+  the commander to decide - never bend the test.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
   arena; big tests get their own batch; load far chunks with `GameTestChunks.hold` + progress-based waits (never
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,

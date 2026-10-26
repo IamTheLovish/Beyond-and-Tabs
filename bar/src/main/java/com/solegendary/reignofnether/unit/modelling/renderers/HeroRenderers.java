@@ -83,6 +83,17 @@ public final class HeroRenderers {
         }
     }
 
+    /** Horde T2-lab hero: PLACEHOLDER body - the Warchief's piglin model and skin (real Ash Shaman body comes later). */
+    public static class AshShaman extends PiglinUnitRenderer {
+        private static final ResourceLocation TEXTURE = tex("horde_warchief");   // placeholder skin
+        public AshShaman(EntityRendererProvider.Context context) { super(context); }
+        @Override public ResourceLocation getTextureLocation(Mob entity) { return TEXTURE; }
+        @Override protected void scale(Mob entity, PoseStack pose, float partialTicks) {
+            super.scale(entity, pose, partialTicks);
+            pose.scale(HERO_SCALE, HERO_SCALE, HERO_SCALE);
+        }
+    }
+
     /** Stormcallers: the Windcaller's body (and its cloud) in sky-silk and lantern gold. */
     public static class StormWitch extends WindcallerRenderer {
         private static final ResourceLocation TEXTURE = tex("storm_witch");
