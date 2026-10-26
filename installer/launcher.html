@@ -36,7 +36,7 @@
   .bar { left:60px; width:820px; height:16px; border-radius:8px; background:#5d6a70; overflow:hidden; }
   .bar i { display:block; height:100%; width:0; background:#4fd18b; border-radius:8px; transition:width .6s ease; }
   .bar.warn i { background:#ffb74d; }
-  .b1 { bottom:96px; } .b2 { bottom:44px; }
+  .b1 { bottom:70px; }   /* one bar: the update check, then PLAY (BAR has two; ours had nothing for the second to show) */
   .play { right:60px; bottom:70px; width:210px; height:116px; background:#e6c76a; color:#1a1508; border:0; border-radius:6px; font:800 34px "Segoe UI", system-ui, sans-serif; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 18px rgba(0,0,0,.5); cursor:pointer; }
   .play:hover { background:#f0d47c; }
   .play:disabled { background:#8c8166; cursor:default; }
@@ -62,7 +62,6 @@
   <div class="status wait" id="status">Checking GitHub ...</div>
   <div class="bar b1" id="bar1"><i style="width:30%"></i></div>
   <div class="note2" id="note2"></div>
-  <div class="bar b2" id="bar2"><i></i></div>
 
   <button class="play" id="play">PLAY</button>
   <div class="links"><a id="lHelp">Troubleshooting</a><a id="lBug">Report a bug</a></div>
@@ -167,16 +166,16 @@ $("lBug").onclick = () => act("bug");
 $("play").onclick = async () => {
   if (dead) return;
   $("play").disabled = true;
-  bar("bar2", 40);
+  bar("bar1", 40);
   setStatus("Starting Prism Launcher ...", "wait");
   try {
     await post("api/play");
-    bar("bar2", 100);
+    bar("bar1", 100);
     setStatus("Prism Launcher is starting: it updates the game, then Minecraft opens.", "ok");
     dead = true;
     setTimeout(() => window.close(), 1200);
   } catch (e) {
-    bar("bar2", 100, true);
+    bar("bar1", 100, true);
     setStatus("PLAY failed: " + e.message, "warn");
     $("play").disabled = false;
   }
