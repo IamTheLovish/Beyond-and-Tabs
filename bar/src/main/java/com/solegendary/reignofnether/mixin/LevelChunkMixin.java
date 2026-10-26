@@ -35,5 +35,8 @@ public abstract class LevelChunkMixin {
         com.solegendary.reignofnether.unit.Terrain.onBlockChanged();
         // client: a ground scar's decal follows the column's new top face (worldmemory/GroundMemoryClient)
         WorldMemoryHooks.onBlockChanged(getLevel(), pos);
+        // server: the battlefield journal keeps each block's state from before the match, for Back to lobby
+        // (match/BattlefieldJournal); the return value is the replaced state, null when nothing changed
+        com.solegendary.reignofnether.match.BattlefieldJournal.onBlockChanged(getLevel(), pos, cir.getReturnValue());
     }
 }
