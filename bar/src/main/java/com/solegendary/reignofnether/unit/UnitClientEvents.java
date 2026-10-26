@@ -427,7 +427,11 @@ public class UnitClientEvents {
     }
 
     public static void sendUnitCommand(UnitAction action, Predicate<LivingEntity> includeUnit) {
-        BlockPos bp = getPreselectedBlockPos();
+        sendUnitCommandAt(action, includeUnit, getPreselectedBlockPos());
+    }
+
+    /** sendUnitCommand aimed at {@code bp} instead of the cursor's picked block (a blueprint ghost's centre). */
+    public static void sendUnitCommandAt(UnitAction action, Predicate<LivingEntity> includeUnit, BlockPos bp) {
 
         if (action.name().toLowerCase().contains("startrts")) {
             if (action == UnitAction.STARTRTS_VILLAGERS) {
@@ -1059,6 +1063,7 @@ public class UnitClientEvents {
             rightClickActionTaken = false;
             if (!selectedUnits.isEmpty()) {
                 BuildingPlacement preSelBuilding = BuildingClientEvents.getPreselectedBuilding();
+                BuildingPlacement ghost;   // a friendly blueprint ghost under the cursor, looked up only if reached below
 
                 // right click -> mount friendly unit
                 UnitAction mountAction = null;
@@ -1123,10 +1128,14 @@ public class UnitClientEvents {
                     else
                         resolveMoveActionDeferred();
                 }
-                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                // right click -> send the builder to build (or assist) a friendly blueprint ghost (building/Blueprints).
+                // The ghost has no blocks, so the picked block is the ground behind/under it: the order is aimed at
+                // the ghost's centre (inside its box: the server's Blueprints.findAt matches it, and the builder walks to the middle, not
+                // the corner origin, which can be off a pad edge). Shift queues it like any order.
                 else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
-                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
-                    sendUnitCommand(UnitAction.BUILD_REPAIR);
+                        && (ghost = com.solegendary.reignofnether.building.BlueprintClientEvents.ghostUnderCursor()) != null) {
+                    sendUnitCommandAt(UnitAction.BUILD_REPAIR, null, ghost.centrePos);
+                    rightClickActionTaken = true;
                 }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else

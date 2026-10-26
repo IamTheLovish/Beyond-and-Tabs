@@ -2,8 +2,8 @@
 //
 // It serves one page from 127.0.0.1 (random free port, random token in the path) and opens it as an Edge app window
 // (1200x640). The page shows your build (from the game jar's name), what is new on main since you last played and the
-// open pull requests ("Coming soon"). PLAY remembers the build you played and starts Prism Launcher on the instance;
-// the instance's pre-launch command (packwiz) updates the game, so the launcher never downloads anything itself.
+// open pull requests ("Coming soon"). PLAY runs the packwiz update itself (the instance's pre-launch command), checks
+// that the game jar is the newest tester pack, remembers that pack and starts Prism Launcher on the instance.
 //
 // GitHub: public API, no login, at most ghCallBudget calls per launch. The server stops when the page stops sending its
 // heartbeat, when PLAY is pressed, or after maxLifetime.
@@ -32,8 +32,9 @@ import (
 
 const (
 	repoSlug        = "IamTheLovish/Beyond-and-Tabs"
+	packRepoSlug    = "IamTheLovish/beyond-and-tabs-pack" // the tester pack: CI publishes "Tester pack <date>-<sha>" on its main
 	ghAPI           = "https://api.github.com"
-	ghCallBudget    = 3
+	ghCallBudget    = 4
 	launcherExe     = "launcher.exe"
 	stateFileName   = "launcher-state.json"
 	troubleshootURL = "https://github.com/" + repoSlug + "/blob/main/pack/INSTALL-for-testers.txt"
@@ -184,17 +185,48 @@ func short(sha string) string {
 	return sha
 }
 
-// statusLine: level is "ok" (green), "update" (gold) or "warn" (amber).
-func statusLine(jarSha, mainSha string, ghErr error) (text, level string) {
+// packHead is the newest tester pack: the pack repo's main commit "Tester pack <yyyy.mm.dd-hhmm>-<sha>" (CI publishes it
+// from main's builds, so main can be ahead of it for ~25 min).
+type packHead struct {
+	Sha  string
+	Date time.Time // UTC
+}
+
+var packRe = regexp.MustCompile(`^Tester pack (\d{4}\.\d{2}\.\d{2}-\d{4})-([0-9a-f]{7,40})$`)
+
+func parsePackCommit(msg string) (packHead, error) {
+	first := strings.TrimSpace(strings.SplitN(strings.ReplaceAll(msg, "\r\n", "\n"), "\n", 2)[0])
+	m := packRe.FindStringSubmatch(first)
+	if m == nil {
+		return packHead{}, fmt.Errorf("the newest pack commit is not a tester pack: %q", first)
+	}
+	t, err := time.ParseInLocation("2006.01.02-1504", m[1], time.UTC)
+	if err != nil {
+		return packHead{}, fmt.Errorf("the newest pack commit has a bad date: %q", first)
+	}
+	return packHead{Sha: strings.ToLower(m[2]), Date: t}, nil
+}
+
+// statusLine: level is "ok" (green), "update" (gold) or "warn" (amber). The game jar is compared with the newest pack,
+// not with main.
+func statusLine(jarSha, mainSha string, pack packHead, err error) (text, level string) {
 	switch {
-	case ghErr != nil:
-		return "Couldn't check GitHub (" + shortErr(ghErr) + ")", "warn"
+	case err != nil:
+		return "Couldn't check GitHub (" + shortErr(err) + ")", "warn"
+	case pack.Sha == "":
+		return "Couldn't read the newest tester pack from GitHub", "warn"
+	}
+	ahead := ""
+	if short(mainSha) != short(pack.Sha) {
+		ahead = " · main has newer merges still being packed (usually ~25 min)"
+	}
+	switch {
 	case jarSha == "":
-		return "Game files not found yet: PLAY installs the newest build (main is at " + short(mainSha) + ")", "update"
-	case short(jarSha) == short(mainSha):
-		return "Up to date: your build is the newest on main", "ok"
+		return "Game files not found yet: PLAY installs the newest pack (" + short(pack.Sha) + ")" + ahead, "update"
+	case short(jarSha) == short(pack.Sha):
+		return "Up to date: pack " + short(pack.Sha) + " (" + pack.Date.Format("2006-01-02 15:04 UTC") + ")" + ahead, "ok"
 	default:
-		return "Update available: main is at " + short(mainSha), "update"
+		return "Update ready: pack " + short(pack.Sha) + " - press PLAY to install it" + ahead, "update"
 	}
 }
 
@@ -291,6 +323,8 @@ type ghResult struct {
 	Soon      []prItem
 	SoonNote  string
 	Err       error // main's head could not be read: the status line says why
+	Pack      packHead
+	PackErr   error // the newest pack could not be read: the status line says why
 	Calls     int
 }
 
@@ -311,8 +345,8 @@ type ghPull struct {
 	MergedAt *time.Time `json:"merged_at"`
 }
 
-// fetchGitHub makes at most 3 calls: main's head, then either compare(last...main) or the recent closed PRs, then the
-// open PRs.
+// fetchGitHub makes at most 4 calls: main's head, the newest tester pack, then either compare(last...main) or the recent
+// closed PRs, then the open PRs.
 func fetchGitHub(g *ghClient, lastSha string) (r ghResult) {
 	defer func() { r.Calls = g.calls }()
 	repo := "/repos/" + repoSlug
@@ -323,6 +357,13 @@ func fetchGitHub(g *ghClient, lastSha string) (r ghResult) {
 		return r
 	}
 	r.MainSha, r.MainDate = head.Sha, head.Commit.Committer.Date
+
+	var packTip ghCommit
+	if err := g.get("/repos/"+packRepoSlug+"/commits/main", &packTip); err != nil {
+		r.PackErr = err
+	} else {
+		r.Pack, r.PackErr = parsePackCommit(packTip.Commit.Message)
+	}
 
 	if lastSha != "" {
 		r.NewsSince = true
@@ -412,6 +453,7 @@ type pageState struct {
 	MainDate   *time.Time `json:"mainDate,omitempty"`
 	Status     string     `json:"status"`
 	Level      string     `json:"level"`
+	PackSha    string     `json:"packSha"` // the newest tester pack ("" when GitHub could not say)
 	Version    string     `json:"version"`
 	NewsTitle  string     `json:"newsTitle"`
 	NewsSince  *time.Time `json:"newsSince,omitempty"`
@@ -429,7 +471,7 @@ func buildPageState(p gamePaths, g *ghClient) pageState {
 	b, haveBuild := readBuild(filepath.Join(p.mcDir, "mods"))
 	r := fetchGitHub(g, st.LastPlayedSha)
 
-	ps := pageState{Version: "Latest", MainSha: r.MainSha, News: r.News, NewsNote: r.NewsNote, Soon: r.Soon,
+	ps := pageState{Version: "Latest", MainSha: r.MainSha, PackSha: r.Pack.Sha, News: r.News, NewsNote: r.NewsNote, Soon: r.Soon,
 		SoonNote: r.SoonNote, GHCalls: r.Calls, NewCount: -1, NewsTitle: "Recently merged"}
 	if haveBuild {
 		ps.Build = &b
@@ -437,9 +479,13 @@ func buildPageState(p gamePaths, g *ghClient) pageState {
 	if !r.MainDate.IsZero() {
 		ps.MainDate = &r.MainDate
 	}
-	ps.Status, ps.Level = statusLine(b.Sha, r.MainSha, r.Err)
-	if haveBuild && b.Sha == "" && r.Err == nil {
-		ps.Status, ps.Level = "Your game jar has no commit in its name ("+b.File+"): can't compare with main ("+short(r.MainSha)+")", "update"
+	checkErr := r.Err
+	if checkErr == nil {
+		checkErr = r.PackErr
+	}
+	ps.Status, ps.Level = statusLine(b.Sha, r.MainSha, r.Pack, checkErr)
+	if haveBuild && b.Sha == "" && checkErr == nil {
+		ps.Status, ps.Level = "Your game jar has no commit in its name ("+b.File+"): can't compare with the newest pack ("+short(r.Pack.Sha)+")", "update"
 	}
 	if haveBuild && b.Jars > 1 {
 		ps.Status += fmt.Sprintf(" - warning: %d copies of the game jar in mods, Forge needs one", b.Jars)
@@ -456,6 +502,60 @@ func buildPageState(p gamePaths, g *ghClient) pageState {
 		ps.NewsNote = "GitHub is unreachable, so the news can't be shown. PLAY still works."
 	}
 	return ps
+}
+
+// ---------- high-performance GPU ----------
+
+// gpuPrefValue is Windows' "High performance" choice for one app (DirectX\UserGpuPreferences). 0 = let Windows decide,
+// 1 = power saving.
+const gpuPrefValue = "GpuPreference=2;"
+
+// gpuPrefStore is the registry as decideGPUPref sees it: one value per exe path.
+type gpuPrefStore interface {
+	Get(exe string) (value string, found bool, err error)
+	Set(exe, value string) error
+}
+
+// decideGPUPref writes gpuPrefValue for exe only when no choice exists yet. An existing value (the user's choice,
+// including "Let Windows decide") is left alone. Read and write errors are returned, never swallowed.
+func decideGPUPref(store gpuPrefStore, exe string) (wrote bool, err error) {
+	_, found, err := store.Get(exe)
+	if err != nil {
+		return false, fmt.Errorf("reading the GPU setting: %w", err)
+	}
+	if found {
+		return false, nil
+	}
+	if err := store.Set(exe, gpuPrefValue); err != nil {
+		return false, fmt.Errorf("writing the GPU setting: %w", err)
+	}
+	return true, nil
+}
+
+// javaExe is the Java Prism runs the game with: JavaPath from the instance's instance.cfg or from prismlauncher.cfg when
+// set, else Prism's bundled java-runtime-gamma.
+func javaExe(p gamePaths) string {
+	inst := filepath.Join(p.prismDir, "instances", instanceName)
+	for _, cfg := range []string{filepath.Join(inst, "instance.cfg"), filepath.Join(p.prismDir, "prismlauncher.cfg")} {
+		if v := readCfgValue(cfg, "JavaPath"); v != "" {
+			return v
+		}
+	}
+	return filepath.Join(p.prismDir, "java", "java-runtime-gamma", "bin", "javaw.exe")
+}
+
+// readCfgValue returns key's value in a Prism .cfg file (key=value lines); "" when the file or the key is missing.
+func readCfgValue(path, key string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if k, v, ok := strings.Cut(strings.TrimSpace(line), "="); ok && strings.TrimSpace(k) == key {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 // ---------- window ----------
@@ -557,10 +657,17 @@ type launcher struct {
 	quit       chan struct{}
 	quitOnce   sync.Once
 	windowNote string
+
+	// PLAY: the packwiz update and the Prism start (fakes in the tests)
+	packwiz      packwizRunner // the update PLAY runs
+	launchPrism  func() error  // starts Prism on the instance
+	playMu       sync.Mutex    // one PLAY at a time
+	updateFailed bool          // the last PLAY's check failed: the next press launches anyway (guarded by playMu)
 }
 
 func newLauncher(p gamePaths, gh *ghClient) *launcher {
-	return &launcher{paths: p, gh: gh, ready: make(chan struct{}), quit: make(chan struct{})}
+	return &launcher{paths: p, gh: gh, ready: make(chan struct{}), quit: make(chan struct{}),
+		packwiz: execPackwiz{}, launchPrism: func() error { return startPrism(p) }}
 }
 
 func (l *launcher) load() {
@@ -624,12 +731,15 @@ func (l *launcher) handler(token string) http.Handler {
 		l.stop()
 	}))
 	mux.HandleFunc(pre+"/api/play", post(func(w http.ResponseWriter, r *http.Request) {
-		if err := l.play(); err != nil {
+		res, err := l.play()
+		if err != nil {
 			writeJSON(w, 500, map[string]string{"error": err.Error()})
 			return
 		}
-		writeJSON(w, 200, map[string]bool{"ok": true})
-		go func() { time.Sleep(2 * time.Second); l.stop() }()
+		writeJSON(w, 200, res)
+		if res.Launched {
+			go func() { time.Sleep(2 * time.Second); l.stop() }()
+		}
 	}))
 	mux.HandleFunc(pre+"/api/open", post(func(w http.ResponseWriter, r *http.Request) {
 		if err := l.open(r.URL.Query().Get("what")); err != nil {
@@ -646,24 +756,189 @@ func serveImage(w http.ResponseWriter, contentType string, data []byte) {
 	w.Write(data)
 }
 
-// play remembers what you played (main's head when known, else your jar's commit) and starts Prism on the instance.
-func (l *launcher) play() error {
-	if !exists(l.paths.prismExe) {
-		return fmt.Errorf("Prism Launcher not found at %s - run BeyondAndTabs-Setup.exe again", l.paths.prismExe)
+// ---------- PLAY: update, check, start ----------
+
+// packwizRunner runs the game's packwiz update. The real one starts Java; the tests use a fake.
+type packwizRunner interface {
+	Run(dir, exe string, args []string) (out string, err error)
+}
+
+type execPackwiz struct{}
+
+func (execPackwiz) Run(dir, exe string, args []string) (string, error) {
+	cmd := exec.Command(exe, args...)
+	cmd.Dir = dir
+	hideWindow(cmd) // no console window: the output goes to packwiz-update.log
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+// splitCommand splits a command line as Prism stores it in instance.cfg: spaces separate, and "..." or \"...\" group.
+// Prism runs the command without a shell, so there is no other quoting.
+func splitCommand(s string) []string {
+	var toks []string
+	var cur strings.Builder
+	inQuote, have := false, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == '\\' && i+1 < len(s) && s[i+1] == '"':
+			inQuote, have = !inQuote, true
+			i++
+		case c == '"':
+			inQuote, have = !inQuote, true
+		case c == ' ' && !inQuote:
+			if have {
+				toks = append(toks, cur.String())
+				cur.Reset()
+				have = false
+			}
+		default:
+			cur.WriteByte(c)
+			have = true
+		}
 	}
-	s := launcherState{LastPlayedAt: time.Now().UTC()}
-	if l.isReady() && l.state.MainSha != "" {
-		s.LastPlayedSha = l.state.MainSha
-	} else if l.isReady() && l.state.Build != nil {
-		s.LastPlayedSha = l.state.Build.Sha
-	} else if b, ok := readBuild(filepath.Join(l.paths.mcDir, "mods")); ok {
-		s.LastPlayedSha = b.Sha
+	if have {
+		toks = append(toks, cur.String())
+	}
+	return toks
+}
+
+// packwizCommand is the instance's PreLaunchCommand with $INST_JAVA replaced by the game's Java: the program and its
+// arguments. It is read from instance.cfg, so the launcher runs what Prism would run before a launch.
+func packwizCommand(p gamePaths) (exe string, args []string, err error) {
+	cfg := filepath.Join(p.prismDir, "instances", instanceName, "instance.cfg")
+	raw := readCfgValue(cfg, "PreLaunchCommand")
+	if raw == "" {
+		return "", nil, fmt.Errorf("no PreLaunchCommand in %s: run BeyondAndTabs-Setup.exe again", cfg)
+	}
+	toks := splitCommand(raw)
+	isPackwiz := false
+	for _, t := range toks {
+		if strings.HasSuffix(t, "packwiz-installer-bootstrap.jar") {
+			isPackwiz = true
+		}
+	}
+	if !isPackwiz {
+		return "", nil, fmt.Errorf("PreLaunchCommand in %s is not the packwiz update: %s", cfg, raw)
+	}
+	if toks[0] == "$INST_JAVA" {
+		toks[0] = javaExe(p)
+	}
+	return toks[0], toks[1:], nil
+}
+
+// lastOutputLine is the last non-empty line the update printed (the warning shows it), else the run error.
+func lastOutputLine(out string, runErr error) string {
+	lines := strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if t := strings.TrimSpace(lines[i]); t != "" {
+			if len(t) > 200 {
+				t = t[:200] + "..."
+			}
+			return t
+		}
+	}
+	if runErr != nil {
+		return shortErr(runErr)
+	}
+	return "no output"
+}
+
+func writeUpdateLog(path, exe string, args []string, out string, runErr error) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s $ %s %s\n", time.Now().Format("2006-01-02 15:04:05"), exe, strings.Join(args, " "))
+	b.WriteString(out)
+	if runErr != nil {
+		fmt.Fprintf(&b, "\nexit: %v\n", runErr)
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
+// playPlan is what PLAY does once the update has run: start Prism, or stop with a warning (the next press launches).
+type playPlan struct {
+	Launch bool
+	Level  string
+	Text   string
+}
+
+// planAfterUpdate decides from the game jar's commit after packwiz ran. forced is the second press after a failed
+// check: launch whatever is installed. An unknown pack (GitHub unreachable) cannot be checked, so PLAY launches and says so.
+func planAfterUpdate(jarSha, packSha, lastLine string, forced bool) playPlan {
+	have := short(jarSha)
+	if have == "" {
+		have = "no game jar"
+	}
+	switch {
+	case packSha == "":
+		return playPlan{true, "warn", "Couldn't read the newest pack from GitHub, so the install is not checked."}
+	case short(jarSha) == short(packSha):
+		return playPlan{true, "ok", "Installed pack " + short(packSha) + "."}
+	case forced:
+		return playPlan{true, "warn", "Launching anyway: you have " + have + ", not the newest pack " + short(packSha) + "."}
+	default:
+		return playPlan{false, "warn", "Update did not install pack " + short(packSha) + " (you have " + have + "): " + lastLine}
+	}
+}
+
+// playResult is PLAY's answer to the page. Launched false: the page shows Text and PLAY can be pressed again.
+type playResult struct {
+	Launched bool   `json:"launched"`
+	Level    string `json:"level,omitempty"`
+	Text     string `json:"text"`
+}
+
+// play runs the packwiz update, checks that the game jar is the newest tester pack and starts Prism on the instance.
+// A failed check starts nothing: the warning says why, and a second press launches anyway.
+func (l *launcher) play() (playResult, error) {
+	if !exists(l.paths.prismExe) {
+		return playResult{}, fmt.Errorf("Prism Launcher not found at %s - run BeyondAndTabs-Setup.exe again", l.paths.prismExe)
+	}
+	l.playMu.Lock()
+	defer l.playMu.Unlock()
+	l.load()
+	<-l.ready
+	forced := l.updateFailed
+	lastLine := ""
+	if !forced {
+		exe, args, err := packwizCommand(l.paths)
+		if err != nil {
+			return playResult{}, err
+		}
+		out, runErr := l.packwiz.Run(l.paths.mcDir, exe, args)
+		if err := writeUpdateLog(updateLogPath(l.paths), exe, args, out, runErr); err != nil {
+			return playResult{}, fmt.Errorf("writing packwiz-update.log: %w", err)
+		}
+		lastLine = lastOutputLine(out, runErr)
+	}
+	jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
+	plan := planAfterUpdate(jar.Sha, l.state.PackSha, lastLine, forced)
+	if !plan.Launch {
+		l.updateFailed = true
+		return playResult{Level: plan.Level, Text: plan.Text}, nil
+	}
+	// remember the pack that is installed (a main commit, so the news compares from there); the jar's commit if unknown
+	s := launcherState{LastPlayedAt: time.Now().UTC(), LastPlayedSha: l.state.PackSha}
+	if s.LastPlayedSha == "" {
+		s.LastPlayedSha = jar.Sha
 	}
 	if err := writeState(l.paths.state, s); err != nil {
-		return fmt.Errorf("saving %s: %w", stateFileName, err)
+		return playResult{}, fmt.Errorf("saving %s: %w", stateFileName, err)
 	}
-	cmd := exec.Command(l.paths.prismExe, "-l", instanceName)
-	cmd.Dir = l.paths.prismDir
+	if err := l.launchPrism(); err != nil {
+		return playResult{}, err
+	}
+	l.updateFailed = false
+	return playResult{Launched: true, Level: plan.Level, Text: plan.Text + " Starting Prism Launcher ..."}, nil
+}
+
+// updateLogPath: the packwiz output of the last PLAY (overwritten each time).
+func updateLogPath(p gamePaths) string { return filepath.Join(p.root, "packwiz-update.log") }
+
+// startPrism opens Prism Launcher on the instance. Prism's own pre-launch command runs too; after the PLAY update it does nothing.
+func startPrism(p gamePaths) error {
+	cmd := exec.Command(p.prismExe, "-l", instanceName)
+	cmd.Dir = p.prismDir
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("starting Prism Launcher: %w", err)
 	}
@@ -748,6 +1023,7 @@ func runLauncher(args []string) error {
 		return errors.New("LOCALAPPDATA is not set")
 	}
 	l := newLauncher(newGamePaths(base), &ghClient{base: ghAPI, client: &http.Client{Timeout: 15 * time.Second}})
+	gpuNote := ensureHighGPU(l.paths) // before Prism starts; a failure is shown on the page and the launch goes on
 	l.load() // fetch while the window opens
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -763,7 +1039,7 @@ func runLauncher(args []string) error {
 	if !noWindow {
 		note, err := openWindow(pageURL)
 		l.mu.Lock()
-		l.windowNote = note
+		l.windowNote = strings.TrimSpace(gpuNote + " " + note)
 		l.mu.Unlock()
 		if err != nil {
 			srv.Close()

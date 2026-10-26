@@ -179,9 +179,41 @@ public class MultiplayerLobby {
         Seat s = seat(seatId);
         if (s == null)
             return null;
-        if (s.bot)
-            return isLobbyHost(sp) ? s : null;
-        return sp.getUUID().equals(s.uuid) ? s : null;
+        return mayEdit(s, sp.getUUID(), isLobbyHost(sp)) ? s : null;
+    }
+
+    /** Whether {@code editor} may edit seat {@code s}: their own seat, or a bot's when they host. Pure. */
+    public static boolean mayEdit(Seat s, UUID editor, boolean editorIsHost) {
+        if (s == null || editor == null)
+            return false;
+        return s.bot ? editorIsHost : editor.equals(s.uuid);
+    }
+
+    /**
+     * Whether colour {@code mapColorId} is held by a playing seat of {@code lineup} other than {@code except}
+     * (spectators and Hero-role seats take no base, so they hold no colour; 0 = automatic is never held). The server
+     * refuses a taken colour with it and the lobby screen crosses taken colours out with it. Pure.
+     */
+    public static boolean colourTakenIn(List<Seat> lineup, int mapColorId, Seat except) {
+        if (mapColorId == 0)
+            return false;
+        for (Seat s : lineup)
+            if (s != except && !s.spectating() && !s.heroRole && s.colorMapId == mapColorId)
+                return true;
+        return false;
+    }
+
+    /**
+     * The lobby's colour rule (BAR's colour box, tester ask Oct 26): {@code editor} may set seat {@code s}'s colour
+     * to {@code value} when the seat is theirs (or a bot's and they host) and {@code value} is 0 (automatic) or a
+     * palette colour no other playing seat holds - so two sides never share a colour. Pure: the lobby_colors tests.
+     */
+    public static boolean colourChangeAllowed(List<Seat> lineup, Seat s, UUID editor, boolean editorIsHost, int value) {
+        if (!mayEdit(s, editor, editorIsHost))
+            return false;
+        if (value == 0)
+            return true;
+        return PlayerPalette.isPaletteColor(value) && !colourTakenIn(lineup, value, s);
     }
 
     static int teamSize(int team, Seat except) {
@@ -193,12 +225,7 @@ public class MultiplayerLobby {
     }
 
     static boolean colourTaken(int mapColorId, Seat except) {
-        if (mapColorId == 0)
-            return false;
-        for (Seat s : seats)
-            if (s != except && !s.spectating() && !s.heroRole && s.colorMapId == mapColorId)
-                return true;
-        return false;
+        return colourTakenIn(seats, mapColorId, except);
     }
 
     /** Applies one lobby action from {@code sp}. Anything not allowed is ignored (the next snapshot corrects them). */
@@ -239,8 +266,8 @@ public class MultiplayerLobby {
                 s.faction = value;
             }
             case SET_COLOUR -> {
-                Seat s = editable(sp, seatId);
-                if (s == null || (value != 0 && (!PlayerPalette.isPaletteColor(value) || colourTaken(value, s))))
+                Seat s = seat(seatId);
+                if (s == null || !colourChangeAllowed(seats, s, sp.getUUID(), isLobbyHost(sp), value))
                     return false;
                 s.colorMapId = value;
             }
@@ -331,6 +358,9 @@ public class MultiplayerLobby {
                 Seat s = editable(sp, seatId);
                 if (s == null || s.bot || s.spectating() || value < 0 || value > 1)
                     return false;
+                // back from the Hero role with a colour someone took meanwhile: any free colour instead
+                if (s.heroRole && value == 0 && colourTakenIn(seats, s.colorMapId, s))
+                    s.colorMapId = 0;
                 s.heroRole = value == 1;
             }
             case START -> {

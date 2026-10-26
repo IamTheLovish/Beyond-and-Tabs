@@ -64,6 +64,12 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   (17:41): "maybe even 42-30" (17:44), "we dont need that many safe floors in the rts version of the game" (17:45).
   min_y must be a multiple of 16, so 48. Budget: design/battlefield-height.md.
 
+## Decisions to build toward (lovish, Oct 24)
+- **Heroes fight smart by themselves when nobody plays them, with an off switch.** "Id allow for heros to be complex
+  ai's that use their abilities and act extremely smart when there is no hero player this can be a toggle players can
+  set if they dont want this option". Built as HeroBot for every unpossessed hero, per-player switch default on
+  (design/hero_mode.md 5b).
+
 ## Standing rule (lovish, Oct 22 19:58) - tests first
 - **Write the test first, then the implementation.** "write the tests first and then implement it so you dont cheat
   and write bad code, which is something I dislike alot". The test states the behaviour (from lovish's words, the bug
@@ -101,6 +107,15 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   before lovish sees it; lovish judges taste only, and every fault he catches is added to the list.
 - **Hand-made data stays hand-made:** generators never overwrite structures or maps someone placed by hand; generated
   and hand-built files live apart.
+
+## Decisions to build toward (lovish, Oct 24) - winning pays
+- **"I want tier 2 to feel like beyond all reason where theres action in tier 1 and if you win by sniping the
+  commander your able to transition to tier 2 more efficiently. [...] Taking decisive battles becomes more important
+  rather than everyone just ramming their units into each other."** Built as: wrecks you can read in the RTS view, idle workers reclaim nearby
+  wrecks by themselves (gamerule `idleReclaim`, default on), a fallen commander leaves a 600 metal wreck and a hero
+  150 + 50 x level, and an enemy hero within 28 blocks gets a one-time XP burst (commander 400, hero 150 + 50 x
+  level). The normal per-kill XP is not raised (it would deepen hero snowballing). All numbers are tunable picks;
+  see design/hud.md ("Reclaim labels") and design/hero_mode.md section 4.
 
 ## Retired decisions
 (When lovish reverses a decision, move it here with the date, his old words and his reason - never delete it, so a
