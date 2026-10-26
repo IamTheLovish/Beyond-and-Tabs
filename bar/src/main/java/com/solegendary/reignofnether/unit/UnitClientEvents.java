@@ -535,8 +535,14 @@ public class UnitClientEvents {
         }
         // follow friendly unit
         if (preselectedUnits.size() == 1 && !targetingSelf()) {
+            LivingEntity clicked = preselectedUnits.get(0);
+            Relationship rel = getPlayerToEntityRelationship(clicked);
             if (hudSelectedEntity instanceof WitchUnit) {
                 sendUnitCommand(UnitAction.THROW_LINGERING_REGEN_POTION);
+            } else if (GuardServerEvents.rightClickGuards(selectedUnits, clicked,
+                    rel == Relationship.OWNED || rel == Relationship.FRIENDLY)) {
+                // builders + a friendly builder under the cursor: assist it (BAR guard), not just walk behind it
+                sendUnitCommand(UnitAction.GUARD);
             } else {
                 sendUnitCommand(UnitAction.FOLLOW);
             }
