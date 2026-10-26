@@ -3,9 +3,13 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os/exec"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 var (
@@ -42,4 +46,56 @@ func displayDPI() int {
 		return int(d)
 	}
 	return 96
+}
+
+// gpuPrefKey is the per-user (HKCU, no admin) key where Windows keeps each app's graphics setting.
+const gpuPrefKey = `Software\Microsoft\DirectX\UserGpuPreferences`
+
+// winGPUStore is gpuPrefStore on the real registry.
+type winGPUStore struct{}
+
+func (winGPUStore) Get(exe string) (string, bool, error) {
+	k, err := registry.OpenKey(registry.CURRENT_USER, gpuPrefKey, registry.QUERY_VALUE)
+	if errors.Is(err, registry.ErrNotExist) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	defer k.Close()
+	v, _, err := k.GetStringValue(exe)
+	if errors.Is(err, registry.ErrNotExist) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return v, true, nil
+}
+
+func (winGPUStore) Set(exe, value string) error {
+	k, _, err := registry.CreateKey(registry.CURRENT_USER, gpuPrefKey, registry.SET_VALUE)
+	if err != nil {
+		return err
+	}
+	defer k.Close()
+	return k.SetStringValue(exe, value)
+}
+
+// ensureHighGPU makes Windows run the game's Java on the high-performance GPU. It logs a line and returns the status
+// note for the page: "" when nothing was written, the error when the write failed (the launch goes on).
+func ensureHighGPU(p gamePaths) string {
+	exe := javaExe(p)
+	wrote, err := decideGPUPref(winGPUStore{}, exe)
+	if err != nil {
+		msg := "Could not set high-performance GPU: " + err.Error()
+		fmt.Println(msg, "("+exe+")")
+		return msg
+	}
+	if !wrote {
+		return ""
+	}
+	msg := "Game set to use the high-performance GPU"
+	fmt.Println(msg+":", exe)
+	return msg
 }

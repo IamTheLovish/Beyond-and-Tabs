@@ -25,6 +25,13 @@ and points the "lovish" Desktop + Start Menu shortcuts at `launcher.exe --launch
 dir, console minimised and detached). Shortcuts earlier installers made (this Prism with `-l "BeyondAndTabs-test"`) are
 repointed; any other "lovish" shortcut is left alone. A plain run of `BeyondAndTabs-Setup.exe` is still the installer.
 
+- **High-performance GPU:** each time the launcher starts (Windows only), it checks Windows' per-app graphics setting for
+  the game's Java (the `JavaPath` in the instance's or Prism's settings, else `PrismLauncher\java\java-runtime-gamma\bin\javaw.exe`).
+  If there is no setting yet, it writes `GpuPreference=2;` (High performance) under
+  `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, so laptops run the game on the discrete GPU. A value that already
+  exists is never changed. A failed write shows "Could not set high-performance GPU" in the window and the game still starts.
+  Off switch / manual way: Settings > System > Display > Graphics (Windows 11), pick the Java (`javaw.exe`) and choose
+  a setting; any choice, even "Let Windows decide", stops the launcher from writing. Deleting the value makes the launcher write it again.
 - **Window:** a page served from `127.0.0.1` on a random free port (a random token in the path), opened as an Edge app
   window (`msedge.exe --app=URL --user-data-dir=%LOCALAPPDATA%BeyondAndTabsauncher-edge --window-size=<1190x610 logical px x display scale>`; the page scales its 1200x640 stage to any window size; Edge from Program Files (x86), Program Files, the user's
   LocalAppData or the App Paths registry key). No Edge: the default browser opens it and the page says so. If no

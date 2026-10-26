@@ -5,11 +5,97 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+// fakeGPUStore stands in for the registry: one value per exe.
+type fakeGPUStore struct {
+	vals   map[string]string
+	getErr error
+	setErr error
+	sets   int
+}
+
+func (f *fakeGPUStore) Get(exe string) (string, bool, error) {
+	if f.getErr != nil {
+		return "", false, f.getErr
+	}
+	v, ok := f.vals[exe]
+	return v, ok, nil
+}
+
+func (f *fakeGPUStore) Set(exe, value string) error {
+	if f.setErr != nil {
+		return f.setErr
+	}
+	f.sets++
+	f.vals[exe] = value
+	return nil
+}
+
+const testJavaExe = `C:\Users\a\AppData\Local\BeyondAndTabs\PrismLauncher\java\java-runtime-gamma\bin\javaw.exe`
+
+func TestGPUPrefNoValueWritesHighPerformance(t *testing.T) {
+	s := &fakeGPUStore{vals: map[string]string{}}
+	wrote, err := decideGPUPref(s, testJavaExe)
+	if err != nil || !wrote || s.vals[testJavaExe] != "GpuPreference=2;" || s.sets != 1 {
+		t.Fatalf("wrote=%v err=%v vals=%v sets=%d", wrote, err, s.vals, s.sets)
+	}
+}
+
+func TestGPUPrefExistingChoiceUntouched(t *testing.T) {
+	s := &fakeGPUStore{vals: map[string]string{testJavaExe: "GpuPreference=1;"}}
+	wrote, err := decideGPUPref(s, testJavaExe)
+	if err != nil || wrote || s.sets != 0 || s.vals[testJavaExe] != "GpuPreference=1;" {
+		t.Fatalf("an existing choice must stay: wrote=%v err=%v vals=%v", wrote, err, s.vals)
+	}
+}
+
+func TestGPUPrefValueWithOtherFieldsUntouched(t *testing.T) {
+	const val = "GpuPreference=0;SomeOther=1;"
+	s := &fakeGPUStore{vals: map[string]string{testJavaExe: val}}
+	wrote, err := decideGPUPref(s, testJavaExe)
+	if err != nil || wrote || s.sets != 0 || s.vals[testJavaExe] != val {
+		t.Fatalf("a value with other fields must stay: wrote=%v err=%v vals=%v", wrote, err, s.vals)
+	}
+}
+
+func TestGPUPrefWriteErrorSurfaced(t *testing.T) {
+	s := &fakeGPUStore{vals: map[string]string{}, setErr: errors.New("access denied")}
+	wrote, err := decideGPUPref(s, testJavaExe)
+	if err == nil || wrote || !strings.Contains(err.Error(), "access denied") {
+		t.Fatalf("a write error must be returned: wrote=%v err=%v", wrote, err)
+	}
+}
+
+func TestGPUPrefReadErrorSurfaced(t *testing.T) {
+	s := &fakeGPUStore{vals: map[string]string{}, getErr: errors.New("registry broken")}
+	wrote, err := decideGPUPref(s, testJavaExe)
+	if err == nil || wrote || s.sets != 0 || !strings.Contains(err.Error(), "registry broken") {
+		t.Fatalf("a read error must be returned and nothing written: wrote=%v err=%v", wrote, err)
+	}
+}
+
+func TestJavaExePrefersConfiguredPath(t *testing.T) {
+	p := newGamePaths(t.TempDir())
+	if got := javaExe(p); got != filepath.Join(p.prismDir, "java", "java-runtime-gamma", "bin", "javaw.exe") {
+		t.Fatalf("no config: got %q", got)
+	}
+	inst := filepath.Join(p.prismDir, "instances", instanceName)
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte("InstanceType=OneSix\nJavaPath=C:\\Java\\bin\\javaw.exe\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := javaExe(p); got != `C:\Java\bin\javaw.exe` {
+		t.Fatalf("instance.cfg JavaPath: got %q", got)
+	}
+}
 
 func TestJarNameToday(t *testing.T) {
 	b, ok := parseJarName("beyondandtabs-2026.10.25-2235-f5775f8.jar")
