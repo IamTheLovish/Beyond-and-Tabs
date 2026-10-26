@@ -12756,7 +12756,8 @@ public class SkirmishGameTests {
                     var faction = Factions.getFaction(unit);
                     if (faction != null)
                         for (var entry : faction.getBuildHotkeys().entrySet())
-                            claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
+                            // tabbed build menu: slot keys repeat across tabs, one tab shows at a time (BuildGroupGameTests)
+                            claim.accept(entry.getValue(), "build slot " + entry.getValue().buttonLabel);
                 }
                 for (String c : clashes)
                     problems.add(key.getPath() + ": " + c);
