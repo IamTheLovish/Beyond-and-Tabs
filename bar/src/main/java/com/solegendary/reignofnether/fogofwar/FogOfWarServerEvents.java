@@ -349,6 +349,12 @@ public class FogOfWarServerEvents {
             FogChunkSnapshot.rebuildIndex(level);
     }
 
+    // a capture still spreading over ticks is finished (and its files flushed) so a restart adopts a whole snapshot
+    @SubscribeEvent
+    public static void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent evt) {
+        FogChunkSnapshot.finishNow();
+    }
+
     /** Whether a new match turns fog on by itself (gamerule reignofnetherFogByDefault, default true). */
     public static boolean isFogByDefault(ServerLevel level) {
         return level != null && level.getGameRules().getBoolean(GameRuleRegistrar.FOG_BY_DEFAULT);
