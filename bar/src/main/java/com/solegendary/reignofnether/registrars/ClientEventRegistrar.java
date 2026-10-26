@@ -100,8 +100,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(HudClientEvents.class); // ensure this is first so cursor is rendered above hud
         vanillaEventBus.register(AttackWarningClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.NotificationClientEvents.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.hud.KillFeedClientEvents.class);
-        // after every other LOWEST-priority Render.Post listener (kill feed), so the banner is the top layer
+        // after every other LOWEST-priority Render.Post listener, so the banner is the top layer
         vanillaEventBus.register(com.solegendary.reignofnether.hud.MatchBanner.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.IdleFactories.class);
@@ -179,6 +178,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.AreaMexClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.SpectatorView.class);   // spectator: follow a side (F8)
@@ -186,6 +186,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.HudPanels.class);   // collapsible panels, I / = keys
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.BlueprintClientEvents.class);   // the ghosts of sites no worker has started (building/Blueprints)
         vanillaEventBus.register(com.solegendary.reignofnether.building.PlacementGridClientEvents.class);   // after BuildingClientEvents: reads the ghost validity it set this frame
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D

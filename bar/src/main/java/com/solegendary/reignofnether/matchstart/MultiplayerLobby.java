@@ -584,6 +584,13 @@ public class MultiplayerLobby {
 
         List<Vec3> starts = startPositions(level, centre, playing.size(), spawnDistance, rng.nextDouble() * Math.PI * 2);
 
+        // fog needs a bounded play area: a border round the arena and the farthest start, before the first base
+        int reach = 0;
+        for (Vec3 s : starts)
+            reach = Math.max(reach, (int) Math.ceil(Math.hypot(s.x - centre.getX(), s.z - centre.getZ())));
+        com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fitBorderForMatch(level, centre.getX() + 0.5,
+            centre.getZ() + 0.5, SkirmishServerboundPacket.arenaRadius(arena), reach, false);
+
         // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
         BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
         BattlefieldSetup.richnessOverride = SkirmishServerboundPacket.metalRichness(metal);

@@ -63,6 +63,47 @@ public final class UnitLodRules {
         return distance < LEGACY_DETAIL_DISTANCE;
     }
 
+    // ---- strategic icons instead of models, by crowd (Oct 23: 120 fps at <60 units, 55-75 at 450-575) ----
+
+    /** Up to this many known units the icon switch stays where it always was (StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER). */
+    public static final int CROWD_START_UNITS = 200;
+    /** From here on the switch has moved as far as it goes. */
+    public static final int CROWD_FULL_UNITS = 600;
+    /** The switch never moves in further than this share of the player's threshold: 70 -> 49, safely above close zoom. */
+    public static final float CROWD_MIN_FACTOR = 0.7f;
+    /** The factor moves in steps of this much (a step is 3.5 zoom at 70, inside the 8 zoom hysteresis band). */
+    private static final float CROWD_STEP = 0.05f;
+    /** Never scale a threshold the player set closer than this: it is already near the detail zoom. */
+    private static final float CROWD_MIN_ENTER = 48f;
+
+    /** 1 for a small army, falling in steps to {@link #CROWD_MIN_FACTOR} as the known units grow to {@link #CROWD_FULL_UNITS}. */
+    public static float crowdFactor(int units) {
+        if (units <= CROWD_START_UNITS)
+            return 1f;
+        float t = Math.min(1f, (units - CROWD_START_UNITS) / (float) (CROWD_FULL_UNITS - CROWD_START_UNITS));
+        float f = 1f - t * (1f - CROWD_MIN_FACTOR);
+        return Math.max(CROWD_MIN_FACTOR, Math.round(f / CROWD_STEP) * CROWD_STEP);
+    }
+
+    /**
+     * The zoom (view height in blocks) past which units draw as icons: the player's threshold, brought in as the
+     * crowd grows because a crowd's models are what the frame pays for. Quantised so a unit count that jitters does not
+     * flip the view; never below {@code min(threshold, CROWD_MIN_ENTER)}.
+     */
+    public static float iconEnterZoom(float threshold, int units) {
+        return Math.max(threshold * crowdFactor(units), Math.min(threshold, CROWD_MIN_ENTER));
+    }
+
+    /**
+     * A unit's model is not drawn this frame: strategic view, the unit is not the HUD portrait's (that render feeds
+     * the portrait) and not a big unit still before its later switch. One rule for the render event
+     * (StrategicViewClientEvents.onRenderLiving) and for the entity dispatcher's cull in front of it.
+     */
+    public static boolean skipUnitModel(boolean strategic, boolean strategicBig, boolean isUnit, boolean isBig,
+                                        boolean isHudSelected) {
+        return strategic && isUnit && !isHudSelected && !(isBig && !strategicBig);
+    }
+
     /**
      * An overlay layer (team cloth, glow, eyes, upgrade glow) of a unit is skipped: only while a shader pack draws
      * its shadow map, and only with the LOD on.

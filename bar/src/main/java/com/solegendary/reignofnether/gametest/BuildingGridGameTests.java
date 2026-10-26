@@ -502,7 +502,7 @@ public class BuildingGridGameTests {
     /**
      * Lovish's late game in miniature: 300 idle vindicators (an army waiting in base) and 1,000 enemy
      * wind generators all round them, 20+ blocks away - out of every unit's aggro range, so every unit looks for an
-     * enemy building every 4 ticks (AttackerUnit idle auto-aggression) and finds none, which is the expensive case:
+     * enemy building on every idle scan (AttackerUnit idle auto-aggression) and finds none, which is the expensive case:
      * the full scan walks all 1,000 buildings (relationship + footprint walk with block reads each), the grid reads the
      * cells within reach. The server really ticks it all. After a warm-up the test alternates three full-scan phases
      * and three grid phases (BuildingGrid.legacyScans) of 30 ticks and averages vanilla's own tick times
@@ -677,14 +677,15 @@ public class BuildingGridGameTests {
         for (Entity e : made)
             if (e instanceof Mob m && m.isAlive())
                 units.add(m);
-        // the scenario: every unit idle and scanning (one lookup per unit per 4 ticks), none attacking a building
+        // the scenario: every unit idle and scanning (one lookup per unit per idle scan: AttackerUnit.IDLE_AGGRO_TICKS,
+        // perf plan PR 5), none attacking a building
         int scanners = 0;
         for (Mob m : units)
             if (m instanceof AttackerUnit au && au.canAttackBuildings() && au.getAggressiveWhenIdle())
                 scanners++;
         if (scanners < units.size() * 95 / 100)
             problems.add("only " + scanners + " of " + units.size() + " units look for buildings when idle");
-        double expected = units.size() / 4.0;
+        double expected = units.size() / (double) com.solegendary.reignofnether.unit.TargetScan.idleScanEvery();
         for (int p = 0; p < STRESS_PHASES; p++) {
             double perTick = phaseScans[p] / (double) STRESS_PHASE;
             if (perTick < expected * 0.6)

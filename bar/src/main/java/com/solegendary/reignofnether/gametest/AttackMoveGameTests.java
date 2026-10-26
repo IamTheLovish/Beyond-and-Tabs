@@ -103,9 +103,30 @@ public class AttackMoveGameTests {
                 notYet("the enemy beside the path is still alive (engaged " + engaged[0] + ")");
             double dx = attacker.getX() - (dest.getX() + 0.5), dz = attacker.getZ() - (dest.getZ() + 0.5);
             if (dx * dx + dz * dz > 2.5 * 2.5)
-                notYet("the attacker stopped " + Math.round(Math.sqrt(dx * dx + dz * dz)) + " blocks short of the spot");
+                notYet("the attacker stopped " + Math.round(Math.sqrt(dx * dx + dz * dz)) + " blocks short of the spot"
+                    + stopShort(attacker));
             cleanUp(made);
         });
+    }
+
+    /**
+     * Why an attack-mover is not where it was sent: its orders, path and what stands round it. Red once in three full
+     * runs of PR #119 (run 39704723375 attempt 1, "stopped 3 blocks short"; green on the rerun and 6 of 6 alone in
+     * flake-stress) with nothing else to read - the stop-short family of tools/known_flakes.txt.
+     */
+    static String stopShort(VindicatorUnit v) {
+        BlockPos amt = v.getAttackMoveTarget(), mt = v.getMoveGoal().getMoveTarget();
+        StringBuilder near = new StringBuilder();
+        for (net.minecraft.world.entity.LivingEntity o : UnitServerEvents.getAllUnits())
+            if (o != v && o.distanceToSqr(v) < 6 * 6)
+                near.append(' ').append(net.minecraft.world.entity.EntityType.getKey(o.getType()).getPath())
+                    .append(String.format(java.util.Locale.ROOT, "@%.1f,%.1f", o.getX() - v.getX(), o.getZ() - v.getZ()));
+        return String.format(java.util.Locale.ROOT, " (at %.1f %.1f %.1f, tick %d; attack-move %s, move %s, target %s,"
+                + " building %s, nav done %s, idle %s; units within 6:%s)", v.getX(), v.getY(), v.getZ(), v.tickCount,
+            amt == null ? "none" : amt.toShortString(), mt == null ? "none" : mt.toShortString(),
+            v.getTargetGoal().getTarget() == null ? "none"
+                : net.minecraft.world.entity.EntityType.getKey(v.getTargetGoal().getTarget().getType()).getPath(),
+            AttackerUnit.isAttackingBuilding(v), v.getNavigation().isDone(), v.isIdle(), near.length() == 0 ? " none" : near);
     }
 
     /**

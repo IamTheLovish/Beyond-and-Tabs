@@ -85,6 +85,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -534,8 +535,14 @@ public class UnitClientEvents {
         }
         // follow friendly unit
         if (preselectedUnits.size() == 1 && !targetingSelf()) {
+            LivingEntity clicked = preselectedUnits.get(0);
+            Relationship rel = getPlayerToEntityRelationship(clicked);
             if (hudSelectedEntity instanceof WitchUnit) {
                 sendUnitCommand(UnitAction.THROW_LINGERING_REGEN_POTION);
+            } else if (GuardServerEvents.rightClickGuards(selectedUnits, clicked,
+                    rel == Relationship.OWNED || rel == Relationship.FRIENDLY)) {
+                // builders + a friendly builder under the cursor: assist it (BAR guard), not just walk behind it
+                sendUnitCommand(UnitAction.GUARD);
             } else {
                 sendUnitCommand(UnitAction.FOLLOW);
             }
@@ -697,10 +704,7 @@ public class UnitClientEvents {
     // dying (health <= 0, death animation playing) or removed for good (killed/discarded). Entities that merely left
     // render distance (UNLOADED_*) are kept on purpose - see onEntityLeave.
     public static boolean isDeadForSelection(LivingEntity e) {
-        if (e.isDeadOrDying())
-            return true;
-        Entity.RemovalReason reason = e.getRemovalReason();
-        return reason != null && reason.shouldDestroy();
+        return SelectionKeep.shouldDrop(e.isDeadOrDying(), e.getRemovalReason());
     }
 
     private static final int VIS_CHECK_TICKS_MAX = 10;
@@ -786,6 +790,12 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
+    // entity ids start over in the next world: fog-site ghosts kept per worker id must not outlive this one
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut evt) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetAllGhosts();
+    }
+
     @SubscribeEvent
     public static void onEntityLeaveEvent(EntityLeaveLevelEvent evt) {
         try {
@@ -802,6 +812,7 @@ public class UnitClientEvents {
      * Therefore, only remove entities if they leave serverside via UnitClientboundPacket.
      */
     public static void onEntityLeave(int entityId) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetGhosts(entityId);
         selectedUnits.removeIf(e -> e.getId() == entityId);
         //System.out.println("selectedUnits removed entity: " + entityId);
         preselectedUnits.removeIf(e -> e.getId() == entityId);
@@ -1112,6 +1123,11 @@ public class UnitClientEvents {
                     else
                         resolveMoveActionDeferred();
                 }
+                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
+                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
+                    sendUnitCommand(UnitAction.BUILD_REPAIR);
+                }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else
                     resolveMoveActionDeferred();
@@ -1342,6 +1358,8 @@ public class UnitClientEvents {
                                              LivingEntity entity, boolean isSelected, boolean isPreselected,
                                              boolean isMouseOverAnyButtonOrHud, boolean isLeftClickAttack,
                                              boolean targetingSelf, boolean isRightClickDown) {
+        if (entity.isRemoved())
+            return;   // kept selected after leaving tracking range (SelectionKeep): not drawn
         AABB entityAABB = entity.getBoundingBox();
         if (entity instanceof Unit unit)
             entityAABB = unit.getInflatedSelectionBox();
@@ -1487,6 +1505,7 @@ public class UnitClientEvents {
             int gn = 0, gTicks = 0;
             boolean gGreen = true;
             for (LivingEntity entity : getSelectedUnits()) {
+                if (entity.isRemoved()) continue;   // kept selected after leaving tracking range: nothing to draw
                 if (entity instanceof Unit unit) {
                     float entityYOffset1 = 1.74f - ((LivingEntity) unit).getEyeHeight() - 1;
                     Vec3 firstPos = ((LivingEntity) unit).getEyePosition().add(0, entityYOffset1,0);
