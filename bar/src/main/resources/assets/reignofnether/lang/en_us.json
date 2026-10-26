@@ -977,6 +977,7 @@
   "matchend.reignofnether.loser": "LOSER",
   "matchend.reignofnether.party_total": "Party total",
   "matchend.reignofnether.resources": "Resources harvested: %s",
+  "matchend.reignofnether.resources_short": "Harvested %s",
   "matchend.reignofnether.col_units": "Units",
   "matchend.reignofnether.col_military": "Military",
   "matchend.reignofnether.col_buildings": "Buildings",

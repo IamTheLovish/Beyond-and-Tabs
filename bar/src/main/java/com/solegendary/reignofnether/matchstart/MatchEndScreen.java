@@ -209,9 +209,9 @@ public class MatchEndScreen extends Screen {
 
     private int contentHeight(boolean c) {
         int h = PAD + (c ? HEADER_H_C : HEADER_H) + LINE_H; // header + column-header row
-        for (Team t : teams)   // team header, rows, party total (+ resources line unless compact), gap
+        for (Team t : teams)   // team header, rows, party total (+ resources line unless compact; party of one: resources only), gap
             h += (c ? TEAM_HEADER_H_C : TEAM_HEADER_H) + t.members.size() * (c ? ROW_H_C : ROW_H)
-                + (c ? LINE_H : LINE_H * 2) + (c ? TEAM_GAP_C : TEAM_GAP);
+                + (c || !MatchEndLayout.showsPartyTotal(t.members.size()) ? LINE_H : LINE_H * 2) + (c ? TEAM_GAP_C : TEAM_GAP);
         if (!awards.isEmpty())
             h += LINE_H + 4 + awards.size() * LINE_H; // "Awards" header + divider + one line each
         return h + PAD;
@@ -295,18 +295,35 @@ public class MatchEndScreen extends Screen {
                 y += rowH;
             }
 
+            // a party of one: its resources line only, no total row that repeats the player's numbers
+            if (!MatchEndLayout.showsPartyTotal(t.members.size())) {
+                String solo = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
+                g.drawString(font, solo, nameX, y, TEXT_DIM, true);
+                y += LINE_H + (compact ? TEAM_GAP_C : TEAM_GAP);
+                continue;
+            }
+
             // party total line
             String totalLabel = Component.translatable("matchend.reignofnether.party_total").getString();
-            g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
             drawNum(g, t.units, cl + COL_UNITS, y, ACCENT);
             drawNum(g, t.military, cl + COL_MIL, y, ACCENT);
             drawNum(g, t.buildings, cl + COL_BLDG, y, ACCENT);
             // party resource total: own line, or after the total label when compact
-            String res = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
+            String amount = String.format("%,d", t.resources);
+            String res = Component.translatable("matchend.reignofnether.resources", amount).getString();
             if (compact) {
-                g.drawString(font, res, nameX + font.width(totalLabel) + 8, y, TEXT_DIM, true);
+                // the line ends before the units total; long text falls back to shorter forms, never over the numbers
+                int room = cl + COL_UNITS - font.width(String.format("%,d", t.units)) - 6 - nameX;
+                String shortRes = Component.translatable("matchend.reignofnether.resources_short", amount).getString();
+                int pick = MatchEndLayout.compactTotalForm(font.width(totalLabel), font.width(res), font.width(shortRes), room);
+                if (pick <= 1)
+                    g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
+                String text = pick == 0 ? res : shortRes;
+                int x = pick <= 1 ? nameX + font.width(totalLabel) + 8 : nameX;
+                g.drawString(font, font.plainSubstrByWidth(text, Math.max(0, nameX + room - x)), x, y, TEXT_DIM, true);
                 y += LINE_H + TEAM_GAP_C;
             } else {
+                g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
                 y += LINE_H;
                 g.drawString(font, res, nameX, y, TEXT_DIM, true);
                 y += LINE_H + TEAM_GAP;
