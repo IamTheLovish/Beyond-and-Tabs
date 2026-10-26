@@ -26,7 +26,7 @@ dir, console minimised and detached). Shortcuts earlier installers made (this Pr
 repointed; any other "lovish" shortcut is left alone. A plain run of `BeyondAndTabs-Setup.exe` is still the installer.
 
 - **Window:** a page served from `127.0.0.1` on a random free port (a random token in the path), opened as an Edge app
-  window (`msedge.exe --app=URL --window-size=1200,640`; Edge from Program Files (x86), Program Files, the user's
+  window (`msedge.exe --app=URL --user-data-dir=%LOCALAPPDATA%BeyondAndTabsauncher-edge --window-size=<1190x610 logical px x display scale>`; the page scales its 1200x640 stage to any window size; Edge from Program Files (x86), Program Files, the user's
   LocalAppData or the App Paths registry key). No Edge: the default browser opens it and the page says so. If no
   browser can be opened, an error box shows the address.
 - **Look:** styled on the Beyond All Reason launcher; background `brand/launcher-bg.jpg` (embedded), page

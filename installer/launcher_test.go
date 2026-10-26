@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -209,5 +210,31 @@ func TestLauncherBackgroundIsEmbedded(t *testing.T) {
 	}
 	if !strings.Contains(launcherHTML, "url(bg.jpg)") {
 		t.Fatal("the page does not use the background")
+	}
+}
+
+func TestEdgeArgs(t *testing.T) {
+	la := `C:\Users\a\AppData\Local`
+	args := edgeArgs("http://127.0.0.1:1/x/", la, 96)
+	want := filepath.Join(la, "BeyondAndTabs", "launcher-app")
+	have := map[string]bool{}
+	for _, a := range args {
+		have[a] = true
+		if strings.HasPrefix(a, "--force-device-scale-factor") {
+			t.Errorf("must not force scale: %q", a)
+		}
+	}
+	for _, a := range []string{"--app=http://127.0.0.1:1/x/", "--user-data-dir=" + want, "--window-size=1190,610", "--no-first-run", "--no-default-browser-check", "--disable-sync", "--disable-features=msImplicitSignin"} {
+		if !have[a] {
+			t.Errorf("missing %q in %v", a, args)
+		}
+	}
+}
+
+func TestWindowSizeIsLogical(t *testing.T) {
+	for _, c := range []struct{ dpi, w, h int }{{96, 1190, 610}, {120, 1190, 610}, {144, 1190, 610}, {0, 1190, 610}} {
+		if w, h := windowSize(c.dpi); w != c.w || h != c.h {
+			t.Errorf("dpi %d: got %dx%d want %dx%d", c.dpi, w, h, c.w, c.h)
+		}
 	}
 }
