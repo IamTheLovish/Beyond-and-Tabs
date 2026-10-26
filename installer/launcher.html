@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Beyond and Tabs</title>
+<link rel="icon" href="cat.png">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { width:100%; height:100%; }
+  body { background:#000; font-family:"Segoe UI", system-ui, sans-serif; color:#fff; overflow:hidden; user-select:none; }
+  .stage { position:relative; width:100%; height:100%; min-height:560px; background:#1b2a1d url(bg.jpg) center / cover no-repeat; }
+  .stage::before { content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,.6) 100%),
+               linear-gradient(90deg, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 45%); }
+  .stage > * { position:absolute; }
+  h1 { left:56px; top:46px; font-size:52px; font-weight:800; letter-spacing:-.5px; text-shadow:0 3px 10px rgba(0,0,0,.7); }
+  .sub { left:60px; top:116px; font-size:16px; color:#f1e3b0; text-shadow:0 2px 6px rgba(0,0,0,.8); }
+  .cfg { right:90px; top:44px; }
+  .cfg label { display:block; font-size:16px; color:#ddd; margin-bottom:6px; text-shadow:0 1px 4px #000; }
+  .cfg .sel { width:170px; height:44px; background:rgba(60,70,80,.75); border-radius:4px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; font-size:17px; cursor:default; }
+  .cfg .sel b { color:#4fd18b; }
+  .news { left:60px; top:160px; width:470px; bottom:178px; max-height:230px; display:flex; flex-direction:column; background:rgba(10,12,16,.72); border:1px solid rgba(255,255,255,.12); border-radius:6px; padding:12px 16px; font-size:14px; }
+  .news h3 { font-size:12px; letter-spacing:.1em; color:#e6c76a; margin-bottom:6px; display:flex; justify-content:space-between; text-transform:uppercase; }
+  .news h3 span { color:#aab; letter-spacing:0; font-weight:400; text-transform:none; }
+  .news ul { overflow-y:auto; flex:1; scrollbar-width:thin; scrollbar-color:#4a4f55 transparent; }
+  .news li { list-style:none; padding:2px 0; display:flex; gap:8px; }
+  .news li .t { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .news .n { color:#9aa1ad; min-width:36px; }
+  .news .tag { margin-left:auto; font-size:11px; padding:0 7px; border-radius:8px; line-height:18px; white-space:nowrap; flex:none; }
+  .news .note { color:#aab; padding:2px 0; }
+  .ok { background:#1d3a24; color:#7ee08f; } .bad { background:#3d1c1c; color:#ff8a80; } .dr { background:#2a2e36; color:#aab; }
+  .tabs { left:60px; bottom:158px; display:flex; gap:6px; }
+  .btn { background:rgba(35,38,42,.92); border:2px solid #4a4f55; color:#fff; font:600 18px "Segoe UI", system-ui, sans-serif; padding:8px 16px; border-radius:2px; cursor:pointer; }
+  .btn:hover { border-color:#8a8f95; }
+  .btn.on { border-color:#e6c76a; color:#f3df9a; }
+  .status { left:60px; bottom:120px; width:820px; font-size:16px; font-weight:600; color:#7ee08f; text-shadow:0 1px 4px #000; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .status.update { color:#f3df9a; } .status.warn { color:#ffb74d; } .status.wait { color:#ddd; }
+  .note2 { left:60px; bottom:72px; font-size:13px; color:#ffb74d; text-shadow:0 1px 4px #000; }
+  .bar { left:60px; width:820px; height:16px; border-radius:8px; background:#5d6a70; overflow:hidden; }
+  .bar i { display:block; height:100%; width:0; background:#4fd18b; border-radius:8px; transition:width .6s ease; }
+  .bar.warn i { background:#ffb74d; }
+  .b1 { bottom:96px; } .b2 { bottom:44px; }
+  .play { right:60px; bottom:70px; width:210px; height:116px; background:#e6c76a; color:#1a1508; border:0; border-radius:6px; font:800 34px "Segoe UI", system-ui, sans-serif; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 18px rgba(0,0,0,.5); cursor:pointer; }
+  .play:hover { background:#f0d47c; }
+  .play:disabled { background:#8c8166; cursor:default; }
+  .links { right:60px; bottom:8px; font-size:14px; color:#ddd; display:flex; gap:12px; }
+  .links a { color:#ddd; cursor:pointer; text-decoration:underline; }
+</style></head>
+<body>
+<div class="stage">
+  <h1>Beyond and Tabs</h1>
+  <div class="sub" id="sub">Checking your build ...</div>
+
+  <div class="cfg" title="Only the newest build for now"><label>Version:</label><div class="sel"><span>Latest <b>&#9679;</b></span><span>&#8964;</span></div></div>
+
+  <div class="news">
+    <h3><b id="ptitle">New since you last played</b><span id="pdate"></span></h3>
+    <ul id="list"><li class="note">Loading ...</li></ul>
+  </div>
+
+  <div class="tabs">
+    <button class="btn on" id="tNews">What's new</button><button class="btn" id="tSoon">Coming soon</button><button class="btn" id="bLog">Open log</button><button class="btn" id="bGame">Open game folder</button>
+  </div>
+
+  <div class="status wait" id="status">Checking GitHub ...</div>
+  <div class="bar b1" id="bar1"><i style="width:30%"></i></div>
+  <div class="note2" id="note2"></div>
+  <div class="bar b2" id="bar2"><i></i></div>
+
+  <button class="play" id="play">PLAY</button>
+  <div class="links"><a id="lHelp">Troubleshooting</a><a id="lBug">Report a bug</a></div>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+let S = null, tab = "news", dead = false;
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function setStatus(text, level) { const s = $("status"); s.textContent = text; s.className = "status " + (level || "ok"); s.title = text; }
+function bar(id, pct, warn) { $(id).classList.toggle("warn", !!warn); $(id).firstElementChild.style.width = pct + "%"; }
+
+function li(item) {
+  const el = document.createElement("li");
+  const n = document.createElement("span"); n.className = "n"; n.textContent = "#" + item.n;
+  const t = document.createElement("span"); t.className = "t"; t.textContent = item.title; t.title = item.title;
+  el.append(n, t);
+  if (item.tag) {
+    const g = document.createElement("span");
+    g.className = "tag " + ({ ready: "ok", "tests failing": "bad" }[item.tag] || "dr");
+    g.textContent = item.tag; el.append(g);
+  }
+  return el;
+}
+function note(text) { const el = document.createElement("li"); el.className = "note"; el.textContent = text; return el; }
+
+function render() {
+  if (!S) return;
+  $("tNews").classList.toggle("on", tab === "news");
+  $("tSoon").classList.toggle("on", tab === "soon");
+  const list = $("list"); list.replaceChildren();
+  let items, msg;
+  if (tab === "news") {
+    $("ptitle").textContent = S.newsTitle;
+    $("pdate").textContent = fmtDate(S.newsSince);
+    items = S.news || []; msg = S.newsNote;
+  } else {
+    $("ptitle").textContent = "Coming soon: open pull requests";
+    $("pdate").textContent = "";
+    items = S.soon || []; msg = S.soonNote;
+  }
+  items.forEach(i => list.append(li(i)));
+  if (msg) list.append(note(msg));
+}
+
+async function load() {
+  try {
+    const r = await fetch("api/state", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    S = await r.json();
+  } catch (e) {
+    setStatus("The launcher could not load its data (" + e.message + "). PLAY still works.", "warn");
+    bar("bar1", 100, true);
+    return;
+  }
+  const parts = [];
+  if (S.build) {
+    parts.push("Build " + (S.build.sha || "(no commit in jar name)"));
+    parts.push(fmtDate(S.build.date));
+  } else {
+    parts.push("Game not installed yet");
+  }
+  if (S.newCount >= 0) parts.push(S.newCount + (S.newCount === 1 ? " new thing" : " new things") + " since you last played");
+  $("sub").textContent = parts.join(" · ");
+  $("tSoon").textContent = "Coming soon" + (S.soon ? " (" + S.soon.length + ")" : "");
+  setStatus(S.status, S.level);
+  bar("bar1", 100, S.level === "warn");
+  if (S.windowNote) $("note2").textContent = S.windowNote;
+  render();
+}
+
+async function post(path) {
+  const r = await fetch(path, { method: "POST", cache: "no-store" });
+  let body = {};
+  try { body = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+  return body;
+}
+async function act(what) {
+  try { await post("api/open?what=" + what); }
+  catch (e) { setStatus("Couldn't open that: " + e.message, "warn"); }
+}
+
+$("tNews").onclick = () => { tab = "news"; render(); };
+$("tSoon").onclick = () => { tab = "soon"; render(); };
+$("bLog").onclick = () => act("log");
+$("bGame").onclick = () => act("game");
+$("lHelp").onclick = () => act("help");
+$("lBug").onclick = () => act("bug");
+
+$("play").onclick = async () => {
+  if (dead) return;
+  $("play").disabled = true;
+  bar("bar2", 40);
+  setStatus("Starting Prism Launcher ...", "wait");
+  try {
+    await post("api/play");
+    bar("bar2", 100);
+    setStatus("Prism Launcher is starting: it updates the game, then Minecraft opens.", "ok");
+    dead = true;
+    setTimeout(() => window.close(), 1200);
+  } catch (e) {
+    bar("bar2", 100, true);
+    setStatus("PLAY failed: " + e.message, "warn");
+    $("play").disabled = false;
+  }
+};
+
+// heartbeat: the launcher stops when the window stops pinging
+let misses = 0;
+setInterval(async () => {
+  if (dead) return;
+  try { await post("api/ping"); misses = 0; }
+  catch (e) {
+    if (++misses >= 2) {
+      dead = true;
+      $("play").disabled = true;
+      setStatus("The launcher has stopped. Open it again from the lovish shortcut.", "warn");
+    }
+  }
+}, 5000);
+post("api/ping").catch(() => {});
+load();
+</script>
+</body></html>
