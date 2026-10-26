@@ -80,12 +80,16 @@ public class PerfPushGameTests {
             helper.fail("could not create the units");
             return;
         }
-        Sys.force(true);
-        Sys.snapshot();   // start a fresh window
+        // the lifetime counter, never reset: the shared window (Sys.calls) is restarted by the 10 s [Sys] report and by
+        // any other test's snapshot, so a 40-tick window that crossed one counted only its tail (174 of 1600, Oct 26);
+        // the hold is this test's own, so another test ending cannot switch measuring off under it
+        Object hold = new Object();
+        Sys.force(hold, true);
+        long before = Sys.lifetime(Sys.PUSH_SCAN)[0];
         helper.runAfterDelay(40, () -> {
-            long calls = Sys.calls(Sys.PUSH_SCAN);
-            String line = Sys.snapshot();
-            Sys.force(false);
+            long calls = Sys.lifetime(Sys.PUSH_SCAN)[0] - before;
+            String line = Sys.lastLine;
+            Sys.force(hold, false);
             pile.forEach(VindicatorUnit::discard);
             ReignOfNether.LOGGER.info("[PushScan] {} units, 40 ticks: {} neighbour lookups; {}", UNITS, calls, line);
             if (calls < UNITS * 40 / 2)
