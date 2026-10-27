@@ -456,15 +456,23 @@ public final class HeroBot {
             return;
         }
         long now = mob.level().getGameTime();
-        boolean fresh = b.lock.refresh(mob, (Unit) mob, now);
+        boolean bot = BotServerEvents.brains.containsKey(hero.getOwnerName());
+        boolean fresh = b.lock.refresh(mob, (Unit) mob, now, !bot);
         if (b.state == HeroBrain.State.OFF) {
             // handed back by the player (possession released, the AI switched on): what they saw stands, danger included
             b.lock.acknowledge();
             b.state = HeroBrain.State.IDLE;
+        } else if (fresh && bot && b.fleeing()) {
+            // a bot's army order swept the fleeing hero along: the flight stands (D030 is the player's word, and the
+            // hero's own brain knows its life better than the bot's sweep); the order waits until it is healed
+            Unit.fullResetBehaviours((Unit) mob);
+            if (b.state == HeroBrain.State.FLEE && b.fleeTo != null)
+                ((Unit) mob).setMoveTarget(b.fleeTo);
         } else if (fresh) {
             if (b.fleeing())
                 b.state = HeroBrain.State.OBEY;
-            b.clearCombo();
+            if (!b.lock.mode().mayMove)
+                b.clearCombo();   // a move, attack or hold: no follow-up after the gap closer's target (Fight keeps it)
             b.record(now, Why.COMMAND, -1, -1);
         }
         // a cast under an order stops the hero's legs for its wind-up (the cast goal and the move share the navigator):
@@ -729,6 +737,7 @@ public final class HeroBot {
         if (going == null || going.distSqr(to) > 9) {
             Unit.fullResetBehaviours(u);   // drops the order's target, hold and attack-move: the run is the order now
             u.setMoveTarget(to);
+            b.fleeTo = to;
         }
         b.record(now, Why.FLEE, cast ? -2 : -1, -1);
     }

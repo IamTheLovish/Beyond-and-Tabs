@@ -55,17 +55,23 @@ public final class OrderLock {
     @Nullable private UnitCommand suspended;
 
     /**
-     * Every tick: reads the hero's order. True when the player gave a command since the last look - a fresh command,
-     * which acknowledges the danger so far (D030) and drops any order a flight had suspended (the new one replaces it).
+     * Every tick: reads the hero's order. True when its owner gave a command since the last look - a fresh command.
+     * A player's ({@code playerOwned}) acknowledges the danger so far (D030) and replaces any order a flight had
+     * suspended. A bot's does neither: its army orders sweep every fighter along every few seconds, which is not a
+     * player taking the hero back, so the newest of them simply becomes the order to go back to once the hero is healed.
      */
-    public boolean refresh(LivingEntity le, Unit unit, long now) {
+    public boolean refresh(LivingEntity le, Unit unit, long now, boolean playerOwned) {
         CommandQueue q = CommandQueues.get(le.getId());
         UnitCommand c = q == null ? null : q.current();
         boolean fresh = false;
         if (c != null && q.currentStartedAt() != seenStart) {
             seenStart = q.currentStartedAt();
-            acknowledge();
-            suspended = null;
+            if (playerOwned) {
+                acknowledge();
+                suspended = null;
+            } else if (suspended != null) {
+                suspended = c;
+            }
             fresh = true;
         }
         current = c;

@@ -46,6 +46,8 @@ public final class HeroBrain {
     public long followUpUntil;
     /** The hero's cast goal was busy last tick (HeroBot.everyTick: the order's walk resumes the tick a cast is done). */
     public boolean wasCasting;
+    /** Where the current flight runs to (a bot's order that sweeps the hero along mid-flight is turned back to it). */
+    @Nullable public net.minecraft.core.BlockPos fleeTo;
 
     public HeroBrain(int heroId) {
         this.log = new DecisionLog(heroId);
