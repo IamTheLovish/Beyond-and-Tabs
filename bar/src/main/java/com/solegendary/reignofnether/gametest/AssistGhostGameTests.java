@@ -265,6 +265,17 @@ public class AssistGhostGameTests {
         s.guards.add(b.getId());
         CommandQueues.issue(s.level, s.owner, UnitAction.GUARD, a.getId(), new int[] { b.getId() },
             a.blockPosition(), BlockPos.ZERO, QueueMode.REPLACE);
+        // diagnosis of the one red in 59 CI runs (40441586228: "guarding false", B still on its spawn cell): when B's
+        // guard ended, the order B was carrying out then, and whether both units were ticking
+        String[] guardEnd = { null };
+        helper.onEachTick(() -> {
+            if (guardEnd[0] == null && !GuardServerEvents.isGuarding(b.getId())) {
+                var q = CommandQueues.get(b.getId());
+                guardEnd[0] = "guard ended at test tick " + helper.getTick() + " (B's order then "
+                    + (q == null || q.current() == null ? "none" : q.current().action() + " by " + q.current().owner())
+                    + "; " + ArenaReady.describe(s.level, List.of(a, b)) + ")";
+            }
+        });
         BuildingPlacement[] first = { null };
         helper.runAfterDelay(10, () -> {
             first[0] = place(s, Defences.VILLAGERS.raidTower(), new BlockPos(s.cx - 7, BuilderAssistGameTests.PAD_Y,
@@ -295,14 +306,15 @@ public class AssistGhostGameTests {
                         () -> {
                             problems.add("B did not follow A to the second site: guarding "
                                 + GuardServerEvents.isGuarding(b.getId()) + ", builders " + s.bp.getBuilders().size()
-                                + "; A " + where(a) + "; B " + where(b));
+                                + "; A " + where(a) + "; B " + where(b) + "; " + (guardEnd[0] == null ? "guard held" : guardEnd[0]));
                             drop(first[0]);
                             finish(helper, s, problems);
                         });
                 },
                 () -> {
                     problems.add("B never helped A on the first site: guarding "
-                        + GuardServerEvents.isGuarding(b.getId()) + "; A " + where(a) + "; B " + where(b));
+                        + GuardServerEvents.isGuarding(b.getId()) + "; A " + where(a) + "; B " + where(b) + "; "
+                        + (guardEnd[0] == null ? "guard held" : guardEnd[0]));
                     drop(first[0]);
                     finish(helper, s, problems);
                 });
