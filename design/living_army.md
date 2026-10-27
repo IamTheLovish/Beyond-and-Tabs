@@ -176,7 +176,10 @@ PRs: #277 (this spec + `design/living_army_plan.md`), #278 slice 1 (springs, zoo
 motion state), #280 slice 3 (parade ground), #281 slice 4 (motion pass), #282 slice 5 (fidgets, glances), #283 slice 6
 (every family); an independent review of 4-6 found sign, rig and clock bugs, fixed tests-first on those branches.
 Measured on the CI bench: the tick 0.10 us a unit, the motion pass 0.26 us a unit, 0 bytes allocated
-by either (budgets 1 and 3 us).
+by either (budgets 1 and 3 us). Checked in game on lovish's PC (real client, Complementary Reimagined shaders,
+`/parade` on a flat world, ~150 units on screen): no broken poses through the loop, 63-64 fps with the living army
+on against 64-66 off - noise. The CI eyes harness could not take this check (it stalls on Supplementaries' welcome
+screen on main itself).
 
 Where the build differs from the text above, and why:
 - **Hit direction comes from the damage event, not `hurtDir`.** Vanilla 1.20.1 sets `hurtDir` for players only (the
