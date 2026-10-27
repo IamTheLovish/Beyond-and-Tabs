@@ -245,6 +245,7 @@ public final class MapClient {
         prepPct = p.prepPct;
         if (p.prepStage >= 0)
             prepSeen = true;
+        com.solegendary.reignofnether.fogofwar.FogMemoryClient.onPrepState(wasPrepRunning, isPrepRunning());
         if (wasPrepRunning && !isPrepRunning())
             ReignOfNether.LOGGER.info("[Prep] the server reports the battlefield {}",
                 prepStage >= 0 ? "READY" : "preparation ended");
