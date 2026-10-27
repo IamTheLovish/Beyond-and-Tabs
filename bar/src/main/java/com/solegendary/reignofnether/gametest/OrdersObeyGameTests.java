@@ -202,6 +202,9 @@ public class OrdersObeyGameTests {
         int[] ordered = { -1 };
         // the pool's state a few times after the order: where a request that never comes back is held
         StringBuilder trace = new StringBuilder();
+        StringBuilder events = new StringBuilder();
+        long[] lastSeen = { Long.MIN_VALUE, 0 };
+        BlockPos[] finalSeen = { null };
         boolean[] done = { false };
         ArenaReady.whenTicking(helper, made, 150, tick -> {
             if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
@@ -225,6 +228,20 @@ public class OrdersObeyGameTests {
             if (t == 1 || t == 5 || t == 40 || t == 300)
                 trace.append(" [t ").append(t).append(": pending ").append(goal.isPathPending()).append(", ")
                     .append(com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.debugState()).append("]");
+            // every request and every path that came back, with where the unit stood: a stuck count that never
+            // reaches its give-up shows as final nodes that change, or requests spaced too short
+            BlockPos fin = goal.getFinalNodePos();
+            if (goal.getLastRequestTime() != lastSeen[0] || goal.isPathPending() != (lastSeen[1] == 1)
+                    || !java.util.Objects.equals(fin, finalSeen[0])) {
+                lastSeen[0] = goal.getLastRequestTime();
+                lastSeen[1] = goal.isPathPending() ? 1 : 0;
+                finalSeen[0] = fin;
+                if (events.length() < 3000)
+                    events.append(" t").append(t).append(goal.isPathPending() ? " req" : " got").append(" at ")
+                        .append(TerrainGameTests.f(m.getX() - startX)).append(",").append(TerrainGameTests.f(m.getZ()))
+                        .append(" end ").append(fin == null ? "none" : fin.getX() + "," + fin.getY() + "," + fin.getZ())
+                        .append(goal.isInBackoff() ? " backoff" : "").append(";");
+            }
             if (!idle && t < 600)
                 return;
             done[0] = true;
@@ -237,7 +254,8 @@ public class OrdersObeyGameTests {
                     + (com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.isInitialised()
                         ? "queue depth " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.queueDepth() : "off")
                     + ", fallback point " + com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.lastLoadedToward(level, m.blockPosition(), far)
-                    + ", now " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.debugState() + ";" + trace;
+                    + ", now " + com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool.debugState() + ";" + trace
+                    + "; events:" + events;
                 ReignOfNether.LOGGER.info("[Orders] a move into unloaded chunks: {}", state);
                 List<String> problems = new ArrayList<>();
                 if (!idle && !(m.getX() - xAt500[0] > 1.0))
