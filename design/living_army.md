@@ -174,7 +174,8 @@ Ideas and technique only - no assets (AGENTS.md section 2).
 
 PRs: #277 (this spec + `design/living_army_plan.md`), #278 slice 1 (springs, zoom gain, de-sync), #279 slice 2 (shared
 motion state), #280 slice 3 (parade ground), #281 slice 4 (motion pass), #282 slice 5 (fidgets, glances), #283 slice 6
-(every family). Measured on the CI bench: the tick 0.10 us a unit, the motion pass 0.26 us a unit, 0 bytes allocated
+(every family); an independent review of 4-6 found sign, rig and clock bugs, fixed tests-first on those branches.
+Measured on the CI bench: the tick 0.10 us a unit, the motion pass 0.26 us a unit, 0 bytes allocated
 by either (budgets 1 and 3 us).
 
 Where the build differs from the text above, and why:
@@ -190,5 +191,12 @@ Where the build differs from the text above, and why:
 - **A player body's jacket, sleeves and trouser legs, and a humanoid's hat, follow their limb after the pass**
   (vanilla copies them inside setupAnim, before it).
 - **Keyframe units and our generated rigs are hierarchical**: their body bends about its own pivot and the head and
-  arms follow as its children; rigs that breathe by themselves get no second breath.
+  arms follow as its children - only where the head is in the body's subtree and no leg is. Where it is not (the
+  Royal Guard's head and arms are the body's siblings; a generated rig's `body` is its pelvis, carrying the legs) the
+  torso is left to the rig's clips and the unit flinches with its head and staggers with its whole body. Rigs that
+  breathe by themselves get no second breath.
+- **A hanging limb's RX/RZ swing its free end** (the hand or foot forward / to the right), so the weight shift tilts
+  the legs against the hips (the feet stay planted) and the arms splay out of a turn.
+- **The idle schedule re-seeds when a unit's clock goes back**: a unit that leaves tracking and returns within the
+  100 ticks its slot is kept is a new entity object with `tickCount` from 0.
 - **The Bone Dragon is left out** while PR #145 reworks it; the bison breathes on the shared exertion.
