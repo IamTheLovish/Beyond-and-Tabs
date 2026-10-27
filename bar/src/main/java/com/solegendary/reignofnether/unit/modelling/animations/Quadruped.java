@@ -165,7 +165,9 @@ public final class Quadruped {
         if (attackTime > 0f && (st[3] <= 0f || attackTime < st[3]))
             st[2] = age;                              // the swing began this frame: start our own, slower clip
         st[3] = attackTime;
-        int slot = com.solegendary.reignofnether.unit.modelling.motion.AnimStates.base(id);
+        // the A/B toggle (Numpad 0) puts the bison back on its own exertion with the rest of the army
+        int slot = com.solegendary.reignofnether.unit.modelling.motion.AnimStates.enabled()
+            ? com.solegendary.reignofnether.unit.modelling.motion.AnimStates.base(id) : -1;
         float exert = exertion(st[0], slot, com.solegendary.reignofnether.unit.modelling.motion.AnimStates.slab());
         float idle = 1f - amt;
 

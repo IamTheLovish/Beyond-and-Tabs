@@ -109,12 +109,34 @@ public final class BoneMaps {
         boolean keyframes = model instanceof KeyframeHierarchicalModel<?>;
         if ((keyframes || model instanceof SplitPasses) && model instanceof HierarchicalModel<?> hm) {
             ModelPart body = descendant(hm, "body"), head = descendant(hm, "head");
+            if (body != null && !bendsAlone(body, head))
+                body = null;      // bending it would part the head from the torso, or swing the legs and feet
             if (body == null && head == null)
                 return NONE;
             return new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
                 .set(Motion.BODY, body).set(Motion.HEAD, head);
         }
         return NONE;
+    }
+
+    /** Every leg, thigh and foot name our rigs and keyframe models use (bone names are not readable from a part). */
+    private static final String[] LEG_NAMES = {"left_leg", "right_leg", "left_thigh", "right_thigh", "left_foot",
+        "right_foot", "legL", "legR", "Lleg", "Rleg", "LLeg", "RLeg", "front_left_leg", "front_right_leg",
+        "back_left_leg", "back_right_leg", "front_left_foot", "front_right_foot", "hind_left_foot", "hind_right_foot"};
+
+    /**
+     * A hierarchical rig's torso may bend by itself (the head and arms following as its children) only when the head
+     * is in its subtree and no leg is - a torso beside its head would leave it behind, a pelvis would swing the feet.
+     */
+    static boolean bendsAlone(ModelPart body, ModelPart head) {
+        if (head == null || body.getAllParts().noneMatch(p -> p == head))
+            return false;
+        return body.getAllParts().noneMatch(p -> {
+            for (String leg : LEG_NAMES)
+                if (p.hasChild(leg))
+                    return true;
+            return false;
+        });
     }
 
     private static ModelPart descendant(HierarchicalModel<?> m, String name) {
