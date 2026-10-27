@@ -271,6 +271,90 @@ public class OrdersObeyGameTests {
         });
     }
 
+    /**
+     * The same move into unloaded land, but each time the unit has come to rest at the pen's east wall it is shifted one
+     * block north or south (alternately), as separation and pushing shifted it by chance in CI. The path into unloaded
+     * land aims at the last loaded ground straight ahead of the unit, so each shift moved the path's end one block, and
+     * "a different end node" counted as progress: the stuck count never reached its give-up and the unit stood with
+     * its order forever (a_move_into_unloaded_chunks..., CI runs 40572488789, 40577575656). A sideways shift of a
+     * block is no progress toward a target 4000 blocks east: the unit gives the order up within 30 s.
+     */
+    @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
+    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        boolean wasRts = UnitServerEvents.rtsPathfinding;
+        UnitServerEvents.rtsPathfinding = true;
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        // the same closed stone pen as a_move_into_unloaded_chunks... (x 0..14, z 0..15)
+        for (int x = 0; x <= 14; x++)
+            for (int z = 0; z <= 15; z++)
+                if (x == 0 || x == 14 || z == 0 || z == 15)
+                    for (int y = 2; y <= 6; y++)
+                        helper.setBlock(new BlockPos(x, y, z), net.minecraft.world.level.block.Blocks.STONE);
+        BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
+        String mine = owner(helper, "shifted");
+        List<Entity> made = new ArrayList<>();
+        Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
+        if (m == null) {
+            UnitServerEvents.rtsPathfinding = wasRts;
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the vindicator");
+            return;
+        }
+        BlockPos far = new BlockPos(pad.getX() + 4000, pad.getY(), pad.getZ() + 8);
+        double startX = m.getX();
+        int[] ordered = { -1 };
+        long[] shiftedFor = { Long.MIN_VALUE };
+        int[] shifts = { 0 };
+        StringBuilder events = new StringBuilder();
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
+                done[0] = true;
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+                helper.fail("the far target's chunk is loaded: this test proves nothing");
+                return;
+            }
+            ordered[0] = tick;
+            move(level, mine, m, far);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            long t = helper.getTick() - ordered[0];
+            MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
+            boolean idle = goal.getMoveTarget() == null;
+            // at rest at the wall after this request's path came in: shift it a block along the wall, once per request
+            if (!idle && m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
+                    && goal.getLastRequestTime() != shiftedFor[0]) {
+                shiftedFor[0] = goal.getLastRequestTime();
+                double dz = shifts[0]++ % 2 == 0 ? 1 : -1;
+                m.teleportTo(m.getX(), m.getY(), m.getZ() + dz);
+                if (events.length() < 2000)
+                    events.append(" t").append(t).append(" shifted to z ").append(TerrainGameTests.f(m.getZ()))
+                        .append(" (path end ").append(goal.getFinalNodePos()).append(");");
+            }
+            if (!idle && t < 600)
+                return;
+            done[0] = true;
+            try {
+                List<String> problems = new ArrayList<>();
+                if (!idle)
+                    problems.add("the unit still had its order after " + t + " ticks (" + shifts[0] + " shifts along the"
+                        + " wall, moved " + TerrainGameTests.f(m.getX() - startX) + " east, last request at "
+                        + goal.getLastRequestTime() + ", now " + level.getGameTime() + "):" + events);
+                else if (m.getX() - startX < 5)
+                    problems.add("the unit gave up without walking toward the target (moved "
+                        + TerrainGameTests.f(m.getX() - startX) + " east)");
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
+
     // ------------------------------------------------------------------- (c) Stop after a queued big formation move
 
     /**
