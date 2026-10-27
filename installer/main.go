@@ -193,8 +193,7 @@ func run() error {
 	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
 	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
 	fmt.Println("Every later launch updates the game to the newest build automatically.")
-	fmt.Println("
-Next time, click the cat bubble on your screen (or the \"" + shortcutName + "\" shortcut on your Desktop):")
+	fmt.Println("\nNext time, click the cat bubble on your screen (or the \"" + shortcutName + "\" shortcut on your Desktop):")
 	fmt.Println("both open the " + appName + " launcher (what's new, your build, PLAY). Drag the bubble to move it; right-click it to start it with Windows or close it.")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
