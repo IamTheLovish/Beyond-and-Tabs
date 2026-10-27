@@ -42,18 +42,6 @@ public class ManaClientEvents {
         ManaServerboundPacket.toggleOvercharge();
     }
 
-    /**
-     * The Geomancer's Ley Link is a two-click order: the first click (on a building) asks for the cursor to be armed
-     * again, but the click handler clears every cursor action after it runs - so it is re-armed here, a tick later.
-     */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || !com.solegendary.reignofnether.ability.abilities.LeyLink.rearmCursor)
-            return;
-        com.solegendary.reignofnether.ability.abilities.LeyLink.rearmCursor = false;
-        com.solegendary.reignofnether.cursor.CursorClientEvents.setLeftClickAction(com.solegendary.reignofnether.unit.UnitAction.LEY_LINK);
-    }
-
     @SubscribeEvent
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         if (!(MC.screen instanceof TopdownGui) || evt.getButton() != GLFW.GLFW_MOUSE_BUTTON_1)

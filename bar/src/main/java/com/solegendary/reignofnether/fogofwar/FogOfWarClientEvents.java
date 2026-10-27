@@ -41,6 +41,8 @@ public class FogOfWarClientEvents {
     // nothing per frame. Volatile: the off-thread chunk mesher reads it.
     public static final int FOG_TINT_CLEAR = 0x7882A0;
     public static volatile int FOG_TINT_RGB = FOG_TINT_CLEAR;
+    // the same for ground never in sight ("dark but visible", ~15% brightness; FogExploration), set with the style
+    public static volatile int FOG_TINT_UNEXPLORED = FogExploration.TINT_UNEXPLORED;
 
     private static final Minecraft MC = Minecraft.getInstance();
 
@@ -80,6 +82,9 @@ public class FogOfWarClientEvents {
         brightChunks.clear();
         brightChunks.addAll(bright);
 
+        // ground in sight for the first time leaves the never-explored tint: re-mesh it once, as any flip does
+        List<ChunkPos> firstExplored = FogExploration.markExplored(bright);
+
         // Publish the server's edge masks atomically with the bright set (same packet), so there is never
         // a window where a chunk is bright but its mask hasn't caught up.
         Map<ChunkPos, long[]> oldMasks = edgeMasks;
@@ -89,6 +94,7 @@ public class FogOfWarClientEvents {
         // re-dirty the same sections 9× each
         Set<ChunkPos> toRerender = new HashSet<>();
         for (ChunkPos cpos : newlyDark) addWithNeighbors(toRerender, cpos);
+        for (ChunkPos cpos : firstExplored) addWithNeighbors(toRerender, cpos);
         for (ChunkPos cpos : newlyBright) {
             addWithNeighbors(toRerender, cpos);
             if (MC.level != null) {
@@ -126,6 +132,15 @@ public class FogOfWarClientEvents {
     // off-thread chunk mesher, so it only reads immutable published state. O(1).
     public static boolean isBlockVisible(BlockPos pos) {
         return isBlockVisible(pos.getX(), pos.getZ());
+    }
+
+    /**
+     * The fog tint for the block column at x, z: 0 in sight (or fog off), else the explored or the never-explored tint
+     * (FogExploration). Same off-thread, allocation-free contract as isBlockVisible.
+     */
+    public static int fogTintAt(int x, int z) {
+        if (isBlockVisible(x, z)) return 0;
+        return FogExploration.pickTint(false, FogExploration.isExplored(x >> 4, z >> 4), FOG_TINT_RGB, FOG_TINT_UNEXPLORED);
     }
 
     public static boolean isBlockVisible(int x, int z) {
@@ -219,6 +234,7 @@ public class FogOfWarClientEvents {
 
         if (enabled != value) {
             enabled = value;
+            FogExploration.clear();   // a new fog: nothing has been seen yet
             resetFogChunks();
 
             if (!enabled) {

@@ -46,7 +46,7 @@ import java.util.function.Supplier;
  */
 public class BuildingBatchServerboundPacket {
 
-    public enum Action { QUEUE, APPLY, SET_REPEAT }
+    public enum Action { QUEUE, APPLY, SET_REPEAT, SET_FACTORY_GUARD }   // SET_FACTORY_GUARD: as SET_REPEAT, for factory guard (Ctrl+G)
 
     /** A click never names more than this many buildings (a whole-map selection of a big base still fits). */
     public static final int MAX_BUILDINGS = 64;
@@ -192,6 +192,15 @@ public class BuildingBatchServerboundPacket {
                             continue;
                         pp.setRepeatQueue(on);
                         BuildingProductionClientboundPacket.toggleRepeat(pp.ownerName, pp.originPos, on);
+                    }
+                }
+                case SET_FACTORY_GUARD -> {
+                    boolean on = value != 0;
+                    for (ProductionPlacement pp : factories) {
+                        if (pp.factoryGuard == on)
+                            continue;
+                        pp.setFactoryGuard(on);
+                        BuildingProductionClientboundPacket.toggleFactoryGuard(pp.ownerName, pp.originPos, on);
                     }
                 }
                 case QUEUE -> {

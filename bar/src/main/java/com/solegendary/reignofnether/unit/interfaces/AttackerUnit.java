@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.TargetScan;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
@@ -47,6 +48,15 @@ public interface AttackerUnit {
     // how often an engaged (non-forced) attacker re-checks for a closer target; must be a multiple of 4 (the
     // cadence of the combat-AI block in tick())
     int RETARGET_TICKS = 12;
+
+    /**
+     * GAMEPLAY NUMBER (lovish's call, Oct 21 perf plan PR 5): how often an idle unit looks for something to attack
+     * by itself - 4 ticks = 0.2 s, as before. 8 (0.4 s, BAR's slow update is 0.5 s) halves idle lookups again - waiting
+     * on lovish's OK (gen-012, Oct 23). A unit that was fighting a moment ago (unit/TargetScan.inCombat) always looks
+     * every 4 ticks, and explicit attack orders, attack-move, retaliation and retargeting never wait on it. A multiple
+     * of 4.
+     */
+    int IDLE_AGGRO_TICKS = 4;
 
     public static final float ATTACK_DAMAGE_REDUCTION_PER_WEAK = 0.2f;
     public static final float ATTACK_DAMAGE_INCREASE_PER_STRENGTH = 0.2f;
@@ -311,6 +321,10 @@ public interface AttackerUnit {
             }
 
             boolean isAttackingBuilding = isAttackingBuilding(attackerUnit);
+            // something to fight now: when it dies or runs off, this unit looks for the next target at once instead of
+            // on the idle stagger below (TargetScan.COMBAT_MEMORY_TICKS)
+            if (isAttackingBuilding || unit.hasLivingTarget())
+                TargetScan.markEngaged(unitMob);
 
             // BAR fire state (EngagementStance): Hold fire never picks a target on its own and Return fire only
             // answers whoever hit it; both still obey an explicit attack order (forced target). Fire at will is RoN's
@@ -402,8 +416,9 @@ public interface AttackerUnit {
                     attackerUnit.setUnitAttackTarget((LivingEntity) lastDSEntity);
                 }
             }
-            // idle auto-aggression
-            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob)) {
+            // idle auto-aggression: every IDLE_AGGRO_TICKS, staggered by entity id, for a unit not in combat (TargetScan)
+            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob)
+                    && TargetScan.idleScanDue(unitMob)) {
                 int sysIdle = Sys.begin(Sys.IDLE_AGGRO);
                 try {
                     attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
@@ -415,8 +430,8 @@ public interface AttackerUnit {
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
             // Throttled from every 4 to every RETARGET_TICKS ticks: this runs for every unit already in combat (the
             // bulk of units in a big fight) and each call is an entity query + sort + line-of-sight checks.
-            // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Idle aggro and
-            // attack-move acquisition above still run every 4 ticks, so reaction time to new enemies is unchanged.
+            // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Attack-move
+            // acquisition above still runs every 4 ticks (idle aggro every IDLE_AGGRO_TICKS, see there).
             if (!forced && fireAtWill && unitMob.tickCount % RETARGET_TICKS == 0) {
                 int sysRetarget = Sys.begin(Sys.RETARGET);
                 try {
