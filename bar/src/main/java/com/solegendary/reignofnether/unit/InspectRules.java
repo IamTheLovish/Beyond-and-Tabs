@@ -37,6 +37,22 @@ public final class InspectRules {
         }
     }
 
+    /**
+     * The viewer's relation to a unit owned by {@code ownerName}, the same answer as the client's
+     * UnitClientEvents.getPlayerToEntityRelationship for a unit: own first (OWNED, so own cards keep their command
+     * card), then ally, else enemy; no owner is neutral. Not the server's unit-to-unit relation
+     * (UnitServerEvents.getUnitToEntityRelationship), which calls a same-owner pair FRIENDLY.
+     */
+    public static Relationship relation(String viewerName, String ownerName, boolean allied) {
+        if (ownerName == null || ownerName.isBlank())
+            return Relationship.NEUTRAL;
+        if (ownerName.equals(viewerName))
+            return Relationship.OWNED;
+        if (allied)
+            return Relationship.FRIENDLY;
+        return Relationship.HOSTILE;
+    }
+
     /** Can the local player see this well enough to select it for inspection (or keep it inspected)? */
     public static boolean mayInspect(boolean inBrightChunk, boolean hiddenFromViewer, boolean passenger) {
         return inBrightChunk && !hiddenFromViewer && !passenger;

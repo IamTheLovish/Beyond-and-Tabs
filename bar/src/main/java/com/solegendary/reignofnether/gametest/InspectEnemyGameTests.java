@@ -59,8 +59,14 @@ public class InspectEnemyGameTests {
         return v;
     }
 
+    /**
+     * The viewer's relation to {@code u} as the client card sees it (player-to-unit: own is OWNED). Not
+     * UnitServerEvents.getUnitToEntityRelationship, a unit-to-unit relation that calls own units FRIENDLY.
+     */
     static Relationship rel(ServerPlayer viewer, VindicatorUnit u) {
-        return UnitServerEvents.getUnitToEntityRelationship(u, viewer);
+        String me = viewer.getName().getString();
+        return InspectRules.relation(me, u.getOwnerName(),
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(me, u.getOwnerName()));
     }
 
     static void finish(GameTestHelper helper, List<String> problems) {

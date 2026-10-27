@@ -70,4 +70,17 @@ class InspectRulesTest {
         assertFalse(InspectRules.keepInSelection(2, false), "an enemy in a group of 2 is dropped");
         assertTrue(InspectRules.keepInSelection(2, true), "own units in a group stay");
     }
+
+    @Test
+    void own_unit_is_owned_even_when_the_alliance_table_lists_self() {
+        // the AC-3/AC-4 game tests used the server's unit-to-unit relation, which calls own units FRIENDLY: own
+        // cards then lost their command card and own units dropped out of groups
+        assertEquals(Relationship.OWNED, InspectRules.relation("me", "me", false));
+        assertEquals(Relationship.OWNED, InspectRules.relation("me", "me", true));
+        assertEquals(Relationship.FRIENDLY, InspectRules.relation("me", "pal", true));
+        assertEquals(Relationship.HOSTILE, InspectRules.relation("me", "foe", false));
+        assertEquals(Relationship.NEUTRAL, InspectRules.relation("me", "", false));
+        assertTrue(InspectRules.shows(Info.COMMAND_CARD, InspectRules.relation("me", "me", true), false, false));
+        assertTrue(InspectRules.keepInSelection(2, InspectRules.canCommand(InspectRules.relation("me", "me", false), false, false)));
+    }
 }
