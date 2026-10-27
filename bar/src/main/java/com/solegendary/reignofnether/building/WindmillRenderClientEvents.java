@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -150,6 +151,8 @@ public class WindmillRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
         try {
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
@@ -175,6 +178,7 @@ public class WindmillRenderClientEvents {
             if (windClock > 1.0e6)
                 windClock -= 1.0e6;   // keep float precision; a jump every ~14 hours of play is invisible
             boolean renderedAny = false;
+            net.minecraft.client.renderer.culling.Frustum frustum = evt.getFrustum();
 
             for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
                 if (!placement.isBuilt || !placement.isExploredClientside)
@@ -192,6 +196,12 @@ public class WindmillRenderClientEvents {
                 double d2 = cam.distanceToSqr(at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5);
                 boolean small = p.kind() == Kind.BELL || p.kind() == Kind.PETALS;
                 if (d2 > (small ? SMALL_PART_DIST_SQR : MAX_RENDER_DIST_SQR))
+                    continue;
+                // off screen: no block-state read, no light lookup, no part boxes (sails reach ~p.size() from the hub)
+                // (petals fall from the crown to the pad, so they get a taller reach)
+                double reach = p.kind() == Kind.PETALS ? 40.0 : Math.max(4.0, p.size() + 1.0);
+                if (frustum != null && !frustum.isVisible(new AABB(at.getX() + 0.5 - reach, at.getY() + 0.5 - reach,
+                        at.getZ() + 0.5 - reach, at.getX() + 0.5 + reach, at.getY() + 0.5 + reach, at.getZ() + 0.5 + reach)))
                     continue;
                 // only on a standing building: a site being rebuilt (or the anchor knocked out) has nothing to move;
                 // a bell hangs in an empty cell from the beam above it

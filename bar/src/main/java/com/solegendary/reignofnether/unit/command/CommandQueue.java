@@ -83,6 +83,18 @@ public final class CommandQueue {
         return c;
     }
 
+    /** Removes the newest waiting order (BAR's command_cancel_last); null if none is waiting. */
+    @Nullable
+    UnitCommand pollLast() {
+        if (size == 0)
+            return null;
+        int i = (head + size - 1) & (ring.length - 1);
+        UnitCommand c = ring[i];
+        ring[i] = null;
+        size--;
+        return c;
+    }
+
     /** Forgets the waiting orders (the current one stays: the unit is still doing it). */
     void clearWaiting() {
         for (int i = 0; i < size; i++)

@@ -215,6 +215,7 @@ public class PossessionClientEvents {
         MC.player.xRotO = 0;
         lookThrough(e);
         MC.options.setCameraType(CameraType.FIRST_PERSON);
+        com.solegendary.reignofnether.cursor.CursorDiagClient.grabCall("grab"); // diagnostics log only
         MC.mouseHandler.grabMouse();
         sinceSent = 99;
         slotsAge = 0;
@@ -872,6 +873,9 @@ public class PossessionClientEvents {
                 continue;
             double dx = le.getX() - mob.getX(), dz = le.getZ() - mob.getZ();
             if (dx * dx + dz * dz > RADAR_RANGE * RADAR_RANGE)
+                continue;
+            // no blips from the fog (own and allied units always pass isInBrightChunk)
+            if (!com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isInBrightChunk(le))
                 continue;
             int px = cx + Math.round((float) (dx * rx + dz * rz) * scale);
             int py = cy - Math.round((float) (dx * fx + dz * fz) * scale);
