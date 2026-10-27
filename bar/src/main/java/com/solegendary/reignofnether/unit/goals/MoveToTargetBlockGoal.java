@@ -474,6 +474,7 @@ public class MoveToTargetBlockGoal extends Goal {
             // the walk from here to the first path's end counts toward the first repath
             repathFromX = this.mob.getX();
             repathFromZ = this.mob.getZ();
+            repathWalkCarried = false;
         }
         this.moveTarget = bp;
 
