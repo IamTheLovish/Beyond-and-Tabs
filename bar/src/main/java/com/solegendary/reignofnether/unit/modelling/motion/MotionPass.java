@@ -36,8 +36,8 @@ public final class MotionPass {
     private static int slidersTick = Integer.MIN_VALUE;
 
     /** The parts touched by the last apply (bones then the hat) and their saved pose: x, y, z, xRot, yRot, zRot. */
-    private static final ModelPart[] TOUCHED = new ModelPart[Motion.BONES + 1];
-    private static final float[] SAVED = new float[(Motion.BONES + 1) * 6];
+    private static final ModelPart[] TOUCHED = new ModelPart[Motion.BONES + BoneMap.MAX_FOLLOWERS];
+    private static final float[] SAVED = new float[(Motion.BONES + BoneMap.MAX_FOLLOWERS) * 6];
     private static int touched = 0;
 
     private static void readSliders() {
@@ -94,6 +94,8 @@ public final class MotionPass {
         root(ps);
         bend(map);
         limbs(map);
+        for (int i = 0; i < map.followerCount; i++)
+            map.followers[i].copyFrom(map.leaders[i]);
     }
 
     /** Puts every part the last apply touched back exactly as setupAnim left it. */
@@ -115,7 +117,8 @@ public final class MotionPass {
     private static void save(BoneMap map) {
         for (int bone = 1; bone < Motion.BONES; bone++)
             keep(map.parts[bone]);
-        keep(map.hat);
+        for (int i = 0; i < map.followerCount; i++)
+            keep(map.followers[i]);
     }
 
     private static void keep(ModelPart p) {
@@ -157,7 +160,6 @@ public final class MotionPass {
         ModelPart[] p = map.parts;
         ride(p[Motion.BODY], map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.HEAD], map.waistY, ax, az, cx, sx, cz, sz);
-        ride(map.hat, map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_R], map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_L], map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARMS], map.waistY, ax, az, cx, sx, cz, sz);
@@ -177,11 +179,10 @@ public final class MotionPass {
         p.zRot += az;
     }
 
-    /** Head (and hat) up from the neck; arms and legs hang: their forward swing is a negative xRot. */
+    /** The head up from the neck; arms and legs hang: their forward swing is a negative xRot. */
     private static void limbs(BoneMap map) {
         ModelPart[] p = map.parts;
         upright(p[Motion.HEAD], Motion.HEAD);
-        upright(map.hat, Motion.HEAD);
         hanging(p[Motion.ARM_R], Motion.ARM_R);
         hanging(p[Motion.ARM_L], Motion.ARM_L);
         hanging(p[Motion.ARMS], Motion.ARMS);
