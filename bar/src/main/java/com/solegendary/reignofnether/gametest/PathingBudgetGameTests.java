@@ -251,4 +251,43 @@ public class PathingBudgetGameTests {
             }
         });
     }
+
+    /**
+     * Plan 015 B: the arena is cut into generated ground at y = -61, and water from a cave or aquifer cell next to or
+     * over the cleared pocket flowed into it (run 40401681056: the wall-detour Vindicator stopped at "water level=7"
+     * ahead, nav done). Water placed over the pocket's middle (y 5) and beside it (x -1, y 3) must not reach the pocket
+     * once it is opened and sealed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void sealed_arena_has_no_fluid_after_openGround(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        level.setBlock(helper.absolutePos(new BlockPos(8, 5, 8)), Blocks.WATER.defaultBlockState(), 3);
+        BlockPos side = helper.absolutePos(new BlockPos(-1, 3, 8));
+        net.minecraft.world.level.block.state.BlockState sideWas = level.getBlockState(side);
+        level.setBlock(side, Blocks.WATER.defaultBlockState(), 3);
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> outside = new java.util.LinkedHashMap<>();
+        int removed = ArenaReady.sealed(helper, outside);
+        outside.putIfAbsent(side, sideWas);
+        helper.runAfterDelay(20, () -> {
+            List<String> problems = new ArrayList<>();
+            for (int x = 0; x <= 15; x++)
+                for (int z = 0; z <= 15; z++)
+                    for (int y = 2; y <= 4; y++)
+                        if (!level.getFluidState(helper.absolutePos(new BlockPos(x, y, z))).isEmpty()) {
+                            problems.add("fluid in the sealed pocket at " + x + "/" + y + "/" + z + " after 20 ticks ("
+                                + removed + " fluid cells removed)");
+                            x = 16;
+                            z = 16;
+                            break;
+                        }
+            if (removed < 2)
+                problems.add("the seal found " + removed + " fluid cells, the test placed 2");
+            try {
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                outside.forEach((abs, state) -> level.setBlock(abs, state, 3));
+            }
+        });
+    }
 }
