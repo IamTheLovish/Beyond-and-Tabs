@@ -71,12 +71,20 @@ public class PathingBudgetGameTests {
     public static void vanilla_path_melee_chaser_runs_down_a_walking_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> outside = new java.util.LinkedHashMap<>();
+        int fluids = ArenaReady.sealed(helper, outside);
         String mine = owner(helper, "chase"), theirs = owner(helper, "chase_foe");
+        Runnable daylight = ArenaReady.noSunlight(mine, theirs);
+        Runnable restore = () -> {
+            daylight.run();
+            outside.forEach((abs, state) -> level.setBlock(abs, state, 3));
+        };
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
         Mob chaser = unit(level, EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), mine, o.getX() + 1.5, o.getY(), o.getZ() + 2.5, made);
         Mob runner = unit(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, o.getX() + 4.5, o.getY(), o.getZ() + 2.5, made);
         if (chaser == null || runner == null) {
+            restore.run();
             TerrainGameTests.cleanUp(made);
             helper.fail("could not create the units");
             return;
@@ -109,10 +117,11 @@ public class PathingBudgetGameTests {
                         + TerrainGameTests.f(apart) + " apart, reach " + TerrainGameTests.f(reach) + ", target moved "
                         + TerrainGameTests.f(moved) + ", chaser target " + (chaser.getTarget() == runner ? "the runner" : String.valueOf(chaser.getTarget()))
                         + ", nav done " + chaser.getNavigation().isDone() + "; " + ArenaReady.describe(level, made)
-                        + "; chaser " + ArenaReady.around(chaser, runner) + ")");
+                        + "; chaser " + ArenaReady.around(chaser, runner) + "; fluid cells removed: " + fluids + ")");
                 try {
                     TerrainGameTests.finish(helper, problems);
                 } finally {
+                    restore.run();
                     TerrainGameTests.cleanUp(made);
                 }
             }
@@ -128,12 +137,20 @@ public class PathingBudgetGameTests {
     public static void vanilla_path_shooter_closes_to_range_on_a_shifting_target(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> outside = new java.util.LinkedHashMap<>();
+        int fluids = ArenaReady.sealed(helper, outside);
         String mine = owner(helper, "range"), theirs = owner(helper, "range_foe");
+        Runnable daylight = ArenaReady.noSunlight(mine, theirs);
+        Runnable restore = () -> {
+            daylight.run();
+            outside.forEach((abs, state) -> level.setBlock(abs, state, 3));
+        };
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
         Mob shooter = unit(level, EntityRegistrar.SKELETON_UNIT.get(), mine, o.getX() + 1.5, o.getY(), o.getZ() + 1.5, made);
         Mob target = TerrainGameTests.dummy(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, o.getX() + 13.5, o.getY(), o.getZ() + 13.5, made);
         if (shooter == null || target == null) {
+            restore.run();
             TerrainGameTests.cleanUp(made);
             helper.fail("could not create the units");
             return;
@@ -164,10 +181,12 @@ public class PathingBudgetGameTests {
                     problems.add("the shooter did not close to its range (" + TerrainGameTests.f(d) + " > " + range
                         + ") in 300 ticks; nav done " + shooter.getNavigation().isDone() + ", target "
                         + (shooter.getTarget() == target ? "the dummy" : String.valueOf(shooter.getTarget()))
-                        + "; " + ArenaReady.describe(level, made));
+                        + "; " + ArenaReady.describe(level, made) + "; shooter " + ArenaReady.around(shooter, target)
+                        + "; fluid cells removed: " + fluids);
                 try {
                     TerrainGameTests.finish(helper, problems);
                 } finally {
+                    restore.run();
                     TerrainGameTests.cleanUp(made);
                 }
             }
@@ -187,6 +206,8 @@ public class PathingBudgetGameTests {
         UnitServerEvents.rtsPathfinding = false;
         VanillaPathBudget.shortRangeCapForTests = 6f;
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> under = new java.util.LinkedHashMap<>();
+        int fluids = ArenaReady.sealed(helper, under);   // before the fence: what stood there first is what restore puts back
         for (int z = 0; z <= 13; z++)
             for (int y = 2; y <= 4; y++)
                 helper.setBlock(new BlockPos(7, y, z), Blocks.STONE);
@@ -195,7 +216,6 @@ public class PathingBudgetGameTests {
         // still walking (Oct 26). That ground depends on the slot the batch gives this test, so it passed or failed
         // by layout; now the only way round is the arena's own gap at z 14-15
         // (what stood there is put back in restore: the fence is outside the arena, where later batches would find it)
-        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> under = new java.util.LinkedHashMap<>();
         for (int i = -1; i <= 16; i++)
             for (int y = 2; y <= 4; y++)
                 for (BlockPos rel : new BlockPos[] { new BlockPos(i, y, -1), new BlockPos(i, y, 16), new BlockPos(-1, y, i), new BlockPos(16, y, i) }) {
@@ -239,7 +259,8 @@ public class PathingBudgetGameTests {
                     problems.add("the vindicator did not get round the wall in 420 ticks ("
                         + TerrainGameTests.f(OrdersObeyGameTests.dist(m, to)) + " from its spot, at x "
                         + TerrainGameTests.f(m.getX() - o.getX()) + " z " + TerrainGameTests.f(m.getZ() - o.getZ())
-                        + ", nav done " + m.getNavigation().isDone() + "; " + ArenaReady.around(m, to.getX() + 0.5, to.getZ() + 0.5) + ")");
+                        + ", nav done " + m.getNavigation().isDone() + "; " + ArenaReady.around(m, to.getX() + 0.5, to.getZ() + 0.5)
+                        + "; fluid cells removed: " + fluids + ")");
                 if (VanillaPathBudget.fallbacksTotal == fallbacksBefore[0])
                     problems.add("no full-range fallback ran: the short search was not used or found the detour itself");
                 try {
@@ -267,8 +288,8 @@ public class PathingBudgetGameTests {
         level.setBlock(side, Blocks.WATER.defaultBlockState(), 3);
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> outside = new java.util.LinkedHashMap<>();
+        outside.put(side, sideWas);          // put back what stood there, not the water this test placed
         int removed = ArenaReady.sealed(helper, outside);
-        outside.putIfAbsent(side, sideWas);
         helper.runAfterDelay(20, () -> {
             List<String> problems = new ArrayList<>();
             for (int x = 0; x <= 15; x++)
