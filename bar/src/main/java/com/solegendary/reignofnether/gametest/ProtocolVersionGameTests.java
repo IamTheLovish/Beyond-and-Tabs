@@ -6,12 +6,16 @@ import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.unit.packets.UnitActionServerboundPacket;
 
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.ServerStatusPing;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The live channel's handshake version is made from the live packet table (security audit F3, Oct 26): the real
@@ -41,6 +45,32 @@ public class ProtocolVersionGameTests {
             problems.add("the handshake version '" + version + "' is not made from the table's hash " + PacketTableHash.hash(table));
         if (!version.equals(PacketHandler.protocolVersion()) || !PacketTableHash.hash(table).equals(PacketTableHash.hash(PacketHandler.table())))
             problems.add("the version changed between two reads");
+        TerrainGameTests.finish(helper, problems);
+    }
+
+    /**
+     * What Forge itself advertises for reignofnether:main (the server list ping and the login handshake read the same
+     * NetworkInstance version, captured once when the channel was created) is PacketHandler's table version, and this
+     * jar accepts it. The channel used to be made in PacketHandler's static initialiser, before init() computed the
+     * hash, so Forge advertised "...+packets.unregistered" while the accept predicates wanted the hash: every client
+     * rejected every server, single player included.
+     */
+    @GameTest(template = ARENA, batch = "protocol_version", timeoutTicks = 20)
+    public static void the_channel_advertises_the_table_version_and_accepts_it(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        ResourceLocation main = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main");
+        Map<ResourceLocation, ServerStatusPing.ChannelData> channels = new ServerStatusPing().getRemoteChannels();
+        ServerStatusPing.ChannelData data = channels.get(main);
+        String expected = PacketHandler.protocolVersion();
+        if (data == null)
+            problems.add("Forge advertises no channel " + main + " (channels: " + channels.keySet() + ")");
+        else if (!expected.equals(data.version()))
+            problems.add("Forge advertises '" + data.version() + "' for " + main + " but PacketHandler's version is '"
+                + expected + "'");
+        if (expected.endsWith("+packets.unregistered"))
+            problems.add("PacketHandler's version was never computed: " + expected);
+        if (!NetworkRegistry.checkListPingCompatibilityForClient(channels))
+            problems.add("this jar rejects its own server's channel list (Forge logs which channel)");
         TerrainGameTests.finish(helper, problems);
     }
 }
