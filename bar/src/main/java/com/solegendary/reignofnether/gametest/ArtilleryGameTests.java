@@ -420,10 +420,25 @@ public class ArtilleryGameTests {
      * Set-up time when possessed: a player walking the crew by hand (navigation idle, so only the keys move it) a
      * single block - under the 1.5-block drift - and clicking every tick from then on gets no shell in the first
      * SET_UP ticks after it comes to rest, and one soon after (a click refused for the set-up costs no cooldown).
+     * Driven by the keys alone (a headless possession).
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void possessed_artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
-        String owner = "gametest_arty_possess_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        possessedSetUpTest(helper, "keys", false);
+    }
+
+    /**
+     * The same, driven the way a real client drives it: a MOVE every tick with the keys and an honest claim of where
+     * its prediction put the unit (PossessionServer.applyMove), the path that moves the unit by the claim and leaves
+     * its zza/xxa at 0.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void possessed_artillery_driven_by_a_client_needs_two_seconds_to_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "claims", true);
+    }
+
+    static void possessedSetUpTest(GameTestHelper helper, String tag, boolean claims) {
+        String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         var b = bombard(helper, owner, 1.5, 8.5);
@@ -452,16 +467,22 @@ public class ArtilleryGameTests {
             active[0] = true;
         });
         // keys held east (yaw -90) until it has gone 0.8 blocks, then let go
-        int[] tick = { 0 }, stoppedAt = { -1 };
+        int[] tick = { 0 }, stoppedAt = { -1 }, seq = { 0 };
         double[] last = { b.getX(), b.getZ() };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])
                 return;
             tick[0]++;
             double moved = Math.hypot(b.getX() - start[0], b.getZ() - start[1]);
-            if (stoppedAt[0] < 0)
-                com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), moved < 0.8 ? 1 : 0,
-                    0, -90, 10, false, false, false);
+            if (stoppedAt[0] < 0) {
+                float fwd = moved < 0.8 ? 1 : 0;
+                if (claims)   // the client's prediction: a walking step east, or where it stands
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), fwd, 0, -90, 10,
+                        false, false, b.getX() + 0.15 * fwd, b.getY(), b.getZ(), ++seq[0]);
+                else
+                    com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), fwd, 0, -90, 10,
+                        false, false, false);
+            }
             double step = Math.hypot(b.getX() - last[0], b.getZ() - last[1]);
             last[0] = b.getX();
             last[1] = b.getZ();
