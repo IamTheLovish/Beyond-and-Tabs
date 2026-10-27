@@ -10,7 +10,7 @@ import re, subprocess, sys, tempfile
 TRACKED = ["bar/src/main/java/*.java", "mod/src/main/java/*.java", "engine/src/*.java"]  # the same list as build.yml
 files = sys.argv[1:]
 if files == ["--tracked"]:
-    files = subprocess.run(["git", "ls-files", "--"] + TRACKED, capture_output=True, text=True, check=True).stdout.split()
+    files = subprocess.run(["git", "ls-files", "--"] + TRACKED, capture_output=True, text=True, check=True).stdout.splitlines()
 if not files:
     # default: every .java changed vs the last pushed main (or HEAD), plus untracked ones - never a silent no-op
     base = subprocess.run(["git", "merge-base", "HEAD", "origin/main"], capture_output=True, text=True).stdout.strip() or "HEAD"
@@ -41,6 +41,8 @@ lines = r.stderr.splitlines()
 for i, l in enumerate(lines):
     m = re.match(r"(.+\.java):(\d+): error: (.*)", l)
     if m and not noise.search(m.group(3)):
+        bad.append(l)
+    elif l.startswith("error:"):  # no file location: a missing file, a bad @argfile or option - javac checked nothing
         bad.append(l)
 # imports of our own classes must name a file that exists (`com.solegendary.reignofnether.player.Relationship` cost
 # two red builds on Oct 14: javac without the classpath reports it as noise). Static members / nested classes:
