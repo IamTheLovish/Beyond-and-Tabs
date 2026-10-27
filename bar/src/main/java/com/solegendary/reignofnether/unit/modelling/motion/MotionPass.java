@@ -32,6 +32,7 @@ public final class MotionPass {
 
     private static final float[] OUT = new float[Motion.OUT];
     private static final float[] SLIDERS = new float[7];
+    private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
     private static int slidersTick = Integer.MIN_VALUE;
 
@@ -56,6 +57,8 @@ public final class MotionPass {
         } catch (RuntimeException e) {   // the config is not loaded yet: as designed
             java.util.Arrays.fill(SLIDERS, 1f);
         }
+        System.arraycopy(SLIDERS, 0, SLIDERS_NO_BREATH, 0, SLIDERS.length);
+        SLIDERS_NO_BREATH[Motion.BREATH] = 0f;
     }
 
     public static void apply(LivingEntity e, EntityModel<?> model, PoseStack ps, float partial) {
@@ -74,8 +77,8 @@ public final class MotionPass {
         try {
             readSliders();
             float zoom = OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getZoom() : 0f;
-            Motion.pose(AnimStates.slab(), b, e.getId(), e.tickCount + partial, partial, zoom, SLIDERS,
-                map.flinchOnly, OUT);
+            Motion.pose(AnimStates.slab(), b, e.getId(), e.tickCount + partial, partial, zoom,
+                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, OUT);
             place(map, ps);
         } catch (RuntimeException ex) {
             restore();
@@ -156,8 +159,15 @@ public final class MotionPass {
         float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ);
         if (ax == 0f && az == 0f)
             return;
-        float cx = Mth.cos(ax), sx = Mth.sin(ax), cz = Mth.cos(az), sz = Mth.sin(az);
         ModelPart[] p = map.parts;
+        if (map.hierarchical) {           // the head and arms are its children: they follow the bend by themselves
+            if (p[Motion.BODY] != null) {
+                p[Motion.BODY].xRot += ax;
+                p[Motion.BODY].zRot += az;
+            }
+            return;
+        }
+        float cx = Mth.cos(ax), sx = Mth.sin(ax), cz = Mth.cos(az), sz = Mth.sin(az);
         ride(p[Motion.BODY], map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.HEAD], map.waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_R], map.waistY, ax, az, cx, sx, cz, sz);

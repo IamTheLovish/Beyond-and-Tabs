@@ -22,12 +22,22 @@ public final class BoneMap {
     static final int MAX_FOLLOWERS = 6;
     /** The waist, model px (y down, from the model origin): the torso bends about it. */
     final float waistY;
-    /** A keyframe-clip body: breath and flinch only. */
+    /** A keyframe-clip body or a custom rig: breath and flinch only. */
     final boolean flinchOnly;
+    /** The head and arms are the body's children (they follow its bend by themselves): bend the body about its pivot. */
+    final boolean hierarchical;
+    /** The rig breathes by itself: no second breath on top. */
+    final boolean noBreath;
 
     BoneMap(float waistY, boolean flinchOnly) {
+        this(waistY, flinchOnly, false, false);
+    }
+
+    BoneMap(float waistY, boolean flinchOnly, boolean hierarchical, boolean noBreath) {
         this.waistY = waistY;
         this.flinchOnly = flinchOnly;
+        this.hierarchical = hierarchical;
+        this.noBreath = noBreath;
     }
 
     BoneMap set(int bone, ModelPart part) {
