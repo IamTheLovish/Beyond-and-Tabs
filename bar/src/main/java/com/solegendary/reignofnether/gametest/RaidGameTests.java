@@ -135,6 +135,9 @@ public class RaidGameTests {
                 chunks.add(new long[] { (x0 >> 4) + 1, z0 >> 4 });
             }
             GameTestChunks.holdAndAwaitOrFail(level, chunks, "raid pad");
+            // ...and the ring round them, which entity ticking needs FULL as well (run 40578551395: 12 of 48 pad
+            // chunks never had their entities, ring frozen at 291 of 316 - see awaitRingOrFail)
+            GameTestChunks.awaitRingOrFail(level, chunks, "raid pad");
             for (Cell c : cells)
                 DuelGameTests.buildPad(level, c.x0(), c.z0());
         }
@@ -1243,6 +1246,7 @@ public class RaidGameTests {
             spawnedAt[0] = (int) helper.getTick();
         });
         boolean[] ordered = { false };
+        int[] hurtAt = { -1 };
         helper.onEachTick(() -> {
             if (spawnedAt[0] < 0)
                 return;
@@ -1255,7 +1259,12 @@ public class RaidGameTests {
                 if (cast[1] instanceof AttackerUnit au && cast[0] != null)
                     au.setUnitAttackTargetForced(cast[0]);
             }
-            if (t != 120)
+            // judged 20 ticks after the first hit (the flight has started, the hit is still recent), not at one fixed
+            // tick: the fleeing worker and the tower knocking the raider back made "hurt in the last 60 ticks at tick
+            // 120" a matter of luck (run 40578551395)
+            if (hurtAt[0] < 0 && cast[0] != null && WorkerFlee.recentlyHurt(cast[0]))
+                hurtAt[0] = t;
+            if (hurtAt[0] >= 0 ? t < hurtAt[0] + 20 : t < 400)
                 return;
             spawnedAt[0] = -1;
             pads.release();
@@ -1270,7 +1279,7 @@ public class RaidGameTests {
                 if (cast[0] == null || cast[1] == null || tower[0] == null || army.size() != 6)
                     error = "could not make the tower, the army, the worker and the raider";
                 else if (!WorkerFlee.recentlyHurt(cast[0]))
-                    error = "the raider never hurt the worker";
+                    error = "the raider never hurt the worker (" + t + " ticks)";
                 else {
                     brain[0].army.run(level, level.getGameTime(), mine, army, buildings, 5);
                     int sent = 0;
