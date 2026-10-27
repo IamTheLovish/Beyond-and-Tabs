@@ -68,6 +68,8 @@ public class MoveToTargetBlockGoal extends Goal {
     private boolean repathWalked = false;
     // a repath the pool answered busy computed nothing: the walk it was owed carries over to the retry
     private boolean repathWalkCarried = false;
+    // the end node of the last path this goal handed to the navigation (cleared by a new order or a stop)
+    @Nullable private BlockPos lastPathEnd = null;
 
     // Before a repath: note where the unit stands now and whether it walked REPATH_WALKED_MIN since the last one.
     private void markRepathFrom() {
@@ -240,7 +242,11 @@ public class MoveToTargetBlockGoal extends Goal {
             // be throttled. The synchronous vanilla path has its new final node ready, so decide the backoff
             // and arm the cooldown gate right here. The async RTS path isn't ready yet (start() just fired the
             // request), so flag it and let onPathReady do the same once the new path is in.
+            // a path stopped from outside (StuckNudge, UnitUnstick) leaves no end to compare: the plain move goal
+            // compares against the last end it was given, else every such stop read as progress and reset the give-up
             BlockPos oldFinalNode = getFinalNodePos();
+            if (oldFinalNode == null && givesUpWhenUnreachable())
+                oldFinalNode = lastPathEnd;
             markRepathFrom();
             this.start();
             // start() is expensive and repeats every tick on a stuck mob (eg. targeting over water). Only the
@@ -334,6 +340,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        lastPathEnd = getFinalNodePos();
         // Broadcast the path so clients can render it briefly. Server-only — clients
         // that received the packet decide whether to render based on ownership/FOW.
         if (!this.mob.level().isClientSide()) {
@@ -365,6 +372,7 @@ public class MoveToTargetBlockGoal extends Goal {
                 float speedMod = u.getSpeedModifier();
                 if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
                 this.mob.getNavigation().moveTo(fallback, speedMod);
+                lastPathEnd = getFinalNodePos();
             }
             return;
         }
@@ -393,6 +401,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        lastPathEnd = getFinalNodePos();
         // The RTS pathfinder is async: node 0 is the unit's position when the request was SUBMITTED, a few
         // ticks ago. By delivery the unit has often drifted off it (crowd/formation separation, momentum),
         // and vanilla navigation always starts following at node 0 - so it would steer the unit BACK to the
@@ -475,6 +484,7 @@ public class MoveToTargetBlockGoal extends Goal {
             repathFromX = this.mob.getX();
             repathFromZ = this.mob.getZ();
             repathWalkCarried = false;
+            lastPathEnd = null;
         }
         this.moveTarget = bp;
 
@@ -514,6 +524,7 @@ public class MoveToTargetBlockGoal extends Goal {
         pendingRepath = false;
         repathFromFinalNode = null;
         repathWalkCarried = false;
+        lastPathEnd = null;
         pathRequestSeq++; // cancel any in-flight path so a late result can't restart movement after a stop.
         this.moveTarget = null;
         this.mob.getNavigation().stop();
