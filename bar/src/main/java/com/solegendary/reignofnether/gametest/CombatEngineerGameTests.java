@@ -2,13 +2,6 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
-import com.solegendary.reignofnether.ability.abilities.BoneGraft;
-import com.solegendary.reignofnether.ability.abilities.Bulwark;
-import com.solegendary.reignofnether.ability.abilities.MendingRite;
-import com.solegendary.reignofnether.ability.abilities.Overdrive;
-import com.solegendary.reignofnether.ability.abilities.Rootwalk;
-import com.solegendary.reignofnether.ability.abilities.SalvageHook;
-import com.solegendary.reignofnether.ability.abilities.TearDown;
 import com.solegendary.reignofnether.bot.BotCombatEngineers;
 import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.Building;
@@ -67,8 +60,7 @@ import java.util.List;
 /**
  * Headless tests of the seven combat engineers (design/combat_engineers.md): each trains at its faction's T2 lab (and
  * only with Tier 2), reclaims wrecks at its build power, field-repairs a hurt friend and never a foe or itself, may start
- * field defences only (and assist anything), really builds one, and its faction ability does what it says - with its
- * counter (a Bulwark survives a Tear Down; a hurt Rootwarden or Jade Mender breaks its channel). The bots' engineer rules
+ * field defences only (and assist anything), and really builds one. The bots' engineer rules
  * (bot/BotCombatEngineers) are checked on their own pieces.
  * <p>
  * Their own holder next to SkirmishGameTests (same arena template, same openGround helper): unique owners per test,
@@ -244,20 +236,50 @@ public class CombatEngineerGameTests {
                     problems.add(tag + ": its cost is not its ResourceCosts entry");
                 if (Math.abs(unit.getMaxHealth() - kit.maxHealth()) > 0.5f)
                     problems.add(tag + ": max health " + unit.getMaxHealth() + ", expected " + kit.maxHealth());
-                Ability a = ce.getEngineerAbility();
-                if (a == null || u.getAbilities() == null || !u.getAbilities().get().contains(a)) {
-                    problems.add(tag + ": its faction ability is not in its ability list");
-                } else {
-                    int idx = u.getAbilities().get().indexOf(a);
-                    if (u.getAbilities().effectiveHotkeys().get(idx) != Keybindings.hotkey1)
-                        problems.add(tag + ": its ability is not on V (hotkey1)");
-                }
                 unit.discard();
             }
             finish(helper, problems);
         } finally {
             cleanUp(made, pools, owners);
         }
+    }
+
+    /**
+     * AC-1 (builder abilities removed, 2026-10-26): no builder or combat engineer in any faction has an ability of its
+     * own - only its building / placement buttons (which are not abilities). Checked on the seven combat engineers and on
+     * every worker, constructor or builder-adjacent unit that used to carry one (Villager, Zombie Villager, Bonewright,
+     * Embalmer, Seedshaper, Elder Druid, Shipwright, Harbourmaster, Geomancer, Ley Master, Tinker).
+     */
+    @GameTest(template = ARENA)
+    public static void ac1_builders_and_engineers_have_no_abilities(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<EntityType<? extends Mob>> types = new ArrayList<>();
+        for (Kit kit : kits())
+            types.add(kit.type());
+        types.add(EntityRegistrar.VILLAGER_UNIT.get());
+        types.add(EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get());
+        types.add(EntityRegistrar.BONEWRIGHT_UNIT.get());
+        types.add(EntityRegistrar.EMBALMER_UNIT.get());
+        types.add(EntityRegistrar.SEEDSHAPER_UNIT.get());
+        types.add(EntityRegistrar.ELDER_DRUID_UNIT.get());
+        types.add(EntityRegistrar.SHIPWRIGHT_UNIT.get());
+        types.add(EntityRegistrar.HARBOURMASTER_UNIT.get());
+        types.add(EntityRegistrar.GEOMANCER_UNIT.get());
+        types.add(EntityRegistrar.LEY_MASTER_UNIT.get());
+        types.add(EntityRegistrar.TINKER_UNIT.get());
+        List<String> problems = new ArrayList<>();
+        for (EntityType<? extends Mob> type : types) {
+            Mob m = type.create(level);
+            if (!(m instanceof Unit u)) {
+                problems.add(type + " could not be created as a unit");
+                continue;
+            }
+            var abilities = u.getAbilities();
+            if (abilities != null && !abilities.get().isEmpty())
+                problems.add(type + " still has abilities: " + abilities.get().stream().map(a -> a.getClass().getSimpleName()).toList());
+            m.discard();
+        }
+        finish(helper, problems);
     }
 
     /**
@@ -281,10 +303,7 @@ public class CombatEngineerGameTests {
                 if (!lang.has(k))
                     missing.add("lang " + k);
         }
-        for (String k : List.of(CombatEngineers.MSG_FIELD_DEFENCES_ONLY, CombatEngineerProd.NEEDS_TIER_2, Bulwark.MSG_BAD_TARGET,
-                Bulwark.MSG_TOO_FAR, BoneGraft.MSG_NO_WRECK, BoneGraft.MSG_NO_TARGET, TearDown.MSG_BAD_TARGET,
-                Rootwalk.MSG_BAD_TARGET, Rootwalk.MSG_INTERRUPTED, SalvageHook.MSG_NO_WRECK, MendingRite.MSG_BAD_TARGET,
-                MendingRite.MSG_BROKEN))
+        for (String k : List.of(CombatEngineers.MSG_FIELD_DEFENCES_ONLY, CombatEngineerProd.NEEDS_TIER_2))
             if (!lang.has(k))
                 missing.add("lang " + k);
         if (!missing.isEmpty())
@@ -353,7 +372,6 @@ public class CombatEngineerGameTests {
                     float drop = before[i] - after, gain = theirPools.get(i).getMetal() - poolBefore[i];
                     float expect = WreckServerEvents.RECLAIM_PER_POWER * ((WorkerUnit) eng).getBuildPower()
                         * WreckServerEvents.factionReclaim((Unit) eng)
-                        * com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(eng)
                         * EconomyPace.of(((Unit) eng).getOwnerName()) * 2f;
                     if (Math.abs(drop - expect) > 0.05f)
                         problems.add(tag + ": stripped " + drop + " metal in 2 s, expected " + expect);
@@ -561,370 +579,6 @@ public class CombatEngineerGameTests {
                 finish(helper, problems);
             } finally {
                 undo.run();
-            }
-        });
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------
-    // the seven abilities
-    // ---------------------------------------------------------------------------------------------------------------
-
-    /**
-     * Field Mason's Bulwark against the Wrecker's Tear Down (each the other's counter): a braced friendly wall takes half
-     * damage, so a Tear Down that rips an unbraced segment down (refunding half its metal to the Wrecker's side) leaves
-     * the braced one standing; the brace ends when the Mason leaves its tether. Bulwark refuses an enemy building; Tear
-     * Down refuses its own side's wall, a tower, and anything beyond reach.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void bulwark_halves_damage_and_survives_a_tear_down(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "bulwark"), foe = owner + "_foe";
-        List<String> problems = new ArrayList<>();
-        List<Entity> made = new ArrayList<>();
-        List<Resources> pools = new ArrayList<>();
-        try {
-            Resources foePool = pool(foe, 0, pools);
-            var wallType = Defences.VILLAGERS.wall();
-            BuildingPlacement braced = stampedBuilt(level, wallType, helper.absolutePos(new BlockPos(3, 1, 3)), owner);
-            BuildingPlacement bare = stampedBuilt(level, wallType, helper.absolutePos(new BlockPos(11, 1, 3)), owner);
-            BuildingPlacement foeWall = stampedBuilt(level, Defences.PIGLINS.wall(), helper.absolutePos(new BlockPos(3, 1, 11)), foe);
-            BuildingPlacement tower = BuildingUtils.getNewBuildingPlacement(Defences.VILLAGERS.raidTower(), level,
-                helper.absolutePos(new BlockPos(11, 1, 11)), Rotation.NONE, owner, false);
-            tower.isBuilt = true;
-            Mob mason = spawn(level, EntityRegistrar.FIELD_MASON_UNIT.get(), owner, helper.absolutePos(new BlockPos(3, 2, 8)), made);
-            Mob wrecker = spawn(level, EntityRegistrar.WRECKER_UNIT.get(), foe, helper.absolutePos(new BlockPos(3, 2, 6)), made);
-            if (mason == null || wrecker == null) {
-                helper.fail("could not create the Field Mason or the Wrecker");
-                return;
-            }
-            if (Bulwark.brace(level, mason, owner, foeWall, true) != null)
-                problems.add("Bulwark braced an enemy wall");
-            if (Bulwark.brace(level, mason, owner, braced, true) == null)
-                problems.add("Bulwark refused a friendly wall in reach");
-            if (Bulwark.damageMultiplier(braced) != Bulwark.DAMAGE_MULT || Bulwark.damageMultiplier(bare) != 1f)
-                problems.add("the braced wall takes x" + Bulwark.damageMultiplier(braced) + ", the bare one x" + Bulwark.damageMultiplier(bare));
-            // Tear Down on the braced segment: hurt, still standing
-            int hp0 = braced.getHealth();
-            if (!TearDown.tearDown(level, wrecker, foe, braced, true))
-                problems.add("Tear Down refused an enemy wall in reach");
-            if (braced.shouldBeDestroyed() || braced.getHealth() <= 0 || braced.getHealth() >= hp0)
-                problems.add("a braced wall should survive a Tear Down, hurt (health " + hp0 + " -> " + braced.getHealth() + ")");
-            if (foePool.getMetal() > 0.01f)
-                problems.add("a Tear Down that brought nothing down refunded metal");
-            // ...and on the bare one: down, half its metal back to the Wrecker's side
-            wrecker.teleportTo(bare.centrePos.getX() + 0.5, wrecker.getY(), bare.maxCorner.getZ() + 2.5);
-            if (!TearDown.tearDown(level, wrecker, foe, bare, true))
-                problems.add("Tear Down refused the second enemy wall in reach");
-            if (!bare.shouldBeDestroyed())
-                problems.add("Tear Down left an unbraced wall standing (health " + bare.getHealth() + ")");
-            float refund = wallType.cost.metal() * TearDown.REFUND_SHARE;
-            if (Math.abs(foePool.getMetal() - refund) > 0.51f)
-                problems.add("Tear Down refunded " + foePool.getMetal() + " metal, expected " + refund);
-            // what it refuses
-            if (TearDown.tearDown(level, wrecker, foe, foeWall, true))
-                problems.add("Tear Down took its own side's wall");
-            wrecker.teleportTo(tower.centrePos.getX() + 0.5, wrecker.getY(), tower.minCorner.getZ() - 1.5);
-            if (TearDown.tearDown(level, wrecker, foe, tower, true))
-                problems.add("Tear Down took an anti-raid tower (only walls, gates and traps)");
-            // from beside the tower the braced wall is far out of reach
-            if (TearDown.tearDown(level, wrecker, foe, braced, true))
-                problems.add("Tear Down reached a wall " + (int) CombatEngineers.distanceToBuilding(wrecker, braced) + " blocks away");
-            // the tether: the Mason walks off and the brace is gone
-            mason.teleportTo(helper.absolutePos(new BlockPos(15, 2, 15)).getX() + 0.5, mason.getY(),
-                helper.absolutePos(new BlockPos(15, 2, 15)).getZ() + 0.5);
-            if (CombatEngineers.distanceToBuilding(mason, braced) <= Bulwark.TETHER)
-                problems.add("test setup: the Mason did not leave the tether");
-            else if (Bulwark.braceOn(braced) != null || Bulwark.damageMultiplier(braced) != 1f)
-                problems.add("the brace held with the Mason " + (int) CombatEngineers.distanceToBuilding(mason, braced) + " blocks away");
-            finish(helper, problems);
-        } finally {
-            cleanUp(made, pools, List.of(owner, foe));
-        }
-    }
-
-    /**
-     * Bonesetter's Bone Graft: a wreck in reach is torn apart to mend a hurt friend - 2 HP per metal, never more than it
-     * is missing, the rest left in the wreck - and without a wreck in reach the graft is refused (nothing mended).
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void bone_graft_turns_a_wreck_into_health(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "graft");
-        List<String> problems = new ArrayList<>();
-        List<Entity> made = new ArrayList<>();
-        try {
-            // mid-arena: the patient (a Halberdier, aggro 10) must have no other test's unit in reach to go after
-            Mob setter = spawn(level, EntityRegistrar.BONESETTER_UNIT.get(), owner, helper.absolutePos(new BlockPos(7, 2, 7)), made);
-            Mob patient = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), owner, helper.absolutePos(new BlockPos(9, 2, 7)), made);
-            BlockPos w = helper.absolutePos(new BlockPos(7, 2, 12));   // in Bone Graft's reach, out of reclaim reach
-            Entity wreck = WreckServerEvents.spawnWreck(level, w.getX() + 0.5, w.getY(), w.getZ() + 0.5, 30f, Factions.VILLAGERS);
-            if (setter == null || patient == null || wreck == null) {
-                helper.fail("could not create the Bonesetter, its patient or the wreck");
-                return;
-            }
-            made.add(wreck);
-            if (!(((CombatEngineer) setter).getEngineerAbility() instanceof BoneGraft))
-                problems.add("the Bonesetter's ability is not Bone Graft");
-            patient.setHealth(patient.getMaxHealth() - 40);
-            float missing = patient.getMaxHealth() - patient.getHealth(), h0 = patient.getHealth();
-            float metal0 = WreckServerEvents.metalOf(wreck);
-            float expectMetal = Math.min(Math.min(BoneGraft.MAX_METAL, metal0), missing / BoneGraft.HP_PER_METAL);
-            float hp = BoneGraft.graft(level, setter, owner, patient, true);
-            if (Math.abs(hp - expectMetal * BoneGraft.HP_PER_METAL) > 0.01f || Math.abs(patient.getHealth() - h0 - hp) > 0.01f)
-                problems.add("Bone Graft mended " + hp + " (patient +" + (patient.getHealth() - h0) + "), expected " + expectMetal * BoneGraft.HP_PER_METAL);
-            float left = wreck.isRemoved() ? 0 : WreckServerEvents.metalOf(wreck);
-            if (Math.abs(metal0 - left - expectMetal) > 0.01f)
-                problems.add("Bone Graft took " + (metal0 - left) + " metal from the wreck, expected " + expectMetal);
-            // no wreck in reach: refused, nothing mended
-            wreck.discard();
-            patient.setHealth(patient.getMaxHealth() - 10);
-            float h1 = patient.getHealth();
-            if (BoneGraft.graft(level, setter, owner, patient, true) != 0 || patient.getHealth() != h1)
-                problems.add("Bone Graft mended without a wreck in reach");
-            finish(helper, problems);
-        } finally {
-            cleanUp(made, List.of(), List.of(owner));
-        }
-    }
-
-    /**
-     * Rootwarden's Rootwalk: it sinks and, after SINK_TICKS, rises beside the own building it aimed at; a second
-     * Rootwarden hurt while sinking stays where it was (the walk fails - its counter). Refused on an enemy building and
-     * on one beyond reach.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 120)
-    public static void rootwalk_rises_beside_a_building_unless_hurt(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "rootwalk"), foe = owner + "_foe";
-        List<Entity> made = new ArrayList<>();
-        BuildingPlacement home = BuildingUtils.getNewBuildingPlacement(Defences.VERDANT.wall(), level,
-            helper.absolutePos(new BlockPos(12, 1, 12)), Rotation.NONE, owner, false);
-        home.isBuilt = true;
-        BuildingPlacement enemy = BuildingUtils.getNewBuildingPlacement(Defences.VERDANT.wall(), level,
-            helper.absolutePos(new BlockPos(12, 1, 2)), Rotation.NONE, foe, false);
-        BuildingPlacement far = BuildingUtils.getNewBuildingPlacement(Defences.VERDANT.wall(), level,
-            helper.absolutePos(new BlockPos(70, 1, 70)), Rotation.NONE, owner, false);   // coordinates only: never stamped
-        Mob a = spawn(level, EntityRegistrar.ROOTWARDEN_UNIT.get(), owner, helper.absolutePos(new BlockPos(2, 2, 2)), made);
-        Mob b = spawn(level, EntityRegistrar.ROOTWARDEN_UNIT.get(), owner, helper.absolutePos(new BlockPos(2, 2, 10)), made);
-        if (a == null || b == null) {
-            cleanUp(made, List.of(), List.of(owner));
-            helper.fail("could not create the Rootwardens");
-            return;
-        }
-        List<String> problems = new ArrayList<>();
-        if (Rootwalk.begin(level, a, owner, enemy, null, true) != null)
-            problems.add("Rootwalk began toward an enemy building");
-        if (Rootwalk.begin(level, a, owner, far, null, true) != null)
-            problems.add("Rootwalk began toward a building " + (int) CombatEngineers.distanceToBuilding(a, far) + " blocks away");
-        if (Rootwalk.begin(level, a, owner, home, null, true) == null || Rootwalk.begin(level, b, owner, home, null, true) == null) {
-            cleanUp(made, List.of(), List.of(owner));
-            helper.fail("Rootwalk refused an own building in reach");
-            return;
-        }
-        double bx = b.getX(), bz = b.getZ();
-        helper.runAfterDelay(5, () -> b.hurt(level.damageSources().generic(), 2f));
-        helper.runAfterDelay(Rootwalk.SINK_TICKS + 10, () -> {
-            try {
-                if (Rootwalk.walkOf(a) != null)
-                    problems.add("the walk is still running after " + (Rootwalk.SINK_TICKS + 10) + " ticks");
-                if (CombatEngineers.distanceToBuilding(a, home) > 2.5)
-                    problems.add("the Rootwarden did not rise beside its building (" + CombatEngineers.distanceToBuilding(a, home) + " away)");
-                if (Rootwalk.walkOf(b) != null)
-                    problems.add("the hurt Rootwarden is still sinking");
-                if (Math.hypot(b.getX() - bx, b.getZ() - bz) > 1.5)
-                    problems.add("the Rootwarden hurt while sinking still walked through the roots");
-                finish(helper, problems);
-            } finally {
-                cleanUp(made, List.of(), List.of(owner));
-            }
-        });
-    }
-
-    /**
-     * Salvager's Salvage Hook: a wreck 14 blocks off is hooked and, REEL_TICKS later, lies at the Salvager's feet (and is
-     * off the line); a click on empty ground is refused; the ability cast through use() starts its cooldown.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void salvage_hook_reels_a_wreck_to_the_salvager(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "salvage");
-        List<Entity> made = new ArrayList<>();
-        Mob salvager = spawn(level, EntityRegistrar.SALVAGER_UNIT.get(), owner, helper.absolutePos(new BlockPos(2, 2, 2)), made);
-        BlockPos w1 = helper.absolutePos(new BlockPos(12, 2, 12)), w2 = helper.absolutePos(new BlockPos(12, 2, 2));
-        Entity far = WreckServerEvents.spawnWreck(level, w1.getX() + 0.5, w1.getY(), w1.getZ() + 0.5, 500f, Factions.TIDEWROUGHT);
-        Entity second = WreckServerEvents.spawnWreck(level, w2.getX() + 0.5, w2.getY(), w2.getZ() + 0.5, 500f, Factions.TIDEWROUGHT);
-        if (salvager == null || far == null || second == null) {
-            cleanUp(made, List.of(), List.of(owner));
-            helper.fail("could not create the Salvager or the wrecks");
-            return;
-        }
-        made.add(far);
-        made.add(second);
-        List<String> problems = new ArrayList<>();
-        if (SalvageHook.hook(level, salvager, owner, helper.absolutePos(new BlockPos(2, 2, 12)), true) != null)
-            problems.add("Salvage Hook hooked something on empty ground");
-        if (SalvageHook.hook(level, salvager, owner, far.blockPosition(), true) == null || !SalvageHook.isOnLine(far)) {
-            cleanUp(made, List.of(), List.of(owner));
-            helper.fail("Salvage Hook refused a wreck in reach");
-            return;
-        }
-        helper.runAfterDelay(SalvageHook.REEL_TICKS + 5, () -> {
-            try {
-                if (far.isRemoved() || far.distanceTo(salvager) > 2.5)
-                    problems.add("the hooked wreck is not at the Salvager's feet (" + (far.isRemoved() ? "gone" : far.distanceTo(salvager) + " away") + ")");
-                if (SalvageHook.isOnLine(far))
-                    problems.add("the wreck is still on the line after the reel");
-                Ability hook = ((CombatEngineer) salvager).getEngineerAbility();
-                if (!(hook instanceof SalvageHook)) {
-                    problems.add("the Salvager's ability is not Salvage Hook");
-                } else {
-                    hook.use(level, (Unit) salvager, second.blockPosition());
-                    if (!SalvageHook.isOnLine(second) || hook.isOffCooldown((Unit) salvager))
-                        problems.add("casting Salvage Hook through use() did not hook the wreck and start its cooldown");
-                }
-                finish(helper, problems);
-            } finally {
-                cleanUp(made, List.of(), List.of(owner));
-            }
-        });
-    }
-
-    /**
-     * Jade Mender's Mending Rite: paid from the energy pool, it heals a hurt friend over time; hurting the Mender breaks
-     * it (its counter). Refused while its owner has no pool, on the Mender itself and on a friend at full health.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void mending_rite_heals_until_the_mender_is_hurt(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "rite");
-        List<Entity> made = new ArrayList<>();
-        List<Resources> pools = new ArrayList<>();
-        // mid-arena: the patient (a Halberdier, aggro 10) must have no other test's unit in reach to go after
-        Mob mender = spawn(level, EntityRegistrar.JADE_MENDER_UNIT.get(), owner, helper.absolutePos(new BlockPos(6, 2, 7)), made);
-        Mob patient = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), owner, helper.absolutePos(new BlockPos(9, 2, 7)), made);
-        Mob whole = spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), owner, helper.absolutePos(new BlockPos(6, 2, 10)), made);
-        if (mender == null || patient == null || whole == null) {
-            cleanUp(made, pools, List.of(owner));
-            helper.fail("could not create the Mending Rite units");
-            return;
-        }
-        List<String> problems = new ArrayList<>();
-        patient.setHealth(patient.getMaxHealth() - 40);
-        // no pool yet: the first second can't be paid
-        if (MendingRite.begin(level, mender, owner, patient, true) != null)
-            problems.add("Mending Rite began for an owner without an energy pool");
-        Resources res = pool(owner, 500, pools);
-        if (MendingRite.begin(level, mender, owner, mender, true) != null)
-            problems.add("Mending Rite began on the Mender itself");
-        if (MendingRite.begin(level, mender, owner, whole, true) != null)
-            problems.add("Mending Rite began on a friend at full health");
-        float energy0 = res.getEnergy(), h0 = patient.getHealth();
-        MendingRite.Rite rite = MendingRite.begin(level, mender, owner, patient, true);
-        if (rite == null) {
-            cleanUp(made, pools, List.of(owner));
-            helper.fail("Mending Rite refused a hurt friend in reach with energy in the pool");
-            return;
-        }
-        if (res.getEnergy() >= energy0)
-            problems.add("Mending Rite did not pay its first second (energy " + energy0 + " -> " + res.getEnergy() + ")");
-        helper.runAfterDelay(30, () -> {
-            if (rite.healed <= 0 || patient.getHealth() <= h0)
-                problems.add("the rite healed nothing in 1.5 s (healed " + rite.healed + ")");
-            if (MendingRite.riteOf(mender) == null)
-                problems.add("the rite stopped by itself with the patient still hurt");
-            mender.hurt(level.damageSources().generic(), 1f);
-        });
-        helper.runAfterDelay(34, () -> {
-            try {
-                if (MendingRite.riteOf(mender) != null)
-                    problems.add("the rite held with the Mender hurt");
-                finish(helper, problems);
-            } finally {
-                cleanUp(made, pools, List.of(owner));
-            }
-        });
-    }
-
-    /**
-     * Pioneer's Overdrive: x3 build power while the rig drives (and a second start is refused), none at all while it
-     * vents (no restart either), the plain 1.5 once it has vented - and reclaim reads it (a driving Pioneer strips x3, a
-     * venting one nothing). The rig's clock is placed by starting it in the past; the cast through use() starts the
-     * ability's cooldown.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 60)
-    public static void overdrive_triples_build_power_then_vents(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        String owner = owner(helper, "overdrive");
-        List<Entity> made = new ArrayList<>();
-        List<Resources> pools = new ArrayList<>();
-        pool(owner, 0, pools);
-        var type = EntityRegistrar.PIONEER_UNIT.get();
-        Mob m1 = spawn(level, type, owner, helper.absolutePos(new BlockPos(2, 2, 2)), made);
-        Mob m2 = spawn(level, type, owner, helper.absolutePos(new BlockPos(10, 2, 2)), made);
-        Mob m3 = spawn(level, type, owner, helper.absolutePos(new BlockPos(2, 2, 12)), made);
-        Mob m4 = spawn(level, type, owner, helper.absolutePos(new BlockPos(10, 2, 12)), made);
-        if (!(m1 instanceof PioneerUnit p1) || !(m2 instanceof PioneerUnit p2) || !(m3 instanceof PioneerUnit p3)
-                || !(m4 instanceof PioneerUnit p4)) {
-            cleanUp(made, pools, List.of(owner));
-            helper.fail("could not create the Pioneers");
-            return;
-        }
-        List<String> problems = new ArrayList<>();
-        long now = level.getGameTime();
-        float base = CombatEngineers.BUILD_POWER;
-        if (!p1.startOverdrive(now) || !p1.isOverdriven() || Math.abs(p1.getBuildPower() - base * Overdrive.POWER_MULT) > 0.001f)
-            problems.add("a driving Pioneer has " + p1.getBuildPower() + " build power, expected " + base * Overdrive.POWER_MULT);
-        if (p1.startOverdrive(now))
-            problems.add("the rig restarted while still driving");
-        if (!p2.startOverdrive(now - Overdrive.DRIVE_TICKS) || !p2.isVenting() || p2.getBuildPower() != 0f)
-            problems.add("a venting Pioneer has " + p2.getBuildPower() + " build power, expected none");
-        if (p2.startOverdrive(now))
-            problems.add("the rig restarted while venting");
-        if (!p3.startOverdrive(now - Overdrive.DRIVE_TICKS - Overdrive.VENT_TICKS) || p3.isOverdriven() || p3.isVenting()
-                || Math.abs(p3.getBuildPower() - base) > 0.001f)
-            problems.add("a vented Pioneer has " + p3.getBuildPower() + " build power, expected " + base);
-        if (!p3.startOverdrive(now))
-            problems.add("the rig refused to start again once vented");
-        // a few ticks on (the units have joined the unit list reclaim walks; the drive and the vent are still on)
-        helper.runAfterDelay(5, () -> {
-            try {
-                // reclaim reads build power: x3 while driving, nothing while venting (a wreck beside each of the two;
-                // made in this tick, so the wreck cap can't take one before the step)
-                BlockPos at1 = helper.absolutePos(new BlockPos(2, 2, 3)), at2 = helper.absolutePos(new BlockPos(10, 2, 3));
-                Entity w1 = WreckServerEvents.spawnWreck(level, at1.getX() + 0.5, at1.getY(), at1.getZ() + 0.5, 200f, Factions.BRASSWORKS);
-                Entity w2 = WreckServerEvents.spawnWreck(level, at2.getX() + 0.5, at2.getY(), at2.getZ() + 0.5, 200f, Factions.BRASSWORKS);
-                if (w1 == null || w2 == null) {
-                    helper.fail("could not create the wrecks");
-                    return;
-                }
-                made.add(w1);
-                made.add(w2);
-                float b1 = WreckServerEvents.metalOf(w1), b2 = WreckServerEvents.metalOf(w2);
-                WreckServerEvents.tickReclaim(level, 1f);
-                float d1 = b1 - (w1.isRemoved() ? 0 : WreckServerEvents.metalOf(w1));
-                float d2 = b2 - (w2.isRemoved() ? 0 : WreckServerEvents.metalOf(w2));
-                float expect = WreckServerEvents.RECLAIM_PER_POWER * base * Overdrive.POWER_MULT * EconomyPace.of(owner);
-                if (Math.abs(d1 - expect) > 0.05f)
-                    problems.add("a driving Pioneer stripped " + d1 + " metal in 1 s, expected " + expect);
-                if (d2 > 0.001f)
-                    problems.add("a venting Pioneer stripped " + d2 + " metal");
-                Ability a = p4.getEngineerAbility();
-                if (!(a instanceof Overdrive)) {
-                    problems.add("the Pioneer's ability is not Overdrive");
-                } else {
-                    a.use(level, p4, p4.blockPosition());
-                    if (!p4.isOverdriven() || a.isOffCooldown(p4))
-                        problems.add("casting Overdrive through use() did not open the rig and start its cooldown");
-                }
-                finish(helper, problems);
-            } finally {
-                cleanUp(made, pools, List.of(owner));
             }
         });
     }

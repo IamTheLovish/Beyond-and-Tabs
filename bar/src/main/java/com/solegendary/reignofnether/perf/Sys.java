@@ -60,13 +60,24 @@ public final class Sys {
     public static final int MOUNT_SCAN = 22;       // a unit looking for a mount (MountGoal autofind)
     public static final int NEUTRAL_AGGRO = 23;    // the once-a-second query for the wild mobs near each unit (neutral aggro)
     public static final int TARGET_GRID = 24;      // the rebuild of TargetScan's per-tick grid of living entities
-    public static final int SECTIONS = 25;
+    // vanilla's own work, timed around the calls into it (mixin/ServerLevelMixin, LivingEntityMixin, EntityMixin). Every
+    // id from VANILLA_FROM on prints in the "vanilla" group of the [Sys] line, not in "ours".
+    public static final int VANILLA_UNIT = 25;     // ServerLevel.tickNonPassenger of a Unit, minus everything timed inside it
+    public static final int VANILLA_OTHER = 26;    // ServerLevel.tickNonPassenger of any other entity, likewise
+    public static final int TRAVEL = 27;           // LivingEntity.travel inside aiStep (movement and its collision)
+    public static final int AI_GOALS = 28;         // LivingEntity.serverAiStep inside aiStep (goals, navigation, controls)
+    public static final int BASE_TICK = 29;        // Entity.baseTick inside Entity.tick
+    public static final int CHUNKS = 30;           // ServerChunkCache.tick inside ServerLevel.tick
+    public static final int LEVEL_REST = 31;       // the rest of ServerLevel.tick: block and fluid ticks, block entities, entity manager, raids
+    public static final int VANILLA_FROM = VANILLA_UNIT;
+    public static final int SECTIONS = 32;
 
     static final String[] NAMES = {
         "unit", "attacker", "attacker/attackMove", "attacker/idleAggro", "attacker/retarget", "attacker/entityScan",
         "attacker/buildingScan", "separation", "stuckNudge", "unstick", "reactions", "pathfinder", "buildings", "bots",
         "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar", "pushScan",
-        "mountScan", "neutralAggro", "targetGrid" };
+        "mountScan", "neutralAggro", "targetGrid",
+        "unitTick", "otherEntities", "travel", "aiGoals", "baseTick", "chunks", "levelRest" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
@@ -92,6 +103,8 @@ public final class Sys {
     private static double windowTickMs = 0;
     /** The last [Sys] line written (tests and the lag-capture summary read it). */
     public static volatile String lastLine = null;
+    /** The share of the mean tick that the timed sections (ours and vanilla) covered in the last line written (tests). */
+    public static volatile double lastCovered = 0;
 
     /** Opens a section; give the result to {@link #end}. Returns 0 (and does nothing) unless measuring on the server thread. */
     public static int begin(int id) {
@@ -182,9 +195,10 @@ public final class Sys {
     static String report() {
         String line = null;
         if (TIMER.ticks >= MIN_TICKS) {
-            line = SysReport.line("[Sys]", "tick", NAMES, TIMER, windowTickMs / TIMER.ticks);
-            lastLine = line;
+            line = write();
             ReignOfNether.LOGGER.info(line);
+        } else {
+            GcLog.takeSysWindowMs();
         }
         TIMER.reset();
         windowTickMs = 0;
@@ -198,10 +212,17 @@ public final class Sys {
     public static String snapshot() {
         if (TIMER.ticks == 0)
             return null;
-        String line = SysReport.line("[Sys]", "tick", NAMES, TIMER, windowTickMs / TIMER.ticks);
-        lastLine = line;
+        String line = write();
         TIMER.reset();
         windowTickMs = 0;
+        return line;
+    }
+
+    private static String write() {
+        double meanMs = windowTickMs / TIMER.ticks;
+        String line = SysReport.line("[Sys]", "tick", NAMES, TIMER, meanMs, VANILLA_FROM, GcLog.takeSysWindowMs());
+        lastCovered = meanMs <= 0 ? 0 : TIMER.totalSelfNs() / 1.0e6 / TIMER.ticks / meanMs;
+        lastLine = line;
         return line;
     }
 
@@ -227,6 +248,7 @@ public final class Sys {
         slow = false;
         windowTickMs = 0;
         Arrays.fill(PUSHED, null);
+        TickGates.onServerStopping();
         TIMER.reset();
     }
 }

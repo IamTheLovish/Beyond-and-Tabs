@@ -74,6 +74,10 @@ public class NonUnitServerEvents {
             moveSuppressedNonUnits.removeIf(mob -> (mob.isDeadOrDying() || mob.isRemoved() || (mob.getNavigation().isDone() && mob.getTarget() == null)));
         }
 
+        // F3 (Oct 26 perf plan): the area where wild animals keep thinking - near a unit or a player - rebuilt once a second
+        if (evt.level.getGameTime() % 20 == 0)
+            com.solegendary.reignofnether.perf.TickGates.refreshAwake((ServerLevel) evt.level, UnitServerEvents.getAllUnits());
+
         if (evt.level.getServer() != null && evt.level.getServer().getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get()) {
             int sysAggro = Sys.begin(Sys.NEUTRAL_AGGRO);
             Set<PathfinderMob> pfMobs = new HashSet<>();
