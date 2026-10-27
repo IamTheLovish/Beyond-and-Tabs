@@ -50,6 +50,9 @@ public class OrdersObeyGameTests {
     static final String BATCH = "orders_obey";
     // its own batch: it switches the server-wide rtsPathfinding flag on for its run (batches run one at a time)
     static final String BATCH_RTS = "orders_obey_rts";
+    // the shifted-along-the-wall test switches the flag too: in the same batch, whichever test ended first restored the
+    // flag to off under the other one, whose path result then waited forever (stress run 40587689274)
+    static final String BATCH_RTS_SHIFTED = "orders_obey_rts_shifted";
 
     static String owner(GameTestHelper helper, String tag) {
         return "gametest_obey_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -279,7 +282,7 @@ public class OrdersObeyGameTests {
      * its order forever (a_move_into_unloaded_chunks..., CI runs 40572488789, 40577575656). A sideways shift of a
      * block is no progress toward a target 4000 blocks east: the unit gives the order up within 30 s.
      */
-    @GameTest(template = ARENA, batch = BATCH_RTS, timeoutTicks = 800)
+    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED, timeoutTicks = 800)
     public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         boolean wasRts = UnitServerEvents.rtsPathfinding;
