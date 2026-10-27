@@ -232,10 +232,14 @@ public class HeroAiV2GameTests {
             // the player takes it back: the same order again, at the same low health
             order(helper, me, hero, UnitAction.MOVE, dest);
         });
+        // obeyed = it got there; once there the order is done and the hero may turn on the enemies beside the spot
+        double[] closest = { Double.MAX_VALUE };
+        for (int t = 151; t <= 360; t++)
+            helper.runAfterDelay(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
         helper.runAfterDelay(360, () -> {
-            if (hero.isAlive() && flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5) > 2.5)
-                problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot, from z %.1f)",
-                    flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5), later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
+            if (hero.isAlive() && closest[0] > 1.5)
+                problems.add(String.format("after the player ordered it on again the hero still did not obey (%.1f blocks short of the spot at best, from z %.1f)",
+                    closest[0], later[0] - helper.absolutePos(BlockPos.ZERO).getZ()));
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
@@ -456,10 +460,14 @@ public class HeroAiV2GameTests {
                 problems.add("setup: the hero did not break off its order to flee at a quarter health");
             HeroBot.onPlayerSelect(hero);   // the player clicks it
         });
+        // back to its order = it got there; once there the order is done and it may turn on the enemies beside the spot
+        double[] closest = { Double.MAX_VALUE };
+        for (int t = 131; t <= 360; t++)
+            helper.runAfterDelay(t, () -> closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
         helper.runAfterDelay(360, () -> {
-            if (hero.isAlive() && flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5) > 2.5)
-                problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short)",
-                    flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
+            if (hero.isAlive() && closest[0] > 1.5)
+                problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short at best)",
+                    closest[0]));
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
