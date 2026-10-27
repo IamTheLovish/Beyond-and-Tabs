@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hud;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.unit.InspectRules;
 import com.solegendary.reignofnether.unit.NonUnitClientEvents;
@@ -19,15 +20,20 @@ import net.minecraft.world.entity.LivingEntity;
 public final class InspectView {
     private InspectView() { }
 
+    /** Spectators (non-RTS players) and sandbox players see every card in full, like the queue / command-card gates. */
+    private static boolean seesEverything() {
+        return InspectRules.seesEverything(PlayerClientEvents.isRTSPlayer(), SandboxClientEvents.isSandboxPlayer());
+    }
+
     public static boolean shows(InspectRules.Info info, LivingEntity le) {
-        if (SandboxClientEvents.isSandboxPlayer())
+        if (seesEverything())
             return true;
         return InspectRules.shows(info, UnitClientEvents.getPlayerToEntityRelationship(le),
             AlliancesClient.canControlAlly(le), NonUnitClientEvents.canControlAllMobs());
     }
 
     public static boolean shows(InspectRules.Info info, BuildingPlacement b) {
-        if (SandboxClientEvents.isSandboxPlayer())
+        if (seesEverything())
             return true;
         return InspectRules.shows(info, BuildingClientEvents.getPlayerToBuildingRelationship(b),
             AlliancesClient.canControlAlly(b.ownerName), NonUnitClientEvents.canControlAllMobs());

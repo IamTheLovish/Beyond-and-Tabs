@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class InspectRulesTest {
 
     private static final Set<Info> PUBLIC = EnumSet.of(Info.PORTRAIT, Info.NAME, Info.HEALTH, Info.STATS, Info.BUILDING_TYPE);
-    private static final Set<Info> PLANS = EnumSet.of(Info.ABILITIES, Info.ITEMS, Info.PRODUCTION_QUEUE, Info.RALLY, Info.AUTOCAST);
+    private static final Set<Info> PLANS = EnumSet.of(Info.ABILITIES, Info.ITEMS, Info.RALLY);
 
     @Test
     void own_things_show_everything_and_take_orders() {
@@ -30,7 +30,6 @@ class InspectRulesTest {
                 assertTrue(InspectRules.shows(i, rel, false, false), rel + " " + i);
             for (Info i : PLANS)
                 assertFalse(InspectRules.shows(i, rel, false, false), rel + " " + i);
-            assertFalse(InspectRules.shows(Info.COMMAND_CARD, rel, false, false), rel.name());
             assertFalse(InspectRules.canCommand(rel, false, false), rel.name());
         }
         assertEquals(Tag.ENEMY, InspectRules.tag(Relationship.HOSTILE));
@@ -44,8 +43,8 @@ class InspectRulesTest {
             assertTrue(InspectRules.shows(i, Relationship.FRIENDLY, false, false), i.name());
         for (Info i : PLANS)
             assertTrue(InspectRules.shows(i, Relationship.FRIENDLY, false, false), i.name());
-        assertFalse(InspectRules.shows(Info.COMMAND_CARD, Relationship.FRIENDLY, false, false));
-        assertTrue(InspectRules.shows(Info.COMMAND_CARD, Relationship.FRIENDLY, true, false));
+        assertFalse(InspectRules.canCommand(Relationship.FRIENDLY, false, false));
+        assertTrue(InspectRules.canCommand(Relationship.FRIENDLY, true, false));
         assertEquals(Tag.ALLY, InspectRules.tag(Relationship.FRIENDLY));
         assertEquals("Ally", Tag.ALLY.label);
     }
@@ -72,6 +71,24 @@ class InspectRulesTest {
     }
 
     @Test
+    void spectators_and_sandbox_players_see_every_card_in_full() {
+        // a spectator owns nothing, so every unit is HOSTILE to them: like the queue / command-card gates
+        // (!isRTSPlayer) they must still see abilities, items and rally lines
+        assertTrue(InspectRules.seesEverything(false, false), "spectator / non-RTS player");
+        assertTrue(InspectRules.seesEverything(true, true), "sandbox player");
+        assertTrue(InspectRules.seesEverything(false, true));
+        assertFalse(InspectRules.seesEverything(true, false), "an RTS player goes by relation");
+    }
+
+    @Test
+    void queue_autocast_and_command_card_are_not_rule_entries() {
+        // production queue, autocast and command card keep their own HUD gates (HudClientEvents), so the rule must
+        // not list them: the tests would check answers the product never asks
+        assertEquals(EnumSet.of(Info.PORTRAIT, Info.NAME, Info.HEALTH, Info.STATS, Info.BUILDING_TYPE,
+            Info.ABILITIES, Info.ITEMS, Info.RALLY), EnumSet.allOf(Info.class));
+    }
+
+    @Test
     void own_unit_is_owned_even_when_the_alliance_table_lists_self() {
         // the AC-3/AC-4 game tests used the server's unit-to-unit relation, which calls own units FRIENDLY: own
         // cards then lost their command card and own units dropped out of groups
@@ -80,7 +97,7 @@ class InspectRulesTest {
         assertEquals(Relationship.FRIENDLY, InspectRules.relation("me", "pal", true));
         assertEquals(Relationship.HOSTILE, InspectRules.relation("me", "foe", false));
         assertEquals(Relationship.NEUTRAL, InspectRules.relation("me", "", false));
-        assertTrue(InspectRules.shows(Info.COMMAND_CARD, InspectRules.relation("me", "me", true), false, false));
+        assertTrue(InspectRules.canCommand(InspectRules.relation("me", "me", true), false, false));
         assertTrue(InspectRules.keepInSelection(2, InspectRules.canCommand(InspectRules.relation("me", "me", false), false, false)));
     }
 }

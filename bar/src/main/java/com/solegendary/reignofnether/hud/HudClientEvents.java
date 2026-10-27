@@ -24,6 +24,7 @@ import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.hud.buttons.Button;
+import com.solegendary.reignofnether.unit.InspectRules;
 import com.solegendary.reignofnether.hud.custombutton.CustomButton;
 import com.solegendary.reignofnether.hud.custombutton.CustomButtonClientEvents;
 import com.solegendary.reignofnether.hud.buttons.*;
@@ -957,7 +958,7 @@ public class HudClientEvents {
                 int totalRes = Resources.getTotalResourcesFromItems(unit.getItems()).getTotalValue();
 
                 if (unit instanceof UnitInventory inv && ItemClientEvents.shouldRenderUnitInventory((LivingEntity) unit)
-                        && InspectView.shows(com.solegendary.reignofnether.unit.InspectRules.Info.ITEMS, hudSelectedEntity)) {
+                        && InspectView.shows(InspectRules.Info.ITEMS, hudSelectedEntity)) {
                     hudZones.add(ItemClientEvents.renderUnitInventory(evt.getGuiGraphics(), blitX,
                         screenHeight - ItemClientEvents.INV_HEIGHT, mouseX, mouseY, inv));
                     renderedItemsOrResources = true;

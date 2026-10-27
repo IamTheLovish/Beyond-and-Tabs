@@ -1722,16 +1722,9 @@ public class UnitClientEvents {
                 return Relationship.NEUTRAL;
             }
 
-            // For Units, check ownership and alliance
+            // For Units, check ownership and alliance (the one rule the inspect tests check)
             String ownerName = ((Unit) entity).getOwnerName();
-
-            if (playerName.equals(ownerName)) {
-                return Relationship.OWNED;
-            } else if (AlliancesClient.isAllied(playerName, ownerName)) {
-                return Relationship.FRIENDLY;
-            } else {
-                return Relationship.HOSTILE;
-            }
+            return InspectRules.relation(playerName, ownerName, AlliancesClient.isAllied(playerName, ownerName));
         }
 
         // If the world or player is null, return NEUTRAL

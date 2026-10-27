@@ -149,8 +149,6 @@ public class InspectEnemyGameTests {
             Relationship r = rel(viewer, enemy);
             if (InspectRules.canCommand(r, false, false))
                 problems.add("an enemy (" + r + ") is commandable");
-            if (InspectRules.shows(Info.COMMAND_CARD, r, false, false))
-                problems.add("an inspected enemy shows a command card");
             if (InspectRules.keepInSelection(2, InspectRules.canCommand(r, false, false)))
                 problems.add("an enemy stays in a group selection");
         });
@@ -173,8 +171,7 @@ public class InspectEnemyGameTests {
     }
 
     /**
-     * AC-3: an enemy's card hides its plans - abilities and cooldowns (a hero's too), items, production queue, rally,
-     * autocast - and carries a red "Enemy" tag; an ally's card shows them with an "Ally" tag; my own card no tag.
+     * AC-3: an enemy's card hides its plans - abilities and cooldowns (a hero's too), items, rally - and carries a red "Enemy" tag; an ally's card shows them with an "Ally" tag; my own card no tag.
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 40)
     public static void ac3_enemy_card_hides_plans_and_is_tagged(GameTestHelper helper) {
@@ -190,7 +187,7 @@ public class InspectEnemyGameTests {
                     return;
                 }
                 Relationship re = rel(viewer, enemy), rm = rel(viewer, mine);
-                for (Info i : new Info[] { Info.ABILITIES, Info.ITEMS, Info.PRODUCTION_QUEUE, Info.RALLY, Info.AUTOCAST })
+                for (Info i : new Info[] { Info.ABILITIES, Info.ITEMS, Info.RALLY })
                     if (InspectRules.shows(i, re, false, false))
                         problems.add("an enemy card shows its " + i);
                 if (InspectRules.tag(re) != Tag.ENEMY || !"Enemy".equals(InspectRules.tag(re).label))

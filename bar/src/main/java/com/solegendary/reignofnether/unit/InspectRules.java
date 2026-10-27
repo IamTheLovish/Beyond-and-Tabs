@@ -11,7 +11,8 @@ package com.solegendary.reignofnether.unit;
  *   <li>Only controllable things take orders and get a command card (own, an ally who shared control, sandbox
  *       all-mobs). An inspected enemy never rides along in a group: a selection of 2+ keeps controllable ones only.</li>
  *   <li>Public info (portrait, name, health, stats, building type) shows for everyone; plan info (abilities and
- *       their cooldowns, items, production queue, rally, autocast) only for own/controlled and allied things.</li>
+ *       their cooldowns, items, rally) only for own/controlled and allied things. Spectators and sandbox players see
+ *       every card in full.</li>
  * </ul>
  */
 public final class InspectRules {
@@ -19,9 +20,9 @@ public final class InspectRules {
 
     /** What a unit or building card can show. */
     public enum Info {
-        PORTRAIT, NAME, HEALTH, STATS, BUILDING_TYPE,               // public: anyone who can see it
-        ABILITIES, ITEMS, PRODUCTION_QUEUE, RALLY, AUTOCAST,        // plans: own, controlled or allied only
-        COMMAND_CARD                                                 // orders: controllable only
+        PORTRAIT, NAME, HEALTH, STATS, BUILDING_TYPE,   // public: anyone who can see it
+        ABILITIES, ITEMS, RALLY                         // plans: own, controlled or allied only
+        // production queue, autocast and the command card keep their own HUD gates (HudClientEvents)
     }
 
     /** The small label on the card of something that isn't yours. */
@@ -65,12 +66,15 @@ public final class InspectRules {
 
     /** Does the card show this piece of info for a thing in relation {@code rel} to the viewer? */
     public static boolean shows(Info info, Relationship rel, boolean alliedControl, boolean controlAllMobs) {
-        boolean control = canCommand(rel, alliedControl, controlAllMobs);
         return switch (info) {
             case PORTRAIT, NAME, HEALTH, STATS, BUILDING_TYPE -> true;
-            case ABILITIES, ITEMS, PRODUCTION_QUEUE, RALLY, AUTOCAST -> control || rel == Relationship.FRIENDLY;
-            case COMMAND_CARD -> control;
+            case ABILITIES, ITEMS, RALLY -> canCommand(rel, alliedControl, controlAllMobs) || rel == Relationship.FRIENDLY;
         };
+    }
+
+    /** Does this viewer see every card in full (sandbox players, and spectators / non-RTS players)? */
+    public static boolean seesEverything(boolean rtsPlayer, boolean sandboxPlayer) {
+        return !rtsPlayer || sandboxPlayer;
     }
 
     /** May this stay in a selection of {@code selectionSize} things? A lone inspected thing may; a group is orders. */
