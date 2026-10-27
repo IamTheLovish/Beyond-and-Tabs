@@ -257,6 +257,24 @@ server-side on the block-display entity, so `WreckSyncServerEvents` sends the ch
 second (`WreckSyncClientboundPacket`), the full list to a joining player; `WreckClientEvents` keeps the id → metal map,
 prunes gone entities once a second, and matches the hovered block to the nearest wreck within 1.5 blocks.
 
+**Wreck markers (Oct 24, "winning pays").** Players did not notice the wrecks, so in the RTS view every known wreck now
+carries a compact number (just the metal; a big heap of 150+ gets the reclaim mark and a brighter, larger number, 500+
+- a commander's 600 - is gold and larger still). The hovered wreck of a selected worker keeps the fuller label above and
+loses its marker; while an area-reclaim circle is dragged only the circle's total shows. Per frame the cost is bounded
+by `resources/WreckMarkerRules` (pure, JUnit-tested): wrecks within 240 blocks of the camera, inside the frustum and in a
+chunk the fog shows now, richest first, at most 48, fading from 120 blocks out and scaling with the camera zoom.
+Fog: `WreckSyncServerEvents` sends a client only the wrecks it may know (`Audience.mayKnow`), the marker also needs the
+chunk to be lit, so a fogged heap is never marked; a heap seen earlier and since fogged simply loses its number.
+
+## Idle auto-reclaim and the winner's wreck
+
+An idle worker (nothing ordered, queued, built, gathered or fought) with a wreck within **8 blocks** walks over and
+strips it by itself, by the same reclaim target + move target an explicit RECLAIM order sets
+(`WreckServerEvents.autoReclaimIdle`, once a second, on the wreck cell index). It never overrides orders or building and
+leaves commanders and combat engineers alone; a heap it cannot reach in 12 s is dropped. The `idleReclaim` gamerule
+(default on) switches it off. First Battle's Reclaim step is not auto-completed by it. Fallen commanders leave a 600
+metal wreck, fallen heroes 150 + 50 x level (never below the normal half-cost heap).
+
 ## Kill feed
 
 `KillFeedServerEvents` queues a line for every unit killed by an enemy unit and every building an enemy unit brings

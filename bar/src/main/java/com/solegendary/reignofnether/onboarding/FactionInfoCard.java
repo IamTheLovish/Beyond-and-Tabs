@@ -13,6 +13,8 @@ import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.IntUnaryOperator;
 
 /**
  * The faction info card (design/onboarding.md): what a new player needs to choose - identity, strengths, weaknesses,
@@ -99,26 +101,73 @@ public final class FactionInfoCard {
         return h;
     }
 
+    /** Widest the card grows to when widening it is what keeps it on screen. */
+    static final int MAX_WIDTH = 340;
+    public static final int WIDEN_STEP = 20;
+
+    private static Faction fitFaction = null;
+    private static int fitKey = 0, fitWidth = 0;
+
+    /**
+     * The narrowest width from {@code w} up to {@code room} (in {@link #WIDEN_STEP}s) whose height fits {@code maxH};
+     * the widest tried when none does. Wider = fewer wrapped lines = shorter.
+     */
+    public static int fitWidth(IntUnaryOperator heightAt, int w, int room, int maxH) {
+        while (heightAt.applyAsInt(w) > maxH && w + WIDEN_STEP <= room)
+            w += WIDEN_STEP;
+        return w;
+    }
+
+    /** Scale that shrinks a card of height {@code h} into {@code maxH}; 1 when it already fits. */
+    public static float fitScale(int h, int maxH) {
+        return h > maxH && h > 0 ? Math.max(0.1f, (float) maxH / h) : 1f;
+    }
+
+    /** Draws the card at (x, y), shrunk into {@code maxH} when taller. Returns the height it takes on screen. */
+    public static int renderFitted(GuiGraphics g, Font font, Faction f, int x, int y, int width, int maxH) {
+        int h = height(font, f, width);
+        if (h == 0)
+            return 0;
+        float scale = fitScale(h, maxH);
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(scale, scale, 1f);
+        render(g, font, f, 0, 0, width);
+        g.pose().popPose();
+        return Math.round(h * scale);
+    }
+
     /**
      * Beside an open faction picker list (x, y, w, h): to its left when there is room, else to its right, else not at
-     * all (a very narrow window keeps the list usable). Kept on screen vertically.
+     * all (a very narrow window keeps the list usable). Kept on screen: a card taller than the screen widens into the
+     * free room beside the list, and shrinks only when that is not enough.
      */
     public static void renderBeside(GuiGraphics g, Font font, Faction f, int px, int py, int pw, int ph, int screenW, int screenH) {
         if (!hasCard(f))
             return;
         int w = Math.min(WIDTH, Math.max(140, screenW / 3));
-        int x;
-        if (px - 4 - w >= 2)
-            x = px - 4 - w;
-        else if (px + pw + 4 + w <= screenW - 2)
-            x = px + pw + 4;
-        else
+        int roomLeft = px - 6, roomRight = screenW - (px + pw) - 6;
+        boolean left = roomLeft >= w;
+        if (!left && roomRight < w)
             return;
+        int room = Math.min(MAX_WIDTH, left ? roomLeft : roomRight);
+        int maxH = screenH - 4;
+        // each candidate width re-wraps the text: fit once per faction and layout, not per frame
+        int key = Objects.hash(w, room, maxH);
+        if (f != fitFaction || key != fitKey) {
+            int start = w;
+            fitWidth = fitWidth(cw -> height(font, f, cw), start, room, maxH);
+            fitFaction = f;
+            fitKey = key;
+        }
+        w = fitWidth;
         int h = height(font, f, w);
+        h = Math.round(h * fitScale(h, maxH));
+        int x = left ? px - 4 - w : px + pw + 4;
         int y = Math.max(2, Math.min(py, screenH - h - 2));
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);   // above the owning screen like the picker itself
-        render(g, font, f, x, y, w);
+        renderFitted(g, font, f, x, y, w, maxH);
         g.pose().popPose();
     }
 }

@@ -22,10 +22,12 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_LAUNCH_DONE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> GUI_SCALE_DEFAULT_DONE;
     // which key layout this install's saved key bindings were last moved to (keybinds/KeybindMigration)
     public static final ForgeConfigSpec.ConfigValue<Integer> KEYBIND_LAYOUT;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HOST_PORT;
+    public static final ForgeConfigSpec.ConfigValue<Integer> AREA_MEX_RADIUS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_INVERT;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
@@ -51,6 +53,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SHAKE;
+    public static final ForgeConfigSpec.ConfigValue<Double> RTS_CURSOR_SPEED;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> RTS_SYSTEM_CURSOR;
 
     // display (DisplaySettings, DisplaySettingsScreen; design/hud.md "Settings")
     public static final ForgeConfigSpec.ConfigValue<Integer> ICON_MODE;
@@ -60,6 +64,9 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
     public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LIVING_ARMY;
+    public static final ForgeConfigSpec.IntValue MOTION_BREATH, MOTION_WEIGHT, MOTION_FIDGET, MOTION_LEAN, MOTION_ACCEL,
+        MOTION_FLINCH, MOTION_SECONDARY;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -67,13 +74,13 @@ public class ReignOfNetherClientConfigs {
     // remembers whether it is collapsed, so a player who tidied the screen once keeps it tidy across restarts
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_STATS_OPEN;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_STATS_TAB;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_KILLFEED_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ALERTS_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_CHEATSHEET_COLLAPSED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_UNITCARD_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_ECONOMY_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_COMMAND_COMPACT;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_MINIMAP_LARGE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> HUD_MINIMAP_SIZE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HUD_OBSERVER_BAR;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_TOAST_SECONDS;
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
@@ -87,6 +94,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_DAMAGE_NUMBERS;
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AI;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
@@ -107,6 +115,8 @@ public class ReignOfNetherClientConfigs {
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         BUILDER.comment("Mouse-wheel zoom step, 1-30 (10 = 15% per notch)");
         CAMERA_ZOOM_SPEED = BUILDER.defineInRange("camera_zoom_speed", 10, 1, 30);
+        BUILDER.comment("Area mex circle radius in blocks (Shift with a metal extractor armed; Shift+wheel resizes it), 4-32");
+        AREA_MEX_RADIUS = BUILDER.defineInRange("area_mex_radius", 12, 4, 32);
         BUILDER.comment("Invert the mouse wheel: wheel forward zooms out (also flips Ctrl+wheel tilt)");
         CAMERA_ZOOM_INVERT = BUILDER.define("camera_zoom_invert", false);
         BUILDER.comment("Middle-mouse drag speed, 1-30 (10 = the ground stays under the cursor)");
@@ -130,6 +140,10 @@ public class ReignOfNetherClientConfigs {
         CAMERA_ZOOM_OUT_FROM_CURSOR = BUILDER.define("camera_zoom_out_from_cursor", false);
         BUILDER.comment("Camera shake on big blasts and building collapses, 0-100% (0 = none; never grows with army size)");
         CAMERA_SHAKE = BUILDER.defineInRange("camera_shake", 100, 0, 100);
+        BUILDER.comment("RTS cursor speed, 0.25-3.0. The cursor uses raw mouse input (no Windows pointer acceleration): 1.0 = one mouse count per screen pixel, same as Windows' unaccelerated 6/11 setting");
+        RTS_CURSOR_SPEED = BUILDER.defineInRange("rts_cursor_speed", 1.0, 0.25, 3.0);
+        BUILDER.comment("RTS view uses the operating system's own mouse cursor (your Windows pointer speed and acceleration, no one-frame lag) instead of Minecraft's locked virtual cursor. Turn off to get the locked cursor with rts_cursor_speed back");
+        RTS_SYSTEM_CURSOR = BUILDER.define("rts_system_cursor", true);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
         BUILDER.comment("BAR-style notifications (commander under attack, unit lost, construction complete...)");
         ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);
@@ -141,6 +155,8 @@ public class ReignOfNetherClientConfigs {
         SHOW_DEV_TIME = BUILDER.define("show_dev_time", true);
         BUILDER.comment("Set after the first launch applied its defaults (full screen, no accessibility screen): onboarding/FirstLaunchClientEvents. Set false to apply them again.");
         FIRST_LAUNCH_DONE = BUILDER.define("first_launch_done", false);
+        BUILDER.comment("Set after GUI scale 3 was applied once (only if the scale was Auto): onboarding/FirstLaunchClientEvents. Set false to apply it again.");
+        GUI_SCALE_DEFAULT_DONE = BUILDER.define("gui_scale_default_done", false);
         BUILDER.comment("Key layout version the saved key bindings were last moved to (keybinds/KeybindMigration). Minecraft keeps every binding in options.txt, defaults included, so a default we change never reaches an install that already saved the old one: once per version, a binding still on an OLD default moves to the new default (a key you chose yourself is never touched). Set 0 to run the moves again.");
         KEYBIND_LAYOUT = BUILDER.defineInRange("keybind_layout", 0, 0, 1000);
         BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
@@ -183,8 +199,6 @@ public class ReignOfNetherClientConfigs {
         HUD_STATS_OPEN = BUILDER.define("hud_stats_open", false);
         BUILDER.comment("HUD: the stats table's tab, 0 players, 1 economy, 2 army, 3 production");
         HUD_STATS_TAB = BUILDER.defineInRange("hud_stats_tab", 0, 0, 3);
-        BUILDER.comment("HUD: kill feed collapsed to a one-line ticker");
-        HUD_KILLFEED_COLLAPSED = BUILDER.define("hud_killfeed_collapsed", true);
         BUILDER.comment("HUD: alert toasts collapsed to icons with count badges");
         HUD_ALERTS_COLLAPSED = BUILDER.define("hud_alerts_collapsed", false);
         BUILDER.comment("HUD: the controls cheat-sheet collapsed to a ? button");
@@ -197,6 +211,8 @@ public class ReignOfNetherClientConfigs {
         HUD_COMMAND_COMPACT = BUILDER.define("hud_command_compact", false);
         BUILDER.comment("HUD: the large minimap (M) was open when the game closed");
         HUD_MINIMAP_LARGE = BUILDER.define("hud_minimap_large", false);
+        BUILDER.comment("HUD: minimap size when the game closed: 0 small, 1 large, 2 expanded (0 with the old hud_minimap_large=true means 1)");
+        HUD_MINIMAP_SIZE = BUILDER.defineInRange("hud_minimap_size", 0, 0, 2);
         BUILDER.comment("HUD: the spectator observer bar (income, army, units, tier, powers per player) while spectating");
         HUD_OBSERVER_BAR = BUILDER.define("hud_observer_bar", true);
         BUILDER.comment("HUD: seconds an alert toast stays up before it fades, 1-10");
@@ -213,6 +229,8 @@ public class ReignOfNetherClientConfigs {
         HERO_DAMAGE_NUMBERS = BUILDER.define("hero_damage_numbers", true);
         BUILDER.comment("One-line first-time tips in matches (each shown once; OnboardingTips)");
         ONBOARDING_TIPS = BUILDER.define("onboarding_tips", true);
+        BUILDER.comment("Hero AI: while you are not possessing your hero it fights by itself with its abilities (HeroBot). Off = it only casts what you order.");
+        HERO_AI = BUILDER.define("hero_ai", true);
         BUILDER.comment("Tips already shown (comma-separated ids); clear it to see them again");
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");
@@ -221,6 +239,16 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
+        LIVING_ARMY = BUILDER.define("living_army", true);
+        BUILDER.comment("Living army: how strong each behaviour plays, in percent (100 = as designed, 0 = off, 200 = double)");
+        MOTION_BREATH = BUILDER.defineInRange("motion_breath", 100, 0, 200);
+        MOTION_WEIGHT = BUILDER.defineInRange("motion_weight_shift", 100, 0, 200);
+        MOTION_FIDGET = BUILDER.defineInRange("motion_fidgets", 100, 0, 200);
+        MOTION_LEAN = BUILDER.defineInRange("motion_lean", 100, 0, 200);
+        MOTION_ACCEL = BUILDER.defineInRange("motion_start_stop", 100, 0, 200);
+        MOTION_FLINCH = BUILDER.defineInRange("motion_flinch", 100, 0, 200);
+        MOTION_SECONDARY = BUILDER.defineInRange("motion_secondary", 100, 0, 200);
         SPEC = BUILDER.build();
     }
 

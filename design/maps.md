@@ -327,7 +327,7 @@ generic capture kinds. Lobby option `Map: Random terrain`.
 
 ## 5. Start-position phase (BAR's "start position mode")
 
-After Start (and after a pre-made map has finished rising), a **45 s** phase:
+After Start (and after a pre-made map has finished rising), a phase with a **120 s** AFK clock (45 s before Ready):
 
 * Each team's **start box** is an annular sector round its slots (teams' boxes separated by a gap), drawn on the
   minimap (team-coloured outline + hatching) and in the world (a coloured outline on the ground).
@@ -339,7 +339,15 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   only to stop teammates stacking - here every slot owns its own mexes, so stacking only hurts the staller.
   Simultaneous is quicker and nobody waits; the "await their turn" feel is kept by the countdown banner.
 * **Bots** auto-place at their slot instantly. When the clock runs out, anyone unplaced is placed at their slot
-  (equally fair). If every human has placed, the phase ends 3 s later.
+  (equally fair) and the match starts, with a chat line naming who was not ready.
+* **Ready** (tester Joisco, Oct 26; BAR's own ready check): placing starts nothing. Each human places, then presses
+  **Ready** in the panel on the right (refused until placed); the panel lists every side as placing / placed /
+  READY / bot / left with "Ready n/m" on top, so everyone sees who the match waits for. A ready player un-readies
+  to move. When every human still in the phase is placed and ready (bots always are), the phase ends 3 s later; an
+  un-ready in those 3 s stops it. A player who logs out drops out of the count and everyone is told (back in,
+  unready, on a rejoin). The host (singleplayer owner / op on a dedicated server) has **Force start**: the first
+  click warns, naming who is not ready, the second starts; non-hosts are refused. Ready is not saved: a reloaded
+  phase asks every human again. Tests: gametest/SpawnReadyGameTests.java (batch spawn_ready).
 * Then the match starts exactly as before (capitol, commander, workers, alliances), the battlefield forms
   (base clearing, wall at the map's radius in the map's material) - a pre-made map skips the procedural patch
   and capture stamping because the map already placed its own.
@@ -349,7 +357,7 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   while the map rises or starts are placed **resumes** on reload. The map build runs again from the saved setup (it
   only writes blocks that differ; an economy already stamped is not stamped twice); the phase comes back with every
   pick and its clock, held until a player is back and then at least 20 s, and ends early only once every human has
-  returned. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
+  returned and pressed Ready again. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
   cleanly. Details: design/ron_rewrite_plan.md "Rewrite 5", design/persistence.md.
 
 ## 6. Tests (gametest/SkirmishGameTests.java, end of file)
@@ -360,7 +368,8 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
 * `map_capture_sites_spawn_with_their_effect`: every map's site kinds are the ones it advertises; a captured
   Lava Vent pays energy, a captured Ancient Forge discounts research, an Oasis heals.
 * `start_phase_places_everyone_in_their_box`: a click outside the box is refused, a click inside is kept,
-  bots are placed at once, and the timeout places the rest inside their boxes and fires the start.
+  bots are placed at once, and the timeout places the rest inside their boxes and fires the start; placing alone
+  does not end the phase, placing and Ready does.
 
 Realm maps and the garrison (gametest/RealmMapGameTests.java; MapLayout was also checked offline with a harness that
 renders every map to PNG):
