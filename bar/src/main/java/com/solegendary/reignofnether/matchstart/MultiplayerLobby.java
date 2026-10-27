@@ -71,7 +71,7 @@ public class MultiplayerLobby {
         public int colorMapId = 0; // PlayerPalette map colour id, 0 = any free colour
         public int team = 0;
         public boolean ready = false;
-        public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard
+        public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard, 3 passive
         // hero mode (design/hero_mode.md): a human on a team with no base of their own, who plays the team's hero
         // (possession) instead of commanding - HeroRoles attaches them to their team at the start
         public boolean heroRole = false;
@@ -294,7 +294,7 @@ public class MultiplayerLobby {
             }
             case SET_DIFFICULTY -> {
                 Seat s = seat(seatId);
-                if (!host || s == null || !s.bot || value < 0 || value > 2)
+                if (!host || s == null || !s.bot || value < 0 || value > 3)
                     return false;
                 s.difficulty = value;
             }
@@ -324,12 +324,12 @@ public class MultiplayerLobby {
                 metal = value;
             }
             case SET_SPAWNS -> {
-                if (!host || value < 0 || value > 2)
+                if (!host || value < 0 || value > 3)
                     return false;
                 spawnDistance = value;
             }
             case SET_PACE -> {
-                if (!host || value < 0 || value > 2)
+                if (!host || value < 0 || value > 3)
                     return false;
                 pace = value;
             }
@@ -785,6 +785,7 @@ public class MultiplayerLobby {
                 BotPlayer.Difficulty diff = switch (s.difficulty) {
                     case 0 -> BotPlayer.Difficulty.EASY;
                     case 2 -> BotPlayer.Difficulty.HARD;
+                    case 3 -> BotPlayer.Difficulty.PASSIVE;
                     default -> BotPlayer.Difficulty.MEDIUM;
                 };
                 name = BotServerEvents.addBotAt(level, faction, diff, pos, colours.get(s));

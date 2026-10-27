@@ -1281,7 +1281,6 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
         com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
         com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
-        com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 
         for (LivingEntity entity : UnitServerEvents.getAllUnits())
             if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

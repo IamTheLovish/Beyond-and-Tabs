@@ -62,12 +62,14 @@ class BuilderCardUnionTabsTest {
     }
 
     @Test
-    void anUntabbedAbilityKeyClashesInEveryTab() {
+    void anUntabbedAbilityKeyDoesNotTakeAGridKey() {
+        // BAR gridmenu: a grid key is live only in its open tab and then wins over the unit's abilities (BuildTabs.onKey),
+        // so an ability on X does not cost the Defence tab's X cell its key
         List<B> primary = List.of(new B(null, 88, null, -1), new B("farm", 81, "economy", 0));
         List<List<B>> others = List.of(List.of(new B("tower", 88, "defence", 3)));
         List<BuilderCardUnion.Added<B>> added = added(primary, others);
         assertEquals(1, added.size());
-        assertEquals(false, added.get(0).keepsKey());
+        assertEquals(true, added.get(0).keepsKey());
     }
 
     @Test
