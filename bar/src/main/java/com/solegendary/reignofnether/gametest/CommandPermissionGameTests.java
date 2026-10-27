@@ -56,6 +56,9 @@ public class CommandPermissionGameTests {
         OPEN_COMMANDS.put("teammsg", "vanilla: team chat");
         OPEN_COMMANDS.put("tm", "vanilla: team chat (redirect to teammsg)");
         OPEN_COMMANDS.put("trigger", "vanilla: scoreboard triggers a map maker enabled per player");
+        OPEN_COMMANDS.put("test", "vanilla's GameTest harness command: only on development and GameTest servers");
+        // Forge 47: its root has subcommands without a requirement (read-only listings); ours never live under it
+        OPEN_COMMANDS.put("forge", "Forge's own command; not ours to gate");
         // ours: each acts only on the caller's own state, or checks the caller in its body
         OPEN_COMMANDS.put("ally", "alliance request from the caller to a player");
         OPEN_COMMANDS.put("allyconfirm", "the caller accepts an alliance request made to them");
