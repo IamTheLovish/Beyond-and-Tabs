@@ -81,6 +81,15 @@ public class MatchEndClientEvents {
         }
     }
 
+    /** Back to lobby: the decided match is gone, so are its results (and the popup, if it is up). */
+    public static void clearResults() {
+        gameDurationTicks = 0;
+        rows = new ArrayList<>();
+        openDelayTicks = -1;
+        titleHoldTicks = 0;
+        dismiss();
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END) return;
