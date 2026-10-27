@@ -174,6 +174,18 @@ public final class PossessionServer {
         return !BY_UNIT.isEmpty() && BY_UNIT.containsKey(unitId);
     }
 
+    /**
+     * Whether {@code e} is possessed and its possessor holds a walk key (forward/back or strafe) with fresh input: a
+     * possessed unit walked by hand. A knockback while the keys rest is not a walk (lovish, Oct 27: only walking costs
+     * the artillery its set-up).
+     */
+    public static boolean keysHeld(Entity e) {
+        if (e == null || BY_UNIT.isEmpty())
+            return false;
+        Possession p = BY_UNIT.get(e.getId());
+        return p != null && p.ticksSinceInput <= INPUT_STALE_TICKS && (p.forward != 0 || p.strafe != 0);
+    }
+
     /** The possession {@code player} holds, or null. */
     public static Possession of(UUID player) {
         return player == null ? null : BY_PLAYER.get(player);

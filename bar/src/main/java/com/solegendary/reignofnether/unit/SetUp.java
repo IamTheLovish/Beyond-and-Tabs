@@ -15,8 +15,10 @@ import java.util.WeakHashMap;
  * refuse too, for possession and anything that calls them directly.
  * <p>
  * "Moving": navigating with a real step this tick ({@link #STEP}, a walk is 0.1-0.25 a tick; a stalled path is not a
- * move), still sliding from such a walk after the path has ended, or ending up more than {@link #DRIFT} from where it last stood - a possessed unit walked by hand, a teleport.
- * A knockback or a crowd shove smaller than that never costs the set-up: being shot at is not moving.
+ * move), walked by hand while possessed (a step while its possessor holds a walk key), still sliding from such a walk
+ * after it has ended, or ending up more than {@link #DRIFT} from where it last stood over ground - a teleport, a long
+ * shove. A knockback (its flight through the air does not count) or a crowd shove smaller than that never costs the
+ * set-up, possessed or not: being shot at is not moving.
  * <p>
  * Server side, from Unit.tick; one map entry per artillery unit, nothing for anyone else. A unit never ticked yet (just
  * spawned where it stands) counts as set up.
@@ -62,11 +64,21 @@ public final class SetUp {
         // a walk ends when the unit comes to rest, not when its path does: it still slides a few ticks after the
         // navigation finishes, and that slide is part of the walk (a shove while standing still is not). A possessed
         // unit is walked by its player with the navigation idle - by its keys (zza/xxa) or, from a real client, by
-        // the client's position claims, which leave zza/xxa at 0 - so any step while possessed is a walk.
+        // the client's position claims, which leave zza/xxa at 0 - so a step while the possessor holds a walk key is
+        // a walk; a knockback while the keys rest is not (lovish, Oct 27).
         boolean driven = !mob.getNavigation().isDone() || mob.zza != 0 || mob.xxa != 0
-                || com.solegendary.reignofnether.hero.PossessionServer.isPossessed(mob);
+                || com.solegendary.reignofnether.hero.PossessionServer.keysHeld(mob);
         boolean walking = stepping && (driven || s.walking);
         s.walking = walking;
+        // thrown by a hit (off the ground, not walking): the flight carries the anchor along, so a knockback's ~2
+        // blocks through the air never add up to a drift - only ground it is pushed over, or a jump of more than
+        // DRIFT in one tick (a teleport), does
+        if (!walking && !mob.onGround() && sx * sx + sz * sz <= DRIFT * DRIFT) {
+            s.anchorX += sx;
+            s.anchorZ += sz;
+            ax = x - s.anchorX;
+            az = z - s.anchorZ;
+        }
         if (walking || ax * ax + az * az > DRIFT * DRIFT) {
             s.movedAt = mob.level().getGameTime();
             s.anchorX = x;
