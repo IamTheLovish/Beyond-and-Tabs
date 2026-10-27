@@ -2503,6 +2503,8 @@
   "onboarding.reignofnether.controls.build_factory": "Build factories (builder selected; press again to cycle)",
   "onboarding.reignofnether.controls.area_mex": "Area mex: with the extractor ghost out (builder selected, metal key), drag a circle (Shift: add to queue)",
   "onboarding.reignofnether.controls.place": "Place / place a row",
+  "onboarding.reignofnether.controls.build_spacing": "Gap between buildings in a row / grid (while placing; 0-8 blocks, per building)",
+  "hud.reignofnether.build_spacing": "Spacing: %s",
   "onboarding.reignofnether.controls.rotate_ccw": "Rotate building left",
   "onboarding.reignofnether.controls.rotate_cw": "Rotate building right",
   "onboarding.reignofnether.controls.cancel": "Cancel build",

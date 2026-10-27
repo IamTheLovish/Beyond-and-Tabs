@@ -144,6 +144,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("build_factory", Keybindings.buildFactory);
         mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
+        mouse("build_spacing", t("shift") + " + " + t("wheel"));   // BuildingLineClientEvents.onScroll
         bind("rotate_ccw", Keybindings.rotateBuildingCCW);
         bind("rotate_cw", Keybindings.rotateBuildingCW);
         bind("cancel", Keybindings.cancelBuild);
