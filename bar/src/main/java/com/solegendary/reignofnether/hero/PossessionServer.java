@@ -568,10 +568,15 @@ public final class PossessionServer {
             return true;
         if (!(p.level.getEntity(unitId) instanceof Mob mob) || !(mob instanceof AttackerUnit attacker))
             return true;
+        // field artillery still setting up holds the shot, and the click costs no cooldown (SetUp, lovish Oct 24)
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(mob))
+            return true;
         boolean ranged = mob instanceof RangedAttackerUnit;
         float range = attacker.getAttackRange();
         double reach = ranged ? Math.max(range, 4) : Math.max(range, 1.5f) + mob.getBbWidth() * 0.5 + 1.0;
         LivingEntity target = lookTarget(mob, p.yaw, p.pitch, reach, true);
+        if (AttackerUnit.refusesTarget(attacker, target))
+            target = null;   // cannot hit air: no flyer as its target, the shot goes at the spot it aims at
         mob.setYRot(p.yaw);
         mob.setYHeadRot(p.yaw);
         mob.swing(InteractionHand.MAIN_HAND);

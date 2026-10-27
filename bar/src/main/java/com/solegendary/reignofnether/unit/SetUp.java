@@ -60,8 +60,10 @@ public final class SetUp {
         double ax = x - s.anchorX, az = z - s.anchorZ;
         boolean stepping = sx * sx + sz * sz > STEP * STEP;
         // a walk ends when the unit comes to rest, not when its path does: it still slides a few ticks after the
-        // navigation finishes, and that slide is part of the walk (a shove while standing still is not)
-        boolean walking = stepping && (!mob.getNavigation().isDone() || s.walking);
+        // navigation finishes, and that slide is part of the walk (a shove while standing still is not). A possessed
+        // unit walks on its keys (zza/xxa) with the navigation idle, so movement input counts as walking too.
+        boolean driven = !mob.getNavigation().isDone() || mob.zza != 0 || mob.xxa != 0;
+        boolean walking = stepping && (driven || s.walking);
         s.walking = walking;
         if (walking || ax * ax + az * az > DRIFT * DRIFT) {
             s.movedAt = mob.level().getGameTime();
