@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.worldborder.WorldBorderServerEvents;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.Packet;
@@ -876,14 +877,23 @@ public class FogOfWarServerEvents {
     }
 
     // register here too for command blocks
+    // Who may switch fog for the whole match: a player needs op level 4, exactly as FogOfWarServerboundPacket (the
+    // HUD's toggle) asks; a command block or the console needs level 2, as every vanilla admin command. Without this a
+    // joined player could type /rts-fog disable and see the whole map (security audit, Oct 26).
+    static boolean mayToggleFog(CommandSourceStack source) {
+        return source.getEntity() instanceof ServerPlayer ? source.hasPermission(4) : source.hasPermission(2);
+    }
+
     @SubscribeEvent
     public static void onRegisterCommand(RegisterCommandsEvent evt) {
-        evt.getDispatcher().register(Commands.literal("rts-fog").then(Commands.literal("enable")
+        evt.getDispatcher().register(Commands.literal("rts-fog").requires(FogOfWarServerEvents::mayToggleFog)
+                .then(Commands.literal("enable")
                 .executes((command) -> {
                     setEnabled(true);
                     return 1;
                 })));
-        evt.getDispatcher().register(Commands.literal("rts-fog").then(Commands.literal("disable")
+        evt.getDispatcher().register(Commands.literal("rts-fog").requires(FogOfWarServerEvents::mayToggleFog)
+                .then(Commands.literal("disable")
                 .executes((command) -> {
                     setEnabled(false);
                     return 1;

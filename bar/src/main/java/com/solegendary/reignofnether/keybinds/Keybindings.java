@@ -112,6 +112,10 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    // The idle T2 builder and commander buttons beside it. Home / End: no letter, digit or punctuation key was free
+    // (every one is an ability, hotkey, control group or camera key), and nothing else binds them in the RTS view.
+    public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_HOME, CATEGORY_RTS, "Home");
+    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_END,  CATEGORY_RTS, "End");
     // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
@@ -179,6 +183,9 @@ public class Keybindings {
     public static final Keybinding item5 = new Keybinding("key.reignofnether.item5", GLFW.GLFW_KEY_C, CATEGORY_RTS, "C");
     public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "V");
 
+    // cursor diagnostics overlay (cursor/CursorDiagClient); no default key - set one in Controls, or use /rts-cursordiag
+    public static final Keybinding cursorDiag = new Keybinding("key.reignofnether.cursor_diag", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "");
+
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
         new Keybinding("key.reignofnether.control_group_1", GLFW.GLFW_KEY_1, CATEGORY_RTS, "1"),
@@ -220,11 +227,12 @@ public class Keybindings {
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy, returnResources,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
-            item1, item2, item3, item4, item5, item6
+            item1, item2, item3, item4, item5, item6,
+            cursorDiag
         ));
         Collections.addAll(list, buildGrid);
         Collections.addAll(list, nums);
