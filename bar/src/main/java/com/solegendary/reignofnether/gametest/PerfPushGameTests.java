@@ -59,17 +59,79 @@ public class PerfPushGameTests {
             helper.fail("could not create the units");
             return;
         }
+        // the best moment so far (largest closest-pair distance) and when it was: a pile that spread and was pushed back
+        // together reads differently from one that never parted
+        double[] best = { 0 };
+        long[] bestAt = { 0 };
         helper.succeedWhen(() -> {
             double closest = Double.MAX_VALUE;
+            int ci = 0, cj = 1, close = 0;
             for (int i = 0; i < pile.size(); i++)
                 for (int j = i + 1; j < pile.size(); j++) {
                     double dx = pile.get(i).getX() - pile.get(j).getX(), dz = pile.get(i).getZ() - pile.get(j).getZ();
-                    closest = Math.min(closest, Math.sqrt(dx * dx + dz * dz));
+                    double d = Math.sqrt(dx * dx + dz * dz);
+                    if (d < MIN_GAP)
+                        close++;
+                    if (d < closest) {
+                        closest = d;
+                        ci = i;
+                        cj = j;
+                    }
                 }
-            if (closest < 0.45)
-                throw new GameTestAssertException("two units are still " + String.format("%.2f", closest) + " blocks apart (a body is 0.6 wide)");
+            if (closest > best[0]) {
+                best[0] = closest;
+                bestAt[0] = helper.getTick();
+            }
+            if (closest < MIN_GAP)
+                // the Oct 27 flake said only "0.29 apart": the message now carries what would explain a pair that
+                // stays together (an order or target pulling them, off the ground, at rest, a foreign unit in the arena)
+                throw new GameTestAssertException(String.format(java.util.Locale.ROOT,
+                    "two units are still %.2f blocks apart (a body is 0.6 wide); %d pairs under %.2f at tick %d, best %.2f at tick %d; %s | %s | %s",
+                    closest, close, MIN_GAP, helper.getTick(), best[0], bestAt[0],
+                    describe(pile.get(ci), ci), describe(pile.get(cj), cj), surroundings(helper, pile)));
             pile.forEach(VindicatorUnit::discard);
         });
+    }
+
+    static final double MIN_GAP = 0.45;
+
+    /** One pile unit's state, for a failure message. */
+    static String describe(VindicatorUnit v, int index) {
+        Vec3 dm = v.getDeltaMovement();
+        var goal = v.getMoveGoal();
+        return String.format(java.util.Locale.ROOT,
+            "#%d id %d at %.2f %.2f %.2f alive %b ground %b dm %.4f %.4f %.4f target %s move %s hold %b idle %b nav-done %b pushable %b",
+            index, v.getId(), v.getX(), v.getY(), v.getZ(), v.isAlive(), v.onGround(), dm.x, dm.y, dm.z,
+            v.getTarget() == null ? "-" : v.getTarget().getType().toShortString() + "@" + String.format(java.util.Locale.ROOT, "%.1f", v.distanceTo(v.getTarget())),
+            goal == null || goal.getMoveTarget() == null ? "-" : goal.getMoveTarget().toShortString(),
+            v.getHoldPosition(), v.isIdle(), v.getNavigation().isDone(), v.isPushable());
+    }
+
+    /** The other living bodies in or beside the arena (a neighbour test's units, mobs), and the pile's own spread. */
+    static String surroundings(GameTestHelper helper, List<VindicatorUnit> pile) {
+        BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(o.getX() - 8, o.getY() - 2, o.getZ() - 8,
+            o.getX() + 24, o.getY() + 12, o.getZ() + 24);
+        List<String> others = new ArrayList<>();
+        for (net.minecraft.world.entity.LivingEntity le : helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, box)) {
+            if (pile.contains(le))
+                continue;
+            if (others.size() < 6)
+                others.add(le.getType().toShortString() + (le instanceof Unit u ? "(" + u.getOwnerName() + ")" : "")
+                    + String.format(java.util.Locale.ROOT, "@%.1f,%.1f", le.getX() - o.getX(), le.getZ() - o.getZ()));
+            else if (others.size() == 6)
+                others.add("...");
+        }
+        double minX = Double.MAX_VALUE, maxX = -Double.MAX_VALUE, minZ = Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+        int alive = 0;
+        for (VindicatorUnit v : pile) {
+            if (v.isAlive())
+                alive++;
+            minX = Math.min(minX, v.getX()); maxX = Math.max(maxX, v.getX());
+            minZ = Math.min(minZ, v.getZ()); maxZ = Math.max(maxZ, v.getZ());
+        }
+        return String.format(java.util.Locale.ROOT, "pile %d alive, spread %.1f x %.1f; others near: %s",
+            alive, maxX - minX, maxZ - minZ, others.isEmpty() ? "none" : others);
     }
 
     /** Units in a pile each look their neighbours up once a tick through the counted pushScan section. */
