@@ -48,6 +48,9 @@ class KeyConflictsTest {
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_tab_military", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_grid_10", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        // pan-up moved to F, where the order Fight ships: an order key under a moved pan key is flagged too
+        List<KeyConflicts.Overlap> f = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_F));
+        assertTrue(f.contains(new KeyConflicts.Overlap("key.reignofnether.fight", "key.reignofnether.pan_up", GLFW.GLFW_KEY_F)), f.toString());
     }
 
     @Test

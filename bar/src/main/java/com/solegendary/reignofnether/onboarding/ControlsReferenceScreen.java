@@ -92,8 +92,12 @@ public class ControlsReferenceScreen extends Screen {
         bind("last_alert", Keybindings.lastAlert);
         bind("overview", Keybindings.overview);
         bind("idle_worker", Keybindings.idleWorker);
+        // keybinds/ChordKeys: BAR Legacy's fixed Ctrl chords (HudClientEvents.onKeyRelease)
+        mouse("idle_builder_ctrl_b", t("ctrl") + " + B");
+        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + B");
+        mouse("select_commander_ctrl_c", t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
-        mouse("select_army_ctrl_w", t("ctrl") + " + W");   // HudClientEvents: hardcoded Ctrl+W, BAR's army key
+        mouse("select_army_ctrl_w", t("ctrl") + " + W");
         mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
         bind("return_resources", Keybindings.returnResources);
 
@@ -119,6 +123,9 @@ public class ControlsReferenceScreen extends Screen {
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
         mouse("remove", t("ctrl") + " + " + t("left_click"));
+        mouse("select_all_units_ctrl_a", t("ctrl") + " + A");
+        mouse("select_same_type_ctrl_z", t("ctrl") + " + Z");
+        mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
         bind("cycle", Keybindings.tab);
         mouse("groups", t("ctrl") + " + 0-9  /  0-9");
@@ -168,7 +175,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("minimap", Keybindings.minimapToggle);
         bind("chat", Keybindings.chat);
         bind("command_bar", Keybindings.commandBar);
-        mouse("menu", "Esc");
+        mouse("menu", t("shift") + " + Esc");   // guiscreen/PauseFlow: plain Esc cancels (esc_cancel above)
     }
 
     private int panelW() {

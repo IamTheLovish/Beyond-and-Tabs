@@ -130,6 +130,66 @@ public class HelperButtons {
             OrthoviewClientEvents.centreCameraOnPos(commander.position());
     }
 
+    /** BAR Legacy's Ctrl+C (selectcomm focus): select the commander and centre the camera on it, every press. */
+    public static void selectCommanderAndFocus() {
+        LivingEntity commander = UnitClientEvents.getOwnCommander();
+        if (commander == null)
+            return;
+        lastCommanderPressMs = System.currentTimeMillis();
+        UnitClientEvents.clearSelectedUnits();
+        BuildingClientEvents.clearSelectedBuildings();
+        UnitClientEvents.addSelectedUnit(commander);
+        OrthoviewClientEvents.centreCameraOnPos(commander.position());
+    }
+
+    /** Every own unit on the map that can take an order now (not garrisoned); buildings never. */
+    private static List<LivingEntity> ownFreeUnits() {
+        List<LivingEntity> out = new ArrayList<>();
+        for (LivingEntity u : UnitClientEvents.getAllUnits())
+            if (u instanceof Unit unit && u.isAlive()
+                    && GarrisonableBuildingAddon.getGarrison(unit) == null
+                    && getPlayerToEntityRelationship(u) == Relationship.OWNED)
+                out.add(u);
+        return out;
+    }
+
+    private static void replaceSelection(List<LivingEntity> units) {
+        if (units.isEmpty())
+            return;
+        UnitClientEvents.clearSelectedUnits();
+        BuildingClientEvents.clearSelectedBuildings();
+        for (LivingEntity u : units)
+            UnitClientEvents.addSelectedUnit(u);
+        HudClientEvents.setLowestCdHudEntity();
+    }
+
+    /** BAR's Ctrl+A: select every own unit on the map (no buildings). */
+    public static void selectAllUnits() {
+        replaceSelection(ownFreeUnits());
+    }
+
+    /** BAR's Ctrl+Z: select every own unit on the map of the selected units' type(s); nothing selected, nothing. */
+    public static void selectSameTypeOnMap() {
+        replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.sameTypes(
+            ownFreeUnits(), new ArrayList<>(UnitClientEvents.getSelectedUnits()), LivingEntity::getType));
+    }
+
+    /** Runs a Ctrl chord (keybinds/ChordKeys); false for NONE so the key goes on to its other meanings. */
+    public static boolean runChord(com.solegendary.reignofnether.keybinds.ChordKeys.Chord chord) {
+        switch (chord) {
+            case SELECT_ARMY -> selectWholeArmy();
+            case SELECT_COMMANDER -> selectCommanderAndFocus();
+            case IDLE_BUILDER -> cycleIdleWorker(false);
+            case IDLE_T2_BUILDER -> cycleIdleT2Builder(false);
+            case SELECT_ALL_UNITS -> selectAllUnits();
+            case SELECT_SAME_TYPE -> selectSameTypeOnMap();
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static int commanderHealthPercent() {
         LivingEntity c = UnitClientEvents.getOwnCommander();
         return c == null ? 0 : IdleButtons.healthPercent(c.getHealth(), c.getMaxHealth());

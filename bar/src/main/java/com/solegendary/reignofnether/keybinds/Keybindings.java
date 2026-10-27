@@ -112,10 +112,13 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
-    // The idle T2 builder and commander buttons beside it. Home / End: no letter, digit or punctuation key was free
-    // (every one is an ability, hotkey, control group or camera key), and nothing else binds them in the RTS view.
-    public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_HOME, CATEGORY_RTS, "Home");
-    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_END,  CATEGORY_RTS, "End");
+    // The idle T2 builder and commander buttons beside it run on fixed Ctrl chords (ChordKeys, BAR's Legacy profile):
+    // Ctrl+C selects the commander and centres on it (selectcomm focus), Ctrl+Shift+B cycles the idle T2 builders
+    // (Ctrl+B, BAR's idle builder, is the idle-worker cycle). They used to sit on Home / End, which the production
+    // monitor (Home) and pause unit production (End, #228) took, so their own keys start unbound (Controls to add one;
+    // KeybindMigration layout 2 frees a saved Home / End). The button corner shows the chord while unbound.
+    public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "").withChord(ChordKeys.Chord.IDLE_T2_BUILDER);
+    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "").withChord(ChordKeys.Chord.SELECT_COMMANDER);
     // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
@@ -127,7 +130,8 @@ public class Keybindings {
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
     // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
-    // (KeybindMigration, layout 1) - #39 changed only this default, so lovish's card still read "A" until then.
+    // (KeybindMigration, layout 1). Oct 26: kept on X (BAR Legacy has A, but #39 took it off A on purpose: a hold of A
+    // waited before panning).
     // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
     // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, S stop, M move, H hold,
     // P patrol, G guard (BAR's Attack is A, which is camera pan-left here). S is also WASD panning: a TAP
@@ -181,7 +185,7 @@ public class Keybindings {
     public static final Keybinding item3 = new Keybinding("key.reignofnether.item3", GLFW.GLFW_KEY_F, CATEGORY_RTS, "F");
     public static final Keybinding item4 = new Keybinding("key.reignofnether.item4", GLFW.GLFW_KEY_G, CATEGORY_RTS, "G");
     public static final Keybinding item5 = new Keybinding("key.reignofnether.item5", GLFW.GLFW_KEY_C, CATEGORY_RTS, "C");
-    public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "V");
+    public static final Keybinding item6 = new Keybinding("key.reignofnether.item6", GLFW.GLFW_KEY_B, CATEGORY_RTS, "B");
 
     // cursor diagnostics overlay (cursor/CursorDiagClient); no default key - set one in Controls, or use /rts-cursordiag
     public static final Keybinding cursorDiag = new Keybinding("key.reignofnether.cursor_diag", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "");

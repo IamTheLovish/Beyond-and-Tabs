@@ -2331,13 +2331,21 @@ public class HudClientEvents {
         // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
         // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
         int key = evt.getKeyCode();
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press the camera panned
-        // for, or one held past a tap once frame lag is allowed for, was a pan, not an order (keybinds/KeyTapTracker)
-        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
-            return;
         // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
         // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
+            return;
+        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
+        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
+        // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
+        if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
+                com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
+                    net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
+            return;
+        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
+        // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
+        // (keybinds/KeyTapTracker)
+        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
             return;
         // BAR queue edits: N / Ctrl+N skip / cancel-last, and a Space that inserted an order (QueueEditKeys)
         if (com.solegendary.reignofnether.unit.QueueEditClientEvents.onKeyRelease(key))
@@ -2352,12 +2360,7 @@ public class HudClientEvents {
         // grid keys Q W E R / A S D F / Z X C V pick a building; both win over the card's other buttons on those keys
         if (BuildTabs.onKey(key))
             return;
-        // BAR's Ctrl+W: select the whole army ("-" stays the card's own key for it)
-        if (key == GLFW.GLFW_KEY_W && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
-                && OrthoviewClientEvents.isEnabled()) {
-            com.solegendary.reignofnether.hud.buttons.HelperButtons.selectWholeArmy();
-            return;
-        }
+        // (BAR's Ctrl+W, select the whole army, is a ChordKeys chord above; "-" stays the card's own key for it)
         // BAR's Ctrl+G: factory guard on the selected factories (only factories selected; G alone keeps its meaning)
         if (key == GLFW.GLFW_KEY_G && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
                 && OrthoviewClientEvents.isEnabled() && ProductionHudLogic.ctrlGToggles(getSelectedUnits().size(),
