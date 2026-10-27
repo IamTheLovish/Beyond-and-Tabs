@@ -185,6 +185,95 @@ public final class CommandQueues {
         return full;
     }
 
+    // ------------------------------------------------------------------ editing the queue (BAR N / Ctrl+N)
+
+    /**
+     * BAR's command_skip_current (N): each unit drops the order it is carrying out and starts its next one now. A
+     * builder's next site in its build queue (BuildRepairGoal.queuedBuildings, which runs before any order waiting
+     * here: the builder is busy until its sites are done) comes first; then the next order in this queue; a unit with
+     * nothing queued stops, exactly as after Stop. Units the owner may not command are left alone.
+     */
+    public static void skipCurrent(ServerLevel level, @Nullable String owner, int[] unitIds) {
+        if (level == null || unitIds == null)
+            return;
+        long now = level.getGameTime();
+        boolean sandbox = UnitActionItem.isSandboxOwner(level, owner);
+        int[] stop = new int[unitIds.length];
+        int n = 0;
+        for (int id : unitIds) {
+            Entity e = level.getEntity(id);
+            if (!(e instanceof Unit unit) || !(e instanceof LivingEntity le)
+                    || !UnitActionItem.mayCommand(level, owner, unit, sandbox))
+                continue;
+            if (e instanceof WorkerUnit wu && skipBuildSite(wu))
+                continue;
+            CommandQueue q = get(id);
+            if (q != null && !q.isEmpty()) {
+                // the order being dropped ends here, whatever kind it is (an ability order may not reset on its own)
+                Unit.fullResetBehaviours(unit);
+                UnitServerEvents.cancelQueuedFormationMove(id);
+                PatrolServerEvents.clear(id);
+                GuardServerEvents.clear(id);
+                if (startNext(level, q, now))
+                    continue;
+            }
+            stop[n++] = id;
+        }
+        if (n > 0)
+            issue(level, owner, UnitAction.STOP, -1, Arrays.copyOf(stop, n), BlockPos.ZERO, BlockPos.ZERO, QueueMode.REPLACE);
+    }
+
+    /**
+     * BAR's command_cancel_last (Ctrl+N): each unit drops the LAST order in its queue - the newest order waiting here,
+     * else a builder's last queued site, else (nothing queued) the order it is carrying out, as {@link #skipCurrent}.
+     */
+    public static void cancelLast(ServerLevel level, @Nullable String owner, int[] unitIds) {
+        if (level == null || unitIds == null)
+            return;
+        boolean sandbox = UnitActionItem.isSandboxOwner(level, owner);
+        int[] current = new int[unitIds.length];
+        int n = 0;
+        for (int id : unitIds) {
+            Entity e = level.getEntity(id);
+            if (!(e instanceof Unit unit) || !(e instanceof LivingEntity)
+                    || !UnitActionItem.mayCommand(level, owner, unit, sandbox))
+                continue;
+            CommandQueue q = get(id);
+            if (q != null && q.pollLast() != null)
+                continue;   // an emptied queue is dropped from the executor's list on its next pass
+            if (e instanceof WorkerUnit wu && dropLastBuildSite(wu))
+                continue;
+            current[n++] = id;
+        }
+        if (n > 0)
+            skipCurrent(level, owner, Arrays.copyOf(current, n));
+    }
+
+    /** A builder on a site with more sites queued: drops the current site and starts the next; false otherwise. */
+    private static boolean skipBuildSite(WorkerUnit wu) {
+        var brg = wu.getBuildRepairGoal();
+        if (brg == null || brg.getBuildingTarget() == null)
+            return false;
+        var cur = brg.getBuildingTarget();
+        brg.queuedBuildings.remove(cur);
+        if (brg.queuedBuildings.isEmpty())
+            return false;
+        return brg.startNextQueuedBuilding();
+    }
+
+    /** Drops the last queued site that is not the one being built; false if there is none. */
+    private static boolean dropLastBuildSite(WorkerUnit wu) {
+        var brg = wu.getBuildRepairGoal();
+        if (brg == null)
+            return false;
+        for (int i = brg.queuedBuildings.size() - 1; i >= 0; i--)
+            if (brg.queuedBuildings.get(i) != brg.getBuildingTarget()) {
+                brg.queuedBuildings.remove(i);
+                return true;
+            }
+        return false;
+    }
+
     /**
      * Puts an order the server adds by itself at the head of the unit's queue, past the cap (a hunting worker's
      * drop-off, UnitActionItem): it runs once the unit finishes what it is doing. Server thread only.

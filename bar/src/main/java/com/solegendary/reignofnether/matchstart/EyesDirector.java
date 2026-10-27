@@ -314,8 +314,8 @@ public final class EyesDirector {
      * (01b-01d) - the camera is put over our slot first, since the server's own cut there (StartPhase.begin) landed
      * 12 s after the phase in the plain run and 01b-01d photographed the map's unlit centre; then the bot's pillar from
      * the ground in the Minecraft view, 20 blocks away (01f; bots are placed at once, so nothing has to end for it);
-     * then our start placed at our slot - its pillar, disc and capitol ghost (01e) - LAST, because placing ends the
-     * phase three seconds later (StartPhase.EARLY_END_TICKS). Placing at the slot is where the clock would have seated
+     * then our start placed at our slot - its pillar, disc and capitol ghost (01e) - LAST, because placing and pressing
+     * Ready (both sent together) ends the phase three seconds later (StartPhase.EARLY_END_TICKS). Placing at the slot is where the clock would have seated
      * us, so the later scenes see the same seating as before. The RTS view and HUD are then restored and {@code ticks}
      * reset, so 02 still reads "0:30" after the seating. Every still logs the banner's seconds and the markers' state.
      * Nothing here is a hard failure: a phase that never shows, or ends under the scene, is logged and the tour goes on.
@@ -404,6 +404,8 @@ public final class EyesDirector {
                         return;
                     }
                     com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.send(startX, startZ);
+                    // placing no longer starts the match (the Ready rule): Ready right behind it, in packet order
+                    com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.sendReady(true);
                     boxesPlaced = true;
                     ReignOfNether.LOGGER.info("[Eyes] 01e: start placed at {}, {} with {} s left; the phase ends 3 s later", startX, startZ, left);
                 }

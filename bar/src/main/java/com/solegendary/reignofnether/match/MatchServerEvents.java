@@ -89,6 +89,7 @@ public class MatchServerEvents {
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onServerStarted(ServerStartedEvent evt) {
         MatchLifecycleSaveData.onServerStarted(evt.getServer());
+        BattlefieldJournal.onServerStarted(evt.getServer());   // a journal saved mid-match records again
     }
 
     // HIGHEST: before MapBuilder, StartPhase, MapMatch and the lobby clear their statics in their own handlers
@@ -101,6 +102,7 @@ public class MatchServerEvents {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onServerStoppingClear(ServerStoppingEvent evt) {
         MatchPrep.dropLive();
+        BattlefieldJournal.onServerStopping();
         MatchState.replaceLive(new MatchState(MapMatch.EFFECTS));
     }
 }

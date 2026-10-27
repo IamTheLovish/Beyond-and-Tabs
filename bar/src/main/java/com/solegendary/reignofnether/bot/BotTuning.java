@@ -42,29 +42,32 @@ public record BotTuning(int t2Minute, int t3Minute,
                         float retreatRatio, long raidCooldownTicks, int raidSize, long scoutEveryTicks,
                         int blindAttackMinute, int defendValue, int t2MinArmy) {
 
-    public static final BotTuning EASY = new BotTuning(8, 99,
+    public static final BotTuning EASY = new BotTuning(9, 99,
         5, 0, 0f, 10,
         1, 1, 6, 3, 2,
         600, 30, 1500, 20 * 240,
         0f, 0, 0, 0,
         6, 150, 4);
 
-    public static final BotTuning MEDIUM = new BotTuning(6, 14,
+    public static final BotTuning MEDIUM = new BotTuning(7, 14,
         7, 1, 3f, 20,
         2, 1, 4, 6, 2,
         900, 50, 2600, 20 * 170,
         2.0f, 20 * 150, 3, 20 * 180,
         6, 150, 6);
 
-    public static final BotTuning HARD = new BotTuning(4, 11,
+    public static final BotTuning HARD = new BotTuning(5, 11,
         9, 2, 2f, 36,
         3, 2, 3, 12, 3,
         1100, 70, 3800, 20 * 100,
         1.8f, 20 * 90, 4, 20 * 120,
         6, 180, 8);
 
+    /** Passive: Easy's economy; BotArmy never sends a wave, raid, scout or site squad whatever these numbers say. */
+    public static final BotTuning PASSIVE = EASY;
+
     public static BotTuning of(BotPlayer.Difficulty difficulty) {
-        return switch (difficulty) { case EASY -> EASY; case MEDIUM -> MEDIUM; case HARD -> HARD; };
+        return switch (difficulty) { case EASY -> EASY; case MEDIUM -> MEDIUM; case HARD -> HARD; case PASSIVE -> PASSIVE; };
     }
 
     /** The army metal value a wave waits for at this minute of the match. */
