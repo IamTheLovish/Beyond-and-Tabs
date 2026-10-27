@@ -424,7 +424,7 @@ public class ArtilleryGameTests {
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void possessed_artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
-        possessedSetUpTest(helper, "keys", false);
+        possessedSetUpTest(helper, "keys", false, false);
     }
 
     /**
@@ -434,10 +434,26 @@ public class ArtilleryGameTests {
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void possessed_artillery_driven_by_a_client_needs_two_seconds_to_set_up(GameTestHelper helper) {
-        possessedSetUpTest(helper, "claims", true);
+        possessedSetUpTest(helper, "claims", true, false);
     }
 
-    static void possessedSetUpTest(GameTestHelper helper, String tag, boolean claims) {
+    /**
+     * Knocked back while its player stands still (lovish, Oct 27: "only my walking" costs the set-up, as for the AI
+     * crew): a hit 10 ticks after it stopped, pushing it back toward where it came from, does not restart the 2 s - it
+     * still fires on the same schedule. Keys-driven: the server moves it.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_possessed_crew_knocked_back_while_standing_keeps_its_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "knock", false, true);
+    }
+
+    /** The same from a real client: its prediction carries the knockback, so the claims slide it with the keys up. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_possessed_from_a_client_knocked_back_keeps_its_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "knockclaims", true, true);
+    }
+
+    static void possessedSetUpTest(GameTestHelper helper, String tag, boolean claims, boolean knock) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -506,8 +522,15 @@ public class ArtilleryGameTests {
                 throw new GameTestAssertException(String.format("walked %.2f blocks: past the 1.5-block drift, so "
                     + "the test no longer checks a short possessed walk", moved));
             }
-            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
             int since = tick[0] - stoppedAt[0];
+            if (knock && since == 10 && !claims)
+                b.knockback(0.4, 1, 0);   // a hit from the east: pushed back west, toward where it started
+            if (knock && claims && since >= 10 && since < 14) {   // the client's prediction of that knockback
+                double[] slide = { 0.30, 0.16, 0.09, 0.05 };
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX() - slide[since - 10], b.getY(), b.getZ(), ++seq[0]);
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
             if (shells > 0) {
                 cleanUp.run();
                 if (since < SET_UP - 2)
