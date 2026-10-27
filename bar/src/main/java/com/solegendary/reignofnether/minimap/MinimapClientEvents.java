@@ -1701,7 +1701,13 @@ public class MinimapClientEvents {
         long t0 = System.nanoTime();
 
         updateMapTerrain(terrainPartition, darkTerrainPartition);
-        mapColoursOverlays = new int[worldRadius * 2][worldRadius * 2];
+        // cleared in place: a fresh int[480][480] every client tick was ~0.9 MB of garbage per tick (~18 MB/s) at
+        // the large map. A new one only when the map size changed (toggleMapSize also reallocates).
+        if (mapColoursOverlays.length != worldRadius * 2 || mapColoursOverlays[0].length != worldRadius * 2)
+            mapColoursOverlays = new int[worldRadius * 2][worldRadius * 2];
+        else
+            for (int[] column : mapColoursOverlays)
+                java.util.Arrays.fill(column, 0);
         if (BlockClientEvents.nightCircleMode != NightCircleMode.OFF)
             updateNightCircles();
         

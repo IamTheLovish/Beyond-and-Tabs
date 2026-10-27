@@ -11,12 +11,9 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
-import com.solegendary.reignofnether.building.buildings.villagers.IronGolemBuilding;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.entities.BlazeUnitFireball;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.entities.WindcallerProjectile;
@@ -252,6 +249,7 @@ public class UnitServerEvents {
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
             return;
+        knockbackIgnoreIds.clear();   // marks live for their own hit's call stack only (see the field)
         saveTicks += 1;
         // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
         if (evt.getServer().getTickCount() % 20 == 0) {
@@ -381,19 +379,12 @@ public class UnitServerEvents {
         }
     }
 
+    private static final QueuePopulation queuePopulation = new QueuePopulation();
+
     public static int getCurrentPopulation(String ownerName) {
-        int currentPopulation = getUnitPopulation(ownerName);
-        for (BuildingPlacement building : BuildingServerEvents.getBuildings())
-            if (building.ownerName.equals(ownerName)) {
-                if (building instanceof ProductionPlacement prodPlacement) {
-                    for (ActiveProduction prodItem : prodPlacement.productionQueue)
-                        if (!(prodPlacement instanceof GraveyardPlacement gy) || gy.getUpgradeLevel() <= 0)
-                            currentPopulation += prodItem.item.getCost(false, ownerName).population;
-                } else if (building.getBuilding() instanceof IronGolemBuilding) {
-                    currentPopulation += ResourceCosts.IRON_GOLEM.population;
-                }
-            }
-        return currentPopulation;
+        // the queue part is memoised per owner per tick too (QueuePopulation: any queue change recounts at once)
+        return getUnitPopulation(ownerName) + queuePopulation.of(ownerName, BuildingServerEvents.getBuildings(), false,
+            serverLevel != null ? serverLevel.getGameTime() : 0, serverLevel != null);
     }
 
     // manually provide all the variables required to do unit actions
@@ -1317,7 +1308,12 @@ public class UnitServerEvents {
 
     private static float KNOCKBACK_RESIST_PER_TICKS = 0.01f;
 
-    public static ArrayList<Integer> knockbackIgnoreIds = new ArrayList<>();
+    // Entities hit by something that must not knock them back (shouldIgnoreKnockback): the knockback that follows the
+    // hit in the same hurt() call is cancelled and takes the mark. A hit with no knockback after it (an arrow with no
+    // shooter, or a target whose knockback an earlier branch cancels) left its id in the old list forever, and every
+    // knockback paid a removeIf over the leak. A hit and its knockback are one call stack, so the set is emptied at
+    // the end of every server tick (onServerTick) and a lookup is O(1).
+    public static final it.unimi.dsi.fastutil.ints.IntOpenHashSet knockbackIgnoreIds = new it.unimi.dsi.fastutil.ints.IntOpenHashSet();
     public static ArrayList<Pair<Integer, Integer>> knockbackResistIds = new ArrayList<>();
 
     @SubscribeEvent
@@ -1330,7 +1326,7 @@ public class UnitServerEvents {
             evt.setCanceled(true);
         else if (evt.getEntity() instanceof BruteUnit bruteUnit && bruteUnit.isHoldingUpShield())
             evt.setCanceled(true);
-        else if (knockbackIgnoreIds.removeIf(i -> i == evt.getEntity().getId()))
+        else if (knockbackIgnoreIds.remove(evt.getEntity().getId()))
             evt.setCanceled(true);
     }
 
