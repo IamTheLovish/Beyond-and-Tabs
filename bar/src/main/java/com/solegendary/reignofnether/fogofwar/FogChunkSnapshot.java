@@ -356,6 +356,7 @@ public class FogChunkSnapshot {
     // build the packet now (that is the snapshot) and hand it to the writer
     private static ClientboundLevelChunkWithLightPacket captureNow(LevelChunk chunk) {
         ChunkPos pos = chunk.getPos();
+        createPendingBlockEntities(chunk);
         ClientboundLevelChunkWithLightPacket packet =
                 new ClientboundLevelChunkWithLightPacket(chunk, captureLevel.getLightEngine(), null, null);
         if (pending.remove(pos)) capturedCount++;
@@ -369,6 +370,22 @@ public class FogChunkSnapshot {
             unwritten.remove(pos, packet);
         });
         return packet;
+    }
+
+    /**
+     * Creates the block entities {@code chunk} still holds only as pending tags, so its packet lists them. A chunk
+     * loaded at level 33 (FULL, not ticking: the capture's own ticket) keeps those its features placed (a DUMMY tag
+     * from WorldGenRegion) pending until the first getBlockEntity of their position: vanilla's background save
+     * (ChunkMap.processUnloads -> saveChunkIfNeeded -> getBlockEntityNbtForSaving) or postProcessGeneration when the
+     * chunk turns ticking, which runs before vanilla ever sends a chunk to a player. The packet lists only created
+     * block entities, so without this the snapshot's depended on whether the save had reached the chunk yet (main run
+     * 40456368179: "reference only" block entities). Creating them is what that save does anyway.
+     */
+    static void createPendingBlockEntities(LevelChunk chunk) {
+        var created = chunk.getBlockEntities();
+        for (var p : chunk.getBlockEntitiesPos())   // a fresh set: pending and created positions
+            if (!created.containsKey(p))
+                chunk.getBlockEntity(p);
     }
 
     /** LevelChunkMixin, before a block of a loaded chunk changes: a chunk still waiting is captured first. */
