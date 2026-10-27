@@ -639,6 +639,12 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::handle)
                 .add();
+        // BAR queue edits (unit/command/QueueEditKeys): N skips the current order, Ctrl+N cancels the last one
+        register(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::handle)
+                .add();
 
         // a packet registered with INSTANCE.messageBuilder directly would be missing from the hash: two jars that
         // differ in it would connect again. Fail at startup (every GameTest run) instead.

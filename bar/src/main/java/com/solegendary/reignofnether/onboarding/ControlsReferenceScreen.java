@@ -134,6 +134,10 @@ public class ControlsReferenceScreen extends Screen {
         bind("patrol", Keybindings.patrol);
         bind("guard", Keybindings.guard);
         mouse("queue", t("shift") + " + " + t("any_order"));
+        // BAR queue editing (unit/command/QueueEditKeys): Space (or Ctrl) + order inserts, N skips, Ctrl+N cancels last
+        mouse("queue_insert", k(Keybindings.queueInsert) + " / " + t("ctrl") + " + " + t("any_order"));
+        bind("queue_skip", Keybindings.queueSkip);
+        mouse("queue_cancel_last", t("ctrl") + " + " + k(Keybindings.queueSkip));
         mouse("area", t("ctrl") + " + " + t("right_drag"));
 
         header("h_build");
