@@ -169,3 +169,37 @@ Ideas and technique only - no assets (AGENTS.md section 2).
 | Mount & Blade II: Bannerlord | Directional attacks and reactions at army scale; formation sandbox for tuning | Stiff idles; little secondary motion on foot |
 | League of Legends | Silhouette-first motion that reads from far; idle variants; cosmetic layers that fail to plain | Not realistic; a few units on screen |
 | Warcraft III | RTS fidget banks ("Stand 2/3/4") at RTS zoom - the original living army | Units in step; clips identical per unit |
+
+## 8. Round 1 as built (Oct 27 2026, overnight)
+
+PRs: #277 (this spec + `design/living_army_plan.md`), #278 slice 1 (springs, zoom gain, de-sync), #279 slice 2 (shared
+motion state), #280 slice 3 (parade ground), #281 slice 4 (motion pass), #282 slice 5 (fidgets, glances), #283 slice 6
+(every family); an independent review of 4-6 found sign, rig and clock bugs, fixed tests-first on those branches.
+Measured on the CI bench: the tick 0.10 us a unit, the motion pass 0.26 us a unit, 0 bytes allocated
+by either (budgets 1 and 3 us). Checked in game on lovish's PC (real client, Complementary Reimagined shaders,
+`/parade` on a flat world, ~150 units on screen): no broken poses through the loop, 63-64 fps with the living army
+on against 64-66 off - noise. The CI eyes harness could not take this check (it stalls on Supplementaries' welcome
+screen on main itself).
+
+Where the build differs from the text above, and why:
+- **Hit direction comes from the damage event, not `hurtDir`.** Vanilla 1.20.1 sets `hurtDir` for players only (the
+  camera tilt); on a unit it is stale. The client's damage event (`LivingEntity.handleDamageEvent`) carries the
+  source's position, so `mixin/LivingEntityDamageMotionMixin` stamps the direction from that.
+- **`/parade` defaults to one unit a type.** A 3x3 block of all 152 unit types is ~1,370 units, more than a PC holds
+  at a usable frame rate; `/parade 3` gives the spec's blocks.
+- **The A/B switch is Numpad 0 or the client command `/livingarmy on|off`** (F8 is fog of war / spectator; a client
+  command needs no packet, so the feature stays client-only).
+- **Idle neighbours start together in under 2% of starts**, not "never": independent per-unit seeds cannot promise
+  never, and the test measures it.
+- **A player body's jacket, sleeves and trouser legs, and a humanoid's hat, follow their limb after the pass**
+  (vanilla copies them inside setupAnim, before it).
+- **Keyframe units and our generated rigs are hierarchical**: their body bends about its own pivot and the head and
+  arms follow as its children - only where the head is in the body's subtree and no leg is. Where it is not (the
+  Royal Guard's head and arms are the body's siblings; a generated rig's `body` is its pelvis, carrying the legs) the
+  torso is left to the rig's clips and the unit flinches with its head and staggers with its whole body. Rigs that
+  breathe by themselves get no second breath.
+- **A hanging limb's RX/RZ swing its free end** (the hand or foot forward / to the right), so the weight shift tilts
+  the legs against the hips (the feet stay planted) and the arms splay out of a turn.
+- **The idle schedule re-seeds when a unit's clock goes back**: a unit that leaves tracking and returns within the
+  100 ticks its slot is kept is a new entity object with `tickCount` from 0.
+- **The Bone Dragon is left out** while PR #145 reworks it; the bison breathes on the shared exertion.
