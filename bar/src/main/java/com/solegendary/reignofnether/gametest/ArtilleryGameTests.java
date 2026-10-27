@@ -463,7 +463,7 @@ public class ArtilleryGameTests {
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void a_crew_hopped_by_keyless_client_claims_must_set_up_again(GameTestHelper helper) {
-        keylessHopTest(helper, "hop", false);
+        keylessHopTest(helper, "hop", false, false);
     }
 
     /**
@@ -472,10 +472,19 @@ public class ArtilleryGameTests {
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void a_crew_hopped_after_a_faked_sprint_jump_must_set_up_again(GameTestHelper helper) {
-        keylessHopTest(helper, "sjhop", true);
+        keylessHopTest(helper, "sjhop", true, false);
     }
 
-    static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst) {
+    /**
+     * The same after a real run with the keys and one claim with no step (round-6 review of #222): the keys run's own
+     * momentum is no shove the server gave, so the keyless hops that follow still cost the set-up.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_after_a_keys_run_must_set_up_again(GameTestHelper helper) {
+        keylessHopTest(helper, "keyshop", false, true);
+    }
+
+    static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -510,18 +519,36 @@ public class ArtilleryGameTests {
         // with sprintJumpFirst each hop is led by one forward + sprint + jump claim where it stands (no step) and
         // followed by 6 ticks with no claim, in which the server lands it (the boost needs the unit on the ground)
         int lead = sprintJumpFirst ? 1 : 0, rest = sprintJumpFirst ? 6 : 0, cycle = lead + arc.length + rest;
-        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * cycle - rest;   // ends with the last hop's landing
+        // with keysRunFirst it first runs east by its keys (sprinting, no claims) and the hops start from where one
+        // claim with no step stops it
+        // (a sprint-jump at its end: the most momentum keys can give it); one hop of 0.2 a tick, past the 1.5-block
+        // drift, fits in what that momentum would open
+        int hops = keysRunFirst ? 1 : 3, hopFrom = keysRunFirst ? 16 : 10, hopEnd = hopFrom + hops * cycle - rest;
+        double pace = keysRunFirst ? 0.2 : 0.12, minMoved = keysRunFirst ? 1.5 : 2.0;
         int[] tick = { 0 }, seq = { 0 };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])
                 return;
             tick[0]++;
             int t = tick[0];
+            if (keysRunFirst && t < hopFrom - 1) {
+                com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), 1, 0, -90, 10,
+                    t == hopFrom - 3, false, true);
+                return;
+            }
+            if (keysRunFirst && t == hopFrom - 1) {   // one claim with no step: where the run has carried it
+                base[0] = b.getX();
+                base[1] = b.getY();
+                base[2] = b.getZ();
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, base[0], base[1], base[2], ++seq[0]);
+                return;
+            }
             if (t >= hopFrom && t < hopEnd) {
                 int hop = (t - hopFrom) / cycle, phase = (t - hopFrom) % cycle - lead;
                 if (phase >= arc.length)
                     return;
-                double x = base[0] + 0.12 * (hop * arc.length + phase + 1);
+                double x = base[0] + pace * (hop * arc.length + phase + 1);
                 if (phase < 0)
                     com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 1, 0, -90, 10,
                         true, false, true, x, base[1] - 0.1, base[2], ++seq[0]);
@@ -535,7 +562,7 @@ public class ArtilleryGameTests {
             int since = t - hopEnd;
             if (since == 0) {
                 double moved = Math.hypot(b.getX() - base[0], b.getZ() - base[2]);
-                if (moved < 2.0) {
+                if (moved < minMoved) {
                     cleanUp.run();
                     throw new GameTestAssertException(String.format("the hops were refused (moved %.2f): the test no "
                         + "longer checks a hop past the 1.5-block drift", moved));
