@@ -1,0 +1,67 @@
+[10:24:14] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[10:24:16] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[10:24:16] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[10:24:16] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[10:24:16] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[10:24:22] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[10:24:23] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[10:24:30] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[10:24:40] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[10:24:41] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[10:25:15] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[10:25:45] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[10:26:15] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[10:26:15] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793096775736
+[10:26:15] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[10:26:19] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793096779791
+[10:26:19] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/VNR, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[10:26:20] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[10:26:21] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[10:26:33] [Netty Local Client IO #0/ERROR]: Channels [reignofnether:main] rejected their server side version number
+[10:26:33] [Netty Local Client IO #0/ERROR]: Terminating connection with server, mismatched mod list
+[10:26:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:27:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:27:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:28:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:28:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:29:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:29:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:30:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:30:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:31:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:31:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:32:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:32:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:33:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:33:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:34:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:34:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:35:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:35:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:36:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:36:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:37:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:37:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:38:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:38:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:39:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:39:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:40:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:40:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:41:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:41:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:42:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:42:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:43:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:43:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:44:29] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:44:59] [Render thread/INFO]: [Eyes] step 1 screen net.minecraftforge.client.gui.ModMismatchDisconnectedScreen level false
+[10:44:59] [Render thread/ERROR]: [Eyes] gave up at step 1
