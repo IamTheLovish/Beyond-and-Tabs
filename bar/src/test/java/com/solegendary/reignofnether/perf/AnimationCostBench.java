@@ -274,6 +274,57 @@ class AnimationCostBench {
         assertTrue(countVertices(hal, pose) == whole, "a pruned pass leaves the body as it found it");
     }
 
+    /** The living army's per-tick state (Kinematics + Idle), microseconds per unit (design/living_army.md, section 3). */
+    static final double MOTION_TICK_BUDGET_US_PER_UNIT = 1.0;
+
+    /**
+     * The living army's client tick for {@link #UNITS} units: each unit's motion snapshot and idle scheduler stepped
+     * once (walking, turning, stopping, hit now and then) - the gate is under {@link #MOTION_TICK_BUDGET_US_PER_UNIT}
+     * a unit and not one byte allocated (the slab is the only storage).
+     */
+    @Test
+    void livingArmyTick() throws IOException {
+        float[] slab = new float[UNITS * com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE];
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        for (int i = 0; i < UNITS; i++)
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, i * stride, 0f, 0f, 0f, 0f, 20f,
+                20f, false, true);
+        Phase tick = new Phase("living army tick (Kinematics + Idle)");
+        com.sun.management.ThreadMXBean mx =
+            (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        long tid = Thread.currentThread().getId();
+        long allocated = 0;
+        for (int frame = -WARMUP * 10; frame < FRAMES; frame++) {
+            int t = 1000 + frame;
+            long a0 = mx.getThreadAllocatedBytes(tid);
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                int b = i * stride;
+                boolean walking = ((t + i * 7) / 60) % 2 == 0;
+                float v = walking ? 0.2f : 0f;
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, v,
+                    walking && (i % 3) == 0 ? 4f : 0f, 20f, 20f, (i % 11) == 0, false);
+                if ((t + i) % 97 == 0)
+                    com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, (i % 8) * 0.785f);
+                com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
+            }
+            long t1 = System.nanoTime();
+            long a1 = mx.getThreadAllocatedBytes(tid);
+            if (frame >= 0)
+                allocated += a1 - a0;
+            record(tick, frame, t1 - t0);
+        }
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f), %d bytes allocated over %d ticks",
+            UNITS, tick.medianMs(), tick.perUnitUs(), MOTION_TICK_BUDGET_US_PER_UNIT, allocated, FRAMES);
+        System.out.println(line);
+        Path out = Path.of("build", "motion-bench.txt");
+        Files.createDirectories(out.getParent());
+        Files.write(out, List.of(line));
+        assertTrue(tick.perUnitUs() < MOTION_TICK_BUDGET_US_PER_UNIT, line);
+        assertTrue(allocated == 0, "the living army tick allocates: " + line);
+    }
+
     private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {
         CountingSink sink = new CountingSink();
         model.renderToBuffer(pose, sink, LIGHT, 0, 1f, 1f, 1f, 1f);
