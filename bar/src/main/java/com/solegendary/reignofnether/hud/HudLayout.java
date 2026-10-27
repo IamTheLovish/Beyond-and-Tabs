@@ -16,9 +16,17 @@ public final class HudLayout {
     private HudLayout() { }
 
     public static final int ICON_FRAME = 22;                              // Button.DEFAULT_ICON_FRAME_SIZE
-    public static final int HUD_START_X = ICON_FRAME * 6 + ICON_FRAME / 2; // 143: the orders grid is 6 tiles wide
+    // the command panel (orders, abilities / build menu, selection strip) uses compact tiles: 18 px frame, 12 px icon
+    // (Button.compactTiles); the control groups, production queue and helper column use the slim tiles (SLIM_TILE),
+    // everything else keeps ICON_FRAME. The ability / build-menu rows are CARD_COLS tiles wide (8, was 6) so the
+    // Commander's ~40 buildings need 5 rows instead of 7; the orders stay ROW = 6 wide.
+    public static final int TILE = 18, CARD_COLS = 8;
+    public static final int HUD_START_X = TILE * CARD_COLS + TILE / 2;    // 153: portrait starts right of the 8-wide card
     public static final int PORTRAIT_W = 32, PORTRAIT_H = 43, STATS_W = 68; // PortraitRendererUnit: icon frame, block height, stats grid
+    // height the alerts / kill feed keep clear above the screen bottom: the old 22 px panel and the 96 px cheat sheet
+    // need it, so it stays 102 though the compact panel itself is PANEL_BODY_H tall
     public static final int PANEL_H = Math.max(PORTRAIT_H, ICON_FRAME * 4 + 6) + 8;   // 102
+    public static final int PANEL_BODY_H = Math.max(PORTRAIT_H, TILE * 4 + 6) + 8;    // 86
     public static final int MIN_PER_ROW = 3, MAX_PER_ROW = 8;
     public static final int MAP_CORNER = 10, MAP_BG = 6;                  // MinimapClientEvents.CORNER_OFFSET / BG_OFFSET
     public static final double SQUARE_SCALE = 1.2;                        // MinimapClientEvents.SQUARE_SCALE
@@ -139,7 +147,7 @@ public final class HudLayout {
 
     /** Right edge of the command panel backing for a multi-selection with this many strip columns. */
     public static int multiPanelRight(int buttonsPerRow) {
-        return HUD_START_X + PORTRAIT_W + STATS_W + ICON_FRAME * buttonsPerRow + 24;
+        return HUD_START_X + PORTRAIT_W + STATS_W + TILE * buttonsPerRow + 24;
     }
 
     /**
@@ -148,7 +156,7 @@ public final class HudLayout {
      * minimap whose backing starts at 504 - fine - but a large map (384) or GUI scale 4 (344) ran straight under it.
      */
     public static int buttonsPerRow(int panelLimit) {
-        int n = (panelLimit - MAP_GAP - multiPanelRight(0)) / ICON_FRAME;
+        int n = (panelLimit - MAP_GAP - multiPanelRight(0)) / TILE;
         return Math.max(MIN_PER_ROW, Math.min(MAX_PER_ROW, n));
     }
 

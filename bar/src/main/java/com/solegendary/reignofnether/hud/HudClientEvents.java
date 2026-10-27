@@ -115,7 +115,7 @@ public class HudClientEvents {
     private static int tempMsgTicksLeft = 0;
     private static final int TEMP_MSG_TICKS_FADE = 50; // ticks left when the msg starts to fade
     private static final int TEMP_MSG_TICKS_MAX = 150; // ticks to show the msg for
-    private static final int MAX_BUTTONS_PER_ROW = 6;
+    private static final int MAX_BUTTONS_PER_ROW = HudLayout.CARD_COLS;
 
     public static final ArrayList<ControlGroup> controlGroups = new ArrayList<>(10);
     public static int lastSelCtrlGroupKey = -1;
@@ -430,6 +430,7 @@ public class HudClientEvents {
     }
 
     private static void drawHud(ScreenEvent.Render.Post evt) {
+        Button.compactTiles = false;
         // clean view (HudPanels, "=" by default): only the economy bar, the minimap and the command card
         boolean extras = HudPanels.showExtras();
         
@@ -438,7 +439,7 @@ public class HudClientEvents {
         deferredTooltip = null;
         
         // where to start drawing the centre hud (from left to right: portrait, stats, unit icon buttons)
-        int hudStartingXPos = Button.DEFAULT_ICON_FRAME_SIZE * 6 + (Button.DEFAULT_ICON_FRAME_SIZE / 2);
+        int hudStartingXPos = HudLayout.HUD_START_X;
 
         ArrayList<LivingEntity> selUnits = UnitClientEvents.getSortedSelectedUnits();
         ArrayList<BuildingPlacement> selBuildings = BuildingClientEvents.getSelectedBuildings();
@@ -448,7 +449,7 @@ public class HudClientEvents {
         int screenHeight = MC.getWindow().getGuiScaledHeight();
 
         int iconSize = 14;
-        int iconFrameSize = Button.DEFAULT_ICON_FRAME_SIZE;
+        int iconFrameSize = HudLayout.TILE;
 
         // the bottom-left panel stops short of the minimap (HudLayout, mirrored by tools/hud_layout.py): at GUI
         // scale 3 on 1080p the screen is 640 px wide and the old width-only rule put eight strip columns under a
@@ -538,6 +539,8 @@ public class HudClientEvents {
             }
         }
 
+        // compact tiles for the bottom-left command panel only (HudLayout.TILE); off again before the resources row
+        Button.compactTiles = true;
         if (hudSelectedPlacement != null) {
             boolean hudSelBuildingOwned =
                 BuildingClientEvents.getPlayerToBuildingRelationship(hudSelectedPlacement) == Relationship.OWNED ||
@@ -834,7 +837,7 @@ public class HudClientEvents {
                                 .toList();
                     }
                     if (buildingAbilities.size() > 0 || !hudSelectedPlacement.isBuilt) {
-                        blitY -= Button.DEFAULT_ICON_FRAME_SIZE;
+                        blitY -= HudLayout.TILE;
                     }
 
                     int rowButtons = 0;
@@ -862,7 +865,7 @@ public class HudClientEvents {
 
                     if (hudSelectedPlacement instanceof ProductionPlacement selProdPlacement) {
                         List<Button> visibleProdButtons = multiSelectCardButtons(selProdPlacement);
-                        blitY -= Button.DEFAULT_ICON_FRAME_SIZE * Math.ceil(((float) visibleProdButtons.size() / (float) MAX_BUTTONS_PER_ROW) - 1);
+                        blitY -= HudLayout.TILE * Math.ceil(((float) visibleProdButtons.size() / (float) MAX_BUTTONS_PER_ROW) - 1);
 
                         for (Button prodButton : visibleProdButtons) {
                             rowButtons += 1;
@@ -874,16 +877,16 @@ public class HudClientEvents {
                             if (rowButtons >= MAX_BUTTONS_PER_ROW) {
                                 rowButtons = 0;
                                 blitX = 0;
-                                blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                                blitY += HudLayout.TILE;
                                 buildingProdRows += 1;
                             }
                         }
                         if (rowButtons > 0) {
-                            blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                            blitY += HudLayout.TILE;
                             buildingProdRows += 1;
                         }
                     } else {
-                        blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                        blitY += HudLayout.TILE;
                     }
                     blitX = 0;
 
@@ -1539,6 +1542,7 @@ public class HudClientEvents {
             }
         }
 
+        Button.compactTiles = false;
         // ---------------------------
         // Resources icons and amounts
         // ---------------------------
