@@ -381,8 +381,12 @@ public class UnitActionItem {
                     }
                 }
                 case ATTACK -> {
-                    LivingEntity le = (LivingEntity) level.getEntity(unitId);
-                    if (!level.isClientSide() && le != null && Concealment.isHiddenFrom(le, unit.getOwnerName())) {
+                    // a target id that is not a living entity (a wreck, a dropped item, a projectile) or no entity at
+                    // all: the order is dropped. The cast here threw ClassCastException on the server thread and the
+                    // whole order was lost (security audit F8, Oct 26)
+                    if (!(level.getEntity(unitId) instanceof LivingEntity le))
+                        continue;
+                    if (!level.isClientSide() && Concealment.isHiddenFrom(le, unit.getOwnerName())) {
                         // the target is cloaked / in a thicket for this unit's side: a direct order on it (a stale
                         // click, a queued area attack, or a modified client that sent the id anyway) becomes a move
                         // to where it stands - walking up close is how a thicket gets seen into
@@ -407,7 +411,7 @@ public class UnitActionItem {
                                 CommandQueues.pushFront((LivingEntity) unit,
                                     new UnitCommand(UnitAction.RETURN_RESOURCES_TO_CLOSEST, unit.getOwnerName(), -1, BlockPos.ZERO));
                             }
-                        } else if (le != null) {
+                        } else {
                             attackerUnit.setUnitAttackTargetForced(le);
                             // a hunt ends with a drop-off, put ahead of whatever else is queued unless one is already
                             // waiting. Server only: the client's prediction used to add it to the server's list too
@@ -432,14 +436,15 @@ public class UnitActionItem {
                     }
                 }
                 case FOLLOW -> {
-                    LivingEntity livingEntity = (LivingEntity) level.getEntity(unitId);
-                    if (!level.isClientSide() && livingEntity != null && Concealment.isHiddenFrom(livingEntity, unit.getOwnerName())) {
+                    // only a living entity can be followed: anything else (or nothing) drops the order - the cast threw
+                    // here (F8, as ATTACK above)
+                    if (!(level.getEntity(unitId) instanceof LivingEntity livingEntity))
+                        continue;
+                    if (!level.isClientSide() && Concealment.isHiddenFrom(livingEntity, unit.getOwnerName())) {
                         unit.setMoveTarget(livingEntity.blockPosition());   // can't tail what this side can't see
                         continue;
                     }
-                    if (livingEntity != null) {
-                        MiscUtil.addUnitCheckpoint(unit, unitId, true);
-                    }
+                    MiscUtil.addUnitCheckpoint(unit, unitId, true);
                     unit.setFollowTarget(livingEntity);
                 }
                 case BUILD_REPAIR -> {
@@ -564,7 +569,10 @@ public class UnitActionItem {
                                     break actionableUnitsLoop;
                                 }
                             } else if (ability.canTargetEntities && this.unitId > 0) {
-                                ability.use(level, unit, (LivingEntity) level.getEntity(unitId));
+                                // a target that is not a living entity (or is gone) drops the cast (F8: the cast threw)
+                                if (!(abilityTarget instanceof LivingEntity livingTarget))
+                                    continue;
+                                ability.use(level, unit, livingTarget);
                                 usedAbility = ability;
                                 if (ability.oneClickOneUse) {
                                     break actionableUnitsLoop;
@@ -645,7 +653,9 @@ public class UnitActionItem {
             for (Ability ability : actionableBuilding.getAbilities()) {
                 if (ability.action == action && (ability.isOffCooldown(actionableBuilding) || ability.canBypassCooldown(actionableBuilding))) {
                     if (ability.canTargetEntities && this.unitId > 0) {
-                        ability.use(level, actionableBuilding, (LivingEntity) level.getEntity(unitId));
+                        // as for units: only a living target, else the cast is dropped (F8: the cast threw)
+                        if (level.getEntity(unitId) instanceof LivingEntity livingTarget)
+                            ability.use(level, actionableBuilding, livingTarget);
                     } else {
                         ability.use(level, actionableBuilding, preselectedBlockPos);
                     }
