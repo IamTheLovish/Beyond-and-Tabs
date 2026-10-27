@@ -73,9 +73,9 @@ public final class BuilderCardUnion {
 
     /**
      * {@link #added} for a tabbed build menu (BuildTabs): slot keys are the same in every tab and only the selected
-     * tab's are live, so a key clashes only with the buttons of its own tab and with the untabbed ones (tabOf null:
-     * the unit's own abilities, always on the card). Every added button stays in its own tab (the caller keeps its
-     * tab). A building already on the card in any tab is not added again. The result is in the order of
+     * tab's are live, ahead of the unit's own abilities and orders (BAR's gridmenu), so a key clashes only with the
+     * buttons of its own tab. A button that loses its key goes after the tab's last cell (tabCells) and takes that
+     * cell's grid key there (BuildTabs). Every added button stays in its own tab (the caller keeps its tab). A building already on the card in any tab is not added again. The result is in the order of
      * {@link #added}: the other types in selection order, each in its own menu order.
      *
      * @param tabOf the tab of a button, or null for an untabbed one
@@ -107,12 +107,15 @@ public final class BuilderCardUnion {
         }
         Map<T, Boolean> keeps = new IdentityHashMap<>();
         for (Map.Entry<Object, List<List<T>>> e : othersByTab.entrySet()) {
-            List<T> tabPrimary = new ArrayList<>(untabbed);
-            if (e.getKey() != null)
+            // a tabbed button's key is a grid key, live only in its open tab and then ahead of every other card key
+            // (BuildTabs.onKey): it clashes only inside its tab. An untabbed one clashes with the whole card.
+            boolean tabbed = e.getKey() != null;
+            List<T> tabPrimary = tabbed ? new ArrayList<>() : new ArrayList<>(untabbed);
+            if (tabbed)
                 for (T t : primary)
                     if (Objects.equals(tabOf.apply(t), e.getKey()))
                         tabPrimary.add(t);
-            for (Added<T> a : added(tabPrimary, e.getValue(), idOf, keyOf, reservedKeys))
+            for (Added<T> a : added(tabPrimary, e.getValue(), idOf, keyOf, tabbed ? List.of() : reservedKeys))
                 keeps.put(a.item(), a.keepsKey());
         }
         // back in selection / menu order; a building offered in two tabs by two types is added once (the first)

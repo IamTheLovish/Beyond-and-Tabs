@@ -12311,13 +12311,9 @@ public class SkirmishGameTests {
                             "ability " + list.get(i).getClass().getSimpleName());
                     }
                 }
-                if (worker) {
-                    var faction = Factions.getFaction(unit);
-                    if (faction != null)
-                        for (var entry : faction.getBuildHotkeys().entrySet())
-                            // tabbed build menu: slot keys repeat across tabs, one tab shows at a time (BuildGroupGameTests)
-                            claim.accept(entry.getValue(), "build slot " + entry.getValue().buttonLabel);
-                }
+                // the build menu's keys are BAR's grid keys (Q W E R / A S D F / Z X C V): live only while a build tab is
+                // open, and then they win over the orders and abilities on the same keys (BuildTabs.onKey), so they
+                // share keys with the card on purpose. Inside a tab they stay unique: BuildGroupGameTests.
                 for (String c : clashes)
                     problems.add(key.getPath() + ": " + c);
             } catch (Exception ex) {

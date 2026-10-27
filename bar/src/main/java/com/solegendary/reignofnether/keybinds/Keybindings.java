@@ -74,13 +74,30 @@ public class Keybindings {
     public static final Keybinding abilitySlot8        = new Keybinding("key.reignofnether.ability_8",    GLFW.GLFW_KEY_I,             CATEGORY_RTS, "I");
     public static final Keybinding abilitySlot9        = new Keybinding("key.reignofnether.ability_9",    GLFW.GLFW_KEY_O,             CATEGORY_RTS, "O");
     public static final Keybinding abilitySlot10       = new Keybinding("key.reignofnether.ability_10",   GLFW.GLFW_KEY_P,             CATEGORY_RTS, "P");
-    // BAR's build-category keys (BuildCategoryKeys): with a builder (or the commander) selected Z / X / C / V open the
-    // metal / energy / defence / factory build list instead of ability slot 2, Attack, hotkey 4 and hotkey 1. They
-    // share the keys on purpose, so they have their own conflict context.
-    public static final Keybinding buildMetal   = new Keybinding("key.reignofnether.build_metal",   GLFW.GLFW_KEY_Z, CATEGORY_RTS, RtsConflictContext.BUILDER, "Z");
-    public static final Keybinding buildEnergy  = new Keybinding("key.reignofnether.build_energy",  GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
-    public static final Keybinding buildDefence = new Keybinding("key.reignofnether.build_defence", GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
-    public static final Keybinding buildFactory = new Keybinding("key.reignofnether.build_factory", GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
+    // BAR's gridmenu (luaui/Widgets/gui_gridmenu.lua, keybind_defaults.json "Grid" profile): with the build menu on the
+    // card and no tab open, Z / X / C / V open the Economy / Military / Defence / Tech tab (BAR's gridmenu_category 1-4)
+    // instead of ability slot 2, Attack, hotkey 4 and hotkey 1. They share the keys on purpose: own conflict context.
+    public static final Keybinding buildTabEconomy  = new Keybinding("key.reignofnether.build_tab_economy",  GLFW.GLFW_KEY_Z, CATEGORY_RTS, RtsConflictContext.BUILDER, "Z");
+    public static final Keybinding buildTabMilitary = new Keybinding("key.reignofnether.build_tab_military", GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
+    public static final Keybinding buildTabDefence  = new Keybinding("key.reignofnether.build_tab_defence",  GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
+    public static final Keybinding buildTabTech     = new Keybinding("key.reignofnether.build_tab_tech",     GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
+    // BAR's grid keys (gridmenu_key row col): the same twelve keys in every tab, in reading order, one per cell of the
+    // 4-wide build grid - Q W E R / A S D F / Z X C V. Live only while a tab is open (BuildTabs.onKey); then they win
+    // over the orders on the same keys (Stop S, Attack X, Fight F), and on W / A / S / D a tap picks, a hold pans.
+    public static final Keybinding[] buildGrid = {
+        new Keybinding("key.reignofnether.build_grid_1",  GLFW.GLFW_KEY_Q, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "Q"),
+        new Keybinding("key.reignofnether.build_grid_2",  GLFW.GLFW_KEY_W, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "W"),
+        new Keybinding("key.reignofnether.build_grid_3",  GLFW.GLFW_KEY_E, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "E"),
+        new Keybinding("key.reignofnether.build_grid_4",  GLFW.GLFW_KEY_R, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "R"),
+        new Keybinding("key.reignofnether.build_grid_5",  GLFW.GLFW_KEY_A, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "A"),
+        new Keybinding("key.reignofnether.build_grid_6",  GLFW.GLFW_KEY_S, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "S"),
+        new Keybinding("key.reignofnether.build_grid_7",  GLFW.GLFW_KEY_D, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "D"),
+        new Keybinding("key.reignofnether.build_grid_8",  GLFW.GLFW_KEY_F, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "F"),
+        new Keybinding("key.reignofnether.build_grid_9",  GLFW.GLFW_KEY_Z, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "Z"),
+        new Keybinding("key.reignofnether.build_grid_10", GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "X"),
+        new Keybinding("key.reignofnether.build_grid_11", GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "C"),
+        new Keybinding("key.reignofnether.build_grid_12", GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "V")
+    };
     public static final Keybinding hotkey1        = new Keybinding("key.reignofnether.hotkey_1",        GLFW.GLFW_KEY_V,             CATEGORY_RTS, "V");
     public static final Keybinding hotkey2        = new Keybinding("key.reignofnether.hotkey_2",        GLFW.GLFW_KEY_L,             CATEGORY_RTS, "L");
     public static final Keybinding minimapToggle  = new Keybinding("key.reignofnether.minimap_toggle",        GLFW.GLFW_KEY_M,             CATEGORY_RTS, "M");
@@ -215,7 +232,7 @@ public class Keybindings {
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
-            buildMetal, buildEnergy, buildDefence, buildFactory,
+            buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
@@ -224,6 +241,7 @@ public class Keybindings {
             cursorDiag,
             queueSkip, queueInsert
         ));
+        Collections.addAll(list, buildGrid);
         Collections.addAll(list, nums);
         Collections.addAll(list, fnums);
         ALL = Collections.unmodifiableList(list);
