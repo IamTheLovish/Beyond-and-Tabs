@@ -71,6 +71,17 @@ type mrIndex struct {
 }
 
 func main() {
+	exe, _ := os.Executable()
+	if isLaunchMode(os.Args[1:], exe) {
+		if err := runLauncher(os.Args[1:]); err != nil {
+			fmt.Println("Launcher error:", err)
+			if !hasFlag(os.Args[1:], "--no-window") {
+				alert(appName+" launcher", err.Error())
+			}
+			os.Exit(1)
+		}
+		return
+	}
 	fmt.Printf("=== %s installer ===\n\n", appName)
 	if err := run(); err != nil {
 		fmt.Printf("\nSomething went wrong: %v\n", err)
@@ -157,10 +168,19 @@ func run() error {
 	}
 	os.RemoveAll(tmp)
 
-	// Shortcuts
-	fmt.Println("\nCreating shortcuts ...")
-	if err := shortcuts(prismExe, prismDir); err != nil {
-		fmt.Println("      (could not create shortcuts:", err, ")")
+	// The launcher (this exe, run with --launch) and the shortcuts that open it
+	fmt.Println("\nInstalling the launcher ...")
+	launcher := newGamePaths(base).launcher
+	if err := installLauncher(launcher); err != nil {
+		fmt.Println("      (could not copy the launcher to", launcher, ":", err, ")")
+	}
+	if exists(launcher) {
+		fmt.Println("\nCreating shortcuts ...")
+		if err := shortcuts(launcher, prismExe, prismDir); err != nil {
+			fmt.Println("      (could not create shortcuts:", err, ")")
+		}
+	} else {
+		fmt.Println("      Shortcuts not changed: there is no launcher to point them at. Run the installer again.")
 	}
 
 	fmt.Println("\nAll done!")
@@ -168,7 +188,8 @@ func run() error {
 	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
 	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
 	fmt.Println("Every later launch updates the game to the newest build automatically.")
-	fmt.Println("\nNext time, use the \"" + shortcutName + "\" shortcut on your Desktop.")
+	fmt.Println("\nNext time, use the \"" + shortcutName + "\" shortcut on your Desktop: it opens the " + appName + " launcher")
+	fmt.Println("(what's new, your build, PLAY).")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
 	cmd.Dir = prismDir
@@ -495,37 +516,44 @@ func installBrand(prismDir string) (string, error) {
 	return ico, os.WriteFile(ico, catICO, 0o644)
 }
 
-// shortcutScript makes the "lovish" shortcuts (Desktop + Start Menu) with the cat icon and removes the old
-// "Beyond and Tabs" ones from earlier installers.
-func shortcutScript(prismExe, prismDir, icoPath string) string {
+// psq quotes a value for a single-quoted PowerShell string (a ' in a user name would otherwise end the string).
+func psq(s string) string { return strings.ReplaceAll(s, "'", "''") }
+
+// shortcutScript makes the "lovish" shortcuts (Desktop + Start Menu) with the cat icon, opening the launcher
+// (launcher.exe --launch, minimised console). A "lovish" shortcut is only rewritten when it is missing, already opens
+// this launcher, or is the one earlier installers made (this Prism with -l "BeyondAndTabs-test"). The old
+// "Beyond and Tabs" shortcuts from earlier installers are removed.
+func shortcutScript(launcherExe, prismExe, prismDir, icoPath string) string {
 	return `
-$exe = '` + prismExe + `'
+$exe = '` + psq(launcherExe) + `'
+$prism = '` + psq(prismExe) + `'
 $ws = New-Object -ComObject WScript.Shell
 foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'))) {
   $lnk = Join-Path $dir '` + shortcutName + `.lnk'
-  if ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe)) {
+  if ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe) -or (($ws.CreateShortcut($lnk).TargetPath -eq $prism) -and ($ws.CreateShortcut($lnk).Arguments -eq '-l "` + instanceName + `"'))) {
     $s = $ws.CreateShortcut($lnk)
     $s.TargetPath = $exe
-    $s.Arguments = '-l "` + instanceName + `"'
-    $s.WorkingDirectory = '` + prismDir + `'
-    $s.IconLocation = '` + icoPath + `,0'
+    $s.Arguments = '--launch'
+    $s.WorkingDirectory = '` + psq(prismDir) + `'
+    $s.IconLocation = '` + psq(icoPath) + `,0'
     $s.Description = 'Play ` + appName + `'
+    $s.WindowStyle = 7
     $s.Save()
   }
   $oldPath = Join-Path $dir '` + appName + `.lnk'
   if (Test-Path -LiteralPath $oldPath) {
     $old = $ws.CreateShortcut($oldPath)
-    if ($old.TargetPath -eq $exe) { Remove-Item -LiteralPath $oldPath -ErrorAction SilentlyContinue }
+    if (($old.TargetPath -eq $exe) -or ($old.TargetPath -eq $prism)) { Remove-Item -LiteralPath $oldPath -ErrorAction SilentlyContinue }
   }
 }`
 }
 
-func shortcuts(prismExe, prismDir string) error {
+func shortcuts(launcherExe, prismExe, prismDir string) error {
 	ico, err := installBrand(prismDir)
 	if err != nil {
-		ico = prismExe // no cat file: fall back to Prism's own icon rather than no shortcut
+		ico = launcherExe // no cat file: fall back to the exe's own icon (also the cat) rather than no shortcut
 	}
-	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", shortcutScript(prismExe, prismDir, ico))
+	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", shortcutScript(launcherExe, prismExe, prismDir, ico))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))

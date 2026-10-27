@@ -139,7 +139,7 @@ public final class MapMatch {
             PlayerPalette.Entry e = PlayerPalette.byMapColorId(s.colorMapId);
             String name = s.bot ? "AI " + botNo++ : s.name;
             picks.add(new MapStateClientboundPacket.PickInfo(name, s.team, e == null ? 0xFFFFFF : e.hex(),
-                setup.cx + slot.dx(), setup.cz + slot.dz(), false, s.bot, s.faction));
+                setup.cx + slot.dx(), setup.cz + slot.dz(), false, s.bot, s.faction, s.bot, false));
         }
         return picks;
     }

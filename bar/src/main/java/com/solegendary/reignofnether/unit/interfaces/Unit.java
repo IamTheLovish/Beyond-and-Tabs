@@ -343,7 +343,9 @@ public interface Unit {
             // Run on every 2nd tick, staggered by entity id so half the units query each tick: a pickup lands at most
             // one tick (50 ms) later than before. Every check below is level-triggered (an item stays in range until
             // taken), so none can be missed.
-            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0) {
+            // Skipped outright while the level holds no item at all (ItemPresence), the usual state of a match.
+            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0
+                    && ItemPresence.mayHaveItems(unitMob.level())) {
                 List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
                 if (!nearbyItems.isEmpty()) {
                     checkAndPickupFood(unit, nearbyItems);

@@ -240,6 +240,9 @@ public class PlayerServerEvents {
         if (FogChunkSnapshot.shouldRecapture) {
             FogChunkSnapshot.captureFogChunks(serverLevel);
         }
+        // the fog snapshot is captured over several ticks with a per-tick time budget (FogChunkSnapshot)
+        if (evt.phase == TickEvent.Phase.END)
+            FogChunkSnapshot.tick();
 
         // the match clock, its graph samples and its sync run in match.MatchServerEvents; the roster walks below are
         // snapshots (MatchRoster), so the beacon victory may beat sides from inside them
@@ -1278,7 +1281,6 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
         com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
         com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
-        com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 
         for (LivingEntity entity : UnitServerEvents.getAllUnits())
             if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))
@@ -1300,6 +1302,8 @@ public class PlayerServerEvents {
         }
         if (!isSandboxOrScenario)
             BuildingServerEvents.getBuildings().removeIf(b -> b.getBuilding().shouldDestroyOnReset || hardReset);
+        if (!isSandboxOrScenario)
+            com.solegendary.reignofnether.building.Blueprints.clear();   // their workers are gone: no order outlives the match
 
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())

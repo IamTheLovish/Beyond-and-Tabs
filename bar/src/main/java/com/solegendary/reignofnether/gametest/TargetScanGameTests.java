@@ -674,7 +674,7 @@ public class TargetScanGameTests {
         boolean[] armed = { false }, done = { false };
         Runnable cleanUp = () -> {
             applyMode(2);
-            Sys.force(false);
+            Sys.force(done, false);   // this run's own hold (the array is unique to it)
             ServerTickProfile.autoCaptureHeld = false;
             for (Entity e : made)
                 if (!e.isRemoved())
@@ -745,7 +745,7 @@ public class TargetScanGameTests {
                     return;
                 }
                 ServerTickProfile.autoCaptureHeld = true;
-                Sys.force(true);
+                Sys.force(done, true);
                 applyMode(2);
                 armed[0] = true;
             } catch (RuntimeException e) {

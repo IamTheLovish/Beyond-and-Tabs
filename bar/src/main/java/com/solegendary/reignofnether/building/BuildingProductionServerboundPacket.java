@@ -30,14 +30,38 @@ public class BuildingProductionServerboundPacket {
     public static void toggleRepeat(net.minecraft.core.BlockPos buildingPos) {
         // several factories of this type selected: Repeat goes to all of them, set to the opposite of the one shown
         // (BuildingBatchServerboundPacket), so a mixed selection ends up all on or all off
-        List<ProductionPlacement> group = BuildingClientEvents.getCommandGroup();
-        if (group.size() > 1 && HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement shown
-                && shown.originPos.equals(buildingPos)) {
+        // Any mix of owned, built factories counts (not just the shown type); mixed states all go on.
+        List<ProductionPlacement> group =
+            com.solegendary.reignofnether.hud.ProductionHudLogic.repeatGroup(BuildingClientEvents.getSelectedBuildings());
+        if (group.size() > 1) {
+            List<Boolean> states = new java.util.ArrayList<>();
+            for (ProductionPlacement pp : group)
+                states.add(pp.repeatQueue);
+            boolean on = com.solegendary.reignofnether.hud.ProductionHudLogic.repeatTarget(states);
             BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.SET_REPEAT, "",
-                shown.repeatQueue ? 0 : 1, positions(group));
+                on ? 1 : 0, positions(group));
             return;
         }
         PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_REPEAT, "", buildingPos));
+    }
+
+    /**
+     * BAR's factoryguard (the card button, or Ctrl+G with factories selected): one factory flips; several are all set
+     * to the opposite of what they show together (mixed -> all on), as Repeat does.
+     */
+    public static void toggleFactoryGuard(List<ProductionPlacement> group) {
+        if (group.isEmpty())
+            return;
+        if (group.size() > 1) {
+            List<Boolean> states = new java.util.ArrayList<>();
+            for (ProductionPlacement pp : group)
+                states.add(pp.factoryGuard);
+            boolean on = com.solegendary.reignofnether.hud.ProductionHudLogic.repeatTarget(states);
+            BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.SET_FACTORY_GUARD, "",
+                on ? 1 : 0, positions(group));
+            return;
+        }
+        PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_FACTORY_GUARD, "", group.get(0).originPos));
     }
 
     public static void toggleSteward(net.minecraft.core.BlockPos buildingPos) {
@@ -145,16 +169,21 @@ public class BuildingProductionServerboundPacket {
     // server-side packet-consuming functions
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
+        ctx.get().enqueueWork(() -> success.set(accept(ctx.get().getSender())));
+        ctx.get().setPacketHandled(true);
+        return success.get();
+    }
+
+    /** The server side of the packet for {@code player} (handle's body; game tests call it with a fake player). */
+    public boolean accept(ServerPlayer player) {
+        {
             BuildingPlacement building = findBuilding(false, this.buildingPos);
             if (building == null)
-                return;
+                return false;
 
-            ServerPlayer player = ctx.get().getSender();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("Sender for unit action packet was null");
-                success.set(false);
-                return;
+                return false;
             }
             // the owner, an ally with control or a sandbox player - not "anyone while somebody is in sandbox", and
             // the ally test now names the building's owner (it asked about "" and so never matched)
@@ -165,8 +194,7 @@ public class BuildingProductionServerboundPacket {
                 // refusing an enemy's sync is routine - it logged 13-14 WARNs per eyes run (Oct 15). Others still warn.
                 if (this.action != BuildingAction.REQUEST_PRODUCTION_SYNC)
                     ReignOfNether.LOGGER.warn("BuildingProductionServerboundPacket: Tried to process packet from " + player.getName() + " for " + building.ownerName);
-                success.set(false);
-                return;
+                return false;
             }
             if (building instanceof ProductionPlacement pBuilding) {
                 if (this.action == BuildingAction.TOGGLE_REPEAT) {
@@ -175,6 +203,9 @@ public class BuildingProductionServerboundPacket {
                 } else if (this.action == BuildingAction.TOGGLE_STEWARD) {
                     pBuilding.setStewardPaused(!pBuilding.stewardPaused);
                     BuildingProductionClientboundPacket.toggleSteward(pBuilding.ownerName, buildingPos, pBuilding.stewardPaused);
+                } else if (this.action == BuildingAction.TOGGLE_FACTORY_GUARD) {
+                    pBuilding.setFactoryGuard(!pBuilding.factoryGuard);
+                    BuildingProductionClientboundPacket.toggleFactoryGuard(pBuilding.ownerName, buildingPos, pBuilding.factoryGuard);
                 } else if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
                     // to the asker only: the reply used to go to the owner and everyone who can see the building, and
                     // clients append without de-duplicating - a rejoining player doubled everyone else's queue display
@@ -211,9 +242,7 @@ public class BuildingProductionServerboundPacket {
                 }
             }
             ReignOfNether.LOGGER.info("[Building] {} performed {} (itemName: {}, pos: {})", player.getName(), this.action, this.itemName, this.buildingPos);
-            success.set(true);
-        });
-        ctx.get().setPacketHandled(true);
-        return success.get();
+            return true;
+        }
     }
 }

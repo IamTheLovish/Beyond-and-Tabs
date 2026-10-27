@@ -74,7 +74,7 @@ public class PerfProfileGameTests {
         helper.succeedWhen(() -> {
             if (!started[0]) {
                 ServerTickProfile.lastCaptureSummary = null;
-                Sys.force(true);
+                Sys.force(started, true);   // this test's own hold (the array is unique to this run)
                 // another capture on this shared server (the 8v8 stress test can trip the automatic one): wait for it
                 if (!ServerTickProfile.startCapture(level.getServer(), 40, "gametest"))
                     notYet("another capture is running on this shared server");
@@ -85,7 +85,7 @@ public class PerfProfileGameTests {
                 notYet("waiting for the recorder's profile");
             if (sys[0] == null) {
                 sys[0] = Sys.snapshot();
-                Sys.force(false);
+                Sys.force(started, false);
             }
             if (ServerTickProfile.lastCaptureEmpty || ServerTickProfile.lastCaptureSections <= 0)
                 throw new GameTestAssertException("the lag capture came back with an EMPTY profile: " + summary);
