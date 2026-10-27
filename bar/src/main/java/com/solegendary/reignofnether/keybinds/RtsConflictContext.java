@@ -24,7 +24,7 @@ public enum RtsConflictContext implements IKeyConflictContext {
     // win over the orders, the tab keys and a camera tap on the same keys (BuildTabs.onKey), so the overlap is intentional
     BUILD_GRID,
     // BAR camera anchors on F5-F8 (Keybindings.cameraAnchors), sharing the keys with fn_5..fn_8 (resign vote F6 / F7,
-    // spectator view F8): the anchor stays quiet while those are live (KeyConflicts.anchorYields), so the overlap is intentional
+    // spectator view F8): the anchor stays quiet while those are live (KeybindsClientEvents.fKeyOwner), so the overlap is intentional
     CAMERA_ANCHOR;
 
     @Override

@@ -53,15 +53,8 @@ public class Keybindings {
     // hideGui too), screenshot (F2), debug / block info (F3) and the stats-table alias (F4), so they ship on F5-F8
     // (tester request, Oct 26): F5 is vanilla's perspective key, idle in the RTS view; F6 / F7 answer an open resign
     // vote and F8 cycles a spectator's view - while those are live the anchor on the key stays quiet
-    // (KeyConflicts.anchorYields). Own conflict context, so Controls does not flag fn_5..fn_8 on the same keys.
+    // (KeybindsClientEvents.fKeyOwner). Own conflict context, so Controls does not flag fn_5..fn_8 on the same keys.
     // Layout 3 (KeybindMigration) moves a saved "unbound" from the older builds onto F5-F8.
-    // a camera bookmark key (F5-F8 by default): the debug overlay (F7) and the ops fog reset (F8) stay quiet on it
-    public static boolean isCameraAnchorKey(int key) {
-        for (Keybinding kb : cameraAnchors)
-            if (kb.getKey() == key)
-                return true;
-        return false;
-    }
     public static final Keybinding[] cameraAnchors = {
         new Keybinding("key.reignofnether.camera_anchor_1", GLFW.GLFW_KEY_F5, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F5"),
         new Keybinding("key.reignofnether.camera_anchor_2", GLFW.GLFW_KEY_F6, CATEGORY_CAMERA, RtsConflictContext.CAMERA_ANCHOR, "F6"),

@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.building.buildings.placements.BeaconPlaceme
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.IdleButtons;
+import com.solegendary.reignofnether.keybinds.ChordKeys;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
@@ -170,7 +171,7 @@ public class HelperButtons {
 
     /** BAR's Ctrl+Z: select every own unit on the map of the selected units' type(s); nothing selected, nothing. */
     public static void selectSameTypeOnMap() {
-        replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.sameTypes(
+        replaceSelection(ChordKeys.sameTypes(
             ownFreeUnits(), new ArrayList<>(UnitClientEvents.getSelectedUnits()), LivingEntity::getType));
     }
 
@@ -180,13 +181,13 @@ public class HelperButtons {
     /** BAR's cycleselected: centre the camera on the next ({@code step} 1) or previous (-1) selected unit; the selection stays. */
     public static void cycleSelected(int step) {
         List<LivingEntity> sel = new ArrayList<>(UnitClientEvents.getSelectedUnits());
-        cycleSelectedAt = com.solegendary.reignofnether.keybinds.ChordKeys.cycleIndex(cycleSelectedAt, sel.size(), step);
+        cycleSelectedAt = ChordKeys.cycleIndex(cycleSelectedAt, sel.size(), step);
         if (cycleSelectedAt >= 0)
             OrthoviewClientEvents.centreCameraOnPos(sel.get(cycleSelectedAt).position());
     }
 
     /** Runs a Ctrl or Alt chord (keybinds/ChordKeys); false for NONE so the key goes on to its other meanings. */
-    public static boolean runChord(com.solegendary.reignofnether.keybinds.ChordKeys.Chord chord) {
+    public static boolean runChord(ChordKeys.Chord chord) {
         switch (chord) {
             case SELECT_ARMY -> selectWholeArmy();
             case SELECT_COMMANDER -> selectCommanderAndFocus();
@@ -195,9 +196,9 @@ public class HelperButtons {
             case SELECT_ALL_UNITS -> selectAllUnits();
             case SELECT_SAME_TYPE -> selectSameTypeOnMap();
             // BAR SelectPart_50 / damaged filter: replaceSelection keeps the selection when the result is empty
-            case SELECT_HALF -> replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.half(
+            case SELECT_HALF -> replaceSelection(ChordKeys.half(
                 new ArrayList<>(UnitClientEvents.getSelectedUnits())));
-            case SELECT_DAMAGED -> replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.damaged(
+            case SELECT_DAMAGED -> replaceSelection(ChordKeys.damaged(
                 new ArrayList<>(UnitClientEvents.getSelectedUnits()),
                 u -> u.getMaxHealth() <= 0 ? 1.0 : u.getHealth() / u.getMaxHealth()));
             case CYCLE_SELECTED_NEXT -> cycleSelected(1);

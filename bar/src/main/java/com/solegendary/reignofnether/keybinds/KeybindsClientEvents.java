@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.keybinds;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
+import com.solegendary.reignofnether.player.ResignVoteClientEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
@@ -27,6 +29,18 @@ public class KeybindsClientEvents {
 
     private static final Logger LOGGER = LogManager.getLogger("reignofnether/keys");
     private static boolean done = false;
+
+    // the one answer every F-key handler asks (camera anchors, debug F7, ops fog reset F8); client-only because it reads
+    // the resign vote and spectator state, so it lives here and not in Keybindings (server classes load that)
+    public static KeyConflicts.FKeyOwner fKeyOwner(int key) {
+        boolean isAnchorKey = false;
+        for (Keybinding kb : Keybindings.cameraAnchors)
+            if (kb.getKey() == key)
+                isAnchorKey = true;
+        return KeyConflicts.fKeyOwner(key, isAnchorKey, ResignVoteClientEvents.isVoteOpen(),
+                Keybindings.getFnum(6).getKey(), Keybindings.getFnum(7).getKey(),
+                PlayerClientEvents.isMatchSpectator(), Keybindings.getFnum(8).getKey());
+    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {

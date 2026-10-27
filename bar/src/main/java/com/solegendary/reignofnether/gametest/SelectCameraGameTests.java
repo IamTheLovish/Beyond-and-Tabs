@@ -129,9 +129,10 @@ public class SelectCameraGameTests {
         if (RtsConflictContext.CAMERA_ANCHOR.conflicts(KeyConflictContext.IN_GAME))
             problems.add("anchors share the IN_GAME context of fn_5..fn_8: Controls would mark them red");
         int f6 = Keybindings.getFnum(6).getDefaultKey(), f7 = Keybindings.getFnum(7).getDefaultKey(), f8 = Keybindings.getFnum(8).getDefaultKey();
-        if (!KeyConflicts.anchorYields(f6, true, f6, f7, false, f8) || KeyConflicts.anchorYields(f6, false, f6, f7, false, f8))
+        if (KeyConflicts.fKeyOwner(f6, true, true, f6, f7, false, f8) != KeyConflicts.FKeyOwner.RESIGN_VOTE
+                || KeyConflicts.fKeyOwner(f6, true, false, f6, f7, false, f8) != KeyConflicts.FKeyOwner.ANCHOR)
             problems.add("F6 must answer an open resign vote and jump otherwise");
-        if (!KeyConflicts.anchorYields(f8, false, f6, f7, true, f8))
+        if (KeyConflicts.fKeyOwner(f8, true, false, f6, f7, true, f8) != KeyConflicts.FKeyOwner.SPECTATE)
             problems.add("F8 must cycle a spectator's view");
         List<KeybindMigration.Move> moves = KeybindMigration.plan(2,
             name -> name.startsWith("key.reignofnether.camera_anchor_") ? GLFW.GLFW_KEY_UNKNOWN : KeybindMigration.CUSTOM);

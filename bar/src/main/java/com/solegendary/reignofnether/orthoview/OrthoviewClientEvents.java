@@ -1147,11 +1147,8 @@ public class OrthoviewClientEvents {
                 for (int i = 0; i < ANCHORS; i++) {
                     if (key == Keybindings.cameraAnchors[i].getKey()) {
                         // F6 / F7 answer an open resign vote, F8 cycles a spectator's view: those win on a shared key
-                        if (com.solegendary.reignofnether.keybinds.KeyConflicts.anchorYields(key,
-                                com.solegendary.reignofnether.player.ResignVoteClientEvents.isVoteOpen(),
-                                Keybindings.getFnum(6).getKey(), Keybindings.getFnum(7).getKey(),
-                                com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator(),
-                                Keybindings.getFnum(8).getKey()))
+                        if (com.solegendary.reignofnether.keybinds.KeybindsClientEvents.fKeyOwner(key)
+                                != com.solegendary.reignofnether.keybinds.KeyConflicts.FKeyOwner.ANCHOR)
                             break;
                         if (isCtrlDown())
                             storeAnchor(i);

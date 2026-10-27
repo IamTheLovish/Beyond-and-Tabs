@@ -60,13 +60,15 @@ class SelectCameraRulesTest {
         assertEquals(GLFW.GLFW_KEY_F1, Keybindings.getFnum(1).getDefaultKey());
         assertEquals(GLFW.GLFW_KEY_F4, Keybindings.statsTable.getAliasKey());
         int f6 = GLFW.GLFW_KEY_F6, f7 = GLFW.GLFW_KEY_F7, f8 = GLFW.GLFW_KEY_F8;
-        assertTrue(KeyConflicts.anchorYields(f6, true, f6, f7, false, f8));
-        assertTrue(KeyConflicts.anchorYields(f7, true, f6, f7, false, f8));
-        assertFalse(KeyConflicts.anchorYields(f6, false, f6, f7, false, f8));
-        assertFalse(KeyConflicts.anchorYields(GLFW.GLFW_KEY_F5, true, f6, f7, true, f8));
-        assertTrue(KeyConflicts.anchorYields(f8, false, f6, f7, true, f8));
-        assertFalse(KeyConflicts.anchorYields(f8, false, f6, f7, false, f8));
-        assertFalse(KeyConflicts.anchorYields(-1, true, -1, -1, true, -1));
+        // one owner per F key: an open resign vote or spectating wins, else the anchor; not an anchor key -> NONE
+        assertEquals(KeyConflicts.FKeyOwner.RESIGN_VOTE, KeyConflicts.fKeyOwner(f6, true, true, f6, f7, false, f8));
+        assertEquals(KeyConflicts.FKeyOwner.RESIGN_VOTE, KeyConflicts.fKeyOwner(f7, true, true, f6, f7, false, f8));
+        assertEquals(KeyConflicts.FKeyOwner.ANCHOR, KeyConflicts.fKeyOwner(f6, true, false, f6, f7, false, f8));
+        assertEquals(KeyConflicts.FKeyOwner.ANCHOR, KeyConflicts.fKeyOwner(GLFW.GLFW_KEY_F5, true, true, f6, f7, true, f8));
+        assertEquals(KeyConflicts.FKeyOwner.SPECTATE, KeyConflicts.fKeyOwner(f8, true, false, f6, f7, true, f8));
+        assertEquals(KeyConflicts.FKeyOwner.ANCHOR, KeyConflicts.fKeyOwner(f8, true, false, f6, f7, false, f8));
+        assertEquals(KeyConflicts.FKeyOwner.NONE, KeyConflicts.fKeyOwner(f7, false, true, f6, f7, false, f8));
+        assertEquals(KeyConflicts.FKeyOwner.NONE, KeyConflicts.fKeyOwner(-1, true, true, -1, -1, true, -1));
         // an install from before saved the anchors unbound: layout 3 moves them onto F5-F8
         List<KeybindMigration.Move> moves = KeybindMigration.plan(2, name -> name.startsWith("key.reignofnether.camera_anchor_")
             ? GLFW.GLFW_KEY_UNKNOWN : KeybindMigration.CUSTOM);

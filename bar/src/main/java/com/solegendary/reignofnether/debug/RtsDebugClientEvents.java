@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.debug;
 
+import com.solegendary.reignofnether.keybinds.KeyConflicts;
 import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.keybinds.KeybindsClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.InputEvent;
@@ -39,7 +41,7 @@ public class RtsDebugClientEvents {
     public static void onInput(InputEvent.Key evt) {
         if (evt.getAction() == GLFW.GLFW_PRESS) {
             // F7 answers "no" to an open resign vote (ResignVoteClientEvents); the debug overlay waits
-            if (evt.getKey() == Keybindings.getFnum(7).getKey() && !Keybindings.isCameraAnchorKey(evt.getKey())
+            if (evt.getKey() == Keybindings.getFnum(7).getKey() && KeybindsClientEvents.fKeyOwner(evt.getKey()) == KeyConflicts.FKeyOwner.NONE
                     && !com.solegendary.reignofnether.player.ResignVoteClientEvents.isVoteOpen()) {
                 if (displayMode == DebugDisplayMode.NONE)
                     displayMode = DebugDisplayMode.NO_PATHFINDING;

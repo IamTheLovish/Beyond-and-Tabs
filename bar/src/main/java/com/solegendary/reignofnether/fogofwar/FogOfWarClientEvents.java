@@ -4,7 +4,9 @@ import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.keybinds.KeyConflicts;
 import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.keybinds.KeybindsClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
@@ -216,7 +218,7 @@ public class FogOfWarClientEvents {
                 return;
 
             // resetFogChunks
-            if (evt.getKey() == Keybindings.getFnum(8).getKey() && isEnabled() && !Keybindings.isCameraAnchorKey(evt.getKey())) {
+            if (evt.getKey() == Keybindings.getFnum(8).getKey() && isEnabled() && KeybindsClientEvents.fKeyOwner(evt.getKey()) == KeyConflicts.FKeyOwner.NONE) {
                 resetFogChunks();
             }
         }
