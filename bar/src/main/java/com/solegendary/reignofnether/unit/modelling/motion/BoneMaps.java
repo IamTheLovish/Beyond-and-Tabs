@@ -2,9 +2,15 @@ package com.solegendary.reignofnether.unit.modelling.motion;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.unit.modelling.models.VillagerUnitModel;
+import com.solegendary.reignofnether.unit.modelling.models.KeyframeHierarchicalModel;
+import com.solegendary.reignofnether.unit.modelling.models.SplitPasses;
 import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.IllagerModel;
+import net.minecraft.client.model.IronGolemModel;
+import net.minecraft.client.model.SpiderModel;
+import net.minecraft.client.model.VillagerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -16,8 +22,11 @@ import java.util.NoSuchElementException;
 /**
  * Which parts of a model the living army moves (design/living_army.md, section 1), one map per model instance (a
  * renderer's model is built once and draws every unit of its type). Families in round 1: every {@link HumanoidModel}
- * (the villager units, piglins, skeletons, zombies...) and every {@link IllagerModel}. Anything else - a custom rig
- * ({@link OwnMotion}), a generated body, an Alex's Mobs creature - gets no map and is left exactly as it was.
+ * (the villager units, piglins, skeletons, zombies...), {@link IllagerModel}, {@link IronGolemModel},
+ * {@link VillagerModel} (the witch) and {@link SpiderModel}; the keyframe-clip units ({@link KeyframeHierarchicalModel})
+ * and our generated rigs ({@link SplitPasses}) get breath-and-flinch on their own hierarchy, the rigs without a second
+ * breath. Anything else - {@link OwnMotion}, the Bone Dragon while its rework (PR #145) is open, a quadruped, an Alex's
+ * Mobs creature - gets no map and is left exactly as it was.
  * A model class whose pass throws is switched off for the session ({@link #disable}).
  */
 @OnlyIn(Dist.CLIENT)
@@ -69,7 +78,41 @@ public final class BoneMaps {
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
             return m;   // the illager's hat is the head's child: it follows the head by itself
         }
+        if (model instanceof IronGolemModel<?> g) {
+            ModelPart root = g.root();
+            return new BoneMap(3f, false)
+                .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
+                .set(Motion.ARM_R, child(root, "right_arm")).set(Motion.ARM_L, child(root, "left_arm"))
+                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
+        }
+        if (model instanceof VillagerModel<?> v) {
+            ModelPart root = v.root();
+            return new BoneMap(12f, false)
+                .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
+                .set(Motion.ARMS, child(root, "arms"))
+                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
+        }
+        if (model instanceof SpiderModel<?> sp) {
+            ModelPart root = sp.root();
+            return new BoneMap(15f, false)
+                .set(Motion.BODY, child(root, "body1")).set(Motion.HEAD, child(root, "head"));
+        }
+        if (model.getClass().getSimpleName().startsWith("BoneDragon"))
+            return NONE;   // PR #145 (the dragon's rework) owns its motion for now
+        boolean keyframes = model instanceof KeyframeHierarchicalModel<?>;
+        if ((keyframes || model instanceof SplitPasses) && model instanceof HierarchicalModel<?> hm) {
+            ModelPart body = descendant(hm, "body"), head = descendant(hm, "head");
+            if (body == null && head == null)
+                return NONE;
+            return new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
+                .set(Motion.BODY, body).set(Motion.HEAD, head);
+        }
         return NONE;
+    }
+
+    private static ModelPart descendant(HierarchicalModel<?> m, String name) {
+        return m.root().getAllParts().filter(p -> p.hasChild(name)).findFirst().map(p -> p.getChild(name))
+            .orElse(null);
     }
 
     private static ModelPart child(ModelPart p, String name) {
