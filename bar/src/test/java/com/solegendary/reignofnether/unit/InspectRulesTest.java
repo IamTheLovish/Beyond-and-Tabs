@@ -74,10 +74,12 @@ class InspectRulesTest {
     void spectators_and_sandbox_players_see_every_card_in_full() {
         // a spectator owns nothing, so every unit is HOSTILE to them: like the queue / command-card gates
         // (!isRTSPlayer) they must still see abilities, items and rally lines
-        assertTrue(InspectRules.seesEverything(false, false), "spectator / non-RTS player");
-        assertTrue(InspectRules.seesEverything(true, true), "sandbox player");
-        assertTrue(InspectRules.seesEverything(false, true));
-        assertFalse(InspectRules.seesEverything(true, false), "an RTS player goes by relation");
+        assertTrue(InspectRules.seesEverything(false, false, false), "spectator");
+        assertTrue(InspectRules.seesEverything(true, false, true), "sandbox player");
+        assertTrue(InspectRules.seesEverything(false, false, true));
+        assertFalse(InspectRules.seesEverything(true, false, false), "an RTS player goes by relation");
+        // a hero seat has no base (not in rtsPlayers) but plays under its team's fog: no enemy plans for it
+        assertFalse(InspectRules.seesEverything(false, true, false), "a hero seat goes by relation");
     }
 
     @Test

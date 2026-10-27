@@ -72,9 +72,10 @@ public final class InspectRules {
         };
     }
 
-    /** Does this viewer see every card in full (sandbox players, and spectators / non-RTS players)? */
-    public static boolean seesEverything(boolean rtsPlayer, boolean sandboxPlayer) {
-        return !rtsPlayer || sandboxPlayer;
+    /** Does this viewer see every card in full (sandbox players, and spectators)? A hero seat has no base (not an RTS
+     *  player) but plays under its team's fog, so it goes by relation like an RTS player. */
+    public static boolean seesEverything(boolean rtsPlayer, boolean heroSeat, boolean sandboxPlayer) {
+        return (!rtsPlayer && !heroSeat) || sandboxPlayer;
     }
 
     /** May this stay in a selection of {@code selectionSize} things? A lone inspected thing may; a group is orders. */

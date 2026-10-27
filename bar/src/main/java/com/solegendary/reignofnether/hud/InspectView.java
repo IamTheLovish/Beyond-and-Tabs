@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hud;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.hero.PossessionClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.unit.InspectRules;
@@ -22,7 +23,8 @@ public final class InspectView {
 
     /** Spectators (non-RTS players) and sandbox players see every card in full, like the queue / command-card gates. */
     private static boolean seesEverything() {
-        return InspectRules.seesEverything(PlayerClientEvents.isRTSPlayer(), SandboxClientEvents.isSandboxPlayer());
+        return InspectRules.seesEverything(PlayerClientEvents.isRTSPlayer(), PossessionClientEvents.isHeroRole(),
+            SandboxClientEvents.isSandboxPlayer());
     }
 
     public static boolean shows(InspectRules.Info info, LivingEntity le) {
