@@ -6,6 +6,8 @@
 # (the same reviews\pr-N-modeA.md file that cc.ps1 gate done reads)
 # from someone with write access. Every new push resets it to pending, so a review always covers the latest code.
 # Comment text is handled as data: only read through env vars and matched with a regex, never executed.
+# Limits (review round 1): GitHub cannot tell builder from reviewer (all sessions post as one account); that check stays
+# in cc.ps1 gate done. Branch protection should require mode-a from the GitHub Actions app so a token can't set it.
 name: mode-a-gate
 on:
   pull_request_target:
@@ -41,8 +43,11 @@ jobs:
           AUTHOR: ${{ github.event.comment.user.login }}
           BODY: ${{ github.event.comment.body }}
         run: |
-          case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) echo "ignored: $AUTHOR has no write access"; exit 0;; esac
-          printf '%s' "$BODY" | grep -qE '^VERDICT: (PASS|BLOCK)' || { echo "not a verdict comment"; exit 0; }
+          case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) echo "ignored: $AUTHOR is not a collaborator"; exit 0;; esac
+          PERM=$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" --jq .permission)
+          case "$PERM" in admin|maintain|write) ;; *) echo "ignored: $AUTHOR has $PERM, not write"; exit 0;; esac
+          V=$(printf '%s' "$BODY" | grep -m1 -oE '^VERDICT: (PASS|BLOCK)' | cut -d' ' -f2)
+          [ -n "$V" ] || { echo "not a verdict comment"; exit 0; }
           printf '%s' "$BODY" | grep -qE '^REVIEWER: ' || { echo "no REVIEWER line"; exit 0; }
           HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
           SHA=$(printf '%s' "$BODY" | grep -oE '^SHA: [0-9a-f]{7,40}' | head -1 | cut -d' ' -f2)
@@ -51,7 +56,7 @@ jobs:
               -f description="Verdict was for ${SHA:-no sha}, head is ${HEAD:0:8}: review the latest commit"
             exit 0
           fi
-          if printf '%s' "$BODY" | grep -qE '^VERDICT: PASS'; then
+          if [ "$V" = "PASS" ]; then   # the FIRST verdict line decides (review round 1, finding 1)
             gh api "repos/$REPO/statuses/$HEAD" -f state=success -f context=mode-a -f description="Mode A PASS by $AUTHOR"
           else
             gh api "repos/$REPO/statuses/$HEAD" -f state=failure -f context=mode-a -f description="Mode A BLOCK by $AUTHOR"
