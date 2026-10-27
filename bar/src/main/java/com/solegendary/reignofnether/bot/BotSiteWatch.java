@@ -152,7 +152,7 @@ public class BotSiteWatch {
                 capitolRelocations++;
                 bot.blocked(gameTime, step, "no build progress for " + stalled / 20 + " s at " + bp.originPos.toShortString()
                     + ", cancelled and re-laid a step away (" + capitolRelocations + "/" + MAX_CAPITOL_RELOCATIONS + "): " + seen);
-                cancel(level, bp);
+                cancel(level, bp, workers);
                 cancelledCapitol = true;
                 continue;
             }
@@ -167,7 +167,7 @@ public class BotSiteWatch {
             // not the same ground again either (the next think would re-lay a lab on the very spot its builders
             // could not reach, and the watch would cancel it again 45 s later, for the whole match)
             bot.siteCancelled(bp, gameTime);
-            cancel(level, bp);
+            cancel(level, bp, workers);
         }
         return cancelledCapitol;
     }
@@ -188,7 +188,13 @@ public class BotSiteWatch {
         return dx * dx + dz * dz <= 4 * 4;
     }
 
-    void cancel(ServerLevel level, BuildingPlacement bp) {
+    void cancel(ServerLevel level, BuildingPlacement bp, List<LivingEntity> workers) {
+        // one line per builder ordered to it: where it stood, how far from the site, what its build goal / path was doing
+        for (LivingEntity le : workers)
+            if (targetOf(le) == bp && le instanceof WorkerUnit wu)
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} site {} at {} cancelled for no progress: "
+                        + "builder {} at {}, {}", bot.name, bp.getBuilding().structureName, bp.originPos.toShortString(),
+                    le.getId(), le.blockPosition().toShortString(), wu.getBuildRepairGoal().describeState());
         sites.remove(bp);
         cancelled++;
         // the player's cancel: refunds what the flow economy spent, drops the site (its workers go idle)

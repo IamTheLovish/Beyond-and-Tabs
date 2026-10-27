@@ -186,6 +186,12 @@ public class Keybindings {
     // cursor diagnostics overlay (cursor/CursorDiagClient); no default key - set one in Controls, or use /rts-cursordiag
     public static final Keybinding cursorDiag = new Keybinding("key.reignofnether.cursor_diag", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_CAMERA, "");
 
+    // BAR queue editing (unit/command/QueueEditKeys, Legacy layout): N skips the current order (Ctrl+N cancels the
+    // last one); N stays the card's Garrison while nothing selected has an order waiting. Space held while giving an
+    // order inserts it at the front of the queue; a plain Space tap keeps lastAlert / openShop.
+    public static final Keybinding queueSkip   = new Keybinding("key.reignofnether.queue_skip",   GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
+    public static final Keybinding queueInsert = new Keybinding("key.reignofnether.queue_insert", GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
+
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
         new Keybinding("key.reignofnether.control_group_1", GLFW.GLFW_KEY_1, CATEGORY_RTS, "1"),
@@ -232,7 +238,8 @@ public class Keybindings {
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,
-            cursorDiag
+            cursorDiag,
+            queueSkip, queueInsert
         ));
         Collections.addAll(list, buildGrid);
         Collections.addAll(list, nums);

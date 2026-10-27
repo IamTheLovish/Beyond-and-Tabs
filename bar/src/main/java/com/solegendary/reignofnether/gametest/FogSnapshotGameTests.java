@@ -295,6 +295,61 @@ public class FogSnapshotGameTests {
     }
 
     /**
+     * A light barrier that never completes (the 7-minute capture) must not hold the capture: the loaded chunk behind it
+     * is built anyway after MAX_CHUNK_WAIT_NS and counted as forced. Own batch: it needs the shared snapshot state to
+     * itself, and batches run one after the other.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20000, batch = "fog_snapshot_hang")
+    public static void capture_bounded_when_barrier_hangs(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));
+        int cx0 = origin.getX() >> 4, cz0 = origin.getZ() >> 4;
+        TicketType<ChunkPos> hold = TicketType.FORCED;
+        ChunkPos hung = new ChunkPos(cx0, cz0);
+        for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)
+            for (int cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+                ChunkPos p = new ChunkPos(cx, cz);
+                level.getChunkSource().addRegionTicket(hold, p, 0, p);
+            }
+        long[] startNs = {-1};
+        helper.onEachTick(() -> {
+            if (startNs[0] < 0) {
+                for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)
+                    for (int cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+                        LevelChunk c = level.getChunkSource().getChunkNow(cx, cz);
+                        if (c == null || !c.isLightCorrect()) return;
+                    }
+                FogChunkSnapshot.testBarrierHook = p -> p.equals(hung) ? new CompletableFuture<>() : null;
+                FogChunkSnapshot.beginCapture(level, cx0 - 1, cx0 + 1, cz0 - 1, cz0 + 1);
+                startNs[0] = System.nanoTime();
+                return;
+            }
+            if (FogChunkSnapshot.isCapturing()) return;
+            long tookMs = (System.nanoTime() - startNs[0]) / 1_000_000L;
+            int forced = FogChunkSnapshot.forcedCount();
+            FogChunkSnapshot.testBarrierHook = null;
+            FogChunkSnapshot.awaitWrites();
+            Path f = FogChunkSnapshot.fileFor(hung);
+            boolean written = f != null && Files.isRegularFile(f);
+            FogChunkSnapshot.clear();
+            FogChunkSnapshot.awaitWrites();
+            for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)
+                for (int cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+                    ChunkPos p = new ChunkPos(cx, cz);
+                    level.getChunkSource().removeRegionTicket(hold, p, 0, p);
+                }
+            List<String> problems = new ArrayList<>();
+            if (tookMs > 12_000L) problems.add("the capture took " + tookMs + " ms (limit 12000)");
+            if (forced != 1) problems.add("forced " + forced + " chunks, expected 1");
+            if (!written) problems.add("the forced chunk has no snapshot file");
+            if (problems.isEmpty()) helper.succeed();
+            else helper.fail(String.join("; ", problems));
+        });
+        // never leave the hook set if the test times out
+        helper.runAfterDelay(19990, () -> FogChunkSnapshot.testBarrierHook = null);
+    }
+
+    /**
      * Chunks that are not loaded: the capture asks the chunk system for them and builds each when it arrives, over
      * real server ticks (PlayerServerEvents drives it); no step goes over the budget, and the files hold the same blocks,
      * heightmaps and block entities as the one-tick capture of the same chunks. Light is not compared here: a chunk just

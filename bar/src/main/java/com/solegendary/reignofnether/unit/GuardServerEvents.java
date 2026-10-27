@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
@@ -35,6 +36,8 @@ public class GuardServerEvents {
 
     private static final double PROTECT_RANGE_SQR = 18 * 18;  // engage enemies this close to the ward
     private static final double ESCORT_GAP_SQR = 7 * 7;       // close back up when further than this
+    /** A builder guarding a factory assists its production from at most this many blocks off its footprint. */
+    public static final int ASSIST_REACH = 6;
 
     public static void setGuardUnit(Unit guard, LivingEntity target) {
         LivingEntity le = (LivingEntity) guard;
@@ -157,6 +160,18 @@ public class GuardServerEvents {
                 }
             }
 
+            // workers guarding a factory (by hand or by its factory guard toggle): BAR's assist - beside the factory,
+            // a builder lends its build power to the factory's current production. With nothing in production it
+            // waits beside the factory (it never wanders off); a new order from the player ends the guard.
+            if (guard instanceof WorkerUnit worker && wardBuilding instanceof ProductionPlacement factory) {
+                boolean inReach = footprintGap(factory, guardLe.blockPosition()) <= ASSIST_REACH;
+                if (inReach && factory.isBuilt && !factory.productionQueue.isEmpty())
+                    factory.addGuardAssist(worker.getBuildPower(), level.getGameTime());
+                else if (!inReach && guard.isIdle())
+                    guard.setMoveTarget(factory.getClosestGroundPos(guardLe.blockPosition(), 2, true));
+                continue;
+            }
+
             // escort: close the gap back up when idle and drifting
             if (guard.isIdle() && guardLe.blockPosition().distSqr(anchor) > ESCORT_GAP_SQR) {
                 if (wardLe != null)
@@ -165,6 +180,19 @@ public class GuardServerEvents {
                     guard.setMoveTarget(anchor);
             }
         }
+    }
+
+    /** Blocks (x/z) from {@code pos} to the edge of the building's footprint; 0 inside it. */
+    public static int footprintGap(BuildingPlacement b, BlockPos pos) {
+        int dx = Math.max(0, Math.max(b.minCorner.getX() - pos.getX(), pos.getX() - b.maxCorner.getX()));
+        int dz = Math.max(0, Math.max(b.minCorner.getZ() - pos.getZ(), pos.getZ() - b.maxCorner.getZ()));
+        return Math.max(dx, dz);
+    }
+
+    /** The guarded building's origin for a unit guarding a building, else null (FactoryGuardGameTests). */
+    public static BlockPos guardedBuilding(int unitId) {
+        GuardTarget t = guards.get(unitId);
+        return t == null ? null : t.buildingPos();
     }
 
     /** The closest hostile unit within protecting range of the anchor. */

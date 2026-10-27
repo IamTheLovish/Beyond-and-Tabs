@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
-import com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents;
@@ -115,7 +114,7 @@ public class HudClientEvents {
     private static int tempMsgTicksLeft = 0;
     private static final int TEMP_MSG_TICKS_FADE = 50; // ticks left when the msg starts to fade
     private static final int TEMP_MSG_TICKS_MAX = 150; // ticks to show the msg for
-    private static final int MAX_BUTTONS_PER_ROW = 6;
+    private static final int MAX_BUTTONS_PER_ROW = HudLayout.CARD_COLS;
 
     public static final ArrayList<ControlGroup> controlGroups = new ArrayList<>(10);
     public static int lastSelCtrlGroupKey = -1;
@@ -125,6 +124,8 @@ public class HudClientEvents {
     private static final ArrayList<Button> productionButtons = new ArrayList<>();
     // buttons which are rendered at the moment in RenderEvent
     private static final ArrayList<Button> renderedButtons = new ArrayList<>();
+    // the control-group buttons among renderedButtons: mouse only, their number keys act on the press (ControlGroup)
+    private static final Set<Button> controlGroupButtons = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     // the selected unit's / building's own card (orders, abilities, build menu, production): its hotkeys win over
     // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler on ".", the last-alert
     // jump on Space) - BAR's bound-key rule, generalised from the idle-worker case
@@ -428,6 +429,7 @@ public class HudClientEvents {
     }
 
     private static void drawHud(ScreenEvent.Render.Post evt) {
+        Button.compactTiles = false;
         // clean view (HudPanels, "=" by default): only the economy bar, the minimap and the command card
         boolean extras = HudPanels.showExtras();
         
@@ -436,7 +438,7 @@ public class HudClientEvents {
         deferredTooltip = null;
         
         // where to start drawing the centre hud (from left to right: portrait, stats, unit icon buttons)
-        int hudStartingXPos = Button.DEFAULT_ICON_FRAME_SIZE * 6 + (Button.DEFAULT_ICON_FRAME_SIZE / 2);
+        int hudStartingXPos = HudLayout.HUD_START_X;
 
         ArrayList<LivingEntity> selUnits = UnitClientEvents.getSortedSelectedUnits();
         ArrayList<BuildingPlacement> selBuildings = BuildingClientEvents.getSelectedBuildings();
@@ -446,7 +448,7 @@ public class HudClientEvents {
         int screenHeight = MC.getWindow().getGuiScaledHeight();
 
         int iconSize = 14;
-        int iconFrameSize = Button.DEFAULT_ICON_FRAME_SIZE;
+        int iconFrameSize = HudLayout.TILE;
 
         // the bottom-left panel stops short of the minimap (HudLayout, mirrored by tools/hud_layout.py): at GUI
         // scale 3 on 1080p the screen is 640 px wide and the old width-only rule put eight strip columns under a
@@ -536,6 +538,8 @@ public class HudClientEvents {
             }
         }
 
+        // compact tiles for the bottom-left command panel only (HudLayout.TILE); off again before the resources row
+        Button.compactTiles = true;
         if (hudSelectedPlacement != null) {
             boolean hudSelBuildingOwned =
                 BuildingClientEvents.getPlayerToBuildingRelationship(hudSelectedPlacement) == Relationship.OWNED ||
@@ -616,6 +620,10 @@ public class HudClientEvents {
                     );
                     multiRepeat.render(evt.getGuiGraphics(), blitX - 25, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
                     renderedButtons.add(multiRepeat);
+                    // factory guard for the whole group, right of Repeat (one press sets all, mixed -> all on)
+                    Button multiGuard = ProductionHudLogic.factoryGuardButton(ProductionHudLogic.repeatGroup(selBuildings));
+                    multiGuard.render(evt.getGuiGraphics(), blitX - 1, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
+                    renderedButtons.add(multiGuard);
                 }
                 // background frame
                 hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
@@ -719,6 +727,12 @@ public class HudClientEvents {
                         stewardButton.render(evt.getGuiGraphics(), toggleX + 24, toggleY, mouseX, mouseY);
                         renderedButtons.add(stewardButton);
                     }
+                    // BAR factory guard (Ctrl+G), right of Repeat (and the Steward): lit while builders made here guard it
+                    Button guardButton = ProductionHudLogic.factoryGuardButton(List.of(selProdBuilding));
+                    boolean stewardShown = selProdBuilding.isCapitol && com.solegendary.reignofnether.research.ResearchClient.hasResearch(
+                            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_STEWARD);
+                    guardButton.render(evt.getGuiGraphics(), toggleX + (stewardShown ? 48 : 24), toggleY, mouseX, mouseY);
+                    renderedButtons.add(guardButton);
                 }
 
                 for (int i = 0; i < selProdBuilding.productionQueue.size(); i++) {
@@ -822,7 +836,7 @@ public class HudClientEvents {
                                 .toList();
                     }
                     if (buildingAbilities.size() > 0 || !hudSelectedPlacement.isBuilt) {
-                        blitY -= Button.DEFAULT_ICON_FRAME_SIZE;
+                        blitY -= HudLayout.TILE;
                     }
 
                     int rowButtons = 0;
@@ -850,7 +864,7 @@ public class HudClientEvents {
 
                     if (hudSelectedPlacement instanceof ProductionPlacement selProdPlacement) {
                         List<Button> visibleProdButtons = multiSelectCardButtons(selProdPlacement);
-                        blitY -= Button.DEFAULT_ICON_FRAME_SIZE * Math.ceil(((float) visibleProdButtons.size() / (float) MAX_BUTTONS_PER_ROW) - 1);
+                        blitY -= HudLayout.TILE * Math.ceil(((float) visibleProdButtons.size() / (float) MAX_BUTTONS_PER_ROW) - 1);
 
                         for (Button prodButton : visibleProdButtons) {
                             rowButtons += 1;
@@ -862,16 +876,16 @@ public class HudClientEvents {
                             if (rowButtons >= MAX_BUTTONS_PER_ROW) {
                                 rowButtons = 0;
                                 blitX = 0;
-                                blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                                blitY += HudLayout.TILE;
                                 buildingProdRows += 1;
                             }
                         }
                         if (rowButtons > 0) {
-                            blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                            blitY += HudLayout.TILE;
                             buildingProdRows += 1;
                         }
                     } else {
-                        blitY += Button.DEFAULT_ICON_FRAME_SIZE;
+                        blitY += HudLayout.TILE;
                     }
                     blitX = 0;
 
@@ -1307,11 +1321,6 @@ public class HudClientEvents {
                 });
             }
 
-            if (hudSelectedEntity instanceof VillagerUnit vUnit)
-                for (Ability ability : vUnit.getAbilities().get())
-                    if (ability instanceof CallToArmsUnit callToArmsUnit)
-                        actionButtons.add(callToArmsUnit.getButton(Keybindings.hotkey1, vUnit));
-
             int orderRows = CommandCard.rows(actionButtons.size());
             int orderIndex = 0;
             for (Button actionButton : actionButtons) {
@@ -1365,7 +1374,6 @@ public class HudClientEvents {
                     }
                 }
                 List<Button> allAbilities = abilityButtons.stream()
-                        .filter(b -> !(b instanceof AbilityButton ab) || !(ab.ability instanceof CallToArmsUnit))
                         .toList();
                 // BAR mixed builders: several builder types selected = their build menus together (BuilderCardUnion),
                 // before the tab split so every added building lands in its own tab
@@ -1475,7 +1483,7 @@ public class HudClientEvents {
             };
 
             List<Button> shownAbilities = abilityButtons.stream()
-                    .filter(b -> !b.isHidden.get() && !(b instanceof AbilityButton ab && ab.ability instanceof CallToArmsUnit))
+                    .filter(b -> !b.isHidden.get())
                     .toList();
             // the sandbox's faction building list is tabbed like a worker's (BuildTabs)
             if (SandboxClientEvents.sandboxMenuType == SandboxMenuType.BUILDINGS) {
@@ -1533,6 +1541,7 @@ public class HudClientEvents {
             }
         }
 
+        Button.compactTiles = false;
         // ---------------------------
         // Resources icons and amounts
         // ---------------------------
@@ -1687,6 +1696,7 @@ public class HudClientEvents {
         // Control group buttons
         // ---------------------
         blitX = 0;
+        controlGroupButtons.clear();
         // clean up untracked entities/buildings from control groups
         for (ControlGroup controlGroup : controlGroups) {
             controlGroup.clean();
@@ -1695,6 +1705,7 @@ public class HudClientEvents {
                 Button ctrlGroupButton = controlGroup.getButton();
                 ctrlGroupButton.render(evt.getGuiGraphics(), SlimTiles.at(blitX), SlimTiles.at(0), mouseX, mouseY);
                 renderedButtons.add(ctrlGroupButton);
+                controlGroupButtons.add(ctrlGroupButton);
                 blitX += HudLayout.SLIM_TILE;
             }
         }
@@ -2309,6 +2320,7 @@ public class HudClientEvents {
     // for some reason some bound vanilla keys like Q and E don't trigger KeyPressed but still trigger keyReleased
     @SubscribeEvent
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
+        ControlGroup.onKeyReleased(evt.getKeyCode());
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
@@ -2327,6 +2339,9 @@ public class HudClientEvents {
         // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
+        // BAR queue edits: N / Ctrl+N skip / cancel-last, and a Space that inserted an order (QueueEditKeys)
+        if (com.solegendary.reignofnether.unit.QueueEditClientEvents.onKeyRelease(key))
+            return;
         // the selected card's own buttons win over HUD-wide ones on the same key (minimap toggle M, idle-worker ".",
         // ...); within the card, CommandCard and the no_two_buttons_on_a_command_card_share_a_hotkey GameTest keep
         // every key unique
@@ -2343,12 +2358,20 @@ public class HudClientEvents {
             com.solegendary.reignofnether.hud.buttons.HelperButtons.selectWholeArmy();
             return;
         }
+        // BAR's Ctrl+G: factory guard on the selected factories (only factories selected; G alone keeps its meaning)
+        if (key == GLFW.GLFW_KEY_G && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
+                && OrthoviewClientEvents.isEnabled() && ProductionHudLogic.ctrlGToggles(getSelectedUnits().size(),
+                    com.solegendary.reignofnether.building.BuildingClientEvents.getSelectedBuildings())) {
+            com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleFactoryGuard(
+                ProductionHudLogic.repeatGroup(com.solegendary.reignofnether.building.BuildingClientEvents.getSelectedBuildings()));
+            return;
+        }
         boolean cardKey = isCardKey(key);
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
         for (Button button : renderedButtons)
             // a build grid button's key is its cell's grid key, handled above (BuildTabs.onKey), never its own hotkey
-            if ((!cardKey || cardButtons.contains(button)) && !BuildTabs.isGridButton(button))
+            if ((!cardKey || cardButtons.contains(button)) && !BuildTabs.isGridButton(button) && !controlGroupButtons.contains(button))   // groups: on the press
                 button.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
@@ -2484,12 +2507,21 @@ public class HudClientEvents {
             || key == Keybindings.panDown.getKey() || key == Keybindings.panRight.getKey();
     }
 
+    // BAR's gui_unit_group_number: the group's digit beside every grouped unit drawn this frame
+    @SubscribeEvent
+    public static void onRenderLevelGroupNumbers(net.minecraftforge.client.event.RenderLevelStageEvent evt) {
+        if (evt.getStage() != net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
+        ControlGroupNumbers.render(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END) {
             return;
         }
         BuildTabs.tick();
+        ControlGroup.tick();   // autogroups: new units of a bound type join their group
         if (OrthoviewClientEvents.isEnabled()) {
             portraitRendererUnit.tickAnimation();
         }
@@ -2512,6 +2544,7 @@ public class HudClientEvents {
     @SubscribeEvent
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
+        ControlGroupNumbers.queue(evt.getEntity());
         if (hudSelectedEntity != null && (hudSelectedEntity.isRemoved() || hudSelectedEntity.isDeadOrDying()))
             setHudSelectedEntity(null);
 
@@ -2554,40 +2587,21 @@ public class HudClientEvents {
                 }
         }
 
-        // Deselect everything
-        if (evt.getKeyCode() == Keybindings.deselect.getKey()) {
+        // Deselect everything; Ctrl+` / Alt+` are BAR's "group unset" / "remove_from_autogroup" (ControlGroup)
+        if (evt.getKeyCode() == Keybindings.deselect.getKey() && !ControlGroup.onDeselectKey(evt.getModifiers())) {
             UnitClientEvents.clearSelectedUnits();
             BuildingClientEvents.clearSelectedBuildings();
             BuildingClientEvents.setBuildingToPlace(null);
         }
 
-        // Initialize controlGroups with empty arrays if not already initialized
-        if (controlGroups.size() < Keybindings.nums.length) {
-            controlGroups.clear(); // Clear in case of a previous partial initialization
-            for (Keybinding keybinding : Keybindings.nums) {
-                controlGroups.add(new ControlGroup());
-            }
-        }
-
-        // Access and save to controlGroups if index is within bounds
-        for (Keybinding keybinding : Keybindings.nums) {
-            int index = Integer.parseInt(keybinding.buttonLabel);
-            if (index >= 0 && index < controlGroups.size() && evt.getKeyCode() == keybinding.getKey()) {  // Bounds check
-                if (Keybindings.ctrlMod.isDown()) {
-                    controlGroups.get(index).saveFromSelected(keybinding, true);
-                } else if (Keybindings.shiftMod.isDown()) {
-                    controlGroups.get(index).saveFromSelected(keybinding, false);
-                } else if (Keybindings.altMod.isDown()) {
-                    for (ControlGroup controlGroup : controlGroups) {
-                        for (LivingEntity le : getSelectedUnits())
-                            controlGroup.entityIds.removeIf(id -> id == le.getId());
-                        for (BuildingPlacement bpl : BuildingClientEvents.getSelectedBuildings())
-                            controlGroup.buildingBps.removeIf(bp -> bp.equals(bpl.originPos));
-                    }
-                    controlGroups.get(index).saveFromSelected(keybinding, true);
-                }
-            }
-        }
+        // BAR control groups on the PRESS, with the event's own modifier bits (either Ctrl / Shift / Alt key): N,
+        // N N, Ctrl+N, Ctrl+Shift+N, Shift+N, Alt+N (ControlGroupRules). They used to be split between this press
+        // (Ctrl / Shift / Alt, left-hand keys only) and the group's HUD button on the RELEASE (plain N), so N did
+        // nothing whenever the button was not drawn (clean view, F1), and Ctrl+N also selected and armed the double
+        // tap on its release.
+        ControlGroup.ensureGroups();
+        if (OrthoviewClientEvents.isEnabled())
+            ControlGroup.onNumberKey(evt.getKeyCode(), evt.getModifiers());
 
         // Open chat while orthoview is enabled
         if (OrthoviewClientEvents.isEnabled() && evt.getKeyCode() == Keybindings.chat.getKey()) {
