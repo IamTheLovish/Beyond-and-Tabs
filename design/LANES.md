@@ -34,7 +34,7 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   posts in a whimsical storybook style; a split light/dark cathedral as a central objective.
 - **Visual language:** runes everywhere - glyph circles over spires growing with level, construction by rune circles
   instead of nano lines (Brassworks: gears/steam), stacked rune beams for big moments, red ground telegraphs.
-  Effects via the Photon library (GPL-3.0), animations via GeckoLib (MIT) - client-side, playable at 300 units.
+  Effects via the Photon library (GPL-3.0), animations via GeckoLib (MIT) - client-side, playable at 300 units. (superseded? see animation-foundation-audit.md - no GeckoLib dependency in build; awaiting lovish confirmation)
 - **Playability is extremely important:** graphics presets (Low-Ultra), measure with the [PerfAuto] profiler, slower
   pacing so heroes keep up, +10% per stat upgrade rank (capabilities are the exciting upgrades - parked until units
   are developed).
