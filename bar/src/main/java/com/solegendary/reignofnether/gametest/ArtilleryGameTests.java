@@ -510,7 +510,7 @@ public class ArtilleryGameTests {
         // with sprintJumpFirst each hop is led by one forward + sprint + jump claim where it stands (no step) and
         // followed by 6 ticks with no claim, in which the server lands it (the boost needs the unit on the ground)
         int lead = sprintJumpFirst ? 1 : 0, rest = sprintJumpFirst ? 6 : 0, cycle = lead + arc.length + rest;
-        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * cycle;
+        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * cycle - rest;   // ends with the last hop's landing
         int[] tick = { 0 }, seq = { 0 };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])

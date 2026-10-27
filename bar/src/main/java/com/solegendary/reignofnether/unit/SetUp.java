@@ -15,10 +15,11 @@ import java.util.WeakHashMap;
  * refuse too, for possession and anything that calls them directly.
  * <p>
  * "Moving": navigating with a real step this tick ({@link #STEP}, a walk is 0.1-0.25 a tick; a stalled path is not a
- * move), walked by hand while possessed (a step while its possessor holds a walk key), still sliding from such a walk
- * after it has ended, or ending up more than {@link #DRIFT} from where it last stood over ground - a teleport, a long
- * shove. A knockback (its flight through the air does not count) or a crowd shove smaller than that never costs the
- * set-up, possessed or not: being shot at is not moving.
+ * move), walked by hand while possessed (a step while its possessor holds a walk key, or any step its client's position
+ * claims make with no shove the server gave it), still sliding from such a walk after it has ended, or ending up more
+ * than {@link #DRIFT} from where it last stood over ground - a teleport, a long shove. A knockback (its flight through
+ * the air does not count) or a crowd shove smaller than that never costs the set-up, possessed or not, as long as the
+ * server gave it: being shot at is not moving.
  * <p>
  * Server side, from Unit.tick; one map entry per artillery unit, nothing for anyone else. A unit never ticked yet (just
  * spawned where it stands) counts as set up.
