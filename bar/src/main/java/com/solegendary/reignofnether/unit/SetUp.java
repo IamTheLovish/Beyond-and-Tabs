@@ -15,7 +15,7 @@ import java.util.WeakHashMap;
  * refuse too, for possession and anything that calls them directly.
  * <p>
  * "Moving": navigating with a real step this tick ({@link #STEP}, a walk is 0.1-0.25 a tick; a stalled path is not a
- * move), or ending up more than {@link #DRIFT} from where it last stood - a possessed unit walked by hand, a teleport.
+ * move), still sliding from such a walk after the path has ended, or ending up more than {@link #DRIFT} from where it last stood - a possessed unit walked by hand, a teleport.
  * A knockback or a crowd shove smaller than that never costs the set-up: being shot at is not moving.
  * <p>
  * Server side, from Unit.tick; one map entry per artillery unit, nothing for anyone else. A unit never ticked yet (just
@@ -34,6 +34,7 @@ public final class SetUp {
     private static final class State {
         double anchorX, anchorZ, lastX, lastZ;
         long movedAt = Long.MIN_VALUE / 2;
+        boolean walking;
     }
 
     private static final Map<Mob, State> STATE = new WeakHashMap<>();
@@ -57,7 +58,11 @@ public final class SetUp {
         }
         double sx = x - s.lastX, sz = z - s.lastZ;
         double ax = x - s.anchorX, az = z - s.anchorZ;
-        boolean walking = !mob.getNavigation().isDone() && sx * sx + sz * sz > STEP * STEP;
+        boolean stepping = sx * sx + sz * sz > STEP * STEP;
+        // a walk ends when the unit comes to rest, not when its path does: it still slides a few ticks after the
+        // navigation finishes, and that slide is part of the walk (a shove while standing still is not)
+        boolean walking = stepping && (!mob.getNavigation().isDone() || s.walking);
+        s.walking = walking;
         if (walking || ax * ax + az * az > DRIFT * DRIFT) {
             s.movedAt = mob.level().getGameTime();
             s.anchorX = x;
