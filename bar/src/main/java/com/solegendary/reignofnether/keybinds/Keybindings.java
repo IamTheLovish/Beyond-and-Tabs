@@ -95,6 +95,10 @@ public class Keybindings {
     // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
     // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
     public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    // The idle T2 builder and commander buttons beside it. Home / End: no letter, digit or punctuation key was free
+    // (every one is an ability, hotkey, control group or camera key), and nothing else binds them in the RTS view.
+    public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_HOME, CATEGORY_RTS, "Home");
+    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_END,  CATEGORY_RTS, "End");
     // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
@@ -206,7 +210,7 @@ public class Keybindings {
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             buildMetal, buildEnergy, buildDefence, buildFactory,
-            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, selectArmy, returnResources,
+            hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
             attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,

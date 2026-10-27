@@ -198,6 +198,32 @@ public final class HudLayout {
         return screenHeight - MAP_CORNER + MAP_BG - 2 - ICON_FRAME;
     }
 
+    public static final int IDLE_ROW_GAP = 2;
+
+    /**
+     * The commander (slot 0) and idle T2 builder (slot 1) buttons: a row left of the minimap's backing, lifted above the
+     * command panel (whose right edge stops at the backing, so a row at the idle-worker button's height would sit on
+     * it). Slot 0 is nearest the map.
+     */
+    public static int idleRowX(int screenWidth, int mapRadius, boolean square, int slot) {
+        return minimapLeft(screenWidth, mapRadius, square) - MAP_GAP - ICON_FRAME - slot * (ICON_FRAME + IDLE_ROW_GAP);
+    }
+
+    public static int idleRowY(int screenHeight) {
+        return screenHeight - PANEL_H - 4 - ICON_FRAME;
+    }
+
+    /** Square map: x of the idle-worker button, the button grid's top-right cell (HudClientEvents c2x). */
+    public static int squareIdleWorkerX(int screenWidth, int mapRadius) {
+        int mapLeft = screenWidth - MAP_CORNER - squareSide(mapRadius);
+        return mapLeft - GRID_PAD - ICON_FRAME - 2 * GRID_STRIDE;
+    }
+
+    /** Square map: y of the idle-worker button (HudClientEvents r2y). */
+    public static int squareIdleWorkerY(int screenHeight) {
+        return screenHeight - MAP_CORNER + 4 - ICON_FRAME - 2 * GRID_STRIDE;
+    }
+
     /**
      * Right edge limit of the centre-top alert column: when the minimap's top comes within 100 px of the economy bar
      * (the large map on a small window), the column stops short of the map's left edge so a stack of toasts can't

@@ -417,6 +417,8 @@ public class PlayerClientEvents {
                 if (entity instanceof Unit unit)
                     unit.setOwnerName("");
         UnitClientEvents.idleWorkerIds.clear();
+        UnitClientEvents.idleT2BuilderIds.clear();
+        UnitClientEvents.commanderIdle = false;
         ResearchClient.removeAllResearch();
         ResearchClient.removeAllCheats();
         BuildingClientEvents.getSelectedBuildings().clear();
@@ -450,6 +452,8 @@ public class PlayerClientEvents {
         UnitClientEvents.getSelectedUnits().clear();
         UnitClientEvents.getPreselectedUnits().clear();
         UnitClientEvents.idleWorkerIds.clear();
+        UnitClientEvents.idleT2BuilderIds.clear();
+        UnitClientEvents.commanderIdle = false;
         ResearchClient.removeAllResearch();
         ResearchClient.removeAllCheats();
         BuildingClientEvents.getSelectedBuildings().clear();

@@ -23,6 +23,8 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.gamerules.GameruleClient;
 import com.solegendary.reignofnether.hero.HeroServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.hud.IdleButtons;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.hud.effecticons.MobEffectIcon;
 import com.solegendary.reignofnether.hud.effecticons.MobEffectIcons;
@@ -128,6 +130,9 @@ public class UnitClientEvents {
 
     // list of ids that correspond to idle workers - should only be updated from server side
     public static final ArrayList<Integer> idleWorkerIds = new ArrayList<>();
+    // the same sync, split (hud/IdleButtons): idle T2 builders (not in idleWorkerIds) and whether the commander is idle
+    public static final ArrayList<Integer> idleT2BuilderIds = new ArrayList<>();
+    public static volatile boolean commanderIdle = false;
 
     // units moused over or inside a box select
     private static final ArrayList<LivingEntity> preselectedUnits = new ArrayList<>();
@@ -794,6 +799,7 @@ public class UnitClientEvents {
         try {
             synchronized (idleWorkerIds) {
                 idleWorkerIds.removeIf(id -> id == evt.getEntity().getId());
+                idleT2BuilderIds.removeIf(id -> id == evt.getEntity().getId());
             }
         } catch (Exception e) {
             ReignOfNether.LOGGER.warn("Error while trying to remove an idleWorkerId");
@@ -1879,14 +1885,35 @@ public class UnitClientEvents {
             return;
 
         UnitClientEvents.idleWorkerIds.clear();
+        idleT2BuilderIds.clear();
+        commanderIdle = false;
+        List<LivingEntity> idle = new ArrayList<>();
         for (int id : idleWorkerIds) {
             for (LivingEntity entity : getAllUnits()) {
                 if (entity.getId() == id &&
                     entity instanceof WorkerUnit unit &&
                     getPlayerToEntityRelationship(entity) == Relationship.OWNED)
-                    UnitClientEvents.idleWorkerIds.add(id);
+                    idle.add(entity);
             }
         }
+        // each idle builder shows in exactly one button: commander, T2 builder or plain worker
+        IdleButtons.Split<LivingEntity> split = IdleButtons.split(idle,
+            CommanderServerEvents::looksLikeCommander, T2Workers::isT2Worker);
+        for (LivingEntity e : split.workers)
+            UnitClientEvents.idleWorkerIds.add(e.getId());
+        for (LivingEntity e : split.t2Builders)
+            idleT2BuilderIds.add(e.getId());
+        commanderIdle = !split.commanders.isEmpty();
+    }
+
+    /** The own commander as the client knows it (the translated name is the tag), or null when there is none alive. */
+    @Nullable
+    public static LivingEntity getOwnCommander() {
+        for (LivingEntity entity : getAllUnits())
+            if (entity.isAlive() && CommanderServerEvents.looksLikeCommander(entity) &&
+                getPlayerToEntityRelationship(entity) == Relationship.OWNED)
+                return entity;
+        return null;
     }
 
     public static void makeVillagerVeteran(int unitId) {

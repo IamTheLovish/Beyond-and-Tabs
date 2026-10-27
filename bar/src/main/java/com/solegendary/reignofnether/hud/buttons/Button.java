@@ -321,7 +321,10 @@ public class Button {
             line.accept((i, style, cp) -> { sb.appendCodePoint(cp); return true; });
             plain.add(sb.toString());
         }
-        String text = hotkeyLineText(hotkey.getCurrentLabel(), I18n.get("hud.reignofnether.tooltip_hotkey"), plain);
+        // the RAW pattern: I18n.get(key) with no args runs String.format on "Hotkey: %s" with nothing to fill it and
+        // returns "Format error: Hotkey: %s", which hotkeyLineText then formatted again into "Format error: Hotkey: ."
+        String text = hotkeyLineText(hotkey.getCurrentLabel(),
+            net.minecraft.locale.Language.getInstance().getOrDefault("hud.reignofnether.tooltip_hotkey"), plain);
         if (text == null)
             return lines;
         List<FormattedCharSequence> out = new ArrayList<>(lines);

@@ -1805,6 +1805,8 @@ public class HudClientEvents {
                 idleWorkerButton.render(evt.getGuiGraphics(), c2x, r2y, mouseX, mouseY);
                 renderedButtons.add(idleWorkerButton);
             }
+            if (extras)
+                renderIdleRow(evt.getGuiGraphics(), mouseX, mouseY, true, screenWidth, screenHeight);
         } else {
             // the attack warning used to sit above the diamond's top point, which at GUI scale 3 is inside the
             // player panel's rows: it now ends the right-edge helper column (below the idle labs), see further down.
@@ -1815,6 +1817,8 @@ public class HudClientEvents {
                     HudLayout.idleWorkerY(screenHeight, r), mouseX, mouseY);
                 renderedButtons.add(idleWorkerButton);
             }
+            if (extras)
+                renderIdleRow(evt.getGuiGraphics(), mouseX, mouseY, false, screenWidth, screenHeight);
 
             if (!toggleMapSizeButton.isHidden.get()) {
                 toggleMapSizeButton.render(evt.getGuiGraphics(),
@@ -2353,6 +2357,21 @@ public class HudClientEvents {
         // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
         if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
+    }
+
+    /** The commander (nearest the map) and idle T2 builder buttons, left of the minimap (HudLayout.idleRowX/Y). */
+    private static void renderIdleRow(net.minecraft.client.gui.GuiGraphics g, int mouseX, int mouseY,
+                                      boolean square, int screenWidth, int screenHeight) {
+        int r = MinimapClientEvents.getMapGuiRadius();
+        int y = HudLayout.idleRowY(screenHeight);
+        Button[] row = { HelperButtons.commanderButton, HelperButtons.idleT2BuilderButton };
+        int slot = 0;
+        for (Button b : row) {
+            if (b.isHidden.get())
+                continue;
+            b.render(g, HudLayout.idleRowX(screenWidth, r, square, slot++), y, mouseX, mouseY);
+            renderedButtons.add(b);
+        }
     }
 
     private static final BuildCategoryKeys.Cycle buildCycle =
