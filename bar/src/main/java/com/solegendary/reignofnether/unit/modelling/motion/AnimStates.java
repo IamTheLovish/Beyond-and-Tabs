@@ -138,7 +138,8 @@ public final class AnimStates {
             le.yBodyRot - le.yBodyRotO, le.getHealth(), le.getMaxHealth(), fighting, fresh);
         s[b + AnimState.SEEN_TICK] = tick;
         boolean moving = s[b + AnimState.SPEED] >= Kinematics.STOP_SPEED;
-        if (Idle.step(s, b, id, tick, moving, fighting) == Idle.GLANCE)
+        // the scheduler counts in the unit's own ticks: the pose reads its envelopes by the same clock (tickCount)
+        if (Idle.step(s, b, id, le.tickCount, moving, fighting) == Idle.GLANCE)
             pickGlance(le, s, b);
     }
 
