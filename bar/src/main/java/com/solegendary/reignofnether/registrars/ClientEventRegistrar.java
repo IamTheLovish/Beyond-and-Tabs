@@ -84,6 +84,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);
         // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameAuto.class);
