@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.solegendary.reignofnether.gamemode.GameMode;
+import com.solegendary.reignofnether.gamerules.GameruleClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.registrars.PacketHandler;
@@ -20,7 +21,9 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameRules;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.*;
@@ -55,20 +58,41 @@ public class AllyCommand {
                         .executes(AllyCommand::setAlliedControl)));
     }
 
+    /**
+     * Start of a match: the lobby's "Alliances" choice (locked unless the host opened them, lovish D032) into the
+     * saved lockAlliances rule, and out to every client (the diplomacy panel hides its ally/disband buttons by it).
+     */
+    public static void setLocked(MinecraftServer server, boolean locked) {
+        server.getGameRules().getRule(GameRuleRegistrar.LOCK_ALLIANCES).set(locked, server);
+        GameruleClientboundPacket.setLockAlliances(locked);
+    }
+
+    /**
+     * Why {@code a} and {@code b} may not change their alliance now (a translation key), or null when they may. In a
+     * match (either of them an RTS player) the teams are fixed under lockAlliances (on by default) or coop mode;
+     * before it - the lobby world - alliances are free. Teams themselves are formed by the match start
+     * (AlliancesServerEvents.addAlliance), never through these commands, so the lock cannot stop one forming.
+     */
+    static String lockedReason(CommandSourceStack source, String a, String b) {
+        if (!PlayerServerEvents.isRTSPlayer(a) && !PlayerServerEvents.isRTSPlayer(b))
+            return null;
+        GameRules rules = source.getLevel().getGameRules();
+        if (rules.getRule(GameRuleRegistrar.LOCK_ALLIANCES).get())
+            return "alliance.reignofnether.alliances_lock";
+        if (rules.getRule(GameRuleRegistrar.COOP_MODE).get())
+            return "alliance.reignofnether.alliances_lock_coop";
+        return null;
+    }
+
     private static int ally(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
         ServerPlayer allyPlayer = EntityArgument.getPlayer(context, "player");
         String playerName = player.getName().getString();
         String allyPlayerName = allyPlayer.getName().getString();
 
-        if (context.getSource().getLevel().getGameRules().getRule(GameRuleRegistrar.LOCK_ALLIANCES).get() &&
-            (PlayerServerEvents.isRTSPlayer(playerName) || PlayerServerEvents.isRTSPlayer(allyPlayerName))) {
-            player.sendSystemMessage(Component.translatable("alliance.reignofnether.alliances_lock"));
-            return 0;
-        }
-        if (context.getSource().getLevel().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get() &&
-            (PlayerServerEvents.isRTSPlayer(playerName) || PlayerServerEvents.isRTSPlayer(allyPlayerName))) {
-            player.sendSystemMessage(Component.translatable("alliance.reignofnether.alliances_lock_coop"));
+        String locked = lockedReason(context.getSource(), playerName, allyPlayerName);
+        if (locked != null) {
+            player.sendSystemMessage(Component.translatable(locked));
             return 0;
         }
 
@@ -127,6 +151,12 @@ public class AllyCommand {
         String playerName = player.getName().getString();
         String requesterPlayerName = requesterPlayer.getName().getString();
 
+        // a request made before the match (both still free then) must not become an alliance in it
+        String locked = lockedReason(context.getSource(), playerName, requesterPlayerName);
+        if (locked != null) {
+            player.sendSystemMessage(Component.translatable(locked));
+            return 0;
+        }
         if (AlliancesServerEvents.pendingAlliances.getOrDefault(playerName, new HashSet<>()).contains(requesterPlayerName)) {
             AlliancesServerEvents.addAlliance(playerName, requesterPlayerName);
             AlliancesServerEvents.pendingAlliances.getOrDefault(requesterPlayerName, new HashSet<>()).remove(playerName);
@@ -154,14 +184,9 @@ public class AllyCommand {
         String playerName = player.getName().getString();
         String allyPlayerName = allyPlayer.getName().getString();
 
-        if (context.getSource().getLevel().getGameRules().getRule(GameRuleRegistrar.LOCK_ALLIANCES).get() &&
-            (PlayerServerEvents.isRTSPlayer(playerName) || PlayerServerEvents.isRTSPlayer(allyPlayerName))) {
-            player.sendSystemMessage(Component.translatable("alliance.reignofnether.alliances_lock"));
-            return 0;
-        }
-        if (context.getSource().getLevel().getGameRules().getRule(GameRuleRegistrar.COOP_MODE).get() &&
-            (PlayerServerEvents.isRTSPlayer(playerName) || PlayerServerEvents.isRTSPlayer(allyPlayerName))) {
-            player.sendSystemMessage(Component.translatable("alliance.reignofnether.alliances_lock_coop"));
+        String locked = lockedReason(context.getSource(), playerName, allyPlayerName);
+        if (locked != null) {
+            player.sendSystemMessage(Component.translatable(locked));
             return 0;
         }
 

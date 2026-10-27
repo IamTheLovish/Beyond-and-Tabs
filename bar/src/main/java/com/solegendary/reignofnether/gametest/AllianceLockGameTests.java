@@ -204,4 +204,30 @@ public class AllianceLockGameTests {
                 problems.add("with alliances open, /allyconfirm did not ally A and C");
         });
     }
+
+    /**
+     * The lobby option's wiring: SET_ALLIANCES is appended to the lobby actions (they travel by ordinal, so an insert
+     * would re-map every older client's clicks), and what Start does with the choice (AllyCommand.setLocked) is the
+     * saved rule the commands read - both ways.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void alliance_lock_lobby_option_is_appended_and_writes_the_rule(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        GameRules.BooleanValue rule = server.getGameRules().getRule(GameRuleRegistrar.LOCK_ALLIANCES);
+        boolean was = rule.get();
+        List<String> problems = new ArrayList<>();
+        if (MultiplayerLobby.Action.SET_ALLIANCES.ordinal() != MultiplayerLobby.Action.BACK_TO_LOBBY.ordinal() + 1)
+            problems.add("SET_ALLIANCES is not appended after BACK_TO_LOBBY (lobby actions travel by ordinal)");
+        try {
+            com.solegendary.reignofnether.alliance.AllyCommand.setLocked(server, false);
+            if (rule.get())
+                problems.add("the lobby's 'Open' left the lockAlliances rule on");
+            com.solegendary.reignofnether.alliance.AllyCommand.setLocked(server, true);
+            if (!rule.get())
+                problems.add("the lobby's 'Locked' left the lockAlliances rule off");
+        } finally {
+            rule.set(was, server);
+        }
+        TerrainGameTests.finish(helper, problems);
+    }
 }
