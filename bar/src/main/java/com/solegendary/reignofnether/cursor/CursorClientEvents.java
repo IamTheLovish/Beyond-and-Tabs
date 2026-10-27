@@ -138,11 +138,13 @@ public class CursorClientEvents {
 
     /** The Smart Select modifiers held right now; Z and Space are remembered so their release stays quiet. */
     private static SmartSelect.Mods currentBoxMods() {
-        boolean z = isRawKeyDown(GLFW.GLFW_KEY_Z);
+        // Z counts only while a box drag is in progress (SmartSelect.Mods.held), never as a stray builder-key press
+        boolean dragging = leftClickDown && boxArmed;
+        boolean z = dragging && isRawKeyDown(GLFW.GLFW_KEY_Z);
         boolean space = isRawKeyDown(GLFW.GLFW_KEY_SPACE);
         if (z) boxModifierKeys.add(GLFW.GLFW_KEY_Z);
         if (space) boxModifierKeys.add(GLFW.GLFW_KEY_SPACE);
-        return new SmartSelect.Mods(Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown(),
+        return SmartSelect.Mods.held(dragging, Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown(),
                 Keybindings.altMod.isDown(), z, space);
     }
 
