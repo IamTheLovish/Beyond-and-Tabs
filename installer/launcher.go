@@ -34,7 +34,7 @@ const (
 	repoSlug        = "IamTheLovish/Beyond-and-Tabs"
 	packRepoSlug    = "IamTheLovish/beyond-and-tabs-pack" // the tester pack: CI publishes "Tester pack <date>-<sha>" on its main
 	ghAPI           = "https://api.github.com"
-	ghCallBudget    = 4
+	ghCallBudget    = 5 // main, the two channels' packs, the news, the open PRs
 	launcherExe     = "launcher.exe"
 	stateFileName   = "launcher-state.json"
 	troubleshootURL = "https://github.com/" + repoSlug + "/blob/main/pack/INSTALL-for-testers.txt"
@@ -192,7 +192,8 @@ type packHead struct {
 	Date time.Time // UTC
 }
 
-var packRe = regexp.MustCompile(`^Tester pack (\d{4}\.\d{2}\.\d{2}-\d{4})-([0-9a-f]{7,40})$`)
+// "Tester pack" on branch main (tested), "Fast pack" on branch fast (untested, channels.go)
+var packRe = regexp.MustCompile(`^(?:Tester|Fast) pack (\d{4}\.\d{2}\.\d{2}-\d{4})-([0-9a-f]{7,40})$`)
 
 func parsePackCommit(msg string) (packHead, error) {
 	first := strings.TrimSpace(strings.SplitN(strings.ReplaceAll(msg, "\r\n", "\n"), "\n", 2)[0])
@@ -210,6 +211,11 @@ func parsePackCommit(msg string) (packHead, error) {
 // statusLine: level is "ok" (green), "update" (gold) or "warn" (amber). The game jar is compared with the newest pack,
 // not with main.
 func statusLine(jarSha, mainSha string, pack packHead, err error) (text, level string) {
+	return statusLineAhead(jarSha, mainSha, pack, err, " · main has newer merges still being packed (usually ~25 min)")
+}
+
+// statusLineAhead: statusLine with the tail used when main is ahead of the pack (channels.go passes the channel's own).
+func statusLineAhead(jarSha, mainSha string, pack packHead, err error, aheadText string) (text, level string) {
 	switch {
 	case err != nil:
 		return "Couldn't check GitHub (" + shortErr(err) + ")", "warn"
@@ -218,7 +224,7 @@ func statusLine(jarSha, mainSha string, pack packHead, err error) (text, level s
 	}
 	ahead := ""
 	if short(mainSha) != short(pack.Sha) {
-		ahead = " · main has newer merges still being packed (usually ~25 min)"
+		ahead = aheadText
 	}
 	switch {
 	case jarSha == "":
@@ -281,11 +287,16 @@ type ghClient struct {
 	base   string
 	client *http.Client
 	calls  int
+	budget int // calls allowed; 0 = ghCallBudget (the page load). The update watcher has its own client and budget
 }
 
 func (g *ghClient) get(path string, v any) error {
-	if g.calls >= ghCallBudget {
-		return fmt.Errorf("GitHub call budget (%d) used up", ghCallBudget)
+	budget := g.budget
+	if budget == 0 {
+		budget = ghCallBudget
+	}
+	if g.calls >= budget {
+		return fmt.Errorf("GitHub call budget (%d) used up", budget)
 	}
 	g.calls++
 	req, err := http.NewRequest("GET", g.base+path, nil)
@@ -324,7 +335,9 @@ type ghResult struct {
 	SoonNote  string
 	Err       error // main's head could not be read: the status line says why
 	Pack      packHead
-	PackErr   error // the newest pack could not be read: the status line says why
+	PackErr   error               // the newest pack could not be read: the status line says why
+	Packs     map[string]packHead // every channel's newest pack (Pack = the tested one)
+	PackErrs  map[string]error
 	Calls     int
 }
 
@@ -345,8 +358,9 @@ type ghPull struct {
 	MergedAt *time.Time `json:"merged_at"`
 }
 
-// fetchGitHub makes at most 4 calls: main's head, the newest tester pack, then either compare(last...main) or the recent
-// closed PRs, then the open PRs.
+// fetchGitHub makes at most 5 calls: main's head, the newest pack of each channel (tested, fast), then either
+// compare(last...main) or the recent closed PRs, then the open PRs. Both packs are read up front, so switching the
+// Version menu costs no call.
 func fetchGitHub(g *ghClient, lastSha string) (r ghResult) {
 	defer func() { r.Calls = g.calls }()
 	repo := "/repos/" + repoSlug
@@ -358,12 +372,12 @@ func fetchGitHub(g *ghClient, lastSha string) (r ghResult) {
 	}
 	r.MainSha, r.MainDate = head.Sha, head.Commit.Committer.Date
 
-	var packTip ghCommit
-	if err := g.get("/repos/"+packRepoSlug+"/commits/main", &packTip); err != nil {
-		r.PackErr = err
-	} else {
-		r.Pack, r.PackErr = parsePackCommit(packTip.Commit.Message)
+	r.Packs, r.PackErrs = map[string]packHead{}, map[string]error{}
+	for _, c := range channels {
+		p, err := fetchPackHead(g, c)
+		r.Packs[c.ID], r.PackErrs[c.ID] = p, err
 	}
+	r.Pack, r.PackErr = r.Packs[channelTested], r.PackErrs[channelTested]
 
 	if lastSha != "" {
 		r.NewsSince = true
@@ -430,6 +444,7 @@ func fetchGitHub(g *ghClient, lastSha string) (r ghResult) {
 type launcherState struct {
 	LastPlayedSha string    `json:"lastPlayedSha"`
 	LastPlayedAt  time.Time `json:"lastPlayedAt"`
+	Channel       string    `json:"channel,omitempty"` // the Version menu's choice (channels.go); "" = tested
 }
 
 func readState(path string) launcherState {
@@ -464,33 +479,34 @@ type pageState struct {
 	SoonNote   string     `json:"soonNote,omitempty"`
 	WindowNote string     `json:"windowNote,omitempty"`
 	GHCalls    int        `json:"githubCalls"`
+	// release channels (channels.go): the chosen one, the menu, and what is on its way
+	Channel  string          `json:"channel"`
+	Channels []channelOption `json:"channels"`
+	WaitMins *int            `json:"waitMins,omitempty"` // set while an update is coming: minutes left (0 = any minute)
+	Note     string          `json:"note,omitempty"`     // what the watcher did (installed a pack, waits for the game to close)
 }
 
-func buildPageState(p gamePaths, g *ghClient) pageState {
+// liveState is what the page's status is computed from on every request (the ETA counts down, the watcher updates it).
+// Guarded by launcher.mu.
+type liveState struct {
+	mainErr  error
+	packs    map[string]packHead
+	packErrs map[string]error
+	wait     *pendingUpdate
+}
+
+func buildPageState(p gamePaths, g *ghClient) (pageState, liveState) {
 	st := readState(p.state)
-	b, haveBuild := readBuild(filepath.Join(p.mcDir, "mods"))
+	ch := selectedChannel(st.Channel)
 	r := fetchGitHub(g, st.LastPlayedSha)
 
-	ps := pageState{Version: "Latest", MainSha: r.MainSha, PackSha: r.Pack.Sha, News: r.News, NewsNote: r.NewsNote, Soon: r.Soon,
-		SoonNote: r.SoonNote, GHCalls: r.Calls, NewCount: -1, NewsTitle: "Recently merged"}
-	if haveBuild {
-		ps.Build = &b
-	}
+	ps := pageState{Version: ch.Label, MainSha: r.MainSha, PackSha: r.Packs[ch.ID].Sha, News: r.News, NewsNote: r.NewsNote, Soon: r.Soon,
+		SoonNote: r.SoonNote, GHCalls: r.Calls, NewCount: -1, NewsTitle: "Recently merged", Channel: ch.ID, Channels: channelOptions()}
 	if !r.MainDate.IsZero() {
 		ps.MainDate = &r.MainDate
 	}
-	checkErr := r.Err
-	if checkErr == nil {
-		checkErr = r.PackErr
-	}
-	ps.Status, ps.Level = statusLine(b.Sha, r.MainSha, r.Pack, checkErr)
-	if haveBuild && b.Sha == "" && checkErr == nil {
-		ps.Status, ps.Level = "Your game jar has no commit in its name ("+b.File+"): can't compare with the newest pack ("+short(r.Pack.Sha)+")", "update"
-	}
-	if haveBuild && b.Jars > 1 {
-		ps.Status += fmt.Sprintf(" - warning: %d copies of the game jar in mods, Forge needs one", b.Jars)
-		ps.Level = "warn"
-	}
+	live := liveState{mainErr: r.Err, packs: r.Packs, packErrs: r.PackErrs}
+	ps = withStatus(ps, p, live, time.Now())
 	if r.NewsSince {
 		ps.NewsTitle = "New since you last played"
 		ps.NewCount = len(r.News)
@@ -500,6 +516,40 @@ func buildPageState(p gamePaths, g *ghClient) pageState {
 	}
 	if r.Err != nil {
 		ps.NewsNote = "GitHub is unreachable, so the news can't be shown. PLAY still works."
+	}
+	return ps, live
+}
+
+// withStatus fills the build, the status line and the wait for the chosen channel. The game jar is read from disk each
+// time (the watcher may have installed a pack since), and the ETA counts down with now.
+func withStatus(ps pageState, p gamePaths, live liveState, now time.Time) pageState {
+	ch := selectedChannel(ps.Channel)
+	b, haveBuild := readBuild(filepath.Join(p.mcDir, "mods"))
+	ps.Build = nil
+	if haveBuild {
+		ps.Build = &b
+	}
+	ps.Version = ch.Label
+	pack := live.packs[ch.ID]
+	checkErr := live.mainErr
+	if checkErr == nil {
+		checkErr = live.packErrs[ch.ID]
+		if ch.ID == channelFast && checkErr != nil && strings.Contains(checkErr.Error(), "404") {
+			checkErr = nil // no branch fast yet: channelStatus says no untested pack is published
+		}
+	}
+	ps.Status, ps.Level = channelStatus(ch, b.Sha, ps.MainSha, pack, checkErr, live.wait, now)
+	if haveBuild && b.Sha == "" && checkErr == nil {
+		ps.Status, ps.Level = ch.Label+" · Your game jar has no commit in its name ("+b.File+"): can't compare with the newest pack ("+short(pack.Sha)+")", "update"
+	}
+	if haveBuild && b.Jars > 1 {
+		ps.Status += fmt.Sprintf(" - warning: %d copies of the game jar in mods, Forge needs one", b.Jars)
+		ps.Level = "warn"
+	}
+	ps.WaitMins = nil
+	if w := live.wait; w != nil && w.NotComing == "" && (pack.Sha == "" || short(w.Sha) != short(pack.Sha)) {
+		m := etaMinutes(w.ETA, now)
+		ps.WaitMins = &m
 	}
 	return ps
 }
@@ -669,6 +719,13 @@ type launcher struct {
 	// read the old pack.toml and report "up to date" (Oct 26). A clean run that left an older jar is retried this often.
 	updateTries int
 	updateWait  time.Duration
+
+	// release channels and the update watcher (channels.go). All optional: nil/zero means "not running" or the default.
+	live     liveState       // guarded by mu
+	note     string          // guarded by mu: what the watcher did, shown on the page
+	gameOpen gameOpenChecker // nil: logLockProbe on the instance
+	watcher  *updateWatcher  // nil: no background checks (tests, GitHub unreachable)
+	kick     chan struct{}   // a channel switch asks the watcher for an early check
 }
 
 func newLauncher(p gamePaths, gh *ghClient) *launcher {
@@ -680,7 +737,10 @@ func newLauncher(p gamePaths, gh *ghClient) *launcher {
 func (l *launcher) load() {
 	l.once.Do(func() {
 		go func() {
-			l.state = buildPageState(l.paths, l.gh)
+			ps, live := buildPageState(l.paths, l.gh)
+			l.mu.Lock()
+			l.state, l.live = ps, live
+			l.mu.Unlock()
 			close(l.ready)
 		}()
 	})
@@ -721,12 +781,15 @@ func (l *launcher) handler(token string) http.Handler {
 	mux.HandleFunc(pre+"/api/state", func(w http.ResponseWriter, r *http.Request) {
 		l.load()
 		<-l.ready
-		s := l.state
-		l.mu.Lock()
-		s.WindowNote = l.windowNote
-		l.mu.Unlock()
-		writeJSON(w, 200, s)
+		writeJSON(w, 200, l.view(time.Now()))
 	})
+	mux.HandleFunc(pre+"/api/channel", post(func(w http.ResponseWriter, r *http.Request) {
+		if err := l.setChannel(r.URL.Query().Get("c")); err != nil {
+			writeJSON(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, 200, l.view(time.Now()))
+	}))
 	mux.HandleFunc(pre+"/api/ping", post(func(w http.ResponseWriter, r *http.Request) {
 		l.mu.Lock()
 		l.lastPing = time.Now()
@@ -906,37 +969,24 @@ func (l *launcher) play() (playResult, error) {
 	l.load()
 	<-l.ready
 	forced := l.updateFailed
+	packSha, ch := l.selected()
 	lastLine := ""
 	if !forced {
-		exe, args, err := packwizCommand(l.paths)
-		if err != nil {
+		var err error
+		if lastLine, err = l.runUpdate(ch, packSha); err != nil {
 			return playResult{}, err
-		}
-		for try := 1; ; try++ {
-			out, runErr := l.packwiz.Run(l.paths.mcDir, exe, args)
-			if err := writeUpdateLog(updateLogPath(l.paths), exe, args, out, runErr); err != nil {
-				return playResult{}, fmt.Errorf("writing packwiz-update.log: %w", err)
-			}
-			lastLine = lastOutputLine(out, runErr)
-			jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
-			staleCache := runErr == nil && strings.Contains(out, "Finished successfully") &&
-				l.state.PackSha != "" && short(jar.Sha) != short(l.state.PackSha)
-			if !staleCache || try >= l.updateTries {
-				break
-			}
-			fmt.Printf("packwiz read an older pack than %s (GitHub's cache): retry %d of %d in %s\n",
-				short(l.state.PackSha), try, l.updateTries-1, l.updateWait)
-			time.Sleep(l.updateWait)
 		}
 	}
 	jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
-	plan := planAfterUpdate(jar.Sha, l.state.PackSha, lastLine, forced)
+	plan := planAfterUpdate(jar.Sha, packSha, lastLine, forced)
 	if !plan.Launch {
 		l.updateFailed = true
 		return playResult{Level: plan.Level, Text: plan.Text}, nil
 	}
-	// remember the pack that is installed (a main commit, so the news compares from there); the jar's commit if unknown
-	s := launcherState{LastPlayedAt: time.Now().UTC(), LastPlayedSha: l.state.PackSha}
+	// remember the pack that is installed (a main commit, so the news compares from there); the jar's commit if unknown.
+	// The rest of the state (the channel) is kept.
+	s := readState(l.paths.state)
+	s.LastPlayedAt, s.LastPlayedSha = time.Now().UTC(), packSha
 	if s.LastPlayedSha == "" {
 		s.LastPlayedSha = jar.Sha
 	}
@@ -948,6 +998,196 @@ func (l *launcher) play() (playResult, error) {
 	}
 	l.updateFailed = false
 	return playResult{Launched: true, Level: plan.Level, Text: plan.Text + " Starting Prism Launcher ..."}, nil
+}
+
+// selected: the chosen channel and its newest pack's commit ("" when GitHub could not say).
+func (l *launcher) selected() (packSha string, ch channel) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.state.PackSha, selectedChannel(l.state.Channel)
+}
+
+// runUpdate points the instance at the channel's pack (instance.cfg, channels.go) and runs the packwiz update, retrying
+// a clean run that left an older jar than packSha (GitHub's raw cache). It returns the update's last output line; an
+// error only when the update could not be started. The caller holds playMu.
+func (l *launcher) runUpdate(ch channel, packSha string) (lastLine string, err error) {
+	if _, err := setPackURL(instanceCfgPath(l.paths), ch.PackTomlURL()); err != nil {
+		return "", err
+	}
+	exe, args, err := packwizCommand(l.paths)
+	if err != nil {
+		return "", err
+	}
+	for try := 1; ; try++ {
+		out, runErr := l.packwiz.Run(l.paths.mcDir, exe, args)
+		if err := writeUpdateLog(updateLogPath(l.paths), exe, args, out, runErr); err != nil {
+			return "", fmt.Errorf("writing packwiz-update.log: %w", err)
+		}
+		lastLine = lastOutputLine(out, runErr)
+		jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
+		staleCache := runErr == nil && strings.Contains(out, "Finished successfully") &&
+			packSha != "" && short(jar.Sha) != short(packSha)
+		if !staleCache || try >= l.updateTries {
+			return lastLine, nil
+		}
+		fmt.Printf("packwiz read an older pack than %s (GitHub's cache): retry %d of %d in %s\n",
+			short(packSha), try, l.updateTries-1, l.updateWait)
+		time.Sleep(l.updateWait)
+	}
+}
+
+// view is the page's data now: the loaded state with the status line, the wait and the window note filled in.
+func (l *launcher) view(now time.Time) pageState {
+	l.mu.Lock()
+	s, live := l.state, l.live
+	s.WindowNote, s.Note = l.windowNote, l.note
+	l.mu.Unlock()
+	if s.Channels == nil {
+		s.Channels = channelOptions()
+	}
+	if s.Channel == "" {
+		s.Channel = channelTested
+	}
+	return withStatus(s, l.paths, live, now)
+}
+
+// setChannel saves the Version menu's choice and shows that channel's pack. Nothing is installed here: PLAY (or the
+// watcher, for a pack that lands later) installs it. Refused while PLAY or an automatic update is running.
+func (l *launcher) setChannel(id string) error {
+	ch, ok := channelByID(id)
+	if !ok {
+		return fmt.Errorf("unknown version %q", id)
+	}
+	if !l.playMu.TryLock() {
+		return errors.New("the game is being updated: try again when it is done")
+	}
+	defer l.playMu.Unlock()
+	l.load()
+	<-l.ready
+	st := readState(l.paths.state)
+	st.Channel = ch.ID
+	if err := writeState(l.paths.state, st); err != nil {
+		return fmt.Errorf("saving %s: %w", stateFileName, err)
+	}
+	l.mu.Lock()
+	l.state.Channel, l.state.PackSha = ch.ID, l.live.packs[ch.ID].Sha
+	l.live.wait, l.note = nil, ""
+	l.mu.Unlock()
+	l.updateFailed = false // a failed check of the other channel says nothing about this one
+	if l.kick != nil {
+		select {
+		case l.kick <- struct{}{}:
+		default:
+		}
+	}
+	return nil
+}
+
+func (l *launcher) gameIsOpen() bool {
+	if l.gameOpen != nil {
+		return l.gameOpen.GameOpen()
+	}
+	return logLockProbe{l.paths.mcDir}.GameOpen()
+}
+
+// pollUpdates is one check of the watcher: what is coming to the chosen channel, and an automatic install when its
+// pack moved. It never starts the game. Returns false when the watcher should stop (GitHub budget used up).
+func (l *launcher) pollUpdates(now time.Time) bool {
+	packSha, ch := l.selected()
+	l.mu.Lock()
+	mainKnown := l.state.MainSha != ""
+	l.mu.Unlock()
+	if !mainKnown {
+		return false // GitHub was unreachable at start: the status already says so
+	}
+	if l.watcher.gh.calls >= pollCallBudget-3 {
+		l.mu.Lock()
+		l.live.wait, l.note = nil, "Stopped checking GitHub for updates (hourly limit): press PLAY to update."
+		l.mu.Unlock()
+		return false
+	}
+	p, tracked, head, headErr, err := l.watcher.check(ch, packSha, now)
+	if err != nil {
+		l.mu.Lock()
+		l.note = "Couldn't check for a coming update (" + shortErr(err) + ")"
+		l.mu.Unlock()
+		return true
+	}
+	if _, cur := l.selected(); cur.ID != ch.ID {
+		return true // the channel changed while checking: the next poll is for the new one
+	}
+	l.mu.Lock()
+	l.live.wait = nil
+	if tracked {
+		l.live.wait = &p
+	}
+	moved := tracked && p.Done && headErr == nil && head.Sha != "" && short(head.Sha) != short(packSha)
+	if moved {
+		if l.live.packs == nil {
+			l.live.packs = map[string]packHead{}
+		}
+		l.live.packs[ch.ID], l.state.PackSha = head, head.Sha
+		l.live.wait = nil
+	}
+	l.mu.Unlock()
+	if moved {
+		l.autoInstall(ch, packSha, head.Sha)
+	}
+	return true
+}
+
+// autoInstall installs a channel's new pack by itself (autoInstallDecision says when). Never launches the game.
+func (l *launcher) autoInstall(ch channel, oldPack, newPack string) {
+	busy := !l.playMu.TryLock()
+	if !busy {
+		defer l.playMu.Unlock()
+	}
+	jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
+	install, why := autoInstallDecision(oldPack, newPack, jar.Sha, !busy && l.gameIsOpen(), busy)
+	if !install {
+		if why != "" {
+			l.mu.Lock()
+			l.note = why
+			l.mu.Unlock()
+		}
+		return
+	}
+	l.mu.Lock()
+	l.note = "Installing " + ch.Label + " pack " + short(newPack) + " ..."
+	l.mu.Unlock()
+	lastLine, err := l.runUpdate(ch, newPack)
+	jar, _ = readBuild(filepath.Join(l.paths.mcDir, "mods"))
+	note := "Installed " + ch.Label + " pack " + short(newPack) + ": press PLAY."
+	switch {
+	case err != nil:
+		note = "Couldn't install pack " + short(newPack) + " (" + shortErr(err) + "): PLAY tries again."
+	case short(jar.Sha) != short(newPack):
+		note = "Pack " + short(newPack) + " did not install (" + lastLine + "): PLAY tries again."
+	default:
+		l.updateFailed = false
+	}
+	l.mu.Lock()
+	l.note = note
+	l.mu.Unlock()
+}
+
+// watchUpdates polls every interval (or at once after a channel switch) until the launcher stops.
+func (l *launcher) watchUpdates(interval time.Duration) {
+	l.load()
+	<-l.ready
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		if !l.pollUpdates(time.Now()) {
+			return
+		}
+		select {
+		case <-l.quit:
+			return
+		case <-t.C:
+		case <-l.kick:
+		}
+	}
 }
 
 // updateLogPath: the packwiz output of the last PLAY (overwritten each time).
@@ -1042,7 +1282,11 @@ func runLauncher(args []string) error {
 	}
 	l := newLauncher(newGamePaths(base), &ghClient{base: ghAPI, client: &http.Client{Timeout: 15 * time.Second}})
 	gpuNote := ensureHighGPU(l.paths) // before Prism starts; a failure is shown on the page and the launch goes on
-	l.load() // fetch while the window opens
+	l.load()                          // fetch while the window opens
+	// what is coming to the chosen channel, and its automatic install (channels.go): its own GitHub budget
+	l.watcher = newUpdateWatcher(&ghClient{base: ghAPI, client: &http.Client{Timeout: 15 * time.Second}, budget: pollCallBudget})
+	l.kick = make(chan struct{}, 1)
+	go l.watchUpdates(pollInterval)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
