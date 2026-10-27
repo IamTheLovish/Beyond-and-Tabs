@@ -14,7 +14,8 @@ import static com.solegendary.reignofnether.unit.modelling.motion.AnimState.*;
  *
  * Semantic convention of {@code out} (per bone {@link #CH} floats): RX radians, + = pitched forward; RY radians, + =
  * turned to the unit's right; RZ radians, + = rolled to the unit's right; TX px + = to the right, TY px + = up, TZ px
- * + = forward. ROOT is the whole body about the feet.
+ * + = forward. ROOT is the whole body about the feet. A hanging limb (an arm, a leg, the crossed arms) swings its free
+ * end: RX + = the hand or foot forward, RZ + = the hand or foot to the unit's right.
  *
  * Every behaviour's size = its slider (0..2) x {@link ZoomGain} x the unit's own amplitude ({@link Desync#amp}); its
  * timing runs at the unit's own tempo ({@link Desync#tempo}); every channel is clamped to {@link #limit}.
@@ -107,8 +108,8 @@ public final class Motion {
                 add(out, ROOT, TX, w * 0.6f);
                 add(out, BODY, RZ, -w * 2f * D);
                 add(out, HEAD, RZ, w * 1.5f * D);
-                add(out, LEG_R, RZ, w * 1.5f * D);
-                add(out, LEG_L, RZ, w * 1.5f * D);
+                add(out, LEG_R, RZ, -w * 1.5f * D);   // the hips go over, the feet stay where they stand
+                add(out, LEG_L, RZ, -w * 1.5f * D);
             }
 
             float gLean = sliders[LEAN] * ZoomGain.gain(zoom, ZoomGain.K_LEAN) * amp;
@@ -126,8 +127,8 @@ public final class Motion {
                 add(out, ARM_R, RX, arms * D);
                 add(out, ARM_L, RX, arms * D);
                 add(out, ARMS, RX, arms * 0.6f * D);
-                add(out, ARM_R, RZ, lean * 0.3f * gSec * D);
-                add(out, ARM_L, RZ, lean * 0.3f * gSec * D);
+                add(out, ARM_R, RZ, -lean * 0.3f * gSec * D);   // out of the turn
+                add(out, ARM_L, RZ, -lean * 0.3f * gSec * D);
                 add(out, HEAD, RX, -pitch * 0.5f * gSec * D);
                 add(out, HEAD, RZ, -lean * 0.4f * gSec * D);
             }

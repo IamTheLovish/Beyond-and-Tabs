@@ -104,6 +104,17 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         MotionPass.apply(entity, this.model, poseStack, partialTicks);
     }
 
+    // and at HEAD too: a render that threw after the pass (a caller that swallows it, like the portrait) skipped its
+    // RETURN, and its parts must not carry that pose into the next unit drawn with the same model
+    @Inject(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD")
+    )
+    private void bat$livingArmyClear(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
+                                     MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        MotionPass.restore();
+    }
+
     @Inject(
             method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
             at = @At("RETURN")
