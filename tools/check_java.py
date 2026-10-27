@@ -3,10 +3,14 @@
 Pre-push gate: catches the errors CI died on (broken class structure, bad braces, missing imports we own).
 Runs javac on the mod sources without the Minecraft classpath, then ignores the errors that are only
 missing-dependency noise. A parse/structure error fails. Usage: check_java.py <files...>
+       check_java.py --tracked   (every tracked source CI checks; for Windows, where that list is too long for argv)
 """
 import re, subprocess, sys, tempfile
 
+TRACKED = ["bar/src/main/java/*.java", "mod/src/main/java/*.java", "engine/src/*.java"]  # the same list as build.yml
 files = sys.argv[1:]
+if files == ["--tracked"]:
+    files = subprocess.run(["git", "ls-files", "--"] + TRACKED, capture_output=True, text=True, check=True).stdout.split()
 if not files:
     # default: every .java changed vs the last pushed main (or HEAD), plus untracked ones - never a silent no-op
     base = subprocess.run(["git", "merge-base", "HEAD", "origin/main"], capture_output=True, text=True).stdout.strip() or "HEAD"
@@ -19,8 +23,12 @@ if not files:
         sys.exit(0)
     print("checking changed files vs", base[:8] + ":", ", ".join(os.path.basename(f) for f in files))
 with tempfile.TemporaryDirectory() as d:
-    r = subprocess.run(["javac", "--release", "17", "-nowarn", "-Xmaxerrs", "5000", "-proc:none", "-d", d] + files,
-                       capture_output=True, text=True)
+    # the file list goes in an @argfile: 2000+ paths are past Windows' 32 KB command line
+    argfile = d + "/sources.txt"
+    with open(argfile, "w", encoding="utf-8") as fh:
+        fh.write("\n".join('"' + f.replace("\\", "/") + '"' for f in files))
+    r = subprocess.run(["javac", "--release", "17", "-nowarn", "-Xmaxerrs", "5000", "-proc:none", "-encoding", "UTF-8", "-d", d + "/out",
+                        "@" + argfile], capture_output=True, text=True)
 noise = re.compile(r"(cannot find symbol|package [\w.]+ (does not exist|is not visible)|"
                    r"method does not override or implement|符号)|location:|symbol:|  (required|found):|\^|^import|"
                    r"error: cannot access|lambda expression not expected here|method reference not expected here|incompatible types|static import only from classes|name clash: |non-static variable super|class file for .* not found|"
