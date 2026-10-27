@@ -61,8 +61,10 @@ public final class SetUp {
         boolean stepping = sx * sx + sz * sz > STEP * STEP;
         // a walk ends when the unit comes to rest, not when its path does: it still slides a few ticks after the
         // navigation finishes, and that slide is part of the walk (a shove while standing still is not). A possessed
-        // unit walks on its keys (zza/xxa) with the navigation idle, so movement input counts as walking too.
-        boolean driven = !mob.getNavigation().isDone() || mob.zza != 0 || mob.xxa != 0;
+        // unit is walked by its player with the navigation idle - by its keys (zza/xxa) or, from a real client, by
+        // the client's position claims, which leave zza/xxa at 0 - so any step while possessed is a walk.
+        boolean driven = !mob.getNavigation().isDone() || mob.zza != 0 || mob.xxa != 0
+                || com.solegendary.reignofnether.hero.PossessionServer.isPossessed(mob);
         boolean walking = stepping && (driven || s.walking);
         s.walking = walking;
         if (walking || ax * ax + az * az > DRIFT * DRIFT) {
