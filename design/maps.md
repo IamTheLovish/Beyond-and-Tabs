@@ -57,7 +57,7 @@ look for none of that risk. (Vanilla's sky colour cannot be overridden without a
 ## 2. Metal values
 
 `MetalPatches` now stores a value per patch (saved with the world, synced to clients). An extractor's income is
-`base * value` (T1 2.0/s, T2 7.0/s). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
+`base * value` (T1 2.0/s, T2 4.5/s - 7.0 until Oct 24). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
 iron plus with a raw-gold heart; **2.0x** a gold-block heart. The minimap draws 1.5x patches gold, 2.0x bright
 gold. Typical layout per slot: a home ring at 1.0x (safe, slow), forward/contested patches at 1.5x (take ground
 to earn more), and the centre cluster at 2.0x (one per slot, the prize everyone fights over - chess's control of
