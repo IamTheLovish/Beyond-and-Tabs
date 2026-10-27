@@ -401,4 +401,46 @@ public class HeroAiV2GameTests {
             });
         }
     }
+
+    // ------------------------------------------------------------------------------------------ select (D030)
+
+    /**
+     * D030's other half: "once the player selects ... it again, the player's order wins". The hero breaks off its move
+     * order near death and runs; the player selects it (HeroBot.onPlayerSelect is what the server runs for the client's
+     * HERO_SELECTED) and the hero goes back to the order it had - past the enemies, at the same low health. Written
+     * before the select code; it calls the server's entry point for a select, which main does not have.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_select", timeoutTicks = 400)
+    public static void hero_ai_v2_selecting_a_fleeing_hero_hands_it_back_to_its_order(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2_select"), them = me + "_foe";
+        Mob hero = paladin(helper, me, 8, 1);
+        List<Mob> mobs = mobs(hero);
+        for (int[] xz : new int[][] { { 5, 11 }, { 11, 11 }, { 5, 13 }, { 11, 13 } })
+            mobs.add(dummy(helper, them, xz[0], xz[1]));
+        if (!(hero instanceof FactionHero p) || mobs.contains(null)) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        HeroAiGameTests.learn(p, 1);
+        BlockPos dest = at(helper, 8, 15);
+        double front = helper.absolutePos(new BlockPos(0, 2, 11)).getZ();
+        double[] deepest = { Double.NEGATIVE_INFINITY };
+        List<String> problems = new ArrayList<>();
+        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        helper.runAfterDelay(25, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        for (int t = 26; t <= 130; t++)
+            helper.runAfterDelay(t, () -> deepest[0] = Math.max(deepest[0], hero.getZ()));
+        helper.runAfterDelay(130, () -> {
+            if (deepest[0] >= front || hero.getZ() > deepest[0] - 1.5)
+                problems.add("setup: the hero did not break off its order to flee at a quarter health");
+            HeroBot.onPlayerSelect(hero);   // the player clicks it
+        });
+        helper.runAfterDelay(360, () -> {
+            if (hero.isAlive() && flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5) > 2.5)
+                problems.add(String.format("selected, the hero did not go back to its move order (%.1f blocks short)",
+                    flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
+            HeroAiGameTests.finish(helper, problems, mobs, null);
+        });
+    }
 }
