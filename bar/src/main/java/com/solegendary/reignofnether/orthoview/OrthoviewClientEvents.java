@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.guiscreen.TopdownGuiServerboundPacket;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.hud.HintBar;
+import com.solegendary.reignofnether.onboarding.OnboardingTips;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.keybinds.KeyTaps;
@@ -290,6 +291,16 @@ public class OrthoviewClientEvents {
         // rotate back the short way round
         targetCamRotX = camRotX + Mth.wrapDegrees(CAMROTX_DEFAULT - camRotX);
         targetPitchOffset = 0;
+    }
+
+    // the camera controls hint while it may still be up; any player camera move (pan, zoom, rotate) closes it
+    private static String cameraHint = null;
+
+    private static void cameraMoved() {
+        if (cameraHint == null)
+            return;
+        HintBar.clearIfShowing(cameraHint);
+        cameraHint = null;
     }
 
     public static void rotateCam(float x, float y) {
@@ -688,6 +699,8 @@ public class OrthoviewClientEvents {
             boolean down = panKeyDown(Keybindings.panDown) || Keybindings.panMinusZ.isDown();
             boolean left = panKeyDown(Keybindings.panLeft) || Keybindings.panPlusX.isDown();
             boolean right = panKeyDown(Keybindings.panRight) || Keybindings.panMinusX.isDown();
+            if (left || right || up || down)
+                cameraMoved();   // pan, or with Alt rotate / tilt
             if (alt) {
                 if (left) targetCamRotX += YAW_KEY_SPEED * dt;
                 if (right) targetCamRotX -= YAW_KEY_SPEED * dt;
@@ -703,8 +716,10 @@ public class OrthoviewClientEvents {
             }
         }
         if (keysActive) {
-            if (Keybindings.zoomIn.isDownOrAlias() || Keybindings.zoomOut.isDownOrAlias())
+            if (Keybindings.zoomIn.isDownOrAlias() || Keybindings.zoomOut.isDownOrAlias()) {
                 zoomFloor = ZOOM_MIN;   // the player's own zoom: a scripted close-up's floor never carries over
+                cameraMoved();
+            }
             if (Keybindings.zoomIn.isDownOrAlias()) {
                 targetZoom *= (float) Math.exp(-ZOOM_KEY_RATE * dt);
                 zoomAnchorAtCursor = false;
@@ -730,8 +745,10 @@ public class OrthoviewClientEvents {
             grabLastY = cursorY;
             panVelRight = 0;
             panVelFwd = 0;
-            if (mdx != 0 || mdy != 0)
+            if (mdx != 0 || mdy != 0) {
                 glideActive = false; // the player took the camera
+                cameraMoved();
+            }
         } else if (mmbDown) {
             mmbDown = false;
             cameraMovingByMouse = false;
@@ -781,8 +798,10 @@ public class OrthoviewClientEvents {
         if (desiredRight > 0) TutorialClientEvents.pannedRight = true;
         if (desiredFwd > 0) TutorialClientEvents.pannedUp = true;
         if (desiredFwd < 0) TutorialClientEvents.pannedDown = true;
-        if (desiredRight != 0 || desiredFwd != 0)
+        if (desiredRight != 0 || desiredFwd != 0) {
             glideActive = false;
+            cameraMoved();   // covers screen-edge pan too
+        }
 
         // ---- rotation and zoom: everything below pivots so a ground point stays put on screen ----
         float oldZoom = zoom;
@@ -995,9 +1014,12 @@ public class OrthoviewClientEvents {
             // the first RTS view's controls hint goes through the one hint bar (hud/HintBar), not the HUD's red
             // warning line: the two used to overlap the start banner (rover run 1, finding 8), and under the loading
             // veil the warning line would have expired unread - the hint bar's clock waits for the cut
-            if (enabledCount == 1)
-                HintBar.queue(
-                    I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName()), 400);
+            // shown once ever (remembered in the seen-tips config, "Reset tips" brings it back) and closed as soon
+            // as the player moves the camera
+            if (OnboardingTips.takeCameraHint()) {
+                cameraHint = I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName());
+                HintBar.queue(cameraHint, 400);
+            }
         } else {
             PlayerServerboundPacket.disableOrthoview();
             TopdownGuiServerboundPacket.closeTopdownGui(MC.player.getId());
@@ -1259,6 +1281,7 @@ public class OrthoviewClientEvents {
         }
         evt.setCanceled(true);
 
+        cameraMoved();
         if (isCtrlDown()) {
             // wheel forward flattens the view, back steepens it (Spring: Ctrl+wheel tilts)
             targetPitchOffset -= (float) Math.signum(delta) * TILT_STEP_SCROLL;
