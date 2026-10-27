@@ -65,9 +65,7 @@
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
-    "goals.RandomStrollGoalMixin",
-    "ConfigValueReloadRaceMixin",
-    "ForgeConfigSpecAccessor"
+    "goals.RandomStrollGoalMixin"
   ],
   "minVersion": "0.8",
   "client": [
