@@ -50,4 +50,31 @@ public final class ProductionHudLogic {
     public static boolean repeatVisible(List<BuildingPlacement> selected) {
         return repeatVisible(selected.size(), repeatGroup(selected).size());
     }
+
+    // ------------------------------------------------------------------ factory guard (BAR factoryguard, Ctrl+G)
+
+    /** Ctrl+G toggles factory guard when no unit is selected and every selected building is an owned, built factory. */
+    public static boolean ctrlGToggles(int selectedUnits, List<BuildingPlacement> selected) {
+        return selectedUnits == 0 && repeatVisible(selected);
+    }
+
+    /** True when every factory in the group has factory guard on (what the button shows). */
+    public static boolean allGuarding(List<ProductionPlacement> group) {
+        if (group.isEmpty())
+            return false;
+        for (ProductionPlacement pp : group)
+            if (!pp.factoryGuard)
+                return false;
+        return true;
+    }
+
+    /** The card's factory guard toggle for {@code group} (client only): tick/cross and a lit frame while on. */
+    public static com.solegendary.reignofnether.hud.buttons.Button factoryGuardButton(List<ProductionPlacement> group) {
+        return new com.solegendary.reignofnether.hud.buttons.BooleanButton(
+            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.factory_guard"),
+            allGuarding(group),
+            () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleFactoryGuard(group),
+            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.factory_guard.tooltip"),
+            true);
+    }
 }

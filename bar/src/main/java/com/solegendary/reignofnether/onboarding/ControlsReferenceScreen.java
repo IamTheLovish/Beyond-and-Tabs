@@ -94,6 +94,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("idle_worker", Keybindings.idleWorker);
         bind("select_army", Keybindings.selectArmy);
         mouse("select_army_ctrl_w", t("ctrl") + " + W");   // HudClientEvents: hardcoded Ctrl+W, BAR's army key
+        mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
         bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
