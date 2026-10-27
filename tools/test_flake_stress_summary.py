@@ -93,6 +93,21 @@ class Summary(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("without naming a test (build error, timeout, crash): [2]", out)
 
+    def test_a_focus_written_with_test_prefix_still_matches(self):
+        # Oct 27: focus "test:<name>" (written like `tests`) matched nothing, so a shard run listed no per-test line
+        # and the evidence of three stress runs was void (40591016638, 40598837754 and #222's)
+        code, out, _ = run([sample(1, passed=["a_pile_of_units", "other"])], shard="1", focus="test:a_pile_of_units")
+        self.assertEqual(code, 0, out)
+        self.assertIn("a_pile_of_units: failed 0, passed 1", out)
+        self.assertNotIn("other:", out)
+
+    def test_a_tests_run_lists_every_test_whatever_the_focus(self):
+        # focus only trims a whole shard's hundreds of tests; a `tests` run names its few tests on purpose
+        code, out, _ = run([sample(1, passed=["a_pile", "b_test"])], tests="test:a_pile,test:b_test", focus="test:zzz")
+        self.assertEqual(code, 0, out)
+        self.assertIn("a_pile: failed 0, passed 1", out)
+        self.assertIn("b_test: failed 0, passed 1", out)
+
     def test_focus_hides_passing_tests_it_does_not_name(self):
         code, out, _ = run([sample(1, passed=["tidewrought_t2_x", "other"], failed=["broken"], outcome="failure")],
                            shard="1", focus="tidewrought_t2")

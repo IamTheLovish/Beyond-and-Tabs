@@ -47,7 +47,12 @@ def summarise(runs, tests="", shard="", focus=""):
     bad_runs = sum(1 for r in runs if r["outcome"] != "success" or r["run"] in empty)
     # a whole shard ignores `tests`, so the prefixes are only checked for a `tests` run
     unmatched = [] if shard.strip() else unmatched_prefixes(tests, ran_names)
-    focus_list = [f.strip() for f in focus.lower().split(",") if f.strip()]
+    # focus trims a whole shard's hundreds of tests to the ones that matter; a `tests` run names its few tests on
+    # purpose, so it lists them all. An entry may be written like `tests` ("test:<prefix>"): the prefix is what counts
+    # (Oct 27: "test:<name>" focus entries matched nothing and three stress runs printed no per-test line).
+    focus_list = [] if not shard.strip() else [
+        f[5:].strip() if f.startswith("test:") else f for f in (e.strip() for e in focus.lower().split(",")) if f]
+    focus_list = [f for f in focus_list if f]
 
     lines = [f"{n} runners; {bad_runs} with any failure"]
     if n == 0:

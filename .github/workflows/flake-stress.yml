@@ -27,7 +27,7 @@ on:
         description: Optional - repeat a whole CI shard (2-9, or 1 = everything the other SHARD_n lines do not name) instead of `tests`
         default: ""
       focus:
-        description: Optional - test-name prefixes (comma-separated) whose passes the summary lists; failures are always listed
+        description: Optional, with `shard` - test-name prefixes (comma-separated, test:<prefix> also accepted) whose passes the summary lists; failures are always listed, and a `tests` run lists every test
         default: ""
 
 jobs:
