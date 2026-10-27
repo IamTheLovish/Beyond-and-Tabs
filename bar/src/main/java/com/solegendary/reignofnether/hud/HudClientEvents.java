@@ -125,6 +125,8 @@ public class HudClientEvents {
     private static final ArrayList<Button> productionButtons = new ArrayList<>();
     // buttons which are rendered at the moment in RenderEvent
     private static final ArrayList<Button> renderedButtons = new ArrayList<>();
+    // the control-group buttons among renderedButtons: mouse only, their number keys act on the press (ControlGroup)
+    private static final Set<Button> controlGroupButtons = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     // the selected unit's / building's own card (orders, abilities, build menu, production): its hotkeys win over
     // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler on ".", the last-alert
     // jump on Space) - BAR's bound-key rule, generalised from the idle-worker case
@@ -1681,6 +1683,7 @@ public class HudClientEvents {
         // Control group buttons
         // ---------------------
         blitX = 0;
+        controlGroupButtons.clear();
         // clean up untracked entities/buildings from control groups
         for (ControlGroup controlGroup : controlGroups) {
             controlGroup.clean();
@@ -1689,6 +1692,7 @@ public class HudClientEvents {
                 Button ctrlGroupButton = controlGroup.getButton();
                 ctrlGroupButton.render(evt.getGuiGraphics(), SlimTiles.at(blitX), SlimTiles.at(0), mouseX, mouseY);
                 renderedButtons.add(ctrlGroupButton);
+                controlGroupButtons.add(ctrlGroupButton);
                 blitX += HudLayout.SLIM_TILE;
             }
         }
@@ -2303,6 +2307,7 @@ public class HudClientEvents {
     // for some reason some bound vanilla keys like Q and E don't trigger KeyPressed but still trigger keyReleased
     @SubscribeEvent
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
+        ControlGroup.onKeyReleased(evt.getKeyCode());
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
@@ -2343,7 +2348,7 @@ public class HudClientEvents {
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
         for (Button button : renderedButtons)
-            if (!cardKey || cardButtons.contains(button))
+            if ((!cardKey || cardButtons.contains(button)) && !controlGroupButtons.contains(button))   // groups: on the press
                 button.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
@@ -2535,12 +2540,21 @@ public class HudClientEvents {
             || key == Keybindings.panDown.getKey() || key == Keybindings.panRight.getKey();
     }
 
+    // BAR's gui_unit_group_number: the group's digit beside every grouped unit drawn this frame
+    @SubscribeEvent
+    public static void onRenderLevelGroupNumbers(net.minecraftforge.client.event.RenderLevelStageEvent evt) {
+        if (evt.getStage() != net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
+        ControlGroupNumbers.render(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END) {
             return;
         }
         BuildTabs.tick();
+        ControlGroup.tick();   // autogroups: new units of a bound type join their group
         if (OrthoviewClientEvents.isEnabled()) {
             portraitRendererUnit.tickAnimation();
         }
@@ -2563,6 +2577,7 @@ public class HudClientEvents {
     @SubscribeEvent
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
+        ControlGroupNumbers.queue(evt.getEntity());
         if (hudSelectedEntity != null && (hudSelectedEntity.isRemoved() || hudSelectedEntity.isDeadOrDying()))
             setHudSelectedEntity(null);
 
@@ -2605,40 +2620,21 @@ public class HudClientEvents {
                 }
         }
 
-        // Deselect everything
-        if (evt.getKeyCode() == Keybindings.deselect.getKey()) {
+        // Deselect everything; Ctrl+` / Alt+` are BAR's "group unset" / "remove_from_autogroup" (ControlGroup)
+        if (evt.getKeyCode() == Keybindings.deselect.getKey() && !ControlGroup.onDeselectKey(evt.getModifiers())) {
             UnitClientEvents.clearSelectedUnits();
             BuildingClientEvents.clearSelectedBuildings();
             BuildingClientEvents.setBuildingToPlace(null);
         }
 
-        // Initialize controlGroups with empty arrays if not already initialized
-        if (controlGroups.size() < Keybindings.nums.length) {
-            controlGroups.clear(); // Clear in case of a previous partial initialization
-            for (Keybinding keybinding : Keybindings.nums) {
-                controlGroups.add(new ControlGroup());
-            }
-        }
-
-        // Access and save to controlGroups if index is within bounds
-        for (Keybinding keybinding : Keybindings.nums) {
-            int index = Integer.parseInt(keybinding.buttonLabel);
-            if (index >= 0 && index < controlGroups.size() && evt.getKeyCode() == keybinding.getKey()) {  // Bounds check
-                if (Keybindings.ctrlMod.isDown()) {
-                    controlGroups.get(index).saveFromSelected(keybinding, true);
-                } else if (Keybindings.shiftMod.isDown()) {
-                    controlGroups.get(index).saveFromSelected(keybinding, false);
-                } else if (Keybindings.altMod.isDown()) {
-                    for (ControlGroup controlGroup : controlGroups) {
-                        for (LivingEntity le : getSelectedUnits())
-                            controlGroup.entityIds.removeIf(id -> id == le.getId());
-                        for (BuildingPlacement bpl : BuildingClientEvents.getSelectedBuildings())
-                            controlGroup.buildingBps.removeIf(bp -> bp.equals(bpl.originPos));
-                    }
-                    controlGroups.get(index).saveFromSelected(keybinding, true);
-                }
-            }
-        }
+        // BAR control groups on the PRESS, with the event's own modifier bits (either Ctrl / Shift / Alt key): N,
+        // N N, Ctrl+N, Ctrl+Shift+N, Shift+N, Alt+N (ControlGroupRules). They used to be split between this press
+        // (Ctrl / Shift / Alt, left-hand keys only) and the group's HUD button on the RELEASE (plain N), so N did
+        // nothing whenever the button was not drawn (clean view, F1), and Ctrl+N also selected and armed the double
+        // tap on its release.
+        ControlGroup.ensureGroups();
+        if (OrthoviewClientEvents.isEnabled())
+            ControlGroup.onNumberKey(evt.getKeyCode(), evt.getModifiers());
 
         // Open chat while orthoview is enabled
         if (OrthoviewClientEvents.isEnabled() && evt.getKeyCode() == Keybindings.chat.getKey()) {
