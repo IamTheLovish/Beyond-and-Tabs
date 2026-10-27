@@ -219,5 +219,17 @@ public enum UnitAction {
     SKYWARD_SHOT,
     // Beyond and Tabs T3 roles (claude/t3-roles.md)
     DEEP_DIVE,              // Tidewrought Leviathan: dives from the water and surfaces by the aimed spot with a slam (T3)
-    GROW_GROVE              // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    GROW_GROVE,             // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    ERUPTION,               // Horde Magma Hurler: a telegraphed ring at the aimed spot erupts, damage + knock-up (second T3)
+    BILE_LOB,               // Gravebound Plague Abomination: lobs an acid pool at the aimed spot (second T3)
+    CARRION_BURST,          // Gravebound Plague Abomination: gives up 20% of its HP to raise skeletons round it (second T3)
+    MIRROR_PLATE,           // Stormcallers Jade Sentinel: 4 s plate that turns frontal ranged shots back (second T3)
+    THUNDERCLAP,            // Stormcallers Jade Sentinel: telegraphed ring round it, damage + 1 s stun (second T3)
+    SANCTIFY,               // Sunforged Cathedral Warden: gold pulse heals 25% of max HP of friends in 10 and cleanses (second T3)
+    BELL_TOLL,              // Sunforged Cathedral Warden: telegraphed bell slows enemies in 12 for 5 s (second T3)
+    BRINE_MIST,             // Tidewrought Abyssal Hydra: 8-wide fog cloud for 6 s, friends hidden, enemy shots at them miss half (second T3)
+    GALE_WINGS,             // Verdant Thornwing Roc: wing-beat cone knocks ground units back and pushes flyers (second T3)
+    SEED_RAIN,              // Verdant Thornwing Roc: telegraphed seed line, thickets root ground enemies 1 s and slow 3 s (second T3)
+    CARPET_BOMB,            // Brassworks Brass Zeppelin: telegraphed 20-block line, bombs fall on ground units and buildings under it (second T3)
+    BALLAST_DUMP            // Brassworks Brass Zeppelin: 5 s of +40% speed, no firing, steam vent (second T3)
 }

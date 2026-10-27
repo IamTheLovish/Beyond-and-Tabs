@@ -208,6 +208,7 @@ public class Factions {
 		registerEntity(PIGLINS, EntityRegistrar.BRUTE_UNIT.get(), ProductionItems.BRUTE);
 		registerEntity(PIGLINS, EntityRegistrar.BONEWRIGHT_UNIT.get(), ProductionItems.BONEWRIGHT);
 		registerEntity(PIGLINS, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.WAR_MAMMOTH);
+		registerEntity(PIGLINS, EntityRegistrar.MAGMA_HURLER_UNIT.get(), ProductionItems.HORDE_T3B);
 		registerEntity(PIGLINS, EntityRegistrar.HEADHUNTER_UNIT.get(), ProductionItems.HEADHUNTER);
 		registerEntity(PIGLINS, EntityRegistrar.MARAUDER_UNIT.get(), ProductionItems.MARAUDER);
 		registerEntity(PIGLINS, EntityRegistrar.HOGLIN_UNIT.get(), ProductionItems.HOGLIN);
@@ -298,11 +299,17 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
 		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
 		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
+		registerEntity(BRASSWORKS, EntityRegistrar.BRASS_ZEPPELIN_UNIT.get(), ProductionItems.BRASS_T3B);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
 		// big-units (design/big_units.md): the T2 beasts
 		registerEntity(VILLAGERS, EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get(), ProductionItems.ORIFLAMME_ELEPHANT);
 		registerEntity(PIGLINS, EntityRegistrar.GOREHORN_RHINO_UNIT.get(), ProductionItems.GOREHORN_RHINO);
 		registerEntity(MONSTERS, EntityRegistrar.OSSUARY_BEHEMOTH_UNIT.get(), ProductionItems.OSSUARY_BEHEMOTH);
+		registerEntity(MONSTERS, EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get(), ProductionItems.GRAVE_T3B);
+		registerEntity(STORMCALLERS, EntityRegistrar.JADE_SENTINEL_UNIT.get(), ProductionItems.STORM_T3B);
+		registerEntity(VILLAGERS, EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get(), ProductionItems.SUN_T3B);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), ProductionItems.TIDE_T3B);
+		registerEntity(VERDANT_COURT, EntityRegistrar.THORNWING_ROC_UNIT.get(), ProductionItems.VERDANT_T3B);
 		registerEntity(VERDANT_COURT, EntityRegistrar.MOSSBACK_BISON_UNIT.get(), ProductionItems.MOSSBACK_BISON);
 		// beasts-2: the other three
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SHELLBACK_TURTLE_UNIT.get(), ProductionItems.SHELLBACK_TURTLE);

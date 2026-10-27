@@ -35,12 +35,16 @@ public class FogBankServerEvents {
     public static final int PASS_TICKS = 10;
 
     /** One live bank. {@code sourceId} is the casting Admiral's entity id: one bank per Admiral, a recast replaces it. */
-    public record Bank(ServerLevel level, String owner, int sourceId, double x, double y, double z, long expireTick) {
+    public record Bank(ServerLevel level, String owner, int sourceId, double x, double y, double z, long expireTick,
+                       int radius, boolean spoilsAim) {
         public boolean contains(LivingEntity le) {
             double dx = le.getX() - x, dz = le.getZ() - z;
-            return dx * dx + dz * dz <= RADIUS * RADIUS && Math.abs(le.getY() - y) <= HEIGHT;
+            return dx * dx + dz * dz <= radius * radius && Math.abs(le.getY() - y) <= HEIGHT;
         }
     }
+
+    /** The share of enemy ranged shots at a unit inside a mist ({@code spoilsAim}) that miss: the Abyssal Hydra's Brine Mist. */
+    public static final float MIST_MISS_CHANCE = 0.5f;
 
     private static final List<Bank> BANKS = new ArrayList<>();
 
@@ -58,8 +62,17 @@ public class FogBankServerEvents {
      * {@code sourceId} already has. Returns the bank.
      */
     public static Bank raise(ServerLevel level, String owner, int sourceId, double x, double y, double z) {
+        return raise(level, owner, sourceId, x, y, z, RADIUS, LIFETIME_TICKS, false);
+    }
+
+    /**
+     * A bank of its own size and length. {@code spoilsAim}: enemy ranged shots at units inside it miss
+     * {@link #MIST_MISS_CHANCE} of the time ({@link #shotSpoiled}) - the Hydra's Brine Mist.
+     */
+    public static Bank raise(ServerLevel level, String owner, int sourceId, double x, double y, double z,
+                             int radius, int lifetimeTicks, boolean spoilsAim) {
         BANKS.removeIf(b -> b.sourceId == sourceId && b.level == level);
-        Bank b = new Bank(level, owner, sourceId, x, y, z, level.getGameTime() + LIFETIME_TICKS);
+        Bank b = new Bank(level, owner, sourceId, x, y, z, level.getGameTime() + lifetimeTicks, radius, spoilsAim);
         BANKS.add(b);
         puff(b, 60);
         return b;
@@ -78,6 +91,25 @@ public class FogBankServerEvents {
             if (b.level != level || b.expireTick <= now || !b.contains(le))
                 continue;
             if (owner.equals(b.owner) || AlliancesServerEvents.isAllied(owner, b.owner))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Does a mist spoil an enemy projectile's aim at {@code target}? True when {@code roll} (0..1, the projectile's own
+     * fixed roll) is under {@link #MIST_MISS_CHANCE} and the target stands in a live aim-spoiling bank of its own side.
+     * An empty-list check in the common case.
+     */
+    public static boolean shotSpoiled(ServerLevel level, LivingEntity target, String targetOwner, float roll) {
+        if (BANKS.isEmpty() || roll >= MIST_MISS_CHANCE || targetOwner == null || targetOwner.isBlank())
+            return false;
+        long now = level.getGameTime();
+        for (int i = 0; i < BANKS.size(); i++) {
+            Bank b = BANKS.get(i);
+            if (!b.spoilsAim || b.level != level || b.expireTick <= now || !b.contains(target))
+                continue;
+            if (targetOwner.equals(b.owner) || AlliancesServerEvents.isAllied(targetOwner, b.owner))
                 return true;
         }
         return false;
@@ -110,9 +142,9 @@ public class FogBankServerEvents {
     // the visible cloud: a low wide layer and a few taller wisps. Server-sent (one packet each per watching player),
     // so the fog reads the same for both sides - the enemy sees the bank, not what is in it
     private static void puff(Bank b, int count) {
-        b.level.sendParticles(ParticleTypes.CLOUD, b.x, b.y + 0.8, b.z, count, RADIUS * 0.5, 0.4, RADIUS * 0.5, 0.0);
+        b.level.sendParticles(ParticleTypes.CLOUD, b.x, b.y + 0.8, b.z, count, b.radius * 0.5, 0.4, b.radius * 0.5, 0.0);
         b.level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, b.x, b.y + 1.0, b.z, Math.max(2, count / 6),
-                RADIUS * 0.4, 0.6, RADIUS * 0.4, 0.005);
+                b.radius * 0.4, 0.6, b.radius * 0.4, 0.005);
     }
 
     @SubscribeEvent

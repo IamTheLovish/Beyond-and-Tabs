@@ -46,6 +46,12 @@ public class BombardShell extends ThrowableItemProjectile {
     private float damage = 9f;
     private String ownerName = "";
     private int fuseTicks = 80;
+    /** Burst radius (blocks); {@link #SPLASH_RADIUS} unless {@link #molten} widened it. */
+    private double splashRadius = SPLASH_RADIUS;
+    /** > 0: a molten shell (Magma Hurler): units it hits burn this long and the ground burns for as long. */
+    private int burnTicks = 0;
+    /** True for a bomb (Brass Zeppelin): flying units are neither hit in flight nor hurt by the burst - bombs fall on the ground. */
+    private boolean groundOnly = false;
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results (server thread)
 
@@ -63,6 +69,44 @@ public class BombardShell extends ThrowableItemProjectile {
     @Override
     protected @NotNull Item getDefaultItem() {
         return Items.FIRE_CHARGE;
+    }
+
+    /**
+     * Makes this a molten shell (the Magma Hurler's Molten Hurl): a wider burst that sets every enemy it hits alight and
+     * leaves burning ground for {@code burn} ticks. Returns itself.
+     */
+    public BombardShell molten(double radius, int burn) {
+        this.splashRadius = radius;
+        this.burnTicks = burn;
+        return this;
+    }
+
+    /** Makes this a bomb that spares flyers (the Brass Zeppelin's carpet). Returns itself. */
+    public BombardShell groundOnly() {
+        this.groundOnly = true;
+        return this;
+    }
+
+    public boolean isGroundOnly() { return groundOnly; }
+
+    public double getSplashRadius() { return splashRadius; }
+    public int getBurnTicks() { return burnTicks; }
+
+    /** Burning ground: every 10 ticks for {@code ticks} ticks the pool shows flames and re-ignites the enemies in it. */
+    static void scorchGround(ServerLevel sl, BombardShell shell, double x, double y, double z, double radius, int ticks) {
+        for (int t = 10; t <= ticks; t += 10) {
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(t, () -> {
+                sl.sendParticles(ParticleTypes.FLAME, x, y + 0.2, z, 6, radius * 0.4, 0.1, radius * 0.4, 0.02);
+                sl.sendParticles(ParticleTypes.LAVA, x, y + 0.2, z, 1, radius * 0.4, 0.1, radius * 0.4, 0);
+                for (LivingEntity le : UnitGrid.near(sl, x, z, radius + 1, new ArrayList<>())) {
+                    if (!le.isAlive() || !(le instanceof Unit u) || !shell.isEnemy(u.getOwnerName()))
+                        continue;
+                    double dx = le.getX() - x, dz = le.getZ() - z;
+                    if (dx * dx + dz * dz <= radius * radius && Math.abs(le.getY() - y) < 2.5)
+                        le.setRemainingFireTicks(Math.max(le.getRemainingFireTicks(), 40));
+                }
+            });
+        }
     }
 
     public float getDamage() { return damage; }
@@ -98,6 +142,8 @@ public class BombardShell extends ThrowableItemProjectile {
     protected boolean canHitEntity(@NotNull Entity e) {
         if (!super.canHitEntity(e))
             return false;
+        if (groundOnly && e instanceof Unit f && f.isFlyingUnit())
+            return false;
         return !(e instanceof Unit u) || isEnemy(u.getOwnerName());
     }
 
@@ -127,23 +173,28 @@ public class BombardShell extends ThrowableItemProjectile {
             return 0;
         }
         double x = getX(), y = getY(), z = getZ();
+        final double r = splashRadius;
         Entity shooter = getOwner();
         List<LivingEntity> hit = new ArrayList<>();
-        for (LivingEntity le : UnitGrid.near(sl, x, z, SPLASH_RADIUS + 1, scratch)) {
+        for (LivingEntity le : UnitGrid.near(sl, x, z, r + 1, scratch)) {
             if (!le.isAlive() || !(le instanceof Unit u) || le.level() != sl || !isEnemy(u.getOwnerName()))
                 continue;
-            if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > SPLASH_RADIUS + 1)
+            if (groundOnly && u.isFlyingUnit())
+                continue;
+            if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > r + 1)
                 continue;
             double dx = le.getX() - x, dz = le.getZ() - z;
-            if (dx * dx + dz * dz <= SPLASH_RADIUS * SPLASH_RADIUS)
+            if (dx * dx + dz * dz <= r * r)
                 hit.add(le);
         }
         // an explosion source, not a mob attack: RoN rewrites mob-attack damage to the attacker's melee damage
         var src = sl.damageSources().explosion(this, shooter);
         for (LivingEntity le : hit) {
             double d = Math.sqrt((le.getX() - x) * (le.getX() - x) + (le.getZ() - z) * (le.getZ() - z));
-            float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / SPLASH_RADIUS));
+            float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / r));
             le.hurt(src, damage * falloff);
+            if (burnTicks > 0 && le.isAlive())
+                le.setRemainingFireTicks(Math.max(le.getRemainingFireTicks(), burnTicks));
         }
         // enemy buildings in reach take an explosion's dent (no terrain is touched)
         List<BuildingPlacement> dented = new ArrayList<>();
@@ -152,14 +203,14 @@ public class BombardShell extends ThrowableItemProjectile {
                 continue;
             double cx = Math.max(b.minCorner.getX(), Math.min(x, b.maxCorner.getX() + 1));
             double cz = Math.max(b.minCorner.getZ(), Math.min(z, b.maxCorner.getZ() + 1));
-            if ((cx - x) * (cx - x) + (cz - z) * (cz - z) <= SPLASH_RADIUS * SPLASH_RADIUS
-                    && y + SPLASH_RADIUS >= b.minCorner.getY() && y - SPLASH_RADIUS <= b.maxCorner.getY() + 1)
+            if ((cx - x) * (cx - x) + (cz - z) * (cz - z) <= r * r
+                    && y + r >= b.minCorner.getY() && y - r <= b.maxCorner.getY() + 1)
                 dented.add(b);
         }
         for (BuildingPlacement b : dented)
             b.destroyRandomBlocks(damage * BUILDING_DAMAGE_MULT, shooter);
         sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
-        sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, SPLASH_RADIUS * 0.4, 0.2, SPLASH_RADIUS * 0.4, 0.02);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, r * 0.4, 0.2, r * 0.4, 0.02);
         sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.6f, 1.2f);
         discard();
         return hit.size();
@@ -171,6 +222,9 @@ public class BombardShell extends ThrowableItemProjectile {
         tag.putFloat("BombardDamage", damage);
         tag.putString("BombardOwner", ownerName);
         tag.putInt("BombardFuse", fuseTicks);
+        tag.putDouble("BombardRadius", splashRadius);
+        tag.putInt("BombardBurn", burnTicks);
+        tag.putBoolean("BombardGroundOnly", groundOnly);
     }
 
     @Override
@@ -179,5 +233,8 @@ public class BombardShell extends ThrowableItemProjectile {
         damage = tag.getFloat("BombardDamage");
         ownerName = tag.getString("BombardOwner");
         fuseTicks = tag.contains("BombardFuse") ? tag.getInt("BombardFuse") : 80;
+        splashRadius = tag.contains("BombardRadius") ? tag.getDouble("BombardRadius") : SPLASH_RADIUS;
+        burnTicks = tag.getInt("BombardBurn");
+        groundOnly = tag.getBoolean("BombardGroundOnly");
     }
 }

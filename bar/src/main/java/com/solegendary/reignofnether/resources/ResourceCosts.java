@@ -295,6 +295,14 @@ public class ResourceCosts {
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
     public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
+    // the second T3 per faction (second-t3-design.md, slice T3b-1): same price as the first, own config entry
+    public static final ResourceCost SUN_T3B = new ResourceCost(ID, "SUN_T3B");
+    public static final ResourceCost GRAVE_T3B = new ResourceCost(ID, "GRAVE_T3B");
+    public static final ResourceCost HORDE_T3B = new ResourceCost(ID, "HORDE_T3B");
+    public static final ResourceCost VERDANT_T3B = new ResourceCost(ID, "VERDANT_T3B");
+    public static final ResourceCost TIDE_T3B = new ResourceCost(ID, "TIDE_T3B");
+    public static final ResourceCost STORM_T3B = new ResourceCost(ID, "STORM_T3B");
+    public static final ResourceCost BRASS_T3B = new ResourceCost(ID, "BRASS_T3B");
     public static final ResourceCost GREAT_FORGE = new ResourceCost(ID, "GREAT_FORGE");
     // big-units (design/big_units.md)
     public static final ResourceCost ORIFLAMME_ELEPHANT = new ResourceCost(ID, "ORIFLAMME_ELEPHANT");
@@ -634,6 +642,13 @@ public class ResourceCosts {
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);
+        SUN_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_T3B);
+        GRAVE_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVE_T3B);
+        HORDE_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HORDE_T3B);
+        VERDANT_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.VERDANT_T3B);
+        TIDE_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_T3B);
+        STORM_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STORM_T3B);
+        BRASS_T3B.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BRASS_T3B);
         GREAT_FORGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GREAT_FORGE);
         ORIFLAMME_ELEPHANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ORIFLAMME_ELEPHANT);
         GOREHORN_RHINO.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GOREHORN_RHINO);

@@ -197,6 +197,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit>> MAGMA_HURLER_UNIT = ENTITIES.register("magma_hurler_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth() * com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.SCALE,
+                           EntityType.PIGLIN_BRUTE.getHeight() * com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "magma_hurler_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit>> SUN_COLOSSUS_UNIT = ENTITIES.register("sun_colossus_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.SCALE,
@@ -1000,6 +1007,42 @@ public class EntityRegistrar {
                     .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.OssuaryBehemothUnit.BASE_SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ossuary_behemoth_unit").toString()));
+    // second Gravebound T3 (T3b-3): the zoglin at x2.6
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit>> PLAGUE_ABOMINATION_UNIT = ENTITIES.register("plague_abomination_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.ZOGLIN.getWidth() * com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.SCALE, EntityType.ZOGLIN.getHeight() * com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "plague_abomination_unit").toString()));
+    // second Stormcallers T3 (T3b-4): the Earthshaker's golem at x2.0
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit>> JADE_SENTINEL_UNIT = ENTITIES.register("jade_sentinel_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.SCALE, EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_sentinel_unit").toString()));
+    // second Sunforged T3 (T3b-5): the Sun Colossus golem at x1.7
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit>> CATHEDRAL_WARDEN_UNIT = ENTITIES.register("cathedral_warden_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.SCALE, EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "cathedral_warden_unit").toString()));
+    // second Tidewrought T3 (T3b-6): the iron golem model in a deep-sea skin at x2.0
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit>> ABYSSAL_HYDRA_UNIT = ENTITIES.register("abyssal_hydra_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.SCALE, EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "abyssal_hydra_unit").toString()));
+    // second Verdant T3 (T3b-7): the Thunder Dragon's spectre model in a bark skin at x2.2 (a flyer: no ground box needed)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit>> THORNWING_ROC_UNIT = ENTITIES.register("thornwing_roc_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit::new, MobCategory.CREATURE)
+                    .sized(1.6f * 1.4f, 1.0f * 1.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornwing_roc_unit").toString()));
+    // second Brassworks T3 (T3b-8): the Thunder Dragon's spectre model in a brass skin, stretched into an airship (a flyer: the box is the hull)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit>> BRASS_ZEPPELIN_UNIT = ENTITIES.register("brass_zeppelin_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit::new, MobCategory.CREATURE)
+                    .sized(2.8f, 2.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "brass_zeppelin_unit").toString()));
     // Alex's Mobs' bison (RenderBison) drawn x1.3
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit>> MOSSBACK_BISON_UNIT = ENTITIES.register("mossback_bison_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit::new, MobCategory.CREATURE)
@@ -1156,6 +1199,13 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.ShieldProjectorProd.itemName -> EntityRegistrar.SHIELD_PROJECTOR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.SapperProd.itemName -> EntityRegistrar.SAPPER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.ITEM_NAME -> EntityRegistrar.MAGMA_HURLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.PlagueAbominationUnit.ITEM_NAME -> EntityRegistrar.PLAGUE_ABOMINATION_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.JadeSentinelUnit.ITEM_NAME -> EntityRegistrar.JADE_SENTINEL_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.villagers.CathedralWardenUnit.ITEM_NAME -> EntityRegistrar.CATHEDRAL_WARDEN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.ITEM_NAME -> EntityRegistrar.ABYSSAL_HYDRA_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.BrassZeppelinUnit.ITEM_NAME -> EntityRegistrar.BRASS_ZEPPELIN_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit.ITEM_NAME -> EntityRegistrar.THORNWING_ROC_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
             case BruteProd.itemName -> EntityRegistrar.BRUTE_UNIT.get();
