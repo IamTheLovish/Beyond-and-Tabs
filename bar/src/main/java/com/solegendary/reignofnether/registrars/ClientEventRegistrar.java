@@ -90,6 +90,9 @@ public class ClientEventRegistrar {
         // [Spike] (a frame of 50 ms or more, with the reason) and [Gfx] (the GPU, once per world join)
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameSpikes.class);
         vanillaEventBus.register(com.solegendary.reignofnether.perf.GfxLog.class);
+        // [Screen] (which screen, what it waits for) and the Report a problem bundle (button + /rts-report)
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.ScreenLog.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.perf.ReportBundle.class);
         vanillaEventBus.register(com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.TreeClearingClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.config.DisplaySettings.class);
