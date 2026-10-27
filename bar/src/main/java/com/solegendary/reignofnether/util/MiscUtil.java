@@ -420,6 +420,10 @@ public class MiscUtil {
      * change the two together.
      */
     public static boolean isIdleOrMoveAttackable(Mob unitMob, LivingEntity targetEntity, boolean neutralAggro) {
+        // a hero the v2 AI drives picks its own fights round enemy towers and while near death (hero/HeroBot)
+        if (unitMob instanceof com.solegendary.reignofnether.hero.FactionHero hero
+                && !com.solegendary.reignofnether.hero.HeroBot.mayAutoTarget(hero, unitMob, targetEntity))
+            return false;
         Relationship rs = Relationship.NEUTRAL;
         if (unitMob instanceof Unit) {
             rs = UnitServerEvents.getUnitToEntityRelationship((Unit) unitMob, targetEntity);
