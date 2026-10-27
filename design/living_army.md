@@ -103,7 +103,7 @@ or number changes. `/parade stop` clears it.
   - `Life.spring`: settles with no overshoot at critical damping; bounded for any step size; `springChain` tip lags
     the root and comes to rest.
   - `Idle`: deterministic per seed; never the same fidget twice in a row; quiet for 1.5 s after a stop; neighbouring
-    ids never fire together.
+    ids start on the same tick in under 2% of starts (independent seeds cannot promise never).
   - Flinch: a hit from the left bends the torso right (all 8 sectors); size class follows the health drop.
   - Lean follows the turn's sign; accelerate pitches forward; brake pitches back then settles.
   - `ZoomGain`: exactly 1 at zoom <= 20, 1 + k at zoom >= 70, monotone between.
