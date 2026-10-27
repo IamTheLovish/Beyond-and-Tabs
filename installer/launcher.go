@@ -533,12 +533,14 @@ func decideGPUPref(store gpuPrefStore, exe string) (wrote bool, err error) {
 }
 
 // javaExe is the Java Prism runs the game with: JavaPath from the instance's instance.cfg or from prismlauncher.cfg when
-// set, else Prism's bundled java-runtime-gamma.
+// set, else Prism's bundled java-runtime-gamma. Prism writes JavaPath with forward slashes (C:/Users/...); it is returned
+// with backslashes, because the GPU preference key must be the exact Windows path: the slash form never matched and
+// the game stayed on the integrated GPU (Oct 26).
 func javaExe(p gamePaths) string {
 	inst := filepath.Join(p.prismDir, "instances", instanceName)
 	for _, cfg := range []string{filepath.Join(inst, "instance.cfg"), filepath.Join(p.prismDir, "prismlauncher.cfg")} {
 		if v := readCfgValue(cfg, "JavaPath"); v != "" {
-			return v
+			return strings.ReplaceAll(v, "/", `\`)
 		}
 	}
 	return filepath.Join(p.prismDir, "java", "java-runtime-gamma", "bin", "javaw.exe")
@@ -663,11 +665,16 @@ type launcher struct {
 	launchPrism  func() error  // starts Prism on the instance
 	playMu       sync.Mutex    // one PLAY at a time
 	updateFailed bool          // the last PLAY's check failed: the next press launches anyway (guarded by playMu)
+	// GitHub's raw files are cached up to 5 min (Cache-Control max-age=300): just after a pack is published, packwiz can
+	// read the old pack.toml and report "up to date" (Oct 26). A clean run that left an older jar is retried this often.
+	updateTries int
+	updateWait  time.Duration
 }
 
 func newLauncher(p gamePaths, gh *ghClient) *launcher {
 	return &launcher{paths: p, gh: gh, ready: make(chan struct{}), quit: make(chan struct{}),
-		packwiz: execPackwiz{}, launchPrism: func() error { return startPrism(p) }}
+		packwiz: execPackwiz{}, launchPrism: func() error { return startPrism(p) },
+		updateTries: 8, updateWait: 45 * time.Second}
 }
 
 func (l *launcher) load() {
@@ -905,11 +912,22 @@ func (l *launcher) play() (playResult, error) {
 		if err != nil {
 			return playResult{}, err
 		}
-		out, runErr := l.packwiz.Run(l.paths.mcDir, exe, args)
-		if err := writeUpdateLog(updateLogPath(l.paths), exe, args, out, runErr); err != nil {
-			return playResult{}, fmt.Errorf("writing packwiz-update.log: %w", err)
+		for try := 1; ; try++ {
+			out, runErr := l.packwiz.Run(l.paths.mcDir, exe, args)
+			if err := writeUpdateLog(updateLogPath(l.paths), exe, args, out, runErr); err != nil {
+				return playResult{}, fmt.Errorf("writing packwiz-update.log: %w", err)
+			}
+			lastLine = lastOutputLine(out, runErr)
+			jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
+			staleCache := runErr == nil && strings.Contains(out, "Finished successfully") &&
+				l.state.PackSha != "" && short(jar.Sha) != short(l.state.PackSha)
+			if !staleCache || try >= l.updateTries {
+				break
+			}
+			fmt.Printf("packwiz read an older pack than %s (GitHub's cache): retry %d of %d in %s\n",
+				short(l.state.PackSha), try, l.updateTries-1, l.updateWait)
+			time.Sleep(l.updateWait)
 		}
-		lastLine = lastOutputLine(out, runErr)
 	}
 	jar, _ := readBuild(filepath.Join(l.paths.mcDir, "mods"))
 	plan := planAfterUpdate(jar.Sha, l.state.PackSha, lastLine, forced)
