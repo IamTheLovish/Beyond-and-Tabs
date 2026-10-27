@@ -937,6 +937,12 @@ public class OrthoviewClientEvents {
     }
 
     // ---- BAR camera anchors ----
+    // kept per world for the session: leaving the world (or the server) forgets them, so a new match starts with none
+    @SubscribeEvent
+    public static void onLogoutClearAnchors(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut evt) {
+        java.util.Arrays.fill(anchorSet, false);
+    }
+
     private static void storeAnchor(int i) {
         Player player = MC.player;
         if (player == null)
@@ -1118,6 +1124,13 @@ public class OrthoviewClientEvents {
             } else {
                 for (int i = 0; i < ANCHORS; i++) {
                     if (key == Keybindings.cameraAnchors[i].getKey()) {
+                        // F6 / F7 answer an open resign vote, F8 cycles a spectator's view: those win on a shared key
+                        if (com.solegendary.reignofnether.keybinds.KeyConflicts.anchorYields(key,
+                                com.solegendary.reignofnether.player.ResignVoteClientEvents.isVoteOpen(),
+                                Keybindings.getFnum(6).getKey(), Keybindings.getFnum(7).getKey(),
+                                com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator(),
+                                Keybindings.getFnum(8).getKey()))
+                            break;
                         if (isCtrlDown())
                             storeAnchor(i);
                         else

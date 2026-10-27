@@ -47,6 +47,18 @@ public final class KeyConflicts {
             && !(key == defaultKey && panKey == panDefaultKey);
     }
 
+    /**
+     * A camera anchor key (F5-F8 by default, Keybindings.cameraAnchors) gives way to the F-key meaning that is live on
+     * the same key: the resign vote's yes / no (fn_6 / fn_7) while a vote is open, and the spectator's view cycle (fn_8)
+     * while spectating. {@code key} is the anchor's key; the others are those bindings' keys now.
+     */
+    public static boolean anchorYields(int key, boolean voteOpen, int voteYesKey, int voteNoKey,
+                                       boolean spectating, int spectateKey) {
+        if (key < 0)
+            return false;
+        return (voteOpen && (key == voteYesKey || key == voteNoKey)) || (spectating && key == spectateKey);
+    }
+
     /** Every RTS binding that sits on a pan key it does not ship on. {@code currentKey} maps a translation key to its key now. */
     public static List<Overlap> panOverlaps(ToIntFunction<String> currentKey) {
         List<Overlap> out = new ArrayList<>();

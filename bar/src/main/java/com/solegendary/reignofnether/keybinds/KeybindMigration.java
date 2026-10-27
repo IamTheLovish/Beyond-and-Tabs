@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 2;
+    public static final int LAYOUT_VERSION = 3;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -44,6 +44,11 @@ public final class KeybindMigration {
     public record Move(String binding, int from, int to) { }
 
     static final List<Stale> STALE = List.of(
+        // until Oct 26: the four BAR camera anchors shipped unbound; every install saved "unbound". Now F5-F8.
+        new Stale(3, "key.reignofnether.camera_anchor_1", GLFW.GLFW_KEY_UNKNOWN, "Camera position 1 unbound -> F5 (Ctrl+F5 stores)"),
+        new Stale(3, "key.reignofnether.camera_anchor_2", GLFW.GLFW_KEY_UNKNOWN, "Camera position 2 unbound -> F6 (Ctrl+F6 stores)"),
+        new Stale(3, "key.reignofnether.camera_anchor_3", GLFW.GLFW_KEY_UNKNOWN, "Camera position 3 unbound -> F7 (Ctrl+F7 stores)"),
+        new Stale(3, "key.reignofnether.camera_anchor_4", GLFW.GLFW_KEY_UNKNOWN, "Camera position 4 unbound -> F8 (Ctrl+F8 stores)"),
         // Oct 11 (c4d0b47) to Oct 21 (#39): Attack was A. Every install of those builds saved it.
         new Stale(1, "key.reignofnether.attack", GLFW.GLFW_KEY_A, "Attack A -> X, so A is pure camera pan-left (#39)"),
         // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production

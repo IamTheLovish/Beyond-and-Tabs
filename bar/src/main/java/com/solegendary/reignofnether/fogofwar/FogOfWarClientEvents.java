@@ -216,7 +216,7 @@ public class FogOfWarClientEvents {
                 return;
 
             // resetFogChunks
-            if (evt.getKey() == Keybindings.getFnum(8).getKey() && isEnabled()) {
+            if (evt.getKey() == Keybindings.getFnum(8).getKey() && isEnabled() && !Keybindings.isCameraAnchorKey(evt.getKey())) {
                 resetFogChunks();
             }
         }

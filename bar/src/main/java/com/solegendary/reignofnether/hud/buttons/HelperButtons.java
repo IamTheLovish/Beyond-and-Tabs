@@ -174,7 +174,18 @@ public class HelperButtons {
             ownFreeUnits(), new ArrayList<>(UnitClientEvents.getSelectedUnits()), LivingEntity::getType));
     }
 
-    /** Runs a Ctrl chord (keybinds/ChordKeys); false for NONE so the key goes on to its other meanings. */
+    // Ctrl+. / Ctrl+, (BAR cycleselected): the index of the selected unit the camera was last centred on
+    private static int cycleSelectedAt = -1;
+
+    /** BAR's cycleselected: centre the camera on the next ({@code step} 1) or previous (-1) selected unit; the selection stays. */
+    public static void cycleSelected(int step) {
+        List<LivingEntity> sel = new ArrayList<>(UnitClientEvents.getSelectedUnits());
+        cycleSelectedAt = com.solegendary.reignofnether.keybinds.ChordKeys.cycleIndex(cycleSelectedAt, sel.size(), step);
+        if (cycleSelectedAt >= 0)
+            OrthoviewClientEvents.centreCameraOnPos(sel.get(cycleSelectedAt).position());
+    }
+
+    /** Runs a Ctrl or Alt chord (keybinds/ChordKeys); false for NONE so the key goes on to its other meanings. */
     public static boolean runChord(com.solegendary.reignofnether.keybinds.ChordKeys.Chord chord) {
         switch (chord) {
             case SELECT_ARMY -> selectWholeArmy();
@@ -183,6 +194,14 @@ public class HelperButtons {
             case IDLE_T2_BUILDER -> cycleIdleT2Builder(false);
             case SELECT_ALL_UNITS -> selectAllUnits();
             case SELECT_SAME_TYPE -> selectSameTypeOnMap();
+            // BAR SelectPart_50 / damaged filter: replaceSelection keeps the selection when the result is empty
+            case SELECT_HALF -> replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.half(
+                new ArrayList<>(UnitClientEvents.getSelectedUnits())));
+            case SELECT_DAMAGED -> replaceSelection(com.solegendary.reignofnether.keybinds.ChordKeys.damaged(
+                new ArrayList<>(UnitClientEvents.getSelectedUnits()),
+                u -> u.getMaxHealth() <= 0 ? 1.0 : u.getHealth() / u.getMaxHealth()));
+            case CYCLE_SELECTED_NEXT -> cycleSelected(1);
+            case CYCLE_SELECTED_PREV -> cycleSelected(-1);
             default -> {
                 return false;
             }
