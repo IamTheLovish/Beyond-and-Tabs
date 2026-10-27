@@ -13,6 +13,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.WeakHashMap;
 
 /**
  * Which parts of a model the living army moves (design/living_army.md, section 1), one map per model instance (a
@@ -27,7 +28,9 @@ public final class BoneMaps {
     private BoneMaps() {}
 
     private static final BoneMap NONE = new BoneMap(0f, false);
-    private static final Map<EntityModel<?>, BoneMap> MAPS = new IdentityHashMap<>();
+    // weak keys: a resource reload builds every renderer's model again, and the old ones must be free to go
+    // (models keep Object's identity equals, so this is still one map per model object)
+    private static final Map<EntityModel<?>, BoneMap> MAPS = new WeakHashMap<>();
     private static final Map<Class<?>, Boolean> DISABLED = new IdentityHashMap<>();
 
     /** This model's map, or null when the living army leaves it alone. */
