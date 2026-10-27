@@ -18,7 +18,7 @@ import java.util.List;
  * takes time"; "you need to build your energy ... before you can supply tier 2 metal extractors"; "converters can be
  * weak to punish players"). Then lovish, Oct 24: "tier 2 ... rendering tier 1 ineffective" - it still came too fast
  * and the refit's jump (2 -> 7 metal/s) made a T1 base pointless, so the refit is softer (4.5 metal/s, was 7; 300 metal
- * and 75 s, were 180 and 45), the research slower (180 s, was 120; same cost) and the bots tech a minute later
+ * and 75 s, were 180 and 45), the research slower (180 s, was 120; and lovish, Oct 27: 10080 energy, was 8000, so it still drains 56/s) and the bots tech a minute later
  * (BotTuning t2Minute easy 9 / medium 7 / hard 5, were 8 / 6 / 4). Every number of that gate lives HERE, one place,
  * the same for all seven factions: {@link #bake()} writes the costs into the shared ResourceCost objects after the
  * config is read, the T2 labs' build time comes from {@link #T2_LAB_BUILD_BLOCKS}, the extractors' energy drain and the
@@ -42,9 +42,9 @@ import java.util.List;
  *       the commander + 3 workers (6 build power) 84 s, and a dozen workers assisting 42 s - assisting speeds it up
  *       (BAR). While it rises it drains 700 / that time: 8.3 metal/s at 6 build power, 17 at 12.</li>
  *   <li>The package is {@value #T2_PACKAGE_METAL} metal / {@value #T2_PACKAGE_ENERGY} energy: 100 s of a 16 metal/s
- *       economy and 1.9 minutes of a 118 energy/s one (capitol + 7 winds) - before it was 645 metal / 1420 energy, 40 s
+ *       economy and 2.3 minutes of a 118 energy/s one (capitol + 7 winds) - before it was 645 metal / 1420 energy, 40 s
  *       of metal. The T3 package (research 1320 / 3600 + lab 420 / 600 = 1740 metal) is untouched and stays above it.</li>
- *   <li><b>Energy is a real gate</b> (the owner's correction): research + lab pull 44-90 energy/s on top of the
+ *   <li><b>Energy is a real gate</b> (the owner's correction): research + lab pull 56-90 energy/s on top of the
  *       40-60 energy/s a base spends on labs, units and buildings, so research and lab together flow at full speed only
  *       above ~110-120 energy/s: capitol + 7 winds. And a refitted extractor drains {@value
  *       #T2_EXTRACTOR_ENERGY_UPKEEP} energy/s for its +2.5 metal/s (T1: {@value #T1_EXTRACTOR_ENERGY_UPKEEP}): six of
@@ -105,8 +105,9 @@ public final class TierGate {
     // ---- what a bot wants before it techs (BotPlayer): the incomes above, as readiness rules ----
     /** Metal/s before researching Tier 2: the capitol + five T1 extractors. */
     public static final float BOT_MIN_METAL_INCOME = 12f;
-    /** Energy/s before researching Tier 2: the research's 56 energy/s (67 before Oct 24, 44 on Oct 24-27) on top of the base's own
-     *  spending, with the T2 lab's pull right after it - kept at 110, the lab needs it next. */
+    /** Energy/s before researching Tier 2: the research's 56 energy/s (67 before Oct 24, 44 on Oct 24-27) and most of the base's
+     *  own spending (56 + 60 is 116: the bank and the capitol pausing workers cover the rest), with the T2 lab's pull
+     *  right after it - kept at 110, the lab needs it next. */
     public static final float BOT_MIN_ENERGY_INCOME = 110f;
     /** Energy/s a base spends on its own before refits: labs, units and builds. */
     public static final float BOT_BASE_ENERGY_SPEND = 60f;

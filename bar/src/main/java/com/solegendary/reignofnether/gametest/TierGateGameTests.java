@@ -93,7 +93,7 @@ public class TierGateGameTests {
                 + TierGate.UPGRADE_EXTRACTOR_SECONDS + "s, lovish set 300/600/75");
         if (TierGate.T2_RESEARCH_METAL != 1000 || TierGate.T2_RESEARCH_ENERGY != 10080 || TierGate.T2_RESEARCH_SECONDS != 180)
             problems.add("Tier 2 research is " + TierGate.T2_RESEARCH_METAL + "m/" + TierGate.T2_RESEARCH_ENERGY + "e/"
-                + TierGate.T2_RESEARCH_SECONDS + "s, lovish set 1000/8000/180");
+                + TierGate.T2_RESEARCH_SECONDS + "s, lovish set 1000/10080/180");
         if (BotTuning.EASY.t2Minute() != 9 || BotTuning.MEDIUM.t2Minute() != 7 || BotTuning.HARD.t2Minute() != 5)
             problems.add("bots start Tier 2 at minutes " + BotTuning.EASY.t2Minute() + "/" + BotTuning.MEDIUM.t2Minute() + "/"
                 + BotTuning.HARD.t2Minute() + " (easy/medium/hard), lovish set 9/7/5");
