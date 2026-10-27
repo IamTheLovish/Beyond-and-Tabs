@@ -568,6 +568,11 @@ public class BuildingClientEvents {
                 0
         );
 
+        // exit arrows: the ghost's and your selected / hovered production buildings' (ExitArrowClientEvents)
+        ExitArrowClientEvents.render(evt.getPoseStack(), buildingToPlace == null ? null
+                : BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
+                buildingToPlace != null && !AreaMexClientEvents.active());
+
         drawFogQueuedBuildings(evt.getPoseStack());
         drawBuildingBoxes(evt.getPoseStack(), evt.getFrustum());
 
