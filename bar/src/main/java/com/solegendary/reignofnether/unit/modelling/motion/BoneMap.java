@@ -13,8 +13,13 @@ public final class BoneMap {
 
     /** Indexed by {@link Motion#BODY}..{@link Motion#ARMS} (ROOT is the pose stack, never a part). */
     final ModelPart[] parts = new ModelPart[Motion.BONES];
-    /** Rides with the head (vanilla copies the hat from the head inside setupAnim, before the pass). */
-    ModelPart hat;
+    /**
+     * Parts vanilla copies from another inside setupAnim - before the pass - (a humanoid's hat from its head, a player
+     * body's jacket, sleeves and trouser legs from its body and limbs): re-copied after the pass so they never part.
+     */
+    final ModelPart[] followers = new ModelPart[MAX_FOLLOWERS], leaders = new ModelPart[MAX_FOLLOWERS];
+    int followerCount = 0;
+    static final int MAX_FOLLOWERS = 6;
     /** The waist, model px (y down, from the model origin): the torso bends about it. */
     final float waistY;
     /** A keyframe-clip body: breath and flinch only. */
@@ -27,6 +32,14 @@ public final class BoneMap {
 
     BoneMap set(int bone, ModelPart part) {
         parts[bone] = part;
+        return this;
+    }
+
+    BoneMap follow(ModelPart follower, ModelPart leader) {
+        if (follower != null && leader != null) {
+            followers[followerCount] = follower;
+            leaders[followerCount++] = leader;
+        }
         return this;
     }
 }
