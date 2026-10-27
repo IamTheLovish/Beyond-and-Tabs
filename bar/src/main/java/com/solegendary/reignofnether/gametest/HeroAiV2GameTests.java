@@ -110,21 +110,28 @@ public class HeroAiV2GameTests {
         BlockPos dest = at(helper, 3, 15);
         double lane = hero.getX();
         double[] worst = { 0 };
+        double[] closest = { Double.MAX_VALUE };
         boolean[] cast = { false };
+        int[] arrived = { -1 };
         helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
         for (int t = 3; t <= 260; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
-                worst[0] = Math.max(worst[0], Math.abs(hero.getX() - lane));
-                cast[0] |= !judgement.isOffCooldown(p);
+                // the order is judged while it runs: once the hero is there it is done, and the hero may fight
+                if (arrived[0] < 0) {
+                    worst[0] = Math.max(worst[0], Math.abs(hero.getX() - lane));
+                    cast[0] |= !judgement.isOffCooldown(p);
+                    closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5));
+                    if (closest[0] <= 1.5)
+                        arrived[0] = tick;
+                }
                 if (tick < 260)
                     return;
                 List<String> problems = new ArrayList<>();
                 if (worst[0] > 2.5)
                     problems.add(String.format("the hero left its lane by %.1f blocks during a move order (the enemy was 6 off it)", worst[0]));
-                if (flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5) > 2.5)
-                    problems.add(String.format("the hero never got to where it was sent (%.1f blocks short)",
-                        flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5)));
+                if (arrived[0] < 0)
+                    problems.add(String.format("the hero never got to where it was sent (%.1f blocks short at best)", closest[0]));
                 if (!cast[0])
                     problems.add("the hero cast nothing while it walked past an enemy in Judgement's reach (it should fight while it obeys)");
                 HeroAiGameTests.finish(helper, problems, mobs(hero, foe), null);
@@ -253,39 +260,46 @@ public class HeroAiV2GameTests {
         }
         EngagementStance.set(ranger, EngagementStance.HOLD_FIRE);
         ((Unit) ranger).setHoldPosition(true);
-        // a Shade Ranger cloaks after standing still with no target for its cloak delay; the hero comes after that
-        helper.runAfterDelay(ShadeRangerUnit.CLOAK_DELAY_TICKS + 15, () -> {
+        // a Shade Ranger cloaks after standing still with no target for its cloak delay; the hero comes after that.
+        // Every check is scheduled now, from the top: a runnable that schedules more of them while the test's delayed
+        // runnables are being run breaks the map they sit in (a NullPointerException in GameTestInfo.tickInternal)
+        int spawnAt = ShadeRangerUnit.CLOAK_DELAY_TICKS + 15, last = spawnAt + 120;
+        Mob[] hero = { null };
+        FactionHeroAbility[] judgement = { null };
+        boolean[] done = { false };
+        helper.runAfterDelay(spawnAt, () -> {
             if (!ShadeRangerUnit.isCloaked(ranger)) {
+                done[0] = true;
                 HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak"), mobs, null);
                 return;
             }
-            Mob hero = paladin(helper, me, 6, 5);
-            if (!(hero instanceof FactionHero p)) {
+            hero[0] = paladin(helper, me, 6, 5);
+            if (!(hero[0] instanceof FactionHero p)) {
+                done[0] = true;
                 HeroAiGameTests.finish(helper, List.of("could not spawn the hero"), mobs, null);
                 return;
             }
-            mobs.add(hero);
-            FactionHeroAbility judgement = HeroAiGameTests.learn(p, 1);
+            mobs.add(hero[0]);
+            judgement[0] = HeroAiGameTests.learn(p, 1);
             ranger.setHealth(4);   // one Judgement (10) finishes it
-            boolean[] done = { false };
-            for (int t = 1; t <= 120; t++) {
-                final int tick = t;
-                helper.runAfterDelay(t, () -> {
-                    if (done[0])
-                        return;
-                    if (!judgement.isOffCooldown(p)) {
-                        done[0] = true;
-                        List<String> problems = new ArrayList<>();
-                        if (!ranger.isAlive() || ranger.getHealth() < 4)
-                            problems.add("Judgement struck the cloaked Shade Ranger, which the hero's side cannot see");
-                        HeroAiGameTests.finish(helper, problems, mobs, null);
-                    } else if (tick == 120) {
-                        done[0] = true;
-                        HeroAiGameTests.finish(helper, List.of("Judgement was never cast at the enemy in plain view"), mobs, null);
-                    }
-                });
-            }
         });
+        for (int t = spawnAt + 1; t <= last; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0] || !(hero[0] instanceof FactionHero p))
+                    return;
+                if (!judgement[0].isOffCooldown(p)) {
+                    done[0] = true;
+                    List<String> problems = new ArrayList<>();
+                    if (!ranger.isAlive() || ranger.getHealth() < 4)
+                        problems.add("Judgement struck the cloaked Shade Ranger, which the hero's side cannot see");
+                    HeroAiGameTests.finish(helper, problems, mobs, null);
+                } else if (tick == last) {
+                    done[0] = true;
+                    HeroAiGameTests.finish(helper, List.of("Judgement was never cast at the enemy in plain view"), mobs, null);
+                }
+            });
+        }
     }
 
     /**
@@ -303,6 +317,10 @@ public class HeroAiV2GameTests {
             HeroAiGameTests.finish(helper, List.of("setup: the raid tower is not a DefenceTowerPlacement"), new ArrayList<>(), null);
             return;
         }
+        for (var block : tower.getBlocks())
+            if (!block.getBlockState().isAir())
+                helper.getLevel().setBlock(block.getBlockPos(), block.getBlockState(), 3);
+        tower.initPlacedBlocks();   // a placement with no blocks standing counts as destroyed on its first tick
         tower.isBuilt = true;
         tower.onlyFoe = them + "_nobody";   // it never fires in this test: the hero must stay out on its own judgement
         BuildingServerEvents.getBuildings().add(tower);
@@ -371,7 +389,7 @@ public class HeroAiV2GameTests {
         judgement.setCooldown(70, (Unit) hero);   // back at about tick 70
         List<String> problems = new ArrayList<>();
         int[] chargedAt = { -1 }, judgedAt = { -1 };
-        boolean[] stunnedThen = { false };
+        boolean[] stunnedThen = { false }, judgementBack = { false };
         helper.runAfterDelay(60, () -> {
             if (!charge.isOffCooldown(p))
                 problems.add("Shield Charge was spent while Judgement, its follow-up, was still on cooldown");
@@ -381,7 +399,9 @@ public class HeroAiV2GameTests {
             helper.runAfterDelay(t, () -> {
                 if (chargedAt[0] < 0 && !charge.isOffCooldown(p))
                     chargedAt[0] = tick;
-                if (judgedAt[0] < 0 && !judgement.isOffCooldown(p)) {
+                // the test put Judgement on cooldown: its cast is the cooldown starting again once it was back
+                judgementBack[0] |= judgement.isOffCooldown(p);
+                if (judgedAt[0] < 0 && judgementBack[0] && !judgement.isOffCooldown(p)) {
                     judgedAt[0] = tick;
                     stunnedThen[0] = foe.hasEffect(MobEffectRegistrar.STUN.get());
                 }
