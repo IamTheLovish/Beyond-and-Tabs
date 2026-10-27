@@ -513,6 +513,7 @@ public class MoveToTargetBlockGoal extends Goal {
         pathPending = false;
         pendingRepath = false;
         repathFromFinalNode = null;
+        repathWalkCarried = false;
         pathRequestSeq++; // cancel any in-flight path so a late result can't restart movement after a stop.
         this.moveTarget = null;
         this.mob.getNavigation().stop();
