@@ -37,7 +37,16 @@ import java.util.Random;
  */
 public class BotPlayer {
 
-    public enum Difficulty { EASY, MEDIUM, HARD }
+    /** PASSIVE plays EASY's economy and base but never leaves home to fight (BotArmy gates every wave, raid, scout and site squad). */
+    public enum Difficulty {
+        EASY, MEDIUM, HARD, PASSIVE;   // the order is the lobby cycle (index 0..3 in the setup screens and packets)
+
+        /** The name on the lobby cycle button. */
+        public String label() { return name().charAt(0) + name().substring(1).toLowerCase(); }
+
+        /** Easy and Passive share the easy economy and tech rules. */
+        public boolean easyLike() { return this == EASY || this == PASSIVE; }
+    }
 
     /**
      * What each faction uses for each job. T2 lives in its own lab (needs Tier 2 research): it trains the T2 army
@@ -1572,7 +1581,7 @@ public class BotPlayer {
                     }
                 }
             } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit drill
-                    && difficulty != Difficulty.EASY && drill.getBurrowTicks() == 0 && le.tickCount % 20 == 0) {
+                    && !difficulty.easyLike() && drill.getBurrowTicks() == 0 && le.tickCount % 20 == 0) {
                 // slice 2: a Drill Burrower in a fight tunnels under the front line onto the nearest enemy shooter 6-16
                 // blocks off (artillery, archers, casters: what a raider is for)
                 com.solegendary.reignofnether.ability.Ability burrow = null;
@@ -1638,7 +1647,7 @@ public class BotPlayer {
         for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
             if (!a.isOffCooldown(u))
                 continue;
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun && difficulty != Difficulty.EASY
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun && !difficulty.easyLike()
                     && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
                         == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT) {
                 float cost = com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST
@@ -2410,7 +2419,7 @@ public class BotPlayer {
      * over (300+), so a bot never stalls its own economy to shoot. Hard bots save less, easy bots never shoot.
      */
     void fireDGun(ServerLevel level, LivingEntity commander, Unit u) {
-        if (difficulty == Difficulty.EASY)
+        if (difficulty.easyLike())
             return;
         // Heaven's Judgement is a column aimed at the densest clump and paid through the Mana core: stormHabits
         if (com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
@@ -2635,7 +2644,7 @@ public class BotPlayer {
      * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
-        if (difficulty == Difficulty.EASY || minutes < tuning.t3Minute())
+        if (difficulty.easyLike() || minutes < tuning.t3Minute())
             return;
         if (kit.t3Building() == null || kit.t3Unit() == null || kit.t2Lab() == null)
             return;   // a faction without its T3 yet: don't sink the economy into a Tier 3 that unlocks nothing
@@ -2763,8 +2772,13 @@ public class BotPlayer {
         int[] ids = new int[units.size()];
         for (int i = 0; i < units.size(); i++)
             ids[i] = units.get(i).getId();
+        if (orderListener != null)
+            orderListener.accept(action, target);
         UnitServerEvents.addActionItem(name, action, -1, ids, target, target);
     }
+
+    /** Test hook: told of every army order this bot gives (action, target); null in play. */
+    public java.util.function.BiConsumer<UnitAction, BlockPos> orderListener;
 
     BlockPos nearestEnemyBuilding(BlockPos from) {
         BlockPos best = null;

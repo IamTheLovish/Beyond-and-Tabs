@@ -139,7 +139,7 @@ public final class BotCombatEngineers {
      * {@code have}, plus queued) than it wants. Public for the game test.
      */
     public static void train(BotPlayer bot, int have, List<LivingEntity> army, List<BuildingPlacement> buildings) {
-        if (bot.kit == null || bot.difficulty == BotPlayer.Difficulty.EASY || bot.kit.t2Lab() == null || army.size() < MIN_ARMY)
+        if (bot.kit == null || bot.difficulty.easyLike() || bot.kit.t2Lab() == null || army.size() < MIN_ARMY)
             return;
         ProductionItem item = engineerFor(bot.faction);
         if (item == null || !ResearchServerEvents.playerHasResearch(bot.name, ProductionItems.RESEARCH_TIER_2))

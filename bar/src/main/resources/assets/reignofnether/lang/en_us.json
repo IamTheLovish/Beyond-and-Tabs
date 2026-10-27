@@ -4077,5 +4077,7 @@
   "colour.reignofnether.emerald": "Emerald",
   "colour.reignofnether.lavender": "Lavender",
   "colour.reignofnether.coral": "Coral",
-  "colour.reignofnether.ice": "Ice"
+  "colour.reignofnether.ice": "Ice",
+  "bot.reignofnether.difficulty.passive": "Passive",
+  "bot.reignofnether.difficulty.passive.tooltip": "Builds its economy and base like Easy, but never attacks, raids or scouts. For testing without being attacked."
 }
