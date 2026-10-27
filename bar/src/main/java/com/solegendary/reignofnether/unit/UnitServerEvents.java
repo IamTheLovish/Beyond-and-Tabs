@@ -11,12 +11,9 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
-import com.solegendary.reignofnether.building.buildings.villagers.IronGolemBuilding;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.entities.BlazeUnitFireball;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.entities.WindcallerProjectile;
@@ -382,19 +379,12 @@ public class UnitServerEvents {
         }
     }
 
+    private static final QueuePopulation queuePopulation = new QueuePopulation();
+
     public static int getCurrentPopulation(String ownerName) {
-        int currentPopulation = getUnitPopulation(ownerName);
-        for (BuildingPlacement building : BuildingServerEvents.getBuildings())
-            if (building.ownerName.equals(ownerName)) {
-                if (building instanceof ProductionPlacement prodPlacement) {
-                    for (ActiveProduction prodItem : prodPlacement.productionQueue)
-                        if (!(prodPlacement instanceof GraveyardPlacement gy) || gy.getUpgradeLevel() <= 0)
-                            currentPopulation += prodItem.item.getCost(false, ownerName).population;
-                } else if (building.getBuilding() instanceof IronGolemBuilding) {
-                    currentPopulation += ResourceCosts.IRON_GOLEM.population;
-                }
-            }
-        return currentPopulation;
+        // the queue part is memoised per owner per tick too (QueuePopulation: any queue change recounts at once)
+        return getUnitPopulation(ownerName) + queuePopulation.of(ownerName, BuildingServerEvents.getBuildings(), false,
+            serverLevel != null ? serverLevel.getGameTime() : 0, serverLevel != null);
     }
 
     // manually provide all the variables required to do unit actions

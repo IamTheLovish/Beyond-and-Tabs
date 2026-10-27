@@ -11,15 +11,12 @@ import com.solegendary.reignofnether.building.BuildingPlaceButton;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ItemShopPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractFarm;
-import com.solegendary.reignofnether.building.buildings.villagers.IronGolemBuilding;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
@@ -42,7 +39,6 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.research.ResearchClient;
-import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.resources.Resources;
@@ -301,21 +297,14 @@ public class UnitClientEvents {
         return unitPopulationCache.getOrDefault(playerName, 0);
     }
 
+    private static final QueuePopulation queuePopulation = new QueuePopulation();
+
     public static int getCurrentPopulation(String playerName) {
-        int currentPopulation = 0;
-        if (MC.level != null) {
-            currentPopulation += getUnitPopulation(playerName);
-            for (BuildingPlacement building : BuildingClientEvents.getBuildings())
-                if (building.ownerName.equals(playerName))
-                    if (building instanceof ProductionPlacement prodBuilding) {
-                        for (ActiveProduction prodItem : prodBuilding.productionQueue)
-                            if (!(prodBuilding instanceof GraveyardPlacement gy) || gy.getUpgradeLevel() <= 0)
-                                currentPopulation += prodItem.item.getCost(true, playerName).population;
-                    } else if (building.getBuilding() instanceof IronGolemBuilding) {
-                        currentPopulation += ResourceCosts.IRON_GOLEM.population;
-                    }
-        }
-        return currentPopulation;
+        if (MC.level == null)
+            return 0;
+        // the queue part is memoised per owner per client tick too (QueuePopulation: any queue change recounts at once)
+        return getUnitPopulation(playerName)
+            + queuePopulation.of(playerName, BuildingClientEvents.getBuildings(), true, MC.level.getGameTime(), true);
     }
 
     public static void sendUnitCommandManual(String playerName, UnitAction action, int unitId, int[] unitIds,

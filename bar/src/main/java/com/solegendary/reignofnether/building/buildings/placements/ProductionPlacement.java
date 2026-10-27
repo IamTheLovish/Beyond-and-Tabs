@@ -52,7 +52,8 @@ public class ProductionPlacement extends BuildingPlacement {
     protected ArrayList<BlockPos> rallyPoints = new ArrayList<>();
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
-    public final List<ActiveProduction> productionQueue = new ArrayList<>();
+    // counts its changes, so the per-tick queue population (QueuePopulation) is never stale
+    public final List<ActiveProduction> productionQueue = new ProductionQueueList<>();
     /**
      * Depth of one building's production queue (BAR factories take a long queue; RoN had no cap at all, so a held
      * key could pile up hundreds of items that only ever showed as "+N"). Hitting it says "Queue full" and refuses the
