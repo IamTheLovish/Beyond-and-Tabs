@@ -86,8 +86,10 @@ public class BuildGroupGameTests {
                 problems.add(who + ": the capitol is not the Economy tab's first building");
             for (BuildGroup g : BuildGroup.values()) {
                 List<Building> tab = f.getBuildingsIn(g);
-                if (tab.size() > BuildGroup.SLOT_KEYS.size())
-                    problems.add(who + ": the " + g + " tab has " + tab.size() + " buildings for " + BuildGroup.SLOT_KEYS.size() + " keys");
+                // BAR's grid has 12 keys; a 13th building on is click only (a fourth row without a key), never keyed
+                for (int i = BuildGroup.SLOT_KEYS.size(); i < tab.size(); i++)
+                    if (f.getBuildHotkeys().get(tab.get(i)) != null)
+                        problems.add(who + ": " + tab.get(i).structureName + " is past the 12 grid keys of " + g + " but has a key");
                 for (int i = 0; i < tab.size() && i < BuildGroup.SLOT_KEYS.size(); i++)
                     if (f.getBuildHotkeys().get(tab.get(i)) != BuildGroup.SLOT_KEYS.get(i))
                         problems.add(who + ": " + tab.get(i).structureName + " is not on slot key " + i + " of " + g);
@@ -131,62 +133,34 @@ public class BuildGroupGameTests {
             helper.fail(problems.size() + " problem(s): " + String.join("; ", problems.subList(0, Math.min(25, problems.size()))));
     }
 
+    /**
+     * BAR's gridmenu keys (Grid profile of keybind_defaults.json): the grid is Q W E R / A S D F / Z X C V in reading
+     * order on a 4-wide grid, and Z / X / C / V open Economy / Military / Defence / Tech. The grid keys share keys with
+     * the orders on purpose (live only in an open tab, then first: BuildTabs.onKey); each has its own conflict context.
+     */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 40)
-    public static void no_slot_key_clashes_with_the_workers_orders_or_abilities(GameTestHelper helper) {
-        List<EntityType<?>> workers = List.of(
-            EntityRegistrar.VILLAGER_UNIT.get(), EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), EntityRegistrar.GRUNT_UNIT.get(),
-            EntityRegistrar.SEEDSHAPER_UNIT.get(), EntityRegistrar.SHIPWRIGHT_UNIT.get(), EntityRegistrar.GEOMANCER_UNIT.get(),
-            EntityRegistrar.TINKER_UNIT.get(),
-            // the elder workers share their base worker's menu and add abilities of their own
-            EntityRegistrar.ELDER_DRUID_UNIT.get(), EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(),
-            EntityRegistrar.HARBOURMASTER_UNIT.get(), EntityRegistrar.LEY_MASTER_UNIT.get(),
-            EntityRegistrar.EMBALMER_UNIT.get(), EntityRegistrar.BONEWRIGHT_UNIT.get(),
-            EntityRegistrar.ENGINEER_CAPTAIN_UNIT.get(), EntityRegistrar.WRECKER_UNIT.get());
+    public static void grid_and_tab_keys_follow_bar_gridmenu(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
-        for (EntityType<?> type : workers) {
-            var e = type.create(helper.getLevel());
-            if (!(e instanceof Unit unit)) {
-                problems.add(type.getDescriptionId() + " could not be created");
-                continue;
-            }
-            try {
-                String who = type.getDescriptionId();
-                Map<Integer, String> others = new HashMap<>();
-                java.util.function.BiConsumer<Keybinding, String> other = (kb, what) -> {
-                    for (int code : codes(kb))
-                        others.putIfAbsent(code, what);
-                };
-                for (var order : CommandCard.orders(e instanceof AttackerUnit, e instanceof WorkerUnit, true, true))
-                    other.accept(order.key(), "order " + order);
-                for (var order : CommandCard.orders(e instanceof AttackerUnit, e instanceof WorkerUnit, true, false))
-                    other.accept(order.key(), "order " + order);
-                var list = unit.getAbilities().get();
-                var keys = unit.getAbilities().effectiveHotkeys();
-                for (int i = 0; i < list.size(); i++) {
-                    boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
-                    other.accept(callToArms ? Keybindings.hotkey1 : keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
-                }
-                // the Return Resources button next to the portrait (HudClientEvents) is on hotkey 5
-                other.accept(Keybindings.hotkey5, "Return Resources");
-                for (int i = 0; i < BuildGroup.SLOT_KEYS.size(); i++)
-                    for (int code : codes(BuildGroup.SLOT_KEYS.get(i))) {
-                        String hit = others.get(code);
-                        if (hit != null)
-                            problems.add(who + ": slot key " + BuildGroup.SLOT_KEYS.get(i).buttonLabel + " is also " + hit);
-                    }
-            } finally {
-                e.discard();
-            }
+        int[] grid = { org.lwjgl.glfw.GLFW.GLFW_KEY_Q, org.lwjgl.glfw.GLFW.GLFW_KEY_W, org.lwjgl.glfw.GLFW.GLFW_KEY_E,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_R, org.lwjgl.glfw.GLFW.GLFW_KEY_A, org.lwjgl.glfw.GLFW.GLFW_KEY_S,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_D, org.lwjgl.glfw.GLFW.GLFW_KEY_F, org.lwjgl.glfw.GLFW.GLFW_KEY_Z,
+            org.lwjgl.glfw.GLFW.GLFW_KEY_X, org.lwjgl.glfw.GLFW.GLFW_KEY_C, org.lwjgl.glfw.GLFW.GLFW_KEY_V };
+        if (BuildGroup.SLOT_KEYS.size() != grid.length || BuildGroup.COLS != 4)
+            problems.add(BuildGroup.SLOT_KEYS.size() + " grid keys on " + BuildGroup.COLS + " columns, BAR has 12 on 4");
+        for (int i = 0; i < Math.min(grid.length, BuildGroup.SLOT_KEYS.size()); i++) {
+            Keybinding kb = BuildGroup.SLOT_KEYS.get(i);
+            if (kb.getDefaultKey() != grid[i])
+                problems.add("grid cell " + i + " defaults to " + kb.buttonLabel);
+            if (!Keybindings.all().contains(kb))
+                problems.add(kb.getTranslationKey() + " is not registered (no Controls entry)");
         }
-        // each tab switch key (Alt + slot key 1-4) is itself a slot key, and Alt + digit stays with control groups
+        // the tab keys are the grid's bottom row, by tab ordinal
         for (int i = 0; i < BuildGroup.TAB_KEYS.size(); i++)
-            if (BuildGroup.TAB_KEYS.get(i) != BuildGroup.SLOT_KEYS.get(i))
-                problems.add("tab key " + i + " is not slot key " + i);
-        // dedupe (7 workers x 15 keys repeat the same hit)
-        List<String> unique = new ArrayList<>(new java.util.LinkedHashSet<>(problems));
-        if (unique.isEmpty())
+            if (BuildGroup.TAB_KEYS.get(i).getDefaultKey() != grid[8 + i])
+                problems.add("tab key " + i + " is not the grid's bottom-row key " + i);
+        if (problems.isEmpty())
             helper.succeed();
         else
-            helper.fail(unique.size() + " problem(s): " + String.join("; ", unique.subList(0, Math.min(25, unique.size()))));
+            helper.fail(problems.size() + " problem(s): " + String.join("; ", problems));
     }
 }

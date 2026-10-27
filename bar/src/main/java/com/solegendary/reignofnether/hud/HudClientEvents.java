@@ -32,7 +32,6 @@ import com.solegendary.reignofnether.hud.playerdisplay.PlayerDisplayClientEvents
 import com.solegendary.reignofnether.items.ItemClientEvents;
 import com.solegendary.reignofnether.items.ItemShopMenu;
 import com.solegendary.reignofnether.items.UnitInventory;
-import com.solegendary.reignofnether.keybinds.BuildCategoryKeys;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
@@ -1385,7 +1384,7 @@ public class HudClientEvents {
                 if (buildTabs) {
                     int abilityRows = (int) unitAbilities.stream().filter(b -> !b.isHidden.get()).count();
                     abilityRows = (abilityRows + MAX_BUTTONS_PER_ROW - 1) / MAX_BUTTONS_PER_ROW;
-                    rowsUp = abilityRows + BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                    rowsUp = abilityRows + BuildTabs.rows(tabBuildings) - 1;
                 } else {
                     rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
                     rowsUp = Math.max(0, rowsUp);
@@ -1481,7 +1480,7 @@ public class HudClientEvents {
             // the sandbox's faction building list is tabbed like a worker's (BuildTabs)
             if (SandboxClientEvents.sandboxMenuType == SandboxMenuType.BUILDINGS) {
                 List<Button> tabBuildings = BuildTabs.tabButtons(shownAbilities);
-                int tabRowsUp = BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                int tabRowsUp = BuildTabs.rows(tabBuildings) - 1;
                 if (SandboxClientEvents.isSandboxPlayer() && (hudSelectedEntity != null || hudSelectedPlacement != null))
                     tabRowsUp += 1;
                 int stripY = blitY - iconFrameSize * tabRowsUp - BuildTabs.STRIP_H;
@@ -2310,9 +2309,6 @@ public class HudClientEvents {
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
             return;
-        // Alt + Q / Z / E / R picked a build tab (BuildTabs.tick): its release must not press the slot as well
-        if (BuildTabs.consumeRelease(evt.getKeyCode()))
-            return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
         // the idle-worker key ("." by default) is also a build-menu slot on some factions (hotkey8, the storage
@@ -2333,8 +2329,9 @@ public class HudClientEvents {
         // with a building ghost out, [ and ] rotate it (BuildingClientEvents) - the build card's "[" slot stays quiet
         if (com.solegendary.reignofnether.building.BuildingClientEvents.isGhostRotateKey(key))
             return;
-        // BAR's Z / X / C / V build lists win over the card's own buttons on those keys while a builder is selected
-        if (onBuildCategoryKey(key))
+        // BAR's gridmenu (BuildTabs, keybinds/BuildCategoryKeys): Z / X / C / V open a build tab, and in an open tab the
+        // grid keys Q W E R / A S D F / Z X C V pick a building; both win over the card's other buttons on those keys
+        if (BuildTabs.onKey(key))
             return;
         // BAR's Ctrl+W: select the whole army ("-" stays the card's own key for it)
         if (key == GLFW.GLFW_KEY_W && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
@@ -2346,7 +2343,8 @@ public class HudClientEvents {
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
         for (Button button : renderedButtons)
-            if (!cardKey || cardButtons.contains(button))
+            // a build grid button's key is its cell's grid key, handled above (BuildTabs.onKey), never its own hotkey
+            if ((!cardKey || cardButtons.contains(button)) && !BuildTabs.isGridButton(button))
                 button.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
@@ -2355,74 +2353,13 @@ public class HudClientEvents {
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
     }
 
-    private static final BuildCategoryKeys.Cycle buildCycle =
-        new BuildCategoryKeys.Cycle();
-
-    private static BuildCategoryKeys.Category buildCategoryOf(int key) {
-        if (Keybindings.buildMetal.matches(key)) return BuildCategoryKeys.Category.METAL;
-        if (Keybindings.buildEnergy.matches(key)) return BuildCategoryKeys.Category.ENERGY;
-        if (Keybindings.buildDefence.matches(key)) return BuildCategoryKeys.Category.DEFENCE;
-        if (Keybindings.buildFactory.matches(key)) return BuildCategoryKeys.Category.FACTORY;
-        return null;
-    }
-
-    /**
-     * BAR's build-category keys (keybinds/BuildCategoryKeys): with a builder (or the commander) selected, Z / X / C / V
-     * pick the first building of their list the builder can build now, and each further press of the same key the
-     * next, wrapping. Shift+key is the same list: Shift only changes how the click places it (queued). Returns true
-     * when the key was used; false (so Z / X / C / V keep their old meaning) with no builder selected, with Ctrl or Alt
-     * held, or when the key's list is empty for this builder.
-     */
-    private static boolean onBuildCategoryKey(int key) {
-        var category = buildCategoryOf(key);
-        if (category == null || !OrthoviewClientEvents.isEnabled())
-            return false;
-        boolean builder = false;
-        for (LivingEntity le : getSelectedUnits())
-            if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit) {
-                builder = true;
-                break;
-            }
-        boolean ctrlOrAlt = Keybindings.ctrlMod.isDown() || Keybindings.altMod.isDown();
-        if (!builder || ctrlOrAlt)
-            return false;
-        if (com.solegendary.reignofnether.building.BuildingClientEvents.getBuildingToPlace() == null)
-            buildCycle.reset();   // the last pick was placed or dropped: the next press starts the list again
-        java.util.Map<String, com.solegendary.reignofnether.building.BuildingPlaceButton> byPath = new java.util.LinkedHashMap<>();
-        java.util.Set<String> onKey = new java.util.HashSet<>();
-        // every tab's buildings: BuildTabs draws only the selected tab, so cardButtons holds only that tab's
-        for (Button b : allBuildButtons) {
-            if (!(b instanceof com.solegendary.reignofnether.building.BuildingPlaceButton pb) || pb.building == null
-                    || (pb.isHidden != null && pb.isHidden.get()) || (pb.isEnabled != null && !pb.isEnabled.get()))
-                continue;
-            net.minecraft.resources.ResourceLocation rl =
-                com.solegendary.reignofnether.api.ReignOfNetherRegistries.BUILDING.getKey(pb.building);
-            if (rl == null)
-                continue;
-            byPath.putIfAbsent(rl.getPath(), pb);
-            if (pb.hotkey != null && pb.hotkey.matches(key) && cardButtons.contains(pb))   // only the drawn tab's slot keys are live
-                onKey.add(rl.getPath());
-        }
-        java.util.List<String> list =
-            BuildCategoryKeys.listFor(category, byPath.keySet(), onKey);
-        if (!BuildCategoryKeys.claimsKey(builder, ctrlOrAlt, list))
-            return false;
-        String pick = buildCycle.press(category, list);
-        if (pick == null)
-            return false;
-        if (MC.player != null)
-            MC.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.get(), 0.2f, 1.0f);
-        byPath.get(pick).onLeftClick.run();
-        return true;
-    }
-
     /**
      * BAR mixed builder selection (tester: "multiple builders including different types ... it only sends one"): with
      * two or more owned builder types selected, the card's build buttons are every selected builder type's, so a
      * building from another type's menu is placed by the whole selection instead of sub-selecting that type first.
      * hudSelectedEntity's buttons come first and keep their keys; the other types' new buildings follow in selection
-     * order, deduplicated by building, and keep their key only if the card does not use it yet (BuilderCardUnion).
-     * Abilities stay hudSelectedEntity's. A placement button's action is BuildingClientEvents.setBuildingToPlace,
+     * order, deduplicated by building; one whose slot the tab already holds goes after the tab's last cell and takes
+     * that cell's grid key (BuilderCardUnion.addedByTab, BuildTabs). Abilities stay hudSelectedEntity's. A placement button's action is BuildingClientEvents.setBuildingToPlace,
      * which does not depend on the button's owner, and placing sends every selected builder.
      */
     private static List<Button> withOtherBuildersMenus(List<Button> primary, List<LivingEntity> selUnits) {
@@ -2510,8 +2447,13 @@ public class HudClientEvents {
 
     /** True when a button on the selected unit's / building's card has this key (primary or alias). */
     public static boolean isCardKey(int key) {
+        // the build grid's keys are its cells' grid keys, live only with a tab open (BuildTabs)
+        if (BuildTabs.isLiveKey(key))
+            return true;
         for (int i = 0; i < cardButtons.size(); i++) {
             Button b = cardButtons.get(i);
+            if (BuildTabs.isGridButton(b))
+                continue;
             if (b.hotkey != null && b.hotkey.matches(key) && (b.isHidden == null || !b.isHidden.get()))
                 return true;
         }

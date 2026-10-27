@@ -82,10 +82,16 @@ public class CommanderKeyGameTests {
                 if (faction == null || faction.getBuildHotkeys().isEmpty())
                     problems.add(who + ": no faction build menu to check against");
                 else
+                    // the build grid keys (BuildGroup.SLOT_KEYS) share keys with the orders on purpose (live only in an
+                    // open tab, then ahead of the orders), but a commander ability on one would be shadowed while a
+                    // tab is open, so CommanderServerEvents keeps the added abilities off them: abilities only
                     for (var entry : faction.getBuildHotkeys().entrySet())
-                        // the build menu is tabbed: slot keys repeat across tabs, only one tab shows at a time
-                        // (BuildGroupGameTests checks inside a tab), so a build key is claimed once per key
-                        claim.accept(entry.getValue(), "build slot " + entry.getValue().buttonLabel);
+                        for (int code : new int[] { entry.getValue().getKey(), entry.getValue().getAliasKey() }) {
+                            String prev = code == -1 ? null : taken.get(code);
+                            // Call to Arms on V shares V with the Tech tab key as it did with the old factory key
+                            if (prev != null && prev.startsWith("ability") && !prev.contains("CallToArms"))
+                                clashes.add(prev + " and build slot " + entry.getValue().buttonLabel + " both on " + entry.getValue().buttonLabel);
+                        }
                 if (!dgun)
                     problems.add(who + ": the commander got no D-gun");
                 for (String c : clashes)
