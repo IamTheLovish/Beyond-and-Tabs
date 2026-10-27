@@ -66,11 +66,15 @@ public class MoveToTargetBlockGoal extends Goal {
     // before, kept for onPathReady while an async repath is in flight
     private double repathFromX = Double.NaN, repathFromZ = Double.NaN;
     private boolean repathWalked = false;
+    // a repath the pool answered busy computed nothing: the walk it was owed carries over to the retry
+    private boolean repathWalkCarried = false;
 
     // Before a repath: note where the unit stands now and whether it walked REPATH_WALKED_MIN since the last one.
     private void markRepathFrom() {
         double dx = this.mob.getX() - repathFromX, dz = this.mob.getZ() - repathFromZ;
-        repathWalked = Double.isNaN(repathFromX) || dx * dx + dz * dz >= REPATH_WALKED_MIN * REPATH_WALKED_MIN;
+        repathWalked = repathWalkCarried || Double.isNaN(repathFromX)
+            || dx * dx + dz * dz >= REPATH_WALKED_MIN * REPATH_WALKED_MIN;
+        repathWalkCarried = false;
         repathFromX = this.mob.getX();
         repathFromZ = this.mob.getZ();
     }
@@ -348,6 +352,8 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            if (pendingRepath)
+                repathWalkCarried = repathWalked;
             pendingRepath = false;
             repathFromFinalNode = null;
             recalcCooldown = RECALC_COOLDOWN_MAX;
@@ -395,7 +401,11 @@ public class MoveToTargetBlockGoal extends Goal {
         snapPathToMob();
         if (wasRepath) {
             BlockPos newFinalNode = getFinalNodePos();
-            if (newFinalNode == null || !repathMadeProgress(repathFromFinalNode, newFinalNode))
+            // no end node at all: stuck, except for a subclass whose last path had an end (as before)
+            boolean stuck = newFinalNode == null
+                ? repathFromFinalNode == null || givesUpWhenUnreachable()
+                : !repathMadeProgress(repathFromFinalNode, newFinalNode);
+            if (stuck)
                 onStuckRepath();
             else
                 resetRecalcBackoff();
