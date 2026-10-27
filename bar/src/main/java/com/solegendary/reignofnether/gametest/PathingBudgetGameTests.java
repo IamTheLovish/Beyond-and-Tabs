@@ -108,7 +108,8 @@ public class PathingBudgetGameTests {
                     problems.add("the chaser did not catch a target walking away at 60% of its speed in 300 ticks ("
                         + TerrainGameTests.f(apart) + " apart, reach " + TerrainGameTests.f(reach) + ", target moved "
                         + TerrainGameTests.f(moved) + ", chaser target " + (chaser.getTarget() == runner ? "the runner" : String.valueOf(chaser.getTarget()))
-                        + ", nav done " + chaser.getNavigation().isDone() + "; " + ArenaReady.describe(level, made) + ")");
+                        + ", nav done " + chaser.getNavigation().isDone() + "; " + ArenaReady.describe(level, made)
+                        + "; chaser " + ArenaReady.around(chaser, runner) + ")");
                 try {
                     TerrainGameTests.finish(helper, problems);
                 } finally {
@@ -189,6 +190,19 @@ public class PathingBudgetGameTests {
         for (int z = 0; z <= 13; z++)
             for (int y = 2; y <= 4; y++)
                 helper.setBlock(new BlockPos(7, y, z), Blocks.STONE);
+        // a fence round the arena (x and z -1 and 16): the full-range fallback searches 64 blocks, and without one it
+        // routed through the generated ground between test slots - main 5421b13f ended at x 16.30, off the arena,
+        // still walking (Oct 26). That ground depends on the slot the batch gives this test, so it passed or failed
+        // by layout; now the only way round is the arena's own gap at z 14-15
+        // (what stood there is put back in restore: the fence is outside the arena, where later batches would find it)
+        java.util.Map<BlockPos, net.minecraft.world.level.block.state.BlockState> under = new java.util.LinkedHashMap<>();
+        for (int i = -1; i <= 16; i++)
+            for (int y = 2; y <= 4; y++)
+                for (BlockPos rel : new BlockPos[] { new BlockPos(i, y, -1), new BlockPos(i, y, 16), new BlockPos(-1, y, i), new BlockPos(16, y, i) }) {
+                    BlockPos abs = helper.absolutePos(rel);
+                    if (under.putIfAbsent(abs, level.getBlockState(abs)) == null)
+                        level.setBlock(abs, Blocks.STONE.defaultBlockState(), 3);
+                }
         String mine = owner(helper, "detour");
         BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
         List<Entity> made = new ArrayList<>();
@@ -196,6 +210,7 @@ public class PathingBudgetGameTests {
         Runnable restore = () -> {
             UnitServerEvents.rtsPathfinding = wasRts;
             VanillaPathBudget.shortRangeCapForTests = Float.MAX_VALUE;
+            under.forEach((abs, state) -> level.setBlock(abs, state, 3));
         };
         if (m == null) {
             restore.run();
@@ -224,7 +239,7 @@ public class PathingBudgetGameTests {
                     problems.add("the vindicator did not get round the wall in 420 ticks ("
                         + TerrainGameTests.f(OrdersObeyGameTests.dist(m, to)) + " from its spot, at x "
                         + TerrainGameTests.f(m.getX() - o.getX()) + " z " + TerrainGameTests.f(m.getZ() - o.getZ())
-                        + ", nav done " + m.getNavigation().isDone() + ")");
+                        + ", nav done " + m.getNavigation().isDone() + "; " + ArenaReady.around(m, to.getX() + 0.5, to.getZ() + 0.5) + ")");
                 if (VanillaPathBudget.fallbacksTotal == fallbacksBefore[0])
                     problems.add("no full-range fallback ran: the short search was not used or found the detour itself");
                 try {

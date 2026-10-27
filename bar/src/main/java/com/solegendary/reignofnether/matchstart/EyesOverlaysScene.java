@@ -42,10 +42,12 @@ import java.util.List;
  * <li>225 of the units selected (half the centre squad and four more squads): outlines and opaque underlines.</li>
  * </ul>
  * Stills at a mid zoom (45) with the units selected, then with one of our houses selected; and at strategic zoom. Then
- * the measurement: eight 8-second slices alternating normal zoom (30) and strategic zoom (200) ABBA-wise, each after a
- * 3-second settle. Per slice: the frame times (vanilla's frame timer, p50 / p95 / max) and our handlers' milliseconds per
- * frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, unitRings, minimap, hud, unitBodies); the
- * summary line gives each zoom's medians. The same scene on two builds (eyes.yml build_run) is a before / after.
+ * the measurement: twelve 8-second slices over normal zoom (30), crowd zoom (60) and strategic zoom (200) ABCCBA-wise,
+ * each after a 3-second settle. Crowd zoom is the band just under the fixed icon switch (70) where a late-game army drew
+ * every model (lovish's Oct 23 log). Per slice: the frame times (vanilla's frame timer, p50 / p95 / max) and our handlers'
+ * milliseconds per frame (FrameParts' lifetime counters: unitOverlays, buildingBoxes, strategicIcons, unitRings, minimap,
+ * hud, unitBodies, buildingDecor, worldMarkers); the summary line gives each zoom's medians. The same scene on two builds
+ * (eyes.yml build_run) is a before / after.
  * <p>
  * Wall-clock timeline, like scenes 16 and 17 (a shader-lane client runs a few ticks a second).
  */
@@ -55,12 +57,14 @@ final class EyesOverlaysScene {
     private static final int SQUADS = 10, PER_SQUAD = 50, SQUAD_COLS = 10, RING = 70;
     private static final int HOUSES = 1700;
     private static final String[] TYPES = { "militia_unit", "pillager_unit", "vindicator_unit" };
-    private static final int ZOOM_NORMAL = 30, ZOOM_MID = 45, ZOOM_STRATEGIC = 200;
-    private static final int[] ORDER = { ZOOM_NORMAL, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_NORMAL,
-            ZOOM_NORMAL, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_NORMAL };
+    private static final int ZOOM_NORMAL = 30, ZOOM_MID = 45, ZOOM_CROWD = 60, ZOOM_STRATEGIC = 200;
+    private static final int[] ZOOMS = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC };
+    private static final int[] ORDER = { ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_CROWD, ZOOM_NORMAL,
+            ZOOM_NORMAL, ZOOM_CROWD, ZOOM_STRATEGIC, ZOOM_STRATEGIC, ZOOM_CROWD, ZOOM_NORMAL };
     private static final double SETTLE_S = 3, SLICE_S = 8;
     private static final int[] SECTIONS = { FrameParts.UNIT_OVERLAYS, FrameParts.BUILDING_BOXES,
-            FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES };
+            FrameParts.STRATEGIC_ICONS, FrameParts.UNIT_RINGS, FrameParts.MINIMAP, FrameParts.HUD, FrameParts.UNIT_BODIES,
+            FrameParts.BUILDING_DECOR, FrameParts.WORLD_MARKERS, FrameParts.MARKERS_RANGE, FrameParts.MARKERS_METAL };
     private static final int SUMMONS_PER_TICK = 25, HOUSES_PER_TICK = 100;
 
     private static int phase = 0;
@@ -417,7 +421,7 @@ final class EyesOverlaysScene {
 
     /** Each zoom's medians over its slices: one line per zoom, the before / after numbers. */
     private static void summary() {
-        for (int zoom : new int[] { ZOOM_NORMAL, ZOOM_STRATEGIC }) {
+        for (int zoom : ZOOMS) {
             List<double[]> rows = new ArrayList<>();
             for (double[] r : results)
                 if ((int) r[0] == zoom)
@@ -428,8 +432,10 @@ final class EyesOverlaysScene {
             double ours = 0;
             for (int k = 0; k < SECTIONS.length; k++) {
                 double m = median(rows, 7 + k);
-                if (SECTIONS[k] != FrameParts.UNIT_BODIES)
-                    ours += m;
+                if (SECTIONS[k] != FrameParts.UNIT_BODIES && SECTIONS[k] != FrameParts.BUILDING_DECOR
+                        && SECTIONS[k] != FrameParts.WORLD_MARKERS && SECTIONS[k] != FrameParts.MARKERS_RANGE
+                        && SECTIONS[k] != FrameParts.MARKERS_METAL)
+                    ours += m;   // the overlays+HUD total stays comparable with the runs before Oct 23
                 parts.append(k == 0 ? "" : ", ").append(FrameParts.name(SECTIONS[k])).append(' ').append(f2(m));
             }
             ReignOfNether.LOGGER.info("[Eyes] 18_overlays zoom {} (medians of {} slices; {}): frame p50 {} ms, p95 {} ms | "

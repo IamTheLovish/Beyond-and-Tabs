@@ -58,13 +58,13 @@ public class LobbyBackdrop {
 
     // ---- shared with tools/gen_lobby_art.py
     private static final float ART_W = 2560f / 1100f;
-    private static final float MOON_X = -0.27f, MOON_Y = 0.205f, MOON_R = 0.14f;
+    private static final float MOON_X = 0.19f, MOON_Y = 0.215f, MOON_R = 0.16f;
     private static final float FRAME_W = 0.66f;
     private static final float HORIZON = 0.64f;
-    private static final float[][] RIVER = {   // x, y, half width
-        {0.372f, 0.800f, 0.048f}, {0.330f, 0.812f, 0.064f}, {0.200f, 0.826f, 0.080f}, {0.020f, 0.846f, 0.098f},
-        {-0.160f, 0.868f, 0.118f}, {-0.285f, 0.895f, 0.130f}, {-0.300f, 0.925f, 0.160f}, {-0.160f, 0.955f, 0.200f},
-        {0.040f, 0.985f, 0.250f}, {0.170f, 1.030f, 0.320f}};
+    private static final float[][] RIVER = {   // x, y, half width (round 6: zig-zags back to the fall)
+        {0.372f, 0.800f, 0.030f}, {0.315f, 0.808f, 0.036f}, {0.200f, 0.818f, 0.046f}, {0.120f, 0.832f, 0.058f},
+        {0.170f, 0.850f, 0.074f}, {0.250f, 0.870f, 0.094f}, {0.205f, 0.895f, 0.120f}, {0.060f, 0.925f, 0.155f},
+        {-0.020f, 0.962f, 0.235f}, {0.040f, 1.005f, 0.310f}, {0.100f, 1.050f, 0.390f}};
     /** the cascade: top x, top y, top half width, bottom x, bottom y, bottom half width */
     private static final float[] CASCADE = {0.300f, 0.688f, 0.016f, 0.372f, 0.802f, 0.042f};
     /** the cathedral breathes about the facade's foot */
@@ -74,14 +74,17 @@ public class LobbyBackdrop {
     private static final float[][] CATH_RECT = {{-0.1546f, 0.2105f, 0.0729f, 0.6779f}, {-0.1041f, 0.1095f, 0.3636f, 0.6968f}, {-0.2020f, 0.1853f, 0.2214f, 0.6968f}, {0.3320f, 0.1663f, 0.4520f, 0.6937f}, {0.2182f, 0.2421f, 0.3762f, 0.6968f}, {0.2214f, 0.1663f, 0.3857f, 0.3905f}, {0.1013f, -0.0011f, 0.2466f, 0.7000f}, {0.2119f, 0.1947f, 0.4741f, 0.7411f}};
     private static final float[] CATH_Z = {0.0130f, 0.0170f, 0.0220f, 0.0250f, 0.0290f, 0.0320f, 0.0350f, 0.0400f};
     /** the rocks breaking the river's surface (x, y, r) - gen_lobby_art.river_rocks() */
-    private static final float[][] RIVER_ROCKS = {{-0.1500f, 0.8750f, 0.0100f}, {-0.3530f, 0.9050f, 0.0130f}, {-0.1850f, 0.9300f, 0.0160f}, {-0.2200f, 0.9550f, 0.0180f}, {0.2150f, 0.9850f, 0.0240f}, {-0.0943f, 1.0000f, 0.0260f}};
+    private static final float[][] RIVER_ROCKS = {{0.2567f, 0.8620f, 0.0080f}, {0.1305f, 0.9000f, 0.0120f}, {0.1423f, 0.9280f, 0.0150f}, {-0.1517f, 0.9580f, 0.0180f}, {0.0889f, 0.9820f, 0.0220f}, {-0.0293f, 0.9980f, 0.0260f}};
     /** the rose window and the portal (artboard), where the light comes from */
     private static final float ROSE_X = 0.2981f, ROSE_Y = 0.3211f, DOOR_X = 0.3000f, DOOR_Y = 0.6735f;
     // </gen:cath>
     // <gen:title> written by tools/gen_lobby_title.py - do not edit by hand
     private static final float TITLE_TEXT_W = 0.9008f, TITLE_TOP_V = 0.1146f, TITLE_BOT_V = 0.8170f;
-    private static final float BYLINE_TEXT_W = 0.9231f, BYLINE_TOP_V = 0.1854f, BYLINE_BOT_V = 0.7053f;
-    private static final float JOISCO_TEXT_W = 0.9325f, JOISCO_TOP_V = 0.1854f, JOISCO_BOT_V = 0.7053f;
+    /** the credits' pieces (texture width fractions of the text, cap top and baseline as v) */
+    private static final float BYLINE_TEXT_W = 0.8300f, BYLINE_TOP_V = 0.2286f, BYLINE_BOT_V = 0.6364f;
+    private static final float LOVISH_TEXT_W = 0.7279f, LOVISH_TOP_V = 0.2286f, LOVISH_BOT_V = 0.6364f;
+    private static final float AMP_TEXT_W = 0.2792f, AMP_TOP_V = 0.2507f, AMP_BOT_V = 0.6011f;
+    private static final float JOISCO_TEXT_W = 0.7048f, JOISCO_TOP_V = 0.2286f, JOISCO_BOT_V = 0.6364f;
     /** the title's animated drips: u, v (texture), half width and reach (in texture heights) */
     private static final float[][] TITLE_DRIPS = {{0.1901f, 0.8232f, 0.0109f, 0.1167f}, {0.3077f, 0.8232f, 0.0096f, 0.1075f}, {0.3507f, 0.8232f, 0.0118f, 0.1190f}, {0.5996f, 0.8232f, 0.0098f, 0.0722f}, {0.6476f, 0.8232f, 0.0100f, 0.0902f}, {0.7122f, 0.8232f, 0.0105f, 0.0865f}};
     // </gen:title>
@@ -103,20 +106,22 @@ public class LobbyBackdrop {
         "clouds_near", "shafts", "mist", "ground", "cascade", "ripples", "streak", "field_far", "field_near", "bats",
         "frame_left", "frame_right", "petal", "vignette", "grain", "mist_pool", "frame_left_tree", "frame_right_tree",
         "frame_left_vines", "frame_right_vines", "leaf", "ring", "fg_briar", "fg_thorns", "fg_branch", "title", "byline",
-        "scrim", "credit_joisco"};
+        "scrim", "credit_joisco", "credit_lovish", "credit_amp", "hills_far"};
     private static final int SKY = 0, MOON = 1, GLOW = 2, SPARKLE = 3, CLOUDS_FAR = 4, SPIRES_FAR = 5, CLOUDS_NEAR = 6,
         SHAFTS = 7, MIST = 8, GROUND = 9, CASCADE_T = 10, RIPPLES = 11, STREAK = 12, FIELD_FAR = 13, FIELD_NEAR = 14,
         BATS = 15, FRAME_LEFT = 16, FRAME_RIGHT = 17, PETAL = 18, VIGNETTE = 19, GRAIN = 20, MIST_POOL = 21,
         TREE_LEFT = 22, TREE_RIGHT = 23, VINES_LEFT = 24, VINES_RIGHT = 25, LEAF = 26, RING = 27, FG_BRIAR = 28,
-        FG_THORNS = 29, FG_BRANCH = 30, TITLE = 31, BYLINE = 32, SCRIM = 33, CREDIT = 34;
+        FG_THORNS = 29, FG_BRANCH = 30, TITLE = 31, BYLINE = 32, SCRIM = 33, CREDIT = 34, LOVISH = 35, AMP = 36, HILLS = 37;
     /** wrap mode per base texture: 0 clamp, 1 repeat, 2 clamp across / repeat along (the moon's reflection) */
     private static final int[] WRAP = {0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     /** the cathedral's layers follow the base textures: per layer its stone, its moon rim and its glass glow */
     private static final int CATH0 = BASE_FILES.length;
     private static final int[] TEX = new int[BASE_FILES.length + CATH.length * 3];
     /** width / height of each texture (the lettering is placed by its own aspect) */
     private static final float[] ASPECT = new float[TEX.length];
+    /** height of each texture in pixels (the credits are drawn at one pixel scale, so their letters match exactly) */
+    private static final int[] TEX_H = new int[TEX.length];
     private static int state = 0;   // 0 not loaded yet, 1 ready, -1 failed (vanilla background)
 
     // ---- per-frame state (no allocation)
@@ -129,7 +134,7 @@ public class LobbyBackdrop {
     private static boolean titleLayout = false, withLetters = false;
     /** the moon's offset from the river's frame in the title layout (sky and ground slide apart), in A */
     private static float moonShift = 0f;
-    private static final int SLICES = 16, ROWS = 12, PETALS = 16, EMBERS = 12;
+    private static final int SLICES = 16, ROWS = 12, PETALS = 16, EMBERS = 12, GLINTS = 10;
 
     /** Uploads the layers on first use (render thread only). False if the art is unavailable. */
     public static boolean ensureLoaded() {
@@ -163,6 +168,7 @@ public class LobbyBackdrop {
                 }
                 int iw = img.getWidth(), ih = img.getHeight();
                 ASPECT[i] = iw / (float) ih;
+                TEX_H[i] = ih;
                 TEX[i] = TextureUtil.generateTextureId();
                 loaded = i + 1;
                 TextureUtil.prepareImage(TEX[i], iw, ih);
@@ -293,7 +299,7 @@ public class LobbyBackdrop {
         // the title layout's shifts: as far as the art reaches past the (zoomed) screen edge, less the parallax
         float slack = ART_W / 2f - w / (2f * A * zoom) - (motion ? 0.065f : 0f);
         float shift = titleLayout ? Mth.clamp(slack, 0f, 0.22f) : 0f;
-        xs = -shift;
+        xs = shift;     // round 6: sky and cathedral slide together, so the moon stays behind the towers
 
         // ---- sky, stars, moon
         art(SKY, -ART_W / 2, 0f, ART_W / 2, 1f, 0.003f, 1f);
@@ -322,9 +328,11 @@ public class LobbyBackdrop {
         // ---- clouds and the distant spires
         wrapped(CLOUDS_FAR, 0.28f, 0.80f, windT * 0.006f, 0.007f, 1f);
         art(SPIRES_FAR, -ART_W / 2, 0.12f, ART_W / 2, 0.80f, 0.011f, 1f);
+        // the far hills and the forest edge on the horizon: the hazy plane between the far spires and the cathedral
+        art(HILLS, -ART_W / 2, 0.50f, ART_W / 2, 0.74f, 0.0125f, 1f);
         wrapped(CLOUDS_NEAR, 0.46f, 0.84f, windT * 0.014f, 0.012f, 1f);
 
-        moonShift = 2f * shift;
+        moonShift = 0f;
         xs = shift;
         // ---- the cathedral, back to front: each depth layer, its moon rim and its glass; mist sheets between
         float swell = 1f + 0.006f * breath;
@@ -332,7 +340,7 @@ public class LobbyBackdrop {
             float z = CATH_Z[i];
             cathLayer(CATH0 + 3 * i, CATH_RECT[i], z, swell, 1f, false);
             cathLayer(CATH0 + 3 * i + 1, CATH_RECT[i], z, swell, 0.22f + 0.38f * breath, true);
-            float pulse = (0.30f + 0.30f * breath) * (0.9f + 0.1f * Mth.sin(t * (0.6f + 0.13f * i) + i));
+            float pulse = (0.30f + 0.30f * breath) * (0.9f + 0.1f * Mth.sin(t * (0.6f + 0.13f * i) + i)) * candle(t, i, motion);
             cathLayer(CATH0 + 3 * i + 2, CATH_RECT[i], z, swell, pulse, true);
             if (i == 1)
                 wrapped(MIST, 0.50f, 0.72f, windT * 0.006f + 0.3f, 0.019f, 0.30f + 0.15f * breath);
@@ -342,9 +350,8 @@ public class LobbyBackdrop {
         additive();
         // light shafts from the rose, falling through the mist toward the viewer
         float rx = sx(ROSE_X) + ox(0.036f), ry = sy(ROSE_Y) + oy(0.036f);
-        float sway = motion ? 0.012f * Mth.sin(t * 0.21f) : 0f;
-        shaft(rx, ry, 0.03f * A, sx(ROSE_X - 0.22f + sway) + ox(0.045f), sx(ROSE_X + 0.20f + sway) + ox(0.045f),
-            sy(0.86f) + oy(0.045f), 0.20f + 0.22f * breath);
+        // (round 6: the fan of light shafts from the rose read as a flat cone over the door - left out; the glass
+        // glow and the breathing wave carry the light)
         // the wave of glass light breathing outward from the rose and the door on each exhale
         float ph = frac(t / BREATH_S - 0.5f);
         float wr = (0.04f + 0.34f * ph) * A, wa = motion ? 0.22f * (1f - ph) * (1f - ph) : 0f;
@@ -354,7 +361,7 @@ public class LobbyBackdrop {
         quad(GLOW, dx0 - hr, dy0 - hr * 0.7f, dx0 + hr, dy0 + hr * 0.7f, 0f, 0f, 1f, 1f, 1f, 0.55f, 0.30f, 0.10f + 0.20f * breath);
         quad(GLOW, dx0 - wr * 0.6f, dy0 - wr * 0.4f, dx0 + wr * 0.6f, dy0 + wr * 0.4f, 0f, 0f, 1f, 1f, 1f, 0.5f, 0.28f, wa * 0.8f);
         RenderSystem.defaultBlendFunc();
-        wrapped(MIST, 0.60f, 0.80f, windT * 0.010f + breath * 0.012f, 0.031f, 0.55f + 0.30f * breath);
+        wrapped(MIST, 0.60f, 0.80f, windT * 0.010f + breath * 0.012f, 0.031f, 0.20f + 0.12f * breath);
 
         // ---- ground (a plane: strips sheared by depth), cascade, river
         ground(GROUND, 0.56f, 1f);
@@ -362,8 +369,9 @@ public class LobbyBackdrop {
         cascade(cv, 0.95f);
         additive();
         river(RIPPLES, t, 0.66f + 0.1f * Mth.sin(t * 0.9f));
-        float shimmer = 0.7f + 0.3f * Mth.sin(t * 5.3f) * Mth.sin(t * 3.1f + 1f);
-        river(STREAK, t, shimmer);
+        // moonlight glints sliding down the river with the current, each flickering as it turns
+        if (motion)
+            glints(t);
         // foam churning at the foot of the fall
         float fx0 = sx(CASCADE[3]) + ox(zg(CASCADE[4])), fy0 = sy(CASCADE[4] + 0.004f);
         float fr = 0.06f * A * (1f + 0.08f * Mth.sin(t * 4.1f));
@@ -388,7 +396,7 @@ public class LobbyBackdrop {
         quad(MIST_POOL, sx(-1.0f + md) + ox(0.030f), sy(0.655f), sx(-0.12f + md) + ox(0.030f), sy(0.785f), 0f, 0f, 1f, 1f,
             1f, 1f, 1f, mp);
         quad(MIST_POOL, sx(-0.55f - md) + ox(0.045f), sy(0.78f), sx(0.62f - md) + ox(0.045f), sy(0.88f), 0f, 0f, 1f, 1f,
-            1f, 1f, 1f, mp * 0.35f);
+            1f, 1f, 1f, mp * 0.15f);
 
         // ---- the flower fields: a gentle sway, and a wave rolling through behind each gust
         swayed(FIELD_FAR, 0.62f, 0.93f, 0.0016f, 0.0030f, t, motion);
@@ -445,7 +453,7 @@ public class LobbyBackdrop {
 
     /**
      * where the title block (cap top of BEYOND to the foot of AND TABS) and the credits line (cap top to baseline) sit,
-     * as fractions of h, and the gap between the two credits (in credit heights)
+     * as fractions of h, and the credits' spacing unit (in credit heights)
      */
     private static final float TITLE_Y0 = 0.034f, TITLE_BLOCK_H = 0.150f, CREDIT_Y0 = 0.220f, CREDIT_H = 0.037f,
         CREDIT_GAP = 1.4f;
@@ -453,9 +461,10 @@ public class LobbyBackdrop {
     /**
      * "BEYOND / AND TABS" and the credits (textures from tools/gen_lobby_title.py) over the sky between the moon and
      * the spires, with blood strands growing from the title's lower letters, each letting a drop fall on its own rhythm
-     * (still, short strands with reduce motion). The credits are a centred pair on one line at the same size (equal
-     * billing): "Developed by Lovish" in blood and gold on the left, "Contributions by Joisco" in sapphire and violet
-     * with a platinum rim on the right. The lettering leans a hair toward the camera: it is the nearest thing on screen.
+     * (still, short strands with reduce motion). The credits are one centred line, "Developed by Lovish & Joisco", both
+     * names at exactly the same size (equal billing): "Developed by" in bone, Lovish in blood and gold, a small gold
+     * "&", Joisco in sapphire and violet with a platinum rim. The lettering leans a hair toward the camera: it is the
+     * nearest thing on screen.
      */
     private static void lettering(float t, boolean motion) {
         RenderSystem.defaultBlendFunc();
@@ -467,35 +476,42 @@ public class LobbyBackdrop {
             tw *= k;
         }
         float tx0 = w / 2f - tw / 2f + lx, ty0 = TITLE_Y0 * h - TITLE_TOP_V * th + ly;
-        // the credits: both textures share a font size and pad, so one scale keeps the letters exactly equal
-        float ch = CREDIT_H * h / (BYLINE_BOT_V - BYLINE_TOP_V);
-        float lw = ch * ASPECT[BYLINE], jw = ch * ASPECT[CREDIT];
-        float gap = CREDIT_GAP * CREDIT_H * h;
-        float textW = lw * BYLINE_TEXT_W + gap + jw * JOISCO_TEXT_W;
-        if (textW > 0.92f * w) {
-            float k = 0.92f * w / textW;
-            ch *= k;
-            lw *= k;
-            jw *= k;
-            gap *= k;
-            textW *= k;
+        // the credits (lovish, Oct 22: "Joisco is also a developer"): "Developed by Lovish & Joisco" on one centred
+        // line, every piece at one pixel scale (same face and size in the textures), so both names are exactly equal;
+        // two stacked lines ("Developed by" / "Lovish & Joisco") when one line would be too wide
+        float cs = CREDIT_H * h / ((BYLINE_BOT_V - BYLINE_TOP_V) * Math.max(1, TEX_H[BYLINE]));
+        float word = CREDIT_GAP * 0.32f * CREDIT_H * h, ampGap = CREDIT_GAP * 0.22f * CREDIT_H * h;
+        float bW = textW(BYLINE, BYLINE_TEXT_W, cs), lW = textW(LOVISH, LOVISH_TEXT_W, cs);
+        float aW = textW(AMP, AMP_TEXT_W, cs), jW = textW(CREDIT, JOISCO_TEXT_W, cs);
+        float names = lW + ampGap + aW + ampGap + jW;
+        float one = bW + word + names;
+        boolean stacked = one > 0.46f * w;
+        float lineW = stacked ? Math.max(bW, names) : one;
+        if (lineW > 0.92f * w) {
+            float k = 0.92f * w / lineW;
+            cs *= k; word *= k; ampGap *= k; bW *= k; lW *= k; aW *= k; jW *= k; names *= k; one *= k; lineW *= k;
         }
-        float cy0 = CREDIT_Y0 * h - BYLINE_TOP_V * ch + ly;
-        float lText0 = w / 2f - textW / 2f + lx * 0.8f, jText0 = lText0 + lw * BYLINE_TEXT_W + gap;
-        float lx0 = lText0 - lw * (1f - BYLINE_TEXT_W) / 2f, jx0 = jText0 - jw * (1f - JOISCO_TEXT_W) / 2f;
+        float capH = (BYLINE_BOT_V - BYLINE_TOP_V) * TEX_H[BYLINE] * cs;
+        float base1 = CREDIT_Y0 * h + capH + ly, base2 = stacked ? base1 + capH * 1.55f : base1;
+        float px0 = w / 2f - (stacked ? names : one) / 2f + lx * 0.8f;
+        float blockW = stacked ? Math.max(bW, names) : one;
+        float bottom = base2 + capH * 0.4f;
         // a breath of darkness behind the lettering so it reads against the moonlit cloud
-        float padHalf = Math.max(tw * TITLE_TEXT_W, textW) * 0.58f;
-        quad(SCRIM, w / 2f - padHalf, TITLE_Y0 * h - 0.05f * h, w / 2f + padHalf,
-            CREDIT_Y0 * h + CREDIT_H * h + 0.05f * h, 0f, 0f, 1f, 1f, 0f, 0f, 0f, 0.5f);
+        float padHalf = Math.max(tw * TITLE_TEXT_W, blockW) * 0.58f;
+        quad(SCRIM, w / 2f - padHalf, TITLE_Y0 * h - 0.05f * h, w / 2f + padHalf, bottom + 0.04f * h,
+            0f, 0f, 1f, 1f, 0f, 0f, 0f, 0.5f);
         quad(TITLE, tx0, ty0, tx0 + tw, ty0 + th, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
-        quad(BYLINE, lx0, cy0, lx0 + lw, cy0 + ch, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
-        // a small gold lozenge between the two names
-        float mx = lText0 + lw * BYLINE_TEXT_W + gap / 2f, my = CREDIT_Y0 * h + CREDIT_H * h * 0.5f + ly;
-        float lz = CREDIT_H * h * 0.16f;
-        disc(mx, my, lz * 1.5f, lz * 1.5f, 0.05f, 0.02f, 0.03f, 0.8f);
-        disc(mx, my, lz * 0.75f, lz, 0.86f, 0.70f, 0.36f, 1f);
-        if (TEX[CREDIT] > 0)
-            quad(CREDIT, jx0, cy0, jx0 + jw, cy0 + ch, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
+        if (stacked) {
+            piece(BYLINE, BYLINE_TEXT_W, BYLINE_BOT_V, cs, w / 2f - bW / 2f + lx * 0.8f, base1);
+        } else {
+            piece(BYLINE, BYLINE_TEXT_W, BYLINE_BOT_V, cs, px0, base1);
+            px0 += bW + word;
+        }
+        piece(LOVISH, LOVISH_TEXT_W, LOVISH_BOT_V, cs, px0, base2);
+        px0 += lW + ampGap;
+        piece(AMP, AMP_TEXT_W, AMP_BOT_V, cs, px0, base2);
+        px0 += aW + ampGap;
+        piece(CREDIT, JOISCO_TEXT_W, JOISCO_BOT_V, cs, px0, base2);
         for (int i = 0; i < TITLE_DRIPS.length; i++) {
             float[] d = TITLE_DRIPS[i];
             float x = tx0 + d[0] * tw, y = ty0 + d[1] * th, hw = Math.max(0.6f, d[2] * th), reach = d[3] * th;
@@ -523,6 +539,20 @@ public class LobbyBackdrop {
                 disc(x - r * 0.35f, dy - r * 0.35f, r * 0.3f, r * 0.3f, 1f, 0.55f, 0.55f, 0.7f * (1f - drop));
             }
         }
+    }
+
+    /** the width on screen of a credit piece's text at pixel scale s */
+    private static float textW(int tex, float textFrac, float s) {
+        return TEX_H[tex] * ASPECT[tex] * s * textFrac;
+    }
+
+    /** a credit piece at pixel scale s, its text starting at x, its baseline at `base` */
+    private static void piece(int tex, float textFrac, float botV, float s, float x, float base) {
+        if (TEX[tex] <= 0)
+            return;
+        float ph = TEX_H[tex] * s, pw = ph * ASPECT[tex];
+        float x0 = x - pw * (1f - textFrac) / 2f, y0 = base - botV * ph;
+        quad(tex, x0, y0, x0 + pw, y0 + ph, 0f, 0f, 1f, 1f, 1f, 1f, 1f, 1f);
     }
 
     /** one hanging strand: a tapering crimson body, lit down its left side, swelling into a bead at the tip */
@@ -834,6 +864,63 @@ public class LobbyBackdrop {
             float px = sx(x) + ox(0.014f), py = sy(y) + oy(0.014f);
             quad(BATS, px - s, py - s / 2f, px + s, py + s / 2f, frame / 3f, 0f, (frame + 1) / 3f, 1f, 1f, 1f, 1f, 0.95f);
         }
+    }
+
+    /**
+     * The candles behind the glass: each cathedral layer's glow flickers on its own (three incommensurate tremors and
+     * a rare gutter), so the windows never pulse in unison. 1 when frozen.
+     */
+    private static float candle(float t, int i, boolean motion) {
+        if (!motion)
+            return 1f;
+        float f = 0.86f + 0.06f * Mth.sin(t * (7.3f + 0.9f * i) + i * 1.3f) * Mth.sin(t * (3.1f + 0.4f * i) + i)
+            + 0.05f * Mth.sin(t * (13.7f + 1.1f * i) + i * 2.1f);
+        float g = frac(t / (5.3f + 1.7f * i) + i * 0.31f);       // now and then a flame gutters and recovers
+        return f - (g < 0.06f ? 0.25f * Mth.sin(g / 0.06f * Mth.PI) : 0f);
+    }
+
+    /**
+     * Moonlight glints on the river: GLINTS sparks, each carried down the river's centreline by the current from the
+     * fall toward the viewer at its own speed and lane, swelling with nearness and twinkling as the water turns them.
+     * Each loops on its own period (frac), so the whole is seamless.
+     */
+    private static void glints(float t) {
+        additive();
+        for (int i = 0; i < GLINTS; i++) {
+            float period = 7f + 5f * frac(i * 0.618f);
+            float p = frac(t / period + i * 0.37f);
+            // position along the river (the segments are spaced unevenly; walk them by y)
+            float y = RIVER[0][1] + (1.0f - RIVER[0][1]) * p * p;
+            float[] cw = riverAt(y);
+            float lane = (frac(i * 0.43f) - 0.5f) * 1.2f + 0.15f * Mth.sin(t * 0.7f + i);
+            float x = cw[0] + lane * cw[1];
+            float near = (y - HORIZON) / (1f - HORIZON);
+            float sz = A * (0.004f + 0.012f * near);
+            float tw = 0.5f + 0.5f * Mth.sin(t * (5f + i) + i * 2.3f);
+            float a = Math.min(1f, p * 8f) * Math.min(1f, (1f - p) * 5f) * tw * tw;
+            float px = sx(x) + ox(zg(y)), py = sy(y) + oy(zg(y));
+            quad(SPARKLE, px - sz * 2.4f, py - sz * 0.6f, px + sz * 2.4f, py + sz * 0.6f, 0f, 0f, 1f, 1f, 1f, 0.92f,
+                0.86f, 0.85f * a);
+        }
+        RenderSystem.defaultBlendFunc();
+    }
+
+    /** The river's centre x and half width at artboard y (RIVER is monotone in y). */
+    private static final float[] RIVER_AT = new float[2];
+
+    private static float[] riverAt(float y) {
+        for (int i = 0; i + 1 < RIVER.length; i++) {
+            float[] p = RIVER[i], q = RIVER[i + 1];
+            if (y <= q[1] || i + 2 == RIVER.length) {
+                float k = Mth.clamp((y - p[1]) / (q[1] - p[1]), 0f, 1f);
+                RIVER_AT[0] = p[0] + (q[0] - p[0]) * k;
+                RIVER_AT[1] = p[2] + (q[2] - p[2]) * k;
+                return RIVER_AT;
+            }
+        }
+        RIVER_AT[0] = RIVER[0][0];
+        RIVER_AT[1] = RIVER[0][2];
+        return RIVER_AT;
     }
 
     /** Embers rising from the glowing door and the foot of the fall, drifting with the wind, each at its own depth. */

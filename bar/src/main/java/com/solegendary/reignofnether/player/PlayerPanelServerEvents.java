@@ -78,13 +78,10 @@ public class PlayerPanelServerEvents {
         com.solegendary.reignofnether.ability.abilities.CryptTide.class,
         com.solegendary.reignofnether.ability.abilities.WarDrums.class,
         com.solegendary.reignofnether.ability.abilities.BastionAegis.class,
-        com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class,
         com.solegendary.reignofnether.ability.abilities.MagmaRupture.class,
         com.solegendary.reignofnether.ability.abilities.HolyBell.class,
         com.solegendary.reignofnether.ability.abilities.WitheringFog.class,
         com.solegendary.reignofnether.ability.abilities.SunriseSortie.class,
-        com.solegendary.reignofnether.ability.abilities.SoulWisps.class,
-        com.solegendary.reignofnether.ability.abilities.AwakenThicket.class,
         com.solegendary.reignofnether.ability.abilities.Bloom.class);
 
     @SubscribeEvent

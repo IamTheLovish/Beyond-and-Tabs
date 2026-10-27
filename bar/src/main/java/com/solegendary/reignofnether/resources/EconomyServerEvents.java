@@ -8,7 +8,9 @@ import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.sandbox.SandboxServer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -189,11 +191,10 @@ public class EconomyServerEvents {
     public static void convertEnergy(Resources res, PlayerEconomy eco) {   // the threshold is the player's slider (converterLevel)
         if (eco.conversionCapacity <= 0 || ManaServerEvents.convertersPaused(res.ownerName))
             return;
-        float spare = res.getEnergy() - eco.energyStorage * converterLevel(res.ownerName, eco);
-        float metalRoom = eco.metalStorage - res.getMetal();
-        if (spare <= 0 || metalRoom <= 0)
+        float energy = EconomyMath.energyToConvert(res.getEnergy(), eco.energyStorage, converterLevel(res.ownerName, eco),
+            eco.metalStorage - res.getMetal(), eco.conversionCapacity / TICKS_PER_SECOND, CONVERSION_RATIO);
+        if (energy <= 0)
             return;
-        float energy = Math.min(spare, Math.min(eco.conversionCapacity / TICKS_PER_SECOND, metalRoom * CONVERSION_RATIO));
         res.addEnergy(-energy);
         res.addMetal(energy / CONVERSION_RATIO);
         eco.energySpentWindow += energy;           // converters show up as energy expense ...
@@ -271,12 +272,7 @@ public class EconomyServerEvents {
         eco.metalDemand += wantMetal;
         eco.energyDemand += wantEnergy;
 
-        float granted = eco.stall;
-        if (wantMetal > 0)
-            granted = Math.min(granted, Math.max(0, res.getMetal()) / wantMetal);
-        if (wantEnergy > 0)
-            granted = Math.min(granted, Math.max(0, res.getEnergy()) / wantEnergy);
-        granted = Math.max(0, Math.min(1, granted));
+        float granted = EconomyMath.granted(eco.stall, res.getMetal(), wantMetal, res.getEnergy(), wantEnergy);
         if (granted <= 0)
             return 0f;
 
@@ -327,9 +323,7 @@ public class EconomyServerEvents {
      * which run it on their own pools only.
      */
     public static void updateStall(Resources res, PlayerEconomy eco) {
-        float stallMetal = eco.metalDemand <= 0 ? 1f : Math.max(0, res.getMetal()) / eco.metalDemand;
-        float stallEnergy = eco.energyDemand <= 0 ? 1f : Math.max(0, res.getEnergy()) / eco.energyDemand;
-        float stall = Math.max(0, Math.min(1f, Math.min(stallMetal, stallEnergy)));
+        float stall = EconomyMath.stall(res.getMetal(), eco.metalDemand, res.getEnergy(), eco.energyDemand);
         eco.stall = ManaServerEvents.capBuildSpeed(res.ownerName, stall);
         eco.metalDemand = 0;
         eco.energyDemand = 0;
@@ -396,10 +390,12 @@ public class EconomyServerEvents {
         eco.energyStorage = energyStorage;
         if (res == null || (metalLost <= 0 && energyLost <= 0) || SandboxServer.isSandboxPlayer(res.ownerName))
             return;
-        if (metalLost > 0 && res.getMetal() > metalStorage)
-            res.addMetal(-Math.min(metalLost, res.getMetal() - metalStorage));
-        if (energyLost > 0 && res.getEnergy() > energyStorage)
-            res.addEnergy(-Math.min(energyLost, res.getEnergy() - energyStorage));
+        float metalGone = EconomyMath.lostFromPool(res.getMetal(), metalStorage, metalLost);
+        float energyGone = EconomyMath.lostFromPool(res.getEnergy(), energyStorage, energyLost);
+        if (metalGone > 0)
+            res.addMetal(-metalGone);
+        if (energyGone > 0)
+            res.addEnergy(-energyGone);
     }
 
     /**
@@ -452,16 +448,16 @@ public class EconomyServerEvents {
      * @return the stored level, or -1 when refused
      */
     public static float setSlider(String owner, boolean energy, float level) {
-        if (owner == null || owner.isEmpty() || Float.isNaN(level) || Float.isInfinite(level) || getResources(owner) == null)
+        if (owner == null || owner.isEmpty() || !EconomyMath.isRealLevel(level) || getResources(owner) == null)
             return -1f;
         PlayerEconomy eco = getEconomy(owner);
-        if (tickCount - eco.lastSliderTick < SLIDER_MIN_TICKS)
+        if (EconomyMath.sliderTooFast(tickCount, eco.lastSliderTick, SLIDER_MIN_TICKS))
             return -1f;
         eco.lastSliderTick = tickCount;
         if (energy)
-            eco.converterLevel = Math.max(CONVERTER_MIN, Math.min(1f, level));
+            eco.converterLevel = EconomyMath.clampLevel(level, CONVERTER_MIN);
         else
-            eco.shareLevel = Math.max(SHARE_MIN, Math.min(1f, level));
+            eco.shareLevel = EconomyMath.clampLevel(level, SHARE_MIN);
         return energy ? eco.converterLevel : eco.shareLevel;
     }
 
@@ -477,33 +473,18 @@ public class EconomyServerEvents {
         if (res == null)
             return 0;
         PlayerEconomy eco = getEconomy(ownerName);
-        if (eco.shareLevel >= 0.999f)
-            return 0;
-        float excess = res.getMetal() - eco.shareLevel * eco.metalStorage;
-        excess = Math.min(excess, SHARE_RATE_PER_SECOND / TICKS_PER_SECOND);
-        if (excess <= 0.0001f)
+        float excess = EconomyMath.shareExcess(res.getMetal(), eco.shareLevel, eco.metalStorage,
+            SHARE_RATE_PER_SECOND / TICKS_PER_SECOND);
+        if (excess <= 0)
             return 0;
         Set<String> allies = AlliancesServerEvents.getAllAllies(ownerName);
         if (allies.isEmpty())
             return 0;
-        float left = excess;
-        for (int pass = 0; pass < 2 && left > 0.0001f; pass++) {
-            int withRoom = 0;
-            for (String ally : allies)
-                if (shareRoom(ally) > 0.0001f)
-                    withRoom++;
-            if (withRoom == 0)
-                break;
-            float share = left / withRoom;
-            for (String ally : allies) {
-                float give = Math.min(share, shareRoom(ally));
-                if (give <= 0.0001f)
-                    continue;
-                getResources(ally).addMetal(give);
-                left -= give;
-            }
-        }
-        float given = excess - Math.max(0, left);
+        List<String> names = new ArrayList<>(allies);
+        float[] rooms = new float[names.size()];
+        for (int i = 0; i < rooms.length; i++)
+            rooms[i] = shareRoom(names.get(i));
+        float given = giveToAllies(names, EconomyMath.splitAmongAllies(excess, rooms), true);
         if (given > 0)
             res.addMetal(-given);
         return given;
@@ -531,28 +512,27 @@ public class EconomyServerEvents {
         Set<String> allies = AlliancesServerEvents.getAllAllies(ownerName);
         if (allies.isEmpty())
             return 0;
-        float left = amount;
-        for (int pass = 0; pass < 2 && left > 0.0001f; pass++) {
-            int withRoom = 0;
-            for (String ally : allies)
-                if (room(ally, metal) > 0.0001f)
-                    withRoom++;
-            if (withRoom == 0)
-                break;
-            float share = left / withRoom;
-            for (String ally : allies) {
-                float give = Math.min(share, room(ally, metal));
-                if (give <= 0.0001f)
-                    continue;
-                Resources res = getResources(ally);
-                if (metal)
-                    res.addMetal(give);
-                else
-                    res.addEnergy(give);
-                left -= give;
-            }
+        List<String> names = new ArrayList<>(allies);
+        float[] rooms = new float[names.size()];
+        for (int i = 0; i < rooms.length; i++)
+            rooms[i] = room(names.get(i), metal);
+        return giveToAllies(names, EconomyMath.splitAmongAllies(amount, rooms), metal);
+    }
+
+    /** Pays out what EconomyMath.splitAmongAllies decided; returns the total handed over. */
+    private static float giveToAllies(List<String> names, float[] gives, boolean metal) {
+        float total = 0;
+        for (int i = 0; i < gives.length; i++) {
+            if (gives[i] <= 0)
+                continue;
+            Resources res = getResources(names.get(i));
+            if (metal)
+                res.addMetal(gives[i]);
+            else
+                res.addEnergy(gives[i]);
+            total += gives[i];
         }
-        return amount - Math.max(0, left);
+        return total;
     }
 
     // called once per server tick (END phase, after every building and unit has ticked) by ResourcesServerEvents
@@ -572,7 +552,7 @@ public class EconomyServerEvents {
             // energy first: the extractors' drain is paid from the pool the income just filled, and the metal they make
             // is what that drain could buy (resources/TierGate)
             if (energyIn > 0) {
-                float banked = Math.max(0, Math.min(energyIn, eco.energyStorage - res.getEnergy()));
+                float banked = EconomyMath.banked(energyIn, eco.energyStorage, res.getEnergy());
                 if (banked > 0)
                     res.addEnergy(banked);
                 eco.energyOverflowTick = energyIn - banked;
@@ -580,7 +560,7 @@ public class EconomyServerEvents {
             float extractorShare = payExtractorUpkeep(res, eco);
             float metalIn = (eco.metalIncome - eco.extractorMetal * (1f - extractorShare)) / TICKS_PER_SECOND;
             if (metalIn > 0) {
-                float banked = Math.max(0, Math.min(metalIn, eco.metalStorage - res.getMetal()));
+                float banked = EconomyMath.banked(metalIn, eco.metalStorage, res.getMetal());
                 if (banked > 0) {
                     res.addMetal(banked);
                     eco.metalProducedWindow += banked;

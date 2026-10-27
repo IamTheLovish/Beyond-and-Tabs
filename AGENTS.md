@@ -159,6 +159,12 @@ NOTES.md                  older session log; README.md is out of date (this file
     tool allows it - never a hand-written polling loop (each check-in is a paid turn). It prints one line at the end
     (GREEN / RED with the failed tests / TIMEOUT) and reruns a run once when every failed test is in
     `tools/known_flakes.txt`. A failure that names no test is never rerun.
+- **Fast JUnit tests** (`bar/src/test/java`, JUnit 5, plan 008): pure rules in seconds, not the minutes of a GameTest.
+  They run inside job `bar`'s `./gradlew build` (no extra job or runner); the `JUnit summary` step posts the count as a
+  notice (`tools/junit_summary.py`). A rule that touches the world cannot load here - pull the arithmetic into a plain
+  class (`PopulationRules`, `EconomyMath`, `PlacementGrid`, `MergeGrid`...) and test that; do not mock the world. Table-
+  driven, written from the rule before the code; a real bug found by a test stays `@Disabled("BUG: ...")` in the PR for
+  the commander to decide - never bend the test.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
   arena; big tests get their own batch; load far chunks with `GameTestChunks.hold` + progress-based waits (never
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,
