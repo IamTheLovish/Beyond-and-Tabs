@@ -149,8 +149,6 @@ public class WreckServerEvents {
             return;
         if (com.solegendary.reignofnether.unit.DragonRaiseServerEvents.isRisen(le))
             return;   // a Bone Dragon's risen skeleton was free - its death must not pay out metal
-        if (com.solegendary.reignofnether.ability.abilities.TotemOfThePack.isSpectral(le))
-            return;   // so was a Totem of the Pack's spectral wolf
         if (com.solegendary.reignofnether.ability.abilities.AwakenThicket.isAwakened(le))
             return;   // and an Elder Druid's awakened treant
         if (com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))
@@ -322,7 +320,6 @@ public class WreckServerEvents {
             if (nearest == null)
                 continue;
             float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * factionReclaim(u)
-                * com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(le)
                 * EconomyPace.of(u.getOwnerName()) * seconds);   // pace: a heap strips faster, holds the same metal
             float got = EconomyServerEvents.addReclaimedMetal(u.getOwnerName(), want);
             if (got <= 0)

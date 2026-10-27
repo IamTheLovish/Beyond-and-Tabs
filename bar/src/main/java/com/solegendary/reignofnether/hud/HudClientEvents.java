@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
-import com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents;
@@ -1308,11 +1307,6 @@ public class HudClientEvents {
                 });
             }
 
-            if (hudSelectedEntity instanceof VillagerUnit vUnit)
-                for (Ability ability : vUnit.getAbilities().get())
-                    if (ability instanceof CallToArmsUnit callToArmsUnit)
-                        actionButtons.add(callToArmsUnit.getButton(Keybindings.hotkey1, vUnit));
-
             int orderRows = CommandCard.rows(actionButtons.size());
             int orderIndex = 0;
             for (Button actionButton : actionButtons) {
@@ -1366,7 +1360,6 @@ public class HudClientEvents {
                     }
                 }
                 List<Button> allAbilities = abilityButtons.stream()
-                        .filter(b -> !(b instanceof AbilityButton ab) || !(ab.ability instanceof CallToArmsUnit))
                         .toList();
                 // BAR mixed builders: several builder types selected = their build menus together (BuilderCardUnion),
                 // before the tab split so every added building lands in its own tab
@@ -1476,7 +1469,7 @@ public class HudClientEvents {
             };
 
             List<Button> shownAbilities = abilityButtons.stream()
-                    .filter(b -> !b.isHidden.get() && !(b instanceof AbilityButton ab && ab.ability instanceof CallToArmsUnit))
+                    .filter(b -> !b.isHidden.get())
                     .toList();
             // the sandbox's faction building list is tabbed like a worker's (BuildTabs)
             if (SandboxClientEvents.sandboxMenuType == SandboxMenuType.BUILDINGS) {

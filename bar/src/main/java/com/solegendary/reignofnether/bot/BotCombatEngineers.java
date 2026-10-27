@@ -1,13 +1,5 @@
 package com.solegendary.reignofnether.bot;
 
-import com.solegendary.reignofnether.ability.Ability;
-import com.solegendary.reignofnether.ability.abilities.BoneGraft;
-import com.solegendary.reignofnether.ability.abilities.Bulwark;
-import com.solegendary.reignofnether.ability.abilities.MendingRite;
-import com.solegendary.reignofnether.ability.abilities.Overdrive;
-import com.solegendary.reignofnether.ability.abilities.Rootwalk;
-import com.solegendary.reignofnether.ability.abilities.SalvageHook;
-import com.solegendary.reignofnether.ability.abilities.TearDown;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
@@ -24,7 +16,6 @@ import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.CombatEngineer;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
-import com.solegendary.reignofnether.unit.units.engineers.PioneerUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -49,8 +40,6 @@ import java.util.WeakHashMap;
  *       blocks behind it - its field repair (CombatEngineers.tickFieldRepair) then mends whatever is hurt around it;</li>
  *   <li>now and then, while the army gathers, has them raise an anti-raid tower at the rally point (BAR: the builders
  *       that follow the army throw up a defence where it stands);</li>
- *   <li>casts each engineer's faction ability when its trigger holds. The cheap tests come first and the scans run only
- *       for an engineer off cooldown, so a quiet army costs a few checks.</li>
  * </ol>
  * Server thread only (BotPlayer.think).
  */
@@ -113,8 +102,6 @@ public final class BotCombatEngineers {
         train(bot, st.engineers.size(), army, buildings);
         if (st.engineers.isEmpty())
             return;
-        for (int i = 0, n = st.engineers.size(); i < n; i++)
-            useAbility(bot, level, st, st.engineers.get(i), buildings);
         if (st.lastOrderAt >= 0 && gameTime - st.lastOrderAt < ORDER_TICKS)
             return;
         st.lastOrderAt = gameTime;
@@ -189,8 +176,7 @@ public final class BotCombatEngineers {
     /**
      * Idle engineers: the nearest wreck within {@link #WRECK_REACH} of the engineer and of the army is reclaimed (an
      * explicit RECLAIM order, as sendReclaimer gives workers); otherwise an engineer far from the follow point walks
-     * there, in one MOVE order for all of them. Busy ones (building, repairing, reclaiming, sinking into the roots or
-     * channelling a rite) are left alone: a MOVE would cancel what they are doing.
+     * there, in one MOVE order for all of them. Busy ones (building, repairing, reclaiming) are left alone: a MOVE would cancel what they are doing.
      */
     static void order(BotPlayer bot, ServerLevel level, State st, List<LivingEntity> army) {
         BlockPos follow = followPoint(bot, level, army);
@@ -198,7 +184,7 @@ public final class BotCombatEngineers {
         for (int i = 0, n = st.engineers.size(); i < n; i++) {
             LivingEntity le = st.engineers.get(i);
             // (Unit.isIdle covers a worker's jobs too: building, repairing, an explicit reclaim order, walking)
-            if (!(le instanceof Unit u) || !u.isIdle() || Rootwalk.walkOf(le) != null || MendingRite.riteOf(le) != null)
+            if (!(le instanceof Unit u) || !u.isIdle())
                 continue;
             Entity wreck = wreckFor(le, follow);
             if (wreck != null) {
@@ -260,149 +246,4 @@ public final class BotCombatEngineers {
         bot.placeNear(level, tower, rally.offset(4, 0, 4), new ArrayList<>(st.engineers), Math.min(2, st.engineers.size()));
     }
 
-    // ------------------------------------------------------------------ the seven abilities
-
-    /** The engineer's faction ability, when it is off cooldown and its trigger holds. Sealed units don't cast. */
-    static void useAbility(BotPlayer bot, ServerLevel level, State st, LivingEntity le, List<BuildingPlacement> buildings) {
-        if (!(le instanceof CombatEngineer ce) || !(le instanceof Unit u) || !le.isAlive() || BotPlayer.sealed(le))
-            return;
-        Ability a = ce.getEngineerAbility();
-        if (a == null || !a.isOffCooldown(u))
-            return;
-        if (a instanceof Bulwark) {
-            BuildingPlacement b = buildingToBrace(bot, level, le, buildings);
-            if (b != null)
-                a.use(level, u, b.centrePos);
-        } else if (a instanceof BoneGraft) {
-            LivingEntity patient = CombatEngineers.mostDamagedFriend(level, le, bot.name, BoneGraft.RANGE);
-            if (patient != null && patient.getHealth() < patient.getMaxHealth() * 0.6f
-                    && BoneGraft.nearestWreck(le, BoneGraft.RANGE) != null)
-                a.use(level, u, patient);
-        } else if (a instanceof TearDown) {
-            tearDown(bot, level, le, u, a);
-        } else if (a instanceof Rootwalk) {
-            BuildingPlacement b = rootwalkTarget(bot, level, st, le, buildings);
-            if (b != null)
-                a.use(level, u, b.centrePos);
-        } else if (a instanceof SalvageHook) {
-            Entity wreck = wreckToHook(le);
-            if (wreck != null)
-                a.use(level, u, wreck.blockPosition());
-        } else if (a instanceof MendingRite) {
-            if (MendingRite.riteOf(le) != null || bot.energyFill < 0.25f)
-                return;
-            LivingEntity patient = CombatEngineers.mostDamagedFriend(level, le, bot.name, MendingRite.RANGE);
-            if (patient != null && patient.getHealth() < patient.getMaxHealth() * 0.5f)
-                a.use(level, u, patient);
-        } else if (a instanceof Overdrive) {
-            if (le instanceof PioneerUnit p && !p.isOverdriven() && !p.isVenting() && isWorking(le))
-                a.use(level, u, le.blockPosition());
-        }
-    }
-
-    /** Building, repairing or stripping a wreck right now: the work Overdrive speeds up. */
-    static boolean isWorking(LivingEntity le) {
-        if (WreckServerEvents.isReclaiming(le) || BoneGraft.nearestWreck(le, WreckServerEvents.RECLAIM_RANGE) != null)
-            return true;
-        return le instanceof WorkerUnit w && w.getBuildRepairGoal() != null && w.getBuildRepairGoal().getBuildingTarget() != null
-            && w.getBuildRepairGoal().isBuilding();
-    }
-
-    /** An own building within Bulwark's reach that is under 85% health with an enemy near it, not braced yet. */
-    @Nullable
-    static BuildingPlacement buildingToBrace(BotPlayer bot, ServerLevel level, LivingEntity mason, List<BuildingPlacement> buildings) {
-        for (BuildingPlacement b : buildings) {
-            if (!b.isBuilt || b.isDestroyedServerside || b.getHealth() >= b.getMaxHealth() * 0.85f
-                    || CombatEngineers.distanceToBuilding(mason, b) > Bulwark.RANGE || Bulwark.braceOn(b) != null)
-                continue;
-            if (bot.nearestEnemyUnit(level, b.centrePos, 16) != null)
-                return b;
-        }
-        return null;
-    }
-
-    /**
-     * The nearest enemy wall, gate or revealed trap within 12 blocks of the Wrecker: torn down if in reach, else - while
-     * the army is on the attack - the Wrecker walks up to it (the next think tears it down). Only what the Wrecker
-     * could see: a trap its owner hides is not attackable and is skipped (no fog leak).
-     */
-    static void tearDown(BotPlayer bot, ServerLevel level, LivingEntity wrecker, Unit u, Ability a) {
-        BuildingPlacement best = null;
-        double bestD = 12;
-        for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
-            if (b.isDestroyedServerside || !TearDown.isTearable(b.getBuilding()) || b.getLevel() != level
-                    || b.ownerName == null || b.ownerName.isBlank() || CombatEngineers.isFriendly(bot.name, b.ownerName)
-                    || !b.isAttackable())
-                continue;
-            double d = CombatEngineers.distanceToBuilding(wrecker, b);
-            if (d < bestD) {
-                bestD = d;
-                best = b;
-            }
-        }
-        if (best == null)
-            return;
-        if (bestD <= TearDown.REACH) {
-            a.use(level, u, best.centrePos);
-        } else if (bot.army.state == BotArmy.State.ATTACK && u.isIdle()) {
-            BlockPos at = BotPlayer.ground(level, best.centrePos.getX(), best.centrePos.getZ());
-            UnitServerEvents.addActionItem(bot.name, UnitAction.MOVE, -1, new int[] { wrecker.getId() }, at, at);
-        }
-    }
-
-    /**
-     * Where a Rootwarden walks: out of trouble when it is hurt with an enemy close (the own building in reach farthest
-     * from it), else - while the army gathers - to a damaged own building too far to walk to quickly, so its field
-     * repair takes the job over on arrival.
-     */
-    @Nullable
-    static BuildingPlacement rootwalkTarget(BotPlayer bot, ServerLevel level, State st, LivingEntity warden, List<BuildingPlacement> buildings) {
-        boolean hurt = warden.getHealth() < warden.getMaxHealth() * 0.45f;
-        boolean threatened = hurt && bot.nearestEnemyUnit(level, warden.blockPosition(), 8) != null;
-        boolean calm = bot.army.state == BotArmy.State.BUILD_UP;
-        if (!threatened && !calm)
-            return null;
-        BuildingPlacement best = null;
-        double bestScore = -1;
-        for (BuildingPlacement b : buildings) {
-            if (!b.isBuilt || b.isDestroyedServerside || b.getLevel() != level)
-                continue;
-            double d = CombatEngineers.distanceToBuilding(warden, b);
-            if (d > Rootwalk.RANGE || d < 16)
-                continue;
-            double score;
-            if (threatened)
-                score = d;   // as far as the roots reach
-            else if (b.getBuilding().repairable && b.getHealth() < b.getMaxHealth() * 0.6f)
-                score = b.getMaxHealth() - b.getHealth();   // the worst hurt
-            else
-                continue;
-            if (score > bestScore) {
-                bestScore = score;
-                best = b;
-            }
-        }
-        return best;
-    }
-
-    /** The richest wreck 6-16 blocks out that no line holds yet (a closer one is simply walked to). */
-    @Nullable
-    static Entity wreckToHook(LivingEntity salvager) {
-        List<Entity> wrecks = WreckServerEvents.getWrecks();
-        Entity best = null;
-        float bestMetal = WreckServerEvents.MIN_COST * WreckServerEvents.WRECK_SHARE;
-        double min2 = 6 * 6, max2 = SalvageHook.RANGE * SalvageHook.RANGE;
-        for (int i = 0, n = wrecks.size(); i < n; i++) {
-            Entity w = wrecks.get(i);
-            if (w.isRemoved() || w.level() != salvager.level() || SalvageHook.isOnLine(w))
-                continue;
-            double d = w.distanceToSqr(salvager);
-            float metal = WreckServerEvents.metalOf(w);
-            if (d < min2 || d > max2 || metal < bestMetal)
-                continue;
-            bestMetal = metal;
-            best = w;
-        }
-        return best;
-    }
 }
