@@ -112,6 +112,28 @@ public final class Motion {
                 add(out, LEG_L, RZ, -w * 1.5f * D);
             }
 
+            // idle fidgets (Idle): a grip adjust, a shoulder roll; the head follows the glance / look-around spring.
+            // A glance aims at a real thing, so it is never scaled up by the zoom or the unit's amplitude.
+            float gFidget = sliders[FIDGET] * ZoomGain.gain(zoom, ZoomGain.K_FIDGET) * amp * standing;
+            if (gFidget != 0f) {
+                int kind = (int) s[b + IDLE_KIND];
+                float env = Idle.fidget(s, b, ageF) * gFidget;
+                float p = (ageF - s[b + IDLE_START]) / Math.max(1f, s[b + IDLE_LEN]);
+                if (kind == Idle.GRIP) {
+                    add(out, ARM_R, RX, env * 7f * D);
+                    add(out, ARM_R, RZ, env * 4f * Mth.sin(p * Mth.TWO_PI * 2f) * D);
+                    add(out, ARMS, RX, env * 4f * D);
+                } else if (kind == Idle.SHOULDER) {
+                    add(out, ARM_R, TY, env * 0.8f);
+                    add(out, ARM_L, TY, env * 0.5f);
+                    add(out, ARM_L, RZ, -env * 5f * D);
+                    add(out, BODY, RZ, env * 2f * D);
+                }
+                float aim = Math.min(1f, sliders[FIDGET]) * standing;
+                add(out, HEAD, RY, Life.springAt(s, b + SP_HEAD_YAW, partial) * aim * D);
+                add(out, HEAD, RX, Life.springAt(s, b + SP_HEAD_PITCH, partial) * aim * D);
+            }
+
             float gLean = sliders[LEAN] * ZoomGain.gain(zoom, ZoomGain.K_LEAN) * amp;
             float lean = Life.springAt(s, b + SP_LEAN, partial);
             add(out, ROOT, RZ, lean * gLean * D);

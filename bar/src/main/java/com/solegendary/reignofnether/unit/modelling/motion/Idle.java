@@ -28,6 +28,14 @@ public final class Idle {
 
     /** One tick; returns the fidget that STARTED this tick ({@link #NONE} otherwise) - a GLANCE wants a target. */
     public static int step(float[] s, int b, int id, int tick, boolean moving, boolean fighting) {
+        // a clock that went back is a new entity object on the old slot (it left tracking and came back before the slot
+        // was forgotten): its schedule was set on the old object's clock, so set it again
+        if (s[b + IDLE_INIT] != 0f && tick < s[b + IDLE_CLOCK]) {
+            s[b + IDLE_INIT] = 0f;
+            s[b + IDLE_KIND] = NONE;
+            s[b + QUIET_UNTIL] = 0f;
+        }
+        s[b + IDLE_CLOCK] = tick;
         if (s[b + IDLE_INIT] == 0f) {
             s[b + IDLE_INIT] = 1f;
             s[b + IDLE_NEXT] = tick + range(id, 1000, GAP_MIN, GAP_MAX);
