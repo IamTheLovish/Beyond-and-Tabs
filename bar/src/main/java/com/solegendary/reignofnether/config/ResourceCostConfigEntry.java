@@ -58,9 +58,28 @@ public class ResourceCostConfigEntry {
         builder.pop();
     }
 
-    public Integer getFood() {return this.FOOD.get();}
-    public Integer getWood() {return this.WOOD.get();}
-    public Integer getOre() {return this.ORE.get();}
-    public Integer getSeconds() {return this.SECONDS.get();}
-    public Integer getPopulation() {return this.POPULATION.get();}
+    public int getFood() {return read(this.FOOD);}
+    public int getWood() {return read(this.WOOD);}
+    public int getOre() {return read(this.ORE);}
+    public int getSeconds() {return read(this.SECONDS);}
+    public int getPopulation() {return read(this.POPULATION);}
+
+    private static final int READS = 8;
+
+    /**
+     * A loaded value is never null, but Forge 47's ConfigValue.get() can return null while the config reloads on
+     * another thread: it checks its cached value and returns it in two reads of a plain field, and the reload's
+     * clearCache() can land between them (PR run 40469588386: mod loading crashed in COMMON_SETUP, where
+     * ResourceCosts.deferredLoadResourceCosts reads every entry while the corrected config file reloads). A read that
+     * lands there reads again; a value still null after that is a real fault and says which one.
+     */
+    private static int read(ForgeConfigSpec.ConfigValue<Integer> value) {
+        for (int i = 0; i < READS; i++) {
+            Integer v = value.get();
+            if (v != null)
+                return v;
+        }
+        throw new IllegalStateException("config value " + String.join(".", value.getPath()) + " stayed null across "
+            + READS + " reads");
+    }
 }
