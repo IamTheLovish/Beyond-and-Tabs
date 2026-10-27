@@ -453,6 +453,82 @@ public class ArtilleryGameTests {
         possessedSetUpTest(helper, "knockclaims", true, true);
     }
 
+    /**
+     * A lying client cannot carry its crew off by hops (round-4 review of #222): position claims that hop it ~3 blocks
+     * east with no walk key held are a move like any walk - the 2 s set-up starts again where it lands. Only a shove
+     * the server gave it (knockback) may fly it through the air for free.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_by_keyless_client_claims_must_set_up_again(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_hop_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        double[] base = new double[3];
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            base[0] = b.getX();
+            base[1] = b.getY();
+            base[2] = b.getZ();
+            active[0] = true;
+        });
+        // three keyless hops east, 8 ticks each: up, then down to the ground, 0.12 a tick sideways (a walk's pace)
+        double[] arc = { 0.35, 0.6, 0.75, 0.8, 0.75, 0.6, 0.35, 0 };
+        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * arc.length;
+        int[] tick = { 0 }, seq = { 0 };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (t >= hopFrom && t < hopEnd) {
+                int k = t - hopFrom;
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, base[0] + 0.12 * (k + 1), base[1] + arc[k % arc.length], base[2], ++seq[0]);
+                return;
+            }
+            if (t < hopEnd)
+                return;
+            int since = t - hopEnd;
+            if (since == 0) {
+                double moved = Math.hypot(b.getX() - base[0], b.getZ() - base[2]);
+                if (moved < 2.0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException(String.format("the hops were refused (moved %.2f): the test no "
+                        + "longer checks a hop past the 1.5-block drift", moved));
+                }
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            if (shellsOf(b) > 0) {
+                cleanUp.run();
+                if (since < SET_UP - 2)
+                    throw new GameTestAssertException("fired " + since + " ticks after hopping "
+                        + String.format("%.2f", Math.hypot(b.getX() - base[0], b.getZ() - base[2]))
+                        + " blocks with no keys: it needs " + SET_UP + " ticks to set up again");
+                helper.succeed();
+            } else if (since > SET_UP + 10) {
+                cleanUp.run();
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops)");
+            }
+        });
+    }
+
     static void possessedSetUpTest(GameTestHelper helper, String tag, boolean claims, boolean knock) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
