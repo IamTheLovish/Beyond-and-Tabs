@@ -506,10 +506,8 @@ public class BuildingPlacement {
         if (!isBuilt)
             return 0;
         float e = getBuilding().getEnergyIncome();
-        // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
-        // network (capped). One empty-map check for every owner who never linked anything
+        // BAR wind: a wind generator earns with the wind
         if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
-            e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
@@ -850,9 +848,6 @@ public class BuildingPlacement {
             }
             return;
         }
-        // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
-        // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
-        amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
         if (attacker instanceof Mob mob)
             lastAttacker = mob;
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
@@ -1043,7 +1038,6 @@ public class BuildingPlacement {
         }
         placedBlockPosSet.clear();
 
-        com.solegendary.reignofnether.mana.LeyNetwork.onBuildingGone(ownerName, centrePos);   // its ley links die with it
         getBuilding().destroy(serverLevel, this);
         for (BuildingCommand command : commands)
             if (command.condition == BuildingCommand.TriggerCondition.ON_DESTROY)
@@ -1072,6 +1066,11 @@ public class BuildingPlacement {
     // should only be run serverside
     public void onBlockBreak(ServerLevel level, BlockPos pos, boolean breakBlocks) {
         totalBlocksEverBroken += 1;
+        // a block lost while the site is unbuilt takes its share of the paid build progress with it: otherwise
+        // tickFlowConstruction re-queued it for free next tick (no builder, no cost), so any hit worth up to two blocks
+        // grew straight back and a partly built site could never be brought down (the user's 20% metal extractor)
+        if (!isBuilt && placedBlockPosSet.contains(pos) && getBlocksTotal() > 0)
+            buildProgress = Math.max(0f, buildProgress - 1f / getBlocksTotal());
         Random rand = new Random();
 
         if (this.getFaction().equals(Factions.MONSTERS) && ResearchServerEvents.playerHasResearch(this.ownerName,

@@ -257,14 +257,14 @@ public class BotArmy {
                 if (lastOrderAt < 0 || gameTime - lastOrderAt >= 40) {
                     lastOrderAt = gameTime;
                     stance(fighters, EngagementStance.FIRE_AT_WILL);
-                    bot.order(fighters, UnitAction.ATTACK_MOVE, meetingPoint(level, intruder));
+                    bot.order(fighters, UnitAction.ATTACK_MOVE, defendPoint(level, intruder, home));
                 }
                 return;
             }
             if (state != State.DEFEND && (lastSquadAt < 0 || gameTime - lastSquadAt >= 60)) {
                 // a lone scout or raider: the three nearest idle fighters see it off, the rest stay on their job
                 lastSquadAt = gameTime;
-                BlockPos at = meetingPoint(level, intruder);
+                BlockPos at = defendPoint(level, intruder, home);
                 collectIdle(fighters, at, 3, true);
                 bot.order(idle, UnitAction.ATTACK_MOVE, at);
             }
@@ -272,7 +272,7 @@ public class BotArmy {
 
         // 1b) capture sites (BotSites): a squad takes, holds, defends and retakes the map's sites. Its fighters are
         // then left out of the rally and the waves (a held site stays held); a base defence above still takes them
-        if (state == State.BUILD_UP || state == State.ATTACK) {
+        if (!passive() && (state == State.BUILD_UP || state == State.ATTACK)) {
             bot.sites.step(level, gameTime, fighters, allRaidIds, minutes);
             if (!bot.sites.holders.isEmpty())
                 fighters.removeIf(le -> bot.sites.holders.contains(le.getId()));
@@ -301,7 +301,9 @@ public class BotArmy {
         boolean cooling = lastAttackAt >= 0 && gameTime - lastAttackAt < tuning.attackCooldownTicks();
         boolean ready = value >= threshold && !cooling;
         boolean overflow = value >= threshold * OVERFLOW_WAVE;
-        if ((ready || overflow) && !fighters.isEmpty()) {
+        if (passive()) {
+            noWaveReason = "passive: never attacks";
+        } else if ((ready || overflow) && !fighters.isEmpty()) {
             BlockPos target = pickTarget(home, minutes);
             if (target != null) {
                 noWaveReason = "";
@@ -340,6 +342,10 @@ public class BotArmy {
     }
 
     void attack(ServerLevel level, long gameTime, BlockPos home, float value, long minutes) {
+        if (passive()) {
+            enter(State.BUILD_UP, gameTime);
+            return;
+        }
         if (fighters.isEmpty()) {
             enter(State.BUILD_UP, gameTime);
             return;
@@ -397,6 +403,8 @@ public class BotArmy {
      * have their own raid on buildings, {@link #vehicleRaid}).
      */
     void raid(ServerLevel level, long gameTime, BlockPos home) {
+        if (passive())
+            return;
         if (tuning.raidCooldownTicks() <= 0 || (lastRaidAt >= 0 && gameTime - lastRaidAt < tuning.raidCooldownTicks()))
             return;
         if (fighters.size() < MIN_FIGHTERS)
@@ -548,6 +556,8 @@ public class BotArmy {
      * 100 blocks out round home. What it passes within SIGHT of becomes a known site.
      */
     void scout(ServerLevel level, long gameTime, List<LivingEntity> mine, List<BuildingPlacement> buildings, BlockPos home) {
+        if (passive())
+            return;
         if (tuning.scoutEveryTicks() <= 0)
             return;
         LivingEntity scout = null;
@@ -780,6 +790,16 @@ public class BotArmy {
      * a block in the air is a path to nowhere, and the fighters that can shoot up (the mixed kits' archers and
      * pikemen, the AA units queueAntiAir adds) only do so from underneath.
      */
+    /** Passive bots never leave the base: an attacker out of BASE_RADIUS (artillery, a flyer) is met at home instead. */
+    BlockPos defendPoint(ServerLevel level, LivingEntity intruder, BlockPos home) {
+        BlockPos at = meetingPoint(level, intruder);
+        if (passive() && at.distSqr(new BlockPos(home.getX(), at.getY(), home.getZ())) > BASE_RADIUS * BASE_RADIUS)
+            return home;
+        return at;
+    }
+
+    boolean passive() { return bot.difficulty == BotPlayer.Difficulty.PASSIVE; }
+
     static BlockPos meetingPoint(ServerLevel level, LivingEntity intruder) {
         if (intruder instanceof Unit u && u.isFlyingUnit())
             return BotPlayer.ground(level, intruder.blockPosition().getX(), intruder.blockPosition().getZ());

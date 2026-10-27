@@ -87,6 +87,43 @@ public final class Life {
         return x * x * (3f - 2f * x);
     }
 
+    /** Floats per spring slot: [value, velocity, the value one step before] (design/living_army.md). */
+    public static final int SPRING = 3;
+
+    /**
+     * One step of a damped spring held in s[i..i+2] toward `target`: `omega` its stiffness (rad per tick), `zeta` its
+     * damping ratio (1 = critical: arrives without overshoot; below 1 rocks before still), `dt` in ticks. Implicit
+     * Euler, so it never blows up whatever the step - a stall or a long frame only settles it sooner. No allocation.
+     */
+    public static void spring(float[] s, int i, float target, float omega, float zeta, float dt) {
+        float x = s[i], v = s[i + 1];
+        float w2dt = omega * omega * dt;
+        v = (v + w2dt * (target - x)) / (1f + 2f * zeta * omega * dt + w2dt * dt);
+        s[i + 2] = x;
+        s[i] = x + dt * v;
+        s[i + 1] = v;
+    }
+
+    /** A spring slot's value between its last two steps (partial 0..1): what a frame draws, the same in every pass. */
+    public static float springAt(float[] s, int i, float partial) {
+        return s[i + 2] + (s[i] - s[i + 2]) * partial;
+    }
+
+    /**
+     * An inertial chain (tail, neck, tassel, tabard): `links` spring slots from `base`, link 0 springing toward
+     * `rootTarget` and each later link toward the one before it, so a swing starts at the root, arrives late at the
+     * tip and settles there last. Unlike {@link #chain} (a lagged sine) it answers motion: a turn whips it, a stop
+     * settles it.
+     */
+    public static void springChain(float[] s, int base, int links, float rootTarget, float omega, float zeta, float dt) {
+        float target = rootTarget;
+        for (int k = 0; k < links; k++) {
+            int i = base + k * SPRING;
+            spring(s, i, target, omega, zeta, dt);
+            target = s[i];
+        }
+    }
+
     /** Degrees to radians, for readable call sites. */
     public static float deg(float d) {
         return d * Mth.DEG_TO_RAD;

@@ -67,8 +67,11 @@ public record BotTuning(int t2Minute, int t3Minute,
         1.8f, 20 * 90, 4, 20 * 120,
         6, 180, 20 * 120, 3, 8);
 
+    /** Passive: Easy's economy; BotArmy never sends a wave, raid, scout or site squad whatever these numbers say. */
+    public static final BotTuning PASSIVE = EASY;
+
     public static BotTuning of(BotPlayer.Difficulty difficulty) {
-        return switch (difficulty) { case EASY -> EASY; case MEDIUM -> MEDIUM; case HARD -> HARD; };
+        return switch (difficulty) { case EASY -> EASY; case MEDIUM -> MEDIUM; case HARD -> HARD; case PASSIVE -> PASSIVE; };
     }
 
     /** The army metal value a wave waits for at this minute of the match. */

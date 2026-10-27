@@ -9,5 +9,8 @@ public enum HeroAction {
     SET_MAX_MANA,
     ACTIVATE_ABILITY_CLIENTSIDE,
     DEACTIVATE_ABILITY_CLIENTSIDE,
-    REQUEST_SYNC
+    REQUEST_SYNC,
+    // the sender's Hero AI switch (ReignOfNetherClientConfigs.HERO_AI): unitId unused
+    HERO_AI_ON,
+    HERO_AI_OFF
 }
