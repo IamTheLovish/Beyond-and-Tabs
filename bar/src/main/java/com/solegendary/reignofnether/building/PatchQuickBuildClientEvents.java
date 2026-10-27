@@ -44,7 +44,7 @@ import java.util.List;
  *       hint in the HUD while hovered.</li>
  *   <li>Area mex (BAR's areamex): with the extractor ghost out, hold the left button and drag a circle - the press
  *       point is the centre, the distance dragged the radius, and the circle is drawn while you drag. On release an
- *       extractor is queued on every free patch inside, nearest first from the builders' average position. Shift adds
+ *       extractor is queued on every free patch inside, as a nearest-neighbour tour from the builders' average position. Shift adds
  *       to the builders' queue instead of replacing it. A plain click (no drag) places one extractor as always.</li>
  * </ul>
  * The pure part (which patches, in what order) is AreaMexCircle.
@@ -232,26 +232,25 @@ public class PatchQuickBuildClientEvents {
             BuildingClientEvents.setBuildingToPlace(null);
     }
 
-    /** The free patches inside the dragged circle, nearest first from the builders' average position. */
+    /**
+     * The free patches inside the dragged circle, as a nearest-neighbour tour (AreaMexCircle.tour) from the builders'
+     * average position: the whole selection shares the one tour and builds each site together.
+     */
     static List<BlockPos> patchesInDrag(BlockPos centre, BlockPos cursor) {
         List<BlockPos> inside = AreaMexCircle.patchesIn(MetalPatchesClient.getPatches(),
             BuildingClientEvents::isPatchTaken, centre, AreaMexCircle.radius(centre, cursor));
-        double sx = 0, sz = 0;
-        int n = 0;
+        List<double[]> here = new ArrayList<>();
+        List<int[]> queueEnd = new ArrayList<>();
         for (LivingEntity entity : UnitClientEvents.getSelectedUnits())
             if (entity instanceof WorkerUnit) {
-                sx += entity.getX();
-                sz += entity.getZ();
-                n++;
+                here.add(new double[] { entity.getX(), entity.getZ() });
+                queueEnd.add(com.solegendary.reignofnether.unit.UnitQueueLinesClient.lastQueuedXZ(entity.getId()));
             }
-        if (n == 0) {
-            sx = centre.getX();
-            sz = centre.getZ();
-        } else {
-            sx /= n;
-            sz /= n;
-        }
-        return AreaMexCircle.nearestFirst(inside, sx, sz);
+        // BAR: with Shift the new sites join the end of the queues, so the tour starts where those end
+        double[] start = AreaMexCircle.tourStart(here, queueEnd, Keybindings.shiftMod.isDown());
+        if (start == null)
+            start = new double[] { centre.getX(), centre.getZ() };
+        return AreaMexCircle.tour(inside, start[0], start[1]);
     }
 
     /** The button came up where it went down: give the press to everyone else, as if we had never held it back. */

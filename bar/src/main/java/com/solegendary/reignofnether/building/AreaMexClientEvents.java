@@ -74,8 +74,12 @@ public class AreaMexClientEvents {
         String owner = MC.player.getName().getString();
         List<AreaMex.Builder> builders = new ArrayList<>();
         for (LivingEntity e : UnitClientEvents.getSelectedUnits())
-            if (e instanceof WorkerUnit)
-                builders.add(new AreaMex.Builder(e.getId(), (int) Math.floor(e.getX()), (int) Math.floor(e.getZ())));
+            if (e instanceof WorkerUnit) {
+                // Shift appends, so (BAR) each builder's chain starts where its queue ends, else where it stands
+                int[] end = com.solegendary.reignofnether.unit.UnitQueueLinesClient.lastQueuedXZ(e.getId());
+                builders.add(end != null ? new AreaMex.Builder(e.getId(), end[0], end[1])
+                    : new AreaMex.Builder(e.getId(), (int) Math.floor(e.getX()), (int) Math.floor(e.getZ())));
+            }
         int queued = 0;
         String firstError = null;
         for (Map.Entry<Integer, List<BlockPos>> group : AreaMex.split(freePatches(), builders, cursor).entrySet()) {

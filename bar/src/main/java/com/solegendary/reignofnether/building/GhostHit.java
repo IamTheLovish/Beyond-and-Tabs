@@ -55,4 +55,41 @@ public final class GhostHit {
     public static boolean hits(double entryT, double hitT, boolean footprintHolds) {
         return footprintHolds || (entryT >= 0 && entryT <= hitT + 1);
     }
+
+    /**
+     * Is a real building a box-tested click target (like a ghost)? Only a friendly one still under construction; a
+     * finished building keeps the picked-block rule (repair when damaged, else a move), as before.
+     */
+    public static boolean assistTarget(boolean isBuilt, boolean friendly) {
+        return friendly && !isBuilt;
+    }
+
+    /** A click target's box (block coords, inclusive corners): a ghost, or a building still under construction. */
+    public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {}
+
+    /**
+     * Which of {@code boxes} the cursor ray (origin {@code o}, direction {@code d}, reaching the picked block at
+     * {@code hitT}) points at, nearest entry first; -1 for none. {@code picked} (x, y, z) may be null. Used for blueprint
+     * ghosts and for half-built buildings, whose missing upper blocks let the ray through to the ground behind or under
+     * them (tester, Oct 26: "unable to assist a production in progress").
+     */
+    public static int pick(double ox, double oy, double oz, double dx, double dy, double dz, double hitT,
+                           int[] picked, java.util.List<Box> boxes) {
+        int best = -1;
+        double bestT = Double.MAX_VALUE;
+        for (int i = 0; i < boxes.size(); i++) {
+            Box b = boxes.get(i);
+            double t = rayEntry(ox, oy, oz, dx, dy, dz, b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ());
+            boolean holds = picked != null && footprintHolds(b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ(),
+                picked[0], picked[1], picked[2]);
+            if (!hits(t, hitT, holds))
+                continue;
+            double rank = t >= 0 ? t : hitT;
+            if (rank < bestT) {
+                bestT = rank;
+                best = i;
+            }
+        }
+        return best;
+    }
 }
