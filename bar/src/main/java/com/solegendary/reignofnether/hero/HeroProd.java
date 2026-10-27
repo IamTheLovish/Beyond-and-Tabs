@@ -54,6 +54,11 @@ public class HeroProd extends HeroProductionItem {
     }
 
     @Override
+    protected boolean isT2LabHero() {
+        return kit.t2Lab;
+    }
+
+    @Override
     protected EntityType<? extends HeroUnit> getHeroEntityType() {
         return type.get();
     }

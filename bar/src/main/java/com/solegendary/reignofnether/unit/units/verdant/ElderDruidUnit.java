@@ -40,7 +40,7 @@ public class ElderDruidUnit extends SeedshaperUnit {
             if (a instanceof AwakenThicket)
                 has = true;
         if (!has)
-            druidAbilities.add(new AwakenThicket(), Keybindings.abilitySlot3);   // E: Q is the Heartwood Hall on the build menu
+            druidAbilities.add(new AwakenThicket(), Keybindings.hotkey1);   // V: Q Z E R T Y ... are the build tabs' slot keys
     }
 
     @Override

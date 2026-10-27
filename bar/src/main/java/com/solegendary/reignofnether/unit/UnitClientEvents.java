@@ -427,7 +427,11 @@ public class UnitClientEvents {
     }
 
     public static void sendUnitCommand(UnitAction action, Predicate<LivingEntity> includeUnit) {
-        BlockPos bp = getPreselectedBlockPos();
+        sendUnitCommandAt(action, includeUnit, getPreselectedBlockPos());
+    }
+
+    /** sendUnitCommand aimed at {@code bp} instead of the cursor's picked block (a blueprint ghost's centre). */
+    public static void sendUnitCommandAt(UnitAction action, Predicate<LivingEntity> includeUnit, BlockPos bp) {
 
         if (action.name().toLowerCase().contains("startrts")) {
             if (action == UnitAction.STARTRTS_VILLAGERS) {
@@ -535,8 +539,14 @@ public class UnitClientEvents {
         }
         // follow friendly unit
         if (preselectedUnits.size() == 1 && !targetingSelf()) {
+            LivingEntity clicked = preselectedUnits.get(0);
+            Relationship rel = getPlayerToEntityRelationship(clicked);
             if (hudSelectedEntity instanceof WitchUnit) {
                 sendUnitCommand(UnitAction.THROW_LINGERING_REGEN_POTION);
+            } else if (GuardServerEvents.rightClickGuards(selectedUnits, clicked,
+                    rel == Relationship.OWNED || rel == Relationship.FRIENDLY)) {
+                // builders + a friendly builder under the cursor: assist it (BAR guard), not just walk behind it
+                sendUnitCommand(UnitAction.GUARD);
             } else {
                 sendUnitCommand(UnitAction.FOLLOW);
             }
@@ -698,10 +708,7 @@ public class UnitClientEvents {
     // dying (health <= 0, death animation playing) or removed for good (killed/discarded). Entities that merely left
     // render distance (UNLOADED_*) are kept on purpose - see onEntityLeave.
     public static boolean isDeadForSelection(LivingEntity e) {
-        if (e.isDeadOrDying())
-            return true;
-        Entity.RemovalReason reason = e.getRemovalReason();
-        return reason != null && reason.shouldDestroy();
+        return SelectionKeep.shouldDrop(e.isDeadOrDying(), e.getRemovalReason());
     }
 
     private static final int VIS_CHECK_TICKS_MAX = 10;
@@ -1056,6 +1063,7 @@ public class UnitClientEvents {
             rightClickActionTaken = false;
             if (!selectedUnits.isEmpty()) {
                 BuildingPlacement preSelBuilding = BuildingClientEvents.getPreselectedBuilding();
+                BuildingPlacement ghost;   // a friendly blueprint ghost under the cursor, looked up only if reached below
 
                 // right click -> mount friendly unit
                 UnitAction mountAction = null;
@@ -1120,10 +1128,14 @@ public class UnitClientEvents {
                     else
                         resolveMoveActionDeferred();
                 }
-                // right click -> send the worker to build one of the player's own blueprints (building/Blueprints)
+                // right click -> send the builder to build (or assist) a friendly blueprint ghost (building/Blueprints).
+                // The ghost has no blocks, so the picked block is the ground behind/under it: the order is aimed at
+                // the ghost's centre (inside its box: the server's Blueprints.findAt matches it, and the builder walks to the middle, not
+                // the corner origin, which can be off a pad edge). Shift queues it like any order.
                 else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
-                        && com.solegendary.reignofnether.building.BlueprintClientEvents.isOwnGhostAt(getPreselectedBlockPos())) {
-                    sendUnitCommand(UnitAction.BUILD_REPAIR);
+                        && (ghost = com.solegendary.reignofnether.building.BlueprintClientEvents.ghostUnderCursor()) != null) {
+                    sendUnitCommandAt(UnitAction.BUILD_REPAIR, null, ghost.centrePos);
+                    rightClickActionTaken = true;
                 }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else
@@ -1355,6 +1367,8 @@ public class UnitClientEvents {
                                              LivingEntity entity, boolean isSelected, boolean isPreselected,
                                              boolean isMouseOverAnyButtonOrHud, boolean isLeftClickAttack,
                                              boolean targetingSelf, boolean isRightClickDown) {
+        if (entity.isRemoved())
+            return;   // kept selected after leaving tracking range (SelectionKeep): not drawn
         AABB entityAABB = entity.getBoundingBox();
         if (entity instanceof Unit unit)
             entityAABB = unit.getInflatedSelectionBox();
@@ -1500,6 +1514,7 @@ public class UnitClientEvents {
             int gn = 0, gTicks = 0;
             boolean gGreen = true;
             for (LivingEntity entity : getSelectedUnits()) {
+                if (entity.isRemoved()) continue;   // kept selected after leaving tracking range: nothing to draw
                 if (entity instanceof Unit unit) {
                     float entityYOffset1 = 1.74f - ((LivingEntity) unit).getEyeHeight() - 1;
                     Vec3 firstPos = ((LivingEntity) unit).getEyePosition().add(0, entityYOffset1,0);

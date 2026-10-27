@@ -108,8 +108,9 @@ public class ProductionPlacement extends BuildingPlacement {
         if (building instanceof ProductionBuilding productionBuilding) {
             productionButtons = productionBuilding.productions.getButtons(this);
         }
-        if (isCapitol)
-            this.allowProdWhileBuilding = true;
+        // every production building takes a queue while it is still going up (Joisco, 2026-10-23: "pre queue units in
+        // workshops while the building is being built"); ProductionItem.tick keeps the queue frozen until isBuilt
+        this.allowProdWhileBuilding = true;
     }
 
     @Nullable
@@ -525,6 +526,12 @@ public class ProductionPlacement extends BuildingPlacement {
         }
     }
 
+    /** Whether this owner already has {@code item} recorded as researched (heroes and other non-research items never are). */
+    private boolean alreadyResearched(ProductionItem item) {
+        var key = com.solegendary.reignofnether.api.ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(item);
+        return key != null && com.solegendary.reignofnether.research.ResearchServerEvents.recordedCount(ownerName, key) > 0;
+    }
+
     // return true if successful
     public boolean startProductionItem(ProductionItem prodItem) {
         return startProductionItem(prodItem, -1);
@@ -549,7 +556,10 @@ public class ProductionPlacement extends BuildingPlacement {
             }
             else {
                 boolean allow = switch (prodItem.dupeRule) {
-                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName);
+                    // one-off, player-wide: refused while queued at ANY of the owner's buildings, and once it is done.
+                    // The queue test alone let a second Tier 2 start after the first finished (the client only hides
+                    // the button; a stale card, a double press, the bot or a raw packet got through): tester report.
+                    case DISALLOW -> !prodItem.itemIsBeingProduced(false, ownerName) && !alreadyResearched(prodItem);
                     case DISALLOW_FOR_BUILDING -> !prodItem.itemIsBeingProducedAt(false, this);
                     case ALLOW -> true;
                 };

@@ -811,7 +811,14 @@ public class BuildingServerEvents {
                 break;
             }
         }
-        if (b) {
+        if (b && com.solegendary.reignofnether.unit.GuardServerEvents.isGuarding(entity.getId())) {
+            // a guard escorting its ward stands next to it - often on the ward's new footprint. A MOVE order here
+            // ended the guard (UnitActionItem clears it on any order), so the assisting builder went idle while the
+            // ward built alone. Step it off without an order: the guard pass then gives a guarding builder this site.
+            Unit unit = (Unit) entity;
+            unit.setFollowTarget(null);
+            unit.setMoveTarget(newBuilding.getClosestGroundPos(entity.getOnPos(), 3, true));
+        } else if (b) {
             UnitServerEvents.addActionItem(((Unit) entity).getOwnerName(),
                 UnitAction.MOVE,
                 -1,
@@ -1058,8 +1065,6 @@ public class BuildingServerEvents {
         });
 
         for (BuildingPlacement building : buildingsToDestroy) {
-            // BAR kill feed: only a building that fell to damage (not a cancel or a defeat clean-up) is a kill line
-            com.solegendary.reignofnether.hud.KillFeedServerEvents.onBuildingDestroyed(building, building.lastAttacker);
             building.destroy(serverLevel);
         }
 

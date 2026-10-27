@@ -1201,29 +1201,55 @@ public class SkirmishGameTests {
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.STONE.defaultBlockState(), 3);
         var point = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, cx, cz,
             com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.MINE);
-        String owner = "gametest_captor";
+        // this slot's own owner: a pool left under a shared name (a run that failed before its clean-up) took the
+        // mine's metal first (EconomyServerEvents.addReclaimedMetal pays the first pool with the name)
+        String owner = "gametest_captor_" + helper.absolutePos(BlockPos.ZERO).asLong();
         var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
         com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
         var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        // every way out takes the site, the captor and the pool away (helper.fail throws: nothing after it runs)
+        Runnable cleanUp = () -> {
+            if (unit != null)
+                unit.discard();
+            if (point != null)
+                point.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        };
         if (point == null || unit == null) {
+            cleanUp.run();
             helper.fail("could not set up the capture point");
             return;
         }
-        unit.moveTo(cx + 2.5, y + 1, cz + 0.5, 0, 0);
+        // on the site's own plinth (the marker stands one above it), not on the pad: place() builds on the column's
+        // solidTop, and anything solid left above the pad (an earlier batch's test on this arena slot, an earlier local
+        // run's ruin) lifted the site out of RADIUS of a captor stood at y+1 - "progress 0.0", PR #200 run 40255634660
+        unit.moveTo(cx + 2.5, point.getY(), cz + 0.5, 0, 0);
         unit.setOwnerName(owner);
         level.addFreshEntity(unit);
         helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
             for (int i = 0; i < 25; i++)
                 com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 1f);
             if (!owner.equals(com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(point)))
-                helper.fail("25 uncontested seconds did not capture the site (progress "
-                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(point) + ")");
+                problems.add("25 uncontested seconds did not capture the site (progress "
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(point) + "; site listed "
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints().contains(point)
+                    + ", removed " + point.isRemoved() + ", claimant '"
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.claimantOf(point) + "', site at "
+                    + point.blockPosition().toShortString() + "; captor alive " + unit.isAlive() + ", removed "
+                    + unit.isRemoved() + ", owner '" + unit.getOwnerName() + "', at " + unit.blockPosition().toShortString()
+                    + ", " + TerrainGameTests.f(Math.sqrt(unit.distanceToSqr(point))) + " from the site, in the unit list "
+                    + com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().contains(unit) + "; units near: "
+                    + com.solegendary.reignofnether.unit.UnitGrid.near(level, point.getX(), point.getZ(), 8, new ArrayList<>())
+                        .stream().map(le -> le.getType().toShortString() + "/" + ((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName()
+                            + "@" + le.blockPosition().toShortString()).toList() + ")");
             if (pool.getMetal() <= 0)
-                helper.fail("the captured Ancient Mine paid no metal");
-            unit.discard();
-            point.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            helper.succeed();
+                problems.add("the captured Ancient Mine paid no metal");
+            try {
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                cleanUp.run();
+            }
         });
     }
 
@@ -10870,59 +10896,6 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Kill feed: a kill queues a line naming both types and owners, and the recipient test admits the killer's
-     * owner (and a spectator with fog off) for it. The packet itself needs a connected client, so this checks the
-     * server half right up to the per-player gate; recentEntries is filtered by this test's own owner names.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void kill_feed_line_queued_for_the_viewer(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String ownerA = "gametest_feed_a", ownerB = "gametest_feed_b";
-        var pair = stancePair(helper, ownerA, ownerB,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
-        if (pair == null) {
-            helper.fail("could not create vindicator units");
-            return;
-        }
-        var a = pair[0];
-        var b = pair[1];
-        helper.runAfterDelay(3, () -> {
-            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
-            if (!b.isDeadOrDying()) {
-                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
-                return;
-            }
-            com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry line = null;
-            for (var e : com.solegendary.reignofnether.hud.KillFeedServerEvents.recentEntries())
-                if (ownerA.equals(e.killerOwner()) && ownerB.equals(e.victimOwner()))
-                    line = e;
-            if (line == null) {
-                helper.fail("no kill feed line queued for the kill");
-                return;
-            }
-            String vindicator = a.getType().getDescriptionId();
-            if (!vindicator.equals(line.killerKey()) || !vindicator.equals(line.victimKey()) || line.building())
-                helper.fail("kill feed line names the wrong things: " + line);
-            var viewer = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(ownerA.getBytes()), ownerA));
-            if (!com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(viewer, line.killerOwner(), line.victimOwner(),
-                    b.getBlockX(), b.getBlockZ()))
-                helper.fail("the killer's owner must receive its own kill");
-            var stranger = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("gametest_feed_c".getBytes()), "gametest_feed_c"));
-            boolean fog = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isFogActiveFor(stranger);
-            boolean sees = com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(stranger, line.killerOwner(),
-                line.victimOwner(), b.getBlockX(), b.getBlockZ());
-            if (!fog && !sees)
-                helper.fail("with fog off a third player sees every kill");
-            a.discard();
-            b.discard();
-            helper.succeed();
-        });
-    }
-
-    /**
      * Team resign vote (ResignVoteServerEvents.Vote, the pure tally): the caller's vote is a yes; it passes on a strict
      * majority of the voters (2 of 2, 2 of 3, 3 of 4, 5 of 8); it fails as soon as enough have said no that the
      * majority is out of reach, or when the window runs out; changing your answer while it is open is allowed, a
@@ -12809,7 +12782,8 @@ public class SkirmishGameTests {
                     var faction = Factions.getFaction(unit);
                     if (faction != null)
                         for (var entry : faction.getBuildHotkeys().entrySet())
-                            claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
+                            // tabbed build menu: slot keys repeat across tabs, one tab shows at a time (BuildGroupGameTests)
+                            claim.accept(entry.getValue(), "build slot " + entry.getValue().buttonLabel);
                 }
                 for (String c : clashes)
                     problems.add(key.getPath() + ": " + c);
@@ -15049,7 +15023,8 @@ public class SkirmishGameTests {
         if (picks.get(1).x != cx + layout.slots.get(1).dx() || picks.get(1).z != cz + layout.slots.get(1).dz())
             problems.add("an unplaced human was not put on their slot");
 
-        // everyone places: the phase ends a few seconds later, long before the clock
+        // everyone places and presses Ready: the phase ends a few seconds later, long before the clock (placing
+        // alone no longer ends it - tester Joisco's Ready rule, gametest/SpawnReadyGameTests)
         List<com.solegendary.reignofnether.maps.StartPhase.Pick> picks2 = new ArrayList<>(List.of(
             new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_d", false, 0, 0, 0xFF0000, null),
             new com.solegendary.reignofnether.maps.StartPhase.Pick("AI 2", true, 1, 1, 0x0000FF, null)));
@@ -15061,8 +15036,14 @@ public class SkirmishGameTests {
             problems.add("phase 2: the click was refused");
         for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
             phase2.tick();
+        if (phase2.isFinished())
+            problems.add("placing without Ready ended the phase");
+        if (!phase2.setReady("gametest_sp_d", true))
+            problems.add("phase 2: Ready was refused after placing");
+        for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
+            phase2.tick();
         if (!phase2.isFinished() || done2[0] != 1)
-            problems.add("all placed did not end the phase early");
+            problems.add("all placed and ready did not end the phase early");
         if (problems.isEmpty())
             helper.succeed();
         else

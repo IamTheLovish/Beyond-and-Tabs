@@ -79,6 +79,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -460,6 +461,7 @@ public class HudClientEvents {
         renderedButtons.clear();
         cardButtons.clear();
         hudZones.clear();
+        BuildTabs.beginFrame();
         unitPortraitZone = null;
         buildingPortraitZone = null;
 
@@ -595,6 +597,23 @@ public class HudClientEvents {
             if (buildingButtons.size() >= 2) {
                 blitX += 20;
                 blitY += 6;
+                // Repeat stays with several buildings selected, as long as every one is an owned factory; one press
+                // sets all of them (mixed states -> all on). Same spot as the single-building button.
+                if (ProductionHudLogic.repeatVisible(selBuildings)) {
+                    boolean allRepeating = true;
+                    for (ProductionPlacement pp : ProductionHudLogic.repeatGroup(selBuildings))
+                        allRepeating &= pp.repeatQueue;
+                    final com.solegendary.reignofnether.building.BuildingPlacement shownForRepeat = hudSelectedPlacement;
+                    com.solegendary.reignofnether.hud.buttons.Button multiRepeat = new com.solegendary.reignofnether.hud.buttons.BooleanButton(
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue"),
+                            allRepeating,
+                            () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleRepeat(shownForRepeat.originPos),
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip"),
+                            true
+                    );
+                    multiRepeat.render(evt.getGuiGraphics(), blitX - 25, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
+                    renderedButtons.add(multiRepeat);
+                }
                 // background frame
                 hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
                     blitX - 5,
@@ -928,7 +947,7 @@ public class HudClientEvents {
                         Button returnButton = new Button("Return resources",
                                 Button.itemIconSize,
                                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/chest.png"),
-                                Keybindings.hotkey5,
+                                Keybindings.returnResources,
                                 () -> unit.getReturnResourcesGoal().getBuildingTarget() != null,
                                 () -> false,
                                 () -> true,
@@ -1342,16 +1361,33 @@ public class HudClientEvents {
                         break;
                     }
                 }
-                List<Button> unitAbilities = abilityButtons.stream()
+                List<Button> allAbilities = abilityButtons.stream()
                         .filter(b -> !(b instanceof AbilityButton ab) || !(ab.ability instanceof CallToArmsUnit))
                         .toList();
+                // BAR mixed builders: several builder types selected = their build menus together (BuilderCardUnion),
+                // before the tab split so every added building lands in its own tab
+                allAbilities = withOtherBuildersMenus(allAbilities, selUnits);
+                // a worker's build menu is tabbed (BuildTabs): its own abilities first, then the tab strip and the
+                // selected tab's grid; only that tab's buildings are drawn, so only its slot keys are live
+                boolean buildTabs = allAbilities.stream().anyMatch(b -> b instanceof BuildingPlaceButton);
+                List<Button> unitAbilities = !buildTabs ? allAbilities
+                        : allAbilities.stream().filter(b -> !(b instanceof BuildingPlaceButton)).toList();
+                List<Button> tabBuildings = !buildTabs ? List.of() : BuildTabs.tabButtons(allAbilities);
 
-                int rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
-                rowsUp = Math.max(0, rowsUp);
+                int rowsUp;
+                if (buildTabs) {
+                    int abilityRows = (int) unitAbilities.stream().filter(b -> !b.isHidden.get()).count();
+                    abilityRows = (abilityRows + MAX_BUTTONS_PER_ROW - 1) / MAX_BUTTONS_PER_ROW;
+                    rowsUp = abilityRows + BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                } else {
+                    rowsUp = (int) Math.floor((float) (unitAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
+                    rowsUp = Math.max(0, rowsUp);
+                }
                 if (SandboxClientEvents.isSandboxPlayer() && (hudSelectedEntity != null || hudSelectedPlacement != null))
                     rowsUp += 1;
 
-                blitY -= iconFrameSize * rowsUp;
+                blitY -= iconFrameSize * rowsUp + (buildTabs ? BuildTabs.STRIP_H : 0);
+                int abilitiesTopY = blitY;
 
                 int i = 0;
                 for (Button button : unitAbilities) {
@@ -1381,6 +1417,13 @@ public class HudClientEvents {
                             blitY += iconFrameSize;
                         }
                     }
+                }
+                if (buildTabs) {
+                    int abilityRows = (i + MAX_BUTTONS_PER_ROW - 1) / MAX_BUTTONS_PER_ROW;
+                    BuildTabs.renderTabs(evt.getGuiGraphics(), abilitiesTopY + abilityRows * iconFrameSize,
+                            MAX_BUTTONS_PER_ROW, iconFrameSize, mouseX, mouseY, tabBuildings, renderedButtons, cardButtons);
+                    hudZones.add(RectZone.getZoneByLW(0, abilitiesTopY + abilityRows * iconFrameSize,
+                            MAX_BUTTONS_PER_ROW * iconFrameSize, BuildTabs.STRIP_H));
                 }
                 if (hudSelectedEntity instanceof HeroUnit hero) {
                     Button rankUpMenuButton = HeroAbility.getRankUpMenuButton(hero);
@@ -1428,6 +1471,18 @@ public class HudClientEvents {
             List<Button> shownAbilities = abilityButtons.stream()
                     .filter(b -> !b.isHidden.get() && !(b instanceof AbilityButton ab && ab.ability instanceof CallToArmsUnit))
                     .toList();
+            // the sandbox's faction building list is tabbed like a worker's (BuildTabs)
+            if (SandboxClientEvents.sandboxMenuType == SandboxMenuType.BUILDINGS) {
+                List<Button> tabBuildings = BuildTabs.tabButtons(shownAbilities);
+                int tabRowsUp = BuildTabs.rows(tabBuildings, MAX_BUTTONS_PER_ROW) - 1;
+                if (SandboxClientEvents.isSandboxPlayer() && (hudSelectedEntity != null || hudSelectedPlacement != null))
+                    tabRowsUp += 1;
+                int stripY = blitY - iconFrameSize * tabRowsUp - BuildTabs.STRIP_H;
+                BuildTabs.renderTabs(evt.getGuiGraphics(), stripY, MAX_BUTTONS_PER_ROW, iconFrameSize, mouseX, mouseY,
+                        tabBuildings, renderedButtons, null);
+                hudZones.add(RectZone.getZoneByLW(0, stripY, MAX_BUTTONS_PER_ROW * iconFrameSize, BuildTabs.STRIP_H));
+                shownAbilities = List.of();
+            }
 
             int rowsUp = (int) Math.floor((float) (shownAbilities.size() - 1) / MAX_BUTTONS_PER_ROW);
             rowsUp = Math.max(0, rowsUp);
@@ -1643,6 +1698,7 @@ public class HudClientEvents {
         // -------------------------
         Button attackWarningButton = AttackWarningClientEvents.getWarningButton();
         Button toggleMapSizeButton = MinimapClientEvents.getToggleSizeButton();
+        Button expandMapButton = MinimapClientEvents.getExpandButton();
         Button markerModeButton = MinimapClientEvents.getMarkerModeButton();
         Button camSensitivityButton = MinimapClientEvents.getCamSensitivityButton();
         Button mapLockButton = MinimapClientEvents.getMapLockButton();
@@ -1699,6 +1755,11 @@ public class HudClientEvents {
             if (extras && !rotateCW.isHidden.get()) {
                 rotateCW.render(evt.getGuiGraphics(), c4x, r0y, mouseX, mouseY);
                 renderedButtons.add(rotateCW);
+            }
+
+            if (!expandMapButton.isHidden.get()) {
+                expandMapButton.render(evt.getGuiGraphics(), c3x, r2y, mouseX, mouseY);
+                renderedButtons.add(expandMapButton);
             }
 
             // top row: view toggles
@@ -1803,6 +1864,13 @@ public class HudClientEvents {
                         screenHeight - (leavesHidingButton.iconSize * 2),
                         mouseX, mouseY);
                 renderedButtons.add(leavesHidingButton);
+            }
+            if (!expandMapButton.isHidden.get()) {
+                expandMapButton.render(evt.getGuiGraphics(),
+                        screenWidth - (expandMapButton.iconSize * 6),
+                        screenHeight - (expandMapButton.iconSize * 6),
+                        mouseX, mouseY);
+                renderedButtons.add(expandMapButton);
             }
             if (extras && !toggleTeamColorsButton.isHidden.get()) {
                 toggleTeamColorsButton.render(evt.getGuiGraphics(),
@@ -2211,6 +2279,8 @@ public class HudClientEvents {
     public static void onMousePress(ScreenEvent.MouseButtonPressed.Post evt) {
         if (!(MC.screen instanceof TopdownGui))
             return;
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1)
+            BuildTabs.click((int) evt.getMouseX(), (int) evt.getMouseY());
         for (Button button : renderedButtons) {
             if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
                 button.checkClicked((int) evt.getMouseX(), (int) evt.getMouseY(), true);
@@ -2232,6 +2302,9 @@ public class HudClientEvents {
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
+            return;
+        // Alt + Q / Z / E / R picked a build tab (BuildTabs.tick): its release must not press the slot as well
+        if (BuildTabs.consumeRelease(evt.getKeyCode()))
             return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
@@ -2266,6 +2339,98 @@ public class HudClientEvents {
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
     }
 
+    /**
+     * BAR mixed builder selection (tester: "multiple builders including different types ... it only sends one"): with
+     * two or more owned builder types selected, the card's build buttons are every selected builder type's, so a
+     * building from another type's menu is placed by the whole selection instead of sub-selecting that type first.
+     * hudSelectedEntity's buttons come first and keep their keys; the other types' new buildings follow in selection
+     * order, deduplicated by building, and keep their key only if the card does not use it yet (BuilderCardUnion).
+     * Abilities stay hudSelectedEntity's. A placement button's action is BuildingClientEvents.setBuildingToPlace,
+     * which does not depend on the button's owner, and placing sends every selected builder.
+     */
+    private static List<Button> withOtherBuildersMenus(List<Button> primary, List<LivingEntity> selUnits) {
+        if (hudSelectedEntity == null)
+            return primary;
+        Set<EntityType<?>> builderTypes = new LinkedHashSet<>();
+        List<LivingEntity> firstOfType = new ArrayList<>();
+        for (LivingEntity le : selUnits) {
+            if (!(le instanceof WorkerUnit) || !(le instanceof Unit))
+                continue;
+            if (getPlayerToEntityRelationship(le) != Relationship.OWNED && !AlliancesClient.canControlAlly(le))
+                continue;
+            if (builderTypes.add(le.getType()))
+                firstOfType.add(le);
+        }
+        if (builderTypes.size() < 2)
+            return primary; // one builder type (or none): the card is unchanged
+        List<List<Button>> others = new ArrayList<>();
+        for (LivingEntity le : firstOfType) {
+            if (le.getType() == hudSelectedEntity.getType())
+                continue;
+            List<Button> menu = new ArrayList<>();
+            for (Button b : ((Unit) le).getAbilityButtons())
+                if (b instanceof BuildingPlaceButton)
+                    menu.add(b);
+            others.add(menu);
+        }
+        // keys the card already shows: the order buttons laid out above (primary's keys are counted by the helper)
+        List<Integer> reserved = new ArrayList<>();
+        for (Button b : cardButtons) {
+            if (b.hotkey == null)
+                continue;
+            reserved.add(b.hotkey.getKey());
+            if (b.hotkey.getAliasKey() > 0)
+                reserved.add(b.hotkey.getAliasKey());
+        }
+        for (Button b : primary)
+            if (b.hotkey != null && b.hotkey.getAliasKey() > 0)
+                reserved.add(b.hotkey.getAliasKey());
+        // tab-aware (BuildTabs): a slot key clashes only within its own tab and with the unit's own abilities
+        List<BuilderCardUnion.Added<Button>> added = BuilderCardUnion.addedByTab(primary, others,
+                b -> b instanceof BuildingPlaceButton ? b.name : null,
+                b -> b.hotkey == null ? BuilderCardUnion.NO_KEY : b.hotkey.getKey(),
+                b -> b instanceof BuildingPlaceButton bp ? bp.group : null,
+                reserved);
+        if (added.isEmpty())
+            return primary;
+        List<Button> out = new ArrayList<>(primary);
+        for (BuilderCardUnion.Added<Button> a : added)
+            out.add(a.keepsKey() || a.item().hotkey == null ? a.item() : keylessCopy(a.item()));
+        return out;
+    }
+
+    // the faction / engineer build buttons are shared and cached, so a clashing key is dropped on a copy, made once
+    private static final Map<Button, Button> KEYLESS_COPIES = new IdentityHashMap<>();
+
+    private static Button keylessCopy(Button b) {
+        return KEYLESS_COPIES.computeIfAbsent(b, o -> {
+            // a building stays a BuildingPlaceButton: same tab, no slot (BuildTabs draws it after the tab's last slot)
+            Button c = o instanceof BuildingPlaceButton bp ? bp.keylessCopy()
+                    : new Button(o.name, o.iconSize, o.iconResource, o.frameResource, null, o.isSelected, o.isHidden,
+                    o.isEnabled, o.onLeftClick, o.onRightClick, o.tooltipLines);
+            c.tooltipOffsetY = o.tooltipOffsetY;
+            c.imageSize = o.imageSize;
+            c.innerIconSizeModifier = o.innerIconSizeModifier;
+            c.playerNameForHeadIcon = o.playerNameForHeadIcon;
+            c.bgColour = o.bgColour;
+            c.bottomLeftText = o.bottomLeftText;
+            c.bottomLeftTextColor = o.bottomLeftTextColor;
+            c.bgIconResource = o.bgIconResource;
+            c.iconItem = o.iconItem;
+            c.iconItemScale = o.iconItemScale;
+            c.onLeftClickRelease = o.onLeftClickRelease;
+            c.lightUpOnHover = o.lightUpOnHover;
+            c.isFlashing = o.isFlashing;
+            c.isActive = o.isActive;
+            c.greyPercent = o.greyPercent;
+            c.getGreyPercent = o.getGreyPercent;
+            c.greyWhenDisabled = o.greyWhenDisabled;
+            c.greyInverted = o.greyInverted;
+            c.showSelectedFrameWhenDisabled = o.showSelectedFrameWhenDisabled;
+            return c;
+        });
+    }
+
     /** True when a button on the selected unit's / building's card has this key (primary or alias). */
     public static boolean isCardKey(int key) {
         for (int i = 0; i < cardButtons.size(); i++) {
@@ -2286,6 +2451,7 @@ public class HudClientEvents {
         if (evt.phase != TickEvent.Phase.END) {
             return;
         }
+        BuildTabs.tick();
         if (OrthoviewClientEvents.isEnabled()) {
             portraitRendererUnit.tickAnimation();
         }

@@ -531,11 +531,6 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::encode)
-                .decoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::decode)
-                .consumerMainThread(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::handle)
-                .add();
         INSTANCE.messageBuilder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::new)

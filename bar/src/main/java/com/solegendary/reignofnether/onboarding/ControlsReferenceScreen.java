@@ -93,6 +93,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("overview", Keybindings.overview);
         bind("idle_worker", Keybindings.idleWorker);
         bind("select_army", Keybindings.selectArmy);
+        bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
         mouse("zoom", t("wheel") + "  /  " + k(Keybindings.zoomIn) + " " + k(Keybindings.zoomOut));

@@ -672,8 +672,8 @@ final class MatchLifecycleCases {
 
     /**
      * A resumed start phase (StartPhase.load): every spot and the clock come back, the clock waits for a human, then
-     * runs at least RESUME_FLOOR_SECONDS whatever was left; "everyone placed" ends it early only once every human is
-     * back; a save of other sides is refused and changes nothing.
+     * runs at least RESUME_FLOOR_SECONDS whatever was left; "everyone placed and ready" ends it early only once every
+     * human is back and pressed Ready again (Ready is not saved); a save of other sides is refused and changes nothing.
      */
     public static void resumed_start_phase_holds_for_its_humans_and_keeps_a_floor(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -704,15 +704,23 @@ final class MatchLifecycleCases {
         after.tick();
         if (after.isHolding() || after.ticksLeft() != StartPhase.RESUME_FLOOR_SECONDS * 20 - 1)
             problems.add("one human back did not restart the clock with the floor: " + after.ticksLeft());
+        // Ready is not saved: the one back presses it again; the one still away can't, so nothing ends
+        if (!after.setReady("gametest_rsp_a", true))
+            problems.add("the human back could not press Ready on their saved start");
         for (int t = 0; t < StartPhase.EARLY_END_TICKS + 5; t++)
             after.tick();
         if (after.isFinished())
             problems.add("everyone placed ended a resumed phase early while a human was still away");
         online.add("gametest_rsp_b");
+        for (int t = 0; t < StartPhase.EARLY_END_TICKS + 5; t++)
+            after.tick();
+        if (after.isFinished())
+            problems.add("a resumed phase ended before the returning human pressed Ready again");
+        after.setReady("gametest_rsp_b", true);
         for (int t = 0; t < StartPhase.EARLY_END_TICKS + 2; t++)
             after.tick();
         if (!after.isFinished())
-            problems.add("with every human back and placed the phase did not end early");
+            problems.add("with every human back, placed and ready the phase did not end early");
 
         StartPhase other = new StartPhase(level, cx, cz, layout, new ArrayList<>(List.of(
             new StartPhase.Pick("gametest_rsp_x", false, 0, 0, 0xFF0000, null),
