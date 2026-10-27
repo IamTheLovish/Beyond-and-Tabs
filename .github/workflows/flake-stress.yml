@@ -1,4 +1,7 @@
 name: flake-stress
+# the tested ref in the run's title: a run is evidence for the branch it tested, and the Command Center gate finds a
+# branch's runs by it (every run was titled "flake-stress" whatever it tested)
+run-name: "flake-stress ${{ inputs.ref }}"
 # Runs a few chosen GameTests on many runners at once and adds up how often each one fails - so a flaky test gets a
 # real fail rate instead of "it failed once on #55", and a flake fix can be proven (0 of N) rather than hoped for.
 # Costs no Claude usage: public-repo runner minutes only. Manual only (never on push).
@@ -33,6 +36,25 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      # a `tests` entry that is neither a batch nor test:<prefix> runs 0 tests (Oct 27: four runs given bare test names):
+      # refuse it before any runner starts. The check from this workflow's own commit, the batch names from the ref
+      # under test (an older ref has no copy of the tool)
+      - uses: actions/checkout@v4
+        if: inputs.shard == ''
+        with:
+          path: wf
+          sparse-checkout: tools/ci_stress_check.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        if: inputs.shard == ''
+        with:
+          ref: "${{ inputs.ref }}"
+          path: tested
+          sparse-checkout: bar/src/main/java/com/solegendary/reignofnether/gametest
+      - name: The tests list names batches or test:<prefix>
+        if: inputs.shard == ''
+        env: { ST_ONLY: "${{ inputs.tests }}" }
+        run: python3 wf/tools/ci_stress_check.py entries "$ST_ONLY" tested/bar/src/main/java/com/solegendary/reignofnether/gametest
       - id: m
         run: |
           n="${{ inputs.runners }}"
