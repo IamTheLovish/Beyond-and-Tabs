@@ -149,4 +149,27 @@ class MotionTest {
         float[] out = pose(s, 30f, 20f, ALL, true);
         assertEquals(0f, v(out, Motion.ROOT, Motion.RZ), 0f, "no lean on a keyframe unit");
     }
+
+    /** A hanging limb's RX/RZ swing its free end (MotionPass.hanging): + = the hand or foot forward / to the right. */
+    private static float[] held(int springSlot, float value) {
+        float[] s = slot();
+        s[springSlot] = value;
+        s[springSlot + 2] = value;
+        return s;
+    }
+
+    @Test
+    void aWeightShiftMovesTheHipsOverPlantedFeet() {
+        float[] out = pose(held(AnimState.SP_WEIGHT, 1f), 0f, 20f, only(Motion.WEIGHT), false);
+        assertTrue(v(out, Motion.ROOT, Motion.TX) > 0f, "the hips go right");
+        assertTrue(v(out, Motion.LEG_R, Motion.RZ) < 0f, "so the right foot swings back left to stay put");
+        assertTrue(v(out, Motion.LEG_L, Motion.RZ) < 0f, "and the left foot too");
+    }
+
+    @Test
+    void theArmsSplayOutOfATurn() {
+        float[] out = pose(held(AnimState.SP_LEAN, 6f), 0f, 20f, only(Motion.SECONDARY), false);
+        assertTrue(v(out, Motion.ARM_R, Motion.RZ) < 0f, "leaning right into a turn, the hands swing out to the left");
+        assertTrue(v(out, Motion.ARM_L, Motion.RZ) < 0f, "both of them");
+    }
 }

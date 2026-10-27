@@ -101,4 +101,17 @@ class IdleTest {
         }
         assertEquals(2, sides.size(), "both legs take the weight in turn");
     }
+
+    @Test
+    void aUnitBackWithAYoungerClockIsScheduledAgain() {
+        // the client forgets a slot only after 100 unseen ticks: a unit that leaves tracking and returns sooner is a
+        // new entity object (tickCount from 0) on the old slot, and must not wait out its old life for a fidget
+        float[] s = new float[AnimState.STRIDE];
+        for (int t = 0; t <= 4000; t++)
+            Idle.step(s, 0, 7, t, false, false);
+        Idle.step(s, 0, 7, 0, false, false);
+        assertTrue(s[AnimState.IDLE_NEXT] <= Idle.GAP_MAX, "next fidget " + s[AnimState.IDLE_NEXT]);
+        assertTrue(s[AnimState.WEIGHT_NEXT] <= Idle.WEIGHT_GAP_MAX, "next weight shift " + s[AnimState.WEIGHT_NEXT]);
+        assertTrue(s[AnimState.QUIET_UNTIL] <= 0f, "no quiet carried over");
+    }
 }

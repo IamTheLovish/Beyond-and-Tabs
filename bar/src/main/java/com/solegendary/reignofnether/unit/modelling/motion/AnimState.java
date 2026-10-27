@@ -24,7 +24,9 @@ public final class AnimState {
     /** The idle scheduler's fields ({@link Idle}). */
     public static final int IDLE_INIT = 16, IDLE_KIND = 17, IDLE_START = 18, IDLE_LEN = 19, IDLE_NEXT = 20,
         IDLE_COUNT = 21, IDLE_LAST = 22, QUIET_UNTIL = 23, WEIGHT_NEXT = 24, WEIGHT_SIDE = 25, WEIGHT_START = 26,
-        GLANCE_YAW = 27, GLANCE_PITCH = 28;
+        GLANCE_YAW = 27, GLANCE_PITCH = 28,
+        /** The tick the scheduler last ran at (the entity's own tickCount). */
+        IDLE_CLOCK = 29;
 
     /** Spring slots. */
     public static final int SP_LEAN = 30, SP_PITCH = SP_LEAN + Life.SPRING, SP_FLINCH_X = SP_PITCH + Life.SPRING,
