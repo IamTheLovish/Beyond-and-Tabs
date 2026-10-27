@@ -9,10 +9,14 @@ import net.minecraft.client.model.IronGolemModel;
 import net.minecraft.client.model.SpiderModel;
 import net.minecraft.client.model.WitchModel;
 import net.minecraft.client.model.WolfModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.world.entity.Entity;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,7 +69,7 @@ class BoneMapsTest {
         assertTrue(guard.flinchOnly);
         assertTrue(guard.hierarchical);
         assertFalse(guard.noBreath);
-        assertNotNull(guard.parts[Motion.BODY]);
+        assertNotNull(guard.parts[Motion.HEAD]);
     }
 
     @Test
@@ -88,5 +92,23 @@ class BoneMapsTest {
         float[] slab = new float[AnimState.STRIDE * 2];
         slab[AnimState.STRIDE + AnimState.EXERTION] = 0.8f;
         assertEquals(0.8f, Quadruped.exertion(0.3f, AnimState.STRIDE, slab), 0f, "a slot: the shared one");
+    }
+
+    private static ModelPart part(Map<String, ModelPart> children) {
+        return new ModelPart(List.of(), children);
+    }
+
+    @Test
+    void aRigsTorsoBendsOnlyWhenItCarriesTheHeadAndNotTheLegs() {
+        BoneMap guard = BoneMaps.forModel(new RoyalGuardModel<>(RoyalGuardModel.createBodyLayer().bakeRoot()));
+        assertNull(guard.parts[Motion.BODY], "the Royal Guard's head and arms are its body's siblings: a bent body leaves them");
+        BoneMap hal = BoneMaps.forModel(new HalberdierModel<Entity>(HalberdierModel.createBodyLayer().bakeRoot()));
+        assertNull(hal.parts[Motion.BODY], "the Halberdier's body is its pelvis: bending it swings the legs and feet");
+        ModelPart head = part(Map.of());
+        assertTrue(BoneMaps.bendsAlone(part(Map.of("head", head)), head), "a torso that carries the head");
+        assertFalse(BoneMaps.bendsAlone(part(Map.of("head", head, "left_thigh", part(Map.of()))), head), "a pelvis");
+        assertFalse(BoneMaps.bendsAlone(part(Map.of("x", part(Map.of("legR", part(Map.of()))), "head", head)), head),
+            "legs deeper down still count");
+        assertFalse(BoneMaps.bendsAlone(part(Map.of()), head), "a torso beside the head");
     }
 }
