@@ -463,7 +463,20 @@ public class ArtilleryGameTests {
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void a_crew_hopped_by_keyless_client_claims_must_set_up_again(GameTestHelper helper) {
-        String owner = "gametest_arty_possess_hop_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        keylessHopTest(helper, "hop", false);
+    }
+
+    /**
+     * The same after one sprint-jump claim with no step (round-5 review of #222): the client's own sprint and jump
+     * flags widen what a claim may cover, but they are no shove the server gave - the hops still cost the set-up.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_after_a_faked_sprint_jump_must_set_up_again(GameTestHelper helper) {
+        keylessHopTest(helper, "sjhop", true);
+    }
+
+    static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst) {
+        String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         var b = bombard(helper, owner, 1.5, 8.5);
@@ -492,8 +505,12 @@ public class ArtilleryGameTests {
             active[0] = true;
         });
         // three keyless hops east, 8 ticks each: up, then down to the ground, 0.12 a tick sideways (a walk's pace)
-        double[] arc = { 0.35, 0.6, 0.75, 0.8, 0.75, 0.6, 0.35, 0 };
-        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * arc.length;
+        // the last claim lands a little below the ground, so the move ends on it (on the ground, as a real landing)
+        double[] arc = { 0.35, 0.6, 0.75, 0.8, 0.75, 0.6, 0.35, -0.1 };
+        // with sprintJumpFirst each hop is led by one forward + sprint + jump claim where it stands (no step) and
+        // followed by 6 ticks with no claim, in which the server lands it (the boost needs the unit on the ground)
+        int lead = sprintJumpFirst ? 1 : 0, rest = sprintJumpFirst ? 6 : 0, cycle = lead + arc.length + rest;
+        int hops = 3, hopFrom = 10, hopEnd = hopFrom + hops * cycle;
         int[] tick = { 0 }, seq = { 0 };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])
@@ -501,9 +518,16 @@ public class ArtilleryGameTests {
             tick[0]++;
             int t = tick[0];
             if (t >= hopFrom && t < hopEnd) {
-                int k = t - hopFrom;
-                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
-                    false, base[0] + 0.12 * (k + 1), base[1] + arc[k % arc.length], base[2], ++seq[0]);
+                int hop = (t - hopFrom) / cycle, phase = (t - hopFrom) % cycle - lead;
+                if (phase >= arc.length)
+                    return;
+                double x = base[0] + 0.12 * (hop * arc.length + phase + 1);
+                if (phase < 0)
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 1, 0, -90, 10,
+                        true, false, true, x, base[1] - 0.1, base[2], ++seq[0]);
+                else
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10,
+                        false, false, x, base[1] + arc[phase], base[2], ++seq[0]);
                 return;
             }
             if (t < hopEnd)
