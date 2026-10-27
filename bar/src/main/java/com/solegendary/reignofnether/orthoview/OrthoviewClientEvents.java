@@ -1253,6 +1253,10 @@ public class OrthoviewClientEvents {
             evt.setCanceled(true);
             return;
         }
+        if (com.solegendary.reignofnether.building.BuildingLineClientEvents.onScroll(evt.getScrollDelta())) {   // Shift+wheel: build spacing
+            evt.setCanceled(true);
+            return;
+        }
         evt.setCanceled(true);
 
         if (isCtrlDown()) {
