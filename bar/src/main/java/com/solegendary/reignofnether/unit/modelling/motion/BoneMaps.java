@@ -9,6 +9,7 @@ import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.IllagerModel;
 import net.minecraft.client.model.IronGolemModel;
+import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.SpiderModel;
 import net.minecraft.client.model.VillagerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -64,7 +65,10 @@ public final class BoneMaps {
                 .set(Motion.BODY, h.body).set(Motion.HEAD, h.head)
                 .set(Motion.ARM_R, h.rightArm).set(Motion.ARM_L, h.leftArm)
                 .set(Motion.LEG_R, h.rightLeg).set(Motion.LEG_L, h.leftLeg);
-            m.hat = h.hat;
+            m.follow(h.hat, h.head);
+            if (model instanceof PlayerModel<?> pl)
+                m.follow(pl.jacket, pl.body).follow(pl.rightSleeve, pl.rightArm).follow(pl.leftSleeve, pl.leftArm)
+                    .follow(pl.rightPants, pl.rightLeg).follow(pl.leftPants, pl.leftLeg);
             if (model instanceof VillagerUnitModel<?> v)
                 m.set(Motion.ARMS, v.crossedArms);
             return m;
