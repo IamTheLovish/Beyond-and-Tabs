@@ -737,15 +737,7 @@ public class CursorClientEvents {
 
     // returns the exact spot that the cursorWorldPos ray meets a solid block
     public static Vec3 getRefinedCursorWorldPos(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
-        Vec3 vectorNear = new Vec3(cursorWorldPosNear.x, cursorWorldPosNear.y, cursorWorldPosNear.z);
-        Vec3 vectorFar = new Vec3(cursorWorldPosFar.x, cursorWorldPosFar.y, cursorWorldPosFar.z);
-
-        // clip() returns the point of clip, not the clipped block giving off-by-one errors so move slightly to compensate
-        HitResult hitResult = null;
-        if (MC.level != null) {
-            hitResult = clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
-        }
-
+        BlockHitResult hitResult = clipCursorRay(cursorWorldPosNear, cursorWorldPosFar);
         if (hitResult != null)
             return hitResult.getLocation().add(new Vec3(-0.001, -0.001, -0.001));
         return new Vec3(0, 0, 0);
@@ -753,14 +745,19 @@ public class CursorClientEvents {
 
     /** As getRefinedCursorWorldPos, but null when the ray hits no block (a miss, not the ray's far end). */
     public static Vec3 cursorRayHit(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
+        BlockHitResult hitResult = clipCursorRay(cursorWorldPosNear, cursorWorldPosFar);
+        if (hitResult == null || hitResult.getType() == HitResult.Type.MISS)
+            return null;
+        return hitResult.getLocation().add(new Vec3(-0.001, -0.001, -0.001));
+    }
+
+    // clip() returns the point of clip, not the clipped block giving off-by-one errors, so callers move slightly to compensate
+    private static BlockHitResult clipCursorRay(Vector3d cursorWorldPosNear, Vector3d cursorWorldPosFar) {
         if (MC.level == null)
             return null;
         Vec3 vectorNear = new Vec3(cursorWorldPosNear.x, cursorWorldPosNear.y, cursorWorldPosNear.z);
         Vec3 vectorFar = new Vec3(cursorWorldPosFar.x, cursorWorldPosFar.y, cursorWorldPosFar.z);
-        BlockHitResult hitResult = clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
-        if (hitResult == null || hitResult.getType() == HitResult.Type.MISS)
-            return null;
-        return hitResult.getLocation().add(new Vec3(-0.001, -0.001, -0.001));
+        return clip(MC.level, new ClipContext(vectorNear, vectorFar, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, null));
     }
 
     // from ClientLevel.clip() but added exception for leaf blocks
