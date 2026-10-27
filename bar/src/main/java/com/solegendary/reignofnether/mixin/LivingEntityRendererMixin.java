@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.motion.MotionPass;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
 import net.minecraft.client.model.EntityModel;
@@ -87,6 +88,30 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         model.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, finalAlpha);
     }
 
+
+    @Shadow protected M model;
+
+    // the living army (design/living_army.md): its offsets go on after the model's own pose and come off when the
+    // unit's render returns, so the body pass and every layer draw the same pose and nothing accumulates
+    @Inject(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Lnet/minecraft/world/entity/Entity;FFFFF)V",
+                    shift = At.Shift.AFTER)
+    )
+    private void bat$livingArmy(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
+                                MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        MotionPass.apply(entity, this.model, poseStack, partialTicks);
+    }
+
+    @Inject(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("RETURN")
+    )
+    private void bat$livingArmyRestore(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
+                                       MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        MotionPass.restore();
+    }
 
     @Inject(
             method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",

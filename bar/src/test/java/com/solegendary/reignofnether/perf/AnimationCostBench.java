@@ -325,6 +325,71 @@ class AnimationCostBench {
         assertTrue(allocated == 0, "the living army tick allocates: " + line);
     }
 
+    /** The living army's motion pass on a vanilla body, microseconds per unit per pass (design/living_army.md, section 3). */
+    static final double MOTION_PASS_BUDGET_US_PER_UNIT = 3.0;
+
+    /**
+     * The living army's per-frame pass for {@link #UNITS} units on a vanilla humanoid body: pose (Motion) + put on the
+     * parts and pose stack (MotionPass.place) + take off (restore), each unit mid-walk, mid-turn and mid-flinch. Gates:
+     * under {@link #MOTION_PASS_BUDGET_US_PER_UNIT} a unit, nothing allocated, and the body left exactly as it was.
+     */
+    @Test
+    void livingArmyMotionPass() throws IOException {
+        net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.LivingEntity> body =
+            new net.minecraft.client.model.HumanoidModel<>(net.minecraft.client.model.geom.builders.LayerDefinition.create(
+                net.minecraft.client.model.HumanoidModel.createMesh(
+                    net.minecraft.client.model.geom.builders.CubeDeformation.NONE, 0f), 64, 64).bakeRoot());
+        var map = com.solegendary.reignofnether.unit.modelling.motion.BoneMaps.forModel(body);
+        assertTrue(map != null, "a humanoid body has a bone map");
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        float[] slab = new float[UNITS * stride];
+        for (int i = 0; i < UNITS; i++) {
+            int b = i * stride;
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0f, 0f, 20f, 20f, false, true);
+            for (int t = 0; t < 20; t++)
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.2f, 4f, 20f, 20f,
+                    false, false);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.1f, 2f, 16f, 20f, false, false);
+        }
+        float[] sliders = {1, 1, 1, 1, 1, 1, 1};
+        float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
+        PoseStack pose = new PoseStack();
+        float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
+        Phase pass = new Phase("living army motion pass (Motion + place + restore, vanilla humanoid)");
+        com.sun.management.ThreadMXBean mx =
+            (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
+        long tid = Thread.currentThread().getId();
+        long allocated = 0;
+        for (int frame = -WARMUP * 10; frame < FRAMES; frame++) {
+            long a0 = mx.getThreadAllocatedBytes(tid);
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, 1000f + frame + i,
+                    0.5f, 40f, sliders, false, out);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.place(map, pose);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
+                pose.setIdentity();   // the render's own push/pop is vanilla's (it allocates), not the pass's
+            }
+            long t1 = System.nanoTime();
+            long a1 = mx.getThreadAllocatedBytes(tid);
+            if (frame >= 0)
+                allocated += a1 - a0;
+            record(pass, frame, t1 - t0);
+        }
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f), %d bytes allocated over %d frames",
+            UNITS, pass.medianMs(), pass.perUnitUs(), MOTION_PASS_BUDGET_US_PER_UNIT, allocated, FRAMES);
+        System.out.println(line);
+        Path out2 = Path.of("build", "motion-pass-bench.txt");
+        Files.createDirectories(out2.getParent());
+        Files.write(out2, List.of(line));
+        assertTrue(pass.perUnitUs() < MOTION_PASS_BUDGET_US_PER_UNIT, line);
+        assertTrue(allocated == 0, "the motion pass allocates: " + line);
+        assertTrue(before == body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot,
+            "restore leaves the body exactly as setupAnim left it");
+    }
+
     private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {
         CountingSink sink = new CountingSink();
         model.renderToBuffer(pose, sink, LIGHT, 0, 1f, 1f, 1f, 1f);
