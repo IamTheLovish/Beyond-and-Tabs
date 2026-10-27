@@ -773,7 +773,6 @@ public class BotPlayer {
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
         verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
-        verdantThickets(level, army, workers, gameTime, minutes);
         tideHabits(level, mine, army);
         tideFogBank(level, mine, army);
         tideKrakens(level, mine);
@@ -1184,12 +1183,12 @@ public class BotPlayer {
     }
 
     /**
-     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis, Totem of the Pack, Magma Rupture, Holy Bell, Withering
+     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis, Magma Rupture, Holy Bell, Withering
      * Fog) on any unit that carries one: same rule as the commander's signature - only once three or more enemy
      * units are within 12 blocks. The ground-targeted ones (Crypt Tide, Magma Rupture, Withering Fog) are aimed at
      * the nearest of them; the rest are cast where the unit stands. The enemy scan only runs for a unit with a
-     * power off cooldown, so an idle army costs nothing here. Sunrise Sortie and Soul Wisps have their own triggers
-     * ({@link #useSortie}, {@link #useWisps}).
+     * power off cooldown, so an idle army costs nothing here. Sunrise Sortie has its own trigger
+     * ({@link #useSortie}).
      */
     void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
@@ -1201,11 +1200,6 @@ public class BotPlayer {
                         useSortie(level, le, u, a);
                     continue;
                 }
-                if (a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps) {
-                    if (a.isOffCooldown(u))
-                        useWisps(level, le, u, a);
-                    continue;
-                }
                 if (a instanceof com.solegendary.reignofnether.ability.abilities.LeafDash) {
                     if (a.isOffCooldown(u))
                         useLeafDash(level, le, u, a);
@@ -1214,11 +1208,9 @@ public class BotPlayer {
                 boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
                         || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
                         || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog
-                        || a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket
                         || a instanceof com.solegendary.reignofnether.ability.abilities.StagLeap;
                 if (!aimed && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis)
-                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.Bloom))
                     continue;
@@ -1289,21 +1281,6 @@ public class BotPlayer {
             a.use(level, u, nearest.blockPosition());
     }
 
-    /** Soul Wisps: whenever the Embalmer is stripping a wreck, or an enemy unit comes within the wisps' reach. */
-    void useWisps(ServerLevel level, LivingEntity le, Unit u, com.solegendary.reignofnether.ability.Ability a) {
-        boolean go = com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming(le);
-        if (!go) {
-            double r = com.solegendary.reignofnether.ability.abilities.SoulWisps.RADIUS;
-            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
-                if (isEnemyUnit(other) && other.distanceToSqr(le) <= r * r) {
-                    go = true;
-                    break;
-                }
-        }
-        if (go)
-            a.use(level, u, le.blockPosition());
-    }
-
     /**
      * Leaf Dash: close on the nearest enemy ranged unit (archers, casters - what a Leafblade is for) within the
      * dash's reach, but only one at least 3 blocks off: next to it, the blade just swings.
@@ -1327,16 +1304,13 @@ public class BotPlayer {
 
     // ------------------------------------------------------------------ Verdant Court habits (slice 2)
 
-    /** Game time of the last Vine Snare errand this bot sent (one every 30 s at most). */
-    long lastSnareAt = -1;
     /** The narrowest point on the way from home toward the enemy, and its "across" direction; recomputed every 5 min. */
     BlockPos choke = null;
     double chokeAcrossX = 1, chokeAcrossZ = 0;
     long chokeAt = -1;
 
     /**
-     * For any bot whose units carry them (the Verdant Court today): Seedshapers plant a couple of Vine Snares across
-     * the choke point nearest home (from minute 2, up to 2 + 1 per 6 min, max 4), one Owl Watcher hovers over that
+     * For any bot whose units carry them (the Verdant Court today): one Owl Watcher hovers over that
      * choke as a picket, and Moonwell Bearers - not fighters, so they never get army orders - follow the army's
      * centre. Cheap: one centroid pass over the army and a few checks a think; the choke scan is a few dozen
      * heightmap reads every 5 minutes.
@@ -1400,26 +1374,6 @@ public class BotPlayer {
                 order(List.of(owl), UnitAction.MOVE, choke.above(3));
             }
         }
-        // snares across the choke
-        int want = (int) Math.min(4, 2 + minutes / 6);
-        int have = com.solegendary.reignofnether.blocks.VineSnareBlockEntity.countOwned(level, name);
-        if (have >= want || (lastSnareAt >= 0 && gameTime - lastSnareAt < 20 * 30))
-            return;
-        for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantVineSnare) || !a.isOffCooldown(u))
-                    continue;
-                // across the gap: centre, then 2 blocks either side, then 4
-                int k = have + 1;
-                int side = (k / 2) * 2 * (k % 2 == 0 ? 1 : -1);
-                BlockPos at = choke.offset((int) Math.round(chokeAcrossX * side), 0, (int) Math.round(chokeAcrossZ * side));
-                a.use(level, u, MiscUtil.getHighestNonAirBlock(level, at));
-                lastSnareAt = gameTime;
-                return;
-            }
-        }
     }
 
     // ------------------------------------------------------------------ Stormcallers habits (slice 1)
@@ -1429,8 +1383,6 @@ public class BotPlayer {
     static final float OVERCHARGE_ON_FILL = 0.6f, OVERCHARGE_OFF_FILL = 0.2f;
     /** Energy kept before the bot's Ward (8 s of drain plus a Judgement), Seal and Frost Field (the Judgement reserve). */
     static final float WARD_RESERVE = 250f, SEAL_RESERVE = 175f, FROST_RESERVE = 200f;
-    /** Game time of the bot's last ley link (one per 10 s at most: the order is free, the beams are not). */
-    long lastLinkAt = -1;
     /** Energy kept before the T2 spells (slice 3): each leaves a Judgement's worth for the combo that follows. */
     static final float SINGULARITY_RESERVE = 200f, MIRROR_RESERVE = 200f, SLAM_RESERVE = 200f, WELL_RESERVE = 300f;
     /**
@@ -1456,8 +1408,7 @@ public class BotPlayer {
      *       (ManaServerEvents also switches it off by itself at 0).</li>
      *   <li>slice 2: it raises its Ward when it is fighting under fire (hit in the last 3 s with 2+ foes in reach); Ink
      *       Scribes seal the priciest enemy caster or commander in reach ({@link #stormSeals}); Frost Adepts freeze the
-     *       ground between the army and an enemy group pushing it ({@link #stormFrost}); Geomancers ley-link the wind
-     *       generators near home once there are three ({@link #stormLinks}), one link per think.</li>
+     *       ground between the army and an enemy group pushing it ({@link #stormFrost}).</li>
      * </ul>
      * Cheap: one centroid pass and one grid query for the army, and a small O(n^2) clump count (n = foes within the
      * Judgement's 14 blocks) only while the D-gun is off cooldown and affordable.
@@ -1479,10 +1430,8 @@ public class BotPlayer {
                 stormCommander(level, le, u, res);
         stormSeals(level, mine, res);
         stormFrost(level, mine, army, res);
-        stormLinks(level, mine, gameTime);
         stormMirror(level, mine, res);
         stormSlam(level, mine, res);
-        stormWells(level, mine, res);
         stormTempest(level, mine, res);
         stormDomes(level, mine, res);
         // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
@@ -1601,33 +1550,6 @@ public class BotPlayer {
                 if (shooter != null && drill.startBurrow(shooter.position())) {
                     burrow.setToMaxCooldown(u);
                     com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), burrow.action, burrow.cooldownMax);
-                }
-            } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.TinkerUnit tinker && tinker.isIdle()
-                    && res.getMetal() >= com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + 200
-                    && home != null && le.blockPosition().distSqr(home) <= 40 * 40) {
-                LivingEntity bare = null;
-                double best = com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE * com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE;
-                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(),
-                        com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE, scan)) {
-                    if (!(other instanceof com.solegendary.reignofnether.unit.units.brass.IronWardenUnit)
-                            || !com.solegendary.reignofnether.ability.abilities.FieldUpgrade.canUpgrade(name, other))
-                        continue;
-                    double d = other.distanceToSqr(le);
-                    if (d < best) {
-                        best = d;
-                        bare = other;
-                    }
-                }
-                scan.clear();
-                if (bare != null) {
-                    for (var a : u.getAbilities().get())
-                        if (a instanceof com.solegendary.reignofnether.ability.abilities.FieldUpgrade fu
-                                && fu.kind == com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING && a.isOffCooldown(u)) {
-                            if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, le, name, bare, fu.kind, true))
-                                a.setToMaxCooldown(u);
-                            break;
-                        }
-                    return;   // one upgrade per think
                 }
             }
         }
@@ -1802,55 +1724,6 @@ public class BotPlayer {
         }
     }
 
-    /**
-     * Geomancers (slice 2): once the bot has three finished wind generators, an idle Geomancer links the nearest pair of
-     * generators within 60 blocks of home that are not yet linked (and within LeyNetwork.MAX_DISTANCE of each other),
-     * one link per 10 s, so the home wind farm resonates. The link is placed directly (the server-side half of the
-     * order); the Geomancer is only its author. Nothing when every pair in reach is linked or capped.
-     */
-    void stormLinks(ServerLevel level, List<LivingEntity> mine, long gameTime) {
-        if (home == null || (lastLinkAt >= 0 && gameTime - lastLinkAt < 20 * 10)
-                || com.solegendary.reignofnether.mana.LeyNetwork.linkCount(name) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_PLAYER)
-            return;
-        LivingEntity geomancer = null;
-        for (LivingEntity le : mine)
-            if (le instanceof com.solegendary.reignofnether.unit.units.storm.GeomancerUnit g && g.isIdle()
-                    && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit)   // a Ley Master's idle time goes to wells and the T3 lab
-                    && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
-                geomancer = le;
-                break;
-            }
-        if (geomancer == null)
-            return;
-        List<BuildingPlacement> winds = new ArrayList<>();
-        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
-            if (bp.isBuilt && !bp.isDestroyedServerside && name.equals(bp.ownerName)
-                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
-                    && bp.centrePos.distSqr(home) <= 60 * 60)
-                winds.add(bp);
-        if (winds.size() < 3)
-            return;
-        BuildingPlacement a = null, b = null;
-        double best = Double.MAX_VALUE;
-        int maxD2 = com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE * com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE;
-        for (int i = 0; i < winds.size(); i++)
-            for (int j = i + 1; j < winds.size(); j++) {
-                BuildingPlacement w1 = winds.get(i), w2 = winds.get(j);
-                double d = w1.centrePos.distSqr(w2.centrePos);
-                if (d > maxD2 || d >= best || com.solegendary.reignofnether.mana.LeyNetwork.isLinked(name, w1.centrePos, w2.centrePos)
-                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w1.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING
-                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w2.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING)
-                    continue;
-                best = d;
-                a = w1;
-                b = w2;
-            }
-        if (a == null)
-            return;
-        if (com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, name, a, b, true))
-            lastLinkAt = gameTime;
-    }
-
     // ------------------------------------------------------------------ Stormcallers T2 habits (slice 3)
 
     /** The spot of a Singularity that closed within {@link #COMBO_TICKS} and lies within {@code range} of {@code from}, else null. */
@@ -1974,35 +1847,6 @@ public class BotPlayer {
         }
     }
 
-    /**
-     * Ley Masters: with a comfortable pool and fewer than two wells, an idle Ley Master near home raises a Mana Well at
-     * its feet - the base's casters (and the Sage falling back to it) cast stronger and cheaper there. One per think;
-     * keeps {@link #WELL_RESERVE}.
-     */
-    void stormWells(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
-        if (home == null || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(name) >= 2
-                || res.getEnergy() < com.solegendary.reignofnether.ability.abilities.ManaWell.ENERGY_COST
-                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + WELL_RESERVE)
-            return;
-        for (LivingEntity le : mine) {
-            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit master) || !master.isIdle() || sealed(le)
-                    || le.blockPosition().distSqr(home) > 40 * 40)
-                continue;
-            // not on top of an existing well (that would take it down), and not inside one (wells don't stack)
-            if (com.solegendary.reignofnether.mana.ManaServerEvents.insideWell(name, le.blockPosition()))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : master.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell well) || !well.isOffCooldown(master))
-                    continue;
-                if (com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, name, le.blockPosition(), true)) {
-                    well.setToMaxCooldown(master);
-                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(master.getId(), well.action, well.cooldownMax);
-                    return;
-                }
-                break;
-            }
-        }
-    }
 
     // ------------------------------------------------------------------ Stormcallers slice 4 habits
 
@@ -2257,61 +2101,6 @@ public class BotPlayer {
                         enemies++;
                 if (enemies >= 3)
                     a.use(level, u, centre);
-                return;
-            }
-        }
-    }
-
-    /** Game time of the last Plant Thicket errand this bot sent, and how many it has sent (alternates the spot). */
-    long lastThicketAt = -1;
-    int thicketErrands = 0;
-
-    /**
-     * Living Terrain (slice 3), for any bot whose Seedshapers carry Plant Thicket: from minute 3 an idle Seedshaper
-     * grows a 3x3 patch every 40 s, alternating between the home choke (just on the home side of it, left then right
-     * of the line) and the army's resting spot (its centre, when the army is idle near home) - cover where the army
-     * waits and where the enemy walks in. Stops at 1 patch + 1 per 4 min, never past the planting cap.
-     */
-    void verdantThickets(ServerLevel level, List<LivingEntity> army, List<LivingEntity> workers, long gameTime, long minutes) {
-        if (minutes < 3 || home == null || (lastThicketAt >= 0 && gameTime - lastThicketAt < 20 * 40))
-            return;
-        int want = (int) Math.min(com.solegendary.reignofnether.blocks.ThicketBlockEntity.MAX_PLANTED, 9 * (1 + minutes / 4));
-        if (com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, name) + 5 > want)
-            return;
-        BlockPos at = null;
-        if (thicketErrands % 2 == 1 && !army.isEmpty()) {
-            // the army's resting spot: only while it idles near home (a marching army has no resting spot)
-            double cx = 0, cz = 0;
-            boolean idle = true;
-            for (LivingEntity le : army) {
-                cx += le.getX();
-                cz += le.getZ();
-                if (le instanceof Unit u && !u.isIdle())
-                    idle = false;
-            }
-            BlockPos centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
-            if (idle && centre.distSqr(home) < 40 * 40)
-                at = centre;
-        }
-        if (at == null && choke != null) {
-            // a step back from the choke toward home, alternating sides of the line
-            double dx = home.getX() - choke.getX(), dz = home.getZ() - choke.getZ();
-            double len = Math.max(1, Math.hypot(dx, dz));
-            int side = (thicketErrands / 2) % 2 == 0 ? 3 : -3;
-            at = ground(level, (int) Math.round(choke.getX() + dx / len * 3 + chokeAcrossX * side),
-                    (int) Math.round(choke.getZ() + dz / len * 3 + chokeAcrossZ * side));
-        }
-        if (at == null)
-            return;
-        for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantThicket) || !a.isOffCooldown(u))
-                    continue;
-                a.use(level, u, at);
-                lastThicketAt = gameTime;
-                thicketErrands++;
                 return;
             }
         }

@@ -163,8 +163,7 @@ public class BuildGroupGameTests {
                 var list = unit.getAbilities().get();
                 var keys = unit.getAbilities().effectiveHotkeys();
                 for (int i = 0; i < list.size(); i++) {
-                    boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
-                    other.accept(callToArms ? Keybindings.hotkey1 : keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
+                    other.accept(keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
                 }
                 // the Return Resources button next to the portrait (HudClientEvents) is on hotkey 5
                 other.accept(Keybindings.hotkey5, "Return Resources");
