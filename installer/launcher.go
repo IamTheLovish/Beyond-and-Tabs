@@ -10,6 +10,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
@@ -663,6 +664,7 @@ type launcher struct {
 	// PLAY: the packwiz update and the Prism start (fakes in the tests)
 	packwiz      packwizRunner // the update PLAY runs
 	launchPrism  func() error  // starts Prism on the instance
+	gameRunning  func() bool   // the game (Prism's Java for this instance) is open: its files are locked
 	playMu       sync.Mutex    // one PLAY at a time
 	updateFailed bool          // the last PLAY's check failed: the next press launches anyway (guarded by playMu)
 	// GitHub's raw files are cached up to 5 min (Cache-Control max-age=300): just after a pack is published, packwiz can
@@ -674,6 +676,7 @@ type launcher struct {
 func newLauncher(p gamePaths, gh *ghClient) *launcher {
 	return &launcher{paths: p, gh: gh, ready: make(chan struct{}), quit: make(chan struct{}),
 		packwiz: execPackwiz{}, launchPrism: func() error { return startPrism(p) },
+		gameRunning: func() bool { return gameIsRunning(p) },
 		updateTries: 8, updateWait: 45 * time.Second}
 }
 
@@ -772,11 +775,35 @@ type packwizRunner interface {
 
 type execPackwiz struct{}
 
+// packwizTimeout bounds one update run: a hung update must never leave PLAY waiting forever.
+const packwizTimeout = 10 * time.Minute
+
+// headlessArgs adds packwiz-installer's -g (no GUI) before the pack URL. hideWindow hides the window it starts, so a GUI
+// dialog ("Failed to download ... " when the running game holds a file, Oct 26) was invisible and waited forever.
+// With -g packwiz prints the error and exits, and PLAY shows it.
+func headlessArgs(args []string) []string {
+	for _, a := range args {
+		if a == "-g" || a == "--no-gui" {
+			return args
+		}
+	}
+	if len(args) == 0 {
+		return []string{"-g"}
+	}
+	out := append([]string{}, args[:len(args)-1]...)
+	return append(out, "-g", args[len(args)-1])
+}
+
 func (execPackwiz) Run(dir, exe string, args []string) (string, error) {
-	cmd := exec.Command(exe, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), packwizTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, exe, headlessArgs(args)...)
 	cmd.Dir = dir
 	hideWindow(cmd) // no console window: the output goes to packwiz-update.log
 	out, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		return string(out), fmt.Errorf("the pack update did not finish in %s and was stopped", packwizTimeout)
+	}
 	return string(out), err
 }
 
@@ -905,6 +932,10 @@ func (l *launcher) play() (playResult, error) {
 	defer l.playMu.Unlock()
 	l.load()
 	<-l.ready
+	// an open game holds its mods and resource packs: the update cannot replace them (Oct 26: PLAY hung on this)
+	if l.gameRunning != nil && l.gameRunning() {
+		return playResult{Level: "warn", Text: "The game is still open: close it, then press PLAY again (the update can't replace files the game is using)."}, nil
+	}
 	forced := l.updateFailed
 	lastLine := ""
 	if !forced {
