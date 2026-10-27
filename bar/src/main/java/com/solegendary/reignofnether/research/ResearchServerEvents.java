@@ -89,6 +89,18 @@ public class ResearchServerEvents {
         UpgradeVisuals.onResearchChanged(playerName);
     }
 
+    /**
+     * How many times {@code researchItemName} is recorded for {@code playerName}: the real record, never the
+     * "medievalman" cheat that makes {@link #playerHasResearch} true for everything. 0 or 1 in a healthy game.
+     */
+    public static int recordedCount(String playerName, ResourceLocation researchItemName) {
+        int n = 0;
+        for (Pair<String, ResourceLocation> r : researchItems)
+            if (r.getFirst().equals(playerName) && r.getSecond().equals(researchItemName))
+                n++;
+        return n;
+    }
+
     public static boolean playerHasResearch(String playerName, ProductionItem researchItem) {
         return playerHasResearch(playerName, ReignOfNetherRegistries.PRODUCTION_ITEM.getKey(researchItem));
     }

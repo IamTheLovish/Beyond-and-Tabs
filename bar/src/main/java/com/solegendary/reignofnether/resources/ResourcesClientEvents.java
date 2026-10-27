@@ -189,63 +189,71 @@ public class ResourcesClientEvents {
     // Render floating text for dropped-off resources
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
-        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
-        }
-
-        for (FloatingText floatingText : floatingTexts) {
-
-            if (floatingText.tickAge > 0) {
-                Minecraft MC = Minecraft.getInstance();
-                MutableComponent component = Component.literal(floatingText.text).withStyle(MyRenderer.iconStyle);
-
-                PoseStack poseStack = evt.getPoseStack();
-                Camera camera = MC.getEntityRenderDispatcher().camera;
-                Vec3 camPos = camera.getPosition();
-
-                poseStack.pushPose();
-                poseStack.translate(floatingText.pos.getX() - camPos.x(),
-                    floatingText.pos.getY() - camPos.y() + 2.5 + (floatingText.tickAge / 20f),
-                    floatingText.pos.getZ() - camPos.z()
-                );
-                poseStack.mulPose(Axis.YP.rotationDegrees(-camera.getYRot()));
-                poseStack.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
-                if (OrthoviewClientEvents.isEnabled()) {
-                    poseStack.scale(-0.075F, -0.075F, 0.075F);
-                } else {
-                    poseStack.scale(-0.05F, -0.05F, 0.05F);
-                }
-                Font font = MC.font;
-
-                float f2 = (float) (-font.width(component) / 2);
-                float f1 = Minecraft.getInstance().options.getBackgroundOpacity(0.25F);
-                float alphaPercent =
-                    ((FLOATING_TEXT_MAX_AGE - floatingText.tickAge) * 1.5f) / (float) FLOATING_TEXT_MAX_AGE;
-                if (alphaPercent < 0.05) {
-                    alphaPercent = 0.05f;
-                }
-                if (alphaPercent > 1) {
-                    alphaPercent = 1f;
-                }
-                int textCol = 0x00FFFFFF + ((int) (0xFF * alphaPercent) << 24);
-                int bgCol = (int) (f1 * 255.0F * alphaPercent) << 24;
-
-                font.drawInBatch(component,
-                    f2,
-                    0,
-                    textCol,
-                    false,
-                    poseStack.last().pose(),
-                    MC.renderBuffers().bufferSource(),
-                    Font.DisplayMode.NORMAL,
-                    bgCol,
-                    255
-                );
-
-                poseStack.popPose();
+        int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        try {
+            if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
+            if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+                return;
             }
-            floatingText.tickAge += 1;
+
+            for (FloatingText floatingText : floatingTexts) {
+
+                if (floatingText.tickAge > 0) {
+                    Minecraft MC = Minecraft.getInstance();
+                    MutableComponent component = Component.literal(floatingText.text).withStyle(MyRenderer.iconStyle);
+
+                    PoseStack poseStack = evt.getPoseStack();
+                    Camera camera = MC.getEntityRenderDispatcher().camera;
+                    Vec3 camPos = camera.getPosition();
+
+                    poseStack.pushPose();
+                    poseStack.translate(floatingText.pos.getX() - camPos.x(),
+                        floatingText.pos.getY() - camPos.y() + 2.5 + (floatingText.tickAge / 20f),
+                        floatingText.pos.getZ() - camPos.z()
+                    );
+                    poseStack.mulPose(Axis.YP.rotationDegrees(-camera.getYRot()));
+                    poseStack.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
+                    if (OrthoviewClientEvents.isEnabled()) {
+                        poseStack.scale(-0.075F, -0.075F, 0.075F);
+                    } else {
+                        poseStack.scale(-0.05F, -0.05F, 0.05F);
+                    }
+                    Font font = MC.font;
+
+                    float f2 = (float) (-font.width(component) / 2);
+                    float f1 = Minecraft.getInstance().options.getBackgroundOpacity(0.25F);
+                    float alphaPercent =
+                        ((FLOATING_TEXT_MAX_AGE - floatingText.tickAge) * 1.5f) / (float) FLOATING_TEXT_MAX_AGE;
+                    if (alphaPercent < 0.05) {
+                        alphaPercent = 0.05f;
+                    }
+                    if (alphaPercent > 1) {
+                        alphaPercent = 1f;
+                    }
+                    int textCol = 0x00FFFFFF + ((int) (0xFF * alphaPercent) << 24);
+                    int bgCol = (int) (f1 * 255.0F * alphaPercent) << 24;
+
+                    font.drawInBatch(component,
+                        f2,
+                        0,
+                        textCol,
+                        false,
+                        poseStack.last().pose(),
+                        MC.renderBuffers().bufferSource(),
+                        Font.DisplayMode.NORMAL,
+                        bgCol,
+                        255
+                    );
+
+                    poseStack.popPose();
+                }
+                floatingText.tickAge += 1;
+            }
+            floatingTexts.removeIf(t -> t.tickAge > FLOATING_TEXT_MAX_AGE);
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
-        floatingTexts.removeIf(t -> t.tickAge > FLOATING_TEXT_MAX_AGE);
     }
 }

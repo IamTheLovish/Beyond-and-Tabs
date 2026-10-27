@@ -142,13 +142,18 @@ public class OrdersObeyGameTests {
             }
             if (!reclicked[0])
                 return;
-            boolean arrived = dist(a, toA) < 1.6 && dist(b, toB) < 1.6;
+            // "arrived" as the game settles a unit: within PathfinderConfig.ARRIVAL_SETTLE (1.5 blocks of the target cell)
+            // plus the half block it may stand off the cell's centre. A fixed 1.6 failed on a unit that had settled 1.93
+            // from the spot and stayed there (CI stress, Oct 22: "A 1.93 from its spot, B 0.01")
+            double settle = Math.sqrt(com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig.ARRIVAL_SETTLE_SQ) + 0.75;
+            boolean arrived = dist(a, toA) < settle && dist(b, toB) < settle;
             if (!problems.isEmpty() || arrived || t > 330) {
                 done[0] = true;
                 try {
                     if (problems.isEmpty() && !arrived)
                         problems.add("not both arrived " + t + " ticks after the order: A " + TerrainGameTests.f(dist(a, toA))
-                            + " from its spot, B " + TerrainGameTests.f(dist(b, toB)) + " (B move target "
+                            + " from its spot (A move target " + goalA.getMoveTarget() + ", nav done " + a.getNavigation().isDone()
+                            + "), B " + TerrainGameTests.f(dist(b, toB)) + " (B move target "
                             + goalB.getMoveTarget() + ", nav done " + b.getNavigation().isDone() + ")");
                     TerrainGameTests.finish(helper, problems);
                 } finally {

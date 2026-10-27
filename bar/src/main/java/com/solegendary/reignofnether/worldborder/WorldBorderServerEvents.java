@@ -41,6 +41,12 @@ public class WorldBorderServerEvents {
         if (level == null)
             return;
 
+        // Once per world load: how much column the game builds, lights and meshes. The battlefield dimension type
+        // (data/reignofnether/dimension_type/battlefield.json, design/battlefield-height.md) is 192 high = 12
+        // sections; vanilla's overworld is 384 = 24, which lovish saw "rendering blocks underground".
+        ReignOfNether.LOGGER.info("[Battlefield] dimension height {}, sections per chunk {} (y {}..{})",
+                level.getHeight(), level.getSectionsCount(), level.getMinBuildHeight(), level.getMaxBuildHeight() - 1);
+
         WorldBorder border = level.getWorldBorder();
         // A small world border marks an RTS-optimised map; a vanilla-sized border is left fully untouched.
         if (!isRtsOptimisedMap(level))
@@ -119,7 +125,7 @@ public class WorldBorderServerEvents {
     // The pad below must match what runtime requests want (ChunkSnapshot.regionFor pads refY by
     // VERTICAL_RADIUS + SLACK both ways, and refY ~= the surface feet Y this heightmap returns) - a shallower
     // prewarm band fails covers() on first touch and every prewarmed chunk gets union-rebuilt, wasting the prewarm.
-    private static int[] surfaceBand(ChunkAccess chunk) {
+    static int[] surfaceBand(ChunkAccess chunk) {   // also ArenaPathing's
         int[] xs = {0, 15, 0, 15, 8};
         int[] zs = {0, 0, 15, 15, 8};
         int minSurf = Integer.MAX_VALUE;

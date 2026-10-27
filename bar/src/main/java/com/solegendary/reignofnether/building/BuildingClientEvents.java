@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
@@ -22,7 +23,7 @@ import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
-import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.player.OwnerColours;
 import com.solegendary.reignofnether.research.ResearchClient;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSources;
@@ -40,6 +41,7 @@ import net.minecraft.client.gui.screens.inventory.BeaconScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
@@ -60,7 +62,10 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import org.lwjgl.glfw.GLFW;
+
+import javax.annotation.Nullable;
 
 import java.awt.*;
 import java.util.*;
@@ -277,6 +282,8 @@ public class BuildingClientEvents {
 
     /** A metal patch is taken when a live building covers its centre (the snap, the area mex and the patch glow). */
     public static boolean isPatchTaken(BlockPos c) {
+        if (BlueprintClientEvents.covers(c))
+            return true;   // a queued extractor (a ghost) holds the patch too
         for (BuildingPlacement bp : buildings)
             if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
                     && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
@@ -405,7 +412,7 @@ public class BuildingClientEvents {
         AABB aabb = new AABB(minX, minY, minZ, maxX, minY, maxZ);
         MyRenderer.drawLineBox(matrix, aabb, r, g, 0, 0.5f);
         MyRenderer.drawSolidBox(matrix, vertexConsumer, aabb, Direction.UP, r, g, 0, 0.5f, rl);
-        AABB aabb2 = new AABB(minX, -64, minZ, maxX, minY, maxZ);
+        AABB aabb2 = new AABB(minX, MC.level != null ? MC.level.getMinBuildHeight() : -64, minZ, maxX, minY, maxZ);   // the world floor: the battlefield's is y 48
         MyRenderer.drawLineBox(matrix, aabb2, r, g, 0, 0.25f);
         // The blocks only ever got the red overlay (pack(0, 0) is "no tint"), so a ghost that fits looked like plain
         // blocks: the green plate sits under them, hidden from the RTS camera (Lane C playtest, Oct 20: "if they fit
@@ -430,8 +437,114 @@ public class BuildingClientEvents {
      */
 
 
+    // drawBuildingBoxes' per-frame scratch (client render thread only)
+    private static final Set<BuildingPlacement> SELECTED_SCRATCH = new ReferenceOpenHashSet<>();
+    private static final OwnerColours BOX_COLOURS = new OwnerColours();
+
+    /**
+     * Our workers' buildings queued into the fog, drawn as ghosts until a building stands on the site. The site test was
+     * {@code buildings.stream().map(b -> b.originPos).toList().contains(bp)} - a fresh list of every origin (~1,700 in
+     * lovish's Oct 21 match) for each queued site, every frame (perf plan R2). The client building grid answers the same
+     * question from one cell (BuildingGrid.hasOrigin: the same answer, BuildingGridGameTests).
+     */
+    private static void drawFogQueuedBuildings(PoseStack poseStack) {
+        if (MC.player == null)
+            return;
+        String me = MC.player.getName().getString();
+        Map<BlockPos, List<BuildingBlock>> fogBlocksToDraw = null;
+        for (LivingEntity le : UnitClientEvents.getAllUnits()) {
+            if (le instanceof Unit unit && le instanceof WorkerUnit workerUnit && unit.getOwnerName().equals(me)) {
+                Map<BlockPos, List<BuildingBlock>> fogBlocks = workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw();
+                if (fogBlocks.isEmpty())
+                    continue;
+                fogBlocks.keySet().removeIf(buildingGrid::hasOrigin);
+                if (fogBlocksToDraw == null)
+                    fogBlocksToDraw = new HashMap<>();
+                for (BlockPos pos : fogBlocks.keySet())
+                    fogBlocksToDraw.put(pos, fogBlocks.get(pos));
+            }
+        }
+        if (fogBlocksToDraw != null)
+            for (BlockPos pos : fogBlocksToDraw.keySet())
+                drawBuilding(fogBlocksToDraw.get(pos), poseStack, pos, 1);
+    }
+
+    /**
+     * The white box round the selected / hovered building and the owner-coloured underline under every building.
+     * In lovish's Oct 21 match this loop ran over all ~1,700 buildings every frame: a new AABB and java.awt.Color each, a
+     * fog test that allocates (BuildingUtils.getUniqueChunkBps), a List.contains on the selection and a pose push per box
+     * - at any zoom, with no frustum test (perf plan R2). Now a building that draws nothing (no box, underline off or
+     * carried by its strategic plate) costs a few field reads, one outside the level renderer's frustum an AABB and a
+     * plane test, the fog test is made only for a building that would get a box, colours are looked up once per owner per
+     * frame, and the camera translation is pushed once for the loop.
+     * <p>
+     * In strategic view the plates (StrategicViewClientEvents) carry the buildings: the team colour, the selection (a white
+     * 1.5 px outline) and the hover - the 3D wire boxes on top of them were a white tangle over five Groves in lovish's
+     * 23:07 clip, so there are none there, and now no underline under a plate either (it showed only as a sliver of
+     * line just off the plate's edge). A building without a plate - a bridge, or one not yet explored - keeps its
+     * underline in strategic view as before.
+     */
+    private static void drawBuildingBoxes(PoseStack poseStack, @Nullable Frustum frustum) {
+        BuildingPlacement preselectedBuilding = getPreselectedBuilding();
+        boolean strategic = com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView();
+        boolean underline = MinimapClientEvents.shouldUnderline();
+        boolean sandbox = SandboxClientEvents.isSandboxPlayer();
+        Set<BuildingPlacement> selected = SELECTED_SCRATCH;   // identity, as List.contains was (no equals of its own)
+        selected.clear();
+        if (!strategic)
+            selected.addAll(selectedBuildings);
+        BOX_COLOURS.clear();
+
+        VertexConsumer lines = null;   // fetched at the first box drawn, where the per-box helpers used to fetch it
+        try {
+            for (BuildingPlacement building : buildings) {
+                boolean isSelected = !strategic && selected.contains(building);
+                boolean boxed = isSelected || (!strategic && building == preselectedBuilding);
+                boolean plated = strategic && building.isExploredClientside && !(building.getBuilding() instanceof AbstractBridge);
+                boolean underlined = underline && !plated;
+                if (!boxed && !underlined)
+                    continue;
+                AABB aabb = new AABB(building.minCorner, building.maxCorner.offset(1, 1, 1));
+                if (frustum != null && !frustum.isVisible(aabb))
+                    continue;
+                if (!sandbox && building.isOutsideWorldBorder())
+                    continue;
+
+                if (boxed && FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
+                    float a = -1;
+                    if (isSelected)
+                        a = 1.0f;
+                    else if (!HudClientEvents.isMouseOverAnyButtonOrHud())   // the hovered building: bright while
+                        a = MiscUtil.isRightClickDown(MC) ? 1.0f : 0.5f;     // right-clicking it (any unit), else half
+                    if (a > 0) {
+                        if (lines == null)
+                            lines = beginBoxes(poseStack);
+                        MyRenderer.drawLineBoxInCameraSpace(poseStack, lines, aabb, 1.0f, 1.0f, 1.0f, a);
+                    }
+                }
+                if (underlined) {
+                    if (lines == null)
+                        lines = beginBoxes(poseStack);
+                    int rgb = BOX_COLOURS.display(building.ownerName);
+                    MyRenderer.drawLineBoxInCameraSpace(poseStack, lines, aabb.setMaxY(aabb.minY),
+                            ((rgb >> 16) & 0xFF) / 255.0f, ((rgb >> 8) & 0xFF) / 255.0f, (rgb & 0xFF) / 255.0f, 0.5f);
+                }
+            }
+        } finally {
+            if (lines != null)
+                poseStack.popPose();
+        }
+    }
+
+    private static VertexConsumer beginBoxes(PoseStack poseStack) {
+        VertexConsumer lines = MC.renderBuffers().bufferSource().getBuffer(RenderType.lines());
+        MyRenderer.pushCameraRelative(poseStack);
+        return lines;
+    }
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
             return;
         }
@@ -448,62 +561,15 @@ public class BuildingClientEvents {
 
     private static void renderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
 
-        drawBuildingToPlace(
+        if (!AreaMexClientEvents.active())   // Shift with an extractor: the area-mex circle replaces the single ghost
+            drawBuildingToPlace(
                 evt.getPoseStack(),
                 BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
                 0
         );
 
-        Map<BlockPos, List<BuildingBlock>> fogBlocksToDraw = new HashMap<>();
-        for (LivingEntity le : UnitClientEvents.getAllUnits()) {
-            if (le instanceof Unit unit && le instanceof WorkerUnit workerUnit &&
-                MC.player != null && unit.getOwnerName().equals(MC.player.getName().getString()))
-            {
-                Map<BlockPos, List<BuildingBlock>> fogBlocks = workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw();
-                fogBlocks.keySet().removeIf(bp -> buildings.stream().map(b -> b.originPos).toList().contains(bp));
-                for (BlockPos pos : fogBlocks.keySet())
-                    fogBlocksToDraw.put(pos, fogBlocks.get(pos));
-            }
-        }
-        for (BlockPos pos : fogBlocksToDraw.keySet()) {
-            drawBuilding(fogBlocksToDraw.get(pos), evt.getPoseStack(), pos, 1);
-        }
-
-        BuildingPlacement preselectedBuilding = getPreselectedBuilding();
-
-        for (BuildingPlacement building : buildings) {
-
-            boolean isInBrightChunk = FogOfWarClientEvents.isBuildingInBrightChunk(building);
-            boolean inWorldBorderOrInSandbox = SandboxClientEvents.isSandboxPlayer() || !building.isOutsideWorldBorder();
-
-            AABB aabb = new AABB(building.minCorner, building.maxCorner.offset(1, 1, 1));
-
-            var colorHex = new Color(PlayerColors.getPlayerDisplayColorHex(building.ownerName));
-            float r = colorHex.getRed() / 255.0f;
-            float g = colorHex.getGreen() / 255.0f;
-            float b = colorHex.getBlue() / 255.0f;
-
-            // in strategic view the plates already carry selection (white 1.5 px outline, StrategicViewClientEvents):
-            // the 3D wire boxes on top of them were a white tangle over five Groves in lovish's 23:07 clip
-            boolean strategic = com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView();
-            if (isInBrightChunk && inWorldBorderOrInSandbox && !strategic) {
-                if (selectedBuildings.contains(building)) {
-                    MyRenderer.drawLineBox(evt.getPoseStack(), aabb, 1.0f, 1.0f, 1.0f, 1.0f);
-                } else if (building.equals(preselectedBuilding) && !HudClientEvents.isMouseOverAnyButtonOrHud()) {
-                    if (hudSelectedEntity instanceof WorkerUnit && MiscUtil.isRightClickDown(MC)) {
-                        MyRenderer.drawLineBox(evt.getPoseStack(), aabb, 1.0f, 1.0f, 1.0f, 1.0f);
-                    } else {
-                        MyRenderer.drawLineBox(evt.getPoseStack(),
-                                aabb,
-                                1.0f, 1.0f, 1.0f,
-                                MiscUtil.isRightClickDown(MC) ? 1.0f : 0.5f
-                        );
-                    }
-                }
-            }
-            if (MinimapClientEvents.shouldUnderline() && inWorldBorderOrInSandbox)
-                MyRenderer.drawBoxBottom(evt.getPoseStack(), aabb, r, g, b, 0.5f);
-        }
+        drawFogQueuedBuildings(evt.getPoseStack());
+        drawBuildingBoxes(evt.getPoseStack(), evt.getFrustum());
 
         // draw rally points and lines
         ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
@@ -608,6 +674,13 @@ public class BuildingClientEvents {
         // prevent clicking behind HUDs
         if (HudClientEvents.isMouseOverAnyButtonOrHud()) {
             setBuildingToPlace(null);
+            return;
+        }
+
+        // Shift + extractor ghost: area mex (every free patch in the circle); the ghost stays armed like a Shift placement
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1 && AreaMexClientEvents.active()) {
+            AreaMexClientEvents.place();
+            evt.setCanceled(true);
             return;
         }
 
@@ -1017,6 +1090,7 @@ public class BuildingClientEvents {
             }
             // a levelled lab joins in its level's structure (design/building_upgrades.md)
             BuildingLevels.restore(newBuilding, upgradeLevel);
+            BlueprintClientEvents.remove(newBuilding.originPos);   // the site has risen: its ghost gives way
             buildings.add(newBuilding);
             // only production buildings have a queue. The server decides who may have it (PacketAuth.mayActFor): the
             // client can't, because at join the buildings arrive before the game mode and allied control (event

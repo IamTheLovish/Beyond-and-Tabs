@@ -90,6 +90,7 @@ public class RtsDebugPathPreview {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
         if (MC.level == null || MC.player == null || evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES
                 || RtsDebugClientEvents.displayMode != DebugDisplayMode.PATHFINDING
                 || !OrthoviewClientEvents.isEnabled())

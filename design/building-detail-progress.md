@@ -19,7 +19,7 @@ Design write-up: `design/building_detail.md`.
   and heartwood hall detail. FoundryHall / HeartwoodHall `buildTimeBlocks` = old counts (428 / 498).
 - Contact sheets `design/building_preview_*.png`; `design/building_detail.md`.
 
-## Status: complete (not merged to main)
+## Status: complete. Stale "not merged" corrected Oct 26 2026: the work is on main (no PR number - it landed before the PR workflow; `tools/gen_lab_levels.py` per-faction L2/L3 first appears in main history at 41b03205, 2026-10-19; `design/building_detail.md` at 1fe3bbf7, 2026-10-16).
 
 ## Next / open
 - CI: green at 91969dc and 97558d5 (all structure GameTests pass). Two runs failed only on the timing test

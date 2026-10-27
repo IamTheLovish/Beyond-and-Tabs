@@ -366,7 +366,7 @@ def statue():
     wings(m)
     head(m)
     _, G = sword(m)
-    hands = m.bone("hands", [0, SHOULDER_Y, 0], parent="body")
+    m.bone("hands", [0, SHOULDER_Y, 0], parent="body")
     m.contact_ok += [("hands", "sword"), ("hands", "left_fore"), ("hands", "right_fore"), ("body", "wing_left"),
                      ("body", "wing_right"), ("body", "head")]
     la = arm(m, 1)

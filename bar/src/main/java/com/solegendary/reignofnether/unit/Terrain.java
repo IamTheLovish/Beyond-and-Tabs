@@ -125,8 +125,8 @@ public final class Terrain {
      * (the chase prices them like the pathfinder: a cost, not a wall); lava and blocked cells never.
      */
     public static boolean canStand(Level level, BlockPos cell, MobilityClass mobility) {
-        byte kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
-        if (kind == WalkabilityBuilder.KIND_WATER)
+        byte kind = classify(level, cell);
+        if (WalkabilityBuilder.isWater(kind))   // a ford as much as deep water: the fight stays on the bank
             return mobility == MobilityClass.AQUATIC || mobility == MobilityClass.TIDAL;
         if (kind == WalkabilityBuilder.KIND_LAVA)
             return mobility == MobilityClass.FIRE_IMMUNE;
@@ -135,8 +135,78 @@ public final class Terrain {
 
     /** {@link #canStand} on a dry cell only: where a chase waits for a target it must not follow into water. */
     public static boolean isLand(Level level, BlockPos cell) {
-        byte kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
-        return kind != WalkabilityBuilder.KIND_BLOCKED && kind != WalkabilityBuilder.KIND_WATER
+        byte kind = classify(level, cell);
+        return kind != WalkabilityBuilder.KIND_BLOCKED && !WalkabilityBuilder.isWater(kind)
             && kind != WalkabilityBuilder.KIND_LAVA;
+    }
+
+    // ---- the per-tick classify memo ----
+    // Engage.melee asks standCell for up to 8 ring cells (and 40 more on the outer rings), 1-3 classify calls each,
+    // for every chaser on every repath; in a scrum the chasers of one target ask about the same few dozen cells, and
+    // each classify reads 3+ block states through the chunk lookup (the Oct 22 match: the "unspecified" Engage
+    // getChunk storm under tinker, 2.35% of the tick). The answer is the same for the rest of the tick unless a block
+    // changes, so the server thread memoises it: cleared when the game time or the level changes, and on any block
+    // change (LevelChunkMixin bumps blockChanges). The client and other threads read the level directly.
+    private static final it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap MEMO = new it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap();
+    private static Level memoLevel = null;
+    private static long memoTime = Long.MIN_VALUE;
+    private static int memoChanges = 0;
+    private static volatile int blockChanges = 0;
+    private static volatile Thread memoThread = null;
+    /** Calls answered from the memo / read from the level (tests, perf notes). */
+    public static long memoHits = 0, memoMisses = 0;
+
+    /** "hits/lookups" since the last call, for the [Paths] line; resets the counters. */
+    public static String memoReport() {
+        String r = memoHits + "/" + (memoHits + memoMisses) + " hits";
+        memoHits = 0;
+        memoMisses = 0;
+        return r;
+    }
+
+    /** Any block change in a loaded chunk (LevelChunkMixin): what was memoised this tick may be stale now. */
+    public static void onBlockChanged() {
+        blockChanges++;
+    }
+
+    /** WalkabilityBuilder.classify, memoised per tick on the server thread. */
+    public static byte classify(Level level, BlockPos cell) {
+        if (level.isClientSide() || !(level instanceof ServerLevel server) || Thread.currentThread() != serverThread(server))
+            return WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
+        long now = level.getGameTime();
+        int changes = blockChanges;
+        if (level != memoLevel || now != memoTime || changes != memoChanges) {
+            MEMO.clear();
+            memoLevel = level;
+            memoTime = now;
+            memoChanges = changes;
+        }
+        long key = cell.asLong();
+        byte kind = MEMO.getOrDefault(key, (byte) -1);
+        if (kind != (byte) -1) {
+            memoHits++;
+            return kind;
+        }
+        memoMisses++;
+        kind = WalkabilityBuilder.classify(level, cell.getX(), cell.getY(), cell.getZ());
+        MEMO.put(key, kind);
+        return kind;
+    }
+
+    private static Thread serverThread(ServerLevel level) {
+        Thread t = memoThread;
+        if (t == null) {
+            t = level.getServer().getRunningThread();
+            memoThread = t;
+        }
+        return t;
+    }
+
+    /** The server stopped: drop the memo (and its level) so an integrated server's next world starts clean. */
+    public static void resetMemo() {
+        MEMO.clear();
+        memoLevel = null;
+        memoTime = Long.MIN_VALUE;
+        memoThread = null;
     }
 }

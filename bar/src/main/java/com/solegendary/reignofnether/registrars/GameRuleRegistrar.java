@@ -25,6 +25,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.BooleanValue> DO_NETHER_CONVERSION;
     public static GameRules.Key<GameRules.BooleanValue> BUILDINGS_OUTSIDE_BORDER;
     public static GameRules.Key<GameRules.BooleanValue> FORCE_FOG;
+    public static GameRules.Key<GameRules.BooleanValue> FOG_BY_DEFAULT;
     public static GameRules.Key<GameRules.BooleanValue> RTS_PATHFINDING;
     public static GameRules.Key<GameRules.IntegerValue> PATHFINDING_THREADS;
     public static GameRules.Key<GameRules.IntegerValue> PATHFINDING_CHUNK_BUILDS;
@@ -33,6 +34,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
     public static GameRules.Key<GameRules.BooleanValue> PLANT_COVER;
     public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
+    public static GameRules.Key<GameRules.BooleanValue> IDLE_RECLAIM;
     public static GameRules.Key<GameRules.BooleanValue> DO_FACTION_TERRAFORM;
     public static GameRules.Key<GameRules.IntegerValue> MATCH_DAY_CYCLE;
 
@@ -109,6 +111,13 @@ public class GameRuleRegistrar {
         FORCE_FOG = GameRules.register("reignofnetherForceFog", GameRules.Category.MISC,
                 GameRules.BooleanValue.create(false)
         );
+        // a new match (lobby or skirmish, MatchState.adopt) starts with fog of war on; set false before the match to
+        // start without it. Unlike reignofnetherForceFog this never refuses /rts-fog disable. Fog needs a bounded
+        // play area (FogOfWarServerEvents.setEnabled), so a match start also fits a world border round its arena
+        // (fitBorderForMatch); with this rule off the world border is left alone too.
+        FOG_BY_DEFAULT = GameRules.register("reignofnetherFogByDefault", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
         // use the RTS-optimised pathfinder (async grid A*, walkability cache) instead of vanilla.
         // Auto-enabled at world load for RTS-optimised maps (small world border) - see
         // WorldBorderServerEvents - which also prewarms the navmesh. Off otherwise.
@@ -145,6 +154,11 @@ public class GameRuleRegistrar {
                 GameRules.BooleanValue.create(true)
         );
         COMMANDER_DEFEAT = GameRules.register("commanderDefeat", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // Beyond and Tabs: an idle worker with a wreck within 8 blocks strips it on its own (WreckServerEvents.autoReclaimIdle,
+        // lovish Oct 24: winning a fight should pay). Off: workers only reclaim what they are ordered to (or stand next to)
+        IDLE_RECLAIM = GameRules.register("idleReclaim", GameRules.Category.MISC,
                 GameRules.BooleanValue.create(true)
         );
         // Beyond and Tabs: the ground round a faction's capitol and labs slowly takes the faction's look (FactionAura,
