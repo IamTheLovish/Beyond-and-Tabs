@@ -39,8 +39,6 @@ public class HudSettingsScreen extends Screen {
 
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_STATS_OPEN,
                 "Stats table open", "Stats table collapsed").pos(left, y).size(colW, rowH));
-        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_KILLFEED_COLLAPSED,
-                "Kill feed: one line", "Kill feed: five lines").pos(right, y).size(colW, rowH));
         y += step;
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HUD_ALERTS_COLLAPSED,
                 "Alerts as icons", "Alerts as text").pos(left, y).size(colW, rowH));
@@ -65,6 +63,15 @@ public class HudSettingsScreen extends Screen {
         // onboarding (design/onboarding.md): the one-line first-time tips in matches
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.ONBOARDING_TIPS,
                 "First-time tips on", "First-time tips off").pos(left, y).size(colW, rowH));
+        // the hero fights by itself while you are not possessing it (HeroBot); the server hears of a change at once
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HERO_AI,
+                "Hero AI on", "Hero AI off") {
+            @Override
+            public void onPress() {
+                super.onPress();
+                com.solegendary.reignofnether.hero.HeroServerboundPacket.sendHeroAi(this.selected());
+            }
+        }.pos(right, y).size(colW, rowH));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20,
                 Component.literal("HUD keys..."),

@@ -56,12 +56,17 @@ public final class Sys {
     public static final int CHUNK_LOADER = 18;     // keeping the chunks around units loaded
     public static final int ECONOMY = 19;          // income, stalls and the resource sync
     public static final int FOG_OF_WAR = 20;       // the server half of fog of war
-    public static final int SECTIONS = 21;
+    public static final int PUSH_SCAN = 21;        // a unit's vanilla push looking up the bodies it overlaps
+    public static final int MOUNT_SCAN = 22;       // a unit looking for a mount (MountGoal autofind)
+    public static final int NEUTRAL_AGGRO = 23;    // the once-a-second query for the wild mobs near each unit (neutral aggro)
+    public static final int TARGET_GRID = 24;      // the rebuild of TargetScan's per-tick grid of living entities
+    public static final int SECTIONS = 25;
 
     static final String[] NAMES = {
         "unit", "attacker", "attacker/attackMove", "attacker/idleAggro", "attacker/retarget", "attacker/entityScan",
         "attacker/buildingScan", "separation", "stuckNudge", "unstick", "reactions", "pathfinder", "buildings", "bots",
-        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar" };
+        "unitSync", "commandQueues", "autoCaster", "unitGrid", "chunkLoader", "economy", "fogOfWar", "pushScan",
+        "mountScan", "neutralAggro", "targetGrid" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
@@ -81,6 +86,8 @@ public final class Sys {
 
     // all below: server thread
     private static boolean forced = false, slow = false;
+    /** Who is forcing measuring on right now ({@link #force}); forced = not empty. */
+    private static final java.util.Set<Object> HOLDERS = new java.util.HashSet<>();
     private static int captureRefs = 0;
     private static double windowTickMs = 0;
     /** The last [Sys] line written (tests and the lag-capture summary read it). */
@@ -117,10 +124,20 @@ public final class Sys {
         return on;
     }
 
-    /** Switch measuring on for a test, whatever the tick times are. Call from the server thread. */
-    public static void force(boolean value) {
+    /**
+     * Switch measuring on (true) or off (false) for one holder - a test - whatever the tick times are. Measuring stays
+     * forced while ANY holder holds it: the game-test server runs a batch's tests side by side, and one global flag let
+     * a test that finished switch measuring off in the middle of another's window (unit_push_neighbour_lookups_are_counted
+     * counted 174 of 1600 lookups on main 5421b13f, Oct 26). Releasing twice, or a holder that never held, is harmless.
+     * Call from the server thread.
+     */
+    public static void force(Object holder, boolean value) {
         serverThread = Thread.currentThread();
-        forced = value;
+        if (value)
+            HOLDERS.add(holder);
+        else
+            HOLDERS.remove(holder);
+        forced = !HOLDERS.isEmpty();
         refresh();
     }
 
@@ -193,10 +210,19 @@ public final class Sys {
         return TIMER.calls[id];
     }
 
+    /**
+     * A section's self nanoseconds and calls while measuring, summed since the server started - never reset by a
+     * report, so a benchmark can difference two readings across the 10-second [Sys] windows. {calls, nanos}.
+     */
+    public static long[] lifetime(int id) {
+        return new long[] { TIMER.lifetimeCalls[id], TIMER.lifetimeNs[id] };
+    }
+
     static void onServerStopping() {
         on = false;
         serverThread = null;
         forced = false;
+        HOLDERS.clear();
         captureRefs = 0;
         slow = false;
         windowTickMs = 0;

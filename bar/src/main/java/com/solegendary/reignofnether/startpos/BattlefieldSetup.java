@@ -106,7 +106,9 @@ public class BattlefieldSetup {
         premadeLayout = null;
         wallStands = false;
         if (premade != null) {
-            // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge
+            // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge. The
+            // lobby's metal richness is already in them (MatchSetup.layout builds the map with it, maps spec M1), so
+            // the override is only cleared here - it used to be the line that made the setting do nothing on these maps
             richnessOverride = -1f;
             arenaRadiusOverride = -1;
             ReignOfNether.LOGGER.info("[BattlefieldSetup] forming {} for {} bases{}", premade.preset.displayName,

@@ -11,15 +11,12 @@ import com.solegendary.reignofnether.building.BuildingPlaceButton;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ItemShopPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractFarm;
-import com.solegendary.reignofnether.building.buildings.villagers.IronGolemBuilding;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
@@ -42,7 +39,6 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.research.ResearchClient;
-import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.resources.ResourceSources;
 import com.solegendary.reignofnether.resources.Resources;
@@ -85,6 +81,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ScreenEvent;
@@ -300,21 +297,14 @@ public class UnitClientEvents {
         return unitPopulationCache.getOrDefault(playerName, 0);
     }
 
+    private static final QueuePopulation queuePopulation = new QueuePopulation();
+
     public static int getCurrentPopulation(String playerName) {
-        int currentPopulation = 0;
-        if (MC.level != null) {
-            currentPopulation += getUnitPopulation(playerName);
-            for (BuildingPlacement building : BuildingClientEvents.getBuildings())
-                if (building.ownerName.equals(playerName))
-                    if (building instanceof ProductionPlacement prodBuilding) {
-                        for (ActiveProduction prodItem : prodBuilding.productionQueue)
-                            if (!(prodBuilding instanceof GraveyardPlacement gy) || gy.getUpgradeLevel() <= 0)
-                                currentPopulation += prodItem.item.getCost(true, playerName).population;
-                    } else if (building.getBuilding() instanceof IronGolemBuilding) {
-                        currentPopulation += ResourceCosts.IRON_GOLEM.population;
-                    }
-        }
-        return currentPopulation;
+        if (MC.level == null)
+            return 0;
+        // the queue part is memoised per owner per client tick too (QueuePopulation: any queue change recounts at once)
+        return getUnitPopulation(playerName)
+            + queuePopulation.of(playerName, BuildingClientEvents.getBuildings(), true, MC.level.getGameTime(), true);
     }
 
     public static void sendUnitCommandManual(String playerName, UnitAction action, int unitId, int[] unitIds,
@@ -426,7 +416,11 @@ public class UnitClientEvents {
     }
 
     public static void sendUnitCommand(UnitAction action, Predicate<LivingEntity> includeUnit) {
-        BlockPos bp = getPreselectedBlockPos();
+        sendUnitCommandAt(action, includeUnit, getPreselectedBlockPos());
+    }
+
+    /** sendUnitCommand aimed at {@code bp} instead of the cursor's picked block (a blueprint ghost's centre). */
+    public static void sendUnitCommandAt(UnitAction action, Predicate<LivingEntity> includeUnit, BlockPos bp) {
 
         if (action.name().toLowerCase().contains("startrts")) {
             if (action == UnitAction.STARTRTS_VILLAGERS) {
@@ -534,8 +528,14 @@ public class UnitClientEvents {
         }
         // follow friendly unit
         if (preselectedUnits.size() == 1 && !targetingSelf()) {
+            LivingEntity clicked = preselectedUnits.get(0);
+            Relationship rel = getPlayerToEntityRelationship(clicked);
             if (hudSelectedEntity instanceof WitchUnit) {
                 sendUnitCommand(UnitAction.THROW_LINGERING_REGEN_POTION);
+            } else if (GuardServerEvents.rightClickGuards(selectedUnits, clicked,
+                    rel == Relationship.OWNED || rel == Relationship.FRIENDLY)) {
+                // builders + a friendly builder under the cursor: assist it (BAR guard), not just walk behind it
+                sendUnitCommand(UnitAction.GUARD);
             } else {
                 sendUnitCommand(UnitAction.FOLLOW);
             }
@@ -697,10 +697,7 @@ public class UnitClientEvents {
     // dying (health <= 0, death animation playing) or removed for good (killed/discarded). Entities that merely left
     // render distance (UNLOADED_*) are kept on purpose - see onEntityLeave.
     public static boolean isDeadForSelection(LivingEntity e) {
-        if (e.isDeadOrDying())
-            return true;
-        Entity.RemovalReason reason = e.getRemovalReason();
-        return reason != null && reason.shouldDestroy();
+        return SelectionKeep.shouldDrop(e.isDeadOrDying(), e.getRemovalReason());
     }
 
     private static final int VIS_CHECK_TICKS_MAX = 10;
@@ -786,6 +783,12 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
+    // entity ids start over in the next world: fog-site ghosts kept per worker id must not outlive this one
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut evt) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetAllGhosts();
+    }
+
     @SubscribeEvent
     public static void onEntityLeaveEvent(EntityLeaveLevelEvent evt) {
         try {
@@ -802,6 +805,7 @@ public class UnitClientEvents {
      * Therefore, only remove entities if they leave serverside via UnitClientboundPacket.
      */
     public static void onEntityLeave(int entityId) {
+        com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetGhosts(entityId);
         selectedUnits.removeIf(e -> e.getId() == entityId);
         //System.out.println("selectedUnits removed entity: " + entityId);
         preselectedUnits.removeIf(e -> e.getId() == entityId);
@@ -1048,6 +1052,7 @@ public class UnitClientEvents {
             rightClickActionTaken = false;
             if (!selectedUnits.isEmpty()) {
                 BuildingPlacement preSelBuilding = BuildingClientEvents.getPreselectedBuilding();
+                BuildingPlacement ghost;   // a friendly blueprint ghost under the cursor, looked up only if reached below
 
                 // right click -> mount friendly unit
                 UnitAction mountAction = null;
@@ -1111,6 +1116,15 @@ public class UnitClientEvents {
                         sendUnitCommand(UnitAction.BUILD_REPAIR);
                     else
                         resolveMoveActionDeferred();
+                }
+                // right click -> send the builder to build (or assist) a friendly blueprint ghost (building/Blueprints).
+                // The ghost has no blocks, so the picked block is the ground behind/under it: the order is aimed at
+                // the ghost's centre (inside its box: the server's Blueprints.findAt matches it, and the builder walks to the middle, not
+                // the corner origin, which can be off a pad edge). Shift queues it like any order.
+                else if (hudSelectedEntity instanceof WorkerUnit && preSelBuilding == null
+                        && (ghost = com.solegendary.reignofnether.building.BlueprintClientEvents.ghostUnderCursor()) != null) {
+                    sendUnitCommandAt(UnitAction.BUILD_REPAIR, null, ghost.centrePos);
+                    rightClickActionTaken = true;
                 }
                 // right click -> follow friendly unit or go to preselected blockPos
                 else
@@ -1342,6 +1356,8 @@ public class UnitClientEvents {
                                              LivingEntity entity, boolean isSelected, boolean isPreselected,
                                              boolean isMouseOverAnyButtonOrHud, boolean isLeftClickAttack,
                                              boolean targetingSelf, boolean isRightClickDown) {
+        if (entity.isRemoved())
+            return;   // kept selected after leaving tracking range (SelectionKeep): not drawn
         AABB entityAABB = entity.getBoundingBox();
         if (entity instanceof Unit unit)
             entityAABB = unit.getInflatedSelectionBox();
@@ -1487,6 +1503,7 @@ public class UnitClientEvents {
             int gn = 0, gTicks = 0;
             boolean gGreen = true;
             for (LivingEntity entity : getSelectedUnits()) {
+                if (entity.isRemoved()) continue;   // kept selected after leaving tracking range: nothing to draw
                 if (entity instanceof Unit unit) {
                     float entityYOffset1 = 1.74f - ((LivingEntity) unit).getEyeHeight() - 1;
                     Vec3 firstPos = ((LivingEntity) unit).getEyePosition().add(0, entityYOffset1,0);

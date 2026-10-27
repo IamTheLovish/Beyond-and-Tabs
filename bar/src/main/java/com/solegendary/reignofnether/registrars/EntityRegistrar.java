@@ -939,6 +939,12 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "horde_warchief_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.AshShamanUnit>> ASH_SHAMAN_UNIT = ENTITIES.register("ash_shaman_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.AshShamanUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth(), EntityType.PIGLIN_BRUTE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ash_shaman_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit>> THORNHEART_DRUID_UNIT = ENTITIES.register("thornheart_druid_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.SKELETON.getWidth(), EntityType.SKELETON.getHeight())

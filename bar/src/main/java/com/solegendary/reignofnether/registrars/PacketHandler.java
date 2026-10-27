@@ -416,6 +416,13 @@ public final class PacketHandler {
                 .consumerMainThread(FogBuildingClientboundPacket::handle)
                 .add();
 
+        // a blueprint's ghost (building/Blueprints): owner, allies and spectators only
+        INSTANCE.messageBuilder(BlueprintClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(BlueprintClientboundPacket::encode)
+                .decoder(BlueprintClientboundPacket::new)
+                .consumerMainThread(BlueprintClientboundPacket::handle)
+                .add();
+
         INSTANCE.messageBuilder(CustomButtonActionServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(CustomButtonActionServerboundPacket::encode)
                 .decoder(CustomButtonActionServerboundPacket::decode)
@@ -523,11 +530,6 @@ public final class PacketHandler {
                 .encoder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.reactions.ReactionClientboundPacket::handle)
-                .add();
-        INSTANCE.messageBuilder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::encode)
-                .decoder(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::decode)
-                .consumerMainThread(com.solegendary.reignofnether.hud.KillFeedClientboundPacket::handle)
                 .add();
         INSTANCE.messageBuilder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(com.solegendary.reignofnether.resources.WreckSyncClientboundPacket::encode)

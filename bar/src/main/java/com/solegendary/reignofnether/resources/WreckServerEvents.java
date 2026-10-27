@@ -3,10 +3,16 @@ package com.solegendary.reignofnether.resources;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
+import com.solegendary.reignofnether.unit.interfaces.CombatEngineer;
+import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +49,11 @@ import java.util.Map;
  * unit's faction (FactionTraits): Sunforged leave broken iron, Gravebound bone, the Horde rusted copper.
  * They decay after {@link #LIFETIME_TICKS} and at most {@link #MAX_WRECKS} exist (oldest go first), so a long
  * 8v8 cannot pile them up into a frame-rate problem.
+ *
+ * Winning pays (lovish, Oct 24: like Beyond All Reason, decisive kills matter): a commander leaves a
+ * {@link #COMMANDER_WRECK_METAL} heap and a hero {@link #heroWreckMetal} (150 + 50 per level) - never less than the
+ * normal half-cost heap - and an idle worker within {@link #IDLE_RECLAIM_RANGE} blocks of a wreck walks over and strips
+ * it by itself ({@link #autoReclaimIdle}, the {@code idleReclaim} gamerule, on by default).
  */
 public class WreckServerEvents {
 
@@ -58,10 +69,36 @@ public class WreckServerEvents {
     public static final int MAX_WRECKS = 150;
     public static final double CHAIN_RANGE = 10.0;
 
+    /**
+     * What a fallen commander leaves, in metal: BAR's commander wreck is a prize worth fighting over, so the side that
+     * kills one can tech up from it (lovish, Oct 24: winning a fight should pay off, as in Beyond All Reason, so the
+     * winner techs faster). A pick for lovish to tune; an ordinary worker's heap is {@code cost * WRECK_SHARE} (25).
+     */
+    public static final float COMMANDER_WRECK_METAL = 600f;
+    /** A fallen hero's wreck is {@code HERO_WRECK_BASE + HERO_WRECK_PER_LEVEL * level} (lovish, Oct 24); at least the normal share. */
+    public static final float HERO_WRECK_BASE = 150f;
+    public static final float HERO_WRECK_PER_LEVEL = 50f;
+    /**
+     * An idle worker this close to a wreck (blocks) starts reclaiming it on its own (design/playtest_oct20_lane_c.md
+     * #32, lovish Oct 24). Past the 3-block strip reach on purpose: the worker walks over; the scan runs once a second.
+     */
+    public static final double IDLE_RECLAIM_RANGE = 8.0;
+    /** An auto-assigned wreck the worker has not reached after this long is dropped (cliff, water, walled in). */
+    static final int IDLE_RECLAIM_GIVE_UP_TICKS = 20 * 12;
+
+    /** Metal in a hero's wreck at {@code level}. */
+    public static float heroWreckMetal(int level) {
+        return HERO_WRECK_BASE + HERO_WRECK_PER_LEVEL * Math.max(1, level);
+    }
+
     private static final List<Entity> wrecks = new ArrayList<>();
     // explicit RECLAIM orders: worker entity id -> the wreck it was told to strip. While an entry is live the
     // worker counts as busy (WorkerUnit.isIdle), so shift-queued orders behind it wait their turn. Server only.
     private static final Map<Integer, Entity> reclaimTargets = new HashMap<>();
+    // idle auto-reclaim bookkeeping (server only): worker id -> game time its auto-assigned wreck is given up, and
+    // worker id -> the wreck id it gave up on (not offered to it again)
+    private static final Int2LongOpenHashMap autoUntil = new Int2LongOpenHashMap();
+    private static final Int2IntOpenHashMap autoGaveUp = new Int2IntOpenHashMap();
     // tickReclaim's per-call spatial bucket of the wrecks (cell lists are reused between calls)
     private static final Long2ObjectOpenHashMap<ArrayList<Entity>> CELLS = new Long2ObjectOpenHashMap<>();
 
@@ -103,7 +140,9 @@ public class WreckServerEvents {
         return w != null && !w.isRemoved();
     }
 
-    @SubscribeEvent
+    // LOW: after HeroServerEvents' Totem of Undying has had its say - a hero it saves is not dead and leaves nothing
+    // (a cancelled event is not delivered to this handler)
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOW)
     public static void onDeath(LivingDeathEvent evt) {
         LivingEntity le = evt.getEntity();
         if (le.level().isClientSide() || !(le.level() instanceof ServerLevel level) || !(le instanceof Unit unit))
@@ -117,9 +156,23 @@ public class WreckServerEvents {
         if (com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))
             return;   // and a Mirror Mage's decoy (it never dies anyway: it shatters)
         ResourceCost cost = unit.getCost();
-        if (cost == null || cost.metal() < MIN_COST)
+        float metal = cost == null || cost.metal() < MIN_COST ? 0 : cost.metal() * WRECK_SHARE;
+        metal = Math.max(metal, decisiveKillWreck(le));
+        if (metal <= 0)
             return;
-        spawnWreck(level, le.getX(), le.getY(), le.getZ(), cost.metal() * WRECK_SHARE, Factions.getFaction(unit));
+        spawnWreck(level, le.getX(), le.getY(), le.getZ(), metal, Factions.getFaction(unit));
+    }
+
+    /**
+     * The least a unit's wreck holds because of who it was: a commander {@link #COMMANDER_WRECK_METAL}, a hero
+     * {@link #heroWreckMetal} at its level, anyone else 0 (their wreck is {@code cost * WRECK_SHARE}).
+     */
+    public static float decisiveKillWreck(LivingEntity dead) {
+        if (CommanderServerEvents.isCommander(dead))
+            return COMMANDER_WRECK_METAL;
+        if (dead instanceof HeroUnit hero)
+            return heroWreckMetal(hero.getHeroLevel());
+        return 0;
     }
 
     public static Entity spawnWreck(ServerLevel level, double x, double y, double z, float metal, Faction faction) {
@@ -172,6 +225,8 @@ public class WreckServerEvents {
         wrecks.clear();
         reclaimTargets.clear();
         CELLS.clear();
+        autoUntil.clear();
+        autoGaveUp.clear();
     }
 
     @SubscribeEvent
@@ -182,6 +237,29 @@ public class WreckServerEvents {
         if (level.getGameTime() % 20 != 0)
             return;
         tickReclaim(level, 1f);
+        autoReclaimIdle(level);
+    }
+
+    /**
+     * Buckets the wrecks by 16x16 cell, so each worker only looks at the one to four cells its reach touches instead of
+     * every wreck on the map (workers x wrecks was the cost of tickReclaim at 8v8).
+     */
+    private static void bucketWrecks() {
+        if (CELLS.size() > 4 * MAX_WRECKS)   // empty cells of old battlefields: start over now and then
+            CELLS.clear();
+        for (ArrayList<Entity> cell : CELLS.values())
+            cell.clear();
+        for (Entity w : wrecks) {
+            if (w.isRemoved())
+                continue;
+            long k = cellKey(Mth.floor(w.getX()) >> 4, Mth.floor(w.getZ()) >> 4);
+            ArrayList<Entity> cell = CELLS.get(k);
+            if (cell == null) {
+                cell = new ArrayList<>();
+                CELLS.put(k, cell);
+            }
+            cell.add(w);
+        }
     }
 
     /** One reclaim step covering {@code seconds} of work. Public for the game test. */
@@ -200,21 +278,7 @@ public class WreckServerEvents {
             else if (now - born > LIFETIME_TICKS)
                 remove(level, w, false);
         }
-        // bucket the wrecks by 16x16 cell once, so each worker only looks at the one to four cells its reclaim range
-        // touches instead of every wreck on the map (workers x wrecks was the cost of this method at 8v8)
-        if (CELLS.size() > 4 * MAX_WRECKS)   // empty cells of old battlefields: start over now and then
-            CELLS.clear();
-        for (ArrayList<Entity> cell : CELLS.values())
-            cell.clear();
-        for (Entity w : wrecks) {
-            long k = cellKey(Mth.floor(w.getX()) >> 4, Mth.floor(w.getZ()) >> 4);
-            ArrayList<Entity> cell = CELLS.get(k);
-            if (cell == null) {
-                cell = new ArrayList<>();
-                CELLS.put(k, cell);
-            }
-            cell.add(w);
-        }
+        bucketWrecks();
         // drop orders whose wreck is gone (decayed, raised, stripped by someone else) or whose worker died
         reclaimTargets.values().removeIf(Entity::isRemoved);
         double r2 = RECLAIM_RANGE * RECLAIM_RANGE;
@@ -272,6 +336,98 @@ public class WreckServerEvents {
             if (left <= 0.01f) {
                 remove(level, nearest, true);
                 chainToNextWreck(nearest, le, u);
+            }
+        }
+    }
+
+    /**
+     * Idle auto-reclaim (backlog #32; lovish Oct 24: winning a fight should pay): once a second, a worker that has
+     * nothing to do and a wreck within {@link #IDLE_RECLAIM_RANGE} blocks is sent to strip it, by the same path an
+     * explicit RECLAIM order takes (a reclaim target + a move target), so it counts as busy until the heap is gone and
+     * {@link #chainToNextWreck} carries it on through a field of wrecks.
+     * <p>
+     * It never takes a worker off anything: only a worker that is {@code Unit.isIdle()} (not building, repairing,
+     * gathering, walking to an order, fighting or casting) with nothing queued behind, and not one that already has a
+     * reclaim target. Commanders (they guard the match; the bots keep theirs home) and combat engineers (they march
+     * with the army and mend what is hurt first) are left alone; they still strip a wreck they stand within
+     * {@link #RECLAIM_RANGE} of. The {@code idleReclaim} gamerule switches it off. The scan is the spatial index
+     * tickReclaim uses: a worker with no wreck in its nine cells costs nine empty lookups. A target the worker has not
+     * reached after {@link #IDLE_RECLAIM_GIVE_UP_TICKS} is dropped and not offered again (a wreck over a cliff would
+     * otherwise keep the worker "busy" until the heap decays). Public for the game test.
+     */
+    public static void autoReclaimIdle(ServerLevel level) {
+        wrecks.removeIf(Entity::isRemoved);
+        if (wrecks.isEmpty()) {
+            autoUntil.clear();
+            return;
+        }
+        if (!level.getGameRules().getBoolean(GameRuleRegistrar.IDLE_RECLAIM))
+            return;
+        long now = level.getGameTime();
+        if (!autoUntil.isEmpty())
+            dropStaleAutoTargets(level, now);
+        if (autoGaveUp.size() > 512)
+            autoGaveUp.clear();
+        bucketWrecks();
+        double reach2 = IDLE_RECLAIM_RANGE * IDLE_RECLAIM_RANGE, strip2 = RECLAIM_RANGE * RECLAIM_RANGE;
+        boolean tutorial = com.solegendary.reignofnether.onboarding.OnboardingServer.isActive();
+        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (!(le instanceof WorkerUnit) || !(le instanceof Unit u) || !le.isAlive() || le.level() != level
+                    || le instanceof CombatEngineer || reclaimTargets.containsKey(le.getId()))
+                continue;
+            int gaveUp = autoGaveUp.getOrDefault(le.getId(), -1);
+            Entity nearest = null;
+            double best = reach2;
+            int x0 = Mth.floor(le.getX() - IDLE_RECLAIM_RANGE) >> 4, x1 = Mth.floor(le.getX() + IDLE_RECLAIM_RANGE) >> 4;
+            int z0 = Mth.floor(le.getZ() - IDLE_RECLAIM_RANGE) >> 4, z1 = Mth.floor(le.getZ() + IDLE_RECLAIM_RANGE) >> 4;
+            for (int cx = x0; cx <= x1; cx++)
+                for (int cz = z0; cz <= z1; cz++) {
+                    ArrayList<Entity> cell = CELLS.get(cellKey(cx, cz));
+                    if (cell == null)
+                        continue;
+                    for (int i = 0, n = cell.size(); i < n; i++) {
+                        Entity w = cell.get(i);
+                        double d = w.distanceToSqr(le);
+                        if (d <= best && w.getId() != gaveUp) {
+                            best = d;
+                            nearest = w;
+                        }
+                    }
+                }
+            // nothing in reach, or one already within the strip reach (tickReclaim strips it where the worker stands)
+            if (nearest == null || best <= strip2)
+                continue;
+            if (CommanderServerEvents.isCommander(le) || !u.isIdle() || UnitServerEvents.hasQueuedActions(le.getId()))
+                continue;
+            if (tutorial && teachingReclaim(u.getOwnerName()))
+                continue;   // First Battle's "Reclaim wreckage" step is the player doing it, not the workers
+            setReclaimTarget(le, nearest);
+            u.setMoveTarget(nearest.blockPosition());
+            autoUntil.put(le.getId(), now + IDLE_RECLAIM_GIVE_UP_TICKS);
+        }
+    }
+
+    /** Whether this player's First Battle is on its Reclaim step (the step finishes when one of their workers reclaims). */
+    private static boolean teachingReclaim(String owner) {
+        var session = com.solegendary.reignofnether.onboarding.OnboardingServer.session(owner);
+        return session != null && session.step == com.solegendary.reignofnether.onboarding.OnboardingStep.RECLAIM;
+    }
+
+    /** Ends auto-assigned reclaims that finished (the target is gone) or never got there in time. */
+    private static void dropStaleAutoTargets(ServerLevel level, long now) {
+        var it = autoUntil.int2LongEntrySet().iterator();
+        while (it.hasNext()) {
+            var e = it.next();
+            Entity worker = level.getEntity(e.getIntKey());
+            Entity target = worker == null ? null : reclaimTargets.get(worker.getId());
+            if (target == null || target.isRemoved() || !worker.isAlive()) {
+                it.remove();   // finished, or the player gave an order since (fullResetBehaviours cleared the target)
+            } else if (now >= e.getLongValue() && worker.distanceToSqr(target) > RECLAIM_RANGE * RECLAIM_RANGE) {
+                autoGaveUp.put(worker.getId(), target.getId());
+                reclaimTargets.remove(worker.getId());
+                if (worker instanceof Unit u)
+                    u.setMoveTarget(null);
+                it.remove();
             }
         }
     }

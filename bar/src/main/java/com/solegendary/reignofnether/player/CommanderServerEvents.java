@@ -31,6 +31,9 @@ public class CommanderServerEvents {
     public static final String TAG = "rts_commander";
     static final UUID HP_MOD = UUID.fromString("5a6c2a4e-9c1f-4b7e-8f21-0b6c7d7a0c01");
     static final UUID DMG_MOD = UUID.fromString("5a6c2a4e-9c1f-4b7e-8f21-0b6c7d7a0c02");
+    // Joseph, Oct 22: "increase commander health by 2x" - doubles the whole total (worker base + HP_MOD), so it
+    // scales with each faction's worker. Its own id, so a repeat call never stacks it.
+    static final UUID HP_X2_MOD = UUID.fromString("5a6c2a4e-9c1f-4b7e-8f21-0b6c7d7a0c03");
 
     public static boolean isCommander(Entity entity) {
         return entity != null && entity.getTags().contains(TAG);
@@ -49,6 +52,11 @@ public class CommanderServerEvents {
         if (hp != null && hp.getModifier(HP_MOD) == null) {
             hp.addPermanentModifier(new AttributeModifier(HP_MOD, "commander_hp", 80.0, AttributeModifier.Operation.ADDITION));
             le.setHealth(le.getMaxHealth());
+        }
+        if (hp != null && hp.getModifier(HP_X2_MOD) == null) {
+            float frac = le.getHealth() / le.getMaxHealth();   // keep the wound fraction for an older save's commander
+            hp.addPermanentModifier(new AttributeModifier(HP_X2_MOD, "commander_hp_x2", 1.0, AttributeModifier.Operation.MULTIPLY_TOTAL));
+            le.setHealth(le.getMaxHealth() * frac);
         }
         AttributeInstance dmg = le.getAttribute(Attributes.ATTACK_DAMAGE);
         if (dmg != null && dmg.getModifier(DMG_MOD) == null)

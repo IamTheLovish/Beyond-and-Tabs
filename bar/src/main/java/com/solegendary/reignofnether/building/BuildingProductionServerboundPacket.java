@@ -30,11 +30,16 @@ public class BuildingProductionServerboundPacket {
     public static void toggleRepeat(net.minecraft.core.BlockPos buildingPos) {
         // several factories of this type selected: Repeat goes to all of them, set to the opposite of the one shown
         // (BuildingBatchServerboundPacket), so a mixed selection ends up all on or all off
-        List<ProductionPlacement> group = BuildingClientEvents.getCommandGroup();
-        if (group.size() > 1 && HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement shown
-                && shown.originPos.equals(buildingPos)) {
+        // Any mix of owned, built factories counts (not just the shown type); mixed states all go on.
+        List<ProductionPlacement> group =
+            com.solegendary.reignofnether.hud.ProductionHudLogic.repeatGroup(BuildingClientEvents.getSelectedBuildings());
+        if (group.size() > 1) {
+            List<Boolean> states = new java.util.ArrayList<>();
+            for (ProductionPlacement pp : group)
+                states.add(pp.repeatQueue);
+            boolean on = com.solegendary.reignofnether.hud.ProductionHudLogic.repeatTarget(states);
             BuildingBatchServerboundPacket.send(BuildingBatchServerboundPacket.Action.SET_REPEAT, "",
-                shown.repeatQueue ? 0 : 1, positions(group));
+                on ? 1 : 0, positions(group));
             return;
         }
         PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_REPEAT, "", buildingPos));

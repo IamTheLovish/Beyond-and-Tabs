@@ -50,6 +50,25 @@ public class GuardServerEvents {
         guard.setMoveTarget(building.centrePos);
     }
 
+    /**
+     * The right-click rule (UnitClientEvents.doResolveMoveAction; playtest: "right click the constructor with other
+     * constructors to assist the worker until otherwise selected"): with at least one builder selected, a right-click on
+     * a friendly builder (worker, T2 constructor, commander, combat engineer) is a guard order - BAR's assist - instead
+     * of a plain follow. A builder right-clicking itself alone is no guard, and anything else follows as before.
+     *
+     * @param selected the selection the order goes to
+     * @param target   the unit under the cursor
+     * @param friendly whether {@code target} is the player's own or an ally's
+     */
+    public static boolean rightClickGuards(java.util.List<LivingEntity> selected, LivingEntity target, boolean friendly) {
+        if (!friendly || !(target instanceof WorkerUnit) || selected == null)
+            return false;
+        for (LivingEntity le : selected)
+            if (le instanceof WorkerUnit && le.getId() != target.getId())
+                return true;
+        return false;
+    }
+
     public static void clear(int unitId) {
         guards.remove(unitId);
     }
@@ -125,6 +144,13 @@ public class GuardServerEvents {
                     job = wardWorker.getBuildRepairGoal().getBuildingTarget();
                 }
                 if (job != null && !job.isDestroyedServerside) {
+                    // the job takes over from the escort: a follow target re-aims the move goal at the ward every 20
+                    // ticks, which pulled the guard off its own approach cell onto the ward's spot - often inside the
+                    // footprint, in the way of the blocks. The escort below picks up again once the guard is idle.
+                    if (guard.getFollowTarget() != null) {
+                        guard.setFollowTarget(null);
+                        guard.getMoveGoal().stopMoving();   // and the last spot the follow aimed at
+                    }
                     if (worker.getBuildRepairGoal().getBuildingTarget() != job)
                         worker.getBuildRepairGoal().setBuildingTarget(job);
                     continue;
