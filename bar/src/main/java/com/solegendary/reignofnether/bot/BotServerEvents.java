@@ -113,9 +113,21 @@ public class BotServerEvents {
         brains.clear();
     }
 
+    /**
+     * /bot changes the match for everyone: the host (the singleplayer / Open-to-LAN owner, or an op on a dedicated
+     * server - PacketAuth.isHost, the lobby's rule) or an op at level 2 may run it; a command block or the console at
+     * level 2. It had no requirement, so a joined player could remove every bot - which defeats them - or add bots
+     * mid-match (security audit, Oct 26).
+     */
+    static boolean mayCommandBots(net.minecraft.commands.CommandSourceStack source) {
+        return source.getEntity() instanceof ServerPlayer sp
+            ? com.solegendary.reignofnether.network.PacketAuth.isHostOrOp(sp, 2)
+            : source.hasPermission(2);
+    }
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(Commands.literal("bot")
+        event.getDispatcher().register(Commands.literal("bot").requires(BotServerEvents::mayCommandBots)
             .then(Commands.literal("add")
                 .then(Commands.argument("faction", StringArgumentType.word())
                     .executes(c -> addBot(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "faction"), "medium"))

@@ -283,6 +283,20 @@ public class UnitServerEvents {
         UnitSyncBatcher.clear();
         // the old global lists were never cleared: an order left in one singleplayer world ran in the next
         CommandQueues.clearAll();
+        clearWorldLists();
+    }
+
+    /**
+     * The world-scoped lists onServerStarted fills with addAll, emptied when the server stops - here, after the saves
+     * above, so the save still sees them (a stop handler of HeroServerEvents' own could run first and save an empty
+     * list). Without it, quitting world A and opening world B let A's fallen heroes be revived in B and saved into B,
+     * and reopening A doubled them; A's workers' gather targets leaked the same way (security audit F4, Oct 26).
+     */
+    public static void clearWorldLists() {
+        HeroServerEvents.fallenHeroes.clear();
+        synchronized (savedTargetResources) {
+            savedTargetResources.clear();
+        }
     }
 
     public static void addUnitPoofs(Level level, Entity entity) {
