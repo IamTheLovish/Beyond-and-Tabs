@@ -329,7 +329,9 @@ public class OrdersObeyGameTests {
             if (!idle && m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
                     && goal.getLastRequestTime() != shiftedFor[0]) {
                 shiftedFor[0] = goal.getLastRequestTime();
-                double dz = shifts[0]++ % 2 == 0 ? 1 : -1;
+                // south first: the last loaded ground the path aims at is floor(z + a hair toward the target's z), so a unit
+                // shifted north of the target's row (z 9 -> floor 8.98 = 8) keeps the same path end; south (7) moves it
+                double dz = shifts[0]++ % 2 == 0 ? -1 : 1;
                 m.teleportTo(m.getX(), m.getY(), m.getZ() + dz);
                 if (events.length() < 2000)
                     events.append(" t").append(t).append(" shifted to z ").append(TerrainGameTests.f(m.getZ()))
