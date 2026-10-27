@@ -95,6 +95,13 @@ func TestJavaExePrefersConfiguredPath(t *testing.T) {
 	if got := javaExe(p); got != `C:\Java\bin\javaw.exe` {
 		t.Fatalf("instance.cfg JavaPath: got %q", got)
 	}
+	// Prism's own form: forward slashes; the GPU key needs the backslash path Windows matches
+	if err := os.WriteFile(filepath.Join(inst, "instance.cfg"), []byte("JavaPath=C:/Users/J/AppData/Local/BeyondAndTabs/PrismLauncher/java/java-runtime-gamma/bin/javaw.exe\r\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := javaExe(p); got != `C:\Users\J\AppData\Local\BeyondAndTabs\PrismLauncher\java\java-runtime-gamma\bin\javaw.exe` {
+		t.Fatalf("slash JavaPath not turned into a Windows path: got %q", got)
+	}
 }
 
 func TestJarNameToday(t *testing.T) {
@@ -270,12 +277,13 @@ type fakePackwiz struct {
 	args    []string
 	install string
 	out     string
+	fromRun int // install only from this call on (a stale cache answered the earlier ones); 0 = every call
 }
 
 func (f *fakePackwiz) Run(dir, exe string, args []string) (string, error) {
 	f.calls++
 	f.dir, f.exe, f.args = dir, exe, args
-	if f.install != "" {
+	if f.install != "" && f.calls >= f.fromRun {
 		if err := os.WriteFile(filepath.Join(dir, "mods", f.install), nil, 0o644); err != nil {
 			return "", err
 		}
@@ -347,6 +355,31 @@ func TestPlayUpdatesVerifiesAndLaunches(t *testing.T) {
 	}
 	if st := readState(p.state); st.LastPlayedSha != "f5775f8" {
 		t.Fatalf("the played pack must be remembered: %+v", st)
+	}
+
+	// 4. just after a publish GitHub's cache serves the old pack.toml: packwiz says up to date twice, then installs.
+	// PLAY retries the clean-but-stale run and launches; a failed run (case 1) is not retried
+	if err := os.Remove(filepath.Join(p.mcDir, "mods", newJar)); err != nil {
+		t.Fatal(err)
+	}
+	fake3 := &fakePackwiz{install: newJar, fromRun: 3, out: "(1/1) Modpack is already up to date!\nFinished successfully!\n"}
+	l3 := newTestLauncher(fake3)
+	l3.updateWait = time.Millisecond
+	res, err = l3.play()
+	if err != nil || !res.Launched || res.Level != "ok" || fake3.calls != 3 || launched != 3 {
+		t.Fatalf("stale cache: res=%+v err=%v calls=%d launched=%d", res, err, fake3.calls, launched)
+	}
+
+	// 5. the cache never catches up: PLAY stops after updateTries runs and warns instead of launching the old jar
+	if err := os.Remove(filepath.Join(p.mcDir, "mods", newJar)); err != nil {
+		t.Fatal(err)
+	}
+	fake4 := &fakePackwiz{out: "Finished successfully!\n"}
+	l4 := newTestLauncher(fake4)
+	l4.updateWait = time.Millisecond
+	res, err = l4.play()
+	if err != nil || res.Launched || fake4.calls != l4.updateTries || launched != 3 {
+		t.Fatalf("never updated: res=%+v err=%v calls=%d launched=%d", res, err, fake4.calls, launched)
 	}
 }
 
