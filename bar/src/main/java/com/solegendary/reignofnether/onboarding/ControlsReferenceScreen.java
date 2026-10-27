@@ -98,6 +98,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("select_commander_ctrl_c", t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
         mouse("select_army_ctrl_w", t("ctrl") + " + W");
+        mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
         bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
@@ -141,6 +142,10 @@ public class ControlsReferenceScreen extends Screen {
         bind("patrol", Keybindings.patrol);
         bind("guard", Keybindings.guard);
         mouse("queue", t("shift") + " + " + t("any_order"));
+        // BAR queue editing (unit/command/QueueEditKeys): Space (or Ctrl) + order inserts, N skips, Ctrl+N cancels last
+        mouse("queue_insert", k(Keybindings.queueInsert) + " / " + t("ctrl") + " + " + t("any_order"));
+        bind("queue_skip", Keybindings.queueSkip);
+        mouse("queue_cancel_last", t("ctrl") + " + " + k(Keybindings.queueSkip));
         mouse("area", t("ctrl") + " + " + t("right_drag"));
 
         header("h_build");
@@ -154,6 +159,7 @@ public class ControlsReferenceScreen extends Screen {
         slots("build_grid_row3", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
         mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
+        mouse("build_spacing", t("shift") + " + " + t("wheel"));   // BuildingLineClientEvents.onScroll
         bind("rotate_ccw", Keybindings.rotateBuildingCCW);
         bind("rotate_cw", Keybindings.rotateBuildingCW);
         bind("cancel", Keybindings.cancelBuild);

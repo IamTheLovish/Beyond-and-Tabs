@@ -77,6 +77,15 @@ public final class AreaMex {
         return out;
     }
 
+    /**
+     * The queue flag the client sends with target {@code index} of one click's extractor orders: with {@code append}
+     * (Shift, or a one-click quick-build) every target joins the builders' queue, as BAR's Shift always does; without
+     * it the first target replaces their orders and the rest join it. MexQueueGameTests drives the server with this.
+     */
+    public static boolean queueFor(int index, boolean append) {
+        return append || index > 0;
+    }
+
     /** Key of the single group {@link #split} returns when no builder is selected. */
     public static final int NO_BUILDER = Integer.MIN_VALUE;
 

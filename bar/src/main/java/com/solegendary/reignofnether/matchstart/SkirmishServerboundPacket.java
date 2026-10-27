@@ -333,7 +333,7 @@ public class SkirmishServerboundPacket {
             if (!spectator)
                 teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
             for (BotSpec b : bots) {
-                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
+                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; case 3 -> "passive"; default -> "medium"; };
                 BotServerEvents.lastBotName = null;
                 added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR, b.colorMapId());
                 if (BotServerEvents.lastBotName != null)

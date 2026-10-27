@@ -74,9 +74,7 @@ public class CommanderKeyGameTests {
                 boolean dgun = false;
                 for (int i = 0; i < list.size(); i++) {
                     dgun |= list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun;
-                    // the Villager's Call to Arms is drawn on hotkey 1 (HudClientEvents)
-                    boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
-                    claim.accept(callToArms ? Keybindings.hotkey1 : keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
+                    claim.accept(keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
                 }
                 var faction = Factions.getFaction(unit);
                 if (faction == null || faction.getBuildHotkeys().isEmpty())
