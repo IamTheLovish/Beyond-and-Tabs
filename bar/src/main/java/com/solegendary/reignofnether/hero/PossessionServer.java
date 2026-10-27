@@ -94,6 +94,8 @@ public final class PossessionServer {
     static final int CORRECTION_GAP_TICKS = 4;
     /** A walker in the air longer than this whose claims don't come down is hovering: gravity wins. */
     static final int HOVER_TICKS = 40;
+    /** A shove allowance above this is a knockback the server really gave (it decays at air drag, ~0.09 a tick). */
+    static final float SHOVE_SEEN = 0.05f;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
     static final int HITS_PER_TICK = 6;
 
@@ -184,6 +186,19 @@ public final class PossessionServer {
             return false;
         Possession p = BY_UNIT.get(e.getId());
         return p != null && p.ticksSinceInput <= INPUT_STALE_TICKS && (p.forward != 0 || p.strafe != 0);
+    }
+
+    /**
+     * Whether {@code e} is possessed and its client's position claims move it with no shove the server gave it (the
+     * allowance a knockback or a sprint-jump opens has run out): a flight through the air is then the client's own
+     * doing, not a hit's. False for units the server moves itself (AI, keys, an ability).
+     */
+    public static boolean claimedWithoutShove(Entity e) {
+        if (e == null || BY_UNIT.isEmpty())
+            return false;
+        Possession p = BY_UNIT.get(e.getId());
+        return p != null && !p.serverMoves && (p.claimFresh || p.ticksSinceClaim <= CLAIM_FRESH_TICKS)
+                && p.shoveAllowance <= SHOVE_SEEN;
     }
 
     /** The possession {@code player} holds, or null. */

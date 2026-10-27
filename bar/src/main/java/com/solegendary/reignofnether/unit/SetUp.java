@@ -65,9 +65,11 @@ public final class SetUp {
         // navigation finishes, and that slide is part of the walk (a shove while standing still is not). A possessed
         // unit is walked by its player with the navigation idle - by its keys (zza/xxa) or, from a real client, by
         // the client's position claims, which leave zza/xxa at 0 - so a step while the possessor holds a walk key is
-        // a walk; a knockback while the keys rest is not (lovish, Oct 27).
+        // a walk; a knockback while the keys rest is not (lovish, Oct 27). A claims-driven unit moved with no shove
+        // the server gave it is moved by its client, keys or not (keyless hops): a walk too (round-4 review of #222)
         boolean driven = !mob.getNavigation().isDone() || mob.zza != 0 || mob.xxa != 0
-                || com.solegendary.reignofnether.hero.PossessionServer.keysHeld(mob);
+                || com.solegendary.reignofnether.hero.PossessionServer.keysHeld(mob)
+                || com.solegendary.reignofnether.hero.PossessionServer.claimedWithoutShove(mob);
         boolean walking = stepping && (driven || s.walking);
         s.walking = walking;
         // thrown by a hit (off the ground, not walking): the flight carries the anchor along, so a knockback's ~2

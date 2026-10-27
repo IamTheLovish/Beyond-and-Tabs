@@ -447,7 +447,10 @@ public class ArtilleryGameTests {
         possessedSetUpTest(helper, "knock", false, true);
     }
 
-    /** The same from a real client: its prediction carries the knockback, so the claims slide it with the keys up. */
+    /**
+     * The same from a real client: the server's hit (its shove opens the claims' allowance) reaches the client, whose
+     * prediction carries the knockback, so the claims slide it with the keys up.
+     */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void a_crew_possessed_from_a_client_knocked_back_keeps_its_set_up(GameTestHelper helper) {
         possessedSetUpTest(helper, "knockclaims", true, true);
@@ -599,7 +602,7 @@ public class ArtilleryGameTests {
                     + "the test no longer checks a short possessed walk", moved));
             }
             int since = tick[0] - stoppedAt[0];
-            if (knock && since == 10 && !claims)
+            if (knock && since == 10)
                 b.knockback(0.4, 1, 0);   // a hit from the east: pushed back west, toward where it started
             if (knock && claims && since >= 10 && since < 14) {   // the client's prediction of that knockback
                 double[] slide = { 0.30, 0.16, 0.09, 0.05 };
