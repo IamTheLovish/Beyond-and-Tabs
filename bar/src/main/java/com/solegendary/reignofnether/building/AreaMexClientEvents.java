@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.resources.MetalPatchesClient;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
+import com.solegendary.reignofnether.unit.UnitQueueLinesClient;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.util.MyRenderer;
 
@@ -65,6 +66,19 @@ public class AreaMexClientEvents {
             CursorClientEvents.getPreselectedBlockPos(), radius());
     }
 
+    /**
+     * The selected workers as area-mex builders, each starting by AreaMex.Builder.of (with {@code shift}, where its
+     * queue line ends). Both area-mex paths (the Shift circle here, the drag in PatchQuickBuildClientEvents) use it.
+     */
+    static List<AreaMex.Builder> selectedBuilders(boolean shift) {
+        List<AreaMex.Builder> out = new ArrayList<>();
+        for (LivingEntity e : UnitClientEvents.getSelectedUnits())
+            if (e instanceof WorkerUnit)
+                out.add(AreaMex.Builder.of(e.getId(), e.getX(), e.getZ(),
+                    UnitQueueLinesClient.lastQueuedXZ(e.getId()), shift));
+        return out;
+    }
+
     /** Left click while active: queue an extractor on every free patch in the circle, builders sharing them. */
     static void place() {
         if (MC.level == null || MC.player == null)
@@ -72,14 +86,7 @@ public class AreaMexClientEvents {
         Building extractor = BuildingClientEvents.getBuildingToPlace();
         BlockPos cursor = CursorClientEvents.getPreselectedBlockPos();
         String owner = MC.player.getName().getString();
-        List<AreaMex.Builder> builders = new ArrayList<>();
-        for (LivingEntity e : UnitClientEvents.getSelectedUnits())
-            if (e instanceof WorkerUnit) {
-                // Shift appends, so (BAR) each builder's chain starts where its queue ends, else where it stands
-                int[] end = com.solegendary.reignofnether.unit.UnitQueueLinesClient.lastQueuedXZ(e.getId());
-                builders.add(end != null ? new AreaMex.Builder(e.getId(), end[0], end[1])
-                    : new AreaMex.Builder(e.getId(), (int) Math.floor(e.getX()), (int) Math.floor(e.getZ())));
-            }
+        List<AreaMex.Builder> builders = selectedBuilders(Keybindings.shiftMod.isDown());
         int queued = 0;
         String firstError = null;
         for (Map.Entry<Integer, List<BlockPos>> group : AreaMex.split(freePatches(), builders, cursor).entrySet()) {

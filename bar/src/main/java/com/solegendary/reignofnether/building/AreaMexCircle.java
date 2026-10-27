@@ -4,14 +4,13 @@ import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
 
 /**
  * BAR's area mex, the pure part: a circle dragged out from its centre picks every free metal patch inside it, ordered
- * nearest-first from where the builders stand. No client classes, so AreaMexDragGameTests checks it headless;
- * PatchQuickBuildClientEvents does the mouse, the circle drawing and the orders.
+ * as one nearest-neighbour chain from where the builders start. No client classes, so AreaMexDragGameTests checks it
+ * headless; PatchQuickBuildClientEvents does the mouse, the circle drawing and the orders.
  */
 public final class AreaMexCircle {
 
@@ -46,44 +45,20 @@ public final class AreaMexCircle {
     }
 
     /**
-     * The build order of one area-mex command, as BAR orders it: a greedy nearest-neighbour tour from (fromX, fromZ) -
-     * each next site is the one nearest the previous site. Sorting by distance from the start ({@link #nearestFirst})
-     * zig-zagged across a ring of patches (tester, Oct 26: "this pathing doesn't make sense"). Ties go by x then z so
-     * the order never flickers. The input is not changed.
+     * The build order of one dragged area-mex command: the free patches {@code inside} the circle as one
+     * nearest-neighbour {@link AreaMex#chain} that the whole selection shares and builds site by site together. It
+     * starts at the builders' average start ({@link AreaMex.Builder#of}: where each queue ends with Shift, else where
+     * each stands), or at {@code fallback} with no builder. PatchQuickBuildClientEvents.patchesInDrag sends this order.
      */
-    public static List<BlockPos> tour(List<BlockPos> patches, double fromX, double fromZ) {
-        List<BlockPos> left = new ArrayList<>(patches);
-        List<BlockPos> out = new ArrayList<>(left.size());
-        double x = fromX, z = fromZ;
-        while (!left.isEmpty()) {
-            final double px = x, pz = z;
-            BlockPos next = left.stream().min(Comparator
-                .comparingDouble((BlockPos p) -> (p.getX() - px) * (p.getX() - px) + (p.getZ() - pz) * (p.getZ() - pz))
-                .thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ)).get();
-            left.remove(next);
-            out.add(next);
-            x = next.getX();
-            z = next.getZ();
-        }
-        return out;
-    }
-
-    /**
-     * Where an area-mex tour starts, as BAR's getAvgPositionOfValidBuilders: the average over the builders of where
-     * each one stands, or - with Shift (the new sites join the end of their queues) - where its queue ends, if it has
-     * one. {@code here} and {@code queueEnd} are per builder, x/z; a null queue end falls back to where it stands.
-     * Null when there is no builder.
-     */
-    public static double[] tourStart(List<double[]> here, List<int[]> queueEnd, boolean shift) {
-        if (here.isEmpty())
-            return null;
+    public static List<BlockPos> order(List<BlockPos> inside, List<AreaMex.Builder> builders, BlockPos fallback) {
+        if (builders.isEmpty())
+            return AreaMex.chain(inside, fallback.getX(), fallback.getZ());
         double sx = 0, sz = 0;
-        for (int i = 0; i < here.size(); i++) {
-            int[] end = shift && i < queueEnd.size() ? queueEnd.get(i) : null;
-            sx += end != null ? end[0] : here.get(i)[0];
-            sz += end != null ? end[1] : here.get(i)[1];
+        for (AreaMex.Builder b : builders) {
+            sx += b.x();
+            sz += b.z();
         }
-        return new double[] { sx / here.size(), sz / here.size() };
+        return AreaMex.chain(inside, sx / builders.size(), sz / builders.size());
     }
 
     /** Horizontal length of the walk from (fromX, fromZ) through {@code sites} in order. */
@@ -95,14 +70,5 @@ public final class AreaMexCircle {
             z = p.getZ();
         }
         return len;
-    }
-
-    /** Nearest first from (fromX, fromZ); equal distances go by x then z so the order never flickers. */
-    public static List<BlockPos> nearestFirst(List<BlockPos> patches, double fromX, double fromZ) {
-        List<BlockPos> out = new ArrayList<>(patches);
-        out.sort(Comparator
-            .comparingDouble((BlockPos p) -> (p.getX() - fromX) * (p.getX() - fromX) + (p.getZ() - fromZ) * (p.getZ() - fromZ))
-            .thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
-        return out;
     }
 }

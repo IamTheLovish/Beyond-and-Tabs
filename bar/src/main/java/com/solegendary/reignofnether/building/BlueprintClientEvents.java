@@ -95,50 +95,23 @@ public class BlueprintClientEvents {
     /**
      * The friendly ghost (own or allied) the cursor points at, else null: right-clicking it with a builder sends the
      * builder to build it (or join the builder already on its way). A ghost has no blocks, so the cursor's picked block
-     * is the ground behind or under it; the test is the ray against the ghost's drawn box (GhostHit), nearest first.
-     * A friendly building still under construction counts too (same box test), so builders can assist it.
+     * is the ground behind or under it; the test is the ray against the ghost's drawn box, nearest first. A friendly
+     * building still under construction counts too (same box test), so builders can assist it. The choice is
+     * GhostHit.target; this only feeds it the cursor ray. Called every frame a worker is selected.
      */
     @Nullable
     public static BuildingPlacement ghostUnderCursor() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null)
+        List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
+        if (mc.player == null || GHOSTS.isEmpty() && buildings.isEmpty())
             return null;
         String me = mc.player.getName().getString();
         // the cursor's world pos is where the ray hit the ground; the ray runs along the look vector through it
         Vector3d hit = CursorClientEvents.getCursorWorldPos();
         Vector3d look = MiscUtil.getPlayerLookVector(mc);
-        BlockPos picked = CursorClientEvents.getPreselectedBlockPos();
         double back = 200, ox = hit.x - look.x * back, oy = hit.y - look.y * back, oz = hit.z - look.z * back;
-        List<BuildingPlacement> sites = new ArrayList<>();
-        List<GhostHit.Box> boxes = new ArrayList<>();
-        for (int i = 0, n = GHOSTS.size(); i < n; i++) {
-            BuildingPlacement g = GHOSTS.get(i);
-            if (sameSide(me, g.ownerName))
-                add(g, sites, boxes);
-        }
-        // a building under construction: its missing upper blocks let the ray through to the ground, so the picked
-        // block is not inside it - find it by its full box like a ghost (tester, Oct 26: "unable to assist a
-        // production in progress"). Finished buildings keep the picked-block rule (repair when damaged).
-        for (BuildingPlacement b : BuildingClientEvents.getBuildings())
-            if (assistable(me, b))
-                add(b, sites, boxes);
-        if (sites.isEmpty())
-            return null;
-        int i = GhostHit.pick(ox, oy, oz, look.x, look.y, look.z, back,
-            picked == null ? null : new int[] { picked.getX(), picked.getY(), picked.getZ() }, boxes);
-        return i < 0 ? null : sites.get(i);
-    }
-
-    /** A friendly (own or allied) building still under construction: a right-click with builders assists it. */
-    static boolean assistable(String me, BuildingPlacement b) {
-        return b != null && b.ownerName != null && GhostHit.assistTarget(b.isBuilt, sameSide(me, b.ownerName))
-            && b.minCorner != null && b.maxCorner != null && b.centrePos != null;
-    }
-
-    private static void add(BuildingPlacement b, List<BuildingPlacement> sites, List<GhostHit.Box> boxes) {
-        sites.add(b);
-        boxes.add(new GhostHit.Box(b.minCorner.getX(), b.minCorner.getY(), b.minCorner.getZ(),
-            b.maxCorner.getX(), b.maxCorner.getY(), b.maxCorner.getZ()));
+        return GhostHit.target(ox, oy, oz, look.x, look.y, look.z, back, CursorClientEvents.getPreselectedBlockPos(),
+            GHOSTS, buildings, owner -> sameSide(me, owner));
     }
 
     @SubscribeEvent

@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.AreaMex;
 import com.solegendary.reignofnether.building.AreaMexCircle;
 
 import net.minecraft.core.BlockPos;
@@ -13,7 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/** building/AreaMexCircle: BAR's area mex - a dragged circle picks the free patches inside, nearest the builders first. */
+/**
+ * building/AreaMexCircle: BAR's area mex - a dragged circle picks the free patches inside, chained from the builders
+ * (AreaMex.chain).
+ */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
 public class AreaMexDragGameTests {
@@ -51,22 +55,22 @@ public class AreaMexDragGameTests {
         List<String> problems = new ArrayList<>();
         BlockPos a = new BlockPos(0, 64, 0), b = new BlockPos(20, 64, 0), c = new BlockPos(40, 64, 0);
         List<BlockPos> scrambled = List.of(c, a, b);
-        if (!AreaMexCircle.nearestFirst(scrambled, -5, 0).equals(List.of(a, b, c)))
+        if (!AreaMex.chain(scrambled, -5, 0).equals(List.of(a, b, c)))
             problems.add("builders west of the patches: should walk a, b, c");
-        if (!AreaMexCircle.nearestFirst(scrambled, 50, 0).equals(List.of(c, b, a)))
+        if (!AreaMex.chain(scrambled, 50, 0).equals(List.of(c, b, a)))
             problems.add("builders east of the patches: should walk c, b, a");
-        if (!AreaMexCircle.nearestFirst(scrambled, 19, 3).equals(List.of(b, a, c)))
-            problems.add("builders by the middle patch: b first, then the nearer of the others");
+        if (!AreaMex.chain(scrambled, 19, 3).equals(List.of(b, a, c)))
+            problems.add("builders by the middle patch: b first, then the tie a/c by lower x");
         // equal distances break by x then z, so the order never flickers frame to frame
         BlockPos p = new BlockPos(5, 64, 0), q = new BlockPos(-5, 64, 0), r = new BlockPos(0, 64, 5);
-        List<BlockPos> tie = AreaMexCircle.nearestFirst(List.of(p, r, q), 0, 0);
+        List<BlockPos> tie = AreaMex.chain(List.of(p, r, q), 0, 0);
         if (!tie.equals(List.of(q, r, p)))
             problems.add("ties should order by x then z: " + tie);
         // the input list is not changed
         List<BlockPos> input = new ArrayList<>(scrambled);
-        AreaMexCircle.nearestFirst(input, 0, 0);
+        AreaMex.chain(input, 0, 0);
         if (!input.equals(scrambled))
-            problems.add("nearestFirst must not reorder its input");
+            problems.add("the chain must not reorder its input");
         verdict(helper, problems);
     }
 

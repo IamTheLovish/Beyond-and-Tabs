@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.bot.BotPlayer;
+import com.solegendary.reignofnether.building.AreaMex;
 import com.solegendary.reignofnether.building.AreaMexCircle;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -26,6 +27,7 @@ import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -39,15 +41,15 @@ import static com.solegendary.reignofnether.gametest.BuilderAssistGameTests.wher
  * <ul>
  *   <li>BUG 1 "this pathing doesn't make sense": an area-mex command queued its sites sorted by distance from the
  *       builders, which zig-zags across a ring of patches. Now (BAR's cmd_area_mex calculateCmdOrder) a greedy
- *       nearest-neighbour tour (AreaMexCircle.tour). AC-1 the queue - and the queue lines the server sends - follow
+ *       nearest-neighbour chain (AreaMexCircle.order, AreaMex.chain). AC-1 the queue - and the queue lines the server sends - follow
  *       the tour; AC-2 sites Shift-clicked one by one keep the player's order.</li>
  *   <li>BUG 2 "unable to assist a production in progress": the cursor ray goes through a half-built frame to the
  *       ground, so the picked block is not in the building and the right-click became a move. Now the client finds a
- *       friendly unfinished building by its box, like a ghost (GhostHit.pick, BlueprintClientEvents.ghostUnderCursor)
+ *       friendly unfinished building by its box, like a ghost (GhostHit.target, BlueprintClientEvents.ghostUnderCursor)
  *       and sends BUILD_REPAIR at its centre. AC-3 that click's order makes a second builder assist and the site rise
  *       faster; AC-4 a finished building is not a box target (unchanged).</li>
  *   <li>BAR parity: AC-5 a Shift area-mex tour starts where the builders' queues end (getAvgPositionOfValidBuilders
- *       with useQueueEnd), a plain one where they stand.</li>
+ *       with useQueueEnd, AreaMex.Builder.of), a plain one where they stand.</li>
  * </ul>
  * Orders go through the server paths the client packets reach (BuildingServerEvents.placeBuilding with
  * AreaMex.queueFor, CommandQueues.issue); queue lines are read from UnitQueueSync, what the client draws.
@@ -143,6 +145,32 @@ public class BuildOrderFixGameTests {
         return out;
     }
 
+    /** The old area-mex order: sorted by distance from the start, which zig-zags. Written out here. */
+    static List<BlockPos> distanceSort(List<BlockPos> sites, double x, double z) {
+        List<BlockPos> out = new ArrayList<>(sites);
+        out.sort(Comparator.comparingDouble(p -> Math.hypot(p.getX() - x, p.getZ() - z)));
+        return out;
+    }
+
+    /**
+     * The right-click target the client picks (GhostHit.target, as BlueprintClientEvents.ghostUnderCursor) for a
+     * camera ray from high in front (-z) of {@code bp}, through its box, onto the pad 2 blocks behind it - the picked
+     * block is NOT in the building, the bug. {@code buildings} is the client's building list; no ghosts.
+     */
+    static BuildingPlacement clickTarget(BuildingPlacement bp, List<BuildingPlacement> buildings, String owner) {
+        double tx = bp.centrePos.getX() + 0.5, ty = bp.minCorner.getY(), tz = bp.maxCorner.getZ() + 2.5;
+        double ox = tx, oy = bp.maxCorner.getY() + 30, oz = bp.minCorner.getZ() - 30;
+        double len = Math.sqrt((tx - ox) * (tx - ox) + (ty - oy) * (ty - oy) + (tz - oz) * (tz - oz));
+        return GhostHit.target(ox, oy, oz, (tx - ox) / len, (ty - oy) / len, (tz - oz) / len, len, clickPicked(bp),
+            List.of(), buildings, owner::equals);
+    }
+
+    /** The block clickTarget's ray picks: the pad behind the building. */
+    static BlockPos clickPicked(BuildingPlacement bp) {
+        return new BlockPos((int) Math.floor(bp.centrePos.getX() + 0.5), bp.minCorner.getY() - 1,
+            (int) Math.floor(bp.maxCorner.getZ() + 2.5));
+    }
+
     // ------------------------------------------------------------------------------------------------ BUG 1
 
     /**
@@ -161,11 +189,13 @@ public class BuildOrderFixGameTests {
         // the zig-zag the tester saw: near-left, near-right, far-left, far-right
         List<BlockPos> zigzag = List.of(s.patch(-7, 0), s.patch(8, 0), s.patch(-15, 0), s.patch(16, 0));
         double wx = w.getX(), wz = w.getZ();
-        List<BlockPos> tour = AreaMexCircle.tour(zigzag, wx, wz);
+        // the order the drag sends (PatchQuickBuildClientEvents.patchesInDrag), a plain drag: from where w stands
+        List<BlockPos> tour = AreaMexCircle.order(zigzag, List.of(AreaMex.Builder.of(w.getId(), wx, wz, null, false)),
+            w.blockPosition());
         double tourLen = AreaMexCircle.pathLength(tour, wx, wz);
         double greedyLen = AreaMexCircle.pathLength(greedy(zigzag, wx, wz), wx, wz);
         double clickLen = AreaMexCircle.pathLength(zigzag, wx, wz);
-        double oldLen = AreaMexCircle.pathLength(AreaMexCircle.nearestFirst(zigzag, wx, wz), wx, wz);
+        double oldLen = AreaMexCircle.pathLength(distanceSort(zigzag, wx, wz), wx, wz);
         if (Math.abs(tourLen - greedyLen) > 1e-6)
             s.problems.add("the tour is " + tourLen + " long, the greedy tour " + greedyLen);
         if (tourLen > clickLen + 1e-6)
@@ -206,7 +236,7 @@ public class BuildOrderFixGameTests {
     /**
      * AC-3: A builds a wind generator alone; while it is half built, the right-click on it is modelled the way the
      * client sees it - a camera ray through the empty upper frame to the pad behind (the picked block is NOT in the
-     * building: the bug) - and GhostHit.pick must find the site by its box. That click's order (BUILD_REPAIR at the
+     * building: the bug) - and GhostHit.target must pick the site by its box. That click's order (BUILD_REPAIR at the
      * site's centre, CommandQueues.issue) sends B, B builds with A, and the site rises faster than with A alone.
      */
     @GameTest(template = ARENA, timeoutTicks = 800, batch = BATCH)
@@ -241,22 +271,15 @@ public class BuildOrderFixGameTests {
                     }
                     float alone = bp.buildProgress - p0;
                     // the click: from high in front (-z) of the site, through its box, onto the pad 2 blocks behind it
-                    double tx = bp.centrePos.getX() + 0.5, ty = bp.minCorner.getY(), tz = bp.maxCorner.getZ() + 2.5;
-                    double ox = tx, oy = bp.maxCorner.getY() + 30, oz = bp.minCorner.getZ() - 30;
-                    double len = Math.sqrt((tx - ox) * (tx - ox) + (ty - oy) * (ty - oy) + (tz - oz) * (tz - oz));
-                    double dx = (tx - ox) / len, dy = (ty - oy) / len, dz = (tz - oz) / len;
-                    BlockPos picked = new BlockPos((int) Math.floor(tx), (int) ty - 1, (int) Math.floor(tz));
+                    BlockPos picked = clickPicked(bp);
                     if (bp.isPosInsideBuilding(picked))
                         problems.add("(setup) the ray's picked block " + picked.toShortString() + " is in the building");
                     if (!GhostHit.assistTarget(bp.isBuilt, true))
                         problems.add("a half-built friendly building is not a box click target");
-                    GhostHit.Box box = new GhostHit.Box(bp.minCorner.getX(), bp.minCorner.getY(), bp.minCorner.getZ(),
-                        bp.maxCorner.getX(), bp.maxCorner.getY(), bp.maxCorner.getZ());
-                    GhostHit.Box elsewhere = new GhostHit.Box(box.minX() + 40, box.minY(), box.minZ(),
-                        box.maxX() + 40, box.maxY(), box.maxZ());
-                    int hit = GhostHit.pick(ox, oy, oz, dx, dy, dz, len,
-                        new int[] { picked.getX(), picked.getY(), picked.getZ() }, List.of(elsewhere, box));
-                    if (hit != 1) {
+                    if (clickTarget(bp, List.of(bp), "someone else") != null)
+                        problems.add("an enemy's half-built building became a click target");
+                    BuildingPlacement hit = clickTarget(bp, List.of(bp), s.owner);
+                    if (hit != bp) {
                         problems.add("the ray through the half-built frame did not pick it: " + hit);
                         finish(helper, s, problems);
                         return;
@@ -323,6 +346,8 @@ public class BuildOrderFixGameTests {
             () -> {
                 if (GhostHit.assistTarget(s.bp.isBuilt, true))
                     problems.add("a finished building became a box click target");
+                if (clickTarget(s.bp, List.of(s.bp), s.owner) != null)
+                    problems.add("the click through a finished building picked it by its box");
                 if (s.bp.getHealth() >= s.bp.getMaxHealth() && BuildingUtils.isBuildingBuildable(false, s.bp))
                     problems.add("a finished, undamaged building is buildable (the click would not be a move)");
                 finish(helper, s, problems);
@@ -356,13 +381,15 @@ public class BuildOrderFixGameTests {
         }
         List<int[]> lines = lineXZ(s.owner, w.getId());
         int[] end = lines.isEmpty() ? null : lines.get(lines.size() - 1);
-        List<double[]> here = List.<double[]>of(new double[] { w.getX(), w.getZ() });
-        List<int[]> ends = new ArrayList<>();
-        ends.add(end);
-        double[] plain = AreaMexCircle.tourStart(here, ends, false);
-        double[] shift = AreaMexCircle.tourStart(here, ends, true);
-        List<BlockPos> plainTour = AreaMexCircle.tour(List.of(west, east), plain[0], plain[1]);
-        List<BlockPos> shiftTour = AreaMexCircle.tour(List.of(west, east), shift[0], shift[1]);
+        // the builders both area-mex paths build (AreaMexClientEvents.selectedBuilders), with and without Shift
+        List<AreaMex.Builder> plain = List.of(AreaMex.Builder.of(w.getId(), w.getX(), w.getZ(), end, false));
+        List<AreaMex.Builder> shift = List.of(AreaMex.Builder.of(w.getId(), w.getX(), w.getZ(), end, true));
+        List<BlockPos> plainTour = AreaMexCircle.order(List.of(west, east), plain, w.blockPosition());
+        List<BlockPos> shiftTour = AreaMexCircle.order(List.of(west, east), shift, w.blockPosition());
+        // the Shift circle (AreaMexClientEvents.place) splits from the same start
+        List<BlockPos> circleTour = AreaMex.split(List.of(west, east), shift, w.blockPosition()).get(w.getId());
+        if (!shiftTour.equals(circleTour))
+            s.problems.add("the Shift circle (" + circleTour + ") and the drag (" + shiftTour + ") start apart");
         if (end == null)
             s.problems.add("the worker has no queue line to start from");
         if (!plainTour.equals(List.of(west, east)))

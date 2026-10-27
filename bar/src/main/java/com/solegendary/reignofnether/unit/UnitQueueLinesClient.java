@@ -70,7 +70,7 @@ public class UnitQueueLinesClient {
 
     /**
      * Where the unit's queue ends (x, z of its last entry), or null with no queue or when the last entry is an entity
-     * target with no position. Area mex starts a Shift tour there, as BAR does (AreaMexCircle.tourStart).
+     * target with no position. Area mex starts a Shift tour there, as BAR does (AreaMex.Builder.of).
      */
     public static int[] lastQueuedXZ(int unitId) {
         int[] e = queues.get(unitId);

@@ -44,7 +44,7 @@ import java.util.List;
  *       hint in the HUD while hovered.</li>
  *   <li>Area mex (BAR's areamex): with the extractor ghost out, hold the left button and drag a circle - the press
  *       point is the centre, the distance dragged the radius, and the circle is drawn while you drag. On release an
- *       extractor is queued on every free patch inside, as a nearest-neighbour tour from the builders' average position. Shift adds
+ *       extractor is queued on every free patch inside, as one nearest-neighbour chain from the builders. Shift adds
  *       to the builders' queue instead of replacing it. A plain click (no drag) places one extractor as always.</li>
  * </ul>
  * The pure part (which patches, in what order) is AreaMexCircle.
@@ -233,24 +233,13 @@ public class PatchQuickBuildClientEvents {
     }
 
     /**
-     * The free patches inside the dragged circle, as a nearest-neighbour tour (AreaMexCircle.tour) from the builders'
-     * average position: the whole selection shares the one tour and builds each site together.
+     * The free patches inside the dragged circle in build order (AreaMexCircle.order): one nearest-neighbour chain the
+     * whole selection shares, from the builders' average start (with Shift, where their queues end).
      */
     static List<BlockPos> patchesInDrag(BlockPos centre, BlockPos cursor) {
         List<BlockPos> inside = AreaMexCircle.patchesIn(MetalPatchesClient.getPatches(),
             BuildingClientEvents::isPatchTaken, centre, AreaMexCircle.radius(centre, cursor));
-        List<double[]> here = new ArrayList<>();
-        List<int[]> queueEnd = new ArrayList<>();
-        for (LivingEntity entity : UnitClientEvents.getSelectedUnits())
-            if (entity instanceof WorkerUnit) {
-                here.add(new double[] { entity.getX(), entity.getZ() });
-                queueEnd.add(com.solegendary.reignofnether.unit.UnitQueueLinesClient.lastQueuedXZ(entity.getId()));
-            }
-        // BAR: with Shift the new sites join the end of the queues, so the tour starts where those end
-        double[] start = AreaMexCircle.tourStart(here, queueEnd, Keybindings.shiftMod.isDown());
-        if (start == null)
-            start = new double[] { centre.getX(), centre.getZ() };
-        return AreaMexCircle.tour(inside, start[0], start[1]);
+        return AreaMexCircle.order(inside, AreaMexClientEvents.selectedBuilders(Keybindings.shiftMod.isDown()), centre);
     }
 
     /** The button came up where it went down: give the press to everyone else, as if we had never held it back. */
