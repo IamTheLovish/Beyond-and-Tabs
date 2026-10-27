@@ -33,7 +33,7 @@ public abstract class ConfigValueReloadRaceMixin {
 
     @Shadow protected abstract Object getRaw(Config config, List<String> path, Supplier<?> defaultSupplier);
 
-    @Inject(method = "get", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "get", at = @At("RETURN"), cancellable = true, require = 1)
     private void bat$neverNullWhileLoaded(CallbackInfoReturnable<Object> cir) {
         if (cir.getReturnValue() != null || this.spec == null)
             return;
