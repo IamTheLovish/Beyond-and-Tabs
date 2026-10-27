@@ -388,7 +388,7 @@ public class UnitClientEvents {
      * command (AreaCommandClientEvents); a Ctrl click is free for this.
      */
     static QueueMode queueModeFromKeys() {
-        return QueueMode.of(Keybindings.shiftMod.isDown(), Keybindings.ctrlMod.isDown());
+        return QueueEditClientEvents.queueModeFromKeys();
     }
 
     public static void sendUnitCommandManual(UnitAction action, int unitId, int[] unitIds,
@@ -1154,7 +1154,7 @@ public class UnitClientEvents {
         leftLineDownY = mouseY;
     }
 
-    private static ArrayList<LivingEntity> actionableSelectedUnits() {
+    static ArrayList<LivingEntity> actionableSelectedUnits() {
         ArrayList<LivingEntity> actionableUnits = new ArrayList<>();
         for (LivingEntity unit : getSelectedUnits()) {
             if ((getPlayerToEntityRelationship(unit) == Relationship.OWNED ||
