@@ -2319,13 +2319,21 @@ public class HudClientEvents {
         // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
         // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
         int key = evt.getKeyCode();
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press the camera panned
-        // for, or one held past a tap once frame lag is allowed for, was a pan, not an order (keybinds/KeyTapTracker)
-        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
-            return;
         // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
         // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
+            return;
+        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
+        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
+        // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
+        if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
+                com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
+                    net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
+            return;
+        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
+        // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
+        // (keybinds/KeyTapTracker)
+        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
             return;
         // the selected card's own buttons win over HUD-wide ones on the same key (minimap toggle M, idle-worker ".",
         // ...); within the card, CommandCard and the no_two_buttons_on_a_command_card_share_a_hotkey GameTest keep
@@ -2337,12 +2345,7 @@ public class HudClientEvents {
         // grid keys Q W E R / A S D F / Z X C V pick a building; both win over the card's other buttons on those keys
         if (BuildTabs.onKey(key))
             return;
-        // BAR's Ctrl+W: select the whole army ("-" stays the card's own key for it)
-        if (key == GLFW.GLFW_KEY_W && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
-                && OrthoviewClientEvents.isEnabled()) {
-            com.solegendary.reignofnether.hud.buttons.HelperButtons.selectWholeArmy();
-            return;
-        }
+        // (BAR's Ctrl+W, select the whole army, is a ChordKeys chord above; "-" stays the card's own key for it)
         boolean cardKey = isCardKey(key);
         // the stats table (I / F4) and clean view (=): quiet while the card has a button on the key
         HudPanels.onKey(key, cardKey);
