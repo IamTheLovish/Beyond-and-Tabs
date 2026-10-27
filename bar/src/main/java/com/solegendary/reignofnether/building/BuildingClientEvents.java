@@ -577,7 +577,9 @@ public class BuildingClientEvents {
         var vertexConsumerNoDepthLine = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
         var vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
         for (BuildingPlacement selBuilding : selectedBuildings) {
-            if (selBuilding instanceof ProductionPlacement selProdBuilding) {
+            // an inspected enemy building's rally is its plan: not drawn (InspectRules)
+            if (selBuilding instanceof ProductionPlacement selProdBuilding && com.solegendary.reignofnether.hud.InspectView
+                    .shows(com.solegendary.reignofnether.unit.InspectRules.Info.RALLY, selBuilding)) {
                 float a = MiscUtil.getOscillatingFloat(0.25f, 0.75f);
 
                 if (!selProdBuilding.getRallyPoints().isEmpty() && MC.level != null) {

@@ -563,6 +563,9 @@ public class HudClientEvents {
                 buildingToggles
             );
             hudZones.add(buildingPortraitZone);
+            // inspecting a building that isn't yours: Enemy / Ally / Neutral in the portrait's top-right corner
+            InspectView.renderTag(evt.getGuiGraphics(), hudSelectedPlacement,
+                blitX + portraitRendererBuilding.frameWidth - 2, screenHeight - portraitRendererBuilding.frameHeight + 2);
 
             blitX += portraitRendererBuilding.blockWidth() + 10;
 
@@ -923,6 +926,9 @@ public class HudClientEvents {
                 hudSelectedEntity
             );
             hudZones.add(unitPortraitZone);
+            // inspecting a unit that isn't yours: Enemy / Ally / Neutral in the portrait's top-right corner
+            InspectView.renderTag(evt.getGuiGraphics(), hudSelectedEntity,
+                blitX + portraitRendererUnit.frameWidth - 2, blitY + 2);
 
             if (hudSelectedEntity instanceof HeroUnit heroUnit) {
                 RectZone zone = portraitRendererUnit.renderHeroLevelAndExp(evt.getGuiGraphics(), blitX + 1, blitY - 5, mouseX, mouseY, heroUnit);
@@ -950,7 +956,8 @@ public class HudClientEvents {
 
                 int totalRes = Resources.getTotalResourcesFromItems(unit.getItems()).getTotalValue();
 
-                if (unit instanceof UnitInventory inv && ItemClientEvents.shouldRenderUnitInventory((LivingEntity) unit)) {
+                if (unit instanceof UnitInventory inv && ItemClientEvents.shouldRenderUnitInventory((LivingEntity) unit)
+                        && InspectView.shows(com.solegendary.reignofnether.unit.InspectRules.Info.ITEMS, hudSelectedEntity)) {
                     hudZones.add(ItemClientEvents.renderUnitInventory(evt.getGuiGraphics(), blitX,
                         screenHeight - ItemClientEvents.INV_HEIGHT, mouseX, mouseY, inv));
                     renderedItemsOrResources = true;

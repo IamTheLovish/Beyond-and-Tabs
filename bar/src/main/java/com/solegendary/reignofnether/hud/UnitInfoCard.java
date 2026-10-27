@@ -190,6 +190,9 @@ public final class UnitInfoCard {
 
     /** How many ability rows {@link #abilities} will draw for this unit (same filter, same cap). */
     public static int abilityRowCount(Unit unit) {
+        // an enemy's (or neutral's) abilities and cooldowns are its plans: not on its card (InspectRules)
+        if (!InspectView.shows(com.solegendary.reignofnether.unit.InspectRules.Info.ABILITIES, (LivingEntity) unit))
+            return 0;
         List<Button> buttons = unit.getAbilityButtons();
         int rows = 0;
         for (int i = 0; i < buttons.size() && rows < MAX_ABILITY_ROWS; i++)
@@ -495,6 +498,8 @@ public final class UnitInfoCard {
     /** One row per ability: icon, name, and "Ready" or the seconds left (BAR shows cooldowns on the card too). */
     private static void abilities(GuiGraphics gg, Font font, int x, int y, int w, int bottom, Unit unit,
                                   int mouseX, int mouseY) {
+        if (!InspectView.shows(com.solegendary.reignofnether.unit.InspectRules.Info.ABILITIES, (LivingEntity) unit))
+            return;
         List<Button> buttons = unit.getAbilityButtons();
         int rows = 0;
         for (int i = 0; i < buttons.size() && rows < MAX_ABILITY_ROWS && y + 9 <= bottom; i++) {

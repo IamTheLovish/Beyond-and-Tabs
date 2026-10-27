@@ -1,0 +1,74 @@
+package com.solegendary.reignofnether.unit;
+
+/**
+ * Inspecting units and buildings you don't control (tester request Oct 26: "select enemy units to pull up their
+ * information just like your own, you just can't command them ... it shouldn't show the abilities for heroes").
+ * Pure rules, no Minecraft client classes: the client selection / HUD code asks these, and the game tests and JUnit
+ * tests check the same answers.
+ * <ul>
+ *   <li>Only what the player can see right now can be inspected: lit by fog of war, not cloaked / in a thicket from
+ *       this side, not riding something. The same test drops an inspected unit that walks into the dark.</li>
+ *   <li>Only controllable things take orders and get a command card (own, an ally who shared control, sandbox
+ *       all-mobs). An inspected enemy never rides along in a group: a selection of 2+ keeps controllable ones only.</li>
+ *   <li>Public info (portrait, name, health, stats, building type) shows for everyone; plan info (abilities and
+ *       their cooldowns, items, production queue, rally, autocast) only for own/controlled and allied things.</li>
+ * </ul>
+ */
+public final class InspectRules {
+    private InspectRules() { }
+
+    /** What a unit or building card can show. */
+    public enum Info {
+        PORTRAIT, NAME, HEALTH, STATS, BUILDING_TYPE,               // public: anyone who can see it
+        ABILITIES, ITEMS, PRODUCTION_QUEUE, RALLY, AUTOCAST,        // plans: own, controlled or allied only
+        COMMAND_CARD                                                 // orders: controllable only
+    }
+
+    /** The small label on the card of something that isn't yours. */
+    public enum Tag {
+        NONE(null, 0), ALLY("Ally", 0xFF55C8FF), ENEMY("Enemy", 0xFFFF5555), NEUTRAL("Neutral", 0xFFC8C8C8);
+
+        public final String label;
+        public final int colour;
+
+        Tag(String label, int colour) {
+            this.label = label;
+            this.colour = colour;
+        }
+    }
+
+    /** Can the local player see this well enough to select it for inspection (or keep it inspected)? */
+    public static boolean mayInspect(boolean inBrightChunk, boolean hiddenFromViewer, boolean passenger) {
+        return inBrightChunk && !hiddenFromViewer && !passenger;
+    }
+
+    /** May the local player order it (own, an ally who shared control, or sandbox control of all mobs)? */
+    public static boolean canCommand(Relationship rel, boolean alliedControl, boolean controlAllMobs) {
+        return rel == Relationship.OWNED || alliedControl || controlAllMobs;
+    }
+
+    /** Does the card show this piece of info for a thing in relation {@code rel} to the viewer? */
+    public static boolean shows(Info info, Relationship rel, boolean alliedControl, boolean controlAllMobs) {
+        boolean control = canCommand(rel, alliedControl, controlAllMobs);
+        return switch (info) {
+            case PORTRAIT, NAME, HEALTH, STATS, BUILDING_TYPE -> true;
+            case ABILITIES, ITEMS, PRODUCTION_QUEUE, RALLY, AUTOCAST -> control || rel == Relationship.FRIENDLY;
+            case COMMAND_CARD -> control;
+        };
+    }
+
+    /** May this stay in a selection of {@code selectionSize} things? A lone inspected thing may; a group is orders. */
+    public static boolean keepInSelection(int selectionSize, boolean canCommand) {
+        return selectionSize <= 1 || canCommand;
+    }
+
+    /** The card's tag: none for own things, else Ally / Enemy / Neutral. */
+    public static Tag tag(Relationship rel) {
+        return switch (rel) {
+            case OWNED -> Tag.NONE;
+            case FRIENDLY -> Tag.ALLY;
+            case HOSTILE -> Tag.ENEMY;
+            case NEUTRAL -> Tag.NEUTRAL;
+        };
+    }
+}
