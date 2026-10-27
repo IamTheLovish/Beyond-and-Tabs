@@ -352,6 +352,11 @@ public class OrdersObeyGameTests {
                 else if (m.getX() - startX < 5)
                     problems.add("the unit gave up without walking toward the target (moved "
                         + TerrainGameTests.f(m.getX() - startX) + " east)");
+                // gave up, but only proves something if it was shifted along the wall in between (a unit that never
+                // came to rest there passes on any code)
+                else if (shifts[0] < 2)
+                    problems.add("the unit gave up after only " + shifts[0] + " shifts along the wall: the test did not"
+                        + " exercise the drift:" + events);
                 TerrainGameTests.finish(helper, problems);
             } finally {
                 UnitServerEvents.rtsPathfinding = wasRts;
