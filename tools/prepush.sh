@@ -15,7 +15,7 @@ run() {  # run "<label>" <command...>; its own exit code decides
 }
 run "preflight (design sheets)"   python3 tools/preflight.py --allow-unverified
 run "generated code matches"      bash -c 'python3 tools/gen_java.py && git diff --exit-code engine/src/main/java/dev/beyondtabs/engine/gen'
-run "check_java"                  bash -c "python3 tools/check_java.py \$(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')"
+run "check_java"                  python3 tools/check_java.py --tracked
 run "check_guards"                python3 tools/check_guards.py
 run "server client imports"       python3 tools/check_server_client_imports.py
 run "balance_audit"               python3 tools/balance_audit.py

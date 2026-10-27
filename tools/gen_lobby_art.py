@@ -35,7 +35,7 @@ LAYOUT = "--layout" in sys.argv     # quick geometry check: flat tones, no ink p
 # ---------------------------------------------------------------- shared layout (LobbyBackdrop.java mirrors these)
 PX_PER_A = 1100.0
 ART_W = 2560 / PX_PER_A                     # 2.327 A: a 21:9 screen, a hair narrower
-MOON = (-0.27, 0.205, 0.14)                 # centre x, y, radius (upper left third)
+MOON = (0.19, 0.215, 0.16)                  # centre x, y, radius (round 6: behind the towers, so the spires cut it)
 RECTS = {                                   # x0, y0, x1, y1 in A (artboard layers)
     "sky": (-ART_W / 2, 0.0, ART_W / 2, 1.0),
     "clouds_far": (-ART_W / 2, 0.28, ART_W / 2, 0.80),     # wraps in x (tile = ART_W)
@@ -51,9 +51,10 @@ RECTS = {                                   # x0, y0, x1, y1 in A (artboard laye
 }
 FRAME_W = 0.66                              # frame_left / frame_right: FRAME_W x 1 A, pinned to the screen edges
 # the river: centreline points (x, y, half width), from the foot of the cascade toward the viewer
-RIVER = [(0.372, 0.800, 0.048), (0.330, 0.812, 0.064), (0.200, 0.826, 0.080), (0.020, 0.846, 0.098),
-         (-0.160, 0.868, 0.118), (-0.285, 0.895, 0.130), (-0.300, 0.925, 0.160), (-0.160, 0.955, 0.200),
-         (0.040, 0.985, 0.250), (0.170, 1.030, 0.320)]
+# round 6: it zig-zags back to the cathedral, narrowing to a thread at the fall, widening toward the viewer
+RIVER = [(0.372, 0.800, 0.030), (0.315, 0.808, 0.036), (0.200, 0.818, 0.046), (0.120, 0.832, 0.058),
+         (0.170, 0.850, 0.074), (0.250, 0.870, 0.094), (0.205, 0.895, 0.120), (0.060, 0.925, 0.155),
+         (-0.020, 0.962, 0.235), (0.040, 1.005, 0.310), (0.100, 1.050, 0.390)]
 HORIZON = 0.64                              # perspective for the river's flow coordinate
 CASCADE = (0.300, 0.688, 0.016, 0.372, 0.802, 0.042)  # top x, top y, top half width, bottom x, bottom y, bottom half width
 
@@ -1193,18 +1194,9 @@ def cathedral():
         g.lead([(x, 0.545), (x, 0.629)], 0.6)
     g.statue_niches(x0t + 0.004, x1t - 0.004, 0.655, 0.735, 3, 40, 165)
     g.blind_arcade(x0t + 0.003, x1t - 0.003, 0.415, 0.445, 5, 130)
-    # the medieval crane left on the unfinished top: a timber frame, a jib, a rope and a hanging stone
-    for x in (x0t + 0.014, x0t + 0.04):
+    # (round 6: the medieval crane on the unfinished top read as antennas against the moon - left out)
+    for x in () if True else (x0t + 0.014, x0t + 0.04):
         g.poly([(x - 0.0016, 0.258), (x + 0.0016, 0.258), (x + 0.001, 0.205), (x - 0.001, 0.205)], 58, 150, 0.6)
-    g.poly([(x0t + 0.012, 0.207), (x0t + 0.044, 0.203), (x0t + 0.044, 0.209), (x0t + 0.012, 0.212)], 58, 150, 0.6)
-    g.poly([(x0t + 0.026, 0.205), (x0t - 0.035, 0.168), (x0t - 0.036, 0.172), (x0t + 0.024, 0.211)], 58, 150, 0.6)
-    g.ln([(x0t + 0.014, 0.258), (x0t + 0.04, 0.205)], 130, 0.6)
-    g.ln([(x0t + 0.04, 0.258), (x0t + 0.014, 0.205)], 130, 0.6)
-    g.ln([(x0t - 0.033, 0.171), (x0t - 0.032, 0.232)], 120, 0.5)
-    g.rect(x0t - 0.037, 0.232, x0t - 0.027, 0.240, 46, 150, 0.6)
-    g.circle(x0t + 0.027, 0.245, 0.010, 30, 150, 0.6)        # the treadwheel
-    for a in range(6):
-        g.ln([(x0t + 0.027, 0.245), (x0t + 0.027 + 0.010 * math.cos(a), 0.245 + 0.010 * math.sin(a))], 110, 0.4)
     # its buttresses (only the left faces show)
     for x in (x0t, x1t - 0.002):
         box(g, x - 0.007, x + 0.007, -0.022, 0.0, 0.33 if x == x0t else 0.30, F, 44, 52, E)
@@ -1885,8 +1877,8 @@ def river_at(y):
     return RIVER[-1][0], RIVER[-1][2]
 
 
-RIVER_ROCKS = ((0.875, 0.35, 0.010), (0.905, -0.45, 0.013), (0.93, 0.55, 0.016), (0.955, -0.30, 0.018),
-               (0.985, 0.70, 0.024), (1.0, -0.65, 0.026))   # (y, across -1..1, radius)
+RIVER_ROCKS = ((0.862, 0.45, 0.008), (0.900, -0.40, 0.012), (0.928, 0.55, 0.015), (0.958, -0.62, 0.018),
+               (0.982, 0.30, 0.022), (0.998, -0.20, 0.026))   # (y, across -1..1, radius)
 
 
 def river_rocks():
@@ -3044,11 +3036,11 @@ def mist_pool(w=1024, h=256):
 
 
 def sprites():
-    glow(); sparkle(); bats(); petal(); leaf(); ring(); cascade(); ripples(); streak(); grain_tex(); vignette(); mist()
+    glow(); sparkle(); bats(); petal(); leaf(); ring(); cascade(); ripples(); streak(); vignette(); mist()
+    import lobby_depth as D
+    D.paper_grain()                       # round 6: monochrome paper tooth instead of RGB noise
     shafts(); mist_pool()
-    fg_plants("fg_briar", 768, 512, 171, "briar")
-    fg_plants("fg_thorns", 512, 384, 172, "briar")
-    fg_plants("fg_branch", 512, 512, 173, "branch")
+    # the foreground pop-outs are round 6's (tools/lobby_depth.fg); fg_plants() is kept for reference
 
 
 # ---------------------------------------------------------------- the hand-drawn pass: ink pen + coloured pencil
@@ -3198,19 +3190,11 @@ def hand_drawn_all(only=None):
         if only is None or grp in only:
             print("hand-drawing", name, flush=True)
             hand_drawn(name, *a, **kw)
-    hd("sky", 0.0, pencil=0.9, ink=0.0, gel=0.0, L=14, seed=201, keep=0.6)
-    hd("clouds_far", 0.08, pencil=0.8, ink=0.2, gel=0.3, L=10, seed=202, keep=0.7)
-    hd("clouds_near", 0.05, pencil=0.8, ink=0.2, gel=0.0, L=10, seed=203, keep=0.7)
+    # round 6: the sky, clouds, ground, fields and frames are drawn as etchings by tools/lobby_depth.py (the value
+    # ladder of design/lobby-backdrop.md); only the moon and the far spires keep this pencil pass
     hd("moon", 0.0, pencil=1.2, ink=0.6, gel=0.0, stipple=0.8, L=7, seed=204, keep=0.5,
        burnish=lambda l, a, s: smoothstep(0.55, 0.8, l) * 0.6)
     hd("spires_far", math.pi / 2, pencil=0.8, ink=0.7, gel=0.4, L=8, seed=205, chalk=1.0, keep=0.5)
-    hd("ground", 0.0, pencil=1.0, ink=1.0, gel=0.8, stipple=0.5, L=8, seed=207, chalk=1.0, keep=0.5,
-       burnish=lambda l, a, s: smoothstep(0.30, 0.5, s[..., 0] - s[..., 1]) * 0.5)
-    hd("field_far", math.pi / 2, pencil=1.0, ink=0.7, gel=0.4, L=5, seed=208, keep=0.55)
-    hd("field_near", math.pi / 2, pencil=1.0, ink=0.9, gel=0.7, L=7, seed=209, keep=0.55)
-    for nm, sd in (("frame_left", 210), ("frame_right", 211)):
-        hd(nm, math.pi / 2, pencil=1.0, ink=1.0, gel=0.6, stipple=0.6, L=8, seed=sd, chalk=1.0, keep=0.5)
-        hd(nm + "_tree", math.pi / 2, pencil=1.0, ink=0.9, gel=0.5, L=6, seed=sd + 10, chalk=0.8, keep=0.55)
 
 
 # ---------------------------------------------------------------- preview compositor (mirrors LobbyBackdrop.java at t=0)
@@ -3367,7 +3351,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     sx = lambda x: W / 2 + (x + xs[0]) * S.A
     sy = lambda y: S.top + y * S.A
     shift = min(0.22, max(0.0, ART_W / 2 - W / (2 * S.A) - (0.065 if motion else 0.0))) if title else 0.0
-    xs[0] = -shift
+    xs[0] = shift                    # round 6: the whole scene slides right together (the moon stays behind the towers)
 
     def art(im, rect, z, **kw):
         x0, y0, x1, y1 = rect
@@ -3400,6 +3384,8 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     art(L["moon"], (mx - mr, my - mr, mx + mr, my + mr), 0.005)
     wrapped(L["clouds_far"], 0.28, 0.80, t * 0.006, 0.007, 1.0)
     art(L["spires_far"], RECTS["spires_far"], 0.011)
+    if "hills_far" in L:
+        art(L["hills_far"], (-ART_W / 2, 0.50, ART_W / 2, 0.74), 0.0125)
     wrapped(L["clouds_near"], 0.46, 0.84, t * 0.014, 0.012, 1.0)
     breath = 0.5
     xs[0] = shift
@@ -3420,8 +3406,8 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     x_t, y_t = sx(rx) + ox(0.036), sy(ry) + oy(0.036)
     xl, xr, yb = sx(rx - 0.22) + ox(0.045), sx(rx + 0.20) + ox(0.045), sy(0.86) + oy(0.045)
     hw = 0.03 * S.A
-    yy0, yy1 = int(max(0, y_t)), int(min(H, yb))
-    for yy in range(yy0, yy1):
+    yy0 = int(max(0, y_t))
+    for yy in range(yy0, yy0):                 # round 6: no shafts (LobbyBackdrop leaves them out)
         v = (yy - y_t) / (yb - y_t)
         xa = (x_t - hw) + (xl - (x_t - hw)) * v
         xb = (x_t + hw) + (xr - (x_t + hw)) * v
@@ -3436,7 +3422,7 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
     hr = 0.10 * (0.9 + 0.2 * breath)
     S.place(L["glow"], sx(dx - hr) + ox(0.04), sy(dy - hr * 0.7) + oy(0.04), sx(dx + hr) + ox(0.04), sy(dy + hr * 0.7) + oy(0.04),
             mode="add", tint=(1, 0.55, 0.3), alpha=0.10 + 0.20 * breath)
-    wrapped(L["mist"], 0.60, 0.80, t * 0.01 + breath * 0.012, 0.031, 0.55 + 0.30 * breath)
+    wrapped(L["mist"], 0.60, 0.80, t * 0.01 + breath * 0.012, 0.031, 0.20 + 0.12 * breath)
     banded(L["ground"], RECTS["ground"])
     # the cascade (slanted trapezoid)
     cxt, ty, thw, cxb, by, bhw = CASCADE
@@ -3456,14 +3442,27 @@ def compose(W, H, t=0.0, lobby=False, cam=(0.0, 0.0), motion=True, title=False):
         al = px[:, 3:4] * 0.95
         S.img[yy, xs_] = S.img[yy, xs_] * (1 - al) + px[:, :3] * al
     sample_strip(S, L["ripples"], t, "ripples", ox)
-    sample_strip(S, L["streak"], t, "streak", ox)
+    # moonlight glints on the river (LobbyBackdrop.glints at this moment)
+    for i in range(10):
+        period = 7 + 5 * ((i * 0.618) % 1)
+        p_ = (t / period + i * 0.37) % 1
+        yv = RIVER[0][1] + (1.0 - RIVER[0][1]) * p_ * p_
+        cxv, hwv = river_at(yv)
+        lane = (((i * 0.43) % 1) - 0.5) * 1.2 + 0.15 * math.sin(t * 0.7 + i)
+        xv = cxv + lane * hwv
+        near = (yv - HORIZON) / (1 - HORIZON)
+        sz = (0.004 + 0.012 * near)
+        tw_ = 0.5 + 0.5 * math.sin(t * (5 + i) + i * 2.3)
+        a_ = min(1, p_ * 8) * min(1, (1 - p_) * 5) * tw_ * tw_
+        art(L["sparkle"], (xv - sz * 2.4, yv - sz * 0.6, xv + sz * 2.4, yv + sz * 0.6), zg(yv), mode="add",
+            tint=(1, 0.92, 0.86), alpha=0.85 * a_)
     S.place(L["mist_pool"], sx(-1.0) + ox(0.03), sy(0.655), sx(-0.12) + ox(0.03), sy(0.785), alpha=0.55 + 0.35 * breath)
-    S.place(L["mist_pool"], sx(-0.55) + ox(0.045), sy(0.78), sx(0.62) + ox(0.045), sy(0.88), alpha=(0.55 + 0.35 * breath) * 0.35)
+    S.place(L["mist_pool"], sx(-0.55) + ox(0.045), sy(0.78), sx(0.62) + ox(0.045), sy(0.88), alpha=(0.55 + 0.35 * breath) * 0.15)
     banded(L["field_far"], RECTS["field_far"])
     banded(L["field_near"], RECTS["field_near"])
     bt = L["bats"]
     fw = bt.width // 3
-    for i, (x, y, f, s) in enumerate(((-0.02, 0.17, 0, 0.042), (0.06, 0.21, 2, 0.034), (0.62, 0.12, 1, 0.03))):
+    for i, (x, y, f, s) in enumerate(((-0.42, 0.30, 0, 0.034), (-0.34, 0.33, 2, 0.028), (0.66, 0.24, 1, 0.03))):
         fr = bt.crop((f * fw, 0, (f + 1) * fw, bt.height))
         art(fr, (x - s, y - s / 2, x + s, y + s / 2), 0.014)
     fwpx = FRAME_W * S.A
@@ -3753,16 +3752,44 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
     """GothicText.plateDrips (mirrors the Java)."""
     BLOOD, DARK, HI = 0xFFA8101C, 0xFF5A0610, 0xFFF06070
 
+    q = 0.25
+
+    def bead(cx, cy, r, alpha=255):
+        A_ = (alpha & 255) << 24
+        for dy in range(-r, r + 1):
+            hw = round(math.sqrt(max(0, r * r - dy * dy)))
+            c = DARK if dy > r // 2 else BLOOD
+            cv.fill(cx - hw * q, cy + dy * q, cx + hw * q, cy + (dy + 1) * q, A_ | (c & 0xFFFFFF))
+        gr = max(1, r // 3)
+        cv.fill(cx + (-r // 2 - gr // 2) * q, cy + (-r // 2 - gr // 2) * q, cx + (-r // 2 + gr) * q, cy + (-r // 2 + gr) * q,
+                A_ | (HI & 0xFFFFFF))
+
     def strand(x, L, wd):
+        """GothicText.bloodStrand (round 6): quarter-pixel root, tapering body, round bead."""
         if L <= 0:
             return
-        cv.fill(x - 1, y, x + wd + 1, y + 2, BLOOD)
-        cv.fill(x, y, x + wd, y + L, BLOOD)
-        cv.fill(x + wd - 1, y + 2, x + wd, y + L, DARK) if wd > 1 else None
-        cv.fill(x - 1, y + L - 1, x + 2, y + L + 2, BLOOD)
-        cv.fill(x - 1, y + L - 1, x, y + L, HI)
-        cv.fill(x + 1, y + L + 1, x + 2, y + L + 2, DARK)
-        cv.fill(x, y + L + 2, x + 1, y + L + 3, DARK)
+        cx = x + wd * 0.5
+        body = wd * 2
+        Lq = L * 4
+        for r in range(-12, 6):
+            hw = body + max(0, 6 - r) // 2 + 1
+            cv.fill(cx - hw * q, y + r * q, cx + hw * q, y + (r + 1) * q, BLOOD)
+        for r in range(6, Lq, 2):
+            k = r / Lq
+            hw = max(1, round(body * (1 - 0.33 * k)))
+            cv.fill(cx - hw * q, y + r * q, cx + hw * q, y + (r + 2) * q, BLOOD)
+            cv.fill(cx + (hw - 1) * q, y + r * q, cx + hw * q, y + (r + 2) * q, DARK)
+        bead(cx, y + (Lq + body + 2) * q, body + 3)
+
+    def drop(x, yy, wd, alpha):
+        if alpha <= 0:
+            return
+        cx = x + wd * 0.5
+        r = wd * 2 + 3
+        for j in range(2 * r):
+            hw = 1 + j * (r - 1) // (2 * r)
+            cv.fill(cx - hw * q, yy + (-3 * r + j) * q, cx + hw * q, yy + (-3 * r + j + 1) * q, (alpha << 24) | (BLOOD & 0xFFFFFF))
+        bead(cx, yy, r, alpha)
 
     n = 4 if bw >= 150 else 3 if bw >= 90 else 2
     seed = (_jhash(label) * 31 + 7) & 0xFFFFFFFF
@@ -3773,7 +3800,6 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
         sx = x0 + 6 + round(fx * (bw - 12))
         wd = 2 if h % 3 == 0 else 1
         ln = maxlen * (0.55 + 0.45 * (_h32(h + 3) % 100) / 100)
-        cv.fill(sx - 2 - h % 5, y - 1, sx + wd + 2 + (h >> 5) % 5, y, BLOOD)
         period = (3 + 3 * (h % 1000) / 1000) / (3 if hot else 1)
         p = (t / period + (_h32(h) % 1000) / 1000) % 1
         if burst:
@@ -3784,16 +3810,13 @@ def _plate_drips(cv, x0, y, bw, label, t, hot, burst=False):
         elif p < 0.70:
             L = round(ln)
             strand(sx, L, wd)
-            if (p - 0.55) / 0.15 > 0.5:
-                cv.fill(sx - 1, y + L + 2, sx + 2, y + L + 3, BLOOD)
+            pass
         else:
             k = (p - 0.70) / 0.30
             strand(sx, round(ln * (0.35 + 0.15 * (1 - k))), wd)
-            dy = round(ln + 4 + k * k * 22)
+            dy = ln + 4 + k * k * 22
             da = round(255 * (1 - k * k))
-            cv.fill(sx, y + dy - 1, sx + 1, y + dy, (da << 24) | (BLOOD & 0xFFFFFF))
-            cv.fill(sx - 1, y + dy, sx + 2, y + dy + 2, (da << 24) | (BLOOD & 0xFFFFFF))
-            cv.fill(sx - 1, y + dy, sx, y + dy + 1, (da << 24) | (HI & 0xFFFFFF))
+            drop(sx, y + dy, wd, da)
 
 
 def title_buttons(img, gs, t=1.3, hot_label="Singleplayer"):
@@ -3826,6 +3849,7 @@ def text_previews():
             bg.save(os.path.join(DESIGN, "title_preview_16x9_gui4.png"), optimize=True)
         bg.crop(box).save(os.path.join(DESIGN, f"lobby_buttons_gui{gs}.png"), optimize=True)
     loading_screen(1920, 1080).save(os.path.join(DESIGN, "loading_preview_16x9.png"), optimize=True)
+    waiting_screen(1920, 1080).save(os.path.join(DESIGN, "waiting_preview_16x9.png"), optimize=True)
 
     gs = 2
     gh = 1080 // gs
@@ -3861,38 +3885,49 @@ def lettering(img, t=1.3, motion=True):
     """LobbyBackdrop.lettering on a float image (title layout): the title, the byline, the strands and their drops."""
     sys.path.insert(0, HERE)
     import gen_lobby_title as GT
-    ti, bi, ji = GT.read_java()
+    ti, bi, li, ai, ji = GT.read_java()
     H, W = img.shape[:2]
     T = Image.open(os.path.join(OUT, "title.png")).convert("RGBA")
-    B = Image.open(os.path.join(OUT, "byline.png")).convert("RGBA")
-    J = Image.open(os.path.join(OUT, "credit_joisco.png")).convert("RGBA")
+    P = {k: Image.open(os.path.join(OUT, f + ".png")).convert("RGBA")
+         for k, f in (("b", "byline"), ("l", "credit_lovish"), ("a", "credit_amp"), ("j", "credit_joisco"))}
+    I = {"b": bi, "l": li, "a": ai, "j": ji}
     sc = Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA")
     th = TITLE_BLOCK_H * H / (ti["bot_v"] - ti["top_v"])
     tw = th * T.width / T.height
     if tw * ti["text_w"] > 0.86 * W:
         k = 0.86 * W / (tw * ti["text_w"]); th *= k; tw *= k
     tx0, ty0 = W / 2 - tw / 2, TITLE_Y0 * H - ti["top_v"] * th
-    ch = CREDIT_H * H / (bi["bot_v"] - bi["top_v"])
-    lw, jw, gap = ch * B.width / B.height, ch * J.width / J.height, CREDIT_GAP * CREDIT_H * H
-    text_w = lw * bi["text_w"] + gap + jw * ji["text_w"]
-    if text_w > 0.92 * W:
-        k = 0.92 * W / text_w; ch *= k; lw *= k; jw *= k; gap *= k; text_w *= k
-    cy0 = CREDIT_Y0 * H - bi["top_v"] * ch
-    l_text0 = W / 2 - text_w / 2
-    j_text0 = l_text0 + lw * bi["text_w"] + gap
-    lx0, jx0 = l_text0 - lw * (1 - bi["text_w"]) / 2, j_text0 - jw * (1 - ji["text_w"]) / 2
-    pad = max(tw * ti["text_w"], text_w) * 0.58
-    _over(img, sc, W / 2 - pad, TITLE_Y0 * H - 0.05 * H, W / 2 + pad, CREDIT_Y0 * H + CREDIT_H * H + 0.05 * H,
-          tint=(0, 0, 0), alpha=0.5)
+    # the credits: one pixel scale for every piece (LobbyBackdrop.lettering)
+    cs = CREDIT_H * H / ((bi["bot_v"] - bi["top_v"]) * P["b"].height)
+    word, amp_gap = CREDIT_GAP * 0.32 * CREDIT_H * H, CREDIT_GAP * 0.22 * CREDIT_H * H
+    tw_ = lambda k_: P[k_].width * cs * I[k_]["text_w"]
+    names = tw_("l") + amp_gap + tw_("a") + amp_gap + tw_("j")
+    one = tw_("b") + word + names
+    stacked = one > 0.46 * W
+    line_w = max(tw_("b"), names) if stacked else one
+    if line_w > 0.92 * W:
+        k = 0.92 * W / line_w; cs *= k; word *= k; amp_gap *= k; names *= k; one *= k; line_w *= k
+    cap = (bi["bot_v"] - bi["top_v"]) * P["b"].height * cs
+    base1 = CREDIT_Y0 * H + cap
+    base2 = base1 + cap * 1.55 if stacked else base1
+    pad = max(tw * ti["text_w"], line_w) * 0.58
+    _over(img, sc, W / 2 - pad, TITLE_Y0 * H - 0.05 * H, W / 2 + pad, base2 + cap * 0.4 + 0.04 * H, tint=(0, 0, 0), alpha=0.5)
     _over(img, T, tx0, ty0, tx0 + tw, ty0 + th)
-    _over(img, B, lx0, cy0, lx0 + lw, cy0 + ch)
-    _over(img, J, jx0, cy0, jx0 + jw, cy0 + ch)
-    mx, my, lz = l_text0 + lw * bi["text_w"] + gap / 2, CREDIT_Y0 * H + CREDIT_H * H * 0.5, CREDIT_H * H * 0.16
-    yy, xx = np.mgrid[0:H, 0:W]
-    dd = ((xx - mx) / (lz * 1.5)) ** 2 + ((yy - my) / (lz * 1.5)) ** 2
-    img[dd < 1] = img[dd < 1] * 0.2 + np.array((0.05, 0.02, 0.03), np.float32) * 0.8
-    dd = ((xx - mx) / (lz * 0.75)) ** 2 + ((yy - my) / lz) ** 2
-    img[dd < 1] = np.array((0.86, 0.70, 0.36), np.float32)
+
+    def piece(k_, x, base):
+        ph = P[k_].height * cs
+        pw = P[k_].width * cs
+        x0 = x - pw * (1 - I[k_]["text_w"]) / 2
+        _over(img, P[k_], x0, base - I[k_]["bot_v"] * ph, x0 + pw, base - I[k_]["bot_v"] * ph + ph)
+    x = W / 2 - (names if stacked else one) / 2
+    if stacked:
+        piece("b", W / 2 - tw_("b") / 2, base1)
+    else:
+        piece("b", x, base1)
+        x += tw_("b") * 1 + word
+    for k_ in ("l", "a", "j"):
+        piece(k_, x, base2)
+        x += P[k_].width * cs * I[k_]["text_w"] + (amp_gap if k_ != "j" else 0)
     pil = Image.fromarray(np.round(np.clip(img, 0, 1) * 255).astype(np.uint8), "RGB").convert("RGBA")
     lay = Image.new("RGBA", (W * 4, H * 4), (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
@@ -3955,6 +3990,37 @@ def loading_screen(W=1920, H=1080, progress=0.62, t=1.3):
     return Image.fromarray(np.round(np.clip(im, 0, 1) * 255).astype(np.uint8), "RGB")
 
 
+def waiting_screen(W=1920, H=1080, gs=2, t=1.3, text="Loading terrain..."):
+    """SplashArt.renderWaiting (connect / joining / saving / level-loading screens): the cathedral in its title layout
+    without the lettering, the 62 % soft pad over the middle, and vanilla's status line (approximated in a sans face;
+    the game uses its own font) with the level-loading progress square."""
+    S = compose(W, H, t=t, title=True)
+    sc = Image.open(os.path.join(OUT, "scrim.png")).convert("RGBA")
+    x0, y0, x1, y1 = W * 0.20, H * 0.18, W * 0.80, H * 0.72
+    fx, fy = (x1 - x0) * 0.30 + 14 * gs, (y1 - y0) * 0.30 + 14 * gs
+    _over(S.img, sc, x0 - fx, y0 - fy, x1 + fx, y1 + fy, tint=(0, 0, 0), alpha=0.62)
+    img = Image.fromarray(np.round(np.clip(S.img, 0, 1) * 255).astype(np.uint8), "RGB")
+    d = ImageDraw.Draw(img)
+    try:
+        from PIL import ImageFont
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 9 * gs)
+    except Exception:
+        f = None
+    gh = H // gs
+    d.text((W / 2, (gh / 2 - 50) * gs), text, fill=(255, 255, 255), font=f, anchor="mm")
+    # LevelLoadingScreen's chunk square (a grey grid filling in), centred below the text
+    cs, n = 2 * gs, 17
+    ox, oy = W / 2 - n * cs / 2, H / 2 - n * cs / 2 + 20 * gs
+    r = np.random.default_rng(3)
+    for i in range(n):
+        for j in range(n):
+            dd = math.hypot(i - n / 2, j - n / 2)
+            if dd < 6.5 + r.random():
+                c = (60, 200, 60) if dd < 3 else (120, 120, 120)
+                d.rectangle([ox + i * cs, oy + j * cs, ox + i * cs + cs - 1, oy + j * cs + cs - 1], fill=c)
+    return img
+
+
 def previews():
     if "cath_back" not in CATH_BOXES:
         load_boxes()
@@ -3970,7 +4036,7 @@ def previews():
         text_previews()
 
 
-SMOOTH = {"title", "byline", "credit_joisco", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
+SMOOTH = {"title", "byline", "credit_joisco", "credit_lovish", "credit_amp", "scrim", "plate", "glow", "mist", "vignette", "grain", "sparkle", "ring", "streak", "ripples", "shafts", "mist_pool",
           "fg_briar", "fg_thorns", "fg_branch"}
 
 
@@ -4011,8 +4077,11 @@ def main():
         return
     if "--previews-only" not in sys.argv:
         only = [a[7:] for a in sys.argv if a.startswith("--only=")]
-        steps = {"sky": sky, "moon": moon, "clouds": all_clouds, "spires": spires_far, "cathedral": cathedral,
-                 "ground": ground, "fields": fields, "frames": frames, "sprites": sprites, "plate": plate}
+        sys.path.insert(0, HERE)
+        import lobby_depth as D
+        steps = {"sky": D.sky, "moon": moon, "clouds": D.clouds, "spires": spires_far, "hills": D.hills,
+                 "cathedral": cathedral, "ground": D.ground, "fields": D.fields, "frames": D.frames, "fg": D.fg,
+                 "sprites": sprites, "plate": plate}
         for k, fn in steps.items():
             if not only or k in only[0].split(","):
                 print("painting", k, flush=True)
@@ -4022,6 +4091,10 @@ def main():
                         load_boxes()
                     write_java_cath()
         hand_drawn_all(only[0].split(",") if only else None)
+        if not only or "cathedral" in only[0].split(","):
+            D.cathedral_grade()
+        if not only or "spires" in only[0].split(","):
+            D.spires_grade()
         compact()
     previews()
     total = 0
