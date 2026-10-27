@@ -6,16 +6,17 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Gothic, blood-dripping lettering for the title screen buttons and the lobby screens (design/lobby-backdrop.md).
@@ -38,13 +39,6 @@ public final class GothicText {
 
     private static final int BLOOD_DEEP = 0xFF7E0812, BLOOD = 0xFFB8141F, BLOOD_LIGHT = 0xFFE8505A;
     private static final int STRAND = 0xFF8A0A14, STRAND_HI = 0xFFD8444E;
-
-    /** the lobby screens' main buttons (restyled); the rest (faction, team, colour, x) keep the vanilla look */
-    public static final Set<String> LOBBY_MAIN = Set.of("Start Battle", "Watch Battle", "Starting...", "Host Online",
-        "Skirmish", "Load Game", "Spectate", "Back", "Ready", "Not Ready", "Play", "Close Lobby", "Hide", "Open to LAN",
-        "Add AI", "Join");
-    /** the buttons whose hover lets a drop of blood fall */
-    public static final Set<String> LOBBY_PRIMARY = Set.of("Start Battle", "Watch Battle", "Ready", "Host Online");
 
     /** the letter centres for the drips, per text and font (computed once per label) */
     private static final Map<String, float[]> DRIP_X = new HashMap<>();
@@ -208,64 +202,84 @@ public final class GothicText {
     private static final float BTN_SIZE = 25f, BTN_CAP = BTN_SIZE * 700f / 1348f, BTN_CAP_TOP = BTN_SIZE * 276f / 1348f;
     private static final int IVORY = 0xFFF8EED2, IVORY_GOLD = 0xFFEFD08A, GOLD = 0xFFD2A04A, GOLD_DEEP = 0xFFA87428;
     private static final int OUTLINE = 0xFF3A0309, OUTLINE_HOT = 0xFF6A0612;
-    private static final int PLATE_BLOOD = 0xFFA8101C, PLATE_BLOOD_DARK = 0xFF5A0610, PLATE_BLOOD_HI = 0xFFF06070;
 
     /**
-     * Repaints text buttons as carved dark stone plates (a bevel: light top edge, dark bottom; a thin gold inlay; a
-     * crimson glow when hovered) with blood seeping from the plate's bottom edge in 2-4 strands that grow, bead and let a
-     * drop fall (longer and quicker while hovered, a burst while pressed), and the label in big Cinzel Black capitals:
-     * ivory to gold, a dark crimson outline and a drop shadow, ~65 % of the button's height (scaled down only when a
-     * label would not fit). Drawn after the buttons have rendered, so clicks, narration and tooltips stay vanilla; the
-     * plate is opaque, so the vanilla label never shows through. Positions and hit areas are untouched.
-     * `only` limits it to those labels (null = every text button at least 40 wide); `primary` labels (null = all) let
-     * the drops fall quickly while hovered. `blackletter` is kept for callers: blackletter now only draws the headings.
+     * Repaints every text button (Button and CycleButton; not the icon buttons) as carved stone with a gold frame (a
+     * bevel: light top edge, dark bottom; a thin gold inlay; a crimson glow when hovered) and the label in the plate
+     * capitals: ivory to gold, a dark crimson outline and a drop shadow. No blood drips (tester, Oct 26: they hung over
+     * the buttons below). The label follows ButtonLabelFit: one size per button height on the screen, shrunk only when
+     * it would not fit, centred both ways and clipped to the frame's padding, so it can never overflow. Drawn after the
+     * buttons have rendered, so clicks, narration and tooltips stay vanilla; the plate is opaque, so the vanilla label
+     * never shows through. Positions and hit areas are untouched.
      */
-    public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, Set<String> only,
-                                      Set<String> primary, boolean blackletter, float alpha) {
+    public static void restyleButtons(GuiGraphics g, Font font, List<? extends GuiEventListener> children, float alpha) {
         int a = Mth.clamp(Mth.ceil(alpha * 255f), 0, 255);
         if (a <= 3)
             return;
         // The first real capture (eyes run 39741755064) showed the vanilla labels over our stone plates: vanilla text
         // sits a hair in front (Font draws it at z +0.03) and wins the depth test against fills at z 0. So: flush what
-        // the buttons queued, then draw the plates, blood and our labels a step nearer the viewer.
+        // the buttons queued, then draw the plates and our labels a step nearer the viewer.
         g.flush();
         g.pose().pushPose();
         g.pose().translate(0f, 0f, 20f);
         try {
-            restyle(g, font, children, only, primary, a);
+            restyle(g, font, children, a);
         } finally {
             g.flush();
             g.pose().popPose();
         }
     }
 
-    private static void restyle(GuiGraphics g, Font font, List<? extends GuiEventListener> children, Set<String> only,
-                                Set<String> primary, int a) {
+    /** The buttons that get the theme: visible text buttons; icon buttons (language, accessibility) keep their look. */
+    static boolean themed(GuiEventListener c) {
+        return c instanceof AbstractButton b && b.visible && !(c instanceof ImageButton)
+            && !b.getMessage().getString().isEmpty();
+    }
+
+    private static void restyle(GuiGraphics g, Font font, List<? extends GuiEventListener> children, int a) {
         float t = seconds();
-        boolean pressed = false;
-        try {
-            pressed = net.minecraft.client.Minecraft.getInstance().mouseHandler.isLeftPressed();
-        } catch (Throwable ignored) {
+        List<AbstractButton> bs = new ArrayList<>();
+        for (GuiEventListener c : children)
+            if (themed(c))
+                bs.add((AbstractButton) c);
+        if (bs.isEmpty())
+            return;
+        // each button's own fit, then one shared size per button height
+        float[] fit = new float[bs.size()];
+        Component[] text = new Component[bs.size()];
+        float[] width = new float[bs.size()];
+        for (int i = 0; i < bs.size(); i++) {
+            AbstractButton b = bs.get(i);
+            text[i] = styled(ButtonLabelFit.display(b.getMessage().getString()).toUpperCase(java.util.Locale.ROOT), PLATE_FONT);
+            width[i] = font.width(text[i]) + OUTLINE_W;
+            fit[i] = ButtonLabelFit.fitScale(width[i], BTN_CAP, b.getWidth(), b.getHeight());
         }
-        // three passes, so a hovered plate's glow sits behind its neighbours and the blood hangs over the plate below
-        for (int pass = 0; pass < 3; pass++) {
-            for (int i = 0; i < children.size(); i++) {
-                if (!(children.get(i) instanceof Button b) || !b.visible || b.getWidth() < 40)
-                    continue;
-                String label = b.getMessage().getString();
-                if (only != null && !only.contains(label))
-                    continue;
+        Map<Integer, Float> group = new HashMap<>();
+        for (int i = 0; i < bs.size(); i++) {
+            int h = bs.get(i).getHeight();
+            if (group.containsKey(h))
+                continue;
+            List<Float> same = new ArrayList<>();
+            for (int j = 0; j < bs.size(); j++)
+                if (bs.get(j).getHeight() == h)
+                    same.add(fit[j]);
+            float[] arr = new float[same.size()];
+            for (int k = 0; k < arr.length; k++)
+                arr[k] = same.get(k);
+            group.put(h, ButtonLabelFit.groupScale(arr, ButtonLabelFit.FLOOR_CAP / BTN_CAP));
+        }
+        // two passes, so a hovered plate's glow sits behind its neighbours
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = 0; i < bs.size(); i++) {
+                AbstractButton b = bs.get(i);
                 boolean hot = b.active && b.isHoveredOrFocused();
                 if (pass == 0) {
                     if (hot)
                         glow(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), t, a);
-                } else if (pass == 1) {
-                    plate(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), label.hashCode(), b.active, hot, a);
                 } else {
-                    boolean fast = hot && (primary == null || primary.contains(label));
-                    if (b.active)
-                        plateDrips(g, b.getX(), b.getY() + b.getHeight(), b.getWidth(), label, t, hot, fast, hot && pressed, a);
-                    label(g, font, label, b.getX(), b.getY(), b.getWidth(), b.getHeight(), b.active, hot, a);
+                    plate(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), text[i].getString().hashCode(), b.active, hot, a);
+                    float s = ButtonLabelFit.scaleFor(fit[i], group.get(b.getHeight()));
+                    label(g, font, text[i], width[i], s, b.getX(), b.getY(), b.getWidth(), b.getHeight(), b.active, hot, a);
                 }
             }
         }
@@ -320,46 +334,45 @@ public final class GothicText {
         }
     }
 
-    /** the label: big engraved capitals, ivory at the top to gold below, a dark crimson outline and a drop shadow */
-    private static void label(GuiGraphics g, Font font, String label, int x0, int y0, int bw, int bh, boolean active,
-                              boolean hot, int a) {
-        Component c = styled(label.toUpperCase(java.util.Locale.ROOT), PLATE_FONT);
-        float w = font.width(c);
-        float s = Math.min(1f, (bw - 14f) / Math.max(1f, w));
-        s = Math.min(s, (bh * 0.68f) / BTN_CAP);
-        if (BTN_CAP * s < 6.5f) {               // a very narrow button: the vanilla face, in ivory with a crimson edge
-            Component v = Component.literal(label);
-            int vx = x0 + (bw - font.width(v)) / 2, vy = y0 + (bh - 8) / 2;
-            g.drawString(font, v, vx + 1, vy + 1, withAlpha(OUTLINE, a), false);
-            g.drawString(font, v, vx, vy, withAlpha(active ? IVORY : 0xFF8A7C68, a), false);
-            return;
-        }
+    /** the outline's reach, both sides together, in label units: measured with the label so it fits too */
+    private static final float OUTLINE_W = 1.5f;
+
+    /** the label: engraved capitals, ivory at the top to gold below, a dark crimson outline and a drop shadow */
+    private static void label(GuiGraphics g, Font font, Component c, float w, float s, int x0, int y0, int bw, int bh,
+                              boolean active, boolean hot, int a) {
         float capH = BTN_CAP * s;
-        float tx = x0 + (bw - w * s) / 2f;
-        float ty = y0 + (bh - capH) / 2f - 0.5f - BTN_CAP_TOP * s;
-        if (!active) {
-            drawAt(g, font, c, tx + 0.5f, ty + 0.75f, s, withAlpha(0xD0000000, a));
-            drawAt(g, font, c, tx, ty, s, withAlpha(0xFF6E6152, a));
-            return;
-        }
-        // the drop shadow, then the outline in eight directions (one GUI unit, whatever the scale)
-        drawAt(g, font, c, tx + 1.2f, ty + 1.8f, s, withAlpha(0xC0000000, a));
-        int ol = hot ? OUTLINE_HOT : OUTLINE;
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dy = -1; dy <= 1; dy++)
-                if (dx != 0 || dy != 0)
-                    drawAt(g, font, c, tx + dx * 0.75f, ty + dy * 0.75f, s, withAlpha(ol, a));
-        // the fill in four bands, ivory at the top to deep gold at the foot of the letters
-        float top = ty + BTN_CAP_TOP * s;
-        int[] bands = hot ? new int[]{0xFFE8B850, 0xFFF6D890, 0xFFFFF2D8, 0xFFFFFAEE}
-                          : new int[]{GOLD_DEEP, GOLD, IVORY_GOLD, IVORY};
-        float[] cut = {2f, 0.80f, 0.55f, 0.30f};
-        for (int k = 0; k < 4; k++) {
-            if (k > 0)
-                g.enableScissor(x0, y0 - 2, x0 + bw, Math.round(top + capH * cut[k]));
-            drawAt(g, font, c, tx, ty, s, withAlpha(bands[k], a));
-            if (k > 0)
-                g.disableScissor();
+        float tx = ButtonLabelFit.left(x0, bw, (w - OUTLINE_W) * s);
+        float top = ButtonLabelFit.capTop(y0, bh, capH);
+        float ty = top - BTN_CAP_TOP * s;
+        // the hard edge: nothing of the label leaves the frame, whatever the font measures
+        int pad = Math.max(2, Math.round(ButtonLabelFit.padding(bw)) - 2);
+        g.enableScissor(x0 + pad, y0 + 2, x0 + bw - pad, y0 + bh - 2);
+        try {
+            if (!active) {
+                drawAt(g, font, c, tx + 0.5f, ty + 0.75f, s, withAlpha(0xD0000000, a));
+                drawAt(g, font, c, tx, ty, s, withAlpha(0xFF6E6152, a));
+                return;
+            }
+            // the drop shadow, then the outline in eight directions (three quarters of a GUI unit, whatever the scale)
+            drawAt(g, font, c, tx + 0.8f, ty + 1.0f, s, withAlpha(0xC0000000, a));
+            int ol = hot ? OUTLINE_HOT : OUTLINE;
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        drawAt(g, font, c, tx + dx * 0.75f, ty + dy * 0.75f, s, withAlpha(ol, a));
+            // the fill in four bands, ivory at the top to deep gold at the foot of the letters
+            int[] bands = hot ? new int[]{0xFFE8B850, 0xFFF6D890, 0xFFFFF2D8, 0xFFFFFAEE}
+                              : new int[]{GOLD_DEEP, GOLD, IVORY_GOLD, IVORY};
+            float[] cut = {2f, 0.80f, 0.55f, 0.30f};
+            for (int k = 0; k < 4; k++) {
+                if (k > 0)
+                    g.enableScissor(x0, y0 - 2, x0 + bw, Math.round(top + capH * cut[k]));
+                drawAt(g, font, c, tx, ty, s, withAlpha(bands[k], a));
+                if (k > 0)
+                    g.disableScissor();
+            }
+        } finally {
+            g.disableScissor();
         }
     }
 
@@ -369,107 +382,6 @@ public final class GothicText {
         pose.translate(x, y, 0f);
         pose.scale(s, s, 1f);
         g.drawString(font, c, 0, 0, argb, false);
-        pose.popPose();
-    }
-
-    /**
-     * Blood seeping from the plate's bottom edge: 2-4 strands (by width) at hashed places, each from a smear along the
-     * lip, growing (0-55 % of its cycle), swelling into a bead (55-70 %) and letting the drop fall (70-100 %), on its
-     * own 3-6 s cycle. Hovered: the strands hang longer and the cycle runs 3x faster; pressed: every strand lets a drop
-     * go at once. Reduce motion: still strands of middling length. Mirrored by tools/gen_lobby_art.py _plate_drips.
-     */
-    private static void plateDrips(GuiGraphics g, int x0, int y, int bw, String label, float t, boolean hot, boolean fast,
-                                   boolean burst, int a) {
-        int n = bw >= 150 ? 4 : bw >= 90 ? 3 : 2;
-        int seed = label.hashCode() * 31 + 7;
-        float maxLen = hot ? 12f : 7f;
-        for (int i = 0; i < n; i++) {
-            int h = hash(seed + i * 7919);
-            float fx = (i + 0.25f + 0.5f * ((h >>> 3) % 1000) / 1000f) / n;
-            int sx = x0 + 6 + Math.round(fx * (bw - 12));
-            int wdt = (h % 3 == 0) ? 2 : 1;
-            float len = maxLen * (0.55f + 0.45f * ((hash(h + 3) % 100) / 100f));
-            if (t < 0f) {
-                bloodStrand(g, sx, y, Math.round(len * 0.7f), wdt, a);
-                continue;
-            }
-            float period = (3f + 3f * (h % 1000) / 1000f) / (fast ? 3f : 1f);
-            float p = (t / period + (hash(h) % 1000) / 1000f) % 1f;
-            if (burst)
-                p = Math.max(p, 0.70f + 0.30f * ((t * 2.5f + i * 0.21f) % 1f));
-            if (p < 0.55f) {
-                float k = p / 0.55f;
-                bloodStrand(g, sx, y, Math.round(len * (0.35f + 0.65f * k * k * (3 - 2 * k))), wdt, a);
-            } else if (p < 0.70f) {
-                int L = Math.round(len);
-                bloodStrand(g, sx, y, L, wdt, a);
-                // (the bead swells: bloodStrand's bead is already full; the drop lets go below)
-            } else {
-                float k = (p - 0.70f) / 0.30f;
-                bloodStrand(g, sx, y, Math.round(len * (0.35f + 0.15f * (1 - k))), wdt, a);
-                float dy = len + 4 + k * k * 22f;
-                int da = Math.round(a * (1f - k * k));
-                drop(g, sx, y + dy, wdt, da);
-            }
-        }
-    }
-
-    /**
-     * One strand, drawn in quarter-pixel units (round 6: the 1-px blocks read as detached pixel "T"s): a root that
-     * swells into the plate's lip (overlapping it, so there is no gap), a body tapering as it hangs, lit down its left
-     * edge and shaded on its right, and a round, glossy bead at the tip.
-     */
-    private static void bloodStrand(GuiGraphics g, int x, int y, int len, int wdt, int a) {
-        if (len <= 0)
-            return;
-        var pose = g.pose();
-        pose.pushPose();
-        pose.translate(x + wdt * 0.5f, y, 0f);
-        pose.scale(0.25f, 0.25f, 1f);
-        int body = wdt * 2;                     // half width of the body at its root, quarter units
-        int Lq = len * 4;
-        // the root: a smear widening up into the lip (from 3 px inside the plate, over its dark lower edge)
-        for (int r = -12; r < 6; r++) {
-            int hw = body + Math.max(0, 6 - r) / 2 + 1;
-            g.fill(-hw, r, hw, r + 1, withAlpha(PLATE_BLOOD, a));
-        }
-        // the body, tapering to two thirds of its width
-        for (int r = 6; r < Lq; r += 2) {
-            float k = r / (float) Lq;
-            int hw = Math.max(1, Math.round(body * (1f - 0.33f * k)));
-            g.fill(-hw, r, hw, r + 2, withAlpha(PLATE_BLOOD, a));
-            g.fill(hw - 1, r, hw, r + 2, withAlpha(PLATE_BLOOD_DARK, a));
-            if (hw > 1)
-                g.fill(-hw, r, -hw + 1, r + 2, withAlpha(PLATE_BLOOD_HI, a * 3 / 5));
-        }
-        bead(g, 0, Lq + body + 2, body + 3, a);
-        pose.popPose();
-    }
-
-    /** a round bead of blood (quarter units, inside a scaled pose): rows of a disc, a dark lower rim, a gloss dot */
-    private static void bead(GuiGraphics g, int cx, int cy, int r, int a) {
-        for (int dy = -r; dy <= r; dy++) {
-            int hw = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
-            g.fill(cx - hw, cy + dy, cx + hw, cy + dy + 1, withAlpha(dy > r / 2 ? PLATE_BLOOD_DARK : PLATE_BLOOD, a));
-        }
-        int gr = Math.max(1, r / 3);
-        g.fill(cx - r / 2 - gr / 2, cy - r / 2 - gr / 2, cx - r / 2 + gr, cy - r / 2 + gr, withAlpha(PLATE_BLOOD_HI, a));
-    }
-
-    /** a falling drop at (x, y) GUI px: a teardrop (quarter units) */
-    private static void drop(GuiGraphics g, float x, float y, int wdt, int a) {
-        if (a <= 0)
-            return;
-        var pose = g.pose();
-        pose.pushPose();
-        pose.translate(x + wdt * 0.5f, y, 0f);
-        pose.scale(0.25f, 0.25f, 1f);
-        int r = wdt * 2 + 3;
-        for (int j = 0; j < 2 * r; j++) {         // the tail, tapering up from the drop
-            int hw = 1 + j * (r - 1) / (2 * r);
-            g.fill(-hw, -3 * r + j, hw, -3 * r + j + 1, withAlpha(PLATE_BLOOD, a));
-        }
-        bead(g, 0, 0, r, a);
         pose.popPose();
     }
 }

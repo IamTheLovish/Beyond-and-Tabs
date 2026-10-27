@@ -330,12 +330,17 @@ public class MultiplayerLobbyScreen extends Screen {
         }
         if (!s.spectating()) {
             // team: a small cycler (T1..T4) on your own row and on bot rows for the host
-            Button team = addRenderableWidget(Button.builder(Component.literal("T" + (s.team + 1)), b -> {
-                send(MultiplayerLobby.Action.SET_TEAM, s.id, (s.team + 1) % MultiplayerLobby.TEAMS);
-                LobbySounds.join();
-            }).bounds(rightEdge - 24, y, 24, ROW_H - 2).build());
+            // left click: the next team, right click: the one before (CycleClicks), wrapping both ways
+            Button team = addRenderableWidget(new CycleClicks.Back(rightEdge - 24, y, 24, ROW_H - 2,
+                Component.literal("T" + (s.team + 1)), b -> {
+                    send(MultiplayerLobby.Action.SET_TEAM, s.id, CycleStep.step(s.team, MultiplayerLobby.TEAMS, false));
+                    LobbySounds.join();
+                }, () -> {
+                    send(MultiplayerLobby.Action.SET_TEAM, s.id, CycleStep.step(s.team, MultiplayerLobby.TEAMS, true));
+                    LobbySounds.join();
+                }));
             team.active = edit;
-            team.setTooltip(Tooltip.create(Component.literal("Team " + (s.team + 1) + (edit ? " - click for the next team" : ""))));
+            team.setTooltip(Tooltip.create(Component.literal("Team " + (s.team + 1) + (edit ? " - click for the next team, right click for the one before" : ""))));
             rightEdge -= 26;
             if (s.bot) {
                 CycleButton<Integer> diff = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.DIFFICULTIES.get(i)))
@@ -478,7 +483,7 @@ public class MultiplayerLobbyScreen extends Screen {
         }
 
         super.render(gg, mx, my, pt);
-        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
+        GothicText.restyleButtons(gg, font, children(), 1f);
 
         // faction icons left of each faction button; on rows you can't edit, the icon and the name as a label
         for (Object[] fi : factionIcons) {
@@ -589,6 +594,8 @@ public class MultiplayerLobbyScreen extends Screen {
             }
             return true;
         }
+        if (CycleClicks.rightClick(children(), mx, my, button))
+            return true;   // right click steps a cycling button back (left click goes forward)
         if (l != null && l.open && !l.starting) {
             for (int[] sw : swatches) {
                 int[] at = swatchOnScreen(sw[2]);
