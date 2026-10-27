@@ -415,4 +415,88 @@ public class ArtilleryGameTests {
         setUpTest(helper, "ground", (b, v) -> b.getRangedAttackGroundGoal().setGroundTarget(
             b.blockPosition().offset(10, -1, 0)), false);
     }
+
+    /**
+     * Set-up time when possessed: a player walking the crew by hand (navigation idle, so only the keys move it) a
+     * single block - under the 1.5-block drift - and clicking every tick from then on gets no shell in the first
+     * SET_UP ticks after it comes to rest, and one soon after (a click refused for the set-up costs no cooldown).
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void possessed_artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        boolean[] active = { false };
+        double[] start = new double[2];
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            start[0] = b.getX();
+            start[1] = b.getZ();
+            active[0] = true;
+        });
+        // keys held east (yaw -90) until it has gone 0.8 blocks, then let go
+        int[] tick = { 0 }, stoppedAt = { -1 };
+        double[] last = { b.getX(), b.getZ() };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            double moved = Math.hypot(b.getX() - start[0], b.getZ() - start[1]);
+            if (stoppedAt[0] < 0)
+                com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), moved < 0.8 ? 1 : 0,
+                    0, -90, 10, false, false, false);
+            double step = Math.hypot(b.getX() - last[0], b.getZ() - last[1]);
+            last[0] = b.getX();
+            last[1] = b.getZ();
+            int shells = shellsOf(b);
+            if (stoppedAt[0] < 0) {
+                if (shells > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("fired before it had even stopped walking (tick " + tick[0] + ")");
+                }
+                if (tick[0] > 4 && moved >= 0.8 && step < 0.01)
+                    stoppedAt[0] = tick[0];
+                else if (tick[0] > 80) {
+                    cleanUp.run();
+                    throw new GameTestAssertException(String.format("the possessed crew never walked a block and "
+                        + "stopped (moved %.2f)", moved));
+                }
+                return;
+            }
+            if (moved >= 1.5) {
+                cleanUp.run();
+                throw new GameTestAssertException(String.format("walked %.2f blocks: past the 1.5-block drift, so "
+                    + "the test no longer checks a short possessed walk", moved));
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            int since = tick[0] - stoppedAt[0];
+            if (shells > 0) {
+                cleanUp.run();
+                if (since < SET_UP - 2)
+                    throw new GameTestAssertException("fired " + since + " ticks after it stopped walking: it needs "
+                        + SET_UP + " ticks to set up");
+                helper.succeed();
+            } else if (since > SET_UP + 10) {
+                cleanUp.run();
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped)");
+            }
+        });
+    }
 }
