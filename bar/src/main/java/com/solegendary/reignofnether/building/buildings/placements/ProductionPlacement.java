@@ -101,6 +101,63 @@ public class ProductionPlacement extends BuildingPlacement {
         if (getLevel() != null && !getLevel().isClientSide())
             getDataStorage().setData(STEWARD_PAUSED, paused);
     }
+
+    /**
+     * BAR's factoryguard (Ctrl+G, tester request): while on, every builder this factory produces is given a guard
+     * order on it as its first order - it assists the factory's production instead of walking to the rally point.
+     * Combat units are unaffected. Off by default (bots never set it).
+     */
+    public boolean factoryGuard = false;
+    public static final com.solegendary.reignofnether.building.data.DataType<Boolean> FACTORY_GUARD =
+            com.solegendary.reignofnether.building.data.DataType.createRegistered(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            com.solegendary.reignofnether.ReignOfNether.MOD_ID, "factory_guard"),
+                    (tag, server) -> tag.getBoolean("guard"),
+                    on -> {
+                        CompoundTag tag = new CompoundTag();
+                        tag.putBoolean("guard", on);
+                        return tag;
+                    },
+                    () -> false);
+
+    /** Sets the factory guard toggle and records it in the building's save data (server side). */
+    public void setFactoryGuard(boolean on) {
+        this.factoryGuard = on;
+        if (getLevel() != null && !getLevel().isClientSide())
+            getDataStorage().setData(FACTORY_GUARD, on);
+    }
+
+    /** Reads the factory guard toggle back from this building's save data (BuildingServerEvents, on load). */
+    public void restoreFactoryGuard() {
+        this.factoryGuard = Boolean.TRUE.equals(getDataStorage().getData(FACTORY_GUARD));
+    }
+
+    // ---- build power lent by guarding builders (GuardServerEvents): BAR's assist on a factory's production ----
+    private float guardAssistPower = 0;
+    private long guardAssistTick = Long.MIN_VALUE / 2;
+    /** A guard pass's assist is good for this many ticks (the pass runs every 10). */
+    public static final int GUARD_ASSIST_TICKS = 15;
+
+    /** One guarding builder lends {@code power} to this factory's production in the guard pass of tick {@code now}. */
+    public void addGuardAssist(float power, long now) {
+        if (guardAssistTick != now) {
+            guardAssistTick = now;
+            guardAssistPower = 0;
+        }
+        guardAssistPower += power;
+    }
+
+    /** The build power guarding builders lend this factory now (0 when no recent guard pass lent any). */
+    public float getGuardAssistPower() {
+        if (getLevel() == null || getLevel().getGameTime() - guardAssistTick > GUARD_ASSIST_TICKS)
+            return 0;
+        return guardAssistPower;
+    }
+
+    @Override
+    public float getProductionBuildPower() {
+        return super.getProductionBuildPower() + getGuardAssistPower();
+    }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
@@ -244,7 +301,13 @@ public class ProductionPlacement extends BuildingPlacement {
         if (entity instanceof Unit unit) {
             unit.setOwnerName(ownerName);
             unit.setupEquipmentAndUpgradesServer();
-            setDelayedRally(unit);
+            // factory guard: an own builder's first order is to guard (assist) this factory, not the rally point
+            if (factoryGuard && unit instanceof WorkerUnit && this.ownerName.equals(ownerName)) {
+                com.solegendary.reignofnether.unit.GuardServerEvents.setGuardBuilding(unit, this);
+                if (unit.getMoveGoal() != null)
+                    unit.getMoveGoal().stopMoving();   // it spawned beside the factory: assist from there, not its centre
+            } else
+                setDelayedRally(unit);
             recordUnitProduced(ownerName, entity);
             watchSpawn(entity);
             if (roof)

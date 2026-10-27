@@ -617,6 +617,10 @@ public class HudClientEvents {
                     );
                     multiRepeat.render(evt.getGuiGraphics(), blitX - 25, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
                     renderedButtons.add(multiRepeat);
+                    // factory guard for the whole group, right of Repeat (one press sets all, mixed -> all on)
+                    Button multiGuard = ProductionHudLogic.factoryGuardButton(ProductionHudLogic.repeatGroup(selBuildings));
+                    multiGuard.render(evt.getGuiGraphics(), blitX - 1, screenHeight - portraitRendererBuilding.frameHeight - 28, mouseX, mouseY);
+                    renderedButtons.add(multiGuard);
                 }
                 // background frame
                 hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
@@ -720,6 +724,12 @@ public class HudClientEvents {
                         stewardButton.render(evt.getGuiGraphics(), toggleX + 24, toggleY, mouseX, mouseY);
                         renderedButtons.add(stewardButton);
                     }
+                    // BAR factory guard (Ctrl+G), right of Repeat (and the Steward): lit while builders made here guard it
+                    Button guardButton = ProductionHudLogic.factoryGuardButton(List.of(selProdBuilding));
+                    boolean stewardShown = selProdBuilding.isCapitol && com.solegendary.reignofnether.research.ResearchClient.hasResearch(
+                            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_STEWARD);
+                    guardButton.render(evt.getGuiGraphics(), toggleX + (stewardShown ? 48 : 24), toggleY, mouseX, mouseY);
+                    renderedButtons.add(guardButton);
                 }
 
                 for (int i = 0; i < selProdBuilding.productionQueue.size(); i++) {
@@ -2344,6 +2354,14 @@ public class HudClientEvents {
         if (key == GLFW.GLFW_KEY_W && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
                 && OrthoviewClientEvents.isEnabled()) {
             com.solegendary.reignofnether.hud.buttons.HelperButtons.selectWholeArmy();
+            return;
+        }
+        // BAR's Ctrl+G: factory guard on the selected factories (only factories selected; G alone keeps its meaning)
+        if (key == GLFW.GLFW_KEY_G && Keybindings.ctrlMod.isDown() && !Keybindings.altMod.isDown()
+                && OrthoviewClientEvents.isEnabled() && ProductionHudLogic.ctrlGToggles(getSelectedUnits().size(),
+                    com.solegendary.reignofnether.building.BuildingClientEvents.getSelectedBuildings())) {
+            com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleFactoryGuard(
+                ProductionHudLogic.repeatGroup(com.solegendary.reignofnether.building.BuildingClientEvents.getSelectedBuildings()));
             return;
         }
         boolean cardKey = isCardKey(key);
