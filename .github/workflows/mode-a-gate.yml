@@ -1,0 +1,58 @@
+# mode-a-gate.yml - required check "mode-a" (lovish Oct 27 03:20: "make the gate better so it doesnt slip"; D040).
+# A PR cannot merge (with branch protection requiring the "mode-a" status) until a reviewer comment says
+#   VERDICT: PASS
+#   REVIEWER: <name> [id:xxxx]
+#   SHA: <the PR's current head sha, at least 7 chars>
+# (the same reviews\pr-N-modeA.md file that cc.ps1 gate done reads)
+# from someone with write access. Every new push resets it to pending, so a review always covers the latest code.
+# Comment text is handled as data: only read through env vars and matched with a regex, never executed.
+name: mode-a-gate
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created, edited]
+permissions:
+  statuses: write
+  pull-requests: read
+jobs:
+  pending-on-push:
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set mode-a pending for the new head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api "repos/$REPO/statuses/$SHA" -f state=pending -f context=mode-a \
+            -f description="Needs a Mode A review comment for ${SHA:0:8}"
+  verdict-from-comment:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read verdict
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          ASSOC: ${{ github.event.comment.author_association }}
+          AUTHOR: ${{ github.event.comment.user.login }}
+          BODY: ${{ github.event.comment.body }}
+        run: |
+          case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) echo "ignored: $AUTHOR has no write access"; exit 0;; esac
+          printf '%s' "$BODY" | grep -qE '^VERDICT: (PASS|BLOCK)' || { echo "not a verdict comment"; exit 0; }
+          printf '%s' "$BODY" | grep -qE '^REVIEWER: ' || { echo "no REVIEWER line"; exit 0; }
+          HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          SHA=$(printf '%s' "$BODY" | grep -oE '^SHA: [0-9a-f]{7,40}' | head -1 | cut -d' ' -f2)
+          if [ -z "$SHA" ] || [ "${HEAD#$SHA}" = "$HEAD" ]; then
+            gh api "repos/$REPO/statuses/$HEAD" -f state=pending -f context=mode-a \
+              -f description="Verdict was for ${SHA:-no sha}, head is ${HEAD:0:8}: review the latest commit"
+            exit 0
+          fi
+          if printf '%s' "$BODY" | grep -qE '^VERDICT: PASS'; then
+            gh api "repos/$REPO/statuses/$HEAD" -f state=success -f context=mode-a -f description="Mode A PASS by $AUTHOR"
+          else
+            gh api "repos/$REPO/statuses/$HEAD" -f state=failure -f context=mode-a -f description="Mode A BLOCK by $AUTHOR"
+          fi
