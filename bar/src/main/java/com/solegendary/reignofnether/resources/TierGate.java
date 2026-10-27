@@ -33,7 +33,7 @@ import java.util.List;
  * energy and a lab spends about 2.4 metal/s on it, so a real T1 army (3-5 labs) spends 7-12 of those 16 metal/s.
  * <ul>
  *   <li><b>Tier 2 research</b> {@value #T2_RESEARCH_METAL} metal / {@value #T2_RESEARCH_ENERGY} energy over
- *       {@value #T2_RESEARCH_SECONDS} s: it drains 5.6 metal/s and 44 energy/s while it runs (a time-based job at the
+ *       {@value #T2_RESEARCH_SECONDS} s: it drains 5.6 metal/s and 56 energy/s while it runs (a time-based job at the
  *       capitol: a second worker cannot help, and the capitol trains no workers meanwhile - for three minutes now, not
  *       two). 5.6 metal/s is a third of a normal economy, so a player who also feeds 3+ labs runs it at a stall and it
  *       takes longer than 180 s.</li>
@@ -73,7 +73,7 @@ public final class TierGate {
 
     // ---- Tier 2 research (the capitol) ----
     public static final int T2_RESEARCH_METAL = 1000;
-    public static final int T2_RESEARCH_ENERGY = 8000;
+    public static final int T2_RESEARCH_ENERGY = 10080;   // was 8000 (lovish, Oct 27: keep 56 energy/s at 180 s)
     public static final int T2_RESEARCH_SECONDS = 180;   // was 120 (lovish, Oct 24)
 
     // ---- the T2 lab (every faction's: Arcane Tower, Dungeon, Flame Sanctuary, Circle of Elders, Drydock, Celestial
@@ -105,7 +105,7 @@ public final class TierGate {
     // ---- what a bot wants before it techs (BotPlayer): the incomes above, as readiness rules ----
     /** Metal/s before researching Tier 2: the capitol + five T1 extractors. */
     public static final float BOT_MIN_METAL_INCOME = 12f;
-    /** Energy/s before researching Tier 2: the research's 44 energy/s (67 before Oct 24) on top of the base's own
+    /** Energy/s before researching Tier 2: the research's 56 energy/s (67 before Oct 24, 44 on Oct 24-27) on top of the base's own
      *  spending, with the T2 lab's pull right after it - kept at 110, the lab needs it next. */
     public static final float BOT_MIN_ENERGY_INCOME = 110f;
     /** Energy/s a base spends on its own before refits: labs, units and builds. */

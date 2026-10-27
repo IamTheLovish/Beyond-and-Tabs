@@ -27,6 +27,8 @@ GATES = {
     'oct22': dict(BASE, rm=1000, re=8000, rs=120, lm=700, le=6000, lw=504, moho=7.0, fm=180, fe=600, fs=45),
     # the softer refit and the slower research (lovish, Oct 24)
     'oct24': dict(BASE, rm=1000, re=8000, rs=180, lm=700, le=6000, lw=504, moho=4.5, fm=300, fe=600, fs=75),
+    # the research energy raised so the slower research still drains 56 energy/s (lovish, Oct 27)
+    'oct27': dict(BASE, rm=1000, re=10080, rs=180, lm=700, le=6000, lw=504, moho=4.5, fm=300, fe=600, fs=75),
 }
 
 
@@ -193,7 +195,7 @@ def policies(rush_winds, normal_winds, P):
 def arrival_table():
     print('| gate   | player | energy   | research start -> done | T2 lab | T1 army spent |')
     print('|---|---|---|---|---|---|')
-    rows = [('oct20', 5, 6)] + [(g, rw, nw) for g in ('oct22', 'oct24') for rw, nw in [(4, 5), (7, 7), (10, 10), (14, 14)]]
+    rows = [('oct20', 5, 6)] + [(g, rw, nw) for g in ('oct22', 'oct24', 'oct27') for rw, nw in [(4, 5), (7, 7), (10, 10), (14, 14)]]
     for gate, rw, nw in rows:
         P = GATES[gate]
         for who, pol in policies(rw, nw, P).items():
@@ -210,7 +212,7 @@ def refit_table(horizon=20 * 60):
     marks = [m * 60 for m in (6, 8, 10, 12, 14, 16, 18, 20) if m * 60 < horizon]
     print('| gate   | T2 lab | refits done (first .. last) | ' + ' | '.join('metal/s @%d' % (m // 60) for m in marks) + ' |')
     print('|---|---|---|' + '---|' * len(marks))
-    for gate in ('oct22', 'oct24'):
+    for gate in ('oct22', 'oct24', 'oct27'):
         P = GATES[gate]
         v = run(policies(7, 7, P)['normal'], P, horizon=horizon, refits=True, sample=set(marks))
         r = v['refits']
