@@ -27,8 +27,10 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
     public final static String buildingName = "Metal Extractor";
     public final static String structureName = "metal_extractor";
     public final static String upgradedStructureName = "metal_extractor_t2";
-    /** Metal per second at tier 2 (tier 1 is metalIncome). */
-    public final static float T2_METAL_INCOME = 7.0f;
+    /** Metal per second at tier 2 (tier 1 is metalIncome). Was 7 (3.5x a T1 extractor) until lovish, Oct 24: "tier 2 ...
+     *  rendering tier 1 ineffective" - now 2.25x, so a T1 base stays an economy (resources/TierGate). The economy banks
+     *  income as a float every tick (EconomyServerEvents), so a fractional rate is exact. */
+    public final static float T2_METAL_INCOME = 4.5f;
     public final static ResourceCost cost = ResourceCosts.METAL_EXTRACTOR;
 
     /** "" (Kingdom), "_dark" (The Fallen), "_nether" (The Gilded Legion), "_verdant" (Verdant Court), "_tide" (Tidewrought) or "_storm" (Stormcallers); picks the faction's structure skin. */
