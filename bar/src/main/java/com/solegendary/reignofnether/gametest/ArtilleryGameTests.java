@@ -659,7 +659,9 @@ public class ArtilleryGameTests {
                 double[] slide = { 0.30, 0.16, 0.09, 0.05 };
                 com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
                     false, b.getX() - slide[since - 10], b.getY(), b.getZ(), ++seq[0]);
-            }
+            } else if (claims)   // a real client claims every tick, standing still too
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX(), b.getY(), b.getZ(), ++seq[0]);
             com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
             if (shells > 0) {
                 cleanUp.run();

@@ -148,6 +148,8 @@ public final class PossessionServer {
         float shoveAllowance;
         /** The horizontal speed of the last shove the server itself gave the unit (knockback, a blast, a push), decaying at air drag: never from the client's flags. */
         float serverShove;
+        /** The last drive ran the claims branch (which zeroes the velocity): only then is this tick's velocity a shove. */
+        boolean claimsLastTick;
         int correctionCooldown;
         /** The server is moving the unit itself (an ability's AI window, a leap arc): claims are ignored. */
         boolean serverMoves;
@@ -767,6 +769,8 @@ public final class PossessionServer {
         Possession p = BY_UNIT.get(mob.getId());
         if (p == null || p.level != mob.level())
             return false;
+        boolean claimsBefore = p.claimsLastTick;
+        p.claimsLastTick = false;
         // the server moving the unit itself starts / ends: the possessor's client stops / resumes predicting
         boolean serverMoves = p.aiTicks > 0 || scriptedMotion(mob);
         if (serverMoves != p.serverMoves) {
@@ -790,8 +794,11 @@ public final class PossessionServer {
             // prediction: the claims move the unit (applyClaim); no input-driven walk on top. A shove the server gave
             // it (knockback, a blast) reached the client as a motion packet and is in the claims, so it only widens
             // what a claim may cover; then the velocity is dropped so vanilla travel adds just one tick of gravity
+            // ...but only if the last tick was a claims tick too (it zeroed the velocity): right after the keys or an
+            // ability moved it, the velocity is that walk's own momentum, not a shove (round-6 review of #222)
             Vec3 dm = mob.getDeltaMovement();
-            float shove = (float) Math.sqrt(dm.x * dm.x + dm.z * dm.z);
+            float shove = claimsBefore ? (float) Math.sqrt(dm.x * dm.x + dm.z * dm.z) : 0;
+            p.claimsLastTick = true;
             p.shoveAllowance = Math.max(p.shoveAllowance * 0.91f, shove > 0.2f ? shove : 0);
             p.serverShove = Math.max(p.serverShove * 0.91f, shove > SHOVE_SEEN ? shove : 0);
             if (shove > 0.2f && !p.headless) {
