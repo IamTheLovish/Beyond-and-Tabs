@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.fogofwar.FogExploration;
+import com.solegendary.reignofnether.fogofwar.FogMemoryClient;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.gametest.framework.GameTest;
@@ -88,6 +89,39 @@ public class FogExplorationGameTests {
             if (!FogExploration.markExplored(List.of(new ChunkPos(5, 5))).isEmpty())
                 problems.add("the live set re-listed chunk (5, 5)");
         } finally {
+            FogExploration.clear();
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /** A rematch keeps the ClientLevel, so the client's fog memory must be dropped when a match preparation starts. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    @SuppressWarnings("unchecked")
+    public static void fog_memory_cleared_on_prep_start(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        var memory = FogMemoryClient.map();
+        memory.clear();
+        FogExploration.clear();
+        try {
+            ChunkPos c = new ChunkPos(3, 4);
+            memory.put(c, new net.minecraft.world.level.chunk.PalettedContainer[0]);
+            FogExploration.markExplored(List.of(c));
+            FogMemoryClient.onPrepState(true, true);
+            FogMemoryClient.onPrepState(false, false);
+            if (memory.size() != 1)
+                problems.add("memory changed without a prep start: " + memory.size());
+            if (!FogExploration.isExplored(3, 4))
+                problems.add("exploration was cleared without a prep start");
+            FogMemoryClient.onPrepState(false, true);
+            if (!memory.isEmpty())
+                problems.add("memory not emptied when the prep started: " + memory.size());
+            if (FogExploration.isExplored(3, 4))
+                problems.add("exploration not cleared when the prep started");
+        } finally {
+            memory.clear();
             FogExploration.clear();
         }
         if (problems.isEmpty())
