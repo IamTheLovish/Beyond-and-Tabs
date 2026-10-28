@@ -19,6 +19,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -103,6 +105,12 @@ public final class PossessionServer {
      * the server's own world that decides. Far under CORRECT_DIST, and the next claim is measured from where it is.
      */
     static final double GROUND_PROBE = 0.01;
+    /** {@link #GROUND_PROBE} as the velocity itself: immutable, so one shared instance (no Vec3 per unit per tick). */
+    static final Vec3 GROUND_PROBE_VEC = new Vec3(0, -GROUND_PROBE, 0);
+    /** A mob's step height: how far a walker may rise in a claim without jumping - and only onto something it stands on. */
+    static final double STEP_UP = 0.6;
+    /** Vanilla's jump velocity (LivingEntity.getJumpPower), +0.1 per Jump Boost level. */
+    static final double JUMP_VELOCITY = 0.42;
     /** A server shove (Possession.serverShove) above this is one the server really gave; it decays by 0.91 a tick. */
     static final float SHOVE_SEEN = 0.05f;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
@@ -153,11 +161,19 @@ public final class PossessionServer {
         int lastSeq = -1, ticksSinceClaim = 99, moveBudget = MOVE_BUDGET_MAX;
         /** Server ticks the unit has been off the ground (jump rise vs. hovering). */
         int airTicks;
+        /**
+         * The Y it last stood on (on the ground, climbing or swimming; where it was possessed until then) and whether it
+         * left that ground launched - holding jump, or carried by a server shove: a claim never takes a walker higher
+         * than a jump's apex plus a step above it, or, not launched, higher than a step it ends up standing on. Each landing used to refill the grounded climb allowance once the unit read on-ground
+         * (Mode A review of #308, round 1: ~4.6 blocks in 7 ticks).
+         */
+        double groundY = Double.NaN;
+        boolean jumpedFromGround;
         /** Extra blocks per tick a claim may cover while a shove (knockback, explosion) carries the unit. */
         float shoveAllowance;
         /** The horizontal speed of the last shove the server itself gave the unit (knockback, a blast, a push), decaying at air drag: never from the client's flags. */
         float serverShove;
-        /** The last drive ran the claims branch (which zeroes the velocity): only then is this tick's velocity a shove. */
+        /** The last drive ran the claims branch (which leaves only the ground probe): only then is this tick's velocity a shove. */
         boolean claimsLastTick;
         int correctionCooldown;
         /** The server is moving the unit itself (an ability's AI window, a leap arc): claims are ignored. */
@@ -436,6 +452,21 @@ public final class PossessionServer {
         return 3.2 * speed * speed * (sprinting ? SPRINT_MULT : 1) + 0.06;
     }
 
+    /**
+     * How high {@code mob}'s jump reaches: vanilla's rise from {@link #JUMP_VELOCITY} (+0.1 per Jump Boost level), each
+     * tick moving by the velocity, then -0.08 gravity and x0.98 drag - 1.252 blocks without the effect.
+     */
+    static double jumpApex(Mob mob) {
+        MobEffectInstance boost = mob.getEffect(MobEffects.JUMP);
+        double v = JUMP_VELOCITY + (boost != null ? 0.1 * (boost.getAmplifier() + 1) : 0);
+        double h = 0;
+        while (v > 0) {
+            h += v;
+            v = (v - 0.08) * 0.98;
+        }
+        return h;
+    }
+
     /** Whether sprint applies: the key is held, the unit is moving forward and it walks (flyers have no sprint). */
     static boolean sprints(Mob mob, float forward, boolean sprint) {
         return sprint && forward > 0 && !isFlyer(mob);
@@ -533,14 +564,25 @@ public final class PossessionServer {
             impossible = true;
         }
         double maxUp, maxDown;
+        boolean climbing = false;
         if (flyer) {
             maxUp = maxDown = perTick * ticks;
         } else {
-            boolean climbing = mob.onClimbable() || mob.isInWater() || mob.isInLava();
-            // on the ground: a step or a jump's first tick; rising: the rest of a jump; later only a little (the claims
-            // path leaves travel no gravity of its own, just the GROUND_PROBE drift)
-            double upPerTick = climbing ? 0.3 : p.airTicks <= 1 ? 0.6 : p.airTicks < 7 ? 0.45 : 0.08;
-            maxUp = upPerTick * ticks + (p.airTicks <= 1 ? 0.6 : 0);
+            climbing = mob.onClimbable() || mob.isInWater() || mob.isInLava();
+            // on the ground: a step or a jump's first tick (its +0.6 only with jump held); rising: the rest of a jump;
+            // later only a little (the claims path leaves travel no gravity of its own, just the GROUND_PROBE drift)
+            boolean grounded = p.airTicks == 0;
+            // knockback lifts a unit without the jump key (vanilla: +0.4 up): a shove the server itself gave it counts
+            // as a launch too, so an honest knocked-back client is not put back on the floor
+            if (grounded)
+                p.jumpedFromGround = p.jump || p.serverShove > SHOVE_SEEN;
+            double upPerTick = climbing ? 0.3 : grounded ? 0.6 : p.airTicks < 7 ? 0.45 : 0.08;
+            maxUp = upPerTick * ticks + (grounded && p.jump ? 0.6 : 0);
+            if (!climbing && !Double.isNaN(p.groundY)) {
+                // the per-tick bounds alone refill on every landing: the rise above the last ground is bounded too
+                double rise = p.jumpedFromGround ? jumpApex(mob) + STEP_UP : STEP_UP;
+                maxUp = Math.min(maxUp, Math.max(0, p.groundY + rise - mob.getY()));
+            }
             maxDown = 4.0 * ticks + 0.5;   // terminal velocity is ~3.9 a tick
             if (!climbing && p.airTicks > HOVER_TICKS && dy > -0.05 * ticks) {
                 dy = Math.min(dy, -0.0784 * ticks);   // hovering walker: it falls
@@ -555,6 +597,13 @@ public final class PossessionServer {
             impossible = true;
         }
         mob.move(net.minecraft.world.entity.MoverType.SELF, new Vec3(dx, dy, dz));
+        if (!flyer && !climbing && !p.jumpedFromGround && !Double.isNaN(p.groundY) && mob.getY() > p.groundY + 1.0e-3
+                && mob.level().noCollision(mob, mob.getBoundingBox().move(0, -2 * GROUND_PROBE, 0))) {
+            // up without jumping is a step, and a step ends standing on something: a client claiming its unit
+            // floats up off the ground is put back down on it
+            mob.move(net.minecraft.world.entity.MoverType.SELF, new Vec3(0, p.groundY - mob.getY(), 0));
+            impossible = true;
+        }
         double ex = p.claimX - mob.getX(), ey = p.claimY - mob.getY(), ez = p.claimZ - mob.getZ();
         double err2 = ex * ex + ey * ey + ez * ez;
         if (!impossible && err2 <= CORRECT_DIST * CORRECT_DIST) {
@@ -797,6 +846,8 @@ public final class PossessionServer {
         p.moveBudget = Math.min(MOVE_BUDGET_MAX, p.moveBudget + 1);
         p.ticksSinceClaim++;
         p.airTicks = mob.onGround() ? 0 : p.airTicks + 1;
+        if (!flyer && (mob.onGround() || mob.onClimbable() || mob.isInWater() || mob.isInLava() || Double.isNaN(p.groundY)))
+            p.groundY = mob.getY();
         if (p.correctionCooldown > 0)
             p.correctionCooldown--;
         if (!serverMoves && (p.claimFresh || p.ticksSinceClaim <= CLAIM_FRESH_TICKS)) {
@@ -804,7 +855,7 @@ public final class PossessionServer {
             // it (knockback, a blast) reached the client as a motion packet and is in the claims, so it only widens
             // what a claim may cover; then the velocity is dropped to the ground probe (GROUND_PROBE): vanilla travel
             // moves by it before it adds gravity, and that move is what sets onGround for this tick
-            // ...but only if the last tick was a claims tick too (it zeroed the velocity): right after the keys or an
+            // ...but only if the last tick was a claims tick too (it left only the probe): right after the keys or an
             // ability moved it, the velocity is that walk's own momentum, not a shove (round-6 review of #222)
             Vec3 dm = mob.getDeltaMovement();
             float shove = claimsBefore ? (float) Math.sqrt(dm.x * dm.x + dm.z * dm.z) : 0;
@@ -833,7 +884,7 @@ public final class PossessionServer {
             mob.setJumping(false);
             // a walker keeps a probe straight down, so travel's move tells on-ground from the world (GROUND_PROBE);
             // a flyer has no ground to find and stays put
-            mob.setDeltaMovement(flyer ? Vec3.ZERO : new Vec3(0, -GROUND_PROBE, 0));
+            mob.setDeltaMovement(flyer ? Vec3.ZERO : GROUND_PROBE_VEC);
             return true;
         }
         // the AI's own convention (MoveControl): speed from the attribute, input scaled by it, so the unit walks at
