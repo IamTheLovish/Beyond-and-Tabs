@@ -52,7 +52,8 @@ import java.util.UUID;
  * <b>Take Root</b> ({@link TakeRoot}, vehicles-design 2026-10-28 3.4, the Rooted Treant): roots in place over
  * {@link #ROOT_TIMES}, can't move or slam while rooted (a move order uproots it, then it walks there), takes x{@link #ROOTED_TAKEN_MULT} damage, and every
  * {@link #LINE_EVERY} ticks bursts a {@link #LINE_LENGTH}-block line of root spikes along the ground toward the nearest
- * enemy, hurting every enemy unit on it (the Evoker's fang line, reskinned). Stats and building bonus are unchanged.
+ * enemy, hurting every enemy unit on it and leaving a stacking Rootbound slow and damage over time
+ * ({@link RootboundEffect}; the Evoker's fang line, reskinned). Stats and building bonus are unchanged.
  */
 public class SentinelTreantUnit extends IronGolemUnit {
 
@@ -273,8 +274,8 @@ public class SentinelTreantUnit extends IronGolemUnit {
     }
 
     /**
-     * One line of root spikes from the Treant along (dx, dz), LINE_LENGTH long: LINE_DAMAGE to every enemy unit on it,
-     * never a friend. Returns how many it hurt. Public for the game test.
+     * One line of root spikes from the Treant along (dx, dz), LINE_LENGTH long: LINE_DAMAGE and a {@link RootboundEffect}
+     * stack to every enemy unit on it, never a friend. Returns how many it hurt. Public for the game test.
      */
     public int strikeRootLine(ServerLevel sl, double dx, double dz) {
         double len = Math.sqrt(dx * dx + dz * dz);
@@ -292,6 +293,7 @@ public class SentinelTreantUnit extends IronGolemUnit {
                 continue;
             if (le.hurt(damageSources().mobAttack(this), LINE_DAMAGE))
                 hits++;
+            RootboundEffect.addStack(le);   // slowed and hurt over time, more with each line that catches it
         }
         BlockParticleOption roots = new BlockParticleOption(ParticleTypes.BLOCK, Blocks.MANGROVE_ROOTS.defaultBlockState());
         for (double d = 1; d <= LINE_LENGTH; d += 1)
