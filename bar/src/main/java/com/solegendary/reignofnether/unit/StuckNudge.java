@@ -155,8 +155,6 @@ public final class StuckNudge {
 
     /** Following a path, or chasing a target it is not in range of and not settled where the chase put it. */
     private static boolean wantsToMove(Mob mob, Unit unit) {
-        if (mob instanceof com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit t && t.isImmobile())
-            return false;   // rooted (or rooting/uprooting): standing still is the point, no repath or sidestep
         if (!mob.getNavigation().isDone())
             return true;
         LivingEntity target = mob.getTarget();
