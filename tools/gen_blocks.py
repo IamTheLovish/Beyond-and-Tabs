@@ -36,6 +36,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import materials  # noqa: E402  - the ONE LabPBR encoder, shared with the units (tools/dsl_to_game.py)
+import plant_sprites  # noqa: E402  - round 29: the grass plants' blade sprites
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACK_DIR = os.path.join(ROOT, "resourcepacks", "BeyondAndTabs-Realistic")
@@ -422,6 +423,12 @@ SEED_ORDER = (
     "cherry_leaves",
     "exposed_cut_copper",     # round 23: copper stages
     "weathered_cut_copper",
+    "grass",                  # round 29: the grass plants (tools/plant_sprites.py)
+    "tall_grass_bottom",
+    "tall_grass_top",
+    "fern",
+    "large_fern_bottom",
+    "large_fern_top",
 )
 
 
@@ -956,6 +963,13 @@ TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.
 # recipe's own per-texel smoothness replaces
 TARGETS["exposed_cut_copper"] = dict(luma=0.44, std=0.065, sat=0.42, tilt=12.0, smooth=90, pore=6)
 TARGETS["weathered_cut_copper"] = dict(luma=0.46, std=0.075, sat=0.42, tilt=12.0, smooth=40, pore=14)
+# Round 29 (lovish Oct 28 "we might need more grass or more realistic grass to match"; his "yes" at 03:35): the grass
+# plants - short grass, tall grass, fern, large fern - were vanilla's 16x pixel tufts beside a 128x lawn. Now tapered
+# blade strokes (tools/plant_sprites.py), greyscale (the biome grass colour tints them, so GrassTint's dry / lush
+# patches carry onto the plants), cut-out. Luma a touch above the lawn's (blades catch more light than the turf under
+# them), SSS like the leaves (thin blades glow when the sun is behind them under labPBR).
+for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top"):
+    TARGETS[_p] = dict(luma=0.56, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2000,6 +2014,23 @@ def m_lantern(F, n, glow):
     return dict(H=H, alb=np.clip(alb, 0, 1), alpha=alpha, f0=f0, smooth=smooth, emit=emit)
 
 
+def m_plant(name, n):
+    """Round 29: a grass plant sprite (tools/plant_sprites.py). Two-block plants are drawn once on a 2n-tall canvas
+    from one seed and split, so the blades run on from the bottom texture into the top one."""
+    ps = plant_sprites
+    rng = np.random.default_rng(SEEDS[name.replace("_top", "_bottom")])
+    if name == "grass":
+        r = ps.grass_clump(n, rng)
+    elif name == "fern":
+        r = ps.fern(n, rng)
+    else:
+        top, bottom = ps.split2(ps.grass_clump(n, rng, tall=True) if name.startswith("tall") else
+                                ps.fern(n, rng, large=True))
+        r = top if name.endswith("_top") else bottom
+    H, shade, alpha = r
+    return dict(H=H, alb=np.clip(np.stack([shade] * 3, -1), 0, 1), alpha=alpha)
+
+
 def m_cobweb(F, n):
     """A cobweb: eight straight spokes from a hub a little off the middle and, between them, rings of STRAIGHT chords
     (an orb web is a polygon spiral, not circles - circles read as a maze), sagging a little; pale silk, cut-out, a
@@ -2296,6 +2327,8 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leav
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
+PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top")
+CUTOUT |= set(PLANTS)   # round 29
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
@@ -2307,6 +2340,10 @@ _MIPPED = "minecraft:cutout_mipped"
 MODEL_OVERRIDES = {
     "glass": {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/glass"}},
     "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
+    # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
+    # breaks into flickering dashes from the RTS camera)
+    **{p: {"parent": "minecraft:block/tinted_cross", "textures": {"cross": "minecraft:block/" + p}}
+       for p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top")},
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
@@ -2629,6 +2666,8 @@ def recipes():
     R["cobweb"] = _parts(m_cobweb, fit=False)
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
+    for p in PLANTS:                                       # round 29
+        R[p] = _parts(lambda F, n, p=p: m_plant(p, n))
     return R
 
 
@@ -2681,7 +2720,7 @@ def make(name, res, preview_dir):
     nxx = (n_img[..., 0].astype(np.float64) / 127.5 - 1)
     nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
     vis = None if alpha is None else alpha > 0.5
-    tint = PLAINS_TINT if name in GRASS_TOPS + ("grass_block_side_overlay",) else \
+    tint = PLAINS_TINT if name in GRASS_TOPS + ("grass_block_side_overlay",) + PLANTS else \
         FOLIAGE_TINT if name in LEAVES else None
     seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
     rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
@@ -2690,7 +2729,7 @@ def make(name, res, preview_dir):
               "rts_luma_std": round(rts_std, 3)}
     if preview_dir:
         shown = alb
-        if name in GRASS_TOPS + ("grass_block_side_overlay",):
+        if name in GRASS_TOPS + ("grass_block_side_overlay",) + PLANTS:
             shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
         if name in LEAVES:
             shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
