@@ -484,6 +484,69 @@ public class ArtilleryGameTests {
         keylessHopTest(helper, "keyshop", false, true);
     }
 
+    /**
+     * A knockback is no free reposition (the #222 follow-up, lovish's option A): while a hit carries a possessed crew
+     * with its keys resting, its moves keep the set-up, so the client's claims may move it only where the knockback
+     * does. A lying client that claims it 1.4 blocks sideways (north, across a push west) during the knockback - under
+     * the 1.5-block drift, so the set-up alone would never notice - must leave it within a few tenths of the push's line.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_knocked_back_crew_is_not_moved_sideways_by_keyless_claims(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_knockside_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 7.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            active[0] = true;
+        });
+        int knockAt = 10, sideTicks = 7, checkAt = knockAt + sideTicks + 3;
+        double side = 0.2;
+        int[] tick = { 0 }, seq = { 0 };
+        double[] hit = new double[2];
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (t == knockAt) {
+                hit[0] = b.getX();
+                hit[1] = b.getZ();
+                b.knockback(0.4, 1, 0);   // a hit from the east: pushed west
+            }
+            if (t >= knockAt && t < knockAt + sideTicks)   // the lie: no push west, 0.2 a tick north, keys at rest
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, hit[0], b.getY(), hit[1] - side * (t - knockAt + 1), ++seq[0]);
+            else   // a real client claims every tick, standing still too
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX(), b.getY(), b.getZ(), ++seq[0]);
+            if (t < checkAt)
+                return;
+            double sideways = Math.abs(b.getZ() - hit[1]);
+            cleanUp.run();
+            if (sideways > 0.5)
+                throw new GameTestAssertException(String.format("keyless claims moved the knocked-back crew %.2f "
+                    + "blocks sideways (claimed %.2f): the knockback only pushed it west", sideways, side * sideTicks));
+            helper.succeed();
+        });
+    }
+
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
