@@ -21,11 +21,11 @@ source: lovish's Oct 28 decisions and answers (via Command Center Vertos); repo 
 - **Vehicle sizes aligned** with the vehicles doc's new hitbox rule (T1 hitbox up to 2x2 x 3 tall, T2 up to 3x3 x
   4.5 tall, bodies up to 3 / 4 long). The 5 x 8 gate and 5 x 7 x 8 bay pass all of them.
 - **Roster aligned**: the Bombard Crew is a T1 Fitting Shed vehicle in both docs; the Steam Tractor is T2 (refit);
-  the Flak Cart moves to the Engine Shed unless lovish keeps it (questions file); Sunforged and Gravebound labs ship
-  with their first vehicle (still lovish's call).
+  the Flak Cart moves to the Engine Shed (not vetoed); Sunforged and Gravebound labs ship
+  with their first vehicle (decided Oct 28, Q7).
 - **Tech steps and capitol levels are now one stated rule**: the capitol is the one building that grows in real
   blocks per tech level (capitol doc); every other building, these labs included, shows tech with drawn parts, glow
-  and particles only. Still an open question for lovish (drawn vs real blocks), listed in the questions file.
+  and particles only. Decided Oct 28 (Q8: drawn, no block changes).
 - Open questions moved to [[open-questions-2026-10-28]]; section 6 below points there.
 
 Scope: the seven per-faction vehicle labs only. Capitols, metal extractors and the faction corruption / creep rules
@@ -211,8 +211,7 @@ leaves (`completeProduction`), like that sheet's "Gate: Portcullis Gate" panel. 
 
 - Heroes stay in the infantry labs. Freed hotkey slots close up.
 - A faction's vehicles move **in the same PR as its vehicle lab**, so no faction is ever without them.
-- Sunforged and Gravebound: the lab ships with their first vehicle, never empty (recommended; still lovish's call in
-  the questions file).
+- Sunforged and Gravebound: the lab ships with their first vehicle, never empty (decided Oct 28, Q7).
 - `isT1Vehicle` is unchanged; the Flak Cart stays out of it (AA, no building bonus) even though it trains here.
 - Bots: the bot learns "vehicle lab" as a lab type (one per bot at T1, after its first infantry lab on easy, before it
   on hard), queues vehicles there, and the PR #146 vehicle raid draws from it. The bot's lab cap counts both.
@@ -444,7 +443,7 @@ honouring Building animation Off / Low / Full.
 
 ## 6. Open questions for lovish
 
-Merged into [[open-questions-2026-10-28]]: opening with the vehicle lab, the Sunforged / Gravebound lab timing, the
+Merged into [[open-questions-2026-10-28]]; answered Oct 28 (Q6 the vehicle lab opens with only the capitol, Q7, Q8): opening with the vehicle lab, the Sunforged / Gravebound lab timing, the
 Flak Cart's lab, and tech steps drawn vs real blocks.
 
 ## Related

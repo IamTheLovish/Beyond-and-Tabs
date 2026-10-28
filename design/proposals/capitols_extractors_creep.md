@@ -319,7 +319,7 @@ is FactionAura with these changes; `NetherZone` and nether blocks leave the Hord
 
 The six look-only styles already exist in FactionAura (biome_bases.md) and grow from there; Ashborn and Hivebound get
 new styles. lovish suggested End blocks: I put them on the alien Hivebound and gave the Ashborn its own ash so it reads
-volcanic, not alien. Questions file Q5. The ash texture must pass the ART-FAULTS "pepper dots" line: soft large-scale
+volcanic, not alien. Decided Oct 28 (Q5). The ash texture must pass the ART-FAULTS "pepper dots" line: soft large-scale
 variation, the ember speckle sparse.
 
 ## 6. Faction by faction: capitols (with level abilities) and extractors
@@ -640,8 +640,8 @@ DO NOT: change extractor HP/cost, patch spacing, labs, or other factions' auras 
 
 Merged into [[open-questions-2026-10-28]]. Answered Oct 28: tech 4 = Ascension research; only Ashborn and
 Hivebound build on creep; pre-made maps move home metal out; the full L4 square is reserved and the capitol goes
-larger than 39 (now 41 wide, 84 tall) with metal pushed out to 52-76. Still open there: the Ashborn creep blocks
-and the vehicle questions.
+larger than 39 (now 41 wide, 84 tall) with metal pushed out to 52-76. Also answered: Ashborn creep = our own ash
+blocks (Q5), and the vehicle questions Q6-Q10; capitol L4 41x84 confirmed.
 
 ## Related
 - [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]], [[open-questions-2026-10-28]]

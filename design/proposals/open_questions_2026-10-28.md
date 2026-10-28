@@ -2,7 +2,7 @@
 title: Beyond and Tabs - open questions for lovish (vehicles, vehicle labs, capitols and creep), Oct 28
 type: decision-list
 project: Beyond and Tabs
-status: 1-4 answered Oct 28; 5-10 waiting for lovish - pick one option per question
+status: all answered Oct 28 (1-10, plus Rootbound and capitol L4); only the revision-pass items remain as notes
 created: 2026-10-28
 source: merged from [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] and [[capitols-extractors-design-2026-10-28]] after the Oct 28 revision pass
 ---
@@ -28,38 +28,21 @@ Earlier answers not repeated: the AI faction (Brassworks keeps steam; a futurist
 separate vehicle lab per faction, infantry vs buildings at half a vehicle's rate, T2 vehicles by lab refit, four
 tech levels, no nether.
 
-## Still open - blocks the Ashborn creep task (capitol doc build order step 1)
+5. **Ashborn creep** = A: our own ash blocks (ash soil, cinder rock, ember cracks) with tuff and basalt; End blocks go
+   to the alien Hivebound.
+6. **Opening with the vehicle lab** = A: yes, it needs only the capitol, like BAR's vehicle plant.
+7. **Sunforged and Gravebound lab timing** = A: together with their first vehicle (Dawnrider, Soulfire Wheel); the
+   button stays hidden until then.
+8. **Tech steps on labs and other buildings** = A: drawn parts, glow and particles, no block changes (the capitol
+   still grows in real blocks).
+9. **Low flyers vs walls** = A: walls stop them; ranged units and AA hit them.
+10. **Rooted Treant** = A: 1.5 s root / 1 s uproot, 30% less damage while fully rooted.
 
-**5. What is the Ashborn creep made of?** (You said "end blocks or something else".)
-- A) our own ash blocks (ash soil, cinder rock, ember cracks) with tuff and basalt; End blocks go to the alien Hivebound **(rec)**
-- B) End blocks (end stone, purpur) for the Ashborn too
-- C) vanilla only (tuff, coarse dirt, gravel, deepslate)
+**New: "Rootbound"** stacking effect from the Treant's spike line (lovish's rule: "rooted champs get slowed and damaged
+over time, stacking"): 3 stacks max, each hit refreshes the effect to 4 s, 12% slow and 1 magic damage per second per
+stack. lovish: keep these numbers.
 
-## Still open - blocks the first vehicle lab (lab doc build order step 1)
-
-**6. Can a player open with the vehicle lab?**
-- A) yes, it needs only the capitol, like BAR's vehicle plant **(rec)**
-- B) no, the infantry lab must be built first
-
-**7. Sunforged and Gravebound have no vehicles yet. When do they get their lab?**
-- A) together with their first vehicle (Dawnrider, Soulfire Wheel); the button stays hidden until then **(rec)**
-- B) now, empty, so every faction has the building from the first PR
-
-**8. Tech steps on labs and other buildings: drawn or real blocks?** (The capitol grows in real blocks either way.)
-- A) drawn parts, glow and particles on every building at once, no block changes **(rec)** - no pathing or HP change, no 24 structure files per faction
-- B) real blocks: every lab swaps to a richer structure at each tech level
-
-## Still open - blocks single vehicles (can be decided when each is built)
-
-**9. Can low-flying vehicles (Dawnrider, Gale Kite, Manta Ferry, Cloud Barge) cross walls?**
-- A) no, walls stop them; ranged units and AA hit them **(rec)** - walls stay the answer to raids
-- B) yes, they fly over; ranged and AA hit them
-- C) yes, and they count as true air (only AA and hits-air units can hit them)
-
-**10. The Rooted Treant: how long to root / uproot, and does it take 30% less damage while rooted?**
-- A) 1.5 s / 1 s and 30% less damage **(rec)** - committed enough to telegraph, quick enough to reposition
-- B) 1 s / 0.5 s and 20% less damage (snappy)
-- C) 2.5 s / 2 s and 40% less damage (a real deploy, like the Sunlens Engine)
+**Capitol L4** = 41 wide x 84 tall confirmed ("go tall, not wider").
 
 ## Decided in the revision pass (veto if you disagree)
 

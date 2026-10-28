@@ -99,7 +99,7 @@ What makes it a vehicle is the job, not the look:
 |---|---|---|
 | Ground | normal pathing; wades at half speed like infantry | everything |
 | Hover | floats a half block over ground and water; full speed on water and tidepools; cannot cross walls | everything; melee normally |
-| Low flying | flies 2-4 blocks up; crosses water, cliffs and units, NOT walls or gates (open: questions file Q9) | ranged ground units and AA; not melee (except jumpers and spears with reach 3+) |
+| Low flying | flies 2-4 blocks up; crosses water, cliffs and units, NOT walls or gates (decided Oct 28, Q9) | ranged ground units and AA; not melee (except jumpers and spears with reach 3+) |
 | Rooted / deployed | a mode switch: the unit stops, plants itself, and gets a stronger attack or armour; cannot move until it uproots | everything; usually more armour while rooted |
 
 Mode switches are always telegraphed (a visible animation, a ground ring in team colour) and take 1-3 s each way.
@@ -205,7 +205,7 @@ vehicle.
   Bison).
 - Economy: about 260m / 180e (est.).
 - Counters: moves 4 infantry across water, cliffs and gaps an army has to walk around (it does not cross walls,
-  questions file Q9). Countered by AA and focused ranged fire before it unloads.
+  decided Oct 28, Q9). Countered by AA and focused ranged fire before it unloads.
 
 ---
 
@@ -536,7 +536,7 @@ and the barrel extends. 3x3, 3 tall. Deploy 2.5 s, pack 2 s. A charging hum, the
 - Mode switches are one animation each (root, deploy, burrow, stone, land): a 1-3 s pose blend, plus a team-coloured
   ground ring. Every concept passes the eyes close-up and the ART-FAULTS list before lovish sees it.
 
-## 8. Recommended first prototype: the Rooted Treant (Verdant)
+## 8. First prototype: the Rooted Treant (Verdant)
 
 Why this one first:
 1. **It is lovish's own example** (the ent that roots and attacks along the ground like a lurker), so the first thing
