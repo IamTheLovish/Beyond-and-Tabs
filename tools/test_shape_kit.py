@@ -10,9 +10,15 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gen_structures as gs  # noqa: E402
-import gothic_parts as gp  # noqa: E402
-import shape_kit as sk  # noqa: E402
+try:
+    import numpy  # noqa: F401  - the CI lint job may not install it; skip there rather than fail
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
+if HAVE_NUMPY:
+    import gen_structures as gs  # noqa: E402
+    import gothic_parts as gp  # noqa: E402
+    import shape_kit as sk  # noqa: E402
 
 VEC = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
 
@@ -21,6 +27,7 @@ def kinds(cells, kind):
     return {p: c for p, c in cells.items() if c[0] == kind}
 
 
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class Counts(unittest.TestCase):
     def test_cells_box_is_exact(self):
         cells = sk.voxelize(sk.cells(0, 3, 0, 2, 0, 4))
@@ -61,6 +68,7 @@ class Counts(unittest.TestCase):
             self.assertEqual(turned, cells, name)
 
 
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class Edges(unittest.TestCase):
     def test_ramp_up_to_north_is_bottom_stairs_facing_north(self):
         # a 45 degree ramp: solid below y = 4 - z (rising toward -z, north), 6 wide
@@ -106,6 +114,7 @@ class Edges(unittest.TestCase):
         self.assertEqual(set(c[0] for c in cells.values()), {"full"})
 
 
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class Hollow(unittest.TestCase):
     def test_sphere_shell_is_closed_and_empty(self):
         solid = sk.voxelize(sk.ellipsoid(6, 6, 6, 0, 6, 0))
@@ -132,6 +141,7 @@ class Hollow(unittest.TestCase):
         self.assertEqual(len(two), 9 ** 3 - 5 ** 3)
 
 
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class Compatible(unittest.TestCase):
     def test_paints_a_part_with_roles(self):
         pal = gp.palette("slate")
@@ -166,6 +176,40 @@ class Compatible(unittest.TestCase):
             self.assertGreater(len(part.b), 50, key)
             part.to_rig(key)
 
+
+
+
+def _partial(name):
+    return "stairs" in name or "slab" in name
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class Merging(unittest.TestCase):
+    """A later shape's stair or slab never downgrades a full cell already in the target (shapes merge; a cone's
+    edge stairs must not bite into the wall it sits on)."""
+
+    def _check(self, target, names):
+        sk.build(sk.cells(-3, 3, 0, 5, -3, 3), "wall", target, at=(4, 0, 4), edges=False)
+        full = {p for p, n in names(target).items() if not _partial(n)}
+        sk.build(sk.cone(5, 3, 6), "roof", target, at=(4, 0, 4))
+        after = names(target)
+        downgraded = sorted(p for p in full if _partial(after[p]))
+        self.assertEqual(downgraded, [], "full cells replaced by a stair/slab: %d" % len(downgraded))
+
+    def test_into_a_part(self):
+        self._check(gp.Part(gp.palette()), lambda t: {p: n for p, (n, _) in t.b.items()})
+
+    def test_into_a_structure(self):
+        def names(t):
+            return {p: t.palette[i][0] for p, i in t.blocks.items()}
+        self._check(gs.Structure(9, 12, 9), names)
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class NoScipy(unittest.TestCase):
+    def test_hollow_needs_no_scipy(self):
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "shape_kit.py")).read()
+        self.assertNotIn("scipy", src)
 
 if __name__ == "__main__":
     unittest.main()
