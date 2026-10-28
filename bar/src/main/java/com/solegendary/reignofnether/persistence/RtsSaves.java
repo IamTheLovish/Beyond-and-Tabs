@@ -65,7 +65,8 @@ public final class RtsSaves {
 
     /**
      * Writes every dirty saved-data file now, on this thread. Only for moments with no match running on the tick:
-     * the server stopping and the scenario editor's explicit Save. Everything else waits for the world save.
+     * the server stopping, the scenario editor's explicit Save and a new match on a running server (maps/NewMatch,
+     * which must persist the arena slot it hands out). Everything else waits for the world save.
      */
     public static void flush(ServerLevel level) {
         if (level != null)
