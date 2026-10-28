@@ -229,3 +229,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    cutaway FORGE INTERIOR: a black-stone chamber lit only by MOLTEN METAL (a glowing crucible and forge), a smith at
    work, thin LAVA CHANNELS across the floor. ASHBORN: what sits inside the gate tunnel / behind the forge heart, so the
    glow seen through the opening has a real forge behind it. Everyone: a dark room lit only by its work reads strongly.
+
+34i. lovishs 36th reference (04:21): /root/bat/design/refs/vehicle_labs/ref36_soul_necropolis_concept.png - painted
+   CONCEPT ART (mood/composition, not blocks): a dark stepped necropolis temple crowned by ONE glowing soul-blue frame,
+   soul-fire BRAZIERS on pillars as the only other lights, GIANT CURVED RIBS/HORNS framing the foreground, a lone figure
+   for scale. GRAVEBOUND: one cold glowing core on a dark mass, braziers only, bone ribs framing - matches the rib-vault
+   gantry the critic liked; soul light may lean blue-cyan as well as green.
