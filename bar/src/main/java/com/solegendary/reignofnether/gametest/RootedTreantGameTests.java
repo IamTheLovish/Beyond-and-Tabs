@@ -276,6 +276,45 @@ public class RootedTreantGameTests {
     }
 
     /**
+     * A stop order after a move order to a rooted Treant drops the held move: it still uproots, but stays where it is.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 160)
+    public static void rooted_treant_stop_order_drops_the_held_move(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_stop");
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        SentinelTreantUnit treant = treant(helper, owner, 2.5, 7.5);
+        List<Mob> units = new ArrayList<>();
+        units.add(treant);
+        if (!allMade(helper, units, 1))
+            return;
+        List<String> problems = new ArrayList<>();
+        int uproot = SentinelTreantUnit.ROOT_TIMES.uprootTicks();
+        double[] start = new double[2];
+        BlockPos goal = helper.absolutePos(new BlockPos(12, 2, 7));
+        everyTick(helper, 120, tick -> {
+            if (tick == 1) {
+                rootNow(treant, level);
+                start[0] = treant.getX();
+                start[1] = treant.getZ();
+                new UnitActionItem(owner, UnitAction.MOVE, -1, new int[] { treant.getId() }, goal, BlockPos.ZERO).action(level);
+            } else if (tick == 3) {
+                if (treant.isRootWanted())
+                    problems.add("the move order should have started uprooting the Treant");
+                new UnitActionItem(owner, UnitAction.STOP, -1, new int[] { treant.getId() }).action(level);
+            } else if (tick == uproot + 60) {
+                double moved = movedFrom(treant, start[0], start[1]);
+                if (treant.isImmobile())
+                    problems.add("the Treant should have finished uprooting");
+                if (moved > 0.5)
+                    problems.add("a stop order should drop the held move, but the Treant walked " + moved + " blocks");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
      * One root-spike line toward +x: hurts the enemies on the line within LINE_LENGTH, and not a friend or an ally of
      * another owner on the line, an enemy beside it, or an enemy past its end.
      */
@@ -447,7 +486,10 @@ public class RootedTreantGameTests {
                 double last = base[0];
                 for (int i = 1; i <= max + 1; i++) {
                     foe.invulnerableTime = 0;
-                    treant.strikeRootLine(level, 1, 0);
+                    friend.invulnerableTime = 0;
+                    int hits = treant.strikeRootLine(level, 1, 0);
+                    if (hits != 1)
+                        problems.add("strike " + i + " should hit exactly the foe, hit " + hits);
                     int stacks = RootboundEffect.stacks(foe);
                     double sp = foe.getAttributeValue(Attributes.MOVEMENT_SPEED);
                     if (stacks != Math.min(i, max))
@@ -461,13 +503,16 @@ public class RootedTreantGameTests {
                 double want = base[0] * (1 - RootboundEffect.SLOW_PER_STACK * max);
                 if (Math.abs(last - want) > base[0] * 0.01)
                     problems.add("at the cap the foe should walk at " + want + ", walks at " + last);
-                if (RootboundEffect.stacks(friend) != 0)
-                    problems.add("the spike line rootbound a friend");
+                if (RootboundEffect.stacks(friend) != 0 || friend.getHealth() < friend.getMaxHealth())
+                    problems.add("the spike line hurt or rootbound a friend standing on it");
+                treant.setNoAi(true);   // not rooted, it would slam the foe: the loss below can only be Rootbound
                 h1[0] = foe.getHealth();
-            } else if (tick == 50) {
-                float lost = h1[0] - foe.getHealth();
-                if (lost < RootboundEffect.DAMAGE_PER_STACK * max - 0.01f)
-                    problems.add("Rootbound at " + max + " stacks should deal damage over time (lost " + lost + " in 2.5 s)");
+            } else if (tick == 72) {
+                // ticks on durations 60, 40 and 20 land (the one at application is inside the line hit's frames):
+                // demand at least two of them, and nothing beyond what four could deal
+                float lost = h1[0] - foe.getHealth(), perTick = RootboundEffect.DAMAGE_PER_STACK * max;
+                if (lost < 2 * perTick - 0.01f || lost > 4 * perTick + 0.01f)
+                    problems.add("Rootbound at " + max + " stacks should deal " + perTick + " a second and nothing else hurt the foe (lost " + lost + " in 3.5 s)");
             } else if (tick == wearsOff + 20) {
                 if (RootboundEffect.stacks(foe) != 0)
                     problems.add("Rootbound should wear off after " + RootboundEffect.SECONDS + " s");
