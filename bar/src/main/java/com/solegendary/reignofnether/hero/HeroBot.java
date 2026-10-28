@@ -830,6 +830,8 @@ public final class HeroBot {
             return true;
         if (b.fleeing())
             return false;
+        if (b.lock.mode() == OrderLock.Mode.MOVE)
+            return false;   // MUTANT (red proof only, never to merge): no fights while a move order stands
         if (b.lock.mode() != OrderLock.Mode.NONE)
             return true;
         return !b.seen.chaseIntoTower(mob, target, 1.0);

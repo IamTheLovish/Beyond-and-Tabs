@@ -92,8 +92,8 @@ public final class OrderLock {
             case STOP, HOLD, STATE -> Mode.NONE;
             default -> Mode.MOVE;   // move, follow, garrison, an ability cast, any errand
         };
-        if (m == Mode.NONE || justGiven)
-            return m;
+        if (m == Mode.NONE || justGiven || m == Mode.MOVE)
+            return m;   // MUTANT (red proof only, never to merge): a move order never ends
         if (!CommandQueues.stillCarriedOut(le, unit, c))
             return Mode.NONE;
         // a move or an errand is over once the hero stands idle (an ability the player cast has landed, a garrison
