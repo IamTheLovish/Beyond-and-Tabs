@@ -460,8 +460,10 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
-            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove)
-            boolean blocked = !isCasting && blockedOnMove(attackerUnit);
+            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove); a
+            // hero the v2 AI is running away is never "blocked": it would stop, fight and start the run again
+            boolean blocked = !isCasting && blockedOnMove(attackerUnit)
+                && !com.solegendary.reignofnether.hero.HeroBot.fleeing(unitMob);
 
             // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
             // unit's queue counts: see ordersWaiting. A move order that is blocked does not count (the contact rule)
@@ -483,7 +485,9 @@ public interface AttackerUnit {
                 }
                 Relationship rs = UnitServerEvents.getUnitToEntityRelationship(unit, lastDSEntity);
 
-                if (!isMeleeAttackedByFlyingOrGarrisoned &&
+                // artillery cannot hit a flyer: no retaliation on it, so a blocked move is not stopped for a target
+                // it would refuse (it stood with no order and no target and died, issue #35 on #222)
+                if (!isMeleeAttackedByFlyingOrGarrisoned && !refusesTarget(attackerUnit, lastDSEntity) &&
                     lastDSEntity instanceof LivingEntity &&
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {

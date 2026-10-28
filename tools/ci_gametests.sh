@@ -81,6 +81,12 @@ fi
 if grep -qE "\[(Latency|GraveyardExit)\]" gametest.log; then
   grep -oE "\[(Latency|GraveyardExit)\].*" gametest.log | head -20 | cut -c1-400 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Order latency]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
+# how fast a pile of units spreads (gametest/PerfPushGameTests): the tick it passed, so a flake-stress run shows the
+# margin to the 400-tick timeout (the Oct 27 flake). Last of the notices: a full shard, already at the 10-notice limit,
+# drops this one rather than another measurement
+if grep -q "\[PushSpread\]" gametest.log; then
+  grep -oE "\[PushSpread\].*" gametest.log | head -4 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Push spread]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # where the ~26 minutes go: wall time per test batch + the slowest tests, one notice (tools/gametest_timing.py)
 python3 ../tools/gametest_timing.py gametest.log || true
 if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
