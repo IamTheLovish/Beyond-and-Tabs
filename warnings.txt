@@ -1,0 +1,112 @@
+(2721 first-launch config/mod-loading notices filtered out)
+[11:21:55] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[11:21:55] [main/WARN]: No graphics cards were found. Either you have no hardware devices supporting 3D acceleration, or something has gone terribly wrong!
+[11:21:55] [main/WARN]: Unable to determine desktop session type because the environment variable XDG_SESSION_TYPE is not set! Your user session may not be configured correctly.
+[11:21:56] [main/WARN]: @Mixin target net.dries007.tfc.common.fluids.MixingFluid was not found particular.forge.mixins.json:compat.TFCMixingFluidMixin
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.world.sky.WorldRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.world.sky.ClientWorldMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.world.sky.BackgroundRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.gui.font.GlyphRendererMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.gui.font.FontSetMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.shadows.EntityRenderDispatcherMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.HierarchicalModelMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.CuboidMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:21:58] [main/WARN]: Force-disabling mixin 'features.render.entity.cull.EntityRendererMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[11:22:04] [pool-4-thread-1/WARN]: Static binding violation: PRIVATE @Overwrite method m_47505_ in modernfix-modernfix.mixins.json:perf.remove_biome_temperature_cache.BiomeMixin cannot reduce visibiliy of PUBLIC target method, visibility will be upgraded.
+[11:22:07] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[11:22:08] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[11:22:08] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumGameOptions, which may cause instability.
+[11:22:08] [Render thread/WARN]: Found flag CUSTOM_IMAGES
+[11:22:08] [Render thread/WARN]: Found flag SSBO
+[11:22:08] [Render thread/WARN]: Found flag BLOCK_EMISSION_ATTRIBUTE
+[11:22:08] [Render thread/WARN]: Found flag ENTITY_TRANSLUCENT
+[11:22:11] [modloading-worker-0/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumOptionsGUI, which may cause instability.
+[11:22:16] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.VertexFormatDescriptionImpl, which may cause instability.
+[11:22:16] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.buffer.SodiumBufferBuilder, which may cause instability.
+[11:22:16] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer, which may cause instability.
+[11:22:20] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[11:22:20] [Worker-ResourceReload-0/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[11:22:30] [Worker-ResourceReload-2/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[11:22:32] [Render thread/WARN]: Found flag CUSTOM_IMAGES
+[11:22:32] [Render thread/WARN]: Found flag SSBO
+[11:22:32] [Render thread/WARN]: Found flag BLOCK_EMISSION_ATTRIBUTE
+[11:22:32] [Render thread/WARN]: Found flag ENTITY_TRANSLUCENT
+[11:22:33] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[11:22:33] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[11:22:33] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[11:22:34] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[11:22:34] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[11:22:34] [Render thread/WARN]: Failed to resolve uniform inPaleGarden, reason: Unknown variable: BIOME_PALE_GARDEN ( = FunctionCall{smooth {[Number{55}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_PALE_GARDEN}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+[11:22:34] [Render thread/WARN]: Failed to resolve uniform inSulfurCaves, reason: Unknown variable: BIOME_SULFUR_CAVES ( = FunctionCall{smooth {[Number{56}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_SULFUR_CAVES}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+[11:22:34] [Render thread/WARN]: Failed to resolve uniform endFlashFactor0, reason: Unknown variable: endFlashIntensity ( = BinaryExpr{ {FunctionCall{min {[Id{endFlashIntensity}, Number{0.5}]} }} multiply{0} {Number{2.0}} })
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[11:22:34] [Render thread/WARN]: The following uniforms won't work, either because they are broken, or reference a broken uniform: 
+[11:22:35] [Render thread/WARN]: Shader compilation log for deferred1.fsh: 0:800(29): warning: `tracePosM' used uninitialized
+[11:22:40] [Render thread/WARN]: Error while parsing the block ID map entry for "block.10104":
+[11:22:40] [Render thread/WARN]: - The block minecraft:stone_slab has no property with the name variant, ignoring!
+[11:22:40] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.device.GLRenderDevice$ImmediateDrawCommandList, which may cause instability.
+[11:22:40] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.serializers.VertexSerializerRegistryImpl, which may cause instability.
+[11:22:40] [Render thread/WARN]: Game took 57.802 seconds to start
+[11:24:10] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.model.BakedModelEncoder, which may cause instability.
+[11:24:17] [Render thread/WARN]: Initial datapack load took 2.827 s
+[11:24:20] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[11:24:20] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[11:24:31] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[11:24:31] [Render thread/WARN]: Failed to resolve uniform inPaleGarden, reason: Unknown variable: BIOME_PALE_GARDEN ( = FunctionCall{smooth {[Number{55}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_PALE_GARDEN}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+[11:24:31] [Render thread/WARN]: Failed to resolve uniform inSulfurCaves, reason: Unknown variable: BIOME_SULFUR_CAVES ( = FunctionCall{smooth {[Number{56}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_SULFUR_CAVES}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+[11:24:31] [Render thread/WARN]: Failed to resolve uniform endFlashFactor0, reason: Unknown variable: endFlashIntensity ( = BinaryExpr{ {FunctionCall{min {[Id{endFlashIntensity}, Number{0.5}]} }} multiply{0} {Number{2.0}} })
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[11:24:31] [Render thread/WARN]: The following uniforms won't work, either because they are broken, or reference a broken uniform: 
+[11:24:34] [Render thread/WARN]: Error while parsing the block ID map entry for "block.10104":
+[11:24:34] [Render thread/WARN]: - The block minecraft:stone_slab has no property with the name variant, ignoring!
+[11:24:34] [Render thread/WARN]: Mod(s) [reignofnether, oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshAttribute, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexFormat$Builder, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeFormat, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.DefaultChunkRenderer, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.ShaderChunkRenderer, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.BakedChunkModelBuilder, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [betterbiomeblend] are modifying Embeddium class me.jellysquid.mods.sodium.client.world.biome.BiomeColorCache, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.smooth.SmoothLightPipeline, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.flat.FlatLightPipeline, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [supplementaries] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer, which may cause instability.
+[11:24:34] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.GlProgram, which may cause instability.
+[11:24:35] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.ShaderType, which may cause instability.
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-shadow.vsh: 0:445(15): warning: `lmCoord' used uninitialized
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.vsh: 0:457(15): warning: `lmCoord' used uninitialized
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.fsh: 0:930(72): warning: `parallaxTexDepth' used uninitialized
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_cutout.fsh: 0:931(72): warning: `parallaxTexDepth' used uninitialized
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.vsh: 0:454(15): warning: `lmCoord' used uninitialized
+[11:24:35] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.fsh: 0:1153(72): warning: `parallaxTexDepth' used uninitialized
+[11:24:41] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[11:24:42] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[11:24:54] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2356ms or 47 ticks behind
+[11:24:56] [Render thread/WARN]: Time from main menu to in-game was 39.561844 seconds
+[11:24:56] [Render thread/WARN]: Total time to load game and open world was 97.363846 seconds
+[11:30:23] [Render thread/WARN]: [Eyes] 07h_halberdier_close: no VindicatorUnit left in the army (the battle took them); summoned a stand-in at -203 71 18
+[11:31:12] [Render thread/WARN]: [Eyes] 07n_squire_close: no MilitiaUnit left in the army (the battle took them); summoned a stand-in at -203 71 18
+[11:31:36] [Render thread/WARN]: [Eyes] 07q_squire_bow_close: no MilitiaUnit:bow left in the army (the battle took them); summoned a stand-in at -203 71 18
+[11:32:01] [Render thread/WARN]: [Eyes] 07t_bone_dragon_close: no BoneDragonUnit left in the army (the battle took them); summoned a stand-in at -203 71 18
+[11:32:31] [Render thread/WARN]: [Eyes] 07w_mossback_bison_close: no MossbackBisonUnit left in the army (the battle took them); summoned a stand-in at -203 71 18
+[11:33:52] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 98, 71, 49, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 11 ordered, nearest worker 19.1 blocks away at 115, 71, 39, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[11:35:45] [Render thread/WARN]: [Eyes] 17_fog: gave up - fog on the client false, 12 marchers (border 720 -> 720, fog on the server: true, 36 other units cleared off the route)
+[11:35:49] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
