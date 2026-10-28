@@ -65,8 +65,11 @@ def height_at(x, z, layered):
     d_hollow = math.hypot(x - 44, z - 44)
     # broad and low: a 1-block step every ~6 blocks reads as a slope from the RTS camera, not a platform
     h = BASE + 2.4 * max(0.0, 1 - d_rise / 17.0) ** 1.2 - 1.6 * max(0.0, 1 - d_hollow / 9.0) ** 1.2
-    # r2 (critic r31: "a clean staircase"): a dithered rounding - each terrace edge breaks every few blocks
-    return int(math.floor(h + 0.9 * (vnoise(x, z, 4.0, 31) - 0.5) + 0.5 * hash01(x, z, 30) + 0.25))
+    # r2b (critic r31: "a clean staircase"): wavy terrace edges from a 3-block noise, only on the relief itself - r2's
+    # per-block dither pitted the whole flat field with 1-block holes and bumps (eyes run 40739254107)
+    if abs(h - BASE) < 0.15:
+        return BASE
+    return int(round(h + 0.7 * (vnoise(x, z, 3.0, 31) - 0.5)))
 
 
 def build(layered):
