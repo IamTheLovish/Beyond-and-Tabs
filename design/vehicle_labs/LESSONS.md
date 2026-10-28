@@ -48,9 +48,17 @@ with TIER (T1 small -> T2 -> T3 -> capitol) and, within a tier, with level / tec
 | Building | Reserved footprint (about) | L1 | Top level |
 |---|---|---|---|
 | T1 (labs, economy) | up to ~13 x 21 | <= 12 tall, modest | <= 22 tall, the full reference |
-| T2 labs | up to ~21 x 27 | <= 16 | <= 32 |
-| T3 labs / game enders | up to ~29 x 29 | <= 22 | <= 45 |
+| T2 | up to ~21 x 27 | <= 16 | <= 32 |
+| T3 | up to ~29 x 29 | <= 22 | <= 45 |
+| T4 | larger again (to be sized with lovish) | | |
 | Capitol (v4) | 59 x 59 | the crag and the first spire | ~100 tall at L6 |
+
+04:35: "tier 2 buildings, tier 3 buildings and tier 4 buildings - tier 1 and tier 2 can be upgraded to match so they
+fit the architecture of future tier buildings later on". So there are FOUR building tiers, and as a player techs up,
+their T1 and T2 buildings can be upgraded (refitted) into the architecture of the later tiers, so a late-game base reads
+as one cohesive city instead of early huts beside late palaces. Design every T1/T2 building with a later-tier refit in
+mind: the refit is another superset level on the same reserved footprint (only adds or replaces blocks), in the
+higher tier's style.
 
 The numbers are a starting proposal for lovish to adjust; the rule is his: small at T1, growing with every tier and
 tech level, never oversized.
