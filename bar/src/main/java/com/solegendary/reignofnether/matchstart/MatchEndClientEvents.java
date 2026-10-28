@@ -68,6 +68,7 @@ public class MatchEndClientEvents {
         gameDurationTicks = ticks;
         rows = newRows != null ? newRows : new ArrayList<>();
         openDelayTicks = TITLE_HOLD_TICKS;
+        stale = false;   // fresh results of a new match are not the ones kept over a lobby
         titleHoldTicks = Math.max(titleHoldTicks, TITLE_HOLD_TICKS);
     }
 
