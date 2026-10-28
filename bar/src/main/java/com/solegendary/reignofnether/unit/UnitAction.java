@@ -219,5 +219,6 @@ public enum UnitAction {
     SKYWARD_SHOT,
     // Beyond and Tabs T3 roles (claude/t3-roles.md)
     DEEP_DIVE,              // Tidewrought Leviathan: dives from the water and surfaces by the aimed spot with a slam (T3)
-    GROW_GROVE              // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    GROW_GROVE,             // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    TAKE_ROOT               // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
 }
