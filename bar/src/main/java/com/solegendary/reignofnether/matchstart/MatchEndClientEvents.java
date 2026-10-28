@@ -28,6 +28,8 @@ public class MatchEndClientEvents {
     private static List<MatchStatRow> rows = new ArrayList<>();
     private static int openDelayTicks = -1;   // >0 while waiting for the title to finish, then the screen opens
     private static int titleHoldTicks = 0;    // >0 while a victory/defeat title is on screen
+    // the host went Back to lobby while these results were up: they go, and the lobby shows, once the popup closes
+    private static boolean stale = false;
 
     public static long getGameDurationTicks() {
         return gameDurationTicks;
@@ -39,6 +41,26 @@ public class MatchEndClientEvents {
 
     public static boolean hasResults() {
         return !rows.isEmpty();
+    }
+
+    /** Results of a match the host has already taken everyone back to the lobby from (no Spectate any more). */
+    public static boolean isStale() {
+        return stale;
+    }
+
+    /**
+     * The lobby reopened over a decided match (the host's Back to lobby): results this player is looking at, or that
+     * are about to open, stay up until they close the popup (MatchEndLayout.lobbyKeepsResults); otherwise they go now.
+     * True when they were kept.
+     */
+    public static boolean onLobbyReopened() {
+        boolean popupOpen = Minecraft.getInstance().screen instanceof MatchEndScreen;
+        if (MatchEndLayout.lobbyKeepsResults(popupOpen, openDelayTicks > 0)) {
+            stale = true;
+            return true;
+        }
+        clearResults();
+        return false;
     }
 
     // called on the client main thread from the packet handler
@@ -79,10 +101,16 @@ public class MatchEndClientEvents {
             // TopdownGuiClientEvents reopens the RTS screen a few ticks after no screen is open
             mc.setScreen(null);
         }
+        if (stale) {
+            // closed after the host went back to the lobby: the results go and the lobby they were kept from comes up
+            clearResults();
+            LobbyClientEvents.showLobbyIfOpen();
+        }
     }
 
     /** Back to lobby: the decided match is gone, so are its results (and the popup, if it is up). */
     public static void clearResults() {
+        stale = false;
         gameDurationTicks = 0;
         rows = new ArrayList<>();
         openDelayTicks = -1;
@@ -110,6 +138,7 @@ public class MatchEndClientEvents {
 
     @SubscribeEvent
     public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
+        stale = false;
         gameDurationTicks = 0;
         rows = new ArrayList<>();
         openDelayTicks = -1;
