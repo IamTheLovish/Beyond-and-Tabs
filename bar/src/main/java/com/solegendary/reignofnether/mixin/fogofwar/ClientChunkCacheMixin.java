@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.mixin.fogofwar;
 
+import com.solegendary.reignofnether.fogofwar.FogMemoryClient;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -46,9 +47,6 @@ public abstract class ClientChunkCacheMixin {
     // Remembered terrain for chunks that have left the cache, as palette snapshots per section
     // (a null entry in the array = that section was all air). LinkedHashMap so the oldest entry can be
     // evicted once the cap is hit; cleared whenever a new ClientChunkCache is built (level change).
-    @Unique
-    private static Map<ChunkPos, PalettedContainer<BlockState>[]> ron_fogMemory;
-
     // ~8k chunks of palette snapshots is a few tens of MB worst case; an RTS-optimised map is well under
     // this, so in practice nothing is ever evicted.
     @Unique
@@ -62,8 +60,7 @@ public abstract class ClientChunkCacheMixin {
 
     @Unique
     private static Map<ChunkPos, PalettedContainer<BlockState>[]> ron_memory() {
-        if (ron_fogMemory == null) ron_fogMemory = new LinkedHashMap<>();
-        return ron_fogMemory;
+        return FogMemoryClient.map();
     }
 
     // Cheap palette-level copy of a chunk's block states. Independent of the live chunk once taken.
@@ -93,7 +90,7 @@ public abstract class ClientChunkCacheMixin {
     // render distance does not wipe fog memory.
     @Inject(method = "<init>", at = @At("RETURN"))
     private void reignofnether$clearFogMemory(ClientLevel level, int viewDistance, CallbackInfo ci) {
-        ron_memory().clear();
+        FogMemoryClient.clear("new level");
     }
 
     // Snapshot the remembered terrain before the client forgets the chunk. The live client chunk already
@@ -123,7 +120,10 @@ public abstract class ClientChunkCacheMixin {
         ron_capturedSections = null;
         ron_mask = null;
         long[] mask = ron_visibilityMask(x, z);
-        if (mask == null) return; // fog off or fully visible: apply the packet untouched
+        if (mask == null) { // fog off or fully visible: apply the packet untouched, and forget any stale memory
+            ron_memory().remove(new ChunkPos(x, z));
+            return;
+        }
 
         LevelChunk old = ((ClientChunkCache) (Object) this).getChunk(x, z, ChunkStatus.FULL, false);
         FogOfWarClientEvents.setChunkFreshlyLoaded(x, z, old == null);

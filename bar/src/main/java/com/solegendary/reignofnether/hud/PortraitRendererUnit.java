@@ -72,11 +72,23 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
     public R renderer;
     public Model model;
 
-    public final int frameWidth = 60;
-    public final int frameHeight = 60;
+    // The selected unit's block (Oct 22, lovish: "the HUD for the units is so large ... units don't need their models
+    // to pop up, just a picture of their icon with their stats"): the unit's HUD icon (the mob head the selection strip
+    // and the buttons use) in a 32 px frame, its stats in a 2 x 3 grid beside it, one slim health bar with the numbers
+    // under both. 100 x 43 px where the model portrait + stats column took 104 x 60 + a health line below. Mirrored by
+    // HudLayout.PORTRAIT_W / STATS_W / PORTRAIT_H and tools/hud_layout.py.
+    public final int frameWidth = 32;          // the icon frame (square)
+    public final int frameHeight = 43;         // icon frame + the health row under it
+    public final int statsWidth = 68;          // the stats grid beside the icon
+    public final int statsHeight = 32;
+    public final int sideWidth = 44;           // the carried-resources frame, and the width ItemClientEvents' inventory takes
+    public static final int HEALTH_ROW_H = 10; // 9 px bar + 1 px air; a hero's mana bar adds one more row
+    private static final int STAT_ROW_H = 10, STAT_COL_B_X = 33, STAT_ROWS = 3;
 
-    public final int statsWidth = 44;
-    public final int statsHeight = 60;
+    // The old 3D model portrait: only the fallback for an entity with no HUD icon (a player, a mob with no mob head).
+    // Flip to false to see which entities still depend on it - none of the faction units should.
+    public static boolean MODEL_FALLBACK = true;
+    private static final int OLD_FRAME = 60;   // the model portrait's old frame, the scale the offsets below were tuned at
 
     private final int size = 46;
     private final int offsetX = 31;
@@ -96,7 +108,7 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
     private final int lookRangeX = 100;
     private final int lookRangeY = 40;
 
-    public final int HERO_Y_OFFSET = 10;
+    public final int HERO_Y_OFFSET = 10;   // a hero's block is one row taller (the mana bar under the health bar)
 
     public PortraitRendererUnit() {
     }
@@ -168,40 +180,141 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         }
     }
 
-    // Render the portrait including:
-    // - background frame
-    // - moving head
-    // - healthbar
-    // - unit name
+    private static final java.util.Map<ResourceLocation, Boolean> ICON_EXISTS = new java.util.HashMap<>();
+
+    private static boolean iconExists(ResourceLocation rl) {
+        return ICON_EXISTS.computeIfAbsent(rl, r -> MC.getResourceManager().getResource(r).isPresent());
+    }
+
+    private static ResourceLocation mobHead(String iconName, String suffix) {
+        return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/" + iconName + suffix + ".png");
+    }
+
+    /**
+     * The entity's HUD icon, the same mob head the selection strip draws (a mounted unit gets the "_half" head so the
+     * rider shows behind it, as in the strip), or null when there is none.
+     */
+    public static ResourceLocation iconFor(LivingEntity entity) {
+        if (entity == null || entity instanceof Player)
+            return null;
+        String name = MiscUtil.getEntityIconName(entity);
+        ResourceLocation rl = mobHead(name, entity.isVehicle() && entity instanceof Unit ? "_half" : "");
+        return iconExists(rl) ? rl : null;
+    }
+
+    /** True when the panel can be drawn for this entity: it has an icon, or the model fallback has a model to draw. */
+    public boolean canRender(LivingEntity entity) {
+        return iconFor(entity) != null || (MODEL_FALLBACK && model != null && renderer != null);
+    }
+
+    /** Pixels the whole block takes above the screen's bottom edge (a hero's extra mana row included). */
+    public int blockHeight(LivingEntity entity) {
+        return frameHeight + (entity instanceof HeroUnit ? HERO_Y_OFFSET : 0);
+    }
+
+    // Render the unit's block including:
+    // - the icon in its frame (the old animated 3D head only when there is no icon)
+    // - the name above it, the passive-effect icons above that
+    // - the slim health bar with its numbers (a hero's mana bar under it)
     // Must be called from DrawScreenEvent
     public RectZone render(GuiGraphics guiGraphics, String name, int x, int y, int mouseX, int mouseY, LivingEntity entity) {
-        if (entity instanceof HeroUnit)
-            y -= HERO_Y_OFFSET;
+        boolean hero = entity instanceof HeroUnit;
+        if (hero)
+            y -= HERO_Y_OFFSET;   // the block grows upward: its mana row sits under the health row
 
         Relationship rs = UnitClientEvents.getPlayerToEntityRelationship(entity);
         int bgCol = PlayerColors.getPlayerPortraitDisplayColorHex(entity instanceof Unit u ? u.getOwnerName() : null);
         if (entity instanceof Player player) {
             bgCol = 0xA0000000 | PlayerColors.getPlayerAllianceColorHex(player.getName().getString());
         }
-        int frameHeightPlus = 0;
-        if (entity instanceof HeroUnit) {
-            frameHeightPlus = HERO_Y_OFFSET;
+        MyRenderer.renderFrameWithBg(guiGraphics, x, y, frameWidth, frameWidth, bgCol);
+
+        ResourceLocation icon = iconFor(entity);
+        if (icon != null) {
+            guiGraphics.pose().pushPose();
+            guiGraphics.pose().translate(0, 0, 1);
+            if (entity.isVehicle() && entity instanceof Unit && entity.getFirstPassenger() != null) {
+                ResourceLocation rider = mobHead(MiscUtil.getEntityIconName(entity.getFirstPassenger()), "");
+                if (iconExists(rider))
+                    MyRenderer.renderIcon(guiGraphics, rider, x + 2, y + 2, frameWidth - 4);
+            }
+            MyRenderer.renderIcon(guiGraphics, icon, x + 2, y + 2, frameWidth - 4);
+            guiGraphics.pose().popPose();
+        } else if (MODEL_FALLBACK) {
+            renderModelFallback(guiGraphics, x, y, entity);
         }
-        MyRenderer.renderFrameWithBg(guiGraphics, x, y, frameWidth, frameHeight + frameHeightPlus, bgCol);
 
-        // remember 0,0 is top left
-        int drawX = x + offsetX;
-        int drawY = y + (int) (entity.getEyeHeight() / standardEyeHeight * offsetY);
+        // name (unless a player, since their nametag will be rendered anyway); the hero's sits above its experience bar
+        String ownerLine = null;
+        if (rs != Relationship.OWNED && entity instanceof Unit unit && unit.getOwnerName().length() > 0) {
+            ownerLine = unit.getOwnerName();
+        }
+        name = WordUtils.capitalize(name);
+        int nameY = hero ? y - 15 : y - 9;
+        int passiveY = hero ? y - 24 : y - 16;
+        int nameX = x;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 2000);
+        if (entity instanceof Unit unit) {
+            for (Button passiveIcon : unit.getPassiveIcons()) {
+                passiveIcon.render(guiGraphics, nameX - 2, passiveY, mouseX, mouseY);
+                if (passiveIcon.isMouseOver(mouseX, mouseY))
+                    passiveIcon.renderTooltip(guiGraphics, mouseX, mouseY);
+                nameX += EnchantmentIcon.ICON_SIZE * 2;
+            }
+            if (!unit.getPassiveIcons().isEmpty())
+                nameX += EnchantmentIcon.ICON_SIZE / 2;
+        }
+        if (!(entity instanceof Player)) {
+            guiGraphics.drawString(Minecraft.getInstance().font, name, nameX + 4, nameY, WHITE);
+            if (ownerLine != null)
+                PortraitRendererBuilding.drawOwnerLine(guiGraphics, ownerLine, nameX + 4, nameY, 200);
+        }
+        guiGraphics.pose().popPose();
 
-        //if (entity instanceof HeroUnit)
-        //    drawY += HERO_Y_OFFSET;
+        // the health bar spans the icon and the stats beside it; the numbers sit on it
+        int rowW = frameWidth + statsWidth;
+        int rowY = y + frameWidth + 1;
+        float cx = x + rowW / 2f;
+        HealthBarClientEvents.renderForEntity(guiGraphics.pose(), entity, cx, rowY, rowW, HealthBarClientEvents.RenderMode.GUI_INFO);
+        HealthBarClientEvents.renderAbsorbForEntity(guiGraphics.pose(), entity, cx, rowY, rowW, HealthBarClientEvents.RenderMode.GUI_INFO);
 
-        int sizeFinal = size;
+        float health = entity.getHealth() + entity.getAbsorptionAmount();
+        String healthText = health >= 1 ? String.valueOf((int) health) : String.valueOf(health).substring(0, 3);
+        float maxHealth = entity.getMaxHealth();
+        if (entity.getAbsorptionAmount() > 0)
+            maxHealth += MiscUtil.getMaxAbsorptionAmount(entity);
+        healthText += "/" + ((int) maxHealth);
+        barText(guiGraphics, healthText, (int) cx, rowY);
 
+        if (entity instanceof HeroUnit heroUnit) {
+            int manaY = rowY + HEALTH_ROW_H;
+            HealthBarClientEvents.renderManaForEntity(guiGraphics.pose(), heroUnit, cx, manaY, rowW,
+                    HealthBarClientEvents.RenderMode.GUI_INFO);
+            float mana = heroUnit.getMana();
+            String manaText = mana >= 1 ? String.valueOf((int) mana) : String.valueOf(mana).substring(0, 3);
+            manaText += "/" + (int) heroUnit.getMaxMana();
+            barText(guiGraphics, manaText, (int) cx, manaY);
+        }
+
+        return RectZone.getZoneByLW(x, y, frameWidth, frameHeight + (hero ? HERO_Y_OFFSET : 0));
+    }
+
+    /** The numbers on a 9 px bar: centred, shadowed, layered above the bar's quads. */
+    private static void barText(GuiGraphics guiGraphics, String text, int centreX, int barY) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0, 0, 10);
+        guiGraphics.drawCenteredString(MC.font, text, centreX, barY + 1, WHITE);
+        guiGraphics.pose().popPose();
+    }
+
+    // The old model portrait, scaled from its 60 px frame into the 32 px icon frame; only for an entity with no icon
+    private void renderModelFallback(GuiGraphics guiGraphics, int x, int y, LivingEntity entity) {
+        float k = frameWidth / (float) OLD_FRAME;
         Pair<Integer, Integer> yAndScaleOffsets = PortraitRendererModifiers.getPortraitRendererModifiers(entity);
-
-        drawY += yAndScaleOffsets.getFirst();// + UnitClientEvents.yOffset;
-        sizeFinal += yAndScaleOffsets.getSecond();// + UnitClientEvents.scale;
+        int drawX = x + Math.round(offsetX * k);
+        int drawY = y + Math.round((entity.getEyeHeight() / standardEyeHeight * offsetY + yAndScaleOffsets.getFirst()) * k);
+        int sizeFinal = Math.round((size + yAndScaleOffsets.getSecond()) * k);
 
         boolean hasBanner = false;
         ItemStack bannerStack = entity.getItemBySlot(EquipmentSlot.HEAD);
@@ -209,151 +322,16 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
             hasBanner = true;
             entity.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
         }
-        // clipped to the frame's inside: long weapons (the Field Medic's staff, the Halberdier's halberd) were drawn
-        // across the HUD beside the portrait (audit Oct 15, item 14). The entity draw flushes its own buffers inside
-        // the call, so the scissor covers all of it; finally - a failed draw must not leave the HUD clipped
-        guiGraphics.enableScissor(x + 2, y + 2, x + frameWidth - 2, y + frameHeight + frameHeightPlus - 2);
+        // clipped to the frame's inside: long weapons were drawn across the HUD beside the portrait (audit Oct 15,
+        // item 14); finally - a failed draw must not leave the HUD clipped
+        guiGraphics.enableScissor(x + 2, y + 2, x + frameWidth - 2, y + frameWidth - 2);
         try {
             drawEntityOnScreen(guiGraphics.pose(), entity, drawX, drawY, sizeFinal);
         } finally {
             guiGraphics.disableScissor();
         }
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0,0,2000);
-        name = WordUtils.capitalize(name);
-
-        // owner on its own small line above the name rather than a " (Owner)" suffix (see PortraitRendererBuilding)
-        String ownerLine = null;
-        if (rs != Relationship.OWNED && entity instanceof Unit unit && unit.getOwnerName().length() > 0) {
-            ownerLine = unit.getOwnerName();
-        }
-
-        // draw name (unless a player, since their nametag will be rendered anyway)
-        if (entity instanceof HeroUnit) {
-            y -= 6;
-        }
-        int xOrig = x;
-        if (entity instanceof Unit unit) {
-            for (Button passiveIcon : unit.getPassiveIcons()) {
-                int yr = unit instanceof HeroUnit ? y - 18 : y - 16;
-                passiveIcon.render(guiGraphics, x - 2, yr, mouseX, mouseY);
-                if (passiveIcon.isMouseOver(mouseX, mouseY))
-                    passiveIcon.renderTooltip(guiGraphics, mouseX, mouseY);
-                x += EnchantmentIcon.ICON_SIZE * 2;
-            }
-            if (!unit.getPassiveIcons().isEmpty())
-                x += EnchantmentIcon.ICON_SIZE / 2;
-        }
-        if (!(entity instanceof Player)) {
-            guiGraphics.drawString(Minecraft.getInstance().font, name, x + 4, y - 9, WHITE);
-            if (ownerLine != null)
-                PortraitRendererBuilding.drawOwnerLine(guiGraphics, ownerLine, x + 4, y - 9, 200);
-        }
-        x = xOrig;
-        if (entity instanceof HeroUnit) {
-            y += 14;
-        }
-
-        RectZone rectZone = RectZone.getZoneByLW(x, y, frameWidth, frameHeight);
-
-        if (entity instanceof HeroUnit heroUnit) {
-            // draw health bar and write min/max hp
-            HealthBarClientEvents.renderForEntity(guiGraphics.pose(),
-                    entity,
-                    x + (frameWidth / 2f),
-                    y + frameHeight - 22,
-                    frameWidth - 9,
-                    HealthBarClientEvents.RenderMode.GUI_PORTRAIT
-            );
-            HealthBarClientEvents.renderAbsorbForEntity(guiGraphics.pose(),
-                    entity,
-                    x + (frameWidth / 2f),
-                    y + frameHeight - 22,
-                    frameWidth - 9,
-                    HealthBarClientEvents.RenderMode.GUI_PORTRAIT
-            );
-            HealthBarClientEvents.renderManaForEntity(guiGraphics.pose(),
-                    heroUnit,
-                    x + (frameWidth / 2f),
-                    y + frameHeight - 12,
-                    frameWidth - 9,
-                    HealthBarClientEvents.RenderMode.GUI_PORTRAIT
-            );
-        } else {
-            HealthBarClientEvents.renderForEntity(guiGraphics.pose(),
-                    entity,
-                    x + (frameWidth / 2f),
-                    y + frameHeight - 14,
-                    frameWidth - 9,
-                    HealthBarClientEvents.RenderMode.GUI_PORTRAIT
-            );
-            HealthBarClientEvents.renderAbsorbForEntity(guiGraphics.pose(),
-                    entity,
-                    x + (frameWidth / 2f),
-                    y + frameHeight - 14,
-                    frameWidth - 9,
-                    HealthBarClientEvents.RenderMode.GUI_PORTRAIT
-            );
-        }
-
-        ArrayList<String> texts = new ArrayList<>();
-        String healthText = "";
-        float health = entity.getHealth();
-        health += entity.getAbsorptionAmount();
-        if (health >= 1) {
-            healthText = String.valueOf((int) health);
-        } else {
-            healthText = String.valueOf(health).substring(0, 3);
-        }
-        float maxHealth = entity.getMaxHealth();
-        if (entity.getAbsorptionAmount() > 0)
-            maxHealth += MiscUtil.getMaxAbsorptionAmount(entity);
-
-        healthText += "/" + ((int) maxHealth);
-        texts.add(healthText);
-
-        if (entity instanceof HeroUnit heroUnit) {
-            String manaText = "";
-            float mana = heroUnit.getMana();
-            if (mana >= 1) {
-                manaText = String.valueOf((int) mana);
-            } else {
-                manaText = String.valueOf(mana).substring(0, 3);
-            }
-            manaText += "/" + (int) heroUnit.getMaxMana();
-            texts.add(manaText);
-        }
-
-        renderStatText(texts, entity, x, (entity instanceof HeroUnit ? y - HERO_Y_OFFSET + 2 : y), guiGraphics);
-
         if (hasBanner)
             entity.setItemSlot(EquipmentSlot.HEAD, bannerStack);
-
-        return rectZone;
-    }
-
-    private void renderStatText(List<String> texts, LivingEntity entity, int x, int y, GuiGraphics guiGraphics) {
-        // need to render like this instead of GuiComponent.drawCenteredString, so it's layered above the portrait entity
-        Minecraft MC = Minecraft.getInstance();
-        MultiBufferSource.BufferSource multibuffersource$buffersource =
-                MultiBufferSource.immediate(Tesselator.getInstance()
-                        .getBuilder());
-
-        for (int i = 0; i < texts.size(); i++) {
-            FormattedCharSequence pTooltips = FormattedCharSequence.forward(texts.get(i), Style.EMPTY);
-            ClientTooltipComponent clientTooltip = ClientTooltipComponent.create(pTooltips);
-            guiGraphics.pose().translate(0.0, 0.0, 400.0);
-            int x0 = x + (frameWidth / 2);
-            int xC = (x0 - MC.font.width(texts.get(i)) / 2);
-            clientTooltip.renderText(MC.font,
-                    xC,
-                    y + frameHeight - 2 + ((i-1) * 10),
-                    guiGraphics.pose().last().pose(),
-                    multibuffersource$buffersource
-            );
-        }
-        multibuffersource$buffersource.endBatch();
-        guiGraphics.pose().popPose();
     }
 
     private class RenderedStat {
@@ -378,15 +356,10 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
     }
 
     public RectZone renderStats(GuiGraphics guiGraphics, int x, int y, int mouseX, int mouseY, Unit unit) {
-        int statsHeightPlus = 0;
-        if (unit instanceof HeroUnit) {
-            y -= HERO_Y_OFFSET;
-            statsHeightPlus = HERO_Y_OFFSET;
-        }
-        MyRenderer.renderFrameWithBg(guiGraphics, x, y, statsWidth, statsHeight + statsHeightPlus, 0xA0000000);
-
-        int blitXIcon = x + 6;
-        int blitYIcon = y + 7;
+        boolean hero = unit instanceof HeroUnit;
+        if (hero)
+            y -= HERO_Y_OFFSET;   // the same shift render() makes: icon and stats stay level
+        MyRenderer.renderFrameWithBg(guiGraphics, x, y, statsWidth, statsHeight, 0xA0000000);
 
         ArrayList<RenderedStat> renderedStats = new ArrayList<>();
 
@@ -537,48 +510,34 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         }
 
         if (unit instanceof HeroUnit heroUnit) {
-            int heroLvl = heroUnit.getHeroLevel();
-            String heroLvlString = I18n.get("hud.hero.reignofnether.level", heroLvl);
-            String heroLvString = I18n.get("hud.hero.reignofnether.level.short", heroLvl);
-            guiGraphics.drawString(
-                    Minecraft.getInstance().font,
-                    fcs((heroLvl >= 10 ? heroLvString : heroLvlString), true),
-                    blitXIcon + 1,
-                    blitYIcon - 1,
-                    WHITE
-            );
-            blitYIcon += HERO_Y_OFFSET + 1;
+            // the level leads the grid: text only, no icon (it used to be drawn over the top-left of the column)
+            renderedStats.add(0, new RenderedStat(null,
+                    I18n.get("hud.hero.reignofnether.level.short", heroUnit.getHeroLevel()),
+                    null, WHITE, 0));
         }
 
-        // render based on prepped strings/icons
-        for (RenderedStat renderedStat : renderedStats) {
-            MyRenderer.renderIcon(guiGraphics, renderedStat.icon, blitXIcon, blitYIcon, 8);
-
-            boolean isMouseOver =
-                    mouseX >= blitXIcon - 1 &&
-                    mouseY >= blitYIcon - 1 &&
-                    mouseX < blitXIcon + statsWidth - 11 &&
-                    mouseY < blitYIcon + 9;
-
-            // highlight on hover
-            if (isMouseOver) {
-                guiGraphics.fill( // x1,y1, x2,y2,
-                    blitXIcon - 1,
-                    blitYIcon - 1,
-                    blitXIcon + statsWidth - 11,
-                    blitYIcon + 9,
-                    0x32FFFFFF);
-                MyRenderer.renderTooltip(guiGraphics, unit.getStatTooltip(renderedStat.type), mouseX, mouseY);
+        // two columns of three, filled down the first then the second: attack, attack speed and range (or the level
+        // first on a hero) on the left, armour and speed on the right
+        for (int i = 0; i < renderedStats.size(); i++) {
+            RenderedStat renderedStat = renderedStats.get(i);
+            int col = i / STAT_ROWS, row = i % STAT_ROWS;
+            int cellX = x + 4 + col * STAT_COL_B_X;
+            int cellY = y + 2 + row * STAT_ROW_H;
+            int cellW = col == 0 ? STAT_COL_B_X - 1 : statsWidth - 4 - STAT_COL_B_X;
+            int textX = cellX;
+            if (renderedStat.icon != null) {
+                MyRenderer.renderIcon(guiGraphics, renderedStat.icon, cellX, cellY, 8);
+                textX = cellX + 10;
             }
 
-            guiGraphics.drawString(
-                Minecraft.getInstance().font,
-                renderedStat.text,
-                blitXIcon + 13 + renderedStat.textXOffset,
-                blitYIcon,
-                renderedStat.colour
-            );
-            blitYIcon += 10;
+            boolean isMouseOver = renderedStat.type != null &&
+                    mouseX >= cellX - 1 && mouseY >= cellY - 1 &&
+                    mouseX < cellX + cellW && mouseY < cellY + 9;
+            if (isMouseOver) {
+                guiGraphics.fill(cellX - 1, cellY - 1, cellX + cellW, cellY + 9, 0x32FFFFFF);
+                MyRenderer.renderTooltip(guiGraphics, unit.getStatTooltip(renderedStat.type), mouseX, mouseY);
+            }
+            guiGraphics.drawString(Minecraft.getInstance().font, renderedStat.text, textX + renderedStat.textXOffset, cellY, renderedStat.colour);
         }
         return RectZone.getZoneByLW(x, y, statsWidth, statsHeight);
     }
@@ -628,10 +587,10 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
     }
 
     public RectZone renderResourcesHeld(GuiGraphics guiGraphics, int x, int y, Resources resources, boolean redText) {
-        MyRenderer.renderFrameWithBg(guiGraphics, x, y, statsWidth, statsHeight, 0xA0000000);
+        MyRenderer.renderFrameWithBg(guiGraphics, x, y, sideWidth, statsHeight, 0xA0000000);
 
-        int blitXIcon = x + 6;
-        int blitYIcon = y + 7;
+        int blitXIcon = x + 5;
+        int blitYIcon = y + 2;   // three rows of 10 fit the 32 px frame, level with the stats grid
 
         // prep strings/icons to render
         List<ResourceLocation> textureStatIcons = List.of(ResourceLocation.fromNamespaceAndPath("reignofnether",
@@ -654,14 +613,14 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
                 guiGraphics.drawString(
                     Minecraft.getInstance().font,
                     statStrings.get(i),
-                    blitXIcon + 12,
+                    blitXIcon + 11,
                     blitYIcon,
                     redText ? RED : WHITE
                 );
                 blitYIcon += 10;
             }
         }
-        return RectZone.getZoneByLW(x, y, statsWidth, statsHeight);
+        return RectZone.getZoneByLW(x, y, sideWidth, statsHeight);
     }
 
     private void drawEntityOnScreen(PoseStack poseStack, LivingEntity entity, int x, int y, int size) {

@@ -4,6 +4,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
 import com.solegendary.reignofnether.faction.FactionTraits;
+import com.solegendary.reignofnether.perf.FrameBudget;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.world.phys.AABB;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
 import net.minecraft.client.Minecraft;
@@ -36,16 +39,28 @@ public class BannerRenderClientEvents {
     private static final float CLOTH_HEIGHT = 0.9f;
     private static final float POLE_HEIGHT = 2.4f;
     private static final double MAX_RENDER_DIST_SQR = 160 * 160;
+    /** Added to the draw distance (squared) when judging a building's centre: its mount can be this far from it, and then some. */
+    private static final double MOUNT_SLACK_SQR = 2 * 160 * 70 + 70 * 70;
 
     /** placement -> its banner mount (top block), recomputed only if the building changes shape (upgrades). */
     private record Mount(int blockCount, BlockPos pos) { }
     private static final Map<BuildingPlacement, Mount> mounts = new WeakHashMap<>();
 
+    /**
+     * Mounts worked out per frame. computeMount walks every block of a placement (tens of thousands for an upgraded
+     * lab); a base coming into view, a fog reveal or a join handed it dozens in one frame - the buildingDecor spike of
+     * 13.7 ms in lovish's Oct 23 log. One a frame: the banners of a new base appear over a few frames, nobody sees it.
+     */
+    private static final FrameBudget MOUNT_BUDGET = new FrameBudget(1);
+
+    /** The banner mount, or null when it is not worked out yet and this frame's budget is spent (try again next frame). */
     private static BlockPos mountFor(BuildingPlacement placement) {
         int count = placement.getBlocks().size();
         Mount cached = mounts.get(placement);
         if (cached != null && cached.blockCount() == count)
             return cached.pos();
+        if (!MOUNT_BUDGET.tryTake())
+            return cached == null ? null : cached.pos();   // an upgraded building keeps its old pole until its turn
         BlockPos pos = computeMount(placement);
         mounts.put(placement, new Mount(count, pos));
         return pos;
@@ -77,6 +92,8 @@ public class BannerRenderClientEvents {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
+            return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.BUILDING_DECOR);
         try {
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
@@ -92,12 +109,22 @@ public class BannerRenderClientEvents {
             float time = MC.level.getGameTime() + evt.getPartialTick();
             BlockState pole = Blocks.DARK_OAK_PLANKS.defaultBlockState();
             boolean renderedAny = false;
+            Frustum frustum = evt.getFrustum();
+            MOUNT_BUDGET.newFrame();
 
             for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
                 if (!fliesBanner(placement))
                     continue;
+                // far buildings: no mount to work out (the pole is within ~60 blocks of the centre)
+                if (cam.distanceToSqr(placement.centrePos.getX(), placement.centrePos.getY(), placement.centrePos.getZ())
+                        > MAX_RENDER_DIST_SQR + MOUNT_SLACK_SQR)
+                    continue;
                 BlockPos mount = mountFor(placement);
                 if (mount == null || cam.distanceToSqr(mount.getX(), mount.getY(), mount.getZ()) > MAX_RENDER_DIST_SQR)
+                    continue;
+                // off screen: no light lookup, no pose, none of the pole and cloth boxes
+                if (frustum != null && !frustum.isVisible(new AABB(mount.getX() - 2, mount.getY(), mount.getZ() - 2,
+                        mount.getX() + 3, mount.getY() + 4, mount.getZ() + 3)))
                     continue;
 
                 // colours per faction in FactionTraits (Sunforged white/gold, Gravebound soul-blue/black, Horde red/bone,

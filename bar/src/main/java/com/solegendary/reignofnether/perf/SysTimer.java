@@ -35,6 +35,8 @@ final class SysTimer {
     /** The most self time one tick (or frame) spent in the section over the window (nanoseconds). */
     final long[] worstTickNs;
     private final long[] tickNs;
+    /** Completed calls per section since the timer was made ({@link #reset} leaves these; see {@link #lifetimeNs}). */
+    final long[] lifetimeCalls;
     /** Closed ticks (frames) in the window. */
     int ticks = 0;
     /** Begins refused because the stack was full (a runaway recursion), and ticks that closed with a section still open. */
@@ -55,6 +57,7 @@ final class SysTimer {
         this.worstTickNs = new long[sections];
         this.tickNs = new long[sections];
         this.lifetimeNs = new long[sections];
+        this.lifetimeCalls = new long[sections];
     }
 
     int sections() {
@@ -87,6 +90,7 @@ final class SysTimer {
         tickNs[id] += self;
         lifetimeNs[id] += self;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (self > worstCallNs[id])
             worstCallNs[id] = self;
         if (depth > 0)
@@ -101,6 +105,7 @@ final class SysTimer {
         tickNs[id] += nanos;
         lifetimeNs[id] += nanos;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (nanos > worstCallNs[id])
             worstCallNs[id] = nanos;
     }

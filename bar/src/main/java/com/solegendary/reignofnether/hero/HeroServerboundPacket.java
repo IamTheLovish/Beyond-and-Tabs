@@ -20,6 +20,11 @@ public class HeroServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.REQUEST_SYNC));
     }
 
+    /** Tells the server this player's Hero AI switch (on login and whenever the box is clicked). */
+    public static void sendHeroAi(boolean on) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.HERO_AI_ON : HeroAction.HERO_AI_OFF));
+    }
+
     public HeroServerboundPacket(
             int unitId,
             HeroAction heroAction
@@ -44,6 +49,15 @@ public class HeroServerboundPacket {
         ctx.get().enqueueWork(() -> {
             // a client asks when a hero loads for it (UnitClientEvents.onEntityJoin): cap how often one client may ask
             net.minecraft.server.level.ServerPlayer sender = ctx.get().getSender();
+            if (sender == null)
+                return;
+            if (heroAction == HeroAction.HERO_AI_ON || heroAction == HeroAction.HERO_AI_OFF) {
+                // a player's own setting, for their own heroes only (the owner name is the player's name)
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_ai_switch", 10, 100))
+                    HeroBot.setAiEnabled(sender.getName().getString(), heroAction == HeroAction.HERO_AI_ON);
+                success.set(true);
+                return;
+            }
             if (!com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_sync_request", 50, 100))
                 return;
             // the answer goes to the asker alone, and only if they may know the hero (its side, a spectator, or in

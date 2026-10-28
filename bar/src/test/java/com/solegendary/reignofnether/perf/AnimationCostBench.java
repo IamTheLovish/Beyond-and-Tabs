@@ -57,6 +57,16 @@ class AnimationCostBench {
 
     static final int UNITS = 500;
     static final int FRAMES = 30, WARMUP = 10;
+    /** The wall-clock gates of the living army (design budgets, not 10x margins) take the best of this many rounds. */
+    static final int ROUNDS = 7;
+    static final long ROUND_PAUSE_MS = 15;
+    /**
+     * Frames run before the rounds: long enough that on-stack replacement (OSR) of the frame lambda's 500-unit loop
+     * has compiled before measuring. With 100 (the single-window warm-up) the OSR compile fell inside the rounds - one
+     * ~4 KB array, always in round 2 (#293's first build: "4000 bytes allocated"). The 300 frames (ticks 970-1269 in
+     * livingArmyTick) also first reach the idle weight-shift and fidget paths, so their first-call costs are warm-up too.
+     */
+    static final int ROUND_WARMUP = 300;
     /** restPose + procedural layer, microseconds per unit: a 10x regression trips it, runner noise does not. */
     static final double ANIM_BUDGET_US_PER_UNIT = 40.0;
 
@@ -272,6 +282,113 @@ class AnimationCostBench {
         hal.beginPass(hal.teamParts());
         hal.endPass(hal.teamParts());
         assertTrue(countVertices(hal, pose) == whole, "a pruned pass leaves the body as it found it");
+    }
+
+    /** The living army's per-tick state (Kinematics + Idle), microseconds per unit (design/living_army.md, section 3). */
+    static final double MOTION_TICK_BUDGET_US_PER_UNIT = 1.0;
+
+    /**
+     * The living army's client tick for {@link #UNITS} units: each unit's motion snapshot and idle scheduler stepped
+     * once (walking, turning, stopping, hit now and then) - the gate is under {@link #MOTION_TICK_BUDGET_US_PER_UNIT}
+     * a unit and not one byte allocated (the slab is the only storage).
+     */
+    @Test
+    void livingArmyTick() throws IOException {
+        float[] slab = new float[UNITS * com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE];
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        for (int i = 0; i < UNITS; i++)
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, i * stride, 0f, 0f, 0f, 0f, 20f,
+                20f, false, true);
+        // best of ROUNDS medians, not one: a single 30-frame median (~20 ms) on a shared runner read 1.41 us/unit
+        // against the 1.0 budget on #146's build (Oct 27); a real regression slows every round (BenchRounds)
+        BenchRounds.Result tick = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+            int t = 1000 + round * FRAMES + frame;
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                int b = i * stride;
+                boolean walking = ((t + i * 7) / 60) % 2 == 0;
+                float v = walking ? 0.2f : 0f;
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, v,
+                    walking && (i % 3) == 0 ? 4f : 0f, 20f, 20f, (i % 11) == 0, false);
+                if ((t + i) % 97 == 0)
+                    com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, (i % 8) * 0.785f);
+                com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
+            }
+            long t1 = System.nanoTime();
+            return t1 - t0;
+        });
+        double perUnitUs = tick.bestMs() * 1000.0 / UNITS;
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d ticks: %s), bytes per round %s",
+            UNITS, tick.bestMs(), perUnitUs, MOTION_TICK_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, tick.roundsText(),
+            tick.bytesText());
+        System.out.println(line);
+        Path out = Path.of("build", "motion-bench.txt");
+        Files.createDirectories(out.getParent());
+        Files.write(out, List.of(line));
+        assertTrue(perUnitUs < MOTION_TICK_BUDGET_US_PER_UNIT, line);
+        // at most one round may allocate (an OSR compile is a one-off); a periodic allocation shows in several
+        assertTrue(tick.allocationFree(), "the living army tick allocates: " + line);
+    }
+
+    /** The living army's motion pass on a vanilla body, microseconds per unit per pass (design/living_army.md, section 3). */
+    static final double MOTION_PASS_BUDGET_US_PER_UNIT = 3.0;
+
+    /**
+     * The living army's per-frame pass for {@link #UNITS} units on a vanilla humanoid body: pose (Motion) + put on the
+     * parts and pose stack (MotionPass.place) + take off (restore), each unit mid-walk, mid-turn and mid-flinch. Gates:
+     * under {@link #MOTION_PASS_BUDGET_US_PER_UNIT} a unit, nothing allocated, and the body left exactly as it was.
+     */
+    @Test
+    void livingArmyMotionPass() throws IOException {
+        net.minecraft.client.model.HumanoidModel<net.minecraft.world.entity.LivingEntity> body =
+            new net.minecraft.client.model.HumanoidModel<>(net.minecraft.client.model.geom.builders.LayerDefinition.create(
+                net.minecraft.client.model.HumanoidModel.createMesh(
+                    net.minecraft.client.model.geom.builders.CubeDeformation.NONE, 0f), 64, 64).bakeRoot());
+        var map = com.solegendary.reignofnether.unit.modelling.motion.BoneMaps.forModel(body);
+        assertTrue(map != null, "a humanoid body has a bone map");
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        float[] slab = new float[UNITS * stride];
+        for (int i = 0; i < UNITS; i++) {
+            int b = i * stride;
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0f, 0f, 20f, 20f, false, true);
+            for (int t = 0; t < 20; t++)
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.2f, 4f, 20f, 20f,
+                    false, false);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.1f, 2f, 16f, 20f, false, false);
+        }
+        float[] sliders = {1, 1, 1, 1, 1, 1, 1};
+        float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
+        PoseStack pose = new PoseStack();
+        float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
+        // best of ROUNDS medians, as in livingArmyTick (BenchRounds)
+        BenchRounds.Result pass = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+            float time = 1000f + round * FRAMES + frame;
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, time + i,
+                    0.5f, 40f, sliders, false, out);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.place(map, pose);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
+                pose.setIdentity();   // the render's own push/pop is vanilla's (it allocates), not the pass's
+            }
+            long t1 = System.nanoTime();
+            return t1 - t0;
+        });
+        double perUnitUs = pass.bestMs() * 1000.0 / UNITS;
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), bytes per round %s",
+            UNITS, pass.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, pass.roundsText(),
+            pass.bytesText());
+        System.out.println(line);
+        Path out2 = Path.of("build", "motion-pass-bench.txt");
+        Files.createDirectories(out2.getParent());
+        Files.write(out2, List.of(line));
+        assertTrue(perUnitUs < MOTION_PASS_BUDGET_US_PER_UNIT, line);
+        assertTrue(pass.allocationFree(), "the motion pass allocates: " + line);
+        assertTrue(before == body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot,
+            "restore leaves the body exactly as setupAnim left it");
     }
 
     private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {

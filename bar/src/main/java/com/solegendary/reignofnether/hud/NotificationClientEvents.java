@@ -700,18 +700,41 @@ public class NotificationClientEvents {
     // rendering: small lines centred just under the economy bar (and its stall warning), fading out over FADE_MS
     // ------------------------------------------------------------------------------------------------------------
 
-    /** Height in GUI pixels the toasts take under HudClientEvents.alertBottom right now (the kill feed sits below). */
+    /** The status line is one 12 px row: a chip with the newest toast, drawn over the economy bar's stall row when it is up. */
+    static final int STATUS_H = 12;
+
+    private static int liveToasts(long now, long ms) {
+        int n = 0;
+        for (int s = 0; s < MAX_LINES; s++)
+            if (lines[s] != null && now - lineStartMs[s] < ms)
+                n++;
+        return n;
+    }
+
+    /**
+     * The toast takes the place of the economy bar's "Build speed N%" strip while it is up (one status line, not a
+     * stack): true when a toast is live and the strip it covers exists. EconomyBarRenderer hides its own chip then
+     * (it still keeps the row), the toast is drawn in that row, and the strip comes back when the toast fades. Not with
+     * a resign-vote banner (that stacks above the toasts) or with the toasts folded to icons.
+     */
+    public static boolean coversStallRow() {
+        if (lines[0] == null || HudPanels.alertsCollapsed || !HudPanels.showExtras()
+                || com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight() > 0)
+            return false;
+        return liveToasts(System.currentTimeMillis(), lineMs()) > 0;
+    }
+
+    /**
+     * Height in GUI pixels the status line takes under HudClientEvents.alertBottom right now: the resign-vote banner,
+     * plus one toast row (none when the toast sits in the stall row's place, or when nothing is up).
+     */
     public static int visibleHeight() {
         long now = System.currentTimeMillis();
         long ms = lineMs();
         int h = com.solegendary.reignofnether.player.ResignVoteClientEvents.bannerHeight();
-        int shown = 0;
-        if (HudPanels.showExtras())
-            for (int s = 0; s < MAX_LINES; s++)
-                if (lines[s] != null && now - lineStartMs[s] < ms)
-                    shown++;
-        if (shown > 0)
-            h += HudPanels.alertsCollapsed ? ICON + 2 : shown * 13;
+        boolean toast = HudPanels.showExtras() && liveToasts(now, ms) > 0;
+        if (toast && !(EconomyBarRenderer.stallRowY >= 0 && coversStallRow()))
+            h += HudPanels.alertsCollapsed ? ICON + 2 : STATUS_H;
         return h == 0 ? 0 : h + 2;
     }
 
@@ -732,28 +755,45 @@ public class NotificationClientEvents {
             renderIcons(gg, cx, y, now, ms);
             return;
         }
-        boolean chevronDrawn = false;
+        // ONE status line (lovish, Oct 22: "a lot of things are taking up space ... more difficult to see what's going
+        // on"): only the newest live toast is drawn, as one slim chip, with a "+1" when another is waiting under it
+        // (it shows when this one fades). A toast used to be a 13 px line each, stacked under the stall strip.
+        int shown = -1;
         for (int s = 0; s < MAX_LINES; s++) {
-            String line = lines[s];
-            if (line == null)
+            if (lines[s] == null)
                 continue;
-            long age = now - lineStartMs[s];
-            if (age >= ms) {
+            if (now - lineStartMs[s] >= ms) {
                 lines[s] = null;
                 continue;
             }
-            if (!chevronDrawn) {   // collapse to icons: left of the newest line
-                HudPanels.chevron(gg, HudPanels.ALERTS, cx - lineWidths[s] / 2 - 4 - HudPanels.CHEVRON - 2, y - 1, false);
-                chevronDrawn = true;
-            }
-            long left = ms - age;
-            float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
-            int alpha = Math.max(8, (int) (0xFF * a));   // font renderer treats alpha < 4 as opaque
-            int w = lineWidths[s] + 8;
-            gg.fill(cx - w / 2, y - 2, cx + w / 2, y + 10, ((int) (0xA0 * a) << 24) | 0x101216);
-            gg.drawString(MC.font, line, cx - lineWidths[s] / 2, y, (alpha << 24) | lineColors[s]);
-            y += 13;
+            if (shown < 0)
+                shown = s;
         }
+        if (shown < 0)
+            return;
+        int more = 0;
+        for (int s = shown + 1; s < MAX_LINES; s++)
+            if (lines[s] != null)
+                more++;
+        // in the stall strip's row when it is up (coversStallRow), else its own row under the economy rows
+        int top = EconomyBarRenderer.stallRowY >= 0 && coversStallRow() ? EconomyBarRenderer.stallRowY : y - 2;
+        String line = lines[shown];
+        int lw = lineWidths[shown];
+        int room = Math.max(40, col[1] - col[0] - 8 - (more > 0 ? 14 : 0));
+        if (lw > room) {   // a narrow window / big GUI scale: cut the line to the column instead of running past it
+            line = MC.font.plainSubstrByWidth(line, room - MC.font.width("...")) + "...";
+            lw = MC.font.width(line);
+        }
+        long left = ms - (now - lineStartMs[shown]);
+        float a = left < FADE_MS ? (float) left / FADE_MS : 1f;
+        int alpha = Math.max(8, (int) (0xFF * a));   // font renderer treats alpha < 4 as opaque
+        int w = lw + 8;
+        HudPanels.chevron(gg, HudPanels.ALERTS, cx - w / 2 - HudPanels.CHEVRON - 2, top + 1, false);   // collapse to icons
+        gg.fill(cx - w / 2, top, cx + w / 2, top + STATUS_H, ((int) (0xC0 * a) << 24) | 0x101216);
+        gg.fill(cx - w / 2, top + STATUS_H - 1, cx + w / 2, top + STATUS_H, ((int) (0xFF * a) << 24) | lineColors[shown]);
+        gg.drawString(MC.font, line, cx - lw / 2, top + 2, (alpha << 24) | lineColors[shown]);
+        if (more > 0)
+            gg.drawString(MC.font, "+" + more, cx + w / 2 + 3, top + 2, (alpha << 24) | 0xA8B0B8);
     }
 
     /**

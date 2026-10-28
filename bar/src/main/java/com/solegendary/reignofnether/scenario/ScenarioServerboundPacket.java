@@ -202,7 +202,11 @@ public class ScenarioServerboundPacket {
                 }
                 case SET_SCENARIO_NAME -> {
                 }
-                case SAVE_SCENARIO -> ScenarioServerEvents.saveScenarioRoles();
+                case SAVE_SCENARIO -> {
+                    // the editor's explicit Save: no match is running, so writing to disk now is what the player asked
+                    ScenarioServerEvents.saveScenarioRoles();
+                    com.solegendary.reignofnether.persistence.RtsSaves.flush(com.solegendary.reignofnether.player.PlayerServerEvents.serverLevel);
+                }
             }
             success.set(true);
         });
