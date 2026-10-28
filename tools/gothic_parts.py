@@ -578,7 +578,6 @@ def portal(w=5, h=9, orders=4, pal=None):
     p = Part(pal)
     m = _mason(p, h + 12)
     half = w // 2
-    depth = orders + 1
     # the wall the portal is cut through (z = 0 face, thick), its masonry
     X = half + orders + 3
     top = h + half + orders + 4
@@ -1019,7 +1018,6 @@ def timber_gables(pal=None):
                         if post or rail:
                             p.set(x, yy, z, "timber", axis="y" if post else "x")
                         else:
-                            brace = (x + yy) % 3 == 0
                             win = yy in (y + 2, y + 3) and (x - ox) % 3 == 0
                             p.set(x, yy, z, "glass" if win else "timber_st" if False else "plaster")
                     for z in range(oz - d, zf):

@@ -25,7 +25,8 @@ import java.util.Map;
 /**
  * The multiplayer lobby screen (MultiplayerLobby on the server, design/multiplayer.md). It only shows the lobby the
  * server last sent (LobbyClientEvents.latest) and sends clicks back; the server decides. Rows are grouped by team:
- * a colour swatch (click: next free colour, right-click: any), the name, the faction (a button on your own row and,
+ * a colour swatch (click: the colour palette, BAR's colour box - colours another side holds are crossed out;
+ * right-click: automatic; the host also sets the bots'), the name, the faction (a button on your own row and,
  * for the host, on bot rows), the team, and Ready / the bot's skill. On the right: the map settings and Add AI (the
  * host's), your Ready toggle, Spectate / Play, Start (the host's, once everyone is ready) and Close. Both panels scroll
  * with the mouse wheel when they hold more than fits (LobbyLayout); Start / Close / Hide stay pinned below.
@@ -40,6 +41,9 @@ public class MultiplayerLobbyScreen extends Screen {
     final FactionPicker picker = new FactionPicker();
     /** Swatches drawn this layout: x, y, seat id. */
     final List<int[]> swatches = new ArrayList<>();
+    /** The colour palette popup and the seat id it picks for (-1 when closed); kept across lobby updates. */
+    final ColourPalette palette = new ColourPalette();
+    int paletteSeat = -1;
     /** Faction icons beside the faction buttons/labels: x, y, faction, editable, label width. */
     final List<Object[]> factionIcons = new ArrayList<>();
     /** Rows to draw: y, seat (null for a header), header text and the room left for the name. */
@@ -335,7 +339,7 @@ public class MultiplayerLobbyScreen extends Screen {
             rightEdge -= 26;
             if (s.bot) {
                 CycleButton<Integer> diff = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.DIFFICULTIES.get(i)))
-                    .withValues(SkirmishSetupScreen.range(3)).withInitialValue(clamp(s.difficulty, 3)).displayOnlyValue()
+                    .withValues(SkirmishSetupScreen.range(4)).withInitialValue(clamp(s.difficulty, 4)).displayOnlyValue()
                     .create(rightEdge - 52, y, 52, ROW_H - 2, Component.literal(""), (b, v) -> send(MultiplayerLobby.Action.SET_DIFFICULTY, s.id, v)));
                 diff.active = edit;
                 rightEdge -= 54;
@@ -405,11 +409,12 @@ public class MultiplayerLobbyScreen extends Screen {
     @Override
     public void render(GuiGraphics gg, int mx, int my, float pt) {
         int realMx = mx, realMy = my;
-        if (picker.isOpen()) {
+        LobbyClientboundPacket l = LobbyClientEvents.latest;
+        MultiplayerLobby.Seat paletteFor = syncPalette(l);
+        if (picker.isOpen() || paletteFor != null) {
             mx = -10000;
             my = -10000;
         }
-        LobbyClientboundPacket l = LobbyClientEvents.latest;
         // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
         // scrim behind the panel, title and hint line so every line of the lobby stays readable over it
         LobbyBackdrop.render(this, gg, realMx, realMy);
@@ -487,6 +492,69 @@ public class MultiplayerLobbyScreen extends Screen {
                     bx, by + 5, 0xD0D0D0, false);
         }
         picker.render(gg, font, realMx, realMy);
+        if (paletteFor != null) {
+            final MultiplayerLobby.Seat seat = paletteFor;
+            final List<MultiplayerLobby.Seat> lineup = l.seats;
+            palette.render(gg, font, realMx, realMy, ColourPalette.indexOf(seat.colorMapId),
+                i -> MultiplayerLobby.colourTakenIn(lineup, PlayerPalette.ENTRIES.get(i).mapColorId(), seat));
+        }
+    }
+
+    static MultiplayerLobby.Seat seatById(LobbyClientboundPacket l, int id) {
+        if (l == null)
+            return null;
+        for (MultiplayerLobby.Seat s : l.seats)
+            if (s.id == id)
+                return s;
+        return null;
+    }
+
+    /** The colour box of seat {@code seatId} on screen: x, y; null when it has none or it is scrolled out. */
+    int[] swatchOnScreen(int seatId) {
+        for (int[] sw : swatches) {
+            if (sw[2] != seatId)
+                continue;
+            int swY = rowY(sw[1] - 4, ROW_H - 2);
+            return swY == Integer.MIN_VALUE ? null : new int[]{ sw[0], swY + 4 };
+        }
+        return null;
+    }
+
+    /**
+     * The seat the open palette picks for, with the palette kept beside its colour box (every lobby update rebuilds
+     * the rows); closes it - null - when that seat left, may no longer be edited (Start was pressed) or scrolled out.
+     */
+    MultiplayerLobby.Seat syncPalette(LobbyClientboundPacket l) {
+        if (paletteSeat < 0)
+            return null;
+        MultiplayerLobby.Seat s = seatById(l, paletteSeat);
+        int[] at = s == null || !l.open || !canEdit(l, s) || s.spectating() ? null : swatchOnScreen(s.id);
+        if (at == null) {
+            closePalette();
+            return null;
+        }
+        palette.openBeside(at[0], at[1], SWATCH, width, height);
+        return s;
+    }
+
+    void closePalette() {
+        paletteSeat = -1;
+        palette.close();
+    }
+
+    /**
+     * Opens the palette on the colour box of drawn row {@code index} (0 = the first row with a box), as a click on it
+     * would: the screenshot tours use it. False when there is no such row or it is not yours to edit.
+     */
+    public boolean openPaletteOnRow(int index) {
+        LobbyClientboundPacket l = LobbyClientEvents.latest;
+        if (index < 0 || index >= swatches.size())
+            return false;
+        MultiplayerLobby.Seat s = seatById(l, swatches.get(index)[2]);
+        if (s == null || !canEdit(l, s))
+            return false;
+        paletteSeat = s.id;
+        return syncPalette(l) != null;
     }
 
     @Override
@@ -494,24 +562,52 @@ public class MultiplayerLobbyScreen extends Screen {
         if (picker.mouseClicked(mx, my, button))
             return true;
         LobbyClientboundPacket l = LobbyClientEvents.latest;
+        MultiplayerLobby.Seat paletteFor = syncPalette(l);
+        if (paletteFor != null) {
+            if (button == 1) {   // right-click anywhere while it is open: automatic colour (the server picks at start)
+                send(MultiplayerLobby.Action.SET_COLOUR, paletteFor.id, 0);
+                closePalette();
+                LobbySounds.colour();
+                return true;
+            }
+            int i = palette.hit(mx, my);
+            if (i >= 0) {
+                int id = PlayerPalette.ENTRIES.get(i).mapColorId();
+                // another side holds it: refused here as on the server (two sides never share a colour)
+                if (id != paletteFor.colorMapId && MultiplayerLobby.colourTakenIn(l.seats, id, paletteFor)) {
+                    LobbySounds.denied();
+                    return true;
+                }
+                send(MultiplayerLobby.Action.SET_COLOUR, paletteFor.id, id);
+                closePalette();
+                LobbySounds.colour();
+                return true;
+            }
+            if (!palette.contains(mx, my)) {
+                closePalette();   // clicked outside: close
+                LobbySounds.close();
+            }
+            return true;
+        }
         if (l != null && l.open && !l.starting) {
             for (int[] sw : swatches) {
-                int swY = rowY(sw[1] - 4, ROW_H - 2);
-                if (swY == Integer.MIN_VALUE)
+                int[] at = swatchOnScreen(sw[2]);
+                if (at == null)
                     continue;
-                swY += 4;
-                if (mx >= sw[0] - 2 && mx < sw[0] + SWATCH + 2 && my >= swY - 2 && my < swY + SWATCH + 2) {
-                    MultiplayerLobby.Seat s = null;
-                    for (MultiplayerLobby.Seat x : l.seats)
-                        if (x.id == sw[2])
-                            s = x;
+                if (mx >= at[0] - 2 && mx < at[0] + SWATCH + 2 && my >= at[1] - 2 && my < at[1] + SWATCH + 2) {
+                    MultiplayerLobby.Seat s = seatById(l, sw[2]);
                     if (s == null || !canEdit(l, s)) {
                         LobbySounds.denied();
                         return true;
                     }
-                    // left: the next colour nobody else has; right: any free colour (the server picks at start)
-                    send(MultiplayerLobby.Action.SET_COLOUR, s.id, button == 1 ? 0 : nextFreeColour(l, s));
-                    LobbySounds.colour();
+                    if (button == 1) {   // right-click: automatic colour, as before
+                        send(MultiplayerLobby.Action.SET_COLOUR, s.id, 0);
+                        LobbySounds.colour();
+                        return true;
+                    }
+                    paletteSeat = s.id;
+                    palette.openBeside(at[0], at[1], SWATCH, width, height);
+                    LobbySounds.open();
                     return true;
                 }
             }
@@ -519,27 +615,12 @@ public class MultiplayerLobbyScreen extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
-    static int nextFreeColour(LobbyClientboundPacket l, MultiplayerLobby.Seat s) {
-        int start = 0;
-        for (int i = 0; i < PlayerPalette.COUNT; i++)
-            if (PlayerPalette.ENTRIES.get(i).mapColorId() == s.colorMapId)
-                start = i + 1;
-        for (int k = 0; k < PlayerPalette.COUNT; k++) {
-            int id = PlayerPalette.ENTRIES.get((start + k) % PlayerPalette.COUNT).mapColorId();
-            boolean taken = false;
-            for (MultiplayerLobby.Seat o : l.seats)
-                if (o != s && !o.spectating() && o.colorMapId == id)
-                    taken = true;
-            if (!taken)
-                return id;
-        }
-        return 0;
-    }
-
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (picker.mouseScrolled(mx, my, delta))
             return true;
+        if (paletteSeat >= 0)
+            return true;   // the list holds still while the palette is open beside a row
         // the wheel scrolls the panel under the pointer, one button (column) or one seat row (list) per notch
         if (mx >= rightX && mx < rightX + RIGHT_W && colContentH > colViewBottom - colViewTop) {
             colScroll -= (int) Math.signum(delta) * 20;
@@ -569,6 +650,11 @@ public class MultiplayerLobbyScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (picker.keyPressed(keyCode))
             return true;
+        if (paletteSeat >= 0 && keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            closePalette();   // Escape closes the palette, not the lobby
+            LobbySounds.close();
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 

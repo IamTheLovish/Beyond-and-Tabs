@@ -9,7 +9,10 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.support.SupportBrain;
+import com.solegendary.reignofnether.unit.support.SupportState;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -47,7 +50,7 @@ import java.util.List;
  * <p>
  * Cost at 8v8: nothing per tick beyond the shared unit plumbing - Seal is an order (or the bot's), never a scan.
  */
-public class InkScribeUnit extends Witch implements Unit {
+public class InkScribeUnit extends Witch implements Unit, SupportUnit {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new Seal(), Keybindings.abilitySlot1);
@@ -129,6 +132,13 @@ public class InkScribeUnit extends Witch implements Unit {
 
     public void setFollowTarget(@Nullable LivingEntity target) { this.followTarget = target; }
 
+    // the support brain (unit/support/SupportBrain, claude/healer-ai-oct21.md): attack orders hold a standoff behind
+    // the fighters instead of following the enemy into melee, Fight takes the rear rank, it steps out of melee
+    private final SupportState supportState = new SupportState();
+    @Override public SupportState getSupportState() { return supportState; }
+    // it seals from range: the standoff behind a fight keeps enemy casters at the front inside its reach
+    @Override public double getSupportReach() { return Seal.RANGE; }
+
     // endregion
 
     // a fragile support (the T1 HP floor, like the Moonwell Bearer it copies) that keeps up with the Fire Adepts; its
@@ -171,6 +181,7 @@ public class InkScribeUnit extends Witch implements Unit {
         this.setCanPickUpLoot(false);
         super.tick();
         Unit.tick(this);
+        SupportBrain.tick(this, this);
     }
 
     @Override

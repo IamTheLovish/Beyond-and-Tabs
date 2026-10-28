@@ -1105,7 +1105,7 @@ def radiant_winged():
     # GRIP_DZ (RadiantPaladinUnitModel: model px, y down, from the sword bone's pivot) and the poses file's "_move" for
     # the sword follow from it - change them with this
     print("  planted grip: GRIP_DY %.3f, GRIP_DZ %.3f" % (-((top_hand[1] + low_hand[1]) / 2 - py), 0.0))
-    hands = m.bone("hands", [0, TOP - 0.6, 0], parent="arms")
+    m.bone("hands", [0, TOP - 0.6, 0], parent="arms")
     # intended contact: the gauntlets close round the grip and meet the vambraces; the fauld lames lie over the thighs
     m.contact_ok += [("hands", "sword"), ("hands", "left_fore"), ("hands", "right_fore"), ("body", "left_thigh"),
                      ("body", "right_thigh")]
