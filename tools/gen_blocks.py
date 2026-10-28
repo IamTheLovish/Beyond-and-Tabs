@@ -429,6 +429,9 @@ SEED_ORDER = (
     "fern",
     "large_fern_bottom",
     "large_fern_top",
+    "grass_straw",            # round 29b: the untinted straw layer of the grass plants (critic r1: "no straw")
+    "tall_grass_straw_bottom",
+    "tall_grass_straw_top",
 )
 
 
@@ -969,7 +972,11 @@ TARGETS["weathered_cut_copper"] = dict(luma=0.46, std=0.075, sat=0.42, tilt=12.0
 # patches carry onto the plants), cut-out. Luma a touch above the lawn's (blades catch more light than the turf under
 # them), SSS like the leaves (thin blades glow when the sun is behind them under labPBR).
 for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top"):
-    TARGETS[_p] = dict(luma=0.56, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)
+    TARGETS[_p] = dict(luma=0.48, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)   # r29b: -15% (critic: lime)
+# round 29b: dead blades, dry stalks and seed heads in their own colour - a tinted greyscale sprite can only be green,
+# so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
+for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
+    TARGETS[_p] = dict(luma=0.50, std=0.110, sat=0.36, tilt=12.0, smooth=50, pore=120)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2016,19 +2023,31 @@ def m_lantern(F, n, glow):
 
 def m_plant(name, n):
     """Round 29: a grass plant sprite (tools/plant_sprites.py). Two-block plants are drawn once on a 2n-tall canvas
-    from one seed and split, so the blades run on from the bottom texture into the top one."""
+    from one seed and split, so the blades run on from the bottom texture into the top one. Round 29b: the grass
+    plants' straw layer (dead blades, dry stalks, seed heads) is drawn with them and split out by texel, in colour."""
     ps = plant_sprites
-    rng = np.random.default_rng(SEEDS[name.replace("_top", "_bottom")])
-    if name == "grass":
+    straw = "straw" in name
+    base = name.replace("grass_straw", "grass")
+    rng = np.random.default_rng(SEEDS[base.replace("_top", "_bottom")])
+    if base == "grass":
         r = ps.grass_clump(n, rng)
-    elif name == "fern":
+    elif base == "fern":
         r = ps.fern(n, rng)
     else:
-        top, bottom = ps.split2(ps.grass_clump(n, rng, tall=True) if name.startswith("tall") else
+        top, bottom = ps.split2(ps.grass_clump(n, rng, tall=True) if base.startswith("tall") else
                                 ps.fern(n, rng, large=True))
-        r = top if name.endswith("_top") else bottom
-    H, shade, alpha = r
-    return dict(H=H, alb=np.clip(np.stack([shade] * 3, -1), 0, 1), alpha=alpha)
+        r = top if base.endswith("_top") else bottom
+    H, shade = r[0], r[1]
+    if len(r) == 4:
+        alpha = r[3] if straw else r[2]
+    else:
+        alpha = r[2]
+    if straw:   # dry straw: tan, a darker brown low in the clump (old dead blades), lighter at the tips
+        rgb = np.array([0.80, 0.70, 0.46])[None, None, :] * shade[..., None]
+        alb = np.clip(rgb * (0.85 + 0.15 * np.clip(shade, 0, 1))[..., None], 0, 1)
+    else:
+        alb = np.clip(np.stack([shade] * 3, -1), 0, 1)
+    return dict(H=np.where(alpha > 0, H, 0.0), alb=alb, alpha=alpha)
 
 
 def m_cobweb(F, n):
@@ -2328,7 +2347,8 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leav
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
 PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top")
-CUTOUT |= set(PLANTS)   # round 29
+STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top")
+CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
@@ -2343,7 +2363,23 @@ MODEL_OVERRIDES = {
     # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
     # breaks into flickering dashes from the RTS camera)
     **{p: {"parent": "minecraft:block/tinted_cross", "textures": {"cross": "minecraft:block/" + p}}
-       for p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top")},
+       for p in ("fern", "large_fern_bottom", "large_fern_top")},
+    # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer
+    **{p: {"ambientocclusion": False,
+           "textures": {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p,
+                        "straw": "minecraft:block/" + p.replace("grass", "grass_straw")},
+           "elements": [
+               {"from": [0.8, 0, 8], "to": [15.2, 16, 8], "shade": False,
+                "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                "faces": {f: dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if t == "#cross" else {}))
+                          for f in ("north", "south")}}
+               for t in ("#cross", "#straw")] + [
+               {"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
+                "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                "faces": {f: dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if t == "#cross" else {}))
+                          for f in ("west", "east")}}
+               for t in ("#cross", "#straw")]}
+       for p in ("grass", "tall_grass_bottom", "tall_grass_top")},
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
@@ -2666,7 +2702,7 @@ def recipes():
     R["cobweb"] = _parts(m_cobweb, fit=False)
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
-    for p in PLANTS:                                       # round 29
+    for p in PLANTS + STRAW:                               # round 29
         R[p] = _parts(lambda F, n, p=p: m_plant(p, n))
     return R
 
