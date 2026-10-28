@@ -201,3 +201,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    RUNNING DOWN its slopes in carved channels, glowing doorways and windows cut into the rock, fire bowls on the summit.
    Lab-scale. ASHBORN: the lab-scale form (the Ember Pens as a small volcano the beasts come out of), with ref29 for the
    stepped-tier plan and lava held in pools.
+
+34d. lovishs 31st reference (04:19): /root/bat/design/refs/vehicle_labs/ref31_dark_timber_guildhall.png - a Minecraft
+   DARK-TIMBER GUILDHALL: steep stacked GABLES in several directions, plaster panels between heavy dark framing, a
+   timber COLONNADE along the ground floor, lit windows, a small spired roof turret. Lab-scale. TIDEWROUGHT primary
+   candidate: the shipwright hall / sail loft of the Careening Hard (wreck timber + copper roofs), with the slip and hull
+   beside it.
