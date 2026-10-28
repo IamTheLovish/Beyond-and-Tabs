@@ -16,6 +16,7 @@ import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -31,8 +32,9 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
+
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -215,14 +217,77 @@ public class BoneDragonUnit extends GhastUnit {
         if (flat.length() > DIVE_RANGE)
             flat = flat.normalize().scale(DIVE_RANGE);
         double x = getX() + flat.x, z = getZ() + flat.z;
-        int gy = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z));
-        diveTo = new Vec3(x, Math.min(gy, getY()), z);
+        // the ground under the dragon's own height at the spot: scanned down, so a roof over it (a cave, an
+        // overhang) is not taken for the ground (#300 review: r1's heightmap "landed" in mid-air under a roof)
+        Integer gy = groundBelow(sl, x, z);
+        if (gy == null)
+            return false;
+        diveTo = new Vec3(x, gy, z);
         diveTicks = 0;
         if (getMoveGoal() != null)
             getMoveGoal().stopMoving();
         dc.setDive(diveTo);
         sl.playSound(null, blockPosition(), SoundEvents.PHANTOM_SWOOP, SoundSource.HOSTILE, 4f, 0.5f);
         return true;
+    }
+
+    /** How far down the ground is looked for under a dive's spot (blocks below the dragon). */
+    static final int GROUND_SCAN = 64;
+
+    /** The standing height on the first solid block below the dragon's height at (x, z), or null within GROUND_SCAN. */
+    private Integer groundBelow(ServerLevel sl, double x, double z) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(getY()), Mth.floor(z));
+        for (int i = 0; i <= GROUND_SCAN && p.getY() > sl.getMinBuildHeight(); i++, p.move(0, -1, 0))
+            if (!sl.getBlockState(p).getCollisionShape(sl, p).isEmpty())
+                return p.getY() + 1;
+        return null;
+    }
+
+    // ---- the Dive's state across a save and load (#300 review: a reload must not hand back a fresh dive): the
+    // cooldown left, the ticks already spent on the ground, and a running dive's spot - relative, never game times
+    static final String KEY_DIVE_CD = "bt_dive_cd", KEY_LANDED_FOR = "bt_dive_landed_for", KEY_DIVE_TO = "bt_dive_to";
+    /** A cooldown restored from the save: told to the clients on the first tick (none are tracking yet at load). */
+    private boolean resendDiveCooldown = false;
+
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (dive != null && dive.getCooldown(this) > 0)
+            tag.putFloat(KEY_DIVE_CD, dive.getCooldown(this));
+        int at = this.entityData.get(landedAtAccessor);
+        if (at >= 0)
+            tag.putInt(KEY_LANDED_FOR, (int) Math.max(0, level().getGameTime() - at));
+        if (diveTo != null) {
+            CompoundTag t = new CompoundTag();
+            t.putDouble("x", diveTo.x);
+            t.putDouble("y", diveTo.y);
+            t.putDouble("z", diveTo.z);
+            t.putInt("ticks", diveTicks);
+            tag.put(KEY_DIVE_TO, t);
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains(KEY_DIVE_CD) && dive != null) {
+            dive.setCooldown(tag.getFloat(KEY_DIVE_CD), false, this);
+            resendDiveCooldown = true;
+        }
+        DragonMoveControl dc = this.moveControl instanceof DragonMoveControl c ? c : null;
+        if (dc != null)
+            dc.setHeading(getYRot());
+        if (tag.contains(KEY_LANDED_FOR)) {
+            this.entityData.set(landedAtAccessor, (int) (level().getGameTime() - tag.getInt(KEY_LANDED_FOR)));
+            if (dc != null)
+                dc.setLanded(true);
+        } else if (tag.contains(KEY_DIVE_TO)) {
+            CompoundTag t = tag.getCompound(KEY_DIVE_TO);
+            diveTo = new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z"));
+            diveTicks = t.getInt("ticks");
+            if (dc != null)
+                dc.setDive(diveTo);
+        }
     }
 
     /** Lets it up again if it has been down {@link #MIN_LAND_TICKS}; else it stays. The Dive button on the ground. */
@@ -393,6 +458,10 @@ public class BoneDragonUnit extends GhastUnit {
     public void tick() {
         super.tick();
         if (level() instanceof ServerLevel sl && isAlive()) {
+            if (resendDiveCooldown && dive != null) {
+                resendDiveCooldown = false;
+                com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(getId(), dive.action, dive.getCooldown(this));
+            }
             if (diveTo != null) {
                 diveTicks++;
                 if (onGround() || getY() - diveTo.y < 0.4)

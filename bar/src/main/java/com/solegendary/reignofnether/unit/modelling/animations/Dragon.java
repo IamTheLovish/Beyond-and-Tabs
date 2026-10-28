@@ -393,7 +393,7 @@ public final class Dragon {
         st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
         float takeoff = st[ST_TAKEOFF];
         // perched: down on the ground (the Bone Dragon's Dive) - it stands, wings folded, instead of hover-beating
-        float wantPerch = e.onGround() && e.tickCount > 5 ? 1f : 0f;
+        float wantPerch = e.onGround() && e.tickCount > 5 && e.deathTime == 0 ? 1f : 0f;
         st[ST_PERCH] += (wantPerch - st[ST_PERCH]) * Math.min(1f, dt / 8f);
         float perch = st[ST_PERCH];
         // the beat's phase advances at the CURRENT rate (a hover beats quicker, a take-off quicker still)

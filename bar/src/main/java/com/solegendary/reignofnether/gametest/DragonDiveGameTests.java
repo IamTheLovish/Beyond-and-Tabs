@@ -316,12 +316,12 @@ public class DragonDiveGameTests {
         });
     }
 
-    /** Aimed 30 blocks away, it dives to the point 16 blocks toward the aim (never farther). */
+    /** Aimed 30 blocks away, it dives to the point 16 blocks toward the aim (never farther) - still over the pad. */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void bone_dragon_dive_reaches_sixteen_blocks_at_most(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos pad = skyPad(helper, 290);
-        var dragon = (BoneDragonUnit) put(level, pad, EntityRegistrar.BONE_DRAGON_UNIT.get(), "gametest_dive_far", 2.5, 6, 2.5);
+        var dragon = (BoneDragonUnit) put(level, pad, EntityRegistrar.BONE_DRAGON_UNIT.get(), "gametest_dive_far", 0.5, 6, 0.5);
         if (dragon == null) {
             helper.fail("could not create the dragon");
             return;
@@ -329,7 +329,7 @@ public class DragonDiveGameTests {
         helper.runAfterDelay(3, () -> {
             try {
                 Vec3 from = dragon.position();
-                if (!dragon.startDive(from.add(30, -6, 0))) {
+                if (!dragon.startDive(from.add(21.2, -6, 21.2))) {     // 30 blocks off along the pad's diagonal
                     helper.fail("the dive was refused");
                     return;
                 }

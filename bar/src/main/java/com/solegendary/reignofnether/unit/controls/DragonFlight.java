@@ -40,6 +40,8 @@ public final class DragonFlight {
     public static final class State {
         public float heading;
         public double speed, vy;
+        /** This tick's displacement, reused every tick (step / dive / brake / perched return it; no allocation). */
+        final double[] out = new double[3];
 
         public State(float heading) {
             this.heading = heading;
@@ -115,7 +117,10 @@ public final class DragonFlight {
     public static double[] perched(State s) {
         s.speed = 0.0;
         s.vy = 0.0;
-        return new double[] {0.0, -0.3, 0.0};
+        s.out[0] = 0.0;
+        s.out[1] = -0.3;
+        s.out[2] = 0.0;
+        return s.out;
     }
 
     /** One tick with nowhere to go: brake along the nose to a hover and level off. */
@@ -127,7 +132,10 @@ public final class DragonFlight {
 
     private static double[] along(State s) {
         double r = Math.toRadians(s.heading);
-        return new double[] {-Math.sin(r) * s.speed, s.vy, Math.cos(r) * s.speed};
+        s.out[0] = -Math.sin(r) * s.speed;
+        s.out[1] = s.vy;
+        s.out[2] = Math.cos(r) * s.speed;
+        return s.out;
     }
 
     public static float wrap(float a) {
