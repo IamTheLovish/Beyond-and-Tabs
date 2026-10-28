@@ -566,16 +566,23 @@ public class WagerBookGameTests {
         level.setWeatherParameters(0, 0, false, false);
         long start = level.getGameTime();
         WagerWeather.start(level, true, 40);
+        // the verdict is read once and kept: succeedWhen retries every tick, and the cleanup turns thunder off, so a
+        // failure that is not sticky would fail once and then pass on the retry (Mode A round 5)
+        String[] verdict = { null };
         helper.succeedWhen(() -> {
             long now = level.getGameTime();
-            if (now < start + 60)
-                helper.fail("waiting past the wager rain's end (" + (now - start) + " ticks)");
-            boolean storm = level.getLevelData().isThundering();
-            long clock = WagerWeather.until(level);
-            cycle.set(cycleWas, level.getServer());
-            level.setWeatherParameters(0, 0, false, false);
-            if (storm || clock >= 0)
-                helper.fail("after a 40-tick wager rain with the cycle on: thundering " + storm + ", clock " + clock);
+            if (verdict[0] == null) {
+                if (now < start + 60)
+                    helper.fail("waiting past the wager rain's end (" + (now - start) + " ticks)");
+                boolean storm = level.getLevelData().isThundering();
+                long clock = WagerWeather.until(level);
+                verdict[0] = storm || clock >= 0
+                    ? "after a 40-tick wager rain with the cycle on: thundering " + storm + ", clock " + clock : "";
+                cycle.set(cycleWas, level.getServer());
+                level.setWeatherParameters(0, 0, false, false);
+            }
+            if (!verdict[0].isEmpty())
+                helper.fail(verdict[0]);
         });
     }
 
