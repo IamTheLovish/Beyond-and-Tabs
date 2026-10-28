@@ -235,33 +235,6 @@ public final class GameTestChunks {
         return score;
     }
 
-    /**
-     * The progress measure of {@link #await} for a test that keeps ticking while it waits (a per-tick poll, not a
-     * blocking loop): {@link #score} rises whenever any chunk of the wanted chunks' dependency cone completes a
-     * further generation status, {@link #describe} says where the cone stands. A wait that counts only chunks already
-     * ENTITY-TICKING sees nothing for most of a load - the first chunk turns ticking only once its whole region is
-     * FULL - and gave up at "0 of 24" on a runner that was merely slow (stress_command_queue, Oct 22/23).
-     */
-    public static final class ConeMeter {
-        private final List<long[]> watched = new ArrayList<>();
-        private final int[] histogram = new int[ChunkStatus.FULL.getIndex() + 2];
-        private final ChunkStatus[] statuses = new ChunkStatus[histogram.length];
-
-        public ConeMeter(List<long[]> wanted) {
-            watched.addAll(wanted);
-            watched.addAll(ring(wanted, watchRadius()));
-        }
-
-        public long score(ServerLevel level) {
-            return progressScore(level.getChunkSource(), watched, histogram, statuses);
-        }
-
-        /** "cone of N chunks: ... " as of the last {@link #score}. */
-        public String describe() {
-            return GameTestChunks.describe(histogram, statuses, watched.size());
-        }
-    }
-
     /** "cone of 6102 chunks: 1200 none, 2300 structure_starts, ..., 380 full" from the last {@link #progressScore}. */
     private static String describe(int[] histogram, ChunkStatus[] statuses, int watched) {
         StringBuilder sb = new StringBuilder("cone of ").append(watched).append(" chunks:");
@@ -356,6 +329,7 @@ public final class GameTestChunks {
     public static void whenEntitiesReady(GameTestHelper helper, ServerLevel level, List<long[]> chunks, int minTicks,
                                          int stallTicks, int capTicks, String what, Runnable body) {
         final int[] t = { 0 }, best = { -1 }, bestAt = { 0 }, bestHalo = { -1 };
+        final long[] bestAtNanos = { System.nanoTime() };
         final boolean[] ran = { false };
         java.util.Set<Long> listed = new java.util.HashSet<>(), halo = new java.util.HashSet<>();
         for (long[] c : chunks)
@@ -393,8 +367,13 @@ public final class GameTestChunks {
                 best[0] = Math.max(best[0], ready);
                 bestHalo[0] = Math.max(bestHalo[0], haloFull);
                 bestAt[0] = t[0];
+                bestAtNanos[0] = System.nanoTime();
             }
-            boolean stalled = t[0] - bestAt[0] >= stallTicks;
+            // the loads are wall-clock work (IO and worldgen threads) but the GameTest server runs its ticks back to back,
+            // several hundred a second when little else runs (run 40447858037): a stall needs stallTicks ticks AND as
+            // long in real time as those ticks take at 20 per second
+            boolean stalled = t[0] - bestAt[0] >= stallTicks
+                && System.nanoTime() - bestAtNanos[0] >= stallTicks * 50_000_000L;
             if (notReady > 0 && !stalled && t[0] < capTicks)
                 return;
             ran[0] = true;

@@ -64,6 +64,9 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
     public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LIVING_ARMY;
+    public static final ForgeConfigSpec.IntValue MOTION_BREATH, MOTION_WEIGHT, MOTION_FIDGET, MOTION_LEAN, MOTION_ACCEL,
+        MOTION_FLINCH, MOTION_SECONDARY;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -236,6 +239,16 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
+        LIVING_ARMY = BUILDER.define("living_army", true);
+        BUILDER.comment("Living army: how strong each behaviour plays, in percent (100 = as designed, 0 = off, 200 = double)");
+        MOTION_BREATH = BUILDER.defineInRange("motion_breath", 100, 0, 200);
+        MOTION_WEIGHT = BUILDER.defineInRange("motion_weight_shift", 100, 0, 200);
+        MOTION_FIDGET = BUILDER.defineInRange("motion_fidgets", 100, 0, 200);
+        MOTION_LEAN = BUILDER.defineInRange("motion_lean", 100, 0, 200);
+        MOTION_ACCEL = BUILDER.defineInRange("motion_start_stop", 100, 0, 200);
+        MOTION_FLINCH = BUILDER.defineInRange("motion_flinch", 100, 0, 200);
+        MOTION_SECONDARY = BUILDER.defineInRange("motion_secondary", 100, 0, 200);
         SPEC = BUILDER.build();
     }
 
