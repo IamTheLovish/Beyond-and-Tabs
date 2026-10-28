@@ -12,3 +12,8 @@ judged against lovish's references (`design/refs/vehicle_labs/`, 28 images) and 
 | Rooting Hollow | Verdant | 1 | 3/10 | no real tree (thin column, no twist/flare/bark); flat canopy slab; gate unreadable; scattered lime lights; stone faces without order; roof clutter. KEEP: galleries under an overgrown roof, mossy south-face palette |
 | Thunder Arsenal | Stormcallers | 1 | 4/10 | tower only a bump, armillary floats; no yard (all roofed); gate unreadable; flat roof language; gold/copper noise; scattered light. KEEP: red colonnade with white panels, mossy plinth, palette |
 | Ember Pens | Ashborn | 1 | 3/10 | no landmark (giant a small lump); gate unreadable; a cube, not a stepped temple; glow scattered everywhere; no material zoning; no calm ground |
+
+## Engine Shed pilot (Brassworks, imitating ref18 only, T1 13x21 <= 22)
+| Round | Critic | Resemblance | Quality | Main faults |
+|---|---|---|---|---|
+| detail r1 (50c09ed2) | fresh Fable, Oct 28 | 4 | 5 | silhouette worse than greybox r3 (outward stair flares, white lantern box + pole); ~40% grey stone vs ref18's red/black/cream; orange-glass door slot dominates; patchwork wing roofs; arcade rhythm too coarse. Keep: the cream hall eave cornice. |
