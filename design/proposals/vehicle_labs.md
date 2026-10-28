@@ -100,11 +100,13 @@ metal-heavy, energy-light). It trains the faction's T1 vehicles, and its T2 vehi
   holds a 5-wide gate with walls and the 3x3 vehicles, and the apron is ground he would have to keep free anyway.
   It stands on **any flat ground**: its own yard floor is part of the structure, so no block under it is ever tested
   (the old 80%-netherrack rule is gone). The Ashborn Crater Pen alone also obeys the capitol doc's area rule (half
-  its cells inside the owner's creep circles), which the capitol's tech-1 creep (44 blocks from its edge, 51 from
-  the start) covers everywhere in the 50-block home build ground.
+  its cells inside the owner's creep circles), which the capitol's L1 creep (56 blocks from its edge, 66 from
+  the start; capitol doc 5.3, six capitol levels since Oct 28 night) covers everywhere in the 63-block home build
+  ground.
 - Fits the map: 13 deep is well under the 26-block gap PR #131 keeps between metal groups, and the home metal band
-  (52-76 from the start, capitol doc 4.2) was set so this lab fits between the L4 capitol's reserved 41x41 square
-  and the nearest patch on every side.
+  (65-89 from the start, none within 61; capitol doc 4.2, re-derived Oct 28 night for the 59x59 L6 capitol) was set
+  so this lab fits between the capitol's reserved 59x59 square and the nearest patch on every side (16 blocks left
+  at the corners).
 - Massing rule from the existing labs: a stone or kerb plinth one block high round the whole box (every T1 lab sheet
   has one), the yard open to the camera side, the tall masses at the back so units in the yard stay visible.
 
@@ -158,8 +160,8 @@ Tech level = the owner's tech (1-4; tech 4 = the new **Ascension** research at t
 Oct 28 answer; capitol doc section 1). As it rises,
 **every** vehicle lab the player owns gets more detailed and gets more particles, whatever its production level, so
 an opponent reads tech from any lab. The steps are separate from the L1-L3 production levels and from the T2 refit.
-The shared rule across the three docs: **the capitol is the one building that grows in real blocks per tech level**
-(it is the centre piece and there is one of it); **every other building shows tech with drawn parts, glow and
+The shared rule across the three docs: **the capitol is the one building that grows in real blocks** (six
+levels across the four techs since Oct 28 night; it is the centre piece and there is one of it); **every other building shows tech with drawn parts, glow and
 particles**, so a tech step never rebuilds pathing or HP on twenty buildings at once. (Still lovish's call: the
 drawn-vs-real-blocks question in the questions file.)
 

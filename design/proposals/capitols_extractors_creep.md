@@ -2,7 +2,7 @@
 title: Beyond and Tabs - capitols, corruption and metal extractors per faction (design doc for approval)
 type: design
 project: Beyond and Tabs
-status: draft v3 for lovish - revised to his Oct 28 answers, then the Oct 28 revision pass (see Revision notes); no code until approved
+status: draft v4 for lovish - revised to his Oct 28 answers, the Oct 28 revision pass, then his Oct 28 night decision (6 capitol levels into 59x59, ~100 tall); no code until approved
 created: 2026-10-28
 source: repo main read-only (building classes, structures/*.nbt, MetalPatches, HomeMetal, BuildingValidators, NetherZone, FactionAura, RaidTuning, TierGate, EconomyServerEvents, design/LANES.md, design/building-revamp-progress.md, design/building_detail.md, design/biome_bases.md, design/moving_buildings.md); PR #86, #131, #146, #203; the art in design/buildings/ and lovish's shots in D:\Downloads
 related: [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] (vehicle labs are designed there, not here), [[open-questions-2026-10-28]]
@@ -12,7 +12,15 @@ related: [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] (veh
 
 ## Revision notes (Oct 28, design revision pass before anything is committed)
 
-- **Capitol levels are 15 / 23 / 31 / 41 wide and 22 / 40 / 60 / 84 tall** (lovish, Oct 28: "even bigger: push
+- **Oct 28 night: six capitol levels into 59x59, about 100 tall** (lovish). Levels are **21 / 29 / 37 / 45 / 53 /
+  59 wide and 20 / 30 / 42 / 60 / 80 / ~100 tall** (Itachi 2's ladder from the White Angel v4 capitol and
+  design/vehicle_labs/LESSONS.md on `claude/vehicle-labs`); the full 59x59 is reserved from the start. Capitol levels
+  and tech levels are now separate: four techs carry six levels (L1 / L3 / L4 / L6 on tech 1 / 2 / 3 / 4, L2 and L5
+  from a capitol-only "Raise the Capitol" research). Same margins on a 59-wide square move the metal out by 13:
+  **home patches 65-89, none within 61, build ground 63**; the start check tests 59x59 (7x7 samples at +-29);
+  capitol creep **56 / 61 / 67 / 72 / 78 / 84** from its edge by level. 5+ starts no longer fit any pre-made map
+  (section 4.2). The four-level numbers in the bullet below and in Answered Q4 are superseded.
+- (Superseded Oct 28 night.) **Capitol levels were 15 / 23 / 31 / 41 wide and 22 / 40 / 60 / 84 tall** (lovish, Oct 28: "even bigger: push
   metal further out and go larger than 39"; my earlier cut to 33 is withdrawn). Height is where the size goes: his
   nine reference images (section 0.1) are all tall, layered clusters of spires, "far taller than wide", so L4 is
   twice as tall as it is wide and nearly 4x L1's height, while the footprint grows just past 39 so the labs and the
@@ -23,7 +31,7 @@ related: [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] (veh
 - **Tech 4 is "Ascension"** (lovish's answer): a late research at the capitol after Tier 3 that also opens the
   faction's game ender. Only Ashborn and Hivebound must build on creep (answer 2); pre-made maps move their home
   metal out to the same band as generated maps (answer 3); the full L4 square is reserved from the start (answer 4).
-- **lovish's nine reference images** (section 0.1) are now the quality bar for every capitol's L3-L4 and are named
+- **lovish's nine reference images** (section 0.1) are now the quality bar for every capitol's L4-L6 and are named
   in each faction entry ("scale ref" / "detail ref"). References only: our builds stay original.
 - **The creep rule now names labs explicitly** (the vehicle lab doc had exempted its labs; it no longer does): every
   Ashborn building except the listed exemptions needs half its cells inside the owner's creep circles, which the
@@ -45,7 +53,8 @@ related: [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] (veh
 - Capitol size: "should get bigger and bigger after each tech upgrade giving more unique upgrades and abilities as
   you upgrade it. More detail more size, more intricate, more particle effects, as technology advances the
   corruption that each building oozes should increase and spread."
-- Capitol levels: "should be based on each tech lvl 1-2-3-4" - **four levels**, not the six of Oct 20.
+- Capitol levels: "should be based on each tech lvl 1-2-3-4" - four tech levels. **Oct 28 night: the capitol has
+  6 levels** across those four techs, 59x59 reserved from the start, about 100 tall at L6 (section 4).
 - Horde nether: "we are trying to stay away from nether mod, I think nether should be replaced with something else
   like end blocks or something else. I also think if were going to set a requirement for buildings to be in nether
   or whatever corruption or creep a race needs it needs to spread alot further from the intitial capital. The
@@ -79,18 +88,18 @@ on footprint, so the capitols go much taller and more layered rather than much w
 
 | # | Image | What it gives | Used for |
 |---|---|---|---|
-| 1 | **Cliff citadel**: slender spires with green onion domes and spike finials, a huge warm terracotta / red sandstone keep with arched windows, buttresses and layered balconies, a giant central arch through the mass, terraced gardens and trees down the cliff, a slim watchtower on its own crag joined by a chain bridge, waterfalls at the base; far taller than wide | **vertical scale, drama, layering, terrain shaped by the building** | the L3-L4 bar for every capitol; most directly Sunforged and Stormcallers ("scale ref: lovish's cliff citadel image, Oct 28") |
-| 2 | **Blossom palace** (credit BuildsbyArs): cream and white walls, two or three storeys of round-arched arcades, tiered teal copper-patina domes and bell roofs with small gold spires, a taller central tower with a pointed teal cap, domed corner pavilions, pink and magenta blossom trees, purple foliage, mossy rock behind | **ornament density, repeated arch rhythm, tiered domes, a planted garden setting** | Stormcallers' Jade Pagoda (closest: jade roofs, gold finials, cherry blossom); its arcade / dome / garden lessons for every faction's L3-L4 ("detail ref: lovish's blossom palace image, Oct 28") |
-| 3 | **Gothic cathedral**: pale grey and white stone, dark slate-blue steep roofs, a tall central spire-tower, flying buttresses, pointed tracery windows, a rose window, a ribbed dome on one wing, in a dark pine forest | **solemn vastness, buttress rhythm, tracery, a dome** | Gravebound L3-L4 (the Necropolis Cathedral), in the haunted palette |
+| 1 | **Cliff citadel**: slender spires with green onion domes and spike finials, a huge warm terracotta / red sandstone keep with arched windows, buttresses and layered balconies, a giant central arch through the mass, terraced gardens and trees down the cliff, a slim watchtower on its own crag joined by a chain bridge, waterfalls at the base; far taller than wide | **vertical scale, drama, layering, terrain shaped by the building** | the L4-L6 bar for every capitol; most directly Sunforged and Stormcallers ("scale ref: lovish's cliff citadel image, Oct 28") |
+| 2 | **Blossom palace** (credit BuildsbyArs): cream and white walls, two or three storeys of round-arched arcades, tiered teal copper-patina domes and bell roofs with small gold spires, a taller central tower with a pointed teal cap, domed corner pavilions, pink and magenta blossom trees, purple foliage, mossy rock behind | **ornament density, repeated arch rhythm, tiered domes, a planted garden setting** | Stormcallers' Jade Pagoda (closest: jade roofs, gold finials, cherry blossom); its arcade / dome / garden lessons for every faction's L4-L6 ("detail ref: lovish's blossom palace image, Oct 28") |
+| 3 | **Gothic cathedral**: pale grey and white stone, dark slate-blue steep roofs, a tall central spire-tower, flying buttresses, pointed tracery windows, a rose window, a ribbed dome on one wing, in a dark pine forest | **solemn vastness, buttress rhythm, tracery, a dome** | Gravebound L4-L6 (the Necropolis Cathedral), in the haunted palette |
 | 4 | **Crooked wizard tower** (credit KodiBuilds): tall, narrow, stone and dark oak, leaning, steep moss-green conical roofs, a smaller second tower, small windows, a purple glowing doorway, on a mountain slope | **whimsy, verticality, an organic lean** | not a capitol: the Stormcallers Celestial Observatory (T2 lab) and the Verdant Circle of Elders; the drawn tech-step crowns on labs (lab doc 2.4) |
-| 5 | **Victorian manor**: cream walls, steep pink and magenta shingle roofs, a round corner turret with a conical cap, gables and dormers, ornate trim, bay windows, a stone stair, lawns and trees | **roofline variety, ornament on a mid-size building** | the L1-L2 capitol pass of every faction (a 15x15 / 23x23 box lives on roofline variety, not mass); Sunforged and Brassworks economy buildings and the Sunforged Barracks |
-| 6 | **Fantasy castle**: a tall vertical cluster of white and pale-stone towers with teal domes and conical caps, gold pennants on every spire, ivy and greenery climbing it, rising from rock; a separate domed white tower to one side | **a tower cluster as one silhouette; white, gold, teal** | Sunforged / White Angel L4 ("scale ref" with 1) |
-| 7 | **Dark gothic fortress**: dark grey and slate, a tall central keep with many sharp spires, round corner towers with pointed caps, curtain walls, a gatehouse, a winding path up a grassy hill | **a militaristic dark keep** | Ashborn L3-L4 massing (the war-temple's keep, walls and gatehouse, in basalt and bronze instead of slate); Gravebound borrows the corner towers |
+| 5 | **Victorian manor**: cream walls, steep pink and magenta shingle roofs, a round corner turret with a conical cap, gables and dormers, ornate trim, bay windows, a stone stair, lawns and trees | **roofline variety, ornament on a mid-size building** | the L1-L2 capitol pass of every faction (a 21x21 / 29x29 box lives on roofline variety, not mass); Sunforged and Brassworks economy buildings and the Sunforged Barracks |
+| 6 | **Fantasy castle**: a tall vertical cluster of white and pale-stone towers with teal domes and conical caps, gold pennants on every spire, ivy and greenery climbing it, rising from rock; a separate domed white tower to one side | **a tower cluster as one silhouette; white, gold, teal** | Sunforged / White Angel L6 ("scale ref" with 1) |
+| 7 | **Dark gothic fortress**: dark grey and slate, a tall central keep with many sharp spires, round corner towers with pointed caps, curtain walls, a gatehouse, a winding path up a grassy hill | **a militaristic dark keep** | Ashborn L4-L6 massing (the war-temple's keep, walls and gatehouse, in basalt and bronze instead of slate); Gravebound borrows the corner towers |
 | 8 | **Colourful tower-house**: many steep spires in teal, deep red and purple with gold trim, warm glowing windows and lanterns, a stone terrace among trees | **glow and light at height, a dense roofline** | the emitter and window-glow plan of every capitol's tech 3-4 steps; the detail bar for mid-size buildings (labs' L3, storage, converters) |
-| 9 | **Dark castle on a twisted tree**: grey stone towers with sharp red conical roofs built into and around a huge gnarled dead tree on a rock outcrop, bare twisted branches, red foliage at the base | **exactly lovish's Gravebound idea: the cathedral at L1, the dead tree growing through it from L3-L4** | **Gravebound L3-L4, marked as the primary reference** |
+| 9 | **Dark castle on a twisted tree**: grey stone towers with sharp red conical roofs built into and around a huge gnarled dead tree on a rock outcrop, bare twisted branches, red foliage at the base | **exactly lovish's Gravebound idea: the cathedral at L1, the dead tree growing through it from L4-L6** | **Gravebound L4-L6, marked as the primary reference** |
 
 Rules that follow from them for every capitol:
-- L3-L4 are **tower clusters**, not one mass: at least five spires of different heights, the tallest at the centre,
+- L4-L6 are **tower clusters**, not one mass: at least five spires of different heights, the tallest at the centre,
   roofs in the faction's own shapes (onion domes, jade tiers, needle spires, caldera cones, masts, smokestacks).
 - The building **shapes its ground**: a crag, terraces, a cliff, roots or a pier base inside the reserved square,
   with the faction's creep ring and planting (gardens, blossom, pines, ash, coral) round the foot.
@@ -112,11 +121,12 @@ Rules that follow from them for every capitol:
 | Production | slot 1 worker, slot 2 scout, slot 9 Tier 2 research, slot 10 Tier 3 research |
 | Tier 2 research | 1000 metal / 10080 energy / 180 s (`TierGate`); opens the T2 lab, the extractor refit (and, per lovish, the vehicle lab's T2 refit) |
 | Tier 3 research | slot 10 (`TierGate`); opens the T3 lab |
-| **Ascension (new, tech 4)** | lovish's answer, Oct 28: a late research at the capitol after Tier 3, slot 11; opens the capitol's L4 and the faction's game ender. Starting point: 2500 metal / 25000 energy / 240 s (est., about 2.5x Tier 2) |
+| **Ascension (new, tech 4)** | lovish's answer, Oct 28: a late research at the capitol after Tier 3, slot 11; opens the capitol's L6 and the faction's game ender. Starting point: 2500 metal / 25000 energy / 240 s (est., about 2.5x Tier 2) |
 | Start check | the start-position phase tests a 15x15 "capitol square", sampled 3x3 at +-7, for void, lava and deep water (`MapLayout.startGround`, `StartPhase.inBox`; bots use the same test) |
-| Home metal | **pre-made maps (main): 6 patches 11-24 from the start (`HomeMetal.RING` 18)**. Generated maps (PR #131, unmerged): 7 home patches 48-72 out, no patch within 40 of a start, build ground 46. **Both move to the band in section 4.2: 7 patches at 52-76, no patch within 48, build ground 50** (lovish's answers 3 and 4, Oct 28) |
+| Home metal | **pre-made maps (main): 6 patches 11-24 from the start (`HomeMetal.RING` 18)**. Generated maps (PR #131, unmerged): 7 home patches 48-72 out, no patch within 40 of a start, build ground 46. **Both move to the band in section 4.2: 7 patches at 65-89, no patch within 61, build ground 63** (lovish's answers 3 and 4, Oct 28; re-derived for the 59x59 capitol Oct 28 night) |
+| **Raise the Capitol (new)** | Oct 28 night: a capitol-only research, slot 12, that gives L2 during tech 1 and L5 during tech 3 (est. 400 m / 2000 e / 60 s and 1500 m / 15000 e / 150 s; open question C1) |
 | Durability (PR #146) | 380 HP: 6 infantry raiders 40-45 s, 4 melee T1 vehicles about 26 s |
-| Levels | none: one structure each today (labs already swap structures in place for L1-L3) |
+| Levels | none: one structure each today (labs already swap structures in place for L1-L3); the capitol gets six (section 4) |
 | Ground look | `FactionAura`: a built capitol or lab slowly turns the ground round it into its faction's look (max radius 16, reversible, budgeted). The Ashborn instead has Reign of Nether's `NetherZone` (radius 6 -> 30). |
 
 ## 2. What all extractors do today (shared, main)
@@ -159,79 +169,138 @@ rotation). Clump of 2-4: same-height bodies with the prop top-centre read as a r
 owner ring and a drawn owner pennant say whose it is. Path: low wide base, tall prop in the middle, so a line does
 not wall the road.
 
-## 4. Capitol growth: four levels on tech 1-2-3-4
+## 4. Capitol growth: six levels across the four techs (lovish, Oct 28 night)
+
+lovish's decision (Oct 28, night): **the capitol has 6 levels**, the full **59x59** footprint is reserved from the
+start, and L6 stands **about 100 blocks tall**. The size ladder is Itachi 2's, from the White Angel capitol v4
+(`tools/capitol_white_angel_v4.py`, 59 x 104 x 59, six levels; `design/vehicle_labs/LESSONS.md`, both on branch
+`claude/vehicle-labs`): T1 labs up to about 33x33, capitol L1 at most 20 tall, L3 at most 42, T2/T3 labs larger
+than T1 labs but well under the capitol. This replaces the four-level plan (15 / 23 / 31 / 41 wide, 22 / 40 / 60 /
+84 tall).
+
+**Capitol levels and tech levels are now separate**: four techs (1, 2 = Tier 2, 3 = Tier 3, 4 = Ascension) carry
+six capitol levels. Each tech raises the capitol one level (L1, L3, L4, L6); the two in-between levels (L2 in tech
+1, L5 in tech 3) are a capitol-only research, **"Raise the Capitol"** (slot 12), so the capitol keeps growing in the
+long stretches between techs. Labs, creep sources other than the capitol, and every other building still step on
+the four techs. (Whether L2 / L5 are paid researches or come free after a time at that tech is open question C1.)
 
 ### 4.1 The levels
 
-| Level | When | Footprint (block extent) | Height | Detail and particles | HP |
+| Level | When (tech) | Footprint (block extent) | Height | What it adds (bigger AND more intricate each step) | HP |
 |---|---|---|---|---|---|
-| L1 | placed at start (tech 1) | 15x15 (today's box) | 22 | today's art, roofline variety (ref 5) | 400 |
-| L2 | Tier 2 research done (tech 2) | 23x23 | 40 | new wings, the first tall spires; faction particles start (embers, soul motes, petals, spray, sparks, steam); warm windows and lanterns | 470 |
-| L3 | Tier 3 research done (tech 3) | 31x31 | 60 | the faction's lovish-named form appears as a tower cluster on shaped ground (refs 1-3, 9); heavier particles, a light column at night | 540 |
-| L4 | Ascension research done (tech 4) | 41x41 | 84 | full silhouette: the tallest spire, the secondary tower and bridge, the crown; constant particle ooze and the most glow (ref 8) | 610 |
+| L1 | placed at start (tech 1) | 21x21 (today's 15x15 art on a 3-block plinth and apron) | 20 | today's art, roofline variety (ref 5), the plinth that every later level stands on | 400 |
+| L2 | "Raise the Capitol" in tech 1 (est. 400 m / 2000 e / 60 s) | 29x29 | 30 | the first ring: a cloister or terrace round the core, the first two spires; warm windows and lanterns; faction particles start (embers, soul motes, petals, spray, sparks, steam) | 435 |
+| L3 | Tier 2 research done (tech 2) | 37x37 | 42 | the faction's main hall or wing pair; the tallest spire passes the old L1 twice over; shaped ground begins (terraces, roots, crag) | 470 |
+| L4 | Tier 3 research done (tech 3) | 45x45 | 60 | the lovish-named form appears as a tower cluster (at least five spires, refs 1-3, 9); heavier particles, a light column at night | 540 |
+| L5 | "Raise the Capitol" in tech 3 (est. 1500 m / 15000 e / 150 s) | 53x53 | 80 | the outer wings and curtain wall, the secondary tower on its own outcrop and its bridge; glow on every storey (ref 8) | 575 |
+| L6 | Ascension research done (tech 4) | 59x59 | about 100 (at most 104, so v4 fits as built) | the crown: the tallest spire, buttresses and pinnacles, the signature at full size; constant particle ooze and the most glow | 610 |
 
+- Width steps +8 / +8 / +8 / +8 / +6 (a new ring of 3-4 blocks a side each level, never a blown-up copy); height
+  steps +10 / +12 / +18 / +20 / +20, so L6 is about 1.7:1 tall to wide and 5x L1. Every level is a step in detail
+  as well as size: no level may be "the previous one, scaled".
+- **Never oversized for its level, checked against the labs**: L1 (21) and L2 (29) sit under the biggest T1 lab (about
+  33x33) in footprint but tower over it (labs stay at most about 20 tall at T1); from L3 (37x37x42, tech 2) the capitol
+  is bigger than any T1 lab every way, so T2 labs must stay under 37 wide and T3 labs under 45 (the "well under the
+  capitol" rule).
 - Each level only adds or replaces blocks (the extractor-tier and lab-level rule), so a level-up is one structure
-  swap and old blocks never vanish. Each swap builds itself in 20 s (it is paid for by the tech).
-- Each level raises the corruption radius (section 5) and, in a later pass, unlocks one ability (section 6).
+  swap and old blocks never vanish. Each swap builds itself in 20 s (it is paid for by its research).
+- Each level raises the capitol's creep radius (section 5) and three of the levels unlock an ability in a later pass
+  (section 6: the old L2 / L3 / L4 abilities now sit on L3 / L4 / L6, the tech levels).
 - Every level keeps a spawn cell on a floor and walkable gaps of at least 4 wide x 8 tall.
-- The capitol is the only building that grows in real blocks per tech level. Labs and every other building show
-  tech with drawn parts, glow and particles (lab doc section 2.4), so one tech-up swaps one structure, not twenty.
-- **Why these numbers.** lovish: larger than 39 wide, and his references are all "far taller than wide". Width
-  steps +8 / +8 / +10 (a new ring of 4-5 blocks a side each level: a cloister, a terrace, a wing); height steps
-  +18 / +20 / +24 so L4 is about 2:1 tall to wide and nearly 4x L1. The battlefield floor is y 48 (LANES.md) and
-  the world top 320, so 84 tall is comfortable; from the RTS camera a tower that tall is the landmark he asked
-  for, and it costs nothing in placement room. Going wider than 41 would eat the lab ring (4.2); going taller is
-  free, so any "even bigger" after this goes up, not out.
+- The capitol is the only building that grows in real blocks. Labs and every other building show tech with drawn
+  parts, glow and particles (lab doc section 2.4), so one tech-up swaps one structure, not twenty.
+- **Section 6 still describes each faction in four stages.** They map onto the six levels like this: stage L1 -> L1
+  and L2 (L2 adds the first ring and spires of that art); stage L2 -> L3; stage L3 -> L4 (the tower cluster's core)
+  and L5 (its outer towers, walls and bridge); stage L4 -> L6 (where an entry says "the full height" it means L6's, about 100). The art passes for each faction set the exact split.
+- Height is free: the battlefield floor is y 48 (LANES.md) and the world top 320, so L6 tops out at y 152.
 
 ### 4.2 Why these sizes stay clear of the metal, and what it costs the opening
 
-A patch's reserved square (half-width 3) is at worst 3 x root 2 = 4.2 blocks nearer the start than its centre; a
-capitol corner reaches half-width x root 2. The metal band is set from L4: corner reach 28.3 + a vehicle lab 13
-deep with a block of gap each side (15) + the patch's 4.2 = 47.5, so **no patch within 48 of a start** (was 40),
-**home patches at 52-76** (was 48-72), **home build ground 50** (was 46).
+Same margins as the four-level plan, applied to a 59-wide capitol. A patch's reserved square (half-width 3) is at
+worst 3 x root 2 = 4.2 blocks nearer the start than its centre; a capitol corner reaches half-width x root 2.
 
-| Level | Half-width | Corner reach | Room left vs "no patch within 48" (43.8) | Room left vs home metal at 52 (47.8) |
+| | old (L4 41x41) | new (L6 59x59) |
+|---|---|---|
+| half-width | 20 | 29 |
+| corner reach (half-width x 1.414) | 28.3 | 41.0 |
+| + a lab 13 deep with a block of gap each side | 15 | 15 |
+| + the patch's reserved corner | 4.2 | 4.2 |
+| = nearest a patch centre may be | 47.5 -> **48** | 60.2 -> **61** |
+| home patches (none-within + 4, band 24 wide) | 52-76 | **65-89** |
+| home build ground (none-within + 2) | 50 | **63** |
+
+The flat side grows by 9 (29 - 20), but the corner grows by 12.7, so the same margins move everything out by
+**13, not 9**. With +9 only (none within 57, patches 61-85, build ground 59) the corner gap would be
+57 - 4.2 - 41.0 = 11.8 blocks, under the 15 the margin promises.
+
+| Level | Half-width | Corner reach | Room left vs "no patch within 61" (56.8) | Room left vs home metal at 65 (60.8) |
 |---|---|---|---|---|
-| L1 | 7 | 9.9 | 34 blocks | 38 |
-| L2 | 11 | 15.6 | 28 | 32 |
-| L3 | 15 | 21.2 | 23 | 27 |
-| L4 | 20 | 28.3 | 15 | 20 |
+| L1 | 10 | 14.1 | 43 blocks | 47 |
+| L2 | 14 | 19.8 | 37 | 41 |
+| L3 | 18 | 25.5 | 31 | 35 |
+| L4 | 22 | 31.1 | 26 | 30 |
+| L5 | 26 | 36.8 | 20 | 24 |
+| L6 | 29 | 41.0 | 16 | 20 |
 
-At L4 at least 15 blocks stay free on every side even at the corners (28 on the flat sides): room for the 11x13
-vehicle lab or an 11x11 T2 lab plus a gap between the capitol and the nearest patch all round. Clump spacing inside
-the band is unchanged (PR #131: members 9.5-14 apart, groups 26 apart, 7x7 pads).
+At L6 at least 16 blocks stay free on every side at the corners (29 on the flat sides): room for the 11x13 vehicle
+lab or an 11x11 T2 lab plus a gap all round. The bigger T1 labs (up to about 33x33) do not fit between the capitol
+and the metal; they go behind and beside the capitol, where the home fan (it faces the map centre) leaves no
+patches: the build ground reaches 63 - 29 = 34 blocks past the L6 square there. Clump spacing inside the band is
+unchanged (PR #131: members 9.5-14 apart, groups 26 apart, 7x7 pads).
 
-**What the longer walk does to the opening.** A worker walks about 4 blocks/s (the Villager's walk; measure it in
-game before tuning). To the nearest home patch: today 48-72 blocks = 12-18 s; new 52-76 blocks = 13-19 s, so about
-+1 s each way. The capitol takes about 60 s to finish, the first extractor is placed while it builds, and the
-first patch is reached well inside the first minute either way; across a match the extra second per trip is noise
-next to the 25 s it costs to build an extractor. Raids feel it a little more than the economy: an outer patch at
-76 is 4 blocks farther from the capitol's towers, so the defender leans slightly more on towers at the clumps (PR
-#146's anti-raid tower test keeps its row). Map size: two starts need their 50-block build grounds and 76-block
-metal bands clear of each other, so **starts stay at least 170 blocks apart**; any map that already holds two
-72-block bands with a lane between them does.
+**What the longer walk does to the opening.** A worker walks about 4 blocks/s (measure in game before tuning). To
+the nearest home patch: PR #131's 48-72 = 12-18 s; the four-level 52-76 = 13-19 s; **new 65-89 = 16-22 s**, about
++3 s each way against the four-level plan (+4 s against PR #131). The first patch is still reached well inside the
+first minute while the capitol builds; across a match it is about 10% more walking per trip than PR #131, worth a
+playtest look. Raids feel it more than the economy: an outer patch at 89 is far from the capitol's towers, so the
+defender leans more on towers at the clumps (PR #146's anti-raid tower test keeps its row).
+
+**Map size.** Two starts need their build grounds and 89-block metal bands clear of each other plus an 18-block
+lane: **starts at least 196 apart** (was 170 = 2 x 76 + 18). Today starts sit on a ring of radius S (`MapLayout`:
+150 for Highlands, Nether Rift, End Spires and Verdant Valley; 155 for Desert Mesa, Soulfire Deltas and Chorus
+Isles; 160 for Archipelago), widened only so neighbours stay `MIN_NEIGHBOUR` 116 apart. Neighbours are
+2 x S x sin(180 / n) apart:
+
+| Seats | Neighbour gap today (S 150 / 155 / 160) | Fits 170 (old)? | Fits 196 (new)? |
+|---|---|---|---|
+| 2 | 300 / 310 / 320 | yes | yes |
+| 3 | 260 / 268 / 277 | yes | yes |
+| 4 | 212 / 219 / 226 | yes | yes |
+| 5 | 176 / 182 / 188 | yes | **no** |
+| 6 | 150 / 155 / 160 | no | **no** |
+| 7 | 130 / 135 / 139 | no | **no** |
+| 8 | 116 / 119 / 122 (S widened to 152 / 155 / 160) | no | **no** |
+
+**Flag: no pre-made map fits 5 or more starts with this band** (the four-level plan already failed 6+; this loses
+5 as well). For 8 starts the ring must reach 98 / sin(22.5) = **257** (`MIN_NEIGHBOUR` 116 -> 196), so the arena
+radius grows from about 238-252 to about 343-353 (about 2x the area). The island maps fail on their own too:
+End Spires' and Chorus Isles' home islands are 40-56 in radius (`isleHome`), which holds the 59x59 square (corner
+41) but not the 63-block build ground or the 65-89 band, so their home metal needs its own islets or bigger home
+islands. Open question C2.
 
 **Pre-made maps** (lovish's answer 3): their home ring (11-24 today, `HomeMetal.RING` 18) moves out to the same
-52-76 band; PR #131's placer runs on them too, so one rule serves both kinds of map.
+65-89 band; PR #131's placer runs on them too, so one rule serves both kinds of map.
 
-**Note for the generated-maps work (PR #131).** lovish earlier chose 7 home patches at 48-72 blocks, no patch
-within 40 of a start and build ground 46. With his Oct 28 "even bigger" answer those become **7 home patches at
-52-76, no patch within 48, build ground 50**; everything else in PR #131 (clump spacing, groups 26 apart, lone
-patches, paths along roads, the 7x7 pads) stays. `MapLayout.startGround` must test the 41x41 capitol square
+**Note for the generated-maps work (PR #131).** lovish earlier chose 7 home patches at 48-72, no patch within 40 and
+build ground 46; the four-level plan made that 52-76 / 48 / 50. With six levels and 59x59 it is **7 home patches at
+65-89, no patch within 61, build ground 63**; everything else in PR #131 (clump spacing, groups 26 apart, lone
+patches, paths along roads, the 7x7 pads) stays. `MapLayout.startGround` must test the 59x59 capitol square
 (section 4.3) at the same time.
 
 ### 4.3 How the start check grows
 
-- The L4 square (41x41, +-20) is **reserved when the capitol is placed** (a faint outline in the owner's colour);
-  nobody builds in it, so growth never crushes a building (lovish's answer 4: the full square from the start). The
-  reserve costs the player a 13-block ring round the L1 capitol from the first minute; the 50-block build ground is
-  sized so a full T1 base (two labs, the vehicle lab, eco) still fits outside it.
-- `MapLayout.startGround` / `StartPhase.inBox` test the L4 square, not 15x15: a 5x5 grid of samples at +-20 (25
-  samples, was 9 at +-7) for void, lava and deep water, and the square must hold no patch's reserved square. Bots use
-  the same test. With the metal band at 52-76 no patch can be inside it. The 84-block height needs no check: the
-  battlefield floor is y 48 and nothing on the map stands above y 132.
-- Every capitol's L4 art (the White Angel crag included) must fit inside 41x41 at the reserved origin; shaped
-  ground (crag, terraces, roots) counts as part of the structure and stays inside the square.
+- The L6 square (59x59, +-29) is **reserved when the capitol is placed** (a faint outline in the owner's colour);
+  nobody builds in it, so growth never crushes a building (lovish: the full square from the start). The reserve
+  costs the player a 19-block ring round the L1 capitol from the first minute; the 63-block build ground is sized so
+  a full T1 base (two labs, the vehicle lab, eco) still fits outside it.
+- `MapLayout.startGround` / `StartPhase.inBox` test the L6 square, not 15x15 (main's `START_HALF` 7, sampled 3x3):
+  a **7x7 grid of samples at -29, -19, -10, 0, 10, 19, 29** (49 samples, about 10 apart as before) for void, lava
+  and deep water, and the square must hold no patch's reserved square. Bots use the same test. With the metal band
+  at 65-89 no patch can be inside it. The height needs no check: the battlefield floor is y 48 and L6 tops out at
+  y 152 (at most 104 tall), far under the world top.
+- Every capitol's L6 art must fit inside 59x59 at the reserved origin, and each level inside its own square (21 /
+  29 / 37 / 45 / 53 / 59) centred on the same origin; shaped ground (crag, terraces, roots) counts as part of the
+  structure and stays inside the square of its level.
 
 ## 5. Corruption / creep per race (replaces the Horde's nether)
 
@@ -268,20 +337,29 @@ is FactionAura with these changes; `NetherZone` and nether blocks leave the Hord
 1. **Every building oozes**, not only capitols and labs. Radius in blocks from the building's edge, by its owner's
    tech level:
 
+   The capitol steps on its own six levels (Oct 28 night); everything else on the owner's four techs.
+
+   | Capitol level | L1 | L2 | L3 | L4 | L5 | L6 |
+   |---|---|---|---|---|---|---|
+   | Capitol creep radius (from its edge) | 56 | 61 | 67 | 72 | 78 | 84 |
+   | Half-width | 10 | 14 | 18 | 22 | 26 | 29 |
+   | Total reach from the start | 66 | 75 | 85 | 94 | 104 | 113 |
+
+   (The four-level plan was 44 / 56 / 68 / 80, reach 51 / 67 / 83 / 100.) Set from the same two rules: L1's reach
+   covers the whole 63-block build ground and touches the home band at 65 (as 51 did with 50 / 52), and L6 reaches
+   24 past the band's outer edge (113 = 89 + 24, as 100 = 76 + 24); the levels between step evenly (about +9.4).
+
    | Source | tech 1 | tech 2 | tech 3 | tech 4 |
    |---|---|---|---|---|
-   | Capitol | 44 | 56 | 68 | 80 |
    | Lab | 16 | 20 | 24 | 28 |
    | Any other building (eco, storage, defence) | 8 | 10 | 12 | 14 |
    | Extractor (creep races only) | 6 | 7 | 8 | 9 |
 
-   Today's ceilings are 30 (Ashborn) and 16 (FactionAura). Total reach from the start point (capitol half-width
-   7 / 11 / 15 / 20 plus radius): tech 1 51, tech 2 67, tech 3 83, tech 4 100. The capitol alone covers the whole
-   50-block build ground at tech 1 (51 > 50) and reaches the home metal band at every level, and chains of
-   buildings carry the creep out to expansions. Enemy creep stops at yours (rule 7),
-   so two tech-4 capitols on a small map simply meet in the middle.
+   Today's ceilings are 30 (Ashborn) and 16 (FactionAura). The capitol alone covers the whole 63-block build ground
+   at L1 (66 > 63) and reaches the home metal band at every level, and chains of buildings carry the creep out to
+   expansions. Enemy creep stops at yours (rule 7), so two L6 capitols on a small map simply meet in the middle.
    **Particles** (the "ooze") are drawn only within 12 blocks of a building, inside the shared ambience budget; the
-   creep ground itself spreads the whole radius. Particles across a 100-block circle would blow the budget and read
+   creep ground itself spreads the whole radius. Particles across a 113-block circle would blow the budget and read
    as fog, not corruption.
 2. **The placement test reads the creep's area, not its blocks.** A creep-race building is valid when **at least half
    its footprint's cells lie inside its owner's creep circles** (pure geometry from the sources, the same on client
@@ -291,11 +369,12 @@ is FactionAura with these changes; `NetherZone` and nether blocks leave the Hord
    resweeps every 10 s (not 60) inside a living source, refilling holes up to 2 deep with its ground block, so a
    battlefield heals into creep.
 4. **Big buildings**: with rule 2 an 11-15-wide lab (the 11x13 vehicle lab included) needs only half its cells in
-   creep, and at tech 1 the capitol's 44-block creep already holds a 15x15 lab anywhere in the build ground. The
+   creep, and at L1 the capitol's creep (56 from its edge, 66 from the start) already holds any lab, a 33x33 T1 lab
+   included, centred anywhere in the 63-block build ground. The
    capitol stays exempt; extractors, windmills, geothermal, solar and defences stay exempt (they follow the map, not
    the creep). Nothing else is exempt: no lab doc may declare its lab free of the rule.
 5. **Spread speed**: a new source reaches full radius in about 60 s (the old nether pace), budgeted per pass like
-   FactionAura (biome_bases.md measured 0.2-0.8 ms per pass at 8v8). The radius steps up within 30 s of a new tech.
+   FactionAura (biome_bases.md measured 0.2-0.8 ms per pass at 8v8). The radius steps up within 30 s of a new tech (or capitol level).
 6. **When a source dies** the creep recedes over about 45 s. Creep-race buildings left outside creep keep working and
    keep their HP, but cannot be rebuilt there until creep returns (no decay damage: it would punish raids twice).
 7. **Never converted**: metal pads and reserved squares, roads, water, buildings and their 1-block ring, the arena
@@ -324,8 +403,10 @@ variation, the ember speckle sparse.
 
 ## 6. Faction by faction: capitols (with level abilities) and extractors
 
-**Abilities are phase 2.** They are starting points (est.) for balance_audit and playtests: one per level from L2;
-L1 keeps what the capitol does today; actives sit on the capitol's ability bar. They are built after the levels, the
+**Abilities are phase 2.** They are starting points (est.) for balance_audit and playtests: one per tech level from tech 2;
+L1 keeps what the capitol does today; with six capitol levels (Oct 28 night) the abilities written "L2 / L3 / L4"
+below unlock at **L3 / L4 / L6** (the tech levels: Tier 2, Tier 3, Ascension), and the stages written L1-L4 map onto
+L1-L6 as section 4.1 says (L2 and L5 add size and detail, not abilities); actives sit on the capitol's ability bar. They are built after the levels, the
 creep and the art (build order step 4), one faction at a time, and any one of them can be cut or swapped without
 touching the rest of this doc. The two that reuse existing code come first: Verdant's Awakening (the Rooted Treant's
 root line) and Gravebound's Soul Bell (Raise Dead on wrecks).
@@ -342,20 +423,22 @@ the hall with a rose window, the crossing tower with a tracery lantern and dome,
 buttresses, a portcullis gate, and the smooth marble **angel statue** (mesh, 3 LODs, wings opening wider with level)
 on a carved pedestal. Art: white_angel_capitol_v4.png (lovish: "wow I really like the picture on the left"),
 white_angel_capitol_stages_v3.png, PR #86's v5_r16 sheet.
-- Map v5's six stages onto four levels: L1 the crag top, gate, crossing tower and angel (wings closed); L2 the hall
-  and terrace, the first needle spires; L3 the front towers, chapels and great stair, the crag cut into terraced
-  gardens; L4 the west and east wings, the curtain wall, a separate domed watchtower on its own crag joined by a
-  chain bridge, and the crown (wings spread).
-- **Size**: v5 is 59x59x104 and 56k blocks at its top stage. It is rebuilt to the 41x41x84 L4 box (70% of v5's
-  width, 80% of its height: keep the crag, hall, crossing tower, spires, buttresses, curtain wall and the angel;
-  drop the timber town); the full v5 stays as the lobby showcase. The angel and its LOD work stay as they are.
+- **Six levels, Oct 28 night.** Itachi 2's v4 (`tools/capitol_white_angel_v4.py` on `claude/vehicle-labs`, 59 x 104
+  x 59, six levels: L1 crag, gate, apron and angel tower; L2 the hall; L3 towers 1-2, front bays, terrace; L4 the
+  west towers and curtain wall; L5 the east cliff wall and tower 5; L6 the crown of buttresses and pinnacles) is the
+  size ladder's source and fits the L6 box as built: **no shrink to 41x41x84 any more.** v4 keeps one fixed 59x59
+  box at every level (its L1 is the whole crag), while the ladder grows the footprint per level (L1 21x21 ... L6
+  59x59): the crag must be re-staged so it grows with the levels (L1 the crag top, gate and angel tower in 21x21; the
+  slopes and terraces spread out level by level), or White Angel is allowed the full crag from L1 (open question C3).
+- v5 (PR #86, 59x59x104, 56k blocks) likewise fits the L6 box; the full v5 stays as the lobby showcase. The angel
+  and its LOD work stay as they are.
 - **Scale ref: lovish's cliff citadel image, Oct 28** (the crag, terraces, chain-bridged watchtower, a giant arch
   through the mass) and **his fantasy castle image** (a white tower cluster with teal domes, gold pennants on every
   spire, ivy on the stone). Detail ref: the blossom palace's arcades on the hall and terrace. References only; the
   build stays v5's own gothic kit.
 - Palette tie-in: keep v5's warm ashlar, red brick cones and slate; carry its gold finials and blue banners and add a
   gold sun disc over the gate, so it matches the white-and-gold Angel Fountain extractors.
-- Particles: light motes round the angel from L2, a sunbeam column at night from L3, drifting gold feathers at L4.
+- Particles: light motes round the angel from L2, a sunbeam column at night from L4, drifting gold feathers at L6.
 - **L2 Sun Halo** (passive): own units and buildings within 24 of the capitol regenerate 2 HP/s.
 - **L3 Angel's Watch** (passive): the angel sees 80 blocks (reveals fog, not cloaked units).
 - **L4 Dawn Beam** (active, 90 s cooldown): a sunbeam at a point within 90: 2 s glow, then a 6-wide burn for 3 s.
@@ -379,11 +462,11 @@ Art: gravebound_capitol.png.
 two bone towers and round corner towers with pointed caps. L3 a **pale dead world-tree** bursts up through the
 crossing tower (bone-white trunk of calcite, bone and pale birch; bare twisted branches), the cathedral's spires and
 flying buttresses climbing it, the crypt podium cut into a rock outcrop. L4 the crown spreads over the square at
-the full 84 height with towers built into and around the branches, soul-fire in the branches, the bell hung from a
+the full height (about 100) with towers built into and around the branches, soul-fire in the branches, the bell hung from a
 branch, a ribbed dome on one wing. The pale crown is the signature and cannot be confused with Verdant's green.
-Particles: soul motes from L2, soul-fire in the branches at L3-L4.
+Particles: soul motes from L2, soul-fire in the branches at L4-L6.
 - **PRIMARY REFERENCE: lovish's dark castle on a twisted tree image, Oct 28** - it is exactly this idea (the
-  cathedral at L1, the dead tree growing through it from L3-L4; towers built into the branches on a rock outcrop).
+  cathedral at L1, the dead tree growing through it from L4-L6; towers built into the branches on a rock outcrop).
   Our palette is bone-white, grey and soul-fire cyan, not its red roofs. Scale ref also: his gothic cathedral image
   (spire-tower, buttress rhythm, tracery, rose window, the dome) and the dark gothic fortress's corner towers.
 - **L2 Soul Bell** (active, 60 s): the bell tolls; each wreck within 30 raises a Zombie for 20 s (up to 4).
@@ -408,10 +491,10 @@ the nether (section 5). Built from the Ashborn kit of the Stone Giant extractor 
 basalt and tuff terraces with magma cracks, bronze bands, fire bowls; on the crown a lava-glow caldera with a **giant
 bronze war gong** between two horned obsidian pillars (the signature; it rings when the capitol trains or is hit). A
 magma-arch gate on the camera side. No pigs, gold blocks, gilded blackstone or nether bricks.
-- L1 the volcano core and gong (15x15). L2 the lower terraces, the first brick hall on piers and the gatehouse. L3
+- L1 the volcano core and gong (15x15 art on the 21x21 plinth). L2 the lower terraces, the first brick hall on piers and the gatehouse. L3
   lovish's "carved brick palace on piers": arcaded halls round the cone, a tall central keep rising from the
   caldera with sharp basalt spires, curtain walls with round corner towers and a winding ramp up. L4 the keep at
-  the full 84 height, a second caldera vent, war banners on every pier, the gong at double size on a bridge between
+  the full height (about 100), a second caldera vent, war banners on every pier, the gong at double size on a bridge between
   the two horned pillars. Particles: embers from L1, ash plumes from L2, lava spatter at L4.
 - **Scale ref: lovish's dark gothic fortress image, Oct 28** (the central keep with many sharp spires, round corner
   towers, curtain walls, gatehouse, the path winding up the hill), translated into basalt, tuff, obsidian and bronze
@@ -436,7 +519,7 @@ Trains Seedshaper (worker), Fox Courier (scout); T2/T3 research. Art: verdant_ca
 **Capitol proposal - the living tree-castle.** L1 today's court. L2 living-wood towers grow from the root buttresses,
 with the manor-style gables and dormers of ref 5 in bark and moss. L3 branch bridges and canopy halls link the
 towers; the world tree's trunk becomes the central spire with halls grown into it, the roots shaping a mossy
-outcrop with terraced gardens. L4 the canopy fills the square with the blossom crown at the full 84 height (the
+outcrop with terraced gardens. L4 the canopy fills the square with the blossom crown at the full height (about 100) (the
 signature), a slimmer sapling-tower to one side joined by a vine bridge. Particles: petals from L2, fireflies at
 night from L3. No candles or part-height blocks on walkable kerbs.
 - **Detail ref: lovish's blossom palace image, Oct 28** (the planted garden setting, blossom and purple foliage,
@@ -461,7 +544,7 @@ Gull Spotter (scout); T2/T3 research. Art: tide_capitol.png.
 **Capitol proposal - the coral palace and the sea-god ring.** L1 the galleon and lighthouse. L2 coral-and-prismarine
 halls rise round the hull. L3 the sea-god temple with a still-water spiral pool (walled source blocks only). L4 a
 **great floating ring** over the lighthouse (drawn part, gold and teal) - the signature. The lighthouse grows into
-the central tower (84 at L4) with coral spires in tiers round it and a prismarine watchtower on a sea-stack joined
+the central tower (about 100 at L6) with coral spires in tiers round it and a prismarine watchtower on a sea-stack joined
 by a rope bridge; waterfalls and tidepools at the base. Particles: spray from L2, glowing motes in the pool at L3,
 the ring's light at L4.
 - **Scale ref: lovish's cliff citadel image, Oct 28** (the watchtower on its own crag with the bridge, waterfalls at
@@ -487,12 +570,12 @@ curved jade roofs, chimes, a crown of lightning rods round a floating amethyst s
 **Capitol proposal - the pagoda among sandstone towers.** L1 the pagoda. L2 two cut-sandstone towers with jade domes
 and gold finials, arcades of round arches on the court. L3 four towers linked by roofed galleries, a taller central
 tower with a pointed jade cap, domed corner pavilions, a cherry garden on terraces round the foot. L4 the central
-tower at the full 84 height, a slim lightning-rod spire on its own outcrop joined by a chain bridge, and the storm
+tower at the full height (about 100), a slim lightning-rod spire on its own outcrop joined by a chain bridge, and the storm
 ring scaled up as a drawn ring of arcing light over the crown (the signature). Particles: sparks from L2, small arcs
-between towers at L3-L4.
+between towers at L4-L6.
 - **Detail ref: lovish's blossom palace image, Oct 28** - this is the faction it fits best (cream and white walls,
   arcades, tiered teal copper-patina domes with gold spires, a taller central tower with a pointed teal cap, corner
-  pavilions, blossom trees): its ornament density and arch rhythm are the Jade Pagoda's L3-L4 bar. **Scale ref: the
+  pavilions, blossom trees): its ornament density and arch rhythm are the Jade Pagoda's L4-L6 bar. **Scale ref: the
   cliff citadel image** (slender spires with green onion domes and spike finials, the bridged watchtower). The
   crooked wizard tower image is the Celestial Observatory (T2 lab), not the capitol. References only.
 - **L2 Mana Well** (passive): +5 energy/s.
@@ -513,7 +596,7 @@ Trains Tinker (worker), Gyro Scout; T2/T3 research. Art: brass_capitol.png.
 **Capitol proposal - the foundry palace on piers.** L1 the Grand Foundry. L2 brick arcades on piers round the yard and
 a fourth stack, dormers and a corner turret on the hall (ref 5). L3 lovish's "carved brick palace on piers" closes
 the square, with a rail viaduct, the clock tower rising as the central spire among tall smokestacks and a copper
-water tower. L4 the clock tower at the full 84 height with the **great gear medallion** at double size, turning
+water tower. L4 the clock tower at the full height (about 100) with the **great gear medallion** at double size, turning
 while the capitol trains (the signature), a separate chimney-stack tower joined by a gantry bridge, warm glowing
 windows on every storey. Particles: steam from L1, sparks from L2, smoke columns at L4.
 - **Detail ref: lovish's Victorian manor image, Oct 28** (roofline variety, bay windows, ornate trim, in brick,
@@ -532,7 +615,7 @@ brass_metal_extractor.png (its own critique: the head is small).
 ### 6.8 Hivebound (planned, alien insect swarm)
 
 Reserved so it follows the same rules later. Capitol: a **hive spire** (chitin mound, ribbed spire, glowing egg
-chambers) growing a new spire per level inside the same 15/23/31/41 boxes and 22/40/60/84 heights; abilities later. Creep: End-like resin,
+chambers) growing a new spire per level inside the same 21/29/37/45/53/59 boxes and 20/30/42/60/80/~100 heights; abilities later. Creep: End-like resin,
 with the placement rule (section 5). Extractor: a **burrow mound** with a mandibled drill and a glowing sac on top;
 5x5, at most 14 tall, copper T2 band. No art yet: concept sheets first.
 
@@ -542,21 +625,24 @@ with the placement rule (section 5). Extractor: a **burrow mound** with a mandib
 |---|---|---|---|
 | T1 extractor | 150 (keep) | 9-11 s | 6-7 s |
 | T2 extractor | 300 (keep) | 18-23 s | 14-16 s |
-| Capitol L1 (15x15x22) | 400 (all factions; today 380 / 400 / 460) | about 42-47 s | about 27 s |
-| Capitol L2 (23x23x40) | 470 | about 50-56 s | about 32 s |
-| Capitol L3 (31x31x60) | 540 | about 57-64 s | about 37 s |
-| Capitol L4 (41x41x84) | 610 | about 64-72 s | about 42 s |
+| Capitol L1 (21x21x20) | 400 (all factions; today 380 / 400 / 460) | about 42-47 s | about 27 s |
+| Capitol L2 (29x29x30) | 435 | about 46-51 s | about 29 s |
+| Capitol L3 (37x37x42) | 470 | about 50-56 s | about 32 s |
+| Capitol L4 (45x45x60) | 540 | about 57-64 s | about 37 s |
+| Capitol L5 (53x53x80) | 575 | about 61-68 s | about 39 s |
+| Capitol L6 (59x59x~100) | 610 | about 64-72 s | about 42 s |
 
-HP is pinned per level, not counted from blocks (a 41x41x84 capitol counted by blocks would be unkillable), so the
-bigger boxes change nothing in this table. Ascension (tech 4) is a new cost: 2500 metal / 25000 energy / 240 s
-(est.), paid once at the capitol after Tier 3; it opens L4 and the game ender. The L4 swap itself is free like
-the other levels.
+HP is pinned per level, not counted from blocks (a 59x59x100 capitol counted by blocks would be unkillable); the
+tech levels keep the four-level plan's HP (400 / 470 / 540 / 610) and L2 / L5 sit halfway. Ascension (tech 4) is a
+new cost: 2500 metal / 25000 energy / 240 s (est.), paid once at the capitol after Tier 3; it opens L6 and the game
+ender. "Raise the Capitol" (L2, L5) is the other new cost (section 1). The swaps themselves are free.
 
 Capitol times scale PR #146's measured 40-45 s and 26 s at 380 HP, so infantry stay at about 0.4x a vehicle per unit
 (lovish's "half as fast"; the vehicles doc's band of 1.5-2.0 vs 3.7 building HP/s per unit). The creep regeneration
 (+1 HP/s after 5 s without damage) does not act during a raid. Extractors keep one HP and one cost for every faction
 (fairness on clumped maps). Costs unchanged: T1 extractor 50m/60e, refit 300m/600e/75s, capitol 250m/350e. **Capitol
-levels are free**: they ride on tech research the player already pays for (Tier 2 is 1000m/10080e). Abilities cost
+levels L1 / L3 / L4 / L6 are free**: they ride on tech research the player already pays for (Tier 2 is 1000m/10080e);
+L2 and L5 cost the Raise the Capitol research. Abilities cost
 nothing to use beyond their cooldowns; Storm's rods drain energy as stated. Flags from PR #146 kept, not changed
 here: the Ashborn Marauder (20 s on a T1 extractor; the vehicles doc brings it up to the infantry band) and T1
 artillery that one-volleys a T1 extractor.
@@ -567,12 +653,13 @@ artillery that one-volleys a T1 extractor.
    the nether look), and the Ashborn capitol is the last one showing Reign of Nether art. The creep system built here
    (area-based rule, every building oozes, no craters) is the base for every race's ooze. The Ashborn vehicle lab
    (lab doc) waits for this step so it has a creep rule to read.
-2. **The metal band** (PR #131 and `HomeMetal`: 52-76, no patch within 48, build ground 50, the 41x41 start
-   check) - small, and it must land before any capitol grows.
-3. **Capitol levels L1-L4** (structure swap on tech, the 41x41 reserve, the Ascension research for L4), proven on
-   the Ashforge.
+2. **The metal band** (PR #131 and `HomeMetal`: 65-89, no patch within 61, build ground 63, the 59x59 start
+   check, and the map ring for the seat counts lovish keeps, section 4.2) - small, and it must land before any
+   capitol grows.
+3. **Capitol levels L1-L6** (structure swap on tech and on Raise the Capitol, the 59x59 reserve, the Ascension
+   research for L6), proven on the Ashforge.
 4. **Look-only ooze for the six other races** (the FactionAura styles grown per section 5); cheap once step 1 exists.
-5. **Sunforged: the White Angel at 41x41x84** (PR #86 folded in), then the other factions' L2-L4 art to the section
+5. **Sunforged: the White Angel at 59x59x~100** (v4 / PR #86 folded in), then the other factions' L2-L6 art to the section
    0.1 bar (Gravebound's tree-castle next: lovish's primary reference); abilities last, one faction at a time.
 6. Extractor touch-ups last (all already pass the 5x5 contract).
 
@@ -588,14 +675,15 @@ NOW: Horde capitol = CentralPortal.java, central_portal.nbt 11x16x9 (Reign of Ne
   wind, geothermal, solar, defences, basic/pocket portals exempt). FactionAura gives the other factions a look-only
   ground aura (capitols/labs, radius <= 16, reversible, budgeted).
 CREEP (extend FactionAura; remove NetherZone from the Horde):
-  - Every building is a source. Radius from its edge: capitol 44/56/68/80, lab 16/20/24/28, other 8/10/12/14,
-    extractor 6/7/8/9, by owner's tech 1/2/3/4 (1 = start, 2 = T2 research done, 3 = T3 done, 4 = the new
-    Ascension research at the capitol after T3, slot 11, ~2500m/25000e/240s est., which also opens the game ender).
+  - Every building is a source. Radius from its edge: capitol 56/61/67/72/78/84 by capitol level L1-L6; lab
+    16/20/24/28, other 8/10/12/14, extractor 6/7/8/9, by owner's tech 1/2/3/4 (1 = start, 2 = T2 research done,
+    3 = T3 done, 4 = the new Ascension research at the capitol after T3, slot 11, ~2500m/25000e/240s est., which
+    also opens the game ender). Until the level system lands the capitol is L1 (56).
   - Placement rule (Horde/PIGLINS faction only for now; lovish: only Ashborn and Hivebound): valid when >= 50% of
     the footprint's cells are inside the owner's creep circles. Pure geometry from the sources (client ghost and
     server agree); never reads blocks. Keep today's exemptions (capitol, extractors, wind, geothermal, solar,
     defences, portals); every lab, the coming vehicle lab included, follows the rule. Total reach from the start:
-    51 / 67 / 83 / 100 by tech (covers the 50-block build ground from tech 1).
+    66 / 75 / 85 / 94 / 104 / 113 by capitol level (covers the 63-block build ground from L1).
   - Ooze particles only within 12 blocks of a building, inside the ambience budget; the ground spreads the full
     radius.
   - Horde buildings: keepsGroundIntact() = true. Resweep every 10 s inside a living source; refill holes up to 2
@@ -614,16 +702,18 @@ ASHFORGE L1 (art):
     path. Walkable gaps >= 4 wide x 8 tall or sealed. Spawn cell open on a floor. buildTimeBlocks stays 314.
   - Fix getIndoorSpawnPoint (-5 y was the portal's) and the centre fire; drop canDestroyBlock's obsidian/portal
     exemption unless still needed. HP 380 -> 400. The gong rings on train/hit (CapitolLife MOTIONS, BELL kind).
-  - Design so L2-L4 can grow round it (23/31/41 boxes, heights 40/60/84: a tall keep with sharp spires, section
-    0.1 ref 7); the 41x41 reserve and the +-20 start check belong to the level-system task, not this one.
-METAL BAND (its own small task, before any capitol grows; PR #131 + HomeMetal): home patches 7 at 52-76 from the
-  start (was 48-72), no patch within 48 (was 40), build ground 50 (was 46); pre-made maps use the same band
-  (HomeMetal.RING 18 -> the 52-76 placer). Clump spacing, groups 26 apart, 7x7 pads unchanged. Starts >= 170 apart.
-  MapLayout.startGround / StartPhase.inBox test the 41x41 square (5x5 samples at +-20) and reject any patch's
-  reserved square inside it.
+  - Design so L2-L6 can grow round it (21x21 plinth at L1, then 29/37/45/53/59 boxes, heights 20/30/42/60/80/~100:
+    a tall keep with sharp spires, section 0.1 ref 7); the 59x59 reserve and the +-29 start check belong to the
+    level-system task, not this one.
+METAL BAND (its own small task, before any capitol grows; PR #131 + HomeMetal): home patches 7 at 65-89 from the
+  start (was 48-72), no patch within 61 (was 40), build ground 63 (was 46); pre-made maps use the same band
+  (HomeMetal.RING 18 -> the 65-89 placer). Clump spacing, groups 26 apart, 7x7 pads unchanged. Starts >= 196 apart
+  (MIN_NEIGHBOUR 116 -> 196; 8 seats need a ring of 257; lovish decides the seat counts first, section 4.2).
+  MapLayout.startGround / StartPhase.inBox test the 59x59 square (7x7 samples at -29/-19/-10/0/10/19/29) and reject
+  any patch's reserved square inside it.
 TESTS FIRST:
   - a Horde lab placed on creep, destroyed, re-placed on the same spot: accepted (fails today after a crater).
-  - a 15x15 Horde lab anywhere within 44 of the capitol at tech 1: accepted.
+  - a 15x15 Horde lab centred anywhere within 66 of the start at L1 (capitol creep 56): accepted.
   - creep never converts a metal pad or reserved square; ExtractorFootprintGameTests stays green.
   - creep recedes when its source dies; a dug creep cell refills within 15 s.
   - the capitol box/build-time/anchor row for the new central_portal; biome_palette_covers_every_faction_block.
@@ -640,8 +730,9 @@ DO NOT: change extractor HP/cost, patch spacing, labs, or other factions' auras 
 
 Merged into [[open-questions-2026-10-28]]. Answered Oct 28: tech 4 = Ascension research; only Ashborn and
 Hivebound build on creep; pre-made maps move home metal out; the full L4 square is reserved and the capitol goes
-larger than 39 (now 41 wide, 84 tall) with metal pushed out to 52-76. Also answered: Ashborn creep = our own ash
-blocks (Q5), and the vehicle questions Q6-Q10; capitol L4 41x84 confirmed.
+larger than 39 with metal pushed out. Also answered: Ashborn creep = our own ash blocks (Q5), and the vehicle
+questions Q6-Q10. **Oct 28 night: six capitol levels into 59x59, about 100 tall** (supersedes "L4 41x84"); new
+questions C1-C3 (Raise the Capitol, map seat counts, White Angel's crag at L1) are in the questions file.
 
 ## Related
 - [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]], [[open-questions-2026-10-28]]
