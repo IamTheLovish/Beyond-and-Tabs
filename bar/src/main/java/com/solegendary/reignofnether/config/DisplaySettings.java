@@ -22,13 +22,13 @@ public class DisplaySettings {
     public static final int ICONS_BY_ZOOM = 0, ICONS_ALWAYS = 1, ICONS_NEVER = 2;
     public static final int FOG_SUBTLE = 0, FOG_CLEAR = 1, FOG_STRONG = 2;
     public static final int BARS_ALWAYS = 0, BARS_DAMAGED = 1, BARS_SELECTED = 2;
-    public static final int LOOK_OFF = 0, LOOK_SUBTLE = 1, LOOK_FULL = 2;
+    public static final int LOOK_OFF = 0, LOOK_SUBTLE = 1, LOOK_FULL = 2, LOOK_ENCHANTED = 3;
     public static final int ANIM_OFF = 0, ANIM_LOW = 1, ANIM_FULL = 2;
 
     static final String[] ICON_MODE_NAMES = { "By zoom", "Always icons", "Never icons" };
     static final String[] FOG_STYLE_NAMES = { "Subtle", "Clear", "Strong" };
     static final String[] HEALTH_BAR_MODE_NAMES = { "Always", "Damaged", "Selected only" };
-    public static final String[] WORLD_LOOK_NAMES = { "Off", "Subtle", "Full" };
+    public static final String[] WORLD_LOOK_NAMES = { "Off", "Subtle", "Full", "Enchanted" };
     public static final String[] BUILDING_ANIMATION_NAMES = { "Off", "Low", "Full" };
 
     // multipliers on the world's colours in fogged chunks: Clear is the original look; Subtle keeps most of the
@@ -80,8 +80,8 @@ public class DisplaySettings {
      * value, so an edit from the screen or the file lands on the next frame.
      */
     public static int worldLook() {
-        int v = get(ReignOfNetherClientConfigs.WORLD_LOOK, LOOK_SUBTLE);
-        return v < LOOK_OFF || v > LOOK_FULL ? LOOK_SUBTLE : v;
+        int v = get(ReignOfNetherClientConfigs.WORLD_LOOK, LOOK_ENCHANTED);
+        return v < LOOK_OFF || v > LOOK_ENCHANTED ? LOOK_ENCHANTED : v;
     }
 
     /** The world look's distance haze strength, 0-2 (1 = default). */

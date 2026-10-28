@@ -192,7 +192,7 @@ public class ReignOfNetherClientConfigs {
         HEALTH_BAR_MODE = BUILDER.defineInRange("health_bar_mode", 1, 0, 2);
         BUILDER.comment("World look: 0 = off, 1 = subtle (default), 2 = full. Smoothed geometry edges, distance haze, a gentle film grade and a soft"
             + " vignette over the world, never the HUD; switches itself off while an Oculus / Iris shader pack is on");
-        WORLD_LOOK = BUILDER.defineInRange("world_look", 1, 0, 2);
+        WORLD_LOOK = BUILDER.defineInRange("world_look", 3, 0, 3);
         BUILDER.comment("World look: distance haze strength in percent, 0-200 (100 = default, 0 = grade only)");
         WORLD_LOOK_HAZE = BUILDER.defineInRange("world_look_haze", 100, 0, 200);
         BUILDER.comment("HUD: the stats table (players / economy / army / production) is open (I toggles it)");

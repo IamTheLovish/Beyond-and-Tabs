@@ -4,6 +4,8 @@
 // buffer, a parametric film grade and a faint vignette - in that order: the picture, the air, then the "camera". No
 // blur anywhere else (no depth of field: blur plus a high camera is the toy-miniature look): textures keep every
 // texel. Overlays drawn without depth (health and build bars) are smoothed only where they cross a geometry edge.
+// Enchanted (Oct 28) adds the one deliberate exception: a soft glow of the BRIGHT areas only (glowAt), plus dimming and
+// vibrance for dull colours - lovish asked for a dimmer, richer, fantasy look.
 
 uniform sampler2D DiffuseSampler;   // the finished world colour
 uniform sampler2D DepthSampler;     // the main depth texture (read only: the pass writes into its own target)
@@ -16,8 +18,15 @@ uniform float HazeMax;              // the haze never covers more than this frac
 uniform float Ortho;                // 1: distance along the view direction (ortho has no eye), 0: distance from the eye
 uniform float Contrast;             // extra midtone slope of the S-curve on luma (0 = none)
 uniform float SplitTone;            // cool shadows / warm highlights
-uniform float Saturation;           // at or below 1, never boosted
+uniform float Saturation;           // a uniform mix toward grey (1 = unchanged)
 uniform float Vignette;             // corner darkening
+uniform float Exposure;             // overall brightness (1 = unchanged); Enchanted dims the world a little
+uniform float Vibrance;             // extra colour for DULL colours only: team colours and UI-like saturated pixels gain ~nothing
+uniform float Glow;                 // a soft glow of the bright areas, screened in (0 = none)
+uniform float GlowThreshold;        // luma where the glow starts
+uniform float GlowRadius;           // its reach as a fraction of the screen height
+uniform vec3 ShadowTint;            // the split tone's shadow and highlight tints (near unit luma)
+uniform vec3 HighlightTint;
 uniform float Aspect;               // width / height
 uniform float EdgeAA;               // 1: smooth geometry edges (FXAA where the depth buffer shows an edge)
 
@@ -26,9 +35,7 @@ in vec2 texCoord;
 out vec4 fragColor;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
-// near-unit-luma tints: the split tone moves hue, not brightness
-const vec3 SHADOW_TINT = vec3(0.96, 1.0, 1.06);
-const vec3 HIGHLIGHT_TINT = vec3(1.04, 1.0, 0.94);
+// the split tone's tints come from WorldLookPass (Subtle / Full: cool 0.96, 1.0, 1.06 and warm 1.04, 1.0, 0.94)
 // scattering drifts distant colour cool before the in-scattered light veils it
 const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);
 
@@ -126,6 +133,28 @@ vec3 fxaa(vec2 uv, vec2 px, vec3 rgbM) {
     return (lB < lMin || lB > lMax) ? rgbA : rgbB;
 }
 
+// ---- glow ----
+// Enchanted (lovish Oct 28: "dim it down a bit and make it look more saturated and whimsy ... fantasy esque"): the soft
+// light-bloom of a painted fantasy scene. The bright-pass of 16 taps (golden-angle spiral, so no ring
+// pattern shows) round the pixel, weighted toward the centre, screened onto it: light spills a little onto what is
+// next to it. Cheap enough for one pass (16 reads, ~0.2 ms on a desktop GPU); off (Glow 0) for Subtle and Full.
+vec3 glowAt(vec2 uv) {
+    vec2 r = vec2(GlowRadius / Aspect, GlowRadius);
+    vec3 sum = vec3(0.0);
+    float wsum = 0.0;
+    for (int i = 0; i < 16; i++) {
+        float f = (float(i) + 0.5) / 16.0;
+        float a = float(i) * 2.39996323;            // the golden angle
+        vec2 o = vec2(cos(a), sin(a)) * sqrt(f) * r;
+        vec3 s = texture(DiffuseSampler, uv + o).rgb;
+        float l = dot(s, vec3(0.2126, 0.7152, 0.0722));
+        float w = 1.0 - 0.7 * f;
+        sum += s * clamp((l - GlowThreshold) / max(1.0 - GlowThreshold, 1e-3), 0.0, 1.0) * w;
+        wsum += w;
+    }
+    return sum / wsum;
+}
+
 void main() {
     vec4 scene = texture(DiffuseSampler, texCoord);
     vec3 c = scene.rgb;
@@ -136,6 +165,8 @@ void main() {
         if (geometryEdge(texCoord, px, depth))
             c = fxaa(texCoord, px, c);
     }
+    if (Glow > 0.0)
+        c = 1.0 - (1.0 - c) * (1.0 - Glow * glowAt(texCoord));
 
     // depth 1.0 = nothing drawn there: the sky (or the RTS view's void tone) is never hazed
     if (depth < 1.0) {
@@ -155,6 +186,7 @@ void main() {
     // filmic S on luma: a quintic with slope 1 at black and white and 1 + Contrast through the midtones, so shadows
     // are not crushed (the fog of war's dark ground must stay readable) and highlights not flattened. Applied as a
     // ratio to rgb, so the curve leaves saturation (chroma / luma) unchanged.
+    c *= Exposure;
     float l = dot(c, LUMA);
     float lc = l + Contrast * 8.0 * l * l * (1.0 - l) * (1.0 - l) * (2.0 * l - 1.0);
     c *= lc / max(l, 1e-4);
@@ -163,13 +195,21 @@ void main() {
     // damage numbers never turn cream and shadows never lift toward blue
     float shadows = smoothstep(0.0, 0.25, lc) - smoothstep(0.25, 0.5, lc);
     float highlights = smoothstep(0.5, 0.75, lc) - smoothstep(0.75, 1.0, lc);
-    c *= mix(vec3(1.0), SHADOW_TINT, shadows * SplitTone) * mix(vec3(1.0), HIGHLIGHT_TINT, highlights * SplitTone);
+    c *= mix(vec3(1.0), ShadowTint, shadows * SplitTone) * mix(vec3(1.0), HighlightTint, highlights * SplitTone);
     // the tint turns hue but never adds colour to what already had it (a warm tint on warm sand would): chroma is
     // capped at its value before the tint, except that near-greys may take the tint's own faint colour
     float lt = dot(c, LUMA);
     vec3 v = c - lt;
     c = lt + v * min(1.0, max(chroma, 0.1 * SplitTone * lt) / max(length(v), 1e-5));
     c = mix(vec3(lt), c, Saturation);
+    // vibrance: colour for the dull pixels (grass, stone, bark) - a pixel's gain falls to nothing as its own
+    // saturation (chroma / luma) reaches 0.6, so team colours, glows and the overlays' strong colours stay as drawn
+    if (Vibrance != 0.0) {
+        float lv = dot(c, LUMA);
+        vec3 dv = c - lv;
+        float sat = length(dv) / max(lv, 1e-3);
+        c = lv + dv * (1.0 + Vibrance * clamp(1.0 - sat / 0.6, 0.0, 1.0));
+    }
 
     // quartic falloff from the centre, 1 at the corners
     vec2 d = (texCoord - 0.5) * vec2(Aspect, 1.0);
