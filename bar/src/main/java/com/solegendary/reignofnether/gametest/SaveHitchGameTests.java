@@ -13,8 +13,6 @@ import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesSaveData;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
-import com.solegendary.reignofnether.survival.SurvivalSaveData;
-import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.unit.HeroUnitSaveData;
 import com.solegendary.reignofnether.unit.TargetResourcesSaveData;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
@@ -58,7 +56,8 @@ public class SaveHitchGameTests {
             new Path("resources", () -> ResourcesServerEvents.saveResources(level), () -> ResourcesSaveData.getInstance(level)),
             new Path("rts players", PlayerServerEvents::saveRTSPlayers, () -> RTSPlayerSaveData.getInstance(level)),
             new Path("research", ResearchServerEvents::saveResearch, () -> ResearchSaveData.getInstance(level)),
-            new Path("survival", () -> SurvivalServerEvents.saveData(level), () -> SurvivalSaveData.getInstance(level)),
+            // not survival: on a world that never ran survival its saved data has a null difficulty, and marking it
+            // dirty here would make the next world save throw (PR #295 CI) - its own events still only mark it dirty
             new Path("custom buildings", () -> CustomBuildingServerEvents.saveCustomBuildings(level), () -> CustomBuildingSaveData.getInstance(level))
         );
         List<String> wrote = new ArrayList<>();

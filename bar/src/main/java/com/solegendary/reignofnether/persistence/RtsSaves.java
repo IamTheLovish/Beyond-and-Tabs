@@ -53,7 +53,8 @@ public final class RtsSaves {
             ResourcesServerEvents.saveResources(overworld);
             ResearchServerEvents.saveResearch();
             CustomBuildingServerEvents.saveCustomBuildings(overworld);
-            com.solegendary.reignofnether.survival.SurvivalServerEvents.saveData(overworld);
+            // not survival: it saves on its own events (wave start, enable, reset), and on a world that never ran
+            // survival its SavedData has no difficulty - writing it threw in the server tick (PR #295 CI, shards 8/9)
         } finally {
             // it now runs once per world save (5 min) instead of every 30 s; still worth seeing when it grows
             long ms = (System.nanoTime() - start) / 1_000_000L;
