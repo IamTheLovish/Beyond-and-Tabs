@@ -207,3 +207,8 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    timber COLONNADE along the ground floor, lit windows, a small spired roof turret. Lab-scale. TIDEWROUGHT primary
    candidate: the shipwright hall / sail loft of the Careening Hard (wreck timber + copper roofs), with the slip and hull
    beside it.
+
+34e. lovishs 32nd reference (04:19): /root/bat/design/refs/vehicle_labs/ref32_dark_castle_crimson_spires.png - a
+   Minecraft dark gothic castle against mountains: black-grey stone TOWERS of several heights with crimson CONED SPIRES,
+   tall lit LANCET windows in a strict rhythm, clustered round a central hall. The clearest large view of the dark-castle
+   style (refs 16, 26). GRAVEBOUND alternative primary (soul-green glow and pale bone instead of red).
