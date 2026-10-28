@@ -147,6 +147,31 @@ class DeathCollapseTest {
     }
 
     @Test
+    void noBoneSnapsFromOneFrameToTheNext() {
+        // a flop, not a pop: at 60 fps no bone turns more than 15 degrees between two frames, whatever the blow
+        float worst = 0f;
+        String where = "";
+        for (int seed = 0; seed < 200; seed++) {
+            float[] s = started(seed * 0.37f, 0.5f + (seed % 5) * 0.5f, seed);
+            float[] prev = new float[DeathCollapse.BONES], prevAcross = new float[DeathCollapse.BONES];
+            for (int f = 1; f <= 84; f++) {
+                DeathCollapse.advance(s, 0, f / 60f);
+                for (int bone : BONES) {
+                    float a = DeathCollapse.swing(s, 0, bone), c = DeathCollapse.across(s, 0, bone);
+                    float d = Math.max(Math.abs(a - prev[bone]), Math.abs(c - prevAcross[bone]));
+                    if (d > worst) {
+                        worst = d;
+                        where = "seed " + seed + " bone " + bone + " at " + f / 60f + " s";
+                    }
+                    prev[bone] = a;
+                    prevAcross[bone] = c;
+                }
+            }
+        }
+        assertTrue(worst <= 15f * DEG, "worst jump " + worst / DEG + " deg (" + where + ")");
+    }
+
+    @Test
     void itSinksAwayAtTheEndAndIsDone() {
         float[] s = started(0f, 1f, 5);
         DeathCollapse.advance(s, 0, DeathCollapse.SINK_START);
