@@ -16,6 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
@@ -56,6 +57,7 @@ public final class WagerBlocks {
     public static boolean place(ServerLevel level, BlockPos pos, BlockState state, long until) {
         if (!level.isLoaded(pos) || !level.getBlockState(pos).isAir()
                 || BuildingUtils.findBuildingOrBlueprint(false, pos) != null
+                || BuildingUtils.findBuildingOrBlueprint(false, pos.below()) != null   // nor on a roof
                 || !level.getEntitiesOfClass(LivingEntity.class, new AABB(pos)).isEmpty())
             return false;
         level.setBlockAndUpdate(pos, state);
@@ -139,6 +141,15 @@ public final class WagerBlocks {
         }
     }
 
+    /** The SavedData's own save then load (the restart path a GameTest drives without restarting). */
+    public static CompoundTag savedDataTag() {
+        return new Data().save(new CompoundTag());
+    }
+
+    public static void loadSavedData(CompoundTag tag) {
+        Data.load(tag);
+    }
+
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent evt) {
         PLACED.clear();   // a world loaded after another in the same game starts from its own list
@@ -162,7 +173,9 @@ public final class WagerBlocks {
     }
 
     private static void takeDown(ServerLevel level, Placed p) {
-        if (level.getBlockState(p.pos).is(p.state.getBlock()))   // a campfire the rain put out still goes
+        // only what it placed: the same state, or its campfire after the rain put it out (lit is the one change allowed)
+        BlockState now = level.getBlockState(p.pos);
+        if (now == p.state || (now.is(Blocks.CAMPFIRE) && p.state.is(Blocks.CAMPFIRE)))
             level.removeBlock(p.pos, false);
     }
 

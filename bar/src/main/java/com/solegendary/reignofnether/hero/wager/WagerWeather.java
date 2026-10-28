@@ -24,19 +24,20 @@ import java.util.Map;
 public final class WagerWeather {
     private WagerWeather() { }
 
-    /** The sky before the first wager weather (kept while wagers overlap) and when the current one ends. */
-    private record Active(boolean rainWas, boolean thunderWas, long until) { }
+    /** The sky before the first wager weather (kept while wagers overlap), the rain flag we set, and when it ends. */
+    private record Active(boolean rainWas, boolean thunderWas, boolean rainSet, long until) { }
 
     private static final Map<ResourceKey<Level>, Active> ACTIVE = new HashMap<>();
 
-    /** Rain (or a clear sky) for {@code ticks}, at most a phenomenon's 90 s; a later wager replaces the earlier one's end. */
+    /** Rain (or a clear sky) for {@code ticks}, at most a phenomenon's 90 s; overlapping wagers end with the later end. */
     public static void start(ServerLevel level, boolean rain, int ticks) {
         int t = Math.max(1, Math.min(ticks, Phenomena.MAX_TICKS));
         Active prev = ACTIVE.get(level.dimension());
         boolean rainWas = prev != null ? prev.rainWas : level.getLevelData().isRaining();
         boolean thunderWas = prev != null ? prev.thunderWas : level.getLevelData().isThundering();
         level.setWeatherParameters(rain ? 0 : t, rain ? t : 0, rain, false);
-        ACTIVE.put(level.dimension(), new Active(rainWas, thunderWas, level.getGameTime() + t));
+        long until = Math.max(level.getGameTime() + t, prev != null ? prev.until : 0);
+        ACTIVE.put(level.dimension(), new Active(rainWas, thunderWas, rain, until));
     }
 
     /** The game time the wager weather in this level ends, -1 when none is running. */
@@ -67,8 +68,11 @@ public final class WagerWeather {
     }
 
     private static void restore(ServerLevel level, Active a) {
+        ACTIVE.remove(level.dimension());
+        // a command or another mod changed the sky meanwhile: theirs stands (Mode A round 2 note)
+        if (level.getLevelData().isRaining() != a.rainSet || level.getLevelData().isThundering())
+            return;
         // zero timers: with the cycle off the sky stays as it was; with it on, vanilla draws new timers next tick
         level.setWeatherParameters(0, 0, a.rainWas, a.thunderWas);
-        ACTIVE.remove(level.dimension());
     }
 }

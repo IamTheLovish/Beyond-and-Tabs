@@ -609,7 +609,7 @@ public class WagerBookGameTests {
                 helper.fail("could not place the test block at " + pos);
                 return;
             }
-            CompoundTag saved = WagerBlocks.saveTag();
+            CompoundTag saved = WagerBlocks.savedDataTag();   // through the SavedData class
             boolean listed = false;
             for (Tag t : saved.getList("blocks", Tag.TAG_COMPOUND)) {
                 CompoundTag e = (CompoundTag) t;
@@ -633,7 +633,7 @@ public class WagerBookGameTests {
                 problems.add("the entry stayed after the block came down");
 
             // a restart: the saved list comes back; the block is already gone, so the entry is simply dropped
-            WagerBlocks.loadTag(level.getServer(), saved);
+            WagerBlocks.loadSavedData(saved);
             if (WagerBlocks.pendingAt(level, pos) != 1)
                 problems.add("the saved entry did not come back on load");
             WagerBlocks.sweep(level, until, p -> true);

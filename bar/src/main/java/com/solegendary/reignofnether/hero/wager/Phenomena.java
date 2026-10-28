@@ -634,7 +634,9 @@ public final class Phenomena {
             double best = c.r() * c.r();
             // an enemy, or one of the owner's own units - never an ally's or a garrisoned one (Mode A note 5)
             List<LivingEntity> all = ownMovable(c, friends(c, c.aim, 3));
-            all.addAll(enemies(c, c.aim, 3));
+            for (LivingEntity e : enemies(c, c.aim, 3))
+                if (!(e instanceof Unit u && u.isGarrisoned()))   // a tower's crew stays in its tower
+                    all.add(e);
             for (LivingEntity e : all) {
                 double d = e.distanceToSqr(c.hero);
                 if (e != c.hero && d <= best) {
