@@ -196,7 +196,7 @@ jobs:
           # overrides in the mrpack; the older published test-pack may have none
           mkdir -p run/config
           if unzip -o -q dl/BeyondAndTabs-test.mrpack 'overrides/config/*' -d dl/ovr; then
-            cp -v dl/ovr/overrides/config/* run/config/
+            cp -rv dl/ovr/overrides/config/. run/config/
           else
             echo "the mrpack ships no configs"
           fi

@@ -12,6 +12,7 @@ Offline: Modrinth is not reached.
 
     python3 tools/test_pack_mods.py
 """
+import json
 import os
 import pathlib
 import sys
@@ -27,12 +28,26 @@ import build_packwiz  # noqa: E402
 
 THIS_ROCKS = "nsHXyrFh"   # Modrinth project id of "This Rocks! (Forge)" (MIT)
 NEW = (THIS_ROCKS, "particular-reforged", "immersive-weathering", "better-biome-blend")
+# Oct 28 second batch (lovish ~06:30). Flutter, Windblown and RLFoliage (Ported) are CurseForge-only (no Modrinth project;
+# the pack builder resolves from Modrinth only, so they are left out, not hand-added).
+CRITTERS = ("cosy-critters", "light-dust")
+CURSEFORGE_ONLY = ("flutter", "windblown", "rlfoliage-ported")
 
 
 class ModList(unittest.TestCase):
     def test_the_four_landscape_mods_are_in_the_pack(self):
         for p in NEW:
             self.assertIn(p, build_pack.EXTRA_PROJECTS)
+
+    def test_the_ambient_mods_are_in_the_pack_and_client_only(self):
+        for p in CRITTERS:
+            self.assertIn(p, build_pack.EXTRA_PROJECTS)
+            self.assertIn(p, build_pack.PINNED_VERSIONS)
+            self.assertIn(p, build_pack.CLIENT_ONLY_PROJECTS)
+
+    def test_curseforge_only_mods_are_not_hand_added(self):
+        for p in CURSEFORGE_ONLY:
+            self.assertNotIn(p, build_pack.EXTRA_PROJECTS)
 
     def test_every_new_mod_is_pinned(self):
         for p in NEW:
@@ -67,8 +82,11 @@ class ShippedConfigs(unittest.TestCase):
     def test_every_config_is_valid_toml_under_config(self):
         self.assertTrue(build_pack.PACK_CONFIGS)
         for name, text in build_pack.PACK_CONFIGS.items():
-            self.assertNotIn("/", name)
-            tomllib.loads(text)
+            self.assertFalse(name.startswith("/") or ".." in name)
+            if name.endswith(".toml"):
+                tomllib.loads(text)
+            elif name.endswith(".json"):
+                json.loads(text)
 
     def test_immersive_weathering_does_not_change_the_map_on_block_ticks(self):
         c = self.parsed("immersive_weathering-common.toml")
@@ -84,6 +102,14 @@ class ShippedConfigs(unittest.TestCase):
         c = self.parsed("immersive_weathering-client.toml")
         self.assertIs(c["general"]["falling_leaf_particles"], False)
 
+    def test_particle_densities_are_capped_low_for_big_armies(self):
+        c = json.loads(build_pack.PACK_CONFIGS["cosycritters.json"])
+        self.assertLessEqual(c["maxBirds"], 12)       # default 50
+        self.assertLessEqual(c["maxMoths"], 3)        # default 8
+        self.assertLessEqual(c["maxSpiders"], 3)      # default 16
+        d = tomllib.loads(build_pack.PACK_CONFIGS["lightdust/main.toml"])
+        self.assertLessEqual(d["Spawning Rules"]["ambientBlockCap"], 4)   # default 12
+
     def test_packwiz_ships_them_as_preserve_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             n = build_packwiz.build_variant(tmp, [("a.jar", "both", "https://cdn.modrinth.com/a.jar", "00")],
@@ -91,7 +117,7 @@ class ShippedConfigs(unittest.TestCase):
                                             ("rp.zip", "https://x/rp.zip", "22"), "v", ())
             index = pathlib.Path(tmp, "index.toml").read_text()
             for name, text in build_pack.PACK_CONFIGS.items():
-                self.assertEqual(pathlib.Path(tmp, "config", name).read_text(), text)
+                self.assertEqual(pathlib.Path(tmp, "config", *name.split("/")).read_text(), text)
                 block = index.split(f'file = "config/{name}"')[1].split("[[files]]")[0]
                 self.assertIn("preserve = true", block)
                 self.assertNotIn("metafile", block)

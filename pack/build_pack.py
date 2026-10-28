@@ -52,18 +52,25 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 #   immersive-weathering      LGPL-3   moss, cracks, rust, frost, soil types, icicles. Blocks, so both sides; needs Moonlight
 #                            (already in lovish's instance). Its block-tick weathering is switched off in PACK_CONFIGS.
 #   better-biome-blend        Unlicense smooth biome colour edges (grass, water, foliage). Client, works with Embeddium.
+#   The ambient mods (lovish ~06:30 Oct 28, client only; their spawns are capped low in PACK_CONFIGS):
+#   cosy-critters             MIT      Cosy Critters & Creepy Crawlies: birds on forest leaves, moths at lights, spiders.
+#   light-dust                LGPL-3   dust floating in light beams. Spawns around the player entity only.
+#   NOT added: Flutter, Windblown and RLFoliage (Ported) are CurseForge-only (no Modrinth project, checked by
+#   slug, by author and by search), and this builder resolves from Modrinth only; no CurseForge file is hand-added.
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
                   "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core",
-                  "oculus", "nsHXyrFh", "particular-reforged", "immersive-weathering", "better-biome-blend")
+                  "oculus", "nsHXyrFh", "particular-reforged", "immersive-weathering", "better-biome-blend",
+                  "cosy-critters", "light-dust")
 # project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
 PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
                    "oculus": "1.20.1-1.8.0",
                    # Oct 28, each the newest Forge 1.20.1 release on Modrinth that day
                    "nsHXyrFh": "1.5.1", "particular-reforged": "1.5.7", "immersive-weathering": "1.20.1-2.0.5",
-                   "better-biome-blend": "1.20.1-1.4.0-forge"}
+                   "better-biome-blend": "1.20.1-1.4.0-forge",
+                   "cosy-critters": "v0.3.3+1.20.1-forge", "light-dust": "2.1.3"}
 # top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
 CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "oculus",
-                        "particular-reforged", "better-biome-blend")
+                        "particular-reforged", "better-biome-blend", "cosy-critters", "light-dust")
 # files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
 # Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
 # One list for macpack.yml, build_packwiz.py and publish-pack's guard.
@@ -88,6 +95,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # Not configurable in the mod (noted in the PR): snow layers melt in rain on a random tick (SnowLayerBlockMixin), and
 # an icicle removes itself by day outside icy biomes.
 # The client file: Particular makes the falling leaves, so Immersive Weathering's own leaf particles go off.
+# Ambient density for 4v4 armies (the RTS camera is the player entity, ~30 blocks up: orthoview), capped low:
+#   cosycritters.json (PigCart/cosy-critters, ConfigData.java, Gson; missing keys keep their defaults):
+#     maxBirds 50 -> 12, maxMoths 8 -> 3, maxSpiders 16 -> 3; birds spawn within 128 blocks of the player on leaves
+#   lightdust/main.toml (Swiss8191/Light-Dust 1.20.1/Forge, LightDustConfig.java, branch of Jul 24 = 2.0.x; the pinned
+#     2.1.3 may differ - Forge drops keys it does not know): [Spawning Rules] ambientBlockCap 12 -> 4, radius 10 -> 8
+#   Particular Reforged: no config shipped (its 1.5.x config could not be read from source); particle-core, already in
+#     the pack, is the valve for its particle counts.
 # This Rocks! (Mrbysco/ThisRocksForge, RocksConfig.java; config/rocks-common.toml): geysers lift players off the ground.
 PACK_CONFIGS = {
     "immersive_weathering-common.toml": """\
@@ -121,6 +135,21 @@ PACK_CONFIGS = {
 # Beyond and Tabs tester pack: Particular Reforged makes the falling leaves.
 [general]
 	falling_leaf_particles = false
+""",
+    "cosycritters.json": """\
+{
+  "configVersion": 1,
+  "maxBirds": 12,
+  "maxMoths": 3,
+  "maxSpiders": 3
+}
+""",
+    "lightdust/main.toml": """\
+# Beyond and Tabs tester pack: fewer dust motes (a big army is a lot to look at already).
+["Spawning Rules"]
+	ambientRadius = 8
+	ambientHardCapRadius = 10
+	ambientBlockCap = 4
 """,
     "rocks-common.toml": """\
 # Beyond and Tabs tester pack: a geyser must not lift the RTS camera or a possessed hero off the ground.
