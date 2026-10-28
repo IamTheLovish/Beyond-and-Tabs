@@ -493,24 +493,6 @@ public class OrdersObeyGameTests {
         });
     }
 
-    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
-    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_2", timeoutTicks = 800)
-    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_2(GameTestHelper helper) {
-        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
-    }
-
-    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
-    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_3", timeoutTicks = 800)
-    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_3(GameTestHelper helper) {
-        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
-    }
-
-    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
-    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_4", timeoutTicks = 800)
-    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_4(GameTestHelper helper) {
-        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
-    }
-
     // how many of the pen's east wall blocks (x 14, y 2..6, z 0..15: 80) are still stone (diagnostics only)
     static int eastWall(GameTestHelper helper) {
         int n = 0;
