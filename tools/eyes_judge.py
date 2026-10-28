@@ -20,7 +20,7 @@ eyes-lines.txt), e.g.
    than 4 blocks from the aim point. Any failure -> exit 1, and the still gets NO numbers and a red banner on the sheet.
    First-person stills (`_34`, `_dusk`) log no such lines: they are listed as "not judged" (the tour's own stills
    are ignored).
-2. MEASUREMENTS on a crop of each passing still (default (900,80)-(1400,300), the meadow grass; a per-still table and
+2. MEASUREMENTS on a crop of each passing still (default (900,80)-(1400,300); the meadow still has open meadow in the table;
    `--crop [NAME=]X0,Y0,X1,Y1` override it): median hue (degrees), median HSV saturation (0-100), median Rec.601 luma
    (0-255 and 0-1) and "dark share" = the fraction of pixels under 0.8 x the median luma. The definitions are those of
    the Oct 28 measure.py, so the numbers stay comparable with past rounds.
@@ -50,7 +50,9 @@ AIM_TOLERANCE = 4.0             # blocks between where the camera was told to lo
 DARK_FRACTION = 0.8             # "dark" = under this share of the median luma
 DEFAULT_CROP = (900, 80, 1400, 300)
 CROPS = {                       # per still, by short name (the key without its step prefix); the rest take the default
-    "meadow_sampler_rts": (900, 80, 1400, 300),
+    # open meadow right of the path. Rounds before r33 (Oct 28) used (900,80)-(1400,300), which holds a tree's
+    # shadow in its corner and swamps the tufts' dark share: re-measure old rounds with --crop to compare.
+    "meadow_sampler_rts": (1000, 250, 1415, 383),
 }
 METRICS = ("hue", "sat", "luma", "dark_share")      # the compared metrics (luma01 is luma / 255)
 SHEET_MAX_W = 2500
