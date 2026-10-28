@@ -201,6 +201,9 @@ public class Keybindings {
     public static final Keybinding queueSkip   = new Keybinding("key.reignofnether.queue_skip",   GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     public static final Keybinding queueInsert = new Keybinding("key.reignofnether.queue_insert", GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
 
+    // the living army's A/B switch for the parade ground (unit/modelling/motion/LivingArmyToggle; F8 is fog/spectator)
+    public static final Keybinding livingArmyToggle = new Keybinding("key.reignofnether.living_army_toggle", GLFW.GLFW_KEY_KP_0, CATEGORY_CAMERA, "N0");
+
     public static final Keybinding[] nums = {
         new Keybinding("key.reignofnether.control_group_0", GLFW.GLFW_KEY_0, CATEGORY_RTS, "0"),
         new Keybinding("key.reignofnether.control_group_1", GLFW.GLFW_KEY_1, CATEGORY_RTS, "1"),
@@ -248,7 +251,7 @@ public class Keybindings {
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,
             cursorDiag,
-            queueSkip, queueInsert
+            queueSkip, queueInsert, livingArmyToggle
         ));
         Collections.addAll(list, buildGrid);
         Collections.addAll(list, nums);
