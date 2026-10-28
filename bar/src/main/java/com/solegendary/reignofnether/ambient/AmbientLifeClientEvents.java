@@ -23,6 +23,7 @@ import java.util.Random;
  * looks at (AmbientLifeMath.focus) - or round the player in first person. Client only and cheap: a pass every 5 ticks
  * samples a few columns, caps by type that shrink as the camera zooms out (AmbientLifeMath.cap: none at strategic
  * zoom), none in rain. Butterflies favour flowers; neither type spawns over stone, sand, water or buildings.
+ * By day a flock of birds now and then crosses the view high up (maybeFlock, AmbientBirdParticle).
  */
 public class AmbientLifeClientEvents {
 
@@ -51,6 +52,8 @@ public class AmbientLifeClientEvents {
                 OrthoviewClientEvents.getCamRotX(), OrthoviewClientEvents.getCamRotY(), OrthoviewClientEvents.getGroundY())
             : new double[] { MC.player.getX(), MC.player.getY(), MC.player.getZ() };
         double r = AmbientLifeMath.radius(zoom);
+        if (day)
+            maybeFlock(f, r, zoom);
         int alive = day ? AmbientCritterParticle.butterflies : AmbientCritterParticle.fireflies;
         int want = AmbientLifeMath.toSpawn(alive, AmbientLifeMath.cap(day ? BUTTERFLY_CAP : FIREFLY_CAP, zoom), day ? 1 : 2);
         for (int i = 0; i < SAMPLES && want > 0; i++) {
@@ -71,6 +74,57 @@ public class AmbientLifeClientEvents {
             MC.particleEngine.createParticle(day ? ParticleRegistrar.BUTTERFLY.get() : ParticleRegistrar.FIREFLY.get(),
                 x + RANDOM.nextDouble(), top + 0.6 + RANDOM.nextDouble(), z + RANDOM.nextDouble(), 0, 0, 0);
             want--;
+        }
+    }
+
+    private static final int FLOCK_ODDS = 160;      // one pass in this many starts a flock: about one every 40 s
+    private static final int BIRD_CAP = 14;         // two flocks at most
+    private static final float FLOCK_ZOOM = 120;    // past this a bird is a pixel
+
+    /**
+     * Now and then a flock - 3 to 7 birds in a V, sometimes one alone - crosses the whole view in a straight line
+     * through the focus, 18-26 blocks over the ground the camera looks at (above the trees and most buildings), at
+     * 0.3-0.4 blocks a tick.
+     */
+    private static void maybeFlock(double[] f, double r, float zoom) {
+        if (zoom > FLOCK_ZOOM || AmbientBirdParticle.birds > BIRD_CAP - 3 || RANDOM.nextInt(FLOCK_ODDS) != 0)
+            return;
+        flock(f, r, 0);
+    }
+
+    /**
+     * A flock now, its leader `along` (0-1) of the way down its path (0.5: over the focus) - for the eyes rig, so a
+     * still can show birds without waiting on the odds. RTS view only; does nothing at night or in rain.
+     */
+    public static void flockNow(double along) {
+        if (MC.level == null || MC.player == null || !OrthoviewClientEvents.isEnabled() || MC.level.isRaining()
+            || !AmbientLifeMath.isDay(MC.level.getDayTime()))
+            return;
+        float zoom = OrthoviewClientEvents.getZoom();
+        double[] f = AmbientLifeMath.focus(MC.player.getX(), MC.player.getEyeY(), MC.player.getZ(),
+            OrthoviewClientEvents.getCamRotX(), OrthoviewClientEvents.getCamRotY(), OrthoviewClientEvents.getGroundY());
+        flock(f, AmbientLifeMath.radius(zoom), Math.max(0, Math.min(0.9, along)));
+    }
+
+    private static void flock(double[] f, double r, double along) {
+        double angle = RANDOM.nextDouble() * Mth.TWO_PI;
+        double[] path = AmbientLifeMath.flockPath(f[0], f[2], r, angle);
+        double speed = 0.3 + RANDOM.nextDouble() * 0.1;
+        double vx = Math.cos(angle) * speed, vz = Math.sin(angle) * speed;
+        double len = Math.hypot(path[2] - path[0], path[3] - path[1]);
+        double sx = path[0] + (path[2] - path[0]) * along, sz = path[1] + (path[3] - path[1]) * along;
+        len *= 1 - along;
+        double y = f[1] + 18 + RANDOM.nextDouble() * 8;
+        int n = RANDOM.nextFloat() < 0.15f ? 1 : 3 + RANDOM.nextInt(5);
+        // behind = against the heading; left of the heading (+ side) is (sin, -cos) in Minecraft's x / z
+        double bx = -Math.cos(angle), bz = -Math.sin(angle), lx = Math.sin(angle), lz = -Math.cos(angle);
+        for (int i = 0; i < n; i++) {
+            double[] slot = AmbientLifeMath.vSlot(i);
+            double back = slot[0] + (RANDOM.nextDouble() - 0.5) * 0.4, side = slot[1] + (RANDOM.nextDouble() - 0.5) * 0.4;
+            double x = sx + bx * back + lx * side, z = sz + bz * back + lz * side;
+            int life = (int) Math.ceil((len + back) / speed);
+            MC.particleEngine.createParticle(ParticleRegistrar.BIRD.get(), x, y + (RANDOM.nextDouble() - 0.5) * 0.6, z,
+                vx, life, vz);
         }
     }
 }

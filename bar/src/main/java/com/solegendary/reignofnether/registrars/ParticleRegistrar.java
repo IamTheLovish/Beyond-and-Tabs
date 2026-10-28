@@ -70,6 +70,10 @@ public class ParticleRegistrar {
             PARTICLES.register("firefly",
                     () -> new SimpleParticleType(true));
 
+    public static final RegistryObject<SimpleParticleType> BIRD =
+            PARTICLES.register("bird",
+                    () -> new SimpleParticleType(true));
+
     public static void init(FMLJavaModLoadingContext context) {
         PARTICLES.register(context.getModEventBus());
     }
