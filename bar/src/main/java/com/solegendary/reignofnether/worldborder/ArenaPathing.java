@@ -83,6 +83,15 @@ public final class ArenaPathing {
             Math.min(cells.size(), cap), cells.size() > cap ? " (of " + cells.size() + "; the rest warm on demand)" : "");
     }
 
+    /** The arena being warmed is left behind (maps.NewMatch moved the world on): stop warming it. */
+    public static void abandon() {
+        synchronized (ArenaPathing.class) {
+            queue.clear();
+            next = 0;
+            built = 0;
+        }
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)

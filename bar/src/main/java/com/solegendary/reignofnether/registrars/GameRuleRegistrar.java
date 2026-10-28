@@ -87,9 +87,10 @@ public class GameRuleRegistrar {
         ALLOWED_HEROES = GameRules.register("allowedHeroes", GameRules.Category.PLAYER,
                 GameRules.IntegerValue.create(2)
         );
-        // only allow alliances to be made/broken with non-RTS players (ie. before a game starts)
+        // only allow alliances to be made/broken with non-RTS players (ie. before a game starts). On by default: teams
+        // are fixed once the match starts, as in BAR (lovish D032); the lobby's "Alliances: Open" turns it off
         LOCK_ALLIANCES = GameRules.register("lockAlliances", GameRules.Category.PLAYER,
-                GameRules.BooleanValue.create(false)
+                GameRules.BooleanValue.create(true)
         );
         // map is set to be played as a scenario by the player that opens it
         SCENARIO_MODE = GameRules.register("scenarioMode", GameRules.Category.MISC,

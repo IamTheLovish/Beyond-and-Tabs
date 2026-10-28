@@ -70,8 +70,7 @@ public class SurvivalServerEvents {
         survivalData.waveNumber = nextWave.number;
         survivalData.difficulty = difficulty;
         survivalData.randomSeed = Wave.randomSeed;
-        survivalData.save();
-        level.getDataStorage().save();
+        survivalData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
         //ReignOfNether.LOGGER.info("saved survival data in serverevents");
     }
 
