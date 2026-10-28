@@ -143,6 +143,12 @@ public class SentinelTreantUnit extends IronGolemUnit {
         rootChanged();
     }
 
+    /** Any new order (stop, attack, another move) replaces a held move; a move order is held again on the next tick. */
+    @Override
+    public void resetBehaviours() {
+        heldMove = null;
+    }
+
     void rootChanged() {
         this.entityData.set(rootWantedDataAccessor, rootWanted);
         level().playSound(null, blockPosition(), rootWanted ? SoundEvents.ROOTED_DIRT_PLACE : SoundEvents.ROOTED_DIRT_BREAK, SoundSource.NEUTRAL, 1.5f, 0.6f);
