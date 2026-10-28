@@ -609,6 +609,15 @@ public final class PossessionServer {
         LivingEntity target = lookTarget(mob, p.yaw, p.pitch, reach, true);
         if (AttackerUnit.refusesTarget(attacker, target))
             target = null;   // cannot hit air: no flyer as its target, the shot goes at the spot it aims at
+        Vec3 at = target != null ? target.position() : ranged ? lookPoint(mob, p.yaw, p.pitch, reach) : null;
+        // inside the dead zone the artillery's own fire method refuses the shell: hold the shot, and like the set-up
+        // the click costs no cooldown (one refused click burnt the Bombard's 68 ticks; the set-up reds on main, Oct 28)
+        if (at != null && mob instanceof com.solegendary.reignofnether.unit.interfaces.IndirectFire lob
+                && lob.getMinRange() > 0) {
+            double dx = at.x - mob.getX(), dz = at.z - mob.getZ();
+            if (dx * dx + dz * dz < lob.getMinRange() * lob.getMinRange())
+                return true;
+        }
         mob.setYRot(p.yaw);
         mob.setYHeadRot(p.yaw);
         mob.swing(InteractionHand.MAIN_HAND);
@@ -621,7 +630,6 @@ public final class PossessionServer {
                 mob.setTarget(target);
                 shooter.performUnitRangedAttack(target, velocity);
             } else {
-                Vec3 at = lookPoint(mob, p.yaw, p.pitch, reach);
                 shooter.performUnitRangedAttack(at.x, at.y, at.z, velocity);
             }
         } else if (target != null) {
