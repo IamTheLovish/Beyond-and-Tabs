@@ -163,12 +163,19 @@ public final class PossessionServer {
         int airTicks;
         /**
          * The Y it last stood on (on the ground, climbing or swimming; where it was possessed until then) and whether it
-         * left that ground launched - holding jump, or carried by a server shove: a claim never takes a walker higher
-         * than a jump's apex plus a step above it, or, not launched, higher than a step it ends up standing on. Each landing used to refill the grounded climb allowance once the unit read on-ground
-         * (Mode A review of #308, round 1: ~4.6 blocks in 7 ticks).
+         * left that ground launched - holding jump, carried by a server shove, or climbing / swimming: a claim never
+         * takes a walker higher than a jump's apex plus a step above it, or, not launched, higher than a step it ends up
+         * standing on. Each landing used to refill the grounded climb allowance once the unit read on-ground (Mode A
+         * review of #308, round 1: ~4.6 blocks in 7 ticks).
          */
         double groundY = Double.NaN;
         boolean jumpedFromGround;
+        /**
+         * Some input packet since the last grounded claim held jump. Only the newest claim is applied, and network
+         * jitter can bunch a tap-jump's two packets (jump on, then off) into one server tick: the jump still happened
+         * (#308 review round 2).
+         */
+        boolean jumpSinceGround;
         /** Extra blocks per tick a claim may cover while a shove (knockback, explosion) carries the unit. */
         float shoveAllowance;
         /** The horizontal speed of the last shove the server itself gave the unit (knockback, a blast, a push), decaying at air drag: never from the client's flags. */
@@ -403,6 +410,7 @@ public final class PossessionServer {
         p.strafe = Mth.clamp(strafe, -1f, 1f);
         setLook(p, yaw, pitch);
         p.jump = jump;
+        p.jumpSinceGround |= jump;
         p.descend = descend;
         p.sprint = sprint;
         p.ticksSinceInput = 0;
@@ -549,9 +557,11 @@ public final class PossessionServer {
 
         double speed = mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
         boolean sprinting = sprints(mob, p.forward, p.sprint);
+        // jump held now, or on any packet since the last grounded claim (a tap-jump bunched by jitter)
+        boolean jumped = p.jump || p.jumpSinceGround;
         // a sprint-jump's first tick carries vanilla's 0.2 push on top of the run (jumpFromGround); it rides out like
         // a shove (the allowance decays at air drag)
-        if (sprinting && p.jump && p.airTicks <= 1)
+        if (sprinting && jumped && p.airTicks <= 1)
             p.shoveAllowance = Math.max(p.shoveAllowance, SPRINT_JUMP_BOOST);
         double perTick = (flyer ? flyPerTick(speed) : walkPerTick(speed, sprinting)) + p.shoveAllowance;
         double dx = p.claimX - mob.getX(), dy = p.claimY - mob.getY(), dz = p.claimZ - mob.getZ();
@@ -574,10 +584,17 @@ public final class PossessionServer {
             boolean grounded = p.airTicks == 0;
             // knockback lifts a unit without the jump key (vanilla: +0.4 up): a shove the server itself gave it counts
             // as a launch too, so an honest knocked-back client is not put back on the floor
-            if (grounded)
-                p.jumpedFromGround = p.jump || p.serverShove > SHOVE_SEEN;
+            if (grounded) {
+                p.jumpedFromGround = jumped || p.serverShove > SHOVE_SEEN;
+                p.jumpSinceGround = false;
+            }
+            // climbing and swimming count as launched too: leaving a ladder at its top or climbing out of water puts
+            // the unit above its last ground (the top rung, the water) with nothing under it for a tick or two, and
+            // it was put back down (#308 review round 2). The rise above that ground is still capped below.
+            if (climbing)
+                p.jumpedFromGround = true;
             double upPerTick = climbing ? 0.3 : grounded ? 0.6 : p.airTicks < 7 ? 0.45 : 0.08;
-            maxUp = upPerTick * ticks + (grounded && p.jump ? 0.6 : 0);
+            maxUp = upPerTick * ticks + (grounded && jumped ? 0.6 : 0);
             if (!climbing && !Double.isNaN(p.groundY)) {
                 // the per-tick bounds alone refill on every landing: the rise above the last ground is bounded too
                 double rise = p.jumpedFromGround ? jumpApex(mob) + STEP_UP : STEP_UP;
