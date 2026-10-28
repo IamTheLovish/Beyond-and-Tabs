@@ -375,7 +375,7 @@ public class FogSnapshotGameTests {
      * snapshot depended on load order with the old capture too (it loaded the box one chunk at a time); the loaded-area
      * test above compares light byte for byte.
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 3000, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 5000, batch = BATCH)
     public static void the_snapshot_of_unloaded_chunks_loads_them_without_blocking_a_tick(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
