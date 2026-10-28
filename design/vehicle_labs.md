@@ -4,6 +4,8 @@ Status: **design, step 1 of 2. Nothing built.** lovish approves this doc before 
 `design/vehicle_labs.png` (the shared plan: top view and gate). Numbers marked *(code)* were read from the live code on
 Oct 28; numbers marked *(proposal)* are new and wait for lovish; *(assumption)* means the code did not say.
 
+> **Oct 28 04:24 - Tidewrought is dropped (lovish): the Careening Hard is cancelled. A new faction replaces it; its vehicle lab comes once its theme exists. See `design/faction-change-tidewrought.md`.**
+
 ## 1. Why, and the rules
 
 **BAR splits production by kind of unit.** A BAR player opens with a bot lab or a vehicle plant (later an aircraft
