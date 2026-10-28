@@ -2326,9 +2326,32 @@ public class BotPlayer {
      */
     boolean placeTechBuilding(ServerLevel level, Building building, int index, List<LivingEntity> workers, int builders) {
         boolean ok = placeNear(level, building, layoutSlot(Layout.ARMY, index + techSlotShift), workers, builders);
+        if (!ok && building.getFaction().equals(Factions.PIGLINS))
+            ok = placeOnOwnNether(level, building, workers, builders);
         if (!ok)
             techSlotShift = (techSlotShift + 1) % 8;
         return ok;
+    }
+
+    /**
+     * A Horde building that must stand on netherrack, tried round each of the bot's own nether zones (its portals'
+     * spread) once the layout slot had none: in bots_reach_tier_2 the medium Horde's Hoglin Stables and Flame Sanctuary
+     * sat at "no valid site" for minutes, a third of the tries refused as must_be_nether (Oct 28).
+     */
+    boolean placeOnOwnNether(ServerLevel level, Building building, List<LivingEntity> workers, int builders) {
+        List<BlockPos> zones = new ArrayList<>();
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
+            if (name.equals(bp.ownerName) && bp.isBuilt
+                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.addon.NetherConvertingAddon nca
+                    && nca.getNetherZone(bp) != null)
+                zones.add(nca.getNetherZone(bp).getOrigin());
+        zones.sort((a, b) -> Double.compare(a.distSqr(home), b.distSqr(home)));
+        for (BlockPos zone : zones)
+            if (placeNearImpl(level, building, zone, workers, builders)) {
+                placed(level.getGameTime());
+                return true;
+            }
+        return false;
     }
 
     /** A site the watch gave up on: remembered so the next placement goes elsewhere; a lab's slot moves on too. */
@@ -2387,20 +2410,52 @@ public class BotPlayer {
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);   // the ground block (leaves skipped, as the player's placement grid does: a bot site on a canopy sat 5 blocks over its builders, soak stalls Oct 21-22); structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
-                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
-                if (error != null)
+                BlockPos site = null;
+                String error = null;
+                for (BlockPos tryAt : siteHeights(level, building, surface)) {
+                    error = BuildingValidators.getPlacementValidityError(level, building, tryAt, name, Rotation.NONE, false, false, true);
+                    if (error == null) {
+                        site = tryAt;
+                        break;
+                    }
+                }
+                if (site == null)
                     lastSiteRejections.merge(error, 1, Integer::sum);
                 else {
-                    workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surface), v.blockPosition().distSqr(surface)));
+                    final BlockPos surfaceSite = site;
+                    workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surfaceSite), v.blockPosition().distSqr(surfaceSite)));
                     int take = Math.min(builders, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
                         ids[i] = workers.get(i).getId();
-                    return BuildingServerEvents.placeBuilding(building, surface, Rotation.NONE, name, ids, false, false, false, true) != null;
+                    return BuildingServerEvents.placeBuilding(building, surfaceSite, Rotation.NONE, name, ids, false, false, false, true) != null;
                 }
             }
         }
         return false;
+    }
+
+    /**
+     * Origins to try for one column: its ground first, then one and two higher and the highest ground under the
+     * footprint's corners and centre. The origin corner alone set the height, so on rolling ground every try of a big
+     * footprint clipped a rise (bots_reach_tier_2, Oct 28: the Horde's Hoglin Stables refused 36-65 of 65 tries as
+     * ground_not_flat); a raised origin leaves small gaps, which the validator allows and placement fills.
+     */
+    List<BlockPos> siteHeights(ServerLevel level, Building building, BlockPos surface) {
+        List<BlockPos> out = new ArrayList<>(List.of(surface, surface.above(), surface.above(2)));
+        var blocks = building.getRelativeBlockData(level);
+        if (blocks == null || blocks.isEmpty())
+            return out;
+        BlockPos min = com.solegendary.reignofnether.building.BuildingUtils.getMinCorner(blocks);
+        BlockPos max = com.solegendary.reignofnether.building.BuildingUtils.getMaxCorner(blocks);
+        int top = surface.getY();
+        int[][] cols = { { min.getX(), min.getZ() }, { max.getX(), min.getZ() }, { min.getX(), max.getZ() },
+            { max.getX(), max.getZ() }, { (min.getX() + max.getX()) / 2, (min.getZ() + max.getZ()) / 2 } };
+        for (int[] c : cols)
+            top = Math.max(top, MiscUtil.getHighestNonAirBlock(level, surface.offset(c[0], 0, c[1]).atY(0), true).getY());
+        if (top > surface.getY() + 2)
+            out.add(surface.atY(top));
+        return out;
     }
 
     int count(List<BuildingPlacement> buildings, Building b) {
