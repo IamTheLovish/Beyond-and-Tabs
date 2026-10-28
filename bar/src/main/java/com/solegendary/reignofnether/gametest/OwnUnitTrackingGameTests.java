@@ -7,9 +7,11 @@ import com.solegendary.reignofnether.mixin.fogofwar.TrackedEntityInvoker;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -23,10 +25,11 @@ import java.util.UUID;
 /**
  * lovish, Oct 27: "units cant be selected if you move too far away from them ... they get deselected". The RTS
  * camera is the player entity, slid back along the view ray, so the ground on screen can be ~200 blocks from it.
- * Vanilla tracks an entity only inside a CIRCLE of about the view distance round the player, while the client keeps
- * the whole SQUARE of chunks loaded: an own unit standing on loaded, visible ground near a corner was never sent to
- * its owner, so it could not be drawn, clicked or boxed, and a selected one lost its ring. Own (and allied) units
- * are tracked across the whole loaded square; enemies keep vanilla's circle (and the fog gate).
+ * Vanilla tracks an entity only inside a circle of view distance * 16 blocks round the player, while the client is
+ * sent the chunks ChunkMap.isChunkInRange passes (out to view distance + 1 on the axes): an own unit standing on
+ * loaded, visible ground was never sent to its owner, so it could not be drawn, clicked or boxed, and a selected one
+ * lost its ring. Own (and allied) units are tracked across the chunks the owner is sent, and no further; enemies keep
+ * vanilla's circle (and the fog gate).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -65,40 +68,51 @@ public class OwnUnitTrackingGameTests {
 
         helper.runAfterDelay(2, () -> {
             String failure = null;
-            // the headless server has no view distance of its own (PlayerList says 0): give it
-            // a real one for this check and put the old one back. No real players here, so nothing else notices.
+            // the headless server's chunk map runs at the minimum view distance (2): give it a real one for this
+            // check and put the old one back. No real players here, so nothing else notices.
             Integer oldChunkMapVd = null;
             try {
-                Field vdField = net.minecraft.server.level.ChunkMap.class.getDeclaredField("viewDistance");
+                Field vdField = ChunkMap.class.getDeclaredField("viewDistance");
                 vdField.setAccessible(true);
                 oldChunkMapVd = vdField.getInt(level.getChunkSource().chunkMap);
                 level.getChunkSource().setViewDistance(10);
-                int vd = vdField.getInt(level.getChunkSource().chunkMap) - 1;   // ChunkMap keeps view distance + 1
-                // the viewer near the far corner of its loaded square from the unit: same chunk distance as the edge
-                // of the loaded ground, but ~1.4x the view distance away in a straight line
-                double off = vd * 16 - 8;
-                viewer.moveTo(mine.getX() - off, mine.getY() + 40, mine.getZ() - off, 0, 0);
-                int dcx = Math.abs((viewer.getBlockX() >> 4) - (mine.getBlockX() >> 4));
-                int dcz = Math.abs((viewer.getBlockZ() >> 4) - (mine.getBlockZ() >> 4));
-                double dist = Math.sqrt(2) * off;
-                if (Math.max(dcx, dcz) > vd || dist <= (vd + 1) * 16)
-                    failure = "test geometry: chunk distance " + Math.max(dcx, dcz) + " / " + vd + ", " + (int) dist + " blocks";
+                int vd = vdField.getInt(level.getChunkSource().chunkMap);   // 1.20.1 keeps the view distance as is
+                ChunkPos uc = mine.chunkPosition();
+
+                // the viewer vd+1 chunks off along an axis, at the far edge of its chunk: vanilla still sends that
+                // chunk (ChunkMap.isChunkInRange), but the unit is more than vd*16 blocks off, outside the circle
+                double vx = (uc.x - (vd + 1)) * 16 + 0.5;
+                viewer.moveTo(vx, mine.getY() + 40, mine.getZ(), 0, 0);
+                double dist = mine.getX() - vx;
+                if (!ChunkMap.isChunkInRange(uc.x - (vd + 1), uc.z, uc.x, uc.z, vd) || dist <= vd * 16)
+                    failure = "test geometry: axis chunk " + (vd + 1) + " not loaded at view distance " + vd
+                        + ", or only " + (int) dist + " blocks";
 
                 if (failure == null && !trackFor(level, mine, viewer))
-                    failure = "an own unit " + (int) dist + " blocks away, " + Math.max(dcx, dcz)
-                        + " chunks inside the owner's loaded square (view distance " + vd + "), is not sent to its owner";
+                    failure = "an own unit " + (int) dist + " blocks away, " + (vd + 1)
+                        + " chunks off on the owner's loaded ground (view distance " + vd + "), is not sent to its owner";
+                // an enemy beside it gets no such reach (fog is off for this viewer, so only vanilla's circle applies)
                 if (failure == null && trackFor(level, enemy, viewer))
-                    failure = "an enemy unit outside vanilla's tracking circle is sent to the viewer";
+                    failure = "an enemy unit on the same loaded ground, outside vanilla's circle, is sent to the viewer";
 
-                // the reach ends with the loaded ground: past it nothing shows anyway (and the client keeps the selection)
-                viewer.moveTo(mine.getX() - (vd + 3) * 16, mine.getY() + 40, mine.getZ(), 0, 0);
+                // a diagonal chunk inside the square but outside the rounded edge the client is sent: no reach there
+                int d = 1;
+                while (d <= vd && ChunkMap.isChunkInRange(0, 0, d, d, vd)) d++;
+                if (failure == null && d > vd)
+                    failure = "test geometry: no unsent diagonal chunk inside view distance " + vd;
+                viewer.moveTo((uc.x - d) * 16 + 8, mine.getY() + 40, (uc.z - d) * 16 + 8, 0, 0);
                 if (failure == null && trackFor(level, mine, viewer))
-                    failure = "an own unit " + (vd + 3) + " chunks away, outside the loaded square, is still tracked";
+                    failure = "an own unit in diagonal chunk (" + d + ", " + d + "), which the client is never sent, is tracked";
+
+                // the reach ends with the loaded ground on the axis too (and the client keeps the selection)
+                viewer.moveTo((uc.x - (vd + 2)) * 16 + 8, mine.getY() + 40, mine.getZ(), 0, 0);
+                if (failure == null && trackFor(level, mine, viewer))
+                    failure = "an own unit " + (vd + 2) + " chunks away, past the loaded ground, is still tracked";
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 failure = "tracking lookup failed: " + ex;
             } finally {
                 if (oldChunkMapVd != null)
-                    level.getChunkSource().setViewDistance(oldChunkMapVd - 1);
+                    level.getChunkSource().setViewDistance(oldChunkMapVd);
                 mine.discard();
                 enemy.discard();
             }
