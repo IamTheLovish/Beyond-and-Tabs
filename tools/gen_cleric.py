@@ -28,7 +28,7 @@ import human_kit as hk  # noqa: E402
 from human_kit import HIP, SHOULDER_X, SHOULDER_Y, HEAD_Y, TRUNK  # noqa: E402
 from gen_models import Model, OUT, slab, lathe, split_above, _unit  # noqa: E402
 from gen_levy import ngon, oct_pole  # noqa: E402
-from gen_medic import cone, on_plate  # noqa: E402
+from gen_medic import cone  # noqa: E402
 
 PALETTE = dict(hk.BASE_PALETTE, **{
     # the chasuble: ivory silk (a "linen" name: painted as cloth), its shade; the gilt orphrey; the team under-robe

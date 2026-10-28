@@ -1025,8 +1025,6 @@ def m_iron(F, n):
     du = np.min(np.abs(F.u[..., None] - cx[None, None, :]), -1)
     dv = np.min(np.abs(F.v[..., None] - cx[None, None, :]), -1)
     inset = 0.09
-    on_edge = np.minimum(np.minimum(np.abs(F.u - inset), np.abs(F.u - 1 + inset)),
-                         np.minimum(np.abs(F.v - inset), np.abs(F.v - 1 + inset)))
     r = 0.028
     dom_u = np.sqrt(np.minimum(np.abs(F.u - inset), np.abs(F.u - 1 + inset)) ** 2 + dv ** 2)
     dom_v = np.sqrt(np.minimum(np.abs(F.v - inset), np.abs(F.v - 1 + inset)) ** 2 + du ** 2)
