@@ -6,7 +6,6 @@ import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 
@@ -27,7 +26,7 @@ public abstract class ProductionBuilding extends Building {
         return minCorner.offset((int) -spawnRadiusOffset, 0, (int) -spawnRadiusOffset);
     }
 
-    public BlockPos getIndoorSpawnPoint(ServerLevel level, BuildingPlacement placement) {
+    public BlockPos getIndoorSpawnPoint(Level level, BuildingPlacement placement) {
         BlockPos spawnPoint;
         for(spawnPoint = placement.centrePos; level.getBlockState(spawnPoint.below()).isAir(); spawnPoint = spawnPoint.offset(0, -1, 0)) {
         }

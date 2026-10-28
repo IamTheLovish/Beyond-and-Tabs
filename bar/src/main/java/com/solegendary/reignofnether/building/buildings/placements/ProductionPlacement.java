@@ -234,7 +234,7 @@ public class ProductionPlacement extends BuildingPlacement {
         return !this.productionQueue.isEmpty();
     }
     // start with the centre pos then go down and look at adjacent blocks until we reach a non-solid block
-    public BlockPos getIndoorSpawnPoint(ServerLevel level) {
+    public BlockPos getIndoorSpawnPoint(Level level) {
         ProductionBuilding building = (ProductionBuilding) getBuilding();
         return building.getIndoorSpawnPoint(level, this);
     }
@@ -410,23 +410,31 @@ public class ProductionPlacement extends BuildingPlacement {
         return spec;
     }
 
-    /** True once this JVM has run the dry run for the building (a remote client never can: it has no ServerLevel). */
-    public static boolean exitSpecKnown(Building building) {
-        return EXIT_SPECS.containsKey(building);
+    /**
+     * The nominal exit cell for a spawn rule: the building's own rotation-aware spawn point plus the item's offset,
+     * before the safety net. Needs only a Level, so a client works out a ghost's cell from the spec the server sent.
+     */
+    public BlockPos exitNominalPos(Level level, boolean indoors, Vec3i offset) {
+        return (indoors ? getIndoorSpawnPoint(level) : getDefaultOutdoorSpawnPoint()).offset(offset);
     }
 
     /**
-     * Where produceUnit would put this building's primary unit with no rally set: the nominal cell (the building's own
-     * rotation-aware spawn rule plus the item's offset) and, when {@code safe}, the spawn safety net's cell for the
-     * item's body against the world as it is now - produceUnit's own fittingSpawnCell, then the roof - for a placed
-     * building (a ghost's blocks are not in the world yet).
+     * Where produceUnit would put this building's primary unit with no rally set: the nominal cell and, when
+     * {@code safe}, the spawn safety net's cell for the item's body against the world as it is now - produceUnit's own
+     * fittingSpawnCell, then the roof - for a placed building (a ghost's blocks are not in the world yet).
      */
     public BlockPos exitArrowPos(ServerLevel serverLevel, ExitSpec spec, boolean safe) {
-        BlockPos p = (spec.indoors() ? getIndoorSpawnPoint(serverLevel) : getDefaultOutdoorSpawnPoint()).offset(spec.offset());
+        BlockPos p = exitNominalPos(serverLevel, spec.indoors(), spec.offset());
         if (!safe)
             return p;
         BlockPos cell = fittingSpawnCell(serverLevel, p, spec.type());
         return cell != null ? cell : roofSpawnCell();
+    }
+
+    /** The safe exit cell, only for {@code senderName}'s own building (a network request is untrusted); else null. */
+    @Nullable
+    public BlockPos exitArrowCellFor(ServerLevel serverLevel, String senderName, ExitSpec spec) {
+        return senderName != null && senderName.equals(ownerName) ? exitArrowPos(serverLevel, spec, true) : null;
     }
 
     // ------------------------------------------------------------------ the spawn safety net

@@ -697,6 +697,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::handle)
                 .add();
+        // exit arrows on a remote server (PR #271): the client asks for a type's spawn rule and its own buildings' exit cells
+        register(com.solegendary.reignofnether.building.ExitArrowServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.building.ExitArrowServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.ExitArrowServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.ExitArrowServerboundPacket::handle)
+                .add();
+        register(com.solegendary.reignofnether.building.ExitArrowClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.building.ExitArrowClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.building.ExitArrowClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.building.ExitArrowClientboundPacket::handle)
+                .add();
 
         // a packet registered with INSTANCE.messageBuilder directly would be missing from the hash: two jars that
         // differ in it would connect again. Fail at startup (every GameTest run) instead.

@@ -20,6 +20,16 @@ public final class ExitArrow {
     /** Below this distance the walk target is "here" (an outdoor spawn stands on its default rally). */
     public static final double MIN_WALK = 1.0;
 
+    /** Client asks while something is shown: once a second at rest. */
+    public static final int ASK_STEADY_TICKS = 20;
+    /** ...and at most 4 a second (the server's PacketAuth limit) when something new needs an answer. */
+    public static final int ASK_BURST_TICKS = 5;
+
+    /** Whether the client should send an ExitArrowServerboundPacket now. */
+    public static boolean shouldAsk(boolean anythingShown, boolean somethingNew, long ticksSinceLastAsk) {
+        return anythingShown && ticksSinceLastAsk >= (somethingNew ? ASK_BURST_TICKS : ASK_STEADY_TICKS);
+    }
+
     /**
      * The way a produced unit walks out, as a unit vector into {@code out[0..1]} (x, z): from the spawn spot towards the
      * spot it walks to with no rally (the building's default rally, its outdoor spawn point). An outdoor spawn already

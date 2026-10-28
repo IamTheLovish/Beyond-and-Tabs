@@ -7,52 +7,65 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ProductionBuilding;
 import com.solegendary.reignofnether.hud.HudPanels;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.Vec3i;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Draws the exit arrow (ExitArrow) of a production building: on the placement ghost (following [ / ] rotation) and on
  * your own production buildings while selected or hovered. Never for enemies' buildings or buildings that produce no
  * units, never with the HUD hidden or in clean view. The spot is ProductionPlacement.exitArrowPos - the spawn code's
- * own calls - so it cannot disagree with where units appear; it is recomputed every {@link #REFRESH_TICKS}, not per
- * frame. Called from BuildingClientEvents.renderLevel (RTS view, after translucent blocks).
+ * own calls - so it cannot disagree with where units appear. Called from BuildingClientEvents.renderLevel (RTS view,
+ * after translucent blocks).
  * <p>
- * The dry run that finds a building's spawn rule needs a ServerLevel: on a client joined to a remote server there is
- * none, and the arrow is not drawn there (logged once).
+ * The spawn rule's dry run needs a ServerLevel, so the client never runs it: it asks the server
+ * (ExitArrowServerboundPacket) for the rule of the ghost's type (kept per type in SPECS; the ghost's cell is then worked
+ * out here from the ClientLevel, so it shows only what the player sees) and for the exit cell of each of its own
+ * selected / hovered buildings (kept per origin in ARROWS, refreshed once a second). Works the same in single player.
  */
 public final class ExitArrowClientEvents {
 
     private ExitArrowClientEvents() { }
 
     private static final Minecraft MC = Minecraft.getInstance();
-    static final int REFRESH_TICKS = 20;
     /** Lift over the ground cell's floor: clear of the top face, so no z-fighting. */
     static final float LIFT = 0.06f;
     /** Bright, team-neutral: warm white fill over a dark edge (team colours are red/blue/green/yellow...). */
     static final float R = 1.0f, G = 0.97f, B = 0.85f, A = 0.9f;
     static final float EDGE_A = 0.6f, EDGE_PAD = 0.12f;
 
-    /** One arrow, cached until {@code until} (game time). */
+    /** One arrow to draw. */
     private static final class Arrow {
-        long until = Long.MIN_VALUE;
         boolean show;
         float x, y, z, dx, dz;
     }
 
-    private static final Map<BuildingPlacement, Arrow> PLACED = new WeakHashMap<>();
+    /** A building type's spawn rule as the server sent it (has = it spawns units at all). */
+    private record Spec(boolean has, boolean indoors, Vec3i offset) { }
+
+    private static final Map<Building, Spec> SPECS = new HashMap<>();
+    /** The server's answer per own building, by origin. */
+    private static final Map<BlockPos, Arrow> ARROWS = new HashMap<>();
+    private static Level seenLevel;
+    private static long lastAsk = Long.MIN_VALUE / 2;
     private static final Arrow GHOST = new Arrow();
     private static Building ghostBuilding;
     private static BlockPos ghostOrigin;
@@ -60,44 +73,57 @@ public final class ExitArrowClientEvents {
 
     private static final float[] DIR = new float[2];
     private static final float[] PTS = new float[14];
-    private static final Arrow[] DRAW = new Arrow[8];
-    private static boolean warnedRemote = false;
+    private static final Arrow[] DRAW = new Arrow[ExitArrowServerboundPacket.MAX_ORIGINS + 1];
+    private static final List<BlockPos> ASK = new ArrayList<>();
 
     public static void render(PoseStack pose, BlockPos ghostOriginPos, boolean ghostShown) {
         if (MC.level == null || MC.player == null || HudPanels.hidden() || HudPanels.cleanView)
             return;
-        ServerLevel sl = serverLevel();
-        if (sl == null)
-            return;
+        if (MC.level != seenLevel) {   // another dimension or server: nothing learned applies
+            seenLevel = MC.level;
+            SPECS.clear();
+            ARROWS.clear();
+            ghostBuilding = null;
+            GHOST.show = false;
+        }
         String me = MC.player.getName().getString();
         long now = MC.level.getGameTime();
         int n = 0;
+        ASK.clear();
+        boolean somethingNew = false;
+        Building askType = null;
 
         Building toPlace = BuildingClientEvents.getBuildingToPlace();
         if (ghostShown && toPlace instanceof ProductionBuilding && ghostOriginPos != null) {
-            Rotation rot = BuildingClientEvents.getBuildingRotation();
-            if (toPlace != ghostBuilding || !ghostOriginPos.equals(ghostOrigin) || rot != ghostRotation) {
-                ghostBuilding = toPlace;
-                ghostOrigin = ghostOriginPos;
-                ghostRotation = rot;
-                BuildingPlacement ghost = toPlace.createBuildingPlacement(MC.level, ghostOriginPos, rot, me);
-                compute(GHOST, ghost, sl, false, now);
-            }
-            if (GHOST.show)
+            Spec spec = SPECS.get(toPlace);
+            if (spec == null) {
+                askType = toPlace;
+                somethingNew = true;
+            } else if (spec.has()) {
+                Rotation rot = BuildingClientEvents.getBuildingRotation();
+                if (toPlace != ghostBuilding || !ghostOriginPos.equals(ghostOrigin) || rot != ghostRotation) {
+                    ghostBuilding = toPlace;
+                    ghostOrigin = ghostOriginPos;
+                    ghostRotation = rot;
+                    BuildingPlacement ghost = toPlace.createBuildingPlacement(MC.level, ghostOriginPos, rot, me);
+                    fill(GHOST, (ProductionPlacement) ghost, ((ProductionPlacement) ghost).exitNominalPos(MC.level, spec.indoors(), spec.offset()));
+                }
                 DRAW[n++] = GHOST;
+            }
         }
-        for (BuildingPlacement b : BuildingClientEvents.getSelectedBuildings()) {
-            if (n >= DRAW.length - 1)
-                break;
-            Arrow a = placed(b, me, sl, now);
-            if (a != null)
-                DRAW[n++] = a;
-        }
+        for (BuildingPlacement b : BuildingClientEvents.getSelectedBuildings())
+            somethingNew |= own(b, me);
         BuildingPlacement hovered = BuildingClientEvents.getPreselectedBuilding();
-        if (hovered != null && !BuildingClientEvents.getSelectedBuildings().contains(hovered)) {
-            Arrow a = placed(hovered, me, sl, now);
-            if (a != null)
+        if (hovered != null && !BuildingClientEvents.getSelectedBuildings().contains(hovered))
+            somethingNew |= own(hovered, me);
+        for (BlockPos origin : ASK) {
+            Arrow a = ARROWS.get(origin);
+            if (a != null && a.show)
                 DRAW[n++] = a;
+        }
+        if (ExitArrow.shouldAsk(askType != null || !ASK.isEmpty(), somethingNew, now - lastAsk)) {
+            lastAsk = now;
+            ExitArrowServerboundPacket.ask(askType, ASK);
         }
         if (n == 0)
             return;
@@ -141,31 +167,17 @@ public final class ExitArrowClientEvents {
         bb.vertex(m, PTS[k * 2], y, PTS[k * 2 + 1]).color(r, g, b, a).endVertex();
     }
 
-    /** Your own production building's arrow, refreshed every REFRESH_TICKS; null if it shows none. */
-    private static Arrow placed(BuildingPlacement b, String me, ServerLevel sl, long now) {
-        if (!(b instanceof ProductionPlacement) || !me.equals(b.ownerName))
-            return null;
-        Arrow a = PLACED.get(b);
-        if (a == null) {
-            a = new Arrow();
-            PLACED.put(b, a);
-        }
-        if (now >= a.until || now < a.until - REFRESH_TICKS)
-            compute(a, b, sl, true, now);
-        return a.show ? a : null;
+    /** Your own production building: queue it to be asked about (at most 8). True if the server has not answered for it yet. */
+    private static boolean own(BuildingPlacement b, String me) {
+        if (!(b instanceof ProductionPlacement) || !me.equals(b.ownerName) || ASK.size() >= ExitArrowServerboundPacket.MAX_ORIGINS
+                || ASK.contains(b.originPos))
+            return false;
+        ASK.add(b.originPos);
+        return !ARROWS.containsKey(b.originPos);
     }
 
-    private static void compute(Arrow a, BuildingPlacement b, ServerLevel sl, boolean safe, long now) {
-        a.until = now + REFRESH_TICKS;
-        a.show = false;
-        if (!(b instanceof ProductionPlacement pp))
-            return;
-        ProductionPlacement.ExitSpec spec = pp.exitSpec(sl);
-        if (spec == null)
-            return;
-        BlockPos p = pp.exitArrowPos(sl, spec, safe);
-        if (p == null)
-            return;
+    /** Point an arrow at {@code p}, the exit cell of {@code pp}. */
+    private static void fill(Arrow a, ProductionPlacement pp, BlockPos p) {
         BlockPos target = pp.getDefaultOutdoorSpawnPoint();
         ExitArrow.walkDir(p.getX() + 0.5, p.getZ() + 0.5, target.getX() + 0.5, target.getZ() + 0.5,
                 (pp.minCorner.getX() + pp.maxCorner.getX() + 1) / 2.0, (pp.minCorner.getZ() + pp.maxCorner.getZ() + 1) / 2.0, DIR);
@@ -177,14 +189,18 @@ public final class ExitArrowClientEvents {
         a.show = true;
     }
 
-    /** The integrated server's level for this dimension (single player, or the host of a LAN game); null otherwise. */
-    private static ServerLevel serverLevel() {
-        MinecraftServer server = MC.getSingleplayerServer();
-        ServerLevel sl = server == null ? null : server.getLevel(MC.level.dimension());
-        if (sl == null && !warnedRemote) {
-            warnedRemote = true;
-            ReignOfNether.LOGGER.warn("Exit arrows are not drawn: this client has no integrated server to find spawn points with");
+    /** The server's answer (client thread, ExitArrowClientboundPacket.handle). */
+    public static void onAnswer(ExitArrowClientboundPacket answer) {
+        if (MC.level == null)
+            return;
+        ResourceLocation rl = ResourceLocation.tryParse(answer.typeKey());
+        if (rl != null && ReignOfNetherRegistries.BUILDING.containsKey(rl))
+            SPECS.put(ReignOfNetherRegistries.BUILDING.get(rl), new Spec(answer.hasSpec(), answer.indoors(), answer.offset()));
+        for (ExitArrowClientboundPacket.Entry e : answer.entries()) {
+            Arrow a = ARROWS.computeIfAbsent(e.origin(), k -> new Arrow());
+            a.show = false;
+            if (e.show() && BuildingUtils.findBuilding(true, e.origin()) instanceof ProductionPlacement pp)
+                fill(a, pp, e.cell());
         }
-        return sl;
     }
 }
