@@ -25,7 +25,7 @@ public interface ChunkMapAccessor {
     @Accessor("entityMap")
     Int2ObjectMap<?> reignofnether$getEntityMap();
 
-    /** The view distance the chunk map sends chunks and tracks entities by, plus one (vanilla's own bookkeeping). */
+    /** The view distance the chunk map sends chunks and tracks entities by (1.20.1 keeps it as is, clamped 2..32). */
     @Accessor("viewDistance")
     int reignofnether$getViewDistance();
 }

@@ -25,7 +25,7 @@ public abstract class TrackedEntityMixin {
 
     @Inject(method = "updatePlayer", at = @At("HEAD"), cancellable = true)
     private void reignofnether$gateEntityVisibility(ServerPlayer player, CallbackInfo ci) {
-        // own/allied units: the whole loaded square, not vanilla's circle (the RTS camera sits far off its view)
+        // own/allied units: every chunk the owner is sent, not vanilla's circle (the RTS camera sits far off its view)
         if (FogOfWarServerEvents.tracksAcrossLoadedSquare(player, entity)) {
             if (seenBy.add(player.connection))
                 serverEntity.addPairing(player);

@@ -228,21 +228,22 @@ public class FogOfWarServerEvents {
     }
 
     /**
-     * An own or allied unit of {@code viewer} (not merely a revealed enemy) inside the square of chunks the viewer's
-     * client keeps loaded. Vanilla tracks entities only within a circle of the view distance round the player, and
-     * the RTS camera is the player entity slid back along the view ray, so loaded ground on screen can sit outside
-     * that circle: an own unit there was never sent to its owner and could not be drawn, clicked or boxed (lovish,
-     * Oct 27). TrackedEntityMixin pairs these regardless of the circle.
+     * An own or allied unit of {@code viewer} (not merely a revealed enemy) standing in a chunk the viewer's client is
+     * sent. Vanilla tracks entities only within a circle of view distance * 16 blocks round the player, while chunks
+     * go out by ChunkMap.isChunkInRange, a rounded shape reaching view distance + 1 on the axes. The RTS camera is the
+     * player entity slid back along the view ray, so loaded ground on screen can sit outside that circle: an own unit
+     * there was never sent to its owner and could not be drawn, clicked or boxed (lovish, Oct 27). TrackedEntityMixin
+     * pairs these regardless of the circle. Keyed on the player's chunk, where vanilla sends chunks from its last
+     * section position: the same chunk except right after a move.
      */
     public static boolean tracksAcrossLoadedSquare(ServerPlayer viewer, Entity entity) {
         if (entity == viewer || !(entity instanceof Unit unit)
                 || !isOnViewersSide(viewer.getName().getString(), unit.getOwnerName()))
             return false;
         int vd = ((com.solegendary.reignofnether.mixin.ChunkMapAccessor) viewer.serverLevel().getChunkSource().chunkMap)
-                .reignofnether$getViewDistance() - 1;
-        int dcx = Math.abs((viewer.getBlockX() >> 4) - (entity.getBlockX() >> 4));
-        int dcz = Math.abs((viewer.getBlockZ() >> 4) - (entity.getBlockZ() >> 4));
-        return Math.max(dcx, dcz) <= vd && entity.broadcastToPlayer(viewer);
+                .reignofnether$getViewDistance();
+        return net.minecraft.server.level.ChunkMap.isChunkInRange(viewer.chunkPosition().x, viewer.chunkPosition().z,
+                entity.chunkPosition().x, entity.chunkPosition().z, vd) && entity.broadcastToPlayer(viewer);
     }
 
     private static boolean isOnViewersSide(String viewerName, String owner) {
