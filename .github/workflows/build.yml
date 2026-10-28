@@ -147,7 +147,8 @@ jobs:
           if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
-        run: pip install -q ruff==0.16.9 && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
+        # numpy + pillow: the animation sheet tests (test_anim_sheet, test_anim_eyes) render real images; run 40650753254 failed here without them
+        run: pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
