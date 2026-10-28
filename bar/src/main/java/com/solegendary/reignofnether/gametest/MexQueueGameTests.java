@@ -65,6 +65,8 @@ public class MexQueueGameTests {
         final List<String> problems = new ArrayList<>();
         final List<String> refusals = new ArrayList<>();   // orders the server refused, with the validator's reason
         final IdentityHashMap<BuildingPlacement, Boolean> seenStarted = new IdentityHashMap<>();
+        /** More to undo with the scene (a test's own bigger pad): run even when finish() fails, which throws. */
+        final List<Runnable> undos = new ArrayList<>();
         boolean done = false;
 
         Scene(GameTestHelper helper, String tag, int padY) {
@@ -134,6 +136,7 @@ public class MexQueueGameTests {
             }
             CombatEngineerGameTests.cleanUp(made, pools, List.of(owner));
             CombatEngineerGameTests.skyPad(level, cx, padY, cz, PAD_R, PAD_H, true);
+            undos.forEach(Runnable::run);
         }
 
         void finish() {
@@ -387,6 +390,9 @@ public class MexQueueGameTests {
         CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, false);
         Mob worker = s.worker(-half - 4, -half);
         Runnable undoBig = () -> CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
+        // s.finish() throws when the test fails, so an undoBig.run() after it never ran: the radius-48 stone pad stayed at
+        // y 264 over the next batches' arenas (CI run 40651908207: scar_lands_on_the_real_top_face found it as the ground)
+        s.undos.add(undoBig);
         if (worker == null) {
             s.setupFail("could not create the worker");
             undoBig.run();
