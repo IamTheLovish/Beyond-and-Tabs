@@ -37,11 +37,19 @@ concurrency:
   group: publish-fast-pack
   cancel-in-progress: true
 env:
-  PACK_REPO: christiansaab-hue/beyond-and-tabs-pack   # the same download repo as publish-pack.yml
+  PACK_REPO: IamTheLovish/beyond-and-tabs-pack   # the download repo (the launcher's packRepoSlug)
   PACK_BRANCH: fast
   FILES_RELEASE: fast-files
+  # packwiz-installer-bootstrap, pinned: release v0.0.3 (the newest, 2020-07-12), asset packwiz-installer-bootstrap.jar.
+  # The hash is the sha256 of that exact asset, downloaded once and hashed on 2026-10-27 (not copied from a web page).
+  # To upgrade: download the new release's asset, run sha256sum on it, change both lines.
+  BOOTSTRAP_VERSION: v0.0.3
+  BOOTSTRAP_SHA256: a8fbb24dc604278e97f4688e82d3d91a318b98efc08d5dbfcbcbcab6443d116c
 jobs:
   publish:
+    # Only main publishes: a manual run on any other branch would hand that branch's unreviewed jar to every tester
+    # on the untested channel, with PACK_TOKEN (PR #267 review, blocker).
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -171,6 +179,8 @@ jobs:
           # "Fast pack <version>": the launcher reads the channel's newest pack from this commit message
           git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q -m "Fast pack $VERSION" -m "untested: compile + unit tests of main $GITHUB_SHA" || echo "nothing changed"
           git push origin "HEAD:refs/heads/$PACK_BRANCH"
+          # the token must not stay in packrepo/.git/config for the steps after this one (PR #267 review, finding 2)
+          git remote set-url origin "https://github.com/$PACK_REPO.git"
           echo "PACK_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       # Windows only: the launcher (the only way to pick the fast channel) is Windows-only; the Mac files are published
@@ -179,7 +189,9 @@ jobs:
         run: |
           set -e
           curl -fsSL -o packwiz-installer-bootstrap.jar \
-            https://github.com/packwiz/packwiz-installer-bootstrap/releases/latest/download/packwiz-installer-bootstrap.jar
+            "https://github.com/packwiz/packwiz-installer-bootstrap/releases/download/$BOOTSTRAP_VERSION/packwiz-installer-bootstrap.jar"
+          echo "$BOOTSTRAP_SHA256  packwiz-installer-bootstrap.jar" | sha256sum -c - \
+            || { echo "::error::packwiz-installer-bootstrap $BOOTSTRAP_VERSION does not match the pinned sha256"; exit 1; }
           expect=$(sha512sum "$JAR" | cut -d' ' -f1)
           rm -rf t-fast && mkdir -p t-fast && cp packwiz-installer-bootstrap.jar t-fast/
           cd t-fast
