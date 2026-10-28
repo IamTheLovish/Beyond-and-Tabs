@@ -390,7 +390,7 @@ class Cli(unittest.TestCase):
         code, out, err = run(lane, "--save", out_json)
         self.assertEqual(code, 0, out + err)
         st = json.loads(out_json.read_text())["lanes"]["big"]["stills"][KEY]
-        self.assertEqual(st["crop"], [900, 80, 1400, 300])
+        self.assertEqual(st["crop"], [1000, 250, 1415, 383])      # the table's open-meadow crop (r33)
 
     def test_a_crop_outside_the_still_is_a_usage_error_not_a_traceback(self):
         lane = make_lane(self.root / "lane")        # 64 x 36: the default crop does not fit
