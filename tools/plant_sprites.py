@@ -1,87 +1,122 @@
 """Grass plants for the realistic pack (lovish Oct 28: "we might need more grass or more realistic grass to match";
-plan item 1, his "yes" at 03:35): short grass, tall grass (bottom + top), fern and large fern (bottom + top), drawn
-as tapered blade strokes instead of vanilla's 16x pixel tufts.
+plan item 1, his "yes" at 03:35): short grass, tall grass (bottom + top), fern and large fern (bottom + top).
 
-Each sprite is GREYSCALE (the biome grass colour tints it in game, so GrassTint's dry / lush patches carry onto the
-plants) with a cut-out alpha. Rules, from the block pack's lessons (tools/gen_blocks.py, design/ART-FAULTS.md):
-- Readable when minified: blades are >= 4 texels wide at the base at 128x (a thread survives mip 2, the RTS zoom),
-  tips taper to ~1 texel (they may fade out with distance - real grass does too).
-- Form light baked in, no flat fill: each blade is darker at the base (the clump's own shade, AO ~0.55) and lighter
-  toward the tip, with a pale midrib and darker edges; blades in front are a touch lighter than those behind.
-- Value range inside 55..220 after the fit; a few blades lighter and drier (they read as straw under the tint).
-- Clumps, not wallpaper: blades rise from 1-3 roots near the bottom middle and fan out with a lean, varied heights,
-  some crossing; nothing touches the tile's side edges much (a cross model shows the sprite twice, crossed).
+Round 34 (fresh critic r33: tufts 4/10 default, 6/10 with the foliage-shadow preset; claude/research-grass-rts-zoom-
+oct28.md): r29-r33 drew ~40 blades 4 texels wide at 128x. The default RTS camera reads the atlas at mip 2 (32 texels a
+block), where a 4-texel blade is one texel and blurs into a smudge. Now a FEW BOLD blades, the way game grass that
+reads from a strategy camera is drawn:
+- short grass: 5-7 blades 12-16 texels wide at the base and >= 4 at 80% of their length, from one crown, so the lowest
+  ~20% is one solid wedge; three height classes (~100 / 75 / 55% of the card); a 40-60 degree fan with a lean.
+  22-30% of the card opaque, 60% of it in the central 60% of the width. Tall grass: 5 blades, 14-18 texels.
+- ferns: 5-6 solid fronds, the leaflets merged into scallops >= 8 texels deep, no leaflet detail.
+- value, in the greyscale the biome tint multiplies (the lawn is 0.56): the body a bit lighter than the lawn, the top
+  ~35% lighter still, the base no darker than the lawn - 0.06, a lighter rib along each blade; no dark outlines and no
+  AO ramp (gen_blocks keeps the plants' AO light).
+- three short-grass shapes, two ferns and two tall grasses (GRASS, FERN, TALL), so neighbouring tufts differ.
 
-The drawing works at 2x and is box-filtered down, so edges are anti-aliased in the alpha before the cut-out threshold.
-Returns float arrays: (H height 0..1, grey albedo HxWx3, alpha 0/1). Two-block plants are drawn on one 2n-tall canvas
-and split, so blades run on from the bottom texture into the top one.
+Each sprite is GREYSCALE with a cut-out alpha. Drawn at SS x SS sub-samples a texel and box-filtered, cut at 0.5; the
+colour under the transparent texels is the nearest blade's (bleed: MC-114265, mipmaps pull that colour into edges).
+Returns float arrays: (H height 0..1, grey shade, alpha 0/1). Two-block plants are drawn on one 2n-tall canvas and
+split, so blades run on from the bottom texture into the top one.
 """
 import math
 
 import numpy as np
+from scipy import ndimage
+from scipy.spatial import cKDTree
 
-SS = 2   # supersampling
+SS = 4   # sub-samples per texel side (r34: 2 -> 4)
+
+# values along a blade in the greyscale the biome colour tints; the lawn (grass_block_top) is 0.56. gen_blocks
+# (m_plant) only scales them so the plant's mean is TARGETS' luma (0.68, ~1.0x for the short grass) and sets the
+# warmth's saturation: these are the final values.
+BASE, BODY, TIP, RIB = 0.585, 0.66, 0.80, 0.045
+
+# r34 shapes. pos: blades across the fan, left to right; `straw` = which of them is a dead blade (the untinted layer)
+GRASS = (
+    dict(blades=6, fan=52, lean=7, straw=4, width=(13, 16)),
+    dict(blades=5, fan=44, lean=-5, straw=0, width=(15, 16)),
+    dict(blades=7, fan=58, lean=-9, straw=5, width=(12, 14)),
+)
+TALL = (
+    dict(blades=5, fan=24, lean=5, straw=1, width=(14, 18)),
+    dict(blades=5, fan=20, lean=-6, straw=3, width=(14, 18)),
+)
+CLASSES = (1.0, 0.75, 0.55)   # the three blade heights, of the card
+FERN = (
+    dict(fronds=6, spread=116, lean=4),
+    dict(fronds=5, spread=100, lean=-9),
+)
+LARGE_FERN = dict(fronds=6, spread=60, lean=2)
+
+
+def _smooth(e0, e1, x):
+    t = np.clip((x - e0) / (e1 - e0), 0, 1)
+    return t * t * (3 - 2 * t)
 
 
 class Canvas:
     def __init__(self, w, h):
+        self.n, self.nh = w, h
         self.w, self.h = w * SS, h * SS
         self.cov = np.zeros((self.h, self.w))
         self.shade = np.zeros((self.h, self.w))
         self.height = np.zeros((self.h, self.w))
         self.layer = np.zeros((self.h, self.w))     # 0 = green (tinted), 1 = straw (untinted, its own colour)
 
-    def stroke(self, pts, widths, shade_fn, depth, layer=0):
-        """A tapered stroke through pts (list of (x, y) in output texels, y down), width per point (texels). Paints
-        coverage, shade (shade_fn(t, s) with t 0..1 along, s -1..1 across) and height, over what is there (painter's
-        order: later strokes are in front)."""
-        pts = np.asarray(pts, float) * SS
-        widths = np.asarray(widths, float) * SS
+    def ribbon(self, pts, hw_fn, shade_fn, depth, wmax, layer=0):
+        """A filled ribbon along the polyline pts ((x, y) in texels, y down, root first): a sub-sample belongs to it
+        when its distance across the line (s, texels, + = right of the direction of travel) is within hw_fn(t, s),
+        t = 0 at the root .. 1 at the tip. Paints coverage, shade (shade_fn(t, s / hw, s)) and height over what is
+        there (painter's order: later ribbons are in front). wmax bounds hw_fn."""
+        pts = np.asarray(pts, float)
         seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
-        total = seg.sum()
+        cum = np.concatenate([[0.0], np.cumsum(seg)])
+        total = cum[-1]
         if total <= 0:
             return
-        steps = max(2, int(total * 1.5))
-        cum = np.concatenate([[0], np.cumsum(seg)])
-        ts = np.linspace(0, total, steps)
-        xs = np.interp(ts, cum, pts[:, 0])
-        ys = np.interp(ts, cum, pts[:, 1])
-        ws = np.interp(ts, cum, widths)
-        dx, dy = np.gradient(xs), np.gradient(ys)
-        ln = np.maximum(np.hypot(dx, dy), 1e-6)
-        nx, ny = -dy / ln, dx / ln
-        for i in range(steps):
-            r = ws[i] / 2
-            if r < 0.35:
-                continue
-            x0, x1 = int(max(0, math.floor(xs[i] - r - 1))), int(min(self.w, math.ceil(xs[i] + r + 2)))
-            y0, y1 = int(max(0, math.floor(ys[i] - r - 1))), int(min(self.h, math.ceil(ys[i] + r + 2)))
-            if x0 >= x1 or y0 >= y1:
-                continue
-            gy, gx = np.mgrid[y0:y1, x0:x1] + 0.5
-            ox, oy = gx - xs[i], gy - ys[i]
-            across = (ox * nx[i] + oy * ny[i]) / max(r, 1e-6)          # -1..1 across the blade
-            d = np.hypot(ox, oy)
-            m = d <= r
-            if not m.any():
-                continue
-            t = ts[i] / total
-            sh = shade_fn(t, np.clip(across, -1, 1))
-            sub = (slice(y0, y1), slice(x0, x1))
-            self.cov[sub] = np.where(m, 1.0, self.cov[sub])
-            self.shade[sub] = np.where(m, sh, self.shade[sub])
-            hh = depth * (1 - 0.6 * np.abs(np.clip(across, -1, 1)))      # a rounded blade, crest on the midrib
-            self.height[sub] = np.where(m, hh, self.height[sub])
-            self.layer[sub] = np.where(m, float(layer), self.layer[sub])
+        k = max(3, int(math.ceil(total * SS)) + 1)               # one point per sub-sample along the line
+        ts = np.linspace(0, total, k)
+        P = np.stack([np.interp(ts, cum, pts[:, 0]), np.interp(ts, cum, pts[:, 1])], -1)
+        T = np.gradient(P, axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nr = np.stack([-T[:, 1], T[:, 0]], -1)
+        x0 = max(0, int((P[:, 0].min() - wmax - 1) * SS))
+        x1 = min(self.w, int((P[:, 0].max() + wmax + 1) * SS) + 1)
+        y0 = max(0, int((P[:, 1].min() - wmax - 1) * SS))
+        y1 = min(self.h, int((P[:, 1].max() + wmax + 1) * SS) + 1)
+        if x0 >= x1 or y0 >= y1:
+            return
+        gy, gx = np.mgrid[y0:y1, x0:x1]
+        gy, gx = gy.reshape(-1), gx.reshape(-1)
+        pix = np.stack([(gx + 0.5) / SS, (gy + 0.5) / SS], -1)
+        d, idx = cKDTree(P).query(pix, distance_upper_bound=wmax + 1)
+        ok = np.isfinite(d)
+        gy, gx, pix, idx = gy[ok], gx[ok], pix[ok], idx[ok]
+        v = pix - P[idx]
+        s = (v * Nr[idx]).sum(1)
+        a = (v * T[idx]).sum(1)
+        t = ts[idx] / total
+        hw = hw_fn(t, s)
+        m = (np.abs(s) <= hw) & ~((idx == k - 1) & (a > 1e-6)) & ~((idx == 0) & (a < -1e-6))
+        gy, gx, t, s, hw = gy[m], gx[m], t[m], s[m], hw[m]
+        across = np.clip(s / np.maximum(hw, 1e-6), -1, 1)
+        self.cov[gy, gx] = 1.0
+        self.shade[gy, gx] = shade_fn(t, across, s)
+        # a blade folded along its rib (a shallow V, so no texel of its edge tilts more than the half it is on - a
+        # rounded blade lit its far edge as a dark rim); a blade in front only a little higher than the one behind
+        self.height[gy, gx] = 0.5 + 0.12 * depth - 0.12 * np.abs(across)
+        self.layer[gy, gx] = float(layer)
+
+    def _down(self, a):
+        return a.reshape(self.h // SS, SS, self.w // SS, SS).mean((1, 3))
 
     def result(self):
-        def down(a):
-            return a.reshape(self.h // SS, SS, self.w // SS, SS).mean((1, 3))
-        cov = down(self.cov)
+        cov = self._down(self.cov)
         alpha = (cov >= 0.5).astype(np.float64)
-        w = np.maximum(down(self.cov), 1e-6)
-        shade = down(self.shade * self.cov) / w
-        height = down(self.height * self.cov) / w
+        w = np.maximum(cov, 1e-6)
+        shade = self._down(self.shade * self.cov) / w
+        height = self._down(self.height * self.cov) / w
         return np.where(alpha > 0, height, 0.0), np.where(alpha > 0, shade, 0.0), alpha
 
     def layers(self):
@@ -89,144 +124,159 @@ class Canvas:
         its covered sub-samples), so the two masks never overlap - the green (tinted) and straw (untinted) quads are
         coplanar and would z-fight where both are opaque."""
         H, shade, alpha = self.result()
-        cov = self.cov.reshape(self.h // SS, SS, self.w // SS, SS).sum((1, 3))
-        straw = (self.layer * self.cov).reshape(self.h // SS, SS, self.w // SS, SS).sum((1, 3))
+        cov = self._down(self.cov)
+        straw = self._down(self.layer * self.cov)
         is_straw = straw * 2 > np.maximum(cov, 1e-6)
         return H, shade, alpha * (~is_straw), alpha * is_straw
 
 
-def _blade_shade(base, tip, tone, dry):
-    """Shade along a blade: dark at its root, lighter to the tip; pale midrib, darker edges (rounded, lit from the
-    upper left: the left edge a little lighter than the right)."""
-    def fn(t, s):
-        along = base + (tip - base) * (t ** 0.7)
-        rib = 0.10 * np.exp(-(s / 0.28) ** 2)
-        edge = -0.10 * np.abs(s) ** 2 - 0.035 * s
-        return (along + rib + edge) * tone * (1.18 if dry else 1.0)
+def bleed(img, alpha):
+    """The value under every transparent texel = its nearest opaque texel's (MC-114265: mipmaps blend the colour of
+    the transparent texels into a cut-out's edges, black by default - a dark rim round every blade from afar)."""
+    solid = alpha > 0.5
+    if not solid.any():
+        return np.full_like(img, 0.5)
+    iy, ix = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)
+    return np.where(solid[..., None] if img.ndim == 3 else solid, img, img[iy, ix])
+
+
+def _blade_shade(tone):
+    """Along a blade: the base a touch above the lawn, the body lighter, the top ~35% lighter still; a lighter rib;
+    the blade folded along the rib, lit from the upper left (left half a touch lighter). No dark edges."""
+    def fn(t, across, s):
+        v = BASE + (BODY - BASE) * _smooth(0.0, 0.3, t) + (TIP - BODY) * _smooth(0.55, 0.95, t)
+        veins = 0.012 * np.cos(s * 2.4)          # fine parallel veins (~2.6 texels): close-ups only, gone by mip 2
+        return (v + RIB * np.exp(-(across / 0.22) ** 2) - 0.025 * across + veins) * tone
     return fn
 
 
-def _spike_shade(t, s):
-    """A seed head: pale, its spikelets as bumps along it (a rough, grainy spike, not a smooth spindle)."""
-    return (0.84 + 0.14 * t + 0.10 * np.sin(t * 46.0 + 2.0 * s) - 0.10 * np.abs(s) ** 2) * 1.12
-
-
-def _curve(x0, y0, length, ang, bend, n_pts=14, rng=None, wobble=0.0):
-    """Points of a blade from its root (x0, y0) going up at angle ang (radians from vertical, + = right), bending
-    further by `bend` radians over its length (gravity / a lean), with a slight wobble."""
+def _curve(x0, y0, length, ang, bend, n_pts=28):
+    """Points of a line from its root (x0, y0) going up at angle ang (radians from vertical, + = right), bending
+    further by `bend` radians over its length (gravity / a lean)."""
     pts = []
     x, y = x0, y0
     step = length / (n_pts - 1)
     for i in range(n_pts):
         pts.append((x, y))
-        t = i / (n_pts - 1)
-        a = ang + bend * t * t + (wobble * (rng.random() - 0.5) if rng is not None else 0)
+        a = ang + bend * (i / (n_pts - 1)) ** 2
         x += math.sin(a) * step
         y -= math.cos(a) * step
     return pts
 
 
-def _fit(x0, y0, length, ang, bend, n_pts, w, rng=None, wobble=0.0, margin=2.0):
-    """_curve, shortened until the whole blade stays inside the tile's width [margin, w - margin] and above its top:
-    a blade cut off by the tile edge shows as a hard vertical line where the crossed quads meet."""
-    for _ in range(12):
-        pts = _curve(x0, y0, length, ang, bend, n_pts, rng, wobble)
-        if all(margin <= x <= w - margin and y >= margin for x, y in pts):
+def _reach(x0, y0, top, ang, bend, w, hw, margin=2.0):
+    """A blade from (x0, y0) whose highest point is at y = top, leaning less until it (with its width hw(t)) stays
+    inside [margin, w - margin]: a blade cut by the tile edge shows as a hard line where the crossed quads meet."""
+    for _ in range(24):
+        length = (y0 - top) / max(0.3, math.cos(ang))
+        for _ in range(8):
+            pts = _curve(x0, y0, length, ang, bend)
+            hi = y0 - min(p[1] for p in pts)
+            length *= (y0 - top) / max(hi, 1e-6)
+        pts = _curve(x0, y0, length, ang, bend)
+        k = len(pts)
+        if all(margin + hw(i / (k - 1)) <= x <= w - margin - hw(i / (k - 1)) for i, (x, _) in enumerate(pts)):
             return pts
-        length *= 0.85
+        ang *= 0.88
+        bend *= 0.88
     return pts
 
 
-def grass_clump(n, rng, tall=False, blades=None):
-    """Short grass (one tile) or tall grass (a 2n-tall canvas): blades from 1-3 roots near the bottom middle fanning
-    out; tall grass gets longer blades and some seed heads (a panicle of spikelets) above the leaves."""
+def _blade_hw(width):
+    """Half width along a blade: full at the root, tapering evenly (0.67 of it half way, 0.41 at 80% - >= 4 texels
+    for a 12-texel blade) to a rounded point."""
+    def hw(t, s=None):
+        t = np.asarray(t, float)
+        return 0.5 * width * (1 - 0.65 * t) * np.sqrt(np.clip(1 - t ** 6, 0, 1))
+    return hw
+
+
+def grass_clump(n, rng, tall=False, variant=0):
+    """Short grass (one tile) or tall grass (a 2n-tall canvas): a few bold blades from one crown (GRASS / TALL)."""
+    spec = (TALL if tall else GRASS)[variant]
     h = 2 * n if tall else n
     cv = Canvas(n, h)
-    roots = [(n * (0.5 + 0.30 * (rng.random() - 0.5)), h - 1) for _ in range(rng.integers(3, 5))]
-    count = blades or (int(rng.integers(34, 42)) if tall else int(rng.integers(38, 48)))
-    lean = math.copysign(0.17 + 0.09 * rng.random(), rng.random() - 0.5)   # the clump leans 10-15 degrees (critic r1)
-    order = []
-    for _ in range(count):
-        rx, ry = roots[rng.integers(len(roots))]
-        rx += (rng.random() - 0.5) * n * 0.20
-        ang = (rng.random() - 0.5) * 1.15 + lean                # fan: about +-33 degrees round the lean
-        ang += 0.25 * math.copysign(rng.random() ** 2, ang)      # a few lean out further
-        hmax = (1.85 if tall else 0.92) * n
-        length = hmax * (0.40 + 0.60 * rng.random() ** 0.8)    # 40-100%: many short blades, fewer long ones
-        bend = math.copysign(0.25 + 0.75 * rng.random(), ang + 1e-3) * (0.7 if tall else 1.0)
-        width = n * (0.034 + 0.018 * rng.random()) * (0.8 if tall else 1.0)   # 4-7 texels at 128x
-        depth = rng.random()                                      # 0 = behind, 1 = in front
-        straw = rng.random() < 0.30                               # dead blades: shorter, low in the clump (critic r1)
-        if straw:
-            length *= 0.55 + 0.3 * rng.random()
-            depth *= 0.6
-        order.append((depth, rx, ry, ang, length, bend, width, straw))
-    order.sort()
-    broken = set(rng.choice(len(order), size=min(len(order), int(rng.integers(2, 4))), replace=False).tolist())
-    for j, (depth, rx, ry, ang, length, bend, width, straw) in enumerate(order):
-        if j in broken:                                           # a broken blade: folds over a third of the way up
-            a = _fit(rx, ry, length * 0.45, ang, 0.1 * bend, 8, n, rng, 0.02)
-            k_ang = ang + math.copysign(1.5 + 0.5 * rng.random(), ang + 1e-3)
-            pts = a + _fit(*a[-1], length * 0.4, k_ang, 0.2, 7, n)[1:]
-        else:
-            pts = _fit(rx, ry, length, ang, bend, 16, n, rng, 0.04)
-        k = len(pts)
-        widths = [width * (1 - (i / (k - 1)) ** 1.6) * 0.92 + 0.6 for i in range(k)]
-        tone = 0.90 + 0.14 * rng.random() + 0.06 * depth
-        if straw:
-            cv.stroke(pts, widths, _blade_shade(0.62, 1.0, tone, False), 0.3 + 0.6 * depth, layer=1)
-        else:
-            cv.stroke(pts, widths, _blade_shade(0.64, 0.92, tone, False), 0.35 + 0.65 * depth)   # r29d: lighter roots
-    if tall:                                                     # seed heads: a stalk and its spikelets
-        for _ in range(int(rng.integers(3, 6))):
-            rx, ry = roots[rng.integers(len(roots))]
-            ang = (rng.random() - 0.5) * 0.4
-            length = n * (1.25 + 0.35 * rng.random())
-            bend = math.copysign(0.08 + 0.2 * rng.random(), ang + 1e-3)   # stalks stand nearly upright
-            pts = _fit(rx, ry, length, ang, bend, 24, n, rng, 0.02, margin=n * 0.12)
-            cv.stroke(pts, [n * 0.016 + 0.8] * len(pts), _blade_shade(0.6, 0.9, 1.0, False), 0.6, layer=1)
-            head = _curve(*pts[-1], n * (0.16 + 0.08 * rng.random()), ang + bend, 0.08, 10)
-            k = len(head)
-            cv.stroke(head, [n * 0.055 * math.sin(math.pi * (0.12 + 0.8 * j / (k - 1))) + 0.8 for j in range(k)],
-                      _spike_shade, 0.75, layer=1)
+    k = spec["blades"]
+    pos = np.linspace(-1, 1, k) + (rng.random(k) - 0.5) * 0.12
+    # height classes: the central blades tallest, the outer ones shortest (a jittered rank, so not a symmetric fan)
+    rank = np.argsort(np.argsort(np.abs(pos - 0.01 * spec["lean"]) + 0.35 * rng.random(k)))
+    cls = [CLASSES[min(2, int(3 * r / k))] for r in rank]
+    depth = rng.permutation(k) / max(1, k - 1)
+    blades = []
+    for i in range(k):
+        straw = i == spec["straw"]
+        lo, hi = spec["width"]
+        width = lo - 2.0 if straw else lo + (hi - lo) * rng.random()     # a dead blade is narrower
+        c = min(cls[i], 0.75) if straw else cls[i]                  # a dead blade is never the tallest
+        top = h - c * (h - 3) * (0.96 + 0.06 * rng.random())
+        ang = math.radians(spec["lean"] + pos[i] * spec["fan"] / 2 + 6 * (rng.random() - 0.5))
+        bend = math.copysign(0.10 + 0.35 * abs(pos[i]), ang + 1e-3) * (1.25 if c == 1.0 else 1.0)
+        if tall:
+            bend *= 1.4                                               # long leaves arch over
+        hw = _blade_hw(width)
+        root = n / 2 + pos[i] * 4.5 + (rng.random() - 0.5) * 1.5
+        pts = _reach(root, h + 1.0, top, ang, bend, n, hw)
+        tone = 0.97 + 0.06 * depth[i] + 0.04 * (rng.random() - 0.5)
+        blades.append((-1.0 if straw else depth[i], pts, hw, tone, width, straw))
+    for d, pts, hw, tone, width, straw in sorted(blades, key=lambda b: b[0]):   # back to front, the straw at the back
+        cv.ribbon(pts, hw, _blade_shade(tone), 0.3 + 0.7 * max(0.0, d), width / 2 + 1, layer=1 if straw else 0)
     return cv.layers()
 
 
-def fern(n, rng, large=False):
-    """Fern (one tile) or large fern (2n tall): 4-6 fronds from one crown, each an arched rachis with alternating
-    pinnae that shorten toward the tip; pinnae are small tapered blades."""
+def _frond_hw(length, wmax, rach, period, phase0, t0=0.12, sweep=0.7, floor=0.12):
+    """Half width of a fern frond: a bare stalk (rach) to t0, then a lanceolate blade (widest ~40% up) whose edge is
+    cut into rounded lobes - the leaflets, merged - alternating left and right and swept toward the tip; a notch goes
+    down to `floor` of the width, so with wmax ~14 a scallop is ~10 texels deep."""
+    def hw(t, s):
+        u = np.clip((t - t0) / (1 - t0), 0, 1)
+        env = np.sin(np.pi * u ** 0.8) ** 0.8
+        ph = (length / period) * (t + 0.3 * t * t) - sweep * np.abs(s) / period + phase0 + np.where(s >= 0, 0.5, 0)
+        lobe = floor + (1 - floor) * (1 - np.abs(2 * (ph % 1.0) - 1)) ** 0.7    # pointed leaflet ends
+        return rach + (wmax - rach) * env * lobe
+    return hw
+
+
+def _frond_shade(tone, wmax):
+    """A frond: the blade values along it, a lighter rachis, the lobes' outer ends a touch lighter, no veins."""
+    def fn(t, across, s):
+        v = BASE + (BODY - BASE) * _smooth(0.0, 0.3, t) + (TIP - 0.03 - BODY) * _smooth(0.55, 0.95, t)
+        rib = RIB * np.exp(-(s / 1.8) ** 2)
+        return (v + rib + 0.03 * np.clip(np.abs(s) / wmax, 0, 1) - 0.02 * np.sign(s)) * tone
+    return fn
+
+
+def fern(n, rng, large=False, variant=0):
+    """Fern (one tile) or large fern (2n tall): 5-6 solid fronds from one crown, arching out, the outer ones drooping."""
+    spec = LARGE_FERN if large else FERN[variant]
     h = 2 * n if large else n
     cv = Canvas(n, h)
-    cx, cy = n * 0.5, h - 1
-    fronds = int(rng.integers(4, 8)) if large else int(rng.integers(3, 7))
-    order = sorted(rng.random(fronds))
-    for k, depth in enumerate(order):
-        ang = (k / max(1, fronds - 1) - 0.5) * (0.8 if large else 1.5) + 0.15 * (rng.random() - 0.5)
-        length = (1.75 if large else 0.86) * n * (0.75 + 0.25 * rng.random())
-        bend = math.copysign((0.35 if large else 0.7) + 0.4 * rng.random(), ang + 1e-3)
-        bend += math.copysign(0.45 * min(1.0, abs(ang) / 0.6), ang + 1e-3)   # outer fronds droop 20-30 degrees more
-        P = 48
-        pts = _fit(cx + (rng.random() - 0.5) * n * 0.06, cy, length, ang, bend, P, n, margin=n * 0.06)
-        tone = 0.95 + 0.1 * rng.random() + 0.05 * depth
-        cv.stroke(pts, [n * 0.024 * (1 - 0.7 * i / (P - 1)) + 0.8 for i in range(P)],
-                  _blade_shade(0.36, 0.64, tone, False), 0.4 + 0.5 * depth)
-        for i in range(5, P - 1):                                 # pinnae, alternating, overlapping
-            t = i / (P - 1)
-            side = 1 if i % 2 else -1
-            x0, y0 = pts[i]
-            x1, y1 = pts[i + 1]
-            heading = math.atan2(x1 - x0, -(y1 - y0))
-            a = heading + side * (0.95 + 0.15 * rng.random())
-            # lanceolate: pinnae longest a third of the way up, short at the base and the tip
-            pl = n * (0.20 if large else 0.16) * math.sin(math.pi * min(1.0, 0.15 + 0.95 * t)) ** 0.8 \
-                * (0.85 + 0.3 * rng.random())
-            if pl < 2:
-                continue
-            pp = _curve(x0, y0, pl, a, side * 0.35, 7)
-            pw = n * (0.050 if large else 0.044) * (1 - 0.4 * t)
-            cv.stroke(pp, [pw * (0.55 + 0.45 * math.sin(math.pi * min(1, j / 5 + 0.15))) * (1 - j / 7) + 0.5
-                           for j in range(7)],
-                      _blade_shade(0.50 + 0.20 * t, 0.98, tone, False), 0.45 + 0.5 * depth)   # dark at the rachis
+    k = spec["fronds"]
+    pos = np.linspace(-1, 1, k) + (rng.random(k) - 0.5) * 0.15
+    depth = rng.permutation(k) / max(1, k - 1)
+    wmax, rach, period = (14.0, 3.0, 19.0) if large else (12.0, 2.5, 15.0)
+    fronds = []
+    for i in range(k):
+        ang = math.radians(spec["lean"] + pos[i] * spec["spread"] / 2 + 6 * (rng.random() - 0.5))
+        bend = math.copysign((0.35 if large else 0.30) + (0.55 if large else 0.45) * abs(pos[i]), ang + 1e-3)
+        # the central fronds long and upright, the outer ones shorter and drooping: a fan, not a V of two
+        length = (1.80 if large else 0.92) * n * (1.0 - 0.40 * abs(pos[i]) ** 1.5) * (0.92 + 0.08 * rng.random())
+        hw = _frond_hw(length, wmax, rach, period, rng.random())
+        root = n / 2 + pos[i] * 3.0
+        bound = (lambda t, w=wmax: w * min(1.0, 2.5 * t))   # the frond's reach across, for the edge check
+        pts = _curve(root, h + 1.0, length, ang, bend)
+        for _ in range(24):
+            kk = len(pts)
+            if all(2 + bound(j / (kk - 1)) <= x <= n - 2 - bound(j / (kk - 1)) and y >= 2
+                   for j, (x, y) in enumerate(pts)):
+                break
+            ang *= 0.9
+            bend *= 0.9
+            length *= 0.98
+            pts = _curve(root, h + 1.0, length, ang, bend)
+        tone = 0.97 + 0.06 * depth[i] + 0.04 * (rng.random() - 0.5)
+        fronds.append((depth[i], pts, hw, tone))
+    for d, pts, hw, tone in sorted(fronds, key=lambda f: f[0]):
+        cv.ribbon(pts, hw, _frond_shade(tone, wmax), 0.3 + 0.7 * d, wmax + 1)
     return cv.result()
 
 
