@@ -385,8 +385,20 @@ public class MexQueueGameTests {
         final int padY = 264, step = 7, n = 13, half = (n - 1) * step / 2;
         Scene s = new Scene(helper, "ac5", padY);
         CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, false);
+        // the pad reaches 48 blocks out, past the chunks the arena keeps loaded: a worker spawned in an unloaded chunk
+        // is not visible to level.getEntity, so the server drops every order for it (isolated stress run 40670585000:
+        // "blueprint 161 was accepted past the cap; the builder's queue ... holds 0"). Hold the pad's chunks first.
+        List<long[]> chunks = new ArrayList<>();
+        for (int x = (s.cx - half - 6) >> 4; x <= (s.cx + half + 6) >> 4; x++)
+            for (int z = (s.cz - half - 6) >> 4; z <= (s.cz + half + 6) >> 4; z++)
+                chunks.add(new long[] { x, z });
+        GameTestChunks.holdAndAwaitOrFail(s.level, chunks, "ac5 queue pad");
+        GameTestChunks.awaitRingOrFail(s.level, chunks, "ac5 queue pad");
         Mob worker = s.worker(-half - 4, -half);
-        Runnable undoBig = () -> CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
+        Runnable undoBig = () -> {
+            CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
+            GameTestChunks.releaseAll(s.level, chunks);
+        };
         if (worker == null) {
             s.setupFail("could not create the worker");
             undoBig.run();
@@ -426,7 +438,8 @@ public class MexQueueGameTests {
         }
         BuildRepairGoal g = ((WorkerUnit) worker).getBuildRepairGoal();
         if (!g.queuedBuildings.equals(s.sites.subList(0, want)))
-            s.problems.add("the builder's queue is not the " + want + " orders in order (holds " + g.queuedBuildings.size() + ")");
+            s.problems.add("the builder's queue is not the " + want + " orders in order (holds " + g.queuedBuildings.size()
+                + "; worker visible to the level: " + (s.level.getEntity(worker.getId()) == worker) + ")");
         if (!s.problems.isEmpty()) {
             s.finish();
             undoBig.run();
