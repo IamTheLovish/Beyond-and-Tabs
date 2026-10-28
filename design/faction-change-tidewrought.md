@@ -27,3 +27,12 @@
 - Vehicle labs: the Careening Hard is cancelled; the new faction gets its own vehicle lab once its theme exists.
 - Keep the seven-faction game playable while the new faction is built (do not delete Tidewrought until its replacement
   can be selected, unless lovish says otherwise).
+
+## Update 04:25 - the new faction is an AI faction (lovish: "add ai faction")
+- The replacement for Tidewrought is an **AI faction** (a machine / synthetic-intelligence faction). It can be the
+  "later futuristic faction" the vehicle-labs plan mentioned (real tanks belong there), now the seventh faction.
+- ref37 (futuristic glass spire, design/refs/vehicle_labs/ref37_futuristic_glass_spire_on_water.png) is its first
+  reference candidate.
+- Must stay distinct from Brassworks (steam machines, Victorian brick and brass): the AI faction is post-industrial -
+  clean geometry, glass, light, drones - not gears and smoke.
+- Still to decide with lovish: its look (references), name, roster and roles, and when the lane starts.
