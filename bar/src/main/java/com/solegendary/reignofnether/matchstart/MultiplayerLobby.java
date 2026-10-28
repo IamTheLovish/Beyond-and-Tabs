@@ -652,7 +652,9 @@ public class MultiplayerLobby {
         // - or, for a rematch after Back to lobby, where the last match was (its ground is the one just restored)
         BlockPos c = rematchCentre != null ? rematchCentre : host != null ? host.blockPosition() : level.getSharedSpawnPos();
         rematchCentre = null;
-        BlockPos centre = new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ());
+        // once a new match has moved the arena to fresh ground (maps.NewMatch), the slot is the centre, not the host
+        BlockPos centre = com.solegendary.reignofnether.maps.ArenaOrigins.centreFor(level,
+            new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ()));
         List<Seat> lineup = new ArrayList<>(seats);
         lastLineup.clear();
         lastLineup.addAll(lineup);
