@@ -415,8 +415,9 @@ public class OrdersObeyGameTests {
      * unit stood with its order forever (a_unit_shifted_along_the_wall..., stress 40675281944: the count went back to 0
      * at three rescues, the unit snapped to x .50, z .50). A rescue that moves the unit nowhere is no progress toward a
      * target 4000 blocks east: the unit gives the order up within 30 s. Rescued on every other request (the goal's own
-     * repath in between), as UnitUnstick takes a while to see a unit trapped again; a rescue's own repath never gives
-     * the order up by itself (a_unit_rescued_with_its_count_near_the_give_up_keeps_an_order_it_can_walk).
+     * repath in between); a_unit_rescued_at_the_wall_on_unstick_cadence... rescues on UnitUnstick's own cadence instead,
+     * whatever the goal is doing. The first rescue to reach the give-up is held one short of it
+     * (a_unit_rescued_with_its_count_near_the_give_up_keeps_an_order_it_can_walk).
      */
     @GameTest(template = ARENA, batch = BATCH_RTS_RESCUED, timeoutTicks = 800)
     public static void a_unit_rescued_in_place_at_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {

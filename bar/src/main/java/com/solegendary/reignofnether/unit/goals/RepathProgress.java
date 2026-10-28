@@ -18,13 +18,14 @@ public final class RepathProgress {
 
     /** A path's end must be this much closer (horizontally) to the target than the one it replaced to be promising. */
     public static final double END_CLOSER_MIN = 1.0;
-    /** The unit must have got this much closer to its target since the last repath for the repath to be progress. */
+    /** The unit must be this much closer to its target than it has been at any repath since the order: progress. */
     public static final double ADVANCED_MIN = 2.0;
 
     /**
      * @param oldEndDist the replaced path's end's horizontal distance to the target, NaN when it had none
      * @param newEndDist the new path's end's distance, NaN when the repath found no path
-     * @param advanced   how much closer to the target the unit itself got since the last repath (negative: farther)
+     * @param advanced   how much closer to the target the unit is than the closest it had been at a repath (or the
+     *                   order) before: a unit pacing back and forth never gets closer than that, so it never resets
      * @param walked     how far the unit moved since the last repath, any way (a detour delivered in segments walks away
      *                   from the target first: that holds the count rather than counting toward the give-up)
      *
