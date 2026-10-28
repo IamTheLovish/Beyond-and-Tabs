@@ -224,3 +224,8 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    stage, clustered PINNACLES at every set-back, crockets up the edges, a slender needle top. PART studies: build the
    spire/pinnacle parts (gothic_parts / the faction part libraries) to this detail. Sunforged lantern-spire, Gravebound
    keep, and every gothic pinnacle.
+
+34h. lovishs 35th reference (04:21): /root/bat/design/refs/vehicle_labs/ref35_forge_interior_cutaway.png - a Minecraft
+   cutaway FORGE INTERIOR: a black-stone chamber lit only by MOLTEN METAL (a glowing crucible and forge), a smith at
+   work, thin LAVA CHANNELS across the floor. ASHBORN: what sits inside the gate tunnel / behind the forge heart, so the
+   glow seen through the opening has a real forge behind it. Everyone: a dark room lit only by its work reads strongly.
