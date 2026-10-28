@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.building;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -77,6 +78,22 @@ class ExitArrowTest {
             assertEquals(ExitArrow.LENGTH, Math.hypot(p[6] - tailMidX, p[7] - tailMidZ), EPS);
             assertTrue(Math.hypot(p[4] - p[8], p[5] - p[9]) > Math.hypot(p[2] - p[10], p[3] - p[11]));
         }
+    }
+
+    /**
+     * When the client asks the server for exit-arrow cells (ExitArrow.shouldAsk): never with nothing to show, at most
+     * once a second while nothing changed, at most 4 a second (every 5 ticks) when something new needs an answer.
+     * Args: anythingShown, somethingNew, ticksSinceLastAsk.
+     */
+    @Test
+    void theClientAsksOncePerSecondAtRestAndBurstsAtMostFourPerSecondWhenSomethingIsNew() {
+        assertFalse(ExitArrow.shouldAsk(false, false, 1000));
+        assertFalse(ExitArrow.shouldAsk(false, true, 1000));
+        assertFalse(ExitArrow.shouldAsk(true, false, 19));
+        assertTrue(ExitArrow.shouldAsk(true, false, 20));
+        assertFalse(ExitArrow.shouldAsk(true, true, 4));
+        assertTrue(ExitArrow.shouldAsk(true, true, 5));
+        assertTrue(ExitArrow.shouldAsk(true, true, 20));
     }
 
     @Test
