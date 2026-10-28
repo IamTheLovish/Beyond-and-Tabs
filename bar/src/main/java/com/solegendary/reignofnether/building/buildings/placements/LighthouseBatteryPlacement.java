@@ -64,8 +64,8 @@ public class LighthouseBatteryPlacement extends BuildingPlacement {
     }
 
     @Override
-    public int getSightRange() {
-        return isBuilt ? SIGHT_RANGE : super.getSightRange();
+    public int getBaseSightRange() {
+        return isBuilt ? SIGHT_RANGE : super.getBaseSightRange();
     }
 
     @Override

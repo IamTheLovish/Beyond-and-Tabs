@@ -207,7 +207,13 @@ public interface Unit {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MAX_HEALTH);
         return (float) (attr != null ? attr.getValue() : Attributes.MAX_HEALTH.getDefaultValue()) + bonus;
     }
+    /** How far the unit reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public default int getSightRange() {
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight, from the SIGHT_RANGE attribute; units with a sight bonus override this, not getSightRange. */
+    public default int getBaseSightRange() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.SIGHT_RANGE.get());
         return (int) Math.round(attr != null ? attr.getValue() : AttributeRegistrar.SIGHT_RANGE.get().getDefaultValue());
     }
