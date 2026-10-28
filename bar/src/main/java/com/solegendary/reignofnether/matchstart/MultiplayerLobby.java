@@ -901,6 +901,9 @@ public class MultiplayerLobby {
         int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
         for (int dx = -12; dx <= 12; dx += 12)
             for (int dz = -12; dz <= 12; dz += 12) {
+                // load it first: the heightmap of an unloaded chunk reads the min build height, so a site no one had
+                // loaded passed as "dry and flat" wherever it was (ExtractorFootprintGameTests.site_ok_reads_...)
+                level.getChunk((x + dx) >> 4, (z + dz) >> 4);
                 int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x + dx, z + dz);
                 if (!level.getBlockState(new BlockPos(x + dx, y - 1, z + dz)).getFluidState().isEmpty())
                     return false;
