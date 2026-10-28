@@ -246,3 +246,18 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    SANDSTONE SEA FORTRESS seen from above (our camera), rising straight out of the water: crenellated towers at stepped
    heights, arcades with ROOF GARDENS, a TIMBER DOCK / jetty with steps down to the waterline. TIDEWROUGHT PRIMARY for the
    yard and waterfront (sandstone is already the kit), with ref31 (shipwright hall) and ref33 (hull-shaped swept roof).
+
+## Oct 28 16:58-17:00 (session E): lovish's part references for the Engine Shed T1 detail round
+Sent after "just needs more block variety to help with texturing like in the photo. More dimensions and architecture
+details". ref18 stays the Engine Shed's ONE primary reference; these teach specific parts (see
+design/vehicle_labs/briefs/brass_t1_checklist.md, "Part references").
+- ref39_greek_temple_columns.png - a temple: columns with bases and capitals standing proud of a recessed wall, a carved
+  frieze band, a pediment with a relief emblem, a stepped base (stylobate) with stairs.
+- ref40_gothic_cathedral_spires.png - a gothic front: buttresses capped with pinnacles, clustered spires, tall pointed
+  traceried windows, every face in 3-4 depth planes.
+- ref41_cathedral_nave_two_tone.png - a nave: light grey stone columns against dark brick ribs and pointed arches (frame
+  vs body by VALUE and by texture), arches stepped from stairs, candle chandeliers on chains.
+- ref42_pagoda_tiered_eaves.png - a pagoda: stacked tiers, each eave a deep overhang on a bracket course, railings,
+  warm light under the eaves, a tall brass finial.
+- ref43_dark_castle_crag.png - a dark castle on a crag: clustered towers of different heights with steep spired caps,
+  tall lit arched windows (light from openings, not lamps), dark stone with paler trim.
