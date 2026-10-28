@@ -189,3 +189,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    every bay, flying buttresses, a forest of spires, formal gardens at its feet. The CEILING for gothic detail in blocks:
    vertical rhythm everywhere (piers every 2-3 cells), every top ends in a pinnacle, nothing flat. Sunforged and
    Gravebound: this is the detail target for your camera faces and rooflines.
+
+34b. lovishs 29th reference (04:18): /root/bat/design/refs/vehicle_labs/ref29_dark_tiered_lava_fortress.png - a
+   Minecraft DARK-STONE fortress in STEPPED TIERS seen from high above (our camera), towers with dark cones, LAVA only in
+   sunken COURTYARDS and terrace pools (contained glow), WATERFALLS pouring down one flank, forest all around.
+   ASHBORN PRIMARY REFERENCE: imitate this - stepped tiers that read from above, glow contained in pools, no scattered
+   lights.
