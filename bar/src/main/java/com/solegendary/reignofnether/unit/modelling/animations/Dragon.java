@@ -171,10 +171,10 @@ public final class Dragon {
     /** Per-entity smoothed state: [glide 0..1, bank deg, last age, the bite's SWING moment (age), last attackTime
      *  seen, hover, the last swing actually seen (age), whether the running bite was foreseen (1) or not (0),
      *  the filtered heading (deg), the bank's velocity (deg/tick), the tail's two lagged banks, heading-seeded flag,
-     *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking]. */
+     *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking, perched]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
-        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_LEN = 19;
+        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19, ST_LEN = 20;
 
     /**
      * The bite's keys, in TICKS relative to the swing moment (0 = the fireball leaves / the blow lands): the wind-up
@@ -392,6 +392,10 @@ public final class Dragon {
         float wantTakeoff = wantsTakeoff(P, e.tickCount, speed, wantClimb) ? 1f : 0f;
         st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
         float takeoff = st[ST_TAKEOFF];
+        // perched: down on the ground (the Bone Dragon's Dive) - it stands, wings folded, instead of hover-beating
+        float wantPerch = e.onGround() && e.tickCount > 5 ? 1f : 0f;
+        st[ST_PERCH] += (wantPerch - st[ST_PERCH]) * Math.min(1f, dt / 8f);
+        float perch = st[ST_PERCH];
         // the beat's phase advances at the CURRENT rate (a hover beats quicker, a take-off quicker still)
         float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
         st[ST_PHASE] += dt / T;
@@ -418,17 +422,17 @@ public final class Dragon {
         st[4] = attackTime;
 
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,
-            age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
+            perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
     }
 
     /**
      * The pose itself from the resolved drivers (tools/dragon_poses.py's pose() takes the same arguments): ph the beat
      * phase (beats), glide / idle (hover) / flare / takeoff 0..1, bank in degrees with the tail's two lagged banks,
-     * climb -1..1, attackT the ticks since the bite's swing moment - a bite runs from -Params.attackWindup to
-     * Params.attackTicks (outside that range: none).
+     * climb -1..1, perch 0..1 (on the ground: wings folded, standing), attackT the ticks since the bite's swing moment
+     * - a bite runs from -Params.attackWindup to Params.attackTicks (outside that range: none).
      */
     public static void pose(Rig r, Params P, int id, float ph, float age, float glide, float idle, float bank,
-                            float tailA, float tailB, float climb, float flare, float takeoff, float attackT,
+                            float tailA, float tailB, float climb, float flare, float takeoff, float perch, float attackT,
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
         float off = Life.offset(id);
         float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
@@ -437,7 +441,8 @@ public final class Dragon {
         float corrective = Life.bump(age, id, 6, 160f, 44f);
         float gs = glide * (1f - corrective);
         float gw0 = Math.max(rhythm(P, ph) * cruise, gs);
-        float amp = (1f + 0.3f * Math.max(0f, climb)) * (1f + 0.25f * takeoff) * (1f - 0.15f * idle) * (1f - 0.35f * flare);
+        float amp = (1f + 0.3f * Math.max(0f, climb)) * (1f + 0.25f * takeoff) * (1f - 0.15f * idle) * (1f - 0.35f * flare)
+            * (1f - 0.85f * perch);
         float s0 = shape(P, ph);
         float bankF = Math.min(1f, Math.abs(bank) / P.bankMax);
         float rip = (age + off) / 26f * Mth.TWO_PI;                 // the glide's slow billow
@@ -581,7 +586,7 @@ public final class Dragon {
         dsl(r.spine2, -0.8f * shape(P, ph - 6f / T) * amp * (1f - gw0), 1.4f * Mth.sin(t1 + 0.2f), 0);
 
         // ---- the legs: tucked, trailing the heave; dangling in a hover / take-off, reaching forward in a flare ------
-        float hang = Math.max(idle, Math.max(takeoff, flare));
+        float hang = Math.max(Math.max(idle, Math.max(takeoff, flare)) * (1f - perch), 0.7f * perch);   // perched: stood on them
         float d4 = shape(P, ph - 4f / T) * amp * (1f - gw0), d7 = shape(P, ph - 7f / T) * amp * (1f - gw0);
         float swingG = 4f * Life.wander(age, id, 160f) * gw0;
         for (int i = 0; i < 4; i++) {
@@ -596,6 +601,21 @@ public final class Dragon {
                 dsl(r.lower[i], 5f * d7 + 25f * hang, 0, 0);
                 dsl(r.foot[i], 6f * d4 + paw - 55f * hang, 0, 0);
             }
+        }
+
+        // ---- perched (on the ground after a dive): the wings fold along the flanks, the body levels, the neck rises --
+        if (perch > 0.01f) {
+            for (int i = 0; i < 2; i++) {
+                float s = i == 0 ? 1f : -1f;
+                dsl(r.arm[i], 0, s * -10f * perch, s * -22f * perch);
+                dsl(r.fore[i], 0, s * -55f * perch, s * 14f * perch);
+                dsl(r.hand[i], 0, s * -65f * perch, 0);
+                for (int k = 0; k < 3; k++)
+                    dsl(r.finger[i][k], 0, s * (16f + 8f * k) * perch, 0);
+            }
+            dsl(r.body, -statePitch * perch, 0, 0);
+            for (int k = 0; k < Math.min(3, r.neck.length); k++)
+                dsl(r.neck[k], 5f * perch, 0, 0);
         }
 
         // ---- idle behaviours (fade with speed) ------------------------------------------------------------------

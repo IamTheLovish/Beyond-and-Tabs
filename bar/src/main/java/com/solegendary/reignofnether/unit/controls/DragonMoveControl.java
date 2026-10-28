@@ -28,6 +28,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     private Vec3 lastSet = Vec3.ZERO, push = Vec3.ZERO;
     private boolean blocked = false;
     private int sweepIn = 0;
+    /** The Dive's ground spot while it stoops (BoneDragonUnit.startDive), and whether it is down on the ground. */
+    private Vec3 diveTo = null;
+    private boolean landed = false;
 
     public DragonMoveControl(Mob mob) {
         super(mob);
@@ -47,7 +50,19 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
 
     /** Flying somewhere, or still carrying speed: the body faces along the flight. */
     public boolean isCruising() {
-        return operation == Operation.MOVE_TO || state.speed > 0.03;
+        return !landed && (diveTo != null || operation == Operation.MOVE_TO || state.speed > 0.03);
+    }
+
+    /** Stoop onto this ground spot (null: stop diving) - every other order waits while it dives. */
+    public void setDive(Vec3 spot) {
+        diveTo = spot;
+    }
+
+    /** On the ground (the Dive's landing): no way on, whatever the move goal wants, until it is let up again. */
+    public void setLanded(boolean landed) {
+        this.landed = landed;
+        if (landed)
+            diveTo = null;
     }
 
     @Override
@@ -64,11 +79,21 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
             push = push.normalize().scale(1.5);
 
         double[] v;
-        if (operation == Operation.MOVE_TO) {
+        if (landed) {
+            v = DragonFlight.perched(state);
+            if (mob.onGround())
+                v[1] = 0.0;
+        } else if (diveTo != null) {
+            AttributeInstance ms = mob.getAttribute(Attributes.MOVEMENT_SPEED);
+            double cruise = DragonFlight.cruiseSpeed(ms == null ? 0.0 : ms.getValue());
+            v = DragonFlight.dive(state, diveTo.x - mob.getX(), diveTo.y - mob.getY(), diveTo.z - mob.getZ(), cruise);
+        } else if (operation == Operation.MOVE_TO) {
             AttributeInstance ms = mob.getAttribute(Attributes.MOVEMENT_SPEED);
             double cruise = DragonFlight.cruiseSpeed(ms == null ? 0.0 : ms.getValue());
             double dx = wantedX - mob.getX(), dy = wantedY - mob.getY(), dz = wantedZ - mob.getZ();
             double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (dist < 1.0 && state.speed < 0.02)
+                operation = Operation.WAIT;     // there (a take-off's climb has no goal to end it): hover, face targets
             if (sweepIn-- <= 0 && dist > 1.0e-4) {
                 sweepIn = SWEEP_EVERY;
                 double r = Math.toRadians(state.heading);
