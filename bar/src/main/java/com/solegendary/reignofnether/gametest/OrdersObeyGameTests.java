@@ -338,17 +338,21 @@ public class OrdersObeyGameTests {
             boolean navDone = m.getNavigation().isDone();
             long nudge = StuckNudge.lastNudge(m);
             if (goal.getLastRequestTime() != traced[0] || goal.isPathPending() != (traced[1] == 1)
-                    || navDone != (traced[2] == 1) || nudge != traced[3] || !java.util.Objects.equals(fin, tracedEnd[0])) {
+                    || navDone != (traced[2] == 1) || nudge != traced[3] || !java.util.Objects.equals(fin, tracedEnd[0]) || t % 40 == 0) {
                 traced[0] = goal.getLastRequestTime();
                 traced[1] = goal.isPathPending() ? 1 : 0;
                 traced[2] = navDone ? 1 : 0;
                 traced[3] = nudge;
                 tracedEnd[0] = fin;
-                if (trace.length() < 6000) {
+                if (trace.length() < 12000) {
                     net.minecraft.world.level.pathfinder.Path p = m.getNavigation().getPath();
                     trace.append(" t").append(t).append(goal.isPathPending() ? " req" : navDone ? " done" : " nav")
                         .append(" at ").append(TerrainGameTests.f(m.getX() - startX)).append(",")
-                        .append(TerrainGameTests.f(m.getZ())).append(m.onGround() ? "" : " air")
+                        .append(TerrainGameTests.f(m.getZ())).append(",y").append(TerrainGameTests.f(m.getY() - pad.getY()))
+                        .append(m.onGround() ? "" : " air").append(m.isPassenger() ? " riding " + m.getVehicle() : "")
+                        .append(" on ").append(level.getBlockState(BlockPos.containing(m.getX(), m.getY() - 0.2, m.getZ()))
+                            .getBlock().getDescriptionId().replace("block.minecraft.", ""))
+                        .append(" wall ").append(eastWall(helper))
                         .append(" end ").append(fin == null ? "none" : (fin.getX() - pad.getX()) + "," + fin.getY() + "," + fin.getZ())
                         .append(p == null ? "" : " n" + p.getNextNodeIndex() + "/" + p.getNodeCount())
                         .append(" stuck ").append(stuckRepaths(goal)).append(goal.isInBackoff() ? " backoff" : "")
@@ -417,6 +421,16 @@ public class OrdersObeyGameTests {
     @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_4", timeoutTicks = 800)
     public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_4(GameTestHelper helper) {
         a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
+    }
+
+    // how many of the pen's east wall blocks (x 14, y 2..6, z 0..15: 80) are still stone (diagnostics only)
+    static int eastWall(GameTestHelper helper) {
+        int n = 0;
+        for (int z = 0; z <= 15; z++)
+            for (int y = 2; y <= 6; y++)
+                if (helper.getBlockState(new BlockPos(14, y, z)).is(net.minecraft.world.level.block.Blocks.STONE))
+                    n++;
+        return n;
     }
 
     // the move goal's count of repaths in a row that made no progress (diagnostics only: -1 if it cannot be read)
