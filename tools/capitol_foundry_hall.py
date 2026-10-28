@@ -267,7 +267,7 @@ def pipe_bridges(c):
 def crane(c):
     """A dock crane on the north-west stack (the camera's left): a dark-oak jib braced off the stack over the yard,
     a chain falling to a hook and a hanging crate - the guild's yard at work."""
-    x, z = -5, -5
+    _x, z = -5, -5
     for xx in (-6, -7):
         c.set(xx, 14, z, DOF)
     c.stair(-6, 13, z, "east", "top", DOS)                         # the brace under the jib

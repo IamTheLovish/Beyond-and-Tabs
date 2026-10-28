@@ -26,6 +26,7 @@ import com.solegendary.reignofnether.items.RandomItemDropRule;
 import com.solegendary.reignofnether.match.MatchOutcome;
 import com.solegendary.reignofnether.match.MatchRoster;
 import com.solegendary.reignofnether.match.MatchState;
+import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.match.Spectators;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
@@ -239,6 +240,9 @@ public class PlayerServerEvents {
         if (FogChunkSnapshot.shouldRecapture) {
             FogChunkSnapshot.captureFogChunks(serverLevel);
         }
+        // the fog snapshot is captured over several ticks with a per-tick time budget (FogChunkSnapshot)
+        if (evt.phase == TickEvent.Phase.END)
+            FogChunkSnapshot.tick();
 
         // the match clock, its graph samples and its sync run in match.MatchServerEvents; the roster walks below are
         // snapshots (MatchRoster), so the beacon victory may beat sides from inside them
@@ -487,6 +491,12 @@ public class PlayerServerEvents {
                 serverPlayer = player;
 
         if (serverPlayer == null) {
+            return;
+        }
+        // NONE is the sandbox "faction" (a sandbox player may act for every owner) and NEUTRAL has no army: only the
+        // host or an op starts as either, whatever route the start came by (design/multiplayer.md)
+        if (!PacketAuth.mayPlayAs(serverPlayer, faction)) {
+            ReignOfNether.LOGGER.warn("[Player] startRTS refused: {} may not start as {}", serverPlayer.getName().getString(), faction.key);
             return;
         }
         leavePeaceful(serverPlayer.serverLevel());
@@ -1045,24 +1055,29 @@ public class PlayerServerEvents {
     public static void movePlayer(int playerId, double x, double y, double z) {
         ServerPlayer serverPlayer = getPlayerById(playerId);
         if (serverPlayer != null && (serverPlayer.isCreative() || serverPlayer.isSpectator())) {
-            boolean isOrtho = false;
-            for (ServerPlayer op : orthoviewPlayers)
-                if (op.getId() == playerId) { isOrtho = true; break; }
-            if (isOrtho) {
-                net.minecraft.world.level.border.WorldBorder border = serverPlayer.level().getWorldBorder();
-                double margin = 1.0D;
-                double minX = border.getMinX() + margin;
-                double maxX = border.getMaxX() - margin;
-                double minZ = border.getMinZ() + margin;
-                double maxZ = border.getMaxZ() - margin;
-                if (maxX > minX && maxZ > minZ) {
-                    x = net.minecraft.util.Mth.clamp(x, minX, maxX);
-                    z = net.minecraft.util.Mth.clamp(z, minZ, maxZ);
-                }
+            // the position is the client's word: NaN or infinity would break the player's position for good
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+                ReignOfNether.LOGGER.warn("[Player] {} sent a non-finite teleport [{}, {}, {}]: ignored", serverPlayer.getName().getString(), x, y, z);
+                return;
             }
+            // every sender, not only the ortho-view players, stays inside the world border and the build height range
+            net.minecraft.world.level.border.WorldBorder border = serverPlayer.level().getWorldBorder();
+            double margin = 1.0D;
+            double minX = border.getMinX() + margin;
+            double maxX = border.getMaxX() - margin;
+            double minZ = border.getMinZ() + margin;
+            double maxZ = border.getMaxZ() - margin;
+            if (maxX > minX && maxZ > minZ) {
+                x = net.minecraft.util.Mth.clamp(x, minX, maxX);
+                z = net.minecraft.util.Mth.clamp(z, minZ, maxZ);
+            }
+            y = net.minecraft.util.Mth.clamp(y, serverPlayer.level().getMinBuildHeight(), serverPlayer.level().getMaxBuildHeight() + MAX_CAMERA_ABOVE_BUILD_HEIGHT);
             serverPlayer.teleportTo(x, y, z);
         }
     }
+
+    /** How far above the build limit a camera body may be moved (the RTS camera hovers well above the terrain). */
+    private static final double MAX_CAMERA_ABOVE_BUILD_HEIGHT = 64.0D;
 
     public static void sendMessageToAllPlayers(String msg) {
         sendMessageToAllPlayers(msg, false);
@@ -1266,7 +1281,6 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
         com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
         com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
-        com.solegendary.reignofnether.ability.abilities.LeyLink.clearAll();
 
         for (LivingEntity entity : UnitServerEvents.getAllUnits())
             if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))
@@ -1288,6 +1302,8 @@ public class PlayerServerEvents {
         }
         if (!isSandboxOrScenario)
             BuildingServerEvents.getBuildings().removeIf(b -> b.getBuilding().shouldDestroyOnReset || hardReset);
+        if (!isSandboxOrScenario)
+            com.solegendary.reignofnether.building.Blueprints.clear();   // their workers are gone: no order outlives the match
 
         if (!isSandboxOrScenario)
             for (BuildingPlacement building : BuildingServerEvents.getBuildings())

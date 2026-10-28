@@ -159,6 +159,12 @@ NOTES.md                  older session log; README.md is out of date (this file
     tool allows it - never a hand-written polling loop (each check-in is a paid turn). It prints one line at the end
     (GREEN / RED with the failed tests / TIMEOUT) and reruns a run once when every failed test is in
     `tools/known_flakes.txt`. A failure that names no test is never rerun.
+- **Fast JUnit tests** (`bar/src/test/java`, JUnit 5, plan 008): pure rules in seconds, not the minutes of a GameTest.
+  They run inside job `bar`'s `./gradlew build` (no extra job or runner); the `JUnit summary` step posts the count as a
+  notice (`tools/junit_summary.py`). A rule that touches the world cannot load here - pull the arithmetic into a plain
+  class (`PopulationRules`, `EconomyMath`, `PlacementGrid`, `MergeGrid`...) and test that; do not mock the world. Table-
+  driven, written from the rule before the code; a real bug found by a test stays `@Disabled("BUG: ...")` in the PR for
+  the commander to decide - never bend the test.
 - **Writing GameTests** (`bar/.../gametest/`): every public rule gets one. Keep everything inside the test's own
   arena; big tests get their own batch; load far chunks with `GameTestChunks.hold` + progress-based waits (never
   `setChunkForced`/`getChunk` on ungenerated chunks). Units **autocast** by default: a test that counts energy,
@@ -214,6 +220,14 @@ All run on GitHub Actions, never on anyone's PC:
   first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
   new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
   dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
+- **bot-ladder.yml** (nightly 07:03 UTC + `workflow_dispatch`; Oct 22, lovish approved) - bot vs bot full matches, one per hosted
+  runner (a 40-match matrix = two waves of the ~20 runners), every Difficulty pair x faction pair
+  (`tools/ladder_matrix.py` reads `enum Difficulty` in BotPlayer, so a new tier is one enum value). The match is
+  `gametest/LadderGameTests` (batch `bot_ladder`, a no-op unless `BAT_LADDER_MATCH` is set, so the per-push shards are
+  unchanged); pace arithmetic in `LadderStats`. It logs `[Sim]`, `[Pace]` and `[Stuck]` lines, writes a JSON per match, and
+  `tools/ladder_report.py` makes the win-rate / pace table (job summary + artifact `bot-ladder-<date>.md`, built to append to
+  a Project doc). Dispatch inputs: `quick` (3 matches), `mode` nightly/full, `matches` (explicit list), `minutes`. Measurement
+  only - never change a unit or a bot in a ladder PR.
 - **pack-study.yml** (numbers only from a reference pack or vanilla's jar) and **face-census.yml** (our pack's
   coverage of the faction buildings, face by face, on Mojang's jar) - block pack calibration and coverage.
 - **concepts.yml** - Blender 4.2 on CI renders unit concept sheets from `design/models/*.json` (our own cube-model

@@ -62,7 +62,8 @@ import java.util.List;
  *     in the level, a death on either side, or the armies' centroids within 8 blocks (20 s cap, the log says which) -
  *     then one more second with the camera centred between the two armies; 10 follows two seconds later.</li>
  * <li>11_capitol_two_minutes: the capitol (BuildingClientEvents, isCapitol) at the default zoom once the match clock
- *     (counted from the 02 shot, labelled 0:30) passes 2:00.</li>
+ *     (counted from the 02 shot, labelled 0:30) passes 2:00. 11b_capitol_selected (Oct 22, slim HUD): the same
+ *     capitol selected, 30 ticks later - the building's icon block, health bar, Repeat toggle and production queue.</li>
  * <li>12_river_crossing (Oct 14, terrain_intelligence.md): a pad with a 4-wide, 1-deep water strip is laid with the
  *     op fill command 30 blocks west of the first fight, a dozen of the player's units are summoned on its west bank
  *     and eight enemies on its east bank, and the dozen is attack-moved across; photographed at contact and six
@@ -73,7 +74,7 @@ import java.util.List;
  *     re-mesh.</li>
  * <li>18_overlays (Oct 21, perf plan R2, EyesOverlaysScene; its own run, eyes.yml input `overlays`): 500 units and
  *     1,700 buildings, stills of the underlines and boxes at a mid zoom and at strategic zoom, and the frame and
- *     per-handler times at zoom 30 and 200 - the before / after of the overlay loops.</li>
+ *     per-handler times at zoom 30, 60 (crowd) and 200 - the before / after of the overlay loops and unit LOD.</li>
  * </ul>
  * Every scene has a tick budget and a "gave up" line; the staged steps are wrapped so an exception logs and moves on
  * instead of killing the run. Each scene logs one "[Eyes] scene: ..." line describing what is on screen.
@@ -313,8 +314,8 @@ public final class EyesDirector {
      * (01b-01d) - the camera is put over our slot first, since the server's own cut there (StartPhase.begin) landed
      * 12 s after the phase in the plain run and 01b-01d photographed the map's unlit centre; then the bot's pillar from
      * the ground in the Minecraft view, 20 blocks away (01f; bots are placed at once, so nothing has to end for it);
-     * then our start placed at our slot - its pillar, disc and capitol ghost (01e) - LAST, because placing ends the
-     * phase three seconds later (StartPhase.EARLY_END_TICKS). Placing at the slot is where the clock would have seated
+     * then our start placed at our slot - its pillar, disc and capitol ghost (01e) - LAST, because placing and pressing
+     * Ready (both sent together) ends the phase three seconds later (StartPhase.EARLY_END_TICKS). Placing at the slot is where the clock would have seated
      * us, so the later scenes see the same seating as before. The RTS view and HUD are then restored and {@code ticks}
      * reset, so 02 still reads "0:30" after the seating. Every still logs the banner's seconds and the markers' state.
      * Nothing here is a hard failure: a phase that never shows, or ends under the scene, is logged and the tour goes on.
@@ -403,6 +404,8 @@ public final class EyesDirector {
                         return;
                     }
                     com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.send(startX, startZ);
+                    // placing no longer starts the match (the Ready rule): Ready right behind it, in packet order
+                    com.solegendary.reignofnether.maps.StartPhaseServerboundPacket.sendReady(true);
                     boxesPlaced = true;
                     ReignOfNether.LOGGER.info("[Eyes] 01e: start placed at {}, {} with {} s left; the phase ends 3 s later", startX, startZ, left);
                 }
@@ -1732,6 +1735,10 @@ public final class EyesDirector {
             OrthoviewClientEvents.centreCameraOnPosInstant(new Vec3(capitolCentre.getX() + 0.5, capitolCentre.getY(), capitolCentre.getZ() + 0.5));
             return;
         }
+        if (capitolSelAt > 0) {
+            capitolSelected(mc);
+            return;
+        }
         // the match clock runs from the 02 shot (labelled 0:30); -1 if that shot never happened (then shoot at once)
         int matchTick = matchZeroTotalTick < 0 ? -1 : totalTicks - matchZeroTotalTick;
         boolean late = ticks > 20 * 90;   // budget: never wait more than 90 s for the clock
@@ -1743,6 +1750,31 @@ public final class EyesDirector {
                     capitolCentre.toShortString(), OrthoviewClientEvents.getZoom(), battleLine(mc));
             shot(mc, "11_capitol_two_minutes");
             groundCensus(mc, "2:00");
+            capitolSelAt = ticks + 2;   // 11b: the capitol selected - the building's HUD block, its queue and toggles
+        }
+    }
+
+    private static int capitolSelAt = -1, capitolSelShotAt = -1;
+
+    /** 11b: select our capitol and photograph the HUD's building block (icon + health bar + Repeat toggle + queue). */
+    private static void capitolSelected(Minecraft mc) {
+        if (ticks == capitolSelAt) {
+            String me = mc.player.getName().getString();
+            for (var b : new ArrayList<>(BuildingClientEvents.getBuildings())) {
+                if (b instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement p
+                        && p.isCapitol && me.equals(p.ownerName)) {
+                    UnitClientEvents.clearSelectedUnits();
+                    BuildingClientEvents.clearSelectedBuildings();
+                    BuildingClientEvents.addSelectedBuilding(b);
+                    break;
+                }
+            }
+            capitolSelShotAt = ticks + 30;   // settle, then photograph
+        } else if (ticks == capitolSelShotAt) {
+            shot(mc, "11b_capitol_selected");
+            BuildingClientEvents.clearSelectedBuildings();
+            capitolSelAt = -1;
+            capitolSelShotAt = -1;
             next();
         }
     }
