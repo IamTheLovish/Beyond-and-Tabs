@@ -261,3 +261,7 @@ design/vehicle_labs/briefs/brass_t1_checklist.md, "Part references").
   warm light under the eaves, a tall brass finial.
 - ref43_dark_castle_crag.png - a dark castle on a crag: clustered towers of different heights with steep spired caps,
   tall lit arched windows (light from openings, not lamps), dark stone with paler trim.
+- ref44_gothic_tower_front_layered.png - a monochrome gothic tower front (17:00; signed by its builder: study only,
+  never trace): relief density - a string course every 3-4 rows, pilasters in 3 stacked planes, arched niches and deep
+  window recesses, pinnacles on every pier top, all in ONE value range where texture (bricks, tiles, polished) does
+  the variety.

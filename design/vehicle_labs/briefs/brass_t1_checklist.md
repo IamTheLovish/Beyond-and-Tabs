@@ -79,6 +79,10 @@ Each teaches a part, at T1 size; none replaces ref18's layout or palette.
   lighter fields. Use it for R2's bay heads and R6's vault; the "chandelier on a chain" for the one warm door light.
 - **ref42 pagoda** -> R4 / R5 eaves: every roof tier overhangs on a bracket course (upside-down stairs under the
   drip), warm light under the eaves, a tall brass finial (R5 ridge ends, R8 point).
+- **ref44 layered gothic front** (signed: study, never trace) -> the relief DENSITY to aim for at T1 size: a string
+  course every 3-4 rows on the tower and wing faces, piers in 2-3 stacked planes, niches with arched heads; variety
+  inside one value range comes from texture (bricks vs tiles vs polished), which is how a role keeps 3+ blocks
+  without speckle.
 - **ref43 castle** -> R7 / R8 and R9: light from openings - a lit tall slot or two in the tower and the shed - not
   scattered lamps; paler trim on dark stone.
 
