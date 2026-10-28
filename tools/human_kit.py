@@ -27,10 +27,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from gen_models import Bone, slab, grip_hand, octagon_axle, lathe, _unit, _add, _mul  # noqa: E402
+from gen_models import Bone, grip_hand, octagon_axle, _unit  # noqa: E402
 from gen_levy import ngon, oct_pole, plate, shrink  # noqa: E402
 import gen_levy  # noqa: E402
-from gen_medic import cone_plates, put_plate, on_plate  # noqa: E402
+from gen_medic import cone_plates, put_plate  # noqa: E402
 
 # ------------------------------------------------------------------ the figure (gen_levy's canon) ------------------
 HIP, KNEE = gen_levy.HIP, gen_levy.KNEE                       # 15.2, 8.2

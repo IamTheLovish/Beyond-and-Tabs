@@ -25,8 +25,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import human_kit as hk  # noqa: E402
 from human_kit import HIP, KNEE, SHOULDER_X, SHOULDER_Y, UPPER, FORE, HEAD_Y, TRUNK, BELT  # noqa: E402
-from gen_models import Model, OUT, slab, lathe, foot, octagon_axle, octagon_pole, grip_hand, split_above, _unit  # noqa: E402
-from gen_levy import ngon, oct_pole  # noqa: E402
+from gen_models import Model, OUT, slab, lathe, foot, octagon_axle, octagon_pole, split_above, _unit  # noqa: E402
+from gen_levy import ngon  # noqa: E402
 from gen_halberdier import shell  # noqa: E402
 from gen_paladin import octagon, loft  # noqa: E402
 
@@ -253,7 +253,7 @@ def dawn_paladin():
     # the shield on the left forearm: the arm bent, the forearm across the front of the body, the board before it
     m.bones[la].rotation = [22, 0, 10]
     m.bones[lf].rotation = [62, 0, 0]
-    g = hk.free_hand(m, lf, 1, lw, colour="plate", accent="plate_dark", cuff="plate_dark", curl=0.95)
+    hk.free_hand(m, lf, 1, lw, colour="plate", accent="plate_dark", cuff="plate_dark", curl=0.95)
     fore_mid = m.fk(lf, (SHOULDER_X, SHOULDER_Y - UPPER - FORE * 0.55, 0.0))
     sc = (fore_mid[0] + 1.0, fore_mid[1] - 0.4, fore_mid[2] - 0.9)
     sb = heater(m, lf, sc)
