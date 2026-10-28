@@ -52,11 +52,17 @@ public class DragonFlightGameTests {
         final float[] last = { Float.NaN };
         final double[] lastPos = { dragon.getX(), dragon.getZ() };
         final double[] worst = { 0, 0, -1e9 };   // the largest yaw step, the largest slip, the farthest past the point (x)
+        final String[] jump = { "" };
         for (int t = 4; t <= 240; t++) {
+            final int tick = t;
             helper.runAfterDelay(t, () -> {
                 float yaw = dragon.getYRot();
-                if (!Float.isNaN(last[0]))
-                    worst[0] = Math.max(worst[0], Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0])));
+                if (!Float.isNaN(last[0])) {
+                    double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
+                    if (step > worst[0])
+                        jump[0] = String.format(" at tick %d, %.1f -> %.1f", tick, last[0], yaw);
+                    worst[0] = Math.max(worst[0], step);
+                }
                 last[0] = yaw;
                 double mx = dragon.getX() - lastPos[0], mz = dragon.getZ() - lastPos[1];
                 if (mx * mx + mz * mz > 0.05 * 0.05) {
@@ -75,8 +81,8 @@ public class DragonFlightGameTests {
                 double speed = dragon.getDeltaMovement().horizontalDistance();
                 List<String> problems = new ArrayList<>();
                 if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
-                    problems.add(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)", worst[0],
-                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW));
+                    problems.add(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s", worst[0],
+                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0]));
                 if (worst[1] > 25)
                     problems.add(String.format("it slid %.0f deg off its nose", worst[1]));
                 if (worst[2] > 3)
@@ -89,6 +95,55 @@ public class DragonFlightGameTests {
                     helper.succeed();
                 else
                     helper.fail(String.join("; ", problems));
+            } finally {
+                dragon.discard();
+            }
+        });
+    }
+
+    /**
+     * A dragon ordered somewhere in the tick it spawns (a building's rally point) flies off from the yaw it was spawned
+     * with: r13's flight kept its own copy of the heading, taken in the constructor (yaw 0) and only caught up on a
+     * hover tick, so the first flying tick swung the nose 90 deg in one tick (stress 40686491320, 1 in 8).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void bone_dragon_ordered_at_spawn_keeps_its_yaw(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 290);
+        final int gy = pad.getY();
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.BONE_DRAGON_UNIT.get().create(level);
+        if (dragon == null) {
+            helper.fail("could not create the Bone Dragon");
+            return;
+        }
+        dragon.moveTo(pad.getX() + 3.5, gy + 8, pad.getZ() + 8.5, 90, 0);    // facing -x
+        dragon.setOwnerName("gametest_dragon_flight");
+        // ordered before it ever ticks, to a point straight ahead
+        dragon.getMoveGoal().setMoveTarget(new BlockPos(pad.getX() - 20, gy + 8, pad.getZ() + 8));
+        level.addFreshEntity(dragon);
+        final float[] last = { 90f };
+        final double[] worst = { 0 };
+        final String[] jump = { "" };
+        for (int t = 1; t <= 40; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                float yaw = dragon.getYRot();
+                double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
+                if (step > worst[0])
+                    jump[0] = String.format(" at tick %d, %.1f -> %.1f", tick, last[0], yaw);
+                worst[0] = Math.max(worst[0], step);
+                last[0] = yaw;
+            });
+        }
+        helper.runAfterDelay(42, () -> {
+            try {
+                if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
+                    helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s", worst[0],
+                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0]));
+                else if (Math.abs(net.minecraft.util.Mth.wrapDegrees(dragon.getYRot() - 90f)) > 10)
+                    helper.fail(String.format("flying straight ahead it ended facing %.1f, not 90", dragon.getYRot()));
+                else
+                    helper.succeed();
             } finally {
                 dragon.discard();
             }
