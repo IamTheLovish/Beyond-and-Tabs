@@ -405,12 +405,13 @@ public class PossessionGroundGameTests {
             } else if (tick < over) {
                 climbed[0] |= unit.onClimbable();
                 cy = y0[0] + 0.2 * (tick - climbFrom + 1);      // vanilla's climb: 0.2 a tick, up to 2.2 above the foot
-            } else if (tick == over) {
-                cx = x0[0] + 0.3;                               // feet over the top: step out toward the wall
-                cy = y0[0] + 2.15;
             } else if (tick < check) {
-                cx = x0[0] + 0.6;                               // and onto it
-                cy = y0[0] + 2.0;
+                // feet over the top: step out toward the wall and onto it at walking speed - a vindicator walks 0.26 a
+                // tick (PossessionServer.walkPerTick at speed 0.25), so 0.2 a tick; round 3's 0.3 a tick was more than
+                // an honest client can claim and the server rightly clipped both steps (CI 40650756519 attempt 2)
+                int k = tick - over;
+                cx = x0[0] + Math.min(0.6, 0.2 * (k + 1));
+                cy = y0[0] + (k == 0 ? 2.15 : k == 1 ? 2.05 : 2.0);
             } else {
                 var p = PossessionServer.of(uuid);
                 if (p == null) {
