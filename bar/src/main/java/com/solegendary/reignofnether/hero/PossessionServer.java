@@ -96,6 +96,8 @@ public final class PossessionServer {
     static final int HOVER_TICKS = 40;
     /** A server shove (Possession.serverShove) above this is one the server really gave; it decays by 0.91 a tick. */
     static final float SHOVE_SEEN = 0.05f;
+    /** How far (blocks) a keyless claim may put a knocked-back field artillery off the line its shove carries it on. */
+    static final double KNOCK_SLACK = 0.3;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
     static final int HITS_PER_TICK = 6;
 
@@ -150,6 +152,9 @@ public final class PossessionServer {
         float serverShove;
         /** The last drive ran the claims branch (which zeroes the velocity): only then is this tick's velocity a shove. */
         boolean claimsLastTick;
+        /** The line the newest server shove carries the unit along: where it was, the shove's direction (unit length)
+         * and the most it can carry it (see applyClaim's knockback cap). */
+        double shoveFromX, shoveFromZ, shoveDirX, shoveDirZ, shoveReach;
         int correctionCooldown;
         /** The server is moving the unit itself (an ability's AI window, a leap arc): claims are ignored. */
         boolean serverMoves;
@@ -523,6 +528,31 @@ public final class PossessionServer {
             dz *= maxH / h;
             impossible = true;
         }
+        // knocked back with the keys at rest, field artillery keeps its set-up (SetUp: claimedWithoutShove is false),
+        // so the claims may carry it only where the shove does - along the shove's line from where it was hit, no
+        // further than the shove reaches, and at most KNOCK_SLACK off it - not reposition it (lovish's option A, the
+        // #222 follow-up). An honest client's prediction rides exactly that line; walking with the keys costs the
+        // set-up anyway, so it is not capped
+        if (!flyer && p.forward == 0 && p.strafe == 0 && p.serverShove > SHOVE_SEEN
+                && com.solegendary.reignofnether.unit.SetUp.needsSetUp(mob)) {
+            double tx = mob.getX() + dx, tz = mob.getZ() + dz;
+            double along = Mth.clamp((tx - p.shoveFromX) * p.shoveDirX + (tz - p.shoveFromZ) * p.shoveDirZ, 0,
+                p.shoveReach);
+            double lx = p.shoveFromX + along * p.shoveDirX, lz = p.shoveFromZ + along * p.shoveDirZ;
+            double off = Math.sqrt((tx - lx) * (tx - lx) + (tz - lz) * (tz - lz));
+            if (off > KNOCK_SLACK) {
+                tx = lx + (tx - lx) * KNOCK_SLACK / off;
+                tz = lz + (tz - lz) * KNOCK_SLACK / off;
+                dx = tx - mob.getX();
+                dz = tz - mob.getZ();
+                h = Math.sqrt(dx * dx + dz * dz);
+                if (h > maxH) {
+                    dx *= maxH / h;
+                    dz *= maxH / h;
+                }
+                impossible = true;
+            }
+        }
         double maxUp, maxDown;
         if (flyer) {
             maxUp = maxDown = perTick * ticks;
@@ -801,6 +831,15 @@ public final class PossessionServer {
             p.claimsLastTick = true;
             p.shoveAllowance = Math.max(p.shoveAllowance * 0.91f, shove > 0.2f ? shove : 0);
             p.serverShove = Math.max(p.serverShove * 0.91f, shove > SHOVE_SEEN ? shove : 0);
+            if (shove > SHOVE_SEEN) {
+                // a new shove: it carries the unit from here along its direction, never further than its speed could
+                // through the air (decaying at air drag, 0.91 a tick: shove / 0.09 in all)
+                p.shoveFromX = mob.getX();
+                p.shoveFromZ = mob.getZ();
+                p.shoveDirX = dm.x / shove;
+                p.shoveDirZ = dm.z / shove;
+                p.shoveReach = shove / (1 - 0.91);
+            }
             if (shove > 0.2f && !p.headless) {
                 // vanilla only sends the shove if this unit happened to tick before the attacker; send it ourselves
                 // so the possessor's prediction always carries it (setting a velocity twice is harmless)
