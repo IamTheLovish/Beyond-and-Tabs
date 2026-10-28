@@ -14,7 +14,9 @@ import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.KeyedSwing;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.packets.UnitAnimationClientboundPacket;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
@@ -51,7 +53,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
+public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit, KeyedSwing {
     public static final Abilities ABILITIES = new Abilities();
 
     //region
@@ -352,5 +354,15 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
     @Override
     public int getDamageTooltipColour() {
         return getSharpnessLevel() > 0 ? TooltipColours.GREEN : TooltipColours.WHITE;
+    }
+
+    /**
+     * The Halberdier body (HalberdierRenderer is bound to the vindicator_unit type alone) thrusts over its keyed clip's
+     * 18 ticks instead of vanilla's 6: HalberdierUnitModel samples THRUST by attackTime, so the swing's length is the
+     * clip's speed. Subclasses (Cutlass Raider, Reef Guard...) draw other bodies with no keyed attack and keep vanilla's.
+     */
+    @Override
+    public int keyedSwingTicks() {
+        return getClass() == VindicatorUnit.class ? HalberdierAnim.THRUST_TICKS : 0;
     }
 }
