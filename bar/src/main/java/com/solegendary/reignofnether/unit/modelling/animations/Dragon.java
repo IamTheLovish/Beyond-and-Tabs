@@ -20,7 +20,8 @@ import java.util.function.Function;
  * design/anims/bone_dragon_flight.md. tools/dragon_poses.py is this file's Python twin (the same formulas and numbers,
  * drawn offline) - keep the two in step.
  *
- * Bones (DSL names; a body carries the ones it has, the rest are skipped):
+ * Bones (DSL names; a body carries the ones it has, the rest are skipped - the Bone Dragon has no crest or ears, so its
+ * idle ear flick is a no-op):
  * body (root) > ribs; body > neck_1..neck_N > head > jaw, horn_left/right, crest, ear_left/right;
  * body > spine_1 > spine_2 > tail_1..tail_M; body > front_{left,right}_upper > _lower > _foot;
  * spine_2 > hind_{left,right}_upper > _lower > _foot;
