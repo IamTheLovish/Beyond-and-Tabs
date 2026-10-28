@@ -355,18 +355,24 @@ public final class MapGenerator {
                     edits.add(valueEdit(r, GenEconomy.STANDARD));
                 if (o == rich && fill && q.value == GenEconomy.STANDARD && exposureOf(ctx, r, o) < 0.3)
                     edits.add(valueEdit(r, GenEconomy.LEAN));
-                if (o == rich && (q.kind == GenEconomy.PKind.FILL || q.kind == GenEconomy.PKind.NUDGE)) {
+                if (o == rich && (q.kind == GenEconomy.PKind.FILL || q.kind == GenEconomy.PKind.NUDGE)
+                        && !strands(rows, i)) {
                     final int at = i;
                     edits.add(new Runnable[] { () -> r[2] = 0, () -> r[2] = live.get(at).value });
                 }
             }
-            // a new patch on the poorest seat's free ground: ten of the candidates it owns most surely, drawn at random
-            // (lovish Oct 27: metal "not connected to where the townhall spawns" - nearest-first would rebuild a home set)
+            // a new patch on the poorest seat's free ground, joining one of its groups (lovish Oct 27: clumps, "have
+            // stranded ones alone" - a stray patch dropped anywhere would undo the layout): ten such spots, at random
+            int[] group = groupsOf(rows);
+            int[] size = new int[rows.size()];
+            for (int gi : group)
+                size[gi]++;
             List<double[]> pool = new ArrayList<>();
             for (GenEconomy.Cand c : e.cands) {
-                if (c.used || c.near < 18 || c.owner != poor && c.d[poor] > 1.15 * c.d[c.owner])
+                if (c.used || c.owner != poor && c.d[poor] > 1.15 * c.d[c.owner])
                     continue;
-                pool.add(new double[] { c.d[poor], c.x, c.z });
+                if (joins(rows, live, group, size, c.x, c.z) >= 0)
+                    pool.add(new double[] { c.d[poor], c.x, c.z });
             }
             for (int i = pool.size() - 1; i > 0; i--) {
                 int k = dice.nextInt(i + 1);
@@ -378,7 +384,7 @@ public final class MapGenerator {
                 if (addRows.size() >= 10)
                     break;
                 int cx = (int) c[1], cz = (int) c[2];
-                if (!padClear(m, cx, cz) || clearOf(m, cx, cz) < 18 || inJungle(m, cx, cz) || nearPatch(rows, cx, cz) < 18)
+                if (!padClear(m, cx, cz) || clearOf(m, cx, cz) < 18 || inJungle(m, cx, cz))
                     continue;
                 double[] r = ctx.patch(cx, cz, GenEconomy.STANDARD, owner(ctx, cx, cz));
                 if ((int) r[3] != poor)
@@ -477,12 +483,78 @@ public final class MapGenerator {
         return r.spread() + 0.5 * cv;
     }
 
-    private static double nearPatch(List<double[]> rows, int x, int z) {
-        double best = Double.MAX_VALUE;
-        for (double[] r : rows)
-            if (r[2] > 0)
-                best = Math.min(best, Geo.len(r[0] - x, r[1] - z));
-        return best;
+    /** Each live row's group: rows closer than GenEconomy.LINK, linked (a removed row, value 0, is its own). */
+    static int[] groupsOf(List<double[]> rows) {
+        int k = rows.size();
+        int[] g = new int[k];
+        java.util.Arrays.fill(g, -1);
+        for (int i = 0; i < k; i++) {
+            if (g[i] >= 0)
+                continue;
+            g[i] = i;
+            if (rows.get(i)[2] <= 0)
+                continue;
+            List<Integer> todo = new ArrayList<>(List.of(i));
+            while (!todo.isEmpty()) {
+                double[] a = rows.get(todo.remove(todo.size() - 1));
+                for (int j = 0; j < k; j++) {
+                    double[] b = rows.get(j);
+                    if (g[j] < 0 && b[2] > 0 && Geo.len(a[0] - b[0], a[1] - b[1]) < GenEconomy.LINK) {
+                        g[j] = i;
+                        todo.add(j);
+                    }
+                }
+            }
+        }
+        return g;
+    }
+
+    /**
+     * The group a new patch at (x, z) would join, or -1: it must stand MEMBER_MIN-MEMBER_MAX from a spread group of at
+     * most three (so the clump stays 2-4) and within 24 of all of it, link to no other, and keep GROUP_SEP from every
+     * other group.
+     */
+    static int joins(List<double[]> rows, List<GenEconomy.Patch> live, int[] group, int[] size, int x, int z) {
+        int joined = -1;
+        double nearest = Double.MAX_VALUE;
+        for (int i = 0; i < rows.size(); i++) {
+            double[] r = rows.get(i);
+            if (r[2] <= 0)
+                continue;
+            double d = Geo.len(r[0] - x, r[1] - z);
+            if (d < GenEconomy.GROUP_SEP) {
+                GenEconomy.PKind kind = live.get(i).kind;
+                if (d < GenEconomy.MEMBER_MIN || (joined >= 0 && joined != group[i])
+                        || kind != GenEconomy.PKind.FILL && kind != GenEconomy.PKind.NUDGE)
+                    return -1;
+                joined = group[i];
+                nearest = Math.min(nearest, d);
+            }
+        }
+        if (joined < 0 || size[joined] > 3 || nearest > GenEconomy.MEMBER_MAX)
+            return -1;
+        for (int i = 0; i < rows.size(); i++)   // and close to all of it: the clump stays compact
+            if (group[i] == joined && Geo.len(rows.get(i)[0] - x, rows.get(i)[1] - z) > 2 * GenEconomy.MEMBER_MAX - 4)
+                return -1;
+        return joined;
+    }
+
+    /** Would removing row i leave a neighbour alone (a pair's partner, a path's two halves)? */
+    static boolean strands(List<double[]> rows, int i) {
+        double[] a = rows.get(i);
+        for (int j = 0; j < rows.size(); j++) {
+            double[] b = rows.get(j);
+            if (j == i || b[2] <= 0 || Geo.len(a[0] - b[0], a[1] - b[1]) >= GenEconomy.LINK)
+                continue;
+            boolean other = false;
+            for (int k = 0; k < rows.size() && !other; k++) {
+                double[] c = rows.get(k);
+                other = k != i && k != j && c[2] > 0 && Geo.len(b[0] - c[0], b[1] - c[1]) < GenEconomy.LINK;
+            }
+            if (!other)
+                return true;
+        }
+        return false;
     }
 
     private static Runnable[] valueEdit(double[] row, float to) {

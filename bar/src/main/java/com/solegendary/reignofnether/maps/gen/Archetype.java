@@ -6,8 +6,8 @@ package com.solegendary.reignofnether.maps.gen;
  * PROSPECTOR / WARDEN, OPEN / BASTION, MOATED / BANKS (a river splits the map), PLAIN for the symmetric control.
  *
  * @param letter     one letter for render sheets and logs
- * @param holeTarget the open-ground fill places patches until no reachable ground in the seat's territory is farther
- *                   than this from a patch (smaller = denser metal)
+ * @param holeTarget the seat's metal density (smaller = denser): its patch allowance scales with PLAIN's target over
+ *                   this (GenEconomy.capOf), and the spread's groups keep GROUP_GAP times it apart on its ground
  * @param ownSites   capture sites placed on the seat's own forward ground (safe for it, reachable by everyone)
  * @param baseTier   the tier the base pad stands on (0 = lowland, 1 = a plateau +4 above it)
  * @param plateau    the pad is ringed by a cliff, reached only by its ramps (defensible, few approaches)

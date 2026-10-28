@@ -8,11 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The generated map's economy and objectives, on its finished ground: the centre, contested capture sites on the front
- * seams, a warden's own sites, the modifiers' sites, the reserved jungle with its (data-only) camps, the random metal
- * spread (lovish Oct 27: "each map should have mexes spread randomly and not be connected to where the townhall
- * spawns" - no home ring, no natural pair), patch values by exposure, the rich vein, and last the forest, which keeps
- * clear of all of it. Whether the dice left every start fairly placed is the balancer's to judge and the reach rule's
+ * The generated map's economy and objectives, on its finished ground: every seat's standard home clumps, the centre,
+ * contested capture sites on the front seams, a warden's own sites, the modifiers' sites, the reserved jungle with its
+ * (data-only) camps, the metal laid out as Beyond All Reason lays it (lovish Oct 27: "design them like beyond all reason
+ * and put clumps in strategic positions all around the map including the back rear sides ... clump them, have stranded
+ * ones alone. Maybe a path or cluster."), patch values by exposure, the rich vein, and last the forest, which keeps
+ * clear of all of it. Nothing stands on a start's build ground (lovish Oct 27 21:37: mexes "not connected to where the
+ * townhall spawns"); whether the rest leaves every start fairly placed is the balancer's to judge and the reach rule's
  * to refuse (MapGenerator.metalReach).
  * <p>
  * Every patch obeys the M1 rules (design/maps.md section 2): a level 7x7 pad of land, no deep water within 7, reachable by
@@ -20,7 +22,8 @@ import java.util.List;
  * map every placement is made on side A's half and copied through the centre, so the economy is exactly symmetric.
  */
 final class GenEconomy {
-    enum PKind { CENTRE, FILL, VEIN, NUDGE }
+    /** HOME: a seat's standard home clumps; FILL: the spread's groups; NUDGE: the balancer's additions to them. */
+    enum PKind { HOME, CENTRE, FILL, VEIN, NUDGE }
 
     static final class Patch {
         int x, z;
@@ -44,6 +47,8 @@ final class GenEconomy {
         final double edge;
         double near = Double.MAX_VALUE;
         boolean used;
+        /** Already weighed as a group's anchor. */
+        boolean tried;
         /** Clear of every site, vent, camp and jungle (worked out once those are placed, before the fill). */
         boolean open = true;
 
@@ -56,7 +61,7 @@ final class GenEconomy {
         }
     }
 
-    static final int FILL_MIN = 20, SITE_GAP = 40, START_CLEAR = 46, ROAD_CLEAR = 9;
+    static final int SITE_GAP = 40, START_CLEAR = 46, ROAD_CLEAR = 9;
     static final float RICH = MapLayout.STANDARD * 1.5f, CENTRE = 2.0f, STANDARD = 1.0f, LEAN = MapLayout.LEAN;
 
     final GenPlan p;
@@ -85,6 +90,7 @@ final class GenEconomy {
 
     void build() {
         candidates();
+        homeClumps();
         centre();
         seamSites();
         frontSites();
@@ -93,7 +99,7 @@ final class GenEconomy {
         jungle();
         for (Cand c : cands)
             c.open = clearOfSites(c.x, c.z) >= 18 && clearOfVents(c.x, c.z) >= 12 && !inJungle(c.x, c.z, 4);
-        fill();
+        spread();
         values();
         if (p.modifiers.contains(Modifier.RICH_VEIN))
             vein();
@@ -701,58 +707,424 @@ final class GenEconomy {
         return d;
     }
 
-    private boolean fillFree(Cand c) {
-        return !c.used && c.open && c.near >= FILL_MIN && (!p.mirror || Geo.len(c.x, c.z) * 2 >= FILL_MIN);
+    // ------------------------------------------------------------------------------------------------- metal groups
+    //
+    // lovish Oct 27, after the random spread: "design them like beyond all reason and put clumps in strategic positions
+    // all around the map including the back rear sides ... clump them, have stranded ones alone. Maybe a path or
+    // cluster." So the metal comes in groups, as on BAR's maps: a standard set of clumps behind and beside every base,
+    // contested clumps on the front seams, and over the rest of the map clumps of 2-4, paths of 3-5 along the roads and
+    // a few stranded lone patches, each group well apart from the next.
+
+    /** Two patches closer than this read as one group (MetalClumpsTest.LINK). */
+    static final double LINK = 16;
+    /** The step between a group's patches: the old natural pair stood 9-13 apart, a pad is 7 wide. */
+    static final double CLUMP_STEP = 11;
+    /** Every patch keeps this far from every patch of another group, so the groups read apart. */
+    static final double GROUP_SEP = 26;
+
+    /** Bearing of a home flank pair from the seat's outward direction, degrees: its rear sides. */
+    static final double HOME_FLANK = 72;
+    /** Distances from the start a home clump may take (its near edge stays past START_CLEAR, the build ground)... */
+    static final int[] HOME_DIST = { 52, 48, 56, 60, 64, 68, 72 };
+    /** ...and turns from its bearing, degrees, tried in this order: the first that suits every seat is everyone's. */
+    static final int[] HOME_TURN = { 0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50 };
+
+    /** One way to lay a home clump: its members' {radial, tangential} offsets, its bearing (radians), turn and distance. */
+    record HomeOption(double[][] shape, double bearing, int turn, int dist) {
+        /** Where it puts seat s's members on this plan. */
+        int[][] spots(GenPlan p, int s) {
+            double sx = p.slotX(s), sz = p.slotZ(s);
+            double b = StrictMath.atan2(sz, sx) + bearing + Math.toRadians(turn);
+            double rx = StrictMath.cos(b), rz = StrictMath.sin(b);
+            int[][] out = new int[shape.length][];
+            for (int k = 0; k < shape.length; k++) {
+                double r = dist + shape[k][0], tg = shape[k][1];
+                out[k] = new int[] { (int) Math.round(sx + rx * r - rz * tg), (int) Math.round(sz + rz * r + rx * tg) };
+            }
+            return out;
+        }
     }
 
+    /**
+     * The home template's clumps, each with its options in the order tried: a triangle behind the base (or a row of three
+     * along its back where the wall is near: a seat on a square arena's side has 62 blocks behind it), and a pair on each
+     * rear flank.
+     */
+    static List<List<HomeOption>> homeOptions() {
+        double h = CLUMP_STEP / 2, up = CLUMP_STEP * Math.sqrt(3) / 2;
+        double[][] triangle = { { 0, -h }, { 0, h }, { up, 0 } }, row = { { 0, -CLUMP_STEP }, { 0, 0 }, { 0, CLUMP_STEP } };
+        double[][] pair = { { 0, -h }, { 0, h } };
+        List<List<HomeOption>> out = new ArrayList<>();
+        out.add(options(List.<double[][]>of(triangle, row), 0));
+        out.add(options(List.<double[][]>of(pair), Math.toRadians(HOME_FLANK)));
+        out.add(options(List.<double[][]>of(pair), -Math.toRadians(HOME_FLANK)));
+        return out;
+    }
+
+    private static List<HomeOption> options(List<double[][]> shapes, double bearing) {
+        List<HomeOption> out = new ArrayList<>();
+        for (int turn : HOME_TURN)   // the turn outermost: a row straight behind beats a triangle turned into a flank's way
+            for (double[][] shape : shapes)
+                for (int dist : HOME_DIST)
+                    out.add(new HomeOption(shape, bearing, turn, dist));
+        return out;
+    }
+
+    /**
+     * The home clumps the plan expects (null where no option fits): per clump the first option whose spots, for every
+     * seat, are clear by the plan alone - inside the wall's clearance, off the roads (14) and the river (22), nearest
+     * their own start and past its build ground, apart from the clumps already chosen. GenTerrain levels a small pad
+     * under each of them, so the ground takes the same set for every seat; GenEconomy then checks it on the real ground.
+     */
+    static HomeOption[] plannedHome(GenPlan p, List<List<HomeOption>> all) {
+        HomeOption[] out = new HomeOption[all.size()];
+        List<int[]> taken = new ArrayList<>();
+        for (int c = 0; c < all.size(); c++)
+            for (HomeOption o : all.get(c)) {
+                List<int[]> spots = new ArrayList<>();
+                boolean ok = true;
+                for (int s = 0; s < p.n && ok; s++)
+                    for (int[] xz : o.spots(p, s)) {
+                        ok &= planOk(p, xz[0], xz[1], s, taken);
+                        spots.add(xz);
+                    }
+                if (ok) {
+                    out[c] = o;
+                    taken.addAll(spots);
+                    break;
+                }
+            }
+        return out;
+    }
+
+    private static boolean planOk(GenPlan p, int x, int z, int s, List<int[]> taken) {
+        if (p.edge(x, z) < 12)
+            return false;
+        for (int o = 0; o < p.n; o++) {
+            double d = Geo.len(x - p.slotX(o), z - p.slotZ(o));
+            if (d < START_CLEAR || o != s && d < Geo.len(x - p.slotX(s), z - p.slotZ(s)))
+                return false;
+        }
+        for (int[] q : taken)
+            if (Geo.len(q[0] - x, q[1] - z) < GROUP_SEP)
+                return false;
+        for (GenPlan.Road r : p.roads)
+            if (near(r.xs, r.zs, x, z, 14))
+                return false;
+        return p.river == null || !near(p.river[0], p.river[1], x, z, 22);
+    }
+
+    private static boolean near(double[] xs, double[] zs, int x, int z, double r) {
+        for (int i = 0; i < xs.length; i++)
+            if (Geo.len(xs[i] - x, zs[i] - z) < r)
+                return true;
+        return false;
+    }
+
+    /**
+     * Every seat's home clumps, one template in the seat's own frame (a bearing from straight out behind the base, a
+     * distance from the start): a triangle behind the base and a pair on each rear flank ("clumps ... including the back
+     * rear sides"; on BAR every start has the same metal near it). The planned option goes first (its ground was levelled
+     * for it), then the rest in order; the first that every seat's ground takes is used for all of them, so the set is the
+     * same for every seat (lovish Oct 22: "starting mexes around the base can be standardized") - and it lies past the
+     * build ground (START_CLEAR), not round the town hall (Oct 27 21:37). A clump that fits no seat-wide spot is left
+     * out for every seat. Not scaled by the lobby's richness or extra metal.
+     */
+    private void homeClumps() {
+        List<List<HomeOption>> all = homeOptions();
+        HomeOption[] planned = plannedHome(p, all);
+        for (int c = 0; c < all.size(); c++) {
+            List<HomeOption> order = new ArrayList<>(all.get(c));
+            if (planned[c] != null) {
+                order.remove(planned[c]);
+                order.add(0, planned[c]);
+            }
+            for (HomeOption o : order)
+                if (homeClump(o))
+                    break;
+        }
+    }
+
+    private boolean homeClump(HomeOption o) {
+        List<int[]> at = new ArrayList<>();
+        for (int s = 0; s < seatsToPlace(); s++)
+            for (int[] xz : o.spots(p, s)) {
+                if (!homeSpot(xz[0], xz[1], s))
+                    return false;
+                at.add(xz);
+            }
+        for (int[] xz : at)
+            addPatch(xz[0], xz[1], STANDARD, PKind.HOME);
+        return true;
+    }
+
+    /** A home patch's spot: what a candidate must be (see candidates()), owned by seat s, apart from other groups. */
+    private boolean homeSpot(int x, int z, int s) {
+        if (!m.inGrid(x, z) || m.distanceToEdge(x, z) < metal.rimInset() || t.roadDist[m.idx(x, z)] < ROAD_CLEAR
+                || nearestStart(x, z) < START_CLEAR || !level(x, z, MapLayout.PAD) || deepNear(x, z, 7))
+            return false;
+        if (metal.reserved().reserves(x, z) || (p.mirror && metal.reserved().reserves(-x, -z)))
+            return false;
+        return argmin(d(x, z)) == s && clearOfPatches(x, z) >= GROUP_SEP;
+    }
+
+    /** A group's patches stand at least this far apart (a pad is 7 wide; a little air between extractors). */
+    static final double MEMBER_MIN = 9.5, MEMBER_MAX = 14;
+    /** Odds a group is a stranded lone patch (higher on exposed ground: the front line, the rim)... */
+    static final double LONE_ODDS = 0.15, LONE_EXPOSED = 0.35;
+    /** ...while lone patches stay under this share of the spread ("have stranded ones alone", a minority). */
+    static final double LONE_MAX = 0.18;
+    /** Odds a group is a path along a road (natural routes), or anywhere else. */
+    static final double PATH_ROAD = 0.45, PATH_ELSE = 0.08;
+    /** Clump sizes 2, 3, 4: their weights. */
+    static final double[] CLUMP_SIZES = { 0.2, 0.45, 0.35 };
+    /** Group anchors keep this share of the territory's hole target apart (a group holds about three patches). */
+    static final double GROUP_GAP = 1.25;
     /**
      * What the lobby's extra-metal option does to the spread: a share of the allowance per level step from NORMAL, which
      * is the map as before (MetalOptions.Extra.count: NONE 0.75x, LOW 0.875x, NORMAL 1x, HIGH 1.25x the patches).
      */
     static final double EXTRA_SHARE = 0.25;
-    /** A seat may draw up to this many times its allowance before the dice skip its ground; the balancer evens the rest. */
-    static final double SEAT_SLACK = 1.3;
-    /** The spacing a patch keeps from the others, as a share of its territory's hole target (the old greedy fill's gap). */
-    static final double SPACING = 0.75;
 
     /**
-     * The random spread (lovish Oct 27: "each map should have mexes spread randomly and not be connected to where the
-     * townhall spawns"): every free candidate in a seeded random order, each taken when no patch stands within its
-     * spacing (SPACING of its territory's hole target, 20% tighter in the rim band, the lobby's richness scaling it,
-     * never under FILL_MIN), until the map holds its count: the seats' allowances ({@link #capOf}) plus the extra-metal
-     * share. A second pass at FILL_MIN takes up any count the spacing left short. Where a start lands among the patches
-     * is left to the dice; the balancer and the reach rule judge it.
+     * The groups over the open map, until every seat holds its allowance ({@link #capOf} with the extra-metal share; its
+     * home clumps and plaza patch count in it): first a contested clump of three on every front seam (and two more on the
+     * front line in team games: BAR's contested high-value clusters toward the middle), then, seat by seat
+     * (always the one furthest short of its allowance, so the dice never pile one seat's ground and starve another's), the
+     * free spot of its ground farthest from all metal (a seeded jitter, a nudge toward roads and the front line) becomes a
+     * group: a stranded lone patch (likelier on exposed ground: the front line, the rim), a path along the road, or a
+     * clump of 2-4. Farthest-first puts the groups all round the map, the rim and the ground behind the bases included.
+     * A second pass with the anchors only GROUP_SEP apart takes up any count left short.
      */
-    private void fill() {
+    private void spread() {
         double rich = Math.sqrt(Math.max(0.3, metal.richness()));
         double extra = 1 + EXTRA_SHARE * (metal.extra().count - 1);
-        int[] cap = new int[p.n];
-        int want = 0;
-        for (int s = 0; s < p.n; s++) {
-            double allowance = capOf(s, rich) * extra;
-            cap[s] = (int) Math.ceil(allowance * SEAT_SLACK);
-            want += (int) Math.round(allowance);
+        int seats = seatsToPlace();
+        int[] want = new int[p.n];
+        for (int s = 0; s < p.n; s++)
+            want[s] = (int) Math.round(capOf(s, rich) * extra);
+        int before = placed();
+        List<int[]> pairs = frontPairs();
+        for (int k = 0; k < (p.mirror ? pairs.size() / 2 : pairs.size()); k++) {
+            Cand a = seamAnchor(pairs.get(k));
+            if (a != null)
+                commit(clump(a, 3));
         }
-        List<Cand> order = new ArrayList<>(cands);
-        for (int i = order.size() - 1; i > 0; i--) {
-            int k = rng.nextInt(i + 1);
-            Cand c = order.get(i);
-            order.set(i, order.get(k));
-            order.set(k, c);
+        for (int k = 0; k < (p.n <= 2 ? 0 : p.mirror ? 1 : 2); k++) {   // team games: the front line is long (frontSites)
+            Cand a = frontAnchor();
+            if (a != null)
+                commit(clump(a, 3));
         }
-        for (boolean tight : new boolean[] { false, true })
-            for (Cand c : order) {
-                if (placed() >= want)
-                    return;
-                if (count[c.owner] >= cap[c.owner] || !fillFree(c))
+        int lone = 0, minLone = Math.max(1, seats / 2);
+        for (boolean tight : new boolean[] { false, true }) {
+            boolean[] dry = new boolean[p.n];
+            while (true) {
+                int s = -1;
+                for (int k = 0; k < seats; k++)
+                    if (!dry[k] && count[k] < want[k] && (s < 0 || (double) count[k] / want[k] < (double) count[s] / want[s]))
+                        s = k;
+                if (s < 0)
+                    break;
+                Cand a = anchor(s, tight, rich);
+                if (a == null) {
+                    dry[s] = true;
                     continue;
-                double spacing = tight ? FILL_MIN
-                    : Math.max(FILL_MIN, SPACING * p.seat[c.owner].holeTarget / rich * (c.edge <= 36 ? 0.8 : 1.0));
-                if (c.near < spacing)
+                }
+                a.tried = true;
+                int room = want[s] - count[s];
+                double x = exposure(a.d, s);
+                boolean exposed = (x >= 0.4 && x <= 0.6) || a.edge <= 36;
+                boolean owed = lone < minLone && exposed;   // "have stranded ones alone": a few on every map
+                boolean loneOk = owed || lone + 1 <= LONE_MAX * (placed() - before + 1);
+                List<Cand> g;
+                if (loneOk && (owed || rng.chance(exposed ? LONE_EXPOSED : LONE_ODDS)))
+                    g = List.of(a);
+                else if (room >= 3 && rng.chance(t.roadDist[m.idx(a.x, a.z)] <= 20 ? PATH_ROAD : PATH_ELSE))
+                    g = path(a, Math.min(room, 3 + rng.nextInt(3)));
+                else
+                    g = clump(a, Math.max(2, Math.min(room, 2 + rng.weighted(CLUMP_SIZES))));
+                if (g.size() < 2 && !loneOk)
                     continue;
-                c.used = true;
-                addPatch(c.x, c.z, STANDARD, PKind.FILL);
+                commit(g);
+                if (g.size() == 1)
+                    lone++;
             }
+        }
+    }
+
+    /** A group's spot: free, open, clear of every other group by GROUP_SEP (and, on a mirror map, of its own copy). */
+    private boolean groupFree(Cand c) {
+        return !c.used && c.open && c.near >= GROUP_SEP && (!p.mirror || Geo.len(c.x, c.z) * 2 >= GROUP_SEP);
+    }
+
+    /** Seat s's next group anchor: the free spot of its ground farthest from all metal, in its own hole target. */
+    private Cand anchor(int s, boolean tight, double rich) {
+        double gap0 = tight ? GROUP_SEP : Math.max(GROUP_SEP, GROUP_GAP * p.seat[s].holeTarget / rich);
+        Cand best = null;
+        double bestS = 0;
+        for (Cand c : cands) {
+            if (c.owner != s || c.tried || !groupFree(c))
+                continue;
+            double gap = Math.max(GROUP_SEP, gap0 * (c.edge <= 36 && !tight ? 0.8 : 1.0));
+            if (c.near < gap)
+                continue;
+            double x = exposure(c.d, s);
+            // roads and the front line draw a little; ground past the reach rule's walk a little less (MapGenerator
+            // .metalReach refuses a draw whose start has under 0.6 of the best start's metal within that walk)
+            double bias = (t.roadDist[m.idx(c.x, c.z)] <= 20 ? 1.1 : 1.0) * (x >= 0.4 && x <= 0.6 ? 1.1 : 1.0)
+                * (c.d[s] <= MapGenerator.REACH_WALK ? 1.0 : FAR_BIAS);
+            double sc = Math.min(c.near, 400) / gap * bias * (1 + 0.35 * rng.nextDouble());
+            if (sc > bestS) {
+                bestS = sc;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    static final double FAR_BIAS = 0.8;
+
+    /** A contested clump on the front line (exposure 0.44-0.56), the free spot there farthest from all metal. */
+    private Cand frontAnchor() {
+        Cand best = null;
+        double bestS = 0;
+        for (Cand c : cands) {
+            if (!groupFree(c) || c.near < 2 * GROUP_SEP)
+                continue;
+            double x = exposure(c.d, c.owner);
+            if (x < 0.44 || x > 0.56)
+                continue;
+            double sc = Math.min(c.near, 400) * (1 + 0.2 * rng.nextDouble());
+            if (sc > bestS) {
+                bestS = sc;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    /** A front seam's contested clump: balanced between the pair (walks within 10-22%), about 45% of the way across. */
+    private Cand seamAnchor(int[] pr) {
+        int i = pr[0], j = pr[1];
+        double between = g.blocks(dist[i], p.slotX(j), p.slotZ(j));
+        if (Double.isInfinite(between))
+            between = Geo.len(p.slotX(i) - p.slotX(j), p.slotZ(i) - p.slotZ(j)) * 1.2;
+        double want = 0.45 * between;
+        for (double tol : new double[] { 0.1, 0.16, 0.22 }) {
+            Cand best = null;
+            double bestF = Double.MAX_VALUE;
+            for (Cand c : cands) {
+                if (pr[2] != 0 && Math.signum(c.x * p.axisZ - c.z * p.axisX) != pr[2])
+                    continue;
+                double di = c.d[i], dj = c.d[j], bal = Math.abs(di - dj) / (di + dj);
+                if (bal > tol || !groupFree(c) || c.near < 2 * GROUP_SEP || (c.owner != i && c.owner != j))
+                    continue;
+                double f = 4 * bal + Math.abs((di + dj) / 2 - want) / want;
+                if (f < bestF) {
+                    bestF = f;
+                    best = c;
+                }
+            }
+            if (best != null)
+                return best;
+        }
+        return null;
+    }
+
+    /** May c join a group being planned: free, MEMBER_MIN from its members and GROUP_SEP from their mirror copies. */
+    private boolean memberOk(Cand c, List<Cand> group) {
+        if (!groupFree(c))
+            return false;
+        for (Cand o : group) {
+            if (o == c || Geo.len(o.x - c.x, o.z - c.z) < MEMBER_MIN)
+                return false;
+            if (p.mirror && Geo.len(o.x + c.x, o.z + c.z) < GROUP_SEP)
+                return false;
+        }
+        return true;
+    }
+
+    /** A clump: the anchor and up to size - 1 patches MEMBER_MIN-MEMBER_MAX round it, picked at random. */
+    private List<Cand> clump(Cand a, int size) {
+        List<Cand> group = new ArrayList<>();
+        group.add(a);
+        List<Cand> ring = new ArrayList<>();
+        for (Cand c : cands) {
+            double dd = Geo.len(c.x - a.x, c.z - a.z);
+            if (dd >= MEMBER_MIN && dd <= MEMBER_MAX)
+                ring.add(c);
+        }
+        while (group.size() < size && !ring.isEmpty()) {
+            Cand c = ring.remove(rng.nextInt(ring.size()));
+            if (memberOk(c, group))
+                group.add(c);
+        }
+        return group;
+    }
+
+    /**
+     * A path: patches CLUMP_STEP + 2 apart in a line through the anchor - along the nearest road when one is within 24
+     * ("metal along natural routes"), else across the seat's front - grown at both ends in turn.
+     */
+    private List<Cand> path(Cand a, int size) {
+        double[] u = roadTangent(a.x, a.z, 24);
+        if (u == null) {
+            double ox = a.x - p.slotX(a.owner), oz = a.z - p.slotZ(a.owner), ol = Math.max(1e-6, Geo.len(ox, oz));
+            u = new double[] { -oz / ol, ox / ol };
+        }
+        List<Cand> group = new ArrayList<>();
+        group.add(a);
+        Cand[] ends = { a, a };
+        boolean[] stuck = new boolean[2];
+        for (int k = 0; group.size() < size && !(stuck[0] && stuck[1]); k++) {
+            int e = k % 2;
+            if (stuck[e])
+                continue;
+            double sign = e == 0 ? 1 : -1, step = CLUMP_STEP + 2;
+            double tx = ends[e].x + sign * u[0] * step, tz = ends[e].z + sign * u[1] * step;
+            Cand pick = null;
+            double bd = 4.5;
+            for (Cand c : cands) {
+                double dd = Geo.len(c.x - tx, c.z - tz);
+                if (dd < bd && memberOk(c, group)) {
+                    bd = dd;
+                    pick = c;
+                }
+            }
+            if (pick == null)
+                stuck[e] = true;
+            else {
+                group.add(pick);
+                ends[e] = pick;
+            }
+        }
+        return group;
+    }
+
+    /** The unit direction of the road nearest (x, z), if one passes within {@code within} blocks. */
+    private double[] roadTangent(int x, int z, double within) {
+        double bd = within;
+        double[] out = null;
+        for (GenPlan.Road r : p.roads)
+            for (int i = 0; i < r.xs.length; i++) {
+                double dd = Geo.len(r.xs[i] - x, r.zs[i] - z);
+                if (dd < bd) {
+                    int lo = Math.max(0, i - 4), hi = Math.min(r.xs.length - 1, i + 4);
+                    double tx = r.xs[hi] - r.xs[lo], tz = r.zs[hi] - r.zs[lo], tl = Geo.len(tx, tz);
+                    if (tl > 1e-6) {
+                        bd = dd;
+                        out = new double[] { tx / tl, tz / tl };
+                    }
+                }
+            }
+        return out;
+    }
+
+    private void commit(List<Cand> group) {
+        for (Cand c : group) {
+            c.used = true;
+            addPatch(c.x, c.z, STANDARD, PKind.FILL);
+        }
     }
 
     private int placed() {
@@ -763,7 +1135,7 @@ final class GenEconomy {
     }
 
     /**
-     * Patches a seat may own in all (its centre patch included): the pre-made maps' counts (20-24 a seat in a 1v1,
+     * Patches a seat may own in all (its home clumps and centre patch included): the pre-made maps' counts (20-24 a seat in a 1v1,
      * 10-23 in a 4v4, design/maps.md / maps spec 1.2) scaled by the archetype's density and the lobby's richness.
      * In team games the archetype's density counts at its square root: at full strength a 4v4 Prospector side drew 19
      * patches a seat to the Warden side's 12, a 22% seat spread before balancing (Phase 1), and the balancer then had
@@ -804,8 +1176,10 @@ final class GenEconomy {
     }
 
     /**
-     * Rich vein: five rich patches 13 apart across one seat's forward ground (exposure 0.28-0.42), crowding fill
-     * patches within 10 of it removed. The side is rolled (the balancer evens out who got it).
+     * Rich vein: five rich patches 13 apart across one seat's forward ground (exposure 0.28-0.42) - a path of its own.
+     * A spread group within GROUP_SEP of it goes whole (a part left behind would be a stray, not a "stranded" lone patch
+     * by choice); a spot that would touch a home clump or the plaza's metal is skipped. The side is rolled (the balancer
+     * evens out who got it).
      */
     private void vein() {
         int s = rng.nextInt(seatsToPlace());
@@ -829,27 +1203,41 @@ final class GenEconomy {
             for (Cand c : cands) {
                 double dd = Geo.len(c.x - tx, c.z - tz);
                 if (dd < bd && c.owner == s && !inJungle(c.x, c.z, 4) && clearOfSites(c.x, c.z) >= 18
-                        && clearOfVents(c.x, c.z) >= 12) {
+                        && clearOfVents(c.x, c.z) >= 12 && (!p.mirror || Geo.len(c.x, c.z) * 2 >= GROUP_SEP)) {
                     bd = dd;
                     pick = c;
                 }
             }
             if (pick == null)
                 continue;
+            boolean blocked = false;
             for (Patch q : patches)
-                if (q.alive && q.kind == PKind.FILL && Geo.len(q.x - pick.x, q.z - pick.z) < 10) {
-                    q.alive = false;
-                    if (q.twin >= 0)
-                        patches.get(q.twin).alive = false;
-                }
-            boolean crowded = false;
-            for (Patch q : patches)
-                if (q.alive && Geo.len(q.x - pick.x, q.z - pick.z) < 9)
-                    crowded = true;
-            if (crowded)
+                if (q.alive && q.kind != PKind.FILL && q.kind != PKind.VEIN && Geo.len(q.x - pick.x, q.z - pick.z) < GROUP_SEP)
+                    blocked = true;
+            if (blocked)
                 continue;
+            for (Patch q : patches)
+                if (q.alive && q.kind == PKind.FILL && Geo.len(q.x - pick.x, q.z - pick.z) < GROUP_SEP)
+                    killGroup(q);
             pick.used = true;
             addPatch(pick.x, pick.z, RICH, PKind.VEIN);
+        }
+    }
+
+    /** Removes q's whole group of spread patches (and their mirror twins). */
+    private void killGroup(Patch q) {
+        List<Patch> todo = new ArrayList<>();
+        todo.add(q);
+        while (!todo.isEmpty()) {
+            Patch a = todo.remove(todo.size() - 1);
+            if (!a.alive)
+                continue;
+            a.alive = false;
+            if (a.twin >= 0)
+                patches.get(a.twin).alive = false;
+            for (Patch b : patches)
+                if (b.alive && b.kind == PKind.FILL && Geo.len(a.x - b.x, a.z - b.z) < LINK)
+                    todo.add(b);
         }
     }
 
@@ -935,16 +1323,24 @@ final class GenEconomy {
 
     // ------------------------------------------------------------------------------------------------- output
 
-    /** The patches as MapLayout records, owned by the seat nearest by walk (the final, tree-aware distances). */
+    /**
+     * The patches as MapLayout records, owned by the seat nearest by walk (the final, tree-aware distances). The home
+     * clumps were placed first, so they lead the list: GenMap.homeCount of them (MapLayout.homeEnd()).
+     */
     void write() {
         m.mexes.clear();
+        m.homeCount = 0;
         for (Patch q : patches)
-            if (q.alive)
+            if (q.alive) {
                 m.mexes.add(new MapLayout.Mex(q.x, q.z, q.value, Math.max(0, argmin(d(q.x, q.z)))));
+                if (q.kind == PKind.HOME)
+                    m.homeCount++;
+            }
     }
 
     void writeWith(WalkGrid fin, int[][] fd) {
         m.mexes.clear();
+        m.homeCount = 0;
         for (Patch q : patches) {
             if (!q.alive)
                 continue;
@@ -955,6 +1351,8 @@ final class GenEconomy {
             if (o < 0)
                 continue;
             m.mexes.add(new MapLayout.Mex(q.x, q.z, q.value, o));
+            if (q.kind == PKind.HOME)
+                m.homeCount++;
         }
     }
 }

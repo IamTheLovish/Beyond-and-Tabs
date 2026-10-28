@@ -70,6 +70,8 @@ public final class GenMap {
     public GenOptions.Contrast contrast;
     /** Which reroll attempt and which swap option the balancer kept (0 = the seed's first draw). */
     public int attempt, swapOption;
+    /** The first homeCount mexes are the seats' standard home clumps (GenEconomy.homeClumps; MapLayout.homeEnd()). */
+    public int homeCount;
     /** Steps the nudge balancer took. */
     public int nudges;
     /** The seats' fairness scores as finally balanced. */

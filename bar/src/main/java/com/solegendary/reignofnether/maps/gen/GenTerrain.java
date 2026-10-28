@@ -63,6 +63,7 @@ final class GenTerrain {
         river();
         rim();
         flats();
+        homePads();
         for (GenPlan.Road r : p.roads)
             road(r);
         flats();
@@ -449,6 +450,45 @@ final class GenTerrain {
                     hf[i] = ph;
                     water[i] = 0;
                 }
+    }
+
+    /** Dry and level within this of a home patch (its 7x7 pad and the deep-water margin)... */
+    static final double HOME_PAD = 5, HOME_DRY = 10;
+    /** ...blending back into the land by this. */
+    static final double HOME_BLEND = 12;
+
+    /**
+     * A small level pad at the seat's own height under each of its planned home patches (GenEconomy.plannedHome), blended
+     * into the land round it, before the roads are laid. The home clumps are one template for every seat (lovish Oct 22:
+     * "starting mexes around the base can be standardized"), 48-82 blocks out, where the base pad has already blended into
+     * the wild ground; without this a slope or a bank under one seat's spot would cost every seat that clump. On a
+     * bastion the pad is a lobe of its plateau, reached from the plateau.
+     */
+    private void homePads() {
+        GenEconomy.HomeOption[] planned = GenEconomy.plannedHome(p, GenEconomy.homeOptions());
+        for (int s = 0; s < p.n; s++) {
+            double hh = TIER_H[p.baseTier[s] + 1];
+            for (GenEconomy.HomeOption o : planned) {
+                if (o == null)
+                    continue;
+                for (int[] c : o.spots(p, s)) {
+                    int r = (int) Math.ceil(HOME_BLEND);
+                    for (int x = c[0] - r; x <= c[0] + r; x++)
+                        for (int z = c[1] - r; z <= c[1] + r; z++) {
+                            if (!m.inGrid(x, z) || !m.inside(x, z))
+                                continue;
+                            double d = Geo.len(x - c[0], z - c[1]);
+                            if (d >= HOME_BLEND)
+                                continue;
+                            int i = idx(x, z);
+                            double base = water[i] != 0 ? 0 : hf[i];
+                            if (d < HOME_DRY)
+                                water[i] = 0;
+                            hf[i] = d <= HOME_PAD ? hh : lerp(hh, base, Fairness.smooth(HOME_PAD, HOME_BLEND, d));
+                        }
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------------------------------------- roads

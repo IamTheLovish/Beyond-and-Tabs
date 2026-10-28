@@ -187,9 +187,10 @@ public final class MapLayout {
         l.pillars.addAll(g.pillars);
         l.spreadFrom = l.mexes.size();   // no template-and-spread split: every patch was placed by the generator
         // nor a HomeMetal set or an extra-metal pass (main's MapLayout.homeSet / spread): the generator lays its own
-        // home and open-ground metal, so homeEnd() is 0 and extraFrom() is the end of the list
+        // home clumps (first in the list, the same for every seat) and open-ground metal, so extraFrom() is the end of
+        // the list and homeEnd() the generator's home count
         l.extraFrom = l.mexes.size();
-        l.homeEnd = 0;
+        l.homeEnd = g.homeCount;
         return l;
     }
 
