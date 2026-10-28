@@ -63,7 +63,19 @@ public class PerfPushGameTests {
         // together reads differently from one that never parted
         double[] best = { 0 };
         long[] bestAt = { 0 };
+        // the most pile units that had a target at once, and what it was: a pile that is idle by itself must not have
+        // any; one that does was pulled by a neighbour test's units (the suspected cause of the Oct 27 flake)
+        int[] mostTargeting = { 0 };
+        String[] targetSeen = { "-" };
         helper.succeedWhen(() -> {
+            int targeting = 0;
+            for (VindicatorUnit v : pile)
+                if (v.getTarget() != null) {
+                    if (targeting++ == 0 && mostTargeting[0] == 0)
+                        targetSeen[0] = v.getTarget().getType().toShortString()
+                            + (v.getTarget() instanceof Unit u ? "(" + u.getOwnerName() + ")" : "") + " at tick " + helper.getTick();
+                }
+            mostTargeting[0] = Math.max(mostTargeting[0], targeting);
             double closest = Double.MAX_VALUE;
             int ci = 0, cj = 1, close = 0;
             for (int i = 0; i < pile.size(); i++)
@@ -86,9 +98,12 @@ public class PerfPushGameTests {
                 // the Oct 27 flake said only "0.29 apart": the message now carries what would explain a pair that
                 // stays together (an order or target pulling them, off the ground, at rest, a foreign unit in the arena)
                 throw new GameTestAssertException(String.format(java.util.Locale.ROOT,
-                    "two units are still %.2f blocks apart (a body is 0.6 wide); %d pairs under %.2f at tick %d, best %.2f at tick %d; %s | %s | %s",
-                    closest, close, MIN_GAP, helper.getTick(), best[0], bestAt[0],
+                    "two units are still %.2f blocks apart (a body is 0.6 wide); %d pairs under %.2f at tick %d, best %.2f at tick %d; at most %d had a target at once (first: %s); %s | %s | %s",
+                    closest, close, MIN_GAP, helper.getTick(), best[0], bestAt[0], mostTargeting[0], targetSeen[0],
                     describe(pile.get(ci), ci), describe(pile.get(cj), cj), surroundings(helper, pile)));
+            // the margin to the timeout on a pass, read by flake-stress runs (tools/ci_gametests.sh: [Push spread])
+            ReignOfNether.LOGGER.info("[PushSpread] {} units spread to {} in {} of 400 ticks; at most {} had a target at once (first: {})",
+                UNITS, String.format(java.util.Locale.ROOT, "%.2f", closest), helper.getTick(), mostTargeting[0], targetSeen[0]);
             pile.forEach(VindicatorUnit::discard);
         });
     }
