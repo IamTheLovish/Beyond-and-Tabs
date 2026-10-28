@@ -73,6 +73,13 @@ public class ExtractorFootprintGameTests {
                     helper.fail("no patches were stamped in " + FORM_TICKS + " ticks");
                     return;
                 }
+                // run alone (flake-stress) nothing holds the battlefield, so its chunks may have unloaded by now and
+                // every patch would read "not_loaded": bring each footprint's chunks back (the save keeps the terrain)
+                for (BlockPos c : patches)
+                    for (int dx = -6; dx <= 6; dx += 12)
+                        for (int dz = -6; dz <= 6; dz += 12)
+                            GameTestChunks.loadNowOrFail(level,
+                                (c.getX() + dx) >> 4, (c.getZ() + dz) >> 4);
                 String problem = check(level, patches, startPositions);
                 if (problem == null)
                     helper.succeed();
@@ -132,12 +139,29 @@ public class ExtractorFootprintGameTests {
                     if (!o.equals(c))
                         neighbour = Math.min(neighbour, Math.max(Math.abs(o.getX() - c.getX()), Math.abs(o.getZ() - c.getZ())));
                 bad.add(c.toShortString() + " (" + nearest + " from a base, nearest patch " + neighbour + ", pad "
-                    + (MetalPatches.padDry(level, c.getX(), c.getZ(), c.getY()) ? "dry" : "WET") + ", player " + (playerOk ? "ok" : "refused")
+                    + (MetalPatches.padDry(level, c.getX(), c.getZ(), c.getY()) ? "dry" : "WET " + wetCells(level, c)) + ", player " + (playerOk ? "ok" : "refused")
                     + "): " + errors);
             }
         }
         if (bad.isEmpty())
             return null;
         return bad.size() + " of " + patches.size() + " patches refuse an extractor: " + String.join(" | ", bad);
+    }
+
+    /** The pad's wet cells as (dx,dz,dy=0|1 source|flowing amount, block below), so a refusal says how the water got there. */
+    private static String wetCells(ServerLevel level, BlockPos c) {
+        List<String> cells = new ArrayList<>();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int dx = -MetalPatches.PAD_HALF; dx <= MetalPatches.PAD_HALF; dx++)
+            for (int dz = -MetalPatches.PAD_HALF; dz <= MetalPatches.PAD_HALF; dz++)
+                for (int dy = 0; dy <= 1; dy++) {
+                    var fluid = level.getFluidState(p.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz));
+                    if (fluid.isEmpty())
+                        continue;
+                    String below = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(level.getBlockState(p.move(0, -1, 0)).getBlock()).getPath();
+                    cells.add(dx + "," + dz + "," + dy + (fluid.isSource() ? " src" : " flow" + fluid.getAmount()) + "/" + below);
+                }
+        return cells.toString();
     }
 }
