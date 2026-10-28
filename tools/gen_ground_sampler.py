@@ -65,7 +65,8 @@ def height_at(x, z, layered):
     d_hollow = math.hypot(x - 44, z - 44)
     # broad and low: a 1-block step every ~6 blocks reads as a slope from the RTS camera, not a platform
     h = BASE + 2.4 * max(0.0, 1 - d_rise / 17.0) ** 1.2 - 1.6 * max(0.0, 1 - d_hollow / 9.0) ** 1.2
-    return int(round(h + 0.4 * (vnoise(x, z, 5.0, 31) - 0.5)))
+    # r2 (critic r31: "a clean staircase"): a dithered rounding - each terrace edge breaks every few blocks
+    return int(math.floor(h + 0.9 * (vnoise(x, z, 4.0, 31) - 0.5) + 0.5 * hash01(x, z, 30) + 0.25))
 
 
 def build(layered):
@@ -113,8 +114,8 @@ def build(layered):
                 elif shaded and hash01(x, z, 43) < 0.25:
                     s.set(x, h + 1, z, "mossy_cobblestone_slab" if hash01(x, z, 44) < 0.5 else "cobblestone_slab",
                           type="bottom", waterlogged="false")
-            elif d in (2, 3) and r < (0.30 if d == 2 else 0.12):
-                s.set(x, h, z, "coarse_dirt")
+            elif d in (2, 3) and r < (0.60 if d == 2 else 0.25):        # r2: 60% / 25% (was 30 / 12)
+                s.set(x, h, z, "coarse_dirt" if r < (0.40 if d == 2 else 0.18) else "rooted_dirt")
                 no_plants.add((x, z))
         # the entrance apron and the worn path to the edge
         cx, cz = ox + bx // 2, oz + bz // 2
@@ -128,12 +129,19 @@ def build(layered):
                 break
             d, _, _ = dist_to_foot(px, pz)
             wob = int(round(2.5 * math.sin(i / 6.0))) if d > 4 else 0
-            width = 1 if d <= 4 else 1
-            for w in range(-width, width + 1):
+            # r2 (critic r31: "a sticker, 3-4 wide, 30% brighter, hard edges"): the apron keeps 3 wide by the door,
+            # then a 1-wide worn core with feathered sides - coarse dirt and rooted dirt, dirt path only now and then
+            width = 1 if d <= 4 else 0
+            for w in range(-width - 1, width + 2):
+                edge = abs(w) > width
                 qx = px + (w if step[0] == 0 else 0) + (wob if step[0] == 0 else 0)
                 qz = pz + (w if step[1] == 0 else 0) + (wob if step[1] == 0 else 0)
                 if (qx, qz) in ground and (qx, qz) not in foot:
-                    s.set(qx, ground[(qx, qz)], qz, "dirt_path" if hash01(qx, qz, 45) < 0.75 else "coarse_dirt")
+                    rr = hash01(qx, qz, 45)
+                    if edge and rr > 0.5:
+                        continue
+                    blk = "dirt_path" if rr < 0.25 else "coarse_dirt" if rr < 0.8 else "rooted_dirt"
+                    s.set(qx, ground[(qx, qz)], qz, blk)
                     no_plants.add((qx, qz))
         # 2. the ground's layers
         for (x, z), h in ground.items():
@@ -168,7 +176,8 @@ def build(layered):
                 p = (tx + half + dx, tz + half + dz)
                 if p in ground and math.hypot(dx, dz) <= 3.2:
                     no_plants.add(p)
-                    if layered and hash01(p[0], p[1], 51) < 0.8:        # podzol under the crown
+                    rag = 0.95 * (1 - math.hypot(dx, dz) / 3.6) + 0.35 * (vnoise(p[0], p[1], 2.0, 55) - 0.5)
+                    if layered and hash01(p[0], p[1], 51) < rag:        # podzol under the crown, ragged (r2)
                         s.set(p[0], ground[p], p[1], "podzol", snowy="false")
     for (x, z), h in ground.items():
         if (x, z) in no_plants or (x, z, h + 1) in s.blocks or h + 2 >= HGT:

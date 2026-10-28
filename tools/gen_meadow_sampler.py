@@ -60,13 +60,16 @@ def main():
     s = Structure(N, HGT, N)
     s.fill(0, 0, 0, N - 1, 0, N - 1, "grass_block", snowy="false")
     path = set()
-    for i in range(N):                                          # a worn path across the corner, 2-3 wide, wandering
+    for i in range(N):                                          # a worn path across the corner, wandering
         cx = int(round(i * 0.75 + 6 + 3 * math.sin(i / 7.0)))
-        for w in range(-1, 2 + (i % 5 == 0)):
+        for w in range(-1, 2):                                     # r31: a 1-wide core, feathered sides
             x, z = cx + w, i
+            rr = hash01(x, z, 9)
+            if w != 0 and rr > 0.5:
+                continue
             if 0 <= x < N:
                 path.add((x, z))
-                s.set(x, 0, z, "dirt_path" if hash01(x, z, 9) > 0.25 else "coarse_dirt")
+                s.set(x, 0, z, "dirt_path" if rr < 0.25 else "coarse_dirt" if rr < 0.8 else "rooted_dirt")
     occupied = set(path)
     rnd = random.Random(28)
     pieces = [(gen_trees.oak(3), 31, 8), (gen_trees.oak(11, old=True), 6, 28), (gen_trees.birch(5), 36, 33),
