@@ -89,8 +89,9 @@ public class LobbyColorsGameTests {
         helper.runAfterDelay(20, () -> {
             // dry ground for both bases, far out from the other batches' arenas
             BlockPos centre = null;
-            for (int k = 0; k < 6 && centre == null; k++) {
-                int cx = origin.getX() - 1500, cz = origin.getZ() + 1500 + 500 * k;
+            // three columns of six: siteOk now reads real ground (it loads the chunk), so an ocean can wet a whole column
+            for (int k = 0; k < 18 && centre == null; k++) {
+                int cx = origin.getX() - 1500 - 500 * (k / 6), cz = origin.getZ() + 1500 + 500 * (k % 6);
                 BlockPos c = new BlockPos(cx, MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
                 for (var p : MultiplayerLobby.startPositions(level, c, 2, 1, 0))
