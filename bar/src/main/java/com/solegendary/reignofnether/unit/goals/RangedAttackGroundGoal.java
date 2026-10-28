@@ -105,7 +105,8 @@ public class RangedAttackGroundGoal<T extends Mob> extends Goal {
             }
             if (distToTarget <= attackRange) { // start drawing bowstring
                 if (bowAttackGoal != null) {
-                    if (bowAttackGoal.getAttackCooldown() <= 0) {
+                    // artillery set-up (unit/SetUp): hold the shot, and the cooldown, until it has stood still
+                    if (bowAttackGoal.getAttackCooldown() <= 0 && com.solegendary.reignofnether.unit.SetUp.isSetUp(this.mob)) {
                         if (mob instanceof RangedAttackerUnit rangedAttackerUnit)
                             rangedAttackerUnit.performUnitRangedAttack(tx, ty, tz, 20);
                         bowAttackGoal.setToMaxAttackCooldown();
