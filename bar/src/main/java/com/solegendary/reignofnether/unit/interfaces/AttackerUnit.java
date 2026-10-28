@@ -485,7 +485,9 @@ public interface AttackerUnit {
                 }
                 Relationship rs = UnitServerEvents.getUnitToEntityRelationship(unit, lastDSEntity);
 
-                if (!isMeleeAttackedByFlyingOrGarrisoned &&
+                // artillery cannot hit a flyer: no retaliation on it, so a blocked move is not stopped for a target
+                // it would refuse (it stood with no order and no target and died, issue #35 on #222)
+                if (!isMeleeAttackedByFlyingOrGarrisoned && !refusesTarget(attackerUnit, lastDSEntity) &&
                     lastDSEntity instanceof LivingEntity &&
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {
