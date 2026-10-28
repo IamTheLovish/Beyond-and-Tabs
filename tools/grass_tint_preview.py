@@ -9,7 +9,7 @@ down to the RTS pixel size and turned a random quarter per block, as tools/gen_b
     python tools/grass_tint_preview.py out.png      # flat | tinted, 96 x 96 blocks at 12 px per block
 
 Prints the patch-scale luma std (the std of 16 x 16-block means / mean luma): how much a field varies at the scale
-the RTS camera reads. A flat field is ~0.000; the Oct 22 version of GrassTint 0.018; Oct 28 ~0.045.
+the RTS camera reads. A flat field is ~0.000; the Oct 22 version of GrassTint 0.018; Oct 28 round 3 ~0.046 (and at the 4-block scale ~0.04).
 """
 import argparse
 import os
@@ -68,17 +68,26 @@ def _octaves(x, z, seed, cells, weights):
 
 def apply(rgb, x, z, salt, k):
     """GrassTint.apply on arrays of block coordinates; returns float rgb (before rounding)."""
-    shape = lambda f: np.tanh(k["CONTRAST"] * f) / np.tanh(k["CONTRAST"])
-    v = 1 + k["VALUE"] * shape(_octaves(x, z, salt * 8, k["CELLS"], k["WEIGHTS"]))
-    dry = shape(_octaves(x + 7919, z - 4583, (salt + 101) * 8, k["CELLS"], k["WEIGHTS"]))
-    clump = _octaves(x - 3001, z + 1777, (salt + 202) * 8, k["CLUMP_CELLS"], k["CLUMP_WEIGHTS"])
-    gate = np.clip((-dry - k["GATE_AT"]) / 0.5, 0, 1)
-    m = np.clip((clump - k["CLUMP_AT"]) / k["CLUMP_SOFT"], 0, 1)
-    m = m * m * (3 - 2 * m) * gate
-    v = v * (1 - k["CLUMP_DARK"] * m)
-    d = k["DRY"] * (dry - k["CLUMP_HUE"] * m)
-    r, g, b = (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF
-    return np.clip(np.stack([r * v * (1 + d), g * v * (1 + k["DRY_GREEN"] * d), b * v * (1 - 1.4 * d)], -1), 0, 255)
+    def shape(f, c):
+        return np.tanh(c * f) / np.tanh(c)
+
+    def smooth(t):
+        return t * t * (3 - 2 * t)
+    f = shape(_octaves(x, z, salt * 8, k["CELLS"], k["WEIGHTS"]), k["CONTRAST"])
+    dry = shape(_octaves(x + 7919, z - 4583, (salt + 101) * 8, k["DRY_CELLS"], k["DRY_WEIGHTS"]), k["DRY_CONTRAST"])
+    st = _octaves(x - 1201, z + 911, (salt + 303) * 8, k["STRAW_CELLS"], k["STRAW_WEIGHTS"])
+    s = smooth(np.clip((st - k["STRAW_AT"]) / k["STRAW_SOFT"], 0, 1)) * np.clip((dry - k["STRAW_GATE"]) / 0.4, 0, 1)
+    cl = _octaves(x - 3001, z + 1777, (salt + 202) * 8, k["CLUMP_CELLS"], k["CLUMP_WEIGHTS"])
+    m = smooth(np.clip((cl - k["CLUMP_AT"]) / k["CLUMP_SOFT"], 0, 1)) * np.clip((k["CLUMP_GATE"] - dry) / 0.4, 0, 1) * (1 - s)
+    mottle = _octaves(x + 555, z - 777, salt * 8 + 40, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"])
+    hm = k["HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"])
+    v = (1 + k["VALUE"] * f) * (1 - k["CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k["MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle))
+    dp, dn = np.maximum(dry, 0), np.minimum(dry, 0)
+    o = k["OLIVE"]
+    r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s) * (1 - 0.02 * m)
+    g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s)
+    b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * np.maximum(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m)
+    return np.clip(np.stack([r, g, b], -1), 0, 255)
 
 
 def render(tex, k, blocks=96, ppb=12, per_block=False, x0=0, z0=0):
