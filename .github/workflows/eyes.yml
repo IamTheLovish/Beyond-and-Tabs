@@ -64,6 +64,11 @@ on:
         description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
         type: boolean
         default: false
+      map:
+        description: "Map for the tour: random (the legacy terrain, what every tour used until Oct 28) or a pre-made map by name - the plant-cover A/B needs one (Oct 28). Publishes to <lane>-map-<name>, so the lane's own baseline is untouched"
+        type: choice
+        options: [random, verdant_valley, highlands, archipelago, desert_mesa]
+        default: random
       build_run:
         description: "Optional: a build run id whose jar (artifact bar-mod) this tour tests - for a dispatch while main's bar/ has moved past bar-dev (two sessions pushing)"
         required: false
@@ -102,7 +107,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ (inputs.map && inputs.map != 'random') && format('map-{0}-', inputs.map) || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -127,7 +132,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', (inputs.map && inputs.map != 'random') && format('-map-{0}', inputs.map) || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -263,6 +268,9 @@ jobs:
       - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
         if: env.OVERLAYS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
+      - name: Map for the tour (dispatch input `map`; EyesDirector EYES_MAP)
+        if: inputs.map && inputs.map != 'random'
+        run: echo "EYES_MAP_JVM=-Dbat.eyes.map=${{ inputs.map }}" >> "$GITHUB_ENV"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -404,7 +412,7 @@ jobs:
           mc-runtime-test: none
           dummy-assets: 'false'
           xvfb: 'true'
-          headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G ${{ env.EYES_JVM_EXTRA }}"'
+          headlessmc-command: '--jvm "-Djava.awt.headless=true -Dbat.eyes=true -Xmx4G ${{ env.EYES_JVM_EXTRA }} ${{ env.EYES_MAP_JVM }}"'
       - name: Stop the recorder and cut a clip per still
         continue-on-error: true
         run: |
