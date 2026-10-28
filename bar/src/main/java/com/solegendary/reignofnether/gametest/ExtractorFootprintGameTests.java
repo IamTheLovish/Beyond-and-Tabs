@@ -42,6 +42,9 @@ public class ExtractorFootprintGameTests {
     /** Ticks the battlefield gets to form (BattlefieldSetup settles for 60) and to be stamped before the patches are read. */
     static final int FORM_TICKS = 400;
 
+    /** How far from one of its bases a battlefield stamps patches (the far lane patches sit about 125 out). */
+    static final int BATTLEFIELD_REACH = 400;
+
     @GameTest(template = ARENA, batch = "extractor_footprint", timeoutTicks = FORM_TICKS + 200)
     public static void every_stamped_patch_takes_every_factions_extractor_where_the_bot_looks(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -68,6 +71,9 @@ public class ExtractorFootprintGameTests {
             synchronized (live) {
                 patches = new ArrayList<>(live);
             }
+            // this battlefield's patches only: in a full CI shard another batch's test stamps its own (and builds on them
+            // - CI 40614999963 judged patches 6,500 blocks off, under that test's walls)
+            patches.removeIf(c -> startPositions.stream().noneMatch(s -> s.distSqr(c) <= BATTLEFIELD_REACH * BATTLEFIELD_REACH));
             try {
                 if (patches.isEmpty()) {
                     helper.fail("no patches were stamped in " + FORM_TICKS + " ticks");
@@ -230,6 +236,52 @@ public class ExtractorFootprintGameTests {
         } finally {
             MetalPatches.forgetAll();
         }
+    }
+
+    /**
+     * MultiplayerLobby.siteOk had solidTop's bug: Level.getHeight of an unloaded chunk is the min build height, so a site
+     * whose chunks no one had loaded read "dry and flat" at y -64 wherever it was. Once solidTop loaded the centre chunk the
+     * lobby tests' probes mixed real ground with -64 and found "no dry ground" (CI 40614999963). A pond on the site, the
+     * chunks left to unload, then siteOk must still see the water.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void site_ok_reads_real_ground_in_unloaded_chunks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        // a chunk centre far from every test's ground, so siteOk's probes (+-12) span 3x3 chunks no one else holds
+        int x = ((origin.getX() + 1500) & ~15) + 8, z = ((origin.getZ() - 12000) & ~15) + 8;
+        List<long[]> chunks = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+                chunks.add(new long[] { (x >> 4) + dx, (z >> 4) + dz });
+        for (long[] c : chunks)
+            GameTestChunks.loadNowOrFail(level, (int) c[0], (int) c[1]);
+        int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+        if (top <= level.getMinBuildHeight()) {
+            helper.fail("no ground at [" + x + ", " + z + "] with its chunk loaded");
+            return;
+        }
+        level.setBlock(new BlockPos(x, top, z), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
+        if (com.solegendary.reignofnether.matchstart.MultiplayerLobby.siteOk(level, x, z)) {
+            helper.fail("siteOk at [" + x + ", " + z + "] took a site with water at its centre, chunks loaded");
+            return;
+        }
+        awaitUnloadThenCheckSite(helper, level, x, z, chunks, 250);
+    }
+
+    private static void awaitUnloadThenCheckSite(GameTestHelper helper, ServerLevel level, int x, int z, List<long[]> chunks, int ticksLeft) {
+        for (long[] c : chunks)
+            if (level.getChunkSource().getChunkNow((int) c[0], (int) c[1]) != null) {
+                if (ticksLeft <= 0)
+                    helper.fail("chunk " + c[0] + "," + c[1] + " never unloaded after its ticket lapsed");
+                else
+                    helper.runAfterDelay(1, () -> awaitUnloadThenCheckSite(helper, level, x, z, chunks, ticksLeft - 1));
+                return;
+            }
+        if (com.solegendary.reignofnether.matchstart.MultiplayerLobby.siteOk(level, x, z))
+            helper.fail("siteOk at [" + x + ", " + z + "] took a site with water at its centre once its chunks had unloaded");
+        else
+            helper.succeed();
     }
 
     /** Each unplaceable patch with the errors it gave, per extractor; null when every patch takes every extractor. */
