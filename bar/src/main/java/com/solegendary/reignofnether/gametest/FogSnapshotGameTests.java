@@ -195,8 +195,10 @@ public class FogSnapshotGameTests {
      * were built ("file != live, reference != live"). The chunk changed before its turn is changed on the top of a
      * column, so its heightmaps change too: the snapshot must hold the heightmaps from before the change (the packet
      * shares the chunk's heightmap arrays until it is encoded, CI run 40469592779: "heightmaps of [22, 52]").
+     * The timeout is in game ticks, which the test server runs far faster than 20 a second when it has little to do
+     * (CI run 40611300957: 2400 ticks in 5 s), while generating the far box takes real time: 20000, as the hang test's.
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 2400, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20000, batch = BATCH)
     public static void the_budgeted_snapshot_equals_the_one_tick_capture(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         diagLevel = level;
@@ -375,7 +377,7 @@ public class FogSnapshotGameTests {
      * snapshot depended on load order with the old capture too (it loaded the box one chunk at a time); the loaded-area
      * test above compares light byte for byte.
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 5000, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 24000, batch = BATCH)
     public static void the_snapshot_of_unloaded_chunks_loads_them_without_blocking_a_tick(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(BlockPos.ZERO);
@@ -387,7 +389,7 @@ public class FogSnapshotGameTests {
         TicketType<ChunkPos> hold = TicketType.FORCED;
         // start once the other test of the batch is done with the shared snapshot state (or has timed out)
         helper.onEachTick(() -> {
-            if (startTick[0] >= 0 || !(loadedTestDone.get() || helper.getTick() > 2420)) return;
+            if (startTick[0] >= 0 || !(loadedTestDone.get() || helper.getTick() > 20020)) return;
             for (int cx = minCx; cx <= maxCx; cx++)
                 for (int cz = minCz; cz <= maxCz; cz++) {
                     if (level.getChunkSource().getChunkNow(cx, cz) != null)
