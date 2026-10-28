@@ -1,87 +1,25 @@
 package com.solegendary.reignofnether.hud;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
-import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
-import com.solegendary.reignofnether.building.BuildingPlacement;
-import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
-import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
-import com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Server half of the BAR kill feed. Every unit killed by an enemy unit and every building an enemy unit brings down
- * becomes a pending line; pending lines are merged (same killer type, victim type and owners -> one line with a
- * count) and flushed every {@link #FLUSH_TICKS} ticks, each player getting only the lines that are about it: its own
- * kills and its own or its allies' losses (see {@link #canSee}; spectators see what is in their vision). So an
- * enemy's losses deep in the fog never reach a client, and a teammate's fight does not fill your feed. At most {@link KillFeedClientboundPacket#MAX_ENTRIES} lines per flush; a
- * bigger fight just shows its first eight.
+ * Per-player kill tally: units killed and units lost to enemy units. The on-screen kill feed is gone (user request);
+ * this tally still feeds the stats table's Army tab (kills / losses) and the bot's army log.
  */
 public class KillFeedServerEvents {
 
-    public static final int FLUSH_TICKS = 5;
-    static final int MAX_PENDING = 64;
-
-    /** A pending line with where the victim fell (for the vision test). */
-    record Pending(Entry entry, int x, int z) {
-        Pending merged() {
-            Entry e = entry;
-            return new Pending(new Entry(e.killerOwner(), e.killerKey(), e.victimOwner(), e.victimKey(), e.count() + 1,
-                e.building()), x, z);
-        }
-    }
-
-    private static final List<Pending> pending = new ArrayList<>();
-    // the last few lines queued, for the game test (never asserted on by count)
-    private static final List<Entry> recent = new ArrayList<>();
-    static final int RECENT_MAX = 32;
-
-    public static List<Entry> recentEntries() {
-        synchronized (pending) {
-            return new ArrayList<>(recent);
-        }
-    }
-
-    static void queue(Entry entry, int x, int z) {
-        synchronized (pending) {
-            for (int i = 0; i < pending.size(); i++) {
-                if (pending.get(i).entry().sameKill(entry)) {
-                    pending.set(i, pending.get(i).merged());
-                    remember(entry);
-                    return;
-                }
-            }
-            if (pending.size() < MAX_PENDING)
-                pending.add(new Pending(entry, x, z));
-            remember(entry);
-        }
-    }
-
-    private static void remember(Entry entry) {
-        recent.add(entry);
-        if (recent.size() > RECENT_MAX)
-            recent.remove(0);
-    }
-
-    static String ownerOrEmpty(String s) {
-        return s == null ? "" : s;
-    }
-
     // per-player {units killed, units lost} for the stats table's Army tab and the observer bar
     // (PlayerPanelServerEvents reads it every 2 s and clears it when the match ends)
-    private static final java.util.Map<String, int[]> tally = new java.util.HashMap<>();
+    private static final Map<String, int[]> tally = new HashMap<>();
 
     /** One enemy unit killed by {@code killerOwner}'s unit (public for the game test). */
     public static void count(String killerOwner, String victimOwner) {
@@ -119,46 +57,6 @@ public class KillFeedServerEvents {
         if (ko == null || ko.isEmpty() || ko.equals(vo) || AlliancesServerEvents.isAllied(ko, vo))
             return;
         count(ko, vo);
-        queue(new Entry(ko, killer.getType().getDescriptionId(), ownerOrEmpty(vo), victim.getType().getDescriptionId(),
-            1, false), victim.getBlockX(), victim.getBlockZ());
-    }
-
-    /** Called from BuildingPlacement.destroy for a building brought down by a unit (not a quiet demolition). */
-    public static void onBuildingDestroyed(BuildingPlacement placement, Entity attacker) {
-        if (!(attacker instanceof Unit k) || placement.ownerName == null || placement.ownerName.isEmpty())
-            return;
-        String ko = k.getOwnerName();
-        if (ko == null || ko.isEmpty() || ko.equals(placement.ownerName)
-                || AlliancesServerEvents.isAllied(ko, placement.ownerName))
-            return;
-        String key;
-        if (placement.getBuilding() instanceof CustomBuilding custom) {
-            key = custom.name;
-        } else {
-            ResourceLocation rl = ReignOfNetherRegistries.BUILDING.getKey(placement.getBuilding());
-            key = rl == null ? "buildings.reignofnether.unknown" : "buildings.reignofnether." + rl.getPath();
-        }
-        queue(new Entry(ko, attacker.getType().getDescriptionId(), placement.ownerName, key, 1, true),
-            placement.centrePos.getX(), placement.centrePos.getZ());
-    }
-
-    /**
-     * Whether {@code viewer} may learn about a kill. A player in the match gets its own kills and its own and its
-     * allies' losses - nothing else: lovish's 3v3 clips (Oct 13, 23:07) had most lines belonging to other people's
-     * fights ("Spear Thrower x Grave Archer x2"), and a feed you have to read to find yourself in is noise. Anyone
-     * not playing (a spectator, fog off) sees what is inside its vision as before. Public for the game test.
-     */
-    public static boolean canSee(ServerPlayer viewer, String killerOwner, String victimOwner, int x, int z) {
-        String name = viewer.getName().getString();
-        if (name.equals(killerOwner) || name.equals(victimOwner))
-            return true;
-        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(name))
-            return !victimOwner.isEmpty() && AlliancesServerEvents.isAllied(name, victimOwner);
-        if (!killerOwner.isEmpty() && AlliancesServerEvents.isAllied(name, killerOwner))
-            return true;
-        if (!victimOwner.isEmpty() && AlliancesServerEvents.isAllied(name, victimOwner))
-            return true;
-        return FogOfWarServerEvents.isBlockVisibleFor(viewer, x, z);
     }
 
     @SubscribeEvent
@@ -171,40 +69,7 @@ public class KillFeedServerEvents {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.getServer() == null || pending.isEmpty()
-                || evt.getServer().getTickCount() % FLUSH_TICKS != 0)
-            return;
-        flush(evt.getServer());
-    }
-
-    static void flush(MinecraftServer server) {
-        List<Pending> batch;
-        synchronized (pending) {
-            batch = new ArrayList<>(pending);
-            pending.clear();
-        }
-        List<Entry> forPlayer = new ArrayList<>(KillFeedClientboundPacket.MAX_ENTRIES);
-        for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
-            forPlayer.clear();
-            for (Pending p : batch) {
-                if (forPlayer.size() >= KillFeedClientboundPacket.MAX_ENTRIES)
-                    break;
-                Entry e = p.entry();
-                if (canSee(sp, e.killerOwner(), e.victimOwner(), p.x(), p.z()))
-                    forPlayer.add(e);
-            }
-            if (!forPlayer.isEmpty())
-                KillFeedClientboundPacket.sendTo(sp, new ArrayList<>(forPlayer));
-        }
-    }
-
-    @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
-        synchronized (pending) {
-            pending.clear();
-            recent.clear();
-        }
         resetTally();
     }
 }

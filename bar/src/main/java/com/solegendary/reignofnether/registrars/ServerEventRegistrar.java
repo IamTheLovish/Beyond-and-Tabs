@@ -65,8 +65,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.MomentumServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitGrid.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.TargetScan.class);   // target acquisition's grid (perf plan PR 5)
         vanillaEventBus.register(com.solegendary.reignofnether.unit.VeterancyServerEvents.class);
-        // BAR HUD pass 4: per-unit kill counters, the kill feed and the wreck metal labels
+        // BAR HUD pass 4: per-unit kill counters, the kill tally and the wreck metal labels
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitKills.class);
         vanillaEventBus.register(com.solegendary.reignofnether.hud.KillFeedServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckSyncServerEvents.class);
@@ -97,14 +98,11 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.onboarding.OnboardingServer.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.WitheringFog.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SunriseSortie.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.LeafDash.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.PlantVineSnare.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.PlantThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.blocks.ThicketCover.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SoulWisps.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
@@ -120,9 +118,7 @@ public class ServerEventRegistrar {
         // Stormcallers slice 2: the Thunder Sage's Ward, the Frost Adept's frost sheets, the Geomancer's ley-link beams
         vanillaEventBus.register(com.solegendary.reignofnether.mana.WardServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.FrostServerEvents.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.mana.LeyNetwork.class);
         // Stormcallers slice 3: the Ley Master's Mana Wells, the Mirror Mage's decoys
-        vanillaEventBus.register(com.solegendary.reignofnether.mana.ManaWellServerEvents.class);
         // wells, ley links and tidepools saved with the world (design/persistence.md)
         vanillaEventBus.register(com.solegendary.reignofnether.persistence.MatchStateSaveData.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.DecoyServerEvents.class);
@@ -148,6 +144,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(TimeServerEvents.class);
         vanillaEventBus.register(CustomBuildingServerEvents.class);
         vanillaEventBus.register(CommandsServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.ParadeGround.class);
         vanillaEventBus.register(ScenarioServerEvents.class);
         vanillaEventBus.register(WorldBorderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.worldborder.ArenaPathing.class);
