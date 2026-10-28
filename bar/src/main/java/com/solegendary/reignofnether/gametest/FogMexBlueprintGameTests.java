@@ -26,8 +26,9 @@ import java.util.List;
  * the minimap and the ghost's snap) knows the patch is there. The validator read only the blocks and called the spot
  * "needs a metal patch" or "not flat", so the ghost stayed red and the click did nothing.
  * <p>
- * The client's view is modelled on the server: a patch centre in the patch list, the blocks under it put back to
- * pre-stamp ground, and an owner with no player, so the footprint is not in the owner's vision (as under fog).
+ * The client's view is modelled on the server (BuildingValidators.testServerModelsClientView): a patch centre in the
+ * patch list, the blocks under it put back to pre-stamp ground, and an owner with no player, so the footprint is not
+ * in the owner's vision (as under fog). Without the hook the server judges its real ground, as it must.
  * The server re-checks the real ground when the fog-queued worker arrives, so the validator only has to trust the
  * patch list while the blocks it reads cannot show the patch.
  */
@@ -91,8 +92,10 @@ public class FogMexBlueprintGameTests {
     static void expect(GameTestHelper helper, Scene s, String expected, String what) {
         String error;
         try {
+            BuildingValidators.testServerModelsClientView = true;
             error = s.error();
         } finally {
+            BuildingValidators.testServerModelsClientView = false;
             s.undo();
         }
         if (expected == null ? error != null : !expected.equals(error))
@@ -120,6 +123,23 @@ public class FogMexBlueprintGameTests {
     public static void fogged_ground_with_no_known_patch_still_needs_one(GameTestHelper helper) {
         Scene s = new Scene(helper, "none", 225, false, true);
         expect(helper, s, "building.reignofnether.needs_metal_patch", "extractor on fogged ground with no patch");
+    }
+
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 100)
+    public static void the_server_still_reads_the_real_ground_under_a_listed_patch(GameTestHelper helper) {
+        // a patch-list entry with no patch blocks, out of a bot owner's vision: the server's own check (an arrival
+        // re-check, a bot's placement) must not trust the list over the ground it really has
+        Scene s = new Scene(helper, "server", 245, true, true);
+        String error;
+        try {
+            error = s.error();
+        } finally {
+            s.undo();
+        }
+        if (!"building.reignofnether.needs_metal_patch".equals(error))
+            helper.fail("server check on a listed patch with no blocks: expected needs_metal_patch, the validator said " + error);
+        else
+            helper.succeed();
     }
 
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 100)

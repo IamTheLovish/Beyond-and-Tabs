@@ -457,6 +457,9 @@ public class BuildingValidators {
         return TutorialClientEvents.BUILD_CAPITOL_POS.distSqr(originPos) < 625; // 25 block range
     }
 
+    /** Test hook: the server judges like a client (its level as the client's stale fog view, the server patch list as the synced one). */
+    public static volatile boolean testServerModelsClientView = false;
+
     /**
      * An extractor over a patch the synced patch list knows, whose blocks the level does not show, out of the owner's
      * vision. A player's never-explored fog is the snapshot taken when the first side was seated, and the battlefield's
@@ -465,6 +468,10 @@ public class BuildingValidators {
      */
     static boolean isKnownPatchUnderFog(Level level, Building building, BlockPos originPos, List<BuildingBlock> blocks,
                                         String ownerName) {
+        // client only: the server reads the real ground (a bot owner is never in vision there, so a patch-list entry
+        // with no blocks under it must not let its arrival skip the checks)
+        if (!level.isClientSide() && !testServerModelsClientView)
+            return false;
         if (!(building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
             return false;
         if (com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5))
