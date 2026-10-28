@@ -42,7 +42,6 @@ public class Slipway extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.SMOOTH_SANDSTONE);
         this.startingBlockTypes.add(Blocks.PRISMARINE_BRICKS);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 150d;
         this.buildTimeBlocks = 141;   // the old 141-block slipway's build time; the Slip's art (tools/lab_slipway.py) has 274
 

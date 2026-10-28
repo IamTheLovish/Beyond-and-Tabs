@@ -58,7 +58,6 @@ public class WallSegment extends DefenceBuilding {
         this.portraitBlock = style.wallPortrait();
         this.maxHealth = fortified ? FORTIFIED_HEALTH : 400d;
         this.buildTimeModifier = 0.6f;
-        this.explodeChance = 0f;   // a wall crumbles, it does not blow up
         this.drawAggro = false;     // see drawsAggroFrom
     }
 

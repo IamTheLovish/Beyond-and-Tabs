@@ -56,7 +56,6 @@ public class AssemblyWorks extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
         this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
-        this.explodeChance = 0.2f;
         this.maxHealth = 340d;
         // the Juggernaut is wide: it walks out clear of the hall's walls (the Observatory's rule)
         this.spawnRadiusOffset = 2f;

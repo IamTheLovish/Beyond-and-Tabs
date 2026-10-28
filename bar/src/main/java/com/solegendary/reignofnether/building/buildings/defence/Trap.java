@@ -92,7 +92,6 @@ public class Trap extends DefenceBuilding {
         this.portraitBlock = style.trapPortrait();
         this.maxHealth = enhanced ? 120d : 60d;
         this.buildTimeModifier = 1.5f;   // nine flat blocks would otherwise go down in a couple of seconds
-        this.explodeChance = 0f;
         this.drawAggro = false;
         // only the plate is laid at once: with no starting type the whole (single) layer would be the foundation and
         // the trap would stand finished, unpaid, the moment it was placed
@@ -274,7 +273,7 @@ public class Trap extends DefenceBuilding {
             }
             // rearmable: only the plate goes (the trap reads as damaged until a worker repairs it back). A mine is
             // spent: every block goes, and the building's own death check removes it on the next world tick.
-            // onBlockBreak keeps the placed-block count honest (explodeChance is 0: no blast from it)
+            // onBlockBreak keeps the placed-block count honest
             for (BuildingBlock b : blocks) {
                 if (b.getBlockState().isAir() || (trap.kind.rearmable && b.getBlockState().getBlock() != trap.trigger))
                     continue;

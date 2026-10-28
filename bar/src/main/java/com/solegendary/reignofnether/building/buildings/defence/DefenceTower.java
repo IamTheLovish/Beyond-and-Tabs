@@ -127,7 +127,6 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         this.portraitBlock = kind.heavyLook() ? style.antiT3Portrait() : style.towerPortrait();
         this.maxHealth = kind.hp;
         this.buildTimeModifier = kind.buildTimeModifier;
-        this.explodeChance = 0.2f;
         switch (kind.gate) {
             case T1_LAB -> this.anyOfLabs = labs;
             case TIER_2 -> {

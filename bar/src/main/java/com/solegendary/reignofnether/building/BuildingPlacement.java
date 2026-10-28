@@ -1071,7 +1071,6 @@ public class BuildingPlacement {
         // grew straight back and a partly built site could never be brought down (the user's 20% metal extractor)
         if (!isBuilt && placedBlockPosSet.contains(pos) && getBlocksTotal() > 0)
             buildProgress = Math.max(0f, buildProgress - 1f / getBlocksTotal());
-        Random rand = new Random();
 
         if (this.getFaction().equals(Factions.MONSTERS) && ResearchServerEvents.playerHasResearch(this.ownerName,
             ProductionItems.RESEARCH_SILVERFISH
@@ -1079,26 +1078,6 @@ public class BuildingPlacement {
             randomSilverfishSpawn(pos);
         }
 
-        // when a player breaks a block that's part of the building:
-        // - roll explodeChance to cause explosion effects and destroy more blocks
-        // - cause fire if < fireThreshold% blocksPercent
-        if (rand.nextFloat(1.0f) < this.building.explodeChance) {
-            if (!breakBlocks && MiscUtil.isNewYearsSeason()) {
-                MiscUtil.doRandomFireworkExplosion(level, Vec3.atCenterOf(pos));
-            } else {
-                level.explode(null,
-                        level.damageSources().generic(),
-                        null,
-                        pos.getX(),
-                        pos.getY(),
-                        pos.getZ(),
-                        breakBlocks ? this.building.explodeRadius : 2.0f,
-                        this.getBlocksPlacedPercent() < this.building.fireThreshold,
-                        // fire
-                        breakBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE
-                );
-            }
-        }
         placedBlockPosSet.remove(pos);
         for (BuildingCommand command : commands)
             if (command.condition == BuildingCommand.TriggerCondition.ON_DAMAGE_TAKEN && command.isOffCooldown())

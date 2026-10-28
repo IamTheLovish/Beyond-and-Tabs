@@ -38,7 +38,6 @@ public class WallGate extends DefenceBuilding {
         this.portraitBlock = style.gatePortrait();
         this.maxHealth = 320d;
         this.buildTimeModifier = 0.7f;
-        this.explodeChance = 0f;
         this.drawAggro = false;
     }
 

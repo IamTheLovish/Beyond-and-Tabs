@@ -35,7 +35,6 @@ public class SpiderLair extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.DEEPSLATE);
         this.startingBlockTypes.add(Blocks.COBBLED_DEEPSLATE);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.SPIDER, Keybindings.abilitySlot1);
