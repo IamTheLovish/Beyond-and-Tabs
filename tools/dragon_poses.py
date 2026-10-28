@@ -20,7 +20,7 @@ P = dict(beatTicks=52.0, down=0.34, hold=0.06, flapUp=38.0, flapDown=-42.0, glid
          burstBeats=3.0, glideBeats=2.0,
          hoverRate=0.85, takeoffRate=0.8,
          breathTicks=90.0, neckLag=2.5, tailLag=5.0, neckSway=12.0, tailWave=6.5,
-         riseP=10.0, dropPx=6.0, pitchUp=9.0, pitchDown=6.0,
+         riseP=3.3, dropPx=2.0, pitchUp=9.0, pitchDown=6.0,
          billow=13.0,
          shakeEvery=260.0, yawnEvery=210.0, attackTicks=22.0, attackWindup=8.0,
          bankMax=50.0, bankPerDeg=5.0, bankOmega=0.5, headingTau=5.0, tailBankLag=4.0, bankHover=0.45, bankGround=0.12,
@@ -224,23 +224,23 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         # and comes back on the recovery (the hover's figure of eight); a flare holds the wings forward as brakes
         armY = (-8 * up0 * (1 - idle) + idle * (18 * dn0 - 14 * up0)) * a * (1 - gA) + 22 * flare
         # the elbow bends against the stroke (it trails the arm by 3 ticks) and folds back through the recovery
-        foreZ = (75 * (sA - sF) - 14 * upF) * a * (1 - gF) - 3 * gF - 7 * inner + 4 * outer
-        foreY = -44 * upF * a * (1 - gF) - 3 * gF - 22 * inner + 2 * outer + 10 * flare
+        foreZ = (40 * (sA - sF) - 7 * upF) * a * (1 - gF) - 3 * gF - 7 * inner + 4 * outer
+        foreY = -22 * upF * a * (1 - gF) - 3 * gF - 22 * inner + 2 * outer + 10 * flare
         # the wrist trails the elbow (the tips still rising as the downstroke begins), folds back hardest on the
         # recovery so the wing comes up narrow, and opens again at the top
-        handZ = (70 * (sF - sH) - 8 * upH) * a * (1 - gH) - (6 - 4 * math.sin((age + offset(ID)) / 50 - 1.2)) * gH - 5 * inner + 3 * outer + 6 * flare
-        handY = -72 * upH * a * (1 - gH) - 5 * gH - 20 * inner + 3 * outer + 12 * flare
+        handZ = (40 * (sF - sH) - 4 * upH) * a * (1 - gH) - (6 - 4 * math.sin((age + offset(ID)) / 50 - 1.2)) * gH - 5 * inner + 3 * outer + 6 * flare
+        handY = -36 * upH * a * (1 - gH) - 5 * gH - 20 * inner + 3 * outer + 12 * flare
         # the twist (pronation on the power stroke, supination on the recovery)
-        foreX = -30 * (sA - sF) * a * (1 - gF)
-        handX = -40 * (sF - sH) * a * (1 - gH)
+        foreX = -15 * (sA - sF) * a * (1 - gF)
+        handX = -20 * (sF - sH) * a * (1 - gH)
         dsl("wing_%s_arm" % side, 0, s * armY, s * armZ + bank * 0.15)
         dsl("wing_%s_fore" % side, foreX, s * foreY, s * foreZ)
         dsl("wing_%s_hand" % side, handX, s * handY, s * handZ)
         # the fingers: closed toward the leading one on the recovery (latest of all), spread in a flare, and each
         # tip trails its finger - the trailing fingers lag more (a fan that ripples open)
         for k in range(3):
-            spread = (18 + 16 * k) * upT * a * (1 - gT) - (4 + 3 * k) * flare
-            lift = 30 * (sH - sT) * a * (1 - gT) * (1 + 0.4 * k)
+            spread = (9 + 8 * k) * upT * a * (1 - gT) - (4 + 3 * k) * flare
+            lift = 12 * (sH - sT) * a * (1 - gT) * (1 + 0.4 * k)
             dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * spread, s * lift)
         # the sail: each chord strip hinges on the one ahead; the load (the stroke's speed, a tick or two late per
         # strip) billows it UP behind the power stroke and cups it DOWN behind the recovery; the glide holds it
@@ -291,7 +291,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
     for k in range(NECK_N):
         f = 1 - 0.06 * k
         sk = shape(lag(P["neckLag"] * (k + 1)))
-        x = (-6.5 * f * sk * amp * (1 - gw_at(lag(P["neckLag"] * (k + 1))))
+        x = (-2.2 * f * sk * amp * (1 - gw_at(lag(P["neckLag"] * (k + 1))))
              + (2.0 * br if k < 3 else 0) - (0.3 * pitch0 if k < 3 else 0)
              - 1.0 * gw0 - 0.6 * statePitch / NECK_N * (1.6 if k < 4 else 0.4)
              + (3.0 * idle if k < 3 else -2.0 * idle))

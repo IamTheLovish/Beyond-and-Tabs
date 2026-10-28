@@ -77,8 +77,9 @@ public final class Dragon {
         /** The chains: ticks of lag per link (the heave down the neck, the tail's vertical wave), the neck's lateral
          *  sway (deg per link) and the tail's lateral wave (deg per link at the root). */
         public float neckLag = 2.5f, tailLag = 5f, neckSway = 12f, tailWave = 6.5f;
-        /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees). */
-        public float riseP = 10f, dropPx = 6f, pitchUp = 9f, pitchDown = 6f;
+        /** How far the body rises on a downstroke and drops through the top (px); the nose up at the bottom / down at the top (degrees).
+         *  lovish (#145): "small heave, about 1/3 of now" - r13 bobbed ~a block a beat (10 / 6 px x1.4). */
+        public float riseP = 3.3f, dropPx = 2f, pitchUp = 9f, pitchDown = 6f;
         /** The sail's billow (degrees per strip at the power stroke's peak speed). */
         public float billow = 13f;
         /** The bite clip's length (ticks) from the moment the entity's swing begins (the shot, for a breather). */
@@ -473,23 +474,24 @@ public final class Dragon {
             // down and comes back on the recovery; a flare holds the wings forward as brakes
             float armY = (-8f * up0 * (1f - idle) + idle * (18f * dn0 - 14f * up0)) * a * (1f - gw0) + 22f * flare;
             // the elbow bends against the stroke (it trails the arm by 3 ticks) and folds back through the recovery
-            float foreZ = (75f * (sA - sF) - 14f * upF) * a * (1f - gF) - 3f * gF - 7f * inner + 4f * outer;
-            float foreY = -44f * upF * a * (1f - gF) - 3f * gF - 22f * inner + 2f * outer + 10f * flare;
-            // the wrist trails the elbow (the tips still rising as the downstroke begins), folds back hardest on the
-            // recovery so the wing comes up narrow, and opens again at the top
-            float handZ = (70f * (sF - sH) - 8f * upH) * a * (1f - gH) - (6f - 4f * Mth.sin((age + off) / 50f - 1.2f)) * gH - 5f * inner + 3f * outer + 6f * flare;
-            float handY = -72f * upH * a * (1f - gH) - 5f * gH - 20f * inner + 3f * outer + 12f * flare;
+            float foreZ = (40f * (sA - sF) - 7f * upF) * a * (1f - gF) - 3f * gF - 7f * inner + 4f * outer;
+            float foreY = -22f * upF * a * (1f - gF) - 3f * gF - 22f * inner + 2f * outer + 10f * flare;
+            // the wrist trails the elbow (the tips still rising as the downstroke begins), folds back on the recovery -
+            // HALF a fold (lovish, #145: the wing stays broad from the RTS camera; r13's full tuck left sticks) - and
+            // opens again at the top
+            float handZ = (40f * (sF - sH) - 4f * upH) * a * (1f - gH) - (6f - 4f * Mth.sin((age + off) / 50f - 1.2f)) * gH - 5f * inner + 3f * outer + 6f * flare;
+            float handY = -36f * upH * a * (1f - gH) - 5f * gH - 20f * inner + 3f * outer + 12f * flare;
             // the twist about the wing's long axis: pronation on the power stroke, supination on the recovery
-            float foreX = -30f * (sA - sF) * a * (1f - gF);
-            float handX = -40f * (sF - sH) * a * (1f - gH);
+            float foreX = -15f * (sA - sF) * a * (1f - gF);
+            float handX = -20f * (sF - sH) * a * (1f - gH);
             dsl(r.arm[i], 0, s * armY, s * armZ + bank * 0.15f);
             dsl(r.fore[i], foreX, s * foreY, s * foreZ);
             dsl(r.hand[i], handX, s * handY, s * handZ);
             // the fingers: closed toward the leading one on the recovery (the latest of all), spread in a flare; each
             // trailing finger lags its tip a little more (the fan ripples open)
             for (int k = 0; k < 3; k++) {
-                float spread = (18f + 16f * k) * upT * a * (1f - gT) - (4f + 3f * k) * flare;
-                float lift = 30f * (sH - sT) * a * (1f - gT) * (1f + 0.4f * k);
+                float spread = (9f + 8f * k) * upT * a * (1f - gT) - (4f + 3f * k) * flare;
+                float lift = 12f * (sH - sT) * a * (1f - gT) * (1f + 0.4f * k);
                 dsl(r.finger[i][k], 0, s * spread, s * lift);
             }
             // the sail: the strips of each span hinge on the one ahead (x > 0 tips a strip's far edge down)
@@ -547,7 +549,7 @@ public final class Dragon {
         for (int k = 0; k < nn; k++) {
             float f = 1f - 0.06f * k;
             float pk = ph - P.neckLag * (k + 1) / T;
-            float x = -6.5f * f * shape(P, pk) * amp * (1f - gw(P, pk, cruise, gs))
+            float x = -2.2f * f * shape(P, pk) * amp * (1f - gw(P, pk, cruise, gs))
                 + (k < 3 ? 2.0f * br - 0.3f * pitch0 + 3.0f * idle : -2.0f * idle)
                 - 1.0f * gw0 - 0.6f * statePitch / nn * (k < 4 ? 1.6f : 0.4f);
             float y = P.neckSway * (1f - 0.4f * gw0) * Mth.sin(t0 - NECK_K * k) + bank * 0.20f * (k + 1) / nn;

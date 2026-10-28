@@ -76,3 +76,8 @@ the last 5 blocks; a climb capped at 0.10 b/t that eases in; slower in a hard tu
 brain's average for the same attribute (0.3 -> 0.167 b/t), so travel times hold. Hovering, the body turns to its
 target at 6 deg/tick. The flare now plays while it brakes (Dragon.wantsFlare); a dragon that flies into view no longer
 plays the take-off (Dragon.wantsTakeoff: a client's tickCount restarts on tracking).
+
+lovish's answers (#145, Oct 27): the heave is a third of r13's (body rise 10 -> 3.3 px, drop 6 -> 2, the neck's
+counter -6.5 -> -2.2: the tables above still show r13's numbers); the upstroke is a HALF fold, the wing broad from
+the RTS camera (elbow/wrist fold back 44/72 -> 22/36, finger close 18+16k -> 9+8k, the elbow/wrist lag 75/70 -> 40,
+the twist 30/40 -> 15/20, the finger lift 30 -> 12); the purple sail stays; the thin skeleton stays for now.
