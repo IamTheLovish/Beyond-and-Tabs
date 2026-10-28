@@ -563,13 +563,14 @@ public class WagerBookGameTests {
         GameRules.BooleanValue cycle = level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE);
         boolean cycleWas = cycle.get();
         cycle.set(false, level.getServer());
-        boolean rainWas = level.isRaining();
+        // the level data's flags, not isRaining(): the visible rain level ramps up over ~20 ticks
+        boolean rainWas = level.getLevelData().isRaining();
         long start = level.getGameTime();
         WagerWeather.start(level, true, 40);
-        if (!level.isRaining() || level.isThundering()) {
+        if (!level.getLevelData().isRaining() || level.getLevelData().isThundering()) {
             cycle.set(cycleWas, level.getServer());
-            helper.fail("the wager rain did not start, or it brought thunder (raining " + level.isRaining()
-                + ", thundering " + level.isThundering() + ")");
+            helper.fail("the wager rain did not start, or it brought thunder (raining " + level.getLevelData().isRaining()
+                + ", thundering " + level.getLevelData().isThundering() + ")");
             return;
         }
         if (WagerWeather.until(level) != start + 40) {
@@ -581,12 +582,13 @@ public class WagerBookGameTests {
             long now = level.getGameTime();
             if (now < start + 45)
                 helper.fail("waiting for the rain to end (" + (now - start) + " ticks)");
-            boolean done = level.isRaining() == rainWas && !level.isThundering() && WagerWeather.until(level) < 0;
+            boolean done = level.getLevelData().isRaining() == rainWas && !level.getLevelData().isThundering()
+                && WagerWeather.until(level) < 0;
             if (!done && now < start + 150)
                 helper.fail("still raining " + (now - start) + " ticks after a 40-tick wager");
             cycle.set(cycleWas, level.getServer());
             if (!done)
-                helper.fail("the wager rain never ended with doWeatherCycle off (raining " + level.isRaining()
+                helper.fail("the wager rain never ended with doWeatherCycle off (raining " + level.getLevelData().isRaining()
                     + ", clock " + WagerWeather.until(level) + ")");
         });
     }
