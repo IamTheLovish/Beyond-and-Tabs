@@ -16,10 +16,10 @@ class DragonFlightTest {
     private static final double CRUISE = DragonFlight.cruiseSpeed(0.3);
 
     /** Flies from (px, py, pz) toward (tx, ty, tz) for up to maxTicks; returns {x, y, z, ticks, maxTurn, maxSlip,
-     *  maxAccel, maxSpeed, minDistAfterClosest - closest (the overshoot)}. */
+     *  maxAccel (speed-up per tick), maxSpeed, overshoot, maxDecel (slow-down per tick)}. */
     private static double[] fly(DragonFlight.State s, double px, double py, double pz, double tx, double ty, double tz,
                                 int maxTicks, double stopWithin) {
-        double maxTurn = 0, maxSlip = 0, maxAccel = 0, maxSpeed = 0, closest = 1e9, overshoot = 0;
+        double maxTurn = 0, maxSlip = 0, maxAccel = 0, maxDecel = 0, maxSpeed = 0, closest = 1e9, overshoot = 0;
         float lastHeading = s.heading;
         double lastSpeed = s.speed;
         int t = 0;
@@ -40,12 +40,13 @@ class DragonFlightTest {
                 float moveYaw = (float) Math.toDegrees(-Math.atan2(v[0], v[2]));
                 maxSlip = Math.max(maxSlip, Math.abs(wrap(moveYaw - s.heading)));
             }
-            maxAccel = Math.max(maxAccel, Math.abs(s.speed - lastSpeed));
+            maxAccel = Math.max(maxAccel, s.speed - lastSpeed);
+            maxDecel = Math.max(maxDecel, lastSpeed - s.speed);
             maxSpeed = Math.max(maxSpeed, h);
             lastHeading = s.heading;
             lastSpeed = s.speed;
         }
-        return new double[] {px, py, pz, t, maxTurn, maxSlip, maxAccel, maxSpeed, overshoot};
+        return new double[] {px, py, pz, t, maxTurn, maxSlip, maxAccel, maxSpeed, overshoot, maxDecel};
     }
 
     private static double wrap(double a) {
@@ -63,7 +64,8 @@ class DragonFlightTest {
         // and its braking, never much
         assertTrue(r[3] < 420, "60 blocks took " + r[3] + " ticks");
         assertTrue(r[7] <= CRUISE * 1.02, "never faster than cruise: " + r[7]);
-        assertTrue(r[6] <= DragonFlight.ACCEL + 1e-6 || r[6] <= DragonFlight.DECEL + 1e-6, "no surge: " + r[6]);
+        assertTrue(r[6] <= DragonFlight.ACCEL + 1e-6, "no surge: speeds up " + r[6] + " b/t in a tick");
+        assertTrue(r[9] <= DragonFlight.DECEL + 1e-6, "no dead stop: slows " + r[9] + " b/t in a tick");
     }
 
     @Test
@@ -99,6 +101,16 @@ class DragonFlightTest {
         // a point 3 blocks off its left wing (MC yaw 0 = +z, so -x is ... either side will do)
         double[] r = fly(s, 0, 80, 0, 3, 80, 0, 200, 1.5);
         assertTrue(r[3] < 200, "reached the point beside it in " + r[3] + " ticks (no orbit)");
+    }
+
+    /** Hovering on its point, a point a few tenths of a block off (a separation push) does not swing the nose round
+     *  (#145 review: r1 re-aimed whenever the point was more than 0.05 away, so the hover's nose jittered). */
+    @Test
+    void aPointInsideTheStopRadiusDoesNotTurnTheNose() {
+        DragonFlight.State s = new DragonFlight.State(0f);
+        for (int t = 0; t < 20; t++)
+            DragonFlight.step(s, -0.3, 0, 0.05, CRUISE, false);        // 0.3 off its left side, inside STOP
+        assertTrue(Math.abs(s.heading) < 1e-3, "the nose turned " + s.heading + " deg for a point 0.3 blocks off");
     }
 
     @Test

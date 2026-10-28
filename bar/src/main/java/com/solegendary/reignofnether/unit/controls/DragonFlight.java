@@ -61,7 +61,7 @@ public final class DragonFlight {
     public static double[] step(State s, double dx, double dy, double dz, double cruise, boolean blocked) {
         double hd = Math.sqrt(dx * dx + dz * dz);
         float off = 0f;
-        if (hd > 0.05) {
+        if (hd > STOP) {        // inside the stop radius it holds its nose: a push of a few tenths never swings it round
             float want = (float) Math.toDegrees(-Math.atan2(dx, dz));
             off = wrap(want - s.heading);
         }

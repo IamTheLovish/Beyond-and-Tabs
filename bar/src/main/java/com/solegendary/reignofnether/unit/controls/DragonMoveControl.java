@@ -45,16 +45,25 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         state.heading = Mth.wrapDegrees(yaw);
     }
 
-    /** Flying somewhere, or still carrying speed: the body faces along the flight. */
+    /**
+     * Flying somewhere, or still carrying speed: the body faces along the flight. A MOVE_TO already on its point is
+     * not (a held position or a persistent move leaves it set): there the dragon hovers and faces its target.
+     */
     public boolean isCruising() {
-        return operation == Operation.MOVE_TO || state.speed > 0.03;
+        if (state.speed > 0.03)
+            return true;
+        if (operation != Operation.MOVE_TO)
+            return false;
+        double dx = wantedX - mob.getX(), dz = wantedZ - mob.getZ();
+        return dx * dx + dz * dz > DragonFlight.STOP * DragonFlight.STOP;
     }
 
     @Override
     public void tick() {
         // what moved us besides the steering since last tick (a knockback, a push) rides on top and decays
         Vec3 now = mob.getDeltaMovement();
-        if (mob.horizontalCollision || mob.verticalCollision)
+        // (in water or lava the drag is not the air's 0.91, so what is left there is no push)
+        if (mob.horizontalCollision || mob.verticalCollision || mob.isInWater() || mob.isInLava())
             push = Vec3.ZERO;
         else    // last tick's push is in there too, already through the drag
             push = now.subtract(lastSet.scale(DRAG));
