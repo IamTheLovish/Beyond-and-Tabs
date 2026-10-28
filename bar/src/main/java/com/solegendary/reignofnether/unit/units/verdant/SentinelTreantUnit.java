@@ -33,6 +33,23 @@ public class SentinelTreantUnit extends IronGolemUnit {
     final static public float aggroRange = 10;
     final static public float rangedDamageResist = 0.4f;
 
+    // ---- Take Root (vehicles-design 2026-10-28, 3.4): STUB for the red run, filled in by the next commit ----------------
+    public record RootTimes(int rootTicks, int uprootTicks) { }
+    public static final RootTimes ROOT_TIMES = new RootTimes(30, 20);
+    public static final float ROOTED_TAKEN_MULT = 0.7f;
+    public static final float LINE_LENGTH = 8f;
+    public static final float LINE_DAMAGE = 8f;
+    public static final int LINE_EVERY = 40;
+    public static final int LINE_TELEGRAPH_TICKS = 6;
+    public int linesFired = 0;
+    public void toggleRoot() { }
+    public void tickRoot(net.minecraft.server.level.ServerLevel sl) { }
+    public boolean isRootWanted() { return false; }
+    public boolean isRootWantedClient() { return false; }
+    public boolean isRooted() { return false; }
+    public boolean isImmobile() { return false; }
+    public int strikeRootLine(net.minecraft.server.level.ServerLevel sl, double dx, double dz) { return 0; }
+
     public SentinelTreantUnit(EntityType<? extends IronGolem> entityType, Level level) {
         super(entityType, level);
     }
