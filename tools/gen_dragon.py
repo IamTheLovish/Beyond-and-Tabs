@@ -271,7 +271,7 @@ def wing(m, P, s):
     mem1 = m.bone("mem_%s_1" % side, [rx, ry - 1.0, rz + 0.8], parent="wing_%s_arm" % side, rotation=[SAG * 0.7, 0, 0])
     mem1b = m.bone("mem_%s_1b" % side, [rx, ry - 1.0, rz + 0.8 + 9.0], parent="mem_%s_1" % side, rotation=[SAG * 0.6, 0, 0])
     mem1c = m.bone("mem_%s_1c" % side, [rx, ry - 1.0, rz + 0.8 + 18.0], parent="mem_%s_1b" % side, rotation=[SAG * 0.5, 0, 0])
-    membrane_panel(mem1, rx, -1.5, A + 4.0, rz + 0.8, 29.0, 24.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=2, outer=[mem1b, mem1c])
+    membrane_panel(mem1, rx, -1.5, A + 7.0, rz + 0.8, 29.0, 24.0, ry - 1.0, s, "membrane", "membrane_dark", seed=3 + s, steps=2, outer=[mem1b, mem1c])
     # the elbow: the fore bone's pivot
     ex = rx + s * A
     fore = m.bone("wing_%s_fore" % side, [ex, ry, rz], parent="wing_%s_arm" % side, rotation=mir(P["fore_rest"]))
@@ -282,7 +282,7 @@ def wing(m, P, s):
     mem2 = m.bone("mem_%s_2" % side, [ex, ry - 1.1, rz + 0.8], parent="wing_%s_fore" % side, rotation=[SAG * 0.7, 0, 0])
     mem2b = m.bone("mem_%s_2b" % side, [ex, ry - 1.1, rz + 0.8 + 8.0], parent="mem_%s_2" % side, rotation=[SAG * 0.6, 0, 0])
     mem2c = m.bone("mem_%s_2c" % side, [ex, ry - 1.1, rz + 0.8 + 16.0], parent="mem_%s_2b" % side, rotation=[SAG * 0.5, 0, 0])
-    membrane_panel(mem2, ex, -10.0, F + 1.0, rz + 0.8, 23.0, 21.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1, outer=[mem2b, mem2c])
+    membrane_panel(mem2, ex, -12.0, F + 1.0, rz + 0.8, 23.0, 21.0, ry - 1.1, s, "membrane", "membrane_dark", seed=11 + s, steps=3, hole=1, outer=[mem2b, mem2c])
     # tattered rags of the owner's colour at the elbow
     fore.box_at([ex + s * 2.0, ry - 2.6, rz + 0.4], [1.4, 4.4, 0.5], "tabard", rotation=[12, 0, s * 15], pivot=[ex + s * 2.0, ry - 0.4, rz + 0.4])
     fore.box_at([ex + s * 3.6, ry - 2.0, rz + 0.6], [1.0, 3.2, 0.5], "tabard_dark", rotation=[18, 0, s * -10], pivot=[ex + s * 3.6, ry - 0.4, rz + 0.6])
@@ -316,7 +316,9 @@ def wing(m, P, s):
         a0, a1 = math.radians(rays[k - 1][0]), a
         L0 = H * rays[k - 1][1]
         am = (a0 + a1) / 2
-        Lm = min(L0, L) - 1.5                                         # r11: the web runs out to the finger tips (bare tips read as a rake from the RTS camera)
+        # r11: the web runs out to the finger tips (bare tips read as a rake from the RTS camera); #145 (lovish allowed
+        # the 512x256 UV atlas this costs): halfway between the two tips, not 1.5 px short of the shorter one
+        Lm = 0.5 * (L0 + L) - 0.3
         web = m.bone("web_%s_%d" % (side, k + 1), [hx, ry - 0.9, rz], parent=b.name, rotation=[SAG * 0.7, s * (90 - math.degrees(am)), 0])
         # the outer half on its own bone hinged half way out (its pivot in the web's unrotated frame, swung into the
         # gap with it), so the web can belly and cup like the big spans
