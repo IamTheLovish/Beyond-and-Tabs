@@ -231,8 +231,8 @@ public class PiglinMerchantUnit extends Piglin implements Unit, AttackerUnit, He
     final static public float attackDamage = 8.0f;
     final static public float attackBonusPerLevel = 0.7f;
     final static public float attacksPerSecond = 0.35f;
-    final static public float maxHealth = 150.0f;
-    final static public float maxHealthBonusPerLevel = 10.0f;
+    final static public float maxHealth = 165.0f;
+    final static public float maxHealthBonusPerLevel = 11.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.28f;
     final static public float attackRange = 2; // only used by ranged units or melee building attackers

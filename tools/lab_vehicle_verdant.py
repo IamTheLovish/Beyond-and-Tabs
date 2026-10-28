@@ -73,7 +73,7 @@ import gen_structures as gs            # noqa: E402
 import mex_verdant as mv               # noqa: E402  - the true leaf distances
 import audit_structure_pockets as ap   # noqa: E402
 import verdant_lab_parts as V          # noqa: E402
-from verdant_lab_parts import (VP, MSB, CSB, MC, MCS, OAK, DOAK, DOS, LEAF, FLEAF, CHERRY, GLOW)  # noqa: E402
+from verdant_lab_parts import (VP, MSB, CSB, MC, MCS, OAK, DOAK, DOS, FLEAF, CHERRY, GLOW)  # noqa: E402
 from gothic_parts import hsh            # noqa: E402
 
 SX, SZ = 17, 17

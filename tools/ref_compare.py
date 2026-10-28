@@ -86,7 +86,8 @@ def main():
         sys.exit("ref_compare: no block pack at %s - generate it: python3 tools/gen_blocks.py" % SP.PACK)
 
     tx = SP.Textures(a.px)
-    img, size, total, _ = SR.render(SR.structure_path(a.building), tx, SR.Faces(tx), a.px, light=not a.flat)
+    img, size, total, _ = SR.render(SR.structure_path(a.building), tx, SR.Faces(tx), a.px,
+                                  light=None if a.flat else SR.Light(SR.sun_vector(250.0, 45.0), 0.8, True, True))
     if img is None:
         sys.exit("ref_compare: the building is only air")
     ref_full = Image.open(a.reference).convert("RGB")

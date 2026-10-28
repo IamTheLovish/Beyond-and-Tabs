@@ -15,16 +15,22 @@ on a building's east side stays on the right. Light sources (lanterns, froglight
 shroomlight, end rods, torches, lit candles and campfires...) skip the face shading and are drawn brighter, so a
 base's night lights show where they are.
 
---light (off by default; tools/ref_compare.py turns it on) lights the building the way the owner's shader screenshots
-do, in place of Minecraft's fixed face shading: smooth-lighting ambient occlusion on every face (a corner darkens with
-each solid neighbour around it, as vanilla smooth lighting does) and ONE low sun casting block shadows (a ray marched
-from points on each face toward the sun through the blocks' real shapes, at a quarter block), warm where the sun falls
-and cool in the shade. The sun is the eyes rig's (LIGHT="-0.85,-0.35,0.30", tools/game_preview.py) in world space: low
-(~21 degrees) from the west-south-west, so the west faces catch it, eaves and towers throw shadows across walls and
-roofs; --sun X,Y,Z points somewhere else (toward the sun; x east, y up, z south).
+LIGHTING (on by default; --flat draws the old unlit look, Minecraft's fixed 1.0 / 0.8 / 0.6 face shades): lovish's
+references are shader screenshots, and flat renders made good shapes look flat to builders and critics
+(design/vehicle_labs/LESSONS.md on claude/vehicle-labs, point 7). So every visible pixel is lit like a shader would:
+  - sun: a directional light (--sun AZIMUTH,ELEVATION in degrees; azimuth from north, clockwise) shades each face by
+    the angle it makes with the sun, so towers have a lit side and a shade side;
+  - shadows: the building is voxelised at a quarter block and the sun's shadow is swept down through it layer by layer
+    (no per-pixel ray march), so towers throw shadows on roofs, walls and the ground (--no-shadows to skip);
+  - ambient occlusion: Minecraft's smooth lighting, from the solid blocks around each face corner and interpolated
+    across the face, so inner corners and the foot of a wall darken (--ao-strength, 0 = off);
+  - sky tint: the ambient light is sky blue and the sun warm (--no-sky-tint for white light);
+  - light sources stay bright: they take no sun, shadow or occlusion.
+--ground N lays a grass plane under the building (N blocks around it) to catch its shadow; --ref IMAGE puts a reference
+picture beside the renders at the same height, the way critics judge (LESSONS.md point 3).
 
     python3 tools/structure_render.py metal_extractor metal_extractor_dark [NAME | FILE.nbt ...] -o sheet.png [--px 24]
-        [--light [--sun X,Y,Z]]
+        [--flat | --sun 250,45 --ao-strength 0.8 --no-shadows --no-sky-tint] [--ground 4] [--ref picture.png ...]
 Prints each building's size and share of blocks textured from the pack.
 """
 import argparse
@@ -50,19 +56,24 @@ _LANTERN = {"side": (0, 2 / 16, 6 / 16, 9 / 16), "top": (0, 9 / 16, 6 / 16, 15 /
 SHEET_UV = {"lantern": _LANTERN, "soul_lantern": _LANTERN}
 BACKGROUND = (24, 24, 28)
 
-# --light: toward the sun, world space (x east, y up, z south) - the eyes rig's low sun, LIGHT="-0.85,-0.35,0.30"
-SUN = (-0.85, 0.35, 0.30)
-SKY = np.array([0.56, 0.60, 0.68])       # the shade's cool sky fill on a roof (walls 0.8 of it), times the face's AO
-SUNLIGHT = np.array([0.68, 0.61, 0.50])  # the sun's warm light where it reaches, times (0.35 + 0.65 n . sun): a low
-#                                          sun still lights a roof, so its shadows read (shader packs do the same)
-AO_LEVEL = (0.42, 0.62, 0.82, 1.0)       # a vertex's light with 3 / 2 / 1 / 0 solid neighbours (vanilla's curve)
-NORMAL = {"top": (0, 1, 0), "south": (0, 0, 1), "west": (-1, 0, 0)}
-SAMPLES = 4                              # sun samples across a face (4 x 4): shadow edges at a quarter block
-SUB = 4                                  # the shadow grid's cells per block
+# the lit look. sun: unit vector toward the sun (x east, y up, z south); ao: how much a fully enclosed corner darkens;
+# shadows / sky: the sun's shadows and the sky-blue ambient + warm sun on or off
+Light = collections.namedtuple("Light", "sun ao shadows sky")
+AMBIENT, SUN = 0.5, 0.7                     # a face in shadow keeps the ambient half; a top in full sun comes to ~1.0
+SKY_COLOUR, SUN_COLOUR = (0.86, 0.92, 1.08), (1.06, 1.0, 0.88)
+VOXEL = 4                                   # shadow / occlusion cells per block edge (a quarter block: slabs, stairs)
+NORMALS = np.array([(0, 1, 0), (0, 0, 1), (-1, 0, 0)], dtype=np.float64)   # top, south, west - the faces drawn
 
 # one palette entry as drawn: top / side are pack texture names or a flat (r, g, b); opaque: a full cube that hides
 # what is behind it; textured: our pack covers it
 Look = collections.namedtuple("Look", "name shape top side opaque light textured")
+
+
+def sun_vector(azimuth, elevation):
+    """Unit vector toward the sun from compass degrees: azimuth 0 north (-z), 90 east (+x); elevation above the
+    horizon."""
+    a, e = math.radians(azimuth), math.radians(elevation)
+    return (math.sin(a) * math.cos(e), math.sin(e), -math.cos(a) * math.cos(e))
 
 
 def is_light(name, props):
@@ -94,9 +105,11 @@ class Faces:
         self.tx = tx
         self.cache = {}
 
-    def crop(self, tex, uv):
-        """The texels of tex (a pack name or a flat colour) inside uv, as a float RGBA array (cached)."""
-        key = (tex, uv)
+    def get(self, tex, uv, shade):
+        """tex: a pack texture name or an (r, g, b) flat colour; uv: (u0, v0, u1, v1) in 0..1, v down the texture;
+        shade: the face's factor, or None for a light source - each texel brightened up to GLOW but never past full in
+        any channel, so the three froglights keep their ochre / green / pink apart and a lantern's frame stays dark."""
+        key = (tex, uv, shade)
         if key not in self.cache:
             if isinstance(tex, tuple):
                 a = np.ones((2, 2, 4))
@@ -106,145 +119,11 @@ class Faces:
             h, w = a.shape[:2]
             c0, r0 = min(int(uv[0] * w), w - 1), min(int(uv[1] * h), h - 1)
             c1, r1 = max(c0 + 1, math.ceil(uv[2] * w)), max(r0 + 1, math.ceil(uv[3] * h))
-            self.cache[key] = a[r0:r1, c0:c1]
-        return self.cache[key]
-
-    def lit(self, tex, uv, light):
-        """The crop under a light map (rows x cols x 3, sampled over the face; any size) - texels clip at full."""
-        a = self.crop(tex, uv).copy()
-        h, w = a.shape[:2]
-        ri = np.arange(h) * light.shape[0] // h
-        ci = np.arange(w) * light.shape[1] // w
-        a[..., :3] = np.clip(a[..., :3] * light[ri][:, ci], 0, 1)
-        return Image.fromarray((a * 255).astype(np.uint8), "RGBA")
-
-    def get(self, tex, uv, shade):
-        """tex: a pack texture name or an (r, g, b) flat colour; uv: (u0, v0, u1, v1) in 0..1, v down the texture;
-        shade: the face's factor, or None for a light source - each texel brightened up to GLOW but never past full in
-        any channel, so the three froglights keep their ochre / green / pink apart and a lantern's frame stays dark."""
-        key = (tex, uv, shade)
-        if key not in self.cache:
-            a = self.crop(tex, uv).copy()
+            a = a[r0:r1, c0:c1].copy()
             if shade is None:
                 a[..., :3] /= np.maximum(a[..., :3].max(axis=-1, keepdims=True), 1 / GLOW)
             self.cache[key] = SP.face_image(a, 1.0 if shade is None else shade)
         return self.cache[key]
-
-
-def casts(lk):
-    """Does this block stop the sun and darken its neighbours' corners? Not glass, panes, bars, water or ice."""
-    n = lk.name.split(":")[-1]
-    return not (lk.light and lk.shape is not PS.FULL) and not any(
-        k in n for k in ("glass", "pane", "iron_bars", "water", "ice", "chain"))
-
-
-class Light:
-    """--light: ambient occlusion and the sun's shadows over a building's boxes. items: [((x, y, z), (x0, x1, y0, y1,
-    z0, z1))] - every box that casts; sun: toward it.
-    Shadows march through a grid of SUB cells per block (the boxes' real shapes, so slab and stair roofs cast); AO
-    counts the cells whose boxes fill at least half of them."""
-
-    def __init__(self, items, sun=SUN):
-        self.sun = np.asarray(sun, float) / np.linalg.norm(sun)
-        vol = collections.Counter()
-        lo = np.array([min(c[i] + b[2 * i] for c, b in items) for i in range(3)]) if items else np.zeros(3)
-        hi = np.array([max(c[i] + b[2 * i + 1] for c, b in items) for i in range(3)]) if items else np.ones(3)
-        self.origin = np.floor(lo) - 1
-        dims = ((np.ceil(hi) + 1 - self.origin) * SUB).astype(int)
-        self.grid = np.zeros(dims, bool)
-        for c, b in items:
-            vol[c] += (b[1] - b[0]) * (b[3] - b[2]) * (b[5] - b[4])
-            g = [(c[i] - self.origin[i]) * SUB for i in range(3)]
-            sl = []
-            for i in range(3):
-                a, z = int(round(g[i] + b[2 * i] * SUB)), int(round(g[i] + b[2 * i + 1] * SUB))
-                sl.append(slice(a, max(z, a + 1)))
-            self.grid[tuple(sl)] = True
-        self.solid = {c for c, v in vol.items() if v >= 0.5}
-
-    def sunlit(self, pts):
-        """For points (N x 3, block units): does the ray toward the sun leave the building without hitting a box?"""
-        pts = np.asarray(pts, float).reshape(-1, 3)
-        lit = np.ones(len(pts), bool)
-        act = np.arange(len(pts))
-        p = (pts - self.origin) * SUB
-        step = self.sun * 0.5                         # half a grid cell
-        shape = np.array(self.grid.shape)
-        while len(act):
-            p += step
-            i = np.floor(p).astype(int)
-            inside = np.all((i >= 0) & (i < shape), axis=1)
-            hit = np.zeros(len(act), bool)
-            j = i[inside]
-            hit[inside] = self.grid[j[:, 0], j[:, 1], j[:, 2]]
-            lit[act[hit]] = False
-            keep = inside & ~hit
-            act, p = act[keep], p[keep]
-        return lit
-
-    @staticmethod
-    def frame(cell, box, face):
-        """A face's top-left corner and its u and v edges (world vectors), as structure_render pastes its texture."""
-        x, y, z = cell
-        x0, x1, y0, y1, z0, z1 = box
-        if face == "top":
-            return np.array([x + x0, y + y1, z + z0]), np.array([x1 - x0, 0, 0]), np.array([0, 0, z1 - z0])
-        if face == "south":
-            return np.array([x + x0, y + y1, z + z1]), np.array([x1 - x0, 0, 0]), np.array([0, y0 - y1, 0])
-        return np.array([x + x0, y + y1, z + z0]), np.array([0, 0, z1 - z0]), np.array([0, y0 - y1, 0])
-
-    def ao(self, cell, box, face):
-        """Smooth-lighting AO levels (3 open .. 0 boxed in) at the face's corners: top-left, top-right, bottom-right,
-        bottom-left of its texture. The neighbours are counted in the layer the face looks into: the next cell when
-        the face lies on its cell's side, else its own cell's layer."""
-        n = NORMAL[face]
-        on_side = {"top": box[3] == 1, "south": box[5] == 1, "west": box[0] == 0}[face]
-        base = tuple(c + d for c, d in zip(cell, n)) if on_side else tuple(cell)
-        _, u, v = self.frame(cell, box, face)
-        ud = tuple(int(np.sign(t)) for t in u) if np.any(u) else (1, 0, 0)
-        vd = tuple(int(np.sign(t)) for t in v) if np.any(v) else (0, -1, 0)
-        out = []
-        for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
-            a = tuple(b + su * d for b, d in zip(base, ud))
-            b_ = tuple(b + sv * d for b, d in zip(base, vd))
-            ab = tuple(b + su * d1 + sv * d2 for b, d1, d2 in zip(base, ud, vd))
-            s1, s2, sc = a in self.solid, b_ in self.solid, ab in self.solid
-            out.append(0 if s1 and s2 else 3 - s1 - s2 - sc)
-        return tuple(out)
-
-    def face_maps(self, faces, res=8):
-        """Light maps (res x res x 3, rows down the texture) for [(cell, box, face)]: the sky's fill under the
-        smooth AO, plus the warm sun where a face looks toward it and the ray from that spot reaches it."""
-        if not faces:
-            return []
-        g = (np.arange(SAMPLES) + 0.5) / SAMPLES
-        su, sv = np.meshgrid(g, g)                         # [row (v), col (u)]
-        pts, ndots = [], []
-        for cell, box, face in faces:
-            o, u, v = self.frame(cell, box, face)
-            n = np.asarray(NORMAL[face], float)
-            ndots.append(max(0.0, float(n @ self.sun)))
-            pts.append(o + su[..., None] * u + sv[..., None] * v + n * (0.55 / SUB))
-        pts = np.asarray(pts).reshape(len(faces), SAMPLES * SAMPLES, 3)
-        nd = np.asarray(ndots)
-        vis = np.zeros((len(faces), SAMPLES * SAMPLES), bool)
-        want = nd > 0
-        if want.any():
-            vis[want] = self.sunlit(pts[want].reshape(-1, 3)).reshape(-1, SAMPLES * SAMPLES)
-        t = (np.arange(res) + 0.5) / res
-        tu, tv = np.meshgrid(t, t)
-        up = np.repeat(np.repeat(vis.reshape(-1, SAMPLES, SAMPLES), res // SAMPLES, 1), res // SAMPLES, 2)
-        out = []
-        for k, (cell, box, face) in enumerate(faces):
-            tl, tr, br, bl = (AO_LEVEL[a] for a in self.ao(cell, box, face))
-            ao = (tl * (1 - tu) * (1 - tv) + tr * tu * (1 - tv) + br * tu * tv + bl * (1 - tu) * tv)[..., None]
-            sky = SKY * (1.0 if face == "top" else 0.8)
-            sun = SUNLIGHT * (0.35 + 0.65 * nd[k]) if nd[k] > 0 else 0.0
-            out.append(sky * ao + sun * up[k][..., None] * (0.55 + 0.45 * ao))
-        return out
-
-    def face_light(self, cell, box, face):
-        return self.face_maps([(cell, box, face)])[0]
 
 
 def structure_path(arg):
@@ -261,16 +140,25 @@ def _uv(lo_u, lo_v, hi_u, hi_v):
     return tuple(round(min(1.0, max(0.0, c)), 3) for c in (lo_u, lo_v, hi_u, hi_v))
 
 
-def render(path, tx, faces, px, light=False, sun=SUN):
+def render(path, tx, faces, px, light=None, ground=0):
     """One building on its own canvas (cropped to it; None when the file holds only air), with its size (x, y, z), the
-    number of blocks drawn and how many of them took a texture from our pack. light: AO and the sun's shadows
-    (Light) in place of the fixed face shading; sun: toward the sun."""
-    root = PS.load_nbt(path)
+    number of blocks drawn and how many of them took a texture from our pack. light: a Light, or None for the flat
+    look; ground: a grass plane this many blocks around the building (0 = none)."""
+    return render_root(PS.load_nbt(path), tx, faces, px, light, ground)
+
+
+def render_root(root, tx, faces, px, light=None, ground=0):
+    """render() of a structure already read: {"size", "palette", "blocks"} as in the .nbt."""
     looks = [look_of(e, tx) for e in root.get("palette") or (root.get("palettes") or [[]])[0]]
     blocks = [(tuple(b["pos"]), looks[b["state"]]) for b in root.get("blocks", [])
               if not PS.invisible(looks[b["state"]].name)]
     if not blocks:
         return None, root["size"], 0, 0
+    counted = len(blocks), sum(1 for _, lk in blocks if lk.textured)
+    if ground > 0:
+        grass = look_of({"Name": "minecraft:grass_block"}, tx)
+        sx, _, sz = root["size"]
+        blocks += [((x, -1, z), grass) for x in range(-ground, sx + ground) for z in range(-ground, sz + ground)]
     full = {pos: lk for pos, lk in blocks if lk.shape is PS.FULL}
 
     def hidden(pos, lk):
@@ -300,39 +188,165 @@ def render(path, tx, faces, px, light=False, sun=SUN):
         sx, sy = P(X, Y, Z)
         return sx - left, sy - top
 
+    # lit: faces are painted at full brightness and each pixel remembers which face it shows (ids), for the light pass
+    ids = np.full((canvas.height, canvas.width), -1, dtype=np.int32) if light else None
+    face_rec = []                                  # per face id: kind (0 top, 1 south, 2 west), box bounds, emissive
+
+    def paint(img, pts, kind, bounds, emissive):
+        at = SP.quad(canvas, img, pts)
+        if ids is None:
+            return
+        minx, miny, alpha = at
+        a = np.asarray(alpha) > 0      # translucent glass takes its own light, not the hall's behind
+        region = ids[miny:miny + a.shape[0], minx:minx + a.shape[1]]
+        region[a[:region.shape[0], :region.shape[1]]] = len(face_rec)
+        face_rec.append((kind,) + bounds + (emissive,))
+
     # painter's order: far (north-east, small z - x) to near, then low to high - by each box's centre
     boxes.sort(key=lambda b: (2 * (b[0][2] - b[0][0]) + b[1][4] + b[1][5] - b[1][0] - b[1][1],
                               2 * b[0][1] + b[1][2] + b[1][3]))
-    maps = {}
-    if light:
-        L = Light([(pos, box) for pos, lk in blocks if casts(lk) for box in lk.shape], sun)
-        want = [(pos, box, f) for pos, box, lk, show in boxes if not lk.light
-                for f, s_ in zip(("top", "south", "west"), show) if s_]
-        maps = dict(zip(((pos, box, f) for pos, box, f in want), L.face_maps(want)))
-
-    def face(tex, uv, pos, box, f, shade):
-        m = maps.get((pos, box, f))
-        return faces.get(tex, uv, shade) if m is None else faces.lit(tex, uv, m)
-
     for (x, y, z), (x0, x1, y0, y1, z0, z1), lk, (s_top, s_south, s_west) in boxes:
-        pos, box = (x, y, z), (x0, x1, y0, y1, z0, z1)
         X0, X1, Y0, Y1, Z0, Z1 = x + x0, x + x1, y + y0, y + y1, z + z0, z + z1
+        bounds = (X0, X1, Y0, Y1, Z0, Z1)
         # Minecraft's default element UVs, from the box in its cell: up (x, z), south (x, 1 - y), west (z, 1 - y)
         model_uv = SHEET_UV.get(lk.side)
-        shade = dict.fromkeys(SHADE) if lk.light else SHADE
+        shade = dict.fromkeys(SHADE) if lk.light else dict.fromkeys(SHADE, 1.0) if light else SHADE
         if s_top:
             uv = model_uv["top"] if model_uv else _uv(x0, z0, x1, z1)
-            SP.quad(canvas, face(lk.top, uv, pos, box, "top", shade["top"]),
-                    [S(X0, Y1, Z0), S(X1, Y1, Z0), S(X1, Y1, Z1), S(X0, Y1, Z1)])
+            paint(faces.get(lk.top, uv, shade["top"]),
+                  [S(X0, Y1, Z0), S(X1, Y1, Z0), S(X1, Y1, Z1), S(X0, Y1, Z1)], 0, bounds, lk.light)
         if s_south:
             uv = model_uv["side"] if model_uv else _uv(x0, 1 - y1, x1, 1 - y0)
-            SP.quad(canvas, face(lk.side, uv, pos, box, "south", shade["south"]),
-                    [S(X0, Y1, Z1), S(X1, Y1, Z1), S(X1, Y0, Z1), S(X0, Y0, Z1)])
+            paint(faces.get(lk.side, uv, shade["south"]),
+                  [S(X0, Y1, Z1), S(X1, Y1, Z1), S(X1, Y0, Z1), S(X0, Y0, Z1)], 1, bounds, lk.light)
         if s_west:
             uv = model_uv["side"] if model_uv else _uv(z0, 1 - y1, z1, 1 - y0)
-            SP.quad(canvas, face(lk.side, uv, pos, box, "west", shade["west"]),
-                    [S(X0, Y1, Z0), S(X0, Y1, Z1), S(X0, Y0, Z1), S(X0, Y0, Z0)])
-    return canvas, root["size"], len(blocks), sum(1 for _, lk in blocks if lk.textured)
+            paint(faces.get(lk.side, uv, shade["west"]),
+                  [S(X0, Y1, Z0), S(X0, Y1, Z1), S(X0, Y0, Z1), S(X0, Y0, Z0)], 2, bounds, lk.light)
+    if light:
+        canvas = lit(canvas, ids, np.asarray(face_rec, dtype=np.float64), blocks, light, (hw, qh, hh, left, top))
+    canvas.info["origin"] = (left, top)   # world (X, Y, Z) is at P(X, Y, Z) - origin on this canvas (the tests use it)
+    return canvas, root["size"], counted[0], counted[1]
+
+
+# ======================================================================================================= lighting
+def voxels(blocks):
+    """The blocks' boxes as solid cells, VOXEL to a block edge: (grid [x, y, z] bool, the grid's origin in blocks)."""
+    lo = np.min([p for p, _ in blocks], axis=0)
+    hi = np.max([p for p, _ in blocks], axis=0) + 1
+    v = VOXEL
+    blk = np.zeros(tuple(hi - lo), dtype=bool)          # full cubes, a block a cell, upsampled at the end
+    grid = np.zeros(tuple((hi - lo) * v), dtype=bool)
+    for (x, y, z), lk in blocks:
+        if lk.shape is PS.FULL:
+            blk[x - lo[0], y - lo[1], z - lo[2]] = True
+            continue
+        for x0, x1, y0, y1, z0, z1 in lk.shape:
+            cells = []
+            for c, a0, a1, lim in ((x - lo[0], x0, x1, grid.shape[0]), (y - lo[1], y0, y1, grid.shape[1]),
+                                   (z - lo[2], z0, z1, grid.shape[2])):
+                i0 = int(math.floor((c + a0) * v + 0.5))
+                i1 = max(i0 + 1, int(math.floor((c + a1) * v + 0.5)))   # a thin post still fills one cell
+                cells.append(slice(max(0, i0), min(lim, i1)))
+            grid[tuple(cells)] = True
+    grid |= blk.repeat(v, 0).repeat(v, 1).repeat(v, 2)
+    return grid, lo.astype(np.float64)
+
+
+def sun_shadow(grid, sun):
+    """Each cell in the sun's shadow (True) or lit: swept from the top layer down, a cell is shadowed when the cell a
+    layer above it toward the sun is solid or shadowed. The sideways step a layer is the sun's slope, rounded per layer
+    (Bresenham), so it never drifts."""
+    nx, ny, nz = grid.shape
+    kx, kz = sun[0] / sun[1], sun[2] / sun[1]
+    shad = np.zeros_like(grid)
+    for y in range(ny - 2, -1, -1):
+        above = grid[:, y + 1, :] | shad[:, y + 1, :]
+        dx = round((y + 1) * kx) - round(y * kx)
+        dz = round((y + 1) * kz) - round(y * kz)
+        # shad[x, z] = above[x + dx, z + dz] (out of the grid: open sky)
+        dst = shad[:, y, :]
+        xs, xd = (slice(dx, nx), slice(0, nx - dx)) if dx >= 0 else (slice(0, nx + dx), slice(-dx, nx))
+        zs, zd = (slice(dz, nz), slice(0, nz - dz)) if dz >= 0 else (slice(0, nz + dz), slice(-dz, nz))
+        dst[xd, zd] = above[xs, zs]
+    return shad
+
+
+def trilinear(field, pts):
+    """field sampled at pts (n x 3, in cells, cell centres at i + 0.5); outside the field reads 0."""
+    f = pts - 0.5
+    i0 = np.floor(f).astype(np.int64)
+    t = f - i0
+    out = np.zeros(len(pts))
+    shape = np.array(field.shape)
+    for corner in range(8):
+        o = np.array([(corner >> 2) & 1, (corner >> 1) & 1, corner & 1])
+        idx = i0 + o
+        ok = np.all((idx >= 0) & (idx < shape), axis=1)
+        w = np.prod(np.where(o, t, 1 - t), axis=1)
+        val = np.zeros(len(pts))
+        val[ok] = field[idx[ok, 0], idx[ok, 1], idx[ok, 2]]
+        out += w * val
+    return out
+
+
+def lit(canvas, ids, rec, blocks, light, view):
+    """The light pass: every pixel's world point from its face and screen position, then sun, shadow, occlusion and
+    tint on it. rec rows: kind, X0, X1, Y0, Y1, Z0, Z1, emissive."""
+    hw, qh, hh, left, top = view
+    ys, xs = np.nonzero(ids >= 0)
+    f = rec[ids[ys, xs]]
+    kind = f[:, 0].astype(np.int64)
+    # screen -> world on the face's plane, inverting P: a = X + Z, b = Z - X - Y * hh / qh
+    a = (xs + 0.5 + left) / hw
+    sy = ys + 0.5 + top
+    X, Y, Z = np.empty(len(xs)), np.empty(len(xs)), np.empty(len(xs))
+    t = kind == 0                                   # top: Y fixed
+    Y[t] = f[t, 4]
+    b = (sy[t] + Y[t] * hh) / qh
+    X[t], Z[t] = (a[t] - b) / 2, (a[t] + b) / 2
+    s = kind == 1                                   # south: Z fixed
+    Z[s] = f[s, 6]
+    X[s] = a[s] - Z[s]
+    w = kind == 2                                   # west: X fixed
+    X[w] = f[w, 1]
+    Z[w] = a[w] - X[w]
+    sw = s | w
+    Y[sw] = ((Z[sw] - X[sw]) * qh - sy[sw]) / hh
+    p = np.stack([np.clip(X, f[:, 1], f[:, 2]), np.clip(Y, f[:, 3], f[:, 4]), np.clip(Z, f[:, 5], f[:, 6])], axis=1)
+    n = NORMALS[kind]
+
+    grid, origin = voxels(blocks)
+    v = VOXEL
+    sun = np.asarray(light.sun)
+    ndl = np.clip(n @ sun, 0, None)
+    vis = np.ones(len(xs))
+    if light.shadows:
+        dark = sun_shadow(grid, sun) | grid
+        vis = 1 - trilinear(dark.astype(np.float32), (p + n * (0.5 / v) - origin) * v)
+    ao = np.ones(len(xs))
+    if light.ao > 0:
+        # Minecraft's smooth lighting: how solid the block layer in front of the face is around this point - at a
+        # corner the four blocks touching it, inside the face interpolated between the corners
+        nb = np.array(grid.shape) // v
+        solid = grid.reshape(nb[0], v, nb[1], v, nb[2], v).mean(axis=(1, 3, 5))
+        ao = 1 - light.ao * trilinear(solid, p + n * 0.5 - origin)
+    sky, sun_c = (np.asarray(SKY_COLOUR), np.asarray(SUN_COLOUR)) if light.sky else (np.ones(3), np.ones(3))
+    gain = (AMBIENT * ao)[:, None] * sky + (SUN * ndl * vis * (0.6 + 0.4 * ao))[:, None] * sun_c
+    gain[f[:, 7] > 0] = 1.0                         # light sources: as painted
+    rgba = np.asarray(canvas).astype(np.float64)
+    rgba[ys, xs, :3] = np.clip(rgba[ys, xs, :3] * gain, 0, 255)
+    return Image.fromarray(rgba.round().astype(np.uint8), "RGBA")
+
+
+def parse_sun(text):
+    try:
+        az, el = (float(t) for t in text.split(","))
+    except ValueError:
+        raise argparse.ArgumentTypeError("--sun wants AZIMUTH,ELEVATION in degrees, e.g. 250,45") from None
+    if not 5 <= el <= 90:
+        raise argparse.ArgumentTypeError("--sun elevation must be 5..90 degrees")
+    return az, el
 
 
 def main():
@@ -341,19 +355,29 @@ def main():
                     help="structure names (bar/.../assets/reignofnether/structures/<name>.nbt) or .nbt paths")
     ap.add_argument("-o", "--out", default="structure_render.png", help="the sheet PNG to write")
     ap.add_argument("--px", type=int, default=24, help="screen pixels per block (24-36 = the RTS default zoom)")
-    ap.add_argument("--light", action="store_true", help="ambient occlusion and a low sun's block shadows")
-    ap.add_argument("--sun", default=",".join(map(str, SUN)), help="toward the sun, x,y,z (x east, y up, z south)")
+    ap.add_argument("--flat", action="store_true", help="the old unlit look: Minecraft's fixed face shades, no sun")
+    ap.add_argument("--sun", type=parse_sun, default=(250.0, 45.0), metavar="AZ,EL",
+                    help="sun direction in degrees: azimuth from north clockwise, elevation (default 250,45: from the "
+                         "west-south-west, shadows fall to the right)")
+    ap.add_argument("--ao-strength", type=float, default=0.8, help="ambient occlusion: 0 off .. 1 strongest")
+    ap.add_argument("--shadows", action=argparse.BooleanOptionalAction, default=True, help="cast sun shadows")
+    ap.add_argument("--sky-tint", action=argparse.BooleanOptionalAction, default=True,
+                    help="sky-blue ambient light and a warm sun (off: white light)")
+    ap.add_argument("--ground", type=int, default=0, metavar="N",
+                    help="a grass plane under the building, N blocks around it, to catch its shadow (default none)")
+    ap.add_argument("--ref", action="append", default=[], metavar="IMAGE",
+                    help="a reference picture to put beside the renders at their height (repeatable)")
     a = ap.parse_args()
-    sun = tuple(float(v) for v in a.sun.split(","))
     if not os.path.isdir(SP.PACK):
         sys.exit("structure_render: no block pack at %s - generate it: python3 tools/gen_blocks.py" % SP.PACK)
+    light = None if a.flat else Light(sun_vector(*a.sun), max(0.0, min(1.0, a.ao_strength)), a.shadows, a.sky_tint)
     tx = SP.Textures(a.px)
     faces = Faces(tx)
     shots = []
     for arg in a.structures:
         path = structure_path(arg)
         label = os.path.splitext(os.path.basename(path))[0]
-        img, size, total, textured = render(path, tx, faces, a.px, a.light, sun)
+        img, size, total, textured = render(path, tx, faces, a.px, light, a.ground)
         size = "x".join(str(v) for v in size)
         if img is None:
             print("%-28s %-9s only air - skipped" % (label, size))
@@ -362,6 +386,13 @@ def main():
         shots.append(("%s  %s" % (label, size), img))
     if not shots:
         sys.exit("structure_render: nothing to draw")
+    if a.ref:
+        # references beside the renders, scaled to the tallest render (judge the building against the picture)
+        tall = max(img.height for _, img in shots)
+        for ref in a.ref:
+            pic = Image.open(ref).convert("RGBA")
+            pic = pic.resize((max(1, round(pic.width * tall / pic.height)), tall), Image.LANCZOS)
+            shots.append(("reference: %s" % os.path.basename(ref), pic))
     # one row, bottoms on one line (each building's front corner at ground level) and one scale, so sizes compare
     font = ImageFont.load_default(size=max(12, int(a.px * 0.6)))
     gap = max(12, a.px)

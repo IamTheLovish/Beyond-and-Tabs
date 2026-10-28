@@ -45,7 +45,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gothic_parts as GP          # noqa: E402
 import gothic_towers as GT         # noqa: E402
-from gothic_parts import Part, hsh, toward, OPP, LANTERN   # noqa: E402
+from gothic_parts import Part, hsh, toward, OPP   # noqa: E402
 
 PAL = GP.palette(
     "slate", "warm",

@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.fogofwar;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import io.netty.buffer.Unpooled;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerChunkCache;
@@ -47,8 +49,8 @@ import java.util.concurrent.locks.LockSupport;
 // The capture is spread over server ticks. It used to run in one tick at the first RTS join and froze the server
 // thread 14-23 s (a synchronous chunk load, packet build, encode and file write for each of ~2,000 chunks):
 //  - server thread, at most TICK_BUDGET_NS per tick ({@link #tick}): build the packet of every border chunk that is
-//    loaded (the packet constructor copies the chunk's sections, block entities and light, so the packet IS the
-//    snapshot) once its light has settled (see below); a chunk that is not loaded gets a level-33 region ticket (FULL, not ticking - what
+//    loaded (the packet constructor copies the chunk's sections, block entities and light, and {@link #copyHeightmaps}
+//    its heightmaps, so the packet IS the snapshot) once its light has settled (see below); a chunk that is not loaded gets a level-33 region ticket (FULL, not ticking - what
 //    getChunk(x, z, true) asked for) and is built once the chunk system has loaded it on its own workers;
 //  - one background thread: encode each built packet and write its file (bytes only, no world access); a chunk
 //    joins the on-disk index once its file is written, and until then get() serves the in-memory packet;
@@ -368,6 +370,7 @@ public class FogChunkSnapshot {
         pendingCreatedCount += createPendingBlockEntities(chunk);
         ClientboundLevelChunkWithLightPacket packet =
                 new ClientboundLevelChunkWithLightPacket(chunk, captureLevel.getLightEngine(), null, null);
+        copyHeightmaps(packet);
         captureMaxBuildNs = Math.max(captureMaxBuildNs, System.nanoTime() - buildStart);
         if (pending.remove(pos)) capturedCount++;
         lru.remove(pos); // a rebuild (relight) replaces an earlier build
@@ -380,6 +383,19 @@ public class FogChunkSnapshot {
             unwritten.remove(pos, packet);
         });
         return packet;
+    }
+
+    /**
+     * Gives the packet its own copy of the chunk's heightmaps. The packet copies the chunk's sections, block entities
+     * and light, but its heightmap tags hold the chunk's own arrays (new LongArrayTag(heightmap.getRawData()) keeps
+     * the array it is given), so a block changed after the build reached the heightmaps of the file the writer encodes
+     * later and of the packet get() serves (CI run 40469592779: "heightmaps of [22, 52]").
+     */
+    static void copyHeightmaps(ClientboundLevelChunkWithLightPacket packet) {
+        CompoundTag heightmaps = packet.getChunkData().getHeightmaps();
+        for (String key : new ArrayList<>(heightmaps.getAllKeys()))
+            if (heightmaps.get(key) instanceof LongArrayTag tag)
+                heightmaps.put(key, new LongArrayTag(tag.getAsLongArray().clone()));
     }
 
     /**

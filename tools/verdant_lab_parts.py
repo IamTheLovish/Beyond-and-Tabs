@@ -32,7 +32,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import gothic_parts as GP          # noqa: E402
 from gothic_parts import Part, hsh, toward  # noqa: E402
 
 MSB, CSB, CHB, SB, MC = "mossy_stone_bricks", "cracked_stone_bricks", "chiseled_stone_bricks", "stone_bricks", \

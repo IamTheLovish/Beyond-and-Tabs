@@ -68,8 +68,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import storm_lab_parts as P              # noqa: E402
-from storm_lab_parts import (JADE, JADE2_ST, OAK, OAK_LOG, OAK_ST, OAK_FENCE, RED, RED_FENCE,  # noqa: E402
-                             LACQ, PAPER, GOLD, SB, SB_ST, SB_SLAB, SB_WALL, CSB, OPP)
+from storm_lab_parts import (JADE, OAK, OAK_LOG, OAK_ST, OAK_FENCE, RED, RED_FENCE,  # noqa: E402
+                             LACQ, PAPER, GOLD, SB, SB_ST, CSB)
 
 SX = SZ = 17
 L1_H, L3_H = 20, 28
