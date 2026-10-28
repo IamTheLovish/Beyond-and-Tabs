@@ -74,7 +74,7 @@ public final class WagerBlocks {
             return "inside a building or blueprint";
         // nor on a roof: a standing building only - a blueprint is a footprint on the ground, so the ground under a
         // planned building is not a roof (Mode A round 3: a blueprint left on the arena floor refused the test's block)
-        if (BuildingUtils.findBuildingOrBlueprint(false, pos.below()) != null)
+        if (BuildingUtils.findBuilding(false, pos.below()) != null)
             return "on a building's roof";
         if (!level.getEntitiesOfClass(LivingEntity.class, new AABB(pos)).isEmpty())
             return "a unit stands there";

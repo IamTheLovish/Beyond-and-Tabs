@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
@@ -69,8 +70,11 @@ public final class WagerWeather {
 
     private static void restore(ServerLevel level, Active a) {
         ACTIVE.remove(level.dimension());
-        // a command or another mod changed the sky meanwhile: theirs stands (Mode A round 2 note)
-        if (level.getLevelData().isRaining() != a.rainSet || level.getLevelData().isThundering())
+        // with the cycle off nothing but a command or another mod changes the sky, so a change meanwhile is theirs and
+        // stands (Mode A round 2 note). With it on (QuickBattle) vanilla's own timers end our rain and flip thunder on,
+        // which is not external: always put the sky back, or the next natural rain would come as a storm (round 3)
+        boolean cycleOn = level.getGameRules().getBoolean(GameRules.RULE_WEATHER_CYCLE);
+        if (!cycleOn && (level.getLevelData().isRaining() != a.rainSet || level.getLevelData().isThundering()))
             return;
         // zero timers: with the cycle off the sky stays as it was; with it on, vanilla draws new timers next tick
         level.setWeatherParameters(0, 0, a.rainWas, a.thunderWas);
