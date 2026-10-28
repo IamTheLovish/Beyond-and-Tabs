@@ -3677,8 +3677,9 @@ public class SkirmishGameTests {
 
     /**
      * The Elder Druid is the Court's T2 constructor: double build power and health, a T2 worker (so it may raise a T3
-     * lab), Verdant, with Awaken Thicket - which a plain Seedshaper must not get. Awaken Thicket wakes a tagged, owned
-     * Sentinel Treant that is dismissed again.
+     * lab), Verdant, and no ability of its own: builder abilities went in every faction on 2026-10-26 (PR #253, 66d0fdb3,
+     * which took its Awaken Thicket). The treant-waking helper stays (the World Tree Walker's grove uses it): it wakes a
+     * tagged, owned Sentinel Treant that is dismissed again.
      */
     @GameTest(template = ARENA)
     public static void elder_druid_is_a_t2_worker(GameTestHelper helper) {
@@ -3709,10 +3710,9 @@ public class SkirmishGameTests {
                 helper.fail("the Elder Druid is not Verdant Court");
             if (druid.getMaxHealth() < 2 * seed.getMaxHealth() - 0.01f)
                 helper.fail("the Elder Druid has " + druid.getMaxHealth() + " health, the Seedshaper " + seed.getMaxHealth());
-            if (druid.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
-                helper.fail("the Elder Druid lacks Awaken Thicket");
-            if (seed.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
-                helper.fail("a plain Seedshaper got Awaken Thicket");
+            if (druid.getAbilities() != null && !druid.getAbilities().get().isEmpty())
+                helper.fail("the Elder Druid has abilities (builders have none since #253): "
+                    + druid.getAbilities().get().stream().map(a -> a.getClass().getSimpleName()).toList());
             if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, Buildings.CASTLE, new int[] { druid.getId() }))
                 helper.fail("a T3 lab refused an Elder Druid builder");
             treant = com.solegendary.reignofnether.ability.abilities.AwakenThicket.awaken(level, owner, at.offset(4, -1, 0));
@@ -4133,7 +4133,7 @@ public class SkirmishGameTests {
             helper.fail("the hero save data should be clean after a flush");
             return;
         }
-        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level);
         if (!data.isDirty())
             helper.fail("a hero death should mark the hero save data dirty for the next autosave");
         else if (data.heroUnits.size() != fallen.size())
@@ -6281,7 +6281,7 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void t2_worker_and_t3_skins_ship_in_the_mod(GameTestHelper helper) {
         List<String> missing = new ArrayList<>();
-        for (String skin : List.of("royal_architect_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
+        for (String skin : List.of("royal_architect_body_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
                 "sun_colossus_unit", "bone_dragon_unit"))
             if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "entities", skin + ".png"))
                 missing.add("textures/entities/" + skin + ".png");

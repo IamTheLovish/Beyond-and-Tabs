@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.building.production.ProductionItems;
@@ -43,7 +44,7 @@ import java.util.List;
  * Tier 2 is an investment (resources/TierGate; lovish, Oct 22). The cost and time constants, the server-side gate on every
  * faction's T2 lab (placement and production), the extractors' energy drain (a T2 extractor's metal drops when energy is
  * short and recovers when it is not), the converter as a last resort, and a bot skirmish that checks bots tech after they
- * field T1 units, never before minute 5, and within a window.
+ * field T1 units, never before minute 6, and within a window.
  * <p>
  * Own holder. Placements are made with getNewBuildingPlacement and only put in the world's building list inside one
  * synchronous call (and taken out again), so no other test can see them.
@@ -83,6 +84,27 @@ public class TierGateGameTests {
         }
         if (TierGate.t2Labs().size() != 7)
             problems.add("seven factions, but " + TierGate.t2Labs().size() + " T2 labs");
+        // lovish, Oct 24: tier 2 came too fast and its economy jump made tier 1 useless - a softer refit (4.5 metal/s, 300
+        // metal, 75 s), a 180 s research, and the bots a minute later. These are his numbers, not tuning room.
+        if (MetalExtractor.T2_METAL_INCOME != 4.5f)
+            problems.add("a T2 extractor makes " + MetalExtractor.T2_METAL_INCOME + " metal/s, lovish set 4.5");
+        if (TierGate.UPGRADE_EXTRACTOR_METAL != 300 || TierGate.UPGRADE_EXTRACTOR_ENERGY != 600 || TierGate.UPGRADE_EXTRACTOR_SECONDS != 75)
+            problems.add("the refit is " + TierGate.UPGRADE_EXTRACTOR_METAL + "m/" + TierGate.UPGRADE_EXTRACTOR_ENERGY + "e/"
+                + TierGate.UPGRADE_EXTRACTOR_SECONDS + "s, lovish set 300/600/75");
+        if (TierGate.T2_RESEARCH_METAL != 1000 || TierGate.T2_RESEARCH_ENERGY != 10080 || TierGate.T2_RESEARCH_SECONDS != 180)
+            problems.add("Tier 2 research is " + TierGate.T2_RESEARCH_METAL + "m/" + TierGate.T2_RESEARCH_ENERGY + "e/"
+                + TierGate.T2_RESEARCH_SECONDS + "s, lovish set 1000/10080/180");
+        if (BotTuning.EASY.t2Minute() != 9 || BotTuning.MEDIUM.t2Minute() != 7 || BotTuning.HARD.t2Minute() != 5)
+            problems.add("bots start Tier 2 at minutes " + BotTuning.EASY.t2Minute() + "/" + BotTuning.MEDIUM.t2Minute() + "/"
+                + BotTuning.HARD.t2Minute() + " (easy/medium/hard), lovish set 9/7/5");
+        // tier 1 stays worth having: a refit no more than ~2.25x's a T1 extractor, and it pays its metal back in no less
+        // than two minutes of the extra income (counting the drill's own downtime while it refits)
+        float t1 = Buildings.METAL_EXTRACTOR_VILLAGERS.getMetalIncome();
+        if (MetalExtractor.T2_METAL_INCOME > 2.25f * t1)
+            problems.add("a T2 extractor is " + MetalExtractor.T2_METAL_INCOME / t1 + "x a T1 one");
+        float payback = (TierGate.UPGRADE_EXTRACTOR_METAL + t1 * TierGate.UPGRADE_EXTRACTOR_SECONDS) / (MetalExtractor.T2_METAL_INCOME - t1);
+        if (payback < 120f)
+            problems.add("a refit pays its metal back in " + payback + " s");
         // the package is a real investment: at least 100 s of the 16 metal/s opener (it was 40 s), and Tier 2 stays under Tier 3
         float seconds = TierGate.T2_PACKAGE_METAL / OPENER_METAL_PER_SECOND;
         if (seconds < 100f)
@@ -257,7 +279,7 @@ public class TierGateGameTests {
 
     /**
      * A T2 extractor's output drops when energy is short and recovers when it is not (BAR: mohos need energy). Two refitted
-     * extractors on their own pool and economy: 14 metal/s for 40 energy/s. Dry pool: nothing; half the drain: half the
+     * extractors on their own pool and economy: 9 metal/s for 40 energy/s. Dry pool: nothing; half the drain: half the
      * metal; plenty: all of it; and the HUD's smoothed figure follows both ways.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
@@ -265,8 +287,9 @@ public class TierGateGameTests {
         List<String> problems = new ArrayList<>();
         String owner = "gametest_tier_gate_energy_" + Long.toHexString(helper.absolutePos(BlockPos.ZERO).asLong());
         var eco = EconomyServerEvents.getEconomy(owner);
-        eco.metalIncome = 2f + 14f;   // the capitol + two T2 extractors (7 each)
-        eco.extractorMetal = 14f;
+        final float t2Pair = 2 * MetalExtractor.T2_METAL_INCOME;   // two T2 extractors (4.5 metal/s each)
+        eco.metalIncome = 2f + t2Pair;   // + the capitol
+        eco.extractorMetal = t2Pair;
         eco.extractorUpkeep = 2 * TierGate.T2_EXTRACTOR_ENERGY_UPKEEP;
         eco.extractorEfficiency = 1f;
         float drainPerTick = eco.extractorUpkeep / 20f;
@@ -276,7 +299,7 @@ public class TierGateGameTests {
             float share = EconomyServerEvents.payExtractorUpkeep(res, eco);
             if (share != 0f || res.getEnergy() != 0f)
                 problems.add("a dry pool paid " + share + " of the drain");
-            float metalPerSecond = 2f + 14f - eco.extractorMetal * (1f - share);
+            float metalPerSecond = 2f + t2Pair - eco.extractorMetal * (1f - share);
             if (Math.abs(metalPerSecond - 2f) > 0.001f)
                 problems.add("with no energy the economy makes " + metalPerSecond + " metal/s, expected the capitol's 2");
             // half the drain in the pool: half the extractors' metal
@@ -296,13 +319,13 @@ public class TierGateGameTests {
             for (int i = 0; i < 40; i++)
                 EconomyServerEvents.payExtractorUpkeep(res, eco);
             float starved = eco.effectiveMetalIncome();
-            if (starved > 2f + 14f * 0.2f)
+            if (starved > 2f + t2Pair * 0.2f)
                 problems.add("after 2 s without energy the income still shows " + starved + " metal/s");
             res.addEnergy(5000f);
             for (int i = 0; i < 60; i++)
                 EconomyServerEvents.payExtractorUpkeep(res, eco);
             float recovered = eco.effectiveMetalIncome();
-            if (recovered < 2f + 14f * 0.95f)
+            if (recovered < 2f + t2Pair * 0.95f)
                 problems.add("3 s after energy returned the income is only " + recovered + " metal/s");
             // T1 extractors drain TierGate's T1 figure and are never throttled below it: no upkeep, no change
             eco.extractorUpkeep = 0f;
@@ -324,7 +347,7 @@ public class TierGateGameTests {
 
     /**
      * The same chain from real placements: a finished T1 extractor drains TierGate's T1 figure, the same one refitted to the
-     * T2 tower drains the T2 figure and earns 7 metal/s, and the economy's recalculation puts both into the owner's economy.
+     * T2 tower drains the T2 figure and earns 4.5 metal/s, and the economy's recalculation puts both into the owner's economy.
      */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void refitted_extractor_drains_energy_and_the_economy_counts_it(GameTestHelper helper) {
@@ -354,10 +377,11 @@ public class TierGateGameTests {
                     BuildingServerEvents.getBuildings().remove(mex);
                 }
                 var eco = EconomyServerEvents.getEconomy(owner);
-                // (7 metal/s on a plain patch; a richer patch nearby, stamped by another test, only raises it)
+                // (4.5 metal/s on a plain patch; a richer patch nearby, stamped by another test, only raises it)
                 if (Math.abs(eco.extractorUpkeep - TierGate.T2_EXTRACTOR_ENERGY_UPKEEP) > 0.01f
-                        || eco.extractorMetal < 6.99f || Math.abs(eco.extractorMetal - mex.getMetalIncome()) > 0.01f)
-                    problems.add("the economy counts " + eco.extractorMetal + " metal/s for " + eco.extractorUpkeep + " energy/s, expected 7+ for "
+                        || eco.extractorMetal < MetalExtractor.T2_METAL_INCOME - 0.01f || Math.abs(eco.extractorMetal - mex.getMetalIncome()) > 0.01f)
+                    problems.add("the economy counts " + eco.extractorMetal + " metal/s for " + eco.extractorUpkeep + " energy/s, expected "
+                        + MetalExtractor.T2_METAL_INCOME + "+ for "
                         + TierGate.T2_EXTRACTOR_ENERGY_UPKEEP);
                 // refit running: the drill is stopped, so it neither earns nor drains
                 var refit = ProductionItems.UPGRADE_EXTRACTOR;
@@ -380,8 +404,14 @@ public class TierGateGameTests {
 
     // ------------------------------------------------------------------------------------------------ the bots
 
-    /** Game-minutes the bot skirmish may run: the latest bot (easy) techs from minute 8, researches 2 min, raises the lab. */
-    static final int BOT_T2_MINUTES = 15;
+    /**
+     * Game-minutes the bot skirmish may run: the latest bot (easy) techs from minute 9, researches 3 min (longer when it
+     * stalls: on main 48f6bbc the easy bot's 120 s research took 146 s and its lab 2:52 more, done at 13:19), then raises
+     * the lab while its refits stop drills for 75 s each - ~15:30-16:30 now, so 18 leaves room (Oct 24: was 15).
+     */
+    static final int BOT_T2_MINUTES = 18;
+    /** The earliest game-minute any bot may hold Tier 2 (lovish, Oct 24: was 5). */
+    static final int BOT_T2_EARLIEST_MINUTE = 6;
     static final int BOT_T2_TICKS = 20 * 60 * BOT_T2_MINUTES;
 
     private static int fighters(String owner) {
@@ -396,13 +426,13 @@ public class TierGateGameTests {
     /**
      * Skirmish: a hard Sunforged, a medium Horde and an easy Gravebound bot (allies, so nothing interrupts the tech) play
      * until each has its T2 lab or {@value #BOT_T2_MINUTES} game-minutes pass. Each must have started the research with a
-     * fighting force fielded (T1 units first), no earlier than its tuning's minute, finished it no earlier than minute 5 and
+     * fighting force fielded (T1 units first), no earlier than its tuning's minute, finished it no earlier than minute 6 and
      * raised the T2 lab inside the window - under the new cost the bots still tech, in their own order (hard, medium, easy).
      * The Horde rides along because its Flame Sanctuary needs a Hoglin Stables the bot has to raise for the server's gate.
      * Logs a {@code [T2Timing]} line (minutes) so the nightly bot ladder's numbers can be compared.
      */
     @GameTest(template = ARENA, timeoutTicks = BOT_T2_TICKS + 1200)
-    public static void bots_reach_tier_2_after_fielding_t1_units_and_not_before_minute_5(GameTestHelper helper) {
+    public static void bots_reach_tier_2_after_fielding_t1_units_and_not_before_minute_6(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String[] names = { "gametest_t2_hard", "gametest_t2_medium", "gametest_t2_easy" };
         Faction[] factions = { Factions.VILLAGERS, Factions.PIGLINS, Factions.MONSTERS };
@@ -454,8 +484,8 @@ public class TierGateGameTests {
                     problems.add(tag + " started Tier 2 at " + minutes(researchStart[i]) + ", before its minute " + tuning.t2Minute());
                 if (researchDone[i] < 0)
                     problems.add(tag + " never finished the Tier 2 research (started " + minutes(researchStart[i]) + ")");
-                else if (researchDone[i] < 5 * 1200L)
-                    problems.add(tag + " had Tier 2 at " + minutes(researchDone[i]) + ", before minute 5");
+                else if (researchDone[i] < BOT_T2_EARLIEST_MINUTE * 1200L)
+                    problems.add(tag + " had Tier 2 at " + minutes(researchDone[i]) + ", before minute " + BOT_T2_EARLIEST_MINUTE);
                 if (labDone[i] < 0)
                     problems.add(tag + " never finished its T2 lab (research done " + minutes(researchDone[i]) + ", at " + minutes(now) + ")");
             }

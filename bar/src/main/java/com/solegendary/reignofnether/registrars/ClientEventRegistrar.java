@@ -78,11 +78,14 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.SpectatorFreeFly.class);   // watchers: free flight
         // the frame-time profile (inbox/spec-5 section 3): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);
         // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameAuto.class);

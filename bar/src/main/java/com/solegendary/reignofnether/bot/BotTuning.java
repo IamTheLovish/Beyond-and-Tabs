@@ -27,8 +27,12 @@ package com.solegendary.reignofnether.bot;
  * @param attackValueCap  the threshold never grows past this
  * @param attackCooldownTicks ticks between waves (a wave that reaches its target keeps going; this gates the next launch)
  * @param retreatRatio    enemy/own value around the army that makes a losing wave pull back (0 = never retreat)
- * @param raidCooldownTicks ticks between raids on enemy extractors (0 = no raids)
- * @param raidSize        fighters in a raid squad
+ * @param raidCooldownTicks ticks between infantry raids (0 = no raids): the fastest fighters hunt the enemy's workers,
+ *                        else its converters, else a bare extractor (lovish, Oct 22: killing workers early sets people behind)
+ * @param raidSize        fighters in an infantry raid squad
+ * @param vehicleRaidCooldownTicks ticks between vehicle raids (0 = none): idle T1 vehicles (RaidTuning.isT1Vehicle) go for
+ *                        an enemy converter, extractor or windmill that no known defence covers
+ * @param vehicleRaidSize T1 vehicles in a vehicle raid
  * @param scoutEveryTicks ticks between scout errands (0 = never scouts: the army finds the enemy by itself)
  * @param blindAttackMinute minute from which a wave may march on an enemy base it has not scouted yet (start
  *                        positions are public in the lobby, so this is a fallback, not a map hack)
@@ -40,28 +44,28 @@ public record BotTuning(int t2Minute, int t3Minute,
                         int sitesBase, int floatSites, int labsPerMinutes, int maxLabs, int queueDepth,
                         int attackValueBase, int attackValuePerMinute, int attackValueCap, long attackCooldownTicks,
                         float retreatRatio, long raidCooldownTicks, int raidSize, long scoutEveryTicks,
-                        int blindAttackMinute, int defendValue, int t2MinArmy) {
+                        int blindAttackMinute, int defendValue, long vehicleRaidCooldownTicks, int vehicleRaidSize, int t2MinArmy) {
 
-    public static final BotTuning EASY = new BotTuning(8, 99,
+    public static final BotTuning EASY = new BotTuning(9, 99,
         5, 0, 0f, 10,
         1, 1, 6, 3, 2,
         600, 30, 1500, 20 * 240,
         0f, 0, 0, 0,
-        6, 150, 4);
+        6, 150, 0, 0, 4);
 
-    public static final BotTuning MEDIUM = new BotTuning(6, 14,
+    public static final BotTuning MEDIUM = new BotTuning(7, 14,
         7, 1, 3f, 20,
         2, 1, 4, 6, 2,
         900, 50, 2600, 20 * 170,
         2.0f, 20 * 150, 3, 20 * 180,
-        6, 150, 6);
+        6, 150, 20 * 200, 3, 6);
 
-    public static final BotTuning HARD = new BotTuning(4, 11,
+    public static final BotTuning HARD = new BotTuning(5, 11,
         9, 2, 2f, 36,
         3, 2, 3, 12, 3,
         1100, 70, 3800, 20 * 100,
         1.8f, 20 * 90, 4, 20 * 120,
-        6, 180, 8);
+        6, 180, 20 * 120, 3, 8);
 
     /** Passive: Easy's economy; BotArmy never sends a wave, raid, scout or site squad whatever these numbers say. */
     public static final BotTuning PASSIVE = EASY;
