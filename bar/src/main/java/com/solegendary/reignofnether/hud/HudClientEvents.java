@@ -2548,7 +2548,10 @@ public class HudClientEvents {
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
         ControlGroupNumbers.queue(evt.getEntity());
-        if (hudSelectedEntity != null && (hudSelectedEntity.isRemoved() || hudSelectedEntity.isDeadOrDying()))
+        // the same rule as the selection (SelectionKeep): a unit kept selected past tracking range stays the HUD
+        // focus. Dropping it here (isRemoved) re-picked it straight away, every rendered entity, every frame, and
+        // each switch cleared the pending left-click order (attack-move, abilities): no queuing from afar.
+        if (hudSelectedEntity != null && UnitClientEvents.isDeadForSelection(hudSelectedEntity))
             setHudSelectedEntity(null);
 
         ArrayList<LivingEntity> units = UnitClientEvents.getSortedSelectedUnits();

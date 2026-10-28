@@ -20,4 +20,13 @@ public final class MatchEndLayout {
     public static boolean showsPartyTotal(int members) {
         return members > 1;
     }
+
+    /**
+     * The host's Back to lobby reopens the lobby on every client (lovish, Oct 27: non-hosts "cant see the graphs to
+     * see the differences between players" - the popup closed at once). Results a player is looking at, or that are
+     * about to open, stay until they close the popup; only results nobody has up go straight away.
+     */
+    public static boolean lobbyKeepsResults(boolean popupOpen, boolean popupPending) {
+        return popupOpen || popupPending;
+    }
 }
