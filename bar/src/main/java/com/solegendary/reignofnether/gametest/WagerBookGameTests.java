@@ -254,7 +254,7 @@ public class WagerBookGameTests {
     /**
      * No one-shotting a base: a legendary at most once a minute per hero and once per two minutes per intent across the
      * match (a refused T4 becomes a T3), and every phenomenon and twist in the table stays under the damage, radius and
-     * duration ceilings.
+     * duration ceilings (a damaging one within radius 6, a buff or reveal within 16).
      */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void wager_fairness_caps_legendaries_damage_radius_and_duration(GameTestHelper helper) {
@@ -291,14 +291,16 @@ public class WagerBookGameTests {
                         continue;
                     }
                     seen++;
-                    if (s.damage() > Phenomena.MAX_DAMAGE || s.radius() > Phenomena.MAX_RADIUS || s.ticks() > Phenomena.MAX_TICKS)
+                    // damage phenomena obey the hero caps (50, radius 6); a buff or a reveal may reach MAX_AREA
+                    if (s.damage() > Phenomena.MAX_DAMAGE || s.ticks() > Phenomena.MAX_TICKS || s.radius() > Phenomena.MAX_AREA
+                            || (s.damage() > 0 && s.radius() > Phenomena.MAX_RADIUS))
                         problems.add(s + " passes a cap");
                     if (s.name() == null || s.name().isBlank())
                         problems.add(i.id() + " T" + tier + " has no name for the reply");
                 }
         }
-        if (Phenomena.MAX_DAMAGE != 50 || Phenomena.MAX_RADIUS != 6 || Phenomena.MAX_TICKS != 1800)
-            problems.add("the caps are not 50 damage / radius 6 / 90 s");
+        if (Phenomena.MAX_DAMAGE != 50 || Phenomena.MAX_RADIUS != 6 || Phenomena.MAX_AREA > 16 || Phenomena.MAX_TICKS != 1800)
+            problems.add("the caps are not 50 damage / radius 6 (16 for a buff) / 90 s");
         if (seen < 20 * 8)
             problems.add("only " + seen + " phenomena checked");
         finish(helper, problems);
@@ -310,7 +312,7 @@ public class WagerBookGameTests {
     static Mob[] scene(GameTestHelper helper, String me, String them) {
         Mob hero = HeroGameTests.spawnHero(helper, HeroKits.DAWN_PALADIN, me, 2, 2);
         Mob friend = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 3, 2);
-        Mob enemy = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), them, 2, 8);
+        Mob enemy = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), them, 2, 6);
         if (friend != null)
             friend.setNoAi(true);
         if (enemy != null)
