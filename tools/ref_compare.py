@@ -13,6 +13,11 @@ Writes one sheet, two rows:
 Why (design/vehicle_labs/LESSONS.md, Oct 28): seven labs stalled at 3-4/10 for two rounds because they blended many
 references, were judged at 18 px (smaller than the game ever shows) and never sat beside their picture. Imitate ONE
 picture; check against it at game zoom; check the squint first.
+
+--front: compare like with like when the reference is a FRONT-ON photo. The sheet's first two rows then hold an
+orthographic elevation of the building's west (-x) face - each (z, y) column's front-most block, every block drawn as a
+full cube face, darker the deeper it is set back - beside the reference and its squint, and a third row keeps the RTS
+corner view and its squint. Check the front outline column by column first, then the squint, then the corner view.
 """
 import argparse
 import os
@@ -25,6 +30,7 @@ import structure_render as SR  # noqa: E402
 import structure_preview as SP  # noqa: E402
 
 BG = SR.BACKGROUND
+SKY = (165, 190, 215)
 
 
 def fit_height(img, h):
@@ -38,6 +44,31 @@ def squint(img, blur):
     return ImageOps.grayscale(flat).filter(ImageFilter.GaussianBlur(blur)).convert("RGB")
 
 
+def front(path, tx, faces, px):
+    """The building's west face, orthographic: z runs left to right (north to south), y up. Every block's shape boxes
+    (stairs, slabs, walls as built) are painted far to near, so a stair-edged slope reads as the line it is; a box set
+    back d blocks behind the front-most block is drawn d steps darker, so recesses and set-backs read."""
+    root = SR.PS.load_nbt(path)
+    looks = [SR.look_of(e, tx) for e in root.get("palette") or (root.get("palettes") or [[]])[0]]
+    sx, sy, sz = root["size"]
+    boxes = []
+    for b in root.get("blocks", []):
+        lk = looks[b["state"]]
+        if not SR.PS.invisible(lk.name):
+            x, y, z = b["pos"]
+            boxes += [(x + bx[0], (x, y, z), bx, lk) for bx in lk.shape]
+    img = Image.new("RGB", (sz * px, sy * px), SKY)   # a pale sky, so its squint compares with a daylight photo
+    x_min = min((d for d, *_ in boxes), default=0)
+    for d, (x, y, z), (x0, x1, y0, y1, z0, z1), lk in sorted(boxes, key=lambda q: -q[0]):
+        w, h = round((z1 - z0) * px), round((y1 - y0) * px)
+        if w < 1 or h < 1:
+            continue
+        shade = max(0.35, 0.9 - 0.08 * (d - x_min))
+        face = faces.get(lk.side, SR._uv(z0, 1 - y1, z1, 1 - y0), None if lk.light else shade).resize((w, h))
+        img.paste(face, (round((z + z0) * px), round((sy - y - y1) * px)), face)
+    return img
+
+
 def main():
     ap = argparse.ArgumentParser(description="A building beside its reference picture, plus the squint test.")
     ap.add_argument("building", help="the .nbt (or a structure name) to render")
@@ -45,6 +76,8 @@ def main():
     ap.add_argument("-o", "--out", default="ref_compare.png")
     ap.add_argument("--px", type=int, default=32, help="pixels per block (24-36 = the RTS zoom; default 32)")
     ap.add_argument("--blur", type=float, default=0.0, help="squint blur radius in px (default: height / 60)")
+    ap.add_argument("--front", action="store_true",
+                    help="the reference is front-on: rows 1-2 are the building's west elevation beside it, row 3 the corner view")
     a = ap.parse_args()
     if not os.path.isdir(SP.PACK):
         sys.exit("ref_compare: no block pack at %s - generate it: python3 tools/gen_blocks.py" % SP.PACK)
@@ -53,26 +86,35 @@ def main():
     img, size, total, _ = SR.render(SR.structure_path(a.building), tx, SR.Faces(tx), a.px)
     if img is None:
         sys.exit("ref_compare: the building is only air")
-    ref = Image.open(a.reference).convert("RGB")
-    ref = fit_height(ref, img.height)
+    ref_full = Image.open(a.reference).convert("RGB")
+    ref = fit_height(ref_full, img.height)
     blur = a.blur or max(3.0, img.height / 60.0)
+    rows = [("%s  %s  (--px %d)" % ("{name}", "x".join(map(str, size)), a.px), img, "{rname}", ref)]
+    if a.front:
+        el = front(SR.structure_path(a.building), tx, SR.Faces(tx), a.px)
+        fref = fit_height(ref_full, el.height)
+        fblur = a.blur or max(3.0, el.height / 60.0)
+        rows = [("{name}  west elevation (front-on)", el, "{rname}", fref),
+                ("squint: elevation", squint(el, fblur), "squint: reference", squint(fref, fblur)),
+                ("{name}  RTS corner view", img, "squint: corner view", squint(img, blur))]
+    else:
+        rows.append(("squint: building", squint(img, blur), "squint: reference", squint(ref, blur)))
 
     gap, cap = max(16, a.px // 2), 28
     font = ImageFont.load_default(size=18)
-    row_w = img.width + ref.width + 3 * gap
-    sheet = Image.new("RGB", (row_w, 2 * (img.height + cap) + 3 * gap), BG)
-    d = ImageDraw.Draw(sheet)
     name = os.path.splitext(os.path.basename(a.building))[0]
     rname = os.path.splitext(os.path.basename(a.reference))[0]
+    lw = max(r[1].width for r in rows)
+    row_w = lw + max(r[3].width for r in rows) + 3 * gap
+    sheet = Image.new("RGB", (row_w, sum(max(r[1].height, r[3].height) + cap + gap for r in rows) + gap), BG)
+    d = ImageDraw.Draw(sheet)
     y = gap
-    for label_l, left, label_r, right in (
-            ("%s  %s  (--px %d)" % (name, "x".join(map(str, size)), a.px), img, rname, ref),
-            ("squint: building", squint(img, blur), "squint: reference", squint(ref, blur))):
-        d.text((gap, y), label_l, fill=(230, 230, 230), font=font)
-        d.text((2 * gap + img.width, y), label_r, fill=(230, 230, 230), font=font)
+    for label_l, left, label_r, right in rows:
+        d.text((gap, y), label_l.format(name=name), fill=(230, 230, 230), font=font)
+        d.text((2 * gap + lw, y), label_r.format(rname=rname), fill=(230, 230, 230), font=font)
         sheet.paste(left.convert("RGB"), (gap, y + cap), left.convert("RGBA") if left.mode == "RGBA" else None)
-        sheet.paste(right, (2 * gap + img.width, y + cap))
-        y += img.height + cap + gap
+        sheet.paste(right, (2 * gap + lw, y + cap))
+        y += max(left.height, right.height) + cap + gap
     sheet.save(a.out)
     print("wrote", a.out, sheet.size, "- %d blocks" % total)
 

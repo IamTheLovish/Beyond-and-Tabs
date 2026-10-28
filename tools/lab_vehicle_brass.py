@@ -1,648 +1,235 @@
 #!/usr/bin/env python3
-"""CONCEPT (round 2): the Brassworks VEHICLE LAB, THE ERECTING SHOP - the Victorian hall where the steam machines are
-built (the Mortar Crawler, the Steam Runner - a boiler on stilt legs - and the Flak Cart). Writes
-design/vehicle_labs/brass_l1.nbt and brass_l3.nbt from the part library tools/brass_lab_parts.py.
+"""PILOT (Oct 28): the Brassworks VEHICLE LAB as an ENGINE SHED imitating ONE picture, lovish's ref18
+(design/refs/vehicle_labs/ref18_brick_hall_central_tower.png). Brief: design/vehicle_labs/briefs/brass_pilot.md with
+its "Changes sent to the builder" (T1 footprint x 0..12, z 0..20, spawn (6, 10), exit lane z 8..12 x 8 tall out the
+WEST face, L3 <= 22 tall, L1 <= 12). THIS STAGE IS THE GREYBOX ONLY: massing in one wall tone, one roof tone and black
+openings, matched to the reference's squint before any detail (lovish's OK comes first).
 
-Round 1 scored 3/10: "a pile of copper-and-blackstone boxes, not a Victorian erecting shop" - no readable gate, two
-landmarks fighting, no calm wall, a glazed roof that read as scaffolding, a grey slab for a clock, light everywhere,
-taller than the capitol. Round 2 is rebuilt around HIERARCHY (the amendment's rule 2), from lovish's references:
+THE PICTURE, STUDIED (230 x 180 px, a frontal shader shot; measured on the silhouette, ground line at ~y 153)
+  - THE WHOLE: very wide and low, symmetric about ONE central tower. Left to right: end pavilion | 4-5 arcade bays |
+    tower | 4-5 arcade bays | end pavilion. Width : tower height ~ 230 : 139, so the building is ~1.7x wider than the
+    tower is tall, and the hall is ~4x wider than it is tall.
+  - THE HALL (x 35..90 and 140..195 in the picture): a ground arcade of dark round-headed arches (y 128..153, the
+    darkest band of the picture - squinted it reads as a dark strip along the ground), a lit string course on top
+    (y ~128), then a red roof (y 95..119) carrying a row of dormers. Hall to roof top ~58 px = 0.42 of the tower; the
+    walls (ground to eaves) ~34 px = 0.25 of the tower; the roof is ~40% of the hall's height, a steep visible plane.
+  - THE END PAVILIONS (x 0..35 and 195..230): a little taller than the hall - walls to ~y 100, steep pyramid roofs to
+    y 66..77 (~0.6 of the tower) - flaring outward at the outer edges; they close the composition at both ends.
+  - THE TOWER (x 88..142 at its foot, ~23% of the width): rises from the arcade in STEPPED STAGES, each set back -
+    stage 1 to ~y 95 (just above the hall roof, the glowing great door at its base y 128..153), stage 2 to ~y 55
+    (x 95..135), stage 3 to ~y 30 (x 103..128), then a short pointed spire to the tip at y 14. Tip ~139 px = 2.4x the
+    hall's roof top. Squinted: one tall stepped triangle on a long low dark band, with two lesser humps at the ends.
 
-THE REFERENCE, STUDIED
-  - ref18 (a red-brick hall, white stone banding, a front arcade, dormer rows, ONE central tower over the great door):
-    the composition. Brick is the field; stone appears only as plinth, string course, voussoir, sill, coping and quoin.
-  - ref09 (one colossal arch punched through the main mass): the exit is a 7 x 9 round arch in a FLAT wall, the biggest
-    and darkest thing on the west face, framed by two full-height piers and a stone voussoir ring with a keystone.
-  - ref12 (Victorian trim on every edge): the gauge turret at the south-west corner - stone quoins, sills, heads, a
-    corbelled cornice, a verdigris cone with a finial; the office range's bay window under a mansard-like slate pitch.
-  - ref17 (a tall shaft is never plain): the boiler-house stack is broken by corbel rings and an oversailing cap.
-  - ref01 / ref20: detail ORDERED in repeating bays; one pyramidal composition climbing to a single top.
-  - Swindon / Crewe erecting shops: a long hall under one slate gable with a glazed strip in each pitch and a louvred
-    smoke slot along the ridge; crane runways on internal piers carry a travelling bridge crane over the pits.
+THE MASSING, round 3 (blocks; x = depth west -> east, z = length north -> south, y 0 = ground; front faces WEST).
+  Slopes are tools/shape_kit.py shapes voxelized with its stair / slab edge pass, so flanks read as lines.
+  ground      y 0, the whole 13 x 21 pad; lawn strip x 0 in front; dark setts in the lane.
+  hall range  SHALLOW and LOW: x 1..7, z 0..20, walls y 1..5, a straight pitch from y 6 to its ridge at y 9 (x 4).
+              Arcade: dark bays 1 wide x 4 tall at z 0, 2, 4, 6 and 14, 16, 18, 20.
+  works shed  behind the hall: x 8..12, z 0..20, flat roof at y 4, a darker tone; one stack x 10..11, z 0..1 to y 10,
+              hidden behind the north wing's high end from the front.
+  end wings   x 1..6, z 0..3 and 17..20, walls y 1..6, under HALF-SWEPT roofs: the ridge on the outer end at y 13
+              (cell 12), concave toward the hall - the picture's up-swept ends.
+  tower       ONE steep pyramid: a base block x 0..6, z 6..14, y 1..5 (the great door through it), then the pyramid
+              from y 6 (half-widths 3.5 in x, 4.5 in z: 9 wide along the front at the hall's roof line) with straight
+              flanks to its apex at y 23 (top cell 21 - 22 tall). No ledges, no needle.
 
-THE COMPOSITION (17 x 17, x 0..16 west -> east, z 0..16 north -> south; the RTS camera sees the roofs, the west face
-and the south face). As the camera reads it:
-  (a) THE CLOCK TOWER, the one landmark, centred over the gate on the west front: a 7 x 5 brick shaft off the gatehouse
-      block, the round 5 x 5 dial (white face, black ring, gold hands standing proud) filling its west face, a verdigris
-      hip at L1 (top y 19); at L3 an open belfry with the bell and the flared verdigris cap (top y 27).
-  (b) THE GREAT WEST ARCH: 7 wide, 9 tall, in a flat brick wall between two full-height piers; stone voussoirs and a
-      chiseled keystone; the roller-shutter drum in brass inside the arch head; rails run out under it.
-  (c) secondary masses stepping down: the ERECTING HALL under one slate gable (ridge y 15, a glass strip in each
-      pitch, the open smoke slot over the spawn column showing the crane), the OFFICE ARCADE along the south front
-      (three lit round-arched bays, a bay window, a slate pitch, the clerestory above it), the GAUGE TURRET at the
-      south-west corner under its cone, the BOILER HOUSE lean-to on the east with its ringed STACK at the north-east
-      (top y 14, well under the tower) and the FURNACE PIER at the south-east corner (twin lit fire slots).
-  (d) a calm ground story: a stone plinth all round, dark setts, the rails.
-  ~70% of every face is plain red brick between a stone string course every 4-5 courses. Light: the arcade's one lit
-  row, the furnace slots, the stack top - nothing else.
+ANCHORS (structure-local block coords x, y, z)
+  spawn cell      (6, 1, 10)       the hall floor at the inner end of the lane
+  spawn column    (6, 1..21, 10)   air to the sky through the ridge vent at every level
+  exit lane       x 0..6, z 8..12, y 1..8 - 5 wide x 8 tall, out of the west face under the tower
+  great door      (0, 1..8, 8..12) the tower's door opening; its arch head at y 9 (detail stage)
+  clock face      (1, 12..14, 10)  stage 2's west face, centred over the door (detail stage)
+  spire tip       (3, 21, 10)      the finial
+  pavilion tips   (PAV_D//2, top, 2) and (PAV_D//2, top, 18)
 
-ANCHORS (structure-local block coords x, y, z; in game these become client-drawn moving parts):
-  crane runways    (4..12, 10, 5) and (4..12, 10, 11)  soot girders on corbels off the hall's inner pilasters (static)
-  gantry bridge    (10, 11, 5..11) + (12, 11, 5..11)   the travelling bridge crane, PARKED east of the spawn column;
-                                   travels along x 4..12 but never stops over x 8 (the spawn column stays open)
-  gantry trolley   (11, 12, 8)     the brass crab across the girders; travels along z 6..10
-  hoist            (11, 10, 8)     the hook block on its chain (11, 11, 8); the locomotive frame slung under it at y 9
-                                   (x 10..12, z 6..10) over the lane's 8-high clearance; lowers to the floor beside
-                                   the spawn while a unit is built
-  spawn column     (8, 1..top, 8)  air to the sky at every level: the open smoke slot in the ridge (z 8, x 6..12)
-  gate leaf        (3, 9, 8)       the roller shutter rolled up in its drum (x 3..4, y 9, z 6..10) inside the arch
-                                   head; unrolls to y 1 down the guide channels at (3, 1..8, 5) and (3, 1..8, 11)
-  clock hands      (0, 15, 8)      the west dial's hub; hour hand (0, 15, 9..10), minute hand (0, 16..17, 8)
-  stack top        (15, 15, 1) at L1, (15, 21, 1) at L3: the smoke source
-  fire slots       (14, 2..4, 16) and (16, 2..4, 16): the furnace glow at the boiler house's base
-  L3 boiler bridge (6..7, 11, 5..11): a second bridge west of the column, the boiler barrel slung at y 9 (x 6)
-  L3 bell          (3, 20, 8)      in the belfry
-  spawn cell       (8, 1, 8)       the hall floor between the rails (a brass boss)
+PASSES (the sheets: design/vehicle_labs/brass_greybox_vs_ref.png = round 1, corner view only;
+        brass_greybox_vs_ref_r2.png = round 2, tools/ref_compare.py --front: the WEST ELEVATION beside ref18, its
+        squint, then the corner view). Front profile = the tallest course seen from the west per z column:
+  ref18 (tip 22) 13.5 12.6 12.1 10.8  9.2  9.2  9.2  9.7 14.3 18.8 21.9 18.2 12.2  9.2  9.2  9.2  9.2 10.9 12.3 12.8 13.7
+  round 1 (corner-view squint only; a 12-deep hall with a 4-high roof, a 6-deep tower)
+  1-5  walls 8 -> 6, roof 12 -> 10, pavilions 6 -> 4 wide, stage ledges; profile within ~1 block, but the corner view
+       read as a chunky block: the deep hall roof outweighed the tower (coordinator's read).
+  round 2 (front elevation first, then squint, then the corner view)
+  1-4  hall 7 deep, works shed behind, pavilions with eave kicks, stages 11 / 14 / 17 + needle:
+       11 13 13 11 9 9 9 11 14 18 21 18 14 11 9 9 9 11 13 13 11 - the outline within ~1.5 blocks, but the tower read
+       as a wedding cake of set-backs, not the picture's one triangle (coordinator's read).
+  round 3 (tools/shape_kit.py; sheet brass_greybox_vs_ref_r3.png)
+  1  a shape_kit pyramid from y 6, a pitched hall roof, swept wing roofs with a kick: the shapes overwrote each other
+     (a slab from one cut the next one's solid roof: light holes in the hall roof); the kick read as a notch.
+  2  shapes MERGED (a full cell stays full), no kick (the concave fall alone reads as up-swept), apex y 23:
+     11 11 11 8 8 8 8 11 15 19 21 19 15 11 8 8 8 8 8 9 11 - one triangle; the stack poked over the north wing.
+  3  wing ridge to 13 (cell 12), the stack hidden behind it, the lane's far wall in the wall tone:
+     12 10 8 8 8 8 8 11 15 19 21 19 15 11 8 8 8 8 8 10 12 - the tower within 1 block of ref18 in every column;
+     the hall 1 lower than the picture (as asked); the wings' fall 1-2 lower at z 2..3 / 17..18.
 
-Usage: python3 tools/lab_vehicle_brass.py   (writes design/vehicle_labs/brass_l1.nbt, brass_l3.nbt and checks them)
+Usage: python3 tools/lab_vehicle_brass.py   (writes design/vehicle_labs/brass_l3_greybox.nbt and checks it)
 """
-import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import numpy as np                    # noqa: E402
+
 import gen_structures as gs           # noqa: E402
-import brass_lab_parts as BP          # noqa: E402
-from brass_lab_parts import new, chain, rod, hsh   # noqa: E402
+import shape_kit as sk                # noqa: E402
 
-SX = SZ = 17
-H1, H3 = 20, 28
-SPAWN = (8, 1, 8)
-LANE_Z = range(6, 11)
-LANE_X = range(0, 12)
-LANE_H = 8
-OUT = "design/vehicle_labs"
+SX, SZ, H_MAX = 13, 21, 22
+SPAWN = (6, 1, 10)
+LANE_X, LANE_Z, LANE_H = range(0, 7), range(8, 13), 8
+OUT = "design/vehicle_labs/brass_l3_greybox.nbt"
 
-# the hall's roof profile: |dz| from the ridge (z 8) -> the course of its stair row (eaves at the wall tops, y 9)
-ROOF = {6: 10, 5: 10, 4: 11, 3: 12, 2: 13, 1: 14}
-GLASS_ROWS = (2, 3)             # |dz| of the glazed strip in each pitch
-WALL_TOP = 9
+WALL, ROOF, HOLE, GROUND, LAWN = "terracotta", "red_nether_bricks", "obsidian", "stone_bricks", "grass_block"
+SHED = "deepslate_bricks"     # the works behind the hall (a second, quieter tone so the front range reads on its own)
+# shape_kit's roles: a full cell takes the role, a stair cell role + "_st", a slab cell role + "_slab"
+PAL = {"roof": ROOF, "roof_st": "red_nether_brick_stairs", "roof_slab": "red_nether_brick_slab"}
 
-
-def brick_box(p, x0, x1, y0, y1, z0, z1, hollow=True, bands=(), band_role="stone"):
-    """A brick mass: skin from y0 to y1; the interior filled to y 2 (no ground pocket) and hollow above when `hollow`;
-    stone string courses on the skin at the `bands` courses."""
-    for x in range(x0, x1 + 1):
-        for z in range(z0, z1 + 1):
-            skin = x in (x0, x1) or z in (z0, z1)
-            for y in range(y0, y1 + 1):
-                if skin or not hollow or y <= 2:
-                    p.set(x, y, z, band_role if y in bands else "wall")
-
-
-def quoin(p, x, y, z):
-    """A stone quoin block on alternate courses, brick between."""
-    p.set(x, y, z, "stone" if y % 2 == 0 else "wall")
+# the massing, round 3 (tuned against the FRONT elevation, column by column; see PASSES above)
+HALL_X = (1, 7)       # the hall range is shallow: a long low band along the front, the works shed behind it
+HALL_TOP = 5          # hall walls y 1..5; a straight-pitched roof over x 0.5..7.5 from y 6 to its ridge at y 9 (cell 8)
+ARCH_H = 4            # arcade openings y 1..4
+ARCH_Z = (0, 2, 4, 6, 14, 16, 18, 20)   # 4 bays each side of the tower, running under the wings as in the picture
+WING_X, WING_Z = (1, 6), ((0, 3), (17, 20))     # end wings' walls, y 1..WING_TOP
+WING_TOP = 6
+# the wings' roofs: half a swept gable each, its ridge on the outer end (z -0.5 / 20.5) at y 13 (cell 12), falling
+# concave toward the hall (steep at the outer end, flattening inward) - the picture's up-swept ends
+WING_ROOF = dict(h=6.8, y0=7.0, half=4.5, sweep=1.8, kick=0.0)
+# the tower: ONE steep pyramid over a base block, centred on (TX, TZ); half-widths at its foot; apex at y 22
+TX, TZ, THX, THZ = 3.0, 10.0, 3.5, 4.5           # foot x -0.5..6.5 (cells 0..6), z 5.5..14.5 (cells 6..14)
+T_FOOT, T_APEX = 6.0, 23.0                       # the pyramid rises from the hall's roof line to the apex
+SHED_X, SHED_TOP = (8, 12), 4                   # the works shed: x 8..12, flat roof at y 4
+STACK = (10, 11, 0, 1, 10)                      # one smokestack behind the north wing's high end, hidden from the front
 
 
-def hip(p, x0, x1, z0, z1, y, role_st="verd_st", role="verd", levels=99):
-    """A hipped cap stepping in one course at a time (verdigris). Returns the first free course."""
-    k = 0
-    while x0 <= x1 and z0 <= z1 and k < levels:
+class G:
+    def __init__(self):
+        self.b = {}
+
+    def set(self, x, y, z, n, **props):
+        if 0 <= x < SX and 0 <= z < SZ and 0 <= y < H_MAX:
+            self.b[(x, y, z)] = (n, props)
+
+    def fill(self, x0, x1, y0, y1, z0, z1, n):
         for x in range(x0, x1 + 1):
-            for z in range(z0, z1 + 1):
-                ex, ez = x in (x0, x1), z in (z0, z1)
-                if x0 == x1 or z0 == z1 or (ex and ez):
-                    p.set(x, y, z, role)
-                elif ex:
-                    p.stair(x, y, z, "east" if x == x0 else "west", "bottom", role_st)
-                elif ez:
-                    p.stair(x, y, z, "south" if z == z0 else "north", "bottom", role_st)
-                else:
-                    p.set(x, y, z, role)
-        x0, x1, z0, z1, y, k = x0 + 1, x1 - 1, z0 + 1, z1 - 1, y + 1, k + 1
-    return y
+            for y in range(y0, y1 + 1):
+                for z in range(z0, z1 + 1):
+                    self.set(x, y, z, n)
+
+    def clear(self, x, y, z):
+        self.b.pop((x, y, z), None)
 
 
-# ============================================================================================ L1
-def ground(p):
-    """Layer 0: dark setts (deepslate tiles with a few cobbled ones), the road out of the hall - two iron rails on
-    dark-oak sleepers between blackstone - a brass boss under the spawn."""
+def pyramid(cx, cz, hx, hz, y0, y1):
+    """A rectangular pyramid: half-widths hx, hz at y0, straight flanks to the apex at y1."""
+    def f(x, y, z):
+        t = np.clip((y - y0) / (y1 - y0), 0, 1)
+        rho = np.maximum(np.abs(x - cx) * hz / hx, np.abs(z - cz))
+        return np.maximum(rho - hz * (1 - t), np.maximum(y0 - y, y - y1))
+    return sk.Shape(f, (cx - hx, cx + hx, y0, y1, cz - hz, cz + hz))
+
+
+def pitched(x0, x1, z0, z1, y0, y1):
+    """A straight-pitched gable roof over x0..x1 (continuous), ridge along z at y1, eaves at y0."""
+    cx, hw = (x0 + x1) / 2, (x1 - x0) / 2
+
+    def f(x, y, z):
+        top = y0 + (y1 - y0) * (1 - np.abs(x - cx) / hw)
+        return np.maximum(np.maximum(y - top, y0 - y), np.maximum(np.abs(x - cx) - hw,
+                                                                np.maximum(z0 - z, z - z1)))
+    return sk.Shape(f, (x0, x1, y0, y1, z0, z1))
+
+
+def swept_half(x0, x1, z_ridge, toward, h, y0, half, sweep, kick):
+    """Half a swept gable: ridge along x at z_ridge (height y0 + h), the slope running `toward` (+1 / -1 in z) for
+    `half` blocks, concave, its last quarter kicking up by `kick`."""
+    def f(x, y, z):
+        s = np.clip((z - z_ridge) * toward / half, 0, None)
+        lift = kick * np.clip((s - 0.75) / 0.25, 0, 1) ** 2
+        top = y0 + h * np.clip(1 - s, 0, 1) ** sweep + lift
+        return np.maximum(np.maximum(y - top, y0 - y), np.maximum(np.maximum(x0 - x, x - x1), s - 1))
+    zz = sorted((z_ridge, z_ridge + toward * half))
+    return sk.Shape(f, (x0, x1, y0, y0 + h, zz[0], zz[1]))
+
+
+def add(g, shape):
+    """shape_kit's cells merged into g in the roof tone: a cell already full stays full (a slab or stair from one
+    shape never cuts into another's solid roof)."""
+    tmp = G()
+    sk.build(shape, "roof", tmp, pal=PAL)
+    for q, blk in tmp.b.items():
+        old = g.b.get(q)
+        if old is None or (old[0] in PAL.values() and old[0] != ROOF) or blk[0] == ROOF:
+            g.b[q] = blk
+
+
+def greybox():
+    g = G()
     for x in range(SX):
         for z in range(SZ):
-            r = hsh(x, z, 3) % 9
-            p.set(x, 0, z, "cobbled_deepslate" if r < 2 else "deepslate_tiles" if r < 7 else "polished_deepslate")
-    for x in range(0, 13):
-        for z in range(5, 12):
-            if z in (7, 9):
-                p.set(x, 0, z, "iron" if x % 4 == 0 else "polished_deepslate")
-            elif z in (5, 11):
-                p.set(x, 0, z, "base")
-            elif x % 2:
-                p.set(x, 0, z, "post", axis="z")
-            else:
-                p.set(x, 0, z, "polished_blackstone")
-    p.set(8, 0, 8, "brass_b")
-
-
-def plinth(p):
-    """The stone plinth along the two camera faces: a stone course and a battered stair proud of every recessed wall."""
-    for z in range(0, 3):
-        p.stair(0, 1, z, "east", "bottom", "stone_st")
-    for z in range(14, 17):
-        p.stair(0, 1, z, "east", "bottom", "stone_st")
-
-
-def gatehouse(p):
-    """The GATEHOUSE: the hall's west gable wall (x 1..2, z 3..13) to y 10 with the GREAT ARCH through it - the opening
-    z 5..11, straight jambs to y 6, a round head to y 9; a stone voussoir ring in the x 1 plane with a chiseled
-    keystone; two full-height brick PIERS standing proud at x 0 (z 3..4 and z 12..13) with stone string courses, a
-    stone cornice along the top at y 11 and small verdigris hips on the piers; the brass shutter DRUM inside the arch
-    head, iron guide channels down the jambs; the lid at y 10..11 the tower stands on."""
-    cy = 6
-
-    def d(z, y):
-        return math.hypot(z - 8, y - cy) if y > cy else abs(z - 8)
-
-    for x in (1, 2):
-        for z in range(3, 14):
-            for y in range(1, 11):
-                dd = d(z, y)
-                if dd < 3.5:
-                    continue                                   # the void
-                if x == 1 and 3.5 <= dd < 4.5 and y > cy:
-                    p.set(x, y, z, "stone")                    # the voussoirs
-                else:
-                    p.set(x, y, z, "wall")
-    p.set(1, 10, 8, "stone_carve")                             # the keystone
-    p.set(0, 10, 8, "stone_carve")
-    # the piers, proud at x 0: brick, stone plinth / string course / cap, a verdigris hip
-    for z in (3, 4, 12, 13):
-        for y in range(1, 12):
-            p.set(0, y, z, "stone" if y in (1, 6, 11) else "wall")
-    for z in (3, 12):
-        p.stair(0, 12, z, "south", "bottom", "verd_st")
-        p.stair(0, 12, z + 1, "north", "bottom", "verd_st")
-    # the hood stairs where the ring meets the piers, and the cornice at y 11 across the front
-    for z in (5, 11):
-        p.stair(0, 10, z, "east", "top", "stone_st")
-    for z in range(5, 12):
-        p.stair(0, 11, z, "east", "top", "stone_st")
-    # the lid: brick at y 10 over x 3..5 (the tower's floor); the wings' flat roofs: slate slabs behind a stone coping
-    for x in range(1, 6):
-        for z in range(3, 14):
-            if x >= 3:
-                p.set(x, 10, z, "wall")
-            if 5 <= z <= 11:
-                p.set(x, 11, z, "wall")
-            elif x == 1 or z in (3, 13):
-                p.set(x, 11, z, "stone")
-            else:
-                p.slab(x, 11, z, "bottom", "slate_slab")
-    # the drum in the arch head and the guide channels
-    for z in range(5, 12):
-        if 6 <= z <= 10:
-            p.stair(3, 9, z, "west", "top", "brass_st")
-            p.set(4, 9, z, "verd" if z == 8 else "brass_b")
-        else:
-            p.set(3, 9, z, "blue")
-            p.set(4, 9, z, "blue")
-    for z in (5, 11):
-        for y in range(1, 9):
-            p.set(3, y, z, "iron" if y % 3 == 0 else "blue_carve" if y % 3 == 1 else "blue")
-
-
-def tower(p):
-    """THE CLOCK TOWER's shaft (x 1..5, z 5..11, y 11..17): brick with stone quoins; the DIAL on the west face - a
-    black ring 7 tall with its corners cut so it reads round, a white 5 x 5 face, black hands flush in the face and a
-    brass hub standing proud; a tall stone-dressed arched window on the south face; a stone cornice proud all round at
-    y 18 and a two-course verdigris hip (top y 19 - the tallest thing at L1)."""
-    for x in range(1, 6):
-        for z in range(5, 12):
-            if x in (1, 5) or z in (5, 11):
-                for y in range(11, 18):
-                    p.set(x, y, z, "wall")
-    for y in range(11, 18):
-        for (x, z) in ((1, 5), (1, 11), (5, 5), (5, 11)):
-            quoin(p, x, y, z)
-    for z in range(5, 12):                                     # the dial
-        for y in range(11, 18):
-            dz, dy = z - 8, y - 14
-            r = max(abs(dz), abs(dy))
-            if r == 3 and abs(dz) == abs(dy):
-                continue
-            p.set(1, y, z, "ring" if r == 3 else "dial")
-    for y in (15, 16):
-        p.set(1, y, 8, "ring")                                 # the minute hand, up
-    p.set(1, 14, 9, "ring")                                    # the hour hand
-    p.set(0, 14, 8, "brass_b")                                 # the hub, proud
-    p.set(2, 12, 11, "stone")                                  # the south window
-    p.set(3, 12, 11, "stone")
-    p.set(4, 12, 11, "stone")
-    for y in range(13, 16):
-        p.set(3, y, 11, "pane_dim")
-        p.set(3, y, 10, "wall")
-    p.stair(2, 15, 11, "west", "top", "stone_st")
-    p.stair(4, 15, 11, "east", "top", "stone_st")
-    p.set(3, 16, 11, "stone_carve")
-    cornice(p, 0, 6, 4, 12, 18)
-    for x in range(1, 6):
-        for z in range(5, 12):
-            p.set(x, 18, z, "wall")
-    hip(p, 1, 5, 5, 11, 18, levels=1)
-    for z in range(6, 11):                                     # the ridge along z
-        p.stair(2, 19, z, "east", "bottom", "verd_st")
-        p.set(3, 19, z, "verd")
-        p.stair(4, 19, z, "west", "bottom", "verd_st")
-    p.stair(3, 19, 5, "south", "bottom", "verd_st")
-    p.stair(3, 19, 11, "north", "bottom", "verd_st")
-
-
-def cornice(p, x0, x1, z0, z1, y):
-    """A stone cornice proud of a mass whose skin is one cell inside x0..x1 / z0..z1: upside-down stairs on the four
-    sides, blocks at the corners."""
-    for x in range(x0, x1 + 1):
-        for z in range(z0, z1 + 1):
-            ex, ez = x in (x0, x1), z in (z0, z1)
-            if ex and ez:
-                p.set(x, y, z, "stone")
-            elif ex:
-                p.stair(x, y, z, "east" if x == x0 else "west", "top", "stone_st")
-            elif ez:
-                p.stair(x, y, z, "south" if z == z0 else "north", "top", "stone_st")
-
-
-def hall(p):
-    """THE ERECTING HALL (x 3..13, z 3..13): brick side walls to y 9, the east gable wall, inner pilasters at z 4 / 12
-    carrying the crane runways on corbels, the clerestory (clear panes) in the south wall above the office pitch, and
-    ONE SLATE GABLE ROOF ridged along x: slate stair rows two courses thick, a glass strip in each pitch, the open smoke
-    slot along the ridge over the spawn column with verdigris lips, the gable's stone coping."""
-    for x in range(3, 14):
-        for z in (3, 13):
-            for y in range(1, WALL_TOP + 1):
-                p.set(x, y, z, "wall")
-    for z in range(3, 14):
-        for y in range(1, WALL_TOP + 1):
-            p.set(13, y, z, "wall")
-    for x in (3, 4, 7, 10):                                    # the inner pilasters and the runway corbels
-        for z in (4, 12):
-            for y in range(1, WALL_TOP + 1):
-                p.set(x, y, z, "wall")
-        if x == 3:
-            continue
-        p.stair(x, 9, 5, "south", "top", "stone_st")
-        p.stair(x, 9, 11, "north", "top", "stone_st")
-    for z in (5, 11):
-        BP.runway(p, 4, 12, 10, z)
-    for x in (5, 6, 8, 9, 11, 12):                             # the clerestory over the office pitch
-        for y in (8, 9):
-            p.set(x, y, 13, "glass")
-    # the roof (its eave row k = 6 is a flatter sprocketed kick proud of the walls, shading the clerestory)
-    for z in range(2, 15):
-        k = abs(z - 8)
-        if k == 0:
-            continue
-        y = ROOF[k]
-        face = "south" if z < 8 else "north"
-        x0 = 3 if k >= 4 else 6
-        if k == 6:
-            x0 = 4
-        for x in range(x0, 13):
-            if k == 6:
-                p.stair(x, y, z, face, "bottom", "slate_st")
-            elif k in GLASS_ROWS:
-                p.set(x, y, z, "glass")
-                p.set(x, y - 1, z, "glass")
-            else:
-                p.stair(x, y, z, face, "bottom", "slate_st")
-                if y - 1 > WALL_TOP and k < 5:
-                    p.set(x, y - 1, z, "slate")
-        if k == 1:                                             # the ridge lips of the smoke slot
-            for x in range(6, 13):
-                p.stair(x, y + 1, z, face, "bottom", "verd_st")
-    # the east gable: brick following the pitch, stone coping stairs on its edge, the verdigris ridge post
-    for z in range(3, 14):
-        k = abs(z - 8)
-        top = ROOF.get(k, 15) if k else 15
-        for y in range(WALL_TOP + 1, top):
-            p.set(13, y, z, "wall")
-        if k:
-            p.stair(13, top, z, "south" if z < 8 else "north", "bottom", "stone_st")
-    p.set(13, 15, 8, "verd")
-
-
-def office(p):
-    """THE OFFICE ARCADE along the south front (x 4..12, z 14..16): stone plinth, brick pilasters at z 16 every third
-    cell with stone caps, round-arched LIT windows between them (the one lit row), the middle bay a square BAY WINDOW
-    flush with the pilasters under a stone lintel, a stone cornice, a steep slate pitch and a verdigris deck meeting the
-    hall wall under the clerestory."""
-    for x in range(4, 13):
-        for z in (14, 15):
-            for y in range(1, 6):
-                p.set(x, y, z, "stone" if y in (1, 5) else "wall")
-    for x in (4, 7, 10):                                       # the pilasters
-        for y in range(1, 6):
-            p.set(x, y, 16, "stone" if y in (1, 5) else "wall")
-    for x in (5, 6, 11, 12):                                   # the arched windows, recessed at z 15
-        for y in (2, 3):
-            p.set(x, y, 15, "pane")
-            p.set(x, y, 14, "light")
-        p.stair(x, 4, 15, "west" if x in (5, 11) else "east", "top", "stone_st")
-        p.set(x, 1, 16, "stone")
-    for x in (5, 6, 11, 12):
-        p.stair(x, 5, 16, "north", "top", "stone_st")         # the cornice between the pilasters
-    for x in (8, 9):                                           # the bay window, flush at z 16
-        p.set(x, 1, 16, "stone")
-        for y in (2, 3):
-            p.set(x, y, 16, "pane")
-            p.set(x, y, 15, "light")
-        p.slab(x, 4, 16, "bottom", "stone_slab")
-        p.set(x, 5, 15, "stone")
-    # the pitch and the deck
-    for x in range(4, 13):
-        p.stair(x, 6, 15, "north", "bottom", "slate_st")
-        p.set(x, 6, 14, "slate")
-        p.stair(x, 7, 14, "north", "bottom", "verd_st")
-    p.set(13, 10, 13, "stone")                                 # the hall-end pilaster's cap (x 13, z 14..16 below)
-    for z in (14, 15, 16):
-        for y in range(1, 10):
-            p.set(13, y, z, "stone" if y in (1, 5) else "wall")
-        p.set(13, 10, z, "stone")
-
-
-def turret(p):
-    """THE GAUGE TURRET at the south-west corner (x 1..3, z 14..16, ref12): stone plinth, brick with stone quoins on
-    alternate courses, two storeys of 1-wide windows with stone sills and heads on the camera faces, a string course,
-    a corbelled stone cornice (proud at x 0), a verdigris cone with a brass finial."""
-    for x in range(1, 4):
-        for z in range(14, 17):
-            for y in range(1, 11):
-                if x in (1, 3) or z in (14, 16) or y <= 2:
-                    p.set(x, y, z, "stone" if y in (1, 2, 6, 10) else "wall")
-    for y in range(3, 10):
-        for (x, z) in ((1, 14), (1, 16), (3, 14), (3, 16)):
-            if y not in (6,):
-                quoin(p, x, y, z)
-    for (x, z) in ((1, 15), (2, 16)):
-        for y in (3, 4, 7, 8):
-            p.set(x, y, z, "pane_dim")
-        for y in (5, 9):
-            p.set(x, y, z, "stone_carve")
-    for z in (14, 15, 16):
-        p.stair(0, 10, z, "east", "top", "stone_st")
-    for y in (2, 6):
-        p.stair(0, y, 15, "east", "top", "stone_st")           # the sills, proud
-    for x in range(1, 4):
-        for z in range(14, 17):
-            p.set(x, 11, z, "stone")
-    hip(p, 1, 3, 14, 16, 12)
-    p.set(2, 13, 15, "verd")
-    p.set(2, 14, 15, "brass_b")
-    rod(p, 2, 15, 15)
-
-
-def north_range(p):
-    """The smiths' shops along the north (x 1..13, z 0..2): low brick under a slate lean-to that rises into the hall's
-    north pitch; a stone-dressed window on its west end."""
-    brick_box(p, 1, 13, 1, 6, 0, 2, bands=(1, 6))
-    for x in range(1, 14):
-        for k, z in enumerate((0, 1, 2)):
-            p.stair(x, 7 + k, z, "south", "bottom", "slate_st")
-            for y in range(7, 7 + k):
-                p.set(x, y, z, "slate")
-    p.set(1, 3, 1, "pane_dim")
-    p.set(1, 4, 1, "pane_dim")
-    p.set(1, 5, 1, "stone_carve")
-    p.set(1, 2, 1, "stone")
-
-
-def boiler_house(p):
-    """THE BOILER HOUSE on the east (x 14..16, z 3..13): brick under a slate lean-to rising to the hall's east wall, a
-    brass steam main along its top; the ringed STACK at the north-east; the FURNACE PIER at the south-east corner."""
-    brick_box(p, 14, 16, 1, 8, 3, 13, bands=(1, 8))
-    for z in range(3, 14):
-        for k, x in enumerate((16, 15, 14)):
-            p.stair(x, 9 + k, z, "west", "bottom", "slate_st")
-            for y in range(9, 9 + k):
-                p.set(x, y, z, "slate")
-    for z in range(3, 13):
-        p.set(14, 12, z, "brass" if z % 3 else "brass_b")       # the steam main
-    stack(p, 14, 0, 14, rings=(7, 11))
-    furnace_pier(p)
-
-
-def stack(p, x0, z0, h, rings=()):
-    """The works chimney x0..x0+2, z0..z0+2 from y 1 to its top course h: stone plinth, brick shaft with a stone band
-    every 4, corbel rings (ref17) of stone stairs and slabs proud on the two sides inside the footprint, an oversailing
-    stone cap, the glowing throat and a lit campfire on top."""
-    for y in range(1, h + 1):
-        for x in range(x0, x0 + 3):
-            for z in range(z0, z0 + 3):
-                edge = x in (x0, x0 + 2) or z in (z0, z0 + 2)
-                if not edge:
-                    p.set(x, y, z, "blue")
-                    continue
-                p.set(x, y, z, "stone" if y in (1, 2) or y in rings or y == h else "wall")
-    for yr in list(rings) + [h - 1]:
-        for i in range(3):
-            p.stair(x0 - 1, yr, z0 + i, "east", "top", "stone_st")
-            p.stair(x0 + i, yr, z0 + 3, "north", "top", "stone_st")
-        p.slab(x0 - 1, yr + 1, z0 + 3, "bottom", "stone_slab")
-        for i in range(3):
-            p.slab(x0 - 1, yr + 1, z0 + i, "bottom", "stone_slab")
-            p.slab(x0 + i, yr + 1, z0 + 3, "bottom", "stone_slab")
-    p.set(x0 + 1, h, z0 + 1, "light")
-    p.set(x0 + 1, h + 1, z0 + 1, "campfire", **BP.CAMPFIRE)
-
-
-def furnace_pier(p):
-    """The FURNACE PIER (x 14..16, z 14..16): soot brick with stone bands, the twin lit fire slots on the south face -
-    the one firebox glow - a stone cap."""
-    for x in range(14, 17):
-        for z in range(14, 17):
-            for y in range(1, 13):
-                p.set(x, y, z, "stone" if y in (1, 6, 12) else "blue")
-    for x in (14, 16):
-        for y in (2, 3, 4):
-            p.set(x, y, 16, "pane_dim")
-            p.set(x, y, 15, "light")
-        p.set(x, 5, 16, "stone_carve")
-    p.set(15, 13, 15, "blue_carve")
-
-
-def crane(p):
-    """The travelling bridge crane on the runways, parked east of the spawn column: twin girders at x 10 / 12, the brass
-    crab, the hook block and the locomotive frame slung under it at y 9."""
-    p.place(BP.bridge_crane(span=7, chassis=True, girder_gap=2), 10, 10, 5)
-
-
-def clear_lane(p):
+            g.set(x, 0, z, LAWN if x == 0 else GROUND)
+    # the works shed behind (flat, low) and its stack
+    g.fill(SHED_X[0], SHED_X[1], 1, SHED_TOP, 0, 20, SHED)
+    x0, x1, z0, z1, top = STACK
+    g.fill(x0, x1, SHED_TOP + 1, top, z0, z1, SHED)
+    # the hall range: low walls under a shallow straight pitch
+    g.fill(HALL_X[0], HALL_X[1], 1, HALL_TOP, 0, 20, WALL)
+    add(g, pitched(HALL_X[0] - 0.5, HALL_X[1] + 0.5, -0.5, 20.5, HALL_TOP + 1, HALL_TOP + 4))
+    # the end wings: a little over the hall, under half-swept roofs rising to their outer ends
+    for (z0, z1), (ridge, toward) in zip(WING_Z, ((-0.5, 1), (20.5, -1))):
+        g.fill(WING_X[0], WING_X[1], 1, WING_TOP, z0, z1, WALL)
+        add(g, swept_half(WING_X[0] - 1.5, WING_X[1] + 0.5, ridge, toward, **WING_ROOF))
+        for z in range(z0 + 1, z1):
+            g.set(WING_X[0], WING_TOP - 1, z, HOLE)
+    for x in range(2, HALL_X[1] + 1, 2):                # the camera's south end: ground bays
+        g.fill(x, x, 1, ARCH_H, SZ - 1, SZ - 1, HOLE)
+    for z in ARCH_Z:                                    # the arcade: a dark ground band
+        g.fill(HALL_X[0], HALL_X[0], 1, ARCH_H, z, z, HOLE)
+    # the tower: a base block carrying ONE steep pyramid, flanks straight from the roof line to the apex
+    g.fill(0, 6, 1, int(T_FOOT) - 1, 6, 14, WALL)
+    add(g, pyramid(TX, TZ, THX, THZ, T_FOOT, T_APEX))
+    # the great door: the exit lane through the tower's base, backed by the hall's dark back wall
     for x in LANE_X:
         for z in LANE_Z:
             for y in range(1, LANE_H + 1):
-                p.clear(x, y, z)
-    for y in range(1, H3 + 1):
-        p.clear(SPAWN[0], y, SPAWN[2])
-
-
-def l1(p):
-    ground(p)
-    plinth(p)
-    north_range(p)
-    hall(p)
-    boiler_house(p)
-    office(p)
-    gatehouse(p)
-    tower(p)
-    turret(p)
-    crane(p)
-    clear_lane(p)
-
-
-# ============================================================================================ L3
-def tower_l3(p):
-    """THE ROYAL WORKS' tower: over the L1 hip (y 18..19, now the belfry floor), an open BELFRY (stone corner piers,
-    iron-barred openings, the bell within, y 20..22), a stone cornice proud all round at y 23 and the FLARED verdigris
-    cap - three courses stepping in from a 7 x 9 base wider than the shaft, a brass course, a brass finial (top y 27)."""
-    for x in range(1, 6):
-        for z in range(5, 12):
-            corner = x in (1, 5) and z in (5, 11)
-            side = x in (1, 5) or z in (5, 11)
-            for y in range(20, 23):
-                if corner:
-                    p.set(x, y, z, "stone")
-                elif side:
-                    p.set(x, y, z, "bars" if y < 22 else "wall")
-            if not side:
-                p.set(x, 19, z, "stone")
-    p.set(3, 20, 8, "bell", attachment="floor", facing="north", powered="false")
-    cornice(p, 0, 6, 4, 12, 23)
-    for x in range(1, 6):
-        for z in range(5, 12):
-            p.set(x, 23, z, "stone")
-    y = hip(p, 0, 6, 4, 12, 24, levels=3)
-    p.set(3, y, 8, "brass_b")
-
-
-def crane_l3(p):
-    """A second, double-girder bridge at x 6 / 7 carrying a brass boiler barrel at y 9 on two chains."""
-    for z in range(5, 12):
-        p.set(7, 11, z, "blue_carve" if z in (5, 11) else "brass_b" if z % 2 else "brass")
-        p.set(6, 11, z, "blue_carve" if z in (5, 11) else "brass")
-    for z in (7, 8, 9):
-        p.set(6, 12, z, "brass_e" if z != 8 else "verd")
-        p.set(7, 12, z, "brass_e")
-    for z in (6, 10):
-        chain(p, 6, 10, z)
-    for z in range(5, 12):
-        p.set(6, 9, z, "blue" if z == 5 else "brass_b" if z in (8, 11) else "brass_e")
-
-
-def dormers_l3(p):
-    """Two dormers in the south pitch over the glass strip (ref18's dormer rows): a pane under a small slate gablet
-    with a verdigris ridge."""
-    for x in (8, 11):
-        p.set(x, 13, 10, "pane_dim")
-        p.set(x, 13, 9, "wall")
-        p.stair(x - 1, 13, 10, "west", "bottom", "slate_st")
-        p.stair(x + 1, 13, 10, "east", "bottom", "slate_st")
-        p.slab(x, 14, 10, "bottom", "verd_slab")
-
-
-def l3(p):
-    l1(p)
-    tower_l3(p)
-    stack(p, 14, 0, 20, rings=(7, 11, 14))
-    crane_l3(p)
-    dormers_l3(p)
-    for z in (3, 12):                                          # the piers' hips grow brass finials
-        p.set(0, 13, z, "brass_b")
-        rod(p, 0, 14, z)
-    clear_lane(p)
+                g.clear(x, y, z)
+            g.set(x, 0, z, "deepslate_tiles")
+    for z in LANE_Z:     # the passage's far wall: wall tone, so the door reads as a deep opening, not a black slab
+        g.fill(HALL_X[1], HALL_X[1], 1, LANE_H, z, z, WALL)
+    # the spawn column: air to the sky (a vent shaft up the tower's back flank)
+    for y in range(1, H_MAX):
+        g.clear(SPAWN[0], y, SPAWN[2])
+    return g
 
 
 # ============================================================================================ output and checks
-def to_rig(p, h, tag):
+def write(g):
+    h = max(y for (_, y, _) in g.b) + 1
+    assert h <= H_MAX, "greybox is %d tall" % h
     rig = gs._SunRig(SX, h, SZ)
-    for (x, y, z), (n, props) in p.b.items():
-        if n in ("air", "cave_air") or not (0 <= x < SX and 0 <= z < SZ and 0 <= y < h):
-            continue
+    for (x, y, z), (n, props) in g.b.items():
         rig.set(x, y, z, n, **props)
     rig.bury_grass()
     rig.settle()
-    rig.check_support("erecting shop " + tag)
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    rig.structure().write(OUT)
     return rig
 
 
-FINE = ("_stairs", "_slab", "_wall", "_fence", "_pane", "iron_bars", "_trapdoor", "_button", "chain", "lantern",
-        "candle", "rod", "_door", "_carpet", "_banner", "flower_pot", "campfire", "fern", "grass", "bell")
-FORBIDDEN = ("water", "lava", "sand", "gravel", "_concrete_powder", "redstone", "magma", "torch", "anvil",
-             "scaffolding", "tnt", "piston", "tuff_bricks", "polished_tuff", "lightning_rod")
-
-
-def stats(rig):
-    n = {p: b[0] for p, b in rig.b.items()}
-
-    def opaque(q):
-        nm = n.get(q)
-        return nm is not None and not any(f in nm for f in FINE) and "glass" not in nm
-    vis = [q for q in n if not all(opaque(c) for c in ((q[0], q[1] + 1, q[2]), (q[0], q[1], q[2] + 1),
-                                                        (q[0] - 1, q[1], q[2])))]
-    fine = [q for q in n if any(f in n[q] for f in FINE)]
-    vfine = [q for q in vis if any(f in n[q] for f in FINE)]
-    return len(n), len(fine) / len(n), len(vis), len(vfine) / max(1, len(vis))
-
-
-def floating(rig):
-    n = rig.b
-    return [(q, n[q][0]) for q in n if q[1] > 0 and not any(
-        (q[0] + a, q[1] + b, q[2] + c) in n for a, b, c in
-        ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)))]
-
-
-def check(rig, path, tag, prev=None):
+def check(rig):
     import audit_structure_pockets as ap
     n = {q: b[0] for q, b in rig.b.items()}
-    assert all((x, 0, z) in n for x in range(SX) for z in range(SZ)), "%s: a hole in the foundation" % tag
-    busy = [(x, y, z, n[(x, y, z)]) for x in LANE_X for z in LANE_Z for y in range(1, LANE_H + 1) if (x, y, z) in n]
-    assert not busy, "%s: the exit lane is narrowed: %s" % (tag, busy[:8])
-    bad = sorted({v for v in n.values() if any(f in v for f in FORBIDDEN)
-                  or ("copper" in v and not v.startswith("waxed_"))})
-    assert not bad, "%s: forbidden %s" % (tag, bad)
-    lone = floating(rig)
-    assert not lone, "%s: floating %s" % (tag, lone[:6])
-    for (x, y, z), v in n.items():
-        if v == "campfire":
-            assert y >= 12, "%s: a campfire within reach at %s" % (tag, (x, y, z))
+    assert all((x, 0, z) in n for x in range(SX) for z in range(SZ)), "a hole in the foundation"
+    busy = [(x, y, z) for x in LANE_X for z in LANE_Z for y in range(1, LANE_H + 1) if (x, y, z) in n]
+    assert not busy, "the exit lane is narrowed: %s" % busy[:8]
     col = [y for y in range(1, rig.size[1]) if (SPAWN[0], y, SPAWN[2]) in n]
-    assert not col, "%s: the spawn column (8, 8) is blocked at %s" % (tag, col)
-    if prev is not None:
-        lost = [q for q in prev if q not in n]
-        assert not lost, "%s drops %d cells of L1, e.g. %s" % (tag, len(lost), lost[:6])
-    one_way, ground_, roof, rooms, note = ap.audit(tag, path)
-    assert not one_way and not ground_ and "TRAPPED" not in note, (tag, one_way[:8], ground_[:8], note)
-    pad = ap.Pad(ap.load_nbt(path))
-    for (x, y, z) in [SPAWN] + [(x, y, z) for x in range(SX) for z in range(SZ) for y in (1, 2)
-                                if pad.walkable(x, y, z)]:
-        seen, stack_, out = {(x, y, z)}, [(x, y, z)], False
-        while stack_:
-            c = stack_.pop()
-            if c[0] < 0 or c[2] < 0 or c[0] >= SX or c[2] >= SZ:
-                out = (c[0] < 0 and c[2] in LANE_Z) or (x, y, z) != SPAWN
-                if out:
-                    break
-            for nb in ap.neighbours(pad, *c):
-                if nb not in seen and -3 <= nb[0] <= SX + 2 and -3 <= nb[2] <= SZ + 2 and 1 <= nb[1] <= rig.size[1]:
-                    seen.add(nb)
-                    stack_.append(nb)
-        assert out, "%s: a unit at %s does not walk out%s" % (tag, (x, y, z), " west" if (x, y, z) == SPAWN else "")
-    tot, fine, vis, vfine = stats(rig)
-    return "%s %dx%dx%d: %d blocks, fine %.0f%% (visible %d, fine %.0f%%), lane clear, no pockets (%d roof-only), " \
-           "spawn walks out west" % (tag, SX, rig.size[1], SZ, tot, 100 * fine, vis, 100 * vfine, len(roof))
-
-
-def build(level):
-    p = new()
-    (l1 if level == 1 else l3)(p)
-    h = max(y for (x, y, z), v in p.b.items() if v[0] not in ("air", "cave_air") and 0 <= x < SX and 0 <= z < SZ) + 1
-    assert h <= (H1 if level == 1 else H3), "L%d is %d tall" % (level, h)
-    return to_rig(p, h, "L%d" % level)
+    assert not col, "the spawn column is blocked at %s" % col
+    lone = [q for q in n if q[1] > 0 and not any((q[0] + a, q[1] + b, q[2] + c) in n for a, b, c in
+                                                   ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)))]
+    assert not lone, "floating %s" % lone[:6]
+    one_way, ground_, roof, rooms, note = ap.audit("brass_l3_greybox", OUT)
+    assert not one_way and not ground_ and "TRAPPED" not in note, (one_way[:8], ground_[:8], note)
+    return "brass_l3_greybox %dx%dx%d: %d blocks, lane clear, spawn column open, no pockets (%d roof-only)" % (
+        SX, rig.size[1], SZ, len(n), len(roof))
 
 
 if __name__ == "__main__":
-    os.makedirs(OUT, exist_ok=True)
-    r1, r3 = build(1), build(3)
-    p1, p3 = os.path.join(OUT, "brass_l1.nbt"), os.path.join(OUT, "brass_l3.nbt")
-    r1.structure().write(p1)
-    r3.structure().write(p3)
-    print(check(r1, p1, "brass_l1"))
-    print(check(r3, p3, "brass_l3", prev=set(r1.b)))
+    print(check(write(greybox())))
