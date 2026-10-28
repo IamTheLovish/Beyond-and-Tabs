@@ -54,7 +54,7 @@ CROPS = {                       # per still, by short name (the key without its 
     # shadow in its corner and swamps the tufts' dark share: re-measure old rounds with --crop to compare.
     "meadow_sampler_rts": (1000, 250, 1415, 383),
 }
-METRICS = ("hue", "sat", "luma", "dark_share")      # the compared metrics (luma01 is luma / 255)
+METRICS = ("hue", "sat", "luma", "dark_share", "stars")      # the compared metrics (luma01 is luma / 255)
 SHEET_MAX_W = 2500
 THUMB_W = 800
 PAD = 12
@@ -165,7 +165,41 @@ def measure(im, box):
     ml = statistics.median(ls)
     dark = sum(1 for v in ls if v < DARK_FRACTION * ml) / len(ls)
     return {"hue": statistics.median(hs), "sat": statistics.median(ss), "luma": ml, "luma01": ml / 255,
-            "dark_share": dark}
+            "dark_share": dark, "stars": count_stars(im, box)}
+
+
+STAR_BLUR = 2                  # px: smooths lawn grain away before the threshold
+STAR_FRACTION = 0.75           # "dark" for a star: under this share of the blurred crop's median luma
+STAR_MIN, STAR_MAX = 15, 300   # px: a tuft's shadow star at the RTS zoom; bigger is a tree / wall / building shadow
+
+
+def count_stars(im, box):
+    """Tuft-sized dark spots in the crop (the Oct 28 grass-tuft "stars"): after a STAR_BLUR px Gaussian blur, the
+    4-connected regions under STAR_FRACTION x the median luma whose size is STAR_MIN..STAR_MAX px. Big static
+    shadows (trees, walls, the battlefield-wall smears) and lawn grain do not count, unlike in the dark share."""
+    from PIL import ImageFilter
+    g = im.convert("L").crop(box).filter(ImageFilter.GaussianBlur(STAR_BLUR))
+    w, h = g.size
+    px = g.tobytes()
+    cut = STAR_FRACTION * statistics.median(px)
+    dark = bytearray(1 if v < cut else 0 for v in px)
+    stars = 0
+    for start in range(w * h):
+        if not dark[start]:
+            continue
+        dark[start] = 0
+        stack, size = [start], 0
+        while stack:
+            i = stack.pop()
+            size += 1
+            x, y = i % w, i // w
+            for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, y > 0), (i + w, y < h - 1)):
+                if ok and dark[j]:
+                    dark[j] = 0
+                    stack.append(j)
+        if STAR_MIN <= size <= STAR_MAX:
+            stars += 1
+    return stars
 
 
 def parse_box(text):
@@ -302,9 +336,13 @@ def compare(prev, cur):
             elif old.get("crop") != st["crop"]:
                 note = f"crop changed {old.get('crop')} -> {st['crop']}: not comparable"
             for metric in METRICS:
-                a = old["metrics"][metric] if old and old.get("metrics") else None
-                b = st["metrics"][metric] if st["metrics"] else None
+                a = old["metrics"].get(metric) if old and old.get("metrics") else None     # rounds before stars
+                b = st["metrics"].get(metric) if st["metrics"] else None                  # have no stars key
                 delta = None
+                if not note and (a is None or b is None):
+                    note_m = "not measured in the earlier round" if a is None else "not measured this round"
+                    add(label, key, metric, a, b, None, note_m)
+                    continue
                 if not note:
                     delta = b - a
                     if metric == "hue":
@@ -313,7 +351,7 @@ def compare(prev, cur):
         for key, old in (before["stills"] if before else {}).items():
             if key not in lane["stills"]:
                 for metric in METRICS:
-                    add(label, key, metric, old["metrics"][metric] if old.get("metrics") else None, None, None,
+                    add(label, key, metric, old["metrics"].get(metric) if old.get("metrics") else None, None, None,
                         "gone this round")
     return rows
 
@@ -330,7 +368,7 @@ def _font(size):
 def _numbers(st):
     m = st["metrics"]
     return (f"hue {m['hue']:.0f} deg   sat {m['sat']:.0f}   luma {m['luma']:.0f} ({m['luma01']:.2f})   "
-            f"dark share {m['dark_share']:.3f}")
+            f"dark share {m['dark_share']:.3f}   stars {m['stars']}")
 
 
 def build_sheet(lane_dir, label, lane, max_width=SHEET_MAX_W):
@@ -419,22 +457,22 @@ def _cell(v, fmt):
 
 def table(lanes):
     out = ["| lane | still | proof | client / server | crop | hue (deg) | sat (0-100) | luma (0-255) | luma (0-1) "
-           "| dark share |", "|---|---|---|---|---|---:|---:|---:|---:|---:|"]
+           "| dark share | stars |", "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|"]
     for label, lane in lanes.items():
         for key, st in lane["stills"].items():
             pr, m, c = st["proof"], st["metrics"], st["crop"]
-            out.append("| {} | {} | {} | {} / {} | ({},{})-({},{}) {} | {} | {} | {} | {} | {} |".format(
+            out.append("| {} | {} | {} | {} / {} | ({},{})-({},{}) {} | {} | {} | {} | {} | {} | {} |".format(
                 label, key, "PASS" if pr["ok"] else "FAIL", _cell(pr["client"], "d"), _cell(pr["server"], "d"),
                 c[0], c[1], c[2], c[3], st["crop_source"],
                 _cell(m and m["hue"], ".0f"), _cell(m and m["sat"], ".0f"), _cell(m and m["luma"], ".0f"),
-                _cell(m and m["luma01"], ".2f"), _cell(m and m["dark_share"], ".3f")))
+                _cell(m and m["luma01"], ".2f"), _cell(m and m["dark_share"], ".3f"), _cell(m and m["stars"], "d")))
     return out
 
 
 def delta_table(rows):
     out = ["| lane | still | metric | before | after | change | note |", "|---|---|---|---:|---:|---:|---|"]
     for r in rows:
-        f = ".3f" if r["metric"] == "dark_share" else ".1f"
+        f = {"dark_share": ".3f", "stars": ".0f"}.get(r["metric"], ".1f")
         out.append("| {} | {} | {} | {} | {} | {} | {} |".format(
             r["lane"], r["still"], r["metric"], _cell(r["old"], f), _cell(r["new"], f),
             "-" if r["delta"] is None else format(r["delta"], "+" + f), r["note"]))

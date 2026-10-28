@@ -292,7 +292,11 @@ class Compare(unittest.TestCase):
         m2 = {"hue": 85.0, "sat": 55.0, "luma": 130.0, "luma01": 0.51, "dark_share": 0.05}
         rows = EJ().compare(self.doc(self.M1), self.doc(m2))
         by = {r["metric"]: r for r in rows}
-        self.assertEqual(set(by), {"hue", "sat", "luma", "dark_share"})
+        self.assertEqual(set(by), {"hue", "sat", "luma", "dark_share", "stars"})
+        self.assertIsNone(by["stars"]["delta"])                   # neither round measured stars: no delta, said why
+        self.assertIn("not measured", by["stars"]["note"])
+        rows = EJ().compare(self.doc(dict(self.M1, stars=626)), self.doc(dict(m2, stars=189)))
+        self.assertEqual({r["metric"]: r for r in rows}["stars"]["delta"], -437)
         self.assertAlmostEqual(by["hue"]["delta"], 5.0)
         self.assertAlmostEqual(by["sat"]["delta"], -5.0)
         self.assertAlmostEqual(by["luma"]["delta"], 10.0)
