@@ -87,14 +87,19 @@ public class WorldMemoryGameTests {
      */
     static final int PLATFORM_Y = 210;
 
-    /** A flat grass floor at relative y 0 over the arena's footprint, dirt under it, clear air above it. */
+    /**
+     * A flat grass floor at relative y 0 over the arena's footprint, dirt under it, clear air above it up to the build
+     * limit: the top-block tests read the whole column, and a sky pad another test left up there (CI run 40651908207:
+     * a failed AC-5's stone at relative 54) would be the top block of every column under it.
+     */
     static void pad(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        int top = level.getMaxBuildHeight() - 1 - PLATFORM_Y;
         for (int x = -1; x <= 16; x++)
             for (int z = -1; z <= 16; z++) {
                 level.setBlock(abs(helper, x, -1, z), Blocks.DIRT.defaultBlockState(), 2);
                 level.setBlock(abs(helper, x, 0, z), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
-                for (int y = 1; y <= 10; y++) {
+                for (int y = 1; y <= top; y++) {
                     BlockPos p = abs(helper, x, y, z);
                     if (!level.getBlockState(p).isAir())
                         level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
