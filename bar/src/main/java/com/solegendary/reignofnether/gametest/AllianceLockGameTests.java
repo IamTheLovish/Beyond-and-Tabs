@@ -81,9 +81,13 @@ public class AllianceLockGameTests {
         return AlliancesServerEvents.pendingAlliances.getOrDefault(to, Set.of()).contains(from);
     }
 
-    /** Dry ground for three lobby bases, out past {@code dx} blocks from the arena; null when there is none. */
+    /**
+     * Dry ground for three lobby bases, out past {@code dx} blocks from the arena; null when there is none. Eighteen
+     * centres along z: siteOk reads real ground (it loads the chunk), and six could all be sea (flake-stress 40754233086,
+     * "no dry ground for three lobby bases" 3 in 16). The x stays {@code dx}, so the batch's two cases stay 1000 apart.
+     */
     static BlockPos dryCentre(ServerLevel level, BlockPos origin, int dx) {
-        for (int k = 0; k < 6; k++) {
+        for (int k = 0; k < 18; k++) {
             int cx = origin.getX() + dx, cz = origin.getZ() - 1500 - 500 * k;
             BlockPos c = new BlockPos(cx, MetalPatches.solidTop(level, cx, cz), cz);
             boolean dry = true;

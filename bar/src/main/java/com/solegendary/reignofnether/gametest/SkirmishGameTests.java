@@ -14759,7 +14759,8 @@ public class SkirmishGameTests {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         helper.runAfterDelay(200, () -> {
             BlockPos centre = null;
-            for (int k = 0; k < 6 && centre == null; k++) {
+            // eighteen centres: siteOk reads real ground (it loads the chunk), so six in a line could all be sea
+            for (int k = 0; k < 18 && centre == null; k++) {
                 int cx = origin.getX() - 1500, cz = origin.getZ() + 1500 + 500 * k;
                 BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
