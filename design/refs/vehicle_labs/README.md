@@ -183,3 +183,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    spire, wider than the tower itself, above a flared conical roof with warm lit windows; magenta trees around. Lesson: a
    big open ring sculpture as the crown reads instantly from above without adding mass. Stormcallers: crown the landmark
    with interlocking rings (fences/walls/chains in jade+gold) around the floating lodestone, arcs drawn between them.
+
+33. lovishs 28th reference (02:26): /root/bat/design/refs/vehicle_labs/ref28_dense_gothic_cathedral.png - a Minecraft
+   grey gothic cathedral in the Cologne mould: TRACERY on every surface, a PINNACLE on every buttress, tall lancets in
+   every bay, flying buttresses, a forest of spires, formal gardens at its feet. The CEILING for gothic detail in blocks:
+   vertical rhythm everywhere (piers every 2-3 cells), every top ends in a pinnacle, nothing flat. Sunforged and
+   Gravebound: this is the detail target for your camera faces and rooflines.
