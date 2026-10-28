@@ -1,84 +1,82 @@
-# Handoff: Itachi 2, session B (vehicle labs + art method), Oct 28 ~04:40 ET
+# Handoff: Itachi 2, session C (vehicle-lab pilot + tools), Oct 28 16:05 ET
 
-The next session starts here. Repo `IamTheLovish/Beyond-and-Tabs`, branch **`claude/vehicle-labs`** (everything below is
-pushed there). First message to lovish: the runner command only (`~/start-runners.sh`), per his standing rule.
+The next session starts here. Repo `IamTheLovish/Beyond-and-Tabs`, branch **`claude/vehicle-labs`** (draft PR #306,
+everything below is pushed). Coordinator: **Rita** (Command Center; replaced Rem at 05:34). lovish relays messages by
+hand; every report to the coordinator is a paste block.
 
-## Read first
-1. `design/vehicle_labs/LESSONS.md` (also Project doc `claude/vehicle-labs-lessons-2026-10-28.md`) - why this
-   session's art stalled and the method that replaces it. lovish: "disappointing we used a lot of usage for little
-   progress", "I really want you to improve your abilities in making these buildings".
-2. The art-director skill: a rewritten `bat-art-director` was proposed to lovish as a card (a "STOP - the building
-   method that works" checklist at the top). Check whether he saved it; if not, the same content is in LESSONS.md.
-3. `design/refs/vehicle_labs/` - lovish's 38 reference images + `README.md` (what each teaches, which faction it is the
-   PRIMARY reference for).
+**First message to lovish: only `~/start-runners.sh`** (his standing rule). Then read
+`claude/north-star-2026-10-21.md` (Project doc), this note, `design/vehicle_labs/LESSONS.md` (bottom section "Pilot
+rounds 1-5" is new) and the last rows of `design/vehicle_labs/SCORES.md`.
 
-## Decisions lovish made this session (all recorded on the branch)
-- **The method** (LESSONS.md): ONE primary reference per building, imitated region by region (like
-  `tools/capitol_white_angel_v4.py`); proportion before detail; a concrete massing plan with coordinates first; a
-  GREYBOX stage lovish approves before any detail; short rules; one pilot to 7+/10 before rolling out; max two heavy
-  agents at once; never restart a round mid-way; **Opus builds, a fresh Fable critic scores** each round.
-- **Size ladder**: "tier 1 buildings should be small and get larger and larger per tier and tech level", "bigger AND
-  more intricate as they level", "not oversized". Starting numbers (his to adjust): T1 up to ~13x21, L1 <= 12, top <= 22;
-  T2 ~21x27, <= 32; T3 ~29x29, <= 45; T4 larger (unsized); capitol v4 59x59, ~100 at L6.
-- **Four building tiers**; T1 and T2 buildings can be **refit** later into the higher tiers' architecture so a late base
-  reads as one city (a refit = another superset level on the same footprint).
-- **Tidewrought is DROPPED** (water is hard in Minecraft and was only a costume). A new **AI faction** replaces it:
-  drones, robots and mecha, inspired by Beyond All Reason and the TABS Neon faction, "like a Tron Legacy faction" (glossy
-  black, glowing light lines; inspiration only), distinct from Brassworks. Its name, roster, look references and start
-  are NOT decided. Record: `design/faction-change-tidewrought.md` (+ Project doc). Keep Tidewrought playable until the
-  replacement can be selected. The Careening Hard vehicle lab is cancelled.
-- Spawn rule (from code): units spawn at the building box centre and drop down
-  (`ProductionBuilding.getIndoorSpawnPoint`) - the column over the spawn cell must be air at every level.
+## Where things stand
 
-## Open questions for lovish (ask, don't assume)
-1. What is tier 4 (a new tech level, or the game-ender buildings)?
-2. What triggers a T1/T2 refit: the tech research itself, or a paid upgrade per building?
-3. The AI faction: reference pictures, name, roster/roles, when its lane starts.
-4. The vehicle-labs design questions in `design/vehicle_labs.md` section 5 (T2 vehicle plants, opening with the vehicle
-   lab, which T1 lab unlocks T2, Sunforged/Gravebound vehicles, which units count as vehicles) - still unanswered.
+| What | State | Next |
+|---|---|---|
+| **Engine Shed pilot** (Brassworks T1 lab imitating ref18, 13x21, <= 22) | Greybox r3 = the approved massing (tower over the door, arcade halls, swept end wings). Detail rounds 1-5 scored 4/5, 4/4, 4/4, 4/5, **3/5** by fresh Fable critics. **Loop STOPPED after r5** (overnight, to stop burning usage). Latest: `brass_l3.nbt` / `brass_l1.nbt`, sheet `brass_detail_vs_ref_r5.png` | **Wait for lovish's answer** (question 1 below). Do not start round 6 on ref18 at T1 size. |
+| **#306** vehicle-labs (draft) | head 363531b6; main merged in (a94f2aa2) | Stays draft, "Do not merge without lovish's OK" |
+| **#324** shape kit | **MERGED** 14:41Z. Claim `shape-kit` released | - |
+| **#303** breath phase | Green (run 40679402482 attempt 2), Mode A PASS, mergeable clean, head dc49693e. Paste block sent to Rita | Rita merges. **Then release claim `breath-phase`** (`python3 tools/claim.py release breath-phase`) |
+| **#322** renderer lighting | MERGED 13:05Z (another session's) | Done: vehicle-labs uses main's renderer |
+| T2 site-search flake (`claude/flake-t2-site-search` @ 2f1f8abe) | Red test pushed; waits for #203 (still open, Mode A round 3 PASS) | When #203 merges: merge main, fix test-first (root cause in Project doc `claude/handoff-2026-10-28-itachi2.md`) |
+| #299 bombard dead-zone, #131 generated maps | With the coordinator | Nothing from us |
 
-## Work that was running at handoff (check, then continue or re-run)
-| What | Model | Brief | Output | Next |
-|---|---|---|---|---|
-| **Pilot**: Brassworks Engine Shed imitating **ref18** (red-brick hall + central tower), T1 size | Opus builder | `design/vehicle_labs/briefs/brass_pilot.md` (incl. the 3 changes: two levels, T1 size 13x21 / L3 <= 22, greybox first) | `design/vehicle_labs/brass_l3_greybox.nbt` + `brass_greybox_vs_ref.png`, then brass_l1/l3 | It was told to STOP at the greybox. Show lovish the greybox comparison; only after his OK, detail it, then one fresh Fable critique. If the files are not on the branch, the old session ended first: re-run the brief with an Opus builder. |
-| **Tools** (DONE, committed d625e9d7): `tools/structure_render.py --light` (AO + low sun shadows, eyes-rig sun; ~2 s per building), `tools/ref_compare.py` now lit by default (`--flat` for the old look), `tools/shape_kit.py` (SDF domes/spires/cones/tori/lofts/curved roofs/ribs, CSG, stair/slab edge pass, hollow shells; `build()` into a gothic_parts Part or a Structure) + tests | Opus builder | `design/vehicle_labs/briefs/tools_light_shapekit.md` | committed | Known limits: shallow curves still show stair teeth, domes blocky at 32 px, ribbed dome ribs patchy, no outer-corner stair shapes until `to_rig()`. Worth a follow-up pass before the domed labs. |
+Claims still held on #91: `breath-phase`, `vehicle-labs`, `flake-t2-site-search`.
 
-Nothing else is running. (At 04:5x the pilot had written `brass_l3_greybox.nbt`, uncommitted.) The other labs are paused until the pilot reaches 7+.
+## Questions for lovish (ask, don't assume)
+1. **The pilot:** (a) re-pilot the T1 Engine Shed on a lab-scale reference (ref11 small mossy tower, ref12 Victorian
+   house, ref15 lit spired mansion, ref17 gallery towers, ref19 vine tower, ref21 gothic tower with bartizans, ref27
+   armillary tower) and keep ref18 for a T2/T3 or capitol-scale Brassworks building, **or** (b) keep ref18 and give
+   this lab a bigger top-level footprint. *(Recommended: a.)*
+2. Is the r3 greybox massing still what he wants? (He said "keep studying it and make it super detailed and
+   intricate" at 05:33 but has not looked at r3 itself yet.)
+3. Still open from session B: what is tier 4; what triggers a T1/T2 refit; the AI faction (refs, name, roster, start);
+   `design/vehicle_labs.md` section 5.
 
-## Agreed next improvements (lovish: "sounds good, add this")
-1. Greybox stage approved by lovish (in the pilot now).
-2. Lighting in the offline renderer (tools brief) - and final checks in game via the eyes lane with shaders.
-3. Shape kit for curves (tools brief).
-4. Polished reusable parts first (windows, arches, spires to ref34's standard), reviewed close up.
-5. Cheap automatic checks before any critic (squint-shape similarity vs the reference, flat-wall and scattered-light
-   detectors).
-6. A palette picker (sample a reference's colours -> nearest blocks in our pack).
-lovish then asked "what else can we do" - answer that next (ideas not yet given: lovish/Joisco build a hero piece by
-hand in creative and Claude turns their own build into the structure script; Macaw's/Chipped shapes for more detail;
-higher-resolution references).
+## Why the pilot stalled (full text in LESSONS.md)
+1. **Wrong scale of reference.** ref18 is palace-scale: its spire is ~60 blocks of fine stepping, ours has 3 half-width
+   cells over 12 rows, so every step is a 4-row box (the frozen outline 7/5/5/5/5/3/3/3/3/1). Its red-panel grid fits
+   only a handful of panels at 13x21. The critics' own ceiling estimate: 6-7/10.
+2. **Fresh critics drift.** r1 "less grey", r3 "grey-cream walls", r5 "red with black frames, grey only as trim";
+   builds swung between them.
+3. **Tolerance checks let regressions through** ("within 1 block of r3" passed stacked boxes twice).
 
-## State of the seven lab concepts (scores in `design/vehicle_labs/SCORES.md`)
-All 3-4/10 from fresh critics after rounds 1-2. Primary references for the roll-out after the pilot: Brassworks ref18;
-Sunforged ref05 + ref10; Gravebound ref14 (alt ref32); Ashborn ref30 at L1 growing to ref29; Verdant ref06;
-Stormcallers ref07 + ref08; (Tidewrought cancelled). Fix lists for the next round of each are in
-`design/vehicle_labs/briefs/` (written for the old 17x17 method - rewrite them to the new method and the T1 size).
-Gravebound/Verdant part libraries may hold half-finished round-2 edits (they compile).
+## The method for the next round (whatever lovish picks)
+1. Choose the reference **by scale first** (it must fit the plot at that tier).
+2. Greybox, front-on outline checked column by column (`tools/ref_compare.py --front`), lovish OKs.
+3. The art director writes **one fixed per-region rubric** from the picture (materials, colour shares, rhythm, light)
+   before any detail; every critic scores against that rubric, not its own taste.
+4. **Freeze each win as an assert** in the build script (see `check_tower`, `check_banned`, `check_greybox` in
+   `tools/lab_vehicle_brass.py`): exact tables, never tolerances.
+5. Colour and shape measured on **rendered pixels**, not block counts.
+6. Opus builds, fresh Fable critic scores; max two heavy agents; stop after 2 rounds without progress and ask lovish.
 
-## Tools added this session
-- `tools/ref_compare.py`: building at --px 32 beside its reference at the same height + a blurred greyscale "squint"
-  row. Run it every pass.
+## Tools now on the branch
+- `tools/structure_render.py` = main's (#322): lit by default, `--flat` for the old look; `SR.Light` namedtuple.
+- `tools/ref_compare.py`: lit by default, `--flat`, **`--front`** (west elevation + squint + corner view; stairs/slabs
+  drawn at their real shapes).
+- `tools/shape_kit.py` = main's (#324): SDF primitives, booleans, stair/slab edge pass, hollow shells; `build()` never
+  replaces a full cell with a stair/slab; no scipy. Known: the clockwise tie-break breaks mirror symmetry (non-blocking).
+- `tools/lab_vehicle_brass.py`: greybox (`--greybox`, own `GB_APEX` = 23.0 - the old 21-tall regeneration bug was it
+  sharing `T_APEX` with the spire) + detail L1/L3 + the asserts above. `ruff check tools` passes.
 
-## Untouched this session - carried over from `claude/handoff-2026-10-28-itachi2.md`
-Items 2-6 there (#295 save hitch stress run 40626428525, T2 site-search flake waiting on #203, #299 bombard dead-zone,
-#131 generated maps Mode A review, #303 breath strobe) were NOT looked at in this session. Check their live state with
-`gh api` before acting. Note: the Horde vehicle lab (Ember Pens) drops the Hoglin Stables' nether-ground rule, one
-cause of the T2 site-search flake.
+## Block colour notes (our pack, rendered)
+Red terracotta is the closest red to ref18 (mangrove stairs/slabs next); there is **no red concrete or wool texture**.
+Red nether brick renders maroon; polished blackstone and deepslate tiles render grey; polished blackstone bricks is the
+best near-black; polished andesite is the smoothest grey; cobblestone reads as rubble at 32 px (banned in the brass lab).
 
-## LEARN
-- Imitate ONE reference; blending many makes a generic box.
-- Judge at --px 32 beside the reference; squint before detail.
-- A greybox lovish approves costs minutes and saves rounds.
-- Seven parallel builders multiply every mistake; pilot first, max two heavy agents.
-- Don't stop a near-finished round: the spend is sunk, finishing it is cheap; change course between rounds.
-- Subagents cannot spawn critics; the main session runs them. Check critic suggestions against the rules
-  (`preview_structure --rts` mirrors x, which confused critics about which face the gate was on).
+## Environment notes (cloud session)
+- PC bridge was offline all session: `D:\Command Center`, `kb.ps1` ledger and the Obsidian vault were not reachable.
+  LEARN lines below are for filing when it is back.
+- Job logs/artifacts are blocked: read failures via check-run annotations. GraphQL blocked: REST `gh api` only.
+- `*.png` is gitignored: add sheets with `git add -f`.
+- Worktrees in this container: `/home/claude/wt-vl` (vehicle-labs), `wt-breath`, `wt-shape` (merged, can go);
+  the generated block pack lives in `/home/claude/beyond-and-tabs/resourcepacks/...` (symlinked into wt-vl).
+
+## LEARN (for the ledger / vault)
+- worked: front-on outline checked column by column in the reference's own camera view; exact per-row tables asserted
+  on every build; picking blocks by rendered pixel colour; tests first on the shape kit (red -> green) caught a second
+  bug (`Structure.pal` taken as a palette).
+- failed: a palace-scale reference on a T1 plot; open-ended fresh critics; tolerance checks; leaving a dead session's
+  work unchecked (session B was still pushing to vehicle-labs, which made a duplicate shape kit and renderer).
+- reusable rules: choose the reference by scale first; give critics a fixed rubric; freeze approved shapes as tables
+  the build must equal; before building on a branch, `git fetch` and check who pushed last.
