@@ -2,11 +2,14 @@ package com.solegendary.reignofnether.match;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.hero.HeroRoles;
 import com.solegendary.reignofnether.player.PlayerClientboundPacket;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 
 import javax.annotation.Nullable;
 
@@ -16,6 +19,10 @@ import javax.annotation.Nullable;
  * observer's view of what is left of it: fog off, every side on the player panel, everything they own left standing
  * and theirs. Refused for a side still in the fight: spectating is not a way to look through the fog mid-match
  * (BAR's spectators never had a side; its players can't switch to one while their team lives).
+ * <p>
+ * Free-fly is the same rule for the camera: a watcher may swap the RTS view for vanilla spectator flight (noclip, no
+ * interaction) and back, but a player holding a side may not - flying past the fog is exactly the scouting the fog
+ * exists to stop. The key is the client's; this class is the authority.
  * Game thread only.
  */
 public final class Spectators {
@@ -27,6 +34,66 @@ public final class Spectators {
     /** Whether {@code name} may spectate now: in play, and their match is over for them. */
     public static boolean maySpectate(String name) {
         return MatchRoster.isFinished(name) && MatchRoster.isInPlay(name);
+    }
+
+    /**
+     * Whether {@code name} is a watcher of a running match: no side in play (never seated, beaten, or spectating) and no
+     * Hero role - the hero plays under their team's fog. Sandbox editors hold a side, so they are not watchers.
+     */
+    public static boolean mayFreeFly(String name) {
+        return MatchRoster.any() && !MatchRoster.isInPlay(name) && !HeroRoles.isHeroRole(name);
+    }
+
+    /**
+     * Whether {@code body}, a watcher's camera body, must not be sent to {@code viewer}: everyone who plays - a side in
+     * the match or a Hero - never sees a watcher (BAR's spectators are not in the game), while watchers still see each
+     * other. Vanilla only hides spectators from non-spectators, and every side's RTS camera body is a vanilla spectator
+     * too, so vanilla alone would show watchers to the players; ChunkMap's tracker asks this
+     * (TrackedEntityMixin).
+     */
+    public static boolean isHiddenFrom(ServerPlayer body, ServerPlayer viewer) {
+        return body != viewer && body.isSpectator()
+            && mayFreeFly(body.getName().getString()) && !mayFreeFly(viewer.getName().getString());
+    }
+
+    /**
+     * Sends {@code name}'s client back to the RTS view: a refused free flight, whose client left the view before it
+     * asked (a test swaps it to record the calls).
+     */
+    public static java.util.function.Consumer<String> backToRtsView = name -> PlayerClientboundPacket.setRTSCamera(name, true);
+
+    /**
+     * The game mode for {@code name} leaving the RTS view (PlayerServerEvents.closeTopdownGui), given the mode saved
+     * when it opened. A watcher stays a spectator: the saved mode is survival for someone who joined mid-match, and a
+     * survival body would be sent to the players (isHiddenFrom only hides spectators) - an invisible survival watcher
+     * would be worse still. Everyone else gets the saved mode back.
+     */
+    public static GameType modeAfterLeavingRtsView(String name, GameType saved) {
+        return mayFreeFly(name) ? GameType.SPECTATOR : saved;
+    }
+
+    /**
+     * The spectator free-fly key: {@code on} puts a watcher in vanilla spectator mode to fly around, off lets them
+     * back into the RTS view (which re-opens the top-down GUI and puts them in spectator mode itself). Either way
+     * the answer for a player holding a side is no, and nothing changes for them, except that a refused {@code on}
+     * sends their client back to the RTS view it left before asking. Leaving the RTS view keeps a watcher a spectator
+     * (modeAfterLeavingRtsView); {@code on} still sets spectator itself, after that close, which the client sends
+     * first. Returns whether the request was granted. Game thread only.
+     */
+    public static boolean setFreeFly(@Nullable ServerPlayer sp, boolean on) {
+        if (sp == null)
+            return false;
+        String name = sp.getName().getString();
+        if (!mayFreeFly(name)) {
+            ReignOfNether.LOGGER.warn("[Match] {} asked for free-fly but is not a watcher of a running match", name);
+            sp.sendSystemMessage(Component.translatable("server.reignofnether.free_fly_refused"));
+            if (on)
+                backToRtsView.accept(name);
+            return false;
+        }
+        if (on)
+            sp.setGameMode(GameType.SPECTATOR);
+        return true;
     }
 
     /** The results screen's / match menu's Spectate from the player with this entity id. */

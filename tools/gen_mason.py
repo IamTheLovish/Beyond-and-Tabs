@@ -21,7 +21,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import human_kit as hk  # noqa: E402
-from human_kit import HIP, SHOULDER_X, SHOULDER_Y, HEAD_Y, TRUNK, BELT  # noqa: E402
+from human_kit import HIP, SHOULDER_X, HEAD_Y, TRUNK, BELT  # noqa: E402
 from gen_models import Model, OUT, slab, lathe, _unit, _cross  # noqa: E402
 from gen_levy import ngon, oct_pole  # noqa: E402
 from gen_halberdier import shell, on_shell  # noqa: E402

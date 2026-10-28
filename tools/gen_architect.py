@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import human_kit as hk  # noqa: E402
 from human_kit import HIP, SHOULDER_X, SHOULDER_Y, HEAD_Y, TRUNK, BELT  # noqa: E402
-from gen_models import Model, OUT, slab, lathe, grip_hand, _unit, _cross  # noqa: E402
+from gen_models import Model, OUT, slab, lathe, _unit, _cross  # noqa: E402
 from gen_levy import ngon, oct_pole  # noqa: E402
 from gen_medic import cone, on_plate  # noqa: E402
 
@@ -153,7 +153,6 @@ def architect():
     feet = hk.legs(m)
     ra, rf, rw = hk.cloth_arm(m, -1, "body", "linen", cuff="linen_shade")
     la, lf, lw = hk.cloth_arm(m, 1, "body", "linen", cuff="linen_shade")
-    g = hk.glove("glove", "glove_dark", cuff="leather_dark")
     # the right hand hangs free beside the satchel
     m.bones[ra].rotation = [3, 0, -7]
     m.bones[rf].rotation = [14, 0, 0]
