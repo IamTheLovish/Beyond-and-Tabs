@@ -610,16 +610,6 @@ public final class EyesDirector {
         if (capitolCentre == null)
             capitolCentre = findCapitol(mc);
         int[][] axes = { { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 } };
-        // toward the map's centre first: the RTS camera stands back from what it looks at (behind and above it), and a
-        // site on the far side of the capitol put that camera spot outside the world border - the server clamps the
-        // camera back inside (PlayerServerEvents.movePlayer) and every 15_* RTS still showed the ground beside the
-        // structure, not the structure (meadow / ground samplers, run 40679410746, Oct 28)
-        var border = mc.level.getWorldBorder();
-        double bcx = border.getCenterX(), bcz = border.getCenterZ();
-        java.util.Arrays.sort(axes, java.util.Comparator.comparingDouble(a -> {
-            double dx = capitolCentre.getX() + a[0] * 45 - bcx, dz = capitolCentre.getZ() + a[1] * 45 - bcz;
-            return dx * dx + dz * dz;
-        }));
         int[] axis = axes[0];
         for (int[] a : axes)
             if (dryAround(mc, capitolCentre.getX() + a[0] * 44, capitolCentre.getZ() + a[1] * 44)) {
@@ -1082,12 +1072,30 @@ public final class EyesDirector {
         if (capitolCentre == null)
             capitolCentre = findCapitol(mc);
         int[][] axes = { { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 } };
+        // the RTS camera stands back from what it looks at (behind and above it): a site on the capitol's outer side
+        // put that camera spot outside the world border, the border clamped it, and every 15_* RTS still showed the
+        // ground beside the structure (meadow / ground samplers, runs 40679410746 and 40691285711, Oct 28). A site
+        // must be dry AND leave the camera's own spot inside the border; the first such axis wins.
+        var border = mc.level.getWorldBorder();
+        double yR = Math.toRadians(OrthoviewClientEvents.getCamRotX());
+        double xR = Math.toRadians(OrthoviewClientEvents.getCamRotY());
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
+        double back = Math.abs(fy) < 1e-3 ? 0 : (mc.player.getEyeY() - capitolCentre.getY()) / fy;
         int[] axis = axes[0];
-        for (int[] a : axes)
-            if (dryAround(mc, capitolCentre.getX() + a[0] * 45, capitolCentre.getZ() + a[1] * 45)) {
+        boolean found = false;
+        for (int[] a : axes) {
+            int sx = capitolCentre.getX() + a[0] * 45, sz = capitolCentre.getZ() + a[1] * 45;
+            double cx = sx + fx * back, cz = sz + fz * back;
+            boolean camInside = cx > border.getMinX() + 2 && cx < border.getMaxX() - 2
+                && cz > border.getMinZ() + 2 && cz < border.getMaxZ() - 2;
+            if (camInside && dryAround(mc, sx, sz)) {
                 axis = a;
+                found = true;
                 break;
             }
+        }
+        ReignOfNether.LOGGER.info("[Eyes] 15 structures: site axis ({}, {}) from the capitol {}{}", axis[0], axis[1],
+            capitolCentre.toShortString(), found ? "" : " - no axis kept the camera inside the border");
         Vec3 g = ground(mc, capitolCentre.getX() + axis[0] * 45, capitolCentre.getZ() + axis[1] * 45, capitolCentre.getY());
         return BlockPos.containing(g);
     }
