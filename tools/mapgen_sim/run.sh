@@ -5,6 +5,7 @@
 #   tools/mapgen_sim/run.sh time 8 30            build time at 4v4
 #   tools/mapgen_sim/run.sh gametest             the 12 maps MapGenGameTests sweeps
 #   tools/mapgen_sim/run.sh sheet OUTDIR 2 6 PROSPECTOR_WARDEN RIVER   PNG contact sheets (players, maps per sheet, contrasts)
+#   tools/mapgen_sim/run.sh junit                the maps/gen JUnit tests (bar/src/test/.../maps/gen) on a JUnit shim (junit/)
 # The Phase 1 harness (lab/: the economy sim, the experiments, the hill-shaded sheets); each main's javadoc has its usage:
 #   tools/mapgen_sim/run.sh lab GenExperiments OUTDIR 8 ROUND PROSPECTOR_WARDEN 200 2 12   one exp1 cell (CSV + sheet)
 #   tools/mapgen_sim/run.sh lab GenProdStats prod.csv 40      lobby maps: time, fallbacks, spreads, robustness
@@ -26,9 +27,16 @@ cp "$SRC/maps/MapLayout.java" "$SRC/maps/MapPreset.java" "$SRC/maps/MetalOptions
 cp -r "$HERE/src/." "$WORK/src/"
 cp -r "$HERE/stub/." "$WORK/src/"
 cp -r "$HERE/lab/." "$WORK/src/"
-javac -nowarn -d "$WORK/out" $(find "$WORK/src" -name '*.java')
 cmd="$1"; shift
-if [ "$cmd" = lab ]; then
+if [ "$cmd" = junit ]; then   # Gradle is not reachable in cloud sessions; CI runs these through the real JUnit
+  TESTS="$HERE/../../bar/src/test/java/com/solegendary/reignofnether/maps/gen"
+  cp "$TESTS"/*.java "$P/maps/gen/"
+  cp -r "$HERE/junit/." "$WORK/src/"
+fi
+javac -nowarn -d "$WORK/out" $(find "$WORK/src" -name '*.java')
+if [ "$cmd" = junit ]; then
+  java -Xmx3g -cp "$WORK/out" JUnitLite $(cd "$TESTS" && ls *Test.java | sed 's/\.java$//; s/^/com.solegendary.reignofnether.maps.gen./')
+elif [ "$cmd" = lab ]; then
   main="$1"; shift
   java -Xmx3g -Djava.awt.headless=true -cp "$WORK/out" "com.solegendary.reignofnether.maps.gen.$main" "$@"
 elif [ "$cmd" = sheet ]; then
