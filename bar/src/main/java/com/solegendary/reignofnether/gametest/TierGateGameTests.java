@@ -441,7 +441,7 @@ public class TierGateGameTests {
         // the soak's own scan (16 steps along each of 8 lines): the first step of each line alone never held a dry row
         Vec3[] starts = SkirmishGameTests.soakAnyRow(level, origin.getX() + 1500, origin.getZ(), 3);
         if (starts == null) {
-            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500) + " (8 lines x 16 steps tried)");
+            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500) + " (8 lines x 16 steps, in 3 regions, tried)");
             return;
         }
         var bots = BotServerEvents.brains;
