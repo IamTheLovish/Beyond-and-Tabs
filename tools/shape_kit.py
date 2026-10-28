@@ -32,6 +32,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gothic_parts as gp  # noqa: E402
+import gen_structures as gs  # noqa: E402
 
 # |normal.y| (1 flat, 0 a wall): below STAIR_MIN full / empty only (a wall stays a wall); slabs from SLAB_MIN; no
 # stairs above FLAT (a crown); on a slope a stair's error is cut by STAIR_BIAS (of 8 octants) - a plane through a cell
@@ -274,30 +275,52 @@ def voxelize(shape, edges=True, hollow=0):
 
 
 def _hollow(vox, t):
-    from scipy import ndimage
+    """Keeps the full cells within distance t of a non-full cell (a shell t thick), plus every stair and slab."""
     full = [p for p, c in vox.items() if c[0] == "full"]
     if not full:
         return vox
-    lo = np.min(full, axis=0) - 1
-    hi = np.max(full, axis=0) + 1
+    r = int(math.ceil(t))
+    lo = np.min(full, axis=0) - 1 - r
+    hi = np.max(full, axis=0) + 1 + r
     grid = np.zeros(tuple(hi - lo + 1), bool)
     for p in full:
         grid[tuple(np.subtract(p, lo))] = True
-    depth = ndimage.distance_transform_edt(grid)          # distance to the nearest non-full cell
-    return {p: c for p, c in vox.items() if c[0] != "full" or depth[tuple(np.subtract(p, lo))] <= t + 1e-9}
+    inner = grid.copy()                                   # full cells with every cell within distance t also full
+    n = grid.shape
+    for dx in range(-r, r + 1):
+        for dy in range(-r, r + 1):
+            for dz in range(-r, r + 1):
+                if (dx, dy, dz) == (0, 0, 0) or dx * dx + dy * dy + dz * dz > t * t + 1e-9:
+                    continue
+                inner[r:n[0] - r, r:n[1] - r, r:n[2] - r] &= grid[r + dx:n[0] - r + dx, r + dy:n[1] - r + dy,
+                                                                  r + dz:n[2] - r + dz]
+    return {p: c for p, c in vox.items() if c[0] != "full" or not inner[tuple(np.subtract(p, lo))]}
 
 
 # ============================================================================================ painting
+def _is_full(target, pos):
+    """True if target already holds a full block (not air, not a stair or slab) at pos."""
+    if isinstance(target, gs.Structure):
+        i = target.blocks.get(pos)
+        name = target.palette[i][0] if i is not None else None
+    else:
+        name = target.b.get(pos, (None,))[0]
+    return bool(name) and name != "air" and "stairs" not in name and "slab" not in name
+
+
 def build(shape, role, target=None, at=(0, 0, 0), pal=None, edges=True, hollow=0):
     """Voxelizes shape into target (a gothic_parts.Part - the default, a new one - or a gen_structures.Structure /
     _SunRig) at offset `at`. role: a palette role, or f(x, y, z) -> role in the shape's own coordinates; a full cell
     takes the role, a stair role + "_st", a slab role + "_slab" (a KeyError if the palette lacks one it needs)."""
-    pal = pal or getattr(target, "pal", None) or gp.palette()
+    tpal = getattr(target, "pal", None)
+    pal = pal or (tpal if isinstance(tpal, dict) else None) or gp.palette()
     if target is None:
         target = gp.Part(pal)
     is_part = isinstance(target, gp.Part)
     ox, oy, oz = at
     for (x, y, z), c in voxelize(shape, edges, hollow).items():
+        if c[0] != "full" and _is_full(target, (x + ox, y + oy, z + oz)):
+            continue                                      # shapes merge: a full cell is never downgraded
         r = role(x, y, z) if callable(role) else role
         if c[0] == "stairs":
             key, props = r + "_st", dict(facing=c[1], half=c[2], shape="straight", waterlogged="false")
