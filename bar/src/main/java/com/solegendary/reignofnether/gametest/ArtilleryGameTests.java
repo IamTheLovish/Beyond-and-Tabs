@@ -553,6 +553,18 @@ public class ArtilleryGameTests {
         keylessHopTest(helper, "keyshop", false, true);
     }
 
+    /** Why a possessed crew's clicks fired nothing, for the failure message (CI shows only the message). */
+    static String possessedFireState(net.minecraft.world.entity.Mob b, java.util.UUID uuid, double x0, double z0) {
+        var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+        StringBuilder near = new StringBuilder();
+        for (var le : b.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                b.getBoundingBox().inflate(7), e -> e != b))
+            near.append(' ').append(le.getType().toShortString()).append(String.format("@%.1f", flat(b, le)));
+        return String.format("set-up left %d, cooldown %s, on ground %b, %.2f from the spot, nearby [%s ], shells %d",
+            com.solegendary.reignofnether.unit.SetUp.ticksLeft(b), p == null ? "no possession" : p.attackCooldownLeft(),
+            b.onGround(), Math.hypot(b.getX() - x0, b.getZ() - z0), near, shellsOf(b));
+    }
+
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
@@ -646,8 +658,9 @@ public class ArtilleryGameTests {
                         + " blocks with no keys: it needs " + SET_UP + " ticks to set up again");
                 helper.succeed();
             } else if (since > SET_UP + 10) {
+                String why = possessedFireState(b, uuid, base[0], base[2]);
                 cleanUp.run();
-                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops)");
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops; " + why + ")");
             }
         });
     }
@@ -739,8 +752,9 @@ public class ArtilleryGameTests {
                         + SET_UP + " ticks to set up");
                 helper.succeed();
             } else if (since > SET_UP + 10) {
+                String why = possessedFireState(b, uuid, last[0], last[1]);
                 cleanUp.run();
-                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped)");
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped; " + why + ")");
             }
         });
     }

@@ -133,6 +133,8 @@ public final class PossessionServer {
         /** Ticks the possessor's input actually drove the unit (the game test reads it to tell "not driven" from
          * "driven but blocked"). */
         public int drivenTicks;
+        /** Ticks before the next attack click may fire (a game test's failure message). */
+        public int attackCooldownLeft() { return attackCooldown; }
 
         // ---- movement prediction (hero slice 3, see applyClaim) ----
         /** The newest position the client says its predicted unit reached, and that claim's sequence number. */
