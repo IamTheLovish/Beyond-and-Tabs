@@ -177,3 +177,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    the walls grow straight out of the rock; many lancets and string courses. Lessons: the building GROWS OUT of the rock
    (no plinth line between them); a pale crag under a dark building gives value contrast so the building pops.
    Gravebound: dark stone on a pale crag (diorite/calcite/andesite), soul-green accent instead of crimson.
+
+32. lovishs 27th reference (02:25): /root/bat/design/refs/vehicle_labs/ref27_armillary_crown_tower.png - a Minecraft
+   wizard tower (watermarked: inspiration only) crowned by a HUGE ARMILLARY SPHERE: interlocking rings orbiting a crystal
+   spire, wider than the tower itself, above a flared conical roof with warm lit windows; magenta trees around. Lesson: a
+   big open ring sculpture as the crown reads instantly from above without adding mass. Stormcallers: crown the landmark
+   with interlocking rings (fences/walls/chains in jade+gold) around the floating lodestone, arcs drawn between them.
