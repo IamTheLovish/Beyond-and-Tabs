@@ -13,6 +13,7 @@ import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -186,25 +187,36 @@ public class FogSnapshotGameTests {
      * arenas; on a busy CI host that light is still spreading for a few ticks), so the reference is taken once the box's
      * light has settled - the same condition the capture waits for (FogChunkSnapshot.lightBarrier) - and the capture
      * then runs over real server ticks (PlayerServerEvents drives it) while nothing in the box changes.
+     * <p>
+     * The 9x9 box is far west of the test grid (as capture_bounded_when_barrier_hangs's), held with a ring round it by
+     * non-ticking tickets (level 33): nothing ticks in it or next to it. It used to be the box round the arena, which
+     * took in the arenas of the batch before (stress_8v8): in CI runs 40452699161, 40469592779 and 40472451498 blocks
+     * changing in that arena after the reference moved the light of the box's corner chunks again after their files
+     * were built ("file != live, reference != live"). The chunk changed before its turn is changed on the top of a
+     * column, so its heightmaps change too: the snapshot must hold the heightmaps from before the change (the packet
+     * shares the chunk's heightmap arrays until it is encoded, CI run 40469592779: "heightmaps of [22, 52]").
      */
-    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 600, batch = BATCH)
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 2400, batch = BATCH)
     public static void the_budgeted_snapshot_equals_the_one_tick_capture(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         diagLevel = level;
         List<String> problems = new ArrayList<>();
         BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));
-        int cx0 = origin.getX() >> 4, cz0 = origin.getZ() >> 4;
+        int cx0 = (origin.getX() >> 4) - 200, cz0 = origin.getZ() >> 4;
         int minCx = cx0 - 4, maxCx = cx0 + 4, minCz = cz0 - 4, maxCz = cz0 + 4;
-        // keep the box loaded (FULL, lit, neighbours too) across the ticks the test spans
+        // the block changed before its chunk's turn: the first free block over a column of chunk (cx0, cz0)
+        int topX = (cx0 << 4) + 1, topZ = (cz0 << 4) + 1;
+        // keep the box and a ring round it loaded (FULL, lit) across the ticks the test spans: the box's light then
+        // depends on loaded chunks only
         TicketType<ChunkPos> hold = TicketType.FORCED;
-        for (int cx = minCx; cx <= maxCx; cx++)
-            for (int cz = minCz; cz <= maxCz; cz++) {
+        for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+            for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                 ChunkPos p = new ChunkPos(cx, cz);
                 level.getChunkSource().addRegionTicket(hold, p, 0, p);
             }
         Runnable release = () -> {
-            for (int cx = minCx; cx <= maxCx; cx++)
-                for (int cz = minCz; cz <= maxCz; cz++) {
+            for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+                for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                     ChunkPos p = new ChunkPos(cx, cz);
                     level.getChunkSource().removeRegionTicket(hold, p, 0, p);
                 }
@@ -218,8 +230,8 @@ public class FogSnapshotGameTests {
         long[] t = {0, 0, 0}; // one-tick capture ns, capture start tick, settle start tick
         helper.onEachTick(() -> {
             if (phase[0] == 0) {
-                for (int cx = minCx; cx <= maxCx; cx++)
-                    for (int cz = minCz; cz <= maxCz; cz++) {
+                for (int cx = minCx - 1; cx <= maxCx + 1; cx++)
+                    for (int cz = minCz - 1; cz <= maxCz + 1; cz++) {
                         LevelChunk c = level.getChunkSource().getChunkNow(cx, cz);
                         if (c == null || !c.isLightCorrect()) return;
                     }
@@ -271,9 +283,9 @@ public class FogSnapshotGameTests {
             FogChunkSnapshot.beginCapture(level, minCx, maxCx, minCz, maxCz);
             if (!FogChunkSnapshot.hasAny())
                 problems.add("hasAny() false while a capture is running (a first join would restart it)");
-            var oldState = level.getBlockState(origin);
-            level.setBlock(origin, oldState.is(Blocks.GOLD_BLOCK) ? Blocks.IRON_BLOCK.defaultBlockState()
-                    : Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+            BlockPos top = new BlockPos(topX, level.getHeight(Heightmap.Types.WORLD_SURFACE, topX, topZ), topZ);
+            var oldState = level.getBlockState(top);
+            level.setBlock(top, Blocks.GOLD_BLOCK.defaultBlockState(), 2);
             ClientboundLevelChunkWithLightPacket afterChange = FogChunkSnapshot.get(changed);
             if (afterChange == null)
                 problems.add("a chunk changed before its turn has no snapshot");
@@ -284,7 +296,7 @@ public class FogSnapshotGameTests {
                 problems.add("a chunk served before its turn has no snapshot (a dark player would get nothing)");
             else if (!Arrays.equals(encode(servedPacket), before.get(served)))
                 problems.add("a chunk served before its turn differs from the one-tick capture");
-            level.setBlock(origin, oldState, 2);
+            level.setBlock(top, oldState, 2);
             FogChunkSnapshot.finishNow();
             Map<ChunkPos, byte[]> changedRef = new LinkedHashMap<>();
             changedRef.put(changed, before.get(changed));
@@ -375,7 +387,7 @@ public class FogSnapshotGameTests {
         TicketType<ChunkPos> hold = TicketType.FORCED;
         // start once the other test of the batch is done with the shared snapshot state (or has timed out)
         helper.onEachTick(() -> {
-            if (startTick[0] >= 0 || !(loadedTestDone.get() || helper.getTick() > 620)) return;
+            if (startTick[0] >= 0 || !(loadedTestDone.get() || helper.getTick() > 2420)) return;
             for (int cx = minCx; cx <= maxCx; cx++)
                 for (int cz = minCz; cz <= maxCz; cz++) {
                     if (level.getChunkSource().getChunkNow(cx, cz) != null)
