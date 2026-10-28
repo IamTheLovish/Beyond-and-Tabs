@@ -28,5 +28,6 @@ public enum BuildingAction {
     REQUEST_PRODUCTION_SYNC, // request that any-in progress production be resynced to client
     CLEAR_PRODUCTION, // run when a serverside building completes its last production item to resync the client's queue
     DECOMMISSION, // the owner reclaims a built building for metal (BuildingReclaim, design/building_upgrades.md)
-    TOGGLE_MERGE // the owner switches a mergeable building's merging on or off (building/merge/MergedBuildings); itemName = "on" / "off"
+    TOGGLE_MERGE, // the owner switches a mergeable building's merging on or off (building/merge/MergedBuildings); itemName = "on" / "off"
+    TOGGLE_FACTORY_GUARD // BAR factoryguard (Ctrl+G): builders this factory produces guard (assist) it first; itemName = "on" / "off"
 }

@@ -151,7 +151,7 @@ public final class BotDefences {
         if (building == null || workers.isEmpty())
             return false;
         level.getChunk(centre.getX() >> 4, centre.getZ() >> 4);
-        BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(centre.getX(), 0, centre.getZ()));
+        BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(centre.getX(), 0, centre.getZ()), true);
         // a 2x2 segment's origin is its min corner (getBuildingOriginPos with Rotation.NONE: centre - size/2)
         BlockPos origin = surface.offset(-1, 0, -1);
         if (!BuildingValidators.isPlacementValid(level, building, origin, owner, Rotation.NONE, false, false, true))

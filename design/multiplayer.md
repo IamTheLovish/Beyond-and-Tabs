@@ -124,7 +124,21 @@ Every serverbound packet now authorises against the sender, never against a name
   (`START_RTS_SANDBOX`) is host or op only.
 - **Player actions**: the action is always about the sender (a `playerId` of -1 used to slip through). Lock/unlock,
   syncing, scenario publishing and sandbox are host or op only.
-- **Start positions** (RoN map lobby): you reserve, free and ready only your own slot.
+- **Start positions** (RoN map lobby): you reserve, free and ready only your own slot. A RESERVE for "neutral" or a
+  faction key that does not exist is refused; "none" still works (it holds a slot before a faction is picked, and a
+  slot with no faction never starts anything).
+- **Who may become a sandbox player** (Oct 22 audit): a faction in a packet decodes with `Factions.findFaction`, so a
+  made-up key is `null` and refused (it used to turn into NONE). `START_RTS` as NONE or NEUTRAL, and `startRTS` itself
+  whatever called it, are host or op only (`PacketAuth.mayPlayAs`); before, any joiner could send START_RTS with
+  faction "none" and become a sandbox player, whom every owner check lets act for everyone.
+- **Placement checks follow the placing owner**, not "somebody is in sandbox": the overlap, metal-patch, fog and worker
+  checks are skipped only when the owner is a sandbox player (`SandboxServer.isSandboxOwner`; the neutral owners ""
+  and "Enemy", which only a sandbox player or the server can place for, count while a sandbox runs). Cancel/destroy
+  and item DROP follow the sender. Before, the host in sandbox switched every check off for everyone.
+- **Teleport** (the camera body): non-finite coordinates are ignored, every sender (not only ortho-view players) is
+  clamped to the world border and to the build height range (+64 above it), and it has its own bucket of 60/s.
+- **Custom buttons** (datapack buttons run functions at permission level 2): only a player in the match or the host/an
+  op may press one, 10/s with a burst of 20, and a right click runs the right-click actions (it ran the left ones).
 - **Game mode, survival waves**: host or op only. **Tutorial scripted spawns**: only in the tutorial world, host only.
 - **Map drawing, map markers, hover info, resign vote**: drawing already had a limit, now markers do too. Hover
   answers only what the asker can see and is rate-limited. The resign vote is per sender.
@@ -133,7 +147,7 @@ Every serverbound packet now authorises against the sender, never against a name
 Rate limits (token buckets per player, dropped silently): unit orders 200/s with a burst of 600 (a formation drag
 sends one packet per unit), building packets 200/s, production 200/s (a login re-requests every building's queue),
 ability-sync requests 400/s with a burst of 1000 (one per unit entering view), hero sync 50/s, player actions 10/s
-(teleport exempt: it follows a held portrait every tick), area commands 10/s, map markers 3/s, start-pos 10/s,
+(teleport has its own, 60/s with a burst of 120: it follows a held portrait every tick), custom buttons 10/s, area commands 10/s, map markers 3/s, start-pos 10/s,
 lobby 10/s.
 
 ## Bandwidth (2-player match)

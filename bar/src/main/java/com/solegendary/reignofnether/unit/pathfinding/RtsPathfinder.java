@@ -32,9 +32,24 @@ public final class RtsPathfinder {
     public static void requestPath(Mob mob, BlockPos target, int reach, MobilityClass mobility, BooleanSupplier valid, PathCallback onReady) {
         Level level = mob.level();
         BlockPos start = mob.blockPosition();
-        if (isUnloaded(level, start) || isUnloaded(level, target)) {
+        if (isUnloaded(level, start)) {
             onReady.onPath(null, false);
             return;
+        }
+        if (isUnloaded(level, target) || lineCrossesUnloaded(level, start, target)) {
+            // A target in (or beyond) an unloaded chunk used to get no path at all, every retry, so the unit stood
+            // still - or, with the target's own chunk loaded but chunks between unloaded, the request parked to warm
+            // its whole corridor first (4000 blocks out: 3419 chunks at 4 a tick, ~43 s with the unit standing and
+            // each cold chunk generated on the main thread; CI, PR #118). Path
+            // to the last loaded ground on the way instead: the unit walks as far as it can (chunks load round it as
+            // it goes, UnitChunkLoader), and when even that gets it no closer, MoveToTargetBlockGoal's stuck count
+            // gives the order up and the unit goes idle where the player can see it.
+            BlockPos edge = lastLoadedToward(level, start, target);
+            if (edge == null) {
+                onReady.onPath(null, false);
+                return;
+            }
+            target = edge;
         }
         int clearanceCells = Math.max(2, Mth.ceil(mob.getBbHeight()));
         float fireCost = fireCostFor(mob);
@@ -122,6 +137,52 @@ public final class RtsPathfinder {
     private static boolean standable(MobilityClass mob, WalkabilityView view, int x, int y, int z) {
         if (Float.isInfinite(view.mobility().costFor(mob, view.kindAt(x, y, z), view.fireCost()))) return false;
         return GridNeighbors.wideFits(view, x, y, z);
+    }
+
+    /**
+     * The farthest point, at most one A* search radius out, on the straight line from {@code start} toward
+     * {@code target} whose chunk (and every chunk before it on the line) is loaded, on the ground there
+     * (motion-blocking height); null when that is within two blocks of the start (nowhere to go). Ground out of vertical reach is replaced by the start height.
+     */
+    @Nullable
+    public static BlockPos lastLoadedToward(Level level, BlockPos start, BlockPos target) {
+        double dx = target.getX() - start.getX(), dz = target.getZ() - start.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1)
+            return null;
+        int bx = start.getX(), bz = start.getZ();
+        // at most one search radius out: A* cannot look further in one go, and a far point (a GameTest server or a
+        // busy map keeps a wide area loaded) made the request warm a corridor of hundreds of chunks first - the unit
+        // stood for 30 s and more (CI, PR #118). The unit repaths from there and goes on as chunks load round it.
+        double maxT = Math.min(len, PathfinderConfig.MAX_RADIUS - 8);
+        for (double t = 4; t <= maxT; t += 4) {
+            int x = Mth.floor(start.getX() + dx * t / len), z = Mth.floor(start.getZ() + dz * t / len);
+            if (isUnloaded(level, new BlockPos(x, start.getY(), z)))
+                break;
+            bx = x;
+            bz = z;
+        }
+        if ((bx - start.getX()) * (bx - start.getX()) + (bz - start.getZ()) * (bz - start.getZ()) <= 4)
+            return null;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+        // ground far above or below the unit (a unit on a high plateau, a bridge, a sky pad) is out of A*'s vertical
+        // band (ChunkSnapshot.regionFor centres it on the start/target midpoint): the snapshot would then miss the
+        // unit's own floor and give no path at all (CI, a_move_into_unloaded_chunks...: the unit never moved).
+        // Aim at the unit's own height instead - A* still walks it as far as it can that way.
+        if (Math.abs(y - start.getY()) > PathfinderConfig.VERTICAL_RADIUS)
+            y = start.getY();
+        return new BlockPos(bx, y, bz);
+    }
+
+    /** Is any chunk on the straight line from start to target (sampled every 8 blocks) not loaded? */
+    private static boolean lineCrossesUnloaded(Level level, BlockPos start, BlockPos target) {
+        double dx = target.getX() - start.getX(), dz = target.getZ() - start.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        for (double t = 8; t < len; t += 8)
+            if (isUnloaded(level, new BlockPos(Mth.floor(start.getX() + dx * t / len), start.getY(),
+                    Mth.floor(start.getZ() + dz * t / len))))
+                return true;
+        return false;
     }
 
     private static boolean isUnloaded(Level level, BlockPos bp) {

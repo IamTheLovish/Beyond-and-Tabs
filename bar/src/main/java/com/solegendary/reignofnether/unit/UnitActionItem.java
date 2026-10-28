@@ -145,11 +145,18 @@ public class UnitActionItem {
         return true;
     }
 
-    private boolean isRedundantMove(Unit unit, BlockPos targetPos) {
+    /**
+     * A MOVE to (about) the spot this unit is already walking to, while it is really getting there: skipped, since a
+     * re-path is expensive and spam-clicking a moving army would only stall it. A unit that is NOT making progress
+     * (no live path, standing on a retry, or circling in a path loop - MoveToTargetBlockGoal.isMakingProgress) takes
+     * the order in full - reset and a new path - so clicking again rescues it (it used to be skipped too: "units
+     * sometimes don't listen to my commands").
+     */
+    public static boolean isRedundantMove(Unit unit, BlockPos targetPos) {
         LivingEntity le = (LivingEntity) unit;
         MoveToTargetBlockGoal goal = unit.getMoveGoal();
 
-        if (goal != null && !le.level().isClientSide()) {
+        if (goal != null && !le.level().isClientSide() && goal.isMakingProgress()) {
             BlockPos bp = goal.getMoveTarget();
             if (bp != null) {
                 double distToTarget = bp.distSqr(le.getOnPos());
@@ -260,6 +267,11 @@ public class UnitActionItem {
                     //}
                     if (shouldResetBehaviours && (NON_ABILITY_ACTIONS.contains(action) || foundAbility) && action != UnitAction.RETURN_RESOURCES_TO_CLOSEST) {
                         Unit.fullResetBehaviours(unit);
+                        // a new order replaces a big vanilla-mode formation move still waiting in the time-sliced
+                        // dispatch queue: else that stale move landed a few ticks later, over this order (a Stop
+                        // right after a 20+ unit move was undone). A new formation move re-queues the unit below.
+                        if (!level.isClientSide() && !autocast)
+                            UnitServerEvents.cancelQueuedFormationMove(((Entity) unit).getId());
                     }
                 }
             }
@@ -269,6 +281,12 @@ public class UnitActionItem {
                 PatrolServerEvents.clear(((Entity) unit).getId());
             if (action != UnitAction.GUARD && !isStateCommand && !autocast)
                 GuardServerEvents.clear(((Entity) unit).getId());
+            // healers and other support units read attack, Fight and attack-building orders their own way - a standoff
+            // behind the front, never a chase into melee (lovish, Oct 21: they "end up killing themselves"). Server
+            // side; every other order just ends their support order and runs below (unit/support/SupportOrders)
+            if (unit instanceof SupportUnit supportUnit && com.solegendary.reignofnether.unit.support.SupportOrders
+                    .order(level, supportUnit, action, unitId, preselectedBlockPos, actionableUnits, autocast))
+                continue;
             switch (action) {
                 case AUTOCAST_ENABLE, AUTOCAST_DISABLE -> {
                     // the generic autocast switch (ability/AutocastState): the ability's action ordinal rides in x
@@ -363,8 +381,12 @@ public class UnitActionItem {
                     }
                 }
                 case ATTACK -> {
-                    LivingEntity le = (LivingEntity) level.getEntity(unitId);
-                    if (!level.isClientSide() && le != null && Concealment.isHiddenFrom(le, unit.getOwnerName())) {
+                    // a target id that is not a living entity (a wreck, a dropped item, a projectile) or no entity at
+                    // all: the order is dropped. The cast here threw ClassCastException on the server thread and the
+                    // whole order was lost (security audit F8, Oct 26)
+                    if (!(level.getEntity(unitId) instanceof LivingEntity le))
+                        continue;
+                    if (!level.isClientSide() && Concealment.isHiddenFrom(le, unit.getOwnerName())) {
                         // the target is cloaked / in a thicket for this unit's side: a direct order on it (a stale
                         // click, a queued area attack, or a modified client that sent the id anyway) becomes a move
                         // to where it stands - walking up close is how a thicket gets seen into
@@ -389,7 +411,7 @@ public class UnitActionItem {
                                 CommandQueues.pushFront((LivingEntity) unit,
                                     new UnitCommand(UnitAction.RETURN_RESOURCES_TO_CLOSEST, unit.getOwnerName(), -1, BlockPos.ZERO));
                             }
-                        } else if (le != null) {
+                        } else {
                             attackerUnit.setUnitAttackTargetForced(le);
                             // a hunt ends with a drop-off, put ahead of whatever else is queued unless one is already
                             // waiting. Server only: the client's prediction used to add it to the server's list too
@@ -414,20 +436,21 @@ public class UnitActionItem {
                     }
                 }
                 case FOLLOW -> {
-                    LivingEntity livingEntity = (LivingEntity) level.getEntity(unitId);
-                    if (!level.isClientSide() && livingEntity != null && Concealment.isHiddenFrom(livingEntity, unit.getOwnerName())) {
+                    // only a living entity can be followed: anything else (or nothing) drops the order - the cast threw
+                    // here (F8, as ATTACK above)
+                    if (!(level.getEntity(unitId) instanceof LivingEntity livingEntity))
+                        continue;
+                    if (!level.isClientSide() && Concealment.isHiddenFrom(livingEntity, unit.getOwnerName())) {
                         unit.setMoveTarget(livingEntity.blockPosition());   // can't tail what this side can't see
                         continue;
                     }
-                    if (livingEntity != null) {
-                        MiscUtil.addUnitCheckpoint(unit, unitId, true);
-                    }
+                    MiscUtil.addUnitCheckpoint(unit, unitId, true);
                     unit.setFollowTarget(livingEntity);
                 }
                 case BUILD_REPAIR -> {
                     // if the unit can't actually build/repair just treat this as a move action
                     if (unit instanceof WorkerUnit workerUnit) {
-                        BuildingPlacement building = BuildingUtils.findBuilding(level.isClientSide(), preselectedBlockPos);
+                        BuildingPlacement building = BuildingUtils.findBuildingOrBlueprint(level.isClientSide(), preselectedBlockPos);   // a pending site (Blueprints) too
                         if (building != null) {
                             workerUnit.getBuildRepairGoal().setBuildingTarget(building);
                         }
@@ -546,7 +569,10 @@ public class UnitActionItem {
                                     break actionableUnitsLoop;
                                 }
                             } else if (ability.canTargetEntities && this.unitId > 0) {
-                                ability.use(level, unit, (LivingEntity) level.getEntity(unitId));
+                                // a target that is not a living entity (or is gone) drops the cast (F8: the cast threw)
+                                if (!(abilityTarget instanceof LivingEntity livingTarget))
+                                    continue;
+                                ability.use(level, unit, livingTarget);
                                 usedAbility = ability;
                                 if (ability.oneClickOneUse) {
                                     break actionableUnitsLoop;
@@ -627,7 +653,9 @@ public class UnitActionItem {
             for (Ability ability : actionableBuilding.getAbilities()) {
                 if (ability.action == action && (ability.isOffCooldown(actionableBuilding) || ability.canBypassCooldown(actionableBuilding))) {
                     if (ability.canTargetEntities && this.unitId > 0) {
-                        ability.use(level, actionableBuilding, (LivingEntity) level.getEntity(unitId));
+                        // as for units: only a living target, else the cast is dropped (F8: the cast threw)
+                        if (level.getEntity(unitId) instanceof LivingEntity livingTarget)
+                            ability.use(level, actionableBuilding, livingTarget);
                     } else {
                         ability.use(level, actionableBuilding, preselectedBlockPos);
                     }

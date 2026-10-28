@@ -87,12 +87,12 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
         } else if (!this.mob.isWithinRestriction(livingentity.blockPosition())) {
             return false;
         } else {
-            boolean canContinue = !(livingentity instanceof Player) || !livingentity.isSpectator() && !((Player)livingentity).isCreative();
-            if (canContinue) {
-                this.path = chasePath(livingentity);
-                this.mob.getNavigation().moveTo(this.path, ((Unit) this.mob).getSpeedModifier());
-            }
-            return canContinue;
+            // Only the keep-going test here. This used to re-run chasePath (Engage.melee + a vanilla createPath) and
+            // moveTo on every call - and the goal selector calls it every tick, so every following chaser repathed
+            // every tick past tick()'s 5/10/20-tick throttle (the Oct 22 match: Engage classify storm + navigation
+            // under tinker, ~4% of the tick). tick() keeps chasing on its throttle, and repaths at once the first
+            // tick the target leaves reach (see tick), so the chase answers a step back just as fast.
+            return !(livingentity instanceof Player) || !livingentity.isSpectator() && !((Player)livingentity).isCreative();
         }
     }
 
@@ -123,9 +123,13 @@ public abstract class AbstractMeleeAttackUnitGoal extends Goal {
             this.mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
             double distSqr = this.mob.distanceToSqr(target.getX(), target.getY(), target.getZ());
 
-            if (distSqr < this.getAttackReachSqr(target))
+            if (distSqr < this.getAttackReachSqr(target)) {
                 this.mob.getNavigation().stop();
-            else if (!((Unit) this.mob).getHoldPosition()) {
+                // a following chaser used to repath every tick from canContinueToUse; it now repaths from here only,
+                // so the moment the target steps out of reach it gets a fresh path rather than waiting out a cooldown
+                if (this.followingTargetEvenIfNotSeen)
+                    ticksUntilNextPathRecalculation = 0;
+            } else if (!((Unit) this.mob).getHoldPosition()) {
                 if (ticksUntilNextPathRecalculation <= 0) {
                     Path path = chasePath(target);
                     this.mob.getNavigation().moveTo(path, ((Unit) this.mob).getSpeedModifier());
