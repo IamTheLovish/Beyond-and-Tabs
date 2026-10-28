@@ -176,7 +176,7 @@ def grass_clump(n, rng, tall=False, blades=None):
         if straw:
             cv.stroke(pts, widths, _blade_shade(0.62, 1.0, tone, False), 0.3 + 0.6 * depth, layer=1)
         else:
-            cv.stroke(pts, widths, _blade_shade(0.50, 0.90, tone, False), 0.35 + 0.65 * depth)
+            cv.stroke(pts, widths, _blade_shade(0.64, 0.92, tone, False), 0.35 + 0.65 * depth)   # r29d: lighter roots
     if tall:                                                     # seed heads: a stalk and its spikelets
         for _ in range(int(rng.integers(3, 6))):
             rx, ry = roots[rng.integers(len(roots))]

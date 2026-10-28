@@ -2780,10 +2780,20 @@ STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top")
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 
 
+# leaning quads for a tuft seen from above (round 29c/d): (axis, angle) per quad; axis x tips the plane through the root
+# toward +z (angle > 0) or -z, axis z toward -x / +x. Round 29c's even four-way star read as rows of identical "x"
+# marks from the RTS camera (run 40691285711): three lopsided sets, each turned at random per block by the blockstate
+TUFTS = {
+    "": (("x", 45), ("x", -22.5), ("z", 45), ("z", -45)),
+    "_b": (("x", 22.5), ("z", -45), ("x", -45)),
+    "_c": (("z", 22.5), ("x", 45), ("z", -22.5), ("x", -45)),
+}
+
+
 def _cross_elements(layers, lean):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
-    or not), plus - with lean - four quads hinged at the root and leaning out 45 degrees (north, south, east, west),
-    their tops ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
+    or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
+    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
     def face(t, tinted):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
     els = []
@@ -2794,12 +2804,12 @@ def _cross_elements(layers, lean):
         els.append({"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
-        if lean:
-            for ang in (45, -45):          # planes through the root, tipped toward +z / -z (about x) ...
+        for axis, ang in (lean or ()):
+            if axis == "x":
                 els.append({"from": [1, 0, 8], "to": [15, 14, 8], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("north", "south")}})
-            for ang in (45, -45):          # ... and toward +x / -x (about z)
+            else:
                 els.append({"from": [8, 0, 1], "to": [8, 14, 15], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("west", "east")}})
@@ -2816,13 +2826,16 @@ def _plant_model(p, straw, lean):
 
 
 PLANT_MODELS = {
-    "grass": _plant_model("grass", True, True),
-    "fern": _plant_model("fern", False, True),
-    "tall_grass_bottom": _plant_model("tall_grass_bottom", True, False),
-    "tall_grass_top": _plant_model("tall_grass_top", True, False),
-    "large_fern_bottom": _plant_model("large_fern_bottom", False, False),
-    "large_fern_top": _plant_model("large_fern_top", False, False),
+    **{"grass" + k: _plant_model("grass", True, v) for k, v in TUFTS.items()},
+    **{"fern" + k: _plant_model("fern", False, v) for k, v in TUFTS.items()},
+    "tall_grass_bottom": _plant_model("tall_grass_bottom", True, None),
+    "tall_grass_top": _plant_model("tall_grass_top", True, None),
+    "large_fern_bottom": _plant_model("large_fern_bottom", False, None),
+    "large_fern_top": _plant_model("large_fern_top", False, None),
 }
+# short grass and ferns: one of the three tufts, turned a random quarter (12 looks), as vanilla turns nothing here
+TUFT_BLOCKSTATES = {b: [dict({"model": "minecraft:block/" + b + k}, **({"y": y} if y else {}))
+                        for k in TUFTS for y in (0, 90, 180, 270)] for b in ("grass", "fern")}
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
@@ -2927,6 +2940,9 @@ def write_models():
     # basalt: vanilla's axis turns of the column, the same turn for every variant (the shared band stays shared)
     turn = {"axis=x": {"x": 90, "y": 90}, "axis=y": {}, "axis=z": {"x": 90}}
     blockstate("basalt", {k: [dict({"model": "minecraft:block/" + m}, **r) for m in basalt] for k, r in turn.items()})
+    for name, variants in TUFT_BLOCKSTATES.items():   # round 29d
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"variants": {"": variants}}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
