@@ -122,6 +122,37 @@ public final class UnitChunkLoader {
             }
     }
 
+    /**
+     * Holds the 5x5 chunks round a build site loaded WITHOUT blocking: the same region tickets and bookkeeping as
+     * {@link #holdArea} (so they age out LINGER_TICKS after the last call) but no synchronous getChunk, so a site
+     * out in ungenerated land costs the tick nothing. A worker's queue is the server's: a site the owner queued
+     * must stay reachable whatever the owner's camera is doing. Chunks nobody holds unload once the RTS camera
+     * (the player entity) scrolls away, and RtsPathfinder answers "no path" for a target in an unloaded chunk, so a
+     * worker sent to a site in fog (not placed yet, so no building holds its chunk) stood where it was.
+     * Call it about once a second while a worker is heading for the site. Server thread only.
+     */
+    public static void holdSite(ServerLevel level, BlockPos pos) {
+        LevelState state = STATES.computeIfAbsent(level.dimension(), k -> new LevelState());
+        ServerChunkCache cache = level.getChunkSource();
+        long now = level.getGameTime();
+        int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+        for (int dx = -RADIUS; dx <= RADIUS; dx++)
+            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
+                long chunk = ChunkPos.asLong(cx + dx, cz + dz);
+                if (!state.regionChunks.containsKey(chunk)) {
+                    ChunkPos cp = new ChunkPos(chunk);
+                    cache.addRegionTicket(UNIT_TICKET, cp, TICKET_DISTANCE, cp);
+                }
+                state.regionChunks.put(chunk, now);
+            }
+    }
+
+    /** Whether the chunk holding {@code pos} is held by a unit or site ticket right now (for tests). */
+    public static boolean isHeld(ServerLevel level, BlockPos pos) {
+        LevelState state = STATES.get(level.dimension());
+        return state != null && state.regionChunks.containsKey(ChunkPos.asLong(pos.getX() >> 4, pos.getZ() >> 4));
+    }
+
     public static void update(MinecraftServer server, Collection<LivingEntity> units) {
         // group the needed chunks by level
         Map<ResourceKey<Level>, LongOpenHashSet> neededRegion = new HashMap<>();

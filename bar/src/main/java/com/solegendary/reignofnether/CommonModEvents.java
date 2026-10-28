@@ -166,6 +166,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.GravecallerUnit.createAttributes().build());
         evt.put(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.HordeWarchiefUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ASH_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.AshShamanUnit.createAttributes().build());
         evt.put(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.ThornheartDruidUnit.createAttributes().build());
         evt.put(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.CorsairCaptainUnit.createAttributes().build());
         evt.put(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.StormWitchUnit.createAttributes().build());

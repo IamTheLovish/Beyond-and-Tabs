@@ -214,7 +214,9 @@ jobs:
               # a structure-photo run keeps it too (Oct 22: the plain lane crashed at RenderSystem init - Oculus's
               # BufferBuilder mixin without Embeddium, runs 39838786995 / 39840043629 - and testers run Embeddium)
               keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or bool(os.environ.get('STRUCTURES'))
-              skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'immediatelyfast', 'e4mc')
+              # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
+              # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
+              skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
               if any(k in low for k in skip):
                   print('skip', name); continue
               data = urllib.request.urlopen(urllib.request.Request(f['downloads'][0],

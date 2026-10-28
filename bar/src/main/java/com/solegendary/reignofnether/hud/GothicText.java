@@ -225,6 +225,22 @@ public final class GothicText {
         int a = Mth.clamp(Mth.ceil(alpha * 255f), 0, 255);
         if (a <= 3)
             return;
+        // The first real capture (eyes run 39741755064) showed the vanilla labels over our stone plates: vanilla text
+        // sits a hair in front (Font draws it at z +0.03) and wins the depth test against fills at z 0. So: flush what
+        // the buttons queued, then draw the plates, blood and our labels a step nearer the viewer.
+        g.flush();
+        g.pose().pushPose();
+        g.pose().translate(0f, 0f, 20f);
+        try {
+            restyle(g, font, children, only, primary, a);
+        } finally {
+            g.flush();
+            g.pose().popPose();
+        }
+    }
+
+    private static void restyle(GuiGraphics g, Font font, List<? extends GuiEventListener> children, Set<String> only,
+                                Set<String> primary, int a) {
         float t = seconds();
         boolean pressed = false;
         try {
@@ -373,8 +389,6 @@ public final class GothicText {
             int sx = x0 + 6 + Math.round(fx * (bw - 12));
             int wdt = (h % 3 == 0) ? 2 : 1;
             float len = maxLen * (0.55f + 0.45f * ((hash(h + 3) % 100) / 100f));
-            // the seep: a smear of blood along the lip above every strand
-            g.fill(sx - 2 - h % 5, y - 1, sx + wdt + 2 + (h >>> 5) % 5, y, withAlpha(PLATE_BLOOD, a));
             if (t < 0f) {
                 bloodStrand(g, sx, y, Math.round(len * 0.7f), wdt, a);
                 continue;
@@ -389,31 +403,73 @@ public final class GothicText {
             } else if (p < 0.70f) {
                 int L = Math.round(len);
                 bloodStrand(g, sx, y, L, wdt, a);
-                if ((p - 0.55f) / 0.15f > 0.5f)       // the bead swells
-                    g.fill(sx - 1, y + L + 2, sx + 2, y + L + 3, withAlpha(PLATE_BLOOD, a));
+                // (the bead swells: bloodStrand's bead is already full; the drop lets go below)
             } else {
                 float k = (p - 0.70f) / 0.30f;
                 bloodStrand(g, sx, y, Math.round(len * (0.35f + 0.15f * (1 - k))), wdt, a);
-                int dy = Math.round(len + 4 + k * k * 22f);
+                float dy = len + 4 + k * k * 22f;
                 int da = Math.round(a * (1f - k * k));
-                g.fill(sx, y + dy - 1, sx + 1, y + dy, withAlpha(PLATE_BLOOD, da));
-                g.fill(sx - 1, y + dy, sx + 2, y + dy + 2, withAlpha(PLATE_BLOOD, da));
-                g.fill(sx - 1, y + dy, sx, y + dy + 1, withAlpha(PLATE_BLOOD_HI, da));
+                drop(g, sx, y + dy, wdt, da);
             }
         }
     }
 
-    /** one strand: a wide root, a crimson body (shaded on its right when 2 wide) and a rounded, lit bead at the tip */
+    /**
+     * One strand, drawn in quarter-pixel units (round 6: the 1-px blocks read as detached pixel "T"s): a root that
+     * swells into the plate's lip (overlapping it, so there is no gap), a body tapering as it hangs, lit down its left
+     * edge and shaded on its right, and a round, glossy bead at the tip.
+     */
     private static void bloodStrand(GuiGraphics g, int x, int y, int len, int wdt, int a) {
         if (len <= 0)
             return;
-        g.fill(x - 1, y, x + wdt + 1, y + 2, withAlpha(PLATE_BLOOD, a));
-        g.fill(x, y, x + wdt, y + len, withAlpha(PLATE_BLOOD, a));
-        if (wdt > 1)
-            g.fill(x + wdt - 1, y + 2, x + wdt, y + len, withAlpha(PLATE_BLOOD_DARK, a));
-        g.fill(x - 1, y + len - 1, x + 2, y + len + 2, withAlpha(PLATE_BLOOD, a));
-        g.fill(x - 1, y + len - 1, x, y + len, withAlpha(PLATE_BLOOD_HI, a));
-        g.fill(x + 1, y + len + 1, x + 2, y + len + 2, withAlpha(PLATE_BLOOD_DARK, a));
-        g.fill(x, y + len + 2, x + 1, y + len + 3, withAlpha(PLATE_BLOOD_DARK, a));
+        var pose = g.pose();
+        pose.pushPose();
+        pose.translate(x + wdt * 0.5f, y, 0f);
+        pose.scale(0.25f, 0.25f, 1f);
+        int body = wdt * 2;                     // half width of the body at its root, quarter units
+        int Lq = len * 4;
+        // the root: a smear widening up into the lip (from 3 px inside the plate, over its dark lower edge)
+        for (int r = -12; r < 6; r++) {
+            int hw = body + Math.max(0, 6 - r) / 2 + 1;
+            g.fill(-hw, r, hw, r + 1, withAlpha(PLATE_BLOOD, a));
+        }
+        // the body, tapering to two thirds of its width
+        for (int r = 6; r < Lq; r += 2) {
+            float k = r / (float) Lq;
+            int hw = Math.max(1, Math.round(body * (1f - 0.33f * k)));
+            g.fill(-hw, r, hw, r + 2, withAlpha(PLATE_BLOOD, a));
+            g.fill(hw - 1, r, hw, r + 2, withAlpha(PLATE_BLOOD_DARK, a));
+            if (hw > 1)
+                g.fill(-hw, r, -hw + 1, r + 2, withAlpha(PLATE_BLOOD_HI, a * 3 / 5));
+        }
+        bead(g, 0, Lq + body + 2, body + 3, a);
+        pose.popPose();
+    }
+
+    /** a round bead of blood (quarter units, inside a scaled pose): rows of a disc, a dark lower rim, a gloss dot */
+    private static void bead(GuiGraphics g, int cx, int cy, int r, int a) {
+        for (int dy = -r; dy <= r; dy++) {
+            int hw = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
+            g.fill(cx - hw, cy + dy, cx + hw, cy + dy + 1, withAlpha(dy > r / 2 ? PLATE_BLOOD_DARK : PLATE_BLOOD, a));
+        }
+        int gr = Math.max(1, r / 3);
+        g.fill(cx - r / 2 - gr / 2, cy - r / 2 - gr / 2, cx - r / 2 + gr, cy - r / 2 + gr, withAlpha(PLATE_BLOOD_HI, a));
+    }
+
+    /** a falling drop at (x, y) GUI px: a teardrop (quarter units) */
+    private static void drop(GuiGraphics g, float x, float y, int wdt, int a) {
+        if (a <= 0)
+            return;
+        var pose = g.pose();
+        pose.pushPose();
+        pose.translate(x + wdt * 0.5f, y, 0f);
+        pose.scale(0.25f, 0.25f, 1f);
+        int r = wdt * 2 + 3;
+        for (int j = 0; j < 2 * r; j++) {         // the tail, tapering up from the drop
+            int hw = 1 + j * (r - 1) / (2 * r);
+            g.fill(-hw, -3 * r + j, hw, -3 * r + j + 1, withAlpha(PLATE_BLOOD, a));
+        }
+        bead(g, 0, 0, r, a);
+        pose.popPose();
     }
 }
