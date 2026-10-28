@@ -104,7 +104,7 @@ public final class PossessionServer {
     /** Sprinting multiplies a ground unit's drive speed by vanilla's sprint modifier (+30%). */
     public static final float SPRINT_MULT = 1.3f;
     /** Vanilla's sprint-jump push along the look (LivingEntity.jumpFromGround), allowed on a sprint-jump's claim. */
-    static final float SPRINT_JUMP_BOOST = 0.2f;
+    public static final float SPRINT_JUMP_BOOST = 0.2f;
     /**
      * In the air a mob steers with 0.02 x its input, and a unit's input is MoveControl's "keys x speed" (~0.3 long),
      * so a jumping unit had a third of a player's air control: the jump felt like being thrown. Off the ground the
