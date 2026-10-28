@@ -90,7 +90,7 @@ public class DisplaySettingsScreen extends Screen {
         addRenderableOnly(new Label("World look").pos(left, y - 4).size(colW * 2 + gap, rowH));
         y += 18;
         Button look = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, worldLookLabel(), b -> {
-            ReignOfNetherClientConfigs.WORLD_LOOK.set((DisplaySettings.worldLook() + 1) % 3);
+            ReignOfNetherClientConfigs.WORLD_LOOK.set((DisplaySettings.worldLook() + 1) % DisplaySettings.WORLD_LOOK_NAMES.length);
             b.setMessage(worldLookLabel());
         }));
         look.setTooltip(Tooltip.create(Component.literal(
