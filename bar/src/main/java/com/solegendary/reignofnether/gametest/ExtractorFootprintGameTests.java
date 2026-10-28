@@ -111,13 +111,77 @@ public class ExtractorFootprintGameTests {
             helper.fail("no unloaded chunk found near x=" + x);
             return;
         }
-        int unloaded = MetalPatches.solidTop(level, x, z);
+        // generate it through the bounded wait (a synchronous getChunk of new ground could park the server thread on CI),
+        // read the ground, then let its one-tick ticket lapse and read again once it has unloaded (back from the save)
         GameTestChunks.loadNowOrFail(level, x >> 4, z >> 4);
         int loaded = MetalPatches.solidTop(level, x, z);
+        if (loaded <= level.getMinBuildHeight()) {
+            helper.fail("solidTop at [" + x + ", " + z + "] read " + loaded + " with its chunk loaded: no ground to compare");
+            return;
+        }
+        awaitUnloadThenCompare(helper, level, x, z, loaded, 150);
+    }
+
+    private static void awaitUnloadThenCompare(GameTestHelper helper, ServerLevel level, int x, int z, int loaded, int ticksLeft) {
+        if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) != null) {
+            if (ticksLeft <= 0)
+                helper.fail("chunk " + (x >> 4) + "," + (z >> 4) + " never unloaded after its ticket lapsed");
+            else
+                helper.runAfterDelay(1, () -> awaitUnloadThenCompare(helper, level, x, z, loaded, ticksLeft - 1));
+            return;
+        }
+        int unloaded = MetalPatches.solidTop(level, x, z);
         if (unloaded != loaded)
             helper.fail("solidTop at [" + x + ", " + z + "] read " + unloaded + " with its chunk unloaded, " + loaded + " loaded");
         else
             helper.succeed();
+    }
+
+    /**
+     * A bamboo jungle (local run of the battlefield test: "pad dry", every obstruction "+9 bamboo"): the pad clears 8 up,
+     * the stalks above stay standing in the extractor's footprint and it clips them. A platform high above the terrain
+     * (as SkirmishGameTests.extractor_and_windmill_fit_on_a_stamped_patch) with bamboo 16 tall, then the player's origin.
+     */
+    @GameTest(template = ARENA)
+    public static void a_stamped_patch_clears_bamboo_taller_than_the_pad(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                if ((dx + dz) % 3 == 0)
+                    for (int k = 1; k <= 16; k++)
+                        level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), net.minecraft.world.level.block.Blocks.BAMBOO.defaultBlockState(), 2);
+            }
+        MetalPatches.forgetAll();
+        try {
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() did not leave a patch block at " + centre + " (solidTop says " + MetalPatches.solidTop(level, cx, cz) + ")");
+                return;
+            }
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch stamped in bamboo 16 tall refuses: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
     }
 
     /** Each unplaceable patch with the errors it gave, per extractor; null when every patch takes every extractor. */
@@ -165,13 +229,42 @@ public class ExtractorFootprintGameTests {
                     if (!o.equals(c))
                         neighbour = Math.min(neighbour, Math.max(Math.abs(o.getX() - c.getX()), Math.abs(o.getZ() - c.getZ())));
                 bad.add(c.toShortString() + " (" + nearest + " from a base, nearest patch " + neighbour + ", pad "
-                    + (MetalPatches.padDry(level, c.getX(), c.getZ(), c.getY()) ? "dry" : "WET " + wetCells(level, c)) + ", player " + (playerOk ? "ok" : "refused")
+                    + (MetalPatches.padDry(level, c.getX(), c.getZ(), c.getY()) ? "dry " + obstructions(level, c) : "WET " + wetCells(level, c)) + ", player " + (playerOk ? "ok" : "refused")
                     + "): " + errors);
             }
         }
         if (bad.isEmpty())
             return null;
         return bad.size() + " of " + patches.size() + " patches refuse an extractor: " + String.join(" | ", bad);
+    }
+
+    /**
+     * A dry pad that still refuses: each pad cell whose ground is not at the pad's height or that has a solid block within
+     * 16 above it, as (dx,dz ground dy, first solid +k block), plus the highest ground round the pad (a pit's rim).
+     */
+    private static String obstructions(ServerLevel level, BlockPos c) {
+        List<String> cells = new ArrayList<>();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int rim = Integer.MIN_VALUE;
+        for (int dx = -MetalPatches.PAD_HALF - 3; dx <= MetalPatches.PAD_HALF + 3; dx++)
+            for (int dz = -MetalPatches.PAD_HALF - 3; dz <= MetalPatches.PAD_HALF + 3; dz++) {
+                int x = c.getX() + dx, z = c.getZ() + dz;
+                if (Math.max(Math.abs(dx), Math.abs(dz)) > MetalPatches.PAD_HALF) {
+                    rim = Math.max(rim, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1 - c.getY());
+                    continue;
+                }
+                String ground = level.getBlockState(p.set(x, c.getY(), z)).isSolid() ? "" : " ground "
+                    + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()).getPath();
+                String above = "";
+                for (int k = 1; k <= 16; k++)
+                    if (level.getBlockState(p.set(x, c.getY() + k, z)).isSolid()) {
+                        above = " +" + k + " " + net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(level.getBlockState(p).getBlock()).getPath();
+                        break;
+                    }
+                if (!ground.isEmpty() || !above.isEmpty())
+                    cells.add(dx + "," + dz + ground + above);
+            }
+        return "(rim +" + rim + ") " + cells;
     }
 
     /** The pad's wet cells as (dx,dz,dy=0|1 source|flowing amount, block below), so a refusal says how the water got there. */
