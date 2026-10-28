@@ -315,6 +315,56 @@ public class RootedTreantGameTests {
     }
 
     /**
+     * Things that are not orders keep a held move: an anchored Treant's idle walk back to its anchor (Unit's 50-tick
+     * retreat check) firing during the uproot, and a Take Root press during the uproot (ignored there). Both Treants
+     * still walk to the ordered spot once free.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 160)
+    public static void rooted_treant_held_move_survives_the_walk_back_and_a_take_root_press(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_keep");
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        SentinelTreantUnit anchored = treant(helper, owner, 2.5, 10.5);
+        SentinelTreantUnit pressed = treant(helper, owner, 2.5, 3.5);
+        List<Mob> units = new ArrayList<>();
+        units.add(anchored);
+        units.add(pressed);
+        if (!allMade(helper, units, 2))
+            return;
+        List<String> problems = new ArrayList<>();
+        int uproot = SentinelTreantUnit.ROOT_TIMES.uprootTicks();
+        double[] startX = new double[2];
+        BlockPos goalA = helper.absolutePos(new BlockPos(12, 2, 10)), goalB = helper.absolutePos(new BlockPos(12, 2, 3));
+        everyTick(helper, 120, tick -> {
+            if (tick == 1) {
+                rootNow(anchored, level);
+                rootNow(pressed, level);
+                // an anchor three blocks off, so the idle walk-back fires: due on the Treant's tick 3 from now
+                anchored.setAnchor(helper.absolutePos(new BlockPos(2, 2, 13)));
+                anchored.tickCount = 100 - 3;
+                startX[0] = anchored.getX();
+                startX[1] = pressed.getX();
+                new UnitActionItem(owner, UnitAction.MOVE, -1, new int[] { anchored.getId() }, goalA, BlockPos.ZERO).action(level);
+                new UnitActionItem(owner, UnitAction.MOVE, -1, new int[] { pressed.getId() }, goalB, BlockPos.ZERO).action(level);
+            } else if (tick == 3) {
+                if (anchored.isRootWanted() || pressed.isRootWanted())
+                    problems.add("the move orders should have started uprooting both Treants");
+                new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { pressed.getId() }).action(level);
+            } else if (tick == 10) {
+                anchored.setAnchor(null);   // one walk-back is the case; no more pulling it home after that
+            } else if (tick == uproot + 80) {
+                double walkedA = anchored.getX() - startX[0], walkedB = pressed.getX() - startX[1];
+                if (walkedA < 1.5)
+                    problems.add("the anchor walk-back during the uproot dropped the held move (walked " + walkedA + " toward it)");
+                if (walkedB < 1.5)
+                    problems.add("a Take Root press during the uproot dropped the held move (walked " + walkedB + " toward it)");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
      * One root-spike line toward +x: hurts the enemies on the line within LINE_LENGTH, and not a friend or an ally of
      * another owner on the line, an enemy beside it, or an enemy past its end.
      */
@@ -508,10 +558,10 @@ public class RootedTreantGameTests {
                 treant.setNoAi(true);   // not rooted, it would slam the foe: the loss below can only be Rootbound
                 h1[0] = foe.getHealth();
             } else if (tick == 72) {
-                // ticks on durations 60, 40 and 20 land (the one at application is inside the line hit's frames):
-                // demand at least two of them, and nothing beyond what four could deal
+                // the ticks on durations 60, 40 and 20 land by now (the one at application is inside the line hit's
+                // frames): all three, and nothing beyond what four could deal
                 float lost = h1[0] - foe.getHealth(), perTick = RootboundEffect.DAMAGE_PER_STACK * max;
-                if (lost < 2 * perTick - 0.01f || lost > 4 * perTick + 0.01f)
+                if (lost < 3 * perTick - 0.01f || lost > 4 * perTick + 0.01f)
                     problems.add("Rootbound at " + max + " stacks should deal " + perTick + " a second and nothing else hurt the foe (lost " + lost + " in 3.5 s)");
             } else if (tick == wearsOff + 20) {
                 if (RootboundEffect.stacks(foe) != 0)
