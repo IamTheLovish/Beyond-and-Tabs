@@ -30,9 +30,12 @@ def classes(rgb):
     """Boolean masks per class. Red: a red hue, saturated, not near-black (maroon reads dark from the camera)."""
     h, s, luma = _hsl(rgb)
     red = ((h < 25) | (h > 340)) & (s > 0.35) & (luma > 0.12)
+    # sky: a blue hue with some saturation - real sky and structure_render's flat (165, 190, 215), which read as pale
+    # (the r1 front measured pale 52 % until masked by hand); neutral stone (calcite, quartz, andesite) is not blue
+    sky = (h >= 185) & (h <= 250) & (s > 0.12)
     dark = (luma < 0.22) & ~red
-    pale = (luma > 0.62) & (s < 0.3)
-    grey = ~red & ~dark & ~pale & (s < 0.25)
+    pale = (luma > 0.62) & (s < 0.3) & ~sky
+    grey = ~red & ~dark & ~pale & ~sky & (s < 0.25)
     return {"red": red, "dark": dark, "grey": grey, "pale": pale}
 
 

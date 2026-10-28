@@ -37,6 +37,13 @@ class ColourShares(unittest.TestCase):
     def test_sky_and_grass_are_left_out_of_the_shares(self):
         self.assertEqual(CS.shares(strips(RED, SKY, SKY, DARK)), {"red": 50, "dark": 50, "grey": 0, "pale": 0})
 
+    def test_the_renderers_flat_sky_is_left_out(self):
+        """structure_render's sky (165, 190, 215) read as 'pale': the r1 front measured pale 52 % until it was masked
+        by hand (builder and critic, Oct 28). Calcite / quartz (near-neutral) stay pale."""
+        self.assertEqual(CS.shares(strips(RED, (165, 190, 215), (165, 190, 215), DARK)),
+                         {"red": 50, "dark": 50, "grey": 0, "pale": 0})
+        self.assertEqual(CS.shares(strips((223, 223, 223), (231, 226, 215)))["pale"], 100)
+
     def test_a_crop_measures_only_inside_it(self):
         im = strips(RED, RED, PALE, PALE)
         self.assertEqual(CS.shares(im, (20, 0, 40, 10))["pale"], 100)

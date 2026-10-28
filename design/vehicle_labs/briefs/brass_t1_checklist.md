@@ -29,7 +29,9 @@ the south wing's gable end, the shed's south end). Those faces are front faces t
 Banned: cobblestone family (rubble at 32 px), unwaxed copper, any block our pack lacks (it renders flat colour).
 
 ## Target shares (measured on ref18's pixels with the same classifier; the critic re-measures ours on the render)
-Whole front: red 33 / dark 35 / grey 16 / pale 16. Per region below.
+Whole front: red 39 / dark 41 / grey 19 / pale 1. Per region below.
+(Corrected Oct 28 after round 1: the first targets, 33 / 35 / 16 / 16, counted ref18's clouds as pale - the
+classifier now leaves blue sky out. Region targets re-measured the same way; pale lives in lines and single cells.)
 
 ## Regions
 **R1 Plinth (y 0..1, every front face).** A 1-high grey course (tuff / polished deepslate) under the arcade piers and
@@ -38,25 +40,27 @@ along the south face; the lawn stays in front. Reads as the base line in the ref
 **R2 Arcade storey (halls and wings, x 0..2, y 1..5; bays at z 0 2 4 6 18 20 22 24).** Ref: a dark storey of repeated
 bays. Piers project to x 0 (polished blackstone bricks, a polished andesite base and cap); bays sit 1-2 deep, their
 backs cracked blackstone bricks, each with a small red panel (red terracotta, y 1..3) carrying a pale cross or diamond
-(calcite). Target: dark 60 / grey 25 / red 10 / pale 5.
+(calcite). Target: dark 63 / grey 28 / red 8 / pale 1.
 
 **R3 Lintel band (y 6, z 0..24 except the tower).** A pale cornice (quartz bricks, upside-down quartz stairs
 projecting at x 0) with one tiny white light over each bay. The brightest line on the front.
 
 **R4 Hall roofs (z 3..7 and 17..21, y 7..9).** Red courses stepped in 2-3 tiers with a slab drip at each tier (mangrove
 stairs / slabs over red terracotta), a grey or dark rib over every pier (polished deepslate / blackstone brick wall),
-a dark ridge course. Target: red 65 / dark 25 / grey 10.
+a dark ridge course. Target: red 67 / dark 24 / grey 8 / pale 1.
 
 **R5 Wings (z 0..4 and 20..24, x 1..8, roofs to y 14).** The swept roof red (mangrove + red terracotta courses), a pale
 rake beaded pale / red along the outer gable edge (solid pale read as a white column in r5), a brass finial at the ridge
 end. The gable ends (z 0 face, and the z 24 face the RTS camera sees) carry the pavilion emblem: a cream panel (quartz
-bricks) with a red cross / star, framed in blackstone. Target: red 75 / dark 10 / grey 10 / pale 5.
+bricks) with a red cross / star, framed in blackstone. Target: red 79 / dark 11 / grey 8 / pale 3.
 
 **R6 Door and tower base (x 0..8, z 7..17, y 1..12).** The door is the 7 x 10 lane (z 9..15, y 1..10, x 0..8): it stays
 clear. Frame it: 1-wide polished blackstone brick jambs on the piers (z 8 and 16) projecting to x 0, a red banded vault
 over it (y 11..12, red terracotta + mangrove stairs, alternating with a pale voussoir line), the far wall (x 9) dark with
 a brass rosette where the animated gate will hang. ONE warm light inside the door head. Tower-base buttresses (z 7..8
 and 16..17) step back in stairs (kept from r4).
+
+**R7-R8 tower target (measured above the hall): red 56 / dark 25 / grey 17 / pale 3.**
 
 **R7 Tower mid (y 12..18).** Black arrises (polished blackstone brick walls / stairs) down the pyramid's edges, red
 fields on the flanks, and the pale diamond "eye" (calcite ring, red heart) on the front face round z 12, y 14..16 (kept
