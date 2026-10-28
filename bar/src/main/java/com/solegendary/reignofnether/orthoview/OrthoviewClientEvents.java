@@ -140,6 +140,9 @@ public class OrthoviewClientEvents {
     private static final long OVERVIEW_HOLD_MS = 250;        // a Tab held this long flies back in on release
     /** A spectator pressed the view key to leave the RTS view: don't pull them back automatically. */
     private static boolean spectatorLeftOnPurpose = false;
+    // whether this client watched a match last tick: the choice above belongs to one match, so it is dropped when
+    // watching starts or stops (a new match, or this one over), on logout, and when the server asks for the RTS view
+    private static boolean wasMatchSpectator = false;
 
     private static int cameraLockTicksLeft = 0;
     private static boolean cameraLocked = false;
@@ -592,6 +595,11 @@ public class OrthoviewClientEvents {
             toggleEnable();
         }
 
+        boolean matchSpectator = com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator();
+        if (matchSpectator != wasMatchSpectator) {
+            spectatorLeftOnPurpose = false;
+            wasMatchSpectator = matchSpectator;
+        }
         // a spectator of a live match always watches from the RTS view: entering a Watch Battle world, a defeat, or
         // any path that left the camera in first person puts it back (checked twice a second; RTS-view only modes)
         if (!enabled && MC.screen == null && MC.player != null && MC.player.tickCount % 10 == 0
@@ -983,6 +991,18 @@ public class OrthoviewClientEvents {
         startGlide(true, anchorX[i], anchorY[i], anchorZ[i]);
     }
 
+    /** SpectatorFreeFly: a watcher left (or came back to) the RTS view on purpose, so the auto re-entry leaves them be. */
+    static void setSpectatorLeftOnPurpose(boolean value) {
+        spectatorLeftOnPurpose = value;
+    }
+
+    /** Out of the RTS view on purpose, flying as a vanilla spectator (SpectatorFreeFly's HUD and speed key off this). */
+    public static boolean isSpectatorFreeFlying() {
+        return !enabled && spectatorLeftOnPurpose && MC.gameMode != null
+            && MC.gameMode.getPlayerMode() == GameType.SPECTATOR
+            && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator();
+    }
+
     public static void toggleEnable() {
         if (MC.level == null || MC.player == null) {
             return;
@@ -1031,7 +1051,17 @@ public class OrthoviewClientEvents {
         TutorialClientEvents.updateStage();
     }
 
+    @SubscribeEvent
+    public static void onLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
+        spectatorLeftOnPurpose = false;
+        wasMatchSpectator = false;
+    }
+
     public static void tryToSetCamera(String playerName, boolean value) {
+        // the server putting this player in the RTS view (a match start, a rejoin, a refused free flight) ends a
+        // spectator's choice to stay out of it
+        if (value && MC.player != null && MC.player.getName().getString().equals(playerName))
+            spectatorLeftOnPurpose = false;
         if (MC.player != null && MC.player.getName().getString().equals(playerName) && value != enabled) {
             tryToToggleEnable();
         }
