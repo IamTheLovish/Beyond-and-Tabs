@@ -305,6 +305,10 @@ public final class MetalPatches {
      */
     public static int solidTop(ServerLevel level, int x, int z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        // load the chunk first, as the getBlockState below would: Level.getHeight answers the min build height for a
+        // chunk not loaded yet, so drySpot judged the pad at y -64 "dry" and the patch was stamped on a lake bed under
+        // the water (ExtractorFootprintGameTests: "pad WET", every wet cell a source block over seagrass and sand)
+        level.getChunk(x >> 4, z >> 4);
         int top = Math.max(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z),
             level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z)) - 1;
         top = Math.min(top, level.getMaxBuildHeight() - 1);
