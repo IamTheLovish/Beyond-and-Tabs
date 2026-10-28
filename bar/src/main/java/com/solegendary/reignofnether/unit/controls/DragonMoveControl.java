@@ -63,6 +63,21 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         return dx * dx + dz * dz > DragonFlight.STOP * DragonFlight.STOP;
     }
 
+    /** The forward speed and the climb (b/t), for the dive's save; restored by {@link #restoreFlight}. */
+    public double speed() {
+        return state.speed;
+    }
+
+    public double climb() {
+        return state.vy;
+    }
+
+    /** Picks the flight up where a saved dragon left it (a reload mid-dive keeps its way on). */
+    public void restoreFlight(double speed, double climb) {
+        state.speed = speed;
+        state.vy = climb;
+    }
+
     /** Stoop onto this ground spot (null: stop diving) - every other order waits while it dives. */
     public void setDive(Vec3 spot) {
         diveTo = spot;
@@ -80,7 +95,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         // what moved us besides the steering since last tick (a knockback, a push) rides on top and decays
         Vec3 now = mob.getDeltaMovement();
         // (in water or lava the drag is not the air's 0.91, so what is left there is no push)
-        if (mob.horizontalCollision || mob.verticalCollision || mob.isInWater() || mob.isInLava())
+        // diving or down, nothing pushes it: the stoop is aimed and a landed dragon is rooted (#300 CI: the units'
+        // separation shoved a dragon landing on a crowd 4.6 blocks off its spot)
+        if (landed || diveTo != null || mob.horizontalCollision || mob.verticalCollision || mob.isInWater() || mob.isInLava())
             push = Vec3.ZERO;
         else    // last tick's push is in there too, already through the drag
             push = now.subtract(lastSet.scale(DRAG));

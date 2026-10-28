@@ -156,6 +156,25 @@ class DragonFlightTest {
         assertTrue(maxTurn <= DragonFlight.TURN_SLOW + 1e-3, "turns at the capped rate: " + maxTurn);
     }
 
+    /** From a standstill facing away from the spot (a hovering dragon ordered to dive beside it) it turns first and
+     *  still comes down AT the spot - #300 CI job 122632111698: paced on its speed, not on how fast it closed on the
+     *  spot, it sank while it turned and landed 4.6 blocks off. */
+    @Test
+    void theDiveFromAStandstillFacingAwayStillLandsOnTheSpot() {
+        DragonFlight.State s = new DragonFlight.State(0f);             // facing +z, not moving
+        double x = 0, y = 80, z = 0;
+        int t = 0;
+        for (; t < 200 && y > 71.05; t++) {
+            double[] v = DragonFlight.dive(s, 8.5 - x, 71 - y, 0 - z, CRUISE);   // 8.5 to its side (+x), 9 down
+            x += v[0];
+            y = Math.max(71, y + v[1]);
+            z += v[2];
+        }
+        double off = Math.sqrt((x - 8.5) * (x - 8.5) + z * z);
+        assertTrue(off < 2.0, "landed " + off + " blocks from the spot");
+        assertTrue(t < 100, "down in " + t + " ticks (want under 5 s)");
+    }
+
     @Test
     void stoppingBrakesSmoothlyAlongTheNose() {
         DragonFlight.State s = new DragonFlight.State(0f);

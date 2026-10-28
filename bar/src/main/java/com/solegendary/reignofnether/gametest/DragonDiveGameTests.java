@@ -584,7 +584,10 @@ public class DragonDiveGameTests {
                 return finish(helper, problems, clean);
             }
             if (tick >= 105) {
-                problems.add("after the reload it never landed");
+                problems.add(String.format("after the reload it never landed (diving %s, %.1f above the pad, %.1f from its spot, "
+                    + "alive %s, in the level %s)", dr.isDiving(), dr.getY() - pad.getY(),
+                    Math.sqrt(Math.pow(dr.getX() - spot.x, 2) + Math.pow(dr.getZ() - spot.z, 2)), dr.isAlive(),
+                    level.getEntity(dr.getId()) == dr));
                 return finish(helper, problems, clean);
             }
             return false;

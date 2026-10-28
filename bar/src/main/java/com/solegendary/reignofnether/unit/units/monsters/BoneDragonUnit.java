@@ -278,6 +278,10 @@ public class BoneDragonUnit extends GhastUnit {
             t.putDouble("y", diveTo.y);
             t.putDouble("z", diveTo.z);
             t.putInt("ticks", diveTicks);
+            if (this.moveControl instanceof DragonMoveControl dc) {
+                t.putDouble("speed", dc.speed());
+                t.putDouble("climb", dc.climb());
+            }
             tag.put(KEY_DIVE_TO, t);
         }
     }
@@ -300,6 +304,8 @@ public class BoneDragonUnit extends GhastUnit {
             CompoundTag t = tag.getCompound(KEY_DIVE_TO);
             diveTo = new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z"));
             diveTicks = t.getInt("ticks");
+            if (dc != null)
+                dc.restoreFlight(t.getDouble("speed"), t.getDouble("climb"));
             if (dc != null)
                 dc.setDive(diveTo);
         }
