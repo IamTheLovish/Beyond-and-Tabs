@@ -1033,7 +1033,8 @@ public class PlayerServerEvents {
                 GameType originalGameType = playerDefaultGameModes.remove(playerName);
 
                 if (originalGameType != null) {
-                    serverPlayer.setGameMode(originalGameType);
+                    // a watcher stays a spectator, hidden from the players (Spectators.modeAfterLeavingRtsView)
+                    serverPlayer.setGameMode(com.solegendary.reignofnether.match.Spectators.modeAfterLeavingRtsView(playerName, originalGameType));
                 } else {
                     ReignOfNether.LOGGER.warn("No original game mode found for player {}", playerName);
                 }
