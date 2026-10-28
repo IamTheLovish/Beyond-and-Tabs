@@ -43,7 +43,9 @@ public class LobbyClientboundPacket {
     // the match sun (match.TimeOfDay / match.DayCycle ids); set on snapshots, encoded after the map
     public int timeOfDay = 0;
     public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();
-    // the stamped map's seed and a generated map's shape / modifiers (MultiplayerLobby.mapSeed); encoded after the sun
+    // the host's "Alliances" choice (true = locked in the match, lovish D032); set on snapshots, encoded after the sun
+    public boolean lockAlliances = true;
+    // the stamped map's seed and a generated map's shape / modifiers (MultiplayerLobby.mapSeed); encoded last
     public long mapSeed = 0;
     public int genShape = 0, genMods = 0;
 
@@ -69,6 +71,7 @@ public class LobbyClientboundPacket {
         p.choosePositions = MultiplayerLobby.choosePositions;
         p.timeOfDay = MultiplayerLobby.timeOfDay;
         p.dayCycle = MultiplayerLobby.dayCycle;
+        p.lockAlliances = MultiplayerLobby.lockAlliances;
         p.mapSeed = MultiplayerLobby.mapSeed;
         p.genShape = MultiplayerLobby.genShape;
         p.genMods = MultiplayerLobby.genMods;
@@ -134,6 +137,7 @@ public class LobbyClientboundPacket {
         choosePositions = buf.readBoolean();
         timeOfDay = buf.readByte();
         dayCycle = buf.readByte();
+        lockAlliances = buf.readBoolean();
         mapSeed = buf.readLong();
         genShape = buf.readByte();
         genMods = buf.readByte();
@@ -167,6 +171,7 @@ public class LobbyClientboundPacket {
         buf.writeBoolean(choosePositions);
         buf.writeByte(timeOfDay);
         buf.writeByte(dayCycle);
+        buf.writeBoolean(lockAlliances);
         buf.writeLong(mapSeed);
         buf.writeByte(genShape);
         buf.writeByte(genMods);

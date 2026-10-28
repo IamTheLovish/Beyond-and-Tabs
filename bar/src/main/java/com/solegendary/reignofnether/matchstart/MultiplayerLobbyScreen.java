@@ -189,6 +189,15 @@ public class MultiplayerLobbyScreen extends Screen {
                 .create(rx, ry, rw, 18, Component.literal("Pace"), (b, v) -> send(MultiplayerLobby.Action.SET_PACE, 0, v)));
             paceBtn.active = host && !l.starting;
             ry += 20;
+            // lovish D032: teams are fixed once the match starts, as in BAR, unless the host opens alliances
+            CycleButton<Boolean> allies = addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Locked" : "Open"))
+                .withValues(true, false).withInitialValue(l.lockAlliances)
+                .withTooltip(v -> Tooltip.create(Component.literal(v
+                    ? "Teams are fixed once the match starts: nobody can ally with an enemy or leave their team"
+                    : "Players may still ally with enemies or leave their team during the match (/ally, /disband)")))
+                .create(rx, ry, rw, 18, Component.literal("Alliances"), (b, v) -> send(MultiplayerLobby.Action.SET_ALLIANCES, 0, v ? 1 : 0)));
+            allies.active = host && !l.starting;
+            ry += 20;
             // the match sun: start time and day/night cycle, one row of two (lovish, Oct 18)
             int halfW = (rw - 2) / 2;
             CycleButton<Integer> time = addRenderableWidget(SkirmishSetupScreen.timeButton(l.timeOfDay, rx, ry, halfW, 18,

@@ -240,8 +240,7 @@ public class StartPosServerEvents {
             StartPosSaveData startPosData = StartPosSaveData.getInstance(serverLevel);
             startPosData.startPoses.clear();
             startPosData.startPoses.addAll(startPoses);
-            startPosData.save();
-            serverLevel.getDataStorage().save();
+            startPosData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
             //ReignOfNether.LOGGER.info("saved " + startPoses.size() + " start positions in serverevents");
         }
     }

@@ -110,6 +110,10 @@ public class MultiplayerLobby {
     static boolean choosePositions = true;   // BAR's start-position phase before the match
     static int timeOfDay = 0;                // match.TimeOfDay id: the light at Start (morning)
     static int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id
+    // "Alliances: Locked / Open" (lovish D032): fixed teams from the start, as in BAR, unless the host opens them.
+    // Written to the saved lockAlliances rule at Start; a new lobby starts from the world's rule (on by default), so a
+    // world that set it keeps its choice
+    static boolean lockAlliances = true;
     static UUID hostUuid = null;
     static String hostName = "";
     static boolean dirty = false;
@@ -168,6 +172,7 @@ public class MultiplayerLobby {
         SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
         SET_TIME, SET_CYCLE,  // the match sun: match.TimeOfDay id, match.DayCycle id
         BACK_TO_LOBBY,        // host, match decided: reset the battlefield and reopen the lobby with the last lineup
+        SET_ALLIANCES,        // host: 1 = alliances locked in the match (default), 0 = open (lockAlliances rule)
         NEW_MAP, SET_GEN_SHAPE, SET_GEN_MODS   // a new seed for the stamped map; a generated map's shape and modifiers
     }
 
@@ -373,6 +378,11 @@ public class MultiplayerLobby {
                     return false;
                 choosePositions = value != 0;
             }
+            case SET_ALLIANCES -> {
+                if (!host)
+                    return false;
+                lockAlliances = value != 0;
+            }
             case SET_TIME -> {
                 if (!host || value < 0 || value >= com.solegendary.reignofnether.match.TimeOfDay.count())
                     return false;
@@ -461,6 +471,8 @@ public class MultiplayerLobby {
             hostUuid = sp.getUUID();
             hostName = sp.getName().getString();
             MinecraftServer server = sp.getServer();
+            if (server != null)
+                lockAlliances = server.getGameRules().getRule(com.solegendary.reignofnether.registrars.GameRuleRegistrar.LOCK_ALLIANCES).get();
             // the host first, then everyone else online, alternating teams so a 1v1 needs no clicks
             addHuman(sp);
             if (server != null)
@@ -683,7 +695,9 @@ public class MultiplayerLobby {
         // - or, for a rematch after Back to lobby, where the last match was (its ground is the one just restored)
         BlockPos c = rematchCentre != null ? rematchCentre : host != null ? host.blockPosition() : level.getSharedSpawnPos();
         rematchCentre = null;
-        BlockPos centre = new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ());
+        // once a new match has moved the arena to fresh ground (maps.NewMatch), the slot is the centre, not the host
+        BlockPos centre = com.solegendary.reignofnether.maps.ArenaOrigins.centreFor(level,
+            new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ()));
         List<Seat> lineup = new ArrayList<>(seats);
         lastLineup.clear();
         lastLineup.addAll(lineup);
@@ -696,6 +710,8 @@ public class MultiplayerLobby {
         // the host's light and day/night cycle (match.DayClock moves the sun once the match is played)
         com.solegendary.reignofnether.match.DayClock.apply(level, com.solegendary.reignofnether.match.TimeOfDay.byId(timeOfDay),
             com.solegendary.reignofnether.match.DayCycle.byId(dayCycle));
+        // the host's "Alliances" choice, before anyone is seated: the teams the start forms are then fixed (or not)
+        com.solegendary.reignofnether.alliance.AllyCommand.setLocked(server, lockAlliances);
         com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(map);
         if (preset.premade() || choosePositions) {
             // a pre-made map rises first and/or everyone places their start (design/maps.md); the match is seated
