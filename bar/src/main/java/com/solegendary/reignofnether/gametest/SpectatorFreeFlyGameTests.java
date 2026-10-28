@@ -33,4 +33,9 @@ public class SpectatorFreeFlyGameTests {
     public static void watchers_are_hidden_from_the_players_but_not_from_each_other(GameTestHelper helper) {
         SpectatorFreeFlyCases.watchers_are_hidden_from_the_players_but_not_from_each_other(helper);
     }
+
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void a_watcher_leaving_the_rts_view_stays_a_hidden_spectator(GameTestHelper helper) {
+        SpectatorFreeFlyCases.a_watcher_leaving_the_rts_view_stays_a_hidden_spectator(helper);
+    }
 }

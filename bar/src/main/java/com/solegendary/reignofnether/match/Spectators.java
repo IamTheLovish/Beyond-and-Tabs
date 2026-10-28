@@ -56,6 +56,14 @@ public final class Spectators {
             && mayFreeFly(body.getName().getString()) && !mayFreeFly(viewer.getName().getString());
     }
 
+    /** Sends {@code name}'s client back to the RTS view (a test swaps it to record the calls). */
+    public static java.util.function.Consumer<String> backToRtsView = name -> { };
+
+    /** The game mode for {@code name} leaving the RTS view, given the mode saved when it opened. */
+    public static GameType modeAfterLeavingRtsView(String name, GameType saved) {
+        return saved;
+    }
+
     /**
      * The spectator free-fly key: {@code on} puts a watcher in vanilla spectator mode to fly around, off lets them
      * back into the RTS view (which re-opens the top-down GUI and puts them in spectator mode itself). Either way

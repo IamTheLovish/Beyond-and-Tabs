@@ -58,10 +58,23 @@ final class SpectatorFreeFlyCases {
             sp.setGameMode(GameType.SURVIVAL);
             if (Spectators.mayFreeFly(player))
                 problems.add("a player holding a side counts as a watcher");
-            if (Spectators.setFreeFly(sp, true))
-                problems.add("free flight on was granted to a player holding a side");
-            if (Spectators.setFreeFly(sp, false))
-                problems.add("back to the RTS view was granted to a player holding a side");
+            // the client left the RTS view before it asked: a refusal must send it back there
+            List<String> sentBack = new ArrayList<>();
+            var wasBack = Spectators.backToRtsView;
+            Spectators.backToRtsView = sentBack::add;
+            try {
+                if (Spectators.setFreeFly(sp, true))
+                    problems.add("free flight on was granted to a player holding a side");
+                if (!sentBack.equals(List.of(player)))
+                    problems.add("a refused free flight did not send the client back to the RTS view (sent " + sentBack + ")");
+                sentBack.clear();
+                if (Spectators.setFreeFly(sp, false))
+                    problems.add("back to the RTS view was granted to a player holding a side");
+                if (!sentBack.isEmpty())
+                    problems.add("a refused 'back to the RTS view' moved the camera (sent " + sentBack + ")");
+            } finally {
+                Spectators.backToRtsView = wasBack;
+            }
             if (sp.gameMode.getGameModeForPlayer() != GameType.SURVIVAL)
                 problems.add("a refused request changed the game mode to " + sp.gameMode.getGameModeForPlayer());
             if (Spectators.setFreeFly(null, true))
@@ -104,6 +117,36 @@ final class SpectatorFreeFlyCases {
             MatchLifecycleCases.forget(w1, w2, p, other);
             PlayerServerEvents.players.remove(watcher1);
             PlayerServerEvents.players.remove(watcher2);
+            PlayerServerEvents.players.remove(playing);
+        }
+    }
+
+    /**
+     * Leaving the RTS view (Backspace, PlayerServerEvents.closeTopdownGui) restores the game mode saved when it
+     * opened - but a watcher stays a spectator, or a late joiner's survival body would be sent to the players and
+     * drawn with a nameplate (isHiddenFrom only hides spectators). A side's player gets the saved mode back as before.
+     */
+    static void a_watcher_leaving_the_rts_view_stays_a_hidden_spectator(GameTestHelper helper) {
+        String watcher = "gametest_ff_watch_d", p = "gametest_ff_slot_d", other = "gametest_ff_side_d";
+        ServerPlayer sp = MatchLifecycleCases.fake(helper.getLevel(), watcher);
+        ServerPlayer playing = MatchLifecycleCases.fake(helper.getLevel(), p);
+        MatchLifecycleCases.side(p, playing.getId());
+        MatchLifecycleCases.side(other, 1_100_074);
+        try {
+            List<String> problems = new ArrayList<>();
+            GameType mode = Spectators.modeAfterLeavingRtsView(watcher, GameType.SURVIVAL);
+            if (mode != GameType.SPECTATOR)
+                problems.add("a watcher who left the RTS view is put in " + mode + ", not spectator");
+            sp.setGameMode(mode);
+            if (!Spectators.isHiddenFrom(sp, playing))
+                problems.add("a watcher who left the RTS view is sent to a player in the match");
+            GameType sideMode = Spectators.modeAfterLeavingRtsView(p, GameType.SURVIVAL);
+            if (sideMode != GameType.SURVIVAL)
+                problems.add("a side's player leaving the RTS view got " + sideMode + ", not the saved survival");
+            finish(helper, problems);
+        } finally {
+            MatchLifecycleCases.forget(watcher, p, other);
+            PlayerServerEvents.players.remove(sp);
             PlayerServerEvents.players.remove(playing);
         }
     }
