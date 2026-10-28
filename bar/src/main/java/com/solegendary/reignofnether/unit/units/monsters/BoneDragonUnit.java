@@ -359,7 +359,9 @@ public class BoneDragonUnit extends GhastUnit {
             scratch.clear();
         }
         for (LivingEntity le : hit) {
-            le.hurt(sl.damageSources().mobAttack(this), IMPACT_DAMAGE);
+            // explicit: RoN's actuallyHurt mixin turns a unit's MOB_ATTACK into its attack damage (20, x1.3 at night) -
+            // the impact is its own number (#300 CI: the foes lost 20, not 60); armour and resists still apply
+            com.solegendary.reignofnether.unit.UnitDamage.hurtExplicit(le, sl.damageSources().mobAttack(this), IMPACT_DAMAGE);
             if (le.isAlive())
                 le.knockback(IMPACT_KNOCKBACK, getX() - le.getX(), getZ() - le.getZ());
         }
