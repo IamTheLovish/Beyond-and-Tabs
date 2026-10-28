@@ -377,10 +377,18 @@ public class ArtilleryGameTests {
                 cleanUp.run();
                 throw new GameTestAssertException("the crew took the flyer as its target");
             }
-            if (b.getMoveGoal().getMoveTarget() == null) {
+            // a ground enemy in weapon reach (a neighbouring test's) is a fair pick for the contact rule: fighting it is
+            // responding. Dropping the move with nothing to fight is the bug
+            var goalTarget = b.getTargetGoal().getTarget();
+            if (b.getMoveGoal().getMoveTarget() == null && goalTarget == null && b.getTarget() == null) {
                 cleanUp.run();
                 throw new GameTestAssertException((tick[0] - hitAt[0]) + " ticks after the flyer hit it the blocked "
                     + "crew had dropped its move, with no target: it stands and dies");
+            }
+            if (goalTarget != null) {
+                cleanUp.run();
+                helper.succeed();   // it took a ground enemy instead: it fights back
+                return;
             }
             if (tick[0] - hitAt[0] >= 5) {
                 cleanUp.run();
