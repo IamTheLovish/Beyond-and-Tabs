@@ -273,6 +273,10 @@ public final class MetalPatches {
                     for (int y = padY + 1; y <= padY + 8; y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isAir())
                             level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
+                    // and the rest of a bamboo stalk: left floating above the 8 it stands in the extractor's footprint
+                    // (bamboo jungles: "+9 bamboo" over every refused pad, ExtractorFootprintGameTests)
+                    for (int y = padY + 9; y <= padY + 32 && level.getBlockState(p.set(bx, y, bz)).is(Blocks.BAMBOO); y++)
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
                     // raise low ground up to the pad
                     for (int y = wet ? Math.min(padY - 4, solidTop(level, bx, bz)) : padY - 4; y < padY; y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isSolidRender(level, p))
