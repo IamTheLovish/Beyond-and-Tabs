@@ -298,12 +298,18 @@ public class FogSnapshotGameTests {
      * A light barrier that never completes (the 7-minute capture) must not hold the capture: the loaded chunk behind it
      * is built anyway after MAX_CHUNK_WAIT_NS and counted as forced. Own batch: it needs the shared snapshot state to
      * itself, and batches run one after the other.
+     * <p>
+     * The 3x3 box is far west of the test grid (which grows east and south from x = 0), held by non-ticking tickets
+     * (level 33): no fluid, random or entity tick can change a block in it. It used to be the arena's own corner chunk,
+     * which is ticking and next to other tests' arenas: in CI run 40457081140 water from a neighbouring arena flowed
+     * into it (FlowingFluid.spreadTo -> LevelChunkMixin -> beforeBlockChange), which rightly captured the chunk on the
+     * spot before its barrier timed out, so the capture ended in 40 ms with "forced 0 chunks, expected 1".
      */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20000, batch = "fog_snapshot_hang")
     public static void capture_bounded_when_barrier_hangs(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos origin = helper.absolutePos(new BlockPos(1, 2, 1));
-        int cx0 = origin.getX() >> 4, cz0 = origin.getZ() >> 4;
+        int cx0 = (origin.getX() >> 4) - 160, cz0 = origin.getZ() >> 4;
         TicketType<ChunkPos> hold = TicketType.FORCED;
         ChunkPos hung = new ChunkPos(cx0, cz0);
         for (int cx = cx0 - 1; cx <= cx0 + 1; cx++)

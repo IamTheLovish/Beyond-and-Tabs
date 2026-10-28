@@ -74,6 +74,7 @@ jobs:
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+          python3 tools/ladder_report.py --selftest   # the nightly bot ladder's table (bot-ladder.yml)
           for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
       - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
         run: python3 tools/check_dep_pins.py
@@ -141,7 +142,7 @@ jobs:
           if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
-        run: pip install -q ruff==0.16.9 && ruff check tools
+        run: pip install -q ruff==0.16.9 && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
@@ -255,8 +256,12 @@ jobs:
       # units' posing and drawing per frame, on the real model classes without a window - a measurement, as notices
       - name: Animation cost bench (measurement only)
         if: always()
+        # the living army's two wall-clock gates (motion-bench, motion-pass-bench) too: their margin to the budget was
+        # never visible until one failed on #146 (Oct 27), so drift now shows in every build before it trips a gate
         run: |
-          [ ! -f bar/build/anim-bench.txt ] || while IFS= read -r line; do echo "::notice::$line"; done < bar/build/anim-bench.txt
+          for f in anim-bench motion-bench motion-pass-bench; do
+            [ ! -f "bar/build/$f.txt" ] || while IFS= read -r line; do echo "::notice::$line"; done < "bar/build/$f.txt"
+          done
       # the fast JUnit suite (bar/src/test, plan 008) ran inside the build above: one notice with the count, so a green
       # build proves the tests really executed (readable from the check-run annotations when job logs are not)
       - name: JUnit summary (count and time, as a notice)
