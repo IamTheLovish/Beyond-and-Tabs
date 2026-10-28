@@ -78,6 +78,7 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.SpectatorFreeFly.class);   // watchers: free flight
         // the frame-time profile (inbox/spec-5 section 3): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameProfile.class);
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
