@@ -957,6 +957,10 @@ def main():
     ap.add_argument("--layer", default=None)
     ap.add_argument("--density", type=int, default=DENSITY)
     ap.add_argument("--check-only", action="store_true", help="build and check, write nothing")
+    ap.add_argument("--plain-spec", action="store_true",
+                    help="the _s map without subsurface or emission: B (porosity) < 65 and A 255 everywhere - the "
+                         "human bodies of Oct 21 (lovish's brief: skin under a shader wets, it does not glow through; "
+                         "the _glow layer alone carries the light)")
     a = ap.parse_args()
     m = render_concept.load_model(a.model)
     m["_path"] = os.path.abspath(a.model)
@@ -968,6 +972,11 @@ def main():
     print("%s: %d cubes in %d parts (%d detail cubes in lod parts); atlas %dx%d UV at %dx = %dx%d px; "
           "check: worst corner %.4f px" % (a.cls, info["cubes"], info["parts"], info["lod"], info["tw"], info["th"],
                                            a.density, info["tw"] * a.density, info["th"] * a.density, info["worst"]))
+    if a.plain_spec:
+        spec = np.asarray(imgs["base_s"]).copy()
+        spec[..., 2] = np.minimum(spec[..., 2], 64)
+        spec[..., 3] = 255
+        imgs["base_s"] = Image.fromarray(spec, "RGBA")
     if a.check_only:
         return 0
     os.makedirs(JAVA_DIR, exist_ok=True)

@@ -47,6 +47,8 @@ public class SelectedTargetGoal<T extends LivingEntity> extends TargetGoal {
     public void setTarget(@Nullable LivingEntity target) {
         if (target != null && target.getId() == this.mob.getId())
             return;
+        if (AttackerUnit.refusesTarget(this.mob, target))
+            return;   // a flyer for a unit that cannot hit air (every path that sets a target ends here)
         this.target = target;
         this.start();
 
