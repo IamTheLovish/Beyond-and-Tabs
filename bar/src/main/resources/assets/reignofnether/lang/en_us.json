@@ -3522,7 +3522,7 @@
   "abilities.reignofnether.hero.savage_leap.ranks": "%s damage, %s s slow",
   "abilities.reignofnether.hero.frenzy": "Frenzy",
   "abilities.reignofnether.hero.frenzy.desc1": "Attacks and runs faster for a while,",
-  "abilities.reignofnether.hero.frenzy.desc2": "and takes a fifth more damage.",
+  "abilities.reignofnether.hero.frenzy.desc2": "and takes a tenth more damage.",
   "abilities.reignofnether.hero.frenzy.ranks": "+%s%% attack speed for %s s",
   "abilities.reignofnether.hero.cleave": "Cleave",
   "abilities.reignofnether.hero.cleave.desc1": "A wide swing: every enemy in the front arc",
