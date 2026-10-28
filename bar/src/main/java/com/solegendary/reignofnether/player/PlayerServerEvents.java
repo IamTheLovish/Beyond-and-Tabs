@@ -1033,7 +1033,8 @@ public class PlayerServerEvents {
                 GameType originalGameType = playerDefaultGameModes.remove(playerName);
 
                 if (originalGameType != null) {
-                    serverPlayer.setGameMode(originalGameType);
+                    // a watcher stays a spectator, hidden from the players (Spectators.modeAfterLeavingRtsView)
+                    serverPlayer.setGameMode(com.solegendary.reignofnether.match.Spectators.modeAfterLeavingRtsView(playerName, originalGameType));
                 } else {
                     ReignOfNether.LOGGER.warn("No original game mode found for player {}", playerName);
                 }
@@ -1260,7 +1261,16 @@ public class PlayerServerEvents {
     }
 
     public static int resetRTS(boolean hardReset) {
-        ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={}", hardReset);
+        return resetRTS(hardReset, false);
+    }
+
+    /**
+     * {@code retireOverTicks}: a new match on fresh ground (maps.NewMatch) is leaving this arena behind, so its units
+     * and buildings are unregistered at once but taken down over the next ticks (maps.ArenaRetirement) instead of
+     * killed and blown up in this one - a big end-of-match would otherwise stall the server tick.
+     */
+    public static int resetRTS(boolean hardReset, boolean retireOverTicks) {
+        ReignOfNether.LOGGER.info("[Player] resetRTS: hardReset={} retireOverTicks={}", hardReset, retireOverTicks);
         ResignVoteServerEvents.clear();   // a vote from the match being reset has nothing left to decide
         MultiplayerLobby.onReset();          // the lobby match is over too: nobody is refused a start any more
         lastBeaconTicksSent.clear();
@@ -1281,6 +1291,11 @@ public class PlayerServerEvents {
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearAll();
         com.solegendary.reignofnether.mana.TempestServerEvents.clearAll();
         com.solegendary.reignofnether.mana.FrostServerEvents.clearAll();
+
+        // the arena is being left behind: unregister it all now, take it down over the next ticks (the loops below
+        // then find nothing to do)
+        if (retireOverTicks && !isSandboxOrScenario)
+            com.solegendary.reignofnether.maps.ArenaRetirement.retireAll(serverLevel);
 
         for (LivingEntity entity : UnitServerEvents.getAllUnits())
             if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

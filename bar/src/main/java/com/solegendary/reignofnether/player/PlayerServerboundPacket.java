@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.gamemode.ClientGameModeHelper;
 import com.solegendary.reignofnether.gamemode.GameMode;
 import com.solegendary.reignofnether.gamemode.GameModeServerboundPacket;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.match.Spectators;
 import com.solegendary.reignofnether.network.PacketAuth;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.survival.SurvivalClientEvents;
@@ -218,6 +219,21 @@ public class PlayerServerboundPacket {
         }
     }
 
+    /**
+     * The spectator free-fly key (orthoview.SpectatorFreeFly): ask the server to let this watcher fly free as a vanilla
+     * spectator ({@code on}) or come back to the RTS view. The server decides (Spectators.setFreeFly).
+     */
+    public static void spectatorFreeFly(boolean on) {
+        Minecraft MC = Minecraft.getInstance();
+        if (MC.player != null) {
+            PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
+                PlayerAction.SPECTATOR_FREE_FLY,
+                MC.player.getId(),
+                on ? 1d : 0d, 0d, 0d
+            ));
+        }
+    }
+
     public static void enableRTSSyncing() {
         PacketHandler.INSTANCE.sendToServer(new PlayerServerboundPacket(
             PlayerAction.ENABLE_RTS_SYNCING,
@@ -374,6 +390,7 @@ public class PlayerServerboundPacket {
             //case CANCEL_START_RTS_EVERYONE -> StartPosServerEvents.cancelStartGameCountdown(false);
             case DEFEAT -> PlayerServerEvents.defeat(this.playerId, Component.translatable("server.reignofnether.surrendered").getString());
             case SPECTATE -> PlayerServerEvents.spectate(this.playerId);
+            case SPECTATOR_FREE_FLY -> Spectators.setFreeFly(player, this.x != 0);
             case RESET_RTS -> PlayerServerEvents.resetRTS(false);
             case RESET_RTS_HARD -> PlayerServerEvents.resetRTS(true);
             case LOCK_RTS -> PlayerServerEvents.setRTSLock(true);
