@@ -97,7 +97,10 @@ public class AmbientBirdParticle extends TextureSheetParticle {
 
     @Override
     public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
-        super.render(buffer, camera, partialTicks);
+        // the bird itself, written here rather than through SingleQuadParticle.render: through that path the bird drew
+        // pure black in the eyes runs (pixels 0,0,0 with any sprite colour or light - 40739251237, 40744639247; the
+        // pack's particle optimiser hooks it), so its own quad, camera-facing and rolled, the same maths as vanilla
+        renderBillboard(buffer, camera, partialTicks);
         // the shadow: a flat quad on the ground under the bird, offset away from the sun, both windings (no culling
         // question from any camera angle)
         double bx = Mth.lerp(partialTicks, xo, x), by = Mth.lerp(partialTicks, yo, y), bz = Mth.lerp(partialTicks, zo, z);
@@ -127,6 +130,23 @@ public class AmbientBirdParticle extends TextureSheetParticle {
             vert(buffer, c[i], cy, a, light);
         for (int i = 3; i >= 0; i--)
             vert(buffer, c[i], cy, a, light);
+    }
+
+    private void renderBillboard(VertexConsumer buffer, Camera camera, float partialTicks) {
+        Vec3 cam = camera.getPosition();
+        float px = (float) (Mth.lerp(partialTicks, xo, x) - cam.x);
+        float py = (float) (Mth.lerp(partialTicks, yo, y) - cam.y);
+        float pz = (float) (Mth.lerp(partialTicks, zo, z) - cam.z);
+        org.joml.Quaternionf q = new org.joml.Quaternionf(camera.rotation());
+        q.rotateZ(Mth.lerp(partialTicks, oRoll, roll));
+        float size = getQuadSize(partialTicks);
+        float u0 = getU0(), u1 = getU1(), v0 = getV0(), v1 = getV1();
+        // vanilla's corner order and uv: (-1,-1) u1 v1, (-1,1) u1 v0, (1,1) u0 v0, (1,-1) u0 v1
+        float[][] corners = { { -1, -1, u1, v1 }, { -1, 1, u1, v0 }, { 1, 1, u0, v0 }, { 1, -1, u0, v1 } };
+        for (float[] c : corners) {
+            org.joml.Vector3f v = new org.joml.Vector3f(c[0], c[1], 0).rotate(q).mul(size).add(px, py, pz);
+            buffer.vertex(v.x(), v.y(), v.z()).uv(c[2], c[3]).color(rCol, gCol, bCol, alpha).uv2(SKY_LIGHT).endVertex();
+        }
     }
 
     private static void vert(VertexConsumer b, float[] c, float y, float a, int light) {
