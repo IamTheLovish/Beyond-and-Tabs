@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.units.verdant.RootboundEffect;
 import com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -416,5 +417,65 @@ public class RootedTreantGameTests {
         if (!half.isRooted())
             problems.add("a reloaded half-rooted Treant should finish on the remaining ticks");
         finish(helper, problems, units);
+    }
+
+    /**
+     * lovish (Oct 28): enemies the spike line roots are slowed and take damage over time, stacking the more they are
+     * rooted. Each hit adds a Rootbound stack up to MAX_STACKS (the slow deepens with each, then holds at the cap); the
+     * stacks deal damage over time; a friend on the line gets none; it wears off after SECONDS.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 160)
+    public static void rooted_treant_spike_line_stacks_a_slow_and_damage_over_time(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_bound"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        SentinelTreantUnit treant = treant(helper, owner, 2.5, 7.5);
+        Mob friend = sturdyWorker(helper, owner, 4.5, 7.5);
+        Mob foe = sturdyWorker(helper, foeOwner, 6.5, 7.5);
+        List<Mob> units = new ArrayList<>();
+        for (Mob m : new Mob[] { treant, friend, foe })
+            units.add(m);
+        if (!allMade(helper, units, 3))
+            return;
+        List<String> problems = new ArrayList<>();
+        int max = RootboundEffect.MAX_STACKS, wearsOff = RootboundEffect.SECONDS * 20;
+        double[] base = new double[1];
+        float[] h1 = new float[1];
+        everyTick(helper, wearsOff + 30, tick -> {
+            if (tick == 1) {
+                base[0] = foe.getAttributeValue(Attributes.MOVEMENT_SPEED);
+                double last = base[0];
+                for (int i = 1; i <= max + 1; i++) {
+                    foe.invulnerableTime = 0;
+                    treant.strikeRootLine(level, 1, 0);
+                    int stacks = RootboundEffect.stacks(foe);
+                    double sp = foe.getAttributeValue(Attributes.MOVEMENT_SPEED);
+                    if (stacks != Math.min(i, max))
+                        problems.add("after " + i + " hits the foe should have " + Math.min(i, max) + " Rootbound stacks, has " + stacks);
+                    if (i <= max && sp >= last - 1e-6)
+                        problems.add("hit " + i + " should slow the foe further (" + sp + " vs " + last + ")");
+                    if (i > max && Math.abs(sp - last) > 1e-6)
+                        problems.add("the slow should hold at the cap after " + max + " stacks");
+                    last = sp;
+                }
+                double want = base[0] * (1 - RootboundEffect.SLOW_PER_STACK * max);
+                if (Math.abs(last - want) > base[0] * 0.01)
+                    problems.add("at the cap the foe should walk at " + want + ", walks at " + last);
+                if (RootboundEffect.stacks(friend) != 0)
+                    problems.add("the spike line rootbound a friend");
+                h1[0] = foe.getHealth();
+            } else if (tick == 50) {
+                float lost = h1[0] - foe.getHealth();
+                if (lost < RootboundEffect.DAMAGE_PER_STACK * max - 0.01f)
+                    problems.add("Rootbound at " + max + " stacks should deal damage over time (lost " + lost + " in 2.5 s)");
+            } else if (tick == wearsOff + 20) {
+                if (RootboundEffect.stacks(foe) != 0)
+                    problems.add("Rootbound should wear off after " + RootboundEffect.SECONDS + " s");
+                if (Math.abs(foe.getAttributeValue(Attributes.MOVEMENT_SPEED) - base[0]) > 1e-6)
+                    problems.add("the foe should walk at its own speed once Rootbound wears off");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
     }
 }
