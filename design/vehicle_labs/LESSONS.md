@@ -36,6 +36,25 @@ Tidewrought now read as buildings) but none of them looks like ANY of his 26 ref
 - SCORES.md - every critic's score and fault list.
 - Roles: Opus builds, Fable critiques (lovish, 04:09).
 
+## Size: a scale ladder, not a fixed cap (lovish, 04:12-04:14)
+"Break the limit to fit these buildings" - "make the increase make sense across the board" - "we can always make the
+buildings more intricate as they keep leveling up, as well as bigger" - "we don't want them oversized, but adjust the
+limit accordingly". So every building reserves its top-level footprint and grows into it; each level adds height AND
+detail; the reference is imitated in full at the top level, and L1 is its first stage.
+
+04:32: "tier 1 buildings should be small and get larger and larger per tier and tech level". So the ladder steps up
+with TIER (T1 small -> T2 -> T3 -> capitol) and, within a tier, with level / tech:
+
+| Building | Reserved footprint (about) | L1 | Top level |
+|---|---|---|---|
+| T1 (labs, economy) | up to ~13 x 21 | <= 12 tall, modest | <= 22 tall, the full reference |
+| T2 labs | up to ~21 x 27 | <= 16 | <= 32 |
+| T3 labs / game enders | up to ~29 x 29 | <= 22 | <= 45 |
+| Capitol (v4) | 59 x 59 | the crag and the first spire | ~100 tall at L6 |
+
+The numbers are a starting proposal for lovish to adjust; the rule is his: small at T1, growing with every tier and
+tech level, never oversized.
+
 ## The method from here (proposal)
 1. Pick ONE lab as the pilot and ONE primary reference for it whose proportions fit.
 2. Art director writes the massing plan from that reference (region by region, like capitol_white_angel_v4.py's
