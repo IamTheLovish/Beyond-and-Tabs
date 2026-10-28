@@ -501,7 +501,7 @@ func (l *launcher) pollUpdates(now time.Time) bool {
 		l.mu.Lock()
 		l.live.wait, l.note = nil, "Stopped checking GitHub for updates (hourly limit): press PLAY to update."
 		l.mu.Unlock()
-		return false
+		return true // keep watchUpdates alive so newHour can reset the budget (review C-10)
 	}
 	p, tracked, head, headErr, err := l.watcher.check(ch, packSha, now)
 	if err != nil {

@@ -376,8 +376,8 @@ func TestWatcherBudgetResetsEveryHour(t *testing.T) {
 	l.watcher = newUpdateWatcher(&ghClient{base: srv.URL, client: srv.Client(), budget: pollCallBudget})
 	l.pollUpdates(t0) // starts the hour
 	l.watcher.gh.calls = pollCallBudget
-	if l.pollUpdates(t0.Add(30*time.Minute)) || !strings.Contains(l.view(t0).Note, "Stopped checking") {
-		t.Fatal("budget used up inside the hour: stop with a note")
+	if !l.pollUpdates(t0.Add(30*time.Minute)) || !strings.Contains(l.view(t0).Note, "Stopped checking") {
+		t.Fatal("budget used up inside the hour: say so, but keep the watcher alive (watchUpdates exits on false and the hour would never reset; review C-10)")
 	}
 	if !l.pollUpdates(t0.Add(61 * time.Minute)) {
 		t.Fatal("an hour later the budget is new: keep watching")
