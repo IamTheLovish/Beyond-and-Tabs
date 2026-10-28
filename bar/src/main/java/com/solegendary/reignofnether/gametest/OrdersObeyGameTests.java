@@ -55,6 +55,8 @@ public class OrdersObeyGameTests {
     static final String BATCH_RTS_SHIFTED = "orders_obey_rts_shifted";
     static final String BATCH_RTS_RESCUED = "orders_obey_rts_rescued";
     static final String BATCH_RTS_RESCUED_FREE = "orders_obey_rts_rescued_free";
+    static final String BATCH_RTS_RESCUED_CADENCE = "orders_obey_rts_rescued_cadence";
+    static final String BATCH_VANILLA_RESCUED_CADENCE = "orders_obey_vanilla_rescued_cadence";
     static final String BATCH_VANILLA_RESCUED_FREE = "orders_obey_vanilla_rescued_free";
 
     static String owner(GameTestHelper helper, String tag) {
@@ -398,8 +400,6 @@ public class OrdersObeyGameTests {
                 else if (shifts[0] < 2)
                     problems.add("the unit gave up after only " + shifts[0] + " shifts along the wall: the test did not"
                         + " exercise the drift:" + events + " trace:" + trace);
-                ReignOfNether.LOGGER.info("[Orders] shifted along the wall, {} ticks, idle {}, {} shifts:{} trace:{}", t, idle,
-                    shifts[0], events, trace);
                 TerrainGameTests.finish(helper, problems);
             } finally {
                 UnitServerEvents.rtsPathfinding = wasRts;
@@ -508,7 +508,113 @@ public class OrdersObeyGameTests {
         return n;
     }
 
-    // the move goal's count of repaths in a row that made no progress (diagnostics only: -1 if it cannot be read)
+    /**
+     * The same move into unloaded land, but UnitUnstick rescues the unit in place at the pen's wall on its own cadence:
+     * every STRIKES x CHECK_INTERVAL ticks (80, the soonest it can flag a unit that has not moved again), whatever the
+     * move goal is doing. A forced repath that reads stuck backs the goal off to 40 checks, so its own next repath
+     * comes after the next rescue: a rescue clamped one short of the give-up every time held a truly stuck unit at
+     * count 2 with its order forever (review of #341, round 2). It must still give the order up. In vanilla (where
+     * the rescue's repath is judged inside rescue()) one rescue must also add at most one stuck repath: rescue() used
+     * to repath the plain move goal twice, from the goal selector and from getMoveGoal.
+     */
+    @GameTest(template = ARENA, batch = BATCH_RTS_RESCUED_CADENCE, timeoutTicks = 800)
+    public static void a_unit_rescued_at_the_wall_on_unstick_cadence_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
+        rescuedOnCadence(helper, true);
+    }
+
+    @GameTest(template = ARENA, batch = BATCH_VANILLA_RESCUED_CADENCE, timeoutTicks = 800)
+    public static void a_unit_rescued_at_the_wall_on_unstick_cadence_still_gives_up_a_move_into_unloaded_chunks_vanilla(GameTestHelper helper) {
+        rescuedOnCadence(helper, false);
+    }
+
+    private static void rescuedOnCadence(GameTestHelper helper, boolean rts) {
+        ServerLevel level = helper.getLevel();
+        boolean wasRts = UnitServerEvents.rtsPathfinding;
+        UnitServerEvents.rtsPathfinding = rts;
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        // the same closed stone pen as a_move_into_unloaded_chunks... (x 0..14, z 0..15)
+        for (int x = 0; x <= 14; x++)
+            for (int z = 0; z <= 15; z++)
+                if (x == 0 || x == 14 || z == 0 || z == 15)
+                    for (int y = 2; y <= 6; y++)
+                        helper.setBlock(new BlockPos(x, y, z), net.minecraft.world.level.block.Blocks.STONE);
+        BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
+        String mine = owner(helper, rts ? "cadence" : "cadencev");
+        List<Entity> made = new ArrayList<>();
+        Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
+        if (m == null) {
+            UnitServerEvents.rtsPathfinding = wasRts;
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the vindicator");
+            return;
+        }
+        BlockPos far = new BlockPos(pad.getX() + 4000, pad.getY(), pad.getZ() + 8);
+        int cadence = com.solegendary.reignofnether.unit.UnitUnstick.STRIKES * com.solegendary.reignofnether.unit.UnitUnstick.CHECK_INTERVAL;
+        double startX = m.getX();
+        int[] ordered = { -1 };
+        long[] lastRescue = { Long.MIN_VALUE };
+        int[] rescues = { 0 }, worstAdded = { 0 };
+        StringBuilder events = new StringBuilder();
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
+                done[0] = true;
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+                helper.fail("the far target's chunk is loaded: this test proves nothing");
+                return;
+            }
+            ordered[0] = tick;
+            move(level, mine, m, far);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            long t = helper.getTick() - ordered[0];
+            MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
+            boolean idle = goal.getMoveTarget() == null;
+            // first rescue once it has come to rest at the wall, then every cadence ticks whatever the goal is doing
+            boolean due = lastRescue[0] == Long.MIN_VALUE
+                ? m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
+                : t - lastRescue[0] >= cadence;
+            if (!idle && due) {
+                lastRescue[0] = t;
+                rescues[0]++;
+                int before = stuckRepaths(goal);
+                com.solegendary.reignofnether.unit.UnitUnstick.rescue(m, m.blockPosition());
+                int after = stuckRepaths(goal);
+                if (goal.getMoveTarget() != null)
+                    worstAdded[0] = Math.max(worstAdded[0], after - before);
+                if (events.length() < 2000)
+                    events.append(" t").append(t).append(" rescued at ").append(TerrainGameTests.f(m.getX() - startX))
+                        .append(",").append(TerrainGameTests.f(m.getZ())).append(" stuck ").append(before).append(" -> ")
+                        .append(goal.getMoveTarget() == null ? "gave up" : String.valueOf(after)).append(";");
+            }
+            if (!idle && t < 600)
+                return;
+            done[0] = true;
+            try {
+                List<String> problems = new ArrayList<>();
+                if (!idle)
+                    problems.add("the unit still had its order after " + t + " ticks (" + rescues[0] + " rescues every "
+                        + cadence + " ticks at the wall, moved " + TerrainGameTests.f(m.getX() - startX) + " east):" + events);
+                else if (m.getX() - startX < 5)
+                    problems.add("the unit gave up without walking toward the target (moved "
+                        + TerrainGameTests.f(m.getX() - startX) + " east)");
+                else if (rescues[0] < 2)
+                    problems.add("the unit gave up after only " + rescues[0] + " rescues at the wall: the test did not"
+                        + " exercise the cadence:" + events);
+                if (!rts && worstAdded[0] > 1)
+                    problems.add("one rescue counted " + worstAdded[0] + " stuck repaths (rescue() repathed the move goal"
+                        + " more than once):" + events);
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
+
     /**
      * A unit UnitUnstick rescues while its stuck count is one short of the give-up, and that can walk to its target
      * from there, keeps its order and gets there. The rescue's own repath is judged (it can count as stuck), so it must
@@ -591,6 +697,7 @@ public class OrdersObeyGameTests {
         });
     }
 
+    // the move goal's count of repaths in a row that made no progress (diagnostics only: -1 if it cannot be read)
     static int stuckRepaths(MoveToTargetBlockGoal goal) {
         try {
             java.lang.reflect.Field f = MoveToTargetBlockGoal.class.getDeclaredField("stuckRepaths");
