@@ -69,3 +69,21 @@ tech level, never oversized.
    "THE PICTURE, STUDIED").
 3. Opus builds; render at --px 32 beside the reference; one Fable critic scores resemblance AND quality.
 4. Repeat until 7+, then roll the method to the other six, one or two at a time.
+
+## Pilot rounds 1-5 (Oct 28, overnight) - what the Engine Shed taught
+Greybox r1-r3 worked: imitating one picture front-on, outline checked column by column, got the massing approved.
+Five detail rounds then stalled at 3-5/10 (SCORES.md). Why:
+1. **ref18 is palace-scale, the plot is T1-scale.** Its spire is ~60 blocks of fine stepping; ours has 3 half-width cells
+   over 12 rows, so every step is a 4-row box (the frozen full-block outline: 7/5/5/5/5/3/3/3/3/1). At this size the
+   triangle can only read as a triangle through stair/cornice edges, never through the outline. Its dense red-panel
+   grid likewise has room for only a handful of panels. Lesson (LESSONS #2 again, now proven): pick a primary reference
+   whose scale fits the plot - ref18 belongs to a T2/T3 or capitol-scale building; a T1 lab needs a lab-scale ref
+   (ref11, ref12, ref15, ref17, ref19, ref21, ref27).
+2. **Fresh critics drift.** r1: "less grey"; r3: "grey-cream walls"; r5: "red-dominant, black frames, grey only as
+   trim". Builds swung between them. Lesson: the art director writes a fixed per-region rubric from the picture once;
+   every critic scores against that rubric, not its own taste.
+3. **Tolerance checks let regressions through.** "Within 1 block of r3" passed stacked boxes twice. What worked:
+   frozen tables the build must equal, asserted on every build (check_tower, check_banned, check_greybox in
+   tools/lab_vehicle_brass.py).
+4. **Measure on rendered pixels.** Blackstone renders grey, deepslate tiles mid-grey, red nether brick maroon, red
+   terracotta closest to ref18's red; there is no red concrete/wool texture in our pack.
