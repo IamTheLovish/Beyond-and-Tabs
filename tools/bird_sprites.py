@@ -19,9 +19,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "bar", "src", "main", "resources", "assets", "reignofnether", "textures", "particle")
 S = 8                       # supersampling
 N = 16
-BODY = (60, 54, 50)
-WING = (70, 63, 57)
-EDGE = (92, 84, 76)
+# r2 (critic r31): in game the r1 colours (body luma ~55) drew near-black under the Enchanted grade - "flat black";
+# now a dark brown-grey that lands at ~20% luma on screen, with a lighter leading edge
+BODY = (98, 88, 80)
+WING = (112, 101, 91)
+EDGE = (146, 134, 121)
 
 
 def P(pts):
@@ -68,8 +70,9 @@ def main():
     }
     for name, im in frames.items():
         down(im).save(os.path.join(OUT, name + ".png"))
-    sh = frames["bird_1"].filter(ImageFilter.GaussianBlur(0.9 * S))
-    a = sh.getchannel("A").point(lambda v: int(v * 0.45))
+    # r2: the r1 shadow (peak alpha 0.45, wide blur) did not show in game - a firmer, less blurred shape
+    sh = frames["bird_1"].filter(ImageFilter.GaussianBlur(0.6 * S))
+    a = sh.getchannel("A").point(lambda v: int(v * 0.7))
     shadow = Image.new("RGBA", sh.size, (20, 22, 26, 0))
     shadow.putalpha(a)
     down(shadow).save(os.path.join(OUT, "bird_shadow.png"))
