@@ -85,12 +85,18 @@ public class AllyCommand {
     }
 
     private static int ally(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        ServerPlayer allyPlayer = EntityArgument.getPlayer(context, "player");
+        return allyAs(context.getSource(), context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player"));
+    }
+
+    /**
+     * /ally {@code other} as {@code player}: a request, unless the teams are locked. The command's body, callable with players the command arguments did not
+     * look up (game tests: fake players cannot join the server's player list, whose getPlayers() is unmodifiable).
+     */
+    public static int allyAs(CommandSourceStack source, ServerPlayer player, ServerPlayer allyPlayer) {
         String playerName = player.getName().getString();
         String allyPlayerName = allyPlayer.getName().getString();
 
-        String locked = lockedReason(context.getSource(), playerName, allyPlayerName);
+        String locked = lockedReason(source, playerName, allyPlayerName);
         if (locked != null) {
             player.sendSystemMessage(Component.translatable(locked));
             return 0;
@@ -102,7 +108,7 @@ public class AllyCommand {
         }
         AlliancesServerEvents.pendingAlliances.computeIfAbsent(allyPlayerName, k -> new HashSet<>()).add(playerName);
         AllianceClientboundPacket.addPendingAlliance(allyPlayerName, playerName);
-        context.getSource().sendSuccess(()->Component.translatable("alliance.reignofnether.sent_request", allyPlayerName), false);
+        source.sendSuccess(()->Component.translatable("alliance.reignofnether.sent_request", allyPlayerName), false);
         SoundClientboundPacket.playSoundForPlayer(SoundAction.CHAT, allyPlayerName);
         allyPlayer.sendSystemMessage(Component.translatable("alliance.reignofnether.ally_confirm", playerName, playerName));
         if (PlayerServerEvents.isRTSPlayer(allyPlayerName))
@@ -146,13 +152,19 @@ public class AllyCommand {
     }
 
     private static int allyConfirm(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        ServerPlayer requesterPlayer = EntityArgument.getPlayer(context, "player");
+        return allyConfirmAs(context.getSource(), context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player"));
+    }
+
+    /**
+     * /allyconfirm {@code other} as {@code player}: accepts their request, unless the teams are locked. The command's body, callable with players the command arguments did not
+     * look up (game tests: fake players cannot join the server's player list, whose getPlayers() is unmodifiable).
+     */
+    public static int allyConfirmAs(CommandSourceStack source, ServerPlayer player, ServerPlayer requesterPlayer) {
         String playerName = player.getName().getString();
         String requesterPlayerName = requesterPlayer.getName().getString();
 
         // a request made before the match (both still free then) must not become an alliance in it
-        String locked = lockedReason(context.getSource(), playerName, requesterPlayerName);
+        String locked = lockedReason(source, playerName, requesterPlayerName);
         if (locked != null) {
             player.sendSystemMessage(Component.translatable(locked));
             return 0;
@@ -161,7 +173,7 @@ public class AllyCommand {
             AlliancesServerEvents.addAlliance(playerName, requesterPlayerName);
             AlliancesServerEvents.pendingAlliances.getOrDefault(requesterPlayerName, new HashSet<>()).remove(playerName);
 
-            context.getSource().sendSuccess(()->Component.translatable("alliance.reignofnether.now_allied", requesterPlayerName), false);
+            source.sendSuccess(()->Component.translatable("alliance.reignofnether.now_allied", requesterPlayerName), false);
             SoundClientboundPacket.playSoundForPlayer(SoundAction.ALLY, requesterPlayerName);
             requesterPlayer.sendSystemMessage(Component.translatable("alliance.reignofnether.ally_accepted", playerName));
             SoundClientboundPacket.playSoundForPlayer(SoundAction.ALLY, playerName);
@@ -173,25 +185,31 @@ public class AllyCommand {
                 }
             }
         } else {
-            context.getSource().sendFailure(Component.translatable("alliance.reignofnether.no_request", requesterPlayerName));
+            source.sendFailure(Component.translatable("alliance.reignofnether.no_request", requesterPlayerName));
         }
         return Command.SINGLE_SUCCESS;
     }
 
     private static int disband(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        ServerPlayer allyPlayer = EntityArgument.getPlayer(context, "player");
+        return disbandAs(context.getSource(), context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player"));
+    }
+
+    /**
+     * /disband {@code other} as {@code player}: ends the alliance, unless the teams are locked. The command's body, callable with players the command arguments did not
+     * look up (game tests: fake players cannot join the server's player list, whose getPlayers() is unmodifiable).
+     */
+    public static int disbandAs(CommandSourceStack source, ServerPlayer player, ServerPlayer allyPlayer) {
         String playerName = player.getName().getString();
         String allyPlayerName = allyPlayer.getName().getString();
 
-        String locked = lockedReason(context.getSource(), playerName, allyPlayerName);
+        String locked = lockedReason(source, playerName, allyPlayerName);
         if (locked != null) {
             player.sendSystemMessage(Component.translatable(locked));
             return 0;
         }
 
         if (player.equals(allyPlayer)) {
-            context.getSource().sendFailure(Component.translatable("alliance.reignofnether.disband_self"));
+            source.sendFailure(Component.translatable("alliance.reignofnether.disband_self"));
             return 0;
         }
         AlliancesServerEvents.removeAlliance(playerName, allyPlayerName);
