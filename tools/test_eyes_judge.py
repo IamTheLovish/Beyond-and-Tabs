@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 
 from PIL import Image
 
@@ -187,7 +188,10 @@ def reference_measure(im, box):
     """tools measure.py of Oct 28 (the definitions past rounds' numbers come from), copied as it was."""
     im = im.convert("RGB").crop(box)
     hs, ss, ls = [], [], []
-    for r, g, b in im.getdata():
+    with warnings.catch_warnings():     # Pillow 12 deprecates getdata (same values as get_flattened_data)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        pixels = list(im.getdata())
+    for r, g, b in pixels:
         h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
         hs.append(h * 360)
         ss.append(s * 100)
