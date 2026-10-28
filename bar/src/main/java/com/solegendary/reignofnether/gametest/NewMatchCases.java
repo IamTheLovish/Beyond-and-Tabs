@@ -215,6 +215,65 @@ final class NewMatchCases {
     }
 
     /**
+     * Retiring the old arena (maps.ArenaRetirement, Mode A review of #198): its units are gone from the world at once,
+     * since one still queued when its chunk unloads would be skipped as removed, saved ownerless and come back into
+     * the unit list when the chunk loads again; and a building is demolished in its own level, whatever level the
+     * request named (resetRTS passes the overworld).
+     */
+    public static void new_match_retires_units_at_once_and_buildings_in_their_own_level(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ServerLevel other = level.getServer().getLevel(net.minecraft.world.level.Level.NETHER);
+        String owner = "gametest_nm_r";
+        List<String> problems = new ArrayList<>();
+        try {
+            if (other == null || other == level) {
+                helper.fail("test setup: no second level to name in the request");
+                return;
+            }
+            BlockPos at = MatchLifecycleCases.pad(helper, Y);
+            MatchLifecycleCases.side(owner, 1_200_011);
+            LivingEntity unit = MatchLifecycleCases.soldier(level, owner, at.getX() + 0.5, Y + 1, at.getZ() + 0.5);
+            BuildingPlacement building = BuildingServerEvents.placeBuilding(Buildings.WIND_GENERATOR_VILLAGERS,
+                new BlockPos(at.getX() - 4, Y, at.getZ() - 4), Rotation.NONE, owner, new int[0], false, false, true, true);
+            if (unit == null || building == null) {
+                helper.fail("test setup: could not make the unit or the building");
+                return;
+            }
+            // the building stands complete in its own level (a self-build would take minutes)
+            List<BlockPos> solid = new ArrayList<>();
+            for (var bb : building.getBlocks())
+                if (!bb.getBlockState().isAir()) {
+                    level.setBlock(bb.getBlockPos(), bb.getBlockState(), 3);
+                    solid.add(bb.getBlockPos());
+                }
+            if (solid.isEmpty()) {
+                helper.fail("test setup: the building has no blocks");
+                return;
+            }
+
+            com.solegendary.reignofnether.maps.ArenaRetirement.retireAll(other);
+            if (!unit.isRemoved())
+                problems.add("a retired unit is still in the world after the request (one in a chunk that unloads "
+                    + "before its turn would come back ownerless)");
+            com.solegendary.reignofnether.maps.ArenaRetirement.finishAll();
+            int left = 0;
+            for (BlockPos bp : solid)
+                if (!level.getBlockState(bp).isAir())
+                    left++;
+            if (left > 0)
+                problems.add(left + " of the building's " + solid.size() + " blocks are still standing: it was "
+                    + "demolished in the level the request named, not its own");
+        } finally {
+            com.solegendary.reignofnether.maps.ArenaRetirement.finishAll();
+            MatchLifecycleCases.forget(owner);
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
+    }
+
+    /**
      * "so restarts don't reuse ground": the slot cursor goes through real saved-data bytes and comes back handing out
      * the slot after the last one, whatever position the next caller stands at.
      */

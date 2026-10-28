@@ -36,4 +36,9 @@ public class NewMatchGameTests {
     public static void new_match_command_is_registered_for_ops_only(GameTestHelper helper) {
         NewMatchCases.new_match_command_is_registered_for_ops_only(helper);
     }
+
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 100, batch = BATCH)
+    public static void new_match_retires_units_at_once_and_buildings_in_their_own_level(GameTestHelper helper) {
+        NewMatchCases.new_match_retires_units_at_once_and_buildings_in_their_own_level(helper);
+    }
 }
