@@ -238,7 +238,8 @@ public class FogOfWarServerEvents {
         if (entity == viewer || !(entity instanceof Unit unit)
                 || !isOnViewersSide(viewer.getName().getString(), unit.getOwnerName()))
             return false;
-        int vd = viewer.server.getPlayerList().getViewDistance();
+        int vd = ((com.solegendary.reignofnether.mixin.ChunkMapAccessor) viewer.serverLevel().getChunkSource().chunkMap)
+                .reignofnether$getViewDistance() - 1;
         int dcx = Math.abs((viewer.getBlockX() >> 4) - (entity.getBlockX() >> 4));
         int dcz = Math.abs((viewer.getBlockZ() >> 4) - (entity.getBlockZ() >> 4));
         return Math.max(dcx, dcz) <= vd && entity.broadcastToPlayer(viewer);

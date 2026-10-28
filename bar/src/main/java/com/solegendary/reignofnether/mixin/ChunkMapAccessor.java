@@ -24,4 +24,8 @@ public interface ChunkMapAccessor {
     /** Entity id -> its TrackedEntity (package-private; cast to fogofwar.TrackedEntityInvoker). Fog re-tracking only. */
     @Accessor("entityMap")
     Int2ObjectMap<?> reignofnether$getEntityMap();
+
+    /** The view distance the chunk map sends chunks and tracks entities by, plus one (vanilla's own bookkeeping). */
+    @Accessor("viewDistance")
+    int reignofnether$getViewDistance();
 }
