@@ -322,6 +322,76 @@ public class ArtilleryGameTests {
     }
 
     /**
+     * Artillery body-blocked on a move and hit by a flyer keeps its move (Itachi 2's review of #222, issue #35): the
+     * contact rule's retaliation stopped the move and then asked for the flyer as its target, which artillery refuses,
+     * so the crew stood with no order and no target and died where it stood. It cannot hit the flyer; it must at least
+     * keep trying to walk out.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void blocked_artillery_hit_by_a_flyer_keeps_moving(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_arty_blocked_air_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        // a pen two blocks high round the crew: its move east can make no headway, so it counts as blocked
+        for (int x = 0; x <= 5; x++)
+            for (int z = 6; z <= 11; z++)
+                if (x == 0 || x == 5 || z == 6 || z == 11)
+                    for (int y = 2; y <= 3; y++)
+                        helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+        var b = bombard(helper, owner, 2.5, 8.5);
+        var g = EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        if (b == null || g == null) {
+            if (b != null) b.discard();
+            helper.fail("could not create the Bombard Crew or the Gull Spotter");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        double gx = o.getX() + 10.5, gy = o.getY() + 2.5, gz = o.getZ() + 8.5;
+        g.moveTo(gx, gy, gz, 90, 0);
+        g.setOwnerName(owner + "_foe");
+        level.addFreshEntity(g);
+        BlockPos dest = helper.absolutePos(new BlockPos(14, 2, 8));
+        boolean[] done = { false };
+        int[] tick = { 0 }, hitAt = { -1 };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            b.discard();
+            g.discard();
+        };
+        helper.runAfterDelay(3, () -> b.setMoveTarget(dest));
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            tick[0]++;
+            hold(g, gx, gy, gz);   // the gull hovers outside the pen
+            if (hitAt[0] < 0) {
+                if (tick[0] > 5 && AttackerUnit.blockedOnMove(b)) {
+                    hitAt[0] = tick[0];
+                    b.hurt(level.damageSources().indirectMagic(g, g), 1f);   // the gull hits the blocked crew
+                } else if (tick[0] > 200) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the penned crew never counted as blocked on its move - the "
+                        + "test proves nothing (move target " + b.getMoveGoal().getMoveTarget() + ")");
+                }
+                return;
+            }
+            if (flyer(b.getTarget()) || flyer(b.getTargetGoal().getTarget())) {
+                cleanUp.run();
+                throw new GameTestAssertException("the crew took the flyer as its target");
+            }
+            if (b.getMoveGoal().getMoveTarget() == null) {
+                cleanUp.run();
+                throw new GameTestAssertException((tick[0] - hitAt[0]) + " ticks after the flyer hit it the blocked "
+                    + "crew had dropped its move, with no target: it stands and dies");
+            }
+            if (tick[0] - hitAt[0] >= 10) {
+                cleanUp.run();
+                helper.succeed();
+            }
+        });
+    }
+
+    /**
      * Shared by the two set-up tests: a Bombard Crew walks ~3 blocks and stops, then gets {@code order} with its
      * cooldown cleared, so only the set-up can hold the shot. It must not fire in the first SET_UP ticks after it
      * stopped, and must fire soon after. Slack of 2 ticks: the test sees "stopped" a tick or two after the last step.
