@@ -133,7 +133,7 @@ def build(layered):
             d, _, _ = dist_to_foot(px, pz)
             wob = int(round(2.5 * math.sin(i / 6.0))) if d > 4 else 0
             # r2 (critic r31: "a sticker, 3-4 wide, 30% brighter, hard edges"): the apron keeps 3 wide by the door,
-            # then a 1-wide worn core with feathered sides - coarse dirt and rooted dirt, dirt path only now and then
+            # then a 1-wide worn core with feathered sides - coarse dirt and dirt (r3), dirt path only now and then
             width = 1 if d <= 4 else 0
             for w in range(-width - 1, width + 2):
                 edge = abs(w) > width
