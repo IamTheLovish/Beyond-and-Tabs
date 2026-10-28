@@ -4874,10 +4874,25 @@ public class SkirmishGameTests {
                 // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
                 // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
                 // before its block tick can fire; whatever lies above that is then supported again.
-                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
-                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
-                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                // The lowest block over the pocket, not just the one at y 5: the arena's own placement can already
+                // have dropped the gravel at y 5 (an entity in flight, landing after this clearing), leaving the next
+                // gravel up resting on air - gravel in a possessed Bombard's eye block (aim 0.02 away) held its shot
+                // ("set up but never fired", shard 1, Oct 28)
+                for (int y = 5; y <= 30; y++) {
+                    BlockPos above = helper.absolutePos(new BlockPos(x, y, z));
+                    var state = level.getBlockState(above);
+                    if (state.isAir())
+                        continue;
+                    if (state.getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                        level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                    break;
+                }
             }
+        // and the gravel already falling (it would land in the cleared pocket)
+        BlockPos lo = helper.absolutePos(new BlockPos(x0, 2, z0)), hi = helper.absolutePos(new BlockPos(x1, 30, z1));
+        for (var falling : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
+                new net.minecraft.world.phys.AABB(lo, hi).expandTowards(1, 1, 1)))
+            falling.discard();
     }
 
     /**
