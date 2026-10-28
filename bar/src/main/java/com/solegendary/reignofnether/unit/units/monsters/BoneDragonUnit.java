@@ -89,7 +89,7 @@ public class BoneDragonUnit extends GhastUnit {
     public static final int LAND_TICKS = 10 * 20;
     public static final int MIN_LAND_TICKS = 4 * 20;
     static final int DIVE_MAX_TICKS = 5 * 20;
-    static final double IMPACT_KNOCKBACK = 0.8;
+    public static final double IMPACT_KNOCKBACK = 0.8;
 
     /** The game time it landed at, or -1 in the air: synced, so the button and the rig know it is down. */
     public static final EntityDataAccessor<Integer> landedAtAccessor =
@@ -184,6 +184,11 @@ public class BoneDragonUnit extends GhastUnit {
     /** Stooping onto its spot (server side). */
     public boolean isDiving() {
         return diveTo != null;
+    }
+
+    /** Where the running dive comes down (server side; null when not diving). For the game test. */
+    public Vec3 diveTarget() {
+        return diveTo;
     }
 
     /** Down long enough that the Dive button may take it off early (both sides: the landing time is synced). */
