@@ -991,6 +991,11 @@ public final class EyesDirector {
                 ReignOfNether.LOGGER.info("[Eyes] {}: fog of war off for the structure photos", label);
                 com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
             }
+            // noon for the day stills, so every round is lit the same: the match is ~2 min after sunrise here, and
+            // the shader lane's low golden light turned the grass khaki (hue 48 against 103 in the plain lane, run
+            // 40712072482). The dusk still keeps its own low sun, and the time is restored after it
+            var noonServer = mc.getSingleplayerServer();
+            noonServer.execute(() -> noonServer.overworld().setDayTime(6000));
             structurePlaced = false;
             structureError = null;
             OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(siteCentre));   // loads its chunks
