@@ -8,9 +8,11 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.goals.MoveToTargetBlockGoal;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.IronGolemUnit;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -34,6 +36,8 @@ import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.projectile.EvokerFangs;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -46,7 +50,7 @@ import java.util.UUID;
  * the line while Thornbows root what comes at it.
  * <p>
  * <b>Take Root</b> ({@link TakeRoot}, vehicles-design 2026-10-28 3.4, the Rooted Treant): roots in place over
- * {@link #ROOT_TIMES}, can't move or slam while rooted, takes x{@link #ROOTED_TAKEN_MULT} damage, and every
+ * {@link #ROOT_TIMES}, can't move or slam while rooted (a move order uproots it, then it walks there), takes x{@link #ROOTED_TAKEN_MULT} damage, and every
  * {@link #LINE_EVERY} ticks bursts a {@link #LINE_LENGTH}-block line of root spikes along the ground toward the nearest
  * enemy, hurting every enemy unit on it (the Evoker's fang line, reskinned). Stats and building bonus are unchanged.
  */
@@ -86,6 +90,8 @@ public class SentinelTreantUnit extends IronGolemUnit {
     private int transitionLeft = 0;
     private int lineCooldown = 0, pendingStrike = 0;
     private double pendingDx = 0, pendingDz = 0;
+    /** A move order given while immobile: uprooting starts and the Treant walks here once it is free. */
+    @Nullable private BlockPos heldMove = null;
     /** Spike lines struck so far (game test). */
     public int linesFired = 0;
 
@@ -112,8 +118,19 @@ public class SentinelTreantUnit extends IronGolemUnit {
                 return;   // already uprooting
             rootWanted = true;
             transitionLeft = ROOT_TIMES.rootTicks();
+            heldMove = null;
             Unit.fullResetBehaviours(this);   // a standing order: no chase drags it off the spot
-        } else if (!rooted) {
+            rootChanged();
+        } else {
+            uproot();
+        }
+    }
+
+    /** Cancels a root in progress (free at once) or starts uprooting a planted Treant; nothing while uprooting. */
+    void uproot() {
+        if (!rootWanted)
+            return;
+        if (!rooted) {
             rootWanted = false;
             transitionLeft = 0;
         } else if (transitionLeft == 0) {
@@ -122,12 +139,34 @@ public class SentinelTreantUnit extends IronGolemUnit {
         } else {
             return;
         }
+        rootChanged();
+    }
+
+    void rootChanged() {
         this.entityData.set(rootWantedDataAccessor, rootWanted);
         level().playSound(null, blockPosition(), rootWanted ? SoundEvents.ROOTED_DIRT_PLACE : SoundEvents.ROOTED_DIRT_BREAK, SoundSource.NEUTRAL, 1.5f, 0.6f);
     }
 
+    /**
+     * A move order to an immobile Treant (BAR's deployables): it is held, not walked; the Treant uproots (a root in
+     * progress is cancelled) and walks there once free. The idle walk back to its anchor is not an order: dropped.
+     */
+    void takeMoveOrder() {
+        MoveToTargetBlockGoal mg = getMoveGoal();
+        BlockPos ordered = mg == null ? null : mg.getMoveTarget();
+        if (ordered == null)
+            return;
+        mg.stopMoving();
+        if (Unit.hasAnchor(this) && ordered.equals(getAnchor()))
+            return;
+        heldMove = ordered;
+        uproot();
+    }
+
     /** One tick of the roots and the spike line (server). Public for the game test. */
     public void tickRoot(ServerLevel sl) {
+        if (isImmobile())
+            takeMoveOrder();
         if (transitionLeft > 0 && --transitionLeft == 0) {
             rooted = rootWanted;
             lineCooldown = 0;
@@ -137,8 +176,15 @@ public class SentinelTreantUnit extends IronGolemUnit {
         }
         setRootModifier(isImmobile());
         if (isImmobile()) {
-            getNavigation().stop();
-            setDeltaMovement(0, getDeltaMovement().y, 0);
+            if (!getNavigation().isDone())
+                getNavigation().stop();
+            Vec3 dm = getDeltaMovement();
+            if (dm.x != 0 || dm.z != 0)
+                setDeltaMovement(0, dm.y, 0);
+        } else if (heldMove != null) {
+            BlockPos to = heldMove;
+            heldMove = null;
+            setMoveTarget(to);
         }
         if (!isRooted())
             return;
@@ -212,12 +258,18 @@ public class SentinelTreantUnit extends IronGolemUnit {
         for (int k = 0; 1.25 * (k + 1) <= LINE_LENGTH; k++) {
             double d = 1.25 * (k + 1);
             double x = getX() + ux * d, z = getZ() + uz * d;
-            EvokerFangs fang = new EvokerFangs(sl, x, getY(), z, yRot, k / 2, this);
+            EvokerFangs fang = new EvokerFangs(sl, x, groundY(sl, x, z), z, yRot, k / 2, this);
             fang.addTag(CryptTide.VISUAL_FANG_TAG);   // EvokerFangsMixin skips its bite: strikeRootLine deals the damage
             sl.addFreshEntity(fang);
-            sl.sendParticles(dirt, x, getY() + 0.1, z, 6, 0.3, 0.05, 0.3, 0.05);
+            sl.sendParticles(dirt, x, groundY(sl, x, z) + 0.1, z, 6, 0.3, 0.05, 0.3, 0.05);
         }
         sl.playSound(null, blockPosition(), SoundEvents.ROOTED_DIRT_BREAK, SoundSource.HOSTILE, 2f, 0.4f);
+    }
+
+    /** The ground under (x, z) for a spike on a slope; the Treant's own height under a roof or over a drop. */
+    double groundY(ServerLevel sl, double x, double z) {
+        int top = sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z));
+        return Math.abs(top - getY()) <= 3 ? top : getY();
     }
 
     /**
@@ -247,10 +299,10 @@ public class SentinelTreantUnit extends IronGolemUnit {
         return hits;
     }
 
-    /** Rooted, the bark closes up: every hit is cut to ROOTED_TAKEN_MULT. */
+    /** Fully rooted, the bark closes up: every hit is cut to ROOTED_TAKEN_MULT (not while rooting or uprooting). */
     @Override
     public boolean hurt(@NotNull DamageSource source, float amount) {
-        return super.hurt(source, rooted ? amount * ROOTED_TAKEN_MULT : amount);
+        return super.hurt(source, isRooted() ? amount * ROOTED_TAKEN_MULT : amount);
     }
 
     /** Rooted (or rooting) it doesn't slam: the spike line does the fighting. */
@@ -285,6 +337,12 @@ public class SentinelTreantUnit extends IronGolemUnit {
         pCompound.putBoolean("bt_root_wanted", rootWanted);
         pCompound.putBoolean("bt_rooted", rooted);
         pCompound.putInt("bt_root_left", transitionLeft);
+        pCompound.putInt("bt_line_cd", lineCooldown);
+        pCompound.putInt("bt_line_pending", pendingStrike);
+        pCompound.putDouble("bt_line_dx", pendingDx);
+        pCompound.putDouble("bt_line_dz", pendingDz);
+        if (heldMove != null)
+            pCompound.putLong("bt_root_move", heldMove.asLong());
     }
 
     @Override
@@ -293,6 +351,11 @@ public class SentinelTreantUnit extends IronGolemUnit {
         rootWanted = pCompound.getBoolean("bt_root_wanted");
         rooted = pCompound.getBoolean("bt_rooted");
         transitionLeft = Math.max(0, Math.min(Math.max(ROOT_TIMES.rootTicks(), ROOT_TIMES.uprootTicks()), pCompound.getInt("bt_root_left")));
+        lineCooldown = Math.max(0, Math.min(LINE_EVERY, pCompound.getInt("bt_line_cd")));
+        pendingStrike = Math.max(0, Math.min(LINE_TELEGRAPH_TICKS, pCompound.getInt("bt_line_pending")));
+        pendingDx = pCompound.getDouble("bt_line_dx");
+        pendingDz = pCompound.getDouble("bt_line_dz");
+        heldMove = pCompound.contains("bt_root_move") ? BlockPos.of(pCompound.getLong("bt_root_move")) : null;
         this.entityData.set(rootWantedDataAccessor, rootWanted);
         setRootModifier(isImmobile());
     }
