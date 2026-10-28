@@ -94,9 +94,10 @@ public class GhostClickGameTests {
             helper.fail("A's build order was refused");
             return;
         }
-        BlockPos step = b.blockPosition().offset(3, 0, 0);
-        // the move B is queued behind must be one it can finish: a spot on the pad (the queue starts the Shift order only
-        // once B is idle, so a move to the void beyond the edge leaves the test waiting on how the move goal gives up)
+        // 3 blocks toward the pad's centre: B stands 11 out on a pad of radius 12, so +3 went past the edge (the Oct 27-28
+        // flake). The move B is queued behind must be one it can finish: the queue starts the Shift order only once B is
+        // idle, so a move to the void beyond the edge left the test waiting on how the move goal gives up
+        BlockPos step = b.blockPosition().offset(-3, 0, 0);
         if (s.level.getBlockState(step.below()).isAir()) {
             problems.add("(setup) B's move goes off the pad: no ground under " + step.toShortString() + " (pad radius "
                 + BuilderAssistGameTests.PAD_R + " around " + s.cx + ", " + s.cz + "; B at " + b.blockPosition().toShortString() + ")");
