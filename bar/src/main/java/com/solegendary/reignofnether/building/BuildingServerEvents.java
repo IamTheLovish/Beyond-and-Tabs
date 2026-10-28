@@ -182,22 +182,8 @@ public class BuildingServerEvents {
 
     public static final Random random = new Random();
 
-    private static final int SAVE_TICKS_MAX = 600;
-    private static int saveTicks = 0;
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END)
-            return;
-        saveTicks += 1;
-        if (saveTicks >= SAVE_TICKS_MAX) {
-            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-            if (level != null) {
-                saveBuildings(level);
-                saveNetherZones(level);
-                saveTicks = 0;
-            }
-        }
-    }
+    // buildings and nether zones reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014): the
+    // 30 s timer here wrote every saved-data file on the server thread mid-fight
 
     public static void saveBuildings(ServerLevel level) {
         if (level == null)
@@ -253,18 +239,14 @@ public class BuildingServerEvents {
         Set<BlockPos> seenOriginPoses = new HashSet<>();
         buildingData.buildings.removeIf(b -> !seenOriginPoses.add(b.originPos));
 
-        buildingData.save();
-        level.getDataStorage().save();
+        buildingData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     public static void saveNetherZones(ServerLevel level) {
         NetherZoneSaveData netherData = NetherZoneSaveData.getInstance(level);
         netherData.netherZones.clear();
         netherData.netherZones.addAll(netherZones);
-        netherData.save();
-        level.getDataStorage().save();
-
-        ReignOfNether.LOGGER.info("saved " + netherZones.size() + " netherzones in serverevents");
+        netherData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
