@@ -106,7 +106,8 @@ public class AmbientBirdParticle extends TextureSheetParticle {
             return;
         double sx = bx + AmbientLifeMath.shadowOffsetX(h, level.getSunAngle(partialTicks));
         Vec3 cam = camera.getPosition();
-        float cx = (float) (sx - cam.x), cy = (float) (groundY + 0.06 - cam.y), cz = (float) (bz - cam.z);
+        // a quarter block up: at the ground itself the short grass hid it (critic r31: "shadows invisible")
+        float cx = (float) (sx - cam.x), cy = (float) (groundY + 0.25 - cam.y), cz = (float) (bz - cam.z);
         float s = quadSize * 1.1f;
         // heading in the ground plane: the shadow's head points along the flight
         double len = Math.sqrt(xd * xd + zd * zd);
