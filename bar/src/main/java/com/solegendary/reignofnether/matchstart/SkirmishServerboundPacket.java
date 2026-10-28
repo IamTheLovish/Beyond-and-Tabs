@@ -319,6 +319,9 @@ public class SkirmishServerboundPacket {
             // a spectator (team < 0, SkirmishSetupScreen.Settings.SPECTATE) gets no base and never joins the match:
             // not an RTS player, so the fog stays off and the HUD is RoN's observer view; the bots ring their spot
             boolean spectator = team < 0;
+            // fog needs a bounded play area: a border round the arena and the bot ring, before the first base
+            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fitBorderForMatch(player.serverLevel(),
+                gx + 0.5, gz + 0.5, arenaRadius(arena), maxR + Math.max(0, bots.size() - 1) * 35, false);
             if (!spectator)
                 PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
 
@@ -330,7 +333,7 @@ public class SkirmishServerboundPacket {
             if (!spectator)
                 teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
             for (BotSpec b : bots) {
-                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
+                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; case 3 -> "passive"; default -> "medium"; };
                 BotServerEvents.lastBotName = null;
                 added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR, b.colorMapId());
                 if (BotServerEvents.lastBotName != null)

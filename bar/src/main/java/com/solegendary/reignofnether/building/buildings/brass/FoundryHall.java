@@ -52,7 +52,6 @@ public class FoundryHall extends ProductionBuilding {
 
         this.productions.add(ProductionItems.TINKER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.GYRO_SCOUT, Keybindings.abilitySlot2);
-        this.productions.add(ProductionItems.RESEARCH_STEWARD, Keybindings.abilitySlot8);   // auto-trains workers (StewardServerEvents)
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);   // the extractor refit (and the T2 lab, slice 2)
         this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);  // the Great Forge (slice 4)
     }

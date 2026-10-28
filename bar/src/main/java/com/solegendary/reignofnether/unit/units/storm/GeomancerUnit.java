@@ -59,18 +59,12 @@ import java.util.List;
  * sash on the illager body (VillagerUnitModel, its own skin from tools/gen_storm_skins.py), with the shared worker
  * plumbing: builds, repairs, reclaims. The first one a player starts with is tagged as the commander - the <b>Thunder
  * Sage</b> - by CommanderServerEvents, which gives it Heaven's Judgement and Blink via FactionTraits.
- * Its own order is <b>Ley Link</b> (slice 2, section 3.4 of the plan): two clicks link two own buildings; linked
- * Wind-Chime Towers resonate for more energy (mana/LeyNetwork).
+ * (Ley Link was removed 2026-10-26.)
  * A thin copy of the Tidewrought Shipwright rather than a subclass of it or VillagerUnit: both carry faction-specific
  * behaviour (Tides, professions, militia) that is found by instanceof elsewhere.
  */
 public class GeomancerUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit {
     public static final Abilities ABILITIES = new Abilities();
-    static {
-        // slice 2: the Ley Link order (hotkey8, as the Seedshaper's snare: the build menu uses slots 1/6 and 5-7)
-        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.LeyLink(),
-                com.solegendary.reignofnether.keybinds.Keybindings.hotkey8);
-    }
     //region
     @Override
     public void updateAbilityButtons() {

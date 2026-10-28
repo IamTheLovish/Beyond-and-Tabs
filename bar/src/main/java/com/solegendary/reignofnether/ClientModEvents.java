@@ -275,6 +275,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.DawnPaladin::new);
         evt.registerEntityRenderer(EntityRegistrar.GRAVECALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.Gravecaller::new);
         evt.registerEntityRenderer(EntityRegistrar.HORDE_WARCHIEF_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.HordeWarchief::new);
+        evt.registerEntityRenderer(EntityRegistrar.ASH_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.AshShaman::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNHEART_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.ThornheartDruid::new);
         evt.registerEntityRenderer(EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.CorsairCaptain::new);
         evt.registerEntityRenderer(EntityRegistrar.STORM_WITCH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HeroRenderers.StormWitch::new);
@@ -309,6 +310,11 @@ public class ClientModEvents {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void onClientSetupEvent(FMLClientSetupEvent evt) {
+        // lovish, Oct 23: installs made before the launcher had his cat get it now, without reinstalling
+        Thread brand = new Thread(() -> com.solegendary.reignofnether.launcher.LauncherBrand.applyOnce(
+                net.minecraftforge.fml.loading.FMLPaths.GAMEDIR.get()), "lovish-launcher-brand");
+        brand.setDaemon(true);
+        brand.start();
         evt.enqueueWork(() -> {
             MenuScreens.register(ContainerRegistrar.TOPDOWNGUI_CONTAINER.get(), TopdownGui::new);
             ItemBlockRenderTypes.setRenderLayer(

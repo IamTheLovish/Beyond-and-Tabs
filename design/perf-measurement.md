@@ -28,7 +28,7 @@ also counted in `attacker`, so the rows add up and `ours` can be set against the
 Sections (`perf/Sys.java`): `unit`, `attacker`, `attacker/attackMove`, `attacker/idleAggro`, `attacker/retarget`,
 `attacker/entityScan`, `attacker/buildingScan`, `separation`, `stuckNudge`, `unstick`, `reactions`, `pathfinder`
 (main-thread half), `buildings`, `bots`, `unitSync`, `commandQueues`, `autoCaster`, `unitGrid` (rebuild),
-`chunkLoader`, `economy`, `fogOfWar`.
+`chunkLoader`, `economy`, `fogOfWar`, `targetGrid` (rebuild of the target scan's grid, perf plan PR 5).
 
 Each is also a `bat:<name>` section in vanilla's profiler. Vanilla files a unit's tick under its entity type, so the
 raw tree has `bat:attacker` once per unit type; `[PerfAuto]` and `[FrameAuto]` add them up by name.

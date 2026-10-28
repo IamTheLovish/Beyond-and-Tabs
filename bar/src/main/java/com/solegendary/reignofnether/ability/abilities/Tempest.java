@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.ExperimentalAbilityText;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
@@ -46,6 +47,16 @@ public class Tempest extends Ability {
         this.showRadiusCircle = true;
     }
 
+    /** Tooltip body. Public for the tooltip game test. */
+    public String description() {
+        return "A storm " + (int) TempestServerEvents.RADIUS + " blocks wide rolls from the dragon toward the chosen spot for " + TempestServerEvents.DURATION_TICKS / 20 + " s, striking the most clumped enemy inside every " + TempestServerEvents.STRIKE_EVERY / 20f + " s for " + (int) TempestServerEvents.DAMAGE + ".";
+    }
+
+    /** Tooltip range line, from the ability's own values. Public for the tooltip game test. */
+    public String rangeLine() {
+        return ExperimentalAbilityText.rangeLine(range);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Tempest",
@@ -59,11 +70,9 @@ public class Tempest extends Ability {
             List.of(
                 FormattedCharSequence.forward("Tempest  (" + (int) TempestServerEvents.ENERGY_UPFRONT + " energy + "
                     + (int) TempestServerEvents.ENERGY_PER_SECOND + "/s, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("A storm " + (int) TempestServerEvents.RADIUS + " blocks wide rolls from the dragon toward a spot up to "
-                    + RANGE + " blocks away for " + TempestServerEvents.DURATION_TICKS / 20 + " s, striking the most clumped enemy inside every "
-                    + TempestServerEvents.STRIKE_EVERY / 20f + " s for " + (int) TempestServerEvents.DAMAGE + ".", Style.EMPTY),
-                FormattedCharSequence.forward("Drains energy every second at spell priority - it can stall your own construction. Starved, it fizzles.", Style.EMPTY),
-                FormattedCharSequence.forward("Friends are never struck. A dragon grounded by wind cannot call it.", Style.EMPTY.withItalic(true))
+                FormattedCharSequence.forward(rangeLine(), Style.EMPTY),
+                FormattedCharSequence.forward(description(), Style.EMPTY),
+                FormattedCharSequence.forward("Drains energy every second; starved, it fizzles. Friends are never struck.", Style.EMPTY.withItalic(true))
             ),
             this,
             unit);

@@ -316,7 +316,6 @@ public class ReignOfNetherCommonConfigs {
         //*Abilities*
         BUILDER.comment("Ability Cost Configurations");
         AbilityCosts.ENCHANT_MAIMING.define(BUILDER);
-        AbilityCosts.VINE_SNARE.define(BUILDER);
         AbilityCosts.THICKET.define(BUILDER);
         AbilityCosts.ENCHANT_QUICK_CHARGE.define(BUILDER);
         AbilityCosts.ENCHANT_SHARPNESS.define(BUILDER);
@@ -713,8 +712,6 @@ public class ReignOfNetherCommonConfigs {
     }
     public static class AbilityCosts implements Costs {
         public static final ResourceCostConfigEntry ENCHANT_MAIMING = ResourceCostConfigEntry.Ability(0,20, 30, ResourceCosts.ENCHANT_MAIMING, "Maiming Enchantment Config");
-        // 15m/30e: a trap is cheap, but each one is a worker's errand and a player holds at most PlantVineSnare.MAX_PER_PLAYER
-        public static final ResourceCostConfigEntry VINE_SNARE = ResourceCostConfigEntry.Ability(0,20, 10, ResourceCosts.VINE_SNARE, "Vine Snare Config");
         // 20m/20e for a 3x3 patch (wood = energy, ore = metal): cheap cover, bounded by ThicketBlockEntity.MAX_PLANTED
         public static final ResourceCostConfigEntry THICKET = ResourceCostConfigEntry.Ability(0,20, 20, ResourceCosts.THICKET, "Thicket Config");
         public static final ResourceCostConfigEntry ENCHANT_QUICK_CHARGE = ResourceCostConfigEntry.Ability(0,40, 20, ResourceCosts.ENCHANT_QUICK_CHARGE, "Quick Charge Enchantment Config");
