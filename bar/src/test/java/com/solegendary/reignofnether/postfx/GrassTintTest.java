@@ -7,9 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Grass tint noise (lovish Oct 22 20:23, "yes this sounds good"): a low-frequency world-position noise on the grass
- * and foliage colour so a big grass field is not one flat green from the RTS camera. Subtle (a few % in value and
- * hue), deterministic, continuous across block borders, and it really varies across a field. Written before the
- * implementation (rule of Oct 22 19:58).
+ * and foliage colour so a big grass field is not one flat green from the RTS camera. Deterministic, continuous across
+ * block borders, and it really varies across a field. Written before the implementation (rule of Oct 22 19:58).
+ * Oct 28 (lovish: "the grass needs a lot more work, looks like 1 bland color from rts view"): the Oct 22 version
+ * (+-4.5% value, +-3.5% hue) was too subtle to read from the RTS camera, so the variation tests now ask for a meadow's
+ * range - a luma spread of 15%+, patches that differ at the 16-block scale, a straw-to-lush hue drift - and the
+ * Oct 22 version fails them.
  */
 class GrassTintTest {
 
@@ -43,15 +46,15 @@ class GrassTintTest {
     }
 
     @Test
-    void colourChangesOnlyAFewPercent() {
+    void colourStaysInAMeadowsRange() {
         double lumaBase = luma(PLAINS_GRASS);
         for (int x = -1000; x < 1000; x += 7) {
             for (int z = -1000; z < 1000; z += 11) {
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
-                assertTrue(Math.abs(luma(c) - lumaBase) <= 0.06 * lumaBase, "luma at " + x + ", " + z);
-                assertTrue(Math.abs(r(c) - r(PLAINS_GRASS)) <= 0.10 * r(PLAINS_GRASS) + 1, "red at " + x + ", " + z);
-                assertTrue(Math.abs(g(c) - g(PLAINS_GRASS)) <= 0.10 * g(PLAINS_GRASS) + 1, "green at " + x + ", " + z);
-                assertTrue(Math.abs(b(c) - b(PLAINS_GRASS)) <= 0.10 * b(PLAINS_GRASS) + 1, "blue at " + x + ", " + z);
+                assertTrue(Math.abs(luma(c) - lumaBase) <= 0.22 * lumaBase, "luma at " + x + ", " + z);
+                assertTrue(Math.abs(r(c) - r(PLAINS_GRASS)) <= 0.32 * r(PLAINS_GRASS) + 1, "red at " + x + ", " + z);
+                assertTrue(Math.abs(g(c) - g(PLAINS_GRASS)) <= 0.32 * g(PLAINS_GRASS) + 1, "green at " + x + ", " + z);
+                assertTrue(Math.abs(b(c) - b(PLAINS_GRASS)) <= 0.32 * b(PLAINS_GRASS) + 1, "blue at " + x + ", " + z);
                 assertEquals(0, c & 0xFF000000, "no bits above the rgb");
             }
         }
@@ -59,16 +62,17 @@ class GrassTintTest {
 
     @Test
     void neighbouringBlocksDifferByAShadeAtMost() {
-        // continuous across block borders: a step of one block moves the field by little (no visible block grid),
-        // and the colour by at most one or two levels per channel
+        // continuous across block borders: a step of one block moves the field by little and the colour by a shade
+        // (10 levels = ~4-7%) at most, at the steepest edge of a patch or clump - no visible block grid even with
+        // vanilla's one colour per face; under Embeddium (in the pack) the colour is blended per corner anyway
         for (int x = -500; x < 500; x++) {
             for (int z = -500; z < 500; z += 13) {
                 double f = GrassTint.field(x, z, 3);
-                assertTrue(Math.abs(GrassTint.field(x + 1, z, 3) - f) <= 0.12, "x step at " + x + ", " + z);
-                assertTrue(Math.abs(GrassTint.field(x, z + 1, 3) - f) <= 0.12, "z step at " + x + ", " + z);
+                assertTrue(Math.abs(GrassTint.field(x + 1, z, 3) - f) <= 0.25, "x step at " + x + ", " + z);
+                assertTrue(Math.abs(GrassTint.field(x, z + 1, 3) - f) <= 0.25, "z step at " + x + ", " + z);
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
                 int n = GrassTint.apply(PLAINS_GRASS, x + 1, z, GrassTint.GRASS);
-                assertTrue(Math.abs(r(c) - r(n)) <= 2 && Math.abs(g(c) - g(n)) <= 2 && Math.abs(b(c) - b(n)) <= 2,
+                assertTrue(Math.abs(r(c) - r(n)) <= 10 && Math.abs(g(c) - g(n)) <= 10 && Math.abs(b(c) - b(n)) <= 10,
                         "colour step at " + x + ", " + z);
             }
         }
@@ -90,8 +94,8 @@ class GrassTintTest {
             }
         }
         double mean = sum / n, std = Math.sqrt(sum2 / n - mean * mean);
-        assertTrue(std >= 0.2, "field std " + std);
-        assertTrue(lo < -0.3 && hi > 0.3, "range " + lo + " .. " + hi);
+        assertTrue(std >= 0.3, "field std " + std);
+        assertTrue(lo < -0.5 && hi > 0.5, "range " + lo + " .. " + hi);
         // ... and the colour of two far-apart patches differs by a visible amount somewhere on the map
         double minL = 1e9, maxL = -1e9;
         for (int x = 0; x < 256; x += 4) {
@@ -101,7 +105,46 @@ class GrassTintTest {
                 maxL = Math.max(maxL, l);
             }
         }
-        assertTrue(maxL - minL >= 0.04 * luma(PLAINS_GRASS), "luma spread " + (maxL - minL));
+        assertTrue(maxL - minL >= 0.15 * luma(PLAINS_GRASS), "luma spread " + (maxL - minL));
+    }
+
+    @Test
+    void patchesDifferAtTheScaleTheRtsCameraReads() {
+        // the mean brightness of 16 x 16-block patches (about what one patch is on screen when zoomed out) varies -
+        // not only single blocks; Oct 22's version: 0.018 of the mean, a flat field 0.000
+        double sum = 0, sum2 = 0;
+        int n = 0;
+        for (int px = 0; px < 256; px += 16) {
+            for (int pz = 0; pz < 256; pz += 16) {
+                double s = 0;
+                for (int x = px; x < px + 16; x++) {
+                    for (int z = pz; z < pz + 16; z++) {
+                        s += luma(GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS));
+                    }
+                }
+                s /= 256;
+                sum += s;
+                sum2 += s * s;
+                n++;
+            }
+        }
+        double mean = sum / n, std = Math.sqrt(sum2 / n - mean * mean);
+        assertTrue(std >= 0.035 * mean, "patch std " + std / mean + " of the mean");
+    }
+
+    @Test
+    void hueDriftsBetweenStrawAndLush() {
+        // dry patches lean to straw-olive, lush ones to blue-green: red / green spreads across a map
+        double lo = 9, hi = 0;
+        for (int x = 0; x < 256; x += 4) {
+            for (int z = 0; z < 256; z += 4) {
+                int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
+                double rg = r(c) / (double) g(c);
+                lo = Math.min(lo, rg);
+                hi = Math.max(hi, rg);
+            }
+        }
+        assertTrue(hi - lo >= 0.12, "red / green " + lo + " .. " + hi);
     }
 
     @Test
