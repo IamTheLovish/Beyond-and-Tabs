@@ -56,20 +56,29 @@ public final class Spectators {
             && mayFreeFly(body.getName().getString()) && !mayFreeFly(viewer.getName().getString());
     }
 
-    /** Sends {@code name}'s client back to the RTS view (a test swaps it to record the calls). */
-    public static java.util.function.Consumer<String> backToRtsView = name -> { };
+    /**
+     * Sends {@code name}'s client back to the RTS view: a refused free flight, whose client left the view before it
+     * asked (a test swaps it to record the calls).
+     */
+    public static java.util.function.Consumer<String> backToRtsView = name -> PlayerClientboundPacket.setRTSCamera(name, true);
 
-    /** The game mode for {@code name} leaving the RTS view, given the mode saved when it opened. */
+    /**
+     * The game mode for {@code name} leaving the RTS view (PlayerServerEvents.closeTopdownGui), given the mode saved
+     * when it opened. A watcher stays a spectator: the saved mode is survival for someone who joined mid-match, and a
+     * survival body would be sent to the players (isHiddenFrom only hides spectators) - an invisible survival watcher
+     * would be worse still. Everyone else gets the saved mode back.
+     */
     public static GameType modeAfterLeavingRtsView(String name, GameType saved) {
-        return saved;
+        return mayFreeFly(name) ? GameType.SPECTATOR : saved;
     }
 
     /**
      * The spectator free-fly key: {@code on} puts a watcher in vanilla spectator mode to fly around, off lets them
      * back into the RTS view (which re-opens the top-down GUI and puts them in spectator mode itself). Either way
-     * the answer for a player holding a side is no, and nothing changes for them. Leaving the RTS view restores the
-     * game mode saved when it opened (survival for someone who joined mid-match), so {@code on} sets spectator
-     * AFTER that restore, which the client sends first. Returns whether the request was granted. Game thread only.
+     * the answer for a player holding a side is no, and nothing changes for them, except that a refused {@code on}
+     * sends their client back to the RTS view it left before asking. Leaving the RTS view keeps a watcher a spectator
+     * (modeAfterLeavingRtsView); {@code on} still sets spectator itself, after that close, which the client sends
+     * first. Returns whether the request was granted. Game thread only.
      */
     public static boolean setFreeFly(@Nullable ServerPlayer sp, boolean on) {
         if (sp == null)
@@ -78,6 +87,8 @@ public final class Spectators {
         if (!mayFreeFly(name)) {
             ReignOfNether.LOGGER.warn("[Match] {} asked for free-fly but is not a watcher of a running match", name);
             sp.sendSystemMessage(Component.translatable("server.reignofnether.free_fly_refused"));
+            if (on)
+                backToRtsView.accept(name);
             return false;
         }
         if (on)
