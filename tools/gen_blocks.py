@@ -976,6 +976,8 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
     # 40725608295 plain / 40725612987 shaders): a leaning quad gets less sun than the top face under it, so the
     # plants read as dark stamps (critic r30, fault 2). The r29b "lime" note was from offline renders, unlit
     TARGETS[_p] = dict(luma=0.62, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)
+    # r31: luma 0.68 and a little warm saturation (m_plant): a lighter, yellower tuft over its own shadow
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.68, sat=0.12)
 # round 29b: dead blades, dry stalks and seed heads in their own colour - a tinted greyscale sprite can only be green,
 # so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
@@ -2049,7 +2051,10 @@ def m_plant(name, n):
         rgb = np.array([0.80, 0.70, 0.46])[None, None, :] * shade[..., None]
         alb = np.clip(rgb * (0.85 + 0.15 * np.clip(shade, 0, 1))[..., None], 0, 1)
     else:
-        alb = np.clip(np.stack([shade] * 3, -1), 0, 1)
+        # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
+        # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
+        # under the biome tint a tuft reads yellower and lighter than the turf it stands on, its shadow beneath it
+        alb = np.clip(np.stack([shade * 1.08, shade, shade * 0.80], -1), 0, 1)
     return dict(H=np.where(alpha > 0, H, 0.0), alb=alb, alpha=alpha)
 
 
@@ -2362,9 +2367,13 @@ TUFTS = {
     "_b": (("x", 22.5), ("z", -45), ("x", -45)),
     "_c": (("z", 22.5), ("x", 45), ("z", -22.5), ("x", -45)),
 }
+# r31 (critic r32: "same silhouette, same size"): two smaller tufts, 0.65 of the height and reach
+TUFT_SCALE = {"_d": 0.65, "_e": 0.65}
+TUFTS["_d"] = TUFTS[""]
+TUFTS["_e"] = TUFTS["_b"]
 
 
-def _cross_elements(layers, lean):
+def _cross_elements(layers, lean, scale=1.0):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
     or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
     ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
@@ -2372,36 +2381,39 @@ def _cross_elements(layers, lean):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
     els = []
     for t, tinted in layers:
-        els.append({"from": [0.8, 0, 8], "to": [15.2, 16, 8], "shade": False,
+        top, reach = round(16 * scale, 3), round(7.2 * scale, 3)
+        els.append({"from": [round(8 - reach, 3), 0, 8], "to": [round(8 + reach, 3), top, 8], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("north", "south")}})
-        els.append({"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
+        els.append({"from": [8, 0, round(8 - reach, 3)], "to": [8, top, round(8 + reach, 3)], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
         for axis, ang in (lean or ()):
             if axis == "x":
-                els.append({"from": [1, 0, 8], "to": [15, 14, 8], "shade": False,
+                lo, hi, ht = round(8 - 7 * scale, 3), round(8 + 7 * scale, 3), round(14 * scale, 3)
+                els.append({"from": [lo, 0, 8], "to": [hi, ht, 8], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("north", "south")}})
             else:
-                els.append({"from": [8, 0, 1], "to": [8, 14, 15], "shade": False,
+                lo, hi, ht = round(8 - 7 * scale, 3), round(8 + 7 * scale, 3), round(14 * scale, 3)
+                els.append({"from": [8, 0, lo], "to": [8, ht, hi], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("west", "east")}})
     return els
 
 
-def _plant_model(p, straw, lean):
+def _plant_model(p, straw, lean, scale=1.0):
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
         tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
         layers.append(("#straw", False))
-    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean)}
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale)}
 
 
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass", True, v) for k, v in TUFTS.items()},
-    **{"fern" + k: _plant_model("fern", False, v) for k, v in TUFTS.items()},
+    **{"grass" + k: _plant_model("grass", True, v, TUFT_SCALE.get(k, 1.0)) for k, v in TUFTS.items()},
+    **{"fern" + k: _plant_model("fern", False, v, TUFT_SCALE.get(k, 1.0)) for k, v in TUFTS.items()},
     "tall_grass_bottom": _plant_model("tall_grass_bottom", True, None),
     "tall_grass_top": _plant_model("tall_grass_top", True, None),
     "large_fern_bottom": _plant_model("large_fern_bottom", False, None),
