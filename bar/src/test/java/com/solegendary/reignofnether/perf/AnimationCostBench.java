@@ -61,8 +61,10 @@ class AnimationCostBench {
     static final int ROUNDS = 7;
     static final long ROUND_PAUSE_MS = 15;
     /**
-     * Frames run before the rounds: long enough that the JIT has swapped in the frame's final compiled code. With 100
-     * (the single-window warm-up), the swap fell inside the rounds and materialised ~4 KB once (#293's first build).
+     * Frames run before the rounds: long enough that on-stack replacement (OSR) of the frame lambda's 500-unit loop
+     * has compiled before measuring. With 100 (the single-window warm-up) the OSR compile fell inside the rounds - one
+     * ~4 KB array, always in round 2 (#293's first build: "4000 bytes allocated"). The 300 frames (ticks 970-1269 in
+     * livingArmyTick) also first reach the idle weight-shift and fidget paths, so their first-call costs are warm-up too.
      */
     static final int ROUND_WARMUP = 300;
     /** restPose + procedural layer, microseconds per unit: a 10x regression trips it, runner noise does not. */
@@ -317,16 +319,16 @@ class AnimationCostBench {
         });
         double perUnitUs = tick.bestMs() * 1000.0 / UNITS;
         String line = String.format(Locale.ROOT,
-            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d ticks: %s), quietest round allocated %d bytes (%s)",
+            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d ticks: %s), bytes per round %s",
             UNITS, tick.bestMs(), perUnitUs, MOTION_TICK_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, tick.roundsText(),
-            tick.quietestRoundBytes(), tick.bytesText());
+            tick.bytesText());
         System.out.println(line);
         Path out = Path.of("build", "motion-bench.txt");
         Files.createDirectories(out.getParent());
         Files.write(out, List.of(line));
         assertTrue(perUnitUs < MOTION_TICK_BUDGET_US_PER_UNIT, line);
-        // a real allocation per tick shows in every round; a one-off (the JIT swapping code) in one round only
-        assertTrue(tick.quietestRoundBytes() == 0, "the living army tick allocates: " + line);
+        // at most one round may allocate (an OSR compile is a one-off); a periodic allocation shows in several
+        assertTrue(tick.allocationFree(), "the living army tick allocates: " + line);
     }
 
     /** The living army's motion pass on a vanilla body, microseconds per unit per pass (design/living_army.md, section 3). */
@@ -376,15 +378,15 @@ class AnimationCostBench {
         });
         double perUnitUs = pass.bestMs() * 1000.0 / UNITS;
         String line = String.format(Locale.ROOT,
-            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), quietest round allocated %d bytes (%s)",
+            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), bytes per round %s",
             UNITS, pass.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, pass.roundsText(),
-            pass.quietestRoundBytes(), pass.bytesText());
+            pass.bytesText());
         System.out.println(line);
         Path out2 = Path.of("build", "motion-pass-bench.txt");
         Files.createDirectories(out2.getParent());
         Files.write(out2, List.of(line));
         assertTrue(perUnitUs < MOTION_PASS_BUDGET_US_PER_UNIT, line);
-        assertTrue(pass.quietestRoundBytes() == 0, "the motion pass allocates: " + line);
+        assertTrue(pass.allocationFree(), "the motion pass allocates: " + line);
         assertTrue(before == body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot,
             "restore leaves the body exactly as setupAnim left it");
     }

@@ -12,9 +12,10 @@ import java.util.StringJoiner;
  * of noise is unlikely to cover them all.
  *
  * The bytes each round's frames allocate (the thread's allocation counter around every frame, nothing else) are
- * counted the same way: a zero-allocation gate takes the QUIETEST round. A real allocation per frame shows in every
- * round; a one-off - the JIT swapping a frame's compiled code mid-measurement, which materialises ~4 KB once (#293's
- * first build; the same code allocates nothing under -Xint) - shows in one round only.
+ * counted per round, and the zero-allocation gate ({@link Result#allocationFree}) lets AT MOST ONE round allocate: a
+ * one-off - on-stack replacement (OSR) of a frame's inner loop compiling mid-measurement, one ~4 KB array (#293's
+ * first build; 0 bytes in every round under -Xint, C1 only or -XX:-UseOnStackReplacement) - lands in one round,
+ * while anything that allocates every N frames with N <= 210 (a cache rebuilt every 64 ticks) shows in two or more.
  *
  * Oct 27: AnimationCostBench.livingArmyTick failed on #146's build at 1.41 us/unit against its 1.0 budget - one median
  * of 30 frames, ~20 ms in all, taken in a noisy moment. Tests: BenchRoundsTest.
@@ -44,9 +45,17 @@ final class BenchRounds {
             return roundBytes.length == 0 ? 0 : q;
         }
 
-        /** The zero-allocation gate. */
+        /**
+         * The zero-allocation gate: at most one round allocated. One round may hold a one-off (an OSR compile); a
+         * periodic allocation with a period up to all the rounds' frames shows in two or more. Not "the quietest round
+         * is clean": that let up to six of seven rounds allocate (round-3 review of #293).
+         */
         boolean allocationFree() {
-            return quietestRoundBytes() == 0;
+            int allocating = 0;
+            for (long b : roundBytes)
+                if (b > 0)
+                    allocating++;
+            return allocating <= 1;
         }
 
         /** Every round's allocated bytes ("0/0/4000/0 B"). */

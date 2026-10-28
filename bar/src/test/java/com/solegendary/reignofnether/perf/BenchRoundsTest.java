@@ -57,8 +57,8 @@ class BenchRoundsTest {
 
     @Test
     void a_one_off_allocation_shows_in_its_round_but_not_in_the_quietest() {
-        // Oct 27, #293's first build: a JIT swap of the compiled frame mid-measurement allocated ~4 KB once
-        // ("4000 bytes allocated"); the same code under -Xint allocates nothing
+        // Oct 27, #293's first build: OSR of the frame's inner loop compiling mid-measurement allocated one ~4 KB array
+        // ("4000 bytes allocated"); under -Xint, C1 only or -XX:-UseOnStackReplacement every round reads 0
         Object[] keep = new Object[1];
         BenchRounds.Result r = BenchRounds.measure(5, 0, 30, 0, (round, frame) -> {
             if (round == 3 && frame == 10)
