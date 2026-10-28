@@ -54,4 +54,26 @@ public final class AmbientLifeMath {
             return 0;
         return (int) Math.round(base * (140 - zoom) / 100.0);
     }
+
+    public static final int FLAP_CYCLE = 1;
+
+    public static double[] flockPath(double fx, double fz, double r, double angle) {
+        return new double[4];
+    }
+
+    public static double[] vSlot(int i) {
+        return new double[2];
+    }
+
+    public static int wingFrame(int age) {
+        return 0;
+    }
+
+    public static double screenRoll(double vx, double vz, float camYawDeg) {
+        return 0;
+    }
+
+    public static double shadowOffsetX(double height, double sunAngle) {
+        return 0;
+    }
 }
