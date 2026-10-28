@@ -20,7 +20,8 @@ public final class WagerClock {
 
     public synchronized boolean mayGrantLegendary(UUID hero, String intent, long now) {
         Long h = byHero.get(hero), i = byIntent.get(intent);
-        return (h == null || now - h >= HERO_T4_TICKS) && (i == null || now - i >= INTENT_T4_TICKS);
+        // now < recorded: another world in the same game, with an earlier clock - its old legendaries do not count
+        return (h == null || now < h || now - h >= HERO_T4_TICKS) && (i == null || now < i || now - i >= INTENT_T4_TICKS);
     }
 
     public synchronized void recordLegendary(UUID hero, String intent, long now) {
@@ -33,7 +34,7 @@ public final class WagerClock {
         return tier >= 4 && !mayGrantLegendary(hero, intent, now) ? 3 : tier;
     }
 
-    /** A new match starts the clocks over (NewMatch / server stop). */
+    /** A stopped server starts the clocks over (WagerServerEvents.onServerStopping). */
     public synchronized void reset() {
         byHero.clear();
         byIntent.clear();

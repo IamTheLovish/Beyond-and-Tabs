@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.hero.wager;
 
 import com.solegendary.reignofnether.hero.HeroFx;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -22,7 +23,7 @@ import java.util.List;
 public final class NeutralYap {
     private NeutralYap() { }
 
-    public static final List<String> EFFECTS = List.of("confetti", "snow_flurry", "silly_sound", "glow", "slow_fall", "swap");
+    public static final List<String> EFFECTS = List.of("confetti", "snow_flurry", "silly_sound", "bubbles", "slow_fall", "swap");
 
     /** Casts neutral effect {@code index} (mod the list) around the hero; returns its id. */
     public static String cast(ServerLevel level, Mob hero, int index) {
@@ -32,8 +33,8 @@ public final class NeutralYap {
             case "confetti" -> HeroFx.particles(level, ParticleTypes.FIREWORK, at.add(0, 2, 0), 30, 0.8, 0.1);
             case "snow_flurry" -> HeroFx.particles(level, ParticleTypes.SNOWFLAKE, at.add(0, 3, 0), 40, 2.0, 0.02);
             case "silly_sound" -> HeroFx.sound(level, at, SoundEvents.GOAT_SCREAMING_AMBIENT, 1.0f, 1.6f);
-            // a few seconds lit up or floating gently: visible, harmless, gone before it matters
-            case "glow" -> hero.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0, false, false));
+            // bubbles instead of a glow: an outline through walls would tell the enemy where he is (Mode A note 5)
+            case "bubbles" -> HeroFx.particles(level, ParticleTypes.BUBBLE_POP, at.add(0, 1.5, 0), 25, 0.6, 0.05);
             case "slow_fall" -> hero.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 100, 0, false, true));
             case "swap" -> swap(level, hero);
             default -> { }
@@ -42,13 +43,16 @@ public final class NeutralYap {
         return id;
     }
 
-    /** He and his nearest own unit within 6 trade places (nothing else moves, nobody is hurt). */
+    /** He and his nearest own ungarrisoned unit within 6 trade places (nothing else moves, nobody is hurt). */
     static void swap(ServerLevel level, Mob hero) {
         LivingEntity other = null;
         double best = 36;
+        String owner = hero instanceof Unit hu ? hu.getOwnerName() : null;
         for (LivingEntity e : HeroFx.friends(level, hero, hero.position(), 6)) {
             double d = e.distanceToSqr(hero);
-            if (e != hero && d < best) {
+            // his own units only, never an ally's or one garrisoned in a tower
+            if (e != hero && d < best && e instanceof Unit u && u.getOwnerName() != null && u.getOwnerName().equals(owner)
+                    && !u.isGarrisoned()) {
                 best = d;
                 other = e;
             }

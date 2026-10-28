@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -43,6 +44,13 @@ public final class WagerServerEvents {
             ? "Wager Book on: key 1 of a hero (or the book) opens it. Write a request, press Wager."
             : "Wager Book off."), true);
         return 1;
+    }
+
+    /** The legendary clocks and the debug toggle belong to one world: the next world in the same game starts clean. */
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        WagerClock.MATCH.reset();
+        Wager.enabled = false;
     }
 
     @SubscribeEvent

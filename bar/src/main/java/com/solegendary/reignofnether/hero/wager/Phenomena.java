@@ -61,7 +61,7 @@ public final class Phenomena {
     public record Spec(String intent, int tier, boolean twist, String name, float damage, float radius, int ticks) { }
 
     /** What a phenomenon is cast with. */
-    record Ctx(ServerLevel level, Mob hero, String owner, Spec spec, Vec3 aim, int quantity) {
+    record Ctx(ServerLevel level, Mob hero, String owner, Spec spec, Vec3 aim, int quantity, java.util.Random rng) {
         float dmg(int hits) { return spec.damage() / Math.max(1, hits); }
         float r() { return spec.radius(); }
         int t() { return spec.ticks(); }
@@ -103,6 +103,12 @@ public final class Phenomena {
 
     /** Runs the phenomenon and returns its name for the reply ("" for an unknown intent: nothing happens). */
     public static String cast(ServerLevel level, Mob hero, String intent, int tier, boolean twist, Vec3 aim, int quantity) {
+        return cast(level, hero, intent, tier, twist, aim, quantity, new java.util.Random());
+    }
+
+    /** As above with the wager's own seeded Random, so a logged seed replays the phenomenon's rolls too. */
+    public static String cast(ServerLevel level, Mob hero, String intent, int tier, boolean twist, Vec3 aim, int quantity,
+                              java.util.Random rng) {
         if (WagerIntents.NONSENSE.equals(intent)) {
             pebble(level, hero);
             return "A Pebble";
@@ -113,7 +119,7 @@ public final class Phenomena {
         if (spec == null || effect == null)
             return "";
         String owner = hero instanceof Unit u && u.getOwnerName() != null ? u.getOwnerName() : "";
-        effect.accept(new Ctx(level, hero, owner, spec, aim, quantity));
+        effect.accept(new Ctx(level, hero, owner, spec, aim, quantity, rng));
         return spec.name();
     }
 
@@ -151,6 +157,15 @@ public final class Phenomena {
             }
         }
         return best;
+    }
+
+    /** The owner's own units that may be moved: an ally's army or a garrisoned tower crew is not his to move. */
+    static List<LivingEntity> ownMovable(Ctx c, List<LivingEntity> list) {
+        List<LivingEntity> out = new ArrayList<>();
+        for (LivingEntity e : list)
+            if (e instanceof Unit u && c.owner.equals(u.getOwnerName()) && !u.isGarrisoned())
+                out.add(e);
+        return out;
     }
 
     /** The owner and every ally (a reveal is for the team). */
@@ -233,11 +248,9 @@ public final class Phenomena {
         HeroFx.sound(c.level, c.aim, SoundEvents.STONE_PLACE, 1.4f, 0.7f);
     }
 
-    static void weather(Ctx c, boolean rain, boolean thunder) {
-        if (rain)
-            c.level.setWeatherParameters(0, c.t(), true, thunder);
-        else
-            c.level.setWeatherParameters(c.t(), 0, false, false);
+    /** Rain or a clear sky for the spec's time, ended by WagerWeather (Mode A B1); never vanilla thunder. */
+    static void weather(Ctx c, boolean rain) {
+        WagerWeather.start(c.level, rain, c.t());
     }
 
     static void blinkTo(Mob m, Vec3 to) {
@@ -250,16 +263,16 @@ public final class Phenomena {
     static {
         // ---- rain (weather is global and symmetric; the owner gets the small rule)
         def("rain", 1, "Drizzle", 0, 6, ticks(60), c -> {
-            weather(c, true, false);
+            weather(c, true);
             for (LivingEntity e : friends(c, c.hero.position(), c.r()))
                 e.clearFire();
         });
         def("rain", 2, "Rain", 0, 6, ticks(90), c -> {
-            weather(c, true, false);
+            weather(c, true);
             effect(enemies(c, c.hero.position(), c.r()), MobEffects.MOVEMENT_SLOWDOWN, ticks(6), 0);
         });
         def("rain", 3, "Thunderstorm", 30, 6, ticks(60), c -> {
-            weather(c, true, true);
+            weather(c, true);
             // five strikes, a second apart, each on one unit (either side) under the storm; 6 a strike, 30 at most
             HeroFx.pulse(c.hero, 20, 100, () -> {
                 List<LivingEntity> under = new ArrayList<>(friends(c, c.aim, c.r()));
@@ -267,7 +280,7 @@ public final class Phenomena {
                 under.remove(c.hero);
                 if (under.isEmpty())
                     return;
-                LivingEntity t = under.get(c.level.random.nextInt(under.size()));
+                LivingEntity t = under.get(c.rng.nextInt(under.size()));
                 Vec3 p = t.position();
                 LightningFx.bolt(c.level, p.x, p.y + 12, p.z, p.x, p.y, p.z);
                 hurt(c, t, c.dmg(5));
@@ -275,7 +288,7 @@ public final class Phenomena {
             });
         });
         def("rain", 4, "Monsoon", 0, 6, ticks(45), c -> {
-            weather(c, true, true);
+            weather(c, true);
             effect(friends(c, c.hero.position(), c.r()), MobEffects.REGENERATION, ticks(10), 0);
             effect(enemies(c, c.hero.position(), c.r()), MobEffects.MOVEMENT_SLOWDOWN, ticks(10), 0);
         });
@@ -285,7 +298,7 @@ public final class Phenomena {
 
         // ---- sun
         def("sun", 1, "Clear Sky", 0, 6, ticks(60), c -> {
-            weather(c, false, false);
+            weather(c, false);
             effect(friends(c, c.hero.position(), c.r()), MobEffects.MOVEMENT_SPEED, ticks(10), 0);
         });
         def("sun", 2, "Sunburn", 20, 6, ticks(20), c -> {
@@ -619,7 +632,8 @@ public final class Phenomena {
         def("teleport", 3, "Swap", 0, 14, ticks(1), c -> {
             LivingEntity other = null;
             double best = c.r() * c.r();
-            List<LivingEntity> all = new ArrayList<>(friends(c, c.aim, 3));
+            // an enemy, or one of the owner's own units - never an ally's or a garrisoned one (Mode A note 5)
+            List<LivingEntity> all = ownMovable(c, friends(c, c.aim, 3));
             all.addAll(enemies(c, c.aim, 3));
             for (LivingEntity e : all) {
                 double d = e.distanceToSqr(c.hero);
@@ -647,13 +661,13 @@ public final class Phenomena {
             Vec3 to = HeroFx.landingSpot(c.level, c.hero, c.aim, c.r());
             HeroFx.telegraph(c.hero, c.hero.position(), 6, 30, ParticleTypes.PORTAL, () -> {
                 Vec3 shift = to.subtract(c.hero.position());
-                for (LivingEntity e : friends(c, c.hero.position(), 6))
+                for (LivingEntity e : ownMovable(c, friends(c, c.hero.position(), 6)))
                     if (e instanceof Mob m)
                         blinkTo(m, HeroFx.landingSpot(c.level, m, m.position().add(shift), c.r() + 2));
             });
         });
         twist("teleport", "Alone Again", 0, 6, ticks(1), c -> {
-            double a = c.level.random.nextDouble() * Math.PI * 2;
+            double a = c.rng.nextDouble() * Math.PI * 2;
             blinkTo(c.hero, HeroFx.landingSpot(c.level, c.hero, c.hero.position().add(Math.cos(a) * c.r(), 0, Math.sin(a) * c.r()), c.r()));
         });
 

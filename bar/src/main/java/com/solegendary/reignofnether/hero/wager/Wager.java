@@ -53,11 +53,19 @@ public final class Wager {
         return hero instanceof HeroUnit h ? Math.max(1, h.getHeroLevel()) : 1;
     }
 
+    /** The server path: a fresh seed per wager, logged, so a "he one-shot my base" report replays exactly. */
     public static Result cast(ServerLevel level, Mob hero, String page) {
-        return cast(level, hero, page, null, new Random(), WagerClock.MATCH);
+        long seed = level.random.nextLong();
+        return cast(level, hero, page, null, new Random(seed), WagerClock.MATCH, seed);
     }
 
+    /** With a given Random (tests script it); the log shows seed=- . */
     public static Result cast(ServerLevel level, Mob hero, String page, @Nullable Vec3 aim, Random rng, WagerClock clock) {
+        return cast(level, hero, page, aim, rng, clock, null);
+    }
+
+    static Result cast(ServerLevel level, Mob hero, String page, @Nullable Vec3 aim, Random rng, WagerClock clock,
+                       @Nullable Long seed) {
         if (!(hero instanceof FactionHero fh) || !hero.isAlive())
             return Result.refused(Outcome.NOT_A_HERO, "Only a hero can be asked.");
         long now = level.getGameTime();
@@ -112,7 +120,7 @@ public final class Wager {
             if (!nonsense)
                 fh.setMana(fh.getMana() - WagerVerdict.inkCost(tier));
             phenomenon = Phenomena.cast(level, hero, intent.id(), tier, twist, aim != null ? aim : autoAim(level, hero),
-                parsed.quantity());
+                parsed.quantity(), rng);
             if (nonsense)
                 reply = line(table, "nonsense", heroLevel, rng) + " (" + phenomenon + ")";
             else if (twist)
@@ -127,10 +135,10 @@ public final class Wager {
         String request = WagerParser.requestLine(page);
         book.write(request, reply);
         ReignOfNether.LOGGER.info("[Wager] owner={} hero={} level={} line='{}' intent={} asked=T{} verdict={} tier={} "
-                + "agree={} twist={} phenomenon='{}' yap={} {}", hero instanceof Unit u ? u.getOwnerName() : "?",
+                + "agree={} twist={} phenomenon='{}' yap={} {} seed={}", hero instanceof Unit u ? u.getOwnerName() : "?",
             hero.getId(), heroLevel, parsed.line(), intent.id(), parsed.askedTier(), verdict.kind(), verdict.tier(),
             String.format("%.2f", verdict.agreeChance()), String.format("%.2f", verdict.twistChance()), phenomenon,
-            yapped, neutral);
+            yapped, neutral, seed == null ? "-" : seed);
         return new Result(Outcome.CAST, parsed, verdict, phenomenon, reply, yapped, neutral);
     }
 
