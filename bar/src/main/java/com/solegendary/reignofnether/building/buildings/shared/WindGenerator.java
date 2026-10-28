@@ -104,7 +104,7 @@ public class WindGenerator extends Building {
         this.energyIncome = 14.0f;
 
         this.explodeChance = 0.35f;
-        this.maxHealth = 30d;
+        this.maxHealth = com.solegendary.reignofnether.raid.RaidTuning.WIND_HEALTH;   // 30 -> 110: 3-4 T1 vehicles take 5-8 s (RaidTuning)
         this.buildTimeBlocks = 44;   // the original 44-block mill's build time, for every faction's take
         // merged buildings, slice 1 (claude/merged-buildings.md build order 1): the White Angel mill is the first
         // building whose Shift+Alt grids grow into complexes; the other factions' generators follow in slice 3
