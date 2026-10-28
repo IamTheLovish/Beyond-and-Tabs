@@ -104,6 +104,18 @@ same 21-column grid, both squints, the corner view, and seven region crops side 
   7  the door's far wall in stacked red / pale bands (the picture's vault), wing tiers striped with a white middle rib,
      the gable lancets dropped (they read as two orange blobs); finials 1 lower (outline within 1 block of r3).
   L1 (2 passes): the tower's first stage capped by a white-rimmed ledge; the far wall kept so the door is not a hole.
+DETAIL ROUND 2 (critic on r1: resemblance 4/10, quality 5/10, silhouette WORSE than r3; sheet
+design/vehicle_labs/brass_detail_vs_ref_r2.png, lit). The tower is now built as explicit stages (tower(): base block,
+arch frontispiece, stages 7 / 5 / 3 wide set back one block each, a brick point), NOT painted onto the pyramid's stair
+edges - that is what made r1's flares and lantern box.
+  1  outline: per-column tops equal to r3 (13 11 9 9 9 9 9 12 16 20 22 20 16 12 9 9 9 9 9 11 13); no stair flares, no
+     pole; the wing finials gone. Palette cut to red nether brick / polished blackstone / quartz; read the tower as a
+     cream column with a snowman face (cream on every stage corner + a ring round the clock).
+  2  cream as one-course lines only: dashed arris quoins, front lips; the clock's ring dropped; the light dots recessed.
+  3  stage faces red with dark flanks (was dark with a red stripe); the hall frieze red; the door's far wall deep red
+     banded dark. Front balance 42 / 37 / 18 (red / black / cream).
+  4  stage lips dashed (cream at the arrises and centre only); the works stack's top hidden behind the wing crest.
+     Balance 44 / 37 / 16 + 3% light, outline still equal to r3 column for column.
 
 Usage: python3 tools/lab_vehicle_brass.py            (writes design/vehicle_labs/brass_l3.nbt and brass_l1.nbt, checks)
        python3 tools/lab_vehicle_brass.py --greybox  (the approved r3 greybox: design/vehicle_labs/brass_l3_greybox.nbt)
@@ -247,27 +259,12 @@ def greybox():
 # ============================================================================================ the detail (L3)
 # block families: a painted cell keeps its shape (full / stairs / slab) and takes the family's block of that shape
 FAM = {
-    "brick": ("bricks", "brick_stairs", "brick_slab"),
     "roof": ("red_nether_bricks", "red_nether_brick_stairs", "red_nether_brick_slab"),
     "white": ("quartz_block", "quartz_stairs", "quartz_slab"),
-    "stone": ("polished_diorite", "polished_diorite_stairs", "polished_diorite_slab"),
-    "dark": ("polished_blackstone_bricks", "polished_blackstone_brick_stairs", "polished_blackstone_brick_slab"),
-    "brass": ("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"),
-    "works": ("deepslate_bricks", "deepslate_brick_stairs", "deepslate_brick_slab"),
-    "grey": ("stone_bricks", "stone_brick_stairs", "stone_brick_slab"),
-    "flank": ("nether_bricks", "nether_brick_stairs", "nether_brick_slab"),
 }
-BODY = "brick"                         # the walls: red brick
-PIER = "deepslate_bricks"              # the picture's dark grey stone: arcade piers
-FLANK = "nether_bricks"                # the tower's dark red-brown flanks between the white ribs
-LEDGES = (9, 13, 17)                   # the tower's stage ledges (white courses)
-LIT_BAYS = (3, 17)                     # the arcade bays lit from inside (one each side)
-DOT = "sea_lantern"                    # the dotted white lights over the arcade (behind glass)
-BAND = "calcite"                       # the flat white stone courses
-GLOW, GLOW2 = "shroomlight", "ochre_froglight"     # warm lit rooms (behind glass) / paler lit windows
 OUT_L3, OUT_L1 = "design/vehicle_labs/brass_l3.nbt", "design/vehicle_labs/brass_l1.nbt"
-PIERS_Z = (0, 2, 4, 16, 18, 20)        # front arcade piers (pilasters project to x 0)
-BAYS_Z = (1, 3, 5, 15, 17, 19)         # front arcade bays: one round-headed arch each, a dormer / window over each
+PIERS_Z = (0, 2, 4, 16, 18, 20)        # front arcade piers: blackstone, every 2nd column
+BAYS_Z = (1, 3, 5, 15, 17, 19)         # front arcade openings, 1 wide, dark, a light dot over each
 
 
 def shape_of(name):
@@ -282,20 +279,12 @@ def paint(g, q, fam):
             g.b[q] = (FAM[fam][shape_of(n)], p)
 
 
-ROLE_OF = {n for f in FAM.values() for n in f} | {WALL, ROOF, HOLE, SHED, "red_nether_brick_stairs",
-                                                      "red_nether_brick_slab"}
+ROLE_OF = {n for f in FAM.values() for n in f}
 
 
 def put(g, q, name, props=None, **kw):
     """A full (or thin) block: may replace anything. props: a stair / slab state (from stair() / slab())."""
     g.set(*q, name, **dict(props or {}, **kw))
-
-
-def put_part(g, q, name, props=None):
-    """A slab or stair: never replaces a full cell (the merge rule)."""
-    old = g.b.get(q)
-    if old is None or shape_of(old[0]) != 0:
-        g.set(*q, name, **(props or {}))
 
 
 def stair(fam, facing, half="bottom"):
@@ -306,249 +295,152 @@ def slab(fam, t="bottom"):
     return FAM[fam][2], dict(type=t, waterlogged="false")
 
 
-def in_tower(x, y, z):
-    """The tower pyramid's cells (the greybox's pyramid, by its own formula) and its base block."""
-    if 0 <= x <= 6 and 6 <= z <= 14 and 1 <= y < T_FOOT:
-        return True
-    if y < T_FOOT:
-        return False
-    t = min(max((y + 0.5 - T_FOOT) / (T_APEX - T_FOOT), 0), 1)
-    rho = max(abs(x - TX) * THZ / THX, abs(z - TZ))
-    return rho <= THZ * (1 - t) + 0.75
+# ---- round 2 (critic: resemblance 4, quality 5, silhouette worse than r3): the tower rebuilt as explicit stages
+RED, BLACK, CREAM = "red_nether_bricks", "polished_blackstone_bricks", "quartz_block"
+# stages (y0, y1, x0, z0, z1): each set back one block in x and z; the outline tapers 7 -> 5 -> 3 -> 1 (r3's columns)
+STAGES = ((9, 11, 1, 7, 13), (12, 15, 2, 8, 12), (16, 19, 3, 9, 11))
+T_BACK = 5            # every stage's back face (x 6 stays air: the spawn column)
+POINT = (3, 20, 10)   # the brick point: a red block and a red brick wall post on it (y 21)
 
 
-def exposed(g, q):
-    x, y, z = q
-    return any((x + a, y + b, z + c) not in g.b for a, b, c in
-               ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, -1)))
+def stage_of(y):
+    return next((st for st in STAGES if st[0] <= y <= st[1]), None)
 
 
-def tower_cell(q):
-    x, y, z = q
-    return in_tower(x, y, z) and y >= T_FOOT and x <= 6 and 5 <= z <= 15
+def tower(g):
+    """The tower, replacing the greybox pyramid: a base block over the great door (y 1..8, x 0..6, z 6..14), a
+    frontispiece with the round arch (x 0, y 9..10, z 7..13), three set-back stages and a brick point. Dark red-brown
+    flanks (blackstone) and a red heart; cream only on the arrises (stage corners) and the stage lips."""
+    for q in [q for q in g.b if q[0] <= 6 and 6 <= q[2] <= 14 and q[1] >= 1]:
+        x, y, z = q
+        if y >= 9 or (y >= 6 and z in (6, 7, 13, 14)) or (x == 0 and z in (6, 7, 13, 14)):
+            del g.b[q]
+    # the base block: two flanking piers either side of the lane, full depth, to the hall's ridge course
+    for z in (6, 7, 13, 14):
+        for x in range(0, 7):
+            for y in range(1, 9):
+                put(g, (x, y, z), BLACK if z in (6, 14) or x == 0 and y <= 2 else RED)
+    # the stages
+    for (y0, y1, x0, z0, z1) in STAGES:
+        for y in range(y0, y1 + 1):
+            for x in range(x0, T_BACK + 1):
+                for z in range(z0, z1 + 1):
+                    edge = z in (z0, z1) or x == x0 and z in (z0 + 1, z1 - 1) and z1 - z0 >= 4
+                    corner = x == x0 and z in (z0, z1) and (y - y0) % 2 == 1      # quoins: the arris, dashed
+                    put(g, (x, y, z), CREAM if corner else BLACK if edge else RED)   # red faces, dark flanks
+        # the lip: the top course's cells not under the next stage turn into stairs falling outward, in cream
+        nxt = stage_of(y1 + 1)
+        for x in range(x0, T_BACK + 1):
+            for z in range(z0, z1 + 1):
+                under = nxt and x >= nxt[2] and nxt[3] <= z <= nxt[4] or (x, y1 + 1, z) == POINT
+                if under:
+                    continue
+                face = "east" if x == x0 else "south" if z == z0 else "north" if z == z1 else "west"
+                lip = x == x0 and (z in (z0, z1) or z == 10)    # cream at the arrises and the centre: a lip, dashed
+                put(g, (x, y1, z), *stair("white" if lip else "roof", face))
+    put(g, POINT, RED)
+    put(g, (POINT[0] + 1, POINT[1], POINT[2]), RED)
+    put(g, (POINT[0], POINT[1] + 1, POINT[2]), "red_nether_brick_wall")
+    # the frontispiece over the door: the round arch in wall material, a cream voussoir line tracing its head
+    for y in (9, 10):
+        for z in range(7, 14):
+            put(g, (0, y, z), BLACK if z in (7, 13) else RED)
+    put(g, (0, 9, 8), *stair("white", "north", "top"))         # the haunches: the arch's head rounds off
+    put(g, (0, 9, 12), *stair("white", "south", "top"))
+    for z in (9, 10, 11):
+        g.clear(0, 9, z)                                       # the head of the opening, a recess over the lane
+        put(g, (0, 10, z), *stair("white", "west", "top"))     # the voussoir line: one thin cream course
+    put(g, (1, 9, 9), BLACK)
+    put(g, (1, 9, 11), BLACK)
+    put(g, (1, 9, 10), "glass")                                # the ONE warm light, inside the arch's head
+    put(g, (2, 9, 10), "shroomlight")
+    # the medallion (clock) on stage 2's face: brass centre in a cream ring, as the picture's round medallion
+    x0 = STAGES[1][2]
+    put(g, (x0, 13, 10), "waxed_copper_block")
+    # the great door's interior: dark, the far wall blackstone banded with dark brick
+    for z in LANE_Z:
+        for y in range(1, LANE_H + 1):
+            put(g, (7, y, z), BLACK if y % 3 == 0 or z in (8, 12) else RED)   # deep red banded dark, in shadow
 
 
 def detail():
-    """L3: the r3 massing (greybox(), untouched) painted region by region after the picture (see THE DETAIL above).
-    Every step only recolours a cell or replaces it; a full cell never becomes a slab or stair."""
+    """L3, round 2: the r3 massing with the tower rebuilt as explicit stages (r3's outline, column for column), then
+    painted to ref18's balance: ~50% deep red, ~35% near-black, ~15% cream as one-course lines."""
     g = greybox()
     base = dict(g.b)
-    expo = {q for q in base if exposed(g, q)}
-    # ---- the base coats: walls red brick, roofs red tile, the works dark brick
     for q, (n, _) in base.items():
         if n in (WALL, HOLE):
-            g.b[q] = (FAM[BODY][0], {})
+            g.b[q] = (RED, {})
         elif n == SHED:
-            g.b[q] = (FAM["works"][0], {})
-
-    # ---- GROUND: the lawn, a paved apron in the door with pale kerbs
+            g.b[q] = (BLACK, {})
+    tower(g)
+    # ---- ground: the lawn, the lane paved dark
     for z in LANE_Z:
         for x in LANE_X:
             put(g, (x, 0, z), "polished_blackstone" if z in (9, 11) else "deepslate_tiles")
-    for x in LANE_X:
-        put(g, (x, 0, 7), "polished_diorite")
-        put(g, (x, 0, 13), "polished_diorite")
-
-    # ---- THE ARCADE: grey stone piers on pale bases under pale imposts, dark bays glowing deep red, a pale string
-    # course carrying a row of small white lights (the picture's dotted line), a dark band under the eaves
-    hall_z = [z for z in range(SZ) if not 6 <= z <= 14]
-    for z in hall_z:
-        for y in range(1, 6):
-            put(g, (1, y, z), FAM[BODY][0])
+    # ---- THE ARCADE, front (x 0..1): a blackstone pier every 2nd column, 1-wide dark openings, a course of lights
     for z in PIERS_Z:
-        put(g, (0, 1, z), "polished_diorite")                  # pale plinth
-        put(g, (0, 2, z), PIER)
-        put(g, (0, 3, z), "chiseled_stone_bricks")             # the impost
-        put(g, (1, 1, z), PIER)
-        put(g, (1, 2, z), PIER)
-        put(g, (1, 3, z), PIER)
+        for y in range(1, 5):
+            put(g, (0, y, z), BLACK)
     for z in BAYS_Z:
         for y in (1, 2, 3):
             g.clear(1, y, z)
-        lit = z in LIT_BAYS
-        put(g, (2, 1, z), "red_nether_bricks")
-        put(g, (2, 2, z), "red_stained_glass")
-        put(g, (3, 2, z), GLOW if lit else "red_nether_bricks")   # crimson panels; two bays lit from inside
-        put(g, (2, 3, z), "red_nether_bricks")
-        put(g, (1, 3, z), *stair("dark", "west", "top"))      # the arch's head: a dark hood over the opening
-    for z in hall_z:
-        put(g, (0, 4, z), *slab("grey", "top"))               # the string course, projecting
-        put(g, (1, 5, z), FAM["dark"][0])                      # the dark band under the eaves
-    for z in BAYS_Z:                                           # the dotted line of lights in the string course
-        put(g, (1, 4, z), "glass")
-        put(g, (2, 4, z), DOT)
-    for z in PIERS_Z:
-        put(g, (1, 4, z), "stone_bricks")
-
-    # ---- END PAVILION ENDS (north and south faces, the camera's second face): the front's order turned the corner
-    for zf, zin in ((SZ - 1, SZ - 2), (0, 1)):
-        for x in range(1, 7):
-            put(g, (x, 1, zf), "polished_diorite")
-            put(g, (x, 4, zf), "polished_diorite")           # the string course (full: the wall stays whole)
-            put(g, (x, 5, zf), FAM["dark"][0])
-            put(g, (x, 6, zf), BAND)
-        for x in (1, 3, 5):
-            put(g, (x, 2, zf), PIER)
-            put(g, (x, 3, zf), "chiseled_stone_bricks")
+            put(g, (2, y, z), RED)                             # the opening's back: deep crimson in shadow
+        g.clear(1, 4, z)
+        put(g, (2, 4, z), "sea_lantern")                       # the light dot at the arcade head, recessed
+    for z in [z for z in range(SZ) if not 6 <= z <= 14]:
+        put(g, (1, 5, z), RED)                                 # the red frieze under the eave cornice
+        n = g.b.get((1, 6, z), ("air",))[0]
+        if shape_of(n) == 2:
+            put(g, (1, 6, z), *slab("white", g.b[(1, 6, z)][1].get("type", "bottom")))
+        else:
+            put(g, (1, 6, z), CREAM)                           # the eave cornice: one cream course (kept from r1)
+    # ---- the ends (z 0 and z 20, the camera's second face): the same order
+    for zf, zin in ((0, 1), (SZ - 1, SZ - 2)):
+        for x in range(1, 8):
+            for y in range(1, 6):
+                put(g, (x, y, zf), BLACK if x % 2 == 1 and y < 5 else RED)
+            put(g, (x, 6, zf), CREAM)
         for x in (2, 4, 6):
             for y in (1, 2, 3):
                 g.clear(x, y, zf)
-            put(g, (x, 1, zin), FAM["dark"][0])
-            put(g, (x, 2, zin), "red_stained_glass")
-            put(g, (x, 3, zin), "red_nether_bricks")
-            put(g, (x, 3, zf), *stair("dark", "north" if zf == 0 else "south", "top"))
-            if (x, 2, zin + (zin - zf)) in g.b:
-                put(g, (x, 2, zin + (zin - zf)), GLOW)
-            put(g, (x, 5, zf), "glass")
-            put(g, (x, 5, zin), DOT)
-        for x in range(7, 8):
-            for y in (1, 2, 3, 4):
-                put(g, (x, y, zf), FAM[BODY][0])
-    for (z0, z1) in WING_Z:                                   # the pavilions' storey band on the front
+                put(g, (x, y, zin), RED)
+            g.clear(x, 4, zf)
+            put(g, (x, 4, zin), "sea_lantern")
+    # ---- the wing roofs: one solid red plane and ONE cream line, the rake along the front edge (x 0) and the crest
+    for (z0, z1) in ((0, 4), (16, 20)):
         for z in range(z0, z1 + 1):
-            put(g, (1, 6, z), BAND)
-
-    # ---- PAVILION ROOFS: red tile tiers; the swept rakes (every stair / slab edge) pale; pale ribs at the ends and
-    # the middle; a tier line every second course on the gable; brass finials on the high ends
-    for q, (n, _) in base.items():
-        x, y, z = q
-        if y <= WING_TOP or not (z <= 3 or z >= 17) or x > 6:
-            continue
-        if q not in expo:
-            continue
-        n = g.b[q][0]
-        top = (x, y + 1, z) not in base
-        if shape_of(n) == 2 or (top and x in (0, 6)):
-            paint(g, q, "white")                               # the eave lips and the rake's crest: white lines
-        elif shape_of(n) == 0 and (x in (0, 6) or z in (0, SZ - 1)) and y in (9, 11):
-            paint(g, q, "stone")                               # pale tier lines across the gable and the end
-        elif shape_of(n) == 1 and x == 3:
-            paint(g, q, "white")                               # the central rib up the swept slope
-    for zr in (0, SZ - 1):
-        put(g, (3, 12, zr), "waxed_cut_copper")                 # the brass finial on the ridge's high end
-        put(g, (3, 13, zr), "lightning_rod", facing="up")
-
-    # ---- HALL ROOF: red tile, pale ribs over the piers, a white-framed dormer over each arch, a pale eave
-    for q, (n, _) in base.items():
-        x, y, z = q
-        if not (4 <= z <= 5 or 15 <= z <= 16) or y < 6 or x > 7 or tower_cell(q):
-            continue
-        if z in (4, 16) and q in expo:
-            paint(g, q, "white" if shape_of(g.b[q][0]) else "stone")   # a pale rib over the pier
-    for z in (4, 5, 15, 16):
-        put_part(g, (1, 6, z), *slab("stone"))
-    for z in (5, 15):
-        put(g, (2, 7, z), "glass")
-        put(g, (3, 7, z), GLOW2)
-        put_part(g, (2, 8, z), *stair("stone", "east"))
-
-    # ---- THE TOWER: dark red-brown flanks, a red heart, its outline in white (the white lines climbing the triangle)
-    tw = [q for q in base if tower_cell(q)]
-    rim = set()
-    for y in {q[1] for q in tw}:
-        row = [q for q in tw if q[1] == y]
-        zs = [q[2] for q in row]
-        xs = [q[0] for q in row]
-        rim |= {q for q in row if q[2] in (min(zs), max(zs)) and q[0] in (min(xs), max(xs))}   # the arrises
-    for q in base:
-        if not tower_cell(q) or q not in expo:
-            continue
-        x, y, z = q
-        n = g.b[q][0]
-        heart = abs(z - TZ) <= 1 or abs(x - TX) <= 1          # the red heart down the middle of each face
-        if shape_of(n) != 0:
-            ledge = y in LEDGES and x == min(c[0] for c in tw if c[1] == y and c[2] == z)
-            paint(g, q, "white" if q in rim or ledge else "flank")   # white lines up the arrises and the stages
-        else:
-            put(g, q, "red_nether_bricks" if heart else FLANK)
-    # the base: buttress piers of grey stone with pale quoins either side of the great door
-    for z in (6, 7, 13, 14):
-        for y in range(1, 6):
-            quoin = z in (6, 14) and y % 2 == 0
-            put(g, (0, y, z), "polished_diorite" if quoin else PIER)
-        put(g, (0, 1, z), "polished_diorite")
-    for z in (7, 13):
-        for y in range(6, 9):
-            if shape_of(g.b.get((0, y, z), ("air",))[0]) == 0:
-                put(g, (0, y, z), PIER)
-    # the great door: a round arch - pale haunches, glass tympanum with the warm glow over the door's head
-    put(g, (1, 9, 8), *stair("white", "north", "top"))
-    put(g, (1, 9, 12), *stair("white", "south", "top"))
-    for z in (9, 11):
-        put(g, (1, 9, z), "red_stained_glass")
-        put(g, (2, 9, z), GLOW)
-    put(g, (1, 9, 10), "glass")
-    put(g, (2, 9, 10), GLOW)
-    put(g, (1, 10, 10), "chiseled_quartz_block")
-    for z in (9, 11):
-        put(g, (1, 10, z), "quartz_block")
-    # through the door: a dark passage, the far wall dark red with one lit doorway into the works
-    for z in LANE_Z:                                           # the far wall: the picture's stacked red and pale bands
-        for y in range(1, LANE_H + 1):
-            band = "red_nether_bricks" if y % 2 == 0 else "granite"
-            put(g, (7, y, z), FAM["dark"][0] if y <= 1 or z in (8, 12) else band)
-    for y in (1, 2, 3):                                        # a lit doorway into the works
-        put(g, (7, y, 10), "glass" if y > 1 else FAM["dark"][0])
-        put(g, (8, y, 10), GLOW)
-    for y in (5, 6):                                           # and the glow high in the door, as in the picture
-        put(g, (7, y, 10), "glass")
-        put(g, (8, y, 10), GLOW)
-    # stage 2: the brass clock, framed pale
-    for y in (12, 13):
-        for z in (9, 10, 11):
-            put(g, (1, y, z), "waxed_cut_copper")
-    put(g, (1, 12, 10), "waxed_copper_block")
-    # stage 3: the belfry's lit opening between pale colonnettes
-    for y in (16, 17):
-        put(g, (2, y, 10), "glass")
-        put(g, (3, y, 10), GLOW2)
-    # the spire's brass finial
-    put(g, (3, 20, 10), "waxed_cut_copper")
-    put(g, (3, 21, 10), "lightning_rod", facing="up")
-
-    # ---- THE WORKS: a corbelled cap on the stack
+            ys = [y for y in range(7, H_MAX) if (0, y, z) in g.b and g.b[(0, y, z)][0] in ROLE_OF]
+            if ys and z not in range(5, 16):
+                paint(g, (0, max(ys), z), "white")
+    # ---- the works: blackstone, the stack red with a dark cap
     x0, x1, z0, z1, top = STACK
     for x in (x0, x1):
         for z in (z0, z1):
-            put(g, (x, top, z), "polished_blackstone_bricks")
+            for y in range(SHED_TOP + 1, top + 1):
+                put(g, (x, y, z), BLACK if y in (7, top) else RED)
+            g.clear(x, top, z) if z == 1 else None              # its top course hides behind the wing's crest
     return g
 
 
 # ============================================================================================ level 1
-L1_TOP = 11            # the highest course at L1 (12 tall)
-
-
 def level1(l3):
-    """The first stage on the same footprint: the arcade hall and the pavilions' walls as at L3, the hall under its plain
-    roof, the pavilions under low roofs, the tower's first stage over the great door. Only cells L3 also fills."""
-    g = greybox()
-    gb = dict(g.b)
-    g.b = {}
+    """The first stage on the same footprint, taken out of L3: the arcade hall and pavilion walls as at L3, the hall
+    under its plain roof, low pavilion roofs capped at y 8, the tower's base and first stage (the arch and the first
+    cream lip, to y 11). Only cells L3 also fills."""
+    g = G()
     for q, b in l3.b.items():
         x, y, z = q
-        if y <= 6:
+        if y <= 8 and not (x in (10, 11) and z in (0, 1) and y > 8):
             g.b[q] = b
-        elif in_tower(x, y, z) and y <= 10 or x in (7, 8) and 8 <= z <= 12 and y <= 8:
-            g.b[q] = b                     # the tower's first stage, the lit far wall seen through the great door
-        elif y <= 8 and q in gb and gb[q][0] in PAL.values():
-            # roofs: the plain greybox roof (no dormers), coloured as L3 (white rakes and eaves)
-            g.b[q] = b if b[0] in ROLE_OF else gb[q]
-        elif x in (10, 11) and z in (0, 1) and y <= 8:
+        elif y <= 11 and x <= 6 and 6 <= z <= 14:
             g.b[q] = b
-    # caps: the pavilions' roofs end in a ridge course of slabs; the tower's first stage in a white ledge of slabs
+    # the pavilions' roofs end at y 8 under a course of red slabs, cream on the front edge
     for q in list(g.b):
         x, y, z = q
-        if (y == 8 and (z <= 3 or z >= 17) and (x, y + 1, z) not in g.b and q in gb and x <= 6
-                and shape_of(g.b[q][0]) == 0):
-            g.b[q] = slab("roof")
-    for x in range(0, 7):
-        for z in range(5, 16):
-            if (x, 10, z) in g.b and in_tower(x, 10, z) and (x, 11, z) in l3.b and (x, 11, z) not in g.b:
-                rim = x in (0, 6) or z in (6, 14) or (x, 11, z) in l3.b and shape_of(l3.b[(x, 11, z)][0]) == 0
-                put(g, (x, 11, z), *slab("white" if rim and (x in (0, 1, 5, 6) or z in (6, 7, 13, 14)) else "roof"))
-    for x in (10, 11):
-        for z in (0, 1):
-            g.set(x, 8, z, "polished_blackstone_bricks")
+        if y == 8 and (z <= 4 or z >= 16) and x <= 7 and (x, 9, z) in l3.b and shape_of(g.b[q][0]) == 0 \
+                and g.b[q][0] in ROLE_OF:
+            g.b[q] = slab("white" if x == 0 else "roof")
     return g
 
 
