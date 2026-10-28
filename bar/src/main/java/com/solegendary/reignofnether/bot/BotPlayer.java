@@ -981,12 +981,16 @@ public class BotPlayer {
         return ok;
     }
 
+    /** The origins placeExtractorImpl tries over a patch centre, in order (public: the footprint game test walks the same list). */
+    public static final int[] EXTRACTOR_DY = { 0, -1, 1 };
+    public static final int[][] EXTRACTOR_OFFSETS = { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} };
+
     boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         if (workers.isEmpty())
             return false;
         level.getChunk(patch.getX() >> 4, patch.getZ() >> 4);
-        for (int dy : new int[] { 0, -1, 1 })
-            for (int[] o : new int[][] { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} }) {
+        for (int dy : EXTRACTOR_DY)
+            for (int[] o : EXTRACTOR_OFFSETS) {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
                 if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
                     continue;
