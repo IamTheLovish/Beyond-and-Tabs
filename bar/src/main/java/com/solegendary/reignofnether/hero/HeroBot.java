@@ -627,9 +627,11 @@ public final class HeroBot {
                 return true;
             }
             case ENGAGE -> {
-                if (!mode.mayMove || !f.melee || f.hp < 0.5 || b.reading.stance() == FightEval.Stance.DISENGAGE)
+                // an attack order lets the gap closer go onto the target the player chose, and onto nothing else
+                boolean ordered = mode == OrderLock.Mode.ATTACK && focus >= 0;
+                if (!(mode.mayMove || ordered) || !f.melee || f.hp < 0.5 || b.reading.stance() == FightEval.Stance.DISENGAGE)
                     return false;
-                LivingEntity t = bestTarget(f, a.range, 0, 0, true, focus);
+                LivingEntity t = ordered ? seenWithin(f, focus, a.range) : bestTarget(f, a.range, 0, 0, true, focus);
                 if (t == null || t.distanceTo(mob) < 4)
                     return false;
                 int around = f.enemiesWithin(t.position(), 5);
@@ -661,6 +663,15 @@ public final class HeroBot {
                 return true;
             }
         }
+    }
+
+    /** The enemy with this id, if the hero's side sees it within {@code range}; else null. */
+    @Nullable
+    static LivingEntity seenWithin(Fight f, int id, double range) {
+        for (LivingEntity e : f.enemies)
+            if (e.getId() == id)
+                return e.distanceTo(f.mob) <= range ? e : null;
+        return null;
     }
 
     /**
@@ -809,13 +820,6 @@ public final class HeroBot {
         b.record(sl.getGameTime(), Why.SELECTED, -1, -1);
     }
 
-    /**
-     * Asked by MiscUtil.isIdleOrMoveAttackable for every target a hero's own targeting looks at (idle aggression, the
-     * melee retarget, Fight-move pick-ups). A hero v2 drives, with no order of the player's, does not walk under an
-     * enemy tower's guns after a target standing there, and picks no fights while it flees or rests near death (it
-     * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
-     * hero, the client side): no say.
-     */
     /** Is the v2 AI running this hero away (or resting it out of reach)? Then it does not stop to answer a blow. */
     public static boolean fleeing(Mob mob) {
         if (!(mob instanceof FactionHero hero))
@@ -824,6 +828,13 @@ public final class HeroBot {
         return b != null && b.active() && b.fleeing();
     }
 
+    /**
+     * Asked by MiscUtil.isIdleOrMoveAttackable for every target a hero's own targeting looks at (idle aggression, the
+     * melee retarget, Fight-move pick-ups). A hero v2 drives, with no order of the player's, does not walk under an
+     * enemy tower's guns after a target standing there, and picks no fights while it flees or rests near death (it
+     * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
+     * hero, the client side): no say.
+     */
     public static boolean mayAutoTarget(FactionHero hero, Mob mob, LivingEntity target) {
         HeroBrain b = hero.heroCore().brainIfAny();
         if (b == null || !b.active())
