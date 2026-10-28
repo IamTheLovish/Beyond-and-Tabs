@@ -94,6 +94,32 @@ public class ExtractorFootprintGameTests {
         });
     }
 
+    /**
+     * The cause of the last "pad WET" refusals: MetalPatches.drySpot read solidTop before anything had loaded the chunk,
+     * Level.getHeight answers the min build height there, and padDry at y -64 said "dry" - then the pad was stamped on
+     * the lake bed under the water, which the leveller leaves alone. solidTop must read real ground in an unloaded chunk.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void solid_top_reads_real_ground_in_an_unloaded_chunk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        // far from every test's ground: a chunk no one has loaded yet (stepping on until one is found)
+        int x = origin.getX() + 1500, z = origin.getZ() - 9000;
+        for (int k = 0; k < 64 && level.getChunkSource().getChunkNow(x >> 4, z >> 4) != null; k++)
+            z -= 64;
+        if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) != null) {
+            helper.fail("no unloaded chunk found near x=" + x);
+            return;
+        }
+        int unloaded = MetalPatches.solidTop(level, x, z);
+        GameTestChunks.loadNowOrFail(level, x >> 4, z >> 4);
+        int loaded = MetalPatches.solidTop(level, x, z);
+        if (unloaded != loaded)
+            helper.fail("solidTop at [" + x + ", " + z + "] read " + unloaded + " with its chunk unloaded, " + loaded + " loaded");
+        else
+            helper.succeed();
+    }
+
     /** Each unplaceable patch with the errors it gave, per extractor; null when every patch takes every extractor. */
     private static String check(ServerLevel level, List<BlockPos> patches, List<BlockPos> starts) {
         List<Building> extractors = new ArrayList<>();
