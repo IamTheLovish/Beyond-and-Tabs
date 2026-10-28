@@ -731,6 +731,9 @@ public class BotPlayer {
             && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
+            averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
+            capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
         if (tier2) {
             boolean upgrading = false;
             for (BuildingPlacement bp : buildings)
@@ -2289,6 +2292,10 @@ public class BotPlayer {
         lastPlacedAt = gameTime;
     }
 
+    /** The tech gate's inputs at the last think and the last building placed, for TierGateGameTests' [T2Snap] line. */
+    public String techDiag = "-";
+    String lastPlacedName = "-";
+
     /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
     void placeFailed(long gameTime, Building building, String reason) {
         lastFailed = building;
@@ -2349,8 +2356,12 @@ public class BotPlayer {
         for (BlockPos zone : zones)
             if (placeNearImpl(level, building, zone, workers, builders)) {
                 placed(level.getGameTime());
+                lastPlacedName = building.structureName;
                 return true;
             }
+        if (!zones.isEmpty())
+            placeFailed(level.getGameTime(), building, "no valid site round " + zones.size() + " own nether zones, last "
+                + zones.get(zones.size() - 1).toShortString() + siteRejections());
         return false;
     }
 
@@ -2377,9 +2388,10 @@ public class BotPlayer {
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         boolean ok = placeNearImpl(level, building, want, workers, builders);
-        if (ok)
+        if (ok) {
             placed(level.getGameTime());
-        else
+            lastPlacedName = building.structureName;
+        } else
             placeFailed(level.getGameTime(), building, "no valid site within 32 blocks of " + want.toShortString()
                 + (workers.isEmpty() ? " (no workers)" : "") + siteRejections());
         return ok;
