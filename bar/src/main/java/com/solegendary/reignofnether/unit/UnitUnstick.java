@@ -387,6 +387,9 @@ public final class UnitUnstick {
             goals.add(u.getMoveGoal());   // not every unit registers its move goal with the selector
         for (MoveToTargetBlockGoal g : goals)
             g.forceRepath();
+        // RED PROOF ONLY (not for merge): the old second repath of the plain move goal
+        if (mob instanceof Unit u && u.getMoveGoal() != null)
+            u.getMoveGoal().forceRepath();
     }
 
     /** For tests. */
