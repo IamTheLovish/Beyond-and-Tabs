@@ -25,6 +25,13 @@ public abstract class TrackedEntityMixin {
 
     @Inject(method = "updatePlayer", at = @At("HEAD"), cancellable = true)
     private void reignofnether$gateEntityVisibility(ServerPlayer player, CallbackInfo ci) {
+        // own/allied units: the whole loaded square, not vanilla's circle (the RTS camera sits far off its view)
+        if (FogOfWarServerEvents.tracksAcrossLoadedSquare(player, entity)) {
+            if (seenBy.add(player.connection))
+                serverEntity.addPairing(player);
+            ci.cancel();
+            return;
+        }
         // shared check: own/allied units always, others only inside the viewer's current vision
         if (FogOfWarServerEvents.isEntityVisibleTo(player, entity)) return;
         // a living entity the player already tracks is dropped too, or it keeps streaming its moves from the fog

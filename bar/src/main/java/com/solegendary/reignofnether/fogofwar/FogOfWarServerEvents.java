@@ -224,6 +224,28 @@ public class FogOfWarServerEvents {
     public static boolean sharesVisionWith(String viewerName, String owner) {
         if (owner == null || owner.isEmpty()) return false;
         if (revealedPlayerNames.contains(owner)) return true;
+        return isOnViewersSide(viewerName, owner);
+    }
+
+    /**
+     * An own or allied unit of {@code viewer} (not merely a revealed enemy) inside the square of chunks the viewer's
+     * client keeps loaded. Vanilla tracks entities only within a circle of the view distance round the player, and
+     * the RTS camera is the player entity slid back along the view ray, so loaded ground on screen can sit outside
+     * that circle: an own unit there was never sent to its owner and could not be drawn, clicked or boxed (lovish,
+     * Oct 27). TrackedEntityMixin pairs these regardless of the circle.
+     */
+    public static boolean tracksAcrossLoadedSquare(ServerPlayer viewer, Entity entity) {
+        if (entity == viewer || !(entity instanceof Unit unit)
+                || !isOnViewersSide(viewer.getName().getString(), unit.getOwnerName()))
+            return false;
+        int vd = viewer.server.getPlayerList().getViewDistance();
+        int dcx = Math.abs((viewer.getBlockX() >> 4) - (entity.getBlockX() >> 4));
+        int dcz = Math.abs((viewer.getBlockZ() >> 4) - (entity.getBlockZ() >> 4));
+        return Math.max(dcx, dcz) <= vd && entity.broadcastToPlayer(viewer);
+    }
+
+    private static boolean isOnViewersSide(String viewerName, String owner) {
+        if (owner == null || owner.isEmpty()) return false;
         List<String> ids = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(viewerName)
                 ? com.solegendary.reignofnether.hero.HeroRoles.commandersOf(viewerName) : List.of(viewerName);
         for (String id : ids)
