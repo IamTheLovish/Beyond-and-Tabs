@@ -53,6 +53,7 @@ public class OrdersObeyGameTests {
     // the shifted-along-the-wall test switches the flag too: in the same batch, whichever test ended first restored the
     // flag to off under the other one, whose path result then waited forever (stress run 40587689274)
     static final String BATCH_RTS_SHIFTED = "orders_obey_rts_shifted";
+    static final String BATCH_RTS_RESCUED = "orders_obey_rts_rescued";
 
     static String owner(GameTestHelper helper, String tag) {
         return "gametest_obey_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -397,6 +398,93 @@ public class OrdersObeyGameTests {
                         + " exercise the drift:" + events + " trace:" + trace);
                 ReignOfNether.LOGGER.info("[Orders] shifted along the wall, {} ticks, idle {}, {} shifts:{} trace:{}", t, idle,
                     shifts[0], events, trace);
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
+
+    /**
+     * The same move into unloaded land, but each time the unit has come to rest at the pen's east wall UnitUnstick
+     * rescues it where it stands (teleported to the centre of its own cell, its move goal repathed), as UnitUnstick did
+     * in CI: the rescue's forceRepath wiped the move goal's stuck count, so the count never reached its give-up and the
+     * unit stood with its order forever (a_unit_shifted_along_the_wall..., stress 40675281944: the count went back to 0
+     * at three rescues, the unit snapped to x .50, z .50). A rescue that moves the unit nowhere is no progress toward a
+     * target 4000 blocks east: the unit gives the order up within 30 s.
+     */
+    @GameTest(template = ARENA, batch = BATCH_RTS_RESCUED, timeoutTicks = 800)
+    public static void a_unit_rescued_in_place_at_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        boolean wasRts = UnitServerEvents.rtsPathfinding;
+        UnitServerEvents.rtsPathfinding = true;
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        // the same closed stone pen as a_move_into_unloaded_chunks... (x 0..14, z 0..15)
+        for (int x = 0; x <= 14; x++)
+            for (int z = 0; z <= 15; z++)
+                if (x == 0 || x == 14 || z == 0 || z == 15)
+                    for (int y = 2; y <= 6; y++)
+                        helper.setBlock(new BlockPos(x, y, z), net.minecraft.world.level.block.Blocks.STONE);
+        BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
+        String mine = owner(helper, "rescued");
+        List<Entity> made = new ArrayList<>();
+        Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
+        if (m == null) {
+            UnitServerEvents.rtsPathfinding = wasRts;
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the vindicator");
+            return;
+        }
+        BlockPos far = new BlockPos(pad.getX() + 4000, pad.getY(), pad.getZ() + 8);
+        double startX = m.getX();
+        int[] ordered = { -1 };
+        long[] rescuedFor = { Long.MIN_VALUE };
+        int[] rescues = { 0 };
+        StringBuilder events = new StringBuilder();
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
+                done[0] = true;
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+                helper.fail("the far target's chunk is loaded: this test proves nothing");
+                return;
+            }
+            ordered[0] = tick;
+            move(level, mine, m, far);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            long t = helper.getTick() - ordered[0];
+            MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
+            boolean idle = goal.getMoveTarget() == null;
+            // at rest at the wall after this request's path came in: rescue it in place, once per request
+            if (!idle && m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
+                    && goal.getLastRequestTime() != rescuedFor[0]) {
+                rescuedFor[0] = goal.getLastRequestTime();
+                rescues[0]++;
+                com.solegendary.reignofnether.unit.UnitUnstick.rescue(m, m.blockPosition());
+                if (events.length() < 2000)
+                    events.append(" t").append(t).append(" rescued at ").append(TerrainGameTests.f(m.getX() - startX))
+                        .append(",").append(TerrainGameTests.f(m.getZ())).append(" stuck ").append(stuckRepaths(goal)).append(";");
+            }
+            if (!idle && t < 600)
+                return;
+            done[0] = true;
+            try {
+                List<String> problems = new ArrayList<>();
+                if (!idle)
+                    problems.add("the unit still had its order after " + t + " ticks (" + rescues[0] + " rescues at the"
+                        + " wall, moved " + TerrainGameTests.f(m.getX() - startX) + " east):" + events);
+                else if (m.getX() - startX < 5)
+                    problems.add("the unit gave up without walking toward the target (moved "
+                        + TerrainGameTests.f(m.getX() - startX) + " east)");
+                // gave up, but only proves something if it was rescued at the wall in between
+                else if (rescues[0] < 2)
+                    problems.add("the unit gave up after only " + rescues[0] + " rescues at the wall: the test did not"
+                        + " exercise the reset:" + events);
                 TerrainGameTests.finish(helper, problems);
             } finally {
                 UnitServerEvents.rtsPathfinding = wasRts;
