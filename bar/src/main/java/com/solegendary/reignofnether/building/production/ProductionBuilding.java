@@ -28,7 +28,8 @@ public abstract class ProductionBuilding extends Building {
 
     public BlockPos getIndoorSpawnPoint(Level level, BuildingPlacement placement) {
         BlockPos spawnPoint;
-        for(spawnPoint = placement.centrePos; level.getBlockState(spawnPoint.below()).isAir(); spawnPoint = spawnPoint.offset(0, -1, 0)) {
+        // stops at the bottom of the world: over void (the End) it would never end (review C-12)
+        for(spawnPoint = placement.centrePos; spawnPoint.getY() > level.getMinBuildHeight() && level.getBlockState(spawnPoint.below()).isAir(); spawnPoint = spawnPoint.offset(0, -1, 0)) {
         }
 
         return spawnPoint;

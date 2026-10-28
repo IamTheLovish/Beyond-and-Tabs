@@ -94,6 +94,9 @@ class ExitArrowTest {
         assertFalse(ExitArrow.shouldAsk(true, true, 4));
         assertTrue(ExitArrow.shouldAsk(true, true, 5));
         assertTrue(ExitArrow.shouldAsk(true, true, 20));
+        // a world whose clock is behind the last world's (review C-11): a negative gap means "ask now", not "wait"
+        assertTrue(ExitArrow.shouldAsk(true, false, -100));
+        assertTrue(ExitArrow.shouldAsk(true, true, -1));
     }
 
     @Test

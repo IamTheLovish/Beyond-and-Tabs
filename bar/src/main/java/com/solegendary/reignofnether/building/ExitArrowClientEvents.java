@@ -24,9 +24,6 @@ import org.joml.Matrix4f;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -85,6 +82,7 @@ public final class ExitArrowClientEvents {
             ARROWS.clear();
             ghostBuilding = null;
             GHOST.show = false;
+            lastAsk = Long.MIN_VALUE / 2;   // the new world's clock may be behind the old one's (review C-11)
         }
         String me = MC.player.getName().getString();
         long now = MC.level.getGameTime();

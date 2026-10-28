@@ -27,7 +27,8 @@ public final class ExitArrow {
 
     /** Whether the client should send an ExitArrowServerboundPacket now. */
     public static boolean shouldAsk(boolean anythingShown, boolean somethingNew, long ticksSinceLastAsk) {
-        return anythingShown && ticksSinceLastAsk >= (somethingNew ? ASK_BURST_TICKS : ASK_STEADY_TICKS);
+        // a negative gap: the game clock went back (another world or server), so the last ask means nothing (review C-11)
+        return anythingShown && (ticksSinceLastAsk < 0 || ticksSinceLastAsk >= (somethingNew ? ASK_BURST_TICKS : ASK_STEADY_TICKS));
     }
 
     /**
