@@ -269,14 +269,14 @@ public final class MetalPatches {
                     if (!wet && (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
                             || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty()))
                         continue;   // leave rivers and lakes alone (unless there is no dry ground anywhere near)
-                    // clear everything above the pad (grass, flowers, logs, leaves - up to 8 high for trees)
-                    for (int y = padY + 1; y <= padY + 8; y++)
+                    // clear everything above the pad (grass, flowers, logs, leaves - at least 8 high for trees) up to the
+                    // column's surface: anything left above 8 stands in the extractor's footprint - a bamboo stalk ("+9
+                    // bamboo") or the top of a hill the pad was cut into ("+9 grass_block", ExtractorFootprintGameTests)
+                    level.getChunk(bx >> 4, bz >> 4);   // the heightmap of an unloaded chunk reads the min build height
+                    int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, bx, bz) - 1;
+                    for (int y = padY + 1; y <= Math.min(Math.max(padY + 8, surface), padY + 32); y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isAir())
                             level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
-                    // and the rest of a bamboo stalk: left floating above the 8 it stands in the extractor's footprint
-                    // (bamboo jungles: "+9 bamboo" over every refused pad, ExtractorFootprintGameTests)
-                    for (int y = padY + 9; y <= padY + 32 && level.getBlockState(p.set(bx, y, bz)).is(Blocks.BAMBOO); y++)
-                        level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
                     // raise low ground up to the pad
                     for (int y = wet ? Math.min(padY - 4, solidTop(level, bx, bz)) : padY - 4; y < padY; y++)
                         if (!level.getBlockState(p.set(bx, y, bz)).isSolidRender(level, p))
