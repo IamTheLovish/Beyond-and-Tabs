@@ -438,7 +438,7 @@ public final class MatchPrep {
         public void startWall(MatchSetup setup, @Nullable CompoundTag resume) {
             MapLayout layout = setup.layout();
             BattlefieldWall.raise(level, setup.cx + 0.5, setup.cz + 0.5, layout.radius, setup.wallMaterial(),
-                setup.seed, WALL_COLUMNS_PER_TICK, resume);
+                setup.seed, WALL_COLUMNS_PER_TICK, resume, layout.squareArena());
         }
 
         @Nullable
@@ -464,7 +464,7 @@ public final class MatchPrep {
 
         @Override
         public void startScout(MatchSetup setup) {
-            ArenaPregen.start(level, setup.cx + 0.5, setup.cz + 0.5, setup.layout().radius + SCOUT_MARGIN,
+            ArenaPregen.start(level, setup.cx + 0.5, setup.cz + 0.5, setup.layout().outerRadius() + SCOUT_MARGIN,
                 SCOUT_IN_FLIGHT, false);
         }
 

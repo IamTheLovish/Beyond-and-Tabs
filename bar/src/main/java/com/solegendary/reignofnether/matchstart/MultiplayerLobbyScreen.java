@@ -135,8 +135,15 @@ public class MultiplayerLobbyScreen extends Screen {
                 .withValues(SkirmishSetupScreen.range(maps)).withInitialValue(clamp(l.map, maps)).displayOnlyValue()
                 .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))
                     + "\n" + com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
-                .create(rx, ry, rw, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
+                .create(rx, ry, rw - 30, 18, Component.literal("Map"), (b, v) -> send(MultiplayerLobby.Action.SET_MAP, 0, v)));
             preset.active = host && !l.starting;
+            // a new draw of the stamped map (its number in the tooltip, as the skirmish lobby shows it under its preview)
+            com.solegendary.reignofnether.maps.MapPreset mp = com.solegendary.reignofnether.maps.MapPreset.byId(clamp(l.map, maps));
+            Button newMap = addRenderableWidget(Button.builder(Component.literal("New"),
+                    b -> send(MultiplayerLobby.Action.NEW_MAP, 0, 0))
+                .bounds(rx + rw - 28, ry, 28, 18).build());
+            newMap.active = host && !l.starting && mp.premade();
+            newMap.setTooltip(Tooltip.create(Component.literal(String.format("Map #%04X - roll a new one", l.mapSeed & 0xFFFF))));
             ry += 20;
             CycleButton<Boolean> starts = addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Choose" : "Auto"))
                 .withValues(true, false).withInitialValue(l.choosePositions)
@@ -146,10 +153,23 @@ public class MultiplayerLobbyScreen extends Screen {
                 .create(rx, ry, rw, 18, Component.literal("Starts"), (b, v) -> send(MultiplayerLobby.Action.SET_STARTPOS, 0, v ? 1 : 0)));
             starts.active = host && !l.starting;
             ry += 20;
-            CycleButton<Integer> map = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.ARENAS.get(i)))
-                .withValues(SkirmishSetupScreen.range(5)).withInitialValue(clamp(l.arena, 5))
-                .create(rx, ry, rw, 18, Component.literal("Size"), (b, v) -> send(MultiplayerLobby.Action.SET_ARENA, 0, v)));
-            map.active = host && !l.starting;
+            if (mp.generated()) {
+                // a generated map has its own size: the row holds its shape and modifiers instead
+                int gw = (rw - 2) / 2;
+                CycleButton<Integer> shape = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.GEN_SHAPES.get(i)))
+                    .withValues(SkirmishSetupScreen.range(SkirmishSetupScreen.GEN_SHAPES.size())).withInitialValue(clamp(l.genShape, SkirmishSetupScreen.GEN_SHAPES.size()))
+                    .create(rx, ry, gw, 18, Component.literal("Shape"), (b, v) -> send(MultiplayerLobby.Action.SET_GEN_SHAPE, 0, v)));
+                shape.active = host && !l.starting;
+                CycleButton<Integer> mods = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.GEN_MODS.get(i)))
+                    .withValues(SkirmishSetupScreen.range(SkirmishSetupScreen.GEN_MODS.size())).withInitialValue(clamp(l.genMods, SkirmishSetupScreen.GEN_MODS.size()))
+                    .create(rx + gw + 2, ry, rw - gw - 2, 18, Component.literal("Mods"), (b, v) -> send(MultiplayerLobby.Action.SET_GEN_MODS, 0, v)));
+                mods.active = host && !l.starting;
+            } else {
+                CycleButton<Integer> map = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.ARENAS.get(i)))
+                    .withValues(SkirmishSetupScreen.range(5)).withInitialValue(clamp(l.arena, 5))
+                    .create(rx, ry, rw, 18, Component.literal("Size"), (b, v) -> send(MultiplayerLobby.Action.SET_ARENA, 0, v)));
+                map.active = host && !l.starting;
+            }
             ry += 20;
 
             CycleButton<Integer> metal = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.METALS.get(i)))

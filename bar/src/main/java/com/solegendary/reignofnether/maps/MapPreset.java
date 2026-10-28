@@ -25,7 +25,11 @@ public enum MapPreset {
     SOULFIRE_DELTAS("Soulfire Deltas", "Slow soul-sand valleys between the bases, lava lakes with geothermal vents, "
         + "fungus groves, nether-brick garrisons that muster wither skeletons", Theme.NETHER, 155, 90),
     CHORUS_ISLES("Chorus Isles", "Railed end-stone islands joined by land necks and bridges, air rules the void, "
-        + "obsidian garrisons that muster endermen", Theme.END, 155, 96);
+        + "obsidian garrisons that muster endermen", Theme.END, 155, 96),
+    // generated maps (design/maps.md "Generated maps", lovish Oct 21 22:28): a new natural battlefield from every seed,
+    // the sides given different characters and evened out by a measured fairness score (maps/gen/MapGenerator)
+    GENERATED("Generated", "A new natural battlefield every seed: tiers, ramps, rivers, different sides evened out, "
+        + "map modifiers", Theme.OVERWORLD, 150, 90);
 
     /** Which blocks and sky tint the map uses (all of them are built in the Overworld, see design/maps.md). */
     public enum Theme { OVERWORLD, NETHER, END }
@@ -46,8 +50,22 @@ public enum MapPreset {
         this.margin = margin;
     }
 
+    /** A map the game stamps itself (every preset but the world's own terrain), hand-made or generated. */
     public boolean premade() {
         return this != RANDOM;
+    }
+
+    /** Drawn by the map generator from the match's seed (MapLayout.build delegates to maps/gen/MapGenerator). */
+    public boolean generated() {
+        return this == GENERATED;
+    }
+
+    /**
+     * A hand-made layout: folded into slot frames, so fair by construction (design/maps.md section 1) - what the
+     * symmetric fairness tests sweep. A generated map is measured instead (MapGenGameTests).
+     */
+    public boolean handmade() {
+        return premade() && !generated();
     }
 
     public static MapPreset byId(int id) {

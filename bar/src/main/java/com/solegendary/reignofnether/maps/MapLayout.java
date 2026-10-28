@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.maps;
 
+import com.solegendary.reignofnether.maps.gen.GenMap;
+import com.solegendary.reignofnether.maps.gen.GenSeed;
+import com.solegendary.reignofnether.maps.gen.MapGenerator;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind;
 
 import java.util.ArrayList;
@@ -15,6 +18,11 @@ import java.util.List;
  * {@code v = |lateral offset|} - and the terrain is a function of (u, v) only, so the map is n-fold rotationally
  * symmetric with a mirror line through every slot. Mexes, capture sites, vents and pillars are listed once in slot
  * frame and rotated to every slot. Coordinates in the records are relative to the map centre.
+ * <p>
+ * A generated map (MapPreset.GENERATED, design/maps.md "Generated maps") is the exception: maps/gen/MapGenerator draws
+ * it from the seed as a natural, unfolded field whose seats differ and are evened out by a measured score. This class
+ * then carries its records and answers {@link #sample} and the arena-edge helpers from the generated grid ({@link #gen}),
+ * so the builder, the preview, the start phase and the tests read it like any other map.
  */
 public final class MapLayout {
 
@@ -53,8 +61,6 @@ public final class MapLayout {
     static final double TAU = Math.PI * 2;
     /** Slot 0 sits due west (-x); the rest follow counter-clockwise on the map. */
     static final double ROT = Math.PI;
-    /** Distance from a start to its home ring of patches (as StartAreaClearing.HOME_RING_RADIUS). */
-    static final int HOME_RING = HomeMetal.RING;
     /** Neighbouring starts are at least this far apart (a capitol, its ring and room to build between). */
     static final int MIN_NEIGHBOUR = 116;
     /** Values of the three tiers of patch (design/maps.md section 2). */
@@ -85,6 +91,10 @@ public final class MapLayout {
     public final MetalOptions metal;
     /** Index in {@link #mexes} where the open-ground fill begins: everything before it is a template patch. */
     private int spreadFrom, extraFrom, homeEnd;
+    /** The generated map this layout reads (MapPreset.GENERATED), or null for a hand-made preset. */
+    public final GenMap gen;
+    /** Angle of slot 0 (slot i sits at rot + 2 pi i / n): due west on the hand-made maps; the generator's choice. */
+    public final double rot;
     /** The walkable ground of the whole arena, sampled once and flooded from any start on demand (see reachFrom). */
     private Ground ground;
 
@@ -93,10 +103,21 @@ public final class MapLayout {
     private double dPlaza, dValley, dLake, dLakeU, dLakeV, dGarU, dGarV;
     private double[] dRich, dFlank, dPillarG, dPillarL;
     private double cHome, cCentre, cLaneU, cLane, cGarU, cGarV, cGar, cChorusU, cChorusV;
+    /** The home lobes in folded slot frame ({start u, v, patch u, |v|} each; null: none yet) and the ground they carry. */
+    private double[][] homeLobes;
+    private int startHeight;
+    private Surface startSurface = Surface.LAND;
 
     private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed,
                       MetalOptions metal) {
+        this(preset, slotTeams, ring, radius, slotsOverride, seed, metal, ROT, null);
+    }
+
+    private MapLayout(MapPreset preset, int[] slotTeams, int ring, int radius, List<Slot> slotsOverride, long seed,
+                      MetalOptions metal, double rot, GenMap gen) {
         this.preset = preset;
+        this.rot = rot;
+        this.gen = gen;
         this.seed = seed;
         this.metal = metal == null ? MetalOptions.DEFAULT : metal;
         this.seedMix = mixSeed(seed);
@@ -119,7 +140,7 @@ public final class MapLayout {
     }
 
     public double slotAngle(int i) {
-        return ROT + TAU * i / n;
+        return rot + TAU * i / n;
     }
 
     /** Start ring radius for {@code n} slots on this preset: the 1v1 ring, widened so neighbours stay apart. */
@@ -142,10 +163,36 @@ public final class MapLayout {
 
     /** As above with the open-ground metal's knobs (the lobby's metal richness, the rim limit, reserved zones). */
     public static MapLayout build(MapPreset preset, int[] slotTeams, long seed, MetalOptions metal) {
+        if (preset.generated())
+            return generated(slotTeams, seed, metal);
         int n = Math.max(2, slotTeams.length);
         int s = ringFor(preset, n);
         MapLayout l = new MapLayout(preset, slotTeams, s, s + preset.margin, null, seed, metal);
         l.populate();
+        return l;
+    }
+
+    /**
+     * A generated map (design/maps.md "Generated maps"): the generator draws it from the seed's low 56 bits with the
+     * lobby options in its top byte (GenSeed), and this layout carries its seats, records and ground. A lone seat plays
+     * the two-seat map, as the hand-made maps do.
+     */
+    static MapLayout generated(int[] slotTeams, long seed, MetalOptions metal) {
+        int[] teams = slotTeams.length >= 2 ? slotTeams : new int[] { slotTeams.length == 1 ? slotTeams[0] : 0,
+            (slotTeams.length == 1 ? slotTeams[0] : 0) + 1 };
+        MetalOptions m = metal == null ? MetalOptions.DEFAULT : metal;
+        GenMap g = MapGenerator.generate(teams, GenSeed.generatorSeed(seed), GenSeed.options(seed), m);
+        MapLayout l = new MapLayout(MapPreset.GENERATED, teams, g.ring, g.half, g.slots, seed, m, g.rot, g);
+        l.mexes.addAll(g.mexes);
+        l.sites.addAll(g.sites);
+        l.vents.addAll(g.vents);
+        l.pillars.addAll(g.pillars);
+        l.spreadFrom = l.mexes.size();   // no template-and-spread split: every patch was placed by the generator
+        // nor a HomeMetal set or an extra-metal pass (main's MapLayout.homeSet / spread): the generator lays its own
+        // home clumps (first in the list, the same for every seat) and open-ground metal, so extraFrom() is the end of
+        // the list and homeEnd() the generator's home count
+        l.extraFrom = l.mexes.size();
+        l.homeEnd = g.homeCount;
         return l;
     }
 
@@ -202,6 +249,15 @@ public final class MapLayout {
 
     private void mex(double u, double v, float value, boolean nudge) {
         double toStart = Math.hypot(ring - u, v);
+        // a template drawn for the old 46-block clearance (Highlands' flank pair and Desert Mesa's rich pair at 8 players
+        // stood 45-48 from the start) moves straight out to the build ground instead of being lost; a block over it, so
+        // rounding to the stamped block keeps it clear
+        double clear = HomeMetal.BUILD_GROUND + 1;
+        if (toStart > 0 && toStart < clear) {
+            u = ring + (u - ring) * clear / toStart;
+            v = v * clear / toStart;
+            toStart = clear;
+        }
         Sample s = new Sample();
         for (int step = 0; step <= (nudge ? NUDGE_MAX : 0); step++) {
             double k = toStart > 0 ? step / toStart : 0;
@@ -225,7 +281,10 @@ public final class MapLayout {
         for (Slot sl : slots) {
             double[] w = toWorld(sl, u, v);
             int x = (int) Math.round(w[0]), z = (int) Math.round(w[1]);
-            if (metal.reserved().reserves(x, z) || !patchGroundOk(x, z, s))
+            // off the start's build ground (design #310 section 4.2: the tech-4 capitol and a lab beside it, then room
+            // to build), as the open-ground fill: a template patch nudged toward its start stops short of it
+            if (distanceToNearestStart(x, z) < HomeMetal.BUILD_GROUND || metal.reserved().reserves(x, z)
+                    || !patchGroundOk(x, z, s))
                 return false;
             if (nudged)   // a nudge must not walk into a neighbour's extractor
                 for (Mex m : mexes)
@@ -296,47 +355,201 @@ public final class MapLayout {
     /** Half the width of a patch's pad (MetalPatches.stamp levels a 7x7). */
     public static final int PAD = 3;
 
+    // ------------------------------------------------------------------------------------------ home metal
+
     /**
-     * The standard home set (see {@link HomeMetal}): HomeMetal.COUNT patches in a fan round the start, all standard,
-     * identical on every map. A spot the ground refuses moves up to NUDGE_MAX toward the start, then tries the next
-     * angles either side and radii inside and outside the ring, so the count is never lower on a bad map.
+     * The home set (see {@link HomeMetal}): the template the generated maps lay, HomeMetal.COUNT standard patches in
+     * clumps 52-76 blocks behind and beside every start (design #310 section 4.2: the 41x41 tech-4 capitol and a lab
+     * beside it keep 48 clear; lovish Oct 28: "pre-made maps move their home metal out to the same band as generated
+     * maps"). Laid after the map's own features, so a clump keeps clear of them, and listed first ({@link #homeEnd}).
+     * <p>
+     * The hand-made maps' bases were shaped for a home ring at 18: Chorus Isles' home island ends 40-56 out, End Spires'
+     * 58, Archipelago's 60, the Highlands plateau 50. So, as the generator levels a pad under each planned home patch
+     * (GenTerrain.homePads), every clump is reached by a <b>lobe</b> of its base's own ground: a strip {@link
+     * #LOBE_HALF} wide either side of the line from the start to each patch, at the start's height and surface (over
+     * sea or void a peninsula, on Highlands a spur of the plateau), blended into the land round it. A clump is chosen by
+     * the first option of HomeMetal's order whose patches pass {@link #homeSpotOk} for every slot's copy and whose lobes
+     * touch nothing the map placed (no lava, cliff or bridge under them; every patch, site, vent and pillar keeps its
+     * ground); the map is mirror-symmetric about each slot's axis, so the back clump takes no turn when one fits and the
+     * right flank is the left's mirror. A clump no option fits is left out for every slot (HomeBandTest sweeps every map
+     * at 2-16 players so none is).
      */
     private void homeSet() {
         Sample s = new Sample();
-        for (int k = 0; k < HomeMetal.COUNT; k++) {
-            double b = (k - (HomeMetal.COUNT - 1) / 2.0) * HomeMetal.ARC;
-            boolean placed = tryHome(HomeMetal.RING, b, s, false);
-            for (int i = 1; i <= 12 && !placed; i++) {
-                double off = Math.toRadians(8) * ((i + 1) / 2) * (i % 2 == 1 ? 1 : -1);
-                for (int dr : new int[] { 0, -3, 3 }) {
-                    if (tryHome(HomeMetal.RING + dr, b + off, s, true)) {
-                        placed = true;
-                        break;
+        sample(slots.get(0).dx(), slots.get(0).dz(), s);
+        startHeight = s.height;
+        startSurface = s.surface;
+        List<List<HomeMetal.Option>> all = HomeMetal.clumps();
+        List<double[]> members = new ArrayList<>();   // slot frame {u, v} of every home patch laid
+        List<Mex> home = new ArrayList<>();
+        HomeMetal.Option left = null;
+        for (int c = 0; c < all.size(); c++) {
+            List<HomeMetal.Option> order = new ArrayList<>(all.get(c));
+            if (c == 0)   // the back clump: an unturned one first, so the set stays mirror-symmetric
+                order.sort((a, b) -> Boolean.compare(a.turn() != 0, b.turn() != 0));
+            if (c == 2 && left != null)   // the right flank: the left flank's mirror first
+                order.add(0, new HomeMetal.Option(left.shape(), -left.bearing(), -left.turn(), left.dist()));
+            for (HomeMetal.Option o : order) {
+                double[][] uv = o.points(ring, 0, 0);   // the template in slot frame: the start at (ring, 0), outward +u
+                if (!homeClumpOk(uv, members, home, s))
+                    continue;
+                for (double[] p : uv) {
+                    members.add(p);
+                    for (Slot sl : slots) {
+                        double[] w = toWorld(sl, p[0], p[1]);
+                        home.add(new Mex((int) Math.round(w[0]), (int) Math.round(w[1]), HomeMetal.VALUE, sl.index()));
                     }
                 }
+                homeLobes = lobesOf(members);
+                if (c == 1)
+                    left = o;
+                break;
             }
         }
-        homeEnd = mexes.size();
+        mexes.addAll(0, home);
+        homeEnd = home.size();
     }
 
-    private boolean tryHome(double r, double b, Sample s, boolean spaced) {
-        double u = ring + Math.cos(b) * r, v = Math.sin(b) * r;
-        if (spaced) {   // an alternative spot never crowds a home patch already down (slot 0's copy stands for all)
-            double[] w0 = toWorld(slots.get(0), u, v);
+    /**
+     * Whether a clump's members (slot frame) may be laid: every patch passes homeSpotOk for every slot's copy, and the
+     * lobes with this clump added change no column under anything the map already placed and cover no lava, cliff or
+     * bridge (the rift, a ridge, a causeway or a purpur bridge stays whole).
+     */
+    private boolean homeClumpOk(double[][] uv, List<double[]> members, List<Mex> home, Sample s) {
+        for (double[] p : uv)
+            if (!homeSpotOk(p[0], p[1], home))
+                return false;
+        List<double[]> with = new ArrayList<>(members);
+        with.addAll(java.util.Arrays.asList(uv));
+        double[][] tried = lobesOf(with);
+        double[][] before = homeLobes;
+        try {
+            // the new lobes' ground: nothing the lobe would flatten may stand there (a 2-block grid: the narrowest of
+            // these features, a bridge or a ridge, is 5 wide)
+            for (double[] p : uv)
+                for (double a = -LOBE_HALF; a <= LOBE_HALF; a += 2)
+                    for (double t = 0; t <= 1.0001; t += 2 / Math.max(2, Math.hypot(p[0] - ring, p[1]))) {
+                        double len = Math.hypot(p[0] - ring, p[1]);
+                        double ux = (p[0] - ring) / len, vx = p[1] / len;
+                        double cu = ring + (p[0] - ring) * t - vx * a, cv = p[1] * t + ux * a;
+                        homeLobes = null;
+                        double[] w = toWorld(slots.get(0), cu, cv);
+                        sample(w[0], w[1], s);
+                        if (s.surface == Surface.LAVA || s.surface == Surface.CLIFF || s.surface == Surface.BRIDGE)
+                            return false;
+                    }
+            // everything already placed keeps its ground: the column under it is what it was without these lobes
             for (Mex m : mexes)
-                if (m.slot() == 0 && Math.hypot(m.dx() - w0[0], m.dz() - w0[1]) < HomeMetal.SPACING)
+                if (!groundKept(m.dx(), m.dz(), PAD + 1, before, tried, s))
+                    return false;
+            for (Site st : sites)
+                if (!groundKept(st.dx(), st.dz(), 4, before, tried, s))
+                    return false;
+            for (Spot sp : vents)
+                if (!groundKept(sp.dx(), sp.dz(), sp.size() + 2, before, tried, s))
+                    return false;
+            for (Spot sp : pillars)
+                if (!groundKept(sp.dx(), sp.dz(), 2, before, tried, s))
+                    return false;
+            return true;
+        } finally {
+            homeLobes = before;
+        }
+    }
+
+    /**
+     * A home patch at slot-frame (u, v): every slot's rounded copy is in its home band, at least HomeMetal.NO_PATCH_WITHIN
+     * from every start, inside the extractor clearance from the wall and outside every reserved zone; it keeps
+     * HomeMetal.CLUMP_SEP from every patch of another clump (any slot's) and the spread's distances from sites (18),
+     * vents (12) and pillars (10); and it stands in its own wedge (its owner is the slot it is listed for). Its lobe may
+     * reach the boundary: sample() folds the map about every boundary, so a lobe meets its neighbour's mirror lobe without
+     * a seam, and a lobe never covers a cliff (homeClumpOk), so a ridge between neighbours keeps its line.
+     */
+    private boolean homeSpotOk(double u, double v, List<Mex> home) {
+        if (Math.abs(Math.atan2(v, u)) > half)
+            return false;
+        for (Slot sl : slots) {
+            double[] w = toWorld(sl, u, v);
+            int x = (int) Math.round(w[0]), z = (int) Math.round(w[1]);
+            if (!HomeMetal.inBand(Math.hypot(x - sl.dx(), z - sl.dz())) || distanceToNearestStart(x, z) < HomeMetal.NO_PATCH_WITHIN
+                    || distanceToArenaEdge(x, z) < metal.rimInset() || metal.reserved().reserves(x, z))
+                return false;
+            for (Mex m : mexes)
+                if (Math.hypot(m.dx() - x, m.dz() - z) < HomeMetal.CLUMP_SEP)
+                    return false;
+            for (Mex m : home)
+                if (Math.hypot(m.dx() - x, m.dz() - z) < HomeMetal.CLUMP_SEP)
+                    return false;
+            for (Site st : sites)
+                if (Math.hypot(st.dx() - x, st.dz() - z) < 18)
+                    return false;
+            for (Spot p : vents)
+                if (Math.hypot(p.dx() - x, p.dz() - z) < 12)
+                    return false;
+            for (Spot p : pillars)
+                if (Math.hypot(p.dx() - x, p.dz() - z) < 10)
                     return false;
         }
-        double toStart = Math.hypot(ring - u, v);
-        for (int step = 0; step <= NUDGE_MAX; step++) {
-            double k = toStart > 0 ? step / toStart : 0;
-            double uu = u + (ring - u) * k, vv = v - v * k;
-            if (Math.hypot(ring - uu, vv) < HomeMetal.MIN_DIST)
-                break;
-            if (placeMex(uu, vv, HomeMetal.VALUE, step > 0, s))
-                return true;
+        return true;
+    }
+
+    /** Whether the square of half-width {@code h} round (x, z) samples the same with the lobes {@code a} and {@code b}. */
+    private boolean groundKept(int x, int z, int h, double[][] a, double[][] b, Sample s) {
+        Sample t = new Sample();
+        double[][] keep = homeLobes;
+        try {
+            for (int i = -h; i <= h; i++)
+                for (int k = -h; k <= h; k++) {
+                    homeLobes = a;
+                    sample(x + i, z + k, s);
+                    homeLobes = b;
+                    sample(x + i, z + k, t);
+                    if (s.height != t.height || s.surface != t.surface || s.fluidTop != t.fluidTop || s.forest != t.forest)
+                        return false;
+                }
+            return true;
+        } finally {
+            homeLobes = keep;
         }
-        return false;
+    }
+
+    /**
+     * The lobes for these home patches, folded into the half wedge sample() reads (v >= 0): one segment from the start to
+     * each patch, as {start u, start v, patch u, |patch v|}.
+     */
+    private double[][] lobesOf(List<double[]> members) {
+        double[][] out = new double[members.size()][];
+        for (int i = 0; i < members.size(); i++)
+            out[i] = new double[] { ring, 0, members.get(i)[0], Math.abs(members.get(i)[1]) };
+        return out;
+    }
+
+    /** Half the width of a home lobe (a patch's 7x7 pad, the realm maps' 5 blocks to a void rail, a block of rounding)... */
+    static final double LOBE_HALF = 11;
+    /** ...and the blend from its edge back to the map's own height. */
+    static final double LOBE_BLEND = 8;
+
+    /**
+     * A home lobe's ground over the map's own (sample()): within LOBE_HALF of a lobe, the start's own height and surface,
+     * dry and clear of trees; within the blend beyond it, solid ground eases back to its own height. Water, lava, void,
+     * cliffs and bridges in the blend keep theirs - a lobe never reaches past its edge into them.
+     */
+    private void homeGround(double u, double v, Sample out) {
+        double d = Double.MAX_VALUE;
+        for (double[] l : homeLobes)
+            d = Math.min(d, seg(u, v, l[0], l[1], l[2], l[3]));
+        if (d >= LOBE_HALF + LOBE_BLEND)
+            return;
+        if (d < LOBE_HALF) {
+            out.height = startHeight;
+            out.surface = startSurface;
+            out.fluidTop = 0;
+            out.forest = false;
+            return;
+        }
+        if (out.surface == Surface.LAND || out.surface == Surface.SAND || out.surface == Surface.GRASS
+                || out.surface == Surface.MESA)
+            out.height = (int) Math.round(lerp(startHeight, out.height, smooth(LOBE_HALF, LOBE_HALF + LOBE_BLEND, d)));
     }
 
     /** One patch per slot near the centre at the closest radius where neighbours' patches don't collide. */
@@ -459,7 +672,6 @@ public final class MapLayout {
     private void populate() {
         switch (preset) {
             case ARCHIPELAGO -> {
-                homeSet();
                 mex(fordBank(), 0, STANDARD);
                 double[] p = polar(isletR(), half - 7.0 / isletR());
                 mexPair(p[0], p[1], RICH);
@@ -468,7 +680,6 @@ public final class MapLayout {
                 sites.add(new Site(0, 0, Kind.WATCHTOWER));
             }
             case HIGHLANDS -> {
-                homeSet();
                 mexPair(hillU(), 6, RICH);
                 double[] f = polar(0.7 * ring, 0.5 * half);
                 mexPair(f[0], f[1], STANDARD);
@@ -477,7 +688,6 @@ public final class MapLayout {
                 sites.add(new Site(0, 0, Kind.FORGE));
             }
             case NETHER_RIFT -> {
-                homeSet();
                 mexPair(riftR() + 12, 7, RICH);
                 centreRing();
                 boundarySite(0.6 * radius, Kind.VENT);
@@ -490,7 +700,6 @@ public final class MapLayout {
                 pillarPair(b[0], b[1], 12);
             }
             case END_SPIRES -> {
-                homeSet();
                 mexPair(spireU(), 6, RICH);
                 centreRing();
                 boundarySite(0.95 * ring, Kind.WATCHTOWER);
@@ -498,14 +707,12 @@ public final class MapLayout {
                 pillarPair(spireU(), Math.max(10, spireSize() - 3), 14);
             }
             case VERDANT_VALLEY -> {
-                homeSet();
                 mexPair(riverR() - 12, 8, RICH);
                 centreRing();
                 boundarySite(0.62 * radius, Kind.CAMP);
                 sites.add(new Site(0, 0, Kind.SHRINE));
             }
             case DESERT_MESA -> {
-                homeSet();
                 double[] m = mesa();
                 mexPair(m[0], m[1], RICH);
                 centreRing();
@@ -520,7 +727,6 @@ public final class MapLayout {
                 dLakeV = lakeR() * Math.sin(half);
                 dGarU = garrisonR() * Math.cos(half);
                 dGarV = garrisonR() * Math.sin(half);
-                homeSet();
                 double[] rich = deltaRich();
                 mexPair(rich[0], rich[1], RICH);
                 double[] flank = deltaFlank();
@@ -555,7 +761,6 @@ public final class MapLayout {
                 cGar = isleGarrisonSize();
                 cChorusU = chorusIsleR() * Math.cos(half);
                 cChorusV = chorusIsleR() * Math.sin(half);
-                homeSet();
                 // the lane island's rich pair sits beside the neck, so the neck's middle stays open
                 mexPair(laneIsleU(), Math.max(4, laneIsleSize() - 8), RICH);
                 // one standard patch per neighbour on every garrison islet big enough to hold one beside the ruin (the
@@ -571,6 +776,10 @@ public final class MapLayout {
             }
             default -> { }
         }
+        // the home set after the map's own features (it keeps clear of them, and its lobes never change their ground);
+        // listed first all the same (homeEnd)
+        if (preset.handmade())
+            homeSet();
         if (preset.premade())
             spread();
     }
@@ -778,7 +987,32 @@ public final class MapLayout {
      * added by changing this method and {@link #arenaHalfExtent}, nothing else.
      */
     public double distanceToArenaEdge(double dx, double dz) {
+        if (gen != null)
+            return gen.distanceToEdge(dx, dz);
         return radius - Math.hypot(dx, dz);
+    }
+
+    /** A square arena (a generated map may be one, lovish Oct 21: "square maps ... as well as round"): straight walls. */
+    public boolean squareArena() {
+        return gen != null && gen.shape == GenMap.Shape.SQUARE;
+    }
+
+    /**
+     * The radius of the circle that holds the whole arena (a square's corners included): for whatever must cover all
+     * of it - the arena's pregeneration, the structure clearing, the clients' map bounds. The radius on a round arena.
+     */
+    public int outerRadius() {
+        return squareArena() ? (int) Math.ceil(radius * Math.sqrt(2)) : radius;
+    }
+
+    /**
+     * Whether a tree grows on the column (dx, dz) (u, v: its sample's frame coordinates): on a generated map the
+     * generator decided (its walk checks counted that stem), elsewhere the builder's sparse share of a grove.
+     */
+    public boolean treeAt(int dx, int dz, double u, double v, double density) {
+        if (gen != null)
+            return gen.treeAt(dx, dz);
+        return decorHash(u, v) < density;
     }
 
     public boolean insideArena(double dx, double dz) {
@@ -818,7 +1052,8 @@ public final class MapLayout {
     /** A column nothing walks through: void, lava, deep water, or a tree stem (a grove column that grew one). */
     private boolean walkBlocked(Sample s) {
         return s.surface == Surface.VOID || s.surface == Surface.LAVA || (s.surface == Surface.WATER && s.height < -1)
-            || (s.forest && decorHash(s.u, s.v) < groveDensity());
+            || (s.forest && (gen != null ? gen.treeAt((int) Math.round(s.u), (int) Math.round(s.v))
+                : decorHash(s.u, s.v) < groveDensity()));
     }
 
     /** The arena's ground, sampled once: column height and whether a unit may stand in it. */
@@ -911,8 +1146,11 @@ public final class MapLayout {
         }
         return new Reach(seen);
     }
-    /** Clear of void and lava round a spread patch (the realm tests ask 5), and of a start. */
-    static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = 46;
+    /**
+     * Clear of void and lava round a spread patch (the realm tests ask 5), and of a start: its build ground
+     * (HomeMetal.BUILD_GROUND, 50 since the 41x41 tech-4 capitol, design #310 section 4.2; it was 46).
+     */
+    static final int SPREAD_CLEARANCE = 7, SPREAD_FROM_START = HomeMetal.BUILD_GROUND;
     /** Value of a patch out behind the bases: worth a worker's walk, not a fight. */
     public static final float LEAN = 0.75f;
 
@@ -982,7 +1220,7 @@ public final class MapLayout {
     /** Index of the slot whose wedge holds (dx, dz). */
     public int slotAt(double dx, double dz) {
         double step = TAU / n;
-        double th = Math.atan2(dz, dx) - ROT;
+        double th = Math.atan2(dz, dx) - rot;
         long k = Math.round(th / step);
         return (int) (((k % n) + n) % n);
     }
@@ -994,6 +1232,10 @@ public final class MapLayout {
      * Every preset is a function of the folded (u, v) only - that is the symmetry.
      */
     public void sample(double dx, double dz, Sample out) {
+        if (gen != null) {
+            gen.sample(dx, dz, out);
+            return;
+        }
         double r = Math.sqrt(dx * dx + dz * dz);
         double step = TAU / n;
         double th = Math.atan2(dz, dx) - ROT;
@@ -1019,6 +1261,8 @@ public final class MapLayout {
                 out.surface = Surface.LAND;
             }
         }
+        if (homeLobes != null)
+            homeGround(u, v, out);
     }
 
     private void set(Sample s, int h, Surface surface) {
@@ -1288,25 +1532,34 @@ public final class MapLayout {
         return voidNeighbour && self != Surface.VOID && preset.railedVoid();
     }
 
-    /** Half the side of the square startGround checks: the widest capitol's half-width (6, of 13) plus one. */
-    static final int START_HALF = 7;
+    /** Half the side of the square startGround checks: the tech-4 capitol's 41x41 (HomeMetal.CAPITOL_HALF). */
+    static final int START_HALF = HomeMetal.CAPITOL_HALF;
+    /** Samples a side of that square: 5x5, 10 blocks apart (design #310 section 4.3; it was 3x3 at +-7). */
+    static final int START_SAMPLES = 5;
 
     /**
-     * Whether a capitol centred at (dx, dz) from the centre stands on ground (design/maps.md section 5): its square,
-     * sampled at 3x3 points, has no void, lava or water deeper than a ford. StartPhase refuses a start anywhere else,
-     * so nobody founds a base in the void of the End maps or in Archipelago's sea. Random terrain is all ground.
+     * Whether a capitol centred at (dx, dz) from the centre may be founded there (design/maps.md section 5): the whole
+     * square it grows into by tech 4 - 41x41, reserved from the start (design #310 section 4.3, lovish Oct 28: "the full L4
+     * square from the start") - sampled at 5x5 points, has no void, lava or water deeper than a ford, and no patch's
+     * reserved square (half-width PAD, = MetalPatches.RESERVED_HALF) reaches into it. StartPhase and the bots refuse a
+     * start anywhere else, so nobody founds a base in the void of the End maps or in Archipelago's sea, or one whose
+     * capitol would grow over an extractor. Random terrain is all ground (its patches are stamped round the start chosen).
      */
     public boolean startGround(double dx, double dz) {
         if (!preset.premade())
             return true;
         Sample s = new Sample();
-        for (int i = -1; i <= 1; i++)
-            for (int k = -1; k <= 1; k++) {
-                sample(dx + i * START_HALF, dz + k * START_HALF, s);
+        double step = 2.0 * START_HALF / (START_SAMPLES - 1);
+        for (int i = 0; i < START_SAMPLES; i++)
+            for (int k = 0; k < START_SAMPLES; k++) {
+                sample(dx - START_HALF + i * step, dz - START_HALF + k * step, s);
                 if (s.surface == Surface.VOID || s.surface == Surface.LAVA
                         || (s.surface == Surface.WATER && s.height < -1))
                     return false;
             }
+        for (Mex m : mexes)
+            if (Math.abs(m.dx() - dx) <= START_HALF + PAD && Math.abs(m.dz() - dz) <= START_HALF + PAD)
+                return false;
         return true;
     }
 

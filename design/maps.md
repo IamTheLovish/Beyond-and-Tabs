@@ -66,7 +66,7 @@ the centre).
 **Metal over the open ground (Oct 16, lovish: "Metal extractors ... should be all over the map I feel like I have
 alot of the map that is empty that doesnt need to be contested"):** after its template, every pre-made map runs
 `MapLayout.spread` - up to 6 more patches per slot from a 12-block grid of candidates, farthest from every patch
-first (weighted toward the ground between the bases), each 30+ from another patch, 46+ from a start, clear of sites,
+first (weighted toward the ground between the bases), each 30+ from another patch, 50+ from a start (the build ground; 46 before the 41x41 capitol), clear of sites,
 vents and pillars, on flat dry ground with no void / lava / deep water within 7, and with a walkable path back to
 its start. Values by distance from the centre: **0.75x lean** behind the bases, **1.0x** on the flanks, **1.5x** in
 the inner half. Mean distance from open ground to the nearest patch: 54-95 -> 25-49 blocks (GameTest
@@ -91,10 +91,19 @@ sight (grey in the fog), and the floating gem is bigger.
   (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
   every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
   patches stamped exactly that far from a real ring wall.
-- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized").* `HomeMetal`: 6 patches
-  a seat, 1.0 each, in a fan 18 blocks from the start (11 to 24 after a nudge), on every pre-made map and player count.
-  A spot the ground refuses moves toward the start, then to the next angle or radius: count and yield never change.
-  The extra-metal level and the lobby's richness never touch it.
+- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized"), and since Oct 28 it
+  stands clear of the tech-4 capitol (design/proposals/capitols_extractors_creep.md section 4.2, PR #310: "pre-made maps
+  move their home metal out to the same band as generated maps").* `HomeMetal` is the one rule for both kinds of map:
+  **exactly 7** standard patches a seat, the generated maps' template (a triangle or row of three straight behind the
+  base, a pair on each rear flank 72 degrees off), every one **52-76 blocks** from its start; **no patch of any kind within
+  48** of a start (the L4 capitol's corner 28.3 + a vehicle lab and its gaps 15 + a patch's reserved square 4.2 = 47.5);
+  the open-ground metal keeps the **50-block build ground** clear. The hand-made bases were shaped for the old 18-block
+  ring (Chorus Isles' home island ends 40-56 out, End Spires' 58, Archipelago's 60, the Highlands plateau 50), so every
+  home patch is reached by a lobe of its base's own ground (`MapLayout.homeGround`: 11 blocks either side of the line
+  from the start, the start's height and surface, an 8-block blend), laid after the map's own features and refused
+  wherever it would cover lava, a cliff or a bridge or change the ground under anything already placed. Was: 6 patches
+  in a fan 18 out (11-24). The extra-metal level and the lobby's richness never touch it. Tests: `HomeBandTest` (JUnit,
+  every hand-made map at 2-16 players and generated maps), `map_metal_home_set_is_standard_for_every_seat`.
 - *Extra metal, spread over the whole map, with a bonus for the outskirts (lovish Oct 22: "we can add more mexes than we
   have to the game", "spread all over the map", "bonuses to players that reach to the outskirts", "he does want massive
   armies").* `MapLayout.spread` runs three passes over one candidate list: the core fill (the map as it was: <= 14 a slot,
@@ -317,9 +326,11 @@ equal for every slot at a given count. Capture: **Forsaken Garrison** (obsidian 
 boundary, **Watchtower** (obsidian spire) in the centre. Fog: pale violet. Players: 2-16.
 
 ### Starting on ground (all pre-made maps)
-`MapLayout.startGround`: the start-position phase refuses a start whose capitol square (sampled 3x3 at +-7) touches
-void, lava or water deeper than a ford (StartPhase.inBox; bots' picks use the same test). Before this a click in a
-start box could found a base in End Spires' void or Archipelago's sea.
+`MapLayout.startGround`: the start-position phase refuses a start whose capitol square touches void, lava or water
+deeper than a ford (StartPhase.inBox; bots' picks use the same test). Before this a click in a start box could found a
+base in End Spires' void or Archipelago's sea. Since Oct 28 the square is the tech-4 capitol's **41x41** (sampled 5x5 at
++-20; it was 3x3 at +-7), reserved from the start (design #310 section 4.3, lovish: "the full L4 square from the
+start"), and it must also hold no patch's reserved square, so a capitol never grows over an extractor.
 
 ### Random terrain
 The old behaviour: the Battlefield world preset's own terrain with the procedural ring of patches and the three
@@ -389,7 +400,134 @@ renders every map to PNG):
 * `realm_maps_and_the_garrison_have_their_names`: every map has its lang name and blurb, every capture kind its
   long and short name.
 
-## 7. A new match on a running server (issue #35, Joisco)
+## 7. Generated maps (MapPreset.GENERATED, maps/gen; lovish Oct 21 22:28)
+
+> "you should be able to choose / add a way to automatically generate maps that are intricate and sometimes changes
+> rng with different buffs and bonuses. The random map can give one side more neutral objectives with the other side
+> giving more mexes."
+
+A new natural battlefield from every seed, built on lovish's Oct 21 map decisions: **balanced asymmetry** (the sides
+differ on purpose and are evened out by a measured per-seat score within a tolerance, default 5%), **square maps as
+well as round**, room kept for the **hero jungle** (MetalOptions.reserved), more metal along the edges and in empty
+ground, bots never cheat (the generator only shapes the map), 4v4 the design standard. Phase 1 (offline prototype and
+experiments, 200 seeds per cell) chose the defaults below; every number, what did not work and the open questions
+are in `design/generated-maps-report.md` (PR #131).
+
+**Determinism.** `MapLayout.build(GENERATED, teams, seed)` calls `MapGenerator.generate`; the same seats and seed draw
+the same map on every JVM (SplitMix64 streams per stage, StrictMath trig, `sqrt` not `hypot`), so the lobby preview is
+the map built, and a save resumes the same map. The lobby options ride the seed's top byte (`GenSeed`: shape any /
+round / square, modifiers on / off / surprise); the low 56 bits are the landscape. The lobby shows the last four hex
+digits ("#1A2B"), the skirmish "New" button and the multiplayer host's "New" roll another seed (the multiplayer lobby
+now carries a seed for every stamped map; before, it always played the unseeded one).
+
+**One build** (`GenPlan` -> `GenTerrain` -> `GenEconomy` -> checks -> `Fairness`):
+* *Arena*: round (radius = ring + 90) or square (same area; seats in the corners, or between corners and sides at 4v4).
+  `distanceToArenaEdge` / `insideArena` / `outerRadius` answer for both; the wall raises straight sides with corner
+  towers (`BattlefieldWall.raise(..., square)`), the scout and the clients cover the corners.
+* *Ground*: a warped fractal tier field, mapped by percentile (5% lakes, 11% T-1 valleys at 1, 44% lowland at 4, 25% T1
+  at 8, 11.5% T2 at 12, 3.5% crests at 16; water at 0, fords and shores -1, deep -3), terraced by a "cliffiness" field:
+  where it is high the step between tiers is a cliff, where low a walkable slope. Base pads flat (52); a plaza (30) in
+  the middle; the rim shelf raises about half the edge to T1. Choke spurs across most main roads (a 14-20 gap); a
+  meandering river with fords on some maps (always on River maps); lakes; forests by noise kept off roads, pads, sites
+  and bases; the jungle grows thick.
+* *Roads*: every seat's main road to the plaza and a seam road to each neighbour, held to a slope of one block per 3.3
+  through anchors (pads, plaza, water crossings at 0 - fords -, roads already laid): **every road is walkable**, so a
+  bastion's plateau has exactly its ramps.
+* *Seat characters* (`Archetype`), one pair per map: **Prospector** (denser metal) vs **Warden** (two own capture sites on
+  its forward ground, less metal); **Open** (no cliffs round the base, denser metal) vs **Bastion** (a plateau a tier up
+  ringed by cliffs, two ramps, leaner metal); **Moated** (a river 70-90 in front, fords only) vs **Banks** (more land);
+  **Mixed** (each seat its own); **Mirror** (point-symmetric terrain and economy: the "tournament" control).
+* *Economy*, laid out as Beyond All Reason lays it (lovish Oct 27: "design them like beyond all reason and put clumps
+  in strategic positions all around the map including the back rear sides ... clump them, have stranded ones alone.
+  Maybe a path or cluster."; it replaces the Oct 27 21:37 random spread, keeping its rule that nothing stands round the
+  town hall):
+  * **Home clumps, the same for every seat** (`HomeMetal`, shared with the hand-made maps): a triangle of three straight
+    behind the base (a row of three where the wall is close, as on a square arena's side seats) and a pair on each rear
+    flank, 72 degrees off straight back, every patch 52-76 blocks out and none within 48 of any start (the 41x41 tech-4
+    capitol, design #310 section 4.2; was 48-72). One template in the seat's frame: the first distance and turn (0-50
+    degrees) that every seat's ground takes is everyone's, and the ground is levelled for it (`GenTerrain.homePads`: a
+    small level pad at the seat's height under each planned patch). **Exactly 7 a seat**: a clump no seat-wide spot takes,
+    or a home patch the final ground drops, makes the draw invalid and the lobby's promise draws again (it used to be
+    left out). Standard patches, untouched by the lobby's richness, extra metal or the balancer.
+  * One 2.0x patch per seat round the plaza (the middle's cluster), then **contested clumps of three**: one on every
+    front seam (both neighbours walk about as far), two more on the front line in team games.
+  * Then **groups over the open map**, seat by seat (always the seat furthest short of its allowance, so the dice never
+    pile one seat's ground): the free spot of its ground farthest from all metal (a seeded jitter, a nudge toward roads
+    and the front line and away from ground past the reach rule's 160 blocks' walk; anchors 1.25x the archetype's hole target apart - Prospector 29, Open 31, Banks 34, Plain 37,
+    Moated 40, Bastion 43, Warden 46 blocks - 20% tighter in the rim band) becomes a **lone stranded patch** (likelier on
+    exposed ground, the front line and the rim; at least one a map, at most 18% of the spread), a **path** of 3-5 along
+    the nearest road ("metal along natural routes", 45% of the groups by a road), or a **clump** of 2-4 (2/3/4 at
+    20/45/35%). A group's patches stand 9.5-14 apart; every patch keeps 26 from any other group. Farthest-first spreads
+    the groups all round the map, the rim and the ground behind the bases included.
+  * Counts: 28 / 20 / 15 patches a seat at 1v1 / 2v2 / 4v4 (home clumps and plaza patch included), times the
+    archetype's density (its square root in team games) and the square root of the lobby's richness; the lobby's
+    **extra metal** scales it from NORMAL: NONE 0.75x, LOW 0.875x, HIGH 1.25x. Values by exposure (rich on the front
+    line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within 7, reachable from its owner,
+    off the roads, at least 50 from any start (the build ground, `HomeMetal.BUILD_GROUND`; 46 before the 41x41 capitol), at least the extractor clearance from the wall
+    (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved zone (section 2's rules).
+    `MapLayout.homeEnd()` marks the home clumps (the first patches of the list).
+* *Objectives*: a site on the plaza, a contested site on every front seam (where both neighbours walk about as far),
+  two more on the front line in team games, a warden's own two; **modifiers** add theirs.
+* *Jungle* (reserved for the hero slice, M12): one wild area per side (two in big team games) between the roads, with
+  an entry and an exit that differ every game and data-only creep camps; the metal leaves it alone.
+* *Modifiers* (`Modifier`), 1-2 per match when on (2-3 on surprise): Rich vein, Ley line (Ley Shrines along a line),
+  Geothermal rift (vents + a Lava Vent site), Gold rush, Mercenary road, Garrison ruins, Watch ridge - all built from
+  existing mechanics. Not rolled in the lobby until their mechanic exists: Hero relic, Hydra lair (the Oct 20 "hydras
+  in the middle that buff the hero who kills them": a lair replaces the centre gold), Fog valleys. Named in chat when
+  the map has risen; under the preview unless Surprise.
+
+**Fairness, measured.** `Fairness` prices a seat in metal per second averaged over 15 minutes: its patches (T1 2.0/s
+then T2 4.5/s after a 75 s refit, main's numbers since 0e223c88; built nearest first, shared with rivals by walk
+distance, front-line ones partly lost to raids), its objectives
+(income at 35 energy a metal, or an estimated worth), its defence (directions an enemy walks straight in), tempo (walk
+to the middle) and space. Spread = (best seat - worst seat) / mean. The balancer (`SWAP_ROBUST`, chosen in Phase 1):
+the same landscape with the seats turned round the ring and the sides' characters swapped, the most even of up to
+eight builds, then small metal edits (a standard patch made rich on the poorest seat, a crowding patch removed from the
+richest...) down to 80% of the tolerance, each edit judged under the central weights and under eight seeded draws of
+the weights (the guesses in the score, priced within their ranges), going on while those draws' mean is still outside
+the tolerance; a draw still outside it gives way to a fresh draw (up to four). The nudge's new patch is drawn at random
+from the poorest seat's ground among the spots that join one of its clumps (9.5-14 from a clump of at most three, so it
+stays 2-4), and a patch is only taken away when that strands no neighbour - the balancer keeps the layout. The
+data-only camps count zero on lobby maps.
+
+**The reach rule** (beside the score): a balanced draw is refused, and drawn again,
+when a start's nearest patch is over 110 blocks' walk or its metal within 160 blocks' walk is under 0.6 of the best
+start's (`MapGenerator.metalReach`).
+
+**What Phase 1 measured** (200 seeds a cell, 1v1 and 4v4, round and square, five contrasts, six balancers; scored
+again under 40 separate weight draws, and a crude 15-minute economy sim as a cross-check):
+* Unbalanced, 1v1 seeds already land within 5% three times in four (median 3.1%); 4v4 never does (median 21%: the
+  contrasts compound over four seats a side). Re-rolling the landscape alone barely helps at 4v4 (14%); turning the
+  seats and swapping the sides gets 16%; small metal edits are what close the gap, to 3.5% in about 0.2 s.
+* Swap + nudge gives the best central spread (1v1 median 1.1%); the robust nudge adds 2-17 points of "within 5% under
+  other weights" (Prospector/Warden 1v1 0.51 -> 0.68; 3-11 at 4v4) for at most 7% more time. Under weight draws a 1v1
+  lobby map stays within 5% about 80% of the time; a 4v4 map's *teams* about 98%, its *seats* only about 45% (median
+  5.3%).
+* That 4v4 seat limit is geometry, not the asymmetry: the point-symmetric Mirror control's seats already spread
+  7.5% round and 11% square (front seats beside an enemy against back seats), its teams 0.3%. Team fairness is the
+  bar that matters there.
+* The sim agrees with the score on direction (correlation 0.36-0.58 on raw 1v1 maps) and after balancing finds no
+  side that wins on average (4v4 team gap, archetype side A - B, means within +-0.5%), but it is too noisy to judge
+  single 4v4 seats.
+* A modifier moves the raw spread by under 2 points (most under 1); the balancer absorbs it.
+
+**Tests** (`gametest/MapGenGameTests.java`, batch `maps_gen`): the same map from the same seed; every seat reaches
+every seat, the middle and its whole economy by ground; level pads, no deep water near a patch, nothing nearer the
+wall than the extractor clearance; reserved zones (the jungle and a caller's zone) free of metal, jungle doors on its
+edge; seats and teams within the tolerance, starts on capitol ground inside their boxes; square edge helpers and the
+square wall's length; the options ride the seed (off rolls nothing, the lobby only live modifiers). The symmetric preset tests sweep
+`MapPreset.handmade()` only. JUnit (`bar/src/test/.../maps/gen`; headless: `tools/mapgen_sim/run.sh junit`):
+`MetalClumpsTest` (2/4/8 seats, six seeds, round and square: metal in groups of at most 6, a 2-4 group compact, lone
+patches at most 30% of the spread and at least one a map, paths on half the maps; a clump behind every base and
+max(2, seats / 2) in the midfield; the home clumps the same for every seat; fairness and buildable pads) and
+`GeneratedMetalTest` (tier 2 at main's numbers, nothing within 40 of a start, extra metal, the reach rule).
+
+**Cost.** A 4v4 build is ~150 ms on one core; the balancer builds up to eight, so a lobby map takes about 0.5-0.7 s at
+1v1, 1.1-1.2 s at 2v2 and 1.6-1.7 s at 4v4 (median; p95 1.9 s, worst seen 3.3 s; 240 lobby seeds, all valid, 17 needing a
+fallback draw, mostly for the reach rule in the draws checked: `design/generated-maps-report.md`, "Oct 27 (later)"). The lobby
+preview draws it on a worker thread ("Generating..."); the server builds it once at Start.
+
+## 8. A new match on a running server (issue #35, Joisco)
 
 "An option to reset the map, or move to a new location, so a server can keep hosting new games." The arena is not
 regenerated and the world is not reloaded: `maps.NewMatch` moves the next match to **fresh ground one slot further out**

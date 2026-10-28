@@ -272,7 +272,7 @@ public final class MatchState {
         if (newSetup.prepares()) {
             // random terrain shows as RANDOM (no fog tint, no name) but with its arena, which is now known at Start
             showMap(newSetup.raisesMap() ? newSetup.preset : MapPreset.RANDOM, newSetup.cx, newSetup.cz,
-                newSetup.layout().radius);
+                newSetup.layout().outerRadius());
             enter(MatchPhase.MAP_RISING, (newSetup.raisesMap() ? newSetup.preset.displayName : "the battlefield")
                 + " for " + newSetup.playing().size() + " sides");
             effects.prepare(this, -1, null);

@@ -2832,6 +2832,8 @@
   "maps.reignofnether.preset.soulfire_deltas.blurb": "Nether: slow soul-sand valleys between the bases, lava lakes with geothermal vents, fungus groves, nether-brick garrisons that raise wither skeletons",
   "maps.reignofnether.preset.chorus_isles": "Chorus Isles",
   "maps.reignofnether.preset.chorus_isles.blurb": "The End: railed islands joined by land necks and bridges, air rules the void, obsidian garrisons that raise endermen",
+  "maps.reignofnether.preset.generated": "Generated",
+  "maps.reignofnether.preset.generated.blurb": "A new natural battlefield from every seed: tiers, ramps, rivers and fords; each side its own character, evened out by a fairness score; map modifiers",
   "maps.reignofnether.forging": "Forging %s: %s%%",
   "maps.reignofnether.startphase": "Start position mode - click inside your start box to place your commander, then press Ready (%ss)",
   "maps.reignofnether.startphase_placed": "Placed - press Ready when you are happy, or click again to move (%ss)",

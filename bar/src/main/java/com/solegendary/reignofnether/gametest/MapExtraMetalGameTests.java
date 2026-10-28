@@ -32,30 +32,39 @@ public class MapExtraMetalGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
     static final long[] SEEDS = { 0L, 0x5EED0001L, 0xBA7C0DEL };
-    /** Two home patches closer than this crowd each other (7x7 pads, 1 block apart, need 8; the fan's closest pair is 9.5). */
+    /** Two home patches closer than this crowd each other (7x7 pads, 1 block apart, need 8; a clump's members stand 11 apart). */
     static final double HOME_CROWD = 9;
     static final Set<MapPreset> LAND = Set.of(MapPreset.HIGHLANDS, MapPreset.NETHER_RIFT, MapPreset.VERDANT_VALLEY,
         MapPreset.DESERT_MESA, MapPreset.SOULFIRE_DELTAS);
 
     /**
-     * The map as it was before extra metal and the standard home set (head 2f732e29, rim limit 22, cap 14 a slot), per
+     * The map without extra metal (MetalOptions.Extra.NONE: the home set, the templates and the core fill), per
      * "PRESET:players:seed (0 or S = 0x5EED0001):patches a slot farther than 40 blocks from the wall:largest gap".
      * Gap: the largest distance from any open ground (no void, lava or deep water; every 3 blocks, the 8 outermost blocks
-     * skipped) to the nearest patch. Measured offline against that head's MapLayout.
+     * and every start's build ground skipped) to the nearest patch. Measured offline (tools/mapgen_sim harness) on this
+     * layout.
+     * <p>
+     * Re-measured Oct 28 for the 41x41 tech-4 capitol (design #310 section 4.2), which moves home metal out to 52-76 and
+     * keeps the 50-block build ground free of every patch. Until then the rows were head 2f732e29's map (rim limit 22, cap
+     * 14 a slot, a home ring at 18), and the core fill had placed many of its patches 46-50 from a start: on the island
+     * maps (Archipelago, End Spires, Chorus Isles), where the home island is most of the open ground, most of them. Those
+     * patches are now on the build ground, so the rows fell; every lost patch was within 50 of a start - past 50 no map at
+     * any player count has fewer mid-map patches a slot than on 2f732e29 (most have more), measured the same way. What this
+     * baseline guards stays exactly as it was: the extra metal never takes a core patch and never widens a gap.
      */
     static final String BASELINE =
-        "ARCHIPELAGO:2:0:21:144 ARCHIPELAGO:4:0:21:100 ARCHIPELAGO:8:0:17:68 HIGHLANDS:2:0:17:65 " +
-        "HIGHLANDS:4:0:17:47 HIGHLANDS:8:0:13:89 NETHER_RIFT:2:0:22:78 NETHER_RIFT:4:0:20:65 " +
-        "NETHER_RIFT:8:0:15:33 END_SPIRES:2:0:20:140 END_SPIRES:4:0:16:66 END_SPIRES:8:0:14:38 " +
-        "VERDANT_VALLEY:2:0:15:65 VERDANT_VALLEY:4:0:18:45 VERDANT_VALLEY:8:0:18:33 DESERT_MESA:2:0:22:79 " +
-        "DESERT_MESA:4:0:21:55 DESERT_MESA:8:0:17:33 SOULFIRE_DELTAS:2:0:22:68 SOULFIRE_DELTAS:4:0:20:58 " +
-        "SOULFIRE_DELTAS:8:0:14:43 CHORUS_ISLES:2:0:16:137 CHORUS_ISLES:4:0:14:118 CHORUS_ISLES:8:0:10:91 " +
-        "ARCHIPELAGO:2:S:21:144 ARCHIPELAGO:4:S:21:100 ARCHIPELAGO:8:S:17:68 HIGHLANDS:2:S:17:65 " +
-        "HIGHLANDS:4:S:17:47 HIGHLANDS:8:S:13:89 NETHER_RIFT:2:S:22:78 NETHER_RIFT:4:S:20:65 " +
-        "NETHER_RIFT:8:S:15:33 END_SPIRES:2:S:21:124 END_SPIRES:4:S:18:77 END_SPIRES:8:S:14:33 " +
-        "VERDANT_VALLEY:2:S:15:65 VERDANT_VALLEY:4:S:18:45 VERDANT_VALLEY:8:S:18:33 DESERT_MESA:2:S:22:79 " +
-        "DESERT_MESA:4:S:21:55 DESERT_MESA:8:S:17:33 SOULFIRE_DELTAS:2:S:22:68 SOULFIRE_DELTAS:4:S:20:58 " +
-        "SOULFIRE_DELTAS:8:S:14:43 CHORUS_ISLES:2:S:14:136 CHORUS_ISLES:4:S:12:124 CHORUS_ISLES:8:S:10:92 ";
+        "ARCHIPELAGO:2:0:9:144 ARCHIPELAGO:4:0:9:100 ARCHIPELAGO:8:0:9:62 HIGHLANDS:2:0:17:55 " +
+        "HIGHLANDS:4:0:16:47 HIGHLANDS:8:0:11:33 NETHER_RIFT:2:0:21:81 NETHER_RIFT:4:0:17:49 " +
+        "NETHER_RIFT:8:0:10:33 END_SPIRES:2:0:11:140 END_SPIRES:4:0:11:66 END_SPIRES:8:0:7:53 " +
+        "VERDANT_VALLEY:2:0:15:58 VERDANT_VALLEY:4:0:16:35 VERDANT_VALLEY:8:0:12:33 DESERT_MESA:2:0:22:69 " +
+        "DESERT_MESA:4:0:22:57 DESERT_MESA:8:0:10:33 SOULFIRE_DELTAS:2:0:21:77 SOULFIRE_DELTAS:4:0:19:58 " +
+        "SOULFIRE_DELTAS:8:0:7:43 CHORUS_ISLES:2:0:15:137 CHORUS_ISLES:4:0:13:114 CHORUS_ISLES:8:0:11:55 " +
+        "ARCHIPELAGO:2:S:9:144 ARCHIPELAGO:4:S:9:100 ARCHIPELAGO:8:S:9:62 HIGHLANDS:2:S:17:55 " +
+        "HIGHLANDS:4:S:16:47 HIGHLANDS:8:S:11:33 NETHER_RIFT:2:S:21:81 NETHER_RIFT:4:S:17:49 " +
+        "NETHER_RIFT:8:S:10:33 END_SPIRES:2:S:12:124 END_SPIRES:4:S:9:81 END_SPIRES:8:S:7:53 " +
+        "VERDANT_VALLEY:2:S:15:58 VERDANT_VALLEY:4:S:16:35 VERDANT_VALLEY:8:S:12:33 DESERT_MESA:2:S:22:69 " +
+        "DESERT_MESA:4:S:22:57 DESERT_MESA:8:S:10:33 SOULFIRE_DELTAS:2:S:21:77 SOULFIRE_DELTAS:4:S:19:58 " +
+        "SOULFIRE_DELTAS:8:S:7:43 CHORUS_ISLES:2:S:15:136 CHORUS_ISLES:4:S:13:112 CHORUS_ISLES:8:S:11:56 ";
 
     static MetalOptions extra(MetalOptions.Extra level) {
         return MetalOptions.DEFAULT.withExtra(level);
@@ -70,14 +79,20 @@ public class MapExtraMetalGameTests {
         return mid;
     }
 
-    /** Largest distance from open ground to its nearest patch (the PR's measurement, see BASELINE). */
+    /**
+     * Largest distance from open ground to its nearest patch (the PR's measurement, see BASELINE). A start's build ground
+     * (HomeMetal.BUILD_GROUND) is not open ground: it is kept free of metal by design (the tech-4 capitol and the labs
+     * round it, design #310 section 4.2), so a start's own centre, 50+ from every patch, would otherwise be every land
+     * map's largest gap and hide the gaps this measures.
+     */
     static int largestGap(MapLayout l) {
         MapLayout.Sample s = new MapLayout.Sample();
         double worst = 0;
         int r = l.radius;
         for (int x = -r; x <= r; x += 3)
             for (int z = -r; z <= r; z += 3) {
-                if (!l.insideArena(x, z) || l.distanceToArenaEdge(x, z) < 8)
+                if (!l.insideArena(x, z) || l.distanceToArenaEdge(x, z) < 8
+                        || l.distanceToNearestStart(x, z) < HomeMetal.BUILD_GROUND)
                     continue;
                 l.sample(x, z, s);
                 if (s.surface == MapLayout.Surface.VOID || s.surface == MapLayout.Surface.LAVA
@@ -102,23 +117,37 @@ public class MapExtraMetalGameTests {
     }
 
     /**
+     * The design's home band (design/proposals/capitols_extractors_creep.md section 4.2, PR #310, lovish Oct 28: the
+     * 41x41 tech-4 capitol pushes home metal out, pre-made maps "to the same band as generated maps"), written from the
+     * doc so the code cannot drift from it: exactly 7 home patches a seat, every one 52-76 blocks from its start, and no
+     * patch of any kind within 48 of a start.
+     */
+    static final int HOME_COUNT = 7, HOME_MIN = 52, HOME_MAX = 76, NO_PATCH_WITHIN = 48;
+
+    /**
      * The home set is one thing (HomeMetal): on every pre-made map, 2 to 16 players, three seeds, every seat has exactly
-     * HomeMetal.COUNT home patches, all HomeMetal.VALUE, between MIN_DIST and MAX_DIST from its start, none crowding
-     * another (closer than HOME_CROWD; the fan's wrap-around pair sits about 9.5 apart), and the set is the same for every seat
-     * (the same distances from its start, to a block of rounding). Neither
-     * the metal richness nor the extra-metal level moves it.
+     * HOME_COUNT home patches, all HomeMetal.VALUE, between HOME_MIN and HOME_MAX from its start, none crowding another
+     * (closer than HOME_CROWD; a clump's members stand 11 apart), no patch at all within NO_PATCH_WITHIN of a start, and
+     * the set is the same for every seat (the same distances from its start, to a block of rounding). Neither the metal
+     * richness nor the extra-metal level moves it.
      */
     @GameTest(template = ARENA, batch = "maps_metal")
     public static void map_metal_home_set_is_standard_for_every_seat(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
+        if (HomeMetal.COUNT != HOME_COUNT || HomeMetal.MIN_DIST != HOME_MIN || HomeMetal.MAX_DIST != HOME_MAX)
+            problems.add("HomeMetal says " + HomeMetal.COUNT + " patches at " + HomeMetal.MIN_DIST + "-" + HomeMetal.MAX_DIST
+                + ", the design " + HOME_COUNT + " at " + HOME_MIN + "-" + HOME_MAX);
         for (MapPreset preset : MapMetalGameTests.premade())
             for (int n : MapMetalGameTests.COUNTS)
                 for (long seed : SEEDS) {
                     int[] teams = RealmMapGameTests.teams(n);
                     MapLayout l = MapLayout.build(preset, teams, seed);
                     String tag = preset + " n=" + n + " seed " + seed + ": ";
-                    if (l.homeEnd() != n * HomeMetal.COUNT)
-                        problems.add(tag + l.homeEnd() + " home patches for " + n + " seats, expected " + n * HomeMetal.COUNT);
+                    if (l.homeEnd() != n * HOME_COUNT)
+                        problems.add(tag + l.homeEnd() + " home patches for " + n + " seats, expected " + n * HOME_COUNT);
+                    for (MapLayout.Mex m : l.mexes)
+                        if (l.distanceToNearestStart(m.dx(), m.dz()) < NO_PATCH_WITHIN)
+                            problems.add(tag + "patch " + m.dx() + "," + m.dz() + " within " + NO_PATCH_WITHIN + " of a start");
                     List<double[]> dist = new ArrayList<>();
                     for (int s = 0; s < n; s++)
                         dist.add(new double[0]);
@@ -135,10 +164,10 @@ public class MapExtraMetalGameTests {
                         }
                         double[] sorted = ds.stream().mapToDouble(Double::doubleValue).sorted().toArray();
                         dist.set(s, sorted);
-                        if (sorted.length != HomeMetal.COUNT)
-                            problems.add(tag + "seat " + s + " has " + sorted.length + " home patches");
+                        if (sorted.length != HOME_COUNT)
+                            problems.add(tag + "seat " + s + " has " + sorted.length + " home patches, not exactly " + HOME_COUNT);
                         for (double d : sorted)
-                            if (d < HomeMetal.MIN_DIST - 0.8 || d > HomeMetal.MAX_DIST + 0.8)
+                            if (d < HOME_MIN || d > HOME_MAX)
                                 problems.add(tag + "seat " + s + " has a home patch " + d + " from its start");
                     }
                     for (int s = 1; s < n; s++)

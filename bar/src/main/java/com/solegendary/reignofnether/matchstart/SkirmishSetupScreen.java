@@ -33,6 +33,9 @@ public class SkirmishSetupScreen extends Screen {
         .map(com.solegendary.reignofnether.bot.BotPlayer.Difficulty::label).toList();
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
+    /** GenSeed.SHAPES and GenSeed.MODIFIERS, in that order. */
+    static final List<String> GEN_SHAPES = List.of("Any", "Round", "Square");
+    static final List<String> GEN_MODS = List.of("On", "Off", "Surprise");
     static final List<String> DISTANCES = List.of("Close", "Normal", "Far");
     // economy pace codes (EconomyPace): 0 Relaxed, 1 Standard, 2 Fast
     static final List<String> PACES = List.of("Relaxed", "Standard", "Fast");
@@ -67,6 +70,14 @@ public class SkirmishSetupScreen extends Screen {
         public int map = com.solegendary.reignofnether.maps.MapPreset.VERDANT_VALLEY.ordinal();
         /** The pre-made map's seed (MapLayout.build): rolled each time the lobby opens, so the preview is the map played. */
         public long mapSeed = 0;
+        /** A generated map's shape (GenSeed.SHAPES: any, round, square) and modifiers (GenSeed.MODIFIERS: on, off, surprise). */
+        public int genShape = 0, genMods = 0;
+
+        /** The seed the match plays: on a generated map with the lobby's shape and modifiers in its top byte (GenSeed). */
+        public long effectiveMapSeed() {
+            return com.solegendary.reignofnether.maps.MapPreset.byId(map).generated()
+                ? com.solegendary.reignofnether.maps.gen.GenSeed.pack(mapSeed, genShape, genMods) : mapSeed;
+        }
         public int timeOfDay = 0;        // match.TimeOfDay id: 0 morning (default), 1 noon, 2 dusk, 3 night
         public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();   // match.DayCycle id: off / slow (default) / normal
         public Long seed = null;         // a fixed world seed (the eyes tour: runs compare, tools/eyes_diff.py); null = random
@@ -228,16 +239,43 @@ public class SkirmishSetupScreen extends Screen {
         // --- right column: map preview (drawn in render) then the settings ---
         int ry = top + 4 + previewH + 4;
         int rw = rightW - 8;
-        // the battlefield: the world's own terrain or a pre-made map (design/maps.md)
+        // the battlefield: the world's own terrain or a pre-made map (design/maps.md); beside it a new seed for the
+        // stamped maps (lovish Oct 21 22:28: generated maps "sometimes changes rng"): the preview redraws, the number
+        // under it changes, and that is the map that will be built
+        com.solegendary.reignofnether.maps.MapPreset preset = com.solegendary.reignofnether.maps.MapPreset.byId(settings.map);
+        int newW = 28;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(com.solegendary.reignofnether.maps.MapPreview.nameOf(com.solegendary.reignofnether.maps.MapPreset.byId(i))))
             .withValues(range(com.solegendary.reignofnether.maps.MapPreset.count())).withInitialValue(Math.min(settings.map, com.solegendary.reignofnether.maps.MapPreset.count() - 1))
             .withTooltip(i -> Tooltip.create(Component.literal(com.solegendary.reignofnether.maps.MapPreview.blurbOf(com.solegendary.reignofnether.maps.MapPreset.byId(i)))))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Map"), (b, v) -> settings.map = v));
+            .create(rightX + 4, ry, rw - newW - 2, 20, Component.literal("Map"), (b, v) -> {
+                settings.map = v;
+                rebuild();   // a generated map swaps the Size row for its own settings
+            }));
+        Button reroll = addRenderableWidget(Button.builder(Component.literal("New"),
+                b -> settings.mapSeed = new java.util.Random().nextLong())
+            .bounds(rightX + 4 + rw - newW, ry, newW, 20).build());
+        reroll.active = preset.premade();
+        reroll.setTooltip(Tooltip.create(Component.literal("Roll a new map from this preset (a new seed)")));
         ry += 22;
-        addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(ARENAS.get(i)))
-            .withValues(range(5)).withInitialValue(settings.arena)
-            .withTooltip(i -> Tooltip.create(Component.literal("Arena size on random terrain (a pre-made map has its own size)")))
-            .create(rightX + 4, ry, rw, 20, Component.literal("Size"), (b, v) -> settings.arena = v));
+        if (preset.generated()) {
+            // the generated map's own settings in the Size row (it has its own size): shape and modifiers
+            int gh = (rw - 2) / 2;
+            addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(GEN_SHAPES.get(i)))
+                .withValues(range(GEN_SHAPES.size())).withInitialValue(settings.genShape)
+                .withTooltip(i -> Tooltip.create(Component.literal("Arena shape: a round ring wall, a square with corner seats, or either by seed")))
+                .create(rightX + 4, ry, gh, 20, Component.literal("Shape"), (b, v) -> settings.genShape = v));
+            addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(GEN_MODS.get(i)))
+                .withValues(range(GEN_MODS.size())).withInitialValue(settings.genMods)
+                .withTooltip(i -> Tooltip.create(Component.literal(i == 2
+                    ? "Map modifiers are rolled but named only once the map has risen"
+                    : i == 1 ? "No map modifiers" : "One or two map modifiers (rich vein, ley line, geothermal rift...), named under the preview")))
+                .create(rightX + 4 + gh + 2, ry, rw - gh - 2, 20, Component.literal("Mods"), (b, v) -> settings.genMods = v));
+        } else {
+            addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(ARENAS.get(i)))
+                .withValues(range(5)).withInitialValue(settings.arena)
+                .withTooltip(i -> Tooltip.create(Component.literal("Arena size on random terrain (a pre-made map has its own size)")))
+                .create(rightX + 4, ry, rw, 20, Component.literal("Size"), (b, v) -> settings.arena = v));
+        }
         ry += 22;
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(METALS.get(i)))
             .withValues(range(4)).withInitialValue(settings.metal)
@@ -476,8 +514,14 @@ public class SkirmishSetupScreen extends Screen {
             // the real layout for this line-up, as the server will stamp it
             gg.fill(x, y, x + w, y + h, 0xFF101216);
             com.solegendary.reignofnether.maps.MapPreview.draw(gg, font, preset, settings.slotTeams(), x + 1, y + 1, w - 2, h - 12,
-                settings.mapSeed, settings.metal);
+                settings.effectiveMapSeed(), settings.metal);
             gg.drawString(font, com.solegendary.reignofnether.maps.MapPreview.nameOf(preset), x + 3, y + h - 10, 0xC8D0C8, false);
+            String mods = preset.generated() ? com.solegendary.reignofnether.maps.MapPreview.modifiersLine() : null;
+            if (mods != null) {   // a generated map's modifiers, on a dark band over the preview's top
+                String line = font.plainSubstrByWidth(mods, w - 6);
+                gg.fill(x + 1, y + 1, x + w - 1, y + 11, 0xA0000000);
+                gg.drawString(font, line, x + 3, y + 2, 0xFFE6C07A, false);
+            }
             // the map's number (the seed's last four hex digits): enough to tell two rolls apart in a report or clip
             String mapNo = String.format("#%04X", settings.mapSeed & 0xFFFF);
             gg.drawString(font, mapNo, x + w - 3 - font.width(mapNo), y + h - 10, 0x8A928A, false);
