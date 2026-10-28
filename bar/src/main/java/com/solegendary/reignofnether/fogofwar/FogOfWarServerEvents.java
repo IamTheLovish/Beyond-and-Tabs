@@ -319,6 +319,22 @@ public class FogOfWarServerEvents {
         pendingResends.remove(playerId);
     }
 
+    /**
+     * The arena moved (maps.NewMatch): what the fog knew of the old one - every player's vision, the reveals, the
+     * neutrals seen there - belongs to a match that is over. Dropped whole, so the next match's first fog tick starts
+     * from nothing and nothing about the old arena can show on the new one.
+     */
+    public static void forgetArena() {
+        playerLiveChunks.clear();
+        playerEdgeChunks.clear();
+        playerEdgeMasks.clear();
+        pendingResends.clear();
+        revealedPlayerNames.clear();
+        revealedUnitExpiryTick.clear();
+        neutralFogUnits.clear();
+        isRtsPlayerCache.clear();
+    }
+
     public static void onPlayerDisconnect(UUID playerId) {
         clearPlayerVision(playerId);
         isRtsPlayerCache.remove(playerId);
