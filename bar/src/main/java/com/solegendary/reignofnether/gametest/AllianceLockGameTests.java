@@ -90,6 +90,15 @@ public class AllianceLockGameTests {
         return null;
     }
 
+    /** A throwable and the frames that threw it, for a problem line. */
+    static String where(Throwable e) {
+        StringBuilder sb = new StringBuilder(String.valueOf(e));
+        StackTraceElement[] st = e.getStackTrace();
+        for (int i = 0; i < Math.min(8, st.length); i++)
+            sb.append(" at ").append(st[i]);
+        return sb.toString();
+    }
+
     interface Checks {
         void run(ServerPlayer a, ServerPlayer b, ServerPlayer c, List<String> problems);
     }
@@ -133,26 +142,34 @@ public class AllianceLockGameTests {
                     online.addAll(List.of(a, b, c));
                     checks.run(a, b, c, problems);
                 }
+            } catch (RuntimeException e) {
+                // the framework reports a throw by its class alone (CI showed a bare UnsupportedOperationException):
+                // say where it came from
+                problems.add("threw " + where(e));
             } finally {
-                online.removeAll(List.of(a, b, c));
-                for (String x : List.of(nA, nB, nC)) {
-                    for (String y : List.of(nA, nB, nC))
-                        if (!x.equals(y) && AlliancesServerEvents.isAllied(x, y))
-                            AlliancesServerEvents.removeAlliance(x, y);
-                    AlliancesServerEvents.pendingAlliances.remove(x);
+                try {
+                    online.removeAll(List.of(a, b, c));
+                    for (String x : List.of(nA, nB, nC)) {
+                        for (String y : List.of(nA, nB, nC))
+                            if (!x.equals(y) && AlliancesServerEvents.isAllied(x, y))
+                                AlliancesServerEvents.removeAlliance(x, y);
+                        AlliancesServerEvents.pendingAlliances.remove(x);
+                    }
+                    // as LobbyColorsGameTests: each side leaves through a match of its own, so no defeat crowns another
+                    for (String n : List.of(nC, nB, nA)) {
+                        new MultiplayerMatch(Set.of(n), Set.of(n)).register();
+                        PlayerServerEvents.defeat(n, "gametest");
+                        MultiplayerMatch leftover = MultiplayerMatch.of(n);
+                        if (leftover != null)
+                            leftover.end();
+                    }
+                    if (match != null && !match.isOver())
+                        match.end();
+                    PlayerServerEvents.players.removeAll(List.of(a, b, c));
+                    rule.set(was, server);
+                } catch (RuntimeException e) {
+                    problems.add("the clean-up threw " + where(e));
                 }
-                // as LobbyColorsGameTests: each side leaves through a match of its own, so no defeat crowns another
-                for (String n : List.of(nC, nB, nA)) {
-                    new MultiplayerMatch(Set.of(n), Set.of(n)).register();
-                    PlayerServerEvents.defeat(n, "gametest");
-                    MultiplayerMatch leftover = MultiplayerMatch.of(n);
-                    if (leftover != null)
-                        leftover.end();
-                }
-                if (match != null && !match.isOver())
-                    match.end();
-                PlayerServerEvents.players.removeAll(List.of(a, b, c));
-                rule.set(was, server);
             }
             TerrainGameTests.finish(helper, problems);
         });
