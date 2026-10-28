@@ -96,6 +96,11 @@ public final class Phenomena {
         return SPECS.get(key(intent, Math.max(1, Math.min(4, tier)), twist));
     }
 
+    /** True for the phenomena that change the world's weather (global: a GameTest leaves them out of its smoke cast). */
+    public static boolean changesWeather(Spec s) {
+        return s.intent().equals("rain") && !s.twist() || s.intent().equals("sun") && s.tier() == 1 && !s.twist();
+    }
+
     /** Runs the phenomenon and returns its name for the reply ("" for an unknown intent: nothing happens). */
     public static String cast(ServerLevel level, Mob hero, String intent, int tier, boolean twist, Vec3 aim, int quantity) {
         if (WagerIntents.NONSENSE.equals(intent)) {

@@ -30,7 +30,7 @@ public final class WagerBlocks {
     private static final List<Placed> PLACED = new ArrayList<>();
 
     /** Places {@code state} at {@code pos} until {@code until} if the spot is air and empty; true if it did. */
-    static boolean place(ServerLevel level, BlockPos pos, BlockState state, long until) {
+    public static boolean place(ServerLevel level, BlockPos pos, BlockState state, long until) {
         if (!level.isLoaded(pos) || !level.getBlockState(pos).isAir()
                 || !level.getEntitiesOfClass(LivingEntity.class, new AABB(pos)).isEmpty())
             return false;
@@ -58,6 +58,38 @@ public final class WagerBlocks {
             takeDown(p);
         PLACED.clear();
     }
+
+    // ---- red-proof stubs (Mode A B2): the seams the GameTest drives
+    public static void sweep(ServerLevel level, long now, java.util.function.Predicate<BlockPos> loaded) {
+        for (int i = PLACED.size() - 1; i >= 0; i--) {
+            Placed p = PLACED.get(i);
+            if (p.level == level && now >= p.until) {
+                if (loaded.test(p.pos))
+                    p.level.removeBlock(p.pos, false);
+                PLACED.remove(i);
+            }
+        }
+    }
+
+    public static void stop(ServerLevel level, java.util.function.Predicate<BlockPos> loaded) {
+        for (int i = PLACED.size() - 1; i >= 0; i--)
+            if (PLACED.get(i).level == level)
+                PLACED.remove(i);
+    }
+
+    public static int pendingAt(ServerLevel level, BlockPos pos) {
+        int n = 0;
+        for (Placed p : PLACED)
+            if (p.level == level && p.pos.equals(pos))
+                n++;
+        return n;
+    }
+
+    public static net.minecraft.nbt.CompoundTag saveTag() {
+        return new net.minecraft.nbt.CompoundTag();
+    }
+
+    public static void loadTag(net.minecraft.server.MinecraftServer server, net.minecraft.nbt.CompoundTag tag) { }
 
     private static void takeDown(Placed p) {
         if (p.level.isLoaded(p.pos) && p.level.getBlockState(p.pos) == p.state)

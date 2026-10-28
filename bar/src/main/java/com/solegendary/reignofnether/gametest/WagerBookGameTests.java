@@ -10,26 +10,34 @@ import com.solegendary.reignofnether.hero.wager.WagerClock;
 import com.solegendary.reignofnether.hero.wager.WagerIntents;
 import com.solegendary.reignofnether.hero.wager.WagerParser;
 import com.solegendary.reignofnether.hero.wager.WagerState;
+import com.solegendary.reignofnether.hero.wager.WagerBlocks;
 import com.solegendary.reignofnether.hero.wager.WagerVerdict;
+import com.solegendary.reignofnether.hero.wager.WagerWeather;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -537,6 +545,143 @@ public class WagerBookGameTests {
                 problems.add("the twisted heal still healed the friend");
             if (WagerState.of(hero).twisted() != 1 || !WagerState.of(hero).tally().contains("Regretted: 1"))
                 problems.add("the tally did not count the twist: " + WagerState.of(hero).tally());
+            cleanup(s, null);
+            finish(helper, problems);
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------ Mode A round 1
+
+    /**
+     * B1: wager weather ends on our own clock. The mod's load function turns doWeatherCycle off, so vanilla's rain timer
+     * never runs out in a match: a 2-s rain from a wager must stop by itself (with the cycle off) and leave the sky as it
+     * was, and it never brings vanilla thunder (whose lightning strikes across the map).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void wager_weather_ends_on_its_own_clock(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameRules.BooleanValue cycle = level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE);
+        boolean cycleWas = cycle.get();
+        cycle.set(false, level.getServer());
+        boolean rainWas = level.isRaining();
+        long start = level.getGameTime();
+        WagerWeather.start(level, true, 40);
+        if (!level.isRaining() || level.isThundering()) {
+            cycle.set(cycleWas, level.getServer());
+            helper.fail("the wager rain did not start, or it brought thunder (raining " + level.isRaining()
+                + ", thundering " + level.isThundering() + ")");
+            return;
+        }
+        if (WagerWeather.until(level) != start + 40) {
+            cycle.set(cycleWas, level.getServer());
+            helper.fail("the wager weather's clock reads " + WagerWeather.until(level) + ", expected " + (start + 40));
+            return;
+        }
+        helper.succeedWhen(() -> {
+            long now = level.getGameTime();
+            if (now < start + 45)
+                helper.fail("waiting for the rain to end (" + (now - start) + " ticks)");
+            boolean done = level.isRaining() == rainWas && !level.isThundering() && WagerWeather.until(level) < 0;
+            if (!done && now < start + 150)
+                helper.fail("still raining " + (now - start) + " ticks after a 40-tick wager");
+            cycle.set(cycleWas, level.getServer());
+            if (!done)
+                helper.fail("the wager rain never ended with doWeatherCycle off (raining " + level.isRaining()
+                    + ", clock " + WagerWeather.until(level) + ")");
+        });
+    }
+
+    /**
+     * B2: a temporary block (wall, mound, campfire) is only forgotten once it is actually gone: at its time with its chunk
+     * unloaded it waits (block and entry stay) and goes when the chunk is back; a server stop keeps unloaded ones; the
+     * list is saved (SavedData) so a restart still takes the block down.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void wager_temporary_blocks_wait_for_their_chunk_and_survive_a_restart(GameTestHelper helper) {
+        helper.runAfterDelay(1, () -> {
+            List<String> problems = new ArrayList<>();
+            ServerLevel level = helper.getLevel();
+            BlockPos pos = helper.absolutePos(new BlockPos(9, 2, 9));
+            long until = level.getGameTime() + 100000;   // the real server sweep never reaches it during the test
+            if (!WagerBlocks.place(level, pos, Blocks.COBBLESTONE.defaultBlockState(), until)) {
+                helper.fail("could not place the test block at " + pos);
+                return;
+            }
+            CompoundTag saved = WagerBlocks.saveTag();
+            boolean listed = false;
+            for (Tag t : saved.getList("blocks", Tag.TAG_COMPOUND)) {
+                CompoundTag e = (CompoundTag) t;
+                if (e.getInt("x") == pos.getX() && e.getInt("y") == pos.getY() && e.getInt("z") == pos.getZ()
+                        && e.getLong("until") == until)
+                    listed = true;
+            }
+            if (!listed)
+                problems.add("the saved list has no entry for the block (a restart would leave it): " + saved);
+
+            WagerBlocks.stop(level, p -> false);
+            if (WagerBlocks.pendingAt(level, pos) != 1 || !level.getBlockState(pos).is(Blocks.COBBLESTONE))
+                problems.add("a server stop with the chunk unloaded dropped the entry");
+            WagerBlocks.sweep(level, until, p -> false);
+            if (WagerBlocks.pendingAt(level, pos) != 1)
+                problems.add("the entry was dropped at its time while its chunk was unloaded");
+            WagerBlocks.sweep(level, until, p -> true);
+            if (!level.getBlockState(pos).isAir())
+                problems.add("the block is still there once its chunk is loaded");
+            if (WagerBlocks.pendingAt(level, pos) != 0)
+                problems.add("the entry stayed after the block came down");
+
+            // a restart: the saved list comes back; the block is already gone, so the entry is simply dropped
+            WagerBlocks.loadTag(level.getServer(), saved);
+            if (WagerBlocks.pendingAt(level, pos) != 1)
+                problems.add("the saved entry did not come back on load");
+            WagerBlocks.sweep(level, until, p -> true);
+            if (WagerBlocks.pendingAt(level, pos) != 0 || !level.getBlockState(pos).isAir())
+                problems.add("the reloaded entry was not cleared");
+            if (!level.getBlockState(pos).isAir())
+                level.removeBlock(pos, false);
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Every phenomenon and twist casts without an error and answers with its name (Mode A note 9: only heal was cast
+     * before). The weather ones are left out (global; B1 has its own test). Whatever they spawned is removed after.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void wager_every_phenomenon_casts_once(GameTestHelper helper) {
+        String me = owner(helper, "smoke"), them = owner(helper, "smoke_enemy");
+        Mob[] s = scene(helper, me, them);
+        if (!(s[0] instanceof FactionHero) || s[1] == null || s[2] == null) {
+            helper.fail("could not spawn the scene");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            ServerLevel level = helper.getLevel();
+            AABB box = new AABB(helper.absolutePos(new BlockPos(-8, -2, -8)), helper.absolutePos(new BlockPos(24, 20, 24)));
+            Set<Integer> before = new HashSet<>();
+            for (Entity e : level.getEntitiesOfClass(Entity.class, box))
+                before.add(e.getId());
+            int cast = 0;
+            for (Phenomena.Spec spec : Phenomena.specs()) {
+                if (Phenomena.changesWeather(spec))
+                    continue;
+                String what = spec.intent() + " T" + spec.tier() + (spec.twist() ? " twist" : "");
+                try {
+                    String name = Phenomena.cast(level, s[0], spec.intent(), Math.max(1, spec.tier()), spec.twist(),
+                        s[2].position(), 0);
+                    if (!spec.name().equals(name))
+                        problems.add(what + " answered '" + name + "'");
+                    cast++;
+                } catch (RuntimeException ex) {
+                    problems.add(what + " threw " + ex);
+                }
+            }
+            if (cast < 90)
+                problems.add("only " + cast + " phenomena cast");
+            for (Entity e : level.getEntitiesOfClass(Entity.class, box))
+                if (!before.contains(e.getId()) && !(e instanceof net.minecraft.world.entity.player.Player))
+                    e.discard();
             cleanup(s, null);
             finish(helper, problems);
         });
