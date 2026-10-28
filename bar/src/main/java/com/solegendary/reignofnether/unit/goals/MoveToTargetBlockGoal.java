@@ -113,9 +113,12 @@ public class MoveToTargetBlockGoal extends Goal {
     /**
      * Repath now from wherever the unit is, without any backoff - for when it was moved externally (UnitUnstick
      * teleporting it out of a block), so it doesn't sit out up to 10 s of stuck-backoff earned while trapped.
+     * The backoff only: the stuck count is kept, and the repaths after this one judge their own progress as ever.
+     * Resetting it here meant a unit UnitUnstick rescued in place while it waited out its backoff at a wall (a move
+     * into unloaded land) never reached its give-up and stood with its order forever (CI stress 40675281944).
      */
     public void forceRepath() {
-        resetRecalcBackoff();
+        currentRecalcCooldown = RECALC_COOLDOWN_MAX;
         recalcCooldown = 0;
         if (moveTarget != null && isRunning && !this.mob.level().isClientSide())
             this.start();
