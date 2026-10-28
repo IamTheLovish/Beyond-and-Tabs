@@ -21,9 +21,9 @@ S = 8                       # supersampling
 N = 16
 # r2 (critic r31): in game the r1 colours (body luma ~55) drew near-black under the Enchanted grade - "flat black";
 # now a dark brown-grey that lands at ~20% luma on screen, with a lighter leading edge
-BODY = (98, 88, 80)
-WING = (112, 101, 91)
-EDGE = (146, 134, 121)
+BODY = (76, 70, 66)     # r3 (eyes run 40760019141): r2 drew paler than the noon lawn under shaders, a ghost
+WING = (86, 79, 74)
+EDGE = (118, 110, 102)
 
 
 def P(pts):
