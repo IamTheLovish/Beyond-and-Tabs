@@ -113,6 +113,9 @@ public final class PossessionServer {
     static final double JUMP_VELOCITY = 0.42;
     /** A server shove (Possession.serverShove) above this is one the server really gave; it decays by 0.91 a tick. */
     static final float SHOVE_SEEN = 0.05f;
+    /** Blocks a knocked-back field artillery's keyless claims may carry it each way on each axis beyond what its shoves
+     * reach (a walk's slide just ended, a current, rounding). */
+    static final double KNOCK_SLACK = 0.3;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
     static final int HITS_PER_TICK = 6;
 
@@ -182,6 +185,9 @@ public final class PossessionServer {
         float serverShove;
         /** The last drive ran the claims branch (which leaves only the ground probe): only then is this tick's velocity a shove. */
         boolean claimsLastTick;
+        /** How far the server's shoves since serverShove last died out may still carry the unit east, west, south and
+         * north (see applyClaim's knockback cap). */
+        double knockEast, knockWest, knockSouth, knockNorth;
         int correctionCooldown;
         /** The server is moving the unit itself (an ability's AI window, a leap arc): claims are ignored. */
         boolean serverMoves;
@@ -573,6 +579,24 @@ public final class PossessionServer {
             dz *= maxH / h;
             impossible = true;
         }
+        // knocked back with the keys at rest, field artillery keeps its set-up (SetUp: claimedWithoutShove is false),
+        // so the claims may carry it only as far as its shoves do, axis by axis (lovish's option A, the #222
+        // follow-up): each shove adds what it can carry the unit east or west and south or north (its own velocity at
+        // air drag, see drive), and the claims spend it. Vanilla collision works per axis and only ever takes motion
+        // away, so an honest prediction - lagging, hit twice from two sides, sliding along a wall - stays inside; a
+        // claim that walks the crew somewhere the shoves never pushed it does not. Walking with the keys costs the
+        // set-up anyway, so it is not capped
+        boolean knockCap = !flyer && p.forward == 0 && p.strafe == 0 && p.serverShove > SHOVE_SEEN
+                && com.solegendary.reignofnether.unit.SetUp.needsSetUp(mob);
+        if (knockCap) {
+            double cx = Mth.clamp(dx, -p.knockWest, p.knockEast), cz = Mth.clamp(dz, -p.knockNorth, p.knockSouth);
+            if (cx != dx || cz != dz) {
+                dx = cx;
+                dz = cz;
+                impossible = true;
+            }
+        }
+        double fromX = mob.getX(), fromZ = mob.getZ();
         double maxUp, maxDown;
         boolean climbing = false;
         if (flyer) {
@@ -614,6 +638,13 @@ public final class PossessionServer {
             impossible = true;
         }
         mob.move(net.minecraft.world.entity.MoverType.SELF, new Vec3(dx, dy, dz));
+        if (knockCap) {   // the shoves' reach the move spent (what collision let through)
+            double mx = mob.getX() - fromX, mz = mob.getZ() - fromZ;
+            p.knockEast = Math.max(0, p.knockEast - Math.max(0, mx));
+            p.knockWest = Math.max(0, p.knockWest + Math.min(0, mx));
+            p.knockSouth = Math.max(0, p.knockSouth - Math.max(0, mz));
+            p.knockNorth = Math.max(0, p.knockNorth + Math.min(0, mz));
+        }
         if (!flyer && !climbing && !p.jumpedFromGround && !Double.isNaN(p.groundY) && mob.getY() > p.groundY + 1.0e-3
                 && mob.level().noCollision(mob, mob.getBoundingBox().move(0, -2 * GROUND_PROBE, 0))) {
             // up without jumping is a step, and a step ends standing on something: a client claiming its unit
@@ -846,6 +877,8 @@ public final class PossessionServer {
             return false;
         boolean claimsBefore = p.claimsLastTick;
         p.claimsLastTick = false;
+        // a shove dies out at air drag every tick, whatever moves the unit meanwhile (keys, an ability's AI window)
+        p.serverShove *= 0.91f;
         // the server moving the unit itself starts / ends: the possessor's client stops / resumes predicting
         boolean serverMoves = p.aiTicks > 0 || scriptedMotion(mob);
         if (serverMoves != p.serverMoves) {
@@ -878,7 +911,19 @@ public final class PossessionServer {
             float shove = claimsBefore ? (float) Math.sqrt(dm.x * dm.x + dm.z * dm.z) : 0;
             p.claimsLastTick = true;
             p.shoveAllowance = Math.max(p.shoveAllowance * 0.91f, shove > 0.2f ? shove : 0);
-            p.serverShove = Math.max(p.serverShove * 0.91f, shove > SHOVE_SEEN ? shove : 0);
+            if (shove > SHOVE_SEEN) {
+                // a shove adds how far it can carry the unit on each axis: never further than its velocity there could
+                // through the air (decaying at air drag, 0.91 a tick: v / 0.09 in all). A new knockback after the last
+                // has died out starts afresh, with the slack
+                if (p.serverShove <= SHOVE_SEEN)
+                    p.knockEast = p.knockWest = p.knockSouth = p.knockNorth = KNOCK_SLACK;
+                double reach = 1 / (1 - 0.91);
+                p.knockEast += Math.max(0, dm.x) * reach;
+                p.knockWest += Math.max(0, -dm.x) * reach;
+                p.knockSouth += Math.max(0, dm.z) * reach;
+                p.knockNorth += Math.max(0, -dm.z) * reach;
+            }
+            p.serverShove = Math.max(p.serverShove, shove > SHOVE_SEEN ? shove : 0);
             if (shove > 0.2f && !p.headless) {
                 // vanilla only sends the shove if this unit happened to tick before the attacker; send it ourselves
                 // so the possessor's prediction always carries it (setting a velocity twice is harmless)
