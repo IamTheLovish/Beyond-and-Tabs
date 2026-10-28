@@ -60,6 +60,10 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
 
     @Override
     public void tick() {
+        // the nose starts from the body's yaw as it is now: BoneDragonUnit.updateRotation leaves the two equal, but a
+        // dragon ordered in its spawn tick (the state was built at yaw 0, before the spawn's moveTo) or turned by other
+        // code (a conversion, a possession) would otherwise swing its nose to a stale heading in one tick
+        state.heading = Mth.wrapDegrees(mob.getYRot());
         // what moved us besides the steering since last tick (a knockback, a push) rides on top and decays
         Vec3 now = mob.getDeltaMovement();
         // (in water or lava the drag is not the air's 0.91, so what is left there is no push)
