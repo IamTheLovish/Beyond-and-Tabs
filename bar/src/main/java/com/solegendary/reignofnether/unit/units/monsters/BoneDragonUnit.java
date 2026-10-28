@@ -234,13 +234,28 @@ public class BoneDragonUnit extends GhastUnit {
     /** How far down the ground is looked for under a dive's spot (blocks below the dragon). */
     static final int GROUND_SCAN = 64;
 
-    /** The standing height on the first solid block below the dragon's height at (x, z), or null within GROUND_SCAN. */
+    /**
+     * The standing height on the first solid block below the dragon's height at (x, z), or null: the spot is inside
+     * terrain at the dragon's height (a cliff beside it - #300 review round 2: r2 returned a ledge above it), the first
+     * thing below is water or lava (no ground to land on), or there is nothing within GROUND_SCAN.
+     */
     private Integer groundBelow(ServerLevel sl, double x, double z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(getY()), Mth.floor(z));
-        for (int i = 0; i <= GROUND_SCAN && p.getY() > sl.getMinBuildHeight(); i++, p.move(0, -1, 0))
-            if (!sl.getBlockState(p).getCollisionShape(sl, p).isEmpty())
+        if (!open(sl, p) || !open(sl, p.above()))
+            return null;
+        for (int i = 0; i <= GROUND_SCAN && p.getY() > sl.getMinBuildHeight(); i++, p.move(0, -1, 0)) {
+            var state = sl.getBlockState(p);
+            if (!state.getFluidState().isEmpty())
+                return null;
+            if (!state.getCollisionShape(sl, p).isEmpty())
                 return p.getY() + 1;
+        }
         return null;
+    }
+
+    private static boolean open(ServerLevel sl, BlockPos p) {
+        var state = sl.getBlockState(p);
+        return state.getFluidState().isEmpty() && state.getCollisionShape(sl, p).isEmpty();
     }
 
     // ---- the Dive's state across a save and load (#300 review: a reload must not hand back a fresh dive): the
