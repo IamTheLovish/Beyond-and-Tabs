@@ -54,13 +54,17 @@ BUILDING_BLOCKS = [
     "cracked_deepslate_bricks", "deepslate_tiles", "blackstone", "polished_blackstone", "polished_blackstone_bricks",
     "cracked_polished_blackstone_bricks", "chiseled_polished_blackstone", "basalt", "polished_basalt", "smooth_basalt",
     "obsidian", "netherrack", "nether_bricks", "red_nether_bricks", "chiseled_nether_bricks", "soul_sand",
-    "prismarine_bricks", "dark_prismarine", "moss_block", "end_stone", "cut_copper", "oxidized_cut_copper",
+    "prismarine_bricks", "dark_prismarine", "moss_block", "end_stone", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper",
     "raw_iron_block", "iron_block", "gold_block", "netherite_block", "diamond_block", "emerald_block", "lapis_block",
     "podzol", "coarse_dirt", "red_sand", "dirt", "sand", "gravel",
     ("smooth_stone_slab", {"type": "double", "waterlogged": "false"}), "dirt_path", "reinforced_deepslate",
     ("farmland", {"moisture": "0"}), ("farmland", {"moisture": "7"}),
 ]
 PER_ROW, ROWS = 7, 4
+# Round 23: the metals on their own (design/eyes/metal_sampler.nbt), a grey reference (white_concrete) beside them
+METALS = ["iron_block", "gold_block", "netherite_block", "raw_iron_block", "raw_gold_block", "raw_copper_block",
+          "white_concrete", "cut_copper", "exposed_cut_copper", "weathered_cut_copper", "oxidized_cut_copper",
+          "copper_block", "oxidized_copper", "smooth_stone"]
 
 
 def building_sampler(blocks):
@@ -101,6 +105,7 @@ def main():
             s.set(1 + i * 3, y, 1, wood + "_log", axis="y")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     s.write(OUT)
+    building_sampler(METALS).write(os.path.join(os.path.dirname(OUT), "metal_sampler.nbt"))
     chunk = PER_ROW * ROWS
     for i in range(0, len(BUILDING_BLOCKS), chunk):
         building_sampler(BUILDING_BLOCKS[i:i + chunk]).write(
