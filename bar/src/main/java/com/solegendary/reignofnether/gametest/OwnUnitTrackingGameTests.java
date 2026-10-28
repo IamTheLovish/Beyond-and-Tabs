@@ -65,8 +65,15 @@ public class OwnUnitTrackingGameTests {
 
         helper.runAfterDelay(2, () -> {
             String failure = null;
+            // the headless server has no view distance of its own (PlayerList says 0): give it
+            // a real one for this check and put the old one back. No real players here, so nothing else notices.
+            Integer oldChunkMapVd = null;
             try {
-                int vd = level.getServer().getPlayerList().getViewDistance();
+                Field vdField = net.minecraft.server.level.ChunkMap.class.getDeclaredField("viewDistance");
+                vdField.setAccessible(true);
+                oldChunkMapVd = vdField.getInt(level.getChunkSource().chunkMap);
+                level.getChunkSource().setViewDistance(10);
+                int vd = vdField.getInt(level.getChunkSource().chunkMap) - 1;   // ChunkMap keeps view distance + 1
                 // the viewer near the far corner of its loaded square from the unit: same chunk distance as the edge
                 // of the loaded ground, but ~1.4x the view distance away in a straight line
                 double off = vd * 16 - 8;
@@ -90,6 +97,8 @@ public class OwnUnitTrackingGameTests {
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 failure = "tracking lookup failed: " + ex;
             } finally {
+                if (oldChunkMapVd != null)
+                    level.getChunkSource().setViewDistance(oldChunkMapVd - 1);
                 mine.discard();
                 enemy.discard();
             }
