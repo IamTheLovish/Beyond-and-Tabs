@@ -478,6 +478,15 @@ SEED_ORDER = (
     "grass_straw",            # round 29b: the untinted straw layer of the grass plants (critic r1: "no straw")
     "tall_grass_straw_bottom",
     "tall_grass_straw_top",
+    "grass_b",                # r34: more plant shapes (PLANT_SHAPES)
+    "grass_c",
+    "fern_b",
+    "tall_grass_bottom_b",
+    "tall_grass_top_b",
+    "grass_straw_b",
+    "grass_straw_c",
+    "tall_grass_straw_bottom_b",
+    "tall_grass_straw_top_b",
 )
 
 
@@ -1039,6 +1048,20 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
 # so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
     TARGETS[_p] = dict(luma=0.50, std=0.110, sat=0.36, tilt=12.0, smooth=50, pore=120)
+# r34 (tufts round 34; critic r33: tufts 4/10 default, 6/10 preset): bold-blade sprites (tools/plant_sprites.py) and
+# more shapes - three short grasses, two ferns, two tall grasses - so neighbouring tufts differ. Each extra shape
+# takes its first shape's targets; appended (SEED_ORDER rule). m_plant fits only their luma MEAN and saturation, over
+# the whole plant (std is not used for the plants any more): the drawn values are already the final ones.
+# ao 0.3 (like the leaves' 0.35): a blade behind another one is not a cavity - r33's grass AO went down to 0.55
+# (claude/research-grass-rts-zoom-oct28.md: no dark outlines, no heavy AO ramp); now >= 0.86.
+PLANT_SHAPES = {"grass_b": "grass", "grass_c": "grass", "fern_b": "fern", "tall_grass_bottom_b": "tall_grass_bottom",
+                "tall_grass_top_b": "tall_grass_top", "grass_straw_b": "grass_straw", "grass_straw_c": "grass_straw",
+                "tall_grass_straw_bottom_b": "tall_grass_straw_bottom", "tall_grass_straw_top_b": "tall_grass_straw_top"}
+for _v, _b in PLANT_SHAPES.items():
+    TARGETS[_v] = dict(TARGETS[_b])
+for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
+           "grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top", *PLANT_SHAPES):
+    TARGETS[_p] = dict(TARGETS[_p], ao=0.3)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2083,36 +2106,66 @@ def m_lantern(F, n, glow):
     return dict(H=H, alb=np.clip(alb, 0, 1), alpha=alpha, f0=f0, smooth=smooth, emit=emit)
 
 
+LUMA_W = np.array([0.2126, 0.7152, 0.0722])
+
+
+def _plant_fit(alb, m, luma, sat):
+    """r34: fit_albedo's saturation and luma-mean steps over the WHOLE plant (both halves of a two-block one at once),
+    without its spread step. Fitted half by half, the r33 tall grass stepped 0.11 in luma where its halves meet (0.66
+    above the seam, 0.77 below, from the same drawn value); and the spread step stretched the drawn values ~1.4x,
+    measured against edge texels that the black under the cut-out darkened at mip 2. plant_sprites draws its values in
+    final units (BASE / BODY / TIP against the lawn's 0.56), so only the mean and the warmth's saturation are set."""
+    if not m.any():
+        return alb
+    L = alb @ LUMA_W
+    grey = L[..., None]
+    mx, mn = alb.max(-1), alb.min(-1)
+    s0 = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)[m].mean()
+    if s0 > 1e-6:
+        alb = np.clip(grey + (alb - grey) * (sat / s0), 0, 1)
+    return np.clip(alb * (luma / max((alb @ LUMA_W)[m].mean(), 1e-6)), 0, 1)
+
+
 def m_plant(name, n):
     """Round 29: a grass plant sprite (tools/plant_sprites.py). Two-block plants are drawn once on a 2n-tall canvas
     from one seed and split, so the blades run on from the bottom texture into the top one. Round 29b: the grass
-    plants' straw layer (dead blades, dry stalks, seed heads) is drawn with them and split out by texel, in colour."""
+    plants' straw layer (dead blades) is drawn with them and split out by texel, in colour. r34: a few bold blades
+    (plant_sprites), shapes _b / _c (PLANT_SHAPES), fitted over the whole plant (_plant_fit), and the colour and height
+    under the transparent texels taken from the nearest blade (plant_sprites.bleed): mipmaps blend them into the edges
+    (MC-114265; r33: 62-100% of the texels round a blade were black), and the height cliff at the cut-out's edge
+    tilted the edge texels' normals 34-40 degrees (15 inside the blade) - a rim the shader lights on one side."""
     ps = plant_sprites
     straw = "straw" in name
     base = name.replace("grass_straw", "grass")
-    rng = np.random.default_rng(SEEDS[base.replace("_top", "_bottom")])
-    if base == "grass":
-        r = ps.grass_clump(n, rng)
-    elif base == "fern":
-        r = ps.fern(n, rng)
+    stem, shape = base, 0
+    for suffix, k in (("_b", 1), ("_c", 2)):
+        if base.endswith(suffix):
+            stem, shape = base[:-len(suffix)], k
+    rng = np.random.default_rng(SEEDS[base.replace("_top", "_bottom")])   # both halves (and layers) from one seed
+    if stem == "grass":
+        full = ps.grass_clump(n, rng, variant=shape)
+    elif stem == "fern":
+        full = ps.fern(n, rng, variant=shape)
+    elif stem.startswith("tall_grass"):
+        full = ps.grass_clump(n, rng, tall=True, variant=shape)
     else:
-        top, bottom = ps.split2(ps.grass_clump(n, rng, tall=True) if base.startswith("tall") else
-                                ps.fern(n, rng, large=True))
-        r = top if base.endswith("_top") else bottom
-    H, shade = r[0], r[1]
-    if len(r) == 4:
-        alpha = r[3] if straw else r[2]
-    else:
-        alpha = r[2]
-    if straw:   # dry straw: tan, a darker brown low in the clump (old dead blades), lighter at the tips
+        full = ps.fern(n, rng, large=True, variant=shape)
+    H, shade = full[0], full[1]
+    alpha = full[3] if straw else full[2]
+    if straw:   # dry straw: tan, the drawn values along the blade
         rgb = np.array([0.80, 0.70, 0.46])[None, None, :] * shade[..., None]
-        alb = np.clip(rgb * (0.85 + 0.15 * np.clip(shade, 0, 1))[..., None], 0, 1)
     else:
         # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
         # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
         # under the biome tint a tuft reads yellower and lighter than the turf it stands on, its shadow beneath it
-        alb = np.clip(np.stack([shade * 1.08, shade, shade * 0.80], -1), 0, 1)
-    return dict(H=np.where(alpha > 0, H, 0.0), alb=alb, alpha=alpha)
+        rgb = np.stack([shade * 1.08, shade, shade * 0.80], -1)
+    t = TARGETS[name]
+    alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
+    H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
+    if H.shape[0] > n:                       # a two-block plant: this texture's half
+        half = slice(0, n) if stem.endswith("_top") else slice(n, 2 * n)
+        H, alb, alpha = H[half], alb[half], alpha[half]
+    return dict(H=H, alb=alb, alpha=alpha)
 
 
 def m_cobweb(F, n):
@@ -2783,8 +2836,10 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leav
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
-PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top")
-STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top")
+PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
+          "grass_b", "grass_c", "fern_b", "tall_grass_bottom_b", "tall_grass_top_b")   # r34: the extra shapes
+STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
+         "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b")
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 
 
@@ -2832,6 +2887,7 @@ def _cross_elements(layers, lean, scale=1.0):
 
 
 def _plant_model(p, straw, lean, scale=1.0):
+    """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
@@ -2840,11 +2896,24 @@ def _plant_model(p, straw, lean, scale=1.0):
     return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale)}
 
 
+# r34: the sprite shape each tuft model shows - three short grasses, two ferns (tools/plant_sprites.py GRASS / FERN) -
+# so a set of planes and its 0.65 copy (_d = "", _e = _b) never show the same blades
+TUFT_SPRITES = {"grass": {"": "", "_b": "_b", "_c": "_c", "_d": "_b", "_e": "_c"},
+                "fern": {"": "", "_b": "_b", "_c": "", "_d": "_b", "_e": ""}}
+# r34: two tall grasses (plant_sprites.TALL). The game picks a model from a blockstate's list by the block's seed, and
+# DoublePlantBlock.getSeed gives both halves the LOWER block's position, so index i of the lower list always stands
+# under index i of the upper one
+TALL_SHAPES = ("", "_b")
+TALL_BLOCKSTATES = {"tall_grass": {
+    "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
+    "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass", True, v, TUFT_SCALE.get(k, 1.0)) for k, v in TUFTS.items()},
-    **{"fern" + k: _plant_model("fern", False, v, TUFT_SCALE.get(k, 1.0)) for k, v in TUFTS.items()},
-    "tall_grass_bottom": _plant_model("tall_grass_bottom", True, None),
-    "tall_grass_top": _plant_model("tall_grass_top", True, None),
+    **{"grass" + k: _plant_model("grass" + TUFT_SPRITES["grass"][k], True, v, TUFT_SCALE.get(k, 1.0))
+       for k, v in TUFTS.items()},
+    **{"fern" + k: _plant_model("fern" + TUFT_SPRITES["fern"][k], False, v, TUFT_SCALE.get(k, 1.0))
+       for k, v in TUFTS.items()},
+    **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},
+    **{"tall_grass_top" + k: _plant_model("tall_grass_top" + k, True, None) for k in TALL_SHAPES},
     "large_fern_bottom": _plant_model("large_fern_bottom", False, None),
     "large_fern_top": _plant_model("large_fern_top", False, None),
 }
@@ -2958,6 +3027,9 @@ def write_models():
     for name, variants in TUFT_BLOCKSTATES.items():   # round 29d
         with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
             json.dump({"variants": {"": variants}}, f, indent=1)
+    for name, halves in TALL_BLOCKSTATES.items():     # r34: two tall grass shapes
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"variants": halves}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -3224,8 +3296,8 @@ def recipes():
             R[name] = _scan_grass_side(i)
         else:
             R[name] = _scan_grass_overlay(i)
-    for p in PLANTS + STRAW:                               # round 29
-        R[p] = _parts(lambda F, n, p=p: m_plant(p, n))
+    for p in PLANTS + STRAW:                               # round 29; r34: fitted in m_plant, over the whole plant
+        R[p] = _parts(lambda F, n, p=p: m_plant(p, n), fit=False)
     return R
 
 

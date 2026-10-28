@@ -37,6 +37,11 @@ public final class Kinematics {
      * @param attacking  swinging or drawing this tick (counts as exertion)
      * @param fresh      the slot's first tick: seed it, no motion
      */
+    /** Ticks per breath at an exertion: 60 at rest (a man standing), 25 when blown. */
+    public static float breathPeriod(float exertion) {
+        return Mth.lerp(Mth.clamp(exertion, 0f, 1f), 60f, 25f);
+    }
+
     public static void step(float[] s, int b, float dx, float dy, float dz, float dYawDeg, float health, float maxHealth,
                             boolean attacking, boolean fresh) {
         if (fresh) {
@@ -70,6 +75,10 @@ public final class Kinematics {
         }
         float e = s[b + EXERTION];
         s[b + EXERTION] = speed > RUN_SPEED || attacking ? e + (1f - e) * 0.02f : e * 0.99f;
+        // the breath runs on its own phase: exertion changes how fast it turns, never where it is (Motion.pose)
+        float tempo = s[b + TEMPO] > 0f ? s[b + TEMPO] : 1f;
+        s[b + BREATH_PREV] = s[b + BREATH_PHASE];
+        s[b + BREATH_PHASE] = Life.advance(s[b + BREATH_PHASE], tempo / breathPeriod(s[b + EXERTION]));
 
         s[b + HIT_AGE] = Math.min(s[b + HIT_AGE] + 1f, 1000f);
         if (Float.isFinite(health) && Float.isFinite(maxHealth) && maxHealth > 0f) {
