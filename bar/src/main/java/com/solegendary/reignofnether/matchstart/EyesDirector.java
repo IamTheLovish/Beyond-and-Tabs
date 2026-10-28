@@ -964,6 +964,29 @@ public final class EyesDirector {
             name, String.format("%.0f, %.0f, %.0f", want.x, want.y, want.z), String.format("%.0f, %.0f, %.0f", eye.x, eye.y, eye.z),
             String.format("%.0f", eye.x + fx * t), String.format("%.0f", eye.z + fz * t), phaseFrames(),
             String.format("%.1f", phaseSeconds()));
+        // what the structure's box holds, on the client and on the server: a still that shows plain ground where the
+        // structure should stand tells which side lost it (meadow / ground samplers, run 40725608295)
+        if (structureOrigin != null && structureSize != null && mc.level != null) {
+            BlockPos o = structureOrigin;
+            net.minecraft.core.Vec3i sz = structureSize;
+            ReignOfNether.LOGGER.info("[Eyes] {}: the structure's box holds {} non-air blocks on the client", name,
+                nonAir(mc.level, o, sz));
+            var server = mc.getSingleplayerServer();
+            if (server != null)
+                server.execute(() -> ReignOfNether.LOGGER.info("[Eyes] {}: ... and {} on the server", name,
+                    nonAir(server.overworld(), o, sz)));
+        }
+    }
+
+    private static int nonAir(net.minecraft.world.level.Level level, BlockPos o, net.minecraft.core.Vec3i sz) {
+        int n = 0;
+        var pos = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < sz.getX(); x++)
+            for (int z = 0; z < sz.getZ(); z++)
+                for (int y = 0; y < sz.getY(); y++)
+                    if (!level.getBlockState(pos.set(o.getX() + x, o.getY() + y, o.getZ() + z)).isAir())
+                        n++;
+        return n;
     }
 
     private static void sceneStructures(Minecraft mc) {
@@ -985,10 +1008,15 @@ public final class EyesDirector {
                 siteCentre = structureSite(mc);
             // a photo booth, not a match: the site is 45 blocks out from the capitol, beyond its vision, and fog of
             // war darkened every structure still to near black (meadow sampler run 40667744923, Oct 28)
+            // ...and on the SERVER too: its fog filter never sends a fogged column's block changes, so the placed
+            // structure would stay off the client - the stills showed the map's plain ground where it stood, runs
+            // 40725608295 / 40725612987 (logAim's block census on both sides checks it)
             if (com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled()) {
                 ReignOfNether.LOGGER.info("[Eyes] {}: fog of war off for the structure photos", label);
                 com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
             }
+            var fogServer = mc.getSingleplayerServer();
+            fogServer.execute(() -> com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false));
             // noon for the day stills, so every round is lit the same: the match is ~2 min after sunrise here, and
             // the shader lane's low golden light turned the grass khaki (hue 48 against 103 in the plain lane, run
             // 40712072482). The dusk still keeps its own low sun, and the time is restored after it
