@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.InteractionHand;
@@ -29,7 +30,7 @@ public class KeyedSwingGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void halberdier_swing_lasts_its_keyed_thrust_clip(GameTestHelper helper) {
-        String owner = "gametest_swing_" + helper.absolutePos(net.minecraft.core.BlockPos.ZERO).asLong();
+        String owner = "gametest_swing_" + helper.absolutePos(BlockPos.ZERO).asLong();
         Mob halberdier = BigUnitGameTests.spawn(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 4.5, 4.5);
         if (halberdier == null) {
             helper.fail("could not create the Halberdier");
@@ -54,7 +55,7 @@ public class KeyedSwingGameTests {
     /** A VindicatorUnit subclass draws another body with no keyed attack (the Cutlass Raider): vanilla's 6 ticks stay. */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void a_body_without_a_keyed_attack_keeps_vanillas_swing(GameTestHelper helper) {
-        String owner = "gametest_swing_" + helper.absolutePos(net.minecraft.core.BlockPos.ZERO).asLong();
+        String owner = "gametest_swing_" + helper.absolutePos(BlockPos.ZERO).asLong();
         Mob raider = BigUnitGameTests.spawn(helper, EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), owner, 4.5, 4.5);
         if (raider == null) {
             helper.fail("could not create the Cutlass Raider");

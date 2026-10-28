@@ -295,6 +295,17 @@ public abstract class LivingEntityMixin extends Entity {
      * Units that override getWaterSlowDown themselves (Drowned, dogs, cats, Strider, Steam Runner at 0.94) bypass this,
      * which is right: those are the unit's own wading rule.
      */
+    @Inject(
+            method = "getWaterSlowDown",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void bt$wadingFriction(CallbackInfoReturnable<Float> cir) {
+        LivingEntity le = (LivingEntity) (Object) this;
+        if (le instanceof Unit)
+            cir.setReturnValue(com.solegendary.reignofnether.unit.Terrain.waterFriction(le, 0.8f));
+    }
+
     /**
      * A body with a keyed attack clip (KeyedSwing) swings for the clip's length, not vanilla's 6 ticks: attackTime runs
      * 0..1 over the swing, and the Halberdier's 18-tick thrust was played in 6 (a 0.3 s flicker in every eyes clip).
@@ -311,17 +322,6 @@ public abstract class LivingEntityMixin extends Entity {
             if (ticks > 0)
                 cir.setReturnValue(ticks);
         }
-    }
-
-    @Inject(
-            method = "getWaterSlowDown",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void bt$wadingFriction(CallbackInfoReturnable<Float> cir) {
-        LivingEntity le = (LivingEntity) (Object) this;
-        if (le instanceof Unit)
-            cir.setReturnValue(com.solegendary.reignofnether.unit.Terrain.waterFriction(le, 0.8f));
     }
 
     @Shadow public boolean hasEffect(MobEffect pEffect) { return true; }
