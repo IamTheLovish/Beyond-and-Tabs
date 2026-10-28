@@ -7175,23 +7175,63 @@ public class SkirmishGameTests {
         boolean[] landed = new boolean[attackers.size()];
         int[] strays = new int[attackers.size()];
         String[] lastStray = new String[attackers.size()];
-        for (int t = 4; t < 400; t++)
+        // what an attacker did, for a miss (Oct 26, run 40373813775: the galley never moved, kept its own target, strays
+        // 0, foe untouched - the message could not tell "never fired" from "fired and missed" or "not ticking"):
+        // ticks with no target at all (keepOnFoe only counts a stray when a target is set), its own tick count, and
+        // each galley shell it fired (BombardShell, owner = the attacker) with where it last was before it burst
+        int[] noTarget = new int[attackers.size()];
+        int[] tickStart = new int[attackers.size()];
+        java.util.Map<Integer, java.util.Map<java.util.UUID, net.minecraft.world.phys.Vec3>> shells = new java.util.HashMap<>();
+        java.util.Map<Integer, java.util.Map<java.util.UUID, Integer>> shellFirstTick = new java.util.HashMap<>();
+        net.minecraft.world.phys.AABB arenaBox = new net.minecraft.world.phys.AABB(helper.absolutePos(new BlockPos(-4, -2, -4)),
+            helper.absolutePos(new BlockPos(20, 40, 20)));
+        for (int t = 4; t < 400; t++) {
+            final int tick = t;
             helper.runAfterDelay(t, () -> {
                 for (int i = 0; i < attackers.size(); i++)
                     if (!foes.get(i).isAlive() || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
                         landed[i] = true;
+                for (int i = 0; i < attackers.size(); i++) {
+                    if (tick == 4)
+                        tickStart[i] = attackers.get(i).tickCount;
+                    var g = ((com.solegendary.reignofnether.unit.interfaces.Unit) attackers.get(i)).getTargetGoal();
+                    if (!landed[i] && (g == null || g.getTarget() == null))
+                        noTarget[i]++;
+                }
+                for (var shell : level.getEntitiesOfClass(com.solegendary.reignofnether.unit.units.tide.BombardShell.class, arenaBox)) {
+                    int i = attackers.indexOf(shell.getOwner());
+                    if (i < 0)
+                        continue;
+                    shells.computeIfAbsent(i, k -> new java.util.LinkedHashMap<>()).put(shell.getUUID(), shell.position());
+                    shellFirstTick.computeIfAbsent(i, k -> new java.util.HashMap<>()).putIfAbsent(shell.getUUID(), tick);
+                }
                 // hold each order: a retaliation or an aggro pick of a neighbouring test's unit (ranged reach and aggro
                 // cross the arena) must not pull an attacker off its Villager; missReport says if one did
                 for (int i = 0; i < attackers.size(); i++)
                     if (!landed[i])
                         keepOnFoe(attackers.get(i), foes.get(i), i, strays, lastStray, true);
             });
+        }
         helper.runAfterDelay(400, () -> {
             List<String> problems = new ArrayList<>(setup);
             for (int i = 0; i < attackers.size(); i++)
-                if (!landed[i])
+                if (!landed[i]) {
+                    var atk = attackers.get(i);
+                    StringBuilder more = new StringBuilder();
+                    more.append(String.format(java.util.Locale.ROOT, " [ticked %d of 396, no target %d ticks, set-up wait %d",
+                        atk.tickCount - tickStart[i], noTarget[i], com.solegendary.reignofnether.unit.SetUp.ticksLeft(atk)));
+                    if (atk instanceof com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit galley)
+                        more.append(", goals [").append(galley.runningGoalsForTest()).append("], using item ")
+                            .append(galley.isUsingItem()).append(", hand ").append(galley.getMainHandItem().getItem());
+                    var fired = shells.getOrDefault(i, java.util.Map.of());
+                    more.append(", shells ").append(fired.size());
+                    for (var e : fired.entrySet())
+                        more.append(String.format(java.util.Locale.ROOT, " (t%d, last at %.1f from the foe)",
+                            shellFirstTick.get(i).get(e.getKey()), e.getValue().distanceTo(foes.get(i).position())));
+                    more.append("]");
                     problems.add(missReport(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath(),
-                        attackers.get(i), foes.get(i), owner, strays[i], lastStray[i], foes));
+                        atk, foes.get(i), owner, strays[i], lastStray[i], foes) + more);
+                }
             for (var e : attackers) e.discard();
             for (var e : foes) e.discard();
             if (!problems.isEmpty())
