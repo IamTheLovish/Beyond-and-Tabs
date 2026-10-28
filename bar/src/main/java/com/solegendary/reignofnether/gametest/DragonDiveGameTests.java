@@ -81,7 +81,15 @@ public class DragonDiveGameTests {
             helper.fail("could not create the dive test units");
             return;
         }
-        float a0 = inA.getHealth(), b0 = inB.getHealth(), f0 = friend.getHealth(), r0 = far.getHealth();
+        // judged on the landing tick alone: the dragon breathes on enemies in its reach on its own (CI 40619496840
+        // rerun: the far worker burned, not crushed), so only what changed in the tick it landed is the impact's
+        Mob[] watched = { inA, inB, friend, far };
+        final float[] before = new float[4];
+        final boolean[] hitAtLanding = new boolean[4], aliveBefore = new boolean[4], countable = new boolean[4];
+        for (int i = 0; i < 4; i++) {
+            before[i] = watched[i].getHealth();
+            aliveBefore[i] = true;
+        }
         final int[] landedAt = { -1 };
         helper.runAfterDelay(3, () -> {
             if (!dragon.isFlyingUnit())
@@ -92,8 +100,17 @@ public class DragonDiveGameTests {
         for (int t = 4; t <= 120; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
-                if (landedAt[0] < 0 && dragon.isLanded())
+                if (landedAt[0] < 0 && dragon.isLanded()) {
                     landedAt[0] = tick;
+                    for (int i = 0; i < 4; i++) {
+                        countable[i] = aliveBefore[i];
+                        hitAtLanding[i] = aliveBefore[i] && (!watched[i].isAlive() || watched[i].getHealth() < before[i]);
+                    }
+                }
+                for (int i = 0; i < 4; i++) {
+                    before[i] = watched[i].getHealth();
+                    aliveBefore[i] = watched[i].isAlive();
+                }
             });
         }
         helper.runAfterDelay(125, () -> {
@@ -105,14 +122,16 @@ public class DragonDiveGameTests {
                     problems.add("the dive took " + (landedAt[0] - 3) + " ticks (want under 4 s)");
                 if (dragon.isFlyingUnit())
                     problems.add("a landed dragon is a ground unit (melee reaches it)");
-                // a physical blow (armour takes its share): hit means dead or hurt
-                if (inA.isAlive() && inA.getHealth() >= a0 || inB.isAlive() && inB.getHealth() >= b0)
-                    problems.add(String.format("the impact should hit both foes by it (health %.0f -> %.0f, %.0f -> %.0f)",
-                        a0, inA.getHealth(), b0, inB.getHealth()));
-                if (friend.getHealth() < f0)
-                    problems.add("the impact hurt a friend");
-                if (far.getHealth() < r0)
-                    problems.add("the impact reached a foe outside its radius");
+                // a physical blow (armour takes its share): hit means dead or hurt in the landing tick; a foe the
+                // breath had already killed before the landing is not counted
+                if (landedAt[0] >= 0) {
+                    if (!hitAtLanding[0] && countable[0] || !hitAtLanding[1] && countable[1])
+                        problems.add("the impact should hit both foes by it (hit: " + hitAtLanding[0] + ", " + hitAtLanding[1] + ")");
+                    if (hitAtLanding[2])
+                        problems.add("the impact hurt a friend");
+                    if (hitAtLanding[3])
+                        problems.add("the impact reached a foe outside its radius");
+                }
                 if (problems.isEmpty())
                     helper.succeed();
                 else
