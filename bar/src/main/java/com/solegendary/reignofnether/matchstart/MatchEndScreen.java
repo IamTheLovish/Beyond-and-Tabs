@@ -194,6 +194,8 @@ public class MatchEndScreen extends Screen {
                 .bounds(panelL + panelW - 26 - 62 - 66, panelT + 5, 62, 20).build());
         spectate.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
                 Component.translatable("matchend.reignofnether.spectate.tooltip")));
+        // kept up over the host's Back to lobby: the battlefield is reset, there is nothing left to watch
+        spectate.visible = !MatchEndClientEvents.isStale();
         // "Back to lobby" (host only; the tester's Oct 26 ask): reset the battlefield on this server and reopen the
         // lobby with the same lineup and settings for a rematch (MultiplayerLobby.backToLobby)
         if (LobbyClientEvents.isHost()) {
