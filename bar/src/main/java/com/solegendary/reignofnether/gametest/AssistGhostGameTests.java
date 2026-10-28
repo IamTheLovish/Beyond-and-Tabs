@@ -25,6 +25,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static com.solegendary.reignofnether.gametest.BuilderAssistGameTests.building;
 import static com.solegendary.reignofnether.gametest.BuilderAssistGameTests.finish;
@@ -265,7 +266,29 @@ public class AssistGhostGameTests {
         s.guards.add(b.getId());
         CommandQueues.issue(s.level, s.owner, UnitAction.GUARD, a.getId(), new int[] { b.getId() },
             a.blockPosition(), BlockPos.ZERO, QueueMode.REPLACE);
+        // diagnosis of the reds (main 40441586228; shard-1 stress 3 of 10 in 40453430261, 1 of 10 in 40452699161, all
+        // "B never helped A on the first site: guarding false", A and B on their spawn cells with no target): when B's
+        // guard ended and the order B carried then, whether both units were ticking, when A took and left site 1, and
+        // the test's ticks against wall-clock time (one failing batch ran its 370 ticks in about 2 s)
         BuildingPlacement[] first = { null };
+        String[] guardEnd = { null };
+        long[] aTook = { -1 }, aLeft = { -1 }, startNs = { System.nanoTime() };
+        helper.onEachTick(() -> {
+            if (guardEnd[0] == null && !GuardServerEvents.isGuarding(b.getId())) {
+                var q = CommandQueues.get(b.getId());
+                guardEnd[0] = "guard ended at test tick " + helper.getTick() + " (B's order then "
+                    + (q == null || q.current() == null ? "none" : q.current().action() + " by " + q.current().owner())
+                    + "; " + ArenaReady.describe(s.level, List.of(a, b)) + ")";
+            }
+            BuildingPlacement aSite = targetOf(a);
+            if (first[0] != null && aTook[0] < 0 && aSite == first[0])
+                aTook[0] = helper.getTick();
+            if (aTook[0] >= 0 && aLeft[0] < 0 && aSite != first[0])
+                aLeft[0] = helper.getTick();
+        });
+        Supplier<String> diag = () -> (guardEnd[0] == null ? "guard held" : guardEnd[0]) + "; A took site 1 at tick "
+            + aTook[0] + ", left it at tick " + aLeft[0] + "; " + helper.getTick() + " ticks in "
+            + (System.nanoTime() - startNs[0]) / 1_000_000 + " ms";
         helper.runAfterDelay(10, () -> {
             first[0] = place(s, Defences.VILLAGERS.raidTower(), new BlockPos(s.cx - 7, BuilderAssistGameTests.PAD_Y,
                 s.cz - 1), a.getId());
@@ -295,14 +318,15 @@ public class AssistGhostGameTests {
                         () -> {
                             problems.add("B did not follow A to the second site: guarding "
                                 + GuardServerEvents.isGuarding(b.getId()) + ", builders " + s.bp.getBuilders().size()
-                                + "; A " + where(a) + "; B " + where(b));
+                                + "; A " + where(a) + "; B " + where(b) + "; " + diag.get());
                             drop(first[0]);
                             finish(helper, s, problems);
                         });
                 },
                 () -> {
                     problems.add("B never helped A on the first site: guarding "
-                        + GuardServerEvents.isGuarding(b.getId()) + "; A " + where(a) + "; B " + where(b));
+                        + GuardServerEvents.isGuarding(b.getId()) + "; A " + where(a) + "; B " + where(b) + "; "
+                        + diag.get());
                     drop(first[0]);
                     finish(helper, s, problems);
                 });

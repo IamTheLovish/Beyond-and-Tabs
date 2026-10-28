@@ -208,6 +208,16 @@ public abstract class Building {
 
     }
 
+    /** A built building has just fallen to damage (not a cancel, a decommission or a clean-up), blocks still standing. Hook for death blasts. */
+    public void onFellToDamage(ServerLevel serverLevel, BuildingPlacement placement) { }
+
+    /**
+     * Whether this building's collapse blasts (BuildingPlacement.destroy) leave the ground alone. A TNT-style blast at
+     * the bottom layer craters the dirt under the footprint, and a metal patch whose ground is holed fails the "ground
+     * not flat" check, so the patch could not be rebuilt on. The effect and sound stay; only the terrain damage goes.
+     */
+    public boolean keepsGroundIntact() { return false; }
+
     public void destroy(ServerLevel serverLevel, BuildingPlacement placement) {
 
     }

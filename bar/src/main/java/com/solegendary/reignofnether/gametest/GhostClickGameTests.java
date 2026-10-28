@@ -40,10 +40,9 @@ public class GhostClickGameTests {
     static final String BATCH = "ghost_click";
 
     /** AC-1: the right-click's order (BUILD_REPAIR at the ghost's centre) sends a Royal Architect onto a worker's ghost. */
-    @GameTest(template = ARENA, timeoutTicks = 600, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 800, batch = BATCH)
     public static void ac1_build_order_at_the_ghosts_centre_joins_it(GameTestHelper helper) {
         Site s = new Site(helper, "gclick");
-        List<String> problems = new ArrayList<>();
         Mob a = s.builder(EntityRegistrar.VILLAGER_UNIT.get(), -11, -6);
         Mob b = s.builder(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), 11, 6);
         if (a == null || b == null) {
@@ -51,6 +50,11 @@ public class GhostClickGameTests {
             helper.fail("(setup) could not create the builders");
             return;
         }
+        whenInLevel(helper, s, a, b, () -> buildOrderJoins(helper, s, a, b));
+    }
+
+    private static void buildOrderJoins(GameTestHelper helper, Site s, Mob a, Mob b) {
+        List<String> problems = new ArrayList<>();
         if (!s.order(Defences.VILLAGERS.raidTower(), a.getId())) {
             s.undo();
             helper.fail("A's build order was refused");
@@ -67,10 +71,9 @@ public class GhostClickGameTests {
     }
 
     /** AC-1 (Shift): the same order Shift-queued behind a move runs after it and still lands on the ghost. */
-    @GameTest(template = ARENA, timeoutTicks = 600, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 800, batch = BATCH)
     public static void ac1_shift_queued_build_order_at_the_ghosts_centre_runs_after_the_move(GameTestHelper helper) {
         Site s = new Site(helper, "gshift");
-        List<String> problems = new ArrayList<>();
         Mob a = s.builder(EntityRegistrar.VILLAGER_UNIT.get(), -11, -6);
         Mob b = s.builder(EntityRegistrar.FIELD_MASON_UNIT.get(), 11, 6);
         if (a == null || b == null) {
@@ -78,6 +81,11 @@ public class GhostClickGameTests {
             helper.fail("(setup) could not create the builders");
             return;
         }
+        whenInLevel(helper, s, a, b, () -> shiftOrderRunsAfterMove(helper, s, a, b));
+    }
+
+    private static void shiftOrderRunsAfterMove(GameTestHelper helper, Site s, Mob a, Mob b) {
+        List<String> problems = new ArrayList<>();
         if (!s.order(Defences.VILLAGERS.raidTower(), a.getId())) {
             s.undo();
             helper.fail("A's build order was refused");
@@ -106,6 +114,35 @@ public class GhostClickGameTests {
             () -> {
                 problems.add("B never took the queued ghost order: " + where(b));
                 finish(helper, s, problems);
+            });
+    }
+
+    /** Most ticks to wait for the builders to be in the level before the orders (timeoutTicks adds this to the old 600). */
+    static final int JOIN_WAIT = 200;
+
+    /**
+     * Runs {@code body} once both builders are in the level. The pad is wider than the 16x16 arena and the builders
+     * stand 11 blocks out, so on a loaded runner a builder's chunk may not be entity-ticking when the test starts:
+     * addFreshEntity then only stores the unit, and level.getEntity(id) - what CommandQueues.issue looks units up by -
+     * returns null, so the orders missed it (CI run 40457081140: "the Shift build order was not queued behind the
+     * move: []"). A real order only names units a client has seen, i.e. units in the level, so the test waits for that.
+     */
+    static void whenInLevel(GameTestHelper helper, Site s, Mob a, Mob b, Runnable body) {
+        int[] waited = { 0 };
+        BlueprintGameTests.poll(helper, 0, JOIN_WAIT,
+            () -> {
+                waited[0] += 5;
+                return s.level.getEntity(a.getId()) == a && s.level.getEntity(b.getId()) == b;
+            },
+            () -> {
+                if (waited[0] > 5)
+                    ReignOfNether.LOGGER.info("[GhostClick] builders joined the level after {} ticks", waited[0]);
+                body.run();
+            },
+            () -> {
+                s.undo();
+                helper.fail("(setup) the builders were not in the level after " + JOIN_WAIT + " ticks: A "
+                    + (s.level.getEntity(a.getId()) == a) + ", B " + (s.level.getEntity(b.getId()) == b));
             });
     }
 }
