@@ -241,3 +241,8 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    glass spire, angled glass WINGS in cyan, symmetric, reflected in the sea. Not one of the 7 factions: filed for the
    LATER FUTURISTIC faction (the one with real tanks, per the vehicle-labs design doc). Tidewrought may borrow its
    sea-glass palette for the lighthouse lamp only.
+
+34k. lovishs 38th reference (04:22): /root/bat/design/refs/vehicle_labs/ref38_sandstone_sea_fort_dock.png - a Minecraft
+   SANDSTONE SEA FORTRESS seen from above (our camera), rising straight out of the water: crenellated towers at stepped
+   heights, arcades with ROOF GARDENS, a TIMBER DOCK / jetty with steps down to the waterline. TIDEWROUGHT PRIMARY for the
+   yard and waterfront (sandstone is already the kit), with ref31 (shipwright hall) and ref33 (hull-shaped swept roof).
