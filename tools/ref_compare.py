@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """A building beside the picture it imitates - the check every art round starts and ends with.
 
-    python3 tools/ref_compare.py BUILDING.nbt REFERENCE.png -o compare.png [--px 32] [--blur 6]
+    python3 tools/ref_compare.py BUILDING.nbt REFERENCE.png -o compare.png [--px 32] [--blur 6] [--flat]
 
 Writes one sheet, two rows:
-  1. the building rendered by tools/structure_render.py at game zoom (--px 32; 24-36 is the RTS default) next to the
+  1. the building rendered by tools/structure_render.py at game zoom (--px 32; 24-36 is the RTS default), LIT (its
+     --light: ambient occlusion and a low sun's shadows - the references are shader screenshots, and beside them a flat
+     render read flat whatever the building's depth; --flat for the old unlit render), next to the
      reference picture scaled (smoothly, never pixel-blown) to the same height;
   2. the SQUINT row: both blurred and greyscaled. Blurred, only the masses and the light/dark pattern survive - the
      hierarchy test. If the reference's squint shows one landmark, a dark gate and calm planes and the building's squint
@@ -45,12 +47,13 @@ def main():
     ap.add_argument("-o", "--out", default="ref_compare.png")
     ap.add_argument("--px", type=int, default=32, help="pixels per block (24-36 = the RTS zoom; default 32)")
     ap.add_argument("--blur", type=float, default=0.0, help="squint blur radius in px (default: height / 60)")
+    ap.add_argument("--flat", action="store_true", help="Minecraft's fixed face shading, no AO or sun shadows")
     a = ap.parse_args()
     if not os.path.isdir(SP.PACK):
         sys.exit("ref_compare: no block pack at %s - generate it: python3 tools/gen_blocks.py" % SP.PACK)
 
     tx = SP.Textures(a.px)
-    img, size, total, _ = SR.render(SR.structure_path(a.building), tx, SR.Faces(tx), a.px)
+    img, size, total, _ = SR.render(SR.structure_path(a.building), tx, SR.Faces(tx), a.px, light=not a.flat)
     if img is None:
         sys.exit("ref_compare: the building is only air")
     ref = Image.open(a.reference).convert("RGB")
