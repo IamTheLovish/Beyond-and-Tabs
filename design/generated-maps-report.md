@@ -23,6 +23,56 @@ knobs, and the open problems.
   first version of this file and the headless `tools/mapgen_sim`, re-ran the balance figures and found the mirror seam.
 - Its tables are kept below and marked **[A]**. They were measured on `0d2ece45`, before the tuning in `625914ef`.
 
+## Oct 27 (later): metal in BAR-style clumps
+
+lovish, on the random spread below: "design them like beyond all reason and put clumps in strategic positions all
+around the map including the back rear sides ... clump them, have stranded ones alone. Maybe a path or cluster."
+
+**What changed** (`GenEconomy`, design/maps.md section 7 "Economy"):
+- **Home clumps, the same for every seat**: a triangle (or a row of three where the wall is close) straight behind
+  the base and a pair on each rear flank, 48-72 blocks out, past the 46-block build ground (the 21:37 rule "not
+  connected to where the townhall spawns" stays: nothing within 40 of a start). One template in the seat's frame; the
+  first distance and turn every seat's plan accepts is levelled (`GenTerrain.homePads`, a small pad at the seat's
+  height) and then checked on the real ground. All 240 production maps have the full seven for every seat.
+- **Contested clumps of three** on every front seam, two more on the front line in team games.
+- **Groups over the open map**, seat by seat (the seat furthest short of its allowance goes next): its free spot
+  farthest from all metal becomes a lone stranded patch (likelier on exposed ground; at least one a map, at most 18%),
+  a path of 3-5 along the nearest road, or a clump of 2-4. Groups keep 26 apart; a group's patches 9.5-14.
+- The **nudge** keeps the layout: a new patch must join one of the poorest seat's clumps (2-4 after), a patch is only
+  removed when that strands no neighbour. Rich vein removes any group it touches whole.
+- The 1.3x seat slack is gone (the seat-by-seat order meets each allowance directly).
+
+**Tests:** `MetalClumpsTest` (JUnit, maps/gen), written first and red on 2c1878e1 for the right reasons (53 of 53
+patches alone, no clump behind any base, 0 home patches); green now with `GeneratedMetalTest`, all 9.
+Headless: `tools/mapgen_sim/run.sh junit` (a small JUnit shim; CI runs the real JUnit). The 12-map sweep
+(`run.sh gametest`): 0 problems, worst spread 3.9%.
+
+**The production check** (`run.sh lab GenProdStats prod.csv 40`, the same 240 lobby seeds; the three columns run on
+the same 2-core machine, two at a time, so the times compare):
+
+| Players, shape | ms median / p95 / max: home rings (2271184a) / random (2c1878e1) / clumps | Robust seat within 5% | Robust team within 5% | Fallback draws |
+|---|---|---|---|---|
+| 1v1 round | 564 / 1147 / 2251 - 594 / 1414 / 4131 - 666 / 1563 / 2866 | 0.80 / 0.76 / 0.75 | 0.80 / 0.76 / 0.75 | 0 / 4 / 5 |
+| 1v1 square | 492 / 679 / 936 - 561 / 1074 / 1092 - 502 / 1025 / 1926 | 0.79 / 0.76 / 0.75 | 0.79 / 0.76 / 0.75 | 0 / 4 / 2 |
+| 2v2 round | 1082 / 1306 / 1513 - 1220 / 1641 / 2564 - 1200 / 1448 / 1526 | 0.80 / 0.55 / 0.67 | 0.95 / 0.82 / 0.89 | 0 / 2 / 0 |
+| 2v2 square | 1002 / 1203 / 1291 - 1184 / 1809 / 2589 - 1125 / 1340 / 1417 | 0.74 / 0.59 / 0.68 | 0.93 / 0.87 / 0.90 | 0 / 3 / 0 |
+| 4v4 round | 1469 / 1654 / 1698 - 1924 / 2181 / 3628 - 1670 / 1940 / 3151 | 0.45 / 0.23 / 0.43 | 0.99 / 0.93 / 0.98 | 0 / 1 / 2 |
+| 4v4 square | 1449 / 1609 / 1636 - 1940 / 3885 / 5572 - 1621 / 3229 / 3333 | 0.46 / 0.25 / 0.42 | 0.98 / 0.95 / 0.99 | 0 / 8 / 8 |
+| **All 240** | p50 1036 / 1210 / 1165, p95 1592 / 2565 / 1897, max 2251 / 5572 / 3333 | | | **0 / 22 / 17** |
+
+- All 240 maps are valid in every column; the seat spread is within 5% under the central weights on every map
+  (clumps: median 1.7-3.2%, max 4.9%; 4v4 team median 0.7%). Patches a map: 57 / 81-82 / 123.
+- **Robustness** (share of 40 weight draws within 5%) is back near the home-ring version: the standard home clumps are
+  fairness by construction again, and the seat-by-seat spread stops the dice piling one seat's ground. 1v1 stays at
+  0.75 (0.80 with the rings).
+- **Fallback draws:** 17 of 240 (random: 22, rings: 0). In the draws checked they are the reach rule (a start with
+  under 0.6 of the best start's metal within 160 blocks' walk); 8 of them on 4v4 square maps. Anchors past that walk
+  count 0.8x (`GenEconomy.FAR_BIAS`), which halved the 1v1 redraws (16 to 7). The reach floor is still the open
+  question below (0.6, 0.5 or none); with a standard home set it matters less than it did.
+- 2271184a prices tier 2 at the old 7.0/s; the other two at main's 4.5/s.
+
+The section below (the random spread) was measured before this change.
+
 ## Oct 27: random metal, tier 2 at main's numbers
 
 lovish (Oct 27 21:37): tier 2 follows main, and "each map should have mexes spread randomly and not be connected to where
@@ -430,7 +480,9 @@ and object rounding.
 
 - `tools/mapgen_sim/run.sh lab GenShowcase OUTDIR` draws three hill-shaded sheets: 1v1 and 4v4 seeds 1-8 as the lobby
   draws them, and a 4v4 raw/balanced pair per seed. They are not cherry-picked.
-- [A]'s contact sheets are in `design/generated-maps/`: `run.sh sheet ...`, drawn on `0d2ece45`.
+- The contact sheets in `design/generated-maps/` (`run.sh sheet design/generated-maps 2 6 MIRROR MIXED OPEN_BASTION
+  PROSPECTOR_WARDEN RIVER` and `... 8 3 MIXED PROSPECTOR_WARDEN`) were redrawn for the BAR-style clumps (Oct 27 later);
+  [A] first drew them on `0d2ece45`.
 
 Both are the generator's own grid, not the Minecraft build.
 
@@ -458,10 +510,12 @@ These are generator knobs. No unit or economy numbers change.
 | Knob | Value | Where |
 |---|---|---|
 | Seat tolerance | 5% (the nudge aims for 4%) | `GenOptions.tolerance` |
-| Patch allowance per seat | 28 / 20 / 15 at 1v1 / 2v2 / 4v4, times the archetype's density (its square root in team games), the square root of the lobby's richness and the extra-metal level (NONE 0.75, LOW 0.875, NORMAL 1, HIGH 1.25); a seat may draw 1.3x | `GenEconomy.capOf`, `fill` |
+| Patch allowance per seat | 28 / 20 / 15 at 1v1 / 2v2 / 4v4 (home clumps and plaza patch included), times the archetype's density (its square root in team games), the square root of the lobby's richness and the extra-metal level (NONE 0.75, LOW 0.875, NORMAL 1, HIGH 1.25) | `GenEconomy.capOf`, `spread` |
+| Home clumps | a triangle (or row of 3) behind the base and a pair on each rear flank at 72 deg, 48-72 out, turns up to 50 deg; 7 standard patches a seat | `GenEconomy.homeOptions` |
+| Groups | lone 15% (35% on exposed ground; at most 18%, at least one a map), path of 3-5 by a road 45% (else 8%), clump 2/3/4 at 20/45/35%; patches 9.5-14 apart, groups 26 apart, anchors 1.25x the hole target apart; ground past 160 walk 0.8x | `GenEconomy` |
 | Reach rule | nearest patch within 110 blocks' walk; metal within 160 at least 0.6 of the best start's | `MapGenerator.metalReach` |
-| Hole targets, blocks | Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 | `Archetype` |
-| Rim band | within 36 of the wall, 20% denser; never closer than the extractor clearance (11) | `GenEconomy.fill` |
+| Hole targets, blocks (group anchors 1.25x) | Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 | `Archetype` |
+| Rim band | within 36 of the wall, group anchors 20% closer; never closer than the extractor clearance (11) | `GenEconomy.anchor` |
 | Patch values | rich at exposure 0.38-0.62 (the front line), lean below 0.3 behind the base, a 2.0x patch per seat round the plaza | `GenEconomy` |
 | Warden | 2 own capture sites | `Archetype` |
 | Team games | 2 extra front-line sites | `GenEconomy` |
@@ -502,6 +556,7 @@ These are generator knobs. No unit or economy numbers change.
 tools/mapgen_sim/run.sh lab GenExperiments OUT 2 ROUND PROSPECTOR_WARDEN 200 2 12   # one exp1 cell; all 20 cells for the tables
 python3 tools/mapgen_sim/analyse.py OUT ANALYSIS [curves.csv]                       # exp1 tables and charts
 tools/mapgen_sim/run.sh lab GenProdStats prod.csv 40                                # the production check
+tools/mapgen_sim/run.sh junit                                                       # the maps/gen JUnit tests, headless
 tools/mapgen_sim/run.sh lab GenReachStats reach.csv 20                              # nearest metal and reach per start
 tools/mapgen_sim/run.sh lab GenRobustCmp robust.csv 2 25                            # 1v1 robust nudge (8 16 for 4v4)
 tools/mapgen_sim/run.sh lab GenTeamBias bias.csv 20 40                              # 4v4 team gap in the sim

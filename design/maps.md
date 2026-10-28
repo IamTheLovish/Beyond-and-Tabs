@@ -426,23 +426,37 @@ now carries a seed for every stamped map; before, it always played the unseeded 
   its forward ground, less metal); **Open** (no cliffs round the base, denser metal) vs **Bastion** (a plateau a tier up
   ringed by cliffs, two ramps, leaner metal); **Moated** (a river 70-90 in front, fords only) vs **Banks** (more land);
   **Mixed** (each seat its own); **Mirror** (point-symmetric terrain and economy: the "tournament" control).
-* *Economy* (lovish Oct 27 21:37: "each map should have mexes spread randomly and not be connected to where the
-  townhall spawns"): no home ring and no natural pair. One 2.0x patch per seat round the plaza, then the **random
-  spread**: every free spot in a seeded random order, each taken when no patch stands within 0.75 of its territory's
-  hole target (Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 blocks; the rim band, within
-  36 of the wall, 20% tighter; the lobby's richness scales it; never under 20), a second pass at 20 if the count is
-  short, until the map holds the seats' allowances: 28 / 20 / 15 patches a seat at 1v1 / 2v2 / 4v4, times the
-  archetype's density (its square root in team games, where the full contrast drew 19 patches a seat against 12) and
-  the square root of the lobby's richness. A seat may draw up to 1.3x its allowance; the balancer evens the rest. The
-  lobby's **extra metal** scales the spread from NORMAL (the count above): NONE 0.75x, LOW 0.875x, HIGH 1.25x. Values by
-  exposure (rich on the front line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within
-  7, reachable from its owner, off the roads, at least 46 from any start (the build ground), at least the extractor
-  clearance from the wall (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved
-  zone (section 2's rules).
+* *Economy*, laid out as Beyond All Reason lays it (lovish Oct 27: "design them like beyond all reason and put clumps
+  in strategic positions all around the map including the back rear sides ... clump them, have stranded ones alone.
+  Maybe a path or cluster."; it replaces the Oct 27 21:37 random spread, keeping its rule that nothing stands round the
+  town hall):
+  * **Home clumps, the same for every seat**: a triangle of three straight behind the base (a row of three where the
+    wall is close, as on a square arena's side seats) and a pair on each rear flank, 72 degrees off straight back, 48-72
+    blocks out - past the 46-block build ground. One template in the seat's frame: the first distance and turn (0-50
+    degrees) that every seat's ground takes is everyone's, and the ground is levelled for it (`GenTerrain.homePads`: a
+    small level pad at the seat's height under each planned patch), so every lobby map in the production check has all
+    seven for every seat. Standard patches, untouched by the lobby's richness, extra metal or the balancer.
+  * One 2.0x patch per seat round the plaza (the middle's cluster), then **contested clumps of three**: one on every
+    front seam (both neighbours walk about as far), two more on the front line in team games.
+  * Then **groups over the open map**, seat by seat (always the seat furthest short of its allowance, so the dice never
+    pile one seat's ground): the free spot of its ground farthest from all metal (a seeded jitter, a nudge toward roads
+    and the front line and away from ground past the reach rule's 160 blocks' walk; anchors 1.25x the archetype's hole target apart - Prospector 29, Open 31, Banks 34, Plain 37,
+    Moated 40, Bastion 43, Warden 46 blocks - 20% tighter in the rim band) becomes a **lone stranded patch** (likelier on
+    exposed ground, the front line and the rim; at least one a map, at most 18% of the spread), a **path** of 3-5 along
+    the nearest road ("metal along natural routes", 45% of the groups by a road), or a **clump** of 2-4 (2/3/4 at
+    20/45/35%). A group's patches stand 9.5-14 apart; every patch keeps 26 from any other group. Farthest-first spreads
+    the groups all round the map, the rim and the ground behind the bases included.
+  * Counts: 28 / 20 / 15 patches a seat at 1v1 / 2v2 / 4v4 (home clumps and plaza patch included), times the
+    archetype's density (its square root in team games) and the square root of the lobby's richness; the lobby's
+    **extra metal** scales it from NORMAL: NONE 0.75x, LOW 0.875x, HIGH 1.25x. Values by exposure (rich on the front
+    line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within 7, reachable from its owner,
+    off the roads, at least 46 from any start (the build ground), at least the extractor clearance from the wall
+    (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved zone (section 2's rules).
+    `MapLayout.homeEnd()` marks the home clumps (the first patches of the list).
 * *Objectives*: a site on the plaza, a contested site on every front seam (where both neighbours walk about as far),
   two more on the front line in team games, a warden's own two; **modifiers** add theirs.
 * *Jungle* (reserved for the hero slice, M12): one wild area per side (two in big team games) between the roads, with
-  an entry and an exit that differ every game and data-only creep camps; the fill leaves it alone.
+  an entry and an exit that differ every game and data-only creep camps; the metal leaves it alone.
 * *Modifiers* (`Modifier`), 1-2 per match when on (2-3 on surprise): Rich vein, Ley line (Ley Shrines along a line),
   Geothermal rift (vents + a Lava Vent site), Gold rush, Mercenary road, Garrison ruins, Watch ridge - all built from
   existing mechanics. Not rolled in the lobby until their mechanic exists: Hero relic, Hydra lair (the Oct 20 "hydras
@@ -459,9 +473,11 @@ eight builds, then small metal edits (a standard patch made rich on the poorest 
 richest...) down to 80% of the tolerance, each edit judged under the central weights and under eight seeded draws of
 the weights (the guesses in the score, priced within their ranges), going on while those draws' mean is still outside
 the tolerance; a draw still outside it gives way to a fresh draw (up to four). The nudge's new patch is drawn at random
-from the poorest seat's ground, never nearest its start. The data-only camps count zero on lobby maps.
+from the poorest seat's ground among the spots that join one of its clumps (9.5-14 from a clump of at most three, so it
+stays 2-4), and a patch is only taken away when that strands no neighbour - the balancer keeps the layout. The
+data-only camps count zero on lobby maps.
 
-**The reach rule** (beside the score, since the dice now place the metal): a balanced draw is refused, and drawn again,
+**The reach rule** (beside the score): a balanced draw is refused, and drawn again,
 when a start's nearest patch is over 110 blocks' walk or its metal within 160 blocks' walk is under 0.6 of the best
 start's (`MapGenerator.metalReach`).
 
@@ -487,9 +503,14 @@ every seat, the middle and its whole economy by ground; level pads, no deep wate
 wall than the extractor clearance; reserved zones (the jungle and a caller's zone) free of metal, jungle doors on its
 edge; seats and teams within the tolerance, starts on capitol ground inside their boxes; square edge helpers and the
 square wall's length; the options ride the seed (off rolls nothing, the lobby only live modifiers). The symmetric preset tests sweep
-`MapPreset.handmade()` only.
+`MapPreset.handmade()` only. JUnit (`bar/src/test/.../maps/gen`; headless: `tools/mapgen_sim/run.sh junit`):
+`MetalClumpsTest` (2/4/8 seats, six seeds, round and square: metal in groups of at most 6, a 2-4 group compact, lone
+patches at most 30% of the spread and at least one a map, paths on half the maps; a clump behind every base and
+max(2, seats / 2) in the midfield; the home clumps the same for every seat; fairness and buildable pads) and
+`GeneratedMetalTest` (tier 2 at main's numbers, nothing within 40 of a start, extra metal, the reach rule).
 
-**Cost.** A 4v4 build is ~150 ms on one core; the balancer builds up to eight, so a lobby map takes about 0.5 s at
-1v1 and 1-2 s at 2v2 and 4v4 (worst seen 2.2 s; 240 lobby seeds, all valid, none needing a fallback draw). The lobby
+**Cost.** A 4v4 build is ~150 ms on one core; the balancer builds up to eight, so a lobby map takes about 0.5-0.7 s at
+1v1, 1.1-1.2 s at 2v2 and 1.6-1.7 s at 4v4 (median; p95 1.9 s, worst seen 3.3 s; 240 lobby seeds, all valid, 17 needing a
+fallback draw, mostly for the reach rule in the draws checked: `design/generated-maps-report.md`, "Oct 27 (later)"). The lobby
 preview draws it on a worker thread ("Generating..."); the server builds it once at Start.
 
