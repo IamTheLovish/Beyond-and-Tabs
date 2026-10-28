@@ -67,7 +67,7 @@ def near(mask, k=1):
     return m
 
 
-def run(ctx, frag, vert, col, depth, P, edge_aa=1.0, frames=1):
+def run(ctx, frag, vert, col, depth, P, edge_aa=1.0, frames=1, grade=None):
     import moderngl
     H, W = depth.shape
     ctex = ctx.texture((W, H), 4, (np.concatenate([col, np.ones((H, W, 1))], -1) * 255).astype(np.uint8).tobytes())
@@ -82,7 +82,9 @@ def run(ctx, frag, vert, col, depth, P, edge_aa=1.0, frames=1):
     vao = ctx.vertex_array(prog, [(ctx.buffer(quad.tobytes()), '3f', 'Position')])
     inv = np.linalg.inv(P).astype('f4')
     neutral = dict(InvProjMat=tuple(inv.T.flatten()), Ortho=1.0, EdgeAA=edge_aa, HazeMax=0.0, Contrast=0.0,
-                   SplitTone=0.0, Saturation=1.0, Vignette=0.0, Aspect=W / H)
+                   SplitTone=0.0, Saturation=1.0, Vignette=0.0, Aspect=W / H, Exposure=1.0, Vibrance=0.0, Glow=0.0,
+                   GlowThreshold=0.5, GlowRadius=0.02, ShadowTint=(0.96, 1.0, 1.06), HighlightTint=(1.04, 1.0, 0.94))
+    neutral.update(grade or {})
     for k, v in neutral.items():
         if k in prog:
             prog[k].value = v
@@ -101,14 +103,40 @@ def run(ctx, frag, vert, col, depth, P, edge_aa=1.0, frames=1):
     return np.frombuffer(out.read(), np.uint8).reshape(H, W, 4)[..., :3].astype(int), ms
 
 
+# each look's grade as WorldLookPass sets it (haze off: a still has no depth here)
+LOOKS = {
+    "subtle": dict(Contrast=0.10, SplitTone=0.5, Saturation=0.96, Vignette=0.05),
+    "full": dict(Contrast=0.18, SplitTone=0.9, Saturation=0.92, Vignette=0.09),
+    "enchanted": dict(Contrast=0.18, SplitTone=1.2, Saturation=1.0, Vignette=0.16, Exposure=0.86, Vibrance=0.45,
+                      Glow=0.30, GlowThreshold=0.50, GlowRadius=0.016, ShadowTint=(0.93, 0.95, 1.13),
+                      HighlightTint=(1.09, 1.0, 0.85)),
+}
+
+
+def grade_still(ctx, frag, vert, path, look, out):
+    """The real shader's grade (no haze, no edge smoothing) on a screenshot - to compare the looks on eyes stills."""
+    from PIL import Image
+    img = np.asarray(Image.open(path).convert("RGB"), float)[::-1] / 255.0      # GL rows go bottom-up
+    H, W = img.shape[:2]
+    P = ortho(-20, 20, -15, 15, -1875.0, 1000.0)
+    res, ms = run(ctx, frag, vert, img, np.ones((H, W)), P, 0.0, 1, LOOKS[look])
+    Image.fromarray(res[::-1].astype(np.uint8)).save(out)
+    print("graded %s with %s -> %s" % (path, look, out))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--shader", default=os.path.join(SHADERS, "bat_postfx.fsh"))
+    ap.add_argument("--grade-still", nargs=3, metavar=("PNG", "LOOK", "OUT"),
+                    help="grade a screenshot with a look (subtle, full, enchanted) through the real shader and exit")
     a = ap.parse_args()
     import moderngl
     ctx = moderngl.create_standalone_context(backend='egl', require=330)
     frag = open(a.shader).read().replace('#version 150', '#version 330')
     vert = open(os.path.join(SHADERS, "bat_postfx.vsh")).read().replace('#version 150', '#version 330')
+    if a.grade_still:
+        grade_still(ctx, frag, vert, *a.grade_still)
+        return
     W, H = 400, 300
     P, col, depth, box, line, text = scene(W, H)
     res, _ = run(ctx, frag, vert, col, depth, P)
