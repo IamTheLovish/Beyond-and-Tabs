@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.match.MatchPhase;
 import com.solegendary.reignofnether.match.MatchState;
+import com.solegendary.reignofnether.persistence.RtsSaves;
 import com.solegendary.reignofnether.player.PlayerServerEvents;
 import com.solegendary.reignofnether.resources.MetalPatches;
 import com.solegendary.reignofnether.startpos.ArenaPregen;
@@ -94,10 +95,11 @@ public final class NewMatch {
         BattlefieldSetup.abandon();
         ArenaPathing.abandon();
 
-        // 2. the next slot, saved at once so a crash or restart never hands it out again
+        // 2. the next slot, saved at once so a crash or restart never hands it out again (a match boundary: the old
+        //    match was reset above and the next has not started, so the one full write RtsSaves allows is no hitch)
         int[] at = origins.cursor().shift(anchor.getX(), anchor.getZ());
         origins.setDirty();
-        level.getDataStorage().save();
+        RtsSaves.flush(level);
         BlockPos origin = ArenaOrigins.groundAt(level, at[0], at[1]);
 
         // 3. everything anchored to the arena follows: people first (a player left outside a moved border takes
