@@ -1184,7 +1184,7 @@ public class BuildingPlacement {
             // queue still listed it as a pending order)
             for (WorkerUnit worker : getBuilders())
                 worker.getBuildRepairGoal().queuedBuildings.remove(this);
-            if (isCapitol &&BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) <= 1) {
+            if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) <= 1) {
                 for (int i = 0; i < 3; i++)
                     spawnHuntableAnimalsNearby(animalSpawnBlockRange / 2);
             }

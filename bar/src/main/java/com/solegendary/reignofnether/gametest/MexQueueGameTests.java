@@ -395,9 +395,6 @@ public class MexQueueGameTests {
         for (int x = (s.cx - half - 6) >> 4; x <= (s.cx + half + 6) >> 4; x++)
             for (int z = (s.cz - half - 6) >> 4; z <= (s.cz + half + 6) >> 4; z++)
                 chunks.add(new long[] { x, z });
-        GameTestChunks.holdAndAwaitOrFail(s.level, chunks, "ac5 queue pad");
-        GameTestChunks.awaitRingOrFail(s.level, chunks, "ac5 queue pad");
-        Mob worker = s.worker(-half - 4, -half);
         Runnable undoBig = () -> {
             CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
             GameTestChunks.releaseAll(s.level, chunks);
@@ -405,6 +402,15 @@ public class MexQueueGameTests {
         // s.finish() throws when the test fails, so an undoBig.run() after it never ran: the radius-48 stone pad stayed at
         // y 264 over the next batches' arenas (CI run 40651908207: scar_lands_on_the_real_top_face found it as the ground)
         s.undos.add(undoBig);
+        // a chunk that never loads throws before any finish(): undo the scene (the big pad with it) on the way out
+        try {
+            GameTestChunks.holdAndAwaitOrFail(s.level, chunks, "ac5 queue pad");
+            GameTestChunks.awaitRingOrFail(s.level, chunks, "ac5 queue pad");
+        } catch (RuntimeException e) {
+            s.undo();
+            throw e;
+        }
+        Mob worker = s.worker(-half - 4, -half);
         if (worker == null) {
             s.setupFail("could not create the worker");
             undoBig.run();
