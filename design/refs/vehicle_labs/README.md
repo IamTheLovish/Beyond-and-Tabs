@@ -235,3 +235,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    soul-fire BRAZIERS on pillars as the only other lights, GIANT CURVED RIBS/HORNS framing the foreground, a lone figure
    for scale. GRAVEBOUND: one cold glowing core on a dark mass, braziers only, bone ribs framing - matches the rib-vault
    gantry the critic liked; soul light may lean blue-cyan as well as green.
+
+34j. lovishs 37th reference (04:22): /root/bat/design/refs/vehicle_labs/ref37_futuristic_glass_spire_on_water.png - a
+   Minecraft FUTURISTIC glass structure rising from water (signed by its builder: inspiration only): a tall central
+   glass spire, angled glass WINGS in cyan, symmetric, reflected in the sea. Not one of the 7 factions: filed for the
+   LATER FUTURISTIC faction (the one with real tanks, per the vehicle-labs design doc). Tidewrought may borrow its
+   sea-glass palette for the lighthouse lamp only.
