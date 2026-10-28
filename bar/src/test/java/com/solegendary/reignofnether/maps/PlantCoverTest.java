@@ -21,12 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PlantCoverTest {
 
     /** The share of eligible columns that carried a plant before the change, averaged over the seeds and team sizes. */
-    private static final double BEFORE_VERDANT = 0.375, BEFORE_HIGHLANDS = 0.267, BEFORE_ARCHIPELAGO = 0.258;
+    private static final double BEFORE_VERDANT = 0.365, BEFORE_HIGHLANDS = 0.258, BEFORE_ARCHIPELAGO = 0.250;
     private static final long[] SEEDS = { 42L, 4242424242L };
     private static final int[][] TEAMS = { { 0, 1 }, { 0, 0, 1, 1 } };
 
     /** A column the builder would plant on: grass-topped, flat enough (slope < 2), not forest, not in a keep-out. */
-    private record Col(double u, double v, int slope, double meadow) { }
+    private record Col(MapLayout layout, double u, double v, int slope, double meadow) { }
 
     private static final java.util.Map<String, List<Col>> COLS = new java.util.HashMap<>();
 
@@ -59,7 +59,7 @@ class PlantCoverTest {
                 }
                 if (slope >= 2 || PlantCover.keptClear(keep, dx, dz))
                     continue;
-                out.add(new Col(c.u, c.v, slope, PlantCover.meadowNoise(l, c.u, c.v)));
+                out.add(new Col(l, c.u, c.v, slope, PlantCover.meadowNoise(l, c.u, c.v)));
             }
     }
 
@@ -68,12 +68,11 @@ class PlantCoverTest {
     }
 
     private static double coverage(MapPreset preset) {
-        MapLayout l = anyLayout();
         PlantCover.Mix mix = PlantCover.mixFor(preset);
         List<Col> cols = columns(preset);
         int planted = 0;
         for (Col c : cols)
-            if (PlantCover.kindAt(mix, l, c.u, c.v, c.slope) >= 0)
+            if (PlantCover.kindAt(mix, c.layout, c.u, c.v, c.slope) >= 0)
                 planted++;
         assertTrue(cols.size() > 5000, preset + ": too few columns to judge (" + cols.size() + ")");
         return planted / (double) cols.size();
@@ -169,12 +168,11 @@ class PlantCoverTest {
     @Test
     void tallGrassAndFernsStayInMeadowCoresAndStayRare() {
         for (MapPreset preset : new MapPreset[] { MapPreset.VERDANT_VALLEY, MapPreset.HIGHLANDS, MapPreset.ARCHIPELAGO }) {
-            MapLayout l = anyLayout();
             PlantCover.Mix mix = PlantCover.mixFor(preset);
             List<Col> cols = columns(preset);
             int tall = 0, planted = 0;
             for (Col c : cols) {
-                int k = PlantCover.kindAt(mix, l, c.u, c.v, c.slope);
+                int k = PlantCover.kindAt(mix, c.layout, c.u, c.v, c.slope);
                 if (k < 0)
                     continue;
                 planted++;
