@@ -77,7 +77,9 @@ def main():
                 s.set(x, 0, z, "dirt_path" if rr < 0.15 else "coarse_dirt" if rr < 0.7 else "dirt")   # r3
     occupied = set(path)
     rnd = random.Random(28)
-    pieces = [(gen_trees.oak(3), 31, 8), (gen_trees.oak(11, old=True), 6, 28), (gen_trees.birch(5), 36, 33),
+    # r27 oak pilot: a spreading oak and an old twin-stemmed oak - two of the pilot's three forms in one still
+    pieces = [(gen_trees.oak(3, form="spread"), 31, 8), (gen_trees.oak(11, old=True, form="twin"), 6, 28),
+              (gen_trees.birch(5), 36, 33),
               (gen_trees.bush(2), 22, 38), (gen_trees.boulder(4), 14, 12)]
     for piece, ox, oz in pieces:
         gen_trees._write_piece(s, piece, ox, oz, lift=1)
