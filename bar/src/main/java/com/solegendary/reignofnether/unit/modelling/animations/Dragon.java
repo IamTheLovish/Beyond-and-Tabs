@@ -170,10 +170,10 @@ public final class Dragon {
     /** Per-entity smoothed state: [glide 0..1, bank deg, last age, the bite's SWING moment (age), last attackTime
      *  seen, hover, the last swing actually seen (age), whether the running bite was foreseen (1) or not (0),
      *  the filtered heading (deg), the bank's velocity (deg/tick), the tail's two lagged banks, heading-seeded flag,
-     *  climb, the beat phase (beats), flare, take-off]. */
+     *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
-        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_LEN = 17;
+        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_LEN = 19;
 
     /**
      * The bite's keys, in TICKS relative to the swing moment (0 = the fireball leaves / the blow lands): the wind-up
@@ -269,6 +269,25 @@ public final class Dragon {
         p.z += z;
     }
 
+    /**
+     * Whether the dragon is taking off: just raised and still slow, or climbing hard from (nearly) a standstill. The
+     * age alone is not enough - a client's tickCount starts at 0 whenever the entity comes into tracking range, so a
+     * dragon flying into view used to play the take-off (legs dangling, body pitched up 25) for three seconds in
+     * mid-cruise. climbWant -1..1 (a full climb is Params.climbSpeed), speed in blocks per tick.
+     */
+    public static boolean wantsTakeoff(Params P, int tickCount, float speed, float climbWant) {
+        return (tickCount < P.takeoffTicks && speed < 0.08f) || (climbWant > 0.5f && speed < 0.08f);
+    }
+
+    /**
+     * Whether the wings flare (held forward as air brakes): while the dragon BRAKES at mid speed (DragonFlight's ramp
+     * into its point: brake in blocks per tick per tick), or just stopped with the hover still coming in. r13 only had
+     * the second, so the flare came after the braking it is meant to show.
+     */
+    public static boolean wantsFlare(float speed, float brake, float hover) {
+        return (brake > 0.002f && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
+    }
+
     /** A fresh per-entity state (see STATE). */
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
@@ -341,7 +360,9 @@ public final class Dragon {
         if (st == null) {
             STATE.put(e, st = newState(age));
             st[ST_PHASE] = Life.offset(id) / P.beatTicks;
-            st[ST_TAKEOFF] = e.tickCount < P.takeoffTicks ? 1f : 0f;
+            double dx0 = e.getX() - e.xo, dz0 = e.getZ() - e.zo;
+            st[ST_SPEED] = (float) Math.sqrt(dx0 * dx0 + dz0 * dz0);
+            st[ST_TAKEOFF] = wantsTakeoff(P, e.tickCount, st[ST_SPEED], 0f) ? 1f : 0f;
         }
         float dt = Mth.clamp(age - st[2], 0f, 20f);
         st[2] = age;
@@ -352,8 +373,13 @@ public final class Dragon {
         st[0] += (wantGlide - st[0]) * Math.min(1f, dt / (wantGlide > st[0] ? 12f : 25f));
         float glide = st[0];
         float wantHover = speed < 0.02f ? 1f : 0f;
-        // the flare: braking into a hover - while the hover driver is still coming in, the wings are air brakes
-        float wantFlare = wantHover > 0.5f && st[5] < 0.8f ? 1f : 0f;
+        // the braking (blocks per tick per tick, smoothed: the speed only changes once a tick, the frames between see none)
+        float lastSpeed = st[ST_SPEED];
+        st[ST_SPEED] += (speed - st[ST_SPEED]) * Math.min(1f, dt / 3f);
+        if (dt > 0f)
+            st[ST_BRAKE] += ((lastSpeed - st[ST_SPEED]) / dt - st[ST_BRAKE]) * Math.min(1f, dt / 4f);
+        // the flare: braking into a hover - the wings are air brakes while it slows, and until the hover has come in
+        float wantFlare = wantsFlare(speed, st[ST_BRAKE], st[5]) ? 1f : 0f;
         st[ST_FLARE] += (wantFlare - st[ST_FLARE]) * Math.min(1f, dt / (wantFlare > st[ST_FLARE] ? 5f : 14f));
         st[5] += (wantHover - st[5]) * Math.min(1f, dt / 25f);
         float idle = st[5];
@@ -362,7 +388,7 @@ public final class Dragon {
         st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
         float climb = st[ST_CLIMB];
         // the take-off: just appeared, or climbing hard from (nearly) a standstill
-        float wantTakeoff = e.tickCount < P.takeoffTicks || (wantClimb > 0.5f && speed < 0.08f) ? 1f : 0f;
+        float wantTakeoff = wantsTakeoff(P, e.tickCount, speed, wantClimb) ? 1f : 0f;
         st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
         float takeoff = st[ST_TAKEOFF];
         // the beat's phase advances at the CURRENT rate (a hover beats quicker, a take-off quicker still)

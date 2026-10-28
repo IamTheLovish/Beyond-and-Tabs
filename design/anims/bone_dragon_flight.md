@@ -64,3 +64,15 @@ it up.
 - The sail shows at least three shades / facets from above (no single flat slab).
 - Wingtips trail the arm (tip still rising at the start of the downstroke).
 - Silhouette on a night sky: the bone rim and the pale hem keep the outline.
+
+## 7. Steering (the server side, #145 after lovish's "the flight is wrong")
+
+The rig can only show the flight it is given. On the ghast's brain (FlyingUnitMoveControl) the dragon surged on a
+random 2-6 tick nudge, re-aimed its whole velocity in a few ticks (sideways and backward slides), snapped its yaw to
+its target in one tick, rose and sank like a lift and coasted to a stop past its point - so the bank, the flare and
+the glide fired at random. unit/controls/DragonFlight.java now steers it: a nose that turns at most 9 deg/tick
+standing, 4 at cruise; the velocity always along it; speed up 0.008, down 0.012 b/t per tick; a braking ramp over
+the last 5 blocks; a climb capped at 0.10 b/t that eases in; slower in a hard turn (no orbiting). Cruise = the ghast
+brain's average for the same attribute (0.3 -> 0.167 b/t), so travel times hold. Hovering, the body turns to its
+target at 6 deg/tick. The flare now plays while it brakes (Dragon.wantsFlare); a dragon that flies into view no longer
+plays the take-off (Dragon.wantsTakeoff: a client's tickCount restarts on tracking).

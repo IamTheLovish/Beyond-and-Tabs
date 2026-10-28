@@ -327,7 +327,6 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
     swingG = 4 * wander(age, ID, 160) * gw0
     for i, leg in enumerate(("front_left", "front_right", "hind_left", "hind_right")):
         front = i < 2
-        dr = 1 if front else -1
         sway = (4 * wander(age - 9 * i, ID, 70) + 12 * shape(lag(6 + 2 * i))) * hang
         if front:
             dsl(leg + "_upper", -4 * d4 - 6 * gw0 + swingG + 40 * hang + sway)
