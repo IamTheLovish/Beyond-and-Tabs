@@ -287,6 +287,7 @@ public interface Unit {
 
     private static void tickBody(Unit unit) {
         Mob unitMob = (Mob) unit;
+        com.solegendary.reignofnether.unit.SetUp.tick(unitMob);   // artillery set-up time: did it move this tick
         // Chunk loading around units (formerly 25 addRegionTicket calls per unit per tick here) is now done once
         // per second for all units together by UnitChunkLoader (driven from UnitServerEvents.onServerTick).
         for (Map.Entry<Ability, Float> cooldownEntry : unit.getAbilityCooldowns().entrySet()) {
@@ -458,6 +459,7 @@ public interface Unit {
             try {
                 com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
                 com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
+                com.solegendary.reignofnether.raid.WorkerFlee.tick(unitMob, unit);   // a hurt worker runs to a tower / the capitol
             } finally {
                 Sys.end(sysReactions);
             }
