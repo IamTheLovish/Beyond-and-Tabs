@@ -171,3 +171,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    NATURAL ROCK ARCH of tall grey stone COLUMNS of varied heights rising to a pointed crest, moss on every ledge/step, a
    lone tree in the opening. Ashborn: this is your fissure gate - a great arch of basalt columns over the exit lane.
    Everyone: crags are column-jointed rock in varied heights with moss/grass on the steps, never a smooth hill.
+
+31. lovishs 26th reference (02:25): /root/bat/design/refs/vehicle_labs/ref26_dark_castle_pale_cliff.png - a Minecraft
+   DARK stone castle with crimson steep roofs and coned turrets, standing right on the edge of a PALE limestone cliff so
+   the walls grow straight out of the rock; many lancets and string courses. Lessons: the building GROWS OUT of the rock
+   (no plinth line between them); a pale crag under a dark building gives value contrast so the building pops.
+   Gravebound: dark stone on a pale crag (diorite/calcite/andesite), soul-green accent instead of crimson.
