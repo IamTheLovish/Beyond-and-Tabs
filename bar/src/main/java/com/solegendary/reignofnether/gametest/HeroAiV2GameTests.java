@@ -1,6 +1,8 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.bot.BotPlayer;
+import com.solegendary.reignofnether.bot.BotServerEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -10,8 +12,10 @@ import com.solegendary.reignofnether.hero.FactionHero;
 import com.solegendary.reignofnether.hero.FactionHeroAbility;
 import com.solegendary.reignofnether.hero.HeroBot;
 import com.solegendary.reignofnether.hero.HeroKits;
+import com.solegendary.reignofnether.hero.ai.HeroBrain;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
+import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
@@ -470,5 +474,125 @@ public class HeroAiV2GameTests {
                     closest[0]));
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
+    }
+
+    // ------------------------------------------------------------------------------------------ a bot's hero
+
+    /**
+     * A bot's Dawn Paladin near death with no heal: it runs from the enemy and rests out of reach. Nobody will heal it
+     * (the Paladin has no heal, mobs do not regenerate) and no player will give the word, so its owner's attack order
+     * must take it out of the rest. Mode A (Oct 28, item 1): every bot army order was wiped while the hero rested, so it
+     * stood there for the rest of the match. Returns the bot's name (for the cleanup) or null when setup failed.
+     */
+    static String botPaladinRests(GameTestHelper helper, String tag, List<Mob> mobs) {
+        String bot = HeroGameTests.owner(helper, tag), them = bot + "_foe";
+        BotPlayer brain = new BotPlayer(bot, Factions.VILLAGERS, BotPlayer.Difficulty.PASSIVE, helper.absolutePos(new BlockPos(8, 2, 1)));
+        brain.enemyFilter = o -> false;
+        BotServerEvents.brains.put(bot, brain);
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.DAWN_PALADIN, bot, 8, 10);
+        Mob foe = dummy(helper, them, 8, 15);
+        mobs.add(hero);
+        mobs.add(foe);
+        if (!(hero instanceof FactionHero) || foe == null) {
+            BotServerEvents.brains.remove(bot);
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return null;
+        }
+        return bot;
+    }
+
+    static HeroBrain.State state(Mob hero) {
+        HeroBrain b = ((FactionHero) hero).heroCore().brainIfAny();
+        return b == null ? HeroBrain.State.OFF : b.state;
+    }
+
+    /** The bot's attack order takes its resting hero out of the rest: the hero walks to where its army is sent. */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_bot_order", timeoutTicks = 400)
+    public static void hero_ai_v2_a_resting_bot_hero_follows_its_bot_order(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Mob> mobs = new ArrayList<>();
+        String bot = botPaladinRests(helper, "v2_bot_order", mobs);
+        if (bot == null)
+            return;
+        Mob hero = mobs.get(0);
+        long[] restAt = { -1 };
+        double[] spot = new double[2];
+        double[] moved = { 0 };
+        boolean[] done = { false };
+        Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
+        helper.runAfterDelay(2, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        // every check is scheduled here, from the top (a runnable that schedules more breaks the test's runnable map)
+        for (int t = 3; t <= 360; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                if (restAt[0] < 0 && state(hero) == HeroBrain.State.REST) {
+                    restAt[0] = tick;
+                    spot[0] = hero.getX();
+                    spot[1] = hero.getZ();
+                    // the bot sends its army to the far side of the arena, away from the enemy (no new threat on the way)
+                    int x = hero.getX() < helper.absolutePos(new BlockPos(8, 2, 0)).getX() ? 14 : 1;
+                    order(helper, bot, hero, UnitAction.ATTACK_MOVE, at(helper, x, 1));
+                } else if (restAt[0] >= 0) {
+                    moved[0] = Math.max(moved[0], flat(hero, spot[0], spot[1]));
+                    if (moved[0] >= 3 || tick - restAt[0] >= 120) {
+                        done[0] = true;
+                        List<String> problems = new ArrayList<>();
+                        if (moved[0] < 3)
+                            problems.add(String.format("the resting bot hero ignored its bot's attack order (moved %.1f blocks in %d ticks, state %s)",
+                                moved[0], tick - restAt[0], state(hero)));
+                        HeroAiGameTests.finish(helper, problems, mobs, cleanup);
+                    }
+                } else if (tick == 360) {
+                    done[0] = true;
+                    HeroAiGameTests.finish(helper, List.of("setup: the bot hero at a quarter health never fled and rested (state "
+                        + state(hero) + ")"), mobs, cleanup);
+                }
+            });
+        }
+    }
+
+    /**
+     * With no order and no heal, a bot's resting hero does not rest forever: after HeroBot's BOT_REST_TICKS it goes back
+     * to its order (here: none) by itself, and a threat seen again would start a new run.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_bot_rest", timeoutTicks = 900)
+    public static void hero_ai_v2_a_bot_hero_does_not_rest_forever(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Mob> mobs = new ArrayList<>();
+        String bot = botPaladinRests(helper, "v2_bot_rest", mobs);
+        if (bot == null)
+            return;
+        Mob hero = mobs.get(0);
+        long[] restAt = { -1 };
+        boolean[] done = { false };
+        Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
+        helper.runAfterDelay(2, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
+        int limit = 20 * 20 + 60;   // BOT_REST_TICKS and a few thinks
+        for (int t = 3; t <= 840; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                HeroBrain.State s = state(hero);
+                if (restAt[0] < 0) {
+                    if (s == HeroBrain.State.REST)
+                        restAt[0] = tick;
+                    else if (tick >= 360) {
+                        done[0] = true;
+                        HeroAiGameTests.finish(helper, List.of("setup: the bot hero at a quarter health never fled and rested (state "
+                            + s + ")"), mobs, cleanup);
+                    }
+                } else if (s != HeroBrain.State.REST) {
+                    done[0] = true;
+                    HeroAiGameTests.finish(helper, new ArrayList<>(), mobs, cleanup);
+                } else if (tick - restAt[0] >= limit) {
+                    done[0] = true;
+                    HeroAiGameTests.finish(helper, List.of(String.format("the bot hero rested %d ticks with no heal and no order (it should go back by itself)",
+                        tick - restAt[0])), mobs, cleanup);
+                }
+            });
+        }
     }
 }
