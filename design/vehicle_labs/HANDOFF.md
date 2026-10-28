@@ -41,9 +41,9 @@ pushed there). First message to lovish: the runner command only (`~/start-runner
 | What | Model | Brief | Output | Next |
 |---|---|---|---|---|
 | **Pilot**: Brassworks Engine Shed imitating **ref18** (red-brick hall + central tower), T1 size | Opus builder | `design/vehicle_labs/briefs/brass_pilot.md` (incl. the 3 changes: two levels, T1 size 13x21 / L3 <= 22, greybox first) | `design/vehicle_labs/brass_l3_greybox.nbt` + `brass_greybox_vs_ref.png`, then brass_l1/l3 | It was told to STOP at the greybox. Show lovish the greybox comparison; only after his OK, detail it, then one fresh Fable critique. If the files are not on the branch, the old session ended first: re-run the brief with an Opus builder. |
-| **Tools**: `--light` (AO + sun shadow) in `tools/structure_render.py`, and `tools/shape_kit.py` (SDF domes/spires/curved roofs voxelized with stair/slab edges) | Opus builder | `design/vehicle_labs/briefs/tools_light_shapekit.md` | those two tools + tests | Same: if not on the branch, re-run the brief. Then make `tools/ref_compare.py` use `--light`. |
+| **Tools** (DONE, committed d625e9d7): `tools/structure_render.py --light` (AO + low sun shadows, eyes-rig sun; ~2 s per building), `tools/ref_compare.py` now lit by default (`--flat` for the old look), `tools/shape_kit.py` (SDF domes/spires/cones/tori/lofts/curved roofs/ribs, CSG, stair/slab edge pass, hollow shells; `build()` into a gothic_parts Part or a Structure) + tests | Opus builder | `design/vehicle_labs/briefs/tools_light_shapekit.md` | committed | Known limits: shallow curves still show stair teeth, domes blocky at 32 px, ribbed dome ribs patchy, no outer-corner stair shapes until `to_rig()`. Worth a follow-up pass before the domed labs. |
 
-Nothing else is running. The other labs are paused until the pilot reaches 7+.
+Nothing else is running. (At 04:5x the pilot had written `brass_l3_greybox.nbt`, uncommitted.) The other labs are paused until the pilot reaches 7+.
 
 ## Agreed next improvements (lovish: "sounds good, add this")
 1. Greybox stage approved by lovish (in the pilot now).
