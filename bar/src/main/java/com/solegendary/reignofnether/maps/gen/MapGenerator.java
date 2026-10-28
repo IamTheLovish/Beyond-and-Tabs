@@ -101,6 +101,7 @@ public final class MapGenerator {
             }
             default -> throw new IllegalStateException();
         }
+        metalReach(best);
         return best;
     }
 
@@ -123,6 +124,7 @@ public final class MapGenerator {
         Built best = null;
         for (int k = 0; k < tries; k++) {
             Built b = build(new GenPlan(teams, seed, drawSeed(draw, k), o, false, 0), metal, w);
+            metalReach(b);
             b.m.attempt = k;
             if (best == null || better(b, best))
                 best = b;
@@ -233,6 +235,53 @@ public final class MapGenerator {
         m.camps.removeIf(c -> !reachedNear(m, seen, c.dx(), c.dz(), 4));
     }
 
+    /** A start whose nearest patch is farther than this walk (blocks) is too far from all metal: ~45 s for a builder. */
+    static final double NEAR_MAX = 110;
+    /** Metal "within reach" of a start: the patches' values within this walk (blocks)... */
+    static final double REACH_WALK = 160;
+    /** ...of which every start must hold at least this share of the best-placed start's. */
+    static final double REACH_MIN = 0.6;
+
+    /**
+     * The reach rule beside the score (lovish Oct 27: random metal, with fairness kept honest). The score already prices
+     * a long walk to metal, but it adds the walk into one number with everything else; this refuses a map outright when
+     * one start is far from all metal or holds much less metal within reach than another, whatever the rest of its score
+     * says. A refused draw is invalid, so the lobby's promise (MapGenerator.generate) draws again.
+     */
+    static void metalReach(Built b) {
+        GenMap m = b.m;
+        if (!m.valid)
+            return;
+        int n = m.n;
+        double[] near = new double[n], reach = new double[n];
+        java.util.Arrays.fill(near, Double.POSITIVE_INFINITY);
+        for (MapLayout.Mex q : m.mexes)
+            for (int s = 0; s < n; s++) {
+                double d = b.g.blocks(b.dist[s], q.dx(), q.dz());
+                near[s] = Math.min(near[s], d);
+                if (d <= REACH_WALK)
+                    reach[s] += q.value();
+            }
+        double best = 0;
+        for (int s = 0; s < n; s++)
+            best = Math.max(best, reach[s]);
+        for (int s = 0; s < n; s++) {
+            if (near[s] > NEAR_MAX) {
+                m.valid = false;
+                m.invalidWhy = "seat " + s + " is far from all metal (nearest patch "
+                    + (Double.isInfinite(near[s]) ? "unreached" : Math.round(near[s]) + " blocks' walk") + ")";
+                return;
+            }
+            if (reach[s] < REACH_MIN * best) {
+                m.valid = false;
+                m.invalidWhy = String.format(java.util.Locale.ROOT,
+                    "seat %d has little metal within reach (%.1f of the best seat's %.1f within %d blocks' walk)", s,
+                    reach[s], best, (int) REACH_WALK);
+                return;
+            }
+        }
+    }
+
     static boolean reachedNear(GenMap m, boolean[] seen, int x, int z, int r) {
         for (int a = -r; a <= r; a++)
             for (int c = -r; c <= r; c++)
@@ -269,6 +318,7 @@ public final class MapGenerator {
         Fairness.Context[] more = new Fairness.Context[robust ? ROBUST_DRAWS.length : 0];
         for (int i = 0; i < more.length; i++)
             more[i] = new Fairness.Context(geo, liveWeights ? ROBUST_DRAWS[i].live() : ROBUST_DRAWS[i]);
+        GenRng dice = GenRng.stream(b.p.draw ^ ((long) b.p.rotation << 20), "nudge");
         List<GenEconomy.Patch> live = new ArrayList<>();
         List<double[]> rows = new ArrayList<>();
         for (GenEconomy.Patch q : e.patches)
@@ -296,8 +346,7 @@ public final class MapGenerator {
                 GenEconomy.Patch q = live.get(i);
                 double[] r = rows.get(i);
                 int o = (int) r[3];
-                boolean fill = q.kind == GenEconomy.PKind.FILL || q.kind == GenEconomy.PKind.NATURAL
-                    || q.kind == GenEconomy.PKind.NUDGE;
+                boolean fill = q.kind == GenEconomy.PKind.FILL || q.kind == GenEconomy.PKind.NUDGE;
                 if (o == poor && fill && q.value == GenEconomy.STANDARD && exposureOf(ctx, r, o) < 0.5)
                     edits.add(valueEdit(r, GenEconomy.RICH));
                 if (o == poor && q.value == GenEconomy.LEAN)
@@ -311,14 +360,20 @@ public final class MapGenerator {
                     edits.add(new Runnable[] { () -> r[2] = 0, () -> r[2] = live.get(at).value });
                 }
             }
-            // a new patch on the poorest seat's free ground: the candidates it owns most surely (nearest to it first)
+            // a new patch on the poorest seat's free ground: ten of the candidates it owns most surely, drawn at random
+            // (lovish Oct 27: metal "not connected to where the townhall spawns" - nearest-first would rebuild a home set)
             List<double[]> pool = new ArrayList<>();
             for (GenEconomy.Cand c : e.cands) {
                 if (c.used || c.near < 18 || c.owner != poor && c.d[poor] > 1.15 * c.d[c.owner])
                     continue;
                 pool.add(new double[] { c.d[poor], c.x, c.z });
             }
-            pool.sort((x, y) -> Double.compare(x[0], y[0]));
+            for (int i = pool.size() - 1; i > 0; i--) {
+                int k = dice.nextInt(i + 1);
+                double[] c = pool.get(i);
+                pool.set(i, pool.get(k));
+                pool.set(k, c);
+            }
             for (double[] c : pool) {
                 if (addRows.size() >= 10)
                     break;

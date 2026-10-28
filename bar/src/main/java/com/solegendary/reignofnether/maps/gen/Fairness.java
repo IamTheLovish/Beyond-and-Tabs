@@ -15,10 +15,13 @@ import java.util.List;
  * The parts (numbers from the hidden-mechanics codex, commit 8816e8a):
  * <ul>
  * <li><b>metal</b>: each patch a seat can claim pays T1 2.0/s x value from the moment a builder gets there (the seat's
- *     patches are built nearest first, one every {@code buildGap} seconds plus the walk), then T2 7.0/s x value once the
- *     seat refits it (safe patches only, one every {@code t2Gap} seconds from {@code t2Time}, 45 s without income during
- *     the refit). A patch is shared between seats by a soft nearest rule on walk distance (softness {@code tau}) and loses
- *     up to {@code riskMax} of its value the closer it lies to an enemy (raids).</li>
+ *     patches are built nearest first, one every {@code buildGap} seconds plus the walk), then T2 4.5/s x value once the
+ *     seat refits it (safe patches only, one every {@code t2Gap} seconds from {@code t2Time}, 75 s without income during
+ *     the refit) - main's MetalExtractor.T2_METAL_INCOME and TierGate.UPGRADE_EXTRACTOR_SECONDS (commit 0e223c88; this
+ *     pure package cannot import them, GeneratedMetalTest keeps the copies equal). The refit's 300 metal is not charged:
+ *     the score charges no build cost (a T1 extractor's neither), and charging only the refit would tilt it against the
+ *     seats with more safe patches. A patch is shared between seats by a soft nearest rule on walk distance (softness
+ *     {@code tau}) and loses up to {@code riskMax} of its value the closer it lies to an enemy (raids).</li>
  * <li><b>objectives</b>: a held site pays its income (Ancient Mine 3 metal/s, Ley Shrine 30 and Lava Vent 45 energy/s at
  *     {@code energyPerMetal} energy a metal) or its estimated worth (camps, garrisons, sight, the forge's 25% research
  *     discount for the whole team), from capture on (army walk + 20 s), shared by the same soft rule.</li>
@@ -67,7 +70,7 @@ public final class Fairness {
     }
 
     public static final double HORIZON = 900;
-    static final double T1 = 2.0, T2 = 7.0, REFIT = 45;
+    static final double T1 = 2.0, T2 = 4.5, REFIT = 75;
 
     /** One seat's score and its parts (metal per second, 15-minute average). */
     public record SeatScore(double metal, double objectives, double defence, double tempo, double space, double total,

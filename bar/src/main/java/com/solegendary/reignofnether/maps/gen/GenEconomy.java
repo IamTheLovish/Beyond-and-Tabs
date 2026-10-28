@@ -8,17 +8,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The generated map's economy and objectives, on its finished ground: home rings, the centre, contested capture sites on
- * the front seams, a warden's own sites, the modifiers' sites, the reserved jungle with its (data-only) camps, every
- * seat's natural pair, the hole-driven open-ground fill (lovish Oct 21: "more metal along the map edges and randomly
- * filling empty areas"), patch values by exposure, the rich vein, and last the forest, which keeps clear of all of it.
+ * The generated map's economy and objectives, on its finished ground: the centre, contested capture sites on the front
+ * seams, a warden's own sites, the modifiers' sites, the reserved jungle with its (data-only) camps, the random metal
+ * spread (lovish Oct 27: "each map should have mexes spread randomly and not be connected to where the townhall
+ * spawns" - no home ring, no natural pair), patch values by exposure, the rich vein, and last the forest, which keeps
+ * clear of all of it. Whether the dice left every start fairly placed is the balancer's to judge and the reach rule's
+ * to refuse (MapGenerator.metalReach).
  * <p>
  * Every patch obeys the M1 rules (design/maps.md section 2): a level 7x7 pad of land, no deep water within 7, reachable by
  * ground from its owner's start, off the roads, clear of sites, vents and starts, never in a reserved zone. On a mirror
  * map every placement is made on side A's half and copied through the centre, so the economy is exactly symmetric.
  */
 final class GenEconomy {
-    enum PKind { HOME, CENTRE, NATURAL, FILL, VEIN, NUDGE }
+    enum PKind { CENTRE, FILL, VEIN, NUDGE }
 
     static final class Patch {
         int x, z;
@@ -83,7 +85,6 @@ final class GenEconomy {
 
     void build() {
         candidates();
-        homeRings();
         centre();
         seamSites();
         frontSites();
@@ -92,7 +93,6 @@ final class GenEconomy {
         jungle();
         for (Cand c : cands)
             c.open = clearOfSites(c.x, c.z) >= 18 && clearOfVents(c.x, c.z) >= 12 && !inJungle(c.x, c.z, 4);
-        naturals();
         fill();
         values();
         if (p.modifiers.contains(Modifier.RICH_VEIN))
@@ -330,19 +330,6 @@ final class GenEconomy {
     }
 
     // ------------------------------------------------------------------------------------------------- the stages
-
-    /** Six patches round every start at 18 (as the pre-made maps' home ring), turned the same way for every seat. */
-    private void homeRings() {
-        for (int s = 0; s < seatsToPlace(); s++) {
-            double sx = p.slotX(s), sz = p.slotZ(s);
-            double toCentre = StrictMath.atan2(-sz, -sx);
-            for (int k = 0; k < 6; k++) {
-                double a = toCentre + Math.PI / 6 + k * Math.PI / 3;
-                addPatch((int) Math.round(sx + 18 * StrictMath.cos(a)), (int) Math.round(sz + 18 * StrictMath.sin(a)),
-                    STANDARD, PKind.HOME);
-            }
-        }
-    }
 
     /**
      * The middle: a capture site on the plaza and one 2.0x patch per seat facing it (two with Gold rush) - or, on a
@@ -718,79 +705,65 @@ final class GenEconomy {
         return !c.used && c.open && c.near >= FILL_MIN && (!p.mirror || Geo.len(c.x, c.z) * 2 >= FILL_MIN);
     }
 
-    /** Every seat's natural pair (maps spec R5, BAR's first expansion): 42-66 blocks' walk out, on its safest side. */
-    private void naturals() {
-        for (int s = 0; s < seatsToPlace(); s++) {
-            Cand best = null;
-            double bestF = Double.MAX_VALUE;
-            for (Cand c : cands) {
-                if (c.owner != s || c.d[s] < 42 || c.d[s] > 66 || !fillFree(c))
-                    continue;
-                double f = exposure(c.d, s) + rng.range(0, 0.03);
-                if (f < bestF) {
-                    bestF = f;
-                    best = c;
-                }
-            }
-            if (best == null)
-                continue;
-            best.used = true;
-            addPatch(best.x, best.z, STANDARD, PKind.NATURAL);
-            Cand second = null;
-            for (Cand c : cands) {
-                double dd = Geo.len(c.x - best.x, c.z - best.z);
-                if (c.owner == s && !c.used && dd >= 9 && dd <= 13 && c.d[s] <= 70 && clearOfSites(c.x, c.z) >= 18
-                        && !inJungle(c.x, c.z, 4) && clearOfOthers(c, best)) {
-                    second = c;
-                    break;
-                }
-            }
-            if (second != null) {
-                second.used = true;
-                addPatch(second.x, second.z, STANDARD, PKind.NATURAL);
-            }
-        }
-    }
-
-    private boolean clearOfOthers(Cand c, Cand pairWith) {
-        for (Patch q : patches)
-            if (q.alive && !(q.x == pairWith.x && q.z == pairWith.z) && Geo.len(q.x - c.x, q.z - c.z) < FILL_MIN)
-                return false;
-        return true;
-    }
+    /**
+     * What the lobby's extra-metal option does to the spread: a share of the allowance per level step from NORMAL, which
+     * is the map as before (MetalOptions.Extra.count: NONE 0.75x, LOW 0.875x, NORMAL 1x, HIGH 1.25x the patches).
+     */
+    static final double EXTRA_SHARE = 0.25;
+    /** A seat may draw up to this many times its allowance before the dice skip its ground; the balancer evens the rest. */
+    static final double SEAT_SLACK = 1.3;
+    /** The spacing a patch keeps from the others, as a share of its territory's hole target (the old greedy fill's gap). */
+    static final double SPACING = 0.75;
 
     /**
-     * The open-ground fill (maps spec R4 on a natural map): the reachable candidate farthest from every patch goes in,
-     * then the next, while any lies farther than its owner's hole target (the archetype's; the rim band 25% denser, the
-     * lobby's richness scales it), none closer than FILL_MIN to another patch.
+     * The random spread (lovish Oct 27: "each map should have mexes spread randomly and not be connected to where the
+     * townhall spawns"): every free candidate in a seeded random order, each taken when no patch stands within its
+     * spacing (SPACING of its territory's hole target, 20% tighter in the rim band, the lobby's richness scaling it,
+     * never under FILL_MIN), until the map holds its count: the seats' allowances ({@link #capOf}) plus the extra-metal
+     * share. A second pass at FILL_MIN takes up any count the spacing left short. Where a start lands among the patches
+     * is left to the dice; the balancer and the reach rule judge it.
      */
     private void fill() {
         double rich = Math.sqrt(Math.max(0.3, metal.richness()));
+        double extra = 1 + EXTRA_SHARE * (metal.extra().count - 1);
         int[] cap = new int[p.n];
-        for (int s = 0; s < p.n; s++)
-            cap[s] = capOf(s, rich);
-        for (int guard = 0; guard < 40 * p.n; guard++) {
-            Cand best = null;
-            double bestS = 1.0;
-            for (Cand c : cands) {
+        int want = 0;
+        for (int s = 0; s < p.n; s++) {
+            double allowance = capOf(s, rich) * extra;
+            cap[s] = (int) Math.ceil(allowance * SEAT_SLACK);
+            want += (int) Math.round(allowance);
+        }
+        List<Cand> order = new ArrayList<>(cands);
+        for (int i = order.size() - 1; i > 0; i--) {
+            int k = rng.nextInt(i + 1);
+            Cand c = order.get(i);
+            order.set(i, order.get(k));
+            order.set(k, c);
+        }
+        for (boolean tight : new boolean[] { false, true })
+            for (Cand c : order) {
+                if (placed() >= want)
+                    return;
                 if (count[c.owner] >= cap[c.owner] || !fillFree(c))
                     continue;
-                double target = p.seat[c.owner].holeTarget / rich * (c.edge <= 36 ? 0.8 : 1.0);
-                double sc = c.near / target;
-                if (sc > bestS) {
-                    bestS = sc;
-                    best = c;
-                }
+                double spacing = tight ? FILL_MIN
+                    : Math.max(FILL_MIN, SPACING * p.seat[c.owner].holeTarget / rich * (c.edge <= 36 ? 0.8 : 1.0));
+                if (c.near < spacing)
+                    continue;
+                c.used = true;
+                addPatch(c.x, c.z, STANDARD, PKind.FILL);
             }
-            if (best == null)
-                break;
-            best.used = true;
-            addPatch(best.x, best.z, STANDARD, PKind.FILL);
-        }
+    }
+
+    private int placed() {
+        int sum = 0;
+        for (int c : count)
+            sum += c;
+        return sum;
     }
 
     /**
-     * Patches a seat may own in all (home ring and centre included): the pre-made maps' counts (20-24 a seat in a 1v1,
+     * Patches a seat may own in all (its centre patch included): the pre-made maps' counts (20-24 a seat in a 1v1,
      * 10-23 in a 4v4, design/maps.md / maps spec 1.2) scaled by the archetype's density and the lobby's richness.
      * In team games the archetype's density counts at its square root: at full strength a 4v4 Prospector side drew 19
      * patches a seat to the Warden side's 12, a 22% seat spread before balancing (Phase 1), and the balancer then had
