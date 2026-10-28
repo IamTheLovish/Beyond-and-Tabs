@@ -6,11 +6,20 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.registrars.AttributeRegistrar;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.IndirectFire;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -71,6 +80,40 @@ public class VisionRangeGameTests {
             else
                 helper.fail(String.join("; ", problems));
         });
+    }
+
+    /**
+     * Artillery keeps needing spotters (lovish, Oct 28): every indirect-fire unit reveals less fog than its gun reaches,
+     * after the Vision multiplier and with a Spyglass (+8 sight) on it.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA)
+    public static void artillery_sight_stays_short_of_its_gun(GameTestHelper helper) {
+        List<EntityType<? extends Mob>> artillery = List.of(
+            EntityRegistrar.BOMBARD_CREW_UNIT.get(), EntityRegistrar.MORTAR_CRAWLER_UNIT.get(),
+            EntityRegistrar.ROCKET_BATTERY_UNIT.get(), EntityRegistrar.MORTAR_GALLEY_UNIT.get(),
+            EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get());
+        List<String> problems = new ArrayList<>();
+        for (EntityType<? extends Mob> type : artillery) {
+            Mob m = type.create(helper.getLevel());
+            if (!(m instanceof IndirectFire) || !(m instanceof AttackerUnit gun) || !(m instanceof Unit u)) {
+                problems.add(type.toShortString() + " is not an indirect-fire attacker");
+                continue;
+            }
+            float range = gun.getAttackRange();
+            if (u.getSightRange() >= range)
+                problems.add(type.toShortString() + " sees " + u.getSightRange() + " with a " + range + " gun");
+            AttributeInstance sight = m.getAttribute(AttributeRegistrar.SIGHT_RANGE.get());
+            if (sight != null) {
+                sight.addTransientModifier(new AttributeModifier(UUID.randomUUID(), "spyglass", 8, AttributeModifier.Operation.ADDITION));
+                if (u.getSightRange() >= range)
+                    problems.add(type.toShortString() + " with a Spyglass sees " + u.getSightRange() + " with a " + range + " gun");
+            }
+            m.discard();
+        }
+        if (problems.isEmpty())
+            helper.succeed();
+        else
+            helper.fail(String.join("; ", problems));
     }
 
     @GameTest(template = SkirmishGameTests.ARENA)
