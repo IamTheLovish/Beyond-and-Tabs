@@ -194,6 +194,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeybindsClientEvents.class);   // saved keys -> new defaults, once
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ambient.AmbientLifeClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
