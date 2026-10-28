@@ -230,9 +230,11 @@ public final class GothicText {
         }
     }
 
-    /** The buttons that get the theme: visible text buttons; icon buttons (language, accessibility) keep their look. */
+    /** The buttons that get the theme: visible text buttons; icon buttons (language, accessibility) and checkboxes
+     *  (the plate would hide the tick) keep their look. */
     static boolean themed(GuiEventListener c) {
         return c instanceof AbstractButton b && b.visible && !(c instanceof ImageButton)
+            && !(c instanceof net.minecraft.client.gui.components.Checkbox)
             && !b.getMessage().getString().isEmpty();
     }
 
