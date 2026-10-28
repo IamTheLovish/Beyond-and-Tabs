@@ -9,13 +9,16 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.time.NightUtils;
 import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.controls.DragonMoveControl;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
@@ -71,6 +74,46 @@ public class BoneDragonUnit extends GhastUnit {
 
     public BoneDragonUnit(EntityType<? extends Ghast> entityType, Level level) {
         super(entityType, level);
+        // #145 (lovish: the flight is wrong): a dragon's nose, turn and brake, not the ghast's nudges (DragonFlight)
+        this.moveControl = new DragonMoveControl(this);
+    }
+
+    /** How fast (degrees per tick) a hovering dragon turns to face what it attacks. */
+    static final float HOVER_TURN = 6f;
+
+    /**
+     * The ghast snaps its yaw to its target or its velocity every tick (a 180 in one tick); the dragon's body faces
+     * along its flight while it flies ({@link DragonMoveControl#heading}, itself turned at a capped rate) and, hovering,
+     * turns toward what it attacks at {@link #HOVER_TURN} degrees per tick - the rig's bank reads the turn either way.
+     * Neither changes what the breath or the fireball hit: both aim at the target, not along the body.
+     */
+    @Override
+    public void updateRotation() {
+        if (level().isClientSide() || !(this.moveControl instanceof DragonMoveControl dc)) {
+            this.yBodyRot = this.getYRot();
+            return;
+        }
+        float yaw;
+        if (dc.isCruising()) {
+            yaw = dc.heading();
+        } else {
+            yaw = getYRot();
+            LivingEntity target = getTarget();
+            BlockPos ground = getRangedAttackGroundGoal() == null ? null : getRangedAttackGroundGoal().getGroundTarget();
+            double x = 0, z = 0;
+            if (target != null) {
+                x = target.getX() - getX();
+                z = target.getZ() - getZ();
+            } else if (ground != null) {
+                x = ground.getX() + 0.5 - getX();
+                z = ground.getZ() + 0.5 - getZ();
+            }
+            if (Math.abs(x) > 0.05 || Math.abs(z) > 0.05)
+                yaw = Mth.approachDegrees(yaw, -((float) Mth.atan2(x, z)) * Mth.RAD_TO_DEG, HOVER_TURN);
+            dc.setHeading(yaw);
+        }
+        this.setYRot(yaw);
+        this.yBodyRot = yaw;
     }
 
     /**
