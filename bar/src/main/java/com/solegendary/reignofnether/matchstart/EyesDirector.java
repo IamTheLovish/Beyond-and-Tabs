@@ -919,9 +919,51 @@ public final class EyesDirector {
         return (System.nanoTime() - phaseNanos) / 1e9;
     }
 
+    /** Frames drawn since the phase began: under a shader pack on a CI runner the game draws ~1 a second. */
+    private static int phaseFrames() {
+        return frames - phaseFrames0;
+    }
+
     private static void nextPhase(int phase) {
         structurePhase = phase;
         phaseNanos = System.nanoTime();
+        phaseFrames0 = frames;
+    }
+
+    private static int frames = 0, phaseFrames0 = 0;
+
+    @SubscribeEvent
+    public static void onRenderTick(TickEvent.RenderTickEvent evt) {
+        if (ENABLED && evt.phase == TickEvent.Phase.END)
+            frames++;
+    }
+
+    /**
+     * The structure photos' wait: the camera aimed again every tick for the first 3.5 s (turning the RTS view on, or a
+     * zoom, moves it a tick or more later - and at ~1 frame a second, run 40712072482, a one-second window of
+     * wall clock can pass with no tick in it), then the still only once both `seconds` have passed and enough frames
+     * have been drawn for the placed blocks' chunks to be meshed (that run's shader stills showed unmeshed voids where
+     * the samplers stood).
+     */
+    private static boolean structureSettled(Minecraft mc, double seconds) {
+        if (phaseSeconds() < 3.5)
+            OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+        return phaseSeconds() >= seconds && phaseFrames() >= STRUCTURE_FRAMES;
+    }
+
+    private static final int STRUCTURE_FRAMES = 25;
+
+    /** Where the RTS camera looks at the still, against where it was told to: the evidence line for a still that misses. */
+    private static void logAim(Minecraft mc, String name) {
+        Vec3 want = structureMiddle(0.3);
+        double yR = Math.toRadians(OrthoviewClientEvents.getCamRotX()), xR = Math.toRadians(OrthoviewClientEvents.getCamRotY());
+        double fx = -Math.sin(yR) * Math.cos(xR), fy = -Math.sin(xR), fz = Math.cos(yR) * Math.cos(xR);
+        Vec3 eye = mc.gameRenderer.getMainCamera().getPosition();
+        double t = Math.abs(fy) < 1e-3 ? 0 : (eye.y - want.y) / -fy;
+        ReignOfNether.LOGGER.info("[Eyes] {}: aimed at {} - the camera at {} looks at {}, {} ({} frames, {} s in the phase)",
+            name, String.format("%.0f, %.0f, %.0f", want.x, want.y, want.z), String.format("%.0f, %.0f, %.0f", eye.x, eye.y, eye.z),
+            String.format("%.0f", eye.x + fx * t), String.format("%.0f", eye.z + fz * t), phaseFrames(),
+            String.format("%.1f", phaseSeconds()));
     }
 
     private static void sceneStructures(Minecraft mc) {
@@ -982,10 +1024,9 @@ public final class EyesDirector {
                 // again once the camera has settled: turning the RTS view on moves the camera to its own base height
                 // a tick later, and an aim taken from the old height lands ~20 blocks off along the view (meadow and
                 // ground samplers, run 40703946521, Oct 28)
-                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
-                    OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
-                if (phaseSeconds() < 5)
+                if (!structureSettled(mc, 5))
                     return;
+                logAim(mc, label + "_rts");
                 shot(mc, label + "_rts");
                 // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
                 // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
@@ -995,10 +1036,9 @@ public final class EyesDirector {
                 nextPhase(3);
             }
             case 3 -> {
-                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
-                    OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));   // after the zoom settles
-                if (phaseSeconds() < 4)
+                if (!structureSettled(mc, 4))
                     return;
+                logAim(mc, label + "_rts_close");
                 shot(mc, label + "_rts_close");
                 if (OrthoviewClientEvents.isEnabled())
                     OrthoviewClientEvents.toggleEnable();
