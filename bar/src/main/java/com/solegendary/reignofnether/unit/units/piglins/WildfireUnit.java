@@ -238,8 +238,8 @@ public class WildfireUnit extends Blaze implements Unit, AttackerUnit, RangedAtt
     final static public float attackDamage = 2.0f;
     final static public float attackBonusPerLevel = 0.25f;
     final static public float attacksPerSecond = 0.6f;
-    final static public float maxHealth = 120.0f;
-    final static public float maxHealthBonusPerLevel = 12.0f;
+    final static public float maxHealth = 130.0f;
+    final static public float maxHealthBonusPerLevel = 13.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.25f;
     final static public float attackRange = 12.0F; // only used by ranged units or melee building attackers

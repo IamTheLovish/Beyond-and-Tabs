@@ -488,6 +488,9 @@ public class ItemRegistrar {
     public static final RegistryObject<Item> AZURE_MEDALLION = ITEMS.register("azure_medallion", () -> new FoilableItem(new Item.Properties()));
     public static final RegistryObject<Item> IRON_HIDE_AMULET = ITEMS.register("iron_hide_amulet", () -> new FoilableItem(new Item.Properties()));
     public static final RegistryObject<Item> SOUL_COLLECTOR = ITEMS.register("soul_collector", () -> new FoilableItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    // Lovish's Wager Book (hero-abilities-overhaul, "First prototype"): opens the book for a hero while /wagerbook is on
+    public static final RegistryObject<Item> WAGER_BOOK = ITEMS.register("wager_book",
+            () -> new com.solegendary.reignofnether.hero.wager.WagerBookItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<Item> BROADSWORD = ITEMS.register("broadsword", () -> new FoilableItem(new Item.Properties()));
     public static final RegistryObject<Item> KATANA = ITEMS.register("katana", () -> new FoilableItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<Item> HEARTSTEALER = ITEMS.register("heartstealer", () -> new FoilableItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
