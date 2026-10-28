@@ -231,6 +231,19 @@ class Measure(unittest.TestCase):
             for a, b in zip(got, ref):
                 self.assertEqual(a, b)
 
+    def test_stars_count_tuft_sized_dark_spots_not_grain_or_big_shadows(self):
+        # r33 night (#350 on r5.9.3): dark share was swamped by big wall smears and a dark-blob count by lawn grain;
+        # a star is a tuft-sized dark spot (15-300 px) under 0.75 x the median luma after a 2 px blur
+        rng = random.Random(3)
+        im = Image.new("RGB", (200, 200))
+        im.putdata([(v, v, v) for v in (150 + rng.randrange(-12, 13) for _ in range(200 * 200))])   # grain only
+        self.assertEqual(EJ().measure(im, (0, 0, 200, 200))["stars"], 0)
+        for x, y in ((20, 20), (60, 20), (100, 30), (20, 80), (70, 90)):
+            im.paste((60, 60, 60), (x, y, x + 8, y + 8))                 # five tuft-sized stars
+        im.paste((60, 60, 60), (120, 120, 190, 190))                      # one big shadow: not a star
+        self.assertEqual(EJ().measure(im, (0, 0, 200, 200))["stars"], 5)
+        self.assertEqual(EJ().measure(im, (0, 0, 50, 50))["stars"], 1)    # only the crop counts
+
     def test_only_the_crop_is_measured(self):
         im = Image.new("RGB", (40, 40), (255, 0, 0))
         im.paste((0, 0, 255), (10, 10, 30, 30))
