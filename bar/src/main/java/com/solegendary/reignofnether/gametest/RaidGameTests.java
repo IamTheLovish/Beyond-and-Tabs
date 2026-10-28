@@ -166,8 +166,18 @@ public class RaidGameTests {
         BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(b, level, origin, Rotation.NONE, owner, false);
         if (bp == null)
             return null;
-        if (t2 && b instanceof MetalExtractor mex)
-            bp.changeStructure(mex.getUpgradedStructureName(1));
+        if (t2 && b instanceof MetalExtractor mex) {
+            // the tower stands before the structure swap, as a refitted T1's pool does in a match: changeStructure on an
+            // empty site queued every T2 block, and buildNextBlock laid them one a tick (the pool's water with them)
+            // while a test was already breaking the building - water over a broken basin spilled onto the patch
+            // (PR #297's CI, Build run 40638083212, "ground_not_flat")
+            String t2Name = mex.getUpgradedStructureName(1);
+            for (BuildingBlock bb : BuildingUtils.getAbsoluteBlockData(
+                    com.solegendary.reignofnether.building.BuildingBlockData.getBuildingBlocksFromNbt(t2Name, level), level, origin, Rotation.NONE))
+                if (!bb.getBlockState().isAir())
+                    level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
+            bp.changeStructure(t2Name);
+        }
         for (BuildingBlock bb : bp.getBlocks())
             if (!bb.getBlockState().isAir())
                 level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
