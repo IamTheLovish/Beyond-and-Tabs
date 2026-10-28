@@ -55,9 +55,11 @@ import com.solegendary.reignofnether.tutorial.TutorialServerboundPacket;
 import com.solegendary.reignofnether.unit.packets.*;
 import com.solegendary.reignofnether.debug.RtsDebugChunksClientboundPacket;
 import com.solegendary.reignofnether.debug.RtsDebugStatsClientboundPacket;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 import com.solegendary.reignofnether.network.PacketTableHash;
@@ -65,6 +67,9 @@ import com.solegendary.reignofnether.network.PacketTableHash;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 // Initialises all of the client-server packet-sending classes
 
@@ -76,17 +81,63 @@ public final class PacketHandler {
 
     // The packet table as registered (index, class, direction - PacketTableHash.entry), and the protocol version made
     // from it at the end of init(). The mod version alone is a constant (1.5.0-beta-4), so two builds with different
-    // tables passed the handshake and then decoded packets as the wrong ones (security audit F3, Oct 26); Forge reads
-    // the version through the supplier below at the handshake, long after init() ran.
+    // tables passed the handshake and then decoded packets as the wrong ones (security audit F3, Oct 26).
+    // Forge reads the version supplier ONCE, when the channel is created (NetworkInstance's constructor), and advertises
+    // that string forever. So the channel cannot exist before the hash does: init() records every packet first
+    // (register(...) only queues it), computes the hash, then creates INSTANCE and registers the queued packets on it.
+    // A channel made in a static initialiser advertised "...+packets.unregistered" while the accept predicates wanted
+    // the hash, and every client rejected every server, single player included.
     private static final List<String> TABLE = new ArrayList<>();
+    private static final List<Pending<?>> PENDING = new ArrayList<>();
     private static volatile String protocolVersion = MOD_VERSION + "+packets.unregistered";
 
-    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), PacketHandler::protocolVersion,
-            v -> protocolVersion.equals(v), v -> protocolVersion.equals(v));
+    /** The mod's channel; null until init() (FMLCommonSetupEvent) has made it with the final protocol version. */
+    public static SimpleChannel INSTANCE;
 
 
     private PacketHandler() { }
+
+    /** One packet registration, queued until the channel exists (same chain as SimpleChannel.MessageBuilder). */
+    private static final class Pending<M> {
+        private final Class<M> type;
+        private final int index;
+        private final NetworkDirection direction;
+        private BiConsumer<M, FriendlyByteBuf> encoder;
+        private Function<FriendlyByteBuf, M> decoder;
+        private BiConsumer<M, Supplier<NetworkEvent.Context>> consumer;
+
+        private Pending(Class<M> type, int index, NetworkDirection direction) {
+            this.type = type;
+            this.index = index;
+            this.direction = direction;
+        }
+
+        Pending<M> encoder(BiConsumer<M, FriendlyByteBuf> encoder) {
+            this.encoder = encoder;
+            return this;
+        }
+
+        Pending<M> decoder(Function<FriendlyByteBuf, M> decoder) {
+            this.decoder = decoder;
+            return this;
+        }
+
+        Pending<M> consumerMainThread(BiConsumer<M, Supplier<NetworkEvent.Context>> consumer) {
+            this.consumer = consumer;
+            return this;
+        }
+
+        void add() {
+            if (encoder == null || decoder == null || consumer == null)
+                throw new IllegalStateException("PacketHandler: " + type.getName() + " needs encoder, decoder and consumerMainThread");
+            PENDING.add(this);
+        }
+
+        void registerOn(SimpleChannel channel) {
+            channel.messageBuilder(type, index, direction)
+                    .encoder(encoder).decoder(decoder).consumerMainThread(consumer).add();
+        }
+    }
 
     /** What this jar sends and accepts at the handshake: mod version + hash of the packet table. */
     public static String protocolVersion() {
@@ -99,13 +150,14 @@ public final class PacketHandler {
     }
 
     /** Every packet registers through here, so the table (and the version) cannot miss one - init() checks the count. */
-    private static <M> SimpleChannel.MessageBuilder<M> register(Class<M> type, int index, NetworkDirection direction) {
+    private static <M> Pending<M> register(Class<M> type, int index, NetworkDirection direction) {
         TABLE.add(PacketTableHash.entry(index, type.getName(), direction.name()));
-        return INSTANCE.messageBuilder(type, index, direction);
+        return new Pending<>(type, index, direction);
     }
 
     public static void init() {
         TABLE.clear();
+        PENDING.clear();
         int index = 0;
 
         register(TopdownGuiServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
@@ -639,13 +691,29 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.worldmemory.GroundMemoryClientboundPacket::handle)
                 .add();
+        // BAR queue edits (unit/command/QueueEditKeys): N skips the current order, Ctrl+N cancels the last one
+        register(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.packets.QueueEditServerboundPacket::handle)
+                .add();
 
         // a packet registered with INSTANCE.messageBuilder directly would be missing from the hash: two jars that
         // differ in it would connect again. Fail at startup (every GameTest run) instead.
-        if (TABLE.size() != index)
+        if (TABLE.size() != index || PENDING.size() != index)
             throw new IllegalStateException("PacketHandler: " + index + " packets registered but " + TABLE.size()
-                + " in the protocol table - register every packet with register(...), not INSTANCE.messageBuilder");
+                + " in the protocol table and " + PENDING.size() + " completed with add()"
+                + " - register every packet with register(...)...add(), not INSTANCE.messageBuilder");
         protocolVersion = PacketTableHash.protocolVersion(MOD_VERSION, TABLE);
+
+        // only now: Forge captures the version string when the channel is created
+        SimpleChannel channel = NetworkRegistry.newSimpleChannel(
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), PacketHandler::protocolVersion,
+                v -> protocolVersion.equals(v), v -> protocolVersion.equals(v));
+        for (Pending<?> p : PENDING)
+            p.registerOn(channel);
+        PENDING.clear();
+        INSTANCE = channel;
         ReignOfNether.LOGGER.info("[Network] protocol {} ({} packets)", protocolVersion, index);
     }
 }

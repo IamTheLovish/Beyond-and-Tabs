@@ -41,12 +41,16 @@ class KeyConflictsTest {
 
     @Test
     void aPanKeyMovedOntoAnOrderKeyIsFlaggedToo() {
-        // pan-up moved to X, where Attack and the builder's energy key ship: they did not move, the pan key did -
-        // one key, three jobs, both flagged
+        // pan-up moved to X, where Attack, the Military tab key and grid cell 10 ship: they did not move, the pan key did -
+        // one key, four jobs, all three flagged
         List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_X));
-        assertEquals(2, o.size(), o.toString());
+        assertEquals(3, o.size(), o.toString());
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
-        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_energy", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_tab_military", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_grid_10", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        // pan-up moved to F, where the order Fight ships: an order key under a moved pan key is flagged too
+        List<KeyConflicts.Overlap> f = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_F));
+        assertTrue(f.contains(new KeyConflicts.Overlap("key.reignofnether.fight", "key.reignofnether.pan_up", GLFW.GLFW_KEY_F)), f.toString());
     }
 
     @Test

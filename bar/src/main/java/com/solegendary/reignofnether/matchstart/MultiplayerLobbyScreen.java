@@ -348,7 +348,7 @@ public class MultiplayerLobbyScreen extends Screen {
             rightEdge -= 26;
             if (s.bot) {
                 CycleButton<Integer> diff = addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(SkirmishSetupScreen.DIFFICULTIES.get(i)))
-                    .withValues(SkirmishSetupScreen.range(3)).withInitialValue(clamp(s.difficulty, 3)).displayOnlyValue()
+                    .withValues(SkirmishSetupScreen.range(4)).withInitialValue(clamp(s.difficulty, 4)).displayOnlyValue()
                     .create(rightEdge - 52, y, 52, ROW_H - 2, Component.literal(""), (b, v) -> send(MultiplayerLobby.Action.SET_DIFFICULTY, s.id, v)));
                 diff.active = edit;
                 rightEdge -= 54;

@@ -22,6 +22,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SHOW_DEV_TIME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> FIRST_LAUNCH_DONE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> GUI_SCALE_DEFAULT_DONE;
     // which key layout this install's saved key bindings were last moved to (keybinds/KeybindMigration)
     public static final ForgeConfigSpec.ConfigValue<Integer> KEYBIND_LAYOUT;
     public static final ForgeConfigSpec.ConfigValue<Integer> DOUBLE_CLICK_MS;
@@ -63,6 +64,9 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
     public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LIVING_ARMY;
+    public static final ForgeConfigSpec.IntValue MOTION_BREATH, MOTION_WEIGHT, MOTION_FIDGET, MOTION_LEAN, MOTION_ACCEL,
+        MOTION_FLINCH, MOTION_SECONDARY;
     // the world look (postfx/WorldLookPass): edge smoothing, distance haze, a film grade and a vignette for players without shader packs
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK;
     public static final ForgeConfigSpec.ConfigValue<Integer> WORLD_LOOK_HAZE;
@@ -151,6 +155,8 @@ public class ReignOfNetherClientConfigs {
         SHOW_DEV_TIME = BUILDER.define("show_dev_time", true);
         BUILDER.comment("Set after the first launch applied its defaults (full screen, no accessibility screen): onboarding/FirstLaunchClientEvents. Set false to apply them again.");
         FIRST_LAUNCH_DONE = BUILDER.define("first_launch_done", false);
+        BUILDER.comment("Set after GUI scale 3 was applied once (only if the scale was Auto): onboarding/FirstLaunchClientEvents. Set false to apply it again.");
+        GUI_SCALE_DEFAULT_DONE = BUILDER.define("gui_scale_default_done", false);
         BUILDER.comment("Key layout version the saved key bindings were last moved to (keybinds/KeybindMigration). Minecraft keeps every binding in options.txt, defaults included, so a default we change never reaches an install that already saved the old one: once per version, a binding still on an OLD default moves to the new default (a key you chose yourself is never touched). Set 0 to run the moves again.");
         KEYBIND_LAYOUT = BUILDER.defineInRange("keybind_layout", 0, 0, 1000);
         BUILDER.comment("Double-click / double-tap window in milliseconds: units and buildings in the world and unit-type buttons (select all of that type), control-group keys (jump to the group)");
@@ -233,6 +239,16 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
+        LIVING_ARMY = BUILDER.define("living_army", true);
+        BUILDER.comment("Living army: how strong each behaviour plays, in percent (100 = as designed, 0 = off, 200 = double)");
+        MOTION_BREATH = BUILDER.defineInRange("motion_breath", 100, 0, 200);
+        MOTION_WEIGHT = BUILDER.defineInRange("motion_weight_shift", 100, 0, 200);
+        MOTION_FIDGET = BUILDER.defineInRange("motion_fidgets", 100, 0, 200);
+        MOTION_LEAN = BUILDER.defineInRange("motion_lean", 100, 0, 200);
+        MOTION_ACCEL = BUILDER.defineInRange("motion_start_stop", 100, 0, 200);
+        MOTION_FLINCH = BUILDER.defineInRange("motion_flinch", 100, 0, 200);
+        MOTION_SECONDARY = BUILDER.defineInRange("motion_secondary", 100, 0, 200);
         SPEC = BUILDER.build();
     }
 

@@ -76,6 +76,9 @@ public class FogChunkSnapshot {
     private static final int MAX_WAITING = 64;
     /** How long finishNow waits for light to settle before building what is left anyway (logged as an error). */
     private static final long FINISH_LIGHT_WAIT_NS = 30_000_000_000L;
+    /** A loaded chunk waiting longer than this for its light is built anyway (a hung barrier must not stall the capture). */
+    public static final long MAX_CHUNK_WAIT_NS = 10_000_000_000L;
+    private static final long PROGRESS_LOG_NS = 10_000_000_000L;
 
     // ThreadedLevelLightEngine.addTask(int, int, TaskType, Runnable) and TaskType.POST_UPDATE: 1.20.1 has no public
     // "wait for pending light tasks" call. Resolved once; a missing member fails loud at class load.
@@ -112,11 +115,23 @@ public class FogChunkSnapshot {
     private static final Set<ChunkPos> ticketed = new HashSet<>();
     // chunks built on the spot for a dark player before their light settled; rebuilt when the barrier completes
     private static final Map<ChunkPos, CompletableFuture<Void>> relight = new LinkedHashMap<>();
+    // when each waiting chunk was first seen loaded / each relight entry was added (server thread only)
+    private static final Map<ChunkPos, Long> waitSince = new java.util.HashMap<>();
+    private static final Map<ChunkPos, Long> relightSince = new java.util.HashMap<>();
+    private static int forcedCount = 0;
+    private static int totalCount = 0;
+    private static long lastProgressNs = 0;
+    /** Test hook: when set and it returns non-null for a chunk, that future is used as the chunk's light barrier. */
+    public static volatile java.util.function.Function<ChunkPos, CompletableFuture<Void>> testBarrierHook = null;
     private static ServerLevel captureLevel = null;
     private static volatile boolean capturing = false;
     private static int capturedCount = 0;
     private static long captureStartNs = 0;
     private static long captureMaxStepNs = 0;
+    // the longest single chunk build (pending block entities + packet) and how many pending block entities the
+    // capture created: logged with the step, so a long step can be told apart from a slow build
+    private static long captureMaxBuildNs = 0;
+    private static int pendingCreatedCount = 0;
     // bumped by clear(): a write task of an older capture drops its result
     private static volatile int generation = 0;
 
@@ -176,8 +191,13 @@ public class FogChunkSnapshot {
             }
         capturing = !pending.isEmpty();
         capturedCount = 0;
+        forcedCount = 0;
+        totalCount = pending.size();
         captureStartNs = System.nanoTime();
+        lastProgressNs = captureStartNs;
         captureMaxStepNs = 0;
+        captureMaxBuildNs = 0;
+        pendingCreatedCount = 0;
         ReignOfNether.LOGGER.info("[FogChunkSnapshot] capturing {} chunks inside world border over the next ticks",
                 pending.size());
     }
@@ -196,9 +216,18 @@ public class FogChunkSnapshot {
         var rl = relight.entrySet().iterator();
         while (rl.hasNext() && System.nanoTime() - start < budgetNs && unwritten.size() < MAX_UNWRITTEN) {
             var e = rl.next();
-            if (!e.getValue().isDone()) continue;
+            if (!e.getValue().isDone()) {
+                Long since = relightSince.get(e.getKey());
+                if (since != null && start - since > MAX_CHUNK_WAIT_NS) { // hung: keep the build it was served
+                    rl.remove();
+                    relightSince.remove(e.getKey());
+                    forcedCount++;
+                }
+                continue;
+            }
             LevelChunk chunk = cache.getChunkNow(e.getKey().x, e.getKey().z);
             rl.remove();
+            relightSince.remove(e.getKey());
             if (chunk != null) captureNow(chunk);
         }
         // chunks taken off the walk: loaded -> light barrier -> built once the barrier has completed
@@ -209,6 +238,18 @@ public class FogChunkSnapshot {
             if (pending.contains(pos)) {
                 LevelChunk chunk = cache.getChunkNow(pos.x, pos.z);
                 if (chunk == null) continue; // still loading
+                Long since = waitSince.computeIfAbsent(pos, k -> start);
+                if (start - since > MAX_CHUNK_WAIT_NS) { // light never settled: build with what it has
+                    ReignOfNether.LOGGER.warn("[FogChunkSnapshot] chunk {} waited over {} s for its light; building it anyway",
+                            pos, MAX_CHUNK_WAIT_NS / 1_000_000_000L);
+                    forcedCount++;
+                    captureNow(chunk);
+                    it.remove();
+                    waitSince.remove(pos);
+                    if (ticketed.remove(pos))
+                        cache.removeRegionTicket(TICKET, pos, 0, pos);
+                    continue;
+                }
                 if (e.getValue() == null) { // just loaded: wait for its light
                     if (chunk.isLightCorrect()) e.setValue(lightBarrier(captureLevel, pos));
                     continue;
@@ -217,6 +258,7 @@ public class FogChunkSnapshot {
                 captureNow(chunk);
             }
             it.remove();
+            waitSince.remove(pos);
             if (ticketed.remove(pos))
                 cache.removeRegionTicket(TICKET, pos, 0, pos);
         }
@@ -237,6 +279,30 @@ public class FogChunkSnapshot {
         if (took > captureMaxStepNs) captureMaxStepNs = took;
         if (pending.isEmpty() && relight.isEmpty())
             finishCapture();
+        else
+            logProgress(cache);
+    }
+
+    private static void logProgress(ServerChunkCache cache) {
+        long now = System.nanoTime();
+        if (now - lastProgressNs < PROGRESS_LOG_NS) return;
+        lastProgressNs = now;
+        int unloaded = 0, lightIncorrect = 0, barrier = 0;
+        for (var e : waiting.entrySet()) {
+            if (cache.getChunkNow(e.getKey().x, e.getKey().z) == null) unloaded++;
+            else if (e.getValue() == null) lightIncorrect++;
+            else if (!e.getValue().isDone()) barrier++;
+        }
+        String msg = "[FogChunkSnapshot] progress " + capturedCount + "/" + totalCount + ", waiting " + waiting.size()
+                + " (unloaded " + unloaded + ", light-incorrect " + lightIncorrect + ", barrier " + barrier
+                + "), relight " + relight.size() + ", forced " + forcedCount;
+        if (forcedCount > 0) ReignOfNether.LOGGER.warn(msg);
+        else ReignOfNether.LOGGER.info(msg);
+    }
+
+    /** Chunks built after waiting past {@link #MAX_CHUNK_WAIT_NS} (or relight entries dropped) in this / the last capture. */
+    public static int forcedCount() {
+        return forcedCount;
     }
 
     /**
@@ -244,6 +310,11 @@ public class FogChunkSnapshot {
      * its loaded neighbours (light crosses at most one chunk border). Server thread.
      */
     public static CompletableFuture<Void> lightBarrier(ServerLevel level, ChunkPos pos) {
+        var hook = testBarrierHook;
+        if (hook != null) {
+            CompletableFuture<Void> forced = hook.apply(pos);
+            if (forced != null) return forced;
+        }
         ServerChunkCache cache = level.getChunkSource();
         ThreadedLevelLightEngine engine = cache.getLightEngine();
         List<CompletableFuture<Void>> parts = new ArrayList<>(9);
@@ -278,19 +349,26 @@ public class FogChunkSnapshot {
             captureLevel.getChunkSource().removeRegionTicket(TICKET, pos, 0, pos);
         ticketed.clear();
         waiting.clear();
+        waitSince.clear();
         relight.clear();
+        relightSince.clear();
         order.clear();
         ReignOfNether.LOGGER.info("[FogChunkSnapshot] captured {} chunks inside world border to {} over {} ms "
-                        + "(longest server-thread step {} ms; files are written in the background)",
+                        + "(longest server-thread step {} ms, longest chunk build {} ms, {} pending block entities "
+                        + "created; files are written in the background)",
                 capturedCount, dir, (System.nanoTime() - captureStartNs) / 1_000_000,
-                String.format(Locale.ROOT, "%.1f", captureMaxStepNs / 1e6));
+                String.format(Locale.ROOT, "%.1f", captureMaxStepNs / 1e6),
+                String.format(Locale.ROOT, "%.1f", captureMaxBuildNs / 1e6), pendingCreatedCount);
     }
 
     // build the packet now (that is the snapshot) and hand it to the writer
     private static ClientboundLevelChunkWithLightPacket captureNow(LevelChunk chunk) {
         ChunkPos pos = chunk.getPos();
+        long buildStart = System.nanoTime();
+        pendingCreatedCount += createPendingBlockEntities(chunk);
         ClientboundLevelChunkWithLightPacket packet =
                 new ClientboundLevelChunkWithLightPacket(chunk, captureLevel.getLightEngine(), null, null);
+        captureMaxBuildNs = Math.max(captureMaxBuildNs, System.nanoTime() - buildStart);
         if (pending.remove(pos)) capturedCount++;
         lru.remove(pos); // a rebuild (relight) replaces an earlier build
         unwritten.put(pos, packet);
@@ -304,12 +382,34 @@ public class FogChunkSnapshot {
         return packet;
     }
 
+    /**
+     * Creates the block entities {@code chunk} still holds only as pending tags, so its packet lists them. A chunk
+     * loaded at level 33 (FULL, not ticking: the capture's own ticket) keeps those its features placed (a DUMMY tag
+     * from WorldGenRegion) pending until the first getBlockEntity of their position: vanilla's background save
+     * (ChunkMap.processUnloads -> saveChunkIfNeeded -> getBlockEntityNbtForSaving) or postProcessGeneration when the
+     * chunk turns ticking, which runs before vanilla ever sends a chunk to a player. The packet lists only created
+     * block entities, so without this the snapshot's depended on whether the save had reached the chunk yet (main run
+     * 40456368179: "reference only" block entities). Creating them is what that save does anyway. Returns how many
+     * positions were pending.
+     */
+    static int createPendingBlockEntities(LevelChunk chunk) {
+        var created = chunk.getBlockEntities();
+        int n = 0;
+        for (var p : chunk.getBlockEntitiesPos())   // a fresh set: pending and created positions
+            if (!created.containsKey(p)) {
+                chunk.getBlockEntity(p);
+                n++;
+            }
+        return n;
+    }
+
     /** LevelChunkMixin, before a block of a loaded chunk changes: a chunk still waiting is captured first. */
     public static void beforeBlockChange(LevelChunk chunk) {
         if (!capturing || chunk.getLevel() != captureLevel || !captureLevel.getServer().isSameThread()) return;
         ChunkPos pos = chunk.getPos();
         // a chunk served early keeps its served build: a rebuild after this change would carry the change's light
         relight.remove(pos);
+        relightSince.remove(pos);
         if (pending.contains(pos))
             captureNow(chunk); // final, see the class comment
     }
@@ -346,8 +446,10 @@ public class FogChunkSnapshot {
                     CompletableFuture<Void> lit = waiting.get(pos);
                     ClientboundLevelChunkWithLightPacket packet = captureNow(chunk);
                     // its light may still be settling: rebuild it once settled, unless a block of it changes first
-                    if (lit == null || !lit.isDone())
+                    if (lit == null || !lit.isDone()) {
                         relight.put(pos, lightBarrier(captureLevel, pos));
+                        relightSince.put(pos, System.nanoTime());
+                    }
                     return packet;
                 }
             }
@@ -463,7 +565,9 @@ public class FogChunkSnapshot {
                 captureLevel.getChunkSource().removeRegionTicket(TICKET, pos, 0, pos);
         ticketed.clear();
         waiting.clear();
+        waitSince.clear();
         relight.clear();
+        relightSince.clear();
         pending.clear();
         order.clear();
         capturing = false;

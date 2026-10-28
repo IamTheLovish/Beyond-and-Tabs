@@ -159,9 +159,7 @@ public class CommanderServerEvents {
         var list = unit.getAbilities().get();
         var keys = unit.getAbilities().effectiveHotkeys();
         for (int i = 0; i < list.size(); i++)
-            // the Villager's Call to Arms is drawn on hotkey 1 (HudClientEvents), whatever key it was registered with
-            claim(taken, list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit
-                ? Keybindings.hotkey1 : keys.get(i));
+            claim(taken, keys.get(i));
         for (Keybinding kb : COMMANDER_KEYS)
             if (!taken.contains(kb.getDefaultKey()) && (kb.getAliasKey() == -1 || !taken.contains(kb.getAliasKey()))) {
                 unit.getAbilities().add(ability, kb);

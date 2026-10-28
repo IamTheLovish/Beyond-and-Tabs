@@ -277,6 +277,7 @@ public class BuildingServerEvents {
             // placement exists: touch them first, or a freshly launched game drops those entries as "Unknown
             // DataType" (the factory Repeat toggle came back off after a restart; design/code_review.md CR-03)
             ProductionPlacement.REPEAT_QUEUE.getClass();
+            ProductionPlacement.FACTORY_GUARD.getClass();
             BuildingReclaim.DECOMMISSION.getClass();
             com.solegendary.reignofnether.building.gameender.GameEnderPlacement.CHARGE.getClass();
             com.solegendary.reignofnether.building.gameender.WardSpirePlacement.CHARGE.getClass();
@@ -315,6 +316,7 @@ public class BuildingServerEvents {
                         pb.setRallyPoint(b.rallyPoint);
                         pb.repeatQueue = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.REPEAT_QUEUE));
                         pb.stewardPaused = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.STEWARD_PAUSED));
+                        pb.restoreFactoryGuard();
                     }
 
                     if (b.upgradeLevel > 0) {
@@ -943,6 +945,9 @@ public class BuildingServerEvents {
             if (building instanceof ProductionPlacement pp && pp.repeatQueue) {
                 BuildingProductionClientboundPacket.toggleRepeat(building.ownerName, building.originPos, true);
             }
+            if (building instanceof ProductionPlacement pp && pp.factoryGuard) {
+                BuildingProductionClientboundPacket.toggleFactoryGuard(building.ownerName, building.originPos, true);
+            }
 
             if (building.getBuilding() instanceof Library) {
                 EnchantAbility ability = building.getDataStorage().getData(Library.AUTO_CAST_ENCHANT);
@@ -1065,6 +1070,7 @@ public class BuildingServerEvents {
         });
 
         for (BuildingPlacement building : buildingsToDestroy) {
+            building.getBuilding().onFellToDamage(serverLevel, building);   // death blasts (EnergyConverter's chain)
             building.destroy(serverLevel);
         }
 

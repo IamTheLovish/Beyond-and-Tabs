@@ -83,6 +83,8 @@ public class ClientEventRegistrar {
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);
         // the client's own systems per frame ([FrameParts]), the automatic client profile ([FrameAuto]) and GC pauses ([GC])
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameWindow.class);
         vanillaEventBus.register(com.solegendary.reignofnether.perf.FrameAuto.class);
@@ -169,11 +171,9 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.WitheringFog.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SunriseSortie.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.LeafDash.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SoulWisps.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);

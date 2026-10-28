@@ -142,7 +142,7 @@ public class PatchQuickBuildClientEvents {
                 if (firstError == null) firstError = error;
                 continue;
             }
-            if (queued == 0 && !append)
+            if (!AreaMex.queueFor(queued, append))
                 BuildingServerboundPacket.placeBuilding(extractor, originPos, Rotation.NONE, owner, ids, false);
             else
                 BuildingServerboundPacket.placeAndQueueBuilding(extractor, originPos, Rotation.NONE, owner, ids, false);

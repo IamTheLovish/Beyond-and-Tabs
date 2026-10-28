@@ -65,11 +65,14 @@
     "fogofwar.TrackedEntityMixin",
     "fogofwar.WorldBorderMixin",
     "goals.MobMixin",
-    "goals.RandomStrollGoalMixin"
+    "goals.RandomStrollGoalMixin",
+    "ConfigValueReloadRaceMixin",
+    "ForgeConfigSpecAccessor"
   ],
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "LivingEntityDamageMotionMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",

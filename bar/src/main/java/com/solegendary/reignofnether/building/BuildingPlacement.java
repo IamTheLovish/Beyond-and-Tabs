@@ -506,10 +506,8 @@ public class BuildingPlacement {
         if (!isBuilt)
             return 0;
         float e = getBuilding().getEnergyIncome();
-        // Stormcallers Ley resonance (mana/LeyNetwork): a ley-linked wind generator earns more per other generator in its
-        // network (capped). One empty-map check for every owner who never linked anything
+        // BAR wind: a wind generator earns with the wind
         if (e > 0 && getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator wg) {
-            e *= com.solegendary.reignofnether.mana.LeyNetwork.incomeMultiplier(ownerName, centrePos);
             if (wg.isWindDriven())
                 e *= com.solegendary.reignofnether.resources.Wind.multiplier();   // BAR wind: earns with the wind
         }
@@ -850,9 +848,6 @@ public class BuildingPlacement {
             }
             return;
         }
-        // a Sunforged Field Mason's Bulwark halves attackers' damage while it holds (design/combat_engineers.md); the
-        // attacker-less overload (game-ender strikes, com-blasts) is not an attack and ignores it
-        amount *= com.solegendary.reignofnether.ability.abilities.Bulwark.damageMultiplier(this);
         if (attacker instanceof Mob mob)
             lastAttacker = mob;
         if (attacker instanceof Unit u && !getLevel().isClientSide() && isAttackable() && amount > 0)
@@ -985,7 +980,8 @@ public class BuildingPlacement {
             int z = block.getBlockPos().getZ();
             boolean solid = !block.getBlockState().isAir();
             if (solid && !quietDemolition && block.isPlaced(serverLevel) && seen[0]++ % blastEvery == blastEvery / 2) {
-                serverLevel.explode(null, null, null, x, y, z, 1.0f, false, Level.ExplosionInteraction.TNT);
+                serverLevel.explode(null, null, null, x, y, z, 1.0f, false,
+                    getBuilding().keepsGroundIntact() ? Level.ExplosionInteraction.NONE : Level.ExplosionInteraction.TNT);
             }
             // removed without the per-block break crack and debris (hundreds of them per building)
             if (solid)
@@ -1042,7 +1038,6 @@ public class BuildingPlacement {
         }
         placedBlockPosSet.clear();
 
-        com.solegendary.reignofnether.mana.LeyNetwork.onBuildingGone(ownerName, centrePos);   // its ley links die with it
         getBuilding().destroy(serverLevel, this);
         for (BuildingCommand command : commands)
             if (command.condition == BuildingCommand.TriggerCondition.ON_DESTROY)

@@ -1,135 +1,80 @@
 package com.solegendary.reignofnether.keybinds;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 /**
- * BAR's build-category keys (Legacy profile, keybind_defaults.json): Z metal extractors, X energy and converters,
- * C defence, V nano turrets and factories. Each key owns an ordered list; only entries the selected builder can
- * build count; the first press picks the first entry, each further press of the same key the next, wrapping
- * (BAR's gui_buildmenu buildUnitHandler). No Minecraft types: BuildCategoryKeysGameTests checks the rules headless;
- * HudClientEvents.onBuildCategoryKey feeds it the card's buildings.
- *
- * Buildings are named by registry path ("wind_generator_tide"); a faction suffix is ignored, so one list serves all
- * seven factions. A building BAR gives no key (storage, walls, traps, T2 labs, ...) is in no category and keeps its
- * own slot key; when that slot key IS a category key (the stockpiles' Z, the bridges' C) it joins the end of that
- * key's cycle ({@link #listFor}), so it stays reachable on the key it always had.
+ * The build menu's key rules, after BAR's gridmenu (github.com/beyond-all-reason/Beyond-All-Reason,
+ * luaui/Widgets/gui_gridmenu.lua: gridmenuCategoryHandler / gridmenuKeyHandler; keys in the "Grid" profile of
+ * common/configs/keybind_defaults.json). No Minecraft types: BuildCategoryKeysGameTests checks the rules headless;
+ * BuildTabs.onKey feeds them the key and the open tab's cells.
+ * <ul>
+ *   <li>The menu is either at home (no tab open: the tab strip shows the last tab, its buildings click-only, no key
+ *       badges) or has a tab open.</li>
+ *   <li>At home a tab key (Z / X / C / V) opens its tab (Economy / Military / Defence / Tech). The grid keys are not
+ *       live, so S stays Stop, F Fight, X ... the tab key.</li>
+ *   <li>With a tab open the grid keys (Q W E R / A S D F / Z X C V) pick the building in their cell. A grid key on an
+ *       empty cell does nothing here, so the key keeps its other meaning (BAR: the handler returns false); a tab key
+ *       on an empty cell switches tab (BAR would do nothing: it needs the home page first).</li>
+ *   <li>Ctrl or Alt held, or no build menu on the card: nothing (BAR: alt / ctrl / meta return early).</li>
+ * </ul>
+ * BuildTabs closes the tab (home) when the building it picked is placed or dropped, as BAR's CommandNotify does.
  */
 public final class BuildCategoryKeys {
 
-    public enum Category { METAL, ENERGY, DEFENCE, FACTORY }
-
-    /** The faction suffixes of the registry paths (Buildings, Defences). */
-    private static final List<String> FACTION_SUFFIXES =
-        List.of("villagers", "monsters", "piglins", "verdant", "tide", "storm", "brass");
-
-    /**
-     * Each category's entries in BAR's order, by path with the faction suffix removed.
-     * METAL: the extractor (its T2 is an upgrade of the same building, not a second entry).
-     * ENERGY: solar, wind, advanced solar, geothermal (BAR's fusion slot), energy converter (BAR's metal makers).
-     * DEFENCE: light towers, anti-air, then the heavy emplacements (BAR's LLT, AA, plasma/flak; no radar, torpedo or
-     * sonar exist here); each faction's own tower sits with its tier.
-     * FACTORY: the lab annex (BAR's nano turret) first, then the faction's T1 army lab.
-     */
-    private static final Map<Category, List<String>> ORDER = new EnumMap<>(Category.class);
-    static {
-        ORDER.put(Category.METAL, List.of("metal_extractor"));
-        ORDER.put(Category.ENERGY, List.of("solar_collector", "wind_generator", "advanced_solar", "geothermal_plant",
-            "energy_converter"));
-        ORDER.put(Category.DEFENCE, List.of("raid_tower", "raid_tower_heavy", "watchtower", "dark_watchtower",
-            "sky_watch", "sky_watch_heavy", "flak", "storm_oak", "rail_battery", "lighthouse_battery", "anti_t3",
-            "ward_spire"));
-        ORDER.put(Category.FACTORY, List.of("lab_annex", "barracks", "graveyard", "portal_basic", "grove", "slipway",
-            "lotus_academy", "machine_shop"));
-    }
-
     private BuildCategoryKeys() { }
 
-    /** The path without its faction suffix ("raid_tower_heavy_tide" -> "raid_tower_heavy"). */
-    public static String stem(String path) {
-        for (String f : FACTION_SUFFIXES)
-            if (path.endsWith("_" + f))
-                return path.substring(0, path.length() - f.length() - 1);
-        return path;
-    }
+    public enum Action { NONE, OPEN_TAB, PICK_CELL }
 
-    /** The category a building is in, or null when BAR gives it no key. */
-    public static Category categoryOf(String path) {
-        String stem = stem(path);
-        for (Map.Entry<Category, List<String>> e : ORDER.entrySet())
-            if (e.getValue().contains(stem))
-                return e.getKey();
-        return null;
-    }
-
-    /** Position in its category's list, or -1. */
-    public static int rankOf(String path) {
-        Category c = categoryOf(path);
-        return c == null ? -1 : ORDER.get(c).indexOf(stem(path));
-    }
-
-    /** Every stem of a category in BAR's order (for tests and tooltips). */
-    public static List<String> stems(Category category) {
-        return ORDER.get(category);
+    /** What a key press does: an action and its tab ordinal (OPEN_TAB) or cell (PICK_CELL); -1 for NONE. */
+    public record Press(Action action, int index) {
+        public static final Press NONE = new Press(Action.NONE, -1);
     }
 
     /**
-     * The cycle for one key: {@code buildable} (paths the selected builder can build now, in card order) that are in
-     * {@code category}, in BAR's order, then the paths of {@code onKey} (buildings outside every category whose own
-     * slot key is this key) in card order.
+     * @param menuShown    the card shows the build menu (a builder, the commander, a mixed builder card)
+     * @param ctrlOrAlt    Ctrl or Alt held
+     * @param open         a tab is open
+     * @param tabKey       the tab ordinal whose key this is, or -1
+     * @param gridKey      the grid cell whose key this is, or -1
+     * @param cellUsable   per cell of the open tab: a visible, enabled building is there
      */
-    public static List<String> listFor(Category category, Collection<String> buildable, Set<String> onKey) {
-        List<String> inCategory = new ArrayList<>();
-        List<String> tail = new ArrayList<>();
-        for (String path : buildable) {
-            if (inCategory.contains(path) || tail.contains(path))
-                continue;
-            Category c = categoryOf(path);
-            if (c == category)
-                inCategory.add(path);
-            else if (c == null && onKey.contains(path))
-                tail.add(path);
-        }
-        inCategory.sort((a, b) -> Integer.compare(rankOf(a), rankOf(b)));   // stable: card order breaks ties
-        inCategory.addAll(tail);
-        return inCategory;
+    public static Press press(boolean menuShown, boolean ctrlOrAlt, boolean open, int tabKey, int gridKey,
+                              boolean[] cellUsable) {
+        if (!menuShown || ctrlOrAlt)
+            return Press.NONE;
+        if (open && gridKey >= 0 && gridKey < cellUsable.length && cellUsable[gridKey])
+            return new Press(Action.PICK_CELL, gridKey);
+        if (tabKey >= 0)
+            return new Press(Action.OPEN_TAB, tabKey);
+        return Press.NONE;
+    }
+
+    /** Index of the first entry of {@code keys} equal to {@code key} (GLFW codes; -1 never matches), or -1. */
+    public static int indexOf(int key, int[] keys) {
+        if (key < 0)
+            return -1;
+        for (int i = 0; i < keys.length; i++)
+            if (keys[i] == key)
+                return i;
+        return -1;
     }
 
     /**
-     * Whether a Z / X / C / V press belongs to the build list rather than to the ability slot, order or hotkey the
-     * key also is: only with a builder (or the commander) selected, no Ctrl / Alt held and something in the list.
-     * Otherwise the key keeps its old meaning.
+     * The button a grid key picks in one tab: the index (into the tab's buttons) of the usable button whose cell is
+     * {@code cell}, or -1. {@code cells} is BuilderCardUnion.tabCells of the tab, so it is the selected tab that decides
+     * which building a key means.
      */
-    public static boolean claimsKey(boolean builderSelected, boolean ctrlOrAltHeld, List<String> list) {
-        return builderSelected && !ctrlOrAltHeld && !list.isEmpty();
+    public static int buttonAt(int cell, int[] cells, boolean[] usable) {
+        for (int i = 0; i < cells.length; i++)
+            if (cells[i] == cell && usable[i])
+                return i;
+        return -1;
     }
 
-    /** Which key press came last, so the next press of the same key moves on. */
-    public static final class Cycle {
-        private Category lastCategory = null;
-        private String lastPath = null;
-
-        public void reset() {
-            lastCategory = null;
-            lastPath = null;
-        }
-
-        /**
-         * The building this press picks: the first of {@code list} unless the last press was this same key and picked
-         * a building still in the list, then the one after it (wrapping). Null (state untouched) for an empty list.
-         */
-        public String press(Category category, List<String> list) {
-            if (list.isEmpty())
-                return null;
-            int at = lastCategory == category && lastPath != null ? list.indexOf(lastPath) : -1;
-            String pick = list.get(at < 0 ? 0 : (at + 1) % list.size());
-            lastCategory = category;
-            lastPath = pick;
-            return pick;
-        }
+    /** Per cell 0..cellCount-1: whether a usable button sits there. */
+    public static boolean[] usableCells(int cellCount, int[] cells, boolean[] usable) {
+        boolean[] out = new boolean[cellCount];
+        for (int i = 0; i < cells.length; i++)
+            if (usable[i] && cells[i] >= 0 && cells[i] < cellCount)
+                out[cells[i]] = true;
+        return out;
     }
 }
