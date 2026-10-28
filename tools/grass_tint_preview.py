@@ -83,7 +83,7 @@ def apply(rgb, x, z, salt, k):
     hm = k["HUE_MOTTLE"] * _octaves(x + 999, z + 333, salt * 8 + 60, k["MOTTLE_CELLS"], k["MOTTLE_WEIGHTS"])
     v = (1 + k["VALUE"] * f) * (1 - k["CLUMP_DARK"] * m) * (1 + 0.10 * s) * (1 + k["MOTTLE"] * np.where(mottle > 0, mottle, 1.6 * mottle))
     dp, dn = np.maximum(dry, 0), np.minimum(dry, 0)
-    o = k["OLIVE"]
+    o = k["OLIVE_GRASS"] if salt == 1 else k["OLIVE"]   # GrassTint.GRASS = 1
     r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s) * (1 - 0.02 * m)
     g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s)
     b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * np.maximum(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m)

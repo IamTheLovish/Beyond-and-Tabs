@@ -51,14 +51,18 @@ class GrassTintTest {
 
     @Test
     void colourStaysInAMeadowsRange() {
-        double lumaBase = luma(PLAINS_GRASS);
+        // the variation round the grass's own base colour (round 5 moved that base on purpose, OLIVE_GRASS: the range
+        // is about the patches, not the base)
+        double br = r(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[0], bg = g(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[1],
+            bb = b(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[2];
+        double lumaBase = 0.2126 * br + 0.7152 * bg + 0.0722 * bb;
         for (int x = -1000; x < 1000; x += 7) {
             for (int z = -1000; z < 1000; z += 11) {
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
                 assertTrue(Math.abs(luma(c) - lumaBase) <= 0.26 * lumaBase, "luma at " + x + ", " + z);
-                assertTrue(Math.abs(r(c) - r(PLAINS_GRASS)) <= 0.42 * r(PLAINS_GRASS) + 1, "red at " + x + ", " + z);
-                assertTrue(Math.abs(g(c) - g(PLAINS_GRASS)) <= 0.42 * g(PLAINS_GRASS) + 1, "green at " + x + ", " + z);
-                assertTrue(Math.abs(b(c) - b(PLAINS_GRASS)) <= 0.42 * b(PLAINS_GRASS) + 1, "blue at " + x + ", " + z);
+                assertTrue(Math.abs(r(c) - br) <= 0.42 * br + 1, "red at " + x + ", " + z);
+                assertTrue(Math.abs(g(c) - bg) <= 0.42 * bg + 1, "green at " + x + ", " + z);
+                assertTrue(Math.abs(b(c) - bb) <= 0.42 * bb + 1, "blue at " + x + ", " + z);
                 assertEquals(0, c & 0xFF000000, "no bits above the rgb");
             }
         }
@@ -229,5 +233,41 @@ class GrassTintTest {
             }
         }
         assertTrue(same < total / 4, same + " of " + total + " equal");
+    }
+
+    private static double hue(int c) {
+        float[] hsb = java.awt.Color.RGBtoHSB(r(c), g(c), b(c), null);
+        return hsb[0] * 360.0;
+    }
+
+    private static double sat(int c) {
+        float[] hsb = java.awt.Color.RGBtoHSB(r(c), g(c), b(c), null);
+        return hsb[1];
+    }
+
+    private static double median(java.util.List<Double> xs) {
+        java.util.Collections.sort(xs);
+        return xs.get(xs.size() / 2);
+    }
+
+    @Test
+    void grassLeansYellowGreenLeavesDoNot() {
+        // round 5 (Oct 28, noon eyes stills): the lawn read at hue 80 under lovish's Complementary preset and 96 in the
+        // plain lane against the reference scan's 72 - too blue-green. Grass on a forest / meadow biome colour (hue
+        // 102) now comes out at 92 or under; the leaves keep their own hue (95+) and the grass its saturation
+        int forest = 0x79C05A;
+        java.util.List<Double> gh = new java.util.ArrayList<>(), fh = new java.util.ArrayList<>(), gs = new java.util.ArrayList<>();
+        for (int x = -400; x < 400; x += 5) {
+            for (int z = -400; z < 400; z += 7) {
+                int c = GrassTint.apply(forest, x, z, GrassTint.GRASS);
+                gh.add(hue(c));
+                gs.add(sat(c));
+                fh.add(hue(GrassTint.apply(forest, x, z, GrassTint.FOLIAGE)));
+            }
+        }
+        double grassHue = median(gh), leafHue = median(fh), grassSat = median(gs);
+        assertTrue(grassHue <= 92, "grass hue " + grassHue);
+        assertTrue(leafHue >= 95, "leaf hue " + leafHue);
+        assertTrue(grassSat <= sat(forest) + 0.03, "grass saturation " + grassSat + " against " + sat(forest));
     }
 }
