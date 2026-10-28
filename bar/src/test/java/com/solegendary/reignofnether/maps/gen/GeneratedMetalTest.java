@@ -45,7 +45,11 @@ class GeneratedMetalTest {
         assertEquals(expected, Fairness.metalIncome(rows, w), 1e-9, "15-minute income of one safe patch");
     }
 
-    /** No home ring: nothing stands round a start (the build ground keeps 46 blocks clear; a home ring sat at 18). */
+    /**
+     * No home ring: nothing stands round a start. No patch within 48 blocks of any start (design #310 section 4.2: the
+     * L4 capitol's corner reach 28.3, a vehicle lab and its gaps 15, a patch's reserved square 4.2 = 47.5; it was 40
+     * before the 41x41 capitol, and a home ring sat at 18).
+     */
     @Test
     void no_seat_has_a_patch_ring_at_its_start() {
         for (int n : new int[] { 2, 4 })
@@ -54,7 +58,7 @@ class GeneratedMetalTest {
                 for (MapLayout.Slot s : l.slots)
                     for (MapLayout.Mex m : l.mexes) {
                         double d = Math.hypot(m.dx() - s.dx(), m.dz() - s.dz());
-                        assertTrue(d > 40, "n=" + n + " seed " + Long.toHexString(seed) + ": a patch " + Math.round(d)
+                        assertTrue(d >= 48, "n=" + n + " seed " + Long.toHexString(seed) + ": a patch " + Math.round(d)
                             + " blocks from seat " + s.index() + "'s start at (" + m.dx() + ", " + m.dz() + ")");
                     }
             }

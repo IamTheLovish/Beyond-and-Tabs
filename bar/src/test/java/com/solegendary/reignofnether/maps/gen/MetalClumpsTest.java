@@ -38,6 +38,11 @@ class MetalClumpsTest {
     static final double CLUMP_SPAN = 32;
     /** Lone patches are a minority: at most this share of the patches outside the home sets and the plaza. */
     static final double LONE_MAX = 0.30;
+    /**
+     * Home patches a seat, exactly (design #310 section 4.2, lovish Oct 28: "7 home patches", generated and pre-made
+     * alike). Written from the doc, not read from the code, so the code cannot drift from it and still pass.
+     */
+    static final int HOME_COUNT = 7;
 
     static final int[] COUNTS = { 2, 4, 8 };
     /** Round and square (GenSeed shape 1 / 2), modifiers on, as MapGenGameTests. */
@@ -260,9 +265,11 @@ class MetalClumpsTest {
     }
 
     /**
-     * Home metal is standard: the first homeEnd() patches are every seat's set, at least a clump each, the same count,
-     * values and places relative to the start (distance within 1.5 blocks, the same bearing from the start's outward
-     * direction within 2 blocks of arc) for every seat - whatever its character or ground.
+     * Home metal is standard: the first homeEnd() patches are every seat's set - exactly HOME_COUNT (7) each, the one
+     * count every map gives (design #310 section 4.2: "7 home patches", pre-made and generated alike; a clump the ground
+     * refuses is never quietly left out) - with the same values and places relative to the start (distance within 1.5
+     * blocks, the same bearing from the start's outward direction within 2 blocks of arc) for every seat, whatever its
+     * character or ground.
      */
     @Test
     void home_metal_is_the_same_for_every_seat() {
@@ -272,8 +279,8 @@ class MetalClumpsTest {
                 MapLayout l = layout(n, seed);
                 String tag = tag(n, seed);
                 int h = l.homeEnd();
-                if (h < 2 * n || h % n != 0) {
-                    problems.add(tag + h + " home patches for " + n + " seats (want a standard set of 2+ each)");
+                if (h != HOME_COUNT * n) {
+                    problems.add(tag + h + " home patches for " + n + " seats (want exactly " + HOME_COUNT + " each)");
                     continue;
                 }
                 List<double[]> first = null;
@@ -290,8 +297,8 @@ class MetalClumpsTest {
                         mine.add(new double[] { a, d, m.value() });
                     }
                     mine.sort((p, q) -> Double.compare(p[0], q[0]));
-                    if (mine.size() != h / n) {
-                        problems.add(tag + "seat " + s.index() + " owns " + mine.size() + " home patches, not " + h / n);
+                    if (mine.size() != HOME_COUNT) {
+                        problems.add(tag + "seat " + s.index() + " owns " + mine.size() + " home patches, not " + HOME_COUNT);
                         continue;
                     }
                     if (first == null) {

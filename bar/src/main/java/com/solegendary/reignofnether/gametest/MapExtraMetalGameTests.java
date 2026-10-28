@@ -32,7 +32,7 @@ public class MapExtraMetalGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
     static final long[] SEEDS = { 0L, 0x5EED0001L, 0xBA7C0DEL };
-    /** Two home patches closer than this crowd each other (7x7 pads, 1 block apart, need 8; the fan's closest pair is 9.5). */
+    /** Two home patches closer than this crowd each other (7x7 pads, 1 block apart, need 8; a clump's members stand 11 apart). */
     static final double HOME_CROWD = 9;
     static final Set<MapPreset> LAND = Set.of(MapPreset.HIGHLANDS, MapPreset.NETHER_RIFT, MapPreset.VERDANT_VALLEY,
         MapPreset.DESERT_MESA, MapPreset.SOULFIRE_DELTAS);
@@ -102,23 +102,37 @@ public class MapExtraMetalGameTests {
     }
 
     /**
+     * The design's home band (design/proposals/capitols_extractors_creep.md section 4.2, PR #310, lovish Oct 28: the
+     * 41x41 tech-4 capitol pushes home metal out, pre-made maps "to the same band as generated maps"), written from the
+     * doc so the code cannot drift from it: exactly 7 home patches a seat, every one 52-76 blocks from its start, and no
+     * patch of any kind within 48 of a start.
+     */
+    static final int HOME_COUNT = 7, HOME_MIN = 52, HOME_MAX = 76, NO_PATCH_WITHIN = 48;
+
+    /**
      * The home set is one thing (HomeMetal): on every pre-made map, 2 to 16 players, three seeds, every seat has exactly
-     * HomeMetal.COUNT home patches, all HomeMetal.VALUE, between MIN_DIST and MAX_DIST from its start, none crowding
-     * another (closer than HOME_CROWD; the fan's wrap-around pair sits about 9.5 apart), and the set is the same for every seat
-     * (the same distances from its start, to a block of rounding). Neither
-     * the metal richness nor the extra-metal level moves it.
+     * HOME_COUNT home patches, all HomeMetal.VALUE, between HOME_MIN and HOME_MAX from its start, none crowding another
+     * (closer than HOME_CROWD; a clump's members stand 11 apart), no patch at all within NO_PATCH_WITHIN of a start, and
+     * the set is the same for every seat (the same distances from its start, to a block of rounding). Neither the metal
+     * richness nor the extra-metal level moves it.
      */
     @GameTest(template = ARENA, batch = "maps_metal")
     public static void map_metal_home_set_is_standard_for_every_seat(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
+        if (HomeMetal.COUNT != HOME_COUNT || HomeMetal.MIN_DIST != HOME_MIN || HomeMetal.MAX_DIST != HOME_MAX)
+            problems.add("HomeMetal says " + HomeMetal.COUNT + " patches at " + HomeMetal.MIN_DIST + "-" + HomeMetal.MAX_DIST
+                + ", the design " + HOME_COUNT + " at " + HOME_MIN + "-" + HOME_MAX);
         for (MapPreset preset : MapMetalGameTests.premade())
             for (int n : MapMetalGameTests.COUNTS)
                 for (long seed : SEEDS) {
                     int[] teams = RealmMapGameTests.teams(n);
                     MapLayout l = MapLayout.build(preset, teams, seed);
                     String tag = preset + " n=" + n + " seed " + seed + ": ";
-                    if (l.homeEnd() != n * HomeMetal.COUNT)
-                        problems.add(tag + l.homeEnd() + " home patches for " + n + " seats, expected " + n * HomeMetal.COUNT);
+                    if (l.homeEnd() != n * HOME_COUNT)
+                        problems.add(tag + l.homeEnd() + " home patches for " + n + " seats, expected " + n * HOME_COUNT);
+                    for (MapLayout.Mex m : l.mexes)
+                        if (l.distanceToNearestStart(m.dx(), m.dz()) < NO_PATCH_WITHIN)
+                            problems.add(tag + "patch " + m.dx() + "," + m.dz() + " within " + NO_PATCH_WITHIN + " of a start");
                     List<double[]> dist = new ArrayList<>();
                     for (int s = 0; s < n; s++)
                         dist.add(new double[0]);
@@ -135,10 +149,10 @@ public class MapExtraMetalGameTests {
                         }
                         double[] sorted = ds.stream().mapToDouble(Double::doubleValue).sorted().toArray();
                         dist.set(s, sorted);
-                        if (sorted.length != HomeMetal.COUNT)
-                            problems.add(tag + "seat " + s + " has " + sorted.length + " home patches");
+                        if (sorted.length != HOME_COUNT)
+                            problems.add(tag + "seat " + s + " has " + sorted.length + " home patches, not exactly " + HOME_COUNT);
                         for (double d : sorted)
-                            if (d < HomeMetal.MIN_DIST - 0.8 || d > HomeMetal.MAX_DIST + 0.8)
+                            if (d < HOME_MIN || d > HOME_MAX)
                                 problems.add(tag + "seat " + s + " has a home patch " + d + " from its start");
                     }
                     for (int s = 1; s < n; s++)
