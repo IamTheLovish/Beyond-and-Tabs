@@ -116,7 +116,7 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         TextureAtlasSprite sh = sprites.get(3, 3);
         float u0 = sh.getU0(), u1 = sh.getU1(), v0 = sh.getV0(), v1 = sh.getV1();
         float a = alpha * 0.9f;
-        int light = getLightColor(partialTicks);
+        int light = SKY_LIGHT;
         // corners: head-left, head-right, tail-right, tail-left (texture top = head)
         float[][] c = {
             { cx + (fx - rx) * s, cz + (fz - rz) * s, u0, v0 },
@@ -131,6 +131,18 @@ public class AmbientBirdParticle extends TextureSheetParticle {
 
     private static void vert(VertexConsumer b, float[] c, float y, float a, int light) {
         b.vertex(c[0], y, c[1]).uv(c[2], c[3]).color(1f, 1f, 1f, a).uv2(light).endVertex();
+    }
+
+    /** Open sky, no block light: follows the time of day through the lightmap. */
+    private static final int SKY_LIGHT = net.minecraft.client.renderer.LightTexture.pack(0, 15);
+
+    /**
+     * The open sky's light, not the light engine's at the bird's block: high over the photo booth that read 0, and the
+     * birds drew pure black (eyes run 40739251237, pixels 0,0,0). A bird in the open is always under the sky.
+     */
+    @Override
+    public int getLightColor(float partialTick) {
+        return SKY_LIGHT;
     }
 
     @Override
