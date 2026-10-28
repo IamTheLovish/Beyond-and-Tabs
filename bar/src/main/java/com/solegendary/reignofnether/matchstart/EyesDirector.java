@@ -294,6 +294,7 @@ public final class EyesDirector {
 
     // ---- 01b-01f: the start-position phase (inbox/spec-3 PR 1: the start markers) ----
     private static boolean startBoxesDone = false;
+    private static boolean structureFlock = false;   // this structure's RTS still has had its flock
     private static long boxesPhaseNanos = -1;   // System.nanoTime() when the phase was first seen active
     private static int boxesCue = 0;            // the next cue of the scene's timeline (CUES index) to fire
     private static boolean boxesPlaced = false; // our start was placed by the scene (01e is worth taking)
@@ -984,8 +985,15 @@ public final class EyesDirector {
                 // ground samplers, run 40703946521, Oct 28)
                 if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
                     OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                if (!structureFlock && phaseSeconds() > 2.5) {
+                    // a flock of the ambient birds, so the still shows them and their shadows (#334); it reaches the
+                    // middle of the view about when the still is taken
+                    structureFlock = true;
+                    com.solegendary.reignofnether.ambient.AmbientLifeClientEvents.flockNow(0.3);
+                }
                 if (phaseSeconds() < 5)
                     return;
+                structureFlock = false;
                 shot(mc, label + "_rts");
                 // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
                 // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
