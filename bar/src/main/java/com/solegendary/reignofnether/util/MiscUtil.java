@@ -449,6 +449,9 @@ public class MiscUtil {
                 attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal) {
             return false;
         }
+        // nor a unit that cannot hit air (the field artillery): both scans, attack-move and idle aggro skip the flyer
+        if (AttackerUnit.refusesTarget(unitMob, targetEntity))
+            return false;
         boolean isPassiveNonUnit = isPassiveNonUnit(targetEntity);
 
 

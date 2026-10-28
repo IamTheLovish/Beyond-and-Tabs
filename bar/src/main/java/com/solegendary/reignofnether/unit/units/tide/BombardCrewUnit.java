@@ -63,7 +63,7 @@ import java.util.Optional;
  * Blaze use - the crew "technically" holds a bow, which the goal needs) rather than a subclass: PillagerUnit is found
  * by instanceof for the Ravager mount, the illager promotion and its crossbow arm pose.
  */
-public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
+public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, RangedAttackerUnit, com.solegendary.reignofnether.unit.interfaces.FieldArtillery {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new AttackGround(BombardCrewUnit.attackRange), Keybindings.abilitySlot1);
@@ -176,7 +176,7 @@ public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, Ran
 
     final static public float attackDamage = 9.0f;      // per shell, to every enemy in the splash
     final static public float attacksPerSecond = 0.25f; // one shell every 4 s
-    final static public float maxHealth = 35.0f;
+    final static public float maxHealth = 28.0f;   // -20% (lovish, Oct 24: artillery death ball)
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.22f;
     final static public float attackRange = 22.0F;      // Pillager 16, Thornbow 13: it shells the line from behind
@@ -339,12 +339,14 @@ public class BombardCrewUnit extends Pillager implements Unit, AttackerUnit, Ran
     }
 
     /**
-     * Lobs one shell at (x, y, z) unless it is inside {@link #MIN_RANGE}. Returns whether it fired. Public for the
-     * game test (fires without waiting on the attack goal).
+     * Lobs one shell at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp). Returns
+     * whether it fired. Public for the game test (fires without waiting on the attack goal).
      */
     public boolean fireShell(double x, double y, double z) {
         if (level().isClientSide())
             return false;
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
+            return false;   // still setting up after moving (FieldArtillery)
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;
