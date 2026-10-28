@@ -116,3 +116,46 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[2.1,)"
     ordering="AFTER"
     side="BOTH"
+
+# macaws-doors (Oct 28 2026; MIT)
+[[dependencies.reignofnether]]
+    modId="mcwdoors"
+    mandatory=true
+    versionRange="[1.1,)"
+    ordering="AFTER"
+    side="BOTH"
+# macaws-bridges (Oct 28 2026; All Rights Reserved art - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="mcwbridges"
+    mandatory=true
+    versionRange="[3.1,)"
+    ordering="AFTER"
+    side="BOTH"
+# macaws-stairs (Oct 28 2026; All Rights Reserved art - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="mcwstairs"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+# macaws-lights-and-lamps (Oct 28 2026; All Rights Reserved art - never copy its assets)
+[[dependencies.reignofnether]]
+    modId="mcwlights"
+    mandatory=true
+    versionRange="[1.1,)"
+    ordering="AFTER"
+    side="BOTH"
+# macaws-paths-and-pavings (Oct 28 2026; MIT)
+[[dependencies.reignofnether]]
+    modId="mcwpaths"
+    mandatory=true
+    versionRange="[1.1,)"
+    ordering="AFTER"
+    side="BOTH"
+# decorative-blocks (Oct 28 2026; MIT)
+[[dependencies.reignofnether]]
+    modId="decorative_blocks"
+    mandatory=true
+    versionRange="[4.1,)"
+    ordering="AFTER"
+    side="BOTH"
