@@ -104,9 +104,12 @@ public final class ServerTickProfile {
             ReignOfNether.LOGGER.info("[Tick] p50 {} ms, p95 {} ms, max {} ms over the last {} ticks; {} units, {} buildings, {} players",
                 fmt(percentile(sorted, 0.50)), fmt(p95), fmt(sorted[sorted.length - 1]), sorted.length,
                 units, BuildingServerEvents.getBuildings().size(), server.getPlayerCount());
+            // how much vanilla A* the units asked for, and how often the short search had to fall back to full range
+            ReignOfNether.LOGGER.info(com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget.report()
+                + "; chase cell memo " + com.solegendary.reignofnether.unit.Terrain.memoReport());
         }
         Sys.report();   // the per-system line, while the server is slow
-        if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && captureTicksLeft == 0 && !captureAwaiting()
+        if (units > 0 && p95 >= AUTO_P95_MS && units >= AUTO_MIN_UNITS && !autoCaptureHeld && captureTicksLeft == 0 && !captureAwaiting()
                 && ticks - lastCaptureAt >= AUTO_COOLDOWN_TICKS && !server.isTimeProfilerRunning()
                 && !server.isRecordingMetrics()) {
             lastCaptureAt = ticks;
@@ -146,6 +149,12 @@ public final class ServerTickProfile {
     public static volatile int lastCaptureSections = 0;
     /** The bat: sections found in the last capture ("bat:attacker", ...). */
     public static volatile List<String> lastCaptureBat = List.of();
+
+    /**
+     * Holds the automatic capture off: a benchmark that compares phases of one run (the [Stress] target scans) would
+     * otherwise pay the recorder's cost in some phases and not in others. Reset when the server stops.
+     */
+    public static volatile boolean autoCaptureHeld = false;
 
     private static boolean captureAwaiting() {
         return resultsWaitLeft > 0;
@@ -351,7 +360,9 @@ public final class ServerTickProfile {
         pendingResults = null;
         pendingReport = null;
         lastCaptureAt = -AUTO_COOLDOWN_TICKS;
+        autoCaptureHeld = false;
         Sys.onServerStopping();
+        com.solegendary.reignofnether.unit.Terrain.resetMemo();
     }
 
     static double[] sortedMs(long[] nanos) {

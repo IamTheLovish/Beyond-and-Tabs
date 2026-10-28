@@ -254,9 +254,17 @@ public final class MatchState {
             ReignOfNether.LOGGER.warn("[Match] refused to prepare a match while {}", phase);
             return false;
         }
+        // fog needs a bounded play area: fit the world border round this match's arena before any side is seated
+        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null)
+            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fitBorderForMatch(server.overworld(),
+                newSetup.cx + 0.5, newSetup.cz + 0.5, newSetup.layout().radius, newSetup.layout().radius, false);
         setup = newSetup;
         origin = newSetup.origin;
         this.onSeated = onSeated;
+        // a new battlefield is formed: what an earlier match changed is this one's starting ground (BattlefieldJournal)
+        if (this == live)
+            BattlefieldJournal.discard();
         match = null;
         winners.clear();
         endClock = 0;
@@ -297,6 +305,9 @@ public final class MatchState {
     }
 
     private void afterMap() {
+        // the battlefield is ready: from here every block the match changes is kept for Back to lobby
+        if (this == live)
+            BattlefieldJournal.arm();
         StartPhase ph = effects.newStartPhase(this);
         if (setup.runsStartPhase()) {
             if (!enter(MatchPhase.START_POSITIONS, ph.picks.size() + " sides placing starts"))
@@ -334,6 +345,7 @@ public final class MatchState {
             if (MatchRoster.any()) {
                 origin = Origin.CLASSIC;
                 enter(MatchPhase.PLAYING, "seated only partly");
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.enableForNewMatch();
             } else if (phase != MatchPhase.LOBBY) {
                 enter(MatchPhase.LOBBY, "nobody could be seated");
             }
@@ -355,6 +367,9 @@ public final class MatchState {
             return null;
         }
         MultiplayerMatch m;
+        // an instant lobby start: the bases are about to land, so the journal records from before them
+        if (this == live)
+            BattlefieldJournal.arm();
         seating = true;
         try {
             m = seat.get();
@@ -391,6 +406,9 @@ public final class MatchState {
         endClock = 0;
         if (how == Origin.LOBBY)
             effects.say("Match started: " + String.join(", ", m.participants));
+        // fog of war is on in a new match unless the host turned the reignofnetherFogByDefault gamerule off first
+        // (tester, Oct 21: "fog of war on by default"); /rts-fog disable still works during the match
+        com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.enableForNewMatch();
         Consumer<MultiplayerMatch> hook = onSeated;
         onSeated = null;
         if (hook != null)
@@ -410,6 +428,9 @@ public final class MatchState {
         winners.clear();
         endClock = 0;
         enter(MatchPhase.PLAYING, name + " started a side");
+        // Quick Battle / skirmish instant start and /bot add: the border was fitted before this first side (see
+        // SkirmishServerboundPacket), so fog can go on now; it did not before because only adopt() asked
+        com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.enableForNewMatch();
     }
 
     /**

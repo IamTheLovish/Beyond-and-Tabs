@@ -29,7 +29,7 @@ public class StrayProd extends GraveyardUnitProductionItem implements IUnitProdu
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide()) {
-                if (placement instanceof GraveyardPlacement gy && placement.getUpgradeLevel() > 0) {
+                if (placement instanceof GraveyardPlacement gy && banksAsSkull(placement)) {
                     gy.createSkull(EntityRegistrar.STRAY_UNIT.get());
                 } else {
                     placement.produceUnit((ServerLevel) level, EntityRegistrar.STRAY_UNIT.get(), placement.ownerName, true);

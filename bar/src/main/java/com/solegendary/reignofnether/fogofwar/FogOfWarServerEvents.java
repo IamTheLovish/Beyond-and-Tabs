@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.worldborder.WorldBorderServerEvents;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.Packet;
@@ -19,6 +20,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -183,7 +185,11 @@ public class FogOfWarServerEvents {
     // hidden. Lets enemy units hide exactly at the circle instead of one whole chunk out.
     public static boolean isBlockVisibleFor(ServerPlayer player, int x, int z) {
         if (!isFogActiveFor(player)) return true;
-        UUID uuid = player.getUUID();
+        return isColumnInVision(player.getUUID(), x, z);
+    }
+
+    // the stored vision masks alone (no fog-active test): live chunk, or edge chunk with the column's bit set
+    private static boolean isColumnInVision(UUID uuid, int x, int z) {
         ChunkPos cp = new ChunkPos(x >> 4, z >> 4);
         Set<ChunkPos> live = playerLiveChunks.get(uuid);
         if (live != null && live.contains(cp)) return true;
@@ -192,6 +198,38 @@ public class FogOfWarServerEvents {
         long[] mask = masks.get(cp);
         if (mask == null) return false;
         return isColumnSet(mask, x, z);
+    }
+
+    /**
+     * The one "may this viewer see this entity" check for fog of war (entity tracking: TrackedEntityMixin). Fog off
+     * for the viewer (fog disabled, spectators, observers) -> everything. Under fog: the viewer itself and units of
+     * their own side (self, allies, a Hero's commanders, a revealed owner) always show; anything else shows only
+     * while its column is inside the viewer's current vision. Buildings are blocks and keep their own ghost rules.
+     */
+    public static boolean isEntityVisibleTo(ServerPlayer viewer, Entity entity) {
+        if (!isFogActiveFor(viewer)) return true;
+        return isEntityVisibleUnderFog(viewer, entity);
+    }
+
+    /** {@link #isEntityVisibleTo} for a viewer known to play under fog (game tests call it directly). */
+    public static boolean isEntityVisibleUnderFog(ServerPlayer viewer, Entity entity) {
+        if (entity == viewer) return true;
+        if (entity instanceof Unit unit && sharesVisionWith(viewer.getName().getString(), unit.getOwnerName()))
+            return true;
+        BlockPos bp = entity.blockPosition();
+        return isColumnInVision(viewer.getUUID(), bp.getX(), bp.getZ());
+    }
+
+    /** True when {@code owner}'s units always show to {@code viewerName}: same side ({@link #teamOwnersFor}) or revealed. */
+    public static boolean sharesVisionWith(String viewerName, String owner) {
+        if (owner == null || owner.isEmpty()) return false;
+        if (revealedPlayerNames.contains(owner)) return true;
+        List<String> ids = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(viewerName)
+                ? com.solegendary.reignofnether.hero.HeroRoles.commandersOf(viewerName) : List.of(viewerName);
+        for (String id : ids)
+            if (id.equals(owner) || AlliancesServerEvents.isAllied(id, owner))
+                return true;
+        return false;
     }
 
     private static boolean isColumnSet(long[] mask, int x, int z) {
@@ -312,6 +350,91 @@ public class FogOfWarServerEvents {
             FogChunkSnapshot.rebuildIndex(level);
     }
 
+    // a capture still spreading over ticks is finished (and its files flushed) so a restart adopts a whole snapshot
+    @SubscribeEvent
+    public static void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent evt) {
+        FogChunkSnapshot.finishNow();
+    }
+
+    /** Whether a new match turns fog on by itself (gamerule reignofnetherFogByDefault, default true). */
+    public static boolean isFogByDefault(ServerLevel level) {
+        return level != null && level.getGameRules().getBoolean(GameRuleRegistrar.FOG_BY_DEFAULT);
+    }
+
+    /**
+     * A match was just seated (MatchState.adopt): fog on unless the host switched the default off. Silent on a map
+     * fog cannot cover (setEnabled would refuse it with a chat line), so ordinary-border worlds are unchanged.
+     */
+    public static void enableForNewMatch() {
+        if (serverLevel == null) {
+            var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null)
+                serverLevel = server.overworld();
+        }
+        boolean byDefault = isFogByDefault(serverLevel);
+        boolean rtsMap = WorldBorderServerEvents.isRtsOptimisedMap(serverLevel);
+        if (shouldEnableForNewMatch(enabled, byDefault, rtsMap)) {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: turning fog of war on (default on, border {})",
+                (int) serverLevel.getWorldBorder().getSize());
+            setEnabled(true);
+        } else {
+            ReignOfNether.LOGGER.info("[FogOfWar] new match: fog of war not turned on - {}",
+                enabled ? "already on" : !byDefault ? "reignofnetherFogByDefault is false"
+                    : serverLevel == null ? "no level yet" : "world border " + (int) serverLevel.getWorldBorder().getSize()
+                        + " is above " + WorldBorderServerEvents.RTS_OPTIMIZED_BORDER + " (no fitting border was set)");
+        }
+    }
+
+    /** Room kept round the arena wall / the farthest start, so no base or wall block sits on the border line. */
+    public static final int BORDER_MARGIN = 80;   // the huge arena (560) still fits the 1280 limit
+    /** A rolled ("random") arena is at most BattlefieldWall.MAX_RADIUS (520) round the bases. */
+    public static final int RANDOM_ARENA_RADIUS = 520;
+
+    /**
+     * The border size (blocks) that holds a match: its arena wall ({@code arenaRadius}, -1 = a random one) and its
+     * farthest start ({@code reach}, blocks from the centre) plus a margin. Above WorldBorderServerEvents.RTS_OPTIMIZED_BORDER
+     * (the fog snapshot's bound: 80 x 80 chunks, each written to disk at ~50-500 KB, FogChunkSnapshot) there is no
+     * fitting border: returns -1 rather than a border that would cut the arena.
+     */
+    public static int borderSizeFor(int arenaRadius, int reach) {
+        int half = Math.max(arenaRadius > 0 ? arenaRadius : RANDOM_ARENA_RADIUS, reach) + BORDER_MARGIN;
+        return 2 * half <= WorldBorderServerEvents.RTS_OPTIMIZED_BORDER ? 2 * half : -1;
+    }
+
+    /**
+     * Gives a match world a border that holds its arena, so fog (which needs a bounded play area to snapshot, see
+     * {@link #setEnabled}) can run in lobby and skirmish matches, whose worlds otherwise keep the vanilla ~60M border
+     * (the arena wall is only blocks). Called before the first side is seated: FogChunkSnapshot captures the
+     * border's chunks at the first start. Does nothing when the host turned reignofnetherFogByDefault off, when the
+     * world already has a small (map-made) border, or when no border up to the fog limit holds the arena. The border
+     * stays with the world; the cost is the snapshot (arena area in chunks x ~50-500 KB, written once at the first start)
+     * and, on a reload of the saved world, the navmesh prewarm WorldBorderServerEvents runs for small borders.
+     * Skipped on the GameTest server unless {@code allowInGameTest}. Returns whether the border was set.
+     */
+    public static boolean fitBorderForMatch(ServerLevel level, double cx, double cz, int arenaRadius, int reach,
+                                            boolean allowInGameTest) {
+        if (level == null || !isFogByDefault(level) || WorldBorderServerEvents.isRtsOptimisedMap(level))
+            return false;
+        if (!allowInGameTest && level.getServer() instanceof net.minecraft.gametest.framework.GameTestServer)
+            return false;
+        int size = borderSizeFor(arenaRadius, reach);
+        if (size < 0) {
+            ReignOfNether.LOGGER.warn("[FogOfWar] no border up to {} holds an arena of radius {} (reach {}): fog stays off "
+                + "for this match", WorldBorderServerEvents.RTS_OPTIMIZED_BORDER, arenaRadius, reach);
+            return false;
+        }
+        level.getWorldBorder().setCenter(cx, cz);
+        level.getWorldBorder().setSize(size);
+        ReignOfNether.LOGGER.info("[FogOfWar] match border set to {} blocks round [{}, {}] so fog of war can run",
+            size, (int) cx, (int) cz);
+        return true;
+    }
+
+    /** The decision of {@link #enableForNewMatch}, pure so a GameTest can walk it. */
+    public static boolean shouldEnableForNewMatch(boolean alreadyOn, boolean byDefault, boolean rtsOptimisedMap) {
+        return !alreadyOn && byDefault && rtsOptimisedMap;
+    }
+
     public static void setEnabled(boolean value) {
         if (!value && isForceFog()) {
             ReignOfNether.LOGGER.info("[FogOfWar] Disable refused: gamerule reignofnetherForceFog is true");
@@ -395,6 +518,7 @@ public class FogOfWarServerEvents {
 
         ticksUntilUpdate = UPDATE_TICKS;
         updatePlayerBrightChunks();
+        refreshEntityTracking();
         for (ServerPlayer p : PlayerServerEvents.orthoviewPlayers) {
             // TODO: on server restart (or singleplayer map relog) unit ids change so fog units always get removed as soon as they're explored
             PlayerChunksClientboundPacket.send(p, playerLiveChunks, playerEdgeChunks);
@@ -419,6 +543,33 @@ public class FogOfWarServerEvents {
         for (ServerPlayer p : PlayerServerEvents.orthoviewPlayers)
             orthoviewUuids.add(p.getUUID());
 
+        VisionSources vision = buildVisionSources();
+
+        for (ServerPlayer sp : serverLevel.getServer().getPlayerList().getPlayers()) {
+            UUID uuid = sp.getUUID();
+            if (!isFogActiveFor(sp)) {
+                clearPlayerVision(uuid);
+                continue;
+            }
+            Long2ObjectOpenHashMap<long[]> covered = coveredFor(sp, vision, orthoviewUuids.contains(uuid));
+
+            // Classify: fully-covered chunk -> live; partially-covered -> edge (keep its column mask).
+            Set<ChunkPos> live = new HashSet<>();
+            Map<ChunkPos, long[]> edge = new HashMap<>();
+            classify(covered, live, edge);
+            Set<ChunkPos> sent = new HashSet<>(live);
+            sent.addAll(edge.keySet());
+            applyVision(sp, live, edge, sent);
+        }
+    }
+
+    // Every owner's covered-column masks for one fog tick, shared by all viewers (see buildVisionSources)
+    private record VisionSources(Set<String> owners,
+                                 Map<String, Long2ObjectOpenHashMap<long[]>> coveredByOwner,
+                                 List<String> revealedOwners,
+                                 Map<String, Long2ObjectOpenHashMap<long[]>> revealedMasksByTarget) { }
+
+    private static VisionSources buildVisionSources() {
         // Collect viewers per owner as blockPos -> LARGEST sight range on that column. Deduping by column
         // (rather than rasterising per entity) is what keeps a clumped army cheap; taking the max preserves
         // the coverage of the longest-sighted occupant.
@@ -481,42 +632,59 @@ public class FogOfWarServerEvents {
             rasterizeViewers(masks, e.getValue());
             revealedMasksByTarget.put(e.getKey(), masks);
         }
+        return new VisionSources(viewersByOwner.keySet(), coveredByOwner, revealedOwners, revealedMasksByTarget);
+    }
 
-        for (ServerPlayer sp : serverLevel.getServer().getPlayerList().getPlayers()) {
-            UUID uuid = sp.getUUID();
-            if (!isFogActiveFor(sp)) {
-                clearPlayerVision(uuid);
-                continue;
-            }
-            String ownerName = sp.getName().getString();
+    // Union of this player's own + allied + revealed owners' covered masks (+ FPS self-bubble).
+    private static Long2ObjectOpenHashMap<long[]> coveredFor(ServerPlayer sp, VisionSources v, boolean inOrthoview) {
+        String ownerName = sp.getName().getString();
+        Long2ObjectOpenHashMap<long[]> covered = new Long2ObjectOpenHashMap<>();
+        // a Hero-role player's body is a spectator parked near the unit they drive: it sees nothing itself
+        boolean heroRole = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(ownerName);
+        if (!heroRole && !inOrthoview && sp.gameMode.isSurvival())
+            rasterizeCircle(covered, sp.blockPosition().getX(), sp.blockPosition().getZ(), PLAYER_SIGHT_BLOCKS);
+        // self + allies (a Hero: their commanders + the commanders' allies)
+        Set<String> teamOwners = teamOwnersFor(ownerName, v.owners());
+        for (String o : teamOwners)
+            mergeMasks(covered, v.coveredByOwner().get(o));
+        for (String revealed : v.revealedOwners())
+            mergeMasks(covered, v.coveredByOwner().get(revealed)); // no-op if already merged as self/ally
+        // enemy units that attacked this player (or an ally) out of the fog
+        for (String o : teamOwners)
+            mergeMasks(covered, v.revealedMasksByTarget().get(o));
+        return covered;
+    }
 
-            // Union this player's own + allied + revealed owners' covered masks (+ FPS self-bubble).
-            Long2ObjectOpenHashMap<long[]> covered = new Long2ObjectOpenHashMap<>();
-            // a Hero-role player's body is a spectator parked near the unit they drive: it sees nothing itself
-            boolean heroRole = com.solegendary.reignofnether.hero.HeroRoles.isHeroRole(ownerName);
-            if (!heroRole && !orthoviewUuids.contains(uuid) && sp.gameMode.isSurvival())
-                rasterizeCircle(covered, sp.blockPosition().getX(), sp.blockPosition().getZ(), PLAYER_SIGHT_BLOCKS);
-            // self + allies (a Hero: their commanders + the commanders' allies)
-            Set<String> teamOwners = teamOwnersFor(ownerName, viewersByOwner.keySet());
-            for (String o : teamOwners)
-                mergeMasks(covered, coveredByOwner.get(o));
-            for (String revealed : revealedOwners)
-                mergeMasks(covered, coveredByOwner.get(revealed)); // no-op if already merged as self/ally
-            // enemy units that attacked this player (or an ally) out of the fog
-            for (String o : teamOwners)
-                mergeMasks(covered, revealedMasksByTarget.get(o));
+    /**
+     * Compute and store {@code sp}'s vision masks now, exactly as the fog tick does, without sending anything. For
+     * headless game tests: their fake players are not in the player list, so the fog tick never computes theirs.
+     * {@link #onPlayerDisconnect} drops them again.
+     */
+    public static void recomputeVisionFor(ServerPlayer sp) {
+        Long2ObjectOpenHashMap<long[]> covered = coveredFor(sp, buildVisionSources(),
+                PlayerServerEvents.orthoviewPlayers.contains(sp));
+        Set<ChunkPos> live = new HashSet<>();
+        Map<ChunkPos, long[]> edge = new HashMap<>();
+        classify(covered, live, edge);
+        Set<ChunkPos> sent = new HashSet<>(live);
+        sent.addAll(edge.keySet());
+        playerLiveChunks.put(sp.getUUID(), live);
+        playerEdgeChunks.put(sp.getUUID(), sent);
+        playerEdgeMasks.put(sp.getUUID(), edge);
+    }
 
-            // Classify: fully-covered chunk -> live; partially-covered -> edge (keep its column mask).
-            Set<ChunkPos> live = new HashSet<>();
-            Map<ChunkPos, long[]> edge = new HashMap<>();
-            for (Long2ObjectMap.Entry<long[]> e : covered.long2ObjectEntrySet()) {
-                ChunkPos cp = new ChunkPos(e.getLongKey());
-                if (maskFull(e.getValue())) live.add(cp);
-                else edge.put(cp, e.getValue());
-            }
-            Set<ChunkPos> sent = new HashSet<>(live);
-            sent.addAll(edge.keySet());
+    private static void classify(Long2ObjectOpenHashMap<long[]> covered, Set<ChunkPos> live, Map<ChunkPos, long[]> edge) {
+        for (Long2ObjectMap.Entry<long[]> e : covered.long2ObjectEntrySet()) {
+            ChunkPos cp = new ChunkPos(e.getLongKey());
+            if (maskFull(e.getValue())) live.add(cp);
+            else edge.put(cp, e.getValue());
+        }
+    }
 
+    // store one player's new vision and send what changed (mask packet, then full-chunk resends)
+    private static void applyVision(ServerPlayer sp, Set<ChunkPos> live, Map<ChunkPos, long[]> edge, Set<ChunkPos> sent) {
+        UUID uuid = sp.getUUID();
+        {
             Set<ChunkPos> prevLive = playerLiveChunks.get(uuid);
             Set<ChunkPos> prevSent = playerEdgeChunks.get(uuid);
             Map<ChunkPos, long[]> prevEdge = playerEdgeMasks.get(uuid);
@@ -577,6 +745,40 @@ public class FogOfWarServerEvents {
                         updateLight ? null : noLight, updateLight ? null : noLight));
             }
         }
+    }
+
+    /**
+     * Re-run vanilla's tracking decision (TrackedEntityMixin -> isEntityVisibleTo) for every unit against every
+     * fogged player, right after their vision changed. Vanilla re-decides only on a section change of the entity or
+     * the player, so a still enemy would neither appear when a friendly walks up nor drop when the vision leaves.
+     * One hash lookup per unit, every UPDATE_TICKS ticks - the same loop size as the viewer collection above.
+     */
+    private static void refreshEntityTracking() {
+        if (serverLevel == null) return;
+        List<ServerPlayer> fogged = new ArrayList<>();
+        for (ServerPlayer sp : serverLevel.players())
+            if (isFogActiveFor(sp)) fogged.add(sp);
+        if (fogged.isEmpty()) return;
+        var tracked = ((com.solegendary.reignofnether.mixin.ChunkMapAccessor) serverLevel.getChunkSource().chunkMap)
+                .reignofnether$getEntityMap();
+        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+            if (le.level() != serverLevel) continue;
+            Object te = tracked.get(le.getId());
+            if (te instanceof com.solegendary.reignofnether.mixin.fogofwar.TrackedEntityInvoker inv)
+                inv.reignofnether$updatePlayers(fogged);
+        }
+    }
+
+    /** TrackedEntityMixin just stopped sending {@code entity} to {@code player} because it is in their fog. */
+    public static void onHiddenByFog(ServerPlayer player, Entity entity) {
+        // the client keeps units in a sticky list (minimap, radar); drop it there too so no stale dot stays behind
+        if (entity instanceof Unit)
+            com.solegendary.reignofnether.unit.packets.UnitSyncClientboundPacket.sendLeavePacketTo(player, entity.getId());
+    }
+
+    /** Server-broadcast sounds (ServerLevelSoundMixin): a player under fog hears nothing from a fogged column. */
+    public static boolean canHearAt(ServerPlayer player, double x, double z) {
+        return isBlockVisibleFor(player, (int) Math.floor(x), (int) Math.floor(z));
     }
 
     private static long blockLong(int x, int z) {
@@ -675,14 +877,23 @@ public class FogOfWarServerEvents {
     }
 
     // register here too for command blocks
+    // Who may switch fog for the whole match: a player needs op level 4, exactly as FogOfWarServerboundPacket (the
+    // HUD's toggle) asks; a command block or the console needs level 2, as every vanilla admin command. Without this a
+    // joined player could type /rts-fog disable and see the whole map (security audit, Oct 26).
+    static boolean mayToggleFog(CommandSourceStack source) {
+        return source.getEntity() instanceof ServerPlayer ? source.hasPermission(4) : source.hasPermission(2);
+    }
+
     @SubscribeEvent
     public static void onRegisterCommand(RegisterCommandsEvent evt) {
-        evt.getDispatcher().register(Commands.literal("rts-fog").then(Commands.literal("enable")
+        evt.getDispatcher().register(Commands.literal("rts-fog").requires(FogOfWarServerEvents::mayToggleFog)
+                .then(Commands.literal("enable")
                 .executes((command) -> {
                     setEnabled(true);
                     return 1;
                 })));
-        evt.getDispatcher().register(Commands.literal("rts-fog").then(Commands.literal("disable")
+        evt.getDispatcher().register(Commands.literal("rts-fog").requires(FogOfWarServerEvents::mayToggleFog)
+                .then(Commands.literal("disable")
                 .executes((command) -> {
                     setEnabled(false);
                     return 1;

@@ -238,9 +238,9 @@ public class BattlefieldWall {
 
     /**
      * The distinct block columns {x, z} of a ring of {@code radius} round (cx, cz), in ring order - the cells
-     * planRing visits, without the world. A watchtower or gatehouse is centred on one of them, and the plain wall's
-     * second layer is one block towards the centre; the game tests lay the widest piece on every one of them to prove
-     * what the metal fill keeps clear.
+     * planWall visits on a round arena, without the world. A watchtower or gatehouse is centred on one of them, and
+     * the plain wall's second layer is one block towards the centre; the game tests lay the widest piece on every one
+     * of them to prove what the metal fill keeps clear.
      */
     public static List<int[]> ringColumns(double cx, double cz, double radius) {
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
@@ -296,6 +296,9 @@ public class BattlefieldWall {
 
     static void planWall(ServerLevel level, double cx, double cz, double radius, boolean square, int perTick,
                          int fromColumn, boolean pregen) {
+        // every arena gets the RTS pathfinder and a warm navmesh, whatever its size (worldborder/ArenaPathing); its
+        // circle covers a square arena's corners too
+        com.solegendary.reignofnether.worldborder.ArenaPathing.onArena(level, cx, cz, square ? radius * Math.sqrt(2) : radius);
         queue.clear();
         ground.clear();
         int col = 0;

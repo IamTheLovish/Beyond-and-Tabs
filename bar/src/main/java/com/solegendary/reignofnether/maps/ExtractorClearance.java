@@ -128,7 +128,8 @@ public final class ExtractorClearance {
         List<String> names;
         try {
             names = structureNames();
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | LinkageError e) {
+            // no game running (plain JUnit: the building registry can't initialise) -> the fallback footprint
             return null;
         }
         int side = 0, read = 0;

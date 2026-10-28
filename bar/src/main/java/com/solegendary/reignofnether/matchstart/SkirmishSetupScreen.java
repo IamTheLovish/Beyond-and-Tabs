@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.hud.GothicText;
+import com.solegendary.reignofnether.hud.LobbyBackdrop;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.player.PlayerColors;
@@ -27,7 +29,8 @@ import java.util.stream.IntStream;
 public class SkirmishSetupScreen extends Screen {
     // factions are chosen by packet code (SkirmishServerboundPacket.CODE_PATHS: 3 stays "Random", the Court took 4,
     // the Tidewrought 5) through the shared FactionPicker dropdown, which lists every coded faction
-    static final List<String> DIFFICULTIES = List.of("Easy", "Medium", "Hard");
+    static final List<String> DIFFICULTIES = java.util.Arrays.stream(com.solegendary.reignofnether.bot.BotPlayer.Difficulty.values())
+        .map(com.solegendary.reignofnether.bot.BotPlayer.Difficulty::label).toList();
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
     /** GenSeed.SHAPES and GenSeed.MODIFIERS, in that order. */
@@ -122,7 +125,7 @@ public class SkirmishSetupScreen extends Screen {
     static final Settings settings = new Settings();   // remembered between lobbies
 
     static final int BG = 0xE0101216, PANEL = 0xC0181B20, EDGE = 0xFF3A3F46, GOLD = 0xFFD27A, DIM = 0x9A9A9A;
-    static final int ROW_H = 22, SWATCH = 12, PAL_SWATCH = 15, PAL_GAP = 2, PAL_PER_ROW = 8;
+    static final int ROW_H = 22, SWATCH = 12;
 
     final Screen parent;
     // layout computed in init()
@@ -134,8 +137,7 @@ public class SkirmishSetupScreen extends Screen {
     /** The row whose colour palette popup is open: a Bot, or {@code PLAYER} for the player, or null. */
     Object paletteFor = null;
     static final Object PLAYER = new Object();
-    int palX, palY;
-    int lastPalHover = -1;   // palette swatch under the mouse last frame, for the hover tick
+    final ColourPalette palette = new ColourPalette();
     final FactionPicker picker = new FactionPicker();
 
     public SkirmishSetupScreen(Screen parent) {
@@ -345,7 +347,7 @@ public class SkirmishSetupScreen extends Screen {
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
                 // no caption: CycleButton draws "caption: value", and the empty caption showed ": Medium" (rover playtest Oct 17)
                 .displayOnlyValue()
-                .withValues(range(3)).withInitialValue(bot.difficulty)
+                .withValues(range(4)).withInitialValue(bot.difficulty)
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
             addRenderableWidget(Button.builder(Component.literal("x"), b -> {
                 settings.bots.remove(bot);
@@ -386,7 +388,7 @@ public class SkirmishSetupScreen extends Screen {
         if (font.width(label) > bw - 8 && label.indexOf(' ') > 0)
             label = label.substring(0, label.indexOf(' '));
         addRenderableWidget(Button.builder(Component.literal(label), b -> {
-            paletteFor = null;
+            closePalette();
             picker.open(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), width, height,
                 FactionPicker.skirmishEntries(), shown, f -> {
                     int c = SkirmishServerboundPacket.codeOf(f);
@@ -424,11 +426,14 @@ public class SkirmishSetupScreen extends Screen {
             mx = -10000;
             my = -10000;
         }
-        renderBackground(gg);
+        // the animated cathedral backdrop (hud/LobbyBackdrop; vanilla background if its art cannot load) and a soft
+        // scrim behind the panel, title and footer so every line of the lobby stays readable over it
+        LobbyBackdrop.render(this, gg, realMx, realMy);
+        LobbyBackdrop.scrim(gg, navX - 10, top - 22, rightX + rightW + 10, bottom + 30);
         gg.fill(navX - 4, top - 4, rightX + rightW + 4, bottom + 4, BG);
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
         gg.fill(navX - 4, bottom + 4, rightX + rightW + 4, bottom + 5, EDGE);
-        gg.drawString(font, "SKIRMISH", navX, top - 16, GOLD);
+        GothicText.title(gg, font, "Skirmish", navX, top - 21);
         gg.drawWordWrap(font, Component.literal(footerText()), navX, bottom + 8, totalW, DIM);
 
         gg.fill(navX, top, navX + navW, bottom, PANEL);
@@ -440,39 +445,16 @@ public class SkirmishSetupScreen extends Screen {
         renderMapPreview(gg, rightX + 4, top + 4, rightW - 8, previewH);
 
         super.render(gg, mx, my, pt);
+        GothicText.restyleButtons(gg, font, children(), GothicText.LOBBY_MAIN, GothicText.LOBBY_PRIMARY, false, 1f);
 
         // each faction button's icon, just left of it (vanilla buttons centre their label, so outside keeps it clear)
         for (Object[] fi : factionIcons)
             FactionPicker.renderIcon(gg, (Faction) fi[2], (Integer) fi[0] - 14, (Integer) fi[1] + (ROW_H - 2 - 12) / 2, 12, false);
 
         if (paletteFor != null) {
-            int cols = PAL_PER_ROW, rows = (PlayerColors.PLAYER_COLOR_COUNT + cols - 1) / cols;
-            int pw = cols * (PAL_SWATCH + PAL_GAP) + 6, ph = rows * (PAL_SWATCH + PAL_GAP) + 30;
-            gg.fill(palX - 1, palY - 1, palX + pw + 1, palY + ph + 1, EDGE);
-            gg.fill(palX, palY, palX + pw, palY + ph, 0xF0101216);
-            gg.drawString(font, "Pick a colour", palX + 4, palY + 4, 0xE0E0E0, false);
-            int current = paletteFor == PLAYER ? settings.colour : ((Bot) paletteFor).colour;
-            int hovered = -1;
-            for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
-                int sx = palX + 3 + (i % cols) * (PAL_SWATCH + PAL_GAP);
-                int sy = palY + 16 + (i / cols) * (PAL_SWATCH + PAL_GAP);
-                boolean hover = mx >= sx && mx < sx + PAL_SWATCH && my >= sy && my < sy + PAL_SWATCH;
-                if (hover) hovered = i;
-                int frame = i == current ? 0xFFFFFFFF : hover ? 0xFFAAAAAA : 0xFF000000;
-                gg.fill(sx - 1, sy - 1, sx + PAL_SWATCH + 1, sy + PAL_SWATCH + 1, frame);
-                gg.fill(sx, sy, sx + PAL_SWATCH, sy + PAL_SWATCH, 0xFF000000 | PlayerColors.colors[i].hexCode);
-                // a colour someone else in the lobby already has: crossed out (picking it buzzes)
-                if (colourTaken(i, paletteFor)) {
-                    for (int d = 2; d < PAL_SWATCH - 2; d++) {
-                        gg.fill(sx + d, sy + d, sx + d + 1, sy + d + 1, 0xC0000000);
-                        gg.fill(sx + PAL_SWATCH - 1 - d, sy + d, sx + PAL_SWATCH - d, sy + d + 1, 0xC0000000);
-                    }
-                }
-            }
-            if (hovered != lastPalHover && hovered >= 0)
-                LobbySounds.hover();
-            lastPalHover = hovered;
-            gg.drawString(font, "right-click: random/auto", palX + 4, palY + ph - 11, DIM, false);
+            // a colour someone else in the lobby already has is crossed out (picking it buzzes)
+            final Object row = paletteFor;
+            palette.render(gg, font, mx, my, row == PLAYER ? settings.colour : ((Bot) row).colour, i -> colourTaken(i, row));
         }
 
         picker.render(gg, font, realMx, realMy);
@@ -609,47 +591,65 @@ public class SkirmishSetupScreen extends Screen {
         if (picker.mouseClicked(mx, my, button))
             return true;
         if (paletteFor != null) {
-            int cols = PAL_PER_ROW;
             if (button == 1) {   // right-click anywhere in the popup: back to random/auto
                 if (paletteFor == PLAYER) settings.colour = -1; else ((Bot) paletteFor).colour = -1;
-                paletteFor = null;
+                closePalette();
                 LobbySounds.colour();
                 return true;
             }
-            for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
-                int sx = palX + 3 + (i % cols) * (PAL_SWATCH + PAL_GAP);
-                int sy = palY + 16 + (i / cols) * (PAL_SWATCH + PAL_GAP);
-                if (mx >= sx && mx < sx + PAL_SWATCH && my >= sy && my < sy + PAL_SWATCH) {
-                    // two rows on one colour can't be told apart in the match (a bot on the player's colour was
-                    // silently put back to auto), so a taken colour is refused and the palette stays open
-                    if (colourTaken(i, paletteFor)) {
-                        LobbySounds.denied();
-                        return true;
-                    }
-                    if (paletteFor == PLAYER) settings.colour = i; else ((Bot) paletteFor).colour = i;
-                    paletteFor = null;
-                    LobbySounds.colour();
+            int i = palette.hit(mx, my);
+            if (i >= 0) {
+                // two rows on one colour can't be told apart in the match (a bot on the player's colour was
+                // silently put back to auto), so a taken colour is refused and the palette stays open
+                if (colourTaken(i, paletteFor)) {
+                    LobbySounds.denied();
                     return true;
                 }
+                if (paletteFor == PLAYER) settings.colour = i; else ((Bot) paletteFor).colour = i;
+                closePalette();
+                LobbySounds.colour();
+                return true;
             }
-            paletteFor = null;   // clicked outside: close
-            LobbySounds.close();
+            if (!palette.contains(mx, my)) {
+                closePalette();   // clicked outside: close
+                LobbySounds.close();
+            }
             return true;
         }
         if (button == 0) {
             for (Object[] s : swatches) {
                 int sx = (Integer) s[0], sy = (Integer) s[1];
                 if (mx >= sx - 2 && mx < sx + SWATCH + 2 && my >= sy - 2 && my < sy + SWATCH + 2) {
-                    paletteFor = s[2];
-                    lastPalHover = -1;
+                    openPalette(s[2], sx, sy);
                     LobbySounds.open();
-                    palX = Math.min(sx + SWATCH + 6, width - (PAL_PER_ROW * (PAL_SWATCH + PAL_GAP) + 10));
-                    palY = Math.max(4, Math.min(sy - 10, height - 90));
                     return true;
                 }
             }
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    /** Opens the colour palette for {@code row} (a Bot or PLAYER) beside its colour box at (sx, sy). */
+    void openPalette(Object row, int sx, int sy) {
+        paletteFor = row;
+        palette.openBeside(sx, sy, SWATCH, width, height);
+    }
+
+    void closePalette() {
+        paletteFor = null;
+        palette.close();
+    }
+
+    /**
+     * Opens the palette on the colour box of drawn row {@code index} (0 = the first row with a box), as a click on it
+     * would: the screenshot tours use it. False when there is no such row.
+     */
+    public boolean openPaletteOnRow(int index) {
+        if (index < 0 || index >= swatches.size())
+            return false;
+        Object[] s = swatches.get(index);
+        openPalette(s[2], (Integer) s[0], (Integer) s[1]);
+        return true;
     }
 
     @Override

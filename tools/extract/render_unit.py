@@ -33,7 +33,7 @@ def tex_color(mat):
         for k, te in mat.m_SavedProperties.m_TexEnvs:
             if k in ("_MainTex", "_BaseMap", "_Albedo") and te.m_Texture.path_id:
                 return te.m_Texture.read().image.convert("RGB")
-    except Exception as e: pass
+    except Exception: pass
     try:
         for k, c in mat.m_SavedProperties.m_Colors:
             if k == "_Color": return (c.r, c.g, c.b)

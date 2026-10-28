@@ -71,7 +71,7 @@ public class MultiplayerLobby {
         public int colorMapId = 0; // PlayerPalette map colour id, 0 = any free colour
         public int team = 0;
         public boolean ready = false;
-        public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard
+        public int difficulty = 1; // bots: 0 easy, 1 medium, 2 hard, 3 passive
         // hero mode (design/hero_mode.md): a human on a team with no base of their own, who plays the team's hero
         // (possession) instead of commanding - HeroRoles attaches them to their team at the start
         public boolean heroRole = false;
@@ -114,6 +114,11 @@ public class MultiplayerLobby {
     static String hostName = "";
     static boolean dirty = false;
     static int startCountdown = -1;
+    // Back to lobby (the tester's Oct 26 ask: rematches on one server): the lineup of the last lobby start, reseated
+    // when the host goes back, and the ring centre it used, so the rematch is fought on the restored ground
+    static final List<Seat> lastLineup = new ArrayList<>();
+    static BlockPos lastCentre = null;
+    static BlockPos rematchCentre = null;
     // the lobby's match being fought is match.MatchState's (rewrite 5): saved with the world, so a reload keeps who
     // may rejoin and who watches (it was a static here that a reload forgot)
 
@@ -161,7 +166,8 @@ public class MultiplayerLobby {
         SET_PACE,  // appended: actions travel by ordinal
         SET_MAP, SET_STARTPOS,
         SET_ROLE,   // hero mode: value 1 = Hero role (no base), 0 = Commander
-        SET_TIME, SET_CYCLE,   // the match sun: match.TimeOfDay id, match.DayCycle id
+        SET_TIME, SET_CYCLE,  // the match sun: match.TimeOfDay id, match.DayCycle id
+        BACK_TO_LOBBY,        // host, match decided: reset the battlefield and reopen the lobby with the last lineup
         NEW_MAP, SET_GEN_SHAPE, SET_GEN_MODS   // a new seed for the stamped map; a generated map's shape and modifiers
     }
 
@@ -188,9 +194,41 @@ public class MultiplayerLobby {
         Seat s = seat(seatId);
         if (s == null)
             return null;
-        if (s.bot)
-            return isLobbyHost(sp) ? s : null;
-        return sp.getUUID().equals(s.uuid) ? s : null;
+        return mayEdit(s, sp.getUUID(), isLobbyHost(sp)) ? s : null;
+    }
+
+    /** Whether {@code editor} may edit seat {@code s}: their own seat, or a bot's when they host. Pure. */
+    public static boolean mayEdit(Seat s, UUID editor, boolean editorIsHost) {
+        if (s == null || editor == null)
+            return false;
+        return s.bot ? editorIsHost : editor.equals(s.uuid);
+    }
+
+    /**
+     * Whether colour {@code mapColorId} is held by a playing seat of {@code lineup} other than {@code except}
+     * (spectators and Hero-role seats take no base, so they hold no colour; 0 = automatic is never held). The server
+     * refuses a taken colour with it and the lobby screen crosses taken colours out with it. Pure.
+     */
+    public static boolean colourTakenIn(List<Seat> lineup, int mapColorId, Seat except) {
+        if (mapColorId == 0)
+            return false;
+        for (Seat s : lineup)
+            if (s != except && !s.spectating() && !s.heroRole && s.colorMapId == mapColorId)
+                return true;
+        return false;
+    }
+
+    /**
+     * The lobby's colour rule (BAR's colour box, tester ask Oct 26): {@code editor} may set seat {@code s}'s colour
+     * to {@code value} when the seat is theirs (or a bot's and they host) and {@code value} is 0 (automatic) or a
+     * palette colour no other playing seat holds - so two sides never share a colour. Pure: the lobby_colors tests.
+     */
+    public static boolean colourChangeAllowed(List<Seat> lineup, Seat s, UUID editor, boolean editorIsHost, int value) {
+        if (!mayEdit(s, editor, editorIsHost))
+            return false;
+        if (value == 0)
+            return true;
+        return PlayerPalette.isPaletteColor(value) && !colourTakenIn(lineup, value, s);
     }
 
     static int teamSize(int team, Seat except) {
@@ -202,12 +240,7 @@ public class MultiplayerLobby {
     }
 
     static boolean colourTaken(int mapColorId, Seat except) {
-        if (mapColorId == 0)
-            return false;
-        for (Seat s : seats)
-            if (s != except && !s.spectating() && !s.heroRole && s.colorMapId == mapColorId)
-                return true;
-        return false;
+        return colourTakenIn(seats, mapColorId, except);
     }
 
     /** Applies one lobby action from {@code sp}. Anything not allowed is ignored (the next snapshot corrects them). */
@@ -217,6 +250,11 @@ public class MultiplayerLobby {
         switch (action) {
             case OPEN -> open(sp);
             case REQUEST -> LobbyClientboundPacket.sendSnapshot(sp);
+            case BACK_TO_LOBBY -> {
+                String why = backToLobby(sp);
+                if (why != null)
+                    sp.sendSystemMessage(Component.literal(why));
+            }
             case CLOSE -> {
                 if (isLobbyHost(sp))
                     close("The host closed the lobby.");
@@ -243,8 +281,8 @@ public class MultiplayerLobby {
                 s.faction = value;
             }
             case SET_COLOUR -> {
-                Seat s = editable(sp, seatId);
-                if (s == null || (value != 0 && (!PlayerPalette.isPaletteColor(value) || colourTaken(value, s))))
+                Seat s = seat(seatId);
+                if (s == null || !colourChangeAllowed(seats, s, sp.getUUID(), isLobbyHost(sp), value))
                     return false;
                 s.colorMapId = value;
             }
@@ -271,7 +309,7 @@ public class MultiplayerLobby {
             }
             case SET_DIFFICULTY -> {
                 Seat s = seat(seatId);
-                if (!host || s == null || !s.bot || value < 0 || value > 2)
+                if (!host || s == null || !s.bot || value < 0 || value > 3)
                     return false;
                 s.difficulty = value;
             }
@@ -301,12 +339,12 @@ public class MultiplayerLobby {
                 metal = value;
             }
             case SET_SPAWNS -> {
-                if (!host || value < 0 || value > 2)
+                if (!host || value < 0 || value > 3)
                     return false;
                 spawnDistance = value;
             }
             case SET_PACE -> {
-                if (!host || value < 0 || value > 2)
+                if (!host || value < 0 || value > 3)
                     return false;
                 pace = value;
             }
@@ -350,6 +388,9 @@ public class MultiplayerLobby {
                 Seat s = editable(sp, seatId);
                 if (s == null || s.bot || s.spectating() || value < 0 || value > 1)
                     return false;
+                // back from the Hero role with a colour someone took meanwhile: any free colour instead
+                if (s.heroRole && value == 0 && colourTakenIn(seats, s.colorMapId, s))
+                    s.colorMapId = 0;
                 s.heroRole = value == 1;
             }
             case START -> {
@@ -460,6 +501,82 @@ public class MultiplayerLobby {
             say(why);
     }
 
+    /**
+     * Back to lobby (the tester, Oct 26: "keep playing on one server rather than making new ones"): once the match is
+     * decided, the host resets it - units, buildings, wrecks, resources (PlayerServerEvents.resetRTS) - puts every
+     * block the match changed back as it was (match.BattlefieldJournal) and reopens the lobby with the last lineup
+     * (bots, and every human still online with their faction, colour, team and role) and the same settings; the
+     * rematch is fought on the restored ground. Null when done, else why not (told to the host).
+     */
+    static String backToLobby(ServerPlayer sp) {
+        if (!isLobbyHost(sp))
+            return "Only the host can take everyone back to the lobby.";
+        com.solegendary.reignofnether.match.MatchState state = MatchState.live();
+        if (state.isPreparing() || startCountdown >= 0)
+            return "A match is being set up - wait for it to start or finish.";
+        if (state.phase() == com.solegendary.reignofnether.match.MatchPhase.PLAYING
+                && com.solegendary.reignofnether.match.MatchRoster.any())
+            return "The match is still being played: it has to be decided first (resign from the match menu).";
+        MinecraftServer server = sp.getServer();
+        if (server == null)
+            return "No server.";
+        ReignOfNether.LOGGER.info("[Lobby] {} went back to the lobby: resetting the battlefield", sp.getName().getString());
+        // the match first (its buildings come down), then the ground: the restore must be the last write
+        PlayerServerEvents.resetRTS(false);
+        for (net.minecraft.world.entity.Entity w : new ArrayList<>(com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks()))
+            w.discard();
+        int restored = com.solegendary.reignofnether.match.BattlefieldJournal.restore(server);
+        rematchCentre = lastCentre;
+        reopen(sp, server);
+        say("Back to the lobby: the battlefield is reset (" + restored + " block(s) restored). Same lineup and settings - ready up for the rematch.");
+        return null;
+    }
+
+    /** Opens the lobby for {@code host} with the last lineup kept ({@link #keptSeats}), then everyone else online. */
+    static void reopen(ServerPlayer host, MinecraftServer server) {
+        open = true;
+        seats.clear();
+        startCountdown = -1;
+        hostUuid = host.getUUID();
+        hostName = host.getName().getString();
+        Set<UUID> online = new HashSet<>();
+        for (ServerPlayer p : server.getPlayerList().getPlayers())
+            online.add(p.getUUID());
+        List<Seat> kept = keptSeats(lastLineup, online, nextSeatId);
+        nextSeatId += kept.size();
+        seats.addAll(kept);
+        addHuman(host);
+        for (ServerPlayer other : server.getPlayerList().getPlayers())
+            if (other != host)
+                addHuman(other);
+        dirty = true;
+    }
+
+    /**
+     * The seats a rematch starts from: every bot of {@code last} as it was, and every human of {@code last} still
+     * online (by UUID) with their faction, colour, team and role - not ready (each confirms again). Humans who left
+     * are dropped; new seat ids from {@code firstId}. Pure: the game tests check it.
+     */
+    public static List<Seat> keptSeats(List<Seat> last, Set<UUID> online, int firstId) {
+        List<Seat> out = new ArrayList<>();
+        int id = firstId;
+        for (Seat s : last) {
+            if (!s.bot && (s.uuid == null || !online.contains(s.uuid)))
+                continue;
+            Seat k = new Seat(id++, s.bot);
+            k.name = s.name;
+            k.uuid = s.uuid;
+            k.faction = s.faction;
+            k.colorMapId = s.colorMapId;
+            k.team = s.team;
+            k.difficulty = s.difficulty;
+            k.heroRole = s.heroRole;
+            k.ready = s.bot || s.spectating();   // a spectator never holds the start up
+            out.add(k);
+        }
+        return out;
+    }
+
     /** One plain chat line to everyone online (lobby news is English text, not a translation key). */
     static void say(String msg) {
         for (ServerPlayer p : PlayerServerEvents.players)
@@ -529,6 +646,9 @@ public class MultiplayerLobby {
         hostUuid = null;
         hostName = "";
         dirty = false;
+        lastLineup.clear();
+        lastCentre = null;
+        rematchCentre = null;
         // the match itself is saved and dropped by match.MatchServerEvents (HIGHEST snapshot, LOWEST clear)
         MultiplayerMatch.clearAll();
         com.solegendary.reignofnether.hero.HeroRoles.clearAll();
@@ -560,9 +680,14 @@ public class MultiplayerLobby {
         ServerLevel level = server.overworld();
         ServerPlayer host = hostUuid == null ? null : server.getPlayerList().getPlayer(hostUuid);
         // the ring is centred where the host stands (a fresh skirmish world: its spawn) - on the ground
-        BlockPos c = host != null ? host.blockPosition() : level.getSharedSpawnPos();
+        // - or, for a rematch after Back to lobby, where the last match was (its ground is the one just restored)
+        BlockPos c = rematchCentre != null ? rematchCentre : host != null ? host.blockPosition() : level.getSharedSpawnPos();
+        rematchCentre = null;
         BlockPos centre = new BlockPos(c.getX(), MetalPatches.solidTop(level, c.getX(), c.getZ()), c.getZ());
         List<Seat> lineup = new ArrayList<>(seats);
+        lastLineup.clear();
+        lastLineup.addAll(lineup);
+        lastCentre = centre;
         open = false;
         seats.clear();
         LobbyClientboundPacket.broadcastSnapshot();   // closes the lobby screens
@@ -615,6 +740,13 @@ public class MultiplayerLobby {
         Map<Seat, Integer> colours = assignColours(playing);
 
         List<Vec3> starts = startPositions(level, centre, playing.size(), spawnDistance, rng.nextDouble() * Math.PI * 2);
+
+        // fog needs a bounded play area: a border round the arena and the farthest start, before the first base
+        int reach = 0;
+        for (Vec3 s : starts)
+            reach = Math.max(reach, (int) Math.ceil(Math.hypot(s.x - centre.getX(), s.z - centre.getZ())));
+        com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fitBorderForMatch(level, centre.getX() + 0.5,
+            centre.getZ() + 0.5, SkirmishServerboundPacket.arenaRadius(arena), reach, false);
 
         // the battlefield forms a few seconds after the last base registers (BattlefieldSetup)
         BattlefieldSetup.arenaRadiusOverride = SkirmishServerboundPacket.arenaRadius(arena);
@@ -685,6 +817,7 @@ public class MultiplayerLobby {
                 BotPlayer.Difficulty diff = switch (s.difficulty) {
                     case 0 -> BotPlayer.Difficulty.EASY;
                     case 2 -> BotPlayer.Difficulty.HARD;
+                    case 3 -> BotPlayer.Difficulty.PASSIVE;
                     default -> BotPlayer.Difficulty.MEDIUM;
                 };
                 name = BotServerEvents.addBotAt(level, faction, diff, pos, colours.get(s));
@@ -694,6 +827,8 @@ public class MultiplayerLobby {
                     continue;   // left during the countdown
                 // keep the base's chunks loaded until the player's camera gets there
                 UnitChunkLoader.holdArea(level, BlockPos.containing(pos));
+                // a dedicated server keeps each player's saved game mode: the RTS camera needs creative
+                PlayerServerEvents.ensureCommanderGameMode(sp);
                 PlayerServerEvents.startRTS(sp.getId(), pos, faction, colours.get(s));
                 if (PlayerServerEvents.isRTSPlayer(sp.getName().getString())) {
                     name = sp.getName().getString();

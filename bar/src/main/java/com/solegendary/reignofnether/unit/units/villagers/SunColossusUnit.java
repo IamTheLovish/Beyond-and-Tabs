@@ -135,8 +135,7 @@ public class SunColossusUnit extends IronGolemUnit {
         if (tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED)
                 && getOwnerName() != null && !getOwnerName().isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);
-            com.solegendary.reignofnether.player.PlayerServerEvents.sendMessageToAllPlayers(
-                "server.reignofnether.t3_arrived", true, getOwnerName(),
+            com.solegendary.reignofnether.unit.T3ServerEvents.announceFielded(getOwnerName(),
                 net.minecraft.network.chat.Component.translatable("entity.reignofnether.sun_colossus_unit"));
         }
         T3ServerEvents.trackColossus(this);

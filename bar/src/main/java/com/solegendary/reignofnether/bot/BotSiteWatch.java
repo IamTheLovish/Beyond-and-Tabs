@@ -152,7 +152,7 @@ public class BotSiteWatch {
                 capitolRelocations++;
                 bot.blocked(gameTime, step, "no build progress for " + stalled / 20 + " s at " + bp.originPos.toShortString()
                     + ", cancelled and re-laid a step away (" + capitolRelocations + "/" + MAX_CAPITOL_RELOCATIONS + "): " + seen);
-                cancel(level, bp);
+                cancel(level, bp, workers);
                 cancelledCapitol = true;
                 continue;
             }
@@ -160,17 +160,41 @@ public class BotSiteWatch {
                 + ", cancelled: " + seen);
             if (bp.getBuilding() == bot.kit.extractor())
                 for (BlockPos patch : MetalPatches.getPatches(level))
-                    if (patch.distSqr(bp.centrePos) <= 4 * 4)
-                        bot.badPatches.put(patch, gameTime);   // not this patch again for a couple of minutes
+                    if (patchUnderSite(patch.getX(), patch.getY(), patch.getZ(), bp.centrePos.getX(), bp.centrePos.getY(), bp.centrePos.getZ())) {
+                        bot.badPatches.put(patch, avoidUntil(gameTime));   // not this patch again for a while
+                        bot.patchFailures.merge(patch, 1, Integer::sum);   // and given up after BotPlayer.PATCH_GIVE_UP cancels
+                    }
             // not the same ground again either (the next think would re-lay a lab on the very spot its builders
             // could not reach, and the watch would cancel it again 45 s later, for the whole match)
             bot.siteCancelled(bp, gameTime);
-            cancel(level, bp);
+            cancel(level, bp, workers);
         }
         return cancelledCapitol;
     }
 
-    void cancel(ServerLevel level, BuildingPlacement bp) {
+    /** Extra ticks a cancelled site's patch is avoided beyond the two minutes a failed placement waits (BotPlayer.freePatch). */
+    static final long PATCH_AVOID_TICKS = 20 * 180;
+
+    /** The time stamp a cancelled site's patch is recorded with in {@link BotPlayer#badPatches}. Pure. */
+    static long avoidUntil(long gameTime) {
+        return gameTime + PATCH_AVOID_TICKS;
+    }
+
+    /** Whether a metal patch is the one an extractor site (centred at c) was laid over. Pure, for the unit test. */
+    static boolean patchUnderSite(int px, int py, int pz, int cx, int cy, int cz) {
+        // flat: a site raised over the ground (a rise, a pillar its workers cannot climb) has its centre at the middle of
+        // its height, several blocks above the patch it covers - 3D distance missed it and the bot laid the same site again
+        long dx = px - cx, dz = pz - cz;
+        return dx * dx + dz * dz <= 4 * 4;
+    }
+
+    void cancel(ServerLevel level, BuildingPlacement bp, List<LivingEntity> workers) {
+        // one line per builder ordered to it: where it stood, how far from the site, what its build goal / path was doing
+        for (LivingEntity le : workers)
+            if (targetOf(le) == bp && le instanceof WorkerUnit wu)
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} site {} at {} cancelled for no progress: "
+                        + "builder {} at {}, {}", bot.name, bp.getBuilding().structureName, bp.originPos.toShortString(),
+                    le.getId(), le.blockPosition().toShortString(), wu.getBuildRepairGoal().describeState());
         sites.remove(bp);
         cancelled++;
         // the player's cancel: refunds what the flow economy spent, drops the site (its workers go idle)

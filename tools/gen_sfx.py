@@ -781,7 +781,6 @@ def s_reclaim_done(rng, v):
 
 
 def s_gate_open(rng, v):
-    d = 1.3
     x = creak(rng, 1.0, 26, 44, (300, 700, 1500)) * 0.7
     chain = grains(rng, 0.9, 14, lambda r: metal(r.uniform(1800, 3200), 0.04, r, 3, 0.12) * 0.5, 0.8)
     latch = wood(110, 0.4, rng, 1.6) + drum(70, 0.3, rng, snap=0.3) * 0.6
@@ -879,7 +878,6 @@ def s_beast_devour(rng, v):
 
 
 def s_beast_embark(rng, v):
-    d = 1.3
     f = sweep(95, 80, 0.9)
     bellow = brass(90, 0.9, rng, bend=f, bright=700, attack=0.12, vib=5, vib_depth=0.02)
     return mix((bellow, 0, 0.7), (grains(rng, 0.8, 35, leaf_grain, 0.7), 0.3, 0.6), (wind(rng, 1.0), 0.2, 0.3))

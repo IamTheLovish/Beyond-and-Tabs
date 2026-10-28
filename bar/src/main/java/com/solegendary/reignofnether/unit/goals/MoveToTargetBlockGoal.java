@@ -37,8 +37,9 @@ public class MoveToTargetBlockGoal extends Goal {
 
     // A plain move order to a spot the unit can't reach used to repath forever (backing off to every 10 s), so the
     // unit never went idle - no idle-worker alert, and a Seedshaper sent to plant on an unreachable spot just stood
-    // there. Like BAR, the unit now walks as close as it can and stops: after this many repaths in a row that end on
-    // the same final node (or find no path), a plain move goal drops its target. ~7 s with the 20/40/80 backoff.
+    // there. Like BAR, the unit now walks as close as it can and stops: after this many repaths in a row that make no
+    // progress (repathMadeProgress) or find no path, a plain move goal drops its target: ~12 s after it stops, as the
+    // goal is checked every other tick and the cooldowns between those repaths are 40 and 80 checks.
     public static final int GIVE_UP_AFTER_STUCK_REPATHS = 3;
     protected int stuckRepaths = 0;
     // The target most recently dropped as unreachable (for errands such as Plant Thicket to tell "gave up" apart
@@ -52,7 +53,51 @@ public class MoveToTargetBlockGoal extends Goal {
         return !persistent && getClass() == MoveToTargetBlockGoal.class;
     }
 
-    // Called where a repath made no progress (same final node, or no path at all).
+    // A repath made progress only if its path ends at least REPATH_PROGRESS_MIN closer (horizontally) to the move
+    // target than the path it replaced, or the unit itself walked REPATH_WALKED_MIN since the repath before (a long
+    // detour, delivered in segments, can end a segment no closer to the target than the last). "A different final
+    // node" was not enough: for a target in unloaded land the path aims at RtsPathfinder.lastLoadedToward from the
+    // unit's own block, so a unit pressed against a wall that drifted one block sideways got a path ending one block
+    // over, every repath read as progress, and it stood with its order forever (CI, a_move_into_unloaded_chunks...,
+    // runs 40572488789, 40577575656).
+    public static final double REPATH_PROGRESS_MIN = 1.0;
+    public static final double REPATH_WALKED_MIN = 2.0;
+    // where the unit stood at the last repath (or the order); whether it had walked REPATH_WALKED_MIN since the one
+    // before, kept for onPathReady while an async repath is in flight
+    private double repathFromX = Double.NaN, repathFromZ = Double.NaN;
+    private boolean repathWalked = false;
+    // a repath the pool answered busy computed nothing: the walk it was owed carries over to the retry
+    private boolean repathWalkCarried = false;
+    // the end node of the last path this goal handed to the navigation (cleared by a new order or a stop)
+    @Nullable private BlockPos lastPathEnd = null;
+
+    // Before a repath: note where the unit stands now and whether it walked REPATH_WALKED_MIN since the last one.
+    private void markRepathFrom() {
+        double dx = this.mob.getX() - repathFromX, dz = this.mob.getZ() - repathFromZ;
+        repathWalked = repathWalkCarried || Double.isNaN(repathFromX)
+            || dx * dx + dz * dz >= REPATH_WALKED_MIN * REPATH_WALKED_MIN;
+        repathWalkCarried = false;
+        repathFromX = this.mob.getX();
+        repathFromZ = this.mob.getZ();
+    }
+
+    // Did a repath from a path ending at oldEnd to one ending at newEnd get the unit any closer to its target? Only the
+    // goal that gives up judges by distance: the subclasses' targets (garrison, return resources, call to arms) follow
+    // the unit's own position, so for them a changed end node is still progress, as before.
+    private boolean repathMadeProgress(@Nullable BlockPos oldEnd, BlockPos newEnd) {
+        if (!givesUpWhenUnreachable())
+            return !newEnd.equals(oldEnd);
+        if (oldEnd == null || moveTarget == null || repathWalked)
+            return true;
+        return horizontalDist(oldEnd, moveTarget) - horizontalDist(newEnd, moveTarget) >= REPATH_PROGRESS_MIN;
+    }
+
+    private static double horizontalDist(BlockPos a, BlockPos b) {
+        double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    // Called where a repath made no progress (no closer final node, or no path at all).
     private void onStuckRepath() {
         backoffRecalcCooldown();
         stuckRepaths++;
@@ -90,6 +135,87 @@ public class MoveToTargetBlockGoal extends Goal {
     // -> reset) is deferred to onPathReady, which compares the new path against repathFromFinalNode.
     protected boolean pendingRepath = false;
     @Nullable protected BlockPos repathFromFinalNode = null;
+
+    // ---- progress, for "is a re-click of this spot redundant?" (UnitActionItem.isRedundantMove) ----
+    // A re-click of the spot a unit is already heading to used to be skipped outright, so a unit stalled in a path
+    // loop (or standing on a no-path retry) could not be rescued by clicking again - "units sometimes don't listen".
+    // Now a re-click is skipped only while the unit is really getting there: a path request in flight that was
+    // issued in the last PROGRESS_WINDOW ticks, or a live path along which it got closer to the target than ever
+    // before within the last PROGRESS_WINDOW ticks. Sampled every PROGRESS_SAMPLE ticks from Unit.tick.
+    public static final int PROGRESS_SAMPLE = 10;
+    public static final int PROGRESS_WINDOW = 25;
+    private long lastRequestTime = Long.MIN_VALUE / 2;   // game time of the last path request
+    private long lastProgressTime = Long.MIN_VALUE / 2;  // game time the unit last got closer than ever to moveTarget
+    private double bestDistSq = Double.MAX_VALUE;        // closest it has been to moveTarget (horizontal, squared)
+    // headway, for the contact rule (ticksWithoutProgress): the last time it got HEADWAY blocks closer than at the
+    // previous mark. Stricter than the 0.3-block progress above, which a unit squeezing through an enemy army inches
+    // out every few samples (CI, CombatEngageGameTests: 43 of 150 movers stood in contact with no target at 15 s)
+    public static final double HEADWAY = 1.0;
+    private double headwayMarkDist = Double.MAX_VALUE;
+    private long lastHeadwayTime = Long.MIN_VALUE / 2;
+
+    // Async requests answered "busy" (pool/queue saturated) in a row. Each busy answer used to retry in 20 ticks with
+    // the unit stood still - forever while the pool stayed saturated. After BUSY_FALLBACK_AFTER in a row, the unit
+    // takes one vanilla path instead (at most SYNC_FALLBACKS_PER_TICK units per tick, so a saturated pool cannot turn
+    // into a main-thread freeze).
+    public static final int BUSY_FALLBACK_AFTER = 3;
+    public static final int SYNC_FALLBACKS_PER_TICK = 4;
+    private static long syncFallbackTick = Long.MIN_VALUE;
+    private static int syncFallbacksThisTick = 0;
+    private int busyStreak = 0;
+
+    /** Diagnostics for tests: an async path request is in flight / the goal is active. */
+    public boolean isPathPending() { return pathPending; }
+    public boolean isGoalRunning() { return isRunning; }
+
+    /** The game time of this goal's last path request (tests: did an order re-path the unit?). */
+    public long getLastRequestTime() { return lastRequestTime; }
+
+    /** Server side, every tick from Unit.tick; acts every {@link #PROGRESS_SAMPLE} ticks. */
+    public void sampleProgress() {
+        if (moveTarget == null || (this.mob.tickCount + this.mob.getId()) % PROGRESS_SAMPLE != 0)
+            return;
+        double dx = moveTarget.getX() + 0.5 - this.mob.getX(), dz = moveTarget.getZ() + 0.5 - this.mob.getZ();
+        double d = dx * dx + dz * dz;
+        // "closer than ever" by at least ~0.3 blocks: an oscillating unit (the path loop) never counts as progress
+        double best = Math.sqrt(bestDistSq);
+        if (bestDistSq == Double.MAX_VALUE || Math.sqrt(d) < best - 0.3) {
+            bestDistSq = d;
+            lastProgressTime = this.mob.level().getGameTime();
+        }
+        double dist = Math.sqrt(d);
+        if (headwayMarkDist == Double.MAX_VALUE || dist < headwayMarkDist - HEADWAY) {
+            headwayMarkDist = dist;
+            lastHeadwayTime = this.mob.level().getGameTime();
+        }
+    }
+
+    /**
+     * Is this unit really on its way to its move target right now? A request in flight issued in the last
+     * {@link #PROGRESS_WINDOW} ticks, or a live path along which it got closer within that window.
+     */
+    public boolean isMakingProgress() {
+        if (moveTarget == null)
+            return false;
+        long now = this.mob.level().getGameTime();
+        if (pathPending)
+            return now - lastRequestTime <= PROGRESS_WINDOW;
+        if (this.mob.getNavigation().isDone())
+            return false;
+        return now - lastProgressTime <= PROGRESS_WINDOW;
+    }
+
+    /**
+     * How long this unit has held a move target without real headway: ticks since it last got {@link #HEADWAY} blocks
+     * closer (or since the order, or since its last path request while one is in flight). 0 with no move target.
+     * AttackerUnit's contact rule reads it: a unit blocked on a move order fights what it touches.
+     */
+    public long ticksWithoutProgress() {
+        if (moveTarget == null)
+            return 0;
+        long since = pathPending ? Math.max(lastHeadwayTime, lastRequestTime) : lastHeadwayTime;
+        return Math.max(0, this.mob.level().getGameTime() - since);
+    }
 
     public MoveToTargetBlockGoal(Mob mob, boolean persistent, int reachRange) {
         this.mob = mob;
@@ -139,16 +265,28 @@ public class MoveToTargetBlockGoal extends Goal {
             // be throttled. The synchronous vanilla path has its new final node ready, so decide the backoff
             // and arm the cooldown gate right here. The async RTS path isn't ready yet (start() just fired the
             // request), so flag it and let onPathReady do the same once the new path is in.
+            // a path stopped from outside (StuckNudge, UnitUnstick) leaves no end to compare: the plain move goal
+            // compares against the last end it was given, else every such stop read as progress and reset the give-up
             BlockPos oldFinalNode = getFinalNodePos();
+            if (oldFinalNode == null && givesUpWhenUnreachable())
+                oldFinalNode = lastPathEnd;
+            markRepathFrom();
             this.start();
             // start() is expensive and repeats every tick on a stuck mob (eg. targeting over water). Only the
             // synchronous vanilla path has a final node ready to compare for the backoff; the async RTS path
             // isn't ready yet (start() just fired the request), so it simply repaths next time it's done.
             if (!pathPending) {
                 BlockPos newFinalNode = getFinalNodePos();
-                if (oldFinalNode != null && oldFinalNode.equals(newFinalNode))
+                // No path at all is "still stuck" too. Before, two nulls in a row (a target in an unloaded chunk:
+                // RtsPathfinder answers null at once, inside start(), so this branch runs; or vanilla finding
+                // nothing) read as progress and reset the count, so the unit retried every 20 ticks forever,
+                // standing still and counted busy. Now it backs off and gives up like any other stuck repath.
+                // (A unit in the air - a jump, a knockback - gets null from vanilla's canUpdatePath for that moment:
+                // that is neither progress nor stuck, it just retries.)
+                boolean airborne = !this.mob.onGround() && !this.mob.isInWater() && !this.mob.isInLava() && !this.mob.isPassenger();
+                if ((newFinalNode == null && !airborne) || (newFinalNode != null && !repathMadeProgress(oldFinalNode, newFinalNode)))
                     onStuckRepath();
-                else
+                else if (newFinalNode != null)
                     resetRecalcBackoff();
                 recalcCooldown = currentRecalcCooldown;
             } else {
@@ -170,6 +308,7 @@ public class MoveToTargetBlockGoal extends Goal {
 
     public void start() {
         isRunning = true;
+        lastRequestTime = this.mob.level().getGameTime();
         // Cleared on every start(); canContinueToUse re-sets it after this call when it fires an async repath,
         // so a fresh order (started directly here) never inherits a previous repath's deferred backoff.
         pendingRepath = false;
@@ -224,6 +363,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        lastPathEnd = getFinalNodePos();
         // Broadcast the path so clients can render it briefly. Server-only — clients
         // that received the packet decide whether to render based on ownership/FOW.
         if (!this.mob.level().isClientSide()) {
@@ -242,15 +382,28 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            if (pendingRepath)
+                repathWalkCarried = repathWalked;
             pendingRepath = false;
             repathFromFinalNode = null;
             recalcCooldown = RECALC_COOLDOWN_MAX;
+            if (++busyStreak >= BUSY_FALLBACK_AFTER && moveTarget != null && this.mob instanceof Unit u
+                    && !this.mob.level().isClientSide() && takeSyncFallback(this.mob.level().getGameTime())) {
+                busyStreak = 0;
+                Path fallback = this.mob.getNavigation().createPath(moveTarget.getX(), moveTarget.getY(), moveTarget.getZ(), moveReachRange);
+                RtsDebugServerEvents.debugPathCalcsThisSecond += 1;
+                float speedMod = u.getSpeedModifier();
+                if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
+                this.mob.getNavigation().moveTo(fallback, speedMod);
+                lastPathEnd = getFinalNodePos();
+            }
             return;
         }
+        busyStreak = 0;
         // The deferred half of the repath throttle (see canContinueToUse): now that the async path is in we
-        // can compare its final node to the pre-repath one. Same node (or no path at all) = still stuck, grow
-        // the backoff; a changed node = progress, reset it. Then arm the cooldown gate so the next repath is
-        // throttled. wasRepath is false for a fresh order, which must never back off.
+        // can compare its final node to the pre-repath one. No progress (repathMadeProgress) or no path at all = still
+        // stuck, grow the backoff; progress = reset it. Then arm the cooldown gate so the next repath is throttled.
+        // wasRepath is false for a fresh order, which must never back off.
         boolean wasRepath = pendingRepath;
         pendingRepath = false;
         if (moveTarget == null) { repathFromFinalNode = null; return; }
@@ -271,6 +424,7 @@ public class MoveToTargetBlockGoal extends Goal {
         float speedMod = u.getSpeedModifier();
         if (speedMod < 1.0f) speedMod = (float) Math.sqrt(speedMod);
         this.mob.getNavigation().moveTo(path, speedMod);
+        lastPathEnd = getFinalNodePos();
         // The RTS pathfinder is async: node 0 is the unit's position when the request was SUBMITTED, a few
         // ticks ago. By delivery the unit has often drifted off it (crowd/formation separation, momentum),
         // and vanilla navigation always starts following at node 0 - so it would steer the unit BACK to the
@@ -278,7 +432,12 @@ public class MoveToTargetBlockGoal extends Goal {
         // already behind the unit by advancing to the node nearest its current position.
         snapPathToMob();
         if (wasRepath) {
-            if (Objects.equals(repathFromFinalNode, getFinalNodePos()))
+            BlockPos newFinalNode = getFinalNodePos();
+            // no end node at all: stuck, except for a subclass whose last path had an end (as before)
+            boolean stuck = newFinalNode == null
+                ? repathFromFinalNode == null || givesUpWhenUnreachable()
+                : !repathMadeProgress(repathFromFinalNode, newFinalNode);
+            if (stuck)
                 onStuckRepath();
             else
                 resetRecalcBackoff();
@@ -289,6 +448,18 @@ public class MoveToTargetBlockGoal extends Goal {
             byte type = path.canReach() ? RtsPathfinder.TYPE_ASTAR : RtsPathfinder.TYPE_FAILED;
             UnitPathClientboundPacket.sendPath(this.mob, path, type);
         }
+    }
+
+    // One of this tick's SYNC_FALLBACKS_PER_TICK vanilla paths for units the saturated async pool kept answering busy.
+    private static boolean takeSyncFallback(long gameTime) {
+        if (gameTime != syncFallbackTick) {
+            syncFallbackTick = gameTime;
+            syncFallbacksThisTick = 0;
+        }
+        if (syncFallbacksThisTick >= SYNC_FALLBACKS_PER_TICK)
+            return false;
+        syncFallbacksThisTick++;
+        return true;
     }
 
     // Advance the active nav path's next-node pointer to the node closest to the mob's CURRENT position,
@@ -327,6 +498,18 @@ public class MoveToTargetBlockGoal extends Goal {
         if (changed) {
             resetRecalcBackoff();
             recalcCooldown = 0;
+            busyStreak = 0;
+            // a new target starts with a fresh progress record (a grace window: a spam-click right after an order
+            // is still redundant while the first path comes in)
+            bestDistSq = Double.MAX_VALUE;
+            lastProgressTime = this.mob.level().getGameTime();
+            // the walk from here to the first path's end counts toward the first repath
+            repathFromX = this.mob.getX();
+            repathFromZ = this.mob.getZ();
+            repathWalkCarried = false;
+            lastPathEnd = null;
+            headwayMarkDist = Double.MAX_VALUE;
+            lastHeadwayTime = lastProgressTime;
         }
         this.moveTarget = bp;
 
@@ -365,6 +548,8 @@ public class MoveToTargetBlockGoal extends Goal {
         pathPending = false;
         pendingRepath = false;
         repathFromFinalNode = null;
+        repathWalkCarried = false;
+        lastPathEnd = null;
         pathRequestSeq++; // cancel any in-flight path so a late result can't restart movement after a stop.
         this.moveTarget = null;
         this.mob.getNavigation().stop();

@@ -12,10 +12,10 @@ import json
 import math
 import sys
 
-P = dict(beatTicks=36.0, down=0.64, flapUp=36.0, flapDown=-46.0, glideArm=7.0, glideFrom=0.16, glideFull=0.34, breathTicks=90.0, neckLag=2.0,
+P = dict(beatTicks=52.0, down=0.64, flapUp=36.0, flapDown=-46.0, glideArm=7.0, glideFrom=0.16, glideFull=0.34, breathTicks=90.0, neckLag=2.0,
          tailLag=3.0, neckWave=6.0, tailWave=7.0, riseP=9.0, dropPx=6.0, pitchUp=10.0, pitchDown=6.0, shakeEvery=260.0, yawnEvery=210.0,
          attackTicks=22.0, attackWindup=6.0,
-         bankMax=30.0, bankPerDeg=5.0, bankOmega=0.5, headingTau=5.0, tailBankLag=4.0, bankHover=0.45, bankGround=0.12,
+         bankMax=50.0, bankPerDeg=5.0, bankOmega=0.5, headingTau=5.0, tailBankLag=4.0, bankHover=0.45, bankGround=0.12,
          climbSpeed=0.06)
 NECK_N, TAIL_N = 5, 7
 ID = 0

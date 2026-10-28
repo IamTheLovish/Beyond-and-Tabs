@@ -57,7 +57,7 @@ look for none of that risk. (Vanilla's sky colour cannot be overridden without a
 ## 2. Metal values
 
 `MetalPatches` now stores a value per patch (saved with the world, synced to clients). An extractor's income is
-`base * value` (T1 2.0/s, T2 7.0/s). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
+`base * value` (T1 2.0/s, T2 4.5/s - 7.0 until Oct 24). Rich patches show it in the ground: **1.0x** raw iron plus; **1.5x** raw
 iron plus with a raw-gold heart; **2.0x** a gold-block heart. The minimap draws 1.5x patches gold, 2.0x bright
 gold. Typical layout per slot: a home ring at 1.0x (safe, slow), forward/contested patches at 1.5x (take ground
 to earn more), and the centre cluster at 2.0x (one per slot, the prize everyone fights over - chess's control of
@@ -91,8 +91,29 @@ sight (grey in the fog), and the floating gem is bigger.
   (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
   every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
   patches stamped exactly that far from a real ring wall.
-- *Knobs on `MetalOptions`*: `rimInset` (default `AUTO_RIM` = the clearance; a larger number keeps the fill further in,
-  a smaller one is lifted to the clearance) and `reserved` (areas the fill must leave alone - the hook for the hero
+- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized").* `HomeMetal`: 6 patches
+  a seat, 1.0 each, in a fan 18 blocks from the start (11 to 24 after a nudge), on every pre-made map and player count.
+  A spot the ground refuses moves toward the start, then to the next angle or radius: count and yield never change.
+  The extra-metal level and the lobby's richness never touch it.
+- *Extra metal, spread over the whole map, with a bonus for the outskirts (lovish Oct 22: "we can add more mexes than we
+  have to the game", "spread all over the map", "bonuses to players that reach to the outskirts", "he does want massive
+  armies").* `MapLayout.spread` runs three passes over one candidate list: the core fill (the map as it was: <= 14 a slot,
+  richness-scaled, not nearer the wall than 22), the rim fill (<= 4 a slot between the clearance and 22) and the spread
+  (<= 8 a slot anywhere with room, 16 apart), each farthest-from-every-patch first. The core fill never loses a patch to
+  the others. A patch yields `1 + level x (0.5 x distance-from-bases + 0.6 x rim)` (`MapLayout.openValue`): 1.0 at the
+  bases, rising to ~1.5 mid-map and ~2.0 at the clearance line on a land map at the normal level. Maps whose open ground is
+  cut by water or void (Archipelago, End Spires, Chorus Isles) have little room, so little extra: the flood rule stands.
+- *Extra-metal level* `MetalOptions.Extra`: LOW (half the extra patches and premium), NORMAL (default), HIGH (twice the
+  extra patches, 1.25x the premium); NONE is the old map (tests). Not in the lobby UI yet; tune it from the bot ladder.
+- *Metal reaches the wall (Oct 22, lovish: "edgeline means maybe enough blocks away that the extractor doesn't get
+  blocked by the wall").* The fill may place a patch as close to the wall as `ExtractorClearance.blocks()` = **11
+  blocks**, derived in code: the biggest extractor structure of any faction and tier (all fourteen `metal_extractor*`
+  files, 5x5, read from the registry), the 1-block placement gap, the 7x7 pad, a worker lane, the wall's widest piece
+  (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
+  every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
+  patches stamped exactly that far from a real ring wall.
+- *Other knobs on `MetalOptions`*: `rimInset` (default `AUTO_RIM` = the clearance; a larger number keeps the fill further
+  in, a smaller one is lifted to the clearance) and `reserved` (areas the fill must leave alone - the hook for the hero
   jungle; nothing reserved today). The arena's edge is asked of one helper, `MapLayout.distanceToArenaEdge`, a circle
   today.
 
@@ -306,7 +327,7 @@ generic capture kinds. Lobby option `Map: Random terrain`.
 
 ## 5. Start-position phase (BAR's "start position mode")
 
-After Start (and after a pre-made map has finished rising), a **45 s** phase:
+After Start (and after a pre-made map has finished rising), a phase with a **120 s** AFK clock (45 s before Ready):
 
 * Each team's **start box** is an annular sector round its slots (teams' boxes separated by a gap), drawn on the
   minimap (team-coloured outline + hatching) and in the world (a coloured outline on the ground).
@@ -318,7 +339,15 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   only to stop teammates stacking - here every slot owns its own mexes, so stacking only hurts the staller.
   Simultaneous is quicker and nobody waits; the "await their turn" feel is kept by the countdown banner.
 * **Bots** auto-place at their slot instantly. When the clock runs out, anyone unplaced is placed at their slot
-  (equally fair). If every human has placed, the phase ends 3 s later.
+  (equally fair) and the match starts, with a chat line naming who was not ready.
+* **Ready** (tester Joisco, Oct 26; BAR's own ready check): placing starts nothing. Each human places, then presses
+  **Ready** in the panel on the right (refused until placed); the panel lists every side as placing / placed /
+  READY / bot / left with "Ready n/m" on top, so everyone sees who the match waits for. A ready player un-readies
+  to move. When every human still in the phase is placed and ready (bots always are), the phase ends 3 s later; an
+  un-ready in those 3 s stops it. A player who logs out drops out of the count and everyone is told (back in,
+  unready, on a rejoin). The host (singleplayer owner / op on a dedicated server) has **Force start**: the first
+  click warns, naming who is not ready, the second starts; non-hosts are refused. Ready is not saved: a reloaded
+  phase asks every human again. Tests: gametest/SpawnReadyGameTests.java (batch spawn_ready).
 * Then the match starts exactly as before (capitol, commander, workers, alliances), the battlefield forms
   (base clearing, wall at the map's radius in the map's material) - a pre-made map skips the procedural patch
   and capture stamping because the map already placed its own.
@@ -328,7 +357,7 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
   while the map rises or starts are placed **resumes** on reload. The map build runs again from the saved setup (it
   only writes blocks that differ; an economy already stamped is not stamped twice); the phase comes back with every
   pick and its clock, held until a player is back and then at least 20 s, and ends early only once every human has
-  returned. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
+  returned and pressed Ready again. Rejoining players get the RTS view and their camera on their pick. A setup that can't resume is cancelled
   cleanly. Details: design/ron_rewrite_plan.md "Rewrite 5", design/persistence.md.
 
 ## 6. Tests (gametest/SkirmishGameTests.java, end of file)
@@ -339,7 +368,8 @@ After Start (and after a pre-made map has finished rising), a **45 s** phase:
 * `map_capture_sites_spawn_with_their_effect`: every map's site kinds are the ones it advertises; a captured
   Lava Vent pays energy, a captured Ancient Forge discounts research, an Oasis heals.
 * `start_phase_places_everyone_in_their_box`: a click outside the box is refused, a click inside is kept,
-  bots are placed at once, and the timeout places the rest inside their boxes and fires the start.
+  bots are placed at once, and the timeout places the rest inside their boxes and fires the start; placing alone
+  does not end the phase, placing and Ready does.
 
 Realm maps and the garrison (gametest/RealmMapGameTests.java; MapLayout was also checked offline with a harness that
 renders every map to PNG):

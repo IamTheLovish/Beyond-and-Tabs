@@ -272,7 +272,6 @@ public class ResourceCosts {
     // ABILITIES
 
     public static final ResourceCost ENCHANT_MAIMING = new ResourceCost(ID, "ENCHANT_MAIMING");
-    public static final ResourceCost VINE_SNARE = new ResourceCost(ID, "VINE_SNARE");   // Verdant Seedshaper trap
     public static final ResourceCost THICKET = new ResourceCost(ID, "THICKET");         // Verdant Seedshaper 3x3 thicket
     public static final ResourceCost ENCHANT_QUICK_CHARGE = new ResourceCost(ID, "ENCHANT_QUICK_CHARGE");
     public static final ResourceCost ENCHANT_SHARPNESS = new ResourceCost(ID, "ENCHANT_SHARPNESS");
@@ -617,7 +616,6 @@ public class ResourceCosts {
         RESEARCH_PILLAGER_CROSSBOWS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_PILLAGER_CROSSBOWS);
         // ******************* ABILITIES ******************* //
         ENCHANT_MAIMING.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MAIMING);
-        VINE_SNARE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.VINE_SNARE);
         THICKET.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.THICKET);
         ENCHANT_QUICK_CHARGE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_QUICK_CHARGE);
         ENCHANT_SHARPNESS.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_SHARPNESS);
@@ -662,5 +660,7 @@ public class ResourceCosts {
         EARTHCRACKER.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.EARTHCRACKER);
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
+        // the tier gate's prices win over the config entries (resources/TierGate: Tier 2 research, the T2 labs, the extractor refit)
+        TierGate.bake();
     }
 }

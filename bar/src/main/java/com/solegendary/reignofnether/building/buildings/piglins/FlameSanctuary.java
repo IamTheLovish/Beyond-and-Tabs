@@ -45,6 +45,7 @@ public class FlameSanctuary extends ProductionBuilding {
 
         this.explodeChance = 0.2f;
         this.maxHealth = 150d;
+        this.buildTimeBlocks = com.solegendary.reignofnether.resources.TierGate.T2_LAB_BUILD_BLOCKS;   // one build time for every faction's T2 lab (resources/TierGate)
 
         this.productions.add(ProductionItems.RESEARCH_BLAZE_FIREWALL, Keybindings.abilitySlot1);
         // Horde T2 lab
@@ -55,6 +56,9 @@ public class FlameSanctuary extends ProductionBuilding {
         this.productions.add(ProductionItems.BONEWRIGHT, Keybindings.abilitySlot6);   // T2 constructor
         this.productions.add(ProductionItems.GOREHORN_RHINO, Keybindings.abilitySlot7);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.WRECKER, Keybindings.abilitySlot8);   // combat engineer (design/combat_engineers.md)
+        // the T2-lab hero and its revive share a slot (H13: design/heroes-t2-lab.md); slots 1-8 were all taken
+        this.productions.add(ProductionItems.ASH_SHAMAN, Keybindings.abilitySlot9);
+        this.productions.add(ProductionItems.ASH_SHAMAN_REVIVE, Keybindings.abilitySlot9);
     }
 
 

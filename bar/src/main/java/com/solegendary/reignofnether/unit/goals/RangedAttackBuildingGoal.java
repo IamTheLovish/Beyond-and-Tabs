@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.unit.goals;
 
+import com.solegendary.reignofnether.unit.Engage;
+
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -157,7 +159,8 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
             }
             if (distToTarget <= attackRange) { // start drawing bowstring
                 if (bowAttackGoal != null) {
-                    if (bowAttackGoal.getAttackCooldown() <= 0) {
+                    // artillery set-up (unit/SetUp): hold the shot, and the cooldown, until it has stood still
+                    if (bowAttackGoal.getAttackCooldown() <= 0 && com.solegendary.reignofnether.unit.SetUp.isSetUp(this.mob)) {
                         if (mob instanceof RangedAttackerUnit rangedAttackerUnit) {
                             rangedAttackerUnit.performUnitRangedAttack(tx, ty, tz, 20);
                             if (!mob.level().isClientSide() && buildingTarget != null)
@@ -194,7 +197,7 @@ public class RangedAttackBuildingGoal<T extends Mob> extends Goal {
         FlyingMoveToTargetGoal fmg = getFlyingMoveGoal();
         if (fmg != null)
             fmg.setMoveTarget(bp);
-        else
+        else if (!Engage.keepPath(this.mob, bp, 1.0f))   // every tick while out of range: keep a path that still ends there
             this.mob.getNavigation().moveTo(bp.getX(), bp.getY(), bp.getZ(), 1.0f);
     }
 }
