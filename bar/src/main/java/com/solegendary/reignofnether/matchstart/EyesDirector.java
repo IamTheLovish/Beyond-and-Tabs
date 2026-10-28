@@ -610,6 +610,16 @@ public final class EyesDirector {
         if (capitolCentre == null)
             capitolCentre = findCapitol(mc);
         int[][] axes = { { -1, 1 }, { 1, 1 }, { -1, -1 }, { 1, -1 } };
+        // toward the map's centre first: the RTS camera stands back from what it looks at (behind and above it), and a
+        // site on the far side of the capitol put that camera spot outside the world border - the server clamps the
+        // camera back inside (PlayerServerEvents.movePlayer) and every 15_* RTS still showed the ground beside the
+        // structure, not the structure (meadow / ground samplers, run 40679410746, Oct 28)
+        var border = mc.level.getWorldBorder();
+        double bcx = border.getCenterX(), bcz = border.getCenterZ();
+        java.util.Arrays.sort(axes, java.util.Comparator.comparingDouble(a -> {
+            double dx = capitolCentre.getX() + a[0] * 45 - bcx, dz = capitolCentre.getZ() + a[1] * 45 - bcz;
+            return dx * dx + dz * dz;
+        }));
         int[] axis = axes[0];
         for (int[] a : axes)
             if (dryAround(mc, capitolCentre.getX() + a[0] * 44, capitolCentre.getZ() + a[1] * 44)) {
