@@ -332,13 +332,7 @@ public class ArtilleryGameTests {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_arty_blocked_air_" + helper.absolutePos(BlockPos.ZERO).asLong();
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
-        // a pen two blocks high round the crew: its move east can make no headway, so it counts as blocked
-        for (int x = 0; x <= 5; x++)
-            for (int z = 6; z <= 11; z++)
-                if (x == 0 || x == 5 || z == 6 || z == 11)
-                    for (int y = 2; y <= 3; y++)
-                        helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
-        var b = bombard(helper, owner, 2.5, 8.5);
+        var b = bombard(helper, owner, 1.5, 8.5);
         var g = EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
         if (b == null || g == null) {
             if (b != null) b.discard();
@@ -351,6 +345,7 @@ public class ArtilleryGameTests {
         g.setOwnerName(owner + "_foe");
         level.addFreshEntity(g);
         BlockPos dest = helper.absolutePos(new BlockPos(14, 2, 8));
+        double bx = b.getX(), by = b.getY(), bz = b.getZ();
         boolean[] done = { false };
         int[] tick = { 0 }, hitAt = { -1 };
         Runnable cleanUp = () -> {
@@ -363,14 +358,17 @@ public class ArtilleryGameTests {
             if (done[0])
                 return;
             tick[0]++;
-            hold(g, gx, gy, gz);   // the gull hovers outside the pen
+            hold(g, gx, gy, gz);   // the gull hovers in front of it
+            // body-blocked: held where it stands, its path stays live but it makes no headway (a wall would not do -
+            // the walk ends at the wall and the move with it, which is not blocked)
+            hold(b, bx, by, bz);
             if (hitAt[0] < 0) {
                 if (tick[0] > 5 && AttackerUnit.blockedOnMove(b)) {
                     hitAt[0] = tick[0];
                     b.hurt(level.damageSources().indirectMagic(g, g), 1f);   // the gull hits the blocked crew
-                } else if (tick[0] > 200) {
+                } else if (tick[0] > 90) {
                     cleanUp.run();
-                    throw new GameTestAssertException("the penned crew never counted as blocked on its move - the "
+                    throw new GameTestAssertException("the held crew never counted as blocked on its move - the "
                         + "test proves nothing (move target " + b.getMoveGoal().getMoveTarget() + ")");
                 }
                 return;
@@ -384,7 +382,7 @@ public class ArtilleryGameTests {
                 throw new GameTestAssertException((tick[0] - hitAt[0]) + " ticks after the flyer hit it the blocked "
                     + "crew had dropped its move, with no target: it stands and dies");
             }
-            if (tick[0] - hitAt[0] >= 10) {
+            if (tick[0] - hitAt[0] >= 5) {
                 cleanUp.run();
                 helper.succeed();
             }
