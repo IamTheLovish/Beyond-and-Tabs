@@ -89,6 +89,15 @@ public class DisplaySettings {
         return Math.max(0, Math.min(get(ReignOfNetherClientConfigs.WORLD_LOOK_HAZE, 100), 200)) / 100f;
     }
 
+    /** Ambient life (ambient/AmbientLifeClientEvents): butterflies by day, fireflies at night, round the camera's view. */
+    public static boolean ambientLife() {
+        try {
+            return ReignOfNetherClientConfigs.AMBIENT_LIFE.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Building ambience (design/lively_buildings.md): the idle particles round capitols, energy buildings and labs. */
     public static boolean buildingAmbience() {
         try {
