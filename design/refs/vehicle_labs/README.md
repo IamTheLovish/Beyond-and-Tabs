@@ -212,3 +212,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    Minecraft dark gothic castle against mountains: black-grey stone TOWERS of several heights with crimson CONED SPIRES,
    tall lit LANCET windows in a strict rhythm, clustered round a central hall. The clearest large view of the dark-castle
    style (refs 16, 26). GRAVEBOUND alternative primary (soul-green glow and pale bone instead of red).
+
+34f. lovishs 33rd reference (04:20): /root/bat/design/refs/vehicle_labs/ref33_swept_roof_timber_hall.png - a Minecraft
+   medieval stone-and-timber hall with a HUGE SWEPT ROOF curving down in one long line, JETTIED timber storeys over a
+   rough stone ground floor, deep layered eaves, many wood/stone tones. TIDEWROUGHT: in wreck timber, a roof curved like
+   an UPTURNED HULL reads as "shipyard" from above; pairs with ref31. Everyone: a single sweeping roofline is a strong,
+   calm landmark shape.
