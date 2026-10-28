@@ -81,6 +81,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapBuilder.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.StartPhase.class);
         vanillaEventBus.register(com.solegendary.reignofnether.maps.MapMatch.class);
+        // a new match on a running server moves the arena to fresh ground (issue #35): /rts-newmatch + the slow demolition
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.NewMatch.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.maps.ArenaRetirement.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.ArenaStructureClearing.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderAntiAir.class);   // commanders shoot flyers
@@ -118,6 +121,8 @@ public class ServerEventRegistrar {
         // Stormcallers slice 3: the Ley Master's Mana Wells, the Mirror Mage's decoys
         // wells, ley links and tidepools saved with the world (design/persistence.md)
         vanillaEventBus.register(com.solegendary.reignofnether.persistence.MatchStateSaveData.class);
+        // plan 014: RTS saved data reaches the disk with the world save, one write on the stop
+        vanillaEventBus.register(com.solegendary.reignofnether.persistence.RtsSaves.class);
         vanillaEventBus.register(com.solegendary.reignofnether.mana.DecoyServerEvents.class);
         // Stormcallers slice 4: the Lantern Fortress's dome, the Celestial Dragon's Tempest, the Phoenix's rebirth
         vanillaEventBus.register(com.solegendary.reignofnether.mana.LanternDomeServerEvents.class);
@@ -141,6 +146,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(TimeServerEvents.class);
         vanillaEventBus.register(CustomBuildingServerEvents.class);
         vanillaEventBus.register(CommandsServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.ParadeGround.class);
         vanillaEventBus.register(ScenarioServerEvents.class);
         vanillaEventBus.register(WorldBorderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.worldborder.ArenaPathing.class);

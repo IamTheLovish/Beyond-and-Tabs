@@ -721,9 +721,9 @@ public class BotPlayer {
                 done = BotDefences.think(this, level, buildings, workers, home, minutes);
         }
 
-        // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit
+        // 4b) tech: research tier 2 at the difficulty's minute (hard: 5 since Oct 24, so the T2 lab stands by ~9-10), then refit
         // home extractors one at a time
-        // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
+        // (not before eight workers: the research holds the capitol's queue for three minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
@@ -2382,6 +2382,11 @@ public class BotPlayer {
 
     enum Layout { WIND, CONVERTER, VAULT, FARM, HOUSE, ARMY }
 
+    /** Where the bot's index-th converter goes (public for the game tests: converters must stay clear of each other's death blast). */
+    public BlockPos converterSlot(int index) {
+        return layoutSlot(Layout.CONVERTER, index);
+    }
+
     /**
      * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
      * Wind generators fill rows of six behind the capitol (4-block pitch for their 3x3), converters sit at the
@@ -2400,7 +2405,9 @@ public class BotPlayer {
         double back, side;
         switch (kind) {
             case WIND -> { back = 14 + (index / 6) * 4; side = (index % 6 - 2.5) * 4; }
-            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * 4); }
+            // converters are the fragile eco building and blow up their neighbours (RaidTuning.CONVERTER_BLAST_RADIUS 5): spaced
+            // 8 apart so one lost to a raid stays one lost
+            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * com.solegendary.reignofnether.raid.RaidTuning.CONVERTER_SPACING); }
             // vaults: a row past the converters, deepest in the base (they lose what they hold when they fall)
             case VAULT -> { back = 14 + 4 * 3 + 7; side = (index % 2 == 0 ? 1 : -1) * (2 + (index / 2) * 4); }
             case FARM -> { back = 4 + index * 12; side = 27; }
