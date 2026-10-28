@@ -111,6 +111,14 @@ public class RootedTreantGameTests {
         return false;
     }
 
+    /** What UnitUnstick reads, for a failure message. */
+    static String unstickState(SentinelTreantUnit t) {
+        return String.format("{pos %.2f %.2f %.2f, encased %s, standable %s, onGround %s, idle %s, target %s, nav done %s, noPhysics %s, rooted %s}",
+            t.getX(), t.getY(), t.getZ(), com.solegendary.reignofnether.unit.UnitUnstick.isEncased(t),
+            com.solegendary.reignofnether.unit.UnitUnstick.isOnStandableGround(t), t.onGround(), t.isIdle(),
+            t.getTarget() == null ? "none" : t.getTarget().getType().toShortString(), t.getNavigation().isDone(), t.noPhysics, t.isRooted());
+    }
+
     static double movedFrom(Mob m, double x0, double z0) {
         return Math.hypot(m.getX() - x0, m.getZ() - z0);
     }
@@ -446,7 +454,12 @@ public class RootedTreantGameTests {
         List<String> problems = new ArrayList<>();
         double[] start = new double[6];
         double[] mostOff = new double[3];
+        String[] seen = new String[2];
         everyTick(helper, 250, tick -> {
+            if (tick == 2) {
+                seen[0] = unstickState(rooted);
+                seen[1] = unstickState(buried);
+            }
             if (tick > 1) {
                 mostOff[0] = Math.max(mostOff[0], movedFrom(rooted, start[0], start[1]));
                 mostOff[1] = Math.max(mostOff[1], movedFrom(control, start[2], start[3]));
@@ -471,8 +484,18 @@ public class RootedTreantGameTests {
                     problems.add("the unrooted control was not lifted out of its pit (got " + mostOff[1] + " blocks off): the pit is no pocket");
                 if (mostOff[0] > 0.3 || !rooted.isRooted())
                     problems.add("the stuck-unit rescue moved a rooted Treant " + mostOff[0] + " blocks (rooted " + rooted.isRooted() + ")");
-                if (mostOff[2] < 0.5)
-                    problems.add("a rooted Treant inside blocks should still be freed (got " + mostOff[2] + " blocks off)");
+                if (mostOff[2] < 0.5) {
+                    // why: its state at tick 2 and now, then two checks run by hand (a strike, then the rescue)
+                    String now = unstickState(buried);
+                    double bx = buried.getX(), bz = buried.getZ();
+                    buried.tickCount = 40 * (buried.tickCount / 40 + 2) - buried.getId() % 40;
+                    com.solegendary.reignofnether.unit.UnitUnstick.tick(buried);
+                    com.solegendary.reignofnether.unit.UnitUnstick.tick(buried);
+                    problems.add("a rooted Treant inside blocks should still be freed (got " + mostOff[2] + " blocks off; at tick 2 "
+                        + seen[1] + "; now " + now + "; two checks by hand moved it " + Math.hypot(buried.getX() - bx, buried.getZ() - bz) + ")");
+                }
+                if (!problems.isEmpty())
+                    problems.add("pit-rooted Treant at tick 2 " + seen[0] + ", now " + unstickState(rooted));
                 return finish(helper, problems, units);
             }
             return false;
