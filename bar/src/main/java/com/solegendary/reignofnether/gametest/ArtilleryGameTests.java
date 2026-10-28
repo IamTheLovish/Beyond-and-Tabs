@@ -644,10 +644,11 @@ public class ArtilleryGameTests {
             var at = p.aimPoint(b);
             var bp = net.minecraft.core.BlockPos.containing(at.x - 0.01 * Math.signum(at.x - b.getX()), at.y - 0.01,
                 at.z);
-            aim = String.format("%.2f away, %.2f below the feet, at %s (%s), eye %.2f, pose %s, yaw %.0f",
+            aim = String.format("%.2f away, %.2f below the feet, at %s (%s), eye %.2f, pose %s, yaw %.0f, pitch %.1f, "
+                    + "ground ahead [%s ]",
                 Math.hypot(at.x - b.getX(), at.z - b.getZ()), b.getY() - at.y, bp.toShortString(),
                 b.level().getBlockState(bp).getBlock().getName().getString(), b.getEyeHeight(), b.getPose(),
-                b.getYRot());
+                b.getYRot(), p.aimPitch(), groundAhead(b, p));
         }
         return String.format("set-up left %d, cooldown %s, on ground %b, %.2f from the spot, y %.2f, nearby [%s ], "
                 + "shells %d, aim %s",
@@ -840,6 +841,38 @@ public class ArtilleryGameTests {
         });
     }
 
+    /** The top block at each whole block along the look direction (1-10 out), height over the feet and its name. */
+    static String groundAhead(net.minecraft.world.entity.Mob b,
+            com.solegendary.reignofnether.hero.PossessionServer.Possession p) {
+        var dir = net.minecraft.world.phys.Vec3.directionFromRotation(0, b.getYRot());
+        StringBuilder out = new StringBuilder();
+        int feet = net.minecraft.util.Mth.floor(b.getY());
+        for (int d = 1; d <= 10; d++) {
+            int x = net.minecraft.util.Mth.floor(b.getX() + dir.x * d), z = net.minecraft.util.Mth.floor(b.getZ() + dir.z * d);
+            String top = "-";
+            for (int y = feet + 3; y >= feet - 2; y--) {
+                var st = b.level().getBlockState(new BlockPos(x, y, z));
+                if (!st.isAir()) {
+                    top = (y - feet) + st.getBlock().getName().getString().substring(0, 2);
+                    break;
+                }
+            }
+            out.append(' ').append(top);
+        }
+        return out.toString();
+    }
+
+    /** Falling blocks over the arena, each logged once: the tick, where it started and where it is (relative). */
+    static void watchFalling(GameTestHelper helper, java.util.Set<Integer> seen, StringBuilder log, int tick) {
+        var box = new net.minecraft.world.phys.AABB(helper.absolutePos(new BlockPos(-2, 0, -2)),
+            helper.absolutePos(new BlockPos(18, 40, 18)));
+        for (var f : helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, box))
+            if (seen.add(f.getId()))
+                log.append(String.format(" t%d %s from %s at %s", tick, f.getBlockState().getBlock().getName().getString(),
+                    helper.relativePos(f.getStartPos()).toShortString(),
+                    helper.relativePos(f.blockPosition()).toShortString()));
+    }
+
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
@@ -881,12 +914,15 @@ public class ArtilleryGameTests {
         // drift, fits in what that momentum would open
         int hops = keysRunFirst ? 1 : 3, hopFrom = keysRunFirst ? 16 : 10, hopEnd = hopFrom + hops * cycle - rest;
         double pace = keysRunFirst ? 0.2 : 0.12, minMoved = keysRunFirst ? 1.5 : 2.0;
+        java.util.Set<Integer> fallSeen = new java.util.HashSet<>();
+        StringBuilder fallLog = new StringBuilder();
         int[] tick = { 0 }, seq = { 0 };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])
                 return;
             tick[0]++;
             int t = tick[0];
+            watchFalling(helper, fallSeen, fallLog, t);
             if (keysRunFirst && t < hopFrom - 1) {
                 com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), 1, 0, -90, 10,
                     t == hopFrom - 3, false, true);
@@ -935,7 +971,8 @@ public class ArtilleryGameTests {
             } else if (since > SET_UP + 10) {
                 String why = possessedFireState(b, uuid, base[0], base[2]);
                 cleanUp.run();
-                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops; " + why + ")");
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops; " + why
+                    + "; falling blocks [" + fallLog + " ])");
             }
         });
     }

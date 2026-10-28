@@ -138,6 +138,8 @@ public final class PossessionServer {
         public int drivenTicks;
         /** Ticks before the next attack click may fire (a game test's failure message). */
         public int attackCooldownLeft() { return attackCooldown; }
+        /** The pitch the last input or click carried (a game test's failure message). */
+        public float aimPitch() { return pitch; }
         /** Where a click would aim now: the look ray's block hit (or its end), as attack() finds it (game test). */
         public Vec3 aimPoint(Mob mob) {
             return lookPoint(mob, yaw, pitch, mob instanceof AttackerUnit a ? Math.max(a.getAttackRange(), 4) : 4);
