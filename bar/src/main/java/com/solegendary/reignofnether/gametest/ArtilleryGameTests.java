@@ -171,7 +171,10 @@ public class ArtilleryGameTests {
                 throw new GameTestAssertException("the galley walked " + Math.round(walked[0])
                     + " blocks toward a target it can shell over the wall (now " + Math.round(flat(g, v)) + " away)");
             if (v.isAlive() && v.getHealth() >= full)
-                throw new GameTestAssertException("no shell has landed on the target yet");
+                throw new GameTestAssertException("no shell has landed on the target yet (" + String.format("%.1f",
+                    flat(g, v)) + " away, target at " + v.blockPosition().toShortString() + ", set-up left "
+                    + com.solegendary.reignofnether.unit.SetUp.ticksLeft(g) + ", shells " + shellsOf(g) + "); galley: "
+                    + state(g));
             g.discard();
             v.discard();
             for (int z = 4; z <= 12; z++)
