@@ -55,6 +55,12 @@ public class TakeRoot extends Ability {
             unit);
     }
 
+    /** toggleRoot resets the Treant's orders itself when it roots; a press while uprooting keeps the held move. */
+    @Override
+    public boolean shouldResetBehaviours() {
+        return false;
+    }
+
     @Override
     public void use(Level level, Unit unitUsing, BlockPos targetBp) {
         if (!level.isClientSide() && unitUsing instanceof SentinelTreantUnit treant)
