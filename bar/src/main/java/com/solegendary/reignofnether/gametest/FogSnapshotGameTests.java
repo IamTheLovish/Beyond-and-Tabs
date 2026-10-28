@@ -57,13 +57,21 @@ public class FogSnapshotGameTests {
     /** Level compareFiles reads live chunks from, to say on a light mismatch which side the world now matches. */
     static ServerLevel diagLevel = null;
 
-    /** The old capture, kept as the reference: synchronous load + packet + encode for every chunk, in one go. */
+    /**
+     * The old capture, kept as the reference: synchronous load + packet + encode for every chunk, in one go. Like the
+     * capture (FogChunkSnapshot.createPendingBlockEntities), it first creates the block entities a chunk still holds
+     * only as pending tags: a chunk held at level 33 keeps those its features placed pending, and the packet lists
+     * only created ones (CI run 40638090592: "block entities (file only [...])" deep under the far box).
+     */
     static Map<ChunkPos, byte[]> oneTickCapture(ServerLevel level, int minCx, int maxCx, int minCz, int maxCz) {
         Map<ChunkPos, byte[]> out = new LinkedHashMap<>();
         for (int cx = minCx; cx <= maxCx; cx++)
             for (int cz = minCz; cz <= maxCz; cz++) {
                 LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, true);
                 if (chunk == null) continue;
+                var created = chunk.getBlockEntities();
+                for (BlockPos p : chunk.getBlockEntitiesPos())   // a fresh set: pending and created positions
+                    if (!created.containsKey(p)) chunk.getBlockEntity(p);
                 out.put(new ChunkPos(cx, cz), encode(new ClientboundLevelChunkWithLightPacket(
                         chunk, level.getLightEngine(), null, null)));
             }
