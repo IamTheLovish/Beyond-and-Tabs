@@ -111,6 +111,18 @@ public final class BarFx {
         return (flags >> SHOT_FACTION_SHIFT) & FACTION_MASK;
     }
 
+    public static byte impactFlags(byte where, boolean metal, byte faction) {
+        return 0;
+    }
+
+    public static int impactWhere(byte flags) {
+        return 0;
+    }
+
+    public static boolean impactMetal(byte flags) {
+        return false;
+    }
+
     /**
      * The F_* faction of whoever fired: an RTS unit's faction (by entity type, like its death debris), a projectile's
      * owner's, else F_NONE (players, wild mobs, towers without a known owner). Works on both sides; never throws
