@@ -218,3 +218,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    rough stone ground floor, deep layered eaves, many wood/stone tones. TIDEWROUGHT: in wreck timber, a roof curved like
    an UPTURNED HULL reads as "shipyard" from above; pairs with ref31. Everyone: a single sweeping roofline is a strong,
    calm landmark shape.
+
+34g. lovishs 34th reference (04:20): /root/bat/design/refs/vehicle_labs/ref34_gothic_spire_studies.png - three Minecraft
+   GOTHIC SPIRE STUDIES (signed by their builder: inspiration only): tall needles in SETBACK STAGES, open tracery in each
+   stage, clustered PINNACLES at every set-back, crockets up the edges, a slender needle top. PART studies: build the
+   spire/pinnacle parts (gothic_parts / the faction part libraries) to this detail. Sunforged lantern-spire, Gravebound
+   keep, and every gothic pinnacle.
