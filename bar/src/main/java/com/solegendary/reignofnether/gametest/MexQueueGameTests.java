@@ -388,11 +388,29 @@ public class MexQueueGameTests {
         final int padY = 264, step = 7, n = 13, half = (n - 1) * step / 2;
         Scene s = new Scene(helper, "ac5", padY);
         CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, false);
-        Mob worker = s.worker(-half - 4, -half);
-        Runnable undoBig = () -> CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
+        // the pad reaches 48 blocks out, past the chunks the arena keeps loaded: a worker spawned in an unloaded chunk
+        // is not visible to level.getEntity, so the server drops every order for it (isolated stress run 40670585000:
+        // "blueprint 161 was accepted past the cap; the builder's queue ... holds 0"). Hold the pad's chunks first.
+        List<long[]> chunks = new ArrayList<>();
+        for (int x = (s.cx - half - 6) >> 4; x <= (s.cx + half + 6) >> 4; x++)
+            for (int z = (s.cz - half - 6) >> 4; z <= (s.cz + half + 6) >> 4; z++)
+                chunks.add(new long[] { x, z });
+        Runnable undoBig = () -> {
+            CombatEngineerGameTests.skyPad(s.level, s.cx, padY, s.cz, half + 6, PAD_H, true);
+            GameTestChunks.releaseAll(s.level, chunks);
+        };
         // s.finish() throws when the test fails, so an undoBig.run() after it never ran: the radius-48 stone pad stayed at
         // y 264 over the next batches' arenas (CI run 40651908207: scar_lands_on_the_real_top_face found it as the ground)
         s.undos.add(undoBig);
+        // a chunk that never loads throws before any finish(): undo the scene (the big pad with it) on the way out
+        try {
+            GameTestChunks.holdAndAwaitOrFail(s.level, chunks, "ac5 queue pad");
+            GameTestChunks.awaitRingOrFail(s.level, chunks, "ac5 queue pad");
+        } catch (RuntimeException e) {
+            s.undo();
+            throw e;
+        }
+        Mob worker = s.worker(-half - 4, -half);
         if (worker == null) {
             s.setupFail("could not create the worker");
             undoBig.run();
@@ -432,13 +450,27 @@ public class MexQueueGameTests {
         }
         BuildRepairGoal g = ((WorkerUnit) worker).getBuildRepairGoal();
         if (!g.queuedBuildings.equals(s.sites.subList(0, want)))
-            s.problems.add("the builder's queue is not the " + want + " orders in order (holds " + g.queuedBuildings.size() + ")");
+            s.problems.add("the builder's queue is not the " + want + " orders in order (holds " + g.queuedBuildings.size()
+                + "; worker visible to the level: " + (s.level.getEntity(worker.getId()) == worker) + ")");
         if (!s.problems.isEmpty()) {
             s.finish();
             undoBig.run();
             return;
         }
         final int buildFirst = 3;
+        // a finished site leaves the builder's queue the tick it is built, not on the goal's next 5-tick turn (the
+        // queue check below ran inside that window now and then: "holds 158" with 3 built, CI run 40651908207)
+        helper.onEachTick(() -> {
+            if (s.done)
+                return;
+            for (int i = 0; i < want; i++)
+                if (s.sites.get(i).isBuilt && g.queuedBuildings.contains(s.sites.get(i))) {
+                    if (s.problems.isEmpty())
+                        s.problems.add("site " + i + " is built but still in the builder's queue (holds "
+                            + g.queuedBuildings.size() + ")");
+                    return;
+                }
+        });
         int[] tick = { 0 };
         Runnable[] stepper = new Runnable[1];
         stepper[0] = () -> helper.runAfterDelay(10, () -> {
