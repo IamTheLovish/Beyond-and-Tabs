@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.mixin.fogofwar;
 
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
+import com.solegendary.reignofnether.match.Spectators;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
@@ -23,8 +24,16 @@ public abstract class TrackedEntityMixin {
     @Shadow @Final ServerEntity serverEntity;
     @Shadow @Final private Set<ServerPlayerConnection> seenBy;
 
+    @Shadow public abstract void removePlayer(ServerPlayer player);
+
     @Inject(method = "updatePlayer", at = @At("HEAD"), cancellable = true)
     private void reignofnether$gateEntityVisibility(ServerPlayer player, CallbackInfo ci) {
+        // a watcher's camera body is never sent to anyone who plays (Spectators.isHiddenFrom); one already sent goes
+        if (entity instanceof ServerPlayer body && Spectators.isHiddenFrom(body, player)) {
+            removePlayer(player);
+            ci.cancel();
+            return;
+        }
         // shared check: own/allied units always, others only inside the viewer's current vision
         if (FogOfWarServerEvents.isEntityVisibleTo(player, entity)) return;
         // a living entity the player already tracks is dropped too, or it keeps streaming its moves from the fog
