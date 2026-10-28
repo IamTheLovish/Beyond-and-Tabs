@@ -979,6 +979,11 @@ public final class EyesDirector {
                 nextPhase(2);
             }
             case 2 -> {
+                // again once the camera has settled: turning the RTS view on moves the camera to its own base height
+                // a tick later, and an aim taken from the old height lands ~20 blocks off along the view (meadow and
+                // ground samplers, run 40703946521, Oct 28)
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_rts");
@@ -990,6 +995,8 @@ public final class EyesDirector {
                 nextPhase(3);
             }
             case 3 -> {
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));   // after the zoom settles
                 if (phaseSeconds() < 4)
                     return;
                 shot(mc, label + "_rts_close");
