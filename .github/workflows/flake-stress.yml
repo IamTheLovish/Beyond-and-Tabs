@@ -30,6 +30,10 @@ on:
         description: Optional, with `shard` - test-name prefixes (comma-separated, test:<prefix> also accepted) whose passes the summary lists; failures are always listed, and a `tests` run lists every test
         default: ""
 
+# read the repo, nothing else: the samples only check out, build and upload their own artifacts
+permissions:
+  contents: read
+
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -42,12 +46,14 @@ jobs:
       - uses: actions/checkout@v4
         if: inputs.shard == ''
         with:
+          persist-credentials: false
           path: wf
           sparse-checkout: tools/ci_stress_check.py
           sparse-checkout-cone-mode: false
       - uses: actions/checkout@v4
         if: inputs.shard == ''
         with:
+          persist-credentials: false
           ref: "${{ inputs.ref }}"
           path: tested
           sparse-checkout: bar/src/main/java/com/solegendary/reignofnether/gametest
@@ -56,8 +62,10 @@ jobs:
         env: { ST_ONLY: "${{ inputs.tests }}" }
         run: python3 wf/tools/ci_stress_check.py entries "$ST_ONLY" tested/bar/src/main/java/com/solegendary/reignofnether/gametest
       - id: m
+        # the input reaches the shell as data (env), never spliced into the script
+        env: { ST_RUNNERS: "${{ inputs.runners }}" }
         run: |
-          n="${{ inputs.runners }}"
+          n="$ST_RUNNERS"
           case "$n" in ''|*[!0-9]*) n=6;; esac
           [ "$n" -lt 1 ] && n=1; [ "$n" -gt 10 ] && n=10
           echo "matrix=$(python3 -c "import json; print(json.dumps(list(range(1, $n + 1))))")" >> "$GITHUB_OUTPUT"
@@ -71,7 +79,7 @@ jobs:
         run: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.ref }}" }
+        with: { persist-credentials: false, ref: "${{ inputs.ref }}" }
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -105,9 +113,11 @@ jobs:
           python3 - <<'EOF'
           import json, re, os
           log = open("bar/gametest.log", errors="replace").read() if os.path.exists("bar/gametest.log") else ""
-          failed = sorted(set(re.findall(r"\b([a-z0-9_]+) failed!", log)))
+          # names keep their method's case (sealed_arena_has_no_fluid_after_openGround): a lower-case-only pattern
+          # missed such a failure and cut such a pass at its first capital
+          failed = sorted(set(re.findall(r"\b([A-Za-z0-9_]+) failed!", log)))
           # passes: vanilla's reporter says nothing on a pass; GameTestShards logs "[TestTime] <name> <ms>" for each
-          names = re.findall(r"\[TestTime\]\s+(?:[A-Za-z0-9_]+\.)?([a-z0-9_]+)", log)
+          names = re.findall(r"\[TestTime\]\s+(?:[A-Za-z0-9_]+\.)?([A-Za-z0-9_]+)", log)
           passed = sorted(set(names) - set(failed))
           # how many tests this sample really ran: a `tests` entry without `test:` (a bare method name is read as a
           # batch name and matches nothing) ran 0 and the gametest server still says "All 0 required tests passed" -
@@ -135,6 +145,7 @@ jobs:
       # the workflow's own commit, not inputs.ref: stressing an older branch that predates the tool still works
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: tools/flake_stress_summary.py
           sparse-checkout-cone-mode: false
           path: src

@@ -9,7 +9,8 @@ Prints one `[Stress]` annotation and appends the same lines to the step summary.
 INVALID: an `::error::` annotation and exit code 1, so neither a reader of the annotations nor of the run's conclusion
 can take it for a clean result. Invalid means: no sample reported; a sample ran 0 tests (Oct 27: four runs were
 dispatched with bare test names - no `test:` - ran nothing, "All 0 required tests passed", and were posted as
-"[Stress] 0 failures"); or a `test:<prefix>` that was asked for matched no test in any sample.
+"[Stress] 0 failures"); a `test:<prefix>` that was asked for matched no test in any sample; or a sample failed
+without naming a test (a build error, a timeout, a crash - or a failure the log parser missed).
 Real test failures are the measurement, not a broken run: they are listed (most failures first) and exit 0.
 Tests: tools/test_flake_stress_summary.py.
 """
@@ -32,7 +33,7 @@ def unmatched_prefixes(tests, ran_names):
         entry = entry.strip()
         if entry.lower().startswith("test:"):
             prefix = entry[5:].strip().lower()
-            if prefix and not any(t.startswith(prefix) for t in ran_names):
+            if prefix and not any(t.lower().startswith(prefix) for t in ran_names):
                 out.append(entry)
     return out
 
@@ -64,7 +65,7 @@ def summarise(runs, tests="", shard="", focus=""):
         lines.append(f"INVALID: asked for but matched no test in any sample: {unmatched}")
     for t in sorted(ran_names, key=lambda t: (-fails[t], t)):
         # a whole-shard run has hundreds of tests: list the failures and the focus tests only
-        if focus_list and not fails[t] and not any(t.startswith(f) for f in focus_list):
+        if focus_list and not fails[t] and not any(t.lower().startswith(f) for f in focus_list):
             continue
         lines.append(f"{t}: failed {fails[t]}, passed {passes[t]}")
     if not fails and ran_names:
@@ -72,7 +73,9 @@ def summarise(runs, tests="", shard="", focus=""):
     crashed = [r["run"] for r in runs if r["outcome"] != "success" and not r["failed"] and r["run"] not in empty]
     if crashed:
         lines.append(f"runs that failed without naming a test (build error, timeout, crash): {crashed}")
-    return lines, n == 0 or bool(empty) or bool(unmatched)
+    # a sample that failed without naming a test could hide a failure of a test under stress (a name the log parser
+    # missed, a crash mid-test): its fail counts are not trustworthy until someone looks at that sample
+    return lines, n == 0 or bool(empty) or bool(unmatched) or bool(crashed)
 
 
 def main():

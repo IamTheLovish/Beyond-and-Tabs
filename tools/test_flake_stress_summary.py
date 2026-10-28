@@ -88,10 +88,22 @@ class Summary(unittest.TestCase):
         self.assertLess(out.index("a: failed 1, passed 1"), out.index("b: failed 0, passed 2"))
         self.assertIn("2 runners; 1 with any failure", out)
 
-    def test_a_crash_that_names_no_test_is_reported_separately(self):
+    def test_a_sample_that_failed_without_naming_a_test_makes_the_run_invalid(self):
+        # its failure could be one of the tests under stress (a name the log parser missed), so the fail counts would
+        # understate it: the run proves nothing until it is looked at
         code, out, _ = run([sample(1, passed=["a"]), sample(2, passed=["a"], outcome="failure")], tests="test:a")
-        self.assertEqual(code, 0, out)
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("::error::", out)
         self.assertIn("without naming a test (build error, timeout, crash): [2]", out)
+
+    def test_names_with_capitals_match_prefixes_and_focus(self):
+        # test names keep their method's case (sealed_arena_has_no_fluid_after_openGround); prefixes are compared
+        # case-blind, as GameTestShards does
+        code, out, _ = run([sample(1, passed=["sealed_arena_after_openGround"])], tests="test:sealed_arena_after_openground")
+        self.assertEqual(code, 0, out)
+        code, out, _ = run([sample(1, passed=["sealed_arena_after_openGround", "x"])], shard="1", focus="SEALED_arena")
+        self.assertIn("sealed_arena_after_openGround: failed 0, passed 1", out)
+        self.assertNotIn("x:", out)
 
     def test_a_focus_written_with_test_prefix_still_matches(self):
         # Oct 27: focus "test:<name>" (written like `tests`) matched nothing, so a shard run listed no per-test line

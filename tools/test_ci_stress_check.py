@@ -45,6 +45,14 @@ class Entries(unittest.TestCase):
         r = run("entries", "test:vanilla_path, pathing_budget_fallback ,parade_ground,defaultBatch:4", self.d.name)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
+    def test_a_chunk_of_a_batch_needs_a_numeric_suffix(self):
+        # the server reads "<batch>:<n>" (vanilla's chunks) by the part before the LAST ':' (GameTestShards.named)
+        self.assertEqual(run("entries", "parade_ground:2,defaultBatch:13", self.d.name).returncode, 0)
+        r = run("entries", "parade_ground:two,parade_ground:", self.d.name)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("parade_ground:two", r.stdout)
+        self.assertIn("'parade_ground:'", r.stdout)
+
     def test_an_empty_prefix_is_rejected(self):
         self.assertEqual(run("entries", "test:", self.d.name).returncode, 1)
 

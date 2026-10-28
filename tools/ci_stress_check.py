@@ -43,7 +43,12 @@ def unknown_entries(entries, batches):
             if len(low) <= 5:
                 bad.append(e)
             continue
-        if low not in batches and low.split(":")[0] not in batches:
+        if low in batches:
+            continue
+        # a chunk of a batch, "<batch>:<n>": the server takes the part before the LAST ':' (GameTestShards.named), and
+        # vanilla's chunk suffix is a number - "parade_ground:two" would match nothing
+        base, colon, suffix = low.rpartition(":")
+        if not (colon and base in batches and suffix.isdigit()):
             bad.append(e)
     return bad
 
