@@ -102,7 +102,7 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public interface Unit {
 
-    int DEFAULT_SIGHT_RANGE = 16;
+    int DEFAULT_SIGHT_RANGE = 16;   // base: the fog a unit reveals is its sight times the Vision multiplier (getSightRange)
     int ANCHOR_RETREAT_RANGE = 30;
 
     int PIGLIN_HEALING_TICKS = 8 * ResourceCost.TICKS_PER_SECOND;
