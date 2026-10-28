@@ -248,8 +248,10 @@ class Crops(unittest.TestCase):
     def test_the_meadow_default_and_the_override_order(self):
         ej = EJ()
         self.assertEqual(ej.parse_box("900,80,1400,300"), (900, 80, 1400, 300))
-        self.assertEqual(ej.crop_for(KEY, [])[0], (900, 80, 1400, 300))
-        # a still without a table entry takes the same default, and says so
+        # the meadow still's table crop is open meadow: r33 (Oct 28) showed the old (900,80)-(1400,300) crop held a
+        # tree's shadow in its corner, which swamped the tufts' dark share (0.137 vs 0.050 on open meadow)
+        self.assertEqual(ej.crop_for(KEY, [])[0], (1000, 250, 1415, 383))
+        # a still without a table entry takes the default, and says so
         self.assertEqual(ej.crop_for("15_ground_after_rts", [])[0], (900, 80, 1400, 300))
         self.assertNotEqual(ej.crop_for("15_ground_after_rts", [])[1], ej.crop_for(KEY, [])[1])
         # CLI flag: NAME=box (short name or full key) beats the table; a bare box is for every other still
