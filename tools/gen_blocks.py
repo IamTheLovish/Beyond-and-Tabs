@@ -2351,6 +2351,51 @@ STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top")
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 
 
+def _cross_elements(layers, lean):
+    """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
+    or not), plus - with lean - four quads hinged at the root and leaning out 45 degrees (north, south, east, west),
+    their tops ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
+    def face(t, tinted):
+        return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
+    els = []
+    for t, tinted in layers:
+        els.append({"from": [0.8, 0, 8], "to": [15.2, 16, 8], "shade": False,
+                    "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                    "faces": {f: face(t, tinted) for f in ("north", "south")}})
+        els.append({"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
+                    "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                    "faces": {f: face(t, tinted) for f in ("west", "east")}})
+        if lean:
+            for ang in (45, -45):          # planes through the root, tipped toward +z / -z (about x) ...
+                els.append({"from": [1, 0, 8], "to": [15, 14, 8], "shade": False,
+                            "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
+                            "faces": {f: face(t, tinted) for f in ("north", "south")}})
+            for ang in (45, -45):          # ... and toward +x / -x (about z)
+                els.append({"from": [8, 0, 1], "to": [8, 14, 15], "shade": False,
+                            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
+                            "faces": {f: face(t, tinted) for f in ("west", "east")}})
+    return els
+
+
+def _plant_model(p, straw, lean):
+    tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
+    layers = [("#cross", True)]
+    if straw:
+        tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
+        layers.append(("#straw", False))
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean)}
+
+
+PLANT_MODELS = {
+    "grass": _plant_model("grass", True, True),
+    "fern": _plant_model("fern", False, True),
+    "tall_grass_bottom": _plant_model("tall_grass_bottom", True, False),
+    "tall_grass_top": _plant_model("tall_grass_top", True, False),
+    "large_fern_bottom": _plant_model("large_fern_bottom", False, False),
+    "large_fern_top": _plant_model("large_fern_top", False, False),
+}
+
+
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
 # 16x textures, which the RTS camera magnifies, but a 128x texture at ~36 px per block is minified 3.5x with nearest
 # texels - thin threads, rims and glints break up and flicker as the camera pans (fresh-eyes review, Oct 15). Forge
@@ -2362,24 +2407,11 @@ MODEL_OVERRIDES = {
     "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
     # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
     # breaks into flickering dashes from the RTS camera)
-    **{p: {"parent": "minecraft:block/tinted_cross", "textures": {"cross": "minecraft:block/" + p}}
-       for p in ("fern", "large_fern_bottom", "large_fern_top")},
-    # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer
-    **{p: {"ambientocclusion": False,
-           "textures": {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p,
-                        "straw": "minecraft:block/" + p.replace("grass", "grass_straw")},
-           "elements": [
-               {"from": [0.8, 0, 8], "to": [15.2, 16, 8], "shade": False,
-                "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
-                "faces": {f: dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if t == "#cross" else {}))
-                          for f in ("north", "south")}}
-               for t in ("#cross", "#straw")] + [
-               {"from": [8, 0, 0.8], "to": [8, 16, 15.2], "shade": False,
-                "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
-                "faces": {f: dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if t == "#cross" else {}))
-                          for f in ("west", "east")}}
-               for t in ("#cross", "#straw")]}
-       for p in ("grass", "tall_grass_bottom", "tall_grass_top")},
+    # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer;
+    # round 29c (the meadow sampler's RTS stills, run 40679410746: the plants were near invisible - upright quads seen
+    # from above are edge-on dashes): short grass and ferns also get four quads LEANING OUT 45 degrees from the root,
+    # so a clump opens up like a real tuft when seen from above (PLANT_MODELS)
+    **PLANT_MODELS,
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
