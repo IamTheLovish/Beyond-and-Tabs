@@ -2,26 +2,37 @@ package com.solegendary.reignofnether.postfx;
 
 /**
  * Grass tint noise (lovish Oct 22 20:23, "yes this sounds good"; Oct 28 "the grass needs a lot more work, looks like
- * 1 bland color from rts view"): the biome colour of grass and foliage varies across the world the way a real meadow
- * does seen from above, so a big grass field is not one flat green from the RTS camera. A block texture cannot do
- * this: the pack's grass is one tile per block, and any patch drawn into it repeats on every block (tools/gen_blocks.py,
- * the SCAN section); a field's large-scale variation has to come from the colour the game multiplies the texture by.
+ * 1 bland color from rts view"): the biome colour of grass and foliage varies across the world the way a meadow does
+ * seen from above, so a big grass field is not one flat green from the RTS camera. A block texture cannot do this:
+ * the pack's grass is one tile per block, and any patch drawn into it repeats on every block; a field's large-scale
+ * variation has to come from the colour the game multiplies the texture by.
  *
- * <p>Three things, each on its own deterministic field:
+ * <p>Round 3 (Oct 28), from a fresh critic's scores on tools/grass_tint_preview.py renders beside the reference
+ * (the CC0 scan Grass004 - one meadow: mixed green blades, straw, dark gaps): round 2 varied at one blurred
+ * 20-40 block scale only (4/10 zoomed out, 3/10 at the default zoom), its dark patches went teal, and it had no straw.
+ * Now, each on its own deterministic field:
  * <ul>
- *   <li><b>Value</b> (+-12%): three octaves (96, 28 and 7 blocks) through a soft contrast curve, so patches have
- *       shapes rather than one smooth blur.</li>
- *   <li><b>Dry / lush</b> (+-10%): toward straw-olive (red up, blue down) or toward deep blue-green.</li>
- *   <li><b>Lush clumps</b>: 12-block clumps of darker, bluer grass that gather in the lush zones and fade out in the
- *       dry ones (clumps scattered evenly everywhere read as camouflage - preview round 2, Oct 28).</li>
+ *   <li><b>Olive base</b>: the plains green moved toward the reference's olive (red +7%, green -4%).</li>
+ *   <li><b>Value</b> (+-8%): octaves at 48, 14 and 4.5 blocks through a contrast curve.</li>
+ *   <li><b>Mottle</b> (+-7% value, +-6% hue): 3 and 1.5-block noise - the scale the default RTS zoom (~30 blocks
+ *       in view) actually shows, between neighbouring clumps.</li>
+ *   <li><b>Dry / lush moods</b> (56 and 16 blocks): dry leans yellow (blue down), lush leans a cooler green by
+ *       dropping red - never by raising blue (that read teal).</li>
+ *   <li><b>Straw</b>: 2-6 block clumps, lighter and a more saturated yellow (red and green up, blue down), only
+ *       on the dry side.</li>
+ *   <li><b>Dark clumps</b>: 2-7 block clumps 14% darker, the same green (round 3's warmer darks read as mud), only
+ *       on the lush side and never on straw.</li>
  * </ul>
- * Tuned on tools/grass_tint_preview.py (a 96 x 96 block field at RTS zoom with the pack's grass texture): the patch
- * scale luma std went 0.003 (Oct 22 version) -> 0.019; a flat field is 0.0004.
+ *
+ * Round 4 (second critic, 5/10 and 4/10): the 48 / 14-block blob octaves halved, the value range widened toward the
+ * dark side, hue swings capped (no orange-brown mud). The critic's single-block straw and dark "pips" with hard edges
+ * cannot come from this tint (Embeddium blends the colour across each block's corners); they belong to the grass
+ * texture's per-block variants (the pack, tools/gen_blocks.py SCAN section).
  *
  * <p>Cost: a few hash lookups per call, only where the game asks for a biome colour - while a chunk section is meshed
  * (BiomeColorsMixin), never per frame. Deterministic: the same block always gets the same colour, on every client.
- * Continuous: value noise with a quintic fade, so neighbouring blocks differ by a shade and, under Embeddium (in the
- * pack), the colour is blended per vertex corner - a smooth gradient, no block steps (GrassTintTest).
+ * Continuous: value noise with a quintic fade; under Embeddium (in the pack) the colour is blended per vertex corner,
+ * so even the 1.5-block mottle is a gradient, not block steps (GrassTintTest).
  */
 public final class GrassTint {
 
@@ -29,44 +40,71 @@ public final class GrassTint {
     public static final int GRASS = 1;
     public static final int FOLIAGE = 2;
 
-    // value field: meadow moods, patches inside them, drifts inside those (blocks per lattice cell, weight)
-    static final double[] CELLS = {96.0, 28.0, 7.0};
-    static final double[] WEIGHTS = {1.0, 0.7, 0.3};
-    static final double CONTRAST = 2.0;     // tanh shaping: patches get edges instead of one smooth blur
-    static final double VALUE = 0.12;       // +-12% brightness
-    static final double DRY = 0.10;         // toward straw: red +10%, blue -14%; toward lush the other way
-    static final double DRY_GREEN = -0.10;  // straw is a touch less green, lush a touch more
+    static final double[] OLIVE = {1.05, 0.97, 1.0};
 
-    // lush clumps: darker, bluer grass gathered where the field is lush
-    static final double[] CLUMP_CELLS = {12.0, 5.0};
-    static final double[] CLUMP_WEIGHTS = {1.0, 0.2};
-    static final double CLUMP_AT = 0.10;    // clump noise above this starts a clump ...
-    static final double CLUMP_SOFT = 0.9;   // ... and is full this much above it (soft: value noise is steep)
-    static final double CLUMP_DARK = 0.09;  // a full clump is 9% darker
-    static final double CLUMP_HUE = 0.5;    // and pushed this far toward lush
-    static final double GATE_AT = -0.2;     // clumps appear where dryness < GATE_AT + 0.5, fully below GATE_AT
+    static final double[] CELLS = {48.0, 14.0, 4.5};
+    static final double[] WEIGHTS = {1.0, 0.8, 0.6};
+    static final double CONTRAST = 2.6;
+    static final double VALUE = 0.045;   // round 4: the blob octaves halved (critic: camouflage, blur)
+
+    static final double[] MOTTLE_CELLS = {3.0, 2.0};
+    static final double[] MOTTLE_WEIGHTS = {1.0, 0.35};
+    static final double MOTTLE = 0.06;    // light side; the dark side is 1.6x (critic: the range sat too mid)
+    static final double HUE_MOTTLE = 0.06;
+
+    static final double[] DRY_CELLS = {56.0, 16.0};
+    static final double[] DRY_WEIGHTS = {1.0, 0.6};
+    static final double DRY_CONTRAST = 2.0;
+
+    static final double[] STRAW_CELLS = {6.0, 3.0};
+    static final double[] STRAW_WEIGHTS = {1.0, 0.35};
+    static final double STRAW_AT = -0.25;
+    static final double STRAW_SOFT = 1.4;
+    static final double STRAW_GATE = -0.15;   // straw only where dryness is above this (fully 0.4 above it)
+
+    static final double[] CLUMP_CELLS = {7.0, 3.5};
+    static final double[] CLUMP_WEIGHTS = {1.0, 0.4};
+    static final double CLUMP_AT = 0.05;
+    static final double CLUMP_SOFT = 0.70;
+    static final double CLUMP_GATE = 0.0;     // dark clumps only where dryness is below this (fully 0.4 below it)
+    static final double CLUMP_DARK = 0.14;
 
     private GrassTint() {
     }
 
     /** The shaped value field in [-1, 1] at block (x, z), its own field per salt. */
     public static double field(int x, int z, int salt) {
-        return shape(octaves(x, z, salt * 8, CELLS, WEIGHTS));
+        return shape(octaves(x, z, salt * 8, CELLS, WEIGHTS), CONTRAST);
     }
 
-    /** rgb (0xRRGGBB) with the variation in value, in hue (dry / lush) and the lush clumps applied at block (x, z). */
+    /** Dryness in [-1, 1] (+ = dry, toward straw; - = lush) at block (x, z). */
+    static double dryness(int x, int z, int salt) {
+        return shape(octaves(x + 7919, z - 4583, (salt + 101) * 8, DRY_CELLS, DRY_WEIGHTS), DRY_CONTRAST);
+    }
+
+    /** Straw cover in [0, 1] at block (x, z). */
+    static double straw(int x, int z, int salt) {
+        double st = octaves(x - 1201, z + 911, (salt + 303) * 8, STRAW_CELLS, STRAW_WEIGHTS);
+        return smooth(clamp01((st - STRAW_AT) / STRAW_SOFT)) * clamp01((dryness(x, z, salt) - STRAW_GATE) / 0.4);
+    }
+
+    /** rgb (0xRRGGBB) with the meadow's variation applied at block (x, z). */
     public static int apply(int rgb, int x, int z, int salt) {
-        double v = 1 + VALUE * field(x, z, salt);
-        double dry = shape(octaves(x + 7919, z - 4583, (salt + 101) * 8, CELLS, WEIGHTS));
-        double clump = octaves(x - 3001, z + 1777, (salt + 202) * 8, CLUMP_CELLS, CLUMP_WEIGHTS);
-        double gate = clamp01((-dry - GATE_AT) / 0.5);
-        double m = smooth(clamp01((clump - CLUMP_AT) / CLUMP_SOFT)) * gate;
-        v *= 1 - CLUMP_DARK * m;
-        double d = DRY * (dry - CLUMP_HUE * m);
-        int r = channel(((rgb >> 16) & 0xFF) * v * (1 + d));
-        int g = channel(((rgb >> 8) & 0xFF) * v * (1 + DRY_GREEN * d));
-        int b = channel((rgb & 0xFF) * v * (1 - 1.4 * d));
-        return (r << 16) | (g << 8) | b;
+        double f = field(x, z, salt);
+        double dry = dryness(x, z, salt);
+        double s = straw(x, z, salt);
+        double cl = octaves(x - 3001, z + 1777, (salt + 202) * 8, CLUMP_CELLS, CLUMP_WEIGHTS);
+        double m = smooth(clamp01((cl - CLUMP_AT) / CLUMP_SOFT)) * clamp01((CLUMP_GATE - dry) / 0.4) * (1 - s);
+        double mottle = octaves(x + 555, z - 777, salt * 8 + 40, MOTTLE_CELLS, MOTTLE_WEIGHTS);
+        double hm = HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
+        double v = (1 + VALUE * f) * (1 - CLUMP_DARK * m) * (1 + 0.10 * s)
+                * (1 + MOTTLE * (mottle > 0 ? mottle : 1.6 * mottle));
+        double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
+        double r = ((rgb >> 16) & 0xFF) * OLIVE[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
+                * (1 - 0.02 * m);
+        double g = ((rgb >> 8) & 0xFF) * OLIVE[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s);
+        double b = (rgb & 0xFF) * OLIVE[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m);
+        return (channel(r) << 16) | (channel(g) << 8) | channel(b);
     }
 
     private static double octaves(int x, int z, int seed, double[] cells, double[] weights) {
@@ -78,8 +116,8 @@ public final class GrassTint {
         return s / w;
     }
 
-    private static double shape(double f) {
-        return Math.tanh(CONTRAST * f) / Math.tanh(CONTRAST);
+    private static double shape(double f, double contrast) {
+        return Math.tanh(contrast * f) / Math.tanh(contrast);
     }
 
     private static double clamp01(double t) {
