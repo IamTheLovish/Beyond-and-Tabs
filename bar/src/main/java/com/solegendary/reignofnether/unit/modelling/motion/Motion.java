@@ -62,15 +62,16 @@ public final class Motion {
                             boolean flinchOnly, float[] out) {
         for (int i = 0; i < OUT; i++)
             out[i] = 0f;
-        float amp = Desync.amp(id), tempo = Desync.tempo(id);
+        float amp = Desync.amp(id);   // the tempo is in the slot: the breath phase turns at it (Kinematics.step)
 
         // breath: the chest swells (a small pitch back), the shoulders rise, the neck follows a beat later
         float gBreath = sliders[BREATH] * ZoomGain.gain(zoom, ZoomGain.K_BREATH) * amp;
         if (gBreath != 0f) {
             float ex = Mth.clamp(s[b + EXERTION], 0f, 1f);
-            float period = Mth.lerp(ex, 60f, 25f) / tempo;
             float size = Mth.lerp(ex, 1.2f, 2.6f) * gBreath;
-            float br = Life.breath(ageF, id, period), neck = Life.breath(ageF - period * 0.08f, id, period);
+            // the phase is state (Kinematics.step): a change of exertion changes the breath's speed, never jumps it
+            float phase = Life.blendPhase(s[b + BREATH_PREV], s[b + BREATH_PHASE], partial);
+            float br = Life.breathAt(phase), neck = Life.breathAt(phase - 0.08f);
             add(out, BODY, RX, -br * size * D);
             add(out, ARM_R, TY, br * 0.25f * size);
             add(out, ARM_L, TY, br * 0.25f * size);

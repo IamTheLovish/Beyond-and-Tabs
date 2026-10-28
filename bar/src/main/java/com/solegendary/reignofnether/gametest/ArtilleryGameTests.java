@@ -80,6 +80,7 @@ public class ArtilleryGameTests {
     public static void artillery_fires_over_a_wall_without_walking_in(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_arty_wall_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         for (int z = 4; z <= 12; z++)
             for (int y = 2; y <= 5; y++)
                 helper.setBlock(new BlockPos(7, y, z), Blocks.STONE);
@@ -322,6 +323,82 @@ public class ArtilleryGameTests {
     }
 
     /**
+     * Artillery body-blocked on a move and hit by a flyer keeps its move (Itachi 2's review of #222, issue #35): the
+     * contact rule's retaliation stopped the move and then asked for the flyer as its target, which artillery refuses,
+     * so the crew stood with no order and no target and died where it stood. It cannot hit the flyer; it must at least
+     * keep trying to walk out.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void blocked_artillery_hit_by_a_flyer_keeps_moving(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_arty_blocked_air_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        var g = EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        if (b == null || g == null) {
+            if (b != null) b.discard();
+            helper.fail("could not create the Bombard Crew or the Gull Spotter");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        double gx = o.getX() + 10.5, gy = o.getY() + 2.5, gz = o.getZ() + 8.5;
+        g.moveTo(gx, gy, gz, 90, 0);
+        g.setOwnerName(owner + "_foe");
+        level.addFreshEntity(g);
+        BlockPos dest = helper.absolutePos(new BlockPos(14, 2, 8));
+        double bx = b.getX(), by = b.getY(), bz = b.getZ();
+        boolean[] done = { false };
+        int[] tick = { 0 }, hitAt = { -1 };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            b.discard();
+            g.discard();
+        };
+        helper.runAfterDelay(3, () -> b.setMoveTarget(dest));
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            tick[0]++;
+            hold(g, gx, gy, gz);   // the gull hovers in front of it
+            // body-blocked: held where it stands, its path stays live but it makes no headway (a wall would not do -
+            // the walk ends at the wall and the move with it, which is not blocked)
+            hold(b, bx, by, bz);
+            if (hitAt[0] < 0) {
+                if (tick[0] > 5 && AttackerUnit.blockedOnMove(b)) {
+                    hitAt[0] = tick[0];
+                    b.hurt(level.damageSources().indirectMagic(g, g), 1f);   // the gull hits the blocked crew
+                } else if (tick[0] > 90) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the held crew never counted as blocked on its move - the "
+                        + "test proves nothing (move target " + b.getMoveGoal().getMoveTarget() + ")");
+                }
+                return;
+            }
+            if (flyer(b.getTarget()) || flyer(b.getTargetGoal().getTarget())) {
+                cleanUp.run();
+                throw new GameTestAssertException("the crew took the flyer as its target");
+            }
+            // a ground enemy in weapon reach (a neighbouring test's) is a fair pick for the contact rule: fighting it is
+            // responding. Dropping the move with nothing to fight is the bug
+            var goalTarget = b.getTargetGoal().getTarget();
+            if (b.getMoveGoal().getMoveTarget() == null && goalTarget == null && b.getTarget() == null) {
+                cleanUp.run();
+                throw new GameTestAssertException((tick[0] - hitAt[0]) + " ticks after the flyer hit it the blocked "
+                    + "crew had dropped its move, with no target: it stands and dies");
+            }
+            if (goalTarget != null) {
+                cleanUp.run();
+                helper.succeed();   // it took a ground enemy instead: it fights back
+                return;
+            }
+            if (tick[0] - hitAt[0] >= 5) {
+                cleanUp.run();
+                helper.succeed();
+            }
+        });
+    }
+
+    /**
      * Shared by the two set-up tests: a Bombard Crew walks ~3 blocks and stops, then gets {@code order} with its
      * cooldown cleared, so only the set-up can hold the shot. It must not fire in the first SET_UP ticks after it
      * stopped, and must fire soon after. Slack of 2 ticks: the test sees "stopped" a tick or two after the last step.
@@ -482,6 +559,191 @@ public class ArtilleryGameTests {
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
     public static void a_crew_hopped_after_a_keys_run_must_set_up_again(GameTestHelper helper) {
         keylessHopTest(helper, "keyshop", false, true);
+    }
+
+    /**
+     * A knockback is no free reposition (the #222 follow-up, lovish's option A): while a hit carries a possessed crew
+     * with its keys resting, its moves keep the set-up, so the client's claims may move it only where the knockback
+     * does. A lying client that claims it 1.4 blocks sideways (north, across a push west) during the knockback - under
+     * the 1.5-block drift, so the set-up alone would never notice - must leave it within a few tenths of the push's line.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_knocked_back_crew_is_not_moved_sideways_by_keyless_claims(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_knockside_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 7.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            active[0] = true;
+        });
+        int knockAt = 10, sideTicks = 7, checkAt = knockAt + sideTicks + 3;
+        double side = 0.2;
+        int[] tick = { 0 }, seq = { 0 };
+        double[] hit = new double[2];
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (t == knockAt) {
+                hit[0] = b.getX();
+                hit[1] = b.getZ();
+                b.knockback(0.4, 1, 0);   // a hit from the east: pushed west
+            }
+            if (t >= knockAt && t < knockAt + sideTicks)   // the lie: no push west, 0.2 a tick north, keys at rest
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, hit[0], b.getY(), hit[1] - side * (t - knockAt + 1), ++seq[0]);
+            else   // a real client claims every tick, standing still too
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX(), b.getY(), b.getZ(), ++seq[0]);
+            if (t < checkAt)
+                return;
+            double sideways = Math.abs(b.getZ() - hit[1]);
+            cleanUp.run();
+            if (sideways > 0.5)
+                throw new GameTestAssertException(String.format("keyless claims moved the knocked-back crew %.2f "
+                    + "blocks sideways (claimed %.2f): the knockback only pushed it west", sideways, side * sideTicks));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The cap never corrects an honest client (round 1 of #307's review): a knocked-back crew whose client lags 3 ticks
+     * each way, hit from the east and two ticks later from the south, flies where its prediction carries it - first
+     * west, then north from wherever the first push had got it - with no correction.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_lagging_client_knocked_back_twice_is_never_corrected(GameTestHelper helper) {
+        honestKnockTest(helper, "knock2", 3, -1, new double[][] { { 0, 1, 0 }, { 2, 0, 1 } });
+    }
+
+    /**
+     * The same for a hit at 45 degrees into a wall: the prediction is stopped on the blocked axis and slides along the
+     * wall on the other, well off the push's own line - vanilla collision, so no correction either.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_crew_knocked_into_a_wall_at_an_angle_slides_without_correction(GameTestHelper helper) {
+        honestKnockTest(helper, "knockwall", 2, 9, new double[][] { { 0, -1, 1 } });
+    }
+
+    /**
+     * An honest client of a possessed Bombard Crew standing at (8.5, 8.5), simulated in the test: the server's hits
+     * ({@code hits}: {tick after the first, x, z} as for LivingEntity.knockback(0.4, x, z)) reach its prediction
+     * {@code lag} ticks late as the velocity the server gave (the motion packet sets it), the prediction flies at air
+     * drag (0.91 a tick, the farthest a push carries it), stopped on x at a wall at {@code wallX} (relative; -1: none),
+     * and each tick's claim reaches the server {@code lag} ticks after it was taken. Not one may be corrected.
+     */
+    static void honestKnockTest(GameTestHelper helper, String tag, int lag, int wallX, double[][] hits) {
+        String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        if (wallX >= 0)
+            for (int z = 0; z <= 15; z++)
+                for (int y = 2; y <= 4; y++)
+                    helper.setBlock(new BlockPos(wallX, y, z), Blocks.STONE);
+        var b = bombard(helper, owner, 8.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        // the client's prediction: position and velocity; a wall's west face, less the crew's half width
+        double[] c = new double[4];
+        double wallFace = wallX < 0 ? Double.MAX_VALUE : helper.absolutePos(new BlockPos(wallX, 0, 0)).getX() - b.getBbWidth() / 2;
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            c[0] = b.getX();
+            c[1] = b.getZ();
+            active[0] = true;
+        });
+        int knockAt = 5, endAt = knockAt + 28;   // well inside HOVER_TICKS of claims
+        java.util.ArrayDeque<double[]> inFlight = new java.util.ArrayDeque<>();   // {due tick, x, z, seq}
+        double[][] given = new double[hits.length][];
+        int[] tick = { 0 }, seq = { 0 }, before = { 0 };
+        double[] start = new double[2];
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+            if (p == null) {
+                cleanUp.run();
+                throw new GameTestAssertException("the possession ended");
+            }
+            if (t == knockAt) {
+                before[0] = p.corrections;
+                start[0] = b.getX();
+                start[1] = b.getZ();
+            }
+            for (int i = 0; i < hits.length; i++) {
+                if (t == knockAt + (int) hits[i][0]) {
+                    b.knockback(0.4, hits[i][1], hits[i][2]);
+                    given[i] = new double[] { b.getDeltaMovement().x, b.getDeltaMovement().z };
+                }
+                if (given[i] != null && t == knockAt + (int) hits[i][0] + lag) {   // the motion packet arrives
+                    c[2] = given[i][0];
+                    c[3] = given[i][1];
+                }
+            }
+            // the prediction's tick: move, stopped on x by the wall, then air drag
+            c[0] += c[2];
+            if (c[0] > wallFace) {
+                c[0] = wallFace;
+                c[2] = 0;
+            }
+            c[1] += c[3];
+            c[2] *= 0.91;
+            c[3] *= 0.91;
+            if (t <= endAt)
+                inFlight.add(new double[] { t + lag, c[0], c[1], ++seq[0] });
+            while (!inFlight.isEmpty() && inFlight.peek()[0] <= t) {
+                double[] m = inFlight.poll();
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, m[1], b.getY(), m[2], (int) m[3]);
+            }
+            if (t < endAt + lag + 2)
+                return;
+            int corrected = p.corrections - before[0];
+            double moved = Math.hypot(b.getX() - start[0], b.getZ() - start[1]);
+            double off = Math.hypot(b.getX() - c[0], b.getZ() - c[1]);
+            cleanUp.run();
+            if (moved < 1.0)
+                throw new GameTestAssertException(String.format("the knockback moved the crew only %.2f blocks: the "
+                    + "test proves nothing", moved));
+            if (corrected > 0 || off > 0.35)
+                throw new GameTestAssertException(String.format("an honest client was corrected %d times (it ended "
+                    + "%.2f blocks from its prediction, after %.2f blocks of knockback)", corrected, off, moved));
+            helper.succeed();
+        });
     }
 
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
