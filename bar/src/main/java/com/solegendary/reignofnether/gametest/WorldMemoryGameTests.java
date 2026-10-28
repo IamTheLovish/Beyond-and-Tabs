@@ -636,6 +636,11 @@ public class WorldMemoryGameTests {
     public static void scar_lands_on_the_real_top_face_and_changes_no_block(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
+        // what another test can leave over this arena: CI run 40651908207 (attempt 2) found a stone sky pad at relative
+        // y 54 here (a failed AC-5 in mex_queue left its radius-48 pad at y 264), and every top block below it was the pad
+        for (int x = -1; x <= 16; x++)
+            for (int z = -1; z <= 16; z++)
+                level.setBlock(abs(helper, x, 54, z), Blocks.STONE.defaultBlockState(), 2);
         pad(helper);
         BlockState stone = Blocks.STONE.defaultBlockState();
         // steps: x 3..6, z 6..9, rising 1..4 blocks (the fourth is a cliff top 4 above the blast)
