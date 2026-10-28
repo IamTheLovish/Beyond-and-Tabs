@@ -54,6 +54,8 @@ public class OrdersObeyGameTests {
     // flag to off under the other one, whose path result then waited forever (stress run 40587689274)
     static final String BATCH_RTS_SHIFTED = "orders_obey_rts_shifted";
     static final String BATCH_RTS_RESCUED = "orders_obey_rts_rescued";
+    static final String BATCH_RTS_RESCUED_FREE = "orders_obey_rts_rescued_free";
+    static final String BATCH_VANILLA_RESCUED_FREE = "orders_obey_vanilla_rescued_free";
 
     static String owner(GameTestHelper helper, String tag) {
         return "gametest_obey_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -412,7 +414,9 @@ public class OrdersObeyGameTests {
      * in CI: the rescue's forceRepath wiped the move goal's stuck count, so the count never reached its give-up and the
      * unit stood with its order forever (a_unit_shifted_along_the_wall..., stress 40675281944: the count went back to 0
      * at three rescues, the unit snapped to x .50, z .50). A rescue that moves the unit nowhere is no progress toward a
-     * target 4000 blocks east: the unit gives the order up within 30 s.
+     * target 4000 blocks east: the unit gives the order up within 30 s. Rescued on every other request (the goal's own
+     * repath in between), as UnitUnstick takes a while to see a unit trapped again; a rescue's own repath never gives
+     * the order up by itself (a_unit_rescued_with_its_count_near_the_give_up_keeps_an_order_it_can_walk).
      */
     @GameTest(template = ARENA, batch = BATCH_RTS_RESCUED, timeoutTicks = 800)
     public static void a_unit_rescued_in_place_at_the_wall_still_gives_up_a_move_into_unloaded_chunks(GameTestHelper helper) {
@@ -460,12 +464,13 @@ public class OrdersObeyGameTests {
             long t = helper.getTick() - ordered[0];
             MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
             boolean idle = goal.getMoveTarget() == null;
-            // at rest at the wall after this request's path came in: rescue it in place, once per request
+            // at rest at the wall after the goal's own repath came in: rescue it in place (not again on the rescue's
+            // own request: the next rescue waits for the goal's next repath)
             if (!idle && m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
                     && goal.getLastRequestTime() != rescuedFor[0]) {
-                rescuedFor[0] = goal.getLastRequestTime();
                 rescues[0]++;
                 com.solegendary.reignofnether.unit.UnitUnstick.rescue(m, m.blockPosition());
+                rescuedFor[0] = goal.getLastRequestTime();
                 if (events.length() < 2000)
                     events.append(" t").append(t).append(" rescued at ").append(TerrainGameTests.f(m.getX() - startX))
                         .append(",").append(TerrainGameTests.f(m.getZ())).append(" stuck ").append(stuckRepaths(goal)).append(";");
@@ -504,6 +509,88 @@ public class OrdersObeyGameTests {
     }
 
     // the move goal's count of repaths in a row that made no progress (diagnostics only: -1 if it cannot be read)
+    /**
+     * A unit UnitUnstick rescues while its stuck count is one short of the give-up, and that can walk to its target
+     * from there, keeps its order and gets there. The rescue's own repath is judged (it can count as stuck), so it must
+     * never be the one that gives the order up, or a unit freed from a block dropped its order the moment it was freed;
+     * and rescue() repaths each goal once (the plain move goal is both in the selector and getMoveGoal: twice made
+     * every rescue two stuck repaths). RTS pathfinding and vanilla.
+     */
+    @GameTest(template = ARENA, batch = BATCH_RTS_RESCUED_FREE, timeoutTicks = 600)
+    public static void a_unit_rescued_with_its_count_near_the_give_up_keeps_an_order_it_can_walk(GameTestHelper helper) {
+        rescuedThenWalks(helper, true);
+    }
+
+    @GameTest(template = ARENA, batch = BATCH_VANILLA_RESCUED_FREE, timeoutTicks = 600)
+    public static void a_unit_rescued_with_its_count_near_the_give_up_keeps_an_order_it_can_walk_vanilla(GameTestHelper helper) {
+        rescuedThenWalks(helper, false);
+    }
+
+    private static void rescuedThenWalks(GameTestHelper helper, boolean rts) {
+        ServerLevel level = helper.getLevel();
+        boolean wasRts = UnitServerEvents.rtsPathfinding;
+        UnitServerEvents.rtsPathfinding = rts;
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        BlockPos pad = helper.absolutePos(new BlockPos(0, 2, 0));
+        String mine = owner(helper, rts ? "freed" : "freedv");
+        List<Entity> made = new ArrayList<>();
+        Mob m = vindicator(level, mine, pad.getX() + 2.5, pad.getY(), pad.getZ() + 8.5, made);
+        if (m == null) {
+            UnitServerEvents.rtsPathfinding = wasRts;
+            TerrainGameTests.cleanUp(made);
+            helper.fail("could not create the vindicator");
+            return;
+        }
+        BlockPos to = new BlockPos(pad.getX() + 13, pad.getY(), pad.getZ() + 8);
+        int[] ordered = { -1 };
+        boolean[] rescued = { false }, done = { false };
+        int[] before = { -1 }, after = { -1 };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            ordered[0] = tick;
+            move(level, mine, m, to);
+        });
+        helper.onEachTick(() -> {
+            if (ordered[0] < 0 || done[0])
+                return;
+            long t = helper.getTick() - ordered[0];
+            MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
+            // once its first path is in and it is on its way: one short of the give-up (vanilla: none, so a rescue
+            // that repaths it twice shows as 2), then rescued where it stands
+            if (!rescued[0] && goal.getMoveTarget() != null && !goal.isPathPending() && !m.getNavigation().isDone()) {
+                rescued[0] = true;
+                setStuckRepaths(goal, rts ? MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS - 1 : 0);
+                before[0] = stuckRepaths(goal);
+                com.solegendary.reignofnether.unit.UnitUnstick.rescue(m, m.blockPosition());
+                after[0] = stuckRepaths(goal);
+            }
+            double dist = Math.sqrt(m.distanceToSqr(to.getX() + 0.5, m.getY(), to.getZ() + 0.5));
+            boolean gaveUp = goal.getLastUnreachableTarget() != null;
+            boolean arrived = goal.getMoveTarget() == null && !gaveUp && dist <= 3;
+            if (!arrived && !gaveUp && t < 400)
+                return;
+            done[0] = true;
+            try {
+                List<String> problems = new ArrayList<>();
+                if (!rescued[0])
+                    problems.add("the unit was never on its way, so never rescued: this test proves nothing");
+                else if (gaveUp)
+                    problems.add("the unit gave its order up right after the rescue (stuck count " + before[0] + " -> "
+                        + after[0] + ", " + TerrainGameTests.f(dist) + " from a target it could walk to)");
+                else if (!arrived)
+                    problems.add("the unit did not reach its target in " + t + " ticks (" + TerrainGameTests.f(dist)
+                        + " away, order " + (goal.getMoveTarget() == null ? "gone" : "kept") + ")");
+                // one rescue is at most one stuck repath (the vanilla path is judged inside rescue())
+                if (!rts && after[0] > before[0] + 1)
+                    problems.add("one rescue counted " + (after[0] - before[0]) + " stuck repaths (rescue() repathed"
+                        + " the move goal more than once)");
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                UnitServerEvents.rtsPathfinding = wasRts;
+                TerrainGameTests.cleanUp(made);
+            }
+        });
+    }
+
     static int stuckRepaths(MoveToTargetBlockGoal goal) {
         try {
             java.lang.reflect.Field f = MoveToTargetBlockGoal.class.getDeclaredField("stuckRepaths");
@@ -511,6 +598,16 @@ public class OrdersObeyGameTests {
             return f.getInt(goal);
         } catch (ReflectiveOperationException | RuntimeException e) {
             return -1;
+        }
+    }
+
+    static void setStuckRepaths(MoveToTargetBlockGoal goal, int n) {
+        try {
+            java.lang.reflect.Field f = MoveToTargetBlockGoal.class.getDeclaredField("stuckRepaths");
+            f.setAccessible(true);
+            f.setInt(goal, n);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
         }
     }
 
