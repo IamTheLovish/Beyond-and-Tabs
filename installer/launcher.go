@@ -1087,7 +1087,7 @@ func (l *launcher) gameIsOpen() bool {
 	if l.gameOpen != nil {
 		return l.gameOpen.GameOpen()
 	}
-	return logLockProbe{l.paths.mcDir}.GameOpen()
+	return logLockProbe{mcDir: l.paths.mcDir}.GameOpen()
 }
 
 // pollUpdates is one check of the watcher: what is coming to the chosen channel, and an automatic install when its
@@ -1100,6 +1100,13 @@ func (l *launcher) pollUpdates(now time.Time) bool {
 	if !mainKnown {
 		return false // GitHub was unreachable at start: the status already says so
 	}
+	if l.watcher.newHour(now) {
+		l.mu.Lock()
+		if strings.HasPrefix(l.note, "Stopped checking") {
+			l.note = "" // the budget is new: watching again
+		}
+		l.mu.Unlock()
+	}
 	if l.watcher.gh.calls >= pollCallBudget-3 {
 		l.mu.Lock()
 		l.live.wait, l.note = nil, "Stopped checking GitHub for updates (hourly limit): press PLAY to update."
@@ -1109,6 +1116,7 @@ func (l *launcher) pollUpdates(now time.Time) bool {
 	p, tracked, head, headErr, err := l.watcher.check(ch, packSha, now)
 	if err != nil {
 		l.mu.Lock()
+		l.live.wait = nil // a stale "update coming" would keep PLAY disabled until a poll works
 		l.note = "Couldn't check for a coming update (" + shortErr(err) + ")"
 		l.mu.Unlock()
 		return true

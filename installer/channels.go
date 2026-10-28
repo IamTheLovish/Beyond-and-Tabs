@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -165,18 +166,30 @@ func (f gameOpenFunc) GameOpen() bool { return f() }
 
 // logLockProbe: a running game holds logs/latest.log open, and Windows refuses to rename an open file. No log = not
 // open. On other systems the rename always works, so it says "not open" (the launcher only ships for Windows).
-type logLockProbe struct{ mcDir string }
+// If the rename back fails, latest.log stays renamed and something is wrong: log it and say "open" (fail safe: no
+// automatic install).
+type logLockProbe struct {
+	mcDir  string
+	rename func(oldpath, newpath string) error // nil: os.Rename (a test injects failures)
+}
 
 func (p logLockProbe) GameOpen() bool {
-	log := filepath.Join(p.mcDir, "logs", "latest.log")
-	if !exists(log) {
+	rename := p.rename
+	if rename == nil {
+		rename = os.Rename
+	}
+	logFile := filepath.Join(p.mcDir, "logs", "latest.log")
+	if !exists(logFile) {
 		return false
 	}
-	probe := log + ".probe"
-	if err := os.Rename(log, probe); err != nil {
+	probe := logFile + ".probe"
+	if err := rename(logFile, probe); err != nil {
 		return true
 	}
-	os.Rename(probe, log)
+	if err := rename(probe, logFile); err != nil {
+		log.Printf("could not rename %s back to latest.log (%v): treating the game as possibly running", probe, err)
+		return true
+	}
 	return false
 }
 
@@ -373,6 +386,17 @@ type updateWatcher struct {
 	gh      *ghClient
 	mu      sync.Mutex
 	typical map[string]time.Duration // per workflow, measured once
+	// start of the current GitHub rate-limit hour (the limit is per hour; PR #267 review finding 4)
+	hourStart time.Time
+}
+
+// newHour gives the watcher a fresh call budget once an hour has passed. True when it did.
+func (w *updateWatcher) newHour(now time.Time) bool {
+	if w.hourStart.IsZero() || now.Sub(w.hourStart) >= time.Hour {
+		w.hourStart, w.gh.calls = now, 0
+		return true
+	}
+	return false
 }
 
 func newUpdateWatcher(gh *ghClient) *updateWatcher {

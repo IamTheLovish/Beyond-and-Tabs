@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -324,5 +325,96 @@ func TestPageLoadReadsBothChannelsWithinBudget(t *testing.T) {
 	ps := withStatus(pageState{Channel: channelFast, MainSha: r.MainSha}, p, liveState{packs: r.Packs, packErrs: r.PackErrs}, t0)
 	if !strings.Contains(ps.Status, "No untested pack published yet") {
 		t.Fatalf("fast without a branch: %q", ps.Status)
+	}
+}
+
+// failingGitHub: every call is an HTTP 500 (GitHub down, no network proxy, ...).
+func failingGitHub(t *testing.T) *httptest.Server {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "down", 500) }))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// PR #267 review finding 6: a network error must not stop the watcher, install anything or start the game.
+func TestWatcherNetworkErrorKeepsWatching(t *testing.T) {
+	fake := &fakePackwiz{install: "beyondandtabs-2026.10.26-1956-bbbbbbb.jar"}
+	l, _, launched := newChannelTestLauncher(t, fake)
+	l.state.Channel = channelFast
+	srv := failingGitHub(t)
+	l.watcher = newUpdateWatcher(&ghClient{base: srv.URL, client: srv.Client(), budget: pollCallBudget})
+	for i := 0; i < 2; i++ {
+		if !l.pollUpdates(t0) {
+			t.Fatal("a network error must not stop the watcher: the next poll may work")
+		}
+	}
+	if note := l.view(t0).Note; !strings.Contains(note, "Couldn't check for a coming update") {
+		t.Fatalf("the error must be shown: %q", note)
+	}
+	if fake.calls != 0 || *launched != 0 {
+		t.Fatalf("no install, no launch on an error: calls=%d launched=%d", fake.calls, *launched)
+	}
+}
+
+// PR #267 review finding 3: "Update coming" from an earlier poll must not stay (PLAY disabled) once a poll fails.
+func TestWatcherNetworkErrorClearsWait(t *testing.T) {
+	l, _, _ := newChannelTestLauncher(t, &fakePackwiz{})
+	l.state.Channel = channelFast
+	srv := failingGitHub(t)
+	l.watcher = newUpdateWatcher(&ghClient{base: srv.URL, client: srv.Client(), budget: pollCallBudget})
+	l.live.wait = &pendingUpdate{Sha: "ccccccc", ETA: t0, Stage: "build and pack"}
+	l.pollUpdates(t0)
+	if v := l.view(t0); v.WaitMins != nil || strings.Contains(v.Status, "any minute now") {
+		t.Fatalf("a failed poll must clear the stale wait: %+v", v)
+	}
+}
+
+// PR #267 review finding 4: the call budget is per hour, so the watcher must count hours, not stop for good.
+func TestWatcherBudgetResetsEveryHour(t *testing.T) {
+	l, _, _ := newChannelTestLauncher(t, &fakePackwiz{})
+	l.state.Channel = channelFast
+	srv := fakeActions(t, "aaaaaaa")
+	l.watcher = newUpdateWatcher(&ghClient{base: srv.URL, client: srv.Client(), budget: pollCallBudget})
+	l.pollUpdates(t0) // starts the hour
+	l.watcher.gh.calls = pollCallBudget
+	if l.pollUpdates(t0.Add(30*time.Minute)) || !strings.Contains(l.view(t0).Note, "Stopped checking") {
+		t.Fatal("budget used up inside the hour: stop with a note")
+	}
+	if !l.pollUpdates(t0.Add(61 * time.Minute)) {
+		t.Fatal("an hour later the budget is new: keep watching")
+	}
+	if l.watcher.gh.calls >= pollCallBudget-3 || strings.Contains(l.view(t0).Note, "Stopped checking") {
+		t.Fatalf("calls=%d note=%q", l.watcher.gh.calls, l.view(t0).Note)
+	}
+}
+
+// PR #267 review finding 5: if the rename-back fails, latest.log stays renamed and the game may be running - say
+// "open" (no auto-install) instead of ignoring it. (The real Windows lock itself can only be tested on a Windows
+// install with the game open.)
+func TestLogLockProbe(t *testing.T) {
+	dir := t.TempDir()
+	if (logLockProbe{mcDir: dir}).GameOpen() {
+		t.Fatal("no log: not open")
+	}
+	logPath := filepath.Join(dir, "logs", "latest.log")
+	os.MkdirAll(filepath.Dir(logPath), 0o755)
+	os.WriteFile(logPath, []byte("x"), 0o644)
+	if (logLockProbe{mcDir: dir}).GameOpen() || !exists(logPath) {
+		t.Fatal("free log: not open, and the log is back under its name")
+	}
+	n := 0
+	locked := logLockProbe{mcDir: dir, rename: func(a, b string) error { n++; return errors.New("in use") }}
+	if !locked.GameOpen() || n != 1 {
+		t.Fatalf("rename refused = the game holds the log: open (renames=%d)", n)
+	}
+	n = 0
+	backFails := logLockProbe{mcDir: dir, rename: func(a, b string) error {
+		n++
+		if n == 2 {
+			return errors.New("access denied")
+		}
+		return os.Rename(a, b)
+	}}
+	if !backFails.GameOpen() {
+		t.Fatal("rename-back failed: treat the game as possibly running")
 	}
 }
