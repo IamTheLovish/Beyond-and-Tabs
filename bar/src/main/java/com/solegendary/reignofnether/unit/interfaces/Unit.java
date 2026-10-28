@@ -209,6 +209,8 @@ public interface Unit {
     }
     /** How far the unit reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public default int getSightRange() {
+        if (this instanceof IndirectFire && this instanceof AttackerUnit gun)   // artillery: short of its gun, unscaled
+            return com.solegendary.reignofnether.fogofwar.Vision.artillery(getBaseSightRange(), gun.getAttackRange());
         return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
     }
 
