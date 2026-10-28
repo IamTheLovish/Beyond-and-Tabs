@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from preview_structure import load_nbt   # noqa: E402
 from gen_structures import OUT, OUT_DATA   # noqa: E402
-from gen_lab_levels import AIR, Canvas, b, lantern, slab, wall_banner, is_air   # noqa: E402
+from gen_lab_levels import Canvas, b, wall_banner, is_air   # noqa: E402
 
 BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capitol_bases")
 # RoN's non-air block counts: the capitols' buildTimeBlocks (their build time must not change with the detail)

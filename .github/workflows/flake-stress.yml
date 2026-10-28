@@ -1,9 +1,16 @@
 name: flake-stress
+# the tested ref in the run's title: a run is evidence for the branch it tested, and the Command Center gate finds a
+# branch's runs by it (every run was titled "flake-stress" whatever it tested)
+run-name: "flake-stress ${{ inputs.ref }}"
 # Runs a few chosen GameTests on many runners at once and adds up how often each one fails - so a flaky test gets a
 # real fail rate instead of "it failed once on #55", and a flake fix can be proven (0 of N) rather than hoped for.
 # Costs no Claude usage: public-repo runner minutes only. Manual only (never on push).
 #   gh workflow run flake-stress.yml -f ref=<branch> -f tests="test:six_melee,test:stuck_chaser" -f runners=8
 # Each runner compiles bar/ and runs only BAT_GAMETEST_ONLY (gametest/GameTestShards: batch names or test:<prefix>).
+# A flake that only shows inside a full shard (its neighbours' units, the shard's load and arena layout) is repeated as
+# that whole shard: `-f shard=1 -f focus=tidewrought_t2` runs shard 1 (everything no SHARD_n line names) on every runner,
+# exactly as build.yml cuts it from the SHARD_n lines of the checked-out ref, and the summary then lists only the tests
+# `focus` names (prefixes, comma-separated) plus every failure. With `shard` set, `tests` is ignored.
 on:
   workflow_dispatch:
     inputs:
@@ -16,6 +23,16 @@ on:
       runners:
         description: Parallel runners (1-10); each run of each test is one sample
         default: "6"
+      shard:
+        description: Optional - repeat a whole CI shard (2-9, or 1 = everything the other SHARD_n lines do not name) instead of `tests`
+        default: ""
+      focus:
+        description: Optional, with `shard` - test-name prefixes (comma-separated, test:<prefix> also accepted) whose passes the summary lists; failures are always listed, and a `tests` run lists every test
+        default: ""
+
+# read the repo, nothing else: the samples only check out, build and upload their own artifacts
+permissions:
+  contents: read
 
 jobs:
   plan:
@@ -23,9 +40,32 @@ jobs:
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
     steps:
+      # a `tests` entry that is neither a batch nor test:<prefix> runs 0 tests (Oct 27: four runs given bare test names):
+      # refuse it before any runner starts. The check from this workflow's own commit, the batch names from the ref
+      # under test (an older ref has no copy of the tool)
+      - uses: actions/checkout@v4
+        if: inputs.shard == ''
+        with:
+          persist-credentials: false
+          path: wf
+          sparse-checkout: tools/ci_stress_check.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        if: inputs.shard == ''
+        with:
+          persist-credentials: false
+          ref: "${{ inputs.ref }}"
+          path: tested
+          sparse-checkout: bar/src/main/java/com/solegendary/reignofnether/gametest
+      - name: The tests list names batches or test:<prefix>
+        if: inputs.shard == ''
+        env: { ST_ONLY: "${{ inputs.tests }}" }
+        run: python3 wf/tools/ci_stress_check.py entries "$ST_ONLY" tested/bar/src/main/java/com/solegendary/reignofnether/gametest
       - id: m
+        # the input reaches the shell as data (env), never spliced into the script
+        env: { ST_RUNNERS: "${{ inputs.runners }}" }
         run: |
-          n="${{ inputs.runners }}"
+          n="$ST_RUNNERS"
           case "$n" in ''|*[!0-9]*) n=6;; esac
           [ "$n" -lt 1 ] && n=1; [ "$n" -gt 10 ] && n=10
           echo "matrix=$(python3 -c "import json; print(json.dumps(list(range(1, $n + 1))))")" >> "$GITHUB_OUTPUT"
@@ -39,16 +79,33 @@ jobs:
         run: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.ref }}" }
+        with: { persist-credentials: false, ref: "${{ inputs.ref }}" }
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
+        with:
+          distribution: temurin
+          java-version: '17'
+          # the same Gradle cache as build.yml's test jobs: ten samples starting at once otherwise download Minecraft's
+          # assets ten times over (the Oct 22 "downloadAssets ... Read timed out" reds)
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
       - name: The chosen tests, sample ${{ matrix.run }}
         id: t
         working-directory: bar
-        env: { BAT_GAMETEST_ONLY: "${{ inputs.tests }}" }
+        env:
+          ST_ONLY: ${{ inputs.tests }}
+          ST_SHARD: ${{ inputs.shard }}
         continue-on-error: true
         run: |
           chmod +x gradlew
+          if [ -n "$ST_SHARD" ]; then
+            # a whole CI shard, cut from build.yml's SHARD_n lines (tools/ci_shard_env.py)
+            eval "$(python3 ../tools/ci_shard_env.py "$ST_SHARD")"
+          else
+            export BAT_GAMETEST_ONLY="$ST_ONLY"
+          fi
           bash ../tools/ci_gametests.sh
       - name: Record which tests ran and which failed
         if: always()
@@ -56,11 +113,17 @@ jobs:
           python3 - <<'EOF'
           import json, re, os
           log = open("bar/gametest.log", errors="replace").read() if os.path.exists("bar/gametest.log") else ""
-          failed = sorted(set(re.findall(r"\b([a-z0-9_]+) failed!", log)))
+          # names keep their method's case (sealed_arena_has_no_fluid_after_openGround): a lower-case-only pattern
+          # missed such a failure and cut such a pass at its first capital
+          failed = sorted(set(re.findall(r"\b([A-Za-z0-9_]+) failed!", log)))
           # passes: vanilla's reporter says nothing on a pass; GameTestShards logs "[TestTime] <name> <ms>" for each
-          names = re.findall(r"\[TestTime\]\s+(?:[A-Za-z0-9_]+\.)?([a-z0-9_]+)", log)
+          names = re.findall(r"\[TestTime\]\s+(?:[A-Za-z0-9_]+\.)?([A-Za-z0-9_]+)", log)
           passed = sorted(set(names) - set(failed))
-          out = {"run": ${{ matrix.run }}, "failed": failed, "passed": passed,
+          # how many tests this sample really ran: a `tests` entry without `test:` (a bare method name is read as a
+          # batch name and matches nothing) ran 0 and the gametest server still says "All 0 required tests passed" -
+          # four samples on Oct 27 were posted as "[Stress] 0 failures" that way. The summary fails such a sample.
+          ran = len(set(passed) | set(failed))
+          out = {"run": ${{ matrix.run }}, "failed": failed, "passed": passed, "ran": ran,
                  "outcome": "${{ steps.t.outcome }}", "log_found": bool(log)}
           json.dump(out, open("stress-${{ matrix.run }}.json", "w"))
           print(out)
@@ -77,26 +140,20 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      # the summary is tools/flake_stress_summary.py (tested by tools/test_flake_stress_summary.py): a sample that ran
+      # no test, or a `test:` prefix that matched nothing, makes this job red with an error annotation
+      # the workflow's own commit, not inputs.ref: stressing an older branch that predates the tool still works
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/flake_stress_summary.py
+          sparse-checkout-cone-mode: false
+          path: src
       - uses: actions/download-artifact@v4
-        with: { pattern: "stress-*", merge-multiple: true }
+        with: { pattern: "stress-*", merge-multiple: true, path: samples }
       - name: Fail rate per test
-        run: |
-          python3 - <<'EOF'
-          import glob, json, collections
-          runs = [json.load(open(f)) for f in sorted(glob.glob("stress-*.json"))]
-          n = len(runs)
-          fails = collections.Counter(t for r in runs for t in r["failed"])
-          passes = collections.Counter(t for r in runs for t in r["passed"])
-          bad_runs = sum(1 for r in runs if r["outcome"] != "success")
-          lines = [f"{n} runners; {bad_runs} with any failure"]
-          for t in sorted(set(fails) | set(passes), key=lambda t: (-fails[t], t)):
-              lines.append(f"{t}: failed {fails[t]}, passed {passes[t]}")
-          if not fails:
-              lines.append("no test failed in any run")
-          crashed = [r["run"] for r in runs if r["outcome"] != "success" and not r["failed"]]
-          if crashed:
-              lines.append(f"runs that failed without naming a test (build error, timeout, crash): {crashed}")
-          print("::notice::[Stress] " + "%0A".join(lines))
-          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as s:
-              s.write("## Flake stress\n\n" + "\n".join("- " + l for l in lines) + "\n")
-          EOF
+        env:
+          ST_FOCUS: "${{ inputs.focus }}"
+          ST_ONLY: "${{ inputs.tests }}"
+          ST_SHARD: "${{ inputs.shard }}"
+        run: python3 src/tools/flake_stress_summary.py samples

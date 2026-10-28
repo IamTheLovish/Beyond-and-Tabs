@@ -147,6 +147,26 @@ public final class HeroKits {
     public static final List<HeroKit> ALL = List.of(DAWN_PALADIN, GRAVECALLER, HORDE_WARCHIEF, THORNHEART_DRUID,
         CORSAIR_CAPTAIN, STORM_WITCH, ARCH_ENGINEER);
 
+    // ------------------------------------------------------------------------------------------------ T2-lab heroes (H13)
+    // Separate from ALL on purpose: ALL is "the one hero per faction" the T1 labs train (tests, bots and the lab roster
+    // assume one per faction); a T2-lab hero is a second hero for the same faction, trained at its T2 lab, spawning at
+    // level 3 with the points those levels give, and exempt from the castle clamp (design/heroes-t2-lab.md section 4).
+    static final ResourceCost T2_HERO_COST = ResourceCost.Unit(0, 450, 450, 50, 4);   // 450 metal, 450 energy, 50 s, 4 pop
+
+    public static final HeroKit ASH_SHAMAN = new HeroKit("ash_shaman", "Ash Shaman", "piglins", Role.CASTER,
+        150, 7, 0, 0.27f, 150, 12, 1.4f, T2_HERO_COST,
+        new AbilitySpec("firewall", "hero_firewall", Target.GROUND, Ai.NONE, cd(18, 15, 12), v(10, 12, 14), 0,
+            40, 6, v(4, 6, 8), v(4), HeroKits::firewall),
+        new AbilitySpec("lava_geyser", "hero_lava_geyser", Target.GROUND, Ai.NONE, cd(14, 12, 10), v(12), 3,
+            50, 8, v(12, 18, 24), v(1.5f), HeroKits::lavaGeyser),
+        new AbilitySpec("ember_totem", "hero_ember_totem", Target.GROUND, Ai.NONE, cd(40, 35, 30), v(10), 5,
+            60, 10, v(3, 4.5f, 6), v(8), HeroKits::emberTotem),
+        // passive: no cast (the effect never fires); a = seconds a hit target burns, applied by AshShamanUnit.doHurtTarget
+        new AbilitySpec("kindle", "hero_kindle", Target.SELF, Ai.NONE, cd(1, 1, 1), v(0), 0,
+            0, 0, v(2, 3, 4), v(0), c -> false)).t2Lab(3);
+
+    public static final List<HeroKit> T2_LAB = List.of(ASH_SHAMAN);
+
     @Nullable
     public static HeroKit forFaction(String factionName) {
         for (HeroKit k : ALL)
@@ -623,6 +643,97 @@ public final class HeroKits {
         }
         HeroFx.ring(c.level, ParticleTypes.ELECTRIC_SPARK, c.hero.position(), c.spec.radius);
         HeroFx.sound(c.level, c.hero.position(), SoundEvents.ANVIL_USE, 1.0f, 1.4f);
+        return true;
+    }
+
+    // ---- Horde T2 lab: Ash Shaman (H13) ----
+
+    /** A line of fire from the hero toward the aim, burning enemies on it (and only on it) every half second for b s. */
+    static boolean firewall(Cast c) {
+        Vec3 aim = new Vec3(c.at.x - c.hero.getX(), 0, c.at.z - c.hero.getZ());
+        double dist = aim.length();
+        if (dist < 0.5)
+            aim = c.hero.getLookAngle().multiply(1, 0, 1);
+        if (aim.lengthSqr() < 1e-4)
+            return false;
+        final Vec3 dir = aim.normalize();
+        double length = Math.max(4, Math.min(c.range(), dist));
+        Vec3 from = c.hero.position().add(dir.scale(1.5));
+        Vec3 to = from.add(dir.scale(length));
+        float dmg = c.a();
+        long[] left = { ticks(c.b()) };
+        int[] n = { 0 };
+        HeroFx.sound(c.level, from, SoundEvents.BLAZE_SHOOT, 1.2f, 0.6f);
+        c.fh.heroCore().timers.add(() -> {
+            if (n[0]++ % 10 == 0) {
+                for (LivingEntity e : HeroFx.enemiesOnLine(c.level, c.hero, from, to, 0.9)) {
+                    HeroFx.damage(c.hero, e, dmg, true);
+                    e.setSecondsOnFire(2);
+                }
+            }
+            if (n[0] % 3 == 0) {
+                int steps = (int) length;
+                for (int i = 0; i <= steps; i++) {
+                    Vec3 p = from.add(dir.scale(length * i / Math.max(1, steps)));
+                    HeroFx.particles(c.level, ParticleTypes.FLAME, p.add(0, 0.4, 0), 2, 0.25, 0.02);
+                }
+            }
+            return --left[0] <= 0 || !c.hero.isAlive();
+        });
+        return true;
+    }
+
+    /** A telegraphed eruption: a ring of embers marks the spot for b s, then it erupts (no damage before that). */
+    static boolean lavaGeyser(Cast c) {
+        Vec3 at = c.at;
+        float dmg = c.a();
+        double radius = c.spec.radius;
+        long[] left = { ticks(c.b()) };
+        HeroFx.sound(c.level, at, SoundEvents.LAVA_AMBIENT, 1.2f, 0.8f);
+        c.fh.heroCore().timers.add(() -> {
+            if (!c.hero.isAlive())
+                return true;   // the caster fell: the eruption is cancelled
+            if (--left[0] > 0) {
+                if (left[0] % 4 == 0) {
+                    HeroFx.ring(c.level, ParticleTypes.LAVA, at, radius);
+                    HeroFx.particles(c.level, ParticleTypes.SMOKE, at.add(0, 0.2, 0), 3, radius / 2, 0.01);
+                }
+                return false;
+            }
+            for (LivingEntity e : HeroFx.enemies(c.level, c.hero, at, radius)) {
+                HeroFx.damage(c.hero, e, dmg, true);
+                e.setSecondsOnFire(3);
+                e.setDeltaMovement(e.getDeltaMovement().add(0, 0.9, 0));
+                e.hurtMarked = true;
+            }
+            HeroFx.particles(c.level, ParticleTypes.LAVA, at.add(0, 0.5, 0), 40, radius / 2, 0.3);
+            HeroFx.particles(c.level, ParticleTypes.FLAME, at.add(0, 1, 0), 30, radius / 3, 0.25);
+            HeroFx.sound(c.level, at, SoundEvents.GENERIC_EXPLODE, 1.0f, 1.2f);
+            return true;
+        });
+        return true;
+    }
+
+    /** A totem of embers at the spot: every second for b s, enemies inside its radius burn (and only those). */
+    static boolean emberTotem(Cast c) {
+        Vec3 at = c.at;
+        float dmg = c.a();
+        double radius = c.spec.radius;
+        long[] left = { ticks(c.b()) };
+        int[] n = { 0 };
+        HeroFx.sound(c.level, at, SoundEvents.FIRECHARGE_USE, 1.2f, 0.7f);
+        c.fh.heroCore().timers.add(() -> {
+            if (n[0]++ % 20 == 0) {
+                for (LivingEntity e : HeroFx.enemies(c.level, c.hero, at, radius)) {
+                    HeroFx.damage(c.hero, e, dmg, true);
+                    e.setSecondsOnFire(2);
+                }
+                HeroFx.ring(c.level, ParticleTypes.FLAME, at, radius);
+            }
+            if (n[0] % 4 == 0)
+                HeroFx.particles(c.level, ParticleTypes.FLAME, at.add(0, 1.2, 0), 3, 0.15, 0.05);
+            return --left[0] <= 0 || !c.hero.isAlive();
+        });
         return true;
     }
 

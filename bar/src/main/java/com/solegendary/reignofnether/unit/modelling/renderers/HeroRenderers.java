@@ -14,9 +14,10 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * The seven faction heroes (hero slice 2, design/hero_mode.md): each is drawn with its body's renderer in its own skin
+ * The faction heroes (hero slice 2, design/hero_mode.md): each is drawn with its body's renderer in its own skin
  * (tools/gen_hero_skins.py, deterministic) and a tenth bigger than the unit it is built on, so a hero reads as a hero
- * in a crowd from the RTS camera.
+ * in a crowd from the RTS camera. The Dawn Paladin has its own body since Oct 21 (DawnPaladinRenderer, on the human
+ * body - lovish 21:20: every human unit off the villager body), at the same HERO_SCALE.
  */
 @OnlyIn(Dist.CLIENT)
 public final class HeroRenderers {
@@ -29,16 +30,6 @@ public final class HeroRenderers {
     }
 
     /** Sunforged: the Halberdier's illager body in gilded plate. */
-    public static class DawnPaladin extends VindicatorUnitRenderer {
-        private static final ResourceLocation TEXTURE = tex("dawn_paladin");
-        public DawnPaladin(EntityRendererProvider.Context context) { super(context); }
-        @Override public ResourceLocation getTextureLocation(VindicatorUnit unit) { return TEXTURE; }
-        @Override protected void scale(VindicatorUnit unit, PoseStack pose, float partialTicks) {
-            super.scale(unit, pose, partialTicks);
-            pose.scale(HERO_SCALE, HERO_SCALE, HERO_SCALE);
-        }
-    }
-
     /** Tidewrought: the Cutlass Raider's body in a captain's coat. */
     public static class CorsairCaptain extends VindicatorUnitRenderer {
         private static final ResourceLocation TEXTURE = tex("corsair_captain");
@@ -76,6 +67,17 @@ public final class HeroRenderers {
     public static class HordeWarchief extends PiglinUnitRenderer {
         private static final ResourceLocation TEXTURE = tex("horde_warchief");
         public HordeWarchief(EntityRendererProvider.Context context) { super(context); }
+        @Override public ResourceLocation getTextureLocation(Mob entity) { return TEXTURE; }
+        @Override protected void scale(Mob entity, PoseStack pose, float partialTicks) {
+            super.scale(entity, pose, partialTicks);
+            pose.scale(HERO_SCALE, HERO_SCALE, HERO_SCALE);
+        }
+    }
+
+    /** Horde T2-lab hero: PLACEHOLDER body - the Warchief's piglin model and skin (real Ash Shaman body comes later). */
+    public static class AshShaman extends PiglinUnitRenderer {
+        private static final ResourceLocation TEXTURE = tex("horde_warchief");   // placeholder skin
+        public AshShaman(EntityRendererProvider.Context context) { super(context); }
         @Override public ResourceLocation getTextureLocation(Mob entity) { return TEXTURE; }
         @Override protected void scale(Mob entity, PoseStack pose, float partialTicks) {
             super.scale(entity, pose, partialTicks);

@@ -26,8 +26,7 @@ public class ResearchServerEvents {
             ResearchSaveData researchData = ResearchSaveData.getInstance(serverLevel);
             researchData.researchItems.clear();
             researchData.researchItems.addAll(researchItems);
-            researchData.save();
-            serverLevel.getDataStorage().save();
+            researchData.save();   // dirty only: the world save writes it (persistence/RtsSaves)
 
             //ReignOfNether.LOGGER.info("saved " + researchItems.size() + " researchItems in serverevents");
         }
@@ -87,6 +86,18 @@ public class ResearchServerEvents {
         researchItems.removeIf(p -> p.getFirst().equals(playerName) && p.getSecond().equals(researchItemName));
         saveResearch();
         UpgradeVisuals.onResearchChanged(playerName);
+    }
+
+    /**
+     * How many times {@code researchItemName} is recorded for {@code playerName}: the real record, never the
+     * "medievalman" cheat that makes {@link #playerHasResearch} true for everything. 0 or 1 in a healthy game.
+     */
+    public static int recordedCount(String playerName, ResourceLocation researchItemName) {
+        int n = 0;
+        for (Pair<String, ResourceLocation> r : researchItems)
+            if (r.getFirst().equals(playerName) && r.getSecond().equals(researchItemName))
+                n++;
+        return n;
     }
 
     public static boolean playerHasResearch(String playerName, ProductionItem researchItem) {

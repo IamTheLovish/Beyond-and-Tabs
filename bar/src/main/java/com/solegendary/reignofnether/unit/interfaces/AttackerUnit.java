@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.TargetScan;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
@@ -47,6 +48,15 @@ public interface AttackerUnit {
     // how often an engaged (non-forced) attacker re-checks for a closer target; must be a multiple of 4 (the
     // cadence of the combat-AI block in tick())
     int RETARGET_TICKS = 12;
+
+    /**
+     * GAMEPLAY NUMBER (lovish's call, Oct 21 perf plan PR 5): how often an idle unit looks for something to attack
+     * by itself - 4 ticks = 0.2 s, as before. 8 (0.4 s, BAR's slow update is 0.5 s) halves idle lookups again - waiting
+     * on lovish's OK (gen-012, Oct 23). A unit that was fighting a moment ago (unit/TargetScan.inCombat) always looks
+     * every 4 ticks, and explicit attack orders, attack-move, retaliation and retargeting never wait on it. A multiple
+     * of 4.
+     */
+    int IDLE_AGGRO_TICKS = 4;
 
     public static final float ATTACK_DAMAGE_REDUCTION_PER_WEAK = 0.2f;
     public static final float ATTACK_DAMAGE_INCREASE_PER_STRENGTH = 0.2f;
@@ -143,8 +153,32 @@ public interface AttackerUnit {
     public EnemySearchBehaviour getEnemySearchBehaviour(); // not necessarily the same goal, eg. could be melee or ranged
     public void setEnemySearchBehaviour(EnemySearchBehaviour behaviour);
 
+    /**
+     * False for a unit that cannot hit air (the field artillery, {@link FieldArtillery}): a flyer
+     * ({@link #isAirTarget}) is never its target - not picked by itself, not in retaliation, and an attack order on one
+     * is ignored ({@link #refusesTarget}; checked in setUnitAttackTarget, SelectedTargetGoal.setTarget and
+     * MiscUtil.isIdleOrMoveAttackable, so the scans never even offer it).
+     */
+    default boolean canTargetAir() {
+        return true;
+    }
+
+    /** In the air for {@link #canTargetAir}: a flying unit (a grounded Celestial Dragon is not), or a vanilla flyer. */
+    static boolean isAirTarget(@Nullable Entity e) {
+        if (e instanceof Unit u)
+            return u.isFlyingUnit();
+        return e != null && com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(e);
+    }
+
+    /** Would this attacker refuse this target (it cannot hit air and the target is in the air)? */
+    static boolean refusesTarget(@Nullable Object attacker, @Nullable Entity target) {
+        return attacker instanceof AttackerUnit a && !a.canTargetAir() && isAirTarget(target);
+    }
+
     // chase and attack the target ignoring all else until it is dead or out of sight
     public default void setUnitAttackTarget(@Nullable LivingEntity target) {
+        if (refusesTarget(this, target))
+            return;   // cannot hit air: the order is ignored, whatever the unit was doing carries on
         if (target != null) {
             MiscUtil.addUnitCheckpoint(((Unit) this), target.getId(), false);
             Goal attackBuildingGoal = this.getAttackBuildingGoal();
@@ -158,6 +192,8 @@ public interface AttackerUnit {
 
     // chase and attack the target ignoring all else until it is dead or out of sight
     public default void setUnitAttackTargetForced(@Nullable LivingEntity target) {
+        if (refusesTarget(this, target))
+            return;
         setUnitAttackTarget(target);
         if (target != null) {
             Goal attackBuildingGoal = this.getAttackBuildingGoal();
@@ -257,6 +293,52 @@ public interface AttackerUnit {
         return CommandQueues.queuedCount(unitMob.getId()) > 0;
     }
 
+    /**
+     * The contact rule. A unit on a plain move order used to ignore the enemy completely until the move ended: no idle
+     * aggro and no retaliation, both of which wait for {@link Unit#isIdle}. A move that runs into the enemy army never
+     * ends on time - the unit is body-blocked short of its formation cell, Separation keeps it twitching (so isIdle's
+     * "standing still" test fails too), and the move only gives up after three repaths that end on the same node:
+     * 7 s at best, far longer in a crowd. So in lovish's Oct 22 1v1 (hundreds a side) his right-clicked army stood
+     * pressed into the bot's wave, taking hits and not swinging back. BAR's move does not chase, but its units still
+     * fire at whatever is in range; here a unit whose move has made no headway (a block closer,
+     * MoveToTargetBlockGoal.ticksWithoutProgress) for {@link #CONTACT_STALL_TICKS} ticks (a shooter
+     * {@link #RANGED_STALL_TICKS}) fights: it answers whoever hits it and takes the nearest enemy within
+     * {@link #contactRange} - arm's length for melee, weapon range for a shooter. The blocked move is dropped (it
+     * would have given up anyway); a unit that is getting closer keeps walking past the enemy, as before (a move away
+     * from a fight still works).
+     */
+    int CONTACT_STALL_TICKS = 30;
+    int RANGED_STALL_TICKS = 60;
+    /** Past the melee swing (two body widths): the rule takes an enemy the unit is touching, not one a step off. */
+    double CONTACT_MARGIN = 1.0;
+
+    static boolean isMelee(AttackerUnit attackerUnit) {
+        return attackerUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal;
+    }
+
+    /** Arm's length for melee (its swing plus {@link #CONTACT_MARGIN}), weapon range for a shooter. */
+    static double contactRange(AttackerUnit attackerUnit) {
+        if (!isMelee(attackerUnit))
+            return attackerUnit.getAttackRange();
+        Mob mob = (Mob) attackerUnit;
+        return Math.max(attackerUnit.getAttackRange(),
+            mob.getBbWidth() * 2.0 + attackerUnit.getBonusMeleeRange() + CONTACT_MARGIN);
+    }
+
+    /** On a plain move order that stopped getting closer (see the contact rule above) and doing nothing else. */
+    static boolean blockedOnMove(AttackerUnit attackerUnit) {
+        Unit unit = (Unit) attackerUnit;
+        Mob mob = (Mob) attackerUnit;
+        MoveToTargetBlockGoal moveGoal = unit.getMoveGoal();
+        if (moveGoal == null || moveGoal.getMoveTarget() == null)
+            return false;
+        if (attackerUnit.getAttackMoveTarget() != null || unit.hasLivingTarget() || isAttackingBuilding(attackerUnit)
+                || unit.getFollowTarget() != null || unit.getHoldPosition() || mob.isPassenger() || unit.isFlyingUnit()
+                || GarrisonableBuildingAddon.getGarrison(unit) != null)
+            return false;   // (a flyer is never body-blocked, and its move goal keeps no headway clock)
+        return moveGoal.ticksWithoutProgress() >= (isMelee(attackerUnit) ? CONTACT_STALL_TICKS : RANGED_STALL_TICKS);
+    }
+
     /** True when the building being attacked was ordered (forced), not picked up on the way. */
     static boolean isBuildingTargetForced(AttackerUnit attackerUnit) {
         Goal attackBuildingGoal = attackerUnit.getAttackBuildingGoal();
@@ -311,6 +393,10 @@ public interface AttackerUnit {
             }
 
             boolean isAttackingBuilding = isAttackingBuilding(attackerUnit);
+            // something to fight now: when it dies or runs off, this unit looks for the next target at once instead of
+            // on the idle stagger below (TargetScan.COMBAT_MEMORY_TICKS)
+            if (isAttackingBuilding || unit.hasLivingTarget())
+                TargetScan.markEngaged(unitMob);
 
             // BAR fire state (EngagementStance): Hold fire never picks a target on its own and Return fire only
             // answers whoever hit it; both still obey an explicit attack order (forced target). Fire at will is RoN's
@@ -374,12 +460,15 @@ public interface AttackerUnit {
             boolean forced3 = attackBuildingGoal instanceof MeleeAttackBuildingGoal mabg && mabg.forced;
             boolean forced = forced1 || forced2 || forced3;
 
+            // a plain move that ran into something and stopped getting closer (the contact rule, blockedOnMove)
+            boolean blocked = !isCasting && blockedOnMove(attackerUnit);
+
             // retaliate against a mob that damaged us UNLESS already on another command - and a command waiting in the
-            // unit's queue counts: see ordersWaiting
+            // unit's queue counts: see ordersWaiting. A move order that is blocked does not count (the contact rule)
             if (unitMob.getLastDamageSource() != null &&
                     attackerUnit.getWillRetaliate() && EngagementStance.mayRetaliate(unitMob) &&
                     unit.getTargetGoal().getTarget() == null &&
-                    !isCasting && ((unit.isIdle() && !ordersWaiting(unitMob)) || (isAttackingBuilding && !forced))) {
+                    !isCasting && ((unit.isIdle() && !ordersWaiting(unitMob)) || (isAttackingBuilding && !forced) || blocked)) {
 
                 Entity lastDSEntity = unitMob.getLastDamageSource().getEntity();
 
@@ -399,11 +488,29 @@ public interface AttackerUnit {
                     !(lastDSEntity instanceof Player player && player.isCreative()) &&
                     (rs == Relationship.NEUTRAL || rs == Relationship.HOSTILE)) {
 
+                    if (blocked)
+                        unit.getMoveGoal().stopMoving();   // the blocked move is over: it fights where it stands
                     attackerUnit.setUnitAttackTarget((LivingEntity) lastDSEntity);
                 }
             }
-            // idle auto-aggression
-            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob)) {
+            // the contact rule: a blocked mover takes the nearest enemy it touches (a shooter: in weapon range)
+            if (blocked && fireAtWill && attackerUnit.getAggressiveWhenIdle() && unit.getTargetGoal().getTarget() == null) {
+                LivingEntity foe;
+                int sysContact = Sys.begin(Sys.ENTITY_SCAN);
+                try {
+                    foe = MiscUtil.findClosestAttackableEntity(unitMob, (float) contactRange(attackerUnit),
+                        (ServerLevel) unitMob.level());
+                } finally {
+                    Sys.end(sysContact);
+                }
+                if (foe != null) {
+                    unit.getMoveGoal().stopMoving();
+                    attackerUnit.setUnitAttackTarget(foe);
+                }
+            }
+            // idle auto-aggression: every IDLE_AGGRO_TICKS, staggered by entity id, for a unit not in combat (TargetScan)
+            if (unit.isIdle() && !isCasting && attackerUnit.getAggressiveWhenIdle() && fireAtWill && !ordersWaiting(unitMob)
+                    && TargetScan.idleScanDue(unitMob)) {
                 int sysIdle = Sys.begin(Sys.IDLE_AGGRO);
                 try {
                     attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
@@ -415,8 +522,8 @@ public interface AttackerUnit {
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
             // Throttled from every 4 to every RETARGET_TICKS ticks: this runs for every unit already in combat (the
             // bulk of units in a big fight) and each call is an entity query + sort + line-of-sight checks.
-            // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Idle aggro and
-            // attack-move acquisition above still run every 4 ticks, so reaction time to new enemies is unchanged.
+            // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Attack-move
+            // acquisition above still runs every 4 ticks (idle aggro every IDLE_AGGRO_TICKS, see there).
             if (!forced && fireAtWill && unitMob.tickCount % RETARGET_TICKS == 0) {
                 int sysRetarget = Sys.begin(Sys.RETARGET);
                 try {

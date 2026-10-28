@@ -57,9 +57,13 @@ TARGETS = {
     "stone":            dict(luma=0.52, std=0.060, sat=0.05, lf=0.2, ao=0.5, tilt=6.0, smooth=40, pore=12),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
     "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
-    "gravel":           dict(luma=0.46, std=0.085, sat=0.07, tilt=26.0, smooth=50, pore=30),
-    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.46, tilt=8.5, smooth=70, pore=24),
-    "oak_log":          dict(luma=0.33, std=0.060, sat=0.38, tilt=27.0, smooth=40, pore=36),
+    # round 24-26 (PR #160, eyes close-ups of the terrain sampler, run 39838783742; shipped by lovish Oct 22 20:23 "you
+    # can ship them and keep working on them"): gravel's smoothness 50 -> 24 (a blue sky sheen at the 30-degree view)
+    # and tilt 26 -> 16 (bubble wrap); oak planks sat 0.46 -> 0.40, smooth 70 -> 45 (orange, satin); oak bark sat
+    # 0.38 -> 0.34 (grey-brown) and tilt 27 -> 22; `soften` (see soften()) keeps the plain game free of pepper
+    "gravel":           dict(luma=0.46, std=0.070, sat=0.07, tilt=16.0, smooth=24, pore=30, soften=0.8),
+    "oak_planks":       dict(luma=0.46, std=0.055, sat=0.40, tilt=8.5, smooth=45, pore=24, soften=0.4, lf=0.3),
+    "oak_log":          dict(luma=0.33, std=0.060, sat=0.34, tilt=22.0, smooth=40, pore=36, soften=2.0),
     "oak_log_top":      dict(luma=0.44, std=0.073, sat=0.48, tilt=12.0, smooth=40, pore=30),
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
@@ -416,6 +420,8 @@ SEED_ORDER = (
     "cherry_log",             # Oct 21: map-tree cherries
     "cherry_log_top",
     "cherry_leaves",
+    "exposed_cut_copper",     # round 23: copper stages
+    "weathered_cut_copper",
 )
 
 
@@ -626,6 +632,26 @@ def m_gravel(F, n):
     return H, alb
 
 
+def m_gravel_r25(F, n):
+    """Gravel, round 25 (reviewer: main's gravel read as Voronoi flagstones / bubble wrap). Gravel is MANY small
+    rounded pebbles, ~2-4 cm: two sizes of soft-domed stones packed together, each its own grey (a few warm, a few
+    dark), shaded rounder than outlined - the gaps between them a soft shadow, not a black grid."""
+    rng = F.rng
+    f1, f2, idx, k = F.voronoi(260, 1.0)                 # ~8 texels: the larger pebbles
+    g1, g2, gidx, gk = F.voronoi(700, 1.0)               # ~5 texels: the small ones
+    big = (rng.random(k) < 0.5)[idx]
+    a1, a2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    pid = np.where(big, idx, gidx + k)
+    dome = np.clip(1 - (2 * a1 / np.maximum(a1 + a2, 1e-6)) ** 2, 0, 1)
+    tone = rng.random(k + gk)
+    kind = rng.random(k + gk)
+    base = np.where(kind[pid][..., None] < 0.6, np.array([0.50, 0.49, 0.48]),
+                    np.where(kind[pid][..., None] < 0.85, np.array([0.52, 0.48, 0.44]), np.array([0.40, 0.39, 0.39])))
+    H = 0.3 + 0.5 * np.sqrt(dome) + 0.02 * F.noise(24, 64, 0.2)
+    shade = (0.85 + 0.25 * tone[pid]) * (0.72 + 0.28 * np.sqrt(dome))
+    return H, np.clip(base * shade[..., None], 0, 1)
+
+
 def m_sand(F, n, base=(0.86, 0.78, 0.58)):
     grains = F.noise(16, 40, 0.0)
     ripple_ph = F.v * 2 * math.pi * 5 + 1.2 * F.noise(1, 3, 0.5)
@@ -764,6 +790,49 @@ def m_planks(F, n, base=(0.66, 0.51, 0.31), wave=0.02):
     return H, alb
 
 
+def m_oak_planks_r24(F, n, base=(0.66, 0.51, 0.31)):
+    """Oak planks, round 24 (eyes close-up, run 39838783742: m_planks' oak read as cartoon wood - a wavy marbled grain,
+    dark outlines round every board, nail dots, orange). Sawn oak boards: a fine STRAIGHT grain (long thin streaks of
+    early- and latewood, a ray fleck here and there), each board its own tone and grain, thin dark gaps, the board
+    edges a little darker where dirt and wear collect, no nails. Each board sits at its own height and is very
+    slightly cupped; the grain lives mostly in the colour, so the light does not emboss it."""
+    rows = 4                                             # vanilla's four boards per block
+    row = np.floor(F.v * rows).astype(int)
+    in_row = (F.v * rows) % 1.0
+    off = np.array([0.0, 0.5, 0.25, 0.75])[row % 4]
+    joint_u = (F.u + off) % 1.0
+    # r25 drew a second end joint in some rows; r26 dropped it - its two draws stay, so every board keeps the tone it
+    # had in round 26 (the build is pixel-identical to #160's round 26)
+    F.rng.random(rows)
+    F.rng.random(rows)
+    # r26 (review: brickwork at RTS): no second joints, and only two of the four rows have a butt joint in this
+    # block - the others run on into the next block (boards a block and more long)
+    ju2 = np.ones_like(joint_u)
+    joint_u = np.where(np.isin(row, [0, 2]), joint_u, 0.5)
+    # the grain: very long along u, thin across v; a hair of waviness; two scales (latewood lines, broad streaks)
+    lines = F.warp(F.noise(16, 64, 0.5, sx=30.0, sy=1.0), 0.0, 0.004 * F.noise(2, 6, 0.5))
+    streak = F.noise(4, 20, 0.6, sx=12.0, sy=1.0)
+    fleck = smoothstep(1.6, 2.4, F.noise(10, 40, 0.3, sx=6.0, sy=1.0))   # the odd ray fleck (quartersawn oak)
+    rng = F.rng
+    board_tone = (rng.random(rows) - 0.5)[row]
+    board_hue = (rng.random(rows) - 0.5)[row]
+    gap = smoothstep(0.0, 0.06, in_row) * smoothstep(0.0, 0.06, 1 - in_row)
+    endgap = smoothstep(0.0, 0.022, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    seams = gap * endgap
+    edge = smoothstep(0.0, 0.22, np.minimum(in_row, 1 - in_row)) \
+        * smoothstep(0.0, 0.05, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    cup = 1 - 4 * (in_row - 0.5) ** 2                    # a board very slightly higher in its middle
+    # the gap in the HEIGHT is a narrow step, not a rounded bevel: a bevel the full colour-gap wide lit as a moulded
+    # plastic panel under the low sun
+    hgap = smoothstep(0.0, 0.025, in_row) * smoothstep(0.0, 0.025, 1 - in_row) \
+        * smoothstep(0.0, 0.010, np.minimum(np.minimum(joint_u, 1 - joint_u), ju2))
+    H = 0.45 + 0.12 * hgap + 0.04 * board_tone + 0.03 * cup + 0.015 * lines
+    shade = (0.86 + 0.10 * board_tone + 0.06 * lines + 0.05 * streak + 0.05 * fleck) * (0.90 + 0.10 * edge) \
+        * (0.62 + 0.38 * seams)                          # r25: a soft dark gap, not a black line
+    jit = np.stack([0.04 * board_hue + 0.015 * streak, 0.01 * board_hue, -0.04 * board_hue - 0.015 * streak], -1)
+    return H, tint(base, shade, jit)
+
+
 def m_spruce_planks(F, n):
     # the darker, redder board with a straight grain (fit_albedo sets the luma): the oak's wave read as marble on the
     # capitol roof (run 38735013028)
@@ -833,7 +902,6 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # round 18 (eyes structure run 39536435197: oak and birch tops "covered in dense dark flecks"): the flecks were
     # the many pin-sized gaps between leaves - in game each shows the dark inside of the crown. Gaps smaller than
     # about 1/20 block are filled with leaves deeper in the crown (a little darker, never black); the real gaps stay.
-    cover = F.blur(leaf.astype(np.float64), n / 64)
     # round 19: no gaps at all - the few big ones left were the same pits on every block (birch "moth-eaten"); the
     # canopy's depth now comes from the deeper, darker fill leaves, not from holes onto the dark inside of the crown
     keep_gap = np.zeros_like(leaf)
@@ -884,6 +952,10 @@ GRASS_TOPS = ("grass_block_top", "grass_block_top_v2")
 TARGETS["cherry_log"] = dict(luma=0.24, std=0.050, sat=0.42, tilt=22.0, smooth=50, pore=30)
 TARGETS["cherry_log_top"] = dict(luma=0.42, std=0.040, sat=0.45, tilt=10.0, smooth=45, pore=30)
 TARGETS["cherry_leaves"] = dict(luma=0.70, std=0.100, sat=0.30, ao=0.35, tilt=9.0, smooth=60, pore=180)
+# round 23: the copper weathering stages in between (the capitol's roofs use all four); smooth is the base the
+# recipe's own per-texel smoothness replaces
+TARGETS["exposed_cut_copper"] = dict(luma=0.44, std=0.065, sat=0.42, tilt=12.0, smooth=90, pore=6)
+TARGETS["weathered_cut_copper"] = dict(luma=0.46, std=0.075, sat=0.42, tilt=12.0, smooth=40, pore=14)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -908,11 +980,70 @@ def m_raw_iron(F, n, cells=13):
 
 
 def m_plate(F, n, rgb):
-    """A cast block of metal or cut gem: m_gold's plate with another colour (iron, netherite, diamond, emerald,
-    lapis)."""
-    H, alb = m_gold(F, n)
+    """Round 23: a cast block of metal: m_gold's plate (bevel, cast dents, polish scratches) in another colour,
+    plus a per-texel smoothness - the split test (eyes 39675571483 / 39675576144, claude/diag-metals) showed the
+    metals read PAINTED under Complementary: the _s panel (D) was indistinguishable from the grey reference (a
+    uniform 150-200 smoothness on an F0-230 metal gives a soft wide sheen like gloss paint), so the metal signal
+    has to come from the smoothness map itself. Used for netherite (F0 255 - the albedo as F0)."""
+    H, alb, smooth = m_metal_plate(F, n)
     L = alb @ np.array([0.2126, 0.7152, 0.0722])
-    return H, tint(rgb, L / max(L.mean(), 1e-6))
+    return H, tint(rgb, L / max(L.mean(), 1e-6)), smooth
+
+
+def brushed(F, strength=1.0):
+    """Brushed-metal grain: long fine streaks along u (a rolled / ground plate), as a tone 0-1 around 0.5."""
+    # fine (40-64 cycles: 2-3 texels) so the mipmaps average it away at RTS distance - the streaks are a close-up
+    # and reflection signal, not a stripe pattern on the block (v1 at 8-64 cycles drew vertical bars at RTS zoom)
+    g = F.noise(40, 64, 0.0, sx=1.0, sy=14.0) + 0.35 * F.noise(16, 40, 0.0, sx=1.0, sy=14.0)
+    return 0.5 + 0.5 * np.tanh(0.5 * strength * g)
+
+
+def m_metal_plate(F, n, bevel=0.07, groove=0.012, dent=0.012, brush=1.0, smooth_base=165, smooth_var=55):
+    """Round 23: the shared cast-and-ground metal plate. Height: a bevelled rim, broad cast dents, the brushing as
+    a fine ripple. Albedo: a flat metal tone with the brushing (real polished metal is near-uniform in albedo - its
+    look is all reflection). Smoothness: HIGH on the ground faces (the sky and sun reflect crisp), lower in the
+    brushing grain and the dents - a per-texel map, the anisotropic streak that makes metal read as metal."""
+    bev = frame(F, bevel, groove)
+    dents = F.noise(2, 6, 0.6)
+    br = brushed(F, brush)
+    wear = smoothstep(0.3, 0.9, norm01(F.fbm(2, 3, 0.5)))        # patches handled more (duller)
+    H = 0.35 + 0.5 * bev + dent * dents + 0.003 * (br - 0.5)
+    shade = (0.93 + 0.04 * dents + 0.025 * (br - 0.5)) * (0.72 + 0.28 * bev)
+    alb = tint((0.80, 0.80, 0.80), shade)
+    smooth = smooth_base + smooth_var * (br - 0.5) - 25 * wear - 20 * (1 - bev)
+    return H, alb, np.clip(smooth, 40, 240)
+
+
+def m_iron(F, n):
+    """Round 23: an iron block as a riveted hot-rolled plate - brushed, a rivet row inside the bevel, the plate
+    faces a cool neutral grey (the warm cast in the eyes stills was the rig's low sun: the grey reference block
+    took the same tint)."""
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.06, groove=0.010, dent=0.010, brush=1.0, smooth_base=150,
+                                   smooth_var=60)
+    # rivets: 4 per side, round domes at 1/8 block in from the edge
+    cx = np.array([0.125, 0.375, 0.625, 0.875])
+    du = np.min(np.abs(F.u[..., None] - cx[None, None, :]), -1)
+    dv = np.min(np.abs(F.v[..., None] - cx[None, None, :]), -1)
+    inset = 0.09
+    r = 0.028
+    dom_u = np.sqrt(np.minimum(np.abs(F.u - inset), np.abs(F.u - 1 + inset)) ** 2 + dv ** 2)
+    dom_v = np.sqrt(np.minimum(np.abs(F.v - inset), np.abs(F.v - 1 + inset)) ** 2 + du ** 2)
+    d = np.minimum(dom_u, dom_v)
+    dome = np.clip(1 - (d / r) ** 2, 0, 1)
+    head = dome > 0
+    H = np.where(head, H + 0.10 * np.sqrt(dome), H)
+    alb = np.where(head[..., None], alb * (0.92 + 0.12 * np.sqrt(dome))[..., None], alb)
+    smooth = np.where(head, 120 + 40 * dome, smooth)
+    return H, alb, smooth
+
+
+def m_gold_r23(F, n):
+    """Round 23 gold: a cast plate, finer polish than iron (less brushing), warm yellow, calm smoothness with the
+    polish grain."""
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.07, groove=0.015, dent=0.012, brush=0.6, smooth_base=185,
+                                   smooth_var=40)
+    L = alb @ np.array([0.2126, 0.7152, 0.0722])
+    return H, tint((0.98, 0.78, 0.25), L / max(L.mean(), 1e-6)), smooth
 
 
 def m_facets(F, n, rgb, cells, edge=0.010, rim=True):
@@ -1124,24 +1255,45 @@ def m_deepslate(F, n, top=False):
     return H, tint((0.28, 0.30, 0.35), shade)
 
 
-def m_copper(F, n, oxidized):
-    """Cut copper: four plates per block with seams; bare metal (LabPBR copper, F0 234) or a teal patina that runs in
-    streaks and gathers in the seams (dielectric). Returns H, albedo, F0 map."""
+def m_copper(F, n, stage):
+    """Round 23 cut copper, four plates per block with seams, in its four weathering stages (0 bare .. 3 oxidized):
+    bare: salmon-pink metal, brushed, F0 234. exposed: the metal dulled brown-tarnished with the first green
+    speckle in the seams. weathered: tarnish everywhere, verdigris spread in blotches from the seams and the low
+    spots over most of the face, bare metal left on the crests. oxidized: solid verdigris, matte, dielectric.
+    Real patina starts where water sits (seams, dents, under the edge) and grows outwards - not a uniform teal."""
     grid = 2
     iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
     face = smoothstep(0.004, 0.02, edge)
     ham = F.noise(4, 14, 0.6)
-    scratch = 1 - smoothstep(0.0, 0.04, np.abs(F.noise(20, 60, 0.0, sx=6.0, sy=1.0)))
-    H = 0.35 + 0.5 * face + 0.02 * ham - 0.01 * scratch
-    if not oxidized:
-        shade = (0.86 + 0.08 * ham - 0.04 * scratch) * (0.65 + 0.35 * face)
-        return H, tint((0.80, 0.45, 0.30), shade), np.full(H.shape, 234)
-    streak = F.fbm(3, 4, 0.6, sx=1.0, sy=4.0)
-    shade = (0.85 + 0.12 * streak + 0.04 * ham) * (0.7 + 0.3 * face)
-    alb = tint((0.32, 0.64, 0.55), shade)
-    alb = np.where((face < 0.3)[..., None], alb * 0.75, alb)
-    return H, alb, np.full(H.shape, 10)
+    br = brushed(F, 0.8)
+    H = 0.35 + 0.5 * face + 0.02 * ham + 0.005 * (br - 0.5)
+    metal = tint((0.80, 0.45, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5)) * (0.65 + 0.35 * face))
+    smooth_metal = np.clip(150 + 40 * (br - 0.5) - 15 * (1 - face), 40, 230)
+    if stage == 0:
+        return H, metal, np.full(H.shape, 234), smooth_metal
+    # tarnish: a brown-purple film that dulls the metal (copper's first oxide, Cu2O)
+    tarn_n = norm01(F.fbm(2, 4, 0.55))
+    tarn = smoothstep(0.1, 0.7, tarn_n + (0.5 if stage >= 2 else 0.0))
+    tarnished = metal * (1 - tarn[..., None]) + tarn[..., None] * tint((0.46, 0.30, 0.24), 0.9 + 0.2 * ham)
+    # verdigris: grows from the seams and the hollows outward
+    seed_n = norm01(F.warp(F.fbm(2, 3, 0.55), 0.015 * F.noise(2, 6), 0.015 * F.noise(2, 6)))
+    low = 1 - face + 0.25 * (1 - norm01(F.blur(ham, F.n / 24)))
+    spread = {1: 0.22, 2: 0.82, 3: 1.05}[stage]
+    verd = smoothstep(0.0, 0.45, seed_n * 0.6 + 0.5 * low + spread - 0.85)
+    spots = smoothstep(0.88, 0.97, norm01(F.noise(6, 16, 0.4))) * (0.5 if stage == 1 else 0.0)
+    verd = np.clip(verd + spots, 0, 1)
+    vtone = 0.85 + 0.2 * norm01(F.fbm(3, 3, 0.5)) + 0.05 * ham
+    green = tint((0.33, 0.62, 0.50), vtone)
+    pale = tint((0.55, 0.75, 0.62), vtone)                 # the chalky light bloom on thick patina
+    bloom = smoothstep(0.6, 0.95, norm01(F.fbm(4, 3, 0.5))) * (stage >= 2)
+    green = green * (1 - 0.6 * bloom[..., None]) + pale * 0.6 * bloom[..., None]
+    alb = tarnished * (1 - verd[..., None]) + green * verd[..., None]
+    alb = np.where((face < 0.3)[..., None], alb * 0.8, alb)
+    H = H + 0.015 * verd * norm01(F.noise(12, 40, 0.3))   # the crust is a little rough
+    f0 = np.where(verd > 0.5, 10, 234)
+    smooth = smooth_metal * (1 - tarn * 0.45) * (1 - verd) + verd * (18 + 10 * (1 - vtone))
+    return H, alb, f0, np.clip(smooth, 8, 230)
 
 
 def m_netherrack(F, n):
@@ -1593,6 +1745,42 @@ def m_bark(F, n, base, style="oak"):
     col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
     alb = np.clip(col * shade[..., None], 0, 1)
     alb = np.stack([F.blur(alb[..., c], 0.5) for c in range(3)], -1)
+    return H, alb
+
+
+def m_oak_bark_r24(F, n, base=(0.42, 0.33, 0.21)):
+    """Oak bark, round 24 (eyes close-up, run 39838783742: m_bark's Voronoi plates read as carved flames - lens-shaped
+    plates domed to a point, dark V tips between them; a quieter version read as quilted leather). Mature oak bark is
+    long rough RIDGES split by deep, meandering furrows that run up the trunk and join and part again. Those furrows are
+    the zero-crossings of a noise stretched up the trunk: lines that wander, fork and merge on their own, at no fixed
+    spacing - no cell shapes at all. Ridge tops are flat and rough (scaly, with short horizontal checks), the furrows
+    dark and damp; sun and rain grey the ridge faces."""
+    warp = 0.02 * F.noise(2, 6, 0.6)
+    field = F.warp(F.noise(2, 8, 0.9, sx=1.0, sy=6.0), warp, 0.0)    # long along v (up the trunk)
+    gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) / 2
+    gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) / 2
+    a = np.abs(field) / np.maximum(np.sqrt(gx * gx + gy * gy), 0.02)   # ~distance to the furrow line, in texels
+    # r25: furrow width also drifts across the whole block (wide, deep runs and tight ones) - the ridges were uniform
+    w = (n / 40) * np.clip(1.0 + 0.5 * F.noise(4, 16, 0.5) + 0.45 * F.noise(1, 3, 0.8), 0.4, 2.0)
+    furrow = 1 - smoothstep(0.0, w, a)                                 # dark, deep
+    ridge = smoothstep(0.6 * w, 2.2 * w, a)                            # flat-topped ridges, a rounded shoulder
+    breaks = (1 - smoothstep(0.0, 0.12, np.abs(F.noise(2, 8, 0.6, sx=4.0, sy=1.0)))) \
+        * smoothstep(0.5, 1.2, F.noise(3, 10, 0.5))                    # a ridge broken across now and then
+    breaks = F.blur(breaks * ridge, 0.8)
+    scale = F.noise(10, 48, 0.4)                                       # scaly roughness on the ridge tops
+    checks = smoothstep(0.7, 1.5, F.noise(8, 40, 0.5, sx=1.0, sy=0.3))  # short checks ACROSS the ridges
+    fib = F.noise(10, 48, 0.4, sx=1.0, sy=8.0)
+    H = 0.30 + 0.45 * ridge - 0.20 * furrow + 0.06 * scale * ridge - 0.10 * checks * ridge - 0.25 * breaks \
+        + 0.02 * fib
+    rgb = np.asarray(base, dtype=np.float64)
+    grey = rgb.mean()
+    weathered = rgb + (grey - rgb) * 0.30 + 0.03                       # the faces sun-greyed (r25: less - too grey)
+    face = np.clip(ridge * (1 - breaks), 0, 1)
+    col = rgb[None, None, :] * (1 - face[..., None]) + weathered[None, None, :] * face[..., None]
+    lichen = F.blur(smoothstep(0.9, 1.6, F.noise(3, 9, 0.6)) * face, 1.5) * 0.35
+    col = col * (1 - lichen[..., None]) + np.array([0.52, 0.55, 0.42])[None, None, :] * grey / 0.5 * lichen[..., None]
+    shade = (0.62 + 0.38 * face) * (1 + 0.06 * scale * face - 0.10 * checks * face + 0.03 * fib) - 0.10 * furrow
+    alb = np.clip(col * shade[..., None], 0, 1)
     return H, alb
 
 
@@ -2191,6 +2379,17 @@ def write_models():
             json.dump({"variants": {"": turns}}, f, indent=1)
 
 
+def _d3(r):
+    """(H, alb, smooth) -> the parts dict (round 23 metals paint their own smoothness)."""
+    H, alb, sm = r
+    return dict(H=H, alb=alb, smooth=sm)
+
+
+def _d4(r):
+    H, alb, f0, sm = r
+    return dict(H=H, alb=alb, f0=f0, smooth=sm)
+
+
 def _parts(fn, fit=True):
     """Round 16: a material that returns a dict (H, alb and any of alpha / f0 / smooth / emit). The albedo is fitted
     on its visible texels - or not at all (fit=False) for a sprite of several materials painted to vanilla's UV
@@ -2204,10 +2403,21 @@ def _parts(fn, fit=True):
     return r
 
 
+def soften(F, alb, t):
+    """Round 25 (the owner's "dots of pepper", Oct 20; r24's plain-lane close-ups: stone's 4-neighbour Laplacian 14.8 ->
+    34): a material whose TARGETS entry has `soften` (texels, sigma) gets its fitted albedo low-passed - nearest-texel
+    magnification turns every texel-to-texel step into a hard screen step, so the colour's detail lives at 3+ texels
+    and the fine grain stays in the normal map for the light. No `soften`, no change."""
+    sg = t.get("soften")
+    if not sg:
+        return alb
+    return np.clip(np.stack([F.blur(alb[..., c], sg) for c in range(alb.shape[-1])], -1), 0, 1)
+
+
 def _plain(fn):
     def r(F, n, t):
         H, alb = fn(F, n)
-        return dict(H=H, alb=fit_albedo(alb, t))
+        return dict(H=H, alb=soften(F, fit_albedo(alb, t), t))
     return r
 
 
@@ -2266,18 +2476,19 @@ def recipes():
         "grass_block_side": _grass_side,
         "grass_block_side_overlay": _grass_side_overlay,
         "dirt": _plain(m_dirt), "stone": _plain(m_stone), "cobblestone": _plain(m_cobblestone),
-        "sand": _plain(m_sand), "gravel": _plain(m_gravel), "oak_planks": _plain(m_planks), "oak_log": _plain(m_log),
+        "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
+        "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
         "raw_iron_block": _with_f0(m_raw_iron), "barrel_side": _with_f0(m_barrel_side),
         "barrel_top": _with_f0(lambda F, n: m_barrel_end(F, n, True)),
         "barrel_bottom": _with_f0(lambda F, n: m_barrel_end(F, n, False)),
-        "gold_block": _plain(m_gold), "hay_block_side": _plain(m_hay_side), "hay_block_top": _plain(m_hay_top),
+        "gold_block": _parts(lambda F, n: _d3(m_gold_r23(F, n))), "hay_block_side": _plain(m_hay_side), "hay_block_top": _plain(m_hay_top),
         "birch_log": _plain(m_birch_log),
         "birch_log_top": _plain(lambda F, n: m_log_top(F, n, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))),
-        "cut_copper": _with_f0(lambda F, n: m_copper(F, n, False)),
-        "oxidized_cut_copper": _with_f0(lambda F, n: m_copper(F, n, True)),
+        "cut_copper": _parts(lambda F, n: _d4(m_copper(F, n, 0))),
+        "oxidized_cut_copper": _parts(lambda F, n: _d4(m_copper(F, n, 3))),
         "azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, False)),
         "cherry_leaves": _cutout(m_cherry_leaves),
         "flowering_azalea_leaves": _cutout(lambda F, n: m_azalea(F, n, True)),
@@ -2374,8 +2585,6 @@ def recipes():
         "basalt_top": lambda F, n: m_basalt_rough(F, n, True),
         "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
         "soul_sand": m_soul_sand,
-        "iron_block": lambda F, n: m_plate(F, n, (0.86, 0.86, 0.87)),
-        "netherite_block": lambda F, n: m_plate(F, n, (0.30, 0.27, 0.29)),
         "diamond_block": lambda F, n: m_facets(F, n, (0.62, 0.86, 0.88), 18),       # r22b: cut facets, not a plate
         "emerald_block": lambda F, n: m_facets(F, n, (0.22, 0.62, 0.36), 16),
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
@@ -2401,6 +2610,8 @@ def recipes():
         plain["stripped_%s_log_top" % wood] = lambda F, n, e=end, s=side: m_log_top(F, n, e, s, rim=(0.58, 0.04))
     for name, fn in plain.items():
         R[name] = _plain(fn)
+    R["iron_block"] = _parts(lambda F, n: _d3(m_iron(F, n)))                       # round 23: brushed, riveted
+    R["netherite_block"] = _parts(lambda F, n: _d3(m_plate(F, n, (0.30, 0.27, 0.29))))
     R["grass_block_snow"] = _grass_snow_side
     # round 16: cut-out and see-through blocks
     R["mangrove_roots_side"] = _parts(lambda F, n: m_roots(F, n, False))
@@ -2416,6 +2627,8 @@ def recipes():
     R["lantern"] = _parts(lambda F, n: m_lantern(F, n, (1.0, 0.72, 0.32)), fit=False)
     R["soul_lantern"] = _parts(lambda F, n: m_lantern(F, n, (0.35, 0.85, 0.95)), fit=False)
     R["cobweb"] = _parts(m_cobweb, fit=False)
+    R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
+    R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     return R
 
 

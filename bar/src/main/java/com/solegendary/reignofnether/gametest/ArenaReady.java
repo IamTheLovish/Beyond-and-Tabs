@@ -11,10 +11,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.IntConsumer;
 
 /**
@@ -40,8 +42,8 @@ public final class ArenaReady {
      * The height must be above the terrain: the arena is cut into the ground at y = -60 of an ordinary world (ocean at
      * sea level 63, caves below), and a pad at 24-88 put units in water and in rock (Oct 21, #94: "in water true", a
      * villager on its glass at 41 and the vindicators floating at 62). Every other pad is 120 or higher, and each caller
-     * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 135 and 301 are
-     * the slots left. Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
+     * takes its own, 11 or more from the rest (3D distance inside aggro range is the thing to avoid): 301 is the slot
+     * left (WaterPathingGameTests' basin took 135: 132-141). Returns the standing position (y + 1) at the arena's corner; template offsets are added to it.
      */
     public static BlockPos pad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
@@ -52,6 +54,60 @@ public final class ArenaReady {
                     helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y + dy, corner.getZ() + dz), Blocks.AIR.defaultBlockState(), 3);
             }
         return new BlockPos(corner.getX(), y + 1, corner.getZ());
+    }
+
+    /**
+     * Makes the pocket SkirmishGameTests.openGround cleared (template x/z 0..15, y 2..4) proof against fluids: the arena
+     * is cut into generated ground at y = -61 (caves and aquifers), and water beside or over the cleared air flowed into
+     * it - run 40401681056: the wall-detour Vindicator stopped at "water level=7" 1-3 blocks ahead, nav done (plan 015 B).
+     * Stone goes on the whole lid (y 5 over the arena), on every rim cell beside the pocket (x/z -1 and 16, y 2..4) that
+     * is not a full block, and on any fluid at y 1 or 5 round it; a fluid inside the pocket becomes air. Blocks it
+     * changes outside the arena go into {@code outside} (what stood there), for the test to put back - later batches find
+     * that ground. Returns how many fluid cells it found, for the failure message.
+     */
+    public static int sealed(GameTestHelper helper, Map<BlockPos, BlockState> outside) {
+        ServerLevel level = helper.getLevel();
+        BlockState stone = Blocks.STONE.defaultBlockState();
+        int fluids = 0;
+        for (int x = -1; x <= 16; x++)
+            for (int z = -1; z <= 16; z++) {
+                boolean inside = x >= 0 && x <= 15 && z >= 0 && z <= 15;
+                for (int y = 1; y <= 5; y++) {
+                    BlockPos abs = helper.absolutePos(new BlockPos(x, y, z));
+                    BlockState was = level.getBlockState(abs);
+                    boolean fluid = !was.getFluidState().isEmpty();
+                    if (fluid)
+                        fluids++;
+                    boolean pocket = y >= 2 && y <= 4;
+                    BlockState want;
+                    if (inside)
+                        want = pocket ? (fluid ? Blocks.AIR.defaultBlockState() : null) : (y == 5 || fluid ? stone : null);
+                    else
+                        want = fluid || (pocket && !was.isCollisionShapeFullBlock(level, abs)) ? stone : null;
+                    if (want == null || was == want)
+                        continue;
+                    if (!inside)
+                        outside.putIfAbsent(abs, was);
+                    level.setBlock(abs, want, 3);
+                }
+            }
+        return fluids;
+    }
+
+    /**
+     * Takes daylight out of a movement test: undead units (a Zombie Villager, a Skeleton without a helmet) get Slowness
+     * every 10 ticks in the day (the Unit sunlight effect), so a test's speeds depended on the time of day its batch ran -
+     * run 40469592779: the chaser under "slowness 1" at 0.175 against a runner meant to walk at 60% of its speed, 0.15
+     * (plan 015 B). The owners get the sandbox's "slipslopslap" cheat (monster units unaffected by sunlight); the
+     * returned undo takes it away again.
+     */
+    public static Runnable noSunlight(String... owners) {
+        for (String o : owners)
+            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(o, "slipslopslap");
+        return () -> {
+            for (String o : owners)
+                com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(o, "slipslopslap");
+        };
     }
 
     /** Ticks of its own a unit must have run before the test counts on it. */

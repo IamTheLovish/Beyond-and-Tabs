@@ -857,7 +857,7 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    /** Energy converters only burn energy above half storage, at TierGate's 100 energy per metal, 50 energy/s each. */
     @GameTest(template = ARENA)
     public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
         var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
@@ -866,8 +866,8 @@ public class SkirmishGameTests {
         res.addEnergy(900);
         for (int i = 0; i < 20; i++)
             com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
-        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
-            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+        if (Math.abs(res.getMetal() - 0.5f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~0.5 metal / 850 energy, got " + res.getMetal()
                 + " / " + res.getEnergy());
         var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
         low.addEnergy(400);
@@ -1201,29 +1201,55 @@ public class SkirmishGameTests {
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.STONE.defaultBlockState(), 3);
         var point = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, cx, cz,
             com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.MINE);
-        String owner = "gametest_captor";
+        // this slot's own owner: a pool left under a shared name (a run that failed before its clean-up) took the
+        // mine's metal first (EconomyServerEvents.addReclaimedMetal pays the first pool with the name)
+        String owner = "gametest_captor_" + helper.absolutePos(BlockPos.ZERO).asLong();
         var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
         com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
         var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        // every way out takes the site, the captor and the pool away (helper.fail throws: nothing after it runs)
+        Runnable cleanUp = () -> {
+            if (unit != null)
+                unit.discard();
+            if (point != null)
+                point.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        };
         if (point == null || unit == null) {
+            cleanUp.run();
             helper.fail("could not set up the capture point");
             return;
         }
-        unit.moveTo(cx + 2.5, y + 1, cz + 0.5, 0, 0);
+        // on the site's own plinth (the marker stands one above it), not on the pad: place() builds on the column's
+        // solidTop, and anything solid left above the pad (an earlier batch's test on this arena slot, an earlier local
+        // run's ruin) lifted the site out of RADIUS of a captor stood at y+1 - "progress 0.0", PR #200 run 40255634660
+        unit.moveTo(cx + 2.5, point.getY(), cz + 0.5, 0, 0);
         unit.setOwnerName(owner);
         level.addFreshEntity(unit);
         helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
             for (int i = 0; i < 25; i++)
                 com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 1f);
             if (!owner.equals(com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(point)))
-                helper.fail("25 uncontested seconds did not capture the site (progress "
-                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(point) + ")");
+                problems.add("25 uncontested seconds did not capture the site (progress "
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(point) + "; site listed "
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints().contains(point)
+                    + ", removed " + point.isRemoved() + ", claimant '"
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.claimantOf(point) + "', site at "
+                    + point.blockPosition().toShortString() + "; captor alive " + unit.isAlive() + ", removed "
+                    + unit.isRemoved() + ", owner '" + unit.getOwnerName() + "', at " + unit.blockPosition().toShortString()
+                    + ", " + TerrainGameTests.f(Math.sqrt(unit.distanceToSqr(point))) + " from the site, in the unit list "
+                    + com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits().contains(unit) + "; units near: "
+                    + com.solegendary.reignofnether.unit.UnitGrid.near(level, point.getX(), point.getZ(), 8, new ArrayList<>())
+                        .stream().map(le -> le.getType().toShortString() + "/" + ((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName()
+                            + "@" + le.blockPosition().toShortString()).toList() + ")");
             if (pool.getMetal() <= 0)
-                helper.fail("the captured Ancient Mine paid no metal");
-            unit.discard();
-            point.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            helper.succeed();
+                problems.add("the captured Ancient Mine paid no metal");
+            try {
+                TerrainGameTests.finish(helper, problems);
+            } finally {
+                cleanUp.run();
+            }
         });
     }
 
@@ -1560,6 +1586,22 @@ public class SkirmishGameTests {
     }
 
     /**
+     * A dry row of {@code count} base sites ({@link #soakRow}) near (x, z): every candidate row (16 steps of 96 blocks
+     * along each of {@link #soakLines}) is tried, the same scan {@link #soakFiveStarts} makes, so a test that wants only
+     * a row finds ground wherever the soak does. Trying just the first step of each line failed the tier-2 bot test every
+     * run (the world is the same each time, and that strip is water or cliff); null only if no candidate row is dry.
+     */
+    static net.minecraft.world.phys.Vec3[] soakAnyRow(ServerLevel level, int x, int z, int count) {
+        for (int bz : soakLines(z))
+            for (int step = 0; step < 16; step++) {
+                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, count);
+                if (row != null)
+                    return row;
+            }
+        return null;
+    }
+
+    /**
      * Five base sites for the soak: a dry row of three ({@link #soakRow}) and two more seats beside it
      * ({@link #soakExtraStart}). Every candidate row (16 steps of 96 blocks along each of {@link #soakLines}) is
      * tried until one has both seats - stopping at the first row failed a build when that row sat on a coast (Oct 16,
@@ -1886,56 +1928,6 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Totem of the Pack: a friend dying by the totem calls up a spectral wolf for the owner; an enemy dying there doesn't. */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void totem_of_the_pack_answers_friends_not_foes(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_pack_totem";
-        var bonewright = com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get().create(level);
-        var grunt = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
-        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.BRUTE_UNIT.get().create(level);
-        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
-        if (bonewright == null || grunt == null || friend == null || foe == null) {
-            helper.fail("could not create totem units");
-            return;
-        }
-        // the totem lives on the Bonewright's own ability set, not on the shared Grunt one
-        if (bonewright.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack))
-            helper.fail("the Bonewright has no Totem of the Pack");
-        if (grunt.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack))
-            helper.fail("a plain Grunt got the Bonewright's totem");
-        grunt.discard();
-        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 12));
-        bonewright.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 2.5, 0, 0);
-        bonewright.setOwnerName(owner);
-        friend.setOwnerName(owner);
-        foe.setOwnerName("gametest_pack_totem_foe");
-        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(bonewright, friend, foe))
-            level.addFreshEntity(e);
-        helper.runAfterDelay(3, () -> {
-            var totem = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.plant(level, bonewright, owner, bonewright.position());
-            var wolf = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.answerDeath(level, friend);
-            var none = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.answerDeath(level, foe);
-            if (wolf == null)
-                helper.fail("no spectral wolf rose for a friend dying by the totem");
-            else if (!(wolf instanceof com.solegendary.reignofnether.unit.interfaces.Unit wu) || !owner.equals(wu.getOwnerName())
-                    || !com.solegendary.reignofnether.ability.abilities.TotemOfThePack.isSpectral(wolf))
-                helper.fail("the wolf is not a spectral wolf of the totem's owner");
-            if (none != null) {
-                none.discard();
-                helper.fail("an enemy dying by the totem called up a wolf");
-            }
-            if (wolf != null)
-                wolf.discard();
-            com.solegendary.reignofnether.ability.abilities.TotemOfThePack.dispel(totem);
-            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(bonewright, friend, foe))
-                e.discard();
-            helper.succeed();
-        });
-    }
-
     /** Magma Rupture: the eruption burns and hurts an enemy on the crack, and leaves a friend on it alone. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void magma_rupture_burns_foes_not_friends(GameTestHelper helper) {
@@ -2151,66 +2143,6 @@ public class SkirmishGameTests {
                     helper.fail("Sunrise Sortie hurt a friendly unit on its path");
             } finally {
                 for (var e : List.<net.minecraft.world.entity.LivingEntity>of(marshal, escort, friend, foe))
-                    e.discard();
-            }
-            helper.succeed();
-        });
-    }
-
-    /** Soul Wisps: Gravebound workers by the Embalmer reclaim faster, the wisps lash an enemy in reach and never a friend. */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void soul_wisps_boost_reclaim_and_hit_foes_not_friends(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_soul_wisps";
-        var embalmer = com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get().create(level);
-        var digger = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get().create(level);
-        var farDigger = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get().create(level);
-        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get().create(level);
-        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
-        if (embalmer == null || digger == null || farDigger == null || friend == null || foe == null) {
-            helper.fail("could not create soul wisps units");
-            return;
-        }
-        // the wisps live on the Embalmer's own ability set, not on the shared Gravedigger one
-        if (embalmer.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps))
-            helper.fail("the Embalmer has no Soul Wisps");
-        if (digger.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps))
-            helper.fail("a plain Gravedigger got the Embalmer's wisps");
-        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
-        embalmer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        digger.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        farDigger.moveTo(at.getX() + 10.5, at.getY(), at.getZ() + 10.5, 0, 0);
-        // the friend stands closer than the foe: a pulse that took the nearest unit instead of the nearest enemy fails
-        friend.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
-        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 4.5, 0, 0);
-        embalmer.setOwnerName(owner);
-        digger.setOwnerName(owner);
-        farDigger.setOwnerName(owner);
-        friend.setOwnerName(owner);
-        foe.setOwnerName("gametest_soul_wisps_foe");
-        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(embalmer, digger, farDigger, friend, foe))
-            level.addFreshEntity(e);
-        helper.runAfterDelay(3, () -> {
-            float before = com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(digger);
-            float foeHp = foe.getHealth(), friendHp = friend.getHealth(), diggerHp = digger.getHealth();
-            var w = com.solegendary.reignofnether.ability.abilities.SoulWisps.summon(level, embalmer, owner);
-            try {
-                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(digger) <= before)
-                    helper.fail("Soul Wisps did not speed up a Gravebound worker's reclaim");
-                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(embalmer) <= 1f)
-                    helper.fail("Soul Wisps did not speed up the Embalmer's own reclaim");
-                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(farDigger) != 1f)
-                    helper.fail("Soul Wisps sped up a worker far out of reach");
-                var hit = com.solegendary.reignofnether.ability.abilities.SoulWisps.pulse(w);
-                if (hit != foe)
-                    helper.fail("the wisps did not lash the enemy in reach");
-                if (foe.isAlive() && foe.getHealth() >= foeHp)
-                    helper.fail("the wisps did not hurt the enemy");
-                if (friend.getHealth() < friendHp || digger.getHealth() < diggerHp)
-                    helper.fail("the wisps hurt a friendly unit");
-            } finally {
-                com.solegendary.reignofnether.ability.abilities.SoulWisps.dispel(w);
-                for (var e : List.<net.minecraft.world.entity.LivingEntity>of(embalmer, digger, farDigger, friend, foe))
                     e.discard();
             }
             helper.succeed();
@@ -3745,8 +3677,9 @@ public class SkirmishGameTests {
 
     /**
      * The Elder Druid is the Court's T2 constructor: double build power and health, a T2 worker (so it may raise a T3
-     * lab), Verdant, with Awaken Thicket - which a plain Seedshaper must not get. Awaken Thicket wakes a tagged, owned
-     * Sentinel Treant that is dismissed again.
+     * lab), Verdant, and no ability of its own: builder abilities went in every faction on 2026-10-26 (PR #253, 66d0fdb3,
+     * which took its Awaken Thicket). The treant-waking helper stays (the World Tree Walker's grove uses it): it wakes a
+     * tagged, owned Sentinel Treant that is dismissed again.
      */
     @GameTest(template = ARENA)
     public static void elder_druid_is_a_t2_worker(GameTestHelper helper) {
@@ -3777,10 +3710,9 @@ public class SkirmishGameTests {
                 helper.fail("the Elder Druid is not Verdant Court");
             if (druid.getMaxHealth() < 2 * seed.getMaxHealth() - 0.01f)
                 helper.fail("the Elder Druid has " + druid.getMaxHealth() + " health, the Seedshaper " + seed.getMaxHealth());
-            if (druid.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
-                helper.fail("the Elder Druid lacks Awaken Thicket");
-            if (seed.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
-                helper.fail("a plain Seedshaper got Awaken Thicket");
+            if (druid.getAbilities() != null && !druid.getAbilities().get().isEmpty())
+                helper.fail("the Elder Druid has abilities (builders have none since #253): "
+                    + druid.getAbilities().get().stream().map(a -> a.getClass().getSimpleName()).toList());
             if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, Buildings.CASTLE, new int[] { druid.getId() }))
                 helper.fail("a T3 lab refused an Elder Druid builder");
             treant = com.solegendary.reignofnether.ability.abilities.AwakenThicket.awaken(level, owner, at.offset(4, -1, 0));
@@ -3972,89 +3904,6 @@ public class SkirmishGameTests {
             } finally {
                 for (var e : all)
                     e.discard();
-            }
-        });
-    }
-
-    /**
-     * A Vine Snare ignores its owner's units, then roots the first enemy unit to walk into it (Slowness VII) and is
-     * spent: of two enemies dropped on it at once, exactly one is rooted.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void verdant_vine_snare_roots_first_enemy_and_is_spent(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_snare", foeOwner = "gametest_snare_foe";
-        BlockPos spot = helper.absolutePos(new BlockPos(7, 2, 7));   // mid-arena, away from neighbours' stamps
-        // a clean, open spot on solid ground whatever a neighbouring test stamped here (CI once found it occupied)
-        level.setBlock(spot.below(), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
-        for (int dy = 0; dy < 3; dy++)
-            level.setBlock(spot.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
-        if (!com.solegendary.reignofnether.ability.abilities.PlantVineSnare.plant(level, owner, spot, false)) {
-            helper.fail("the Vine Snare could not be planted at " + spot + " (found " + level.getBlockState(spot)
-                    + ", " + com.solegendary.reignofnether.blocks.VineSnareBlockEntity.countOwned(level, owner) + " owned)");
-            return;
-        }
-        if (!(level.getBlockEntity(spot) instanceof com.solegendary.reignofnether.blocks.VineSnareBlockEntity be)
-                || !owner.equals(be.getOwner())) {
-            helper.fail("the planted Vine Snare has no owner: " + level.getBlockEntity(spot));
-            level.removeBlock(spot, false);
-            return;
-        }
-        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
-        var friend = vill.create(level);
-        var foeA = vill.create(level);
-        var foeB = vill.create(level);
-        if (friend == null || foeA == null || foeB == null) {
-            helper.fail("could not create the snare test units");
-            level.removeBlock(spot, false);
-            return;
-        }
-        friend.setOwnerName(owner);
-        foeA.setOwnerName(foeOwner);
-        foeB.setOwnerName(foeOwner);
-        friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
-        level.addFreshEntity(friend);
-        List<net.minecraft.world.entity.Mob> all = List.of(friend, foeA, foeB);
-        var snareBlock = com.solegendary.reignofnether.registrars.BlockRegistrar.VINE_SNARE.get();
-        helper.runAfterDelay(10, () -> {
-            boolean ok = true;
-            if (!level.getBlockState(spot).is(snareBlock)) {
-                helper.fail("the snare was sprung by its owner's own unit");
-                ok = false;
-            } else if (friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN)) {
-                helper.fail("the snare rooted a friendly unit");
-                ok = false;
-            }
-            if (!ok) {
-                for (var e : all) e.discard();
-                level.removeBlock(spot, false);
-                return;
-            }
-            friend.moveTo(spot.getX() + 3.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
-            foeA.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.4, 0, 0);
-            foeB.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.6, 0, 0);
-            level.addFreshEntity(foeA);
-            level.addFreshEntity(foeB);
-        });
-        helper.runAfterDelay(25, () -> {
-            try {
-                int rooted = 0;
-                for (var foe : List.of(foeA, foeB)) {
-                    var root = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
-                    if (root != null && root.getAmplifier() >= com.solegendary.reignofnether.blocks.VineSnareBlock.ROOT_AMPLIFIER)
-                        rooted++;
-                }
-                if (level.getBlockState(spot).is(snareBlock))
-                    helper.fail("the snare is still there after enemies walked into it");
-                else if (rooted != 1)
-                    helper.fail("the snare should root exactly the first enemy, rooted " + rooted);
-                else
-                    helper.succeed();
-            } finally {
-                for (var e : all)
-                    e.discard();
-                if (level.getBlockState(spot).is(snareBlock))
-                    level.removeBlock(spot, false);
             }
         });
     }
@@ -4284,7 +4133,7 @@ public class SkirmishGameTests {
             helper.fail("the hero save data should be clean after a flush");
             return;
         }
-        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level);
         if (!data.isDirty())
             helper.fail("a hero death should mark the hero save data dirty for the next autosave");
         else if (data.heroUnits.size() != fallen.size())
@@ -5020,6 +4869,14 @@ public class SkirmishGameTests {
                 level.setBlock(helper.absolutePos(new BlockPos(x, 1, z)), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
                 for (int y = 2; y <= 4; y++)
                     level.setBlock(helper.absolutePos(new BlockPos(x, y, z)), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                // a lid for the clearing: arenas sit in generated terrain, and a gravel or sand layer overhead loses its
+                // support when the pocket under it is cleared and falls in on the units - gravel in a Jade Guard's cell
+                // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
+                // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
+                // before its block tick can fire; whatever lies above that is then supported again.
+                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
+                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
             }
     }
 
@@ -6424,7 +6281,7 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void t2_worker_and_t3_skins_ship_in_the_mod(GameTestHelper helper) {
         List<String> missing = new ArrayList<>();
-        for (String skin : List.of("royal_architect_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
+        for (String skin : List.of("royal_architect_body_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
                 "sun_colossus_unit", "bone_dragon_unit"))
             if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "entities", skin + ".png"))
                 missing.add("textures/entities/" + skin + ".png");
@@ -6961,8 +6818,7 @@ public class SkirmishGameTests {
 
     /**
      * The Harbourmaster is the Tidewrought T2 constructor: double build power and health, a T2 worker, Tidewrought and
-     * tidal, with Raise Great Tidepool (which a plain Shipwright must not get). The great pool is wider and lasts longer
-     * than the Tide Priest's, charges its energy, and a cast without the energy raises nothing.
+     * tidal.
      */
     @GameTest(template = ARENA)
     public static void tidewrought_harbourmaster_is_a_t2_worker(GameTestHelper helper) {
@@ -6972,7 +6828,6 @@ public class SkirmishGameTests {
         var hm = com.solegendary.reignofnether.registrars.EntityRegistrar.HARBOURMASTER_UNIT.get().create(level);
         var ship = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
         var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
-        pool.addEnergy(com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.ENERGY_COST + 10);
         com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
         try {
             if (hm == null || ship == null) {
@@ -6993,37 +6848,6 @@ public class SkirmishGameTests {
                 helper.fail("the Harbourmaster is not a tidal Tidewrought unit");
             if (hm.getMaxHealth() < 2 * ship.getMaxHealth() - 0.01f)
                 helper.fail("the Harbourmaster has " + hm.getMaxHealth() + " health, the Shipwright " + ship.getMaxHealth());
-            if (ship.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool))
-                helper.fail("a plain Shipwright got Raise Great Tidepool");
-            com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool great = null;
-            for (var a : hm.getAbilities().get())
-                if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool g)
-                    great = g;
-            if (great == null) {
-                helper.fail("the Harbourmaster has no Raise Great Tidepool");
-                return;
-            }
-            BlockPos aim = helper.absolutePos(new BlockPos(9, 1, 7));   // the ground block, 7 blocks off
-            great.use(level, hm, aim);
-            var pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner);
-            if (pools.isEmpty()) {
-                helper.fail("Raise Great Tidepool raised nothing: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
-                return;
-            }
-            var p = pools.get(0);
-            // radius 3 on open ground is 29 cells (the priest's radius 2 is 13); a few may sit under an arena edge
-            if (p.radius != com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.RADIUS || p.cellCount() <= 13)
-                helper.fail("the great pool is not bigger than a priest's: radius " + p.radius + ", " + p.cellCount() + " cells");
-            if (p.ticksLeft() <= com.solegendary.reignofnether.tide.TidepoolServerEvents.DEFAULT_LIFETIME_TICKS)
-                helper.fail("the great pool does not outlast a priest's: " + p.ticksLeft() + " ticks left");
-            if (pool.getEnergy() > 10.01)
-                helper.fail("Raise Great Tidepool did not charge its energy: " + pool.getEnergy());
-            if (great.isOffCooldown(hm))
-                helper.fail("Raise Great Tidepool did not go on cooldown");
-            var refused = com.solegendary.reignofnether.ability.abilities.RaiseGreatTidepool.cast(level, hm,
-                helper.absolutePos(new BlockPos(4, 1, 12)));
-            if (refused != null || com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size() != 1)
-                helper.fail("a cast without the energy for it still raised a pool");
             helper.succeed();
         } finally {
             com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
@@ -7340,9 +7164,13 @@ public class SkirmishGameTests {
             attackers.add(atk);
             foes.add(foe);
         }
+        // the order a player gives (UnitActionItem: right-click an enemy = setUnitAttackTargetForced). An unforced target is
+        // re-picked every RETARGET_TICKS (AttackerUnit.retargetToClosestUnit) to the nearest enemy, and in this test that is
+        // the NEIGHBOURING row's Villager (5 blocks off, nearer than the galley's own at 14): a shell fired in such a window
+        // lands on the wrong Villager, "mortar_galley_unit never hit its target ... strays 21" (CI Oct 21-22, 3 reds)
         helper.runAfterDelay(3, () -> {
             for (int i = 0; i < attackers.size(); i++)
-                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTargetForced(foes.get(i));
         });
         boolean[] landed = new boolean[attackers.size()];
         int[] strays = new int[attackers.size()];
@@ -9105,96 +8933,6 @@ public class SkirmishGameTests {
         });
     }
 
-    /**
-     * Ley Link: five finished Wind-Chime Towers in a row on their own platform; linking them into one network raises
-     * each tower's income by 10% per other tower in it, capped at +30% (the fifth is one too many to count), the once-a
-     * -second income pass sees it, a building with three links takes no fourth (LINK_CAP), a pair too far apart is
-     * refused (LINK_INVALID), and a tower that falls takes its links with it.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void ley_link_raises_linked_wind_income_and_respects_caps(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_storm_ley_" + helper.absolutePos(BlockPos.ZERO).asLong();
-        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        final int y = 235;
-        int cx = base.getX(), cz = base.getZ();   // its own column, high over its own arena
-        for (int dx = -20; dx <= 20; dx++)
-            for (int dz = -7; dz <= 7; dz++) {
-                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.STONE.defaultBlockState(), 3);
-                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
-            }
-        var pool = manaPool(owner, 100);
-        com.solegendary.reignofnether.mana.ManaServerEvents.bindTraits(owner, FactionTraits.STORMCALLERS);
-        List<com.solegendary.reignofnether.building.BuildingPlacement> winds = new ArrayList<>();
-        Runnable cleanup = () -> {
-            for (var w : winds)
-                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(w);
-            dropManaPool(owner, pool);
-        };
-        // five towers 6 blocks apart: neighbours are 6 apart, the ends 24 (over MAX_DISTANCE 16)
-        for (int i = 0; i < 5; i++) {
-            var w = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(Buildings.WIND_GENERATOR_STORM,
-                new BlockPos(cx - 14 + i * 6, y, cz - 2), Rotation.NONE, owner, new int[0], false, false, true, true);
-            if (w == null) {
-                helper.fail("wind generator " + i + " could not be placed");
-                cleanup.run();
-                return;
-            }
-            w.isBuilt = true;
-            winds.add(w);
-        }
-        helper.runAfterDelay(5, () -> {
-            try {
-                var a = winds.get(0); var b = winds.get(1); var c = winds.get(2); var d = winds.get(3); var e = winds.get(4);
-                float base1 = a.getEnergyIncome();
-                if (base1 <= 0) {
-                    helper.fail("a built wind generator has no income");
-                    return;
-                }
-                if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, a.centrePos, true, e.centrePos, true)
-                        != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.LINK_INVALID)
-                    helper.fail("a link between towers 24 blocks apart was accepted");
-                if (!com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, b, true))
-                    helper.fail("the first link was refused");
-                if (Math.abs(a.getEnergyIncome() - base1 * 1.1f) > 0.01f || Math.abs(b.getEnergyIncome() - base1 * 1.1f) > 0.01f)
-                    helper.fail("a pair of linked towers should earn +10% each: " + a.getEnergyIncome() + " / " + b.getEnergyIncome());
-                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, b, c, true);
-                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, c, d, true);
-                if (Math.abs(a.getEnergyIncome() - base1 * 1.3f) > 0.01f)
-                    helper.fail("a tower with three others in its network should earn +30%: " + a.getEnergyIncome());
-                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, d, e, true);
-                if (Math.abs(a.getEnergyIncome() - base1 * 1.3f) > 0.01f)
-                    helper.fail("the resonance cap did not hold at four others: " + a.getEnergyIncome());
-                // the income pass sees it: the owner's income is the five towers' boosted incomes
-                com.solegendary.reignofnether.resources.EconomyServerEvents.recalculateIncomeAndStorage();
-                float want = 0;
-                for (var w : winds)
-                    want += w.getEnergyIncome();
-                float got = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner).energyIncome;
-                if (Math.abs(got - want) > 0.01f || want <= base1 * 5)
-                    helper.fail("the income pass did not pick up the resonance: " + got + " vs " + want);
-                // per-building cap: c has b and d; a third link (a-c, 12 apart) fits, a fourth (c-e, 12) does not
-                if (!com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, c, true))
-                    helper.fail("a third link on a tower was refused");
-                if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, c.centrePos, true, e.centrePos, true)
-                        != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.LINK_CAP)
-                    helper.fail("a fourth link on one tower was accepted");
-                // linking a linked pair again unlinks it
-                com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, owner, a, c, true);
-                if (com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, a.centrePos, c.centrePos))
-                    helper.fail("re-linking a linked pair did not unlink it");
-                // a tower that falls takes its links with it: b dies, a is alone again
-                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(b);
-                b.destroy(level);
-                if (com.solegendary.reignofnether.mana.LeyNetwork.linksOf(owner, b.centrePos) != 0 || Math.abs(a.getEnergyIncome() - base1) > 0.01f)
-                    helper.fail("a destroyed tower kept its links: a earns " + a.getEnergyIncome() + " (base " + base1 + ")");
-                helper.succeed();
-            } finally {
-                cleanup.run();
-            }
-        });
-    }
-
     // ------------------------------------------------------------------ Stormcallers slice 3 (T2: the Celestial Observatory)
 
     /**
@@ -9254,12 +8992,10 @@ public class SkirmishGameTests {
 
     /**
      * The Ley Master is the Stormcallers T2 constructor: double build power and health, a T2 worker (a plain Geomancer is
-     * not), with Mana Well (which a Geomancer must not get). A well costs 80, boosts the power and cuts the cost of a
-     * spell cast inside its 10 blocks (not one cast outside), a fifth well is refused at the cap (nothing paid), and a
-     * cast on an own well takes it down.
+     * not).
      */
     @GameTest(template = ARENA)
-    public static void ley_master_is_a_t2_worker_and_its_well_empowers_spells_in_radius(GameTestHelper helper) {
+    public static void ley_master_is_a_t2_worker(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_ley_master_" + helper.absolutePos(BlockPos.ZERO).asLong();
         openGround(helper, 0, 0, 15, 15);
@@ -9295,60 +9031,6 @@ public class SkirmishGameTests {
                 helper.fail("the Ley Master is not a Stormcallers unit");
             if (master.getMaxHealth() < 2 * geo.getMaxHealth() - 0.01f)
                 helper.fail("the Ley Master has " + master.getMaxHealth() + " health, the Geomancer " + geo.getMaxHealth());
-            if (geo.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell))
-                helper.fail("a plain Geomancer got Mana Well");
-            com.solegendary.reignofnether.ability.abilities.ManaWell well = null;
-            for (var a : master.getAbilities().get())
-                if (a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell w)
-                    well = w;
-            if (well == null) {
-                helper.fail("the Ley Master has no Mana Well");
-                return;
-            }
-            BlockPos aim = helper.absolutePos(new BlockPos(3, 1, 7));   // the ground block beside it
-            well.use(level, master, aim);
-            if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 1) {
-                helper.fail("Mana Well raised nothing: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
-                return;
-            }
-            if (Math.abs(pool.getEnergy() - (1000 - com.solegendary.reignofnether.ability.abilities.ManaWell.ENERGY_COST)) > 0.01f)
-                helper.fail("Mana Well did not charge its energy: " + pool.getEnergy());
-            if (well.isOffCooldown(master))
-                helper.fail("Mana Well did not go on cooldown");
-            var wells = com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner);
-            if (wells.size() != 1 || wells.get(0).centre.distSqr(aim) > 4)
-                helper.fail("the well record is not where it was aimed: " + wells);
-            // inside the well: power x1.25 and the cost x0.8; outside: neither
-            float before = pool.getEnergy();
-            float power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(master, owner, 100);
-            float paid = before - pool.getEnergy();
-            if (Math.abs(power - com.solegendary.reignofnether.mana.ManaServerEvents.WELL_POWER) > 0.001f
-                    || Math.abs(paid - 100 * com.solegendary.reignofnether.mana.ManaServerEvents.WELL_DISCOUNT) > 0.01f)
-                helper.fail("a spell inside the well got power " + power + " and paid " + paid);
-            before = pool.getEnergy();
-            power = com.solegendary.reignofnether.mana.ManaServerEvents.tryCastQuiet(far, owner, 100);
-            paid = before - pool.getEnergy();
-            if (Math.abs(power - 1f) > 0.001f || Math.abs(paid - 100) > 0.01f)
-                helper.fail("a spell outside the well got power " + power + " and paid " + paid);
-            // the cap: three more go up (10 apart so they don't dismantle one another), the fifth is refused unpaid
-            well.setCooldown(0, master);
-            for (int i = 1; i <= 3; i++) {
-                master.moveTo(at.getX() + 1.5 + i * 3, at.getY(), at.getZ() + 2.5, 0, 0);   // beside each new well, inside its 8-block reach
-                if (!com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, helper.absolutePos(new BlockPos(3 + i * 3, 1, 7)), true))
-                    helper.fail("well " + (i + 1) + " was refused: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
-            }
-            if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != com.solegendary.reignofnether.mana.ManaServerEvents.WELLS_PER_PLAYER)
-                helper.fail("the owner has " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + " wells, not the cap");
-            before = pool.getEnergy();
-            if (com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, helper.absolutePos(new BlockPos(6, 1, 12)), true)
-                    || Math.abs(pool.getEnergy() - before) > 0.01f)
-                helper.fail("a fifth well was raised or paid for over the cap");
-            // a cast on an own well takes it down, for free
-            master.moveTo(aim.getX() + 0.5, at.getY(), aim.getZ() + 0.5, 0, 0);
-            if (!com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, owner, aim, true)
-                    || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != com.solegendary.reignofnether.mana.ManaServerEvents.WELLS_PER_PLAYER - 1
-                    || Math.abs(pool.getEnergy() - before) > 0.01f)
-                helper.fail("casting on an own well did not take it down for free: " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + " wells, energy " + pool.getEnergy());
             helper.succeed();
         } finally {
             cleanup.run();
@@ -10039,7 +9721,7 @@ public class SkirmishGameTests {
                     .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                 byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                     spawn.getX(), spawn.getY(), spawn.getZ());
-                if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER
+                if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind)
                         && !audit.escapes(spawn))
                     problems.add(building.structureName + ": units spawn at " + audit.rel(spawn) + " and can't leave");
             }
@@ -10835,59 +10517,6 @@ public class SkirmishGameTests {
             if (tag.getInt(com.solegendary.reignofnether.unit.EngagementStance.KEY)
                     != com.solegendary.reignofnether.unit.EngagementStance.RETURN_FIRE.ordinal())
                 helper.fail("stance not in the unit's save data: " + tag.get(com.solegendary.reignofnether.unit.EngagementStance.KEY));
-            a.discard();
-            b.discard();
-            helper.succeed();
-        });
-    }
-
-    /**
-     * Kill feed: a kill queues a line naming both types and owners, and the recipient test admits the killer's
-     * owner (and a spectator with fog off) for it. The packet itself needs a connected client, so this checks the
-     * server half right up to the per-player gate; recentEntries is filtered by this test's own owner names.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 100)
-    public static void kill_feed_line_queued_for_the_viewer(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String ownerA = "gametest_feed_a", ownerB = "gametest_feed_b";
-        var pair = stancePair(helper, ownerA, ownerB,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE,
-            com.solegendary.reignofnether.unit.EngagementStance.HOLD_FIRE, 2);
-        if (pair == null) {
-            helper.fail("could not create vindicator units");
-            return;
-        }
-        var a = pair[0];
-        var b = pair[1];
-        helper.runAfterDelay(3, () -> {
-            b.hurt(level.damageSources().indirectMagic(a, a), 10000f);
-            if (!b.isDeadOrDying()) {
-                helper.fail("foe survived a 10000 hit (hp " + b.getHealth() + ")");
-                return;
-            }
-            com.solegendary.reignofnether.hud.KillFeedClientboundPacket.Entry line = null;
-            for (var e : com.solegendary.reignofnether.hud.KillFeedServerEvents.recentEntries())
-                if (ownerA.equals(e.killerOwner()) && ownerB.equals(e.victimOwner()))
-                    line = e;
-            if (line == null) {
-                helper.fail("no kill feed line queued for the kill");
-                return;
-            }
-            String vindicator = a.getType().getDescriptionId();
-            if (!vindicator.equals(line.killerKey()) || !vindicator.equals(line.victimKey()) || line.building())
-                helper.fail("kill feed line names the wrong things: " + line);
-            var viewer = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(ownerA.getBytes()), ownerA));
-            if (!com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(viewer, line.killerOwner(), line.victimOwner(),
-                    b.getBlockX(), b.getBlockZ()))
-                helper.fail("the killer's owner must receive its own kill");
-            var stranger = net.minecraftforge.common.util.FakePlayerFactory.get(level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("gametest_feed_c".getBytes()), "gametest_feed_c"));
-            boolean fog = com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isFogActiveFor(stranger);
-            boolean sees = com.solegendary.reignofnether.hud.KillFeedServerEvents.canSee(stranger, line.killerOwner(),
-                line.victimOwner(), b.getBlockX(), b.getBlockZ());
-            if (!fog && !sees)
-                helper.fail("with fog off a third player sees every kill");
             a.discard();
             b.discard();
             helper.succeed();
@@ -12211,7 +11840,7 @@ public class SkirmishGameTests {
         }
         tinker.setOwnerName("gametest_brass_live_" + helper.absolutePos(BlockPos.ZERO).asLong());
         com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(tinker);
-        boolean rail = false, overclock = false, turret = false, upgrade = false;
+        boolean rail = false, overclock = false, turret = false;
         for (var a : tinker.getAbilities().get()) {
             rail |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun
                 && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(tinker)
@@ -12220,12 +11849,11 @@ public class SkirmishGameTests {
                 && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(tinker)
                     == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.OVERCLOCK;
             turret |= a instanceof com.solegendary.reignofnether.ability.abilities.DeployTurret;
-            upgrade |= a instanceof com.solegendary.reignofnether.ability.abilities.FieldUpgrade;
         }
         tinker.discard();
-        if (!rail || !overclock || !turret || !upgrade)
+        if (!rail || !overclock || !turret)
             helper.fail("the Guildmaster lacks the Rail Lance (" + rail + "), Overclock (" + overclock + "), Deploy Turret ("
-                + turret + ") or the Tinker's Field Upgrade (" + upgrade + ")");
+                + turret + ")");
         helper.succeed();
     }
 
@@ -12315,98 +11943,6 @@ public class SkirmishGameTests {
             } finally {
                 cart.discard();
                 foe.discard();
-            }
-        });
-    }
-
-    /**
-     * Field Upgrade (ability/abilities/FieldUpgrade): a Tinker plates an own Iron Warden once - its armour rises by the
-     * plating, 30 metal is paid, a second upgrade (plating or barrel) is refused with nothing paid; the barrel is
-     * refused on a melee machine but fits a Flak Cart, whose attack range grows; nobody else's machine can be touched.
-     * Pools under unique owners, dropped at the end.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 60)
-    public static void field_upgrade_applies_once_per_machine(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_brass_upgrade_" + helper.absolutePos(BlockPos.ZERO).asLong(), other = owner + "_other";
-        openGround(helper, 0, 0, 15, 15);
-        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
-        pool.addMetal(100);
-        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
-        var tinker = com.solegendary.reignofnether.registrars.EntityRegistrar.TINKER_UNIT.get().create(level);
-        var warden = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_WARDEN_UNIT.get().create(level);
-        var cart = com.solegendary.reignofnether.registrars.EntityRegistrar.FLAK_CART_UNIT.get().create(level);
-        var theirs = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_WARDEN_UNIT.get().create(level);
-        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
-        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(tinker, warden, cart, theirs))
-            if (e != null)
-                all.add(e);
-        if (all.size() != 4) {
-            helper.fail("could not create the Field Upgrade test units");
-            for (var e : all) e.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            return;
-        }
-        BlockPos c = helper.absolutePos(new BlockPos(7, 2, 7));
-        tinker.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 0.5, 0, 0);
-        warden.moveTo(c.getX() + 2.5, c.getY(), c.getZ() + 0.5, 0, 0);
-        cart.moveTo(c.getX() - 2.5, c.getY(), c.getZ() + 0.5, 0, 0);
-        theirs.moveTo(c.getX() + 0.5, c.getY(), c.getZ() + 3.5, 0, 0);
-        tinker.setOwnerName(owner);
-        warden.setOwnerName(owner);
-        cart.setOwnerName(owner);
-        theirs.setOwnerName(other);
-        for (var e : all)
-            level.addFreshEntity(e);
-        helper.runAfterDelay(2, () -> {
-            try {
-                var PLATING = com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING;
-                var BARREL = com.solegendary.reignofnether.brass.Heat.UPGRADE_BARREL;
-                double armourBefore = warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
-                // the barrel never fits a melee machine, nothing paid
-                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, BARREL, true) || pool.getMetal() != 100)
-                    helper.fail("a Long Barrel should be refused on an Iron Warden with nothing paid");
-                // plating fits, once
-                if (!com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, PLATING, true))
-                    helper.fail("plating an own bare Iron Warden should succeed");
-                double armourAfter = warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
-                if (Math.abs(armourAfter - armourBefore - com.solegendary.reignofnether.brass.Heat.PLATING_ARMOUR) > 0.01)
-                    helper.fail("plating should add " + com.solegendary.reignofnether.brass.Heat.PLATING_ARMOUR + " armour, added " + (armourAfter - armourBefore));
-                if (warden.upgrade() != PLATING)
-                    helper.fail("the Warden's synced upgrade byte should say plating, is " + warden.upgrade());
-                if (Math.abs(pool.getMetal() - 70) > 0.01)
-                    helper.fail("plating should cost " + com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + " metal, pool has " + pool.getMetal());
-                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, warden, PLATING, true)
-                        || Math.abs(pool.getMetal() - 70) > 0.01
-                        || Math.abs(warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR) - armourAfter) > 0.01)
-                    helper.fail("a second upgrade on the same machine should be refused with nothing paid or changed");
-                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.canUpgrade(owner, warden))
-                    helper.fail("an upgraded machine should not read as upgradeable");
-                // the barrel on a ranged machine: range grows
-                double rangeBefore = cart.getAttributeValue(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_RANGE.get());
-                if (!com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, cart, BARREL, true))
-                    helper.fail("a Long Barrel should fit a Flak Cart");
-                double rangeAfter = cart.getAttributeValue(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_RANGE.get());
-                if (Math.abs(rangeAfter - rangeBefore - com.solegendary.reignofnether.brass.Heat.BARREL_RANGE) > 0.01 || cart.upgrade() != BARREL)
-                    helper.fail("the barrel should add " + com.solegendary.reignofnether.brass.Heat.BARREL_RANGE + " range, added " + (rangeAfter - rangeBefore));
-                if (Math.abs(pool.getMetal() - 40) > 0.01)
-                    helper.fail("two upgrades should have cost 60 metal, pool has " + pool.getMetal());
-                // never someone else's machine; and with 40 metal left a third (30) would fit, but there is no bare own machine
-                if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, tinker, owner, theirs, PLATING, true)
-                        || theirs.upgrade() != com.solegendary.reignofnether.brass.Heat.UPGRADE_NONE)
-                    helper.fail("another owner's machine should never be upgraded");
-                // the upgrade rides the save data: a reload re-applies the modifier once
-                var tag = new net.minecraft.nbt.CompoundTag();
-                com.solegendary.reignofnether.brass.Heat.save(warden, tag);
-                if (tag.getByte("bt_upgrade") != PLATING)
-                    helper.fail("the upgrade is not saved");
-                com.solegendary.reignofnether.brass.Heat.load(warden, warden, tag);
-                if (Math.abs(warden.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR) - armourAfter) > 0.01)
-                    helper.fail("re-loading the upgrade should not stack the armour");
-                helper.succeed();
-            } finally {
-                for (var e : all) e.discard();
-                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             }
         });
     }
@@ -12771,18 +12307,13 @@ public class SkirmishGameTests {
                     var list = abilities.get();
                     var keys = abilities.effectiveHotkeys();
                     for (int i = 0; i < list.size(); i++) {
-                        // the Villager's Call to Arms is drawn in the orders row on hotkey 1 (HudClientEvents)
-                        boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
-                        claim.accept(callToArms ? com.solegendary.reignofnether.keybinds.Keybindings.hotkey1 : keys.get(i),
+                        claim.accept(keys.get(i),
                             "ability " + list.get(i).getClass().getSimpleName());
                     }
                 }
-                if (worker) {
-                    var faction = Factions.getFaction(unit);
-                    if (faction != null)
-                        for (var entry : faction.getBuildHotkeys().entrySet())
-                            claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
-                }
+                // the build menu's keys are BAR's grid keys (Q W E R / A S D F / Z X C V): live only while a build tab is
+                // open, and then they win over the orders and abilities on the same keys (BuildTabs.onKey), so they
+                // share keys with the card on purpose. Inside a tab they stay unique: BuildGroupGameTests.
                 for (String c : clashes)
                     problems.add(key.getPath() + ": " + c);
             } catch (Exception ex) {
@@ -13087,77 +12618,6 @@ public class SkirmishGameTests {
         var bytes = new java.io.ByteArrayOutputStream();
         net.minecraft.nbt.NbtIo.write(tag, new java.io.DataOutputStream(bytes));
         return net.minecraft.nbt.NbtIo.read(new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes.toByteArray())));
-    }
-
-    /** Mana Wells: raise, save, forget (a restart), restore - the same well, registered for the spell bonus, once. */
-    @GameTest(template = ARENA)
-    public static void mana_wells_survive_reload(GameTestHelper helper) throws java.io.IOException {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_reload_wells";
-        openGround(helper, 1, 1, 14, 14);
-        try {
-            var w = com.solegendary.reignofnether.mana.ManaWellServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(7, 1, 7)), true);
-            if (w == null) {
-                helper.fail("could not raise a well: " + com.solegendary.reignofnether.mana.ManaServerEvents.lastRefusal());
-                return;
-            }
-            BlockPos centre = w.centre;
-            var tag = throughDisk(onlyOwner(com.solegendary.reignofnether.persistence.MatchStateSaveData.snapshot(), owner));
-            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
-            if (!com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner).isEmpty()
-                    || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 0) {
-                helper.fail("clearOwner left the well registered");
-                return;
-            }
-            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);
-            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);   // idempotent
-            var wells = com.solegendary.reignofnether.mana.ManaWellServerEvents.wellsOf(owner);
-            if (wells.size() != 1 || !wells.get(0).centre.equals(centre) || wells.get(0).level != level)
-                helper.fail("restored wells " + wells.size() + (wells.isEmpty() ? "" : " at " + wells.get(0).centre) + ", expected 1 at " + centre);
-            else if (com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) != 1
-                    || !com.solegendary.reignofnether.mana.ManaServerEvents.insideWell(owner, centre))
-                helper.fail("restored well is not in the spell registry (count " + com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(owner) + ")");
-            else
-                helper.succeed();
-        } finally {
-            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
-        }
-    }
-
-    /** Ley links: two links (one between generators) save and restore with their resonance intact. */
-    @GameTest(template = ARENA)
-    public static void ley_links_survive_reload(GameTestHelper helper) throws java.io.IOException {
-        ServerLevel level = helper.getLevel();
-        String owner = "gametest_reload_ley";
-        BlockPos a = helper.absolutePos(new BlockPos(2, 2, 2)), b = helper.absolutePos(new BlockPos(8, 2, 2)), c = helper.absolutePos(new BlockPos(8, 2, 8));
-        try {
-            com.solegendary.reignofnether.mana.LeyNetwork.setLevel(owner, level);
-            if (com.solegendary.reignofnether.mana.LeyNetwork.link(owner, a, true, b, true) != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NONE
-                    || com.solegendary.reignofnether.mana.LeyNetwork.link(owner, b, true, c, false) != com.solegendary.reignofnether.mana.ManaServerEvents.Refusal.NONE) {
-                helper.fail("could not link");
-                return;
-            }
-            int before = com.solegendary.reignofnether.mana.LeyNetwork.otherGeneratorsInNetwork(owner, a);
-            var tag = throughDisk(onlyOwner(com.solegendary.reignofnether.persistence.MatchStateSaveData.snapshot(), owner));
-            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
-            if (com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) != 0) {
-                helper.fail("clearOwner left links");
-                return;
-            }
-            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);
-            com.solegendary.reignofnether.persistence.MatchStateSaveData.restore(level.getServer(), tag);   // idempotent
-            int after = com.solegendary.reignofnether.mana.LeyNetwork.otherGeneratorsInNetwork(owner, a);
-            if (com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) != 2
-                    || !com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, a, b)
-                    || !com.solegendary.reignofnether.mana.LeyNetwork.isLinked(owner, c, b))
-                helper.fail("restored " + com.solegendary.reignofnether.mana.LeyNetwork.linkCount(owner) + " links, expected a-b and b-c");
-            else if (before != 1 || after != before)
-                helper.fail("resonance changed on reload: " + before + " other generators -> " + after);
-            else
-                helper.succeed();
-        } finally {
-            com.solegendary.reignofnether.mana.ManaServerEvents.clearOwner(owner);
-        }
     }
 
     /**
@@ -13663,6 +13123,9 @@ public class SkirmishGameTests {
         var pool = testPool(owner);
         var item = com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR;
         var cost = item.getCost(false, owner);
+        // the refit needs Tier 2 on the server too (resources/TierGate)
+        com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         try {
             var row = stampedRow(helper, Buildings.METAL_EXTRACTOR_VILLAGERS, owner, 90);
             if (row == null)
@@ -13701,6 +13164,7 @@ public class SkirmishGameTests {
             for (var pp : row)
                 pp.productionQueue.clear();
         } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
         }
     }
@@ -14219,7 +13683,7 @@ public class SkirmishGameTests {
                         .safeSpawnPoint(level, pp.getIndoorSpawnPoint(level), null);
                     byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level,
                         spawn.getX(), spawn.getY(), spawn.getZ());
-                    if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_WATER && !audit.escapes(spawn))
+                    if (!com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.isWater(kind) && !audit.escapes(spawn))
                         problems.add(name + ": units spawn at " + audit.rel(spawn) + " and can't leave");
                 }
             }
@@ -14826,6 +14290,11 @@ public class SkirmishGameTests {
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.LAVA
                             || surf == com.solegendary.reignofnether.maps.MapLayout.Surface.VOID)
                         problems.add(tag + "patch on " + surf + " at " + m);
+                    // the whole 7x7 pad MetalPatches.stamp levels, not only the centre column (maps spec M1: 20 of
+                    // Highlands' 96 patches at 8 players had an 8-block drop inside the pad and this test passed)
+                    String fault = MapMetalGameTests.padFault(layout, m.dx(), m.dz(), sample);
+                    if (fault != null)
+                        problems.add(tag + "patch " + m + " has " + fault + " in its pad");
                 }
             }
         }
@@ -15012,7 +14481,8 @@ public class SkirmishGameTests {
         if (picks.get(1).x != cx + layout.slots.get(1).dx() || picks.get(1).z != cz + layout.slots.get(1).dz())
             problems.add("an unplaced human was not put on their slot");
 
-        // everyone places: the phase ends a few seconds later, long before the clock
+        // everyone places and presses Ready: the phase ends a few seconds later, long before the clock (placing
+        // alone no longer ends it - tester Joisco's Ready rule, gametest/SpawnReadyGameTests)
         List<com.solegendary.reignofnether.maps.StartPhase.Pick> picks2 = new ArrayList<>(List.of(
             new com.solegendary.reignofnether.maps.StartPhase.Pick("gametest_sp_d", false, 0, 0, 0xFF0000, null),
             new com.solegendary.reignofnether.maps.StartPhase.Pick("AI 2", true, 1, 1, 0x0000FF, null)));
@@ -15024,8 +14494,14 @@ public class SkirmishGameTests {
             problems.add("phase 2: the click was refused");
         for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
             phase2.tick();
+        if (phase2.isFinished())
+            problems.add("placing without Ready ended the phase");
+        if (!phase2.setReady("gametest_sp_d", true))
+            problems.add("phase 2: Ready was refused after placing");
+        for (int t = 0; t < com.solegendary.reignofnether.maps.StartPhase.EARLY_END_TICKS + 2; t++)
+            phase2.tick();
         if (!phase2.isFinished() || done2[0] != 1)
-            problems.add("all placed did not end the phase early");
+            problems.add("all placed and ready did not end the phase early");
         if (problems.isEmpty())
             helper.succeed();
         else
