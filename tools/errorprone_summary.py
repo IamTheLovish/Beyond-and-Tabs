@@ -22,7 +22,6 @@ print('```')
 # the build failed, as two multi-line annotations (workflow-command escaping)
 def _esc(t):
     return t.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
-import io, contextlib
 if len(sys.argv) > 2 and sys.argv[2] == '--annotate':
     lines = open(sys.argv[1], errors='replace').read().splitlines()
     body = [l for l in lines if 'What went wrong' in l]
