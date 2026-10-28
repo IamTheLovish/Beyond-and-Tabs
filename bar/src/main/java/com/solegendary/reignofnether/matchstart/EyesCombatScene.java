@@ -22,8 +22,8 @@ import java.util.List;
  * else moves:
  * <ul>
  *   <li>one of ours with an iron sword east of a row of five still dummies (AI off): two vindicators in iron armour,
- *   two ghouls, a paladin body; two light blows each - sparks on the armoured ones, dust on the others
- *   (20_combat_hits);</li>
+ *   two ghouls, a paladin body; four light blows each - sparks on the armoured ones, dust on the others
+ *   (20_combat_hits, during the fourth);</li>
  *   <li>then a killing blow each from the same side: every body should fall west, away from the sword, fold and settle
  *   (20_combat_collapse_falling, 20_combat_collapse_down) and sink away; the log says how many collapsed;</li>
  *   <li>then a radius-4 blast a few blocks south: the RTS shake (the log gives the trauma it earned; 20_combat_shake).</li>
@@ -41,6 +41,7 @@ final class EyesCombatScene {
     private static int phase = 0;
     private static long phaseNanos = 0;
     private static Vec3 centre;
+    private static int blows = 0;
     private static volatile String serverNote = null;
 
     private static double seconds() {
@@ -62,6 +63,7 @@ final class EyesCombatScene {
         switch (phase) {
             case 0 -> {
                 setUp(mc, site);
+                blows = 0;
                 next(1);
             }
             case 1 -> {
@@ -70,14 +72,17 @@ final class EyesCombatScene {
                     next(2);
                 }
             }
-            case 2 -> {   // the second light blow, then the still while the sparks fly
-                if (t >= 0.4) {
+            case 2 -> {   // three more light blows in quick succession, then the still while the sparks fly
+                if (t >= 0.15) {
                     server(mc, false);
-                    next(3);
+                    if (++blows >= 3)
+                        next(3);
+                    else
+                        next(2);
                 }
             }
             case 3 -> {
-                if (t >= 0.1) {
+                if (t >= 0.12) {
                     ReignOfNether.LOGGER.info("[Eyes] 20_combat_hits: {}", serverNote);
                     EyesDirector.shot(mc, "20_combat_hits");
                     next(4);
@@ -207,6 +212,11 @@ final class EyesCombatScene {
                         armoured++;
                     }
                     d.invulnerableTime = 0;
+                    // a unit's blow deals the attacker's own damage (LivingEntityMixin), not the amount asked: for the
+                    // killing blow the dummy is brought to its last half heart first, so the sword's blow is what kills
+                    // it - with the direction a real kill has (the first tour's fallback kill() had none)
+                    if (kill)
+                        d.setHealth(Math.min(d.getHealth(), 0.5f));
                     d.hurt(level.damageSources().mobAttack(sword), kill ? 10000f : 1f);
                     if (kill && d.isAlive()) {
                         d.kill();   // the blow did not land (a rule refused it): it still dies, without a direction
