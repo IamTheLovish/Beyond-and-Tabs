@@ -14,7 +14,7 @@
 #   tools/mapgen_sim/run.sh lab GenShowcase OUTDIR            the 1v1 / 4v4 / balancing sheets
 #   tools/mapgen_sim/run.sh lab GenSeam seam 4                mirror fold check (and "hash K" for non-mirror maps)
 #   python3 tools/mapgen_sim/analyse.py EXPDIR OUTDIR [curves.csv]   exp1 tables and charts (pandas, matplotlib)
-# It compiles a copy of maps/gen + MapLayout/MapPreset/MetalOptions with a stub of CapturePointServerEvents.Kind.
+# It compiles a copy of maps/gen + MapLayout/MapPreset/MetalOptions/HomeMetal with a stub of CapturePointServerEvents.Kind.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="$HERE/../../bar/src/main/java/com/solegendary/reignofnether"
@@ -22,7 +22,7 @@ WORK="${MAPGEN_SIM_WORK:-$(mktemp -d)}"
 P="$WORK/src/com/solegendary/reignofnether"
 mkdir -p "$P/maps" "$WORK/out"
 cp -r "$SRC/maps/gen" "$P/maps/"
-cp "$SRC/maps/MapLayout.java" "$SRC/maps/MapPreset.java" "$SRC/maps/MetalOptions.java" "$P/maps/"
+cp "$SRC/maps/MapLayout.java" "$SRC/maps/MapPreset.java" "$SRC/maps/MetalOptions.java" "$SRC/maps/HomeMetal.java" "$P/maps/"
 cp -r "$HERE/src/." "$WORK/src/"
 cp -r "$HERE/stub/." "$WORK/src/"
 cp -r "$HERE/lab/." "$WORK/src/"
