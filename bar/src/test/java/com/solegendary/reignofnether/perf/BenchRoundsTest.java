@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.perf;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -66,6 +67,30 @@ class BenchRoundsTest {
         });
         assertTrue(r.roundBytes()[3] >= 500 * 8, r.bytesText());
         assertEquals(0, r.quietestRoundBytes(), r.bytesText());
+    }
+
+    @Test
+    void a_one_off_allocation_passes_the_gate() {
+        Object[] keep = new Object[1];
+        BenchRounds.Result r = BenchRounds.measure(7, 0, 30, 0, (round, frame) -> {
+            if (round == 2 && frame == 0)
+                keep[0] = new long[500];
+            return 1;
+        });
+        assertTrue(r.allocationFree(), r.bytesText());
+    }
+
+    @Test
+    void an_allocation_every_45_frames_fails_the_gate() {
+        // a cache rebuilt every N ticks, 30 < N <= 210: it misses some 30-frame rounds, so "the quietest round is
+        // clean" would pass it, where the old single 210-frame sum caught it (round-3 review of #293)
+        Object[] keep = new Object[1];
+        BenchRounds.Result r = BenchRounds.measure(7, 0, 30, 0, (round, frame) -> {
+            if ((round * 30 + frame) % 45 == 44)
+                keep[0] = new long[64];
+            return 1;
+        });
+        assertFalse(r.allocationFree(), r.bytesText());
     }
 
     @Test

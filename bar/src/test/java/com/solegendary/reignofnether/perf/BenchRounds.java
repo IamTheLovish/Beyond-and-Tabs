@@ -44,6 +44,11 @@ final class BenchRounds {
             return roundBytes.length == 0 ? 0 : q;
         }
 
+        /** The zero-allocation gate. */
+        boolean allocationFree() {
+            return quietestRoundBytes() == 0;
+        }
+
         /** Every round's allocated bytes ("0/0/4000/0 B"). */
         String bytesText() {
             StringJoiner j = new StringJoiner("/", "", " B");
