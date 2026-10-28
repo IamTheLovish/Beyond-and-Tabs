@@ -4133,7 +4133,7 @@ public class SkirmishGameTests {
             helper.fail("the hero save data should be clean after a flush");
             return;
         }
-        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level);
         if (!data.isDirty())
             helper.fail("a hero death should mark the hero save data dirty for the next autosave");
         else if (data.heroUnits.size() != fallen.size())
@@ -4874,10 +4874,27 @@ public class SkirmishGameTests {
                 // ("by inWall (eyes in gravel)") shattered a mirror-image decoy on three CI runs (Oct 21-22, mirror_images_
                 // decoys_draw_fire_deal_nothing_and_fade). A falling block just above the pocket becomes stone, at once,
                 // before its block tick can fire; whatever lies above that is then supported again.
-                BlockPos above = helper.absolutePos(new BlockPos(x, 5, z));
-                if (level.getBlockState(above).getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
-                    level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                // The lowest block over the pocket, not just the one at y 5: the arena's own placement can already
+                // have dropped the gravel at y 5 (an entity in flight, landing after this clearing), leaving the next
+                // gravel up resting on air - gravel in a possessed Bombard's eye block (aim 0.02 away) held its shot
+                // ("set up but never fired", shard 1, Oct 28). The air over an arena runs high: a gravel layer at y 32-33
+                // began falling as a possessed Bombard's test started and landed two deep in front of it (shard-1
+                // stress 40729344872), so the search goes up to y 64
+                for (int y = 5; y <= 64; y++) {
+                    BlockPos above = helper.absolutePos(new BlockPos(x, y, z));
+                    var state = level.getBlockState(above);
+                    if (state.isAir())
+                        continue;
+                    if (state.getBlock() instanceof net.minecraft.world.level.block.FallingBlock)
+                        level.setBlock(above, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                    break;
+                }
             }
+        // and the gravel already falling (it would land in the cleared pocket)
+        BlockPos lo = helper.absolutePos(new BlockPos(x0, 2, z0)), hi = helper.absolutePos(new BlockPos(x1, 64, z1));
+        for (var falling : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class,
+                new net.minecraft.world.phys.AABB(lo, hi).expandTowards(1, 1, 1)))
+            falling.discard();
     }
 
     /**
@@ -6281,7 +6298,7 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void t2_worker_and_t3_skins_ship_in_the_mod(GameTestHelper helper) {
         List<String> missing = new ArrayList<>();
-        for (String skin : List.of("royal_architect_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
+        for (String skin : List.of("royal_architect_body_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
                 "sun_colossus_unit", "bone_dragon_unit"))
             if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "entities", skin + ".png"))
                 missing.add("textures/entities/" + skin + ".png");
@@ -12895,8 +12912,9 @@ public class SkirmishGameTests {
         helper.runAfterDelay(100, () -> {
             // dry ground for both bases: try a few centres out past x+1500 on the far side from the soak
             BlockPos centre = null;
-            for (int k = 0; k < 6 && centre == null; k++) {
-                int cx = origin.getX() + 1500, cz = origin.getZ() - 1500 - 500 * k;
+            // three columns of six: siteOk now reads real ground (it loads the chunk), so an ocean can wet a whole column
+            for (int k = 0; k < 18 && centre == null; k++) {
+                int cx = origin.getX() + 1500 + 500 * (k / 6), cz = origin.getZ() - 1500 - 500 * (k % 6);
                 BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
                 for (var p : com.solegendary.reignofnether.matchstart.MultiplayerLobby.startPositions(level, c, 2, 1, 0))
