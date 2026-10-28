@@ -245,6 +245,19 @@ public final class EyesDirector {
                     afterScars();
                 }
             }
+            case STEP_COMBAT -> {   // 20_combat (EyesCombatScene): hit sparks, death collapse, shake up close
+                boolean done;
+                try {
+                    done = EyesCombatScene.tick(mc, scarsSite);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 20_combat failed at tick {}, going on to the fog scene", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = STEP_FOG;
+                    ticks = 0;
+                }
+            }
             case STEP_FOG -> {
                 boolean done;
                 try {
@@ -599,9 +612,9 @@ public final class EyesDirector {
         afterScars();
     }
 
-    /** The full tour goes on to 17_fog (EyesFogScene, the last scene); a scars-only run ends here. */
+    /** The full tour goes on to 20_combat (EyesCombatScene) and 17_fog (EyesFogScene, the last scene); a scars-only run ends here. */
     private static void afterScars() {
-        step = SCARS_ONLY ? 15 : STEP_FOG;
+        step = SCARS_ONLY ? 15 : STEP_COMBAT;
         ticks = 0;
     }
 
@@ -888,6 +901,7 @@ public final class EyesDirector {
     // and the building's HP bar are not in these stills. The timeline is wall-clock seconds, not ticks: the shader
     // lane's client runs 4-6 ticks a second (see CUES).
     static final int STEP_STRUCTURES = 20;
+    static final int STEP_COMBAT = 30;            // 20_combat, EyesCombatScene: between the scars and the fog (full tour)
     static final List<String> STRUCTURES = parseStructures(System.getProperty("bat.eyes.structures", ""));
     private static int structureIndex = 0;
     private static int structurePhase = 0;
