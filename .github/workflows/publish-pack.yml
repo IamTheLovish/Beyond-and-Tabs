@@ -206,6 +206,9 @@ jobs:
             [ "$got" = "$expect" ] || { echo "::error::$variant: installed jar hash differs"; exit 1; }
             test -f "resourcepacks/BeyondAndTabs-Realistic.zip"
             test -f options.txt
+            # the shipped mod configs (build_pack.PACK_CONFIGS): Immersive Weathering must not weather on block ticks
+            grep -q '^[[:space:]]*block_growths = false' config/immersive_weathering-common.toml
+            grep -q '^[[:space:]]*falling_leaf_particles = false' config/immersive_weathering-client.toml
             n=$(ls mods | wc -l); echo "$variant: $n mods"; ls mods
             if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra|oculus'; then
               echo "::error::mac pack contains Embeddium, ImmediatelyFast, Embeddium Extra or Oculus"; exit 1
