@@ -307,10 +307,10 @@ func TestWatcherAutoInstallsButNeverLaunches(t *testing.T) {
 		t.Fatalf("game open: calls=%d launched=%d note=%q", fake2.calls, *launched2, l2.view(t0).Note)
 	}
 
-	// out of GitHub budget: stop, and say so
+	// out of GitHub budget: say so, and keep the watcher alive for the hourly reset (review C-10)
 	l2.watcher.gh.calls = pollCallBudget
-	if l2.pollUpdates(t0) || !strings.Contains(l2.view(t0).Note, "Stopped checking") {
-		t.Fatal("an exhausted budget must stop the watcher with a note")
+	if !l2.pollUpdates(t0) || !strings.Contains(l2.view(t0).Note, "Stopped checking") {
+		t.Fatal("an exhausted budget must pause with a note, not end the watcher")
 	}
 }
 
