@@ -230,4 +230,40 @@ class GrassTintTest {
         }
         assertTrue(same < total / 4, same + " of " + total + " equal");
     }
+
+    private static double hue(int c) {
+        float[] hsb = java.awt.Color.RGBtoHSB(r(c), g(c), b(c), null);
+        return hsb[0] * 360.0;
+    }
+
+    private static double sat(int c) {
+        float[] hsb = java.awt.Color.RGBtoHSB(r(c), g(c), b(c), null);
+        return hsb[1];
+    }
+
+    private static double median(java.util.List<Double> xs) {
+        java.util.Collections.sort(xs);
+        return xs.get(xs.size() / 2);
+    }
+
+    @Test
+    void grassLeansYellowGreenLeavesDoNot() {
+        // round 5 (Oct 28, noon eyes stills): the lawn read at hue 80 under lovish's Complementary preset and 96 in the
+        // plain lane against the reference scan's 72 - too blue-green. Grass on a forest / meadow biome colour (hue
+        // 102) now comes out at 92 or under; the leaves keep their own hue (95+) and the grass its saturation
+        int forest = 0x79C05A;
+        java.util.List<Double> gh = new java.util.ArrayList<>(), fh = new java.util.ArrayList<>(), gs = new java.util.ArrayList<>();
+        for (int x = -400; x < 400; x += 5) {
+            for (int z = -400; z < 400; z += 7) {
+                int c = GrassTint.apply(forest, x, z, GrassTint.GRASS);
+                gh.add(hue(c));
+                gs.add(sat(c));
+                fh.add(hue(GrassTint.apply(forest, x, z, GrassTint.FOLIAGE)));
+            }
+        }
+        double grassHue = median(gh), leafHue = median(fh), grassSat = median(gs);
+        assertTrue(grassHue <= 92, "grass hue " + grassHue);
+        assertTrue(leafHue >= 95, "leaf hue " + leafHue);
+        assertTrue(grassSat <= sat(forest) + 0.03, "grass saturation " + grassSat + " against " + sat(forest));
+    }
 }
