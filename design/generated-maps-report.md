@@ -23,6 +23,49 @@ knobs, and the open problems.
   first version of this file and the headless `tools/mapgen_sim`, re-ran the balance figures and found the mirror seam.
 - Its tables are kept below and marked **[A]**. They were measured on `0d2ece45`, before the tuning in `625914ef`.
 
+## Oct 27: random metal, tier 2 at main's numbers
+
+lovish (Oct 27 21:37): tier 2 follows main, and "each map should have mexes spread randomly and not be connected to where
+the townhall spawns".
+
+- **Tier 2:** the score prices T2 at 4.5 metal/s after a 75 s refit (main's `MetalExtractor.T2_METAL_INCOME`,
+  `TierGate.UPGRADE_EXTRACTOR_SECONDS`, 0e223c88), was 7.0 and 45 s. The refit's 300 metal is not charged, because the
+  score charges no build cost at all; charging only the refit would tilt it against seats with more safe patches. The
+  lab's `EconSim` refits at 300 m / 600 e, 75 s, 4.5/s.
+- **Metal:** no home ring and no natural pair. The fill is a seeded random spread over the whole map, kept 0.75 of the
+  territory's hole target apart, up to the same per-seat allowances (a seat may draw 1.3x its share; the balancer evens
+  the rest). The nudge's new patch is drawn at random from the poorest seat's ground, not nearest its start. The build
+  ground keeps 46 blocks round each start clear, as before.
+- **Reach rule** (`MapGenerator.metalReach`): a draw is refused, and drawn again, when a start's nearest patch is over
+  110 blocks' walk, or its metal within 160 blocks' walk is under 0.6 of the best start's. The floor is a design call
+  sent to lovish: 0.6 (default), 0.5, or none.
+- **Extra metal** (lobby): it was ignored on generated maps. It now scales the spread from NORMAL, which is the old
+  count: NONE 0.75x, LOW 0.875x, HIGH 1.25x.
+
+**What it costs** (production check, 240 lobby maps, the same seeds as before; `run.sh lab GenProdStats prod.csv 40`):
+
+| Players, shape | ms median / max | Spread median / max | Team median | Robust seat within 5% | Robust team within 5% | Patches | Sites |
+|---|---|---|---|---|---|---|---|
+| 1v1 round | 808 / 6265 | 3.2% / 4.0% | 3.2% | 0.76 (was 0.80) | 0.76 (0.80) | 58 | 5.2 |
+| 1v1 square | 618 / 1642 | 3.4% / 4.0% | 3.4% | 0.76 (0.79) | 0.76 (0.79) | 58 | 5.2 |
+| 2v2 round | 1412 / 2944 | 2.8% / 4.8% | 1.6% | 0.55 (0.80) | 0.82 (0.95) | 78 | 5.3 |
+| 2v2 square | 1324 / 2875 | 3.4% / 4.9% | 1.6% | 0.59 (0.74) | 0.87 (0.93) | 78 | 5.8 |
+| 4v4 round | 2354 / 4908 | 3.1% / 4.8% | 1.2% | 0.23 (0.45) | 0.93 (0.99) | 120 | 5.2 |
+| 4v4 square | 2440 / 7405 | 3.3% / 4.9% | 1.0% | 0.25 (0.46) | 0.95 (0.98) | 120 | 6.1 |
+
+- All 240 maps are valid. 22 needed a fallback draw (8 at 1v1, 5 at 2v2, 9 at 4v4; none before), mostly the reach
+  rule: without it, 2 of 120 did. The redraws are what lift the slowest build from 2.1 s to 7.4 s.
+- Under the central weights every map is still within 5%. Under other plausible weights the random spread is less
+  robust than the home rings were, most at 2v2 and 4v4 seats. The home ring was fairness by construction; the dice now
+  need the balancer for all of it.
+- Tighter slack (1.1x instead of 1.3x) on 120 of the same maps was within noise (4v4 seats 0.29 against 0.24).
+- **Where the metal lands** (`run.sh lab GenReachStats reach.csv 20`, 120 maps): the nearest patch is 49-87 blocks'
+  walk from a start (the home ring was 18), so "far from all metal" never trips on lobby maps. The poorest start's
+  metal within 160 is 0.49-1.0 of the best one's before the rule; 7.5% of draws fall under 0.6.
+- The 12-map sweep (`run.sh gametest`): 0 problems, worst spread 4.0%.
+
+The older sections below were measured before this change.
+
 ## The short version
 
 - **The generator works.**
@@ -415,7 +458,8 @@ These are generator knobs. No unit or economy numbers change.
 | Knob | Value | Where |
 |---|---|---|
 | Seat tolerance | 5% (the nudge aims for 4%) | `GenOptions.tolerance` |
-| Patch cap per seat | 28 / 20 / 15 at 1v1 / 2v2 / 4v4, times the archetype's density (its square root in team games) and the square root of the lobby's richness | `GenEconomy.capOf` |
+| Patch allowance per seat | 28 / 20 / 15 at 1v1 / 2v2 / 4v4, times the archetype's density (its square root in team games), the square root of the lobby's richness and the extra-metal level (NONE 0.75, LOW 0.875, NORMAL 1, HIGH 1.25); a seat may draw 1.3x | `GenEconomy.capOf`, `fill` |
+| Reach rule | nearest patch within 110 blocks' walk; metal within 160 at least 0.6 of the best start's | `MapGenerator.metalReach` |
 | Hole targets, blocks | Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 | `Archetype` |
 | Rim band | within 36 of the wall, 20% denser; never closer than the extractor clearance (11) | `GenEconomy.fill` |
 | Patch values | rich at exposure 0.38-0.62 (the front line), lean below 0.3 behind the base, a 2.0x patch per seat round the plaza | `GenEconomy` |
@@ -458,6 +502,7 @@ These are generator knobs. No unit or economy numbers change.
 tools/mapgen_sim/run.sh lab GenExperiments OUT 2 ROUND PROSPECTOR_WARDEN 200 2 12   # one exp1 cell; all 20 cells for the tables
 python3 tools/mapgen_sim/analyse.py OUT ANALYSIS [curves.csv]                       # exp1 tables and charts
 tools/mapgen_sim/run.sh lab GenProdStats prod.csv 40                                # the production check
+tools/mapgen_sim/run.sh lab GenReachStats reach.csv 20                              # nearest metal and reach per start
 tools/mapgen_sim/run.sh lab GenRobustCmp robust.csv 2 25                            # 1v1 robust nudge (8 16 for 4v4)
 tools/mapgen_sim/run.sh lab GenTeamBias bias.csv 20 40                              # 4v4 team gap in the sim
 tools/mapgen_sim/run.sh lab GenCurves curves.csv 60                                 # 1v1 sim curves

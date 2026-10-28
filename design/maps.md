@@ -426,14 +426,19 @@ now carries a seed for every stamped map; before, it always played the unseeded 
   its forward ground, less metal); **Open** (no cliffs round the base, denser metal) vs **Bastion** (a plateau a tier up
   ringed by cliffs, two ramps, leaner metal); **Moated** (a river 70-90 in front, fords only) vs **Banks** (more land);
   **Mixed** (each seat its own); **Mirror** (point-symmetric terrain and economy: the "tournament" control).
-* *Economy*: six patches round every start at 18, one 2.0x per seat round the plaza, a natural pair 42-66 out, then the
-  hole-driven fill (the reachable spot farthest from any patch goes in while any lies beyond its owner's hole target:
-  Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 blocks; the rim band, within 36 of the
-  wall, 20% denser; capped per seat at 28 / 20 / 15 patches at 1v1 / 2v2 / 4v4, times the archetype's density (its
-  square root in team games, where the full contrast drew 19 patches a seat against 12) and the square root of the
-  lobby's richness); values by exposure (rich on the front line, lean behind the base). Every patch: a level 7x7 pad of
-  land, no deep water within 7, reachable from its owner, off the roads, at least the extractor clearance from the wall
-  (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved zone (section 2's rules).
+* *Economy* (lovish Oct 27 21:37: "each map should have mexes spread randomly and not be connected to where the
+  townhall spawns"): no home ring and no natural pair. One 2.0x patch per seat round the plaza, then the **random
+  spread**: every free spot in a seeded random order, each taken when no patch stands within 0.75 of its territory's
+  hole target (Prospector 29, Open 31, Banks 34, Plain 37, Moated 40, Bastion 43, Warden 46 blocks; the rim band, within
+  36 of the wall, 20% tighter; the lobby's richness scales it; never under 20), a second pass at 20 if the count is
+  short, until the map holds the seats' allowances: 28 / 20 / 15 patches a seat at 1v1 / 2v2 / 4v4, times the
+  archetype's density (its square root in team games, where the full contrast drew 19 patches a seat against 12) and
+  the square root of the lobby's richness. A seat may draw up to 1.3x its allowance; the balancer evens the rest. The
+  lobby's **extra metal** scales the spread from NORMAL (the count above): NONE 0.75x, LOW 0.875x, HIGH 1.25x. Values by
+  exposure (rich on the front line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within
+  7, reachable from its owner, off the roads, at least 46 from any start (the build ground), at least the extractor
+  clearance from the wall (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved
+  zone (section 2's rules).
 * *Objectives*: a site on the plaza, a contested site on every front seam (where both neighbours walk about as far),
   two more on the front line in team games, a warden's own two; **modifiers** add theirs.
 * *Jungle* (reserved for the hero slice, M12): one wild area per side (two in big team games) between the roads, with
@@ -444,16 +449,21 @@ now carries a seed for every stamped map; before, it always played the unseeded 
   in the middle that buff the hero who kills them": a lair replaces the centre gold), Fog valleys. Named in chat when
   the map has risen; under the preview unless Surprise.
 
-**Fairness, measured.** `Fairness` prices a seat in metal per second averaged over 15 minutes: its patches (T1 then
-T2, built nearest first, shared with rivals by walk distance, front-line ones partly lost to raids), its objectives
+**Fairness, measured.** `Fairness` prices a seat in metal per second averaged over 15 minutes: its patches (T1 2.0/s
+then T2 4.5/s after a 75 s refit, main's numbers since 0e223c88; built nearest first, shared with rivals by walk
+distance, front-line ones partly lost to raids), its objectives
 (income at 35 energy a metal, or an estimated worth), its defence (directions an enemy walks straight in), tempo (walk
 to the middle) and space. Spread = (best seat - worst seat) / mean. The balancer (`SWAP_ROBUST`, chosen in Phase 1):
 the same landscape with the seats turned round the ring and the sides' characters swapped, the most even of up to
 eight builds, then small metal edits (a standard patch made rich on the poorest seat, a crowding patch removed from the
 richest...) down to 80% of the tolerance, each edit judged under the central weights and under eight seeded draws of
 the weights (the guesses in the score, priced within their ranges), going on while those draws' mean is still outside
-the tolerance; a draw still outside it gives way to a fresh draw (up to four). The data-only camps count zero on lobby
-maps.
+the tolerance; a draw still outside it gives way to a fresh draw (up to four). The nudge's new patch is drawn at random
+from the poorest seat's ground, never nearest its start. The data-only camps count zero on lobby maps.
+
+**The reach rule** (beside the score, since the dice now place the metal): a balanced draw is refused, and drawn again,
+when a start's nearest patch is over 110 blocks' walk or its metal within 160 blocks' walk is under 0.6 of the best
+start's (`MapGenerator.metalReach`).
 
 **What Phase 1 measured** (200 seeds a cell, 1v1 and 4v4, round and square, five contrasts, six balancers; scored
 again under 40 separate weight draws, and a crude 15-minute economy sim as a cross-check):

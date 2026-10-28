@@ -12,7 +12,8 @@ import java.util.List;
  * <ul>
  * <li>two build crews per seat (the commander, bp 3; three workers, bp 3) walk (2.5 b/s, 1.3 x the straight line) to
  *     their seat's patches nearest first and build T1 extractors (70 m / 90 e, 42 s at bp 1); a patch an enemy holds is
- *     skipped; from 8:00 safe extractors are refitted to T2 (180 m / 300 e, 45 s without income) one per 30 s;</li>
+ *     skipped; from 8:00 safe extractors are refitted to T2 (300 m / 600 e, 75 s without income, then 4.5 m/s: main's TierGate and
+ *     MetalExtractor, 0e223c88) one per 30 s;</li>
  * <li>energy is made, not priced: a base crew builds wind generators (50 m / 30 e, +14 e/s) whenever energy income falls
  *     below 1.37 x metal income (the unit cost ratio); spending stalls on whichever resource runs out;</li>
  * <li>everything left over is army (metal spent on units). Every 20 s each objective goes to the team whose army
@@ -191,7 +192,7 @@ final class EconSim {
             double v = 2 + mines[s];
             for (Patch p : patches)
                 if (p.owner == s && !p.refitting)
-                    v += (p.t2 ? 7 : 2) * p.value;
+                    v += (p.t2 ? Fairness.T2 : Fairness.T1) * p.value;
             return v;
         }
 
@@ -282,16 +283,16 @@ final class EconSim {
                     p.refitting = false;
                     p.t2 = true;
                 }
-            if (t >= nextRefit[s] && metal[s] > 180 * forge && energy[s] > 300 * forge) {
+            if (t >= nextRefit[s] && metal[s] > 300 * forge && energy[s] > 600 * forge) {
                 Patch pick = null;
                 for (Patch p : patches)
                     if (p.owner == s && !p.t2 && !p.refitting && exposure(p.d, s) < 0.42 && (pick == null || p.d[s] < pick.d[s]))
                         pick = p;
                 if (pick != null) {
                     pick.refitting = true;
-                    pick.refitDone = t + 45;
-                    metal[s] -= 180 * forge;
-                    energy[s] -= 300 * forge;
+                    pick.refitDone = t + Fairness.REFIT;
+                    metal[s] -= 300 * forge;
+                    energy[s] -= 600 * forge;
                     nextRefit[s] = t + 30;
                 }
             }
