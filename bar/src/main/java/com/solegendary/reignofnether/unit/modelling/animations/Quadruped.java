@@ -154,7 +154,7 @@ public final class Quadruped {
         int id = e.getId();
         float[] st = STATE.get(e);
         if (st == null)
-            STATE.put(e, st = new float[] {0f, age, -1000f, 0f});
+            STATE.put(e, st = new float[] {0f, age, -1000f, 0f, Life.advance(0f, Life.offset(id) / P.breathTicks)});
         float dt = Mth.clamp(age - st[1], 0f, 20f);
         st[1] = age;
         float amt = Math.min(1f, limbSwingAmount);
@@ -252,7 +252,10 @@ public final class Quadruped {
 
         // ---- breath, always -----------------------------------------------------------------------------------------
         float breathTicks = Mth.lerp(exert, P.breathTicks, P.breathTicks * 0.5f);
-        float br = Life.breath(age, id, breathTicks);          // -1 out .. 1 in
+        // the phase is state, moved by the frame's elapsed ticks: exertion changes the breath's speed, never jumps it
+        // (as age / breathTicks it strobed once the age was large - Mode A review Oct 27)
+        st[4] = Life.advance(st[4], dt / breathTicks);
+        float br = Life.breathAt(st[4]);                       // -1 out .. 1 in
         float swell = 0.5f + 0.5f * br;
         if (r.body != null) {
             r.body.xScale = 1f + 0.018f * swell * (1f + 0.6f * exert);
