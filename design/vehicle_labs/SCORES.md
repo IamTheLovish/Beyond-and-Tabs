@@ -17,3 +17,4 @@ judged against lovish's references (`design/refs/vehicle_labs/`, 28 images) and 
 | Round | Critic | Resemblance | Quality | Main faults |
 |---|---|---|---|---|
 | detail r1 (50c09ed2) | fresh Fable, Oct 28 | 4 | 5 | silhouette worse than greybox r3 (outward stair flares, white lantern box + pole); ~40% grey stone vs ref18's red/black/cream; orange-glass door slot dominates; patchwork wing roofs; arcade rhythm too coarse. Keep: the cream hall eave cornice. |
+| detail r2 (fa66b589) | fresh Fable, Oct 28 | 4 | 4 | spire rebuilt as 7/5/3 boxes with quartz "ears" (worse than r3's taper); blackstone renders grey so the corner view reads as a grey box; 1x1 cyan light squares; wing ramps with no overhang; flat door head. Keep: tower-over-door massing between arcade halls and raised end pavilions. |
