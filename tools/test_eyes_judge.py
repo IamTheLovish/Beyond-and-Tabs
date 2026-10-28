@@ -463,6 +463,16 @@ class Sheet(unittest.TestCase):
         self.assertGreaterEqual(sheet.width, 1600)      # not a thumbnail wall: the zoom is there
         self.assertEqual(len([t for t in tiles if t["zoom_box"]]), 2)
 
+    def test_a_crop_too_wide_for_the_row_stacks_under_the_still_at_one_to_one(self):
+        ej = EJ()
+        lane = make_lane(self.root / "lane", size=(2000, 400))
+        res = ej.judge_lane(lane, "lane", [(None, (0, 0, 2000, 400))])
+        sheet, tiles = ej.build_sheet(lane, "lane", res)
+        t = tiles[0]
+        self.assertEqual(t["zoom"], 1)                      # 2x (4000 px) and 1x beside the still (2000 + 800) do not fit
+        self.assertLessEqual(sheet.width, 2500)
+        self.assertGreater(t["zoom_box"][1], t["thumb_box"][1] + t["thumb_box"][3] - 1)    # below the still, not over it
+
     def test_a_still_without_proof_gets_no_zoom(self):
         ej = EJ()
         lane = make_lane(self.root / "lane", client=0, server=10)
