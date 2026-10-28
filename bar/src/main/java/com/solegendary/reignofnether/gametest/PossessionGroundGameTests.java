@@ -176,4 +176,79 @@ public class PossessionGroundGameTests {
             });
         });
     }
+
+    /** A real jump's apex (vanilla: 0.42 up, then -0.08 and x0.98 a tick) plus a step's 0.6, with a little float slack. */
+    static final double MOST_RISE = 1.2522 + 0.6 + 0.05;
+
+    /**
+     * A lying client that holds jump and claims 1.2 blocks up every tick, on the ground or not: once a standing unit
+     * reads on-ground (this PR), each landing must not hand it a fresh climb budget. It must never rise more than a real
+     * jump's apex plus a step (about 1.85) above the ground it last stood on, and the lie is corrected. Before the cap,
+     * the grounded allowance (+1.2 on air ticks 0 and 1, then 0.45 a tick) let it rise ~4.6 blocks in 7 ticks and
+     * refilled on every landing (Mode A review of #308, round 1).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 140)
+    public static void possession_repeated_jump_claims_never_rise_past_a_jump(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = HeroGameTests.owner(helper, "jumpclimb");
+        UUID uuid = UUID.nameUUIDFromBytes(me.getBytes());
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 236;
+        Runnable clearPad = HeroGameTests.possessionPad(level, base, y, 8, 2);
+        Mob unit = HeroGameTests.padUnit(level, me, base.getX() - 3.5, y, base.getZ() + 0.5);
+        if (unit == null) {
+            clearPad.run();
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        List<String> problems = new ArrayList<>();
+        Runnable finish = () -> {
+            PossessionServer.release(uuid, null);
+            unit.discard();
+            clearPad.run();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        };
+        helper.runAfterDelay(6, () -> {
+            String why = PossessionServer.claim(level, me, uuid, unit.getId(), true);
+            if (why != null) {
+                problems.add("could not possess the unit: " + why);
+                finish.run();
+                return;
+            }
+            double floor = unit.getY();   // the pad is flat: the last ground the unit stood on is always the floor
+            int[] seq = { 1 };
+            double[] highest = { 0 };
+            int[] highestAt = { 0 };
+            for (int t = 1; t <= 100; t++) {
+                int tick = t;
+                helper.runAfterDelay(t, () -> {
+                    if (unit.getY() - floor > highest[0]) {
+                        highest[0] = unit.getY() - floor;
+                        highestAt[0] = tick;
+                    }
+                    PossessionServer.applyMove(uuid, unit.getId(), 0, 0, -90, 0, true, false,
+                        unit.getX(), unit.getY() + 1.2, unit.getZ(), seq[0]++);
+                });
+            }
+            helper.runAfterDelay(101, () -> {
+                var p = PossessionServer.of(uuid);
+                if (p == null) {
+                    problems.add("the possession was lost");
+                    finish.run();
+                    return;
+                }
+                highest[0] = Math.max(highest[0], unit.getY() - floor);
+                if (highest[0] > MOST_RISE)
+                    problems.add(String.format(Locale.ROOT, "jump claims of +1.2 every tick lifted the unit %.2f blocks "
+                        + "above its ground (tick %d), more than a jump's apex plus a step (%.2f)", highest[0],
+                        highestAt[0], MOST_RISE));
+                if (p.corrections < 1)
+                    problems.add("100 ticks of impossible jump claims were never corrected");
+                finish.run();
+            });
+        });
+    }
 }
