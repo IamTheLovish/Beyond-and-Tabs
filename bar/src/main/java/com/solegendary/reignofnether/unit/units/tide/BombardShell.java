@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.particles.ParticleTypes;
@@ -46,6 +47,12 @@ public class BombardShell extends ThrowableItemProjectile {
     private float damage = 9f;
     private String ownerName = "";
     private int fuseTicks = 80;
+    /**
+     * False when fired by a unit that cannot hit air (the field artillery, AttackerUnit.canTargetAir; lovish, Oct 24):
+     * the shell flies through flyers and its burst never touches one. The Iron Leviathan Engine's rounds and the Sky
+     * Corsair's bombs keep hitting air.
+     */
+    private boolean hitsAir = true;
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results (server thread)
 
@@ -58,6 +65,7 @@ public class BombardShell extends ThrowableItemProjectile {
         this.damage = damage;
         if (shooter instanceof Unit u && u.getOwnerName() != null)
             this.ownerName = u.getOwnerName();
+        this.hitsAir = !(shooter instanceof AttackerUnit a) || a.canTargetAir();
     }
 
     @Override
@@ -67,6 +75,7 @@ public class BombardShell extends ThrowableItemProjectile {
 
     public float getDamage() { return damage; }
     public String getShellOwnerName() { return ownerName; }
+    public boolean hitsAir() { return hitsAir; }
 
     /**
      * Flight time in ticks for a shot of this flat length: a lob, not a line drive (about a 3-block apex at 11 blocks,
@@ -93,10 +102,15 @@ public class BombardShell extends ThrowableItemProjectile {
         fuseTicks = t + 40;
     }
 
-    /** Never collides with its own side's units (the crew fires over its own line). */
+    /**
+     * Never collides with its own side's units (the crew fires over its own line), nor with a flyer when it
+     * {@link #hitsAir() cannot hit air}.
+     */
     @Override
     protected boolean canHitEntity(@NotNull Entity e) {
         if (!super.canHitEntity(e))
+            return false;
+        if (!hitsAir && AttackerUnit.isAirTarget(e))
             return false;
         return !(e instanceof Unit u) || isEnemy(u.getOwnerName());
     }
@@ -132,6 +146,8 @@ public class BombardShell extends ThrowableItemProjectile {
         for (LivingEntity le : UnitGrid.near(sl, x, z, SPLASH_RADIUS + 1, scratch)) {
             if (!le.isAlive() || !(le instanceof Unit u) || le.level() != sl || !isEnemy(u.getOwnerName()))
                 continue;
+            if (!hitsAir && u.isFlyingUnit())
+                continue;   // the field artillery cannot hit air, splash included
             if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > SPLASH_RADIUS + 1)
                 continue;
             double dx = le.getX() - x, dz = le.getZ() - z;
@@ -171,6 +187,7 @@ public class BombardShell extends ThrowableItemProjectile {
         tag.putFloat("BombardDamage", damage);
         tag.putString("BombardOwner", ownerName);
         tag.putInt("BombardFuse", fuseTicks);
+        tag.putBoolean("BombardHitsAir", hitsAir);
     }
 
     @Override
@@ -179,5 +196,6 @@ public class BombardShell extends ThrowableItemProjectile {
         damage = tag.getFloat("BombardDamage");
         ownerName = tag.getString("BombardOwner");
         fuseTicks = tag.contains("BombardFuse") ? tag.getInt("BombardFuse") : 80;
+        hitsAir = !tag.contains("BombardHitsAir") || tag.getBoolean("BombardHitsAir");
     }
 }

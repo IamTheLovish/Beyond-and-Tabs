@@ -171,4 +171,508 @@ public class ArtilleryGameTests {
             v.discard();
         });
     }
+
+    // ------------------------------------------------------------------ the artillery nerf (lovish, Oct 24)
+    // "massed shell artillery forms an unapproachable death ball": the four BombardShell units (Bombard Crew, Mortar
+    // Crawler, Rocket Battery, Mortar Galley) cannot hit air and need 2 s of standing still after moving before they
+    // fire. SET_UP is lovish's 2 s written out, so the tests do not read the number back from the code they check.
+
+    static final int SET_UP = 40;
+
+    static com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit bombard(GameTestHelper helper, String owner,
+                                                                                 double x, double z) {
+        var b = EntityRegistrar.BOMBARD_CREW_UNIT.get().create(helper.getLevel());
+        if (b == null)
+            return null;
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        b.moveTo(o.getX() + x, o.getY(), o.getZ() + z, -90, 0);
+        b.setOwnerName(owner);
+        helper.getLevel().addFreshEntity(b);
+        b.setupEquipmentAndUpgradesServer();   // the bow UnitBowAttackGoal needs (see galley())
+        return b;
+    }
+
+    static void hold(net.minecraft.world.entity.Mob m, double x, double y, double z) {
+        m.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        m.moveTo(x, y, z, m.getYRot(), 0);
+    }
+
+    static boolean flyer(net.minecraft.world.entity.Entity e) {
+        return e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && u.isFlyingUnit();
+    }
+
+    /** Shells in flight that this unit fired. */
+    static int shellsOf(net.minecraft.world.entity.Mob shooter) {
+        return shooter.level().getEntitiesOfClass(com.solegendary.reignofnether.unit.units.tide.BombardShell.class,
+            shooter.getBoundingBox().inflate(40), s -> s.getOwner() == shooter).size();
+    }
+
+    /**
+     * Cannot hit air: with only an enemy flyer in reach a Bombard Crew never takes it as a target - not by itself, not
+     * in retaliation when the flyer hurts it, not on a direct attack order - and never fires; the other three shell
+     * units refuse the direct order too. A shell passes through a flyer in its path, and a burst right beside a flyer
+     * leaves it unhurt while a ground enemy in the same splash is hit.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void artillery_never_targets_or_hurts_a_flyer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_arty_air_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        var g = EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        if (b == null || g == null) {
+            if (b != null) b.discard();
+            helper.fail("could not create the Bombard Crew or the Gull Spotter");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        double gx = o.getX() + 13.5, gy = o.getY() + 2.5, gz = o.getZ() + 8.5;
+        g.moveTo(gx, gy, gz, 90, 0);
+        g.setOwnerName(foeOwner);
+        level.addFreshEntity(g);
+        float gullFull = g.getMaxHealth();
+        // the other three shell units, each given the same direct order on the gull
+        java.util.List<net.minecraft.world.entity.Mob> all = new java.util.ArrayList<>();
+        all.add(b);
+        int row = 0;
+        for (var type : java.util.List.of(EntityRegistrar.MORTAR_CRAWLER_UNIT.get(),
+                EntityRegistrar.ROCKET_BATTERY_UNIT.get(), EntityRegistrar.MORTAR_GALLEY_UNIT.get())) {
+            var m = type.create(level);
+            if (m == null)
+                continue;
+            BlockPos at = helper.absolutePos(new BlockPos(4, 2, 1 + row * 5));
+            m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setOwnerName(owner);
+            level.addFreshEntity(m);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) m).setupEquipmentAndUpgradesServer();
+            all.add(m);
+            row++;
+        }
+        Runnable cleanUp = () -> {
+            for (var m : all)
+                m.discard();
+            g.discard();
+        };
+        boolean[] groundTarget = { false };
+        for (int t = 1; t < 160; t++) {
+            int tick = t;
+            helper.runAfterDelay(t, () -> {
+                hold(g, gx, gy, gz);   // the gull hovers on its spot for the whole test
+                if (tick >= 140)
+                    return;
+                if (tick == 5)    // the gull "hurts" the crew: retaliation must not pick it
+                    b.hurt(level.damageSources().indirectMagic(g, g), 1f);
+                if (tick == 10)   // a direct attack order on the gull, for all four
+                    for (var m : all)
+                        ((AttackerUnit) m).setUnitAttackTargetForced(g);
+                for (var m : all) {
+                    var goalTarget = ((com.solegendary.reignofnether.unit.interfaces.Unit) m).getTargetGoal().getTarget();
+                    if (flyer(m.getTarget()) || flyer(goalTarget)) {
+                        cleanUp.run();
+                        throw new GameTestAssertException(m.getType().toShortString() + " took the flyer as its target"
+                            + " at tick " + tick + (tick >= 10 ? " (after a direct attack order)" : tick >= 5
+                                ? " (in retaliation)" : " (by itself)"));
+                    }
+                    if (m == b && m.getTarget() != null)
+                        groundTarget[0] = true;   // a neighbouring test's ground unit came into reach: a shot is fair
+                }
+                if (!groundTarget[0] && shellsOf(b) > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the Bombard Crew fired with only a flyer in reach (tick " + tick + ")");
+                }
+            });
+        }
+        helper.runAfterDelay(140, () -> {
+            if (g.getHealth() < gullFull) {
+                cleanUp.run();
+                throw new GameTestAssertException("the gull was hurt while the artillery stood by: " + g.getHealth());
+            }
+            // a shell flying straight through the gull: it passes through and does not burst on it
+            var through = new com.solegendary.reignofnether.unit.units.tide.BombardShell(level, b, 9f);
+            through.setPos(gx - 1.5, gy + g.getBbHeight() / 2, gz);
+            through.setDeltaMovement(0.3, 0, 0);
+            level.addFreshEntity(through);
+        });
+        helper.runAfterDelay(150, () -> {
+            try {
+                if (g.getHealth() < gullFull)
+                    throw new GameTestAssertException("a shell burst on the gull it flew through: health "
+                        + g.getHealth() + "/" + gullFull);
+                // a burst right beside the gull, a ground enemy in the same splash: the walker is hit, the gull is not
+                VillagerUnit v = foe(helper, foeOwner, 13.5, 6.5);
+                if (v == null)
+                    throw new GameTestAssertException("could not create the ground foe");
+                all.add(v);
+                float vFull = v.getHealth();
+                var shell = new com.solegendary.reignofnether.unit.units.tide.BombardShell(level, b, 9f);
+                shell.setPos(gx, gy - 1.0, gz - 1.0);
+                level.addFreshEntity(shell);
+                shell.burst();
+                if (g.getHealth() < gullFull)
+                    throw new GameTestAssertException("a shell bursting beside the gull hurt it: " + g.getHealth() + "/" + gullFull);
+                if (v.getHealth() >= vFull)
+                    throw new GameTestAssertException("the same burst missed the ground enemy a block away - the test proves nothing");
+                cleanUp.run();
+                helper.succeed();
+            } catch (GameTestAssertException e) {
+                cleanUp.run();
+                throw e;
+            }
+        });
+    }
+
+    /**
+     * Shared by the two set-up tests: a Bombard Crew walks ~3 blocks and stops, then gets {@code order} with its
+     * cooldown cleared, so only the set-up can hold the shot. It must not fire in the first SET_UP ticks after it
+     * stopped, and must fire soon after. Slack of 2 ticks: the test sees "stopped" a tick or two after the last step.
+     */
+    static void setUpTest(GameTestHelper helper, String tag, java.util.function.BiConsumer<
+            com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit, VillagerUnit> order, boolean withFoe) {
+        String owner = "gametest_arty_setup_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        VillagerUnit v = withFoe ? foe(helper, owner + "_foe", 15.5, 8.5) : null;
+        if (b == null || (withFoe && v == null)) {
+            if (b != null) b.discard();
+            if (v != null) v.discard();
+            helper.fail("could not create the units");
+            return;
+        }
+        boolean[] done = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            b.discard();
+            if (v != null)
+                v.discard();
+        };
+        double sx = b.getX(), sz = b.getZ();
+        BlockPos dest = helper.absolutePos(new BlockPos(4, 2, 8));
+        double vx = v == null ? 0 : v.getX(), vy = v == null ? 0 : v.getY(), vz = v == null ? 0 : v.getZ();
+        helper.runAfterDelay(3, () -> b.setMoveTarget(dest));
+        int[] stoppedAt = { -1 };
+        int[] tick = { 0 };
+        double[] last = { sx, sz };
+        int slack = 2;
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            tick[0]++;
+            if (v != null)
+                hold(v, vx, vy, vz);
+            double step = Math.hypot(b.getX() - last[0], b.getZ() - last[1]);
+            last[0] = b.getX();
+            last[1] = b.getZ();
+            int shells = shellsOf(b);
+            if (stoppedAt[0] < 0) {
+                if (shells > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("fired before it had even stopped walking (tick " + tick[0] + ")");
+                }
+                if (tick[0] > 5 && Math.hypot(b.getX() - sx, b.getZ() - sz) > 1.5 && b.getNavigation().isDone()
+                        && step < 0.01) {
+                    stoppedAt[0] = tick[0];
+                    order.accept(b, v);
+                    ((com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal<?>) b.getAttackGoal()).resetCooldown();
+                }
+                if (tick[0] > 160) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("the crew never walked to its move target and stopped");
+                }
+                return;
+            }
+            int since = tick[0] - stoppedAt[0];
+            if (step > 0.05) {
+                cleanUp.run();
+                throw new GameTestAssertException("the crew moved again " + since + " ticks after it stopped - the test needs it standing");
+            }
+            if (shells > 0 && since < SET_UP - slack) {
+                cleanUp.run();
+                throw new GameTestAssertException("fired " + since + " ticks after it stopped walking: it needs "
+                    + SET_UP + " ticks to set up");
+            }
+            if (shells > 0) {
+                cleanUp.run();
+                helper.succeed();
+                return;
+            }
+            if (since > SET_UP + 40) {
+                cleanUp.run();
+                throw new GameTestAssertException("still had not fired " + since + " ticks after it stopped (set-up is "
+                    + SET_UP + "); target " + (b.getTarget() == null ? "none" : "set") + ", using item " + b.isUsingItem());
+            }
+        });
+    }
+
+    /** Set-up time on an attack order: a crew that just stopped walking holds fire 2 s, then shells the target. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
+        setUpTest(helper, "atk", (b, v) -> ((AttackerUnit) b).setUnitAttackTarget(v), true);
+    }
+
+    /** Set-up time on Attack Ground: the same 2 s before the first shell goes at the ordered spot. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void attack_ground_waits_for_the_set_up(GameTestHelper helper) {
+        setUpTest(helper, "ground", (b, v) -> b.getRangedAttackGroundGoal().setGroundTarget(
+            b.blockPosition().offset(10, -1, 0)), false);
+    }
+
+    /**
+     * Set-up time when possessed: a player walking the crew by hand (navigation idle, so only the keys move it) a
+     * single block - under the 1.5-block drift - and clicking every tick from then on gets no shell in the first
+     * SET_UP ticks after it comes to rest, and one soon after (a click refused for the set-up costs no cooldown).
+     * Driven by the keys alone (a headless possession).
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void possessed_artillery_needs_two_seconds_to_set_up_after_moving(GameTestHelper helper) {
+        possessedSetUpTest(helper, "keys", false, false);
+    }
+
+    /**
+     * The same, driven the way a real client drives it: a MOVE every tick with the keys and an honest claim of where
+     * its prediction put the unit (PossessionServer.applyMove), the path that moves the unit by the claim and leaves
+     * its zza/xxa at 0.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void possessed_artillery_driven_by_a_client_needs_two_seconds_to_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "claims", true, false);
+    }
+
+    /**
+     * Knocked back while its player stands still (lovish, Oct 27: "only my walking" costs the set-up, as for the AI
+     * crew): a hit 10 ticks after it stopped, pushing it back toward where it came from, does not restart the 2 s - it
+     * still fires on the same schedule. Keys-driven: the server moves it.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_possessed_crew_knocked_back_while_standing_keeps_its_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "knock", false, true);
+    }
+
+    /**
+     * The same from a real client: the server's hit (its shove opens the claims' allowance) reaches the client, whose
+     * prediction carries the knockback, so the claims slide it with the keys up.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_possessed_from_a_client_knocked_back_keeps_its_set_up(GameTestHelper helper) {
+        possessedSetUpTest(helper, "knockclaims", true, true);
+    }
+
+    /**
+     * A lying client cannot carry its crew off by hops (round-4 review of #222): position claims that hop it ~3 blocks
+     * east with no walk key held are a move like any walk - the 2 s set-up starts again where it lands. Only a shove
+     * the server gave it (knockback) may fly it through the air for free.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_by_keyless_client_claims_must_set_up_again(GameTestHelper helper) {
+        keylessHopTest(helper, "hop", false, false);
+    }
+
+    /**
+     * The same after one sprint-jump claim with no step (round-5 review of #222): the client's own sprint and jump
+     * flags widen what a claim may cover, but they are no shove the server gave - the hops still cost the set-up.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_after_a_faked_sprint_jump_must_set_up_again(GameTestHelper helper) {
+        keylessHopTest(helper, "sjhop", true, false);
+    }
+
+    /**
+     * The same after a real run with the keys and one claim with no step (round-6 review of #222): the keys run's own
+     * momentum is no shove the server gave, so the keyless hops that follow still cost the set-up.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 300)
+    public static void a_crew_hopped_after_a_keys_run_must_set_up_again(GameTestHelper helper) {
+        keylessHopTest(helper, "keyshop", false, true);
+    }
+
+    static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
+        String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        double[] base = new double[3];
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            base[0] = b.getX();
+            base[1] = b.getY();
+            base[2] = b.getZ();
+            active[0] = true;
+        });
+        // three keyless hops east, 8 ticks each: up, then down to the ground, 0.12 a tick sideways (a walk's pace)
+        // the last claim lands a little below the ground, so the move ends on it (on the ground, as a real landing)
+        double[] arc = { 0.35, 0.6, 0.75, 0.8, 0.75, 0.6, 0.35, -0.1 };
+        // with sprintJumpFirst each hop is led by one forward + sprint + jump claim where it stands (no step) and
+        // followed by 6 ticks with no claim, in which the server lands it (the boost needs the unit on the ground)
+        int lead = sprintJumpFirst ? 1 : 0, rest = sprintJumpFirst ? 6 : 0, cycle = lead + arc.length + rest;
+        // with keysRunFirst it first runs east by its keys (sprinting, no claims) and the hops start from where one
+        // claim with no step stops it
+        // (a sprint-jump at its end: the most momentum keys can give it); one hop of 0.2 a tick, past the 1.5-block
+        // drift, fits in what that momentum would open
+        int hops = keysRunFirst ? 1 : 3, hopFrom = keysRunFirst ? 16 : 10, hopEnd = hopFrom + hops * cycle - rest;
+        double pace = keysRunFirst ? 0.2 : 0.12, minMoved = keysRunFirst ? 1.5 : 2.0;
+        int[] tick = { 0 }, seq = { 0 };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (keysRunFirst && t < hopFrom - 1) {
+                com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), 1, 0, -90, 10,
+                    t == hopFrom - 3, false, true);
+                return;
+            }
+            if (keysRunFirst && t == hopFrom - 1) {   // one claim with no step: where the run has carried it
+                base[0] = b.getX();
+                base[1] = b.getY();
+                base[2] = b.getZ();
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, base[0], base[1], base[2], ++seq[0]);
+                return;
+            }
+            if (t >= hopFrom && t < hopEnd) {
+                int hop = (t - hopFrom) / cycle, phase = (t - hopFrom) % cycle - lead;
+                if (phase >= arc.length)
+                    return;
+                double x = base[0] + pace * (hop * arc.length + phase + 1);
+                if (phase < 0)
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 1, 0, -90, 10,
+                        true, false, true, x, base[1] - 0.1, base[2], ++seq[0]);
+                else
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10,
+                        false, false, x, base[1] + arc[phase], base[2], ++seq[0]);
+                return;
+            }
+            if (t < hopEnd)
+                return;
+            int since = t - hopEnd;
+            if (since == 0) {
+                double moved = Math.hypot(b.getX() - base[0], b.getZ() - base[2]);
+                if (moved < minMoved) {
+                    cleanUp.run();
+                    throw new GameTestAssertException(String.format("the hops were refused (moved %.2f): the test no "
+                        + "longer checks a hop past the 1.5-block drift", moved));
+                }
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            if (shellsOf(b) > 0) {
+                cleanUp.run();
+                if (since < SET_UP - 2)
+                    throw new GameTestAssertException("fired " + since + " ticks after hopping "
+                        + String.format("%.2f", Math.hypot(b.getX() - base[0], b.getZ() - base[2]))
+                        + " blocks with no keys: it needs " + SET_UP + " ticks to set up again");
+                helper.succeed();
+            } else if (since > SET_UP + 10) {
+                cleanUp.run();
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops)");
+            }
+        });
+    }
+
+    static void possessedSetUpTest(GameTestHelper helper, String tag, boolean claims, boolean knock) {
+        String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        boolean[] done = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+        };
+        boolean[] active = { false };
+        double[] start = new double[2];
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            start[0] = b.getX();
+            start[1] = b.getZ();
+            active[0] = true;
+        });
+        // keys held east (yaw -90) until it has gone 0.8 blocks, then let go
+        int[] tick = { 0 }, stoppedAt = { -1 }, seq = { 0 };
+        double[] last = { b.getX(), b.getZ() };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            double moved = Math.hypot(b.getX() - start[0], b.getZ() - start[1]);
+            if (stoppedAt[0] < 0) {
+                float fwd = moved < 0.8 ? 1 : 0;
+                if (claims)   // the client's prediction: a walking step east, or where it stands
+                    com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), fwd, 0, -90, 10,
+                        false, false, b.getX() + 0.15 * fwd, b.getY(), b.getZ(), ++seq[0]);
+                else
+                    com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), fwd, 0, -90, 10,
+                        false, false, false);
+            }
+            double step = Math.hypot(b.getX() - last[0], b.getZ() - last[1]);
+            last[0] = b.getX();
+            last[1] = b.getZ();
+            int shells = shellsOf(b);
+            if (stoppedAt[0] < 0) {
+                if (shells > 0) {
+                    cleanUp.run();
+                    throw new GameTestAssertException("fired before it had even stopped walking (tick " + tick[0] + ")");
+                }
+                if (tick[0] > 4 && moved >= 0.8 && step < 0.01)
+                    stoppedAt[0] = tick[0];
+                else if (tick[0] > 80) {
+                    cleanUp.run();
+                    throw new GameTestAssertException(String.format("the possessed crew never walked a block and "
+                        + "stopped (moved %.2f)", moved));
+                }
+                return;
+            }
+            if (moved >= 1.5) {
+                cleanUp.run();
+                throw new GameTestAssertException(String.format("walked %.2f blocks: past the 1.5-block drift, so "
+                    + "the test no longer checks a short possessed walk", moved));
+            }
+            int since = tick[0] - stoppedAt[0];
+            if (knock && since == 10)
+                b.knockback(0.4, 1, 0);   // a hit from the east: pushed back west, toward where it started
+            if (knock && claims && since >= 10 && since < 14) {   // the client's prediction of that knockback
+                double[] slide = { 0.30, 0.16, 0.09, 0.05 };
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX() - slide[since - 10], b.getY(), b.getZ(), ++seq[0]);
+            } else if (claims)   // a real client claims every tick, standing still too
+                com.solegendary.reignofnether.hero.PossessionServer.applyMove(uuid, b.getId(), 0, 0, -90, 10, false,
+                    false, b.getX(), b.getY(), b.getZ(), ++seq[0]);
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            if (shells > 0) {
+                cleanUp.run();
+                if (since < SET_UP - 2)
+                    throw new GameTestAssertException("fired " + since + " ticks after it stopped walking: it needs "
+                        + SET_UP + " ticks to set up");
+                helper.succeed();
+            } else if (since > SET_UP + 10) {
+                cleanUp.run();
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped)");
+            }
+        });
+    }
 }

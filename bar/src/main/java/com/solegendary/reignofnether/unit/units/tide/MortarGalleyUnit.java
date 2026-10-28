@@ -68,7 +68,7 @@ import java.util.List;
  * (RoN's paths assume a walker), its water travel by the Sloop's tamer one, and {@link #getTarget} reads RoN's target
  * goal instead of AM's chase timer.
  */
-public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit, com.solegendary.reignofnether.unit.interfaces.IndirectFire {
+public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements Unit, AttackerUnit, RangedAttackerUnit, TidalUnit, com.solegendary.reignofnether.unit.interfaces.FieldArtillery {
     final static public float attackRange = 30.0F;   // Bombard Crew 22, Ghast 30: it shells the line from far behind
 
     public static final Abilities ABILITIES = new Abilities();
@@ -185,7 +185,7 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
     final static public boolean willRetaliate = true; // will attack when hurt by an enemy
     final static public boolean aggressiveWhenIdle = true;
 
-    final static public float maxHealth = 110.0f;
+    final static public float maxHealth = 88.0f;   // -20% (lovish, Oct 24: artillery death ball)
     final static public float armorValue = 6.0f;          // the shell
     final static public float movementSpeed = 0.18f;      // Bombard 0.22: the water (Tides) is what makes it keep up
     public int maxResources = 100;
@@ -390,12 +390,14 @@ public class MortarGalleyUnit extends EntityAlligatorSnappingTurtle implements U
     }
 
     /**
-     * Lobs one shell at (x, y, z) unless it is inside {@link #MIN_RANGE}. Returns whether it fired. Public for the
-     * game test (fires without waiting on the attack goal).
+     * Lobs one shell at (x, y, z) unless it is inside {@link #MIN_RANGE} or still setting up (unit/SetUp). Returns
+     * whether it fired. Public for the game test (fires without waiting on the attack goal).
      */
     public boolean fireShell(double x, double y, double z) {
         if (level().isClientSide())
             return false;
+        if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(this))
+            return false;   // still setting up after moving (FieldArtillery)
         double dx = x - getX(), dz = z - getZ();
         if (dx * dx + dz * dz < MIN_RANGE * MIN_RANGE)
             return false;
