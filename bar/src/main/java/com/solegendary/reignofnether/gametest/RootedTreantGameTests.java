@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.gametest;
 
+import com.mojang.datafixers.util.Pair;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.abilities.TakeRoot;
@@ -7,6 +8,7 @@ import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.units.verdant.RootboundEffect;
 import com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit;
 import net.minecraft.core.BlockPos;
@@ -200,7 +202,10 @@ public class RootedTreantGameTests {
             return;
         List<String> problems = new ArrayList<>();
         double[] start = new double[4];
-        everyTick(helper, 60, tick -> {
+        double[] walkedMost = new double[1];
+        everyTick(helper, 85, tick -> {
+            if (tick > 1)
+                walkedMost[0] = Math.max(walkedMost[0], movedFrom(walker, start[2], start[3]));
             if (tick == 1) {
                 rootNow(rooted, level);
                 start[0] = rooted.getX();
@@ -209,13 +214,18 @@ public class RootedTreantGameTests {
                 start[3] = walker.getZ();
                 rooted.setUnitAttackTargetForced(foeA);
                 walker.setUnitAttackTargetForced(foeB);
-            } else if (tick == 50) {
+            } else if (tick == 80) {
                 double moved = movedFrom(rooted, start[0], start[1]);
                 if (moved > 0.3 || !rooted.isRooted())
                     problems.add("a rooted Treant moved " + moved + " blocks (rooted " + rooted.isRooted() + ")");
-                double walked = movedFrom(walker, start[2], start[3]);
-                if (walked < 1.0)
-                    problems.add("the walking control Treant only moved " + walked + " blocks: the check can't see movement");
+                // the control chases its foe 9 blocks off: the most it got from its start at any tick, so a chase that
+                // reached the foe early and stood there still counts; on a miss, say where it was and why
+                if (walkedMost[0] < 1.0)
+                    problems.add(String.format("the walking control Treant only got %.2f blocks from its start: the check "
+                        + "can't see movement (at %.2f, %.2f from %.2f, %.2f; navigation done %s; target %s; foe at %.2f, %.2f)",
+                        walkedMost[0], walker.getX(), walker.getZ(), start[2], start[3], walker.getNavigation().isDone(),
+                        walker.getTargetGoal().getTarget() == null ? "none" : walker.getTargetGoal().getTarget() == foeB ? "the foe" : "another",
+                        foeB.getX(), foeB.getZ()));
                 return finish(helper, problems, units);
             }
             return false;
@@ -358,6 +368,48 @@ public class RootedTreantGameTests {
                     problems.add("the anchor walk-back during the uproot dropped the held move (walked " + walkedA + " toward it)");
                 if (walkedB < 1.5)
                     problems.add("a Take Root press during the uproot dropped the held move (walked " + walkedB + " toward it)");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
+     * A Take Root press is a new order: rooting drops a group move still waiting in the formation dispatch queue (else
+     * it lands later and uproots the Treant), and uprooting drops the attack target it held while rooted.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void rooted_treant_take_root_press_drops_a_queued_move_and_the_target(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_press"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        SentinelTreantUnit walking = treant(helper, owner, 2.5, 3.5);
+        SentinelTreantUnit rooted = treant(helper, owner, 2.5, 10.5);
+        Mob foe = sturdyWorker(helper, foeOwner, 8.5, 10.5);
+        List<Mob> units = new ArrayList<>();
+        for (Mob m : new Mob[] { walking, rooted, foe })
+            units.add(m);
+        if (!allMade(helper, units, 3))
+            return;
+        List<String> problems = new ArrayList<>();
+        everyTick(helper, 5, tick -> {
+            if (tick == 1) {
+                // a 20+ unit move's slot for the walking Treant, still waiting to dispatch, then the root press
+                UnitServerEvents.queueFormationMove(List.of(Pair.<net.minecraft.world.entity.LivingEntity, BlockPos>of(walking, helper.absolutePos(new BlockPos(12, 2, 3)))));
+                new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { walking.getId() }).action(level);
+                if (!walking.isRootWanted())
+                    problems.add("the press should start rooting the walking Treant");
+                if (UnitServerEvents.hasQueuedFormationMove(walking.getId()))
+                    problems.add("rooting should drop the Treant's queued formation move");
+                rootNow(rooted, level);
+                rooted.setUnitAttackTargetForced(foe);
+                if (rooted.getTargetGoal().getTarget() != foe)
+                    problems.add("the rooted Treant should hold its attack target");
+                new UnitActionItem(owner, UnitAction.TAKE_ROOT, -1, new int[] { rooted.getId() }).action(level);
+                if (rooted.isRootWanted())
+                    problems.add("the press should start uprooting the rooted Treant");
+                if (rooted.getTargetGoal().getTarget() != null)
+                    problems.add("uprooting should drop the attack target it held while rooted");
                 return finish(helper, problems, units);
             }
             return false;
