@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.maps.gen;
 
+import com.solegendary.reignofnether.maps.HomeMetal;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MetalOptions;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind;
@@ -61,7 +62,11 @@ final class GenEconomy {
         }
     }
 
-    static final int SITE_GAP = 40, START_CLEAR = 46, ROAD_CLEAR = 9;
+    /**
+     * START_CLEAR: the start's build ground, which no open-ground patch takes (HomeMetal.BUILD_GROUND, 50 since the 41x41
+     * tech-4 capitol, design #310 section 4.2; it was 46).
+     */
+    static final int SITE_GAP = 40, START_CLEAR = HomeMetal.BUILD_GROUND, ROAD_CLEAR = 9;
     static final float RICH = MapLayout.STANDARD * 1.5f, CENTRE = 2.0f, STANDARD = 1.0f, LEAN = MapLayout.LEAN;
 
     final GenPlan p;
@@ -717,74 +722,33 @@ final class GenEconomy {
 
     /** Two patches closer than this read as one group (MetalClumpsTest.LINK). */
     static final double LINK = 16;
-    /** The step between a group's patches: the old natural pair stood 9-13 apart, a pad is 7 wide. */
-    static final double CLUMP_STEP = 11;
-    /** Every patch keeps this far from every patch of another group, so the groups read apart. */
-    static final double GROUP_SEP = 26;
+    /** The step between a group's patches: the old natural pair stood 9-13 apart, a pad is 7 wide (the home clumps' too). */
+    static final double CLUMP_STEP = HomeMetal.CLUMP_STEP;
+    /** Every patch keeps this far from every patch of another group, so the groups read apart (home clumps included). */
+    static final double GROUP_SEP = HomeMetal.CLUMP_SEP;
 
-    /** Bearing of a home flank pair from the seat's outward direction, degrees: its rear sides. */
-    static final double HOME_FLANK = 72;
-    /** Distances from the start a home clump may take (its near edge stays past START_CLEAR, the build ground)... */
-    static final int[] HOME_DIST = { 52, 48, 56, 60, 64, 68, 72 };
-    /** ...and turns from its bearing, degrees, tried in this order: the first that suits every seat is everyone's. */
-    static final int[] HOME_TURN = { 0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50 };
-
-    /** One way to lay a home clump: its members' {radial, tangential} offsets, its bearing (radians), turn and distance. */
-    record HomeOption(double[][] shape, double bearing, int turn, int dist) {
-        /** Where it puts seat s's members on this plan. */
-        int[][] spots(GenPlan p, int s) {
-            double sx = p.slotX(s), sz = p.slotZ(s);
-            double b = StrictMath.atan2(sz, sx) + bearing + Math.toRadians(turn);
-            double rx = StrictMath.cos(b), rz = StrictMath.sin(b);
-            int[][] out = new int[shape.length][];
-            for (int k = 0; k < shape.length; k++) {
-                double r = dist + shape[k][0], tg = shape[k][1];
-                out[k] = new int[] { (int) Math.round(sx + rx * r - rz * tg), (int) Math.round(sz + rz * r + rx * tg) };
-            }
-            return out;
-        }
-    }
-
-    /**
-     * The home template's clumps, each with its options in the order tried: a triangle behind the base (or a row of three
-     * along its back where the wall is near: a seat on a square arena's side has 62 blocks behind it), and a pair on each
-     * rear flank.
-     */
-    static List<List<HomeOption>> homeOptions() {
-        double h = CLUMP_STEP / 2, up = CLUMP_STEP * Math.sqrt(3) / 2;
-        double[][] triangle = { { 0, -h }, { 0, h }, { up, 0 } }, row = { { 0, -CLUMP_STEP }, { 0, 0 }, { 0, CLUMP_STEP } };
-        double[][] pair = { { 0, -h }, { 0, h } };
-        List<List<HomeOption>> out = new ArrayList<>();
-        out.add(options(List.<double[][]>of(triangle, row), 0));
-        out.add(options(List.<double[][]>of(pair), Math.toRadians(HOME_FLANK)));
-        out.add(options(List.<double[][]>of(pair), -Math.toRadians(HOME_FLANK)));
-        return out;
-    }
-
-    private static List<HomeOption> options(List<double[][]> shapes, double bearing) {
-        List<HomeOption> out = new ArrayList<>();
-        for (int turn : HOME_TURN)   // the turn outermost: a row straight behind beats a triangle turned into a flank's way
-            for (double[][] shape : shapes)
-                for (int dist : HOME_DIST)
-                    out.add(new HomeOption(shape, bearing, turn, dist));
-        return out;
+    /** Where a home option puts seat s's members on this plan: the template in the seat's own frame. */
+    static int[][] spots(HomeMetal.Option o, GenPlan p, int s) {
+        double sx = p.slotX(s), sz = p.slotZ(s);
+        return o.spots(sx, sz, StrictMath.atan2(sz, sx));
     }
 
     /**
      * The home clumps the plan expects (null where no option fits): per clump the first option whose spots, for every
      * seat, are clear by the plan alone - inside the wall's clearance, off the roads (14) and the river (22), nearest
-     * their own start and past its build ground, apart from the clumps already chosen. GenTerrain levels a small pad
-     * under each of them, so the ground takes the same set for every seat; GenEconomy then checks it on the real ground.
+     * their own start and in its home band (HomeMetal), apart from the clumps already chosen. GenTerrain levels a small
+     * pad under each of them, so the ground takes the same set for every seat; GenEconomy then checks it on the real
+     * ground.
      */
-    static HomeOption[] plannedHome(GenPlan p, List<List<HomeOption>> all) {
-        HomeOption[] out = new HomeOption[all.size()];
+    static HomeMetal.Option[] plannedHome(GenPlan p, List<List<HomeMetal.Option>> all) {
+        HomeMetal.Option[] out = new HomeMetal.Option[all.size()];
         List<int[]> taken = new ArrayList<>();
         for (int c = 0; c < all.size(); c++)
-            for (HomeOption o : all.get(c)) {
+            for (HomeMetal.Option o : all.get(c)) {
                 List<int[]> spots = new ArrayList<>();
                 boolean ok = true;
                 for (int s = 0; s < p.n && ok; s++)
-                    for (int[] xz : o.spots(p, s)) {
+                    for (int[] xz : spots(o, p, s)) {
                         ok &= planOk(p, xz[0], xz[1], s, taken);
                         spots.add(xz);
                     }
@@ -798,11 +762,11 @@ final class GenEconomy {
     }
 
     private static boolean planOk(GenPlan p, int x, int z, int s, List<int[]> taken) {
-        if (p.edge(x, z) < 12)
+        if (p.edge(x, z) < 12 || !HomeMetal.inBand(Geo.len(x - p.slotX(s), z - p.slotZ(s))))
             return false;
         for (int o = 0; o < p.n; o++) {
             double d = Geo.len(x - p.slotX(o), z - p.slotZ(o));
-            if (d < START_CLEAR || o != s && d < Geo.len(x - p.slotX(s), z - p.slotZ(s)))
+            if (d < HomeMetal.NO_PATCH_WITHIN || o != s && d < Geo.len(x - p.slotX(s), z - p.slotZ(s)))
                 return false;
         }
         for (int[] q : taken)
@@ -822,33 +786,44 @@ final class GenEconomy {
     }
 
     /**
-     * Every seat's home clumps, one template in the seat's own frame (a bearing from straight out behind the base, a
-     * distance from the start): a triangle behind the base and a pair on each rear flank ("clumps ... including the back
-     * rear sides"; on BAR every start has the same metal near it). The planned option goes first (its ground was levelled
-     * for it), then the rest in order; the first that every seat's ground takes is used for all of them, so the set is the
-     * same for every seat (lovish Oct 22: "starting mexes around the base can be standardized") - and it lies past the
-     * build ground (START_CLEAR), not round the town hall (Oct 27 21:37). A clump that fits no seat-wide spot is left
-     * out for every seat. Not scaled by the lobby's richness or extra metal.
+     * Every seat's home clumps, the one template every map lays (HomeMetal: a triangle behind the base and a pair on each
+     * rear flank, "clumps ... including the back rear sides"; on BAR every start has the same metal near it). The planned
+     * option goes first (its ground was levelled for it), then the rest in order; the first that every seat's ground takes
+     * is used for all of them, so the set is the same for every seat (lovish Oct 22: "starting mexes around the base can be
+     * standardized") - and it lies in the home band, 52-76 out, clear of the tech-4 capitol and a lab beside it (design
+     * #310 section 4.2), not round the town hall (Oct 27 21:37). Not scaled by the lobby's richness or extra metal.
+     * <p>
+     * A clump that fits no seat-wide spot makes the draw invalid (it used to be left out for every seat, so a map could
+     * quietly serve five home patches): the lobby's promise (MapGenerator.generate) then draws again, and every seat of a
+     * served map has exactly HomeMetal.COUNT.
      */
     private void homeClumps() {
-        List<List<HomeOption>> all = homeOptions();
-        HomeOption[] planned = plannedHome(p, all);
+        List<List<HomeMetal.Option>> all = HomeMetal.clumps();
+        HomeMetal.Option[] planned = plannedHome(p, all);
         for (int c = 0; c < all.size(); c++) {
-            List<HomeOption> order = new ArrayList<>(all.get(c));
+            List<HomeMetal.Option> order = new ArrayList<>(all.get(c));
             if (planned[c] != null) {
                 order.remove(planned[c]);
                 order.add(0, planned[c]);
             }
-            for (HomeOption o : order)
-                if (homeClump(o))
+            boolean laid = false;
+            for (HomeMetal.Option o : order)
+                if (homeClump(o)) {
+                    laid = true;
                     break;
+                }
+            if (!laid && m.valid) {
+                m.valid = false;
+                m.invalidWhy = "a seat would start short of its home metal: home clump " + c
+                    + " fits no spot every seat's ground takes";
+            }
         }
     }
 
-    private boolean homeClump(HomeOption o) {
+    private boolean homeClump(HomeMetal.Option o) {
         List<int[]> at = new ArrayList<>();
         for (int s = 0; s < seatsToPlace(); s++)
-            for (int[] xz : o.spots(p, s)) {
+            for (int[] xz : spots(o, p, s)) {
                 if (!homeSpot(xz[0], xz[1], s))
                     return false;
                 at.add(xz);
@@ -858,10 +833,14 @@ final class GenEconomy {
         return true;
     }
 
-    /** A home patch's spot: what a candidate must be (see candidates()), owned by seat s, apart from other groups. */
+    /**
+     * A home patch's spot: what a candidate must be (see candidates()), owned by seat s, in its home band and clear of
+     * every start by HomeMetal.NO_PATCH_WITHIN, apart from other groups.
+     */
     private boolean homeSpot(int x, int z, int s) {
         if (!m.inGrid(x, z) || m.distanceToEdge(x, z) < metal.rimInset() || t.roadDist[m.idx(x, z)] < ROAD_CLEAR
-                || nearestStart(x, z) < START_CLEAR || !level(x, z, MapLayout.PAD) || deepNear(x, z, 7))
+                || !HomeMetal.inBand(Geo.len(x - p.slotX(s), z - p.slotZ(s)))
+                || nearestStart(x, z) < HomeMetal.NO_PATCH_WITHIN || !level(x, z, MapLayout.PAD) || deepNear(x, z, 7))
             return false;
         if (metal.reserved().reserves(x, z) || (p.mirror && metal.reserved().reserves(-x, -z)))
             return false;

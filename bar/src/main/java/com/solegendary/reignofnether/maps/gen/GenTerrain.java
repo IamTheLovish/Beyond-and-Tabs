@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.maps.gen;
 
+import com.solegendary.reignofnether.maps.HomeMetal;
 import com.solegendary.reignofnether.maps.MapLayout;
 
 import java.util.Arrays;
@@ -460,18 +461,18 @@ final class GenTerrain {
     /**
      * A small level pad at the seat's own height under each of its planned home patches (GenEconomy.plannedHome), blended
      * into the land round it, before the roads are laid. The home clumps are one template for every seat (lovish Oct 22:
-     * "starting mexes around the base can be standardized"), 48-82 blocks out, where the base pad has already blended into
-     * the wild ground; without this a slope or a bank under one seat's spot would cost every seat that clump. On a
-     * bastion the pad is a lobe of its plateau, reached from the plateau.
+     * "starting mexes around the base can be standardized"), 52-76 blocks out (HomeMetal), where the base pad has already
+     * blended into the wild ground; without this a slope or a bank under one seat's spot would cost every seat that
+     * clump. On a bastion the pad is a lobe of its plateau, reached from the plateau.
      */
     private void homePads() {
-        GenEconomy.HomeOption[] planned = GenEconomy.plannedHome(p, GenEconomy.homeOptions());
+        HomeMetal.Option[] planned = GenEconomy.plannedHome(p, HomeMetal.clumps());
         for (int s = 0; s < p.n; s++) {
             double hh = TIER_H[p.baseTier[s] + 1];
-            for (GenEconomy.HomeOption o : planned) {
+            for (HomeMetal.Option o : planned) {
                 if (o == null)
                     continue;
-                for (int[] c : o.spots(p, s)) {
+                for (int[] c : GenEconomy.spots(o, p, s)) {
                     int r = (int) Math.ceil(HOME_BLEND);
                     for (int x = c[0] - r; x <= c[0] + r; x++)
                         for (int z = c[1] - r; z <= c[1] + r; z++) {

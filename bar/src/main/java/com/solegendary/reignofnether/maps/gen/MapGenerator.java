@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.maps.gen;
 
+import com.solegendary.reignofnether.maps.HomeMetal;
 import com.solegendary.reignofnether.maps.MapLayout;
 import com.solegendary.reignofnether.maps.MetalOptions;
 
@@ -196,8 +197,37 @@ public final class MapGenerator {
         check(b);
         b.dist = Fairness.fields(m, fin);
         e.writeWith(fin, b.dist);
+        homeSets(m);
         m.report = Fairness.score(m, fin, b.dist, w);
         return b;
+    }
+
+    /**
+     * Every seat starts with exactly HomeMetal.COUNT home patches, each in its band (design #310 section 4.2), or the draw
+     * is invalid and the lobby's promise draws again. GenEconomy.homeClumps already refuses a clump no seat-wide spot
+     * takes; this catches what the final ground does after it: a patch the reach check drops, or one the trees hand to
+     * another seat's walk.
+     */
+    static void homeSets(GenMap m) {
+        if (!m.valid)
+            return;
+        int[] count = new int[m.n];
+        for (int i = 0; i < m.homeCount; i++) {
+            MapLayout.Mex q = m.mexes.get(i);
+            MapLayout.Slot s = m.slots.get(q.slot());
+            count[q.slot()]++;
+            if (!HomeMetal.inBand(Geo.len(q.dx() - s.dx(), q.dz() - s.dz()))) {
+                m.valid = false;
+                m.invalidWhy = "seat " + s.index() + "'s home patch at " + q.dx() + "," + q.dz() + " is outside its band";
+                return;
+            }
+        }
+        for (int s = 0; s < m.n; s++)
+            if (count[s] != HomeMetal.COUNT) {
+                m.valid = false;
+                m.invalidWhy = "seat " + s + " has " + count[s] + " home patches, not " + HomeMetal.COUNT;
+                return;
+            }
     }
 
     /**

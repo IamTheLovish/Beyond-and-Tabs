@@ -66,7 +66,7 @@ the centre).
 **Metal over the open ground (Oct 16, lovish: "Metal extractors ... should be all over the map I feel like I have
 alot of the map that is empty that doesnt need to be contested"):** after its template, every pre-made map runs
 `MapLayout.spread` - up to 6 more patches per slot from a 12-block grid of candidates, farthest from every patch
-first (weighted toward the ground between the bases), each 30+ from another patch, 46+ from a start, clear of sites,
+first (weighted toward the ground between the bases), each 30+ from another patch, 50+ from a start (the build ground; 46 before the 41x41 capitol), clear of sites,
 vents and pillars, on flat dry ground with no void / lava / deep water within 7, and with a walkable path back to
 its start. Values by distance from the centre: **0.75x lean** behind the bases, **1.0x** on the flanks, **1.5x** in
 the inner half. Mean distance from open ground to the nearest patch: 54-95 -> 25-49 blocks (GameTest
@@ -91,10 +91,19 @@ sight (grey in the fog), and the floating gem is bigger.
   (the 5x5 gatehouse) and 1.5 blocks of rounding, as a square, times root 2. `MapRimGameTests` lays the gatehouse on
   every ring column of every map and an extractor ghost on every rim patch, and in a world places all 14 extractors on
   patches stamped exactly that far from a real ring wall.
-- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized").* `HomeMetal`: 6 patches
-  a seat, 1.0 each, in a fan 18 blocks from the start (11 to 24 after a nudge), on every pre-made map and player count.
-  A spot the ground refuses moves toward the start, then to the next angle or radius: count and yield never change.
-  The extra-metal level and the lobby's richness never touch it.
+- *Home metal is standard (Oct 22, lovish: "starting mexes around the base can be standardized"), and since Oct 28 it
+  stands clear of the tech-4 capitol (design/proposals/capitols_extractors_creep.md section 4.2, PR #310: "pre-made maps
+  move their home metal out to the same band as generated maps").* `HomeMetal` is the one rule for both kinds of map:
+  **exactly 7** standard patches a seat, the generated maps' template (a triangle or row of three straight behind the
+  base, a pair on each rear flank 72 degrees off), every one **52-76 blocks** from its start; **no patch of any kind within
+  48** of a start (the L4 capitol's corner 28.3 + a vehicle lab and its gaps 15 + a patch's reserved square 4.2 = 47.5);
+  the open-ground metal keeps the **50-block build ground** clear. The hand-made bases were shaped for the old 18-block
+  ring (Chorus Isles' home island ends 40-56 out, End Spires' 58, Archipelago's 60, the Highlands plateau 50), so every
+  home patch is reached by a lobe of its base's own ground (`MapLayout.homeGround`: 11 blocks either side of the line
+  from the start, the start's height and surface, an 8-block blend), laid after the map's own features and refused
+  wherever it would cover lava, a cliff or a bridge or change the ground under anything already placed. Was: 6 patches
+  in a fan 18 out (11-24). The extra-metal level and the lobby's richness never touch it. Tests: `HomeBandTest` (JUnit,
+  every hand-made map at 2-16 players and generated maps), `map_metal_home_set_is_standard_for_every_seat`.
 - *Extra metal, spread over the whole map, with a bonus for the outskirts (lovish Oct 22: "we can add more mexes than we
   have to the game", "spread all over the map", "bonuses to players that reach to the outskirts", "he does want massive
   armies").* `MapLayout.spread` runs three passes over one candidate list: the core fill (the map as it was: <= 14 a slot,
@@ -317,9 +326,11 @@ equal for every slot at a given count. Capture: **Forsaken Garrison** (obsidian 
 boundary, **Watchtower** (obsidian spire) in the centre. Fog: pale violet. Players: 2-16.
 
 ### Starting on ground (all pre-made maps)
-`MapLayout.startGround`: the start-position phase refuses a start whose capitol square (sampled 3x3 at +-7) touches
-void, lava or water deeper than a ford (StartPhase.inBox; bots' picks use the same test). Before this a click in a
-start box could found a base in End Spires' void or Archipelago's sea.
+`MapLayout.startGround`: the start-position phase refuses a start whose capitol square touches void, lava or water
+deeper than a ford (StartPhase.inBox; bots' picks use the same test). Before this a click in a start box could found a
+base in End Spires' void or Archipelago's sea. Since Oct 28 the square is the tech-4 capitol's **41x41** (sampled 5x5 at
++-20; it was 3x3 at +-7), reserved from the start (design #310 section 4.3, lovish: "the full L4 square from the
+start"), and it must also hold no patch's reserved square, so a capitol never grows over an extractor.
 
 ### Random terrain
 The old behaviour: the Battlefield world preset's own terrain with the procedural ring of patches and the three
@@ -430,12 +441,14 @@ now carries a seed for every stamped map; before, it always played the unseeded 
   in strategic positions all around the map including the back rear sides ... clump them, have stranded ones alone.
   Maybe a path or cluster."; it replaces the Oct 27 21:37 random spread, keeping its rule that nothing stands round the
   town hall):
-  * **Home clumps, the same for every seat**: a triangle of three straight behind the base (a row of three where the
-    wall is close, as on a square arena's side seats) and a pair on each rear flank, 72 degrees off straight back, 48-72
-    blocks out - past the 46-block build ground. One template in the seat's frame: the first distance and turn (0-50
+  * **Home clumps, the same for every seat** (`HomeMetal`, shared with the hand-made maps): a triangle of three straight
+    behind the base (a row of three where the wall is close, as on a square arena's side seats) and a pair on each rear
+    flank, 72 degrees off straight back, every patch 52-76 blocks out and none within 48 of any start (the 41x41 tech-4
+    capitol, design #310 section 4.2; was 48-72). One template in the seat's frame: the first distance and turn (0-50
     degrees) that every seat's ground takes is everyone's, and the ground is levelled for it (`GenTerrain.homePads`: a
-    small level pad at the seat's height under each planned patch), so every lobby map in the production check has all
-    seven for every seat. Standard patches, untouched by the lobby's richness, extra metal or the balancer.
+    small level pad at the seat's height under each planned patch). **Exactly 7 a seat**: a clump no seat-wide spot takes,
+    or a home patch the final ground drops, makes the draw invalid and the lobby's promise draws again (it used to be
+    left out). Standard patches, untouched by the lobby's richness, extra metal or the balancer.
   * One 2.0x patch per seat round the plaza (the middle's cluster), then **contested clumps of three**: one on every
     front seam (both neighbours walk about as far), two more on the front line in team games.
   * Then **groups over the open map**, seat by seat (always the seat furthest short of its allowance, so the dice never
@@ -450,7 +463,7 @@ now carries a seed for every stamped map; before, it always played the unseeded 
     archetype's density (its square root in team games) and the square root of the lobby's richness; the lobby's
     **extra metal** scales it from NORMAL: NONE 0.75x, LOW 0.875x, HIGH 1.25x. Values by exposure (rich on the front
     line, lean behind the base). Every patch: a level 7x7 pad of land, no deep water within 7, reachable from its owner,
-    off the roads, at least 46 from any start (the build ground), at least the extractor clearance from the wall
+    off the roads, at least 50 from any start (the build ground, `HomeMetal.BUILD_GROUND`; 46 before the 41x41 capitol), at least the extractor clearance from the wall
     (`ExtractorClearance`, 11 today, the same rule as the pre-made maps), never in a reserved zone (section 2's rules).
     `MapLayout.homeEnd()` marks the home clumps (the first patches of the list).
 * *Objectives*: a site on the plaza, a contested site on every front seam (where both neighbours walk about as far),
