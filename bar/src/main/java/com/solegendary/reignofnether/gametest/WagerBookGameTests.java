@@ -643,6 +643,10 @@ public class WagerBookGameTests {
             StringBuilder why = new StringBuilder();
             for (BlockPos rel : List.of(new BlockPos(9, 2, 9), new BlockPos(12, 2, 12), new BlockPos(12, 2, 4), new BlockPos(5, 2, 12))) {
                 BlockPos at = helper.absolutePos(rel);
+                // the arena is cut into an ordinary world at y -60: what stands at a spot is the template's or the
+                // ground's, so the test clears its spot first (round 1-3 runs: refused at y -58 even in isolation)
+                if (!level.getBlockState(at).isAir())
+                    level.setBlock(at, Blocks.AIR.defaultBlockState(), 3);
                 String no = WagerBlocks.refusal(level, at);
                 if (no == null) {
                     pos = at;
