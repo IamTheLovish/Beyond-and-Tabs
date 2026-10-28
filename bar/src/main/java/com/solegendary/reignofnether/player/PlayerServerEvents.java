@@ -173,8 +173,7 @@ public class PlayerServerEvents {
         RTSPlayerSaveData data = RTSPlayerSaveData.getInstance(serverLevel);
         data.rtsPlayers.clear();
         data.rtsPlayers.addAll(rtsPlayers);
-        data.save();
-        serverLevel.getDataStorage().save();
+        data.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
@@ -201,8 +200,6 @@ public class PlayerServerEvents {
         }
     }
 
-    private static final int SAVE_TICKS_MAX = 1200;
-    private static int saveTicks = 0;
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         saveRTSPlayers();
@@ -270,16 +267,7 @@ public class PlayerServerEvents {
                 }
             }
         }
-        if (evt.phase == TickEvent.Phase.END) {
-            saveTicks += 1;
-            if (saveTicks >= SAVE_TICKS_MAX) {
-                ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-                if (level != null) {
-                    saveRTSPlayers();
-                    saveTicks = 0;
-                }
-            }
-        }
+        // the RTS players reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014), not every 60 s
     }
 
     // what a player who just logged in needs about every unit; the per-unit part goes to that player only
