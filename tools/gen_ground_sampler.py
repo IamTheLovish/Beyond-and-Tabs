@@ -118,7 +118,7 @@ def build(layered):
                     s.set(x, h + 1, z, "mossy_cobblestone_slab" if hash01(x, z, 44) < 0.5 else "cobblestone_slab",
                           type="bottom", waterlogged="false")
             elif d in (2, 3) and r < (0.60 if d == 2 else 0.25):        # r2: 60% / 25% (was 30 / 12)
-                s.set(x, h, z, "coarse_dirt" if r < (0.40 if d == 2 else 0.18) else "rooted_dirt")
+                s.set(x, h, z, "coarse_dirt" if r < (0.40 if d == 2 else 0.18) else "dirt")   # r3: no rooted dirt (vanilla's pink roots read magenta)
                 no_plants.add((x, z))
         # the entrance apron and the worn path to the edge
         cx, cz = ox + bx // 2, oz + bz // 2
@@ -143,7 +143,7 @@ def build(layered):
                     rr = hash01(qx, qz, 45)
                     if edge and rr > 0.5:
                         continue
-                    blk = "dirt_path" if rr < 0.25 else "coarse_dirt" if rr < 0.8 else "rooted_dirt"
+                    blk = "dirt_path" if rr < 0.15 else "coarse_dirt" if rr < 0.7 else "dirt"   # r3: darker, no rooted dirt
                     s.set(qx, ground[(qx, qz)], qz, blk)
                     no_plants.add((qx, qz))
         # 2. the ground's layers

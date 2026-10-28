@@ -74,7 +74,7 @@ def main():
                 continue
             if 0 <= x < N:
                 path.add((x, z))
-                s.set(x, 0, z, "dirt_path" if rr < 0.25 else "coarse_dirt" if rr < 0.8 else "rooted_dirt")
+                s.set(x, 0, z, "dirt_path" if rr < 0.15 else "coarse_dirt" if rr < 0.7 else "dirt")   # r3
     occupied = set(path)
     rnd = random.Random(28)
     pieces = [(gen_trees.oak(3), 31, 8), (gen_trees.oak(11, old=True), 6, 28), (gen_trees.birch(5), 36, 33),
