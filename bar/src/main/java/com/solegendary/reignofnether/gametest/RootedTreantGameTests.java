@@ -212,9 +212,19 @@ public class RootedTreantGameTests {
         List<String> problems = new ArrayList<>();
         double[] start = new double[4];
         double[] walkedMost = new double[1];
+        double[] last = new double[3];
+        String[] jump = new String[1];
         everyTick(helper, 85, tick -> {
-            if (tick > 1)
+            if (tick > 1) {
                 walkedMost[0] = Math.max(walkedMost[0], movedFrom(walker, start[2], start[3]));
+                // the first tick the rooted Treant shifts: from where to where, and what UnitUnstick read then
+                double step = Math.hypot(rooted.getX() - last[0], rooted.getZ() - last[2]);
+                if (jump[0] == null && step > 0.05)
+                    jump[0] = String.format("tick %d: %.2f %.2f %.2f -> state %s", tick, last[0], last[1], last[2], unstickState(rooted));
+            }
+            last[0] = rooted.getX();
+            last[1] = rooted.getY();
+            last[2] = rooted.getZ();
             if (tick == 1) {
                 rootNow(rooted, level);
                 start[0] = rooted.getX();
@@ -226,7 +236,8 @@ public class RootedTreantGameTests {
             } else if (tick == 80) {
                 double moved = movedFrom(rooted, start[0], start[1]);
                 if (moved > 0.3 || !rooted.isRooted())
-                    problems.add("a rooted Treant moved " + moved + " blocks (rooted " + rooted.isRooted() + ")");
+                    problems.add("a rooted Treant moved " + moved + " blocks (rooted " + rooted.isRooted() + "; first shift "
+                        + (jump[0] == null ? "none seen" : jump[0]) + ")");
                 // the control chases its foe 9 blocks off: the most it got from its start at any tick, so a chase that
                 // reached the foe early and stood there still counts; on a miss, say where it was and why
                 if (walkedMost[0] < 1.0)
@@ -452,7 +463,7 @@ public class RootedTreantGameTests {
         if (!allMade(helper, units, 4))
             return;
         List<String> problems = new ArrayList<>();
-        double[] start = new double[6];
+        double[] start = new double[7];
         double[] mostOff = new double[3];
         String[] seen = new String[2];
         everyTick(helper, 250, tick -> {
@@ -463,7 +474,7 @@ public class RootedTreantGameTests {
             if (tick > 1) {
                 mostOff[0] = Math.max(mostOff[0], movedFrom(rooted, start[0], start[1]));
                 mostOff[1] = Math.max(mostOff[1], movedFrom(control, start[2], start[3]));
-                mostOff[2] = Math.max(mostOff[2], movedFrom(buried, start[4], start[5]));
+                mostOff[2] = Math.max(mostOff[2], Math.sqrt(buried.distanceToSqr(start[4], start[5], start[6])));
             }
             if (tick == 1) {
                 rootNow(rooted, level);
@@ -478,22 +489,17 @@ public class RootedTreantGameTests {
                 start[2] = control.getX();
                 start[3] = control.getZ();
                 start[4] = buried.getX();
-                start[5] = buried.getZ();
+                start[5] = buried.getY();
+                start[6] = buried.getZ();
             } else if (tick == 240) {
                 if (mostOff[1] < 1.5)
                     problems.add("the unrooted control was not lifted out of its pit (got " + mostOff[1] + " blocks off): the pit is no pocket");
                 if (mostOff[0] > 0.3 || !rooted.isRooted())
                     problems.add("the stuck-unit rescue moved a rooted Treant " + mostOff[0] + " blocks (rooted " + rooted.isRooted() + ")");
-                if (mostOff[2] < 0.5) {
-                    // why: its state at tick 2 and now, then two checks run by hand (a strike, then the rescue)
-                    String now = unstickState(buried);
-                    double bx = buried.getX(), bz = buried.getZ();
-                    buried.tickCount = 40 * (buried.tickCount / 40 + 2) - buried.getId() % 40;
-                    com.solegendary.reignofnether.unit.UnitUnstick.tick(buried);
-                    com.solegendary.reignofnether.unit.UnitUnstick.tick(buried);
+                // the rescue lifts it onto the nearest cell it fits, here the top of the logs it was caught in
+                if (mostOff[2] < 0.5 || com.solegendary.reignofnether.unit.UnitUnstick.isEncased(buried))
                     problems.add("a rooted Treant inside blocks should still be freed (got " + mostOff[2] + " blocks off; at tick 2 "
-                        + seen[1] + "; now " + now + "; two checks by hand moved it " + Math.hypot(buried.getX() - bx, buried.getZ() - bz) + ")");
-                }
+                        + seen[1] + "; now " + unstickState(buried) + ")");
                 if (!problems.isEmpty())
                     problems.add("pit-rooted Treant at tick 2 " + seen[0] + ", now " + unstickState(rooted));
                 return finish(helper, problems, units);
