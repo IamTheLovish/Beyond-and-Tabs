@@ -76,6 +76,20 @@ public class BattlefieldSetup {
         settleTicksLeft = -1;
     }
 
+    /**
+     * Forget the battlefield a match was about to form: pending starts, the lobby's overrides and the pre-made map or
+     * prepared wall that were meant for the old arena. A new match on fresh ground (maps.NewMatch) must not form its
+     * battlefield from what was left for the last one.
+     */
+    public static synchronized void abandon() {
+        discardPending();
+        expectFormation = false;
+        premadeLayout = null;
+        wallStands = false;
+        richnessOverride = -1f;
+        arenaRadiusOverride = -1;
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         pending.clear();
@@ -106,7 +120,9 @@ public class BattlefieldSetup {
         premadeLayout = null;
         wallStands = false;
         if (premade != null) {
-            // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge
+            // the map already laid its own patches and sites: clear the bases, raise the wall on the map's edge. The
+            // lobby's metal richness is already in them (MatchSetup.layout builds the map with it, maps spec M1), so
+            // the override is only cleared here - it used to be the line that made the setting do nothing on these maps
             richnessOverride = -1f;
             arenaRadiusOverride = -1;
             ReignOfNether.LOGGER.info("[BattlefieldSetup] forming {} for {} bases{}", premade.preset.displayName,

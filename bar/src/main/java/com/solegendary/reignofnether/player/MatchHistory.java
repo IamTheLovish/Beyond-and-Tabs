@@ -137,7 +137,7 @@ public class MatchHistory {
                 continue;
             EconomyServerEvents.PlayerEconomy eco = EconomyServerEvents.getEconomy(p.name);
             // metal income as the HUD shows it: base + buildings + what converters made
-            p.history.offer(eco.metalIncome + eco.metalConverted, eco.energyIncome, armies.getOrDefault(p.name, 0f));
+            p.history.offer(eco.effectiveMetalIncome() + eco.metalConverted, eco.energyIncome, armies.getOrDefault(p.name, 0f));
         }
     }
 }

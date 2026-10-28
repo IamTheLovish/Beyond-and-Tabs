@@ -6,12 +6,14 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.addon.RangeIndicatorAddon;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
+import com.solegendary.reignofnether.cursor.CursorModePolicy;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.guiscreen.TopdownGuiServerboundPacket;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.hud.HintBar;
+import com.solegendary.reignofnether.onboarding.OnboardingTips;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
 import com.solegendary.reignofnether.keybinds.KeyTaps;
@@ -138,6 +140,9 @@ public class OrthoviewClientEvents {
     private static final long OVERVIEW_HOLD_MS = 250;        // a Tab held this long flies back in on release
     /** A spectator pressed the view key to leave the RTS view: don't pull them back automatically. */
     private static boolean spectatorLeftOnPurpose = false;
+    // whether this client watched a match last tick: the choice above belongs to one match, so it is dropped when
+    // watching starts or stops (a new match, or this one over), on logout, and when the server asks for the RTS view
+    private static boolean wasMatchSpectator = false;
 
     private static int cameraLockTicksLeft = 0;
     private static boolean cameraLocked = false;
@@ -291,6 +296,16 @@ public class OrthoviewClientEvents {
         targetPitchOffset = 0;
     }
 
+    // the camera controls hint while it may still be up; any player camera move (pan, zoom, rotate) closes it
+    private static String cameraHint = null;
+
+    private static void cameraMoved() {
+        if (cameraHint == null)
+            return;
+        HintBar.clearIfShowing(cameraHint);
+        cameraHint = null;
+    }
+
     public static void rotateCam(float x, float y) {
         if (isCameraLocked()) {
             return;
@@ -354,9 +369,9 @@ public class OrthoviewClientEvents {
         double c = d0 * d0 - renderRadius * renderRadius;
         double disc = b * b - 4 * a * c;
         double h = disc < 0 ? 0 : (-b + Math.sqrt(disc)) / (2 * a);
-        // let the player zoom well past the strictly-loaded view: the strategic icon view keeps it readable
-        // and distance fog is already pushed out, so a soft edge beats a hard zoom stop mid-battle
-        return (float) Mth.clamp(h * 1.5, ZOOM_MAX * 1.5f, ZOOM_MAX_HARD);
+        // the view must stay inside the loaded radius (no 1.5x allowance: ground past it is not loaded, so a
+        // building ghost placed there is red, see ZoomLimit and BuildingValidators "not_loaded")
+        return ZoomLimit.max(h, ZOOM_MAX, ZOOM_MAX_HARD);
     }
 
     public static void panCam(float x, float y, float z) { // pan camera relative to rotation
@@ -565,7 +580,11 @@ public class OrthoviewClientEvents {
         }
 
         boolean grabbed = cursorMode == GLFW.GLFW_CURSOR_DISABLED;
-        if (MC.screen == null && !grabbed && MC.isWindowActive()) {
+        // never while the RTS view runs on the OS cursor (rts_system_cursor): that mode wants the mouse free
+        boolean systemCursorActive = CursorModePolicy.useSystemCursor(
+                ReignOfNetherClientConfigs.RTS_SYSTEM_CURSOR.get(), enabled && MC.screen instanceof TopdownGui);
+        if (CursorModePolicy.shouldRegrab(systemCursorActive, MC.screen == null, grabbed, MC.isWindowActive())) {
+            com.solegendary.reignofnether.cursor.CursorDiagClient.grabCall("regrab");
             MC.mouseHandler.releaseMouse();
             MC.mouseHandler.grabMouse();
         }
@@ -576,6 +595,11 @@ public class OrthoviewClientEvents {
             toggleEnable();
         }
 
+        boolean matchSpectator = com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator();
+        if (matchSpectator != wasMatchSpectator) {
+            spectatorLeftOnPurpose = false;
+            wasMatchSpectator = matchSpectator;
+        }
         // a spectator of a live match always watches from the RTS view: entering a Watch Battle world, a defeat, or
         // any path that left the camera in first person puts it back (checked twice a second; RTS-view only modes)
         if (!enabled && MC.screen == null && MC.player != null && MC.player.tickCount % 10 == 0
@@ -683,6 +707,8 @@ public class OrthoviewClientEvents {
             boolean down = panKeyDown(Keybindings.panDown) || Keybindings.panMinusZ.isDown();
             boolean left = panKeyDown(Keybindings.panLeft) || Keybindings.panPlusX.isDown();
             boolean right = panKeyDown(Keybindings.panRight) || Keybindings.panMinusX.isDown();
+            if (left || right || up || down)
+                cameraMoved();   // pan, or with Alt rotate / tilt
             if (alt) {
                 if (left) targetCamRotX += YAW_KEY_SPEED * dt;
                 if (right) targetCamRotX -= YAW_KEY_SPEED * dt;
@@ -698,8 +724,10 @@ public class OrthoviewClientEvents {
             }
         }
         if (keysActive) {
-            if (Keybindings.zoomIn.isDownOrAlias() || Keybindings.zoomOut.isDownOrAlias())
+            if (Keybindings.zoomIn.isDownOrAlias() || Keybindings.zoomOut.isDownOrAlias()) {
                 zoomFloor = ZOOM_MIN;   // the player's own zoom: a scripted close-up's floor never carries over
+                cameraMoved();
+            }
             if (Keybindings.zoomIn.isDownOrAlias()) {
                 targetZoom *= (float) Math.exp(-ZOOM_KEY_RATE * dt);
                 zoomAnchorAtCursor = false;
@@ -725,8 +753,10 @@ public class OrthoviewClientEvents {
             grabLastY = cursorY;
             panVelRight = 0;
             panVelFwd = 0;
-            if (mdx != 0 || mdy != 0)
+            if (mdx != 0 || mdy != 0) {
                 glideActive = false; // the player took the camera
+                cameraMoved();
+            }
         } else if (mmbDown) {
             mmbDown = false;
             cameraMovingByMouse = false;
@@ -776,8 +806,10 @@ public class OrthoviewClientEvents {
         if (desiredRight > 0) TutorialClientEvents.pannedRight = true;
         if (desiredFwd > 0) TutorialClientEvents.pannedUp = true;
         if (desiredFwd < 0) TutorialClientEvents.pannedDown = true;
-        if (desiredRight != 0 || desiredFwd != 0)
+        if (desiredRight != 0 || desiredFwd != 0) {
             glideActive = false;
+            cameraMoved();   // covers screen-edge pan too
+        }
 
         // ---- rotation and zoom: everything below pivots so a ground point stays put on screen ----
         float oldZoom = zoom;
@@ -959,6 +991,18 @@ public class OrthoviewClientEvents {
         startGlide(true, anchorX[i], anchorY[i], anchorZ[i]);
     }
 
+    /** SpectatorFreeFly: a watcher left (or came back to) the RTS view on purpose, so the auto re-entry leaves them be. */
+    static void setSpectatorLeftOnPurpose(boolean value) {
+        spectatorLeftOnPurpose = value;
+    }
+
+    /** Out of the RTS view on purpose, flying as a vanilla spectator (SpectatorFreeFly's HUD and speed key off this). */
+    public static boolean isSpectatorFreeFlying() {
+        return !enabled && spectatorLeftOnPurpose && MC.gameMode != null
+            && MC.gameMode.getPlayerMode() == GameType.SPECTATOR
+            && com.solegendary.reignofnether.player.PlayerClientEvents.isMatchSpectator();
+    }
+
     public static void toggleEnable() {
         if (MC.level == null || MC.player == null) {
             return;
@@ -990,9 +1034,12 @@ public class OrthoviewClientEvents {
             // the first RTS view's controls hint goes through the one hint bar (hud/HintBar), not the HUD's red
             // warning line: the two used to overlap the start banner (rover run 1, finding 8), and under the loading
             // veil the warning line would have expired unread - the hint bar's clock waits for the cut
-            if (enabledCount == 1)
-                HintBar.queue(
-                    I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName()), 400);
+            // shown once ever (remembered in the seen-tips config, "Reset tips" brings it back) and closed as soon
+            // as the player moves the camera
+            if (OnboardingTips.takeCameraHint()) {
+                cameraHint = I18n.get("hud.reignofnether.camera_controls_hint", Keybindings.toggleCamera.getDisplayName());
+                HintBar.queue(cameraHint, 400);
+            }
         } else {
             PlayerServerboundPacket.disableOrthoview();
             TopdownGuiServerboundPacket.closeTopdownGui(MC.player.getId());
@@ -1004,7 +1051,17 @@ public class OrthoviewClientEvents {
         TutorialClientEvents.updateStage();
     }
 
+    @SubscribeEvent
+    public static void onLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
+        spectatorLeftOnPurpose = false;
+        wasMatchSpectator = false;
+    }
+
     public static void tryToSetCamera(String playerName, boolean value) {
+        // the server putting this player in the RTS view (a match start, a rejoin, a refused free flight) ends a
+        // spectator's choice to stay out of it
+        if (value && MC.player != null && MC.player.getName().getString().equals(playerName))
+            spectatorLeftOnPurpose = false;
         if (MC.player != null && MC.player.getName().getString().equals(playerName) && value != enabled) {
             tryToToggleEnable();
         }
@@ -1244,8 +1301,17 @@ public class OrthoviewClientEvents {
             delta = -delta;
         if (CustomBuildingClientEvents.isMouseOverScrollArea((int) evt.getMouseX(), (int) evt.getMouseY()))
             return;
+        if (com.solegendary.reignofnether.building.AreaMexClientEvents.onScroll(evt.getScrollDelta())) {   // Shift+wheel sizes the area-mex circle
+            evt.setCanceled(true);
+            return;
+        }
+        if (com.solegendary.reignofnether.building.BuildingLineClientEvents.onScroll(evt.getScrollDelta())) {   // Shift+wheel: build spacing
+            evt.setCanceled(true);
+            return;
+        }
         evt.setCanceled(true);
 
+        cameraMoved();
         if (isCtrlDown()) {
             // wheel forward flattens the view, back steepens it (Spring: Ctrl+wheel tilts)
             targetPitchOffset -= (float) Math.signum(delta) * TILT_STEP_SCROLL;

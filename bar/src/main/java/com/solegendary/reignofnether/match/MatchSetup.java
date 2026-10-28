@@ -200,7 +200,7 @@ public final class MatchSetup {
             int[] teams = new int[playing.size()];
             for (int i = 0; i < teams.length; i++)
                 teams[i] = playing.get(i).team;
-            layout = raisesMap() ? MapLayout.build(preset, teams, mapSeed)
+            layout = raisesMap() ? MapLayout.build(preset, teams, mapSeed, SkirmishServerboundPacket.premadeMetal(metal))
                 : MapLayout.ring(teams, new ArrayList<>(ringOffsets), ringRadius, arenaRadius);
         }
         return layout;
