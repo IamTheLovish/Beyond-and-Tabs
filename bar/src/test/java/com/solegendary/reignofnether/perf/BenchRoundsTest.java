@@ -46,6 +46,39 @@ class BenchRoundsTest {
     }
 
     @Test
+    void the_harness_itself_allocates_nothing_per_frame() {
+        // the zero-allocation gates sit on top of it: any byte the harness spent would read as the bench code's
+        BenchRounds.Result r = BenchRounds.measure(7, 300, 30, 0, (round, frame) -> frame);
+        assertEquals(0, r.quietestRoundBytes(), r.bytesText());
+        for (long b : r.roundBytes())
+            assertEquals(0, b, r.bytesText());
+    }
+
+    @Test
+    void a_one_off_allocation_shows_in_its_round_but_not_in_the_quietest() {
+        // Oct 27, #293's first build: a JIT swap of the compiled frame mid-measurement allocated ~4 KB once
+        // ("4000 bytes allocated"); the same code under -Xint allocates nothing
+        Object[] keep = new Object[1];
+        BenchRounds.Result r = BenchRounds.measure(5, 0, 30, 0, (round, frame) -> {
+            if (round == 3 && frame == 10)
+                keep[0] = new long[500];
+            return 1;
+        });
+        assertTrue(r.roundBytes()[3] >= 500 * 8, r.bytesText());
+        assertEquals(0, r.quietestRoundBytes(), r.bytesText());
+    }
+
+    @Test
+    void an_allocation_every_frame_shows_in_every_round() {
+        Object[] keep = new Object[1];
+        BenchRounds.Result r = BenchRounds.measure(5, 0, 30, 0, (round, frame) -> {
+            keep[0] = new long[8];
+            return 1;
+        });
+        assertTrue(r.quietestRoundBytes() >= 30 * 8 * 8, r.bytesText());
+    }
+
+    @Test
     void the_line_lists_every_round() {
         BenchRounds.Result r = BenchRounds.measure(3, 0, 5, 0, (round, frame) -> 1000L * (round + 1));
         String s = r.roundsText();
