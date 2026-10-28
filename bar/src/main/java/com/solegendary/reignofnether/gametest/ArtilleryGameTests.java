@@ -560,9 +560,20 @@ public class ArtilleryGameTests {
         for (var le : b.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
                 b.getBoundingBox().inflate(7), e -> e != b))
             near.append(' ').append(le.getType().toShortString()).append(String.format("@%.1f", flat(b, le)));
-        return String.format("set-up left %d, cooldown %s, on ground %b, %.2f from the spot, nearby [%s ], shells %d",
+        String aim = "?";
+        if (p != null) {
+            var at = p.aimPoint(b);
+            var bp = net.minecraft.core.BlockPos.containing(at.x - 0.01 * Math.signum(at.x - b.getX()), at.y - 0.01,
+                at.z);
+            aim = String.format("%.2f away, %.2f below the feet, at %s (%s), eye %.2f, pose %s, yaw %.0f",
+                Math.hypot(at.x - b.getX(), at.z - b.getZ()), b.getY() - at.y, bp.toShortString(),
+                b.level().getBlockState(bp).getBlock().getName().getString(), b.getEyeHeight(), b.getPose(),
+                b.getYRot());
+        }
+        return String.format("set-up left %d, cooldown %s, on ground %b, %.2f from the spot, y %.2f, nearby [%s ], "
+                + "shells %d, aim %s",
             com.solegendary.reignofnether.unit.SetUp.ticksLeft(b), p == null ? "no possession" : p.attackCooldownLeft(),
-            b.onGround(), Math.hypot(b.getX() - x0, b.getZ() - z0), near, shellsOf(b));
+            b.onGround(), Math.hypot(b.getX() - x0, b.getZ() - z0), b.getY(), near, shellsOf(b), aim);
     }
 
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
