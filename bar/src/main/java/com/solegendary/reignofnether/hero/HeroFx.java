@@ -185,6 +185,63 @@ public final class HeroFx {
         return new Vec3(col.getX() + 0.5, y, col.getZ() + 0.5);
     }
 
+    /**
+     * The telegraph helper (hero-abilities-overhaul 5.1 item 3): a ring of {@code marker} round {@code at} every 5 ticks
+     * for {@code ticks}, then {@code onFire} - the ground warning every ground-aimed hit gives at least 1 s before it
+     * lands. Runs on the hero's own timers (HeroCore.timers, the Lava Geyser pattern), so it is cancelled with the caster:
+     * a hero that dies or is removed fires nothing.
+     */
+    public static void telegraph(Mob hero, Vec3 at, double radius, int ticks, ParticleOptions marker, Runnable onFire) {
+        if (!(hero instanceof FactionHero fh) || !(hero.level() instanceof ServerLevel level))
+            return;
+        int[] t = { 0 };
+        fh.heroCore().timers.add(() -> {
+            if (!hero.isAlive())
+                return true;
+            if (t[0] % 5 == 0)
+                ring(level, marker, at, radius);
+            if (++t[0] < ticks)
+                return false;
+            onFire.run();
+            return true;
+        });
+    }
+
+    /** {@code onPulse} every {@code period} ticks for {@code ticks} (a storm's strikes, a fire's burns); stops with the hero. */
+    public static void pulse(Mob hero, int period, int ticks, Runnable onPulse) {
+        if (!(hero instanceof FactionHero fh))
+            return;
+        int[] t = { 0 };
+        fh.heroCore().timers.add(() -> {
+            if (!hero.isAlive())
+                return true;
+            if (t[0] % Math.max(1, period) == 0)
+                onPulse.run();
+            return ++t[0] >= ticks;
+        });
+    }
+
+    /** {@code onFire} once after {@code ticks} (a temporary wall comes down, a buff ends); dropped with the hero. */
+    public static void after(Mob hero, int ticks, Runnable onFire) {
+        if (!(hero instanceof FactionHero fh))
+            return;
+        int[] t = { 0 };
+        fh.heroCore().timers.add(() -> {
+            if (!hero.isAlive())
+                return true;
+            if (++t[0] < ticks)
+                return false;
+            onFire.run();
+            return true;
+        });
+    }
+
+    /** A temporary summon of the hero: it crumbles at {@code endTick} or with the hero (HeroCore's summon list). */
+    public static void addSummon(Mob hero, net.minecraft.world.entity.Entity e, long endTick) {
+        if (hero instanceof FactionHero fh)
+            fh.heroCore().addSummon(e, endTick);
+    }
+
     /** True for the Gravebound (Judgement smites the undead harder). */
     public static boolean isUndead(LivingEntity e) {
         return e.getMobType() == net.minecraft.world.entity.MobType.UNDEAD;

@@ -847,6 +847,10 @@ public class UnitClientEvents {
 
             if (selectedUnits.removeIf(e -> e.getId() == entity.getId()))
                 selectedUnits.add((LivingEntity) entity);
+            // back in tracking range: the HUD focus follows the fresh entity without clearing a pending order
+            if (HudClientEvents.hudSelectedEntity != null && HudClientEvents.hudSelectedEntity != entity
+                    && HudClientEvents.hudSelectedEntity.getId() == entity.getId())
+                HudClientEvents.hudSelectedEntity = (LivingEntity) entity;
             if (preselectedUnits.removeIf(e -> e.getId() == entity.getId()))
                 preselectedUnits.add((LivingEntity) entity);
             allUnits.removeIf(e -> e.getId() == entity.getId());
