@@ -67,6 +67,10 @@ public final class DeathCollapse {
     private static final float[] SPLAY = {0f, 0f, 0.2f, 0.5f, -0.5f, 0.15f, -0.15f, 0.2f};   // + = to the unit's right
     private static final float BONE_DAMP = 3f, ACROSS_K = 30f, ACROSS_DAMP = 11f, ACROSS_LIMIT = 1.2f;
     private static final float GROUND_BOUNCE = 0.2f, GROUND_FRICTION = 8f;
+    /** The share of a bone's depth under the ground taken back out per physics step (~0.05 s to clear it). */
+    private static final float GROUND_EASE = 0.3f;
+    /** No bone turns faster than this (rad/s): 12 = at most 12 degrees between two 60 fps frames. */
+    private static final float MAX_SPIN = 12f;
     /** The upper body (head, arms, crossed arms) rides on the torso; the waist is the torso's pivot. */
     private static final float WAIST = 12f;
 
@@ -158,25 +162,28 @@ public final class DeathCollapse {
             float acc = HANGING[bone] ? GRAVITY[bone] * (float) Math.sin(parent - sa)   // hangs towards the world's down
                 : GRAVITY[bone] * (float) Math.sin(parent + sa);                       // an upright bone tips over
             va += (acc - BONE_DAMP * va) * dt;
+            va = Math.max(-MAX_SPIN, Math.min(MAX_SPIN, va));
             sa += va * dt;
-            boolean contact = false;
+            // the ground: a bone whose tip went under it is eased back out over a few steps and loses the speed that
+            // took it there (a hard clamp popped the head 19 degrees in a frame when the folding torso drove it into
+            // the ground - DeathCollapseTest.noBoneSnapsFromOneFrameToTheNext)
             float r = Math.max(-1f, Math.min(1f, h / LENGTH[bone]));
+            float pen = 0f;
             if (HANGING[bone]) {
                 // its tip is under the ground while |parent - sa| < acos(h / L): it rests on the trailing side
                 float alpha = (float) Math.acos(r);
-                if (alpha > 0f && sa > parent - alpha && sa < parent + alpha) {
-                    sa = parent - alpha;
-                    contact = true;
-                }
+                if (alpha > 0f && sa > parent - alpha && sa < parent + alpha)
+                    pen = sa - (parent - alpha);
             } else {
                 float beta = (float) Math.acos(-r);
-                if (parent + sa > beta) {
-                    sa = beta - parent;
-                    contact = true;
-                }
+                pen = Math.max(0f, parent + sa - beta);
             }
-            if (contact && va > 0f)
-                va = -va * GROUND_BOUNCE;
+            boolean contact = pen > 0f;
+            if (contact) {
+                sa -= pen * GROUND_EASE;
+                if (va > 0f)
+                    va = -va * GROUND_BOUNCE;
+            }
             if (sa > LIMIT[bone]) {
                 sa = LIMIT[bone];
                 va = Math.min(0f, va) * GROUND_BOUNCE;

@@ -79,7 +79,7 @@ public final class DeathCollapseClient {
         int id = e.getId();
         if (POOL.base(id) >= 0)
             return true;
-        if (e.deathTime > CLAIM_TICKS || !enabled() || !(e instanceof Unit) || !e.onGround())
+        if (e.deathTime > CLAIM_TICKS || !enabled() || !(e instanceof Unit) || !nearGround(e))
             return false;
         if (PossessionClientEvents.isPossessing() && PossessionClientEvents.getPossessedId() == id
             && Minecraft.getInstance().options.getCameraType().isFirstPerson())
@@ -92,6 +92,14 @@ public final class DeathCollapseClient {
         started++;
         begin(e, b);
         return true;
+    }
+
+    /**
+     * On the ground or just above it (the killing blow's knockback can lift a body for a tick, and the client's
+     * on-ground flag lags the server's): a flyer shot down mid-air keeps the plain death and falls as it always did.
+     */
+    private static boolean nearGround(LivingEntity e) {
+        return e.onGround() || !e.level().noCollision(e, e.getBoundingBox().move(0, -1.2, 0));
     }
 
     private static void begin(LivingEntity e, int b) {
