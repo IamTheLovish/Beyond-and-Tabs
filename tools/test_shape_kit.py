@@ -1,97 +1,170 @@
-"""tools/shape_kit.py: clean geometry -> blocks. Run: python3 -m unittest discover -s tools -p 'test_*.py'"""
-import collections
+"""tools/shape_kit.py: SDF shapes voxelized into roles, with stairs / slabs on the slopes. Run:
+python3 -m unittest discover -s tools -p 'test_shape_kit.py'
+
+Cell convention under test: cell (x, y, z) spans [x - 0.5, x + 0.5] x [y, y + 1] x [z - 0.5, z + 0.5], so a shape
+centred on (0, 0) sits on the column x = z = 0 and y = 0 is the floor.
+"""
 import math
 import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(__file__))
-import shape_kit as K  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gen_structures as gs  # noqa: E402
+import gothic_parts as gp  # noqa: E402
+import shape_kit as sk  # noqa: E402
+
+VEC = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
 
 
-def kinds(cells):
-    return collections.Counter(c.kind for c in cells.values())
+def kinds(cells, kind):
+    return {p: c for p, c in cells.items() if c[0] == kind}
 
 
-class VoxelCounts(unittest.TestCase):
-    def test_box_is_exact(self):
-        cells = K.voxelize(K.box((0, 0, 0), (4, 2, 3)), edges=False)
-        self.assertEqual(len(cells), 5 * 3 * 4)
+class Counts(unittest.TestCase):
+    def test_cells_box_is_exact(self):
+        cells = sk.voxelize(sk.cells(0, 3, 0, 2, 0, 4))
+        self.assertEqual(len(cells), 4 * 3 * 5)
+        self.assertTrue(all(c == ("full",) for c in cells.values()))
         self.assertEqual(min(cells), (0, 0, 0))
-        self.assertEqual(max(cells), (4, 2, 3))
+        self.assertEqual(max(cells), (3, 2, 4))
 
-    def test_sphere_volume(self):
-        n = len(K.voxelize(K.sphere((0, 0, 0), 8), edges=False))
-        self.assertAlmostEqual(n / (4 / 3 * math.pi * 8 ** 3), 1.0, delta=0.06)
+    def test_cylinder_area(self):
+        cells = sk.voxelize(sk.cylinder(5, 0, 4), edges=False)
+        self.assertEqual({y for _, y, _ in cells}, {0, 1, 2, 3})
+        per_layer = len(cells) / 4
+        self.assertAlmostEqual(per_layer, math.pi * 25, delta=0.1 * math.pi * 25)
 
-    def test_subtraction_and_intersection(self):
-        a = K.box((0, 0, 0), (9, 0, 9))
-        hole = K.box((3, 0, 3), (6, 0, 6))
-        self.assertEqual(len(K.voxelize(a - hole, edges=False)), 100 - 16)
-        self.assertEqual(len(K.voxelize(a & hole, edges=False)), 16)
-        self.assertEqual(len(K.voxelize(a | K.box((20, 0, 0), (20, 0, 0)), edges=False)), 101)
+    def test_booleans(self):
+        a, b = sk.cells(0, 3, 0, 0, 0, 0), sk.cells(2, 5, 0, 0, 0, 0)
+        self.assertEqual(len(sk.voxelize(a | b)), 6)
+        self.assertEqual(len(sk.voxelize(a & b)), 2)
+        self.assertEqual(sorted(sk.voxelize(a - b)), [(0, 0, 0), (1, 0, 0)])
 
-    def test_cone_tapers(self):
-        cells = K.voxelize(K.cone(0, 0, 6, 0, 12), edges=False)
-        width = {y: sum(1 for (x, yy, z) in cells if yy == y and z == 0) for y in range(13)}
-        self.assertGreater(width[0], width[6])
-        self.assertGreater(width[6], width[11])
-        self.assertTrue(all(width[y] >= width[y + 1] for y in range(12)))
+    def test_move(self):
+        cells = sk.voxelize(sk.cells(0, 1, 0, 1, 0, 1).move(10, 3, -4))
+        self.assertEqual(min(cells), (10, 3, -4))
 
-
-class EdgePass(unittest.TestCase):
-    def test_gable_slopes_take_stairs_facing_the_ridge(self):
-        # a straight 45-degree gable along x, ridge at z = 0: the south slope climbs north, the north slope south
-        cells = K.voxelize(K.curved_roof(0, 8, 0, 6, 0, 6, curve=1.0))
-        st = [(p, c) for p, c in cells.items() if c.kind == "stairs" and 1 <= p[0] <= 7 and p[2] != 0]
-        self.assertTrue(st)
-        for (x, y, z), c in st:
-            self.assertEqual(c.half, "bottom", (x, y, z))
-            self.assertEqual(c.facing, "north" if z > 0 else "south", (x, y, z))
-
-    def test_vertical_walls_stay_full_blocks(self):
-        cells = K.voxelize(K.cylinder(0, 0, 6, 0, 8), edges=True)
-        side = [c for (x, y, z), c in cells.items() if 1 <= y <= 7]
-        self.assertTrue(side)
-        self.assertEqual(kinds({i: c for i, c in enumerate(side)}), {"full": len(side)})
-
-    def test_underside_takes_upside_down_stairs(self):
-        # an onion dome's bulge: its lower flank faces down and out, so its stairs hang (half = top)
-        cells = K.voxelize(K.onion_dome(0, 0, 0, 6, 16))
-        halves = {c.half for c in cells.values() if c.kind == "stairs"}
-        self.assertEqual(halves, {"bottom", "top"})
+    def test_every_primitive_voxelizes_and_is_square_symmetric(self):
+        """Round shapes centred on a column come out the same under a quarter turn - no lopsided curves."""
+        for name, shape in [("cone", sk.cone(5, 0, 8)), ("ellipsoid", sk.ellipsoid(5, 4, 5)),
+                            ("onion", sk.onion_dome(5, 0, 12)), ("pointed", sk.spire(4, 0, 14, "pointed")),
+                            ("ogee", sk.spire(4, 0, 14, "ogee")), ("torus", sk.torus(6, 1.5, 2)),
+                            ("loft", sk.loft([(0, 5), (10, 3), (12, 0)]))]:
+            cells = sk.voxelize(shape)
+            self.assertGreater(len(cells), 20, name)
+            turned = {}
+            for (x, y, z), c in cells.items():
+                if c[0] == "stairs":
+                    c = ("stairs", gp.cw(c[1], 1), c[2])
+                turned[(-z, y, x)] = c
+            self.assertEqual(turned, cells, name)
 
 
-class HollowShell(unittest.TestCase):
-    def test_dome_shell_has_no_interior_fill_and_is_closed(self):
-        cells = K.voxelize(K.sphere((0, 0, 0), 7), shell=1)
-        solid = K.voxelize(K.sphere((0, 0, 0), 7), edges=False)
-        self.assertLess(len(cells), len(solid) * 0.6)
-        self.assertFalse([p for p in cells if math.dist(p, (0, 0, 0)) < 5.0])
-        # closed: a flood from the centre through empty cells never gets out of the sphere's box
-        seen, todo = {(0, 0, 0)}, [(0, 0, 0)]
+class Edges(unittest.TestCase):
+    def test_ramp_up_to_north_is_bottom_stairs_facing_north(self):
+        # a 45 degree ramp: solid below y = 4 - z (rising toward -z, north), 6 wide
+        ramp = sk.Shape(lambda x, y, z: y - (4.0 - z), (-4, 4, 0, 10, -6, 5)) & sk.cells(-3, 3, 0, 8, -5, 4)
+        st = kinds(sk.voxelize(ramp), "stairs")
+        self.assertGreater(len(st), 10)
+        self.assertEqual({c[1:] for c in st.values()}, {("north", "bottom")})
+
+    def test_ramp_up_to_east(self):
+        ramp = sk.Shape(lambda x, y, z: y - (4.0 + x), (-5, 5, 0, 10, -4, 4)) & sk.cells(-4, 4, 0, 8, -3, 3)
+        st = kinds(sk.voxelize(ramp), "stairs")
+        self.assertEqual({c[1:] for c in st.values()}, {("east", "bottom")})
+
+    def test_overhang_underside_is_top_half(self):
+        # solid ABOVE y = 2 + z: the underside comes lower toward the north, so the full lower half sits north
+        under = sk.Shape(lambda x, y, z: (2.0 + z) - y, (-4, 4, -3, 9, -5, 5)) & sk.cells(-3, 3, -2, 8, -4, 4)
+        st = kinds(sk.voxelize(under), "stairs")
+        self.assertGreater(len(st), 10)
+        self.assertEqual({c[2] for c in st.values()}, {"top"})
+        self.assertEqual({c[1] for c in st.values()}, {"north"})
+
+    def test_vertical_walls_take_no_stairs(self):
+        cells = sk.voxelize(sk.cylinder(6.3, 0, 5))
+        self.assertEqual(set(c[0] for c in cells.values()), {"full"})
+
+    def test_dome_stairs_face_the_axis(self):
+        cells = sk.voxelize(sk.ellipsoid(6, 6, 6, 0, 0, 0) & sk.box(-7, 7, 0, 7, -7, 7))
+        st = kinds(cells, "stairs")
+        self.assertGreater(len(st), 12)
+        for (x, y, z), (_, facing, half) in st.items():
+            dx, dz = VEC[facing]
+            self.assertGreater(dx * -x + dz * -z, 0, ((x, y, z), facing))
+            self.assertEqual(half, "bottom")
+
+    def test_flat_crown_takes_slabs(self):
+        cells = sk.voxelize(sk.ellipsoid(9, 2.5, 9) & sk.box(-10, 10, 0, 3, -10, 10))
+        slabs = kinds(cells, "slab")
+        self.assertIn((0, 2, 0), slabs)
+        self.assertEqual({c[1] for c in slabs.values()}, {"bottom"})
+
+    def test_edges_off_is_full_only(self):
+        cells = sk.voxelize(sk.cone(5, 0, 6), edges=False)
+        self.assertEqual(set(c[0] for c in cells.values()), {"full"})
+
+
+class Hollow(unittest.TestCase):
+    def test_sphere_shell_is_closed_and_empty(self):
+        solid = sk.voxelize(sk.ellipsoid(6, 6, 6, 0, 6, 0))
+        shell = sk.voxelize(sk.ellipsoid(6, 6, 6, 0, 6, 0), hollow=1)
+        self.assertLess(len(shell), len(solid) * 0.6)
+        self.assertNotIn((0, 6, 0), shell)
+        self.assertTrue(set(shell) <= set(solid))
+        # flood the air from outside the bounding box (6-connected): it must not reach the cavity
+        lo, hi = -8, 8
+        seen, todo = set(), [(lo, 6 + lo, lo)]
         while todo:
-            x, y, z = todo.pop()
-            for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
-                q = (x + d[0], y + d[1], z + d[2])
-                self.assertLessEqual(max(map(abs, q)), 8, "the shell leaks at %s" % (q,))
-                if q not in seen and q not in cells:
-                    seen.add(q)
-                    todo.append(q)
+            p = todo.pop()
+            if p in seen or p in shell or not all(lo <= v - o <= hi for v, o in zip(p, (0, 6, 0))):
+                continue
+            seen.add(p)
+            x, y, z = p
+            todo += [(x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x, y - 1, z), (x, y, z + 1), (x, y, z - 1)]
+        self.assertNotIn((0, 6, 0), seen)
+
+    def test_thicker_shell(self):
+        one = sk.voxelize(sk.cells(0, 8, 0, 8, 0, 8), hollow=1)
+        two = sk.voxelize(sk.cells(0, 8, 0, 8, 0, 8), hollow=2)
+        self.assertEqual(len(one), 9 ** 3 - 7 ** 3)
+        self.assertEqual(len(two), 9 ** 3 - 5 ** 3)
 
 
-class PartBridge(unittest.TestCase):
-    def test_build_writes_roles_into_a_part(self):
-        import gothic_parts as G
-        p = G.Part()
-        K.build(p, K.cone(0, 0, 4, 0, 8), "roof")
-        names = {n for n, _ in p.b.values()}
-        pal = p.pal
+class Compatible(unittest.TestCase):
+    def test_paints_a_part_with_roles(self):
+        pal = gp.palette("slate")
+        part = sk.build(sk.cone(4, 0, 5), "roof", gp.Part(pal))
+        names = {n for n, _ in part.b.values()}
         self.assertIn(pal["roof"], names)
         self.assertIn(pal["roof_st"], names)
-        for n, props in p.b.values():
-            if n == pal["roof_st"]:
-                self.assertIn(props["facing"], ("north", "south", "east", "west"))
+        st = [p for n, p in part.b.values() if n == pal["roof_st"]]
+        self.assertTrue(all(set(p) == {"facing", "half", "shape", "waterlogged"} for p in st))
+        rig = part.to_rig("cone")
+        self.assertIsInstance(rig.structure(), gs.Structure)
+
+    def test_role_callable_and_origin(self):
+        part = sk.build(sk.cells(0, 3, 0, 0, 0, 0), lambda x, y, z: "trim" if x % 2 else "wall", at=(10, 0, 0))
+        self.assertEqual(part.get(10, 0, 0), part.pal["wall"])
+        self.assertEqual(part.get(11, 0, 0), part.pal["trim"])
+
+    def test_missing_stair_role_is_an_error(self):
+        with self.assertRaises(KeyError):
+            sk.build(sk.cone(4, 0, 5), "no_such_role", gp.Part())
+
+    def test_into_a_structure(self):
+        s = gs.Structure(12, 8, 12)
+        sk.build(sk.cone(4, 0, 5), "roof", s, at=(6, 0, 6), pal=gp.palette("red"))
+        names = {s.palette[i][0] for i in s.blocks.values()}
+        self.assertLessEqual({"bricks", "brick_stairs"}, names)
+        self.assertLessEqual(names, {"bricks", "brick_stairs", "brick_slab"})
+
+    def test_demos_build(self):
+        for key, _, make in sk.DEMOS:
+            part = make(gp.palette("slate"))
+            self.assertGreater(len(part.b), 50, key)
+            part.to_rig(key)
 
 
 if __name__ == "__main__":
