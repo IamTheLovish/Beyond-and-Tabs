@@ -762,6 +762,14 @@ public class RaidGameTests {
                     problems.add("could not place the " + (round == 1 ? "T2" : "T1") + " extractor");
                     continue;
                 }
+                // the extractor must be handed over standing, with nothing left to lay: a block still queued is laid one
+                // a tick by buildNextBlock while the blows below are breaking the building, with no look at its
+                // neighbours - a pool's water laid back over a broken basin spills onto the patch (PR #297's CI, Build
+                // run 40638083212: flowing water beside the T2, "ground_not_flat"). A player's extractor never has its
+                // water queued: the upgrade swaps the structure on a T1 whose pool already stands.
+                String state = cur[round].constructionState();
+                if (!state.startsWith("queue 0,"))
+                    problems.add("the " + (round == 1 ? "T2" : "T1") + " extractor was handed over with blocks still to lay: " + state);
             }
         });
         helper.onEachTick(() -> {
