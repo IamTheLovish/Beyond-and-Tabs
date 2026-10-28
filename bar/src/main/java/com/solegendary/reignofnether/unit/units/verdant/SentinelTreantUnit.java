@@ -93,6 +93,9 @@ public class SentinelTreantUnit extends IronGolemUnit {
     private double pendingDx = 0, pendingDz = 0;
     /** A move order given while immobile: uprooting starts and the Treant walks here once it is free. */
     @Nullable private BlockPos heldMove = null;
+    /** The held move the last behaviour reset cleared, and the tick it did: the anchor walk-back gives it back. */
+    @Nullable private BlockPos droppedMove = null;
+    private int droppedAt = -1;
     /** Spike lines struck so far (game test). */
     public int linesFired = 0;
 
@@ -143,9 +146,14 @@ public class SentinelTreantUnit extends IronGolemUnit {
         rootChanged();
     }
 
-    /** Any new order (stop, attack, another move) replaces a held move; a move order is held again on the next tick. */
+    /**
+     * Any new order (stop, attack, another move) replaces a held move; a move order is held again on the next tick. The
+     * idle walk back to the anchor resets behaviours too but is no order: takeMoveOrder restores what it dropped.
+     */
     @Override
     public void resetBehaviours() {
+        droppedMove = heldMove;
+        droppedAt = tickCount;
         heldMove = null;
     }
 
@@ -156,7 +164,8 @@ public class SentinelTreantUnit extends IronGolemUnit {
 
     /**
      * A move order to an immobile Treant (BAR's deployables): it is held, not walked; the Treant uproots (a root in
-     * progress is cancelled) and walks there once free. The idle walk back to its anchor is not an order: dropped.
+     * progress is cancelled) and walks there once free. The idle walk back to its anchor is not an order: dropped, and
+     * the held move its reset (this same tick) cleared is put back.
      */
     void takeMoveOrder() {
         MoveToTargetBlockGoal mg = getMoveGoal();
@@ -164,8 +173,12 @@ public class SentinelTreantUnit extends IronGolemUnit {
         if (ordered == null)
             return;
         mg.stopMoving();
-        if (Unit.hasAnchor(this) && ordered.equals(getAnchor()))
+        if (Unit.hasAnchor(this) && ordered.equals(getAnchor())) {
+            if (droppedAt == tickCount && droppedMove != null)
+                heldMove = droppedMove;
+            droppedMove = null;
             return;
+        }
         heldMove = ordered;
         uproot();
     }
