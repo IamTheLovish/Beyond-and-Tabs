@@ -433,6 +433,19 @@ public class MexQueueGameTests {
             return;
         }
         final int buildFirst = 3;
+        // a finished site leaves the builder's queue the tick it is built, not on the goal's next 5-tick turn (the
+        // queue check below ran inside that window now and then: "holds 158" with 3 built, CI run 40651908207)
+        helper.onEachTick(() -> {
+            if (s.done)
+                return;
+            for (int i = 0; i < want; i++)
+                if (s.sites.get(i).isBuilt && g.queuedBuildings.contains(s.sites.get(i))) {
+                    if (s.problems.isEmpty())
+                        s.problems.add("site " + i + " is built but still in the builder's queue (holds "
+                            + g.queuedBuildings.size() + ")");
+                    return;
+                }
+        });
         int[] tick = { 0 };
         Runnable[] stepper = new Runnable[1];
         stepper[0] = () -> helper.runAfterDelay(10, () -> {
