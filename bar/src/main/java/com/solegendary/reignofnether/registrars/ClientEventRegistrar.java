@@ -144,6 +144,10 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
+        // combat feel (Oct 28): hard landings feed the camera shake
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.CameraShakeClient.class);
+        // and the death collapse: its clock, cleanup, the bodies it holds a moment after the server removes them
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.DeathCollapseClient.class);
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.commands.lang.CommandBarClientEvents.class);

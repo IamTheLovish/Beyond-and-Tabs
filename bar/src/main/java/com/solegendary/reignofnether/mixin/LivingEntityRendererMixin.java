@@ -124,6 +124,30 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         MotionPass.restore();
     }
 
+    @Shadow protected abstract float getFlipDegrees(T entity);
+
+    // combat feel (Oct 28): a unit whose death collapses (DeathCollapseClient) does not also take vanilla's stiff
+    // tip-over - its collapse tips it the way the blow pushed it, in MotionPass
+    @Redirect(
+            method = "setupRotations",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;getFlipDegrees(Lnet/minecraft/world/entity/LivingEntity;)F")
+    )
+    private float bat$collapseNoFlip(LivingEntityRenderer<T, M> self, T entity) {
+        return com.solegendary.reignofnether.unit.modelling.motion.DeathCollapseClient.collapsing(entity)
+                ? 0f : this.getFlipDegrees(entity);
+    }
+
+    // ... nor its red death flash (every pass and layer asks this for the overlay, the team colour mask included)
+    @Inject(method = "getOverlayCoords", at = @At("HEAD"), cancellable = true)
+    private static void bat$collapseNoRed(LivingEntity entity, float whiteOverlay, CallbackInfoReturnable<Integer> cir) {
+        if (entity.deathTime > 0
+                && com.solegendary.reignofnether.unit.modelling.motion.DeathCollapseClient.collapsing(entity))
+            cir.setReturnValue(net.minecraft.client.renderer.texture.OverlayTexture.pack(
+                    net.minecraft.client.renderer.texture.OverlayTexture.u(whiteOverlay),
+                    net.minecraft.client.renderer.texture.OverlayTexture.v(false)));
+    }
+
     @Inject(
             method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
             at = @At(value = "INVOKE",

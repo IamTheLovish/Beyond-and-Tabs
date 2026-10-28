@@ -53,6 +53,10 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_PITCH_FAR;
     public static final ForgeConfigSpec.ConfigValue<Boolean> CAMERA_ZOOM_OUT_FROM_CURSOR;
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SHAKE;
+    // combat feel (Oct 28): the trauma shake's mode, 0 Off, 1 Subtle, 2 Full (DisplaySettings.cameraShake); the slider
+    // above scales it further. And the death collapse (unit/modelling/motion/DeathCollapseClient) on or off
+    public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SHAKE_MODE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> DEATH_COLLAPSE;
     public static final ForgeConfigSpec.ConfigValue<Double> RTS_CURSOR_SPEED;
     public static final ForgeConfigSpec.ConfigValue<Boolean> RTS_SYSTEM_CURSOR;
 
@@ -140,6 +144,10 @@ public class ReignOfNetherClientConfigs {
         CAMERA_ZOOM_OUT_FROM_CURSOR = BUILDER.define("camera_zoom_out_from_cursor", false);
         BUILDER.comment("Camera shake on big blasts and building collapses, 0-100% (0 = none; never grows with army size)");
         CAMERA_SHAKE = BUILDER.defineInRange("camera_shake", 100, 0, 100);
+        BUILDER.comment("Camera shake from big blasts, heavy shells, building collapses and hard landings: 0 Off, 1 Subtle (default), 2 Full. Very gentle in the RTS view and less the further you zoom out; none in the strategic view. camera_shake above scales it further");
+        CAMERA_SHAKE_MODE = BUILDER.defineInRange("camera_shake_mode", 1, 0, 2);
+        BUILDER.comment("Death collapse: a dying unit's body folds and falls the way the killing blow pushed it, then sinks away (at most 40 at once; past that the plain death). false = vanilla's red tip-over");
+        DEATH_COLLAPSE = BUILDER.define("death_collapse", true);
         BUILDER.comment("RTS cursor speed, 0.25-3.0. The cursor uses raw mouse input (no Windows pointer acceleration): 1.0 = one mouse count per screen pixel, same as Windows' unaccelerated 6/11 setting");
         RTS_CURSOR_SPEED = BUILDER.defineInRange("rts_cursor_speed", 1.0, 0.25, 3.0);
         BUILDER.comment("RTS view uses the operating system's own mouse cursor (your Windows pointer speed and acceleration, no one-frame lag) instead of Minecraft's locked virtual cursor. Turn off to get the locked cursor with rts_cursor_speed back");

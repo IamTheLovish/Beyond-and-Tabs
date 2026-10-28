@@ -87,8 +87,7 @@ public final class BarFxClient {
     static boolean ortho = false;
     static float zoom = 30;
 
-    // camera shake
-    static float shakeAmt = 0;
+    // camera shake: CameraShakeClient holds the trauma (combat feel, Oct 28); shake() / shakeMinor() feed it
 
     static float rnd(float a, float b) { return a + R.nextFloat() * (b - a); }
 
@@ -156,8 +155,8 @@ public final class BarFxClient {
     }
 
     public static void clear() {
-        live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0; shakeAmt = 0;
-        DomeFx.clear();
+        live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0;
+        DomeFx.clear(); CameraShakeClient.reset(); SPARK_BUDGET.reset();
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -186,7 +185,10 @@ public final class BarFxClient {
                         boolean full = deaths++ < (busy ? DEATH_BUDGET / 3 : DEATH_BUDGET);
                         death(e.kind, BarFx.deathFaction(e.flags), BarFx.deathTier(e.flags), e.x, e.y, e.z, e.a, e.b, full);
                     }
-                    case BarFx.SCORCH -> scorchRing(e.x, e.y, e.z, e.a, busy);
+                    case BarFx.SCORCH -> {
+                        scorchRing(e.x, e.y, e.z, e.a, busy);
+                        shake(CameraShake.traumaForHeavyImpact(e.a), e.x, e.y, e.z);   // a heavy shell / T3 ability lands
+                    }
                     case BarFx.BUILDING_PART -> buildingPart(e.x, e.y, e.z, (int) e.a);
                     case BarFx.COLLAPSE -> collapse(e.x, e.y, e.z, e.a, e.b, (e.flags & 1) == 0);
                     case BarFx.NANO -> nano(e.kind, e.flags, e.x, e.y, e.z, e.a, e.b, e.c, busy);
@@ -289,10 +291,12 @@ public final class BarFxClient {
     }
 
     /**
-     * Something lands. where: ground / unit / building; faction (F_*) tints the flash and sparks; (dx,dz) its
-     * horizontal heading; size ~1 normal.
+     * Something lands. detail: where (ground / unit / building) and, on a unit, whether it was metal on metal
+     * (BarFx.impactFlags); faction (F_*) tints the flash and sparks; (dx,dz) its horizontal heading; size ~1 normal.
      */
-    static void hit(int kind, int where, int faction, float x, float y, float z, float dx, float dz, float size) {
+    static void hit(int kind, int detail, int faction, float x, float y, float z, float dx, float dz, float size) {
+        int where = detail & BarFx.IMPACT_WHERE_MASK;
+        boolean metal = (detail & BarFx.IMPACT_METAL) != 0;
         size = Math.max(.3f, Math.min(size, 3f));
         switch (kind) {
             case BarFx.K_SONIC -> { }
@@ -311,25 +315,37 @@ public final class BarFxClient {
             }
             case BarFx.K_MAGIC -> {
                 flash(x, y, z, .9f, .15f, tint(0xD8B8FF, faction));
-                sparks(x, y, z, 8, 3.5f, tint(0xD8B8FF, faction), -dx, -dz);
+                // a bolt on a unit shares the hit sparks' budget (a mage line volleying stays a handful of sparks)
+                int n = where == BarFx.AT_UNIT
+                        ? SPARK_BUDGET.take((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, clock, 8) : 8;
+                sparks(x, y, z, n, 3.5f, tint(0xD8B8FF, faction), -dx, -dz);
                 ring(x, groundOr(x, y, z), z, 1.3f, .3f, tint(0xC8A0FF, faction));
             }
             case BarFx.K_POTION -> {
                 for (int i = 0; i < 4; i++) { P p = smoke(x + rnd(-.4f, .4f), y, z + rnd(-.4f, .4f), .3f, 1.2f, 0xB890D8, .4f); p.vy = .3f; p.grow = 2f; }
             }
             case BarFx.K_MELEE -> {
+                if (where == BarFx.AT_UNIT) { unitHit(x, y, z, dx, dz, faction, metal, false); return; }
                 flash(x, y, z, .28f * size, .05f, tint(0xFFF4D8, faction));
                 sparks(x, y, z, where == BarFx.AT_BUILDING ? 3 : 4, 2.5f, tint(0xFFF0C0, faction), dx, dz);
                 if (where == BarFx.AT_BUILDING) dust(x, y - .4f, z, .35f, 0xB8A890);
             }
             case BarFx.K_HEAVY_MELEE -> {
+                if (where == BarFx.AT_UNIT) {
+                    if (!unitHit(x, y, z, dx, dz, faction, metal, true)) return;
+                    // a big body's blow kicks a little dust off the ground under it
+                    float g = groundY(x, y, z);
+                    if (y - g < 2.5f) dust(x, g, z, .3f, groundColor(x, g, z));
+                    // a T3's real blow is felt - as a "minor" shake: a whole brawl of them stays a rumble
+                    if (size >= 2f) shakeMinor(.18f, x, y, z);
+                    return;
+                }
                 flash(x, y, z, .55f * size, .08f, tint(0xFFF0D0, faction));
                 sparks(x, y, z, 8, 3.5f, tint(0xFFE8B0, faction), dx, dz);
                 float g = groundY(x, y, z);
                 int gc = groundColor(x, g, z);
                 for (int i = 0; i < 3; i++) dust(x + rnd(-.5f, .5f), g, z + rnd(-.5f, .5f), .35f, gc);
                 chunks(x, g + .1f, z, 2, 2.5f, gc, 2.5f);
-                // no shake on hits - with many units it never stops
             }
             default -> {   // arrows, thrown things
                 int sc = tint(0xFFE8C0, faction);
@@ -342,11 +358,57 @@ public final class BarFxClient {
                     dust(x, y, z, .25f, 0xB8A890);
                     sparks(x, y, z, 2, 2f, sc, -dx, -dz);
                 } else {
-                    flash(x, y, z, .22f, .05f, tint(0xFFF0D0, faction));
-                    sparks(x, y, z, 2, 1.8f, sc, dx, dz);
+                    unitHit(x, y, z, dx, dz, faction, metal, false);
                 }
             }
         }
+    }
+
+    /**
+     * Hit sparks budget (combat feel, Oct 28): every melee or projectile hit on a unit draws its burst from here - a
+     * per-second and a per-chunk budget (HitSparkBudget), so hundreds of units trading blows cost a fixed handful of
+     * particles while one hit always shows.
+     */
+    static final HitSparkBudget SPARK_BUDGET = new HitSparkBudget();
+    static int sparkHits = 0, sparkDropped = 0;
+    static float sparkLogAt = 10;
+
+    /** The size of one screen pixel in blocks in the RTS view (0 otherwise): sparks stay a pixel or two wide from above. */
+    static float pixel() {
+        if (!ortho) return 0;
+        int h = MC.getWindow().getHeight();
+        return h > 0 ? zoom / h : 0;
+    }
+
+    /**
+     * A blow or a shot lands on a unit: a small burst at the contact point, read from the RTS camera as a few bright
+     * pixels, not a cloud. Metal on metal (BarFx.impactFlags: a metal weapon or arrowhead on armour or a construct):
+     * a pin-point flash and bright streaks in the attacker's faction tint. Anything else: a small puff of dust with a
+     * couple of flecks, the dust nudged towards the faction tint. Returns false when the budget had nothing left.
+     */
+    static boolean unitHit(float x, float y, float z, float dx, float dz, int faction, boolean metal, boolean heavy) {
+        int want = metal ? (heavy ? 6 : 4) : (heavy ? 4 : 3);
+        int n = SPARK_BUDGET.take((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, clock, want);
+        if (n <= 0) { sparkDropped++; return false; }
+        sparkHits++;
+        float px = pixel();
+        if (metal) {
+            flash(x, y, z, Math.max(heavy ? .2f : .14f, px * 3), .05f, tint(0xFFF6E0, faction));
+            float w = Math.max(.03f, px * 1.5f);   // a streak about 1.5 px wide at any zoom
+            for (int i = 1; i < n; i++) {
+                P p = add(SPARK, x, y, z, rnd(.15f, .3f), w, tint(0xFFE4A0, faction));
+                double a = R.nextDouble() * Math.PI * 2; float sp = (heavy ? 3.4f : 2.6f) * rnd(.5f, 1f);
+                p.vx = (float) Math.cos(a) * sp + dx * sp * .7f; p.vz = (float) Math.sin(a) * sp + dz * sp * .7f;
+                p.vy = rnd(.4f, 1.1f) * sp;
+            }
+        } else {
+            int c = faction == BarFx.F_NONE ? 0x9C8E78
+                    : mix(0x9C8E78, com.solegendary.reignofnether.faction.FactionTraits.shotTintOf(faction), .2f);
+            P puff = dust(x, y - .1f, z, heavy ? .26f : .18f, c);
+            puff.vy *= .6f;
+            if (n > 1) chunks(x, y, z, n - 1, heavy ? 2f : 1.5f, mix(c, 0x000000, .35f), .6f);
+        }
+        return true;
     }
 
     static void explosion(int kind, float x, float y, float z, float r) {
@@ -379,7 +441,7 @@ public final class BarFxClient {
             if (r >= 2) crater(x, g, z, r * .45f, ground);
         }
         if (onGround && r >= 2.5f) scorchRing(x, g, z, r * .8f, live.size() > MAX * 3 / 4);   // artillery-sized
-        if (r >= 2.5f) shake(r * .12f, x, y, z);   // only real blasts (creepers, commander death), not small pops
+        shake(CameraShake.traumaForBlast(r), x, y, z);   // only real blasts (creepers, commander death), not small pops
     }
 
     /**
@@ -682,8 +744,8 @@ public final class BarFxClient {
             d.x2 = g;   // ground under the pop, for its dust
         }
         P billow = add(DELAY, x, g, z, .8f, half, 0xA89C8A); billow.x2 = g; billow.crater = true;   // crater = billow
-        if (shake)   // one gentle shake per building, never per unit (and none for the commander blast)
-            shake(.25f + half * .04f, x, g, z);
+        if (shake)   // one shake per building, never per unit (and none for the commander blast)
+            shake(CameraShake.traumaForCollapse(half), x, g, z);
     }
 
     /** A DELAY timer ran out: a secondary pop of a collapsing building, or (crater flag) its second dust billow. */
@@ -840,22 +902,34 @@ public final class BarFxClient {
         return ortho ? zoom : 0;
     }
 
-    static void shake(float amount, float x, float y, float z) {
+    /**
+     * A big event at (x,y,z) earns {@code trauma} (CameraShake.traumaFor*): it reaches the camera scaled by its distance
+     * from the middle of the screen (RTS view, CameraShake.rtsRange by zoom) or from the camera (first person, 40
+     * blocks). Never per unit, never with army size: only blasts, heavy shells, collapses and hard landings call it.
+     */
+    static void shake(float trauma, float x, float y, float z) {
+        if (trauma > 0) CameraShakeClient.add(trauma * shakeGain(x, y, z));
+    }
+
+    /** A small, frequent jolt (a T3's hit, a big unit landing nearby): capped as a whole (CameraShake.addMinor). */
+    static void shakeMinor(float trauma, float x, float y, float z) {
+        if (trauma > 0) CameraShakeClient.addMinor(trauma * shakeGain(x, y, z));
+    }
+
+    static float shakeGain(float x, float y, float z) {
         float fx, fz;
         if (ortho && lookY < -.1f) {
             float t = (y - camY) / lookY;
             fx = camX + lookX * t; fz = camZ + lookZ * t;
         } else { fx = camX; fz = camZ; }
         float d = (float) Math.hypot(x - fx, z - fz);
-        float range = ortho ? 30 + zoom : 40;
-        float a = amount * .5f * Math.max(0, 1 - d / range);
-        if (a > 0) shakeAmt = Math.min(.35f, shakeAmt + a);   // was 1.2: a base dying shook the screen nonstop
+        return CameraShake.falloff(d, ortho ? CameraShake.rtsRange(zoom) : 40);
     }
 
     /**
-     * The player's camera-shake setting (camera_shake, 0-100%) as a 0-1 multiplier on what the game applies. It only
-     * scales the output: how much shake an event earns (never per unit, never with army size - the rule above) is
-     * decided in shake(), unchanged. 1 when the config is not loaded yet.
+     * The camera page's shake slider (camera_shake, 0-100%) as a 0-1 multiplier on what the Display page's mode
+     * (Off / Subtle / Full) gives. It only scales the output: how much shake an event earns (never per unit, never with
+     * army size - the rule above) is decided in shake(). 1 when the config is not loaded yet.
      */
     static float shakeSetting() {
         try {
@@ -865,20 +939,14 @@ public final class BarFxClient {
         }
     }
 
-    /** Current camera shake offset in blocks (orthographic view) - horizontal. */
+    /** This frame's camera shake offset in blocks (orthographic view) - horizontal (CameraShakeClient, mode and slider in). */
     public static float shakeX() {
-        if (shakeAmt < .002f) return 0;
-        float s = shakeSetting();
-        if (s <= 0) return 0;
-        return shakeAmt * .5f * s * ((float) Math.sin(clock * 53.0) + .6f * (float) Math.sin(clock * 31.7 + 1.3));
+        return CameraShakeClient.offsetX();
     }
 
-    /** Current camera shake offset in blocks (orthographic view) - vertical. */
+    /** This frame's camera shake offset in blocks (orthographic view) - vertical. */
     public static float shakeY() {
-        if (shakeAmt < .002f) return 0;
-        float s = shakeSetting();
-        if (s <= 0) return 0;
-        return shakeAmt * .5f * s * ((float) Math.sin(clock * 47.3 + 2.1) + .6f * (float) Math.sin(clock * 27.9 + .4));
+        return CameraShakeClient.offsetY();
     }
 
     // ------------------------------------------------------------------ ground
@@ -971,7 +1039,14 @@ public final class BarFxClient {
         lastNanos = nanos;
         if (MC.isPaused()) dt = 0;
         clock += dt;
-        shakeAmt *= (float) Math.exp(-dt * 5);
+        if (clock >= sparkLogAt) {   // ten-second line: is the hit spark budget biting? (eyes tours, playtest logs)
+            sparkLogAt = clock + 10;
+            if (sparkHits + sparkDropped > 0)
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[HitSparks] {} unit hits drew a burst, {} were over the budget ({} / s, {} / chunk / s); shake trauma {}",
+                    sparkHits, sparkDropped, HitSparkBudget.GLOBAL_PER_SECOND, HitSparkBudget.CHUNK_PER_SECOND,
+                    String.format("%.2f", CameraShakeClient.trauma()));
+            sparkHits = sparkDropped = 0;
+        }
 
         // camera
         Vec3 cp = camera.getPosition();

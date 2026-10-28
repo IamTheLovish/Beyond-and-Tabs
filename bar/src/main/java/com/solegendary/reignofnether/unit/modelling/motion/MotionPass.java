@@ -21,8 +21,8 @@ import org.joml.Quaternionf;
  * the head, arms and legs on top. Restore puts every touched part back exactly, so nothing accumulates frame to frame
  * on parts vanilla does not reset. Render thread only; no allocation.
  *
- * Skipped: the living army off (config or the parade toggle), a unit with no slot yet, a dying unit (vanilla's death
- * fall plays alone), the possessed hero seen in first person, a model with no {@link BoneMap}. A model class that
+ * Skipped: the living army off (config or the parade toggle), a unit with no slot yet, a dying unit (its death
+ * collapse, DeathCollapseClient, or vanilla's fall), the possessed hero seen in first person, a model with no {@link BoneMap}. A model class that
  * throws is switched off for the session ({@link BoneMaps#disable}) and draws as before.
  */
 @OnlyIn(Dist.CLIENT)
@@ -63,7 +63,11 @@ public final class MotionPass {
 
     public static void apply(LivingEntity e, EntityModel<?> model, PoseStack ps, float partial) {
         restore();
-        if (!AnimStates.enabled() || e.deathTime > 0)
+        if (e.deathTime > 0) {   // a dying unit: its collapse, or vanilla's fall when it has none (DeathCollapseClient)
+            DeathCollapseClient.apply(e, model, ps, partial);
+            return;
+        }
+        if (!AnimStates.enabled())
             return;
         int b = AnimStates.base(e.getId());
         if (b < 0)
