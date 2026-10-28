@@ -195,3 +195,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    sunken COURTYARDS and terrace pools (contained glow), WATERFALLS pouring down one flank, forest all around.
    ASHBORN PRIMARY REFERENCE: imitate this - stepped tiers that read from above, glow contained in pools, no scattered
    lights.
+
+34c. lovishs 30th reference (04:19): /root/bat/design/refs/vehicle_labs/ref30_magma_volcano_stronghold.png - a Minecraft
+   "Magma Stronghold" (titled build: inspiration only): the whole building is ONE VOLCANO CONE of dark stone, LAVA
+   RUNNING DOWN its slopes in carved channels, glowing doorways and windows cut into the rock, fire bowls on the summit.
+   Lab-scale. ASHBORN: the lab-scale form (the Ember Pens as a small volcano the beasts come out of), with ref29 for the
+   stepped-tier plan and lava held in pools.
