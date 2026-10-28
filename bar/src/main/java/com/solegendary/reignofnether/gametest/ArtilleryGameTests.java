@@ -149,7 +149,6 @@ public class ArtilleryGameTests {
     public static void artillery_fires_over_a_wall_without_walking_in(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_arty_wall_" + helper.absolutePos(BlockPos.ZERO).asLong();
-        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         for (int z = 4; z <= 12; z++)
             for (int y = 2; y <= 5; y++)
                 helper.setBlock(new BlockPos(7, y, z), Blocks.STONE);
