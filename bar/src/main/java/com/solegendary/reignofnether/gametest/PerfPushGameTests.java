@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.TitanMass;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit;
@@ -45,6 +46,13 @@ public class PerfPushGameTests {
             // a 0.3-block lattice: every body overlaps its neighbours, so the push has work to do
             v.moveTo(at.getX() + 6.5 + (i % 8) * 0.3, at.getY(), at.getZ() + 6.5 + (i / 8) * 0.3, 0, 0);
             v.setOwnerName(owner);
+            // hold fire: the pile is about the push alone. Idle units auto-acquire enemies in range, and a shard runs
+            // this beside combat tests' units of other owners (the two piles of this class differ in owner too); a pile
+            // chasing one melee ring stands closer than it spawned. That is the best-supported cause of the Oct 27 flake
+            // - "0.29 apart" after 400 ticks, only ever in shard 1 (PR #289's build 40572488789) - while alone a pile
+            // spreads in 102-138 of 400 ticks with no target (flake-stress 40606579207). Hold fire also stops
+            // retaliation, so a neighbour's stray hit does not start a chase either.
+            EngagementStance.set(v, EngagementStance.HOLD_FIRE);
             level.addFreshEntity(v);
             made.add(v);
         }
@@ -101,6 +109,11 @@ public class PerfPushGameTests {
                     "two units are still %.2f blocks apart (a body is 0.6 wide); %d pairs under %.2f at tick %d, best %.2f at tick %d; at most %d had a target at once (first: %s); %s | %s | %s",
                     closest, close, MIN_GAP, helper.getTick(), best[0], bestAt[0], mostTargeting[0], targetSeen[0],
                     describe(pile.get(ci), ci), describe(pile.get(cj), cj), surroundings(helper, pile)));
+            // the isolation itself is checked: a hold-fire pile that still took a target means the stance leaked, and its
+            // spacing proves nothing
+            if (mostTargeting[0] > 0)
+                throw new GameTestAssertException("a hold-fire pile took a target (" + mostTargeting[0] + " units at once, first: "
+                    + targetSeen[0] + ") - EngagementStance.HOLD_FIRE no longer keeps an idle unit from acquiring");
             // the margin to the timeout on a pass, read by flake-stress runs (tools/ci_gametests.sh: [Push spread])
             ReignOfNether.LOGGER.info("[PushSpread] {} units spread to {} in {} of 400 ticks; at most {} had a target at once (first: {})",
                 UNITS, String.format(java.util.Locale.ROOT, "%.2f", closest), helper.getTick(), mostTargeting[0], targetSeen[0]);
