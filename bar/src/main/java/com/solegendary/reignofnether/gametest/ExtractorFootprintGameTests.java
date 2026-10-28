@@ -52,8 +52,12 @@ public class ExtractorFootprintGameTests {
         // z far from the soak and the T2 test's rows (they sit at origin z), so no other test's patches or buildings are near;
         // the full scan of the soak (16 steps x 8 lines), as the T2 test does: one strip is often water or cliff
         Vec3[] starts = SkirmishGameTests.soakAnyRow(level, origin.getX() + 1500, origin.getZ() + 6000, 3);
+        // the whole scan can still be sea or cliff (flake-stress 40652936389: 2 of 8 seeds) - then the other side
+        if (starts == null)
+            starts = SkirmishGameTests.soakAnyRow(level, origin.getX() - 1500, origin.getZ() + 6000, 3);
         if (starts == null) {
-            helper.fail("no dry ground for three bases near x=" + (origin.getX() + 1500));
+            helper.fail("no dry ground for three bases near x=" + (origin.getX() + 1500) + " or x=" + (origin.getX() - 1500)
+                + " (z=" + (origin.getZ() + 6000) + ")");
             return;
         }
         MetalPatches.forgetAll();
