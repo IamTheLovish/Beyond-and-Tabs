@@ -48,6 +48,8 @@ public final class HeroBrain {
     public boolean wasCasting;
     /** Where the current flight runs to (a bot's order that sweeps the hero along mid-flight is turned back to it). */
     @Nullable public net.minecraft.core.BlockPos fleeTo;
+    /** The game tick the hero went to REST (a bot's hero goes back to its order after HeroBot.BOT_REST_TICKS). */
+    public long restSince;
 
     public HeroBrain(int heroId) {
         this.log = new DecisionLog(heroId);

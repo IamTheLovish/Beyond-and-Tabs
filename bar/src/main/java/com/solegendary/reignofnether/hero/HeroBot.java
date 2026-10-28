@@ -433,6 +433,8 @@ public final class HeroBot {
 
     /** Blocks a flight runs from the threats (v1's ESCAPE_DISTANCE). */
     static final double FLEE_DISTANCE = ESCAPE_DISTANCE;
+    /** Ticks a bot's hero rests out of reach, still near death, before it goes back to its order by itself. */
+    static final int BOT_REST_TICKS = 20 * 20;
     /** Ticks a gap closer's follow-up stays armed: the charge's wind-up and flight fit well inside it. */
     static final int FOLLOW_UP_TICKS = 40;
 
@@ -462,15 +464,18 @@ public final class HeroBot {
             // handed back by the player (possession released, the AI switched on): what they saw stands, danger included
             b.lock.acknowledge();
             b.state = HeroBrain.State.IDLE;
-        } else if (fresh && bot && b.fleeing()) {
+        } else if (fresh && bot && b.state == HeroBrain.State.FLEE) {
             // a bot's army order swept the fleeing hero along: the flight stands (D030 is the player's word, and the
-            // hero's own brain knows its life better than the bot's sweep); the order waits until it is healed
+            // hero's own brain knows its life better than the bot's sweep); the order waits until the run is over.
+            // A resting hero is out of reach: the bot's next order takes it back (a hero with no heal would rest forever)
             Unit.fullResetBehaviours((Unit) mob);
             if (b.state == HeroBrain.State.FLEE && b.fleeTo != null)
                 ((Unit) mob).setMoveTarget(b.fleeTo);
         } else if (fresh) {
-            if (b.fleeing())
+            if (b.fleeing()) {
                 b.state = HeroBrain.State.OBEY;
+                b.lock.takeSuspended();   // the fresh order replaces the one the flight broke off
+            }
             if (!b.lock.mode().mayMove)
                 b.clearCombo();   // a move, attack or hold: no follow-up after the gap closer's target (Fight keeps it)
             b.record(now, Why.COMMAND, -1, -1);
@@ -519,7 +524,17 @@ public final class HeroBot {
             // side) and it waits for a heal or the player's word - it never walks back in by itself
             ((Unit) mob).getMoveGoal().stopMoving();
             b.state = HeroBrain.State.REST;
+            b.restSince = now;
             b.record(now, Why.REST, -1, -1);
+        }
+        if (b.state == HeroBrain.State.REST && now - b.restSince >= BOT_REST_TICKS
+                && BotServerEvents.brains.containsKey(hero.getOwnerName())) {
+            // a bot's hero has no player to give the word: after a while out of reach it goes back to its order
+            // (a hero with no heal would otherwise rest for the rest of the match); a threat seen again starts a new run
+            resume(sl, mob, b);
+            b.state = HeroBrain.State.IDLE;
+            b.record(now, Why.RESUME, -1, -1);
+            return;
         }
         if (b.state == HeroBrain.State.REST) {
             Fight f = new Fight(sl, mob, hero, b.seen.enemies, b.seen.friends, r.hp(), isMelee(hero));
@@ -801,6 +816,14 @@ public final class HeroBot {
      * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
      * hero, the client side): no say.
      */
+    /** Is the v2 AI running this hero away (or resting it out of reach)? Then it does not stop to answer a blow. */
+    public static boolean fleeing(Mob mob) {
+        if (!(mob instanceof FactionHero hero))
+            return false;
+        HeroBrain b = hero.heroCore().brainIfAny();
+        return b != null && b.active() && b.fleeing();
+    }
+
     public static boolean mayAutoTarget(FactionHero hero, Mob mob, LivingEntity target) {
         HeroBrain b = hero.heroCore().brainIfAny();
         if (b == null || !b.active())
