@@ -17,6 +17,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -410,6 +411,68 @@ public class RootedTreantGameTests {
                     problems.add("the press should start uprooting the rooted Treant");
                 if (rooted.getTargetGoal().getTarget() != null)
                     problems.add("uprooting should drop the attack target it held while rooted");
+                return finish(helper, problems, units);
+            }
+            return false;
+        });
+    }
+
+    /**
+     * The stuck-unit rescue (UnitUnstick) leaves a rooted Treant where it is: in a small walled pit, with a target it
+     * can't reach, an unrooted Treant (the control) is lifted out, a rooted one stays put and rooted. A rooted Treant
+     * caught inside blocks is still freed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rooted_treant_is_not_lifted_out_of_a_pit_but_is_freed_from_blocks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "treant_pit"), foeOwner = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 1, 1, 14, 14);
+        // two 3x3 pits walled three high (no step-up out): nine cells, under UnitUnstick.POCKET_MAX_CELLS
+        for (int cz : new int[] { 4, 10 })
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dz = -2; dz <= 2; dz++)
+                    if (Math.abs(dx) == 2 || Math.abs(dz) == 2)
+                        for (int y = 2; y <= 4; y++)
+                            level.setBlock(helper.absolutePos(new BlockPos(4 + dx, y, cz + dz)), Blocks.STONE.defaultBlockState(), 3);
+        SentinelTreantUnit rooted = treant(helper, owner, 4.5, 4.5);
+        SentinelTreantUnit control = treant(helper, owner, 4.5, 10.5);
+        SentinelTreantUnit buried = treant(helper, owner, 11.5, 12.5);
+        Mob foe = sturdyWorker(helper, foeOwner, 11.5, 6.5);
+        List<Mob> units = new ArrayList<>();
+        for (Mob m : new Mob[] { rooted, control, buried, foe })
+            units.add(m);
+        if (!allMade(helper, units, 4))
+            return;
+        List<String> problems = new ArrayList<>();
+        double[] start = new double[6];
+        double[] mostOff = new double[3];
+        everyTick(helper, 250, tick -> {
+            if (tick > 1) {
+                mostOff[0] = Math.max(mostOff[0], movedFrom(rooted, start[0], start[1]));
+                mostOff[1] = Math.max(mostOff[1], movedFrom(control, start[2], start[3]));
+                mostOff[2] = Math.max(mostOff[2], movedFrom(buried, start[4], start[5]));
+            }
+            if (tick == 1) {
+                rootNow(rooted, level);
+                rootNow(buried, level);
+                rooted.setUnitAttackTargetForced(foe);   // a target it can't reach: not idle, so a pocket suspect
+                control.setUnitAttackTargetForced(foe);
+                BlockPos feet = buried.blockPosition();
+                level.setBlock(feet, Blocks.OAK_LOG.defaultBlockState(), 3);
+                level.setBlock(feet.above(), Blocks.OAK_LOG.defaultBlockState(), 3);
+                start[0] = rooted.getX();
+                start[1] = rooted.getZ();
+                start[2] = control.getX();
+                start[3] = control.getZ();
+                start[4] = buried.getX();
+                start[5] = buried.getZ();
+            } else if (tick == 240) {
+                if (mostOff[1] < 1.5)
+                    problems.add("the unrooted control was not lifted out of its pit (got " + mostOff[1] + " blocks off): the pit is no pocket");
+                if (mostOff[0] > 0.3 || !rooted.isRooted())
+                    problems.add("the stuck-unit rescue moved a rooted Treant " + mostOff[0] + " blocks (rooted " + rooted.isRooted() + ")");
+                if (mostOff[2] < 0.5)
+                    problems.add("a rooted Treant inside blocks should still be freed (got " + mostOff[2] + " blocks off)");
                 return finish(helper, problems, units);
             }
             return false;
