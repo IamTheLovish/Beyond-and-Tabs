@@ -2349,11 +2349,26 @@ public class BotPlayer {
             placed(level.getGameTime());
         else
             placeFailed(level.getGameTime(), building, "no valid site within 32 blocks of " + want.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : ""));
+                + (workers.isEmpty() ? " (no workers)" : "") + siteRejections());
         return ok;
     }
 
+    /** Why the last placeNear's tries were refused (validator key -> tries), for the blocked reason: a site search that
+     *  finds nothing says whether the ground, the nether, the neighbours or the fog stopped it. */
+    final java.util.Map<String, Integer> lastSiteRejections = new java.util.TreeMap<>();
+
+    private String siteRejections() {
+        if (lastSiteRejections.isEmpty())
+            return "";
+        StringBuilder sb = new StringBuilder(" [");
+        lastSiteRejections.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> sb.append(sb.length() > 2 ? ", " : "").append(e.getKey().replace("building.reignofnether.", "")).append(' ').append(e.getValue()));
+        return sb.append(']').toString();
+    }
+
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
+        lastSiteRejections.clear();
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2363,7 +2378,10 @@ public class BotPlayer {
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);   // the ground block (leaves skipped, as the player's placement grid does: a bot site on a canopy sat 5 blocks over its builders, soak stalls Oct 21-22); structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
-                if (BuildingValidators.isPlacementValid(level, building, surface, name, Rotation.NONE, false, false, true)) {
+                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
+                if (error != null)
+                    lastSiteRejections.merge(error, 1, Integer::sum);
+                else {
                     workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surface), v.blockPosition().distSqr(surface)));
                     int take = Math.min(builders, workers.size());
                     int[] ids = new int[take];
