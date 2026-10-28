@@ -42,14 +42,19 @@ def vnoise(x, z, scale, salt):
 
 
 def plant_at(x, z):
-    """An index into the plant list, or None: MapBuilder.plantAt's rule with a VERDANT_VALLEY-like mix."""
+    """An index into the plant list, or None. r31 pilot (critic r31: "wallpaper scatter - identical tufts at a uniform
+    ~45%, every block"; in game each tuft reads as its own dark shadow star): clumps, not a scatter. Inside a meadow,
+    tufts grow in clusters of ~4-7 blocks (a 5-block noise) at ~90%, with bare lawn between them (4%); the clusters'
+    shadows merge into darker clumps instead of polka dots. Cover inside a meadow ~35%, about the old total."""
     meadow = 0.65 * vnoise(x, z, 11.0, 1) + 0.35 * vnoise(x, z, 4.0, 2)
     dense = max(0.0, min(1.0, (meadow - 0.22) / 0.45))
+    clump = vnoise(x, z, 5.0, 7) * 0.75 + 0.25 * vnoise(x, z, 2.0, 8)
     pick = hash01(x, z, 3)
-    if pick < 0.75 * dense * (2 - dense) + 0.10:                  # + a sparse scatter outside the meadows
+    inside = clump > 0.62 - 0.22 * dense                              # bigger, more clumps where the meadow is lush
+    if pick < (0.9 * min(1.0, 0.35 + dense) if inside else 0.04):
         h = hash01(x, z, 4)
-        if meadow > 0.62 and h < 0.10:
-            return "large_fern" if h < 0.025 else "tall_grass"
+        if meadow > 0.62 and inside and h < 0.14:
+            return "large_fern" if h < 0.03 else "tall_grass"
         return "fern" if h < 0.16 else "grass"
     if vnoise(x, z, 13.0, 5) > 0.68 and pick > 0.93:
         return ("poppy", "dandelion", "oxeye_daisy", "azure_bluet", "cornflower")[int(hash01(x, z, 6) * 5)]
