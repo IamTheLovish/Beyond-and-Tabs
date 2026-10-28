@@ -3,7 +3,7 @@
 Branch for Reign of Nether rewrite #5 (design/ron_rewrite_plan.md): a match lifecycle state machine (`MatchState`:
 lobby -> map rising -> start positions -> playing -> ended, saved with the world), defeat / victory / spectate moved
 out of `PlayerServerEvents` into a `match` package, and code_review CR-13 (a reload during map rising or the
-start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/ron_rewrite_plan.md "Rewrite 5".
+start-position phase). Base: origin/main d73acee. Status (Oct 26 2026): on main, no PR number - it landed before the PR workflow (`match/MatchState.java` and `gametest/MatchLifecycleCases.java` first appear in main history at e6bc8b3e, 2026-10-17). Write-up: design/ron_rewrite_plan.md "Rewrite 5".
 
 ## Done
 - Behaviour pins first: `gametest/MatchLifecycleGameTests` (own holder), written against the pre-rewrite public API -
@@ -54,7 +54,7 @@ start-position phase). Base: origin/main d73acee. Not merged. Write-up: design/r
   minutes (from 27.6-32+).
 
 ## Next
-- Nothing in this lane. Not merged (the lead merges). Up to date with origin/main d73acee.
+- Nothing in this lane. (Was "not merged"; it is on main since e6bc8b3e, 2026-10-17 - see the status at the top.)
 
 ## Known failures
 - Run 38251630920 (c74a564): my phase-walk test set the map stage on the wrong recorder (fixed in 96e74c6);

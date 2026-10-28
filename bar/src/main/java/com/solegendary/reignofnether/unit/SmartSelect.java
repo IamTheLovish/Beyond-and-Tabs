@@ -36,6 +36,14 @@ public final class SmartSelect {
     /** The modifier keys held when the box is evaluated: Shift add, Ctrl subtract, Alt combat, Z same type, Space idle. */
     public record Mods(boolean shift, boolean ctrl, boolean alt, boolean sameType, boolean idleOnly) {
         public static final Mods NONE = new Mods(false, false, false, false, false);
+
+        /**
+         * The modifiers as read from the keyboard. Z is the same-type filter ONLY while a box drag is in progress:
+         * outside one it is the builders' metal key, so a Z press with a builder selected never touches box state.
+         */
+        public static Mods held(boolean boxDragging, boolean shift, boolean ctrl, boolean alt, boolean z, boolean space) {
+            return new Mods(shift, ctrl, alt, boxDragging && z, space);
+        }
     }
 
     /** What the rules ask of a unit. {@link #DEFAULT} is server-safe; the client overrides idle and type. */

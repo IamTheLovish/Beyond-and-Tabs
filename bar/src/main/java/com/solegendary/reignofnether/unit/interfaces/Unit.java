@@ -287,6 +287,7 @@ public interface Unit {
 
     private static void tickBody(Unit unit) {
         Mob unitMob = (Mob) unit;
+        com.solegendary.reignofnether.unit.SetUp.tick(unitMob);   // artillery set-up time: did it move this tick
         // Chunk loading around units (formerly 25 addRegionTicket calls per unit per tick here) is now done once
         // per second for all units together by UnitChunkLoader (driven from UnitServerEvents.onServerTick).
         for (Map.Entry<Ability, Float> cooldownEntry : unit.getAbilityCooldowns().entrySet()) {
@@ -342,7 +343,9 @@ public interface Unit {
             // Run on every 2nd tick, staggered by entity id so half the units query each tick: a pickup lands at most
             // one tick (50 ms) later than before. Every check below is level-triggered (an item stays in range until
             // taken), so none can be missed.
-            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0) {
+            // Skipped outright while the level holds no item at all (ItemPresence), the usual state of a match.
+            if (((unitMob.tickCount + unitMob.getId()) & 1) == 0
+                    && ItemPresence.mayHaveItems(unitMob.level())) {
                 List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
                 if (!nearbyItems.isEmpty()) {
                     checkAndPickupFood(unit, nearbyItems);
@@ -456,6 +459,7 @@ public interface Unit {
             try {
                 com.solegendary.reignofnether.unit.reactions.Kite.tick(unitMob, unit);
                 com.solegendary.reignofnether.unit.reactions.Brace.tick(unitMob, unit);
+                com.solegendary.reignofnether.raid.WorkerFlee.tick(unitMob, unit);   // a hurt worker runs to a tower / the capitol
             } finally {
                 Sys.end(sysReactions);
             }

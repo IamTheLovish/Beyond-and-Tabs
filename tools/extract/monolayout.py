@@ -217,9 +217,9 @@ class Reader:
     def unity_event(self):
         n = self.prim("i32"); calls = []
         for _ in range(n):
-            target = self.pptr(); method = self.str(); mode = self.prim("i32")
-            obj = self.pptr(); objtype = self.str(); iv = self.prim("i32"); fv = self.prim("f32"); sv = self.str()
-            bv = self.prim("u8"); self.align(); state = self.prim("i32")
+            self.pptr(); method = self.str(); mode = self.prim("i32")
+            self.pptr(); self.str(); self.prim("i32"); self.prim("f32"); self.str()
+            self.prim("u8"); self.align(); self.prim("i32")
             calls.append((method, mode))
         return ("unityevent", calls)
     def gradient(self):

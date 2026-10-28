@@ -34,7 +34,7 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
   posts in a whimsical storybook style; a split light/dark cathedral as a central objective.
 - **Visual language:** runes everywhere - glyph circles over spires growing with level, construction by rune circles
   instead of nano lines (Brassworks: gears/steam), stacked rune beams for big moments, red ground telegraphs.
-  Effects via the Photon library (GPL-3.0), animations via GeckoLib (MIT) - client-side, playable at 300 units.
+  Effects via the Photon library (GPL-3.0), animations via GeckoLib (MIT) - client-side, playable at 300 units. (superseded? see animation-foundation-audit.md - no GeckoLib dependency in build; awaiting lovish confirmation)
 - **Playability is extremely important:** graphics presets (Low-Ultra), measure with the [PerfAuto] profiler, slower
   pacing so heroes keep up, +10% per stat upgrade rank (capabilities are the exciting upgrades - parked until units
   are developed).
@@ -63,6 +63,20 @@ lovish runs more than one Claude on this repo (same GitHub account). To avoid st
 - **Battlefield floor y 48 (11 sections), plain stone underground.** After flying through the stone layer in spectator
   (17:41): "maybe even 42-30" (17:44), "we dont need that many safe floors in the rts version of the game" (17:45).
   min_y must be a multiple of 16, so 48. Budget: design/battlefield-height.md.
+
+## Decisions to build toward (lovish, Oct 24)
+- **Heroes fight smart by themselves when nobody plays them, with an off switch.** "Id allow for heros to be complex
+  ai's that use their abilities and act extremely smart when there is no hero player this can be a toggle players can
+  set if they dont want this option". Built as HeroBot for every unpossessed hero, per-player switch default on
+  (design/hero_mode.md 5b).
+
+## Standing rule (lovish, Oct 22 19:58) - tests first
+- **Write the test first, then the implementation.** "write the tests first and then implement it so you dont cheat
+  and write bad code, which is something I dislike alot". The test states the behaviour (from lovish's words, the bug
+  report or the plan) and must FAIL on the current code before any fix is written; then implement until it passes.
+  Never weaken, skip or delete a test to make code pass; never special-case code for the test. A PR's test commit
+  comes before (or with clear red evidence for) its fix. Visual/art work: the metric gates and stills are the "test",
+  defined before the round starts.
 
 ## Working habits for every session (from lovish's agent handbook, Oct 20)
 Picked from a 212-tip handbook of measured Claude Code practice; these fit this repo.
@@ -93,6 +107,15 @@ Picked from a 212-tip handbook of measured Claude Code practice; these fit this 
   before lovish sees it; lovish judges taste only, and every fault he catches is added to the list.
 - **Hand-made data stays hand-made:** generators never overwrite structures or maps someone placed by hand; generated
   and hand-built files live apart.
+
+## Decisions to build toward (lovish, Oct 24) - winning pays
+- **"I want tier 2 to feel like beyond all reason where theres action in tier 1 and if you win by sniping the
+  commander your able to transition to tier 2 more efficiently. [...] Taking decisive battles becomes more important
+  rather than everyone just ramming their units into each other."** Built as: wrecks you can read in the RTS view, idle workers reclaim nearby
+  wrecks by themselves (gamerule `idleReclaim`, default on), a fallen commander leaves a 600 metal wreck and a hero
+  150 + 50 x level, and an enemy hero within 28 blocks gets a one-time XP burst (commander 400, hero 150 + 50 x
+  level). The normal per-kill XP is not raised (it would deepen hero snowballing). All numbers are tunable picks;
+  see design/hud.md ("Reclaim labels") and design/hero_mode.md section 4.
 
 ## Retired decisions
 (When lovish reverses a decision, move it here with the date, his old words and his reason - never delete it, so a

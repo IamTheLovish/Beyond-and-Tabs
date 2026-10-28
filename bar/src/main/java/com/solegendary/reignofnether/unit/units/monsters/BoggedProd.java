@@ -29,7 +29,7 @@ public class BoggedProd extends GraveyardUnitProductionItem implements IUnitProd
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide()) {
-                if (placement instanceof GraveyardPlacement gy && placement.getUpgradeLevel() > 0) {
+                if (placement instanceof GraveyardPlacement gy && banksAsSkull(placement)) {
                     gy.createSkull(EntityRegistrar.BOGGED_UNIT.get());
                 } else {
                     placement.produceUnit((ServerLevel) level, EntityRegistrar.BOGGED_UNIT.get(), placement.ownerName, true);

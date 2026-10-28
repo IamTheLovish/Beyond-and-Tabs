@@ -56,7 +56,7 @@ def comps_of(pid):
         raw = o.get_raw_data(); cls = script_class(raw, sext)
         if cls is None: continue
         try: out.append((cls, L.read_mono(raw, cls)))
-        except Exception as e: out.append((cls, None))
+        except Exception: out.append((cls, None))
     return out
 
 def projectile_stats(pid):

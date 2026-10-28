@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
+import com.solegendary.reignofnether.perf.Sys;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.PhantomSummon;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -39,6 +40,8 @@ public class NonUnitServerEvents {
 
     public static final List<Pair<PathfinderMob, BlockPos>> nonUnitMoveTargets = Collections.synchronizedList(new ArrayList<>());
 
+    private static final TargetingConditions WILD_MOBS = TargetingConditions.forCombat().selector(e -> !(e instanceof Unit));
+
     public static boolean canControlAllMobs(Level level, String playerName) {
         return ResearchServerEvents.playerHasCheat(playerName, "wouldyoukindly");
     }
@@ -71,13 +74,23 @@ public class NonUnitServerEvents {
             moveSuppressedNonUnits.removeIf(mob -> (mob.isDeadOrDying() || mob.isRemoved() || (mob.getNavigation().isDone() && mob.getTarget() == null)));
         }
 
+        // F3 (Oct 26 perf plan): the area where wild animals keep thinking - near a unit or a player - rebuilt once a second
+        if (evt.level.getGameTime() % 20 == 0)
+            com.solegendary.reignofnether.perf.TickGates.refreshAwake((ServerLevel) evt.level, UnitServerEvents.getAllUnits());
+
         if (evt.level.getServer() != null && evt.level.getServer().getGameRules().getRule(GameRuleRegistrar.NEUTRAL_AGGRO).get()) {
+            int sysAggro = Sys.begin(Sys.NEUTRAL_AGGRO);
             Set<PathfinderMob> pfMobs = new HashSet<>();
-            for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
-                if (unit.tickCount % 20 != 0)
-                    continue;
-                AABB aabb = new AABB(unit.blockPosition().offset(-10, -10, -10), unit.blockPosition().offset(10, 10, 10));
-                pfMobs.addAll(evt.level.getNearbyEntities(PathfinderMob.class, TargetingConditions.forCombat(), unit, aabb));
+            try {
+                for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
+                    if (unit.tickCount % 20 != 0)
+                        continue;
+                    AABB aabb = new AABB(unit.blockPosition().offset(-10, -10, -10), unit.blockPosition().offset(10, 10, 10));
+                    // units are not wild mobs: the selector drops them before the combat rules and the sight check
+                    pfMobs.addAll(evt.level.getNearbyEntities(PathfinderMob.class, WILD_MOBS, unit, aabb));
+                }
+            } finally {
+                Sys.end(sysAggro);
             }
             for (PathfinderMob pfMob : pfMobs) {
                 if (!(shouldMobBeAggressive(pfMob)))

@@ -215,6 +215,8 @@ jobs:
               keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
               # Oculus is in the tester pack since Oct 22 (build_pack.py) and cannot start without Embeddium: the plain
               # lane drops both, or the client dies at RenderSystem init (canopy plain run 39868947300)
+              # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
+              # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
               if any(k in low for k in skip):
                   print('skip', name); continue

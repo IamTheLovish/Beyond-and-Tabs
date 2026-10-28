@@ -49,16 +49,19 @@ public final class FrameParts {
     // That draw is filed here instead of under unitBodies, which is now the view's draw alone (the same as before
     // without a pack), so the shadow cost and what the LOD saves there show on their own.
     public static final int UNIT_SHADOW = 12;      // the unit bodies drawn into the shader pack's shadow map
+    // Oct 23: worldMarkers split by handler (nested inside it, so worldMarkers itself is the dispatch + gating rest):
+    // the sum of the three is the old worldMarkers number
+    public static final int MARKERS_RANGE = 13;    // BlockClientEvents: range indicator highlights
+    public static final int MARKERS_METAL = 14;    // MetalPatchMarkerClientEvents: rings and gems
     // Oct 22 (canopy silhouettes): units under leaves redrawn as silhouettes, the composite, and the leaf fade's shell
-    public static final int CANOPY = 13;           // orthoview/CanopySilhouettes + LeafFade
-    public static final int FRAME_SECTIONS = 14;
+    public static final int CANOPY = 15;           // orthoview/CanopySilhouettes + LeafFade
+    public static final int FRAME_SECTIONS = 16;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 14;        // Unit.tick on the client
-    public static final int SECTIONS = 15;
+    public static final int UNIT_TICK = 16;        // Unit.tick on the client
+    public static final int SECTIONS = 17;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "canopy",
-            "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "canopy", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)

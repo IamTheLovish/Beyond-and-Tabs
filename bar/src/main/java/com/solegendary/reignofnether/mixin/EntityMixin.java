@@ -169,4 +169,39 @@ public abstract class EntityMixin {
             cir.setReturnValue(false);
     }
 
+    // ---- Oct 26 perf plan ----
+
+    @Shadow public abstract void baseTick();
+
+    /** [Sys] vanilla group: Entity.baseTick (fire, fluids, portals, effects for living bodies). */
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "tick",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;baseTick()V"))
+    private void reignofnether$timedBaseTick(Entity self) {
+        int t = com.solegendary.reignofnether.perf.Sys.begin(com.solegendary.reignofnether.perf.Sys.BASE_TICK);
+        try {
+            this.baseTick();
+        } finally {
+            com.solegendary.reignofnether.perf.Sys.end(t);
+        }
+    }
+
+    /**
+     * F1: a Unit's move does not ask the world for the entities it could collide with (one entity query per move,
+     * 9.6% of a 300-unit tick). Units keep their spacing through the UnitGrid push (LivingEntityMixin.pushEntities);
+     * the solid entities this query finds (boats, minecarts, shulkers) do not stop a unit any more.
+     */
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "collide",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;getEntityCollisions(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"))
+    private java.util.List<net.minecraft.world.phys.shapes.VoxelShape> reignofnether$unitsSkipEntityCollisions(Level level, Entity self, AABB box) {
+        if (self instanceof com.solegendary.reignofnether.unit.interfaces.Unit && com.solegendary.reignofnether.perf.TickGates.ENABLED)
+            return java.util.List.of();
+        return level.getEntityCollisions(self, box);
+    }
+
+    /** Counts moves of the entities a test watches (TickGates.watchMoves); one empty-map check otherwise. */
+    @Inject(method = "move", at = @At("HEAD"))
+    private void reignofnether$countMove(net.minecraft.world.entity.MoverType type, net.minecraft.world.phys.Vec3 pos, CallbackInfo ci) {
+        com.solegendary.reignofnether.perf.TickGates.onMove((Entity) (Object) this);
+    }
+
 }

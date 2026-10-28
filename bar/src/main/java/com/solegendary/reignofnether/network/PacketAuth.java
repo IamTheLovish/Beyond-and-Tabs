@@ -105,6 +105,20 @@ public final class PacketAuth {
         return sp != null && (isHost(sp) || sp.hasPermissions(level));
     }
 
+    /**
+     * May {@code sp} start or reserve a start position as {@code faction}? A real faction: anyone. NONE (the sandbox
+     * "faction": a sandbox player edits and takes over the whole map) and NEUTRAL: the host or an op only. null (a key
+     * no faction has, see {@link com.solegendary.reignofnether.faction.Factions#findFaction}): nobody.
+     */
+    public static boolean mayPlayAs(ServerPlayer sp, com.solegendary.reignofnether.faction.Faction faction) {
+        if (sp == null || faction == null)
+            return false;
+        if (faction == com.solegendary.reignofnether.faction.Factions.NONE
+                || faction == com.solegendary.reignofnether.faction.Factions.NEUTRAL)
+            return isHostOrOp(sp, 2);
+        return true;
+    }
+
     // ---- rate limits ----
 
     /** Token buckets per player per channel: refill {@code perSecond}, hold at most {@code burst}. */
