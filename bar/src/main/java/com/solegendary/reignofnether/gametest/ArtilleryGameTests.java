@@ -75,6 +75,75 @@ public class ArtilleryGameTests {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
+    /**
+     * A possessed artillery click the dead zone refuses costs no cooldown (the set-up reds on main, Oct 28: one refused
+     * click right after set-up burnt the Bombard's 68-tick cooldown, so it "set up but never fired"). An enemy 3 blocks
+     * in front of the crosshair - inside the 6-block MIN_RANGE - refuses the click; once it is gone the next click fires.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_possessed_shot_refused_for_the_dead_zone_costs_no_cooldown(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_deadzone_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        VillagerUnit v = foe(helper, owner + "_foe", 4.5, 8.5);
+        if (b == null || v == null) {
+            if (b != null) b.discard();
+            if (v != null) v.discard();
+            helper.fail("could not create the units");
+            return;
+        }
+        double vx = v.getX(), vy = v.getY(), vz = v.getZ();
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+            v.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            active[0] = true;
+        });
+        int clickAt = 5, clearAt = 6, deadline = 20;
+        int[] tick = { 0 };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (t < clearAt)
+                hold(v, vx, vy, vz);   // the enemy stands in front of the crosshair, inside the dead zone
+            else if (t == clearAt)
+                v.discard();           // ...and is gone: the aim is clear
+            if (t < clickAt)
+                return;
+            if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(b)) {
+                cleanUp.run();
+                throw new GameTestAssertException("the standing crew was not set up - the test proves nothing");
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            if (t == clickAt && shellsOf(b) > 0) {
+                cleanUp.run();
+                throw new GameTestAssertException("fired at an enemy 3 blocks away, inside the 6-block dead zone");
+            }
+            if (t > clickAt && shellsOf(b) > 0) {
+                cleanUp.run();
+                helper.succeed();
+            } else if (t >= deadline) {
+                cleanUp.run();
+                throw new GameTestAssertException((t - clickAt) + " ticks after a click the dead zone refused, with the"
+                    + " aim clear, it still had not fired: the refused click cost its cooldown");
+            }
+        });
+    }
+
     /** A wall between the galley and its target: it shells over the wall from where it stands, it doesn't walk in. */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 420)
     public static void artillery_fires_over_a_wall_without_walking_in(GameTestHelper helper) {
