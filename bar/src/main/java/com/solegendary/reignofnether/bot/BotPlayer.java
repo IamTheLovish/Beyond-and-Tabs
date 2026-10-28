@@ -765,13 +765,22 @@ public class BotPlayer {
         economy.decommissionObsolete(gameTime, minutes, tier2, buildings);
 
         // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
-        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen
+        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen.
+        // Tier 2 researched and its lab not standing yet, with the tier gate's army out: the T1 labs finish what they
+        // hold and queue no more, so the lab's metal is not eaten by repeat queues (the easy bot fielded 225 fighters on
+        // an empty pool and never raised its Dungeon in bots_reach_tier_2, Oct 28)
+        boolean savingForT2Lab = tier2 && kit.t2Lab() != null && army.size() >= tuning.t2MinArmy()
+            && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
                 if (bp.getBuilding() == Buildings.PORTAL_BASIC) {
                     // the Horde: a Basic Portal trains nothing until it is refitted to a Military Portal
                     if (pp.productionQueue.isEmpty())
                         pp.startProductionItem(ProductionItems.RESEARCH_PORTAL_FOR_MILITARY);
+                    continue;
+                }
+                if (savingForT2Lab) {
+                    pp.setRepeatQueue(false);
                     continue;
                 }
                 pp.setRepeatQueue(true);
