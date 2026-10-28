@@ -88,5 +88,59 @@ class EngineShedT1Greybox(unittest.TestCase):
         self.assertIn("lane clear", L.check(self.rig, self.out))
 
 
+REGIONS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "design", "vehicle_labs", "brass_t1_regions.json")
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class EngineShedT1Detail(unittest.TestCase):
+    """Detail round 1 on the approved greybox, to the fixed checklist (design/vehicle_labs/briefs/brass_t1_checklist.md):
+    the greybox's exact front outline, the build checks, only the checklist's palette roles, and every region of
+    brass_t1_regions.json passing facade_audit (>= 2 depth planes, >= 3 materials, no material over 40 %)."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.out = os.path.join(cls.tmp.name, "brass_t1.nbt")
+        cls.rig = L.write(L.detail(), cls.out)
+        cls.names = {q: n for q, (n, _) in cls.rig.b.items() if n != "air"}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_size_and_front_outline_are_the_greybox_ones(self):
+        self.assertEqual(list(self.rig.size), SIZE_T1)
+        t = {}
+        for x, y, z in self.names:
+            t[z] = max(t.get(z, -1), y)
+        self.assertEqual([t.get(z, -1) for z in range(SIZE_T1[2])], FRONT_T1)
+
+    def test_build_checks_pass(self):
+        """Lane, spawn column, nothing floating, no trapped pockets; no banned blocks."""
+        self.assertIn("lane clear", L.check(self.rig, self.out))
+        L.check_banned(self.rig, "brass_t1")
+
+    def test_only_the_checklist_palette(self):
+        stray = sorted(set(self.names.values()) - L.ALLOWED)
+        self.assertEqual(stray, [])
+        self.assertFalse([n for n in L.ALLOWED if any(k in n for k in L.BANNED)])
+
+    def test_light_budget(self):
+        """At most one small light per arcade bay; lanterns only at the door, the tower slot and the shed slot."""
+        v = list(self.names.values())
+        self.assertLessEqual(sum(n.endswith("candle") for n in v), len(L.ARCH_Z))
+        self.assertLessEqual(v.count("lantern"), 3)
+
+    def test_every_region_passes_the_facade_audit(self):
+        import json
+        import facade_audit as FA
+        with open(REGIONS) as f:
+            regions = json.load(f)
+        rep = FA.audit(self.out, regions)
+        self.assertEqual(len(rep), 13)
+        bad = ["%s: %s" % (r["name"], "; ".join(r["faults"])) for r in rep if r["faults"]]
+        self.assertEqual(bad, [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -524,3 +524,41 @@ def coal_heap(p, cells, y=1):
         else:
             out = next(f for f, (a, b) in VEC.items() if (x + a, z + b) not in s)
             p.stair(x, y, z, OPP[out], "bottom", "blackstone_stairs")
+
+
+# ============================================================================================ relief parts (T1 detail)
+# The Engine Shed T1's relief vocabulary (design/vehicle_labs/briefs/brass_t1_checklist.md, part refs ref39-ref44):
+# small, literal-block parts a face is built from - a column with a base and a capital, a pinnacle, a framed emblem.
+def pilaster(h, shaft="polished_blackstone_bricks", trim="polished_andesite"):
+    """A 1-wide column h tall standing in front of its wall (ref39): a trim base, the shaft, a capital of an
+    upside-down trim stair overhanging the front (+z), its tall back against the wall."""
+    p = new()
+    p.set(0, 0, 0, trim)
+    for y in range(1, h - 1):
+        p.set(0, y, 0, shaft)
+    p.stair(0, h - 1, 0, "north", "top", trim + "_stairs")
+    return p
+
+
+def pinnacle(h=3, shaft="polished_blackstone_brick_wall", tip="waxed_cut_copper_slab"):
+    """A buttress pinnacle (ref40): a wall shaft h - 1 tall with a brass slab point."""
+    p = new()
+    for y in range(h - 1):
+        p.set(0, y, 0, shaft)
+    p.slab(0, h - 1, 0, "bottom", tip)
+    return p
+
+
+def emblem(frame="blackstone", field="quartz_bricks", cross="red_terracotta"):
+    """The pavilion emblem (ref39's pediment panel, ref18's gable star): a 5 x 5 dark frame in the wall's face plane
+    (z 0) round a 3 x 3 panel set one back (z -1): a red cross on a cream field. The cells in front of the panel are
+    air (the recess), so placing it carves the wall it lands on."""
+    p = new()
+    for x in range(-2, 3):
+        for y in range(-2, 3):
+            if abs(x) == 2 or abs(y) == 2:
+                p.set(x, y, 0, frame)
+            else:
+                p.set(x, y, 0, "air")
+                p.set(x, y, -1, cross if x == 0 or y == 0 else field)
+    return p
