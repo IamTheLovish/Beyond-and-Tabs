@@ -39,8 +39,13 @@ public class LobbyClientEvents {
                 latest = p;
                 version++;
                 if (p.open) {
-                    if (!wasOpen)
+                    if (!wasOpen) {
                         dismissed = false;
+                        // a lobby opening over a decided match is the rematch (Back to lobby): the old results go,
+                        // and their popup makes way for the lobby
+                        if (MatchEndClientEvents.hasResults())
+                            MatchEndClientEvents.clearResults();
+                    }
                     if (!dismissed && !(mc.screen instanceof MultiplayerLobbyScreen)
                             && (mc.screen == null || mc.screen instanceof TopdownGui))
                         mc.setScreen(new MultiplayerLobbyScreen());
@@ -62,6 +67,24 @@ public class LobbyClientEvents {
         dismissed = false;
         LobbyServerboundPacket.send(MultiplayerLobby.Action.OPEN, 0, 0);
         Minecraft.getInstance().setScreen(new MultiplayerLobbyScreen());
+    }
+
+    /**
+     * Whether this client hosts (the server re-checks: MultiplayerLobby.isLobbyHost): the integrated server's owner,
+     * or an op on a dedicated server - who sees "Back to lobby".
+     */
+    public static boolean isHost() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null)
+            return false;
+        return mc.hasSingleplayerServer() || mc.player.hasPermissions(2);
+    }
+
+    /** "Back to lobby": the host asks the server to reset the battlefield and reopen the lobby with the last lineup. */
+    public static void backToLobby() {
+        dismissed = false;
+        MatchEndClientEvents.clearResults();
+        LobbyServerboundPacket.send(MultiplayerLobby.Action.BACK_TO_LOBBY, 0, 0);
     }
 
     /** A world other people can be in: an integrated server opened to LAN, or a remote server. */

@@ -50,7 +50,9 @@ env:
   SHARD_5: "duel_counters"
   SHARD_6: "test:bots_pl,test:striker_autocasts_on_an_enemy_in_range"
   SHARD_7: "test:des,test:ear,test:enhanced_t,test:every_building_b,test:every_building_h,test:every_c,test:exp,test:faction_aura_s,test:fire,test:game_ender_c,test:hero_gains_x,test:hero_ge,test:hero_ra,test:heroe,test:holy_bell_reveals_f,test:melee_c,test:stac,test:statu,test:stea,test:storm_,test:structures_have_no_unit_pockets_0,test:structures_have_no_unit_pockets_1,test:structures_have_no_unit_pockets_2,test:sunr,test:t2_c,test:t3_r,test:t3_t,test:tidepool_c,test:tidewrought_b,test:tidewrought_harp,test:tidewrought_leviathan_i,test:tidewrought_r,test:tidewrought_u,test:verdant_m,test:verdant_o,test:wid,test:world_so,test:wr"
-  SHARD_8: "test:every_e,test:every_f,test:every_m,test:every_s,test:every_t,test:every_u,test:exi,test:ext,test:faction_aura_r,test:faction_l,test:fie,test:firs,test:fl,test:fo,test:fr,test:game_ender_a,test:gar,test:geo,test:go,test:gr,test:hd,test:hea,test:hero_a,test:hero_d,test:hero_gains_c,test:hero_ro,test:hero_s,test:hi,test:hold,test:holy_bell_reveals_t,test:hom,test:hor,test:hos,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:men,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
+  SHARD_8: "test:every_e,test:every_f,test:every_m,test:every_s,test:every_t,test:every_u,test:exi,test:ext,test:faction_aura_r,test:faction_l,test:fie,test:firs,test:fl,test:fo,test:fr,test:game_ender_a,test:gar,test:geo,test:go,test:gr,test:hd,test:hea,test:hero_a,test:hero_d,test:hero_gains_c,test:hero_ro,test:hero_s,test:hi,test:hold,test:holy_bell_reveals_t,test:hom,test:hor,test:hos,test:i,test:j,test:k,test:l,test:mac,test:mae,test:mag,test:man,test:map_c,test:map_d,test:match_h,test:melee_d,test:mer,test:mi,test:mo,test:n,test:o,test:pa,test:ph,test:pl,test:po,test:pre,test:production_buildings_place_every_unit_2,test:production_buildings_place_every_unit_4,test:production_q,test:production_r,test:q,test:rai,test:rea,test:rep,test:resign_v,test:ret,test:ro,test:ru,test:sa,test:se,test:sf,test:sh,test:si,test:sk,test:sm,test:sn,test:so,test:spa"
+  # Oct 22 (tier gate): the bot T2 skirmish plays up to 15 game-minutes alone - a runner of its own, not the long pole of shard 1 or 6
+  SHARD_9: "test:bots_reach_tier_2"
 jobs:
   build:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
@@ -72,6 +74,7 @@ jobs:
           python3 tools/check_sail_hubs.py
           python3 tools/check_parts.py
           python3 tools/hud_layout.py
+          python3 tools/ladder_report.py --selftest   # the nightly bot ladder's table (bot-ladder.yml)
           for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
       - name: Animation review sheet tests (tools/test_anim_sheet.py - the sheet maths, the fast renderer == the old one)
         run: |
@@ -144,7 +147,7 @@ jobs:
           if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
-        run: pip install -q ruff==0.16.9 && ruff check tools
+        run: pip install -q ruff==0.16.9 && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
@@ -258,8 +261,17 @@ jobs:
       # units' posing and drawing per frame, on the real model classes without a window - a measurement, as notices
       - name: Animation cost bench (measurement only)
         if: always()
+        # the living army's two wall-clock gates (motion-bench, motion-pass-bench) too: their margin to the budget was
+        # never visible until one failed on #146 (Oct 27), so drift now shows in every build before it trips a gate
         run: |
-          [ ! -f bar/build/anim-bench.txt ] || while IFS= read -r line; do echo "::notice::$line"; done < bar/build/anim-bench.txt
+          for f in anim-bench motion-bench motion-pass-bench; do
+            [ ! -f "bar/build/$f.txt" ] || while IFS= read -r line; do echo "::notice::$line"; done < "bar/build/$f.txt"
+          done
+      # the fast JUnit suite (bar/src/test, plan 008) ran inside the build above: one notice with the count, so a green
+      # build proves the tests really executed (readable from the check-run annotations when job logs are not)
+      - name: JUnit summary (count and time, as a notice)
+        if: always()
+        run: python3 tools/junit_summary.py bar/build/test-results/test
       - name: Keep this run's own jar (the eyes run tests exactly this build, not whatever bar-dev holds by then)
         uses: actions/upload-artifact@v4
         with:

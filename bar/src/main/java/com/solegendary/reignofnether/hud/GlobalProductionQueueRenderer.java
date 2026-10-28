@@ -48,8 +48,45 @@ public class GlobalProductionQueueRenderer {
         }
     }
 
+    /**
+     * One icon per factory that is producing right now (the unit it is building), so the Factory tab shows every busy
+     * factory instead of folding same-item factories into one counted icon. Items waiting behind the front of a queue
+     * stay grouped after these (aggregateQueue starts at index 1).
+     */
+    private static List<ProductionPlacement> producingFactories(String playerName) {
+        List<ProductionPlacement> out = new ArrayList<>();
+        if (playerName == null) return out;
+        for (BuildingPlacement b : BuildingClientEvents.getBuildings()) {
+            if (b instanceof ProductionPlacement p && playerName.equals(p.ownerName)
+                    && ProductionHudLogic.isProducing(p.isBuilt, p.productionQueue.size()))
+                out.add(p);
+        }
+        return out;
+    }
+
+    private static Button createFactoryButton(ProductionPlacement factory) {
+        ActiveProduction front = factory.productionQueue.get(0);
+        Button btn = front.item.getCancelButton(factory, true);
+        btn.onLeftClick = () -> {
+            BuildingClientEvents.clearSelectedBuildings();
+            UnitClientEvents.clearSelectedUnits();
+            BuildingClientEvents.addSelectedBuilding(factory);
+            OrthoviewClientEvents.centreCameraOnPos(factory.centrePos);
+        };
+        float total = front.item.getCost(true, factory.ownerName).ticks;
+        float frac = total <= 0 ? 0f : Mth.clamp(front.ticksLeft / total, 0f, 1f);
+        btn.greyPercent = 1 - frac;
+        List<FormattedCharSequence> tooltip = new ArrayList<>();
+        tooltip.add(fcs(btn.name));
+        int progressPercent = Math.round((1.0f - frac) * 100f);
+        if (progressPercent > 0)
+            tooltip.add(fcs(progressPercent + "%"));
+        btn.tooltipLines = tooltip;
+        return btn;
+    }
+
     private static void aggregateQueue(ProductionPlacement placement, Map<ProductionItem, ProductionQueueGroup> grouped, List<ProductionQueueGroup> ordered) {
-        for (int i = 0; i < placement.productionQueue.size(); i++) {
+        for (int i = 1; i < placement.productionQueue.size(); i++) {
             ActiveProduction production = placement.productionQueue.get(i);
             ProductionQueueGroup group = grouped.computeIfAbsent(production.item, k -> {
                 ProductionQueueGroup g = new ProductionQueueGroup(k);
@@ -75,11 +112,11 @@ public class GlobalProductionQueueRenderer {
         if (count <= 1) return;
         String countText = String.valueOf(count);
         int textWidth = MC.font.width(countText);
-        guiGraphics.drawString(MC.font, countText, x + iconFrameSize - textWidth - 3, y + iconFrameSize - 10, 0xFFFFFF);
+        guiGraphics.drawString(MC.font, countText, x + iconFrameSize - textWidth - 2, y + iconFrameSize - 9, 0xFFFFFF);
     }
 
     private static Button createQueueButton(ProductionQueueGroup group) {
-        Button btn = group.item.getCancelButton(group.placement, group.includesFront);
+        Button btn = SlimTiles.apply(group.item.getCancelButton(group.placement, group.includesFront));
         btn.onLeftClick = () -> {
             if (group.placements.isEmpty()) return;
             ProductionPlacement next = group.placements.get(0);
@@ -109,27 +146,36 @@ public class GlobalProductionQueueRenderer {
         RectZone hudZone = RectZone.getZoneByLW(0,0,0,0);
         List<Button> renderedButtons = new ArrayList<>();
 
-        if (groupedQueue.isEmpty())
+        List<ProductionPlacement> factories = producingFactories(playerName);
+        int total = factories.size() + groupedQueue.size();
+        if (total == 0)
             return new Pair<>(hudZone, renderedButtons);
 
-        int iconFrameSize = Button.DEFAULT_ICON_FRAME_SIZE;
+        int iconFrameSize = HudLayout.SLIM_TILE;   // slim 18 px tiles (SlimTiles): ten queued items were a 120 x 54 block
         int iconsPerRow = 5;
-        int rows = (int) Math.ceil((double) groupedQueue.size() / iconsPerRow);
+        int rows = (int) Math.ceil((double) total / iconsPerRow);
 
         hudZone = MyRenderer.renderFrameWithBg(guiGraphics, baseX, baseY,
-                iconFrameSize * Math.min(groupedQueue.size(), iconsPerRow) + 10,
+                iconFrameSize * Math.min(total, iconsPerRow) + 10,
                 iconFrameSize * rows + 10, 0xA0000000);
 
         int startX = baseX + 5, startY = baseY + 5;
-        for (int i = 0; i < groupedQueue.size(); i++) {
-            ProductionQueueGroup group = groupedQueue.get(i);
+        for (int i = 0; i < total; i++) {
             int iconX = startX + (i % iconsPerRow) * iconFrameSize;
             int iconY = startY + (i / iconsPerRow) * iconFrameSize;
 
-            Button btn = createQueueButton(group);
-            btn.render(guiGraphics, iconX, iconY, mouseX, mouseY);
+            Button btn;
+            int count = 1;
+            if (i < factories.size()) {
+                btn = createFactoryButton(factories.get(i));
+            } else {
+                ProductionQueueGroup group = groupedQueue.get(i - factories.size());
+                btn = createQueueButton(group);
+                count = group.count;
+            }
+            btn.render(guiGraphics, SlimTiles.at(iconX), SlimTiles.at(iconY), mouseX, mouseY);
             renderedButtons.add(btn);
-            renderQueueGroupCount(guiGraphics, iconX, iconY, iconFrameSize, group.count);
+            renderQueueGroupCount(guiGraphics, iconX, iconY, iconFrameSize, count);
 
             if (btn.isMouseOver(mouseX, mouseY)) btn.renderTooltip(guiGraphics, mouseX, mouseY);
         }
