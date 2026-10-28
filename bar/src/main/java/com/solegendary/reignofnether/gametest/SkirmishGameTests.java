@@ -6281,7 +6281,7 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void t2_worker_and_t3_skins_ship_in_the_mod(GameTestHelper helper) {
         List<String> missing = new ArrayList<>();
-        for (String skin : List.of("royal_architect_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
+        for (String skin : List.of("royal_architect_body_unit", "embalmer_unit", "bonewright_unit", "war_mammoth_unit",
                 "sun_colossus_unit", "bone_dragon_unit"))
             if (!modFileHas("assets", ReignOfNether.MOD_ID, "textures", "entities", skin + ".png"))
                 missing.add("textures/entities/" + skin + ".png");

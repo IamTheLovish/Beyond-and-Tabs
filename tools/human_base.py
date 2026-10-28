@@ -94,6 +94,34 @@ UNITS = {
                   roll=1.5, arm=22, cloth={"robe_front": (36, 0), "robe_back": (-24, 0), "robe_left": (3, 0), "robe_right": (3, 0)}, extra={},
                   idle_sway=0.35, idle_glance=-12,
                   note="the healer: light and short, the staff kept upright as its arm swings, the free arm swinging"),
+    # Oct 21 (lovish 21:20: every human unit off the villager body): the four Sunforged men rebuilt on the human body
+    # (tools/human_kit.py's figure - the Levy's canon)
+    "cleric": dict(model="design/models/sunforged_cleric_v2.json", java_class="ClericAnim", scale=1.0,
+                   weapon="carry", stride_f=0.38, stride_b=0.32, lift=2.0, lean=-2, sway=0.35, twist=3,
+                   roll=1.2, arm=16,
+                   cloth={"robe_front": (9, 0), "robe_back": (-7, 0), "robe_left": (3, 0), "robe_right": (3, 0),
+                          "chasuble_front": (8, 0), "chasuble_back": (-6, 0)}, extra={},
+                   idle_sway=0.4, idle_glance=-12,
+                   note="the priest: an older man's short measured step, the book held to the chest, the free hand "
+                        "swinging a little"),
+    "architect": dict(model="design/models/sunforged_architect_v2.json", java_class="ArchitectAnim", scale=1.0,
+                      weapon="carry", stride_f=0.44, stride_b=0.38, lift=2.0, lean=-2, sway=0.4, twist=4,
+                      roll=1.5, arm=20,
+                      cloth={"coat_front": (22, 0), "coat_back": (-18, 0), "coat_left": (3, 0), "coat_right": (3, 0)},
+                      extra={}, idle_sway=0.4, idle_glance=-14,
+                      note="the master builder: a brisk walk, the rolled plan carried like a baton, the free arm "
+                           "swinging"),
+    "mason": dict(model="design/models/sunforged_mason_v2.json", java_class="MasonAnim", scale=1.0,
+                  weapon="sword", stride_f=0.46, stride_b=0.40, lift=2.2, lean=-4, sway=0.5, twist=4,
+                  roll=1.8, arm=20, cloth={"apron": (30, 0)}, extra={}, idle_sway=0.45, idle_glance=-12,
+                  note="the sapper: a heavy-shouldered stride, the hammer carried at the ready, the free arm swinging"),
+    "dawn_paladin": dict(model="design/models/sunforged_dawn_paladin_v2.json", java_class="DawnPaladinAnim",
+                         scale=1.1, weapon="sword_shield", stride_f=0.42, stride_b=0.36, lift=2.6, lean=-1,
+                         sway=0.55, twist=3, roll=1.5, arm=18,
+                         cloth={"surcoat_front": (30, 0), "surcoat_back": (-22, 0)}, extra={},
+                         idle_sway=0.5, idle_glance=-12,
+                         note="the hero: upright and measured in plate, the sword arm swinging a little, the shield "
+                              "arm held"),
 }
 # what each weapon class's arms do (DSL degrees per key): "swing" = counter-swing with the legs at k x the arm
 # amplitude (shoulder) and the elbow folding a little as the arm comes forward; "hold" = the rig holds them
@@ -104,6 +132,12 @@ ARMS = {
     "greatsword": {"arms": ("hold", 0.0)},
     "staff": {"left_arm": ("swing", 1.0), "left_fore": ("fold", 0.5), "staff_arm": ("swing", 0.5),
               "staff": ("counter", 0.4)},
+    # a thing carried in the left hand (a book to the chest, a rolled plan): that arm nearly still, the right swinging
+    "carry": {"right_arm": ("swing", 1.0), "right_fore": ("fold", 0.5), "left_arm": ("swing", 0.25),
+              "left_fore": ("fold", 0.1)},
+    # a sword in the right hand and a shield on the left arm: the sword arm swings a little, the shield arm less
+    "sword_shield": {"right_arm": ("swing", 0.6), "right_fore": ("fold", 0.2), "left_arm": ("swing", 0.3),
+                     "left_fore": ("fold", 0.1)},
 }
 LEGS = (("left_thigh", "left_shin", "left_foot"), ("right_thigh", "right_shin", "right_foot"))
 
