@@ -118,7 +118,9 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         float rx = -fz, rz = fx;                                   // a horizontal perpendicular
         TextureAtlasSprite sh = sprites.get(3, 3);
         float u0 = sh.getU0(), u1 = sh.getU1(), v0 = sh.getV0(), v1 = sh.getV1();
-        float a = alpha * 0.9f;
+        // drawn in both windings, and where the renderer culls nothing both layers land: half the alpha each (the plain
+        // lane's shadows came out solid black at 0.9, eyes run 40760015987)
+        float a = alpha * 0.5f;
         int light = SKY_LIGHT;
         // corners: head-left, head-right, tail-right, tail-left (texture top = head)
         float[][] c = {
