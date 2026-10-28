@@ -55,15 +55,30 @@ public final class WagerBlocks {
 
     /** Places {@code state} at {@code pos} until {@code until} if the spot is free; true if it did. */
     public static boolean place(ServerLevel level, BlockPos pos, BlockState state, long until) {
-        if (!level.isLoaded(pos) || !level.getBlockState(pos).isAir()
-                || BuildingUtils.findBuildingOrBlueprint(false, pos) != null
-                || BuildingUtils.findBuildingOrBlueprint(false, pos.below()) != null   // nor on a roof
-                || !level.getEntitiesOfClass(LivingEntity.class, new AABB(pos)).isEmpty())
+        if (refusal(level, pos) != null)
             return false;
         level.setBlockAndUpdate(pos, state);
         PLACED.add(new Placed(level.dimension(), pos.immutable(), state, until));
         dirty();
         return true;
+    }
+
+    /** Why {@link #place} would refuse {@code pos}, or null when it may place there. */
+    @Nullable
+    public static String refusal(ServerLevel level, BlockPos pos) {
+        if (!level.isLoaded(pos))
+            return "chunk not loaded";
+        if (!level.getBlockState(pos).isAir())
+            return "not air: " + level.getBlockState(pos);
+        if (BuildingUtils.findBuildingOrBlueprint(false, pos) != null)
+            return "inside a building or blueprint";
+        // nor on a roof: a standing building only - a blueprint is a footprint on the ground, so the ground under a
+        // planned building is not a roof (Mode A round 3: a blueprint left on the arena floor refused the test's block)
+        if (BuildingUtils.findBuildingOrBlueprint(false, pos.below()) != null)
+            return "on a building's roof";
+        if (!level.getEntitiesOfClass(LivingEntity.class, new AABB(pos)).isEmpty())
+            return "a unit stands there";
+        return null;
     }
 
     /** Takes down this level's due blocks whose chunk is loaded; due ones in unloaded chunks wait. */

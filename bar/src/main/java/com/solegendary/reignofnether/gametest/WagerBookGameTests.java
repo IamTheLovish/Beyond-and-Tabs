@@ -553,6 +553,33 @@ public class WagerBookGameTests {
     // ------------------------------------------------------------------------------------------------ Mode A round 1
 
     /**
+     * Round 3: with doWeatherCycle ON (QuickBattle) vanilla's own timers end the wager rain and flip thunder on at the
+     * same tick; that is not an outside change, so the sky must still be put back - no storm after a wager drizzle.
+     * Its own batch: it turns the cycle on, which the cycle-off weather test must not see.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "wager_weather_cycle_on")
+    public static void wager_weather_with_the_cycle_on_leaves_no_storm(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameRules.BooleanValue cycle = level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE);
+        boolean cycleWas = cycle.get();
+        cycle.set(true, level.getServer());
+        level.setWeatherParameters(0, 0, false, false);
+        long start = level.getGameTime();
+        WagerWeather.start(level, true, 40);
+        helper.succeedWhen(() -> {
+            long now = level.getGameTime();
+            if (now < start + 60)
+                helper.fail("waiting past the wager rain's end (" + (now - start) + " ticks)");
+            boolean storm = level.getLevelData().isThundering();
+            long clock = WagerWeather.until(level);
+            cycle.set(cycleWas, level.getServer());
+            level.setWeatherParameters(0, 0, false, false);
+            if (storm || clock >= 0)
+                helper.fail("after a 40-tick wager rain with the cycle on: thundering " + storm + ", clock " + clock);
+        });
+    }
+
+    /**
      * B1: wager weather ends on our own clock. The mod's load function turns doWeatherCycle off, so vanilla's rain timer
      * never runs out in a match: a 2-s rain from a wager must stop by itself (with the cycle off) and leave the sky as it
      * was, and it never brings vanilla thunder (whose lightning strikes across the map).
@@ -603,10 +630,21 @@ public class WagerBookGameTests {
         helper.runAfterDelay(1, () -> {
             List<String> problems = new ArrayList<>();
             ServerLevel level = helper.getLevel();
-            BlockPos pos = helper.absolutePos(new BlockPos(9, 2, 9));
             long until = level.getGameTime() + 100000;   // the real server sweep never reaches it during the test
-            if (!WagerBlocks.place(level, pos, Blocks.COBBLESTONE.defaultBlockState(), until)) {
-                helper.fail("could not place the test block at " + pos);
+            // the first free spot of a few: an earlier test in the shard may have left something on this arena
+            BlockPos pos = null;
+            StringBuilder why = new StringBuilder();
+            for (BlockPos rel : List.of(new BlockPos(9, 2, 9), new BlockPos(12, 2, 12), new BlockPos(12, 2, 4), new BlockPos(5, 2, 12))) {
+                BlockPos at = helper.absolutePos(rel);
+                String no = WagerBlocks.refusal(level, at);
+                if (no == null) {
+                    pos = at;
+                    break;
+                }
+                why.append(' ').append(at.toShortString()).append(": ").append(no).append(';');
+            }
+            if (pos == null || !WagerBlocks.place(level, pos, Blocks.COBBLESTONE.defaultBlockState(), until)) {
+                helper.fail("could not place the test block anywhere:" + why);
                 return;
             }
             CompoundTag saved = WagerBlocks.savedDataTag();   // through the SavedData class
