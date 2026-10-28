@@ -97,9 +97,15 @@ public class BuildingValidators {
                 && !com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.isOverLava(level, absoluteBlocks))
             return com.solegendary.reignofnether.building.buildings.shared.GeothermalPlant.MUST_BE_LAVA;
 
-        if (isBuildingPlacementInAirOrOnIllegalBlocks(level, building, absoluteBlocks)) {
+        // under fog the ground read here can be older than the match's (see isKnownPatchUnderFog, isUnexploredOnClient):
+        // the patch list is trusted for a patch, the ground is not judged, and the fog-queued worker's arrival
+        // re-checks the real ground (BuildingServerEvents.placeBuilding)
+        boolean knownPatchUnderFog = !isSandbox && isKnownPatchUnderFog(level, building, originPos, absoluteBlocks, ownerName);
+        boolean staleGround = knownPatchUnderFog || (!isSandbox && isUnexploredOnClient(level, absoluteBlocks));
+
+        if (!staleGround && isBuildingPlacementInAirOrOnIllegalBlocks(level, building, absoluteBlocks)) {
             return "building.reignofnether.ground_not_flat";
-        } else if (isBuildingPlacementClipping(level, building, absoluteBlocks)) {
+        } else if (!staleGround && isBuildingPlacementClipping(level, building, absoluteBlocks)) {
             return "building.reignofnether.ground_not_flat";
         } else if (isOverlappingAnyOtherBuilding(level, building, absoluteBlocks) && !isSandbox) {
             // an extractor on a patch that something else is crowding: say it's the patch that is blocked, so the
@@ -123,7 +129,7 @@ public class BuildingValidators {
         } else if (!isNotTutorialOrNearValidCapitolPosition(level, building, originPos)) {
             return "building.reignofnether.build_centre_here";
         } else if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
-                && !com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5)) {
+                && !knownPatchUnderFog && !com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5)) {
             return "building.reignofnether.needs_metal_patch";
         } else if (building instanceof com.solegendary.reignofnether.building.buildings.shared.LabAnnex && !isSandbox) {
             // an annex snaps to an own army lab with a free slot (design/building_upgrades.md)
@@ -449,6 +455,59 @@ public class BuildingValidators {
         if (!(building instanceof TownCentre))
             return true;
         return TutorialClientEvents.BUILD_CAPITOL_POS.distSqr(originPos) < 625; // 25 block range
+    }
+
+    /** Test hook: the server judges like a client (its level as the client's stale fog view, the server patch list as the synced one). */
+    public static volatile boolean testServerModelsClientView = false;
+
+    /**
+     * An extractor over a patch the synced patch list knows, whose blocks the level does not show, out of the owner's
+     * vision. A player's never-explored fog is the snapshot taken when the first side was seated, and the battlefield's
+     * patches (and their levelled pads) are stamped a few ticks after it, so there the client sees the old ground with
+     * no patch while the minimap and the ghost's snap show one. A patch the blocks do show is read as before.
+     */
+    static boolean isKnownPatchUnderFog(Level level, Building building, BlockPos originPos, List<BuildingBlock> blocks,
+                                        String ownerName) {
+        // client only: the server reads the real ground (a bot owner is never in vision there, so a patch-list entry
+        // with no blocks under it must not let its arrival skip the checks)
+        if (!level.isClientSide() && !testServerModelsClientView)
+            return false;
+        if (!(building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor))
+            return false;
+        if (com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5))
+            return false;
+        List<BlockPos> patches = level.isClientSide()
+            ? com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches()
+            : level instanceof net.minecraft.server.level.ServerLevel sl
+                ? com.solegendary.reignofnether.resources.MetalPatches.getPatches(sl) : List.of();
+        boolean known = false;
+        synchronized (patches) {
+            for (BlockPos c : patches)
+                // the extractor's 5x5 covers the centre, at the heights isOnPatch looks at
+                if (c.getX() >= originPos.getX() && c.getX() <= originPos.getX() + 4
+                        && c.getZ() >= originPos.getZ() && c.getZ() <= originPos.getZ() + 4
+                        && c.getY() <= originPos.getY() + 1 && c.getY() >= originPos.getY() - 3) {
+                    known = true;
+                    break;
+                }
+        }
+        return known && !isInBrightChunk(level, blocks, ownerName);
+    }
+
+    /**
+     * The footprint's centre is in fog this client has never explored (lovish, Oct 27: blueprints of every building may
+     * go there). That ground is the snapshot from when the first side was seated, before the battlefield's patches,
+     * pads and start areas were stamped, so it says nothing about whether the site is flat now. Client only: the
+     * server always reads the real ground.
+     */
+    static boolean isUnexploredOnClient(Level level, List<BuildingBlock> blocks) {
+        if (!level.isClientSide() || !FogOfWarClientEvents.isEnabled())
+            return false;
+        BlockPos minPos = BuildingUtils.getMinCorner(blocks);
+        BlockPos maxPos = BuildingUtils.getMaxCorner(blocks);
+        BlockPos centre = new BlockPos((minPos.getX() + maxPos.getX()) / 2, minPos.getY(), (minPos.getZ() + maxPos.getZ()) / 2);
+        return !FogOfWarClientEvents.isInBrightChunk(centre)
+            && !com.solegendary.reignofnether.fogofwar.FogExploration.isExplored(centre.getX() >> 4, centre.getZ() >> 4);
     }
 
     public static boolean isInBrightChunk(Level level, List<BuildingBlock> blocks, String ownerName) {
