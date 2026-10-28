@@ -100,9 +100,11 @@ metal-heavy, energy-light). It trains the faction's T1 vehicles, and its T2 vehi
   holds a 5-wide gate with walls and the 3x3 vehicles, and the apron is ground he would have to keep free anyway.
   It stands on **any flat ground**: its own yard floor is part of the structure, so no block under it is ever tested
   (the old 80%-netherrack rule is gone). The Ashborn Crater Pen alone also obeys the capitol doc's area rule (half
-  its cells inside the owner's creep circles), which the capitol's tech-1 creep (40 blocks from its edge) covers
-  everywhere in the home build ground.
-- Fits the map: 13 deep is well under the 26-block gap PR #131 keeps between metal groups.
+  its cells inside the owner's creep circles), which the capitol's tech-1 creep (44 blocks from its edge, 51 from
+  the start) covers everywhere in the 50-block home build ground.
+- Fits the map: 13 deep is well under the 26-block gap PR #131 keeps between metal groups, and the home metal band
+  (52-76 from the start, capitol doc 4.2) was set so this lab fits between the L4 capitol's reserved 41x41 square
+  and the nearest patch on every side.
 - Massing rule from the existing labs: a stone or kerb plinth one block high round the whole box (every T1 lab sheet
   has one), the yard open to the camera side, the tall masses at the back so units in the yard stay visible.
 
@@ -152,13 +154,22 @@ and so on). The vehicle lab grows the same way with the same flourishes, so "L3"
 
 ### 2.4 Tech steps: one visual step per tech level (lovish: 4 levels)
 
-Tech level = the owner's tech (1-4; tech 4 is an open question in [[open-questions-2026-10-28]]). As it rises,
+Tech level = the owner's tech (1-4; tech 4 = the new **Ascension** research at the capitol after Tier 3, lovish's
+Oct 28 answer; capitol doc section 1). As it rises,
 **every** vehicle lab the player owns gets more detailed and gets more particles, whatever its production level, so
 an opponent reads tech from any lab. The steps are separate from the L1-L3 production levels and from the T2 refit.
 The shared rule across the three docs: **the capitol is the one building that grows in real blocks per tech level**
 (it is the centre piece and there is one of it); **every other building shows tech with drawn parts, glow and
 particles**, so a tech step never rebuilds pathing or HP on twenty buildings at once. (Still lovish's call: the
 drawn-vs-real-blocks question in the questions file.)
+
+lovish's nine reference images (capitol doc section 0.1) set the detail bar here too: the **colourful tower-house**
+(steep spires in teal, red and purple with gold trim, warm glowing windows and lanterns) is the bar for every lab's
+L3 and for the tech 3-4 glow and emitters; the **Victorian manor** (roofline variety, gables, dormers, a corner
+turret, bay windows) for the Sunforged Barracks and the L1-L2 of mid-size buildings; the **crooked wizard tower**
+(credit KodiBuilds; tall, narrow, leaning, moss-green conical roofs) for the Stormcallers Celestial Observatory and
+the Verdant Circle of Elders (T2 labs) and for the drawn tech-4 crowns. References only; every lab stays on its
+faction's own kit.
 
 | | What it is | Cost to the game |
 |---|---|---|
@@ -355,8 +366,8 @@ folder.
    Soulfire Wheel) unless lovish wants them earlier and empty.
 4. The T2 refit (shared code once, then each faction's crown with its first T2 vehicle; Mortar Galley and Steam
    Juggernaut move with theirs).
-5. Tech steps 2-4 for all seven labs, in one pass with the shared drawn-part code, once lovish has answered how
-   tech 4 is reached (questions file). The structures from steps 1-3 must already declare the anchors (section 5).
+5. Tech steps 2-4 for all seven labs, in one pass with the shared drawn-part code, once the Ascension research
+   (tech 4) exists in the capitol. The structures from steps 1-3 must already declare the anchors (section 5).
 
 ## 5. For Itachi 2 to build from (stands alone)
 

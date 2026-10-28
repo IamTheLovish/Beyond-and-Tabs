@@ -2,49 +2,40 @@
 title: Beyond and Tabs - open questions for lovish (vehicles, vehicle labs, capitols and creep), Oct 28
 type: decision-list
 project: Beyond and Tabs
-status: waiting for lovish - pick one option per question
+status: 1-4 answered Oct 28; 5-10 waiting for lovish - pick one option per question
 created: 2026-10-28
 source: merged from [[vehicles-design-2026-10-28]], [[vehicle-labs-design-2026-10-28]] and [[capitols-extractors-design-2026-10-28]] after the Oct 28 revision pass
 ---
 
 # Open questions, ordered by how much each blocks building
 
-One line per answer is enough ("1A, 2A, 3C ..."). The recommendation is marked **(rec)**. Questions lovish has
-already answered (the AI faction, where vehicles are built, infantry vs buildings at half a vehicle's rate, T2
-vehicles by lab refit, four tech levels, no nether) are not repeated here.
+One line per answer is enough ("5A, 6A, 7B ..."). The recommendation is marked **(rec)**. Numbers 1-4 are kept
+as answered below so earlier references stay valid.
 
-## Blocks the creep and the capitol levels (capitol doc build order steps 1-2)
+## Answered Oct 28 (lovish, via the Command Center coordinator)
 
-**1. What is "tech 4"?** It drives the capitol's fourth level, the fourth creep radius and the fourth tech step on
-every lab. Nothing above tech 3 exists in main.
-- A) a new late research at the capitol after Tier 3 ("Ascension"), which also opens the faction's game ender **(rec)**
-- B) no new research: L1 the start, L2 the first lab built, L3 Tier 2, L4 Tier 3
-- C) building the faction's first Tier 3 experimental
+1. **Tech 4** = A: a new late research at the capitol after Tier 3, **"Ascension"**, which also opens the faction's
+   game ender. (Capitol doc section 1 and 4.1; est. 2500 metal / 25000 energy / 240 s, slot 11.)
+2. **Creep placement rule** = A: only **Ashborn and Hivebound** must build on their creep; the other six ooze for
+   looks and the small home-ground bonus.
+3. **Pre-made maps' home metal** = A: moved out to the same band as generated maps.
+4. **Capitol growth space** = the full L4 square reserved from the start, and **"even bigger: push metal further out
+   and go larger than 39"**. Applied as: capitol levels **15 / 23 / 31 / 41 wide, 22 / 40 / 60 / 84 tall** (height
+   carries the size, per his nine reference images), **home metal 52-76** (was 48-72), no patch within 48 (was 40),
+   build ground 50 (was 46), creep capitol radius 44 / 56 / 68 / 80. The earlier cut to 33x33 is withdrawn.
 
-**2. Which races must build on their creep?** (The others still ooze for looks and the small home-ground bonus.)
-- A) only Ashborn and the Hivebound **(rec)** - the spreading races; the rest build anywhere
-- B) every race
-- C) none; creep is looks and bonus for everyone
+Earlier answers not repeated: the AI faction (Brassworks keeps steam; a futuristic faction gets tanks later), a
+separate vehicle lab per faction, infantry vs buildings at half a vehicle's rate, T2 vehicles by lab refit, four
+tech levels, no nether.
 
-**3. Pre-made maps put home metal 11-24 blocks from the start, so a growing capitol cannot fit there.**
-(Generated maps are fine: 7 patches at 48-72, as you answered.)
-- A) move pre-made home metal out to 48-72 like the generated maps **(rec)**
-- B) on pre-made maps the capitol grows only upward (stays 15x15)
-- C) cap growth at L2 (21x21) there and move only the closest patches
-
-**4. How is the capitol's growth space kept free?** (The revised L4 box is 33x33, a 9-block ring round the L1
-capitol; the old 39x39 was cut because it left too little room for the 11x13 vehicle lab - please look at that in the
-capitol doc's revision notes.)
-- A) the full L4 square (33x33) is reserved from the start, shown as a faint outline **(rec)**
-- B) only the next level's square is reserved, when its tech starts
-- C) nothing reserved; the capitol grows round whatever stands there
+## Still open - blocks the Ashborn creep task (capitol doc build order step 1)
 
 **5. What is the Ashborn creep made of?** (You said "end blocks or something else".)
 - A) our own ash blocks (ash soil, cinder rock, ember cracks) with tuff and basalt; End blocks go to the alien Hivebound **(rec)**
 - B) End blocks (end stone, purpur) for the Ashborn too
 - C) vanilla only (tuff, coarse dirt, gravel, deepslate)
 
-## Blocks the first vehicle lab (lab doc build order step 1)
+## Still open - blocks the first vehicle lab (lab doc build order step 1)
 
 **6. Can a player open with the vehicle lab?**
 - A) yes, it needs only the capitol, like BAR's vehicle plant **(rec)**
@@ -58,7 +49,7 @@ capitol doc's revision notes.)
 - A) drawn parts, glow and particles on every building at once, no block changes **(rec)** - no pathing or HP change, no 24 structure files per faction
 - B) real blocks: every lab swaps to a richer structure at each tech level
 
-## Blocks single vehicles (can be decided when each is built)
+## Still open - blocks single vehicles (can be decided when each is built)
 
 **9. Can low-flying vehicles (Dawnrider, Gale Kite, Manta Ferry, Cloud Barge) cross walls?**
 - A) no, walls stop them; ranged units and AA hit them **(rec)** - walls stay the answer to raids
@@ -74,6 +65,10 @@ capitol doc's revision notes.)
 
 - The Flak Cart moves to the Brassworks Engine Shed with the other Brassworks vehicles (it stays out of the
   building-bonus list). Say so if you want it to stay in the Machine Shop as anti-air support.
-- The capitol L4 box is 33x33x56, not 39x39x64 (question 4 above).
+- The capitol L4 is 41x41x84 (just past his "larger than 39", with the size going into height); if he wants it
+  wider still, every extra block of width costs a block of lab room on each side, so the recommendation is to go
+  taller instead.
+- Ascension's cost (2500m / 25000e / 240 s) and the walk-time note (+1 s each way to the first patch) are
+  estimates to playtest, not decisions.
 - The Hoglin keeps its stats but gets an original body (the Cinder Boar); no vanilla-mob or Reign of Nether
   look-alikes in the vehicle slot.
