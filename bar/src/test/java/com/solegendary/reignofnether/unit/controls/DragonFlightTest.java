@@ -118,6 +118,32 @@ class DragonFlightTest {
         assertTrue(Math.abs(y - 90) < 1.5, "got to its height: " + y);
     }
 
+    /** The dive (lovish's land command): it stoops onto a ground spot fast - far quicker down than its climb cap -
+     *  reaching the ground near the spot, its nose still turning at the capped rate. */
+    @Test
+    void theDiveStoopsOntoTheSpot() {
+        DragonFlight.State s = new DragonFlight.State(0f);
+        fly(s, 0, 80, 0, 0, 80, 40, 120, 0);                           // cruising along +z at 80
+        double x = 0, y = 80, z = 0, maxVy = 0, maxTurn = 0;
+        float last = s.heading;
+        int t = 0;
+        for (; t < 200 && y > 70.05; t++) {
+            double[] v = DragonFlight.dive(s, 6 - x, 70 - y, 14 - z, CRUISE);   // a spot 10 down, ahead and to the side
+            x += v[0];
+            y = Math.max(70, y + v[1]);
+            z += v[2];
+            maxVy = Math.max(maxVy, -v[1]);
+            maxTurn = Math.max(maxTurn, Math.abs(wrap(s.heading - last)));
+            last = s.heading;
+        }
+        double off = Math.sqrt((x - 6) * (x - 6) + (z - 14) * (z - 14));
+        assertTrue(t < 80, "down in under 4 s: " + t + " ticks");
+        assertTrue(maxVy > DragonFlight.CLIMB_MAX * 2, "a stoop, not a sink: " + maxVy);
+        assertTrue(maxVy <= DragonFlight.DIVE_VY + 1e-6, "but capped: " + maxVy);
+        assertTrue(off < 2.5, "lands near the spot: " + off + " blocks off");
+        assertTrue(maxTurn <= DragonFlight.TURN_SLOW + 1e-3, "turns at the capped rate: " + maxTurn);
+    }
+
     @Test
     void stoppingBrakesSmoothlyAlongTheNose() {
         DragonFlight.State s = new DragonFlight.State(0f);
