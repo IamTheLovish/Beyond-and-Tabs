@@ -84,8 +84,12 @@ public class BlockClientEvents {
         int fp2 = 0;
         try {
             int fg = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_GATE);
-            boolean skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
-            com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            boolean skip;
+            try {
+                skip = com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fg);
+            }
             if (skip) return;   // shader pack shadow map: overlays cast no shadow
             fp2 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE);
             frameBuffer = null;   // fetched on the first highlight drawn: see vc()
@@ -93,9 +97,11 @@ public class BlockClientEvents {
                 return;
             }
             int fr = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE_REFRESH);
-            refreshRangeSubsets();
-            com.solegendary.reignofnether.perf.FrameParts.end(fr);
-            int p3 = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_P3);
+            try {
+                refreshRangeSubsets();
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fr);
+            }
             // draw range indicators for buildings with abilities and monster night sources
             for (BuildingPlacement building : rangeBuildings) {
                 RangeIndicatorAddon ria = building.getBuilding().getActiveAddon(RangeIndicatorAddon.class);
@@ -112,7 +118,6 @@ public class BlockClientEvents {
                 }
             }
 
-            com.solegendary.reignofnether.perf.FrameParts.end(p3);
             if (tempMouseCircleOrigin != null && MC.level != null) {
                 Set<BlockPos> bps = MiscUtil.CircleUtil.getCircle(tempMouseCircleOrigin.getFirst(), tempMouseCircleOrigin.getSecond());
                 for (BlockPos bp : bps) {
@@ -122,19 +127,22 @@ public class BlockClientEvents {
                 }
             }
             int fu = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_RANGE_UNITS);
-            for (LivingEntity le : rangeUnits) {
-                if (!(le instanceof RangeIndicator ri) || le.isRemoved()) continue;
-                if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
-                boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
-                if (selected || !ri.showOnlyWhenSelected()) {
-                    for (BlockPos bp : ri.getHighlightBps()) {
-                        int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
-                        float yOffset = snowLayers * 0.125f;
-                        MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+            try {
+                for (LivingEntity le : rangeUnits) {
+                    if (!(le instanceof RangeIndicator ri) || le.isRemoved()) continue;
+                    if (!FogOfWarClientEvents.isBlockVisible(le.getOnPos())) continue;
+                    boolean selected = UnitClientEvents.getSelectedUnits().contains(le);
+                    if (selected || !ri.showOnlyWhenSelected()) {
+                        for (BlockPos bp : ri.getHighlightBps()) {
+                            int snowLayers = BlockUtils.getSnowLayers(le.level().getBlockState(bp.above()));
+                            float yOffset = snowLayers * 0.125f;
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vc(), Direction.UP, yOffset, bp, 0f, 0.8f, 0f, 0.3f);
+                        }
                     }
                 }
+            } finally {
+                com.solegendary.reignofnether.perf.FrameParts.end(fu);
             }
-            com.solegendary.reignofnether.perf.FrameParts.end(fu);
             if (HudClientEvents.hudSelectedEntity != null && MC.level != null &&
                     (ItemClientEvents.actionableUnitItem != null || ItemClientEvents.hoveredInvItem != null)) {
                 RangeIndicator ri = ItemClientEvents.actionableUnitItem;
