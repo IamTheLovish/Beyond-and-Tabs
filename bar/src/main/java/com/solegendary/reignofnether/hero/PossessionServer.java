@@ -94,6 +94,15 @@ public final class PossessionServer {
     static final int CORRECTION_GAP_TICKS = 4;
     /** A walker in the air longer than this whose claims don't come down is hovering: gravity wins. */
     static final int HOVER_TICKS = 40;
+    /**
+     * The velocity a claims tick leaves a walker for vanilla travel: a probe straight down, not zero. Travel's move is
+     * the last write to onGround each tick and sets it only from a downward collision in that move, so a zero move
+     * read every standing possessed unit as airborne - the hover rule then pushed it into the floor and the
+     * sprint-jump boost was lost (Oct 27, claude/inbox-possession-onground-oct27.md). On the ground the probe collides
+     * and moves nothing; in the air (a client claiming a hover) it drifts this far and onGround stays false, so it is
+     * the server's own world that decides. Far under CORRECT_DIST, and the next claim is measured from where it is.
+     */
+    static final double GROUND_PROBE = 0.01;
     /** A server shove (Possession.serverShove) above this is one the server really gave; it decays by 0.91 a tick. */
     static final float SHOVE_SEEN = 0.05f;
     /** At most this many hit markers per possessor per tick (an area ability can hit a crowd at once). */
@@ -528,8 +537,8 @@ public final class PossessionServer {
             maxUp = maxDown = perTick * ticks;
         } else {
             boolean climbing = mob.onClimbable() || mob.isInWater() || mob.isInLava();
-            // on the ground: a step or a jump's first tick; rising: the rest of a jump; later only the one tick of
-            // gravity the server's own travel took off since the last claim
+            // on the ground: a step or a jump's first tick; rising: the rest of a jump; later only a little (the claims
+            // path leaves travel no gravity of its own, just the GROUND_PROBE drift)
             double upPerTick = climbing ? 0.3 : p.airTicks <= 1 ? 0.6 : p.airTicks < 7 ? 0.45 : 0.08;
             maxUp = upPerTick * ticks + (p.airTicks <= 1 ? 0.6 : 0);
             maxDown = 4.0 * ticks + 0.5;   // terminal velocity is ~3.9 a tick
@@ -793,7 +802,8 @@ public final class PossessionServer {
         if (!serverMoves && (p.claimFresh || p.ticksSinceClaim <= CLAIM_FRESH_TICKS)) {
             // prediction: the claims move the unit (applyClaim); no input-driven walk on top. A shove the server gave
             // it (knockback, a blast) reached the client as a motion packet and is in the claims, so it only widens
-            // what a claim may cover; then the velocity is dropped so vanilla travel adds just one tick of gravity
+            // what a claim may cover; then the velocity is dropped to the ground probe (GROUND_PROBE): vanilla travel
+            // moves by it before it adds gravity, and that move is what sets onGround for this tick
             // ...but only if the last tick was a claims tick too (it zeroed the velocity): right after the keys or an
             // ability moved it, the velocity is that walk's own momentum, not a shove (round-6 review of #222)
             Vec3 dm = mob.getDeltaMovement();
@@ -821,7 +831,9 @@ public final class PossessionServer {
             mob.setXxa(0);
             mob.setYya(0);
             mob.setJumping(false);
-            mob.setDeltaMovement(Vec3.ZERO);
+            // a walker keeps a probe straight down, so travel's move tells on-ground from the world (GROUND_PROBE);
+            // a flyer has no ground to find and stays put
+            mob.setDeltaMovement(flyer ? Vec3.ZERO : new Vec3(0, -GROUND_PROBE, 0));
             return true;
         }
         // the AI's own convention (MoveControl): speed from the attribute, input scaled by it, so the unit walks at
