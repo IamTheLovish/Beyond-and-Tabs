@@ -4133,7 +4133,7 @@ public class SkirmishGameTests {
             helper.fail("the hero save data should be clean after a flush");
             return;
         }
-        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level, false);
+        com.solegendary.reignofnether.unit.UnitServerEvents.saveFallenHeroUnits(level);
         if (!data.isDirty())
             helper.fail("a hero death should mark the hero save data dirty for the next autosave");
         else if (data.heroUnits.size() != fallen.size())
