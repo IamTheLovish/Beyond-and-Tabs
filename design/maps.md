@@ -402,8 +402,9 @@ and everything anchored to the arena moves with it.
   `bt-arena-origins`) the moment a slot is taken, so a restart or a crash never hands the same ground out twice.
 * **The move** (`NewMatch.start(server, hint, force)`, one tick): refuse while a battlefield is being prepared (and
   while a match is in play unless forced); reset like `/rts-hard-reset`, but the old units and buildings are
-  unregistered at once and removed over the next ticks (`maps.ArenaRetirement`, the defeat cleanup's rate - no wrecks,
-  no effects, buildings ownerless first so a demolition can never defeat a player of the next match); take the next
+  unregistered at once, the units removed at once (one left queued in a chunk that unloaded came back ownerless) and the
+  buildings demolished in their own level over the next ticks (`maps.ArenaRetirement`, the defeat cleanup's rate - no
+  wrecks, no effects, buildings ownerless first so a demolition can never defeat a player of the next match); take the next
   slot; move every player to it; recentre the world border (size and "unbounded" borders untouched); set the world
   spawn (where people land and join, i.e. the lobby's return point); forget the fog of war's view of the old arena (the
   fog snapshot went with the reset; the first side to start captures the new one, so nothing hidden is ever served);

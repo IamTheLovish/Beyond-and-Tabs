@@ -195,7 +195,7 @@ final class NewMatchCases {
                     problems.add("the next match's centre is " + centre2 + " after the second new match, not " + o2);
             }
 
-            // the old arena is taken down over a few ticks, not all in the tick of the request
+            // the old arena's buildings come down over a few ticks; its unit was removed at once and stays gone
             helper.runAfterDelay(80, () -> {
                 try {
                     if (!unit.isRemoved())

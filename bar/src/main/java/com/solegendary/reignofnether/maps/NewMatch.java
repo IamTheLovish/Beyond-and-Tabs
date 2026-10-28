@@ -34,8 +34,8 @@ import java.util.List;
  * <ol>
  *   <li>refuses while a battlefield is being prepared, and while a match is in play unless forced ({@link #refusal});</li>
  *   <li>resets the match like /rts-hard-reset (sides, lobby, possession, fog snapshot, patches, research, alliances)
- *       but unregisters the old units and buildings at once and takes them down over the next ticks
- *       ({@link ArenaRetirement}) - the shift never stalls the tick;</li>
+ *       but unregisters the old units and buildings at once, removes the units at once and takes the buildings down
+ *       over the next ticks ({@link ArenaRetirement}) - the shift never stalls the tick;</li>
  *   <li>takes the next slot and finds its ground (one chunk);</li>
  *   <li>moves everyone to it (the lobby's return point), then the world border's centre (its size is the host's and
  *       stays; an unbounded border is left alone) and the world spawn, so people landing or joining arrive in the
