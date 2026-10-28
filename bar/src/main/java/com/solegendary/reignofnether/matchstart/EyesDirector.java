@@ -941,6 +941,12 @@ public final class EyesDirector {
         if (ticks == 1 && structurePhase == 0) {
             if (siteCentre == null)
                 siteCentre = structureSite(mc);
+            // a photo booth, not a match: the site is 45 blocks out from the capitol, beyond its vision, and fog of
+            // war darkened every structure still to near black (meadow sampler run 40667744923, Oct 28)
+            if (com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled()) {
+                ReignOfNether.LOGGER.info("[Eyes] {}: fog of war off for the structure photos", label);
+                com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
+            }
             structurePlaced = false;
             structureError = null;
             OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(siteCentre));   // loads its chunks
