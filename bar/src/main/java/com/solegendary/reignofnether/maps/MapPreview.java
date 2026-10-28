@@ -18,6 +18,7 @@ public final class MapPreview {
     private static int[] cachedTeams = null;
     private static int cachedW, cachedH;
     private static long cachedSeed = 0;
+    private static int cachedMetalCode = 1;
     private static int[] colours = new int[0];
     private static MapLayout layout = null;
 
@@ -25,13 +26,23 @@ public final class MapPreview {
         draw(gg, font, preset, teams, x, y, w, h, 0L);
     }
 
-    /** As above for the map with this seed (MapLayout.build(preset, teams, seed)) - the skirmish lobby's roll. */
+    /** As below with the normal metal setting. */
     public static void draw(GuiGraphics gg, Font font, MapPreset preset, int[] teams, int x, int y, int w, int h, long seed) {
+        draw(gg, font, preset, teams, x, y, w, h, seed, 1);
+    }
+
+    /**
+     * The map with this seed and the lobby's metal setting (0 lean, 1 normal, 2 rich, 3 random), which reaches
+     * pre-made maps since maps spec M1: MapLayout.build(preset, teams, seed, SkirmishServerboundPacket.premadeMetal).
+     */
+    public static void draw(GuiGraphics gg, Font font, MapPreset preset, int[] teams, int x, int y, int w, int h, long seed,
+                            int metalCode) {
         if (teams.length < 2)
             teams = new int[] { 0, 1 };
         int gw = w / CELL, gh = h / CELL;
-        if (preset != cachedPreset || !Arrays.equals(teams, cachedTeams) || gw != cachedW || gh != cachedH || seed != cachedSeed)
-            rebuild(preset, teams, gw, gh, seed);
+        if (preset != cachedPreset || !Arrays.equals(teams, cachedTeams) || gw != cachedW || gh != cachedH || seed != cachedSeed
+                || metalCode != cachedMetalCode)
+            rebuild(preset, teams, gw, gh, seed, metalCode);
         final int[] cols = colours;
         final int fgw = gw, fgh = gh;
         gg.drawManaged(() -> {
@@ -61,13 +72,15 @@ public final class MapPreview {
         });
     }
 
-    static void rebuild(MapPreset preset, int[] teams, int gw, int gh, long seed) {
+    static void rebuild(MapPreset preset, int[] teams, int gw, int gh, long seed, int metalCode) {
         cachedPreset = preset;
+        cachedMetalCode = metalCode;
         cachedSeed = seed;
         cachedTeams = teams.clone();
         cachedW = gw;
         cachedH = gh;
-        layout = MapLayout.build(preset, teams, seed);
+        layout = MapLayout.build(preset, teams, seed,
+            com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket.premadeMetal(metalCode));
         colours = new int[gw * gh];
         MapLayout.Sample s = new MapLayout.Sample();
         double scale = (layout.radius + 4) / (Math.min(gw, gh) / 2.0 - 1);

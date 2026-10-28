@@ -35,10 +35,19 @@ final class SysTimer {
     /** The most self time one tick (or frame) spent in the section over the window (nanoseconds). */
     final long[] worstTickNs;
     private final long[] tickNs;
+    /** Completed calls per section since the timer was made ({@link #reset} leaves these; see {@link #lifetimeNs}). */
+    final long[] lifetimeCalls;
     /** Closed ticks (frames) in the window. */
     int ticks = 0;
     /** Begins refused because the stack was full (a runaway recursion), and ticks that closed with a section still open. */
     int overflow = 0, unbalanced = 0;
+    /**
+     * Self nanoseconds per section and closed ticks (frames) since the timer was made: like {@link #selfNs} and
+     * {@link #ticks} but never reset, so a measurement that does not line up with the report windows (an eyes scene's
+     * slice) can difference two readings.
+     */
+    final long[] lifetimeNs;
+    long lifetimeTicks = 0;
 
     SysTimer(int sections, LongSupplier clock) {
         this.clock = clock;
@@ -47,6 +56,8 @@ final class SysTimer {
         this.worstCallNs = new long[sections];
         this.worstTickNs = new long[sections];
         this.tickNs = new long[sections];
+        this.lifetimeNs = new long[sections];
+        this.lifetimeCalls = new long[sections];
     }
 
     int sections() {
@@ -77,7 +88,9 @@ final class SysTimer {
         int id = frameId[i];
         selfNs[id] += self;
         tickNs[id] += self;
+        lifetimeNs[id] += self;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (self > worstCallNs[id])
             worstCallNs[id] = self;
         if (depth > 0)
@@ -90,7 +103,9 @@ final class SysTimer {
             return;
         selfNs[id] += nanos;
         tickNs[id] += nanos;
+        lifetimeNs[id] += nanos;
         calls[id]++;
+        lifetimeCalls[id]++;
         if (nanos > worstCallNs[id])
             worstCallNs[id] = nanos;
     }
@@ -112,6 +127,7 @@ final class SysTimer {
             tickNs[id] = 0;
         }
         ticks++;
+        lifetimeTicks++;
     }
 
     /** Starts a new window (the totals; sections open now stay open). */

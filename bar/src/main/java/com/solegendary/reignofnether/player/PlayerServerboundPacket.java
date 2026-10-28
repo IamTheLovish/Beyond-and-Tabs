@@ -289,7 +289,7 @@ public class PlayerServerboundPacket {
     public PlayerServerboundPacket(FriendlyByteBuf buffer) {
         this.action = buffer.readEnum(PlayerAction.class);
 		if (this.action == PlayerAction.START_RTS)
-			this.faction = Factions.getFaction(buffer.readResourceLocation());
+			this.faction = Factions.findFaction(buffer.readResourceLocation());   // null: not a faction (refused in accept)
         this.playerId = buffer.readInt();
         this.x = buffer.readDouble();
         this.y = buffer.readDouble();
@@ -326,69 +326,82 @@ public class PlayerServerboundPacket {
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {
         final var success = new AtomicBoolean(false);
         ctx.get().enqueueWork(() -> {
-
             ServerPlayer player = ctx.get().getSender();
             if (player == null) {
                 ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Sender was null");
                 success.set(false);
                 return;
-            } else if (playerId != -1 && player.getId() != playerId) {
-                ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Tried to process packet from " + player.getName() + " for id: " + this.playerId);
-                success.set(false);
-                return;
-            } else if (opOnlyActions.contains(action) && !player.hasPermissions(4)) {
-                ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Non-op player " + player.getName() + " tried to run action: " + this.action.name());
-                success.set(false);
-                return;
-            } else if (hostOnlyActions.contains(action) && !PacketAuth.isHostOrOp(player, 2)) {
-                ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " is not the host and tried to run action: " + this.action.name());
-                success.set(false);
-                return;
-            } else if (action != PlayerAction.TELEPORT && !PacketAuth.allow(player, "player_action", 10, 30)) {
-                // (TELEPORT only moves the sender's own camera body and follows a held portrait every tick)
-                return;   // starts, votes and market requests are a few a second at most
             }
-            // a packet with playerId -1 used to pass the check above and then act on id -1; whatever the client
-            // claimed, an action is about the sender
-            this.playerId = player.getId();
-
-            // TELEPORT follows a held portrait every tick: at INFO it was 90 of the log's last 200 lines (Oct 15 review)
-            if (action == PlayerAction.TELEPORT)
-                ReignOfNether.LOGGER.debug("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
-            else
-                ReignOfNether.LOGGER.info("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
-
-            switch (action) {
-                case TELEPORT -> PlayerServerEvents.movePlayer(this.playerId, this.x, this.y, this.z);
-                case ENABLE_ORTHOVIEW -> PlayerServerEvents.enableOrthoview(this.playerId);
-                case DISABLE_ORTHOVIEW -> PlayerServerEvents.disableOrthoview(this.playerId);
-				case START_RTS ->
-                    PlayerServerEvents.startRTS(this.playerId, new Vec3(this.x, this.y, this.z), Factions.getFaction(this.faction.key));
-                case START_RTS_SANDBOX ->
-                    PlayerServerEvents.startRTS(this.playerId, new Vec3(this.x, this.y, this.z), Factions.NONE);
-                case START_RTS_SCENARIO ->
-                        PlayerServerEvents.startRTSScenario(this.playerId, (int) this.x);
-                case PUBLISH_SCENARIO_MAP ->
-                        PlayerServerEvents.publishScenarioMap();
-                //case START_RTS_EVERYONE -> StartPosServerEvents.startGameCountdown();
-                //case CANCEL_START_RTS_EVERYONE -> StartPosServerEvents.cancelStartGameCountdown(false);
-                case DEFEAT -> PlayerServerEvents.defeat(this.playerId, Component.translatable("server.reignofnether.surrendered").getString());
-                case SPECTATE -> PlayerServerEvents.spectate(this.playerId);
-                case SPECTATOR_FREE_FLY -> Spectators.setFreeFly(player, this.x != 0);
-                case RESET_RTS -> PlayerServerEvents.resetRTS(false);
-                case RESET_RTS_HARD -> PlayerServerEvents.resetRTS(true);
-                case LOCK_RTS -> PlayerServerEvents.setRTSLock(true);
-                case UNLOCK_RTS -> PlayerServerEvents.setRTSLock(false);
-                case ENABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(true);
-                case DISABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(false);
-                case REQUEST_MARKET_RATES -> PlayerServerEvents.updateMarketRates(this.playerId);
-                case RESIGN_VOTE -> ResignVoteServerEvents.call(this.playerId);
-                case RESIGN_VOTE_YES -> ResignVoteServerEvents.answer(this.playerId, true);
-                case RESIGN_VOTE_NO -> ResignVoteServerEvents.answer(this.playerId, false);
-            }
-            success.set(true);
+            success.set(accept(player));
         });
         ctx.get().setPacketHandled(true);
         return success.get();
+    }
+
+    /** What the server does with this packet from {@code player} (the network handler's body, callable by game tests). */
+    public boolean accept(ServerPlayer player) {
+        if (playerId != -1 && player.getId() != playerId) {
+            ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Tried to process packet from " + player.getName() + " for id: " + this.playerId);
+            return false;
+        } else if (opOnlyActions.contains(action) && !player.hasPermissions(4)) {
+            ReignOfNether.LOGGER.warn("PlayerServerboundPacket: Non-op player " + player.getName() + " tried to run action: " + this.action.name());
+            return false;
+        } else if (hostOnlyActions.contains(action) && !PacketAuth.isHostOrOp(player, 2)) {
+            ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " is not the host and tried to run action: " + this.action.name());
+            return false;
+        }
+        if (action == PlayerAction.START_RTS && !PacketAuth.mayPlayAs(player, this.faction)) {
+            // START_RTS carries the faction: "none" (sandbox), "neutral" or a made-up key would otherwise make the sender
+            // a sandbox player, who may act for every owner. Sandbox starts go through START_RTS_SANDBOX (host only).
+            ReignOfNether.LOGGER.warn("PlayerServerboundPacket: " + player.getName() + " may not start as faction "
+                + (this.faction == null ? "(unknown)" : this.faction.key));
+            return false;
+        }
+        if (action == PlayerAction.TELEPORT) {
+            // follows a held portrait every tick and a minimap drag ten times a second: 60/s, a burst of two seconds
+            if (!PacketAuth.allow(player, "player_teleport", 60, 120))
+                return false;
+        } else if (!PacketAuth.allow(player, "player_action", 10, 30)) {
+            return false;   // starts, votes and market requests are a few a second at most
+        }
+        // a packet with playerId -1 used to pass the check above and then act on id -1; whatever the client
+        // claimed, an action is about the sender
+        this.playerId = player.getId();
+
+        // TELEPORT follows a held portrait every tick: at INFO it was 90 of the log's last 200 lines (Oct 15 review)
+        if (action == PlayerAction.TELEPORT)
+            ReignOfNether.LOGGER.debug("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
+        else
+            ReignOfNether.LOGGER.info("[Player] {} performed {} (pos: [{}, {}, {}])", player.getName(), action, this.x, this.y, this.z);
+
+        switch (action) {
+            case TELEPORT -> PlayerServerEvents.movePlayer(this.playerId, this.x, this.y, this.z);
+            case ENABLE_ORTHOVIEW -> PlayerServerEvents.enableOrthoview(this.playerId);
+            case DISABLE_ORTHOVIEW -> PlayerServerEvents.disableOrthoview(this.playerId);
+            case START_RTS ->
+                PlayerServerEvents.startRTS(this.playerId, new Vec3(this.x, this.y, this.z), Factions.getFaction(this.faction.key));
+            case START_RTS_SANDBOX ->
+                PlayerServerEvents.startRTS(this.playerId, new Vec3(this.x, this.y, this.z), Factions.NONE);
+            case START_RTS_SCENARIO ->
+                PlayerServerEvents.startRTSScenario(this.playerId, (int) this.x);
+            case PUBLISH_SCENARIO_MAP ->
+                PlayerServerEvents.publishScenarioMap();
+            //case START_RTS_EVERYONE -> StartPosServerEvents.startGameCountdown();
+            //case CANCEL_START_RTS_EVERYONE -> StartPosServerEvents.cancelStartGameCountdown(false);
+            case DEFEAT -> PlayerServerEvents.defeat(this.playerId, Component.translatable("server.reignofnether.surrendered").getString());
+            case SPECTATE -> PlayerServerEvents.spectate(this.playerId);
+            case SPECTATOR_FREE_FLY -> Spectators.setFreeFly(player, this.x != 0);
+            case RESET_RTS -> PlayerServerEvents.resetRTS(false);
+            case RESET_RTS_HARD -> PlayerServerEvents.resetRTS(true);
+            case LOCK_RTS -> PlayerServerEvents.setRTSLock(true);
+            case UNLOCK_RTS -> PlayerServerEvents.setRTSLock(false);
+            case ENABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(true);
+            case DISABLE_RTS_SYNCING -> PlayerServerEvents.setRTSSyncingEnabled(false);
+            case REQUEST_MARKET_RATES -> PlayerServerEvents.updateMarketRates(this.playerId);
+            case RESIGN_VOTE -> ResignVoteServerEvents.call(this.playerId);
+            case RESIGN_VOTE_YES -> ResignVoteServerEvents.answer(this.playerId, true);
+            case RESIGN_VOTE_NO -> ResignVoteServerEvents.answer(this.playerId, false);
+        }
+        return true;
     }
 }

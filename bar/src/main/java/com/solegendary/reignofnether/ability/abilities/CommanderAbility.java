@@ -136,7 +136,7 @@ public class CommanderAbility extends Ability {
                 title = "Rally Standard";
                 line1 = "Allies within 12 blocks: Resistance I and Speed I for 20 s.";
                 line2 = "Hold the line under the sun banner.";
-                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/white_banner.png");
+                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/goat_horn.png");
             }
         }
         // Blink is aimed: the button arms the cursor and the click sends the spot (UnitActionItem dispatches it)

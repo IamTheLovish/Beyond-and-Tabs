@@ -19,7 +19,7 @@ public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
 
     private static final Dragon.Params PARAMS = new Dragon.Params();
     static {
-        PARAMS.beatTicks = 36f;
+        PARAMS.beatTicks = 52f;   // r12d: a 10-block wyrm beats in ~2.6 s (lovish clips 16-40-34 / 16-43-09)
         PARAMS.down = 0.64f;
         PARAMS.flapUp = 32f;
         PARAMS.flapDown = -38f;

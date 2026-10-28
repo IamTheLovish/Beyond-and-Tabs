@@ -14,7 +14,6 @@ Faces follow ModelPart.Cube (1.20.1): top at (u+d, v), bottom at (u+d+w, v), the
 +x and back (+z) sides; each Polygon puts its 4 vertices on (u1,v0) (u0,v0) (u0,v1) (u1,v1).
 """
 import argparse
-import copy
 import json
 import math
 import os

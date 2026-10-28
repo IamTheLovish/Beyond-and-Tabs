@@ -359,4 +359,60 @@ public abstract class LivingEntityMixin extends Entity {
             ci.cancel();
         }
     }
+
+    @Shadow protected abstract void doPush(Entity entity);
+
+    /** Units look up the bodies they overlap in the shared UnitGrid, not the world, and push each with their own doPush. */
+    @Inject(
+            method = "pushEntities",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    protected void pushEntities(CallbackInfo ci) {
+        java.util.List<LivingEntity> overlapping = com.solegendary.reignofnether.unit.Separation.overlappingForPush((LivingEntity) (Object) this);
+        if (overlapping == null)
+            return;
+        for (int i = 0; i < overlapping.size(); i++)
+            this.doPush(overlapping.get(i));
+        overlapping.clear();
+        ci.cancel();
+    }
+
+    // ---- Oct 26 perf plan: vanilla's movement and AI timed as [Sys] sections, and a resting unit's travel skipped ----
+
+    @Shadow protected boolean jumping;
+    @Shadow protected abstract void serverAiStep();
+    @Shadow public abstract void travel(Vec3 pTravelVector);
+
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;travel(Lnet/minecraft/world/phys/Vec3;)V"))
+    private void reignofnether$timedTravel(LivingEntity self, Vec3 input) {
+        int t = com.solegendary.reignofnether.perf.Sys.begin(com.solegendary.reignofnether.perf.Sys.TRAVEL);
+        try {
+            this.travel(input);
+        } finally {
+            com.solegendary.reignofnether.perf.Sys.end(t);
+        }
+    }
+
+    @org.spongepowered.asm.mixin.injection.Redirect(method = "aiStep",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;serverAiStep()V"))
+    private void reignofnether$timedServerAiStep(LivingEntity self) {
+        int t = com.solegendary.reignofnether.perf.Sys.begin(com.solegendary.reignofnether.perf.Sys.AI_GOALS);
+        try {
+            this.serverAiStep();
+        } finally {
+            com.solegendary.reignofnether.perf.Sys.end(t);
+        }
+    }
+
+    /**
+     * F1: a Unit at rest (on the ground, horizontal speed under 1e-3, no input, no order, not hurt, not in a fluid)
+     * skips travel - its collision query - except every 10th tick, so a broken floor still drops it. TickGates.
+     */
+    @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
+    private void reignofnether$restingUnitSkipsTravel(Vec3 input, CallbackInfo ci) {
+        if (!this.jumping && com.solegendary.reignofnether.perf.TickGates.skipTravel((LivingEntity) (Object) this))
+            ci.cancel();
+    }
 }

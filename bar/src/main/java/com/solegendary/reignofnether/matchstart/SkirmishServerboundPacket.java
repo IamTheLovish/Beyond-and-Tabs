@@ -201,6 +201,17 @@ public class SkirmishServerboundPacket {
         };
     }
 
+    /**
+     * The lobby's metal setting as the open-ground metal of a pre-made map (maps spec M1): lean, normal and rich scale
+     * how many patches the fill places in every slot. Random keeps the normal map - a pre-made map is the same map the
+     * lobby preview drew for its seed, so the roll that random terrain makes at formation has no place here.
+     */
+    public static com.solegendary.reignofnether.maps.MetalOptions premadeMetal(int metal) {
+        float richness = metalRichness(metal);
+        return richness < 0 ? com.solegendary.reignofnether.maps.MetalOptions.DEFAULT
+            : com.solegendary.reignofnether.maps.MetalOptions.ofRichness(richness);
+    }
+
     /** Spawn-distance code (0 close, 1 normal, 2 far) to the inner and outer radius of the bot spawn ring. */
     public static int spawnMinR(int spawnDistance) {
         return switch (spawnDistance) { case 0 -> 140; case 2 -> 300; default -> 180; };
@@ -308,6 +319,9 @@ public class SkirmishServerboundPacket {
             // a spectator (team < 0, SkirmishSetupScreen.Settings.SPECTATE) gets no base and never joins the match:
             // not an RTS player, so the fog stays off and the HUD is RoN's observer view; the bots ring their spot
             boolean spectator = team < 0;
+            // fog needs a bounded play area: a border round the arena and the bot ring, before the first base
+            com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.fitBorderForMatch(player.serverLevel(),
+                gx + 0.5, gz + 0.5, arenaRadius(arena), maxR + Math.max(0, bots.size() - 1) * 35, false);
             if (!spectator)
                 PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
 
@@ -319,7 +333,7 @@ public class SkirmishServerboundPacket {
             if (!spectator)
                 teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
             for (BotSpec b : bots) {
-                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
+                String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; case 3 -> "passive"; default -> "medium"; };
                 BotServerEvents.lastBotName = null;
                 added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR, b.colorMapId());
                 if (BotServerEvents.lastBotName != null)

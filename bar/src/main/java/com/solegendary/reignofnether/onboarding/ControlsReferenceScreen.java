@@ -92,7 +92,14 @@ public class ControlsReferenceScreen extends Screen {
         bind("last_alert", Keybindings.lastAlert);
         bind("overview", Keybindings.overview);
         bind("idle_worker", Keybindings.idleWorker);
+        // keybinds/ChordKeys: BAR Legacy's fixed Ctrl chords (HudClientEvents.onKeyRelease)
+        mouse("idle_builder_ctrl_b", t("ctrl") + " + B");
+        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + B");
+        mouse("select_commander_ctrl_c", t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
+        mouse("select_army_ctrl_w", t("ctrl") + " + W");
+        mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
+        bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
         mouse("zoom", t("wheel") + "  /  " + k(Keybindings.zoomIn) + " " + k(Keybindings.zoomOut));
@@ -117,6 +124,9 @@ public class ControlsReferenceScreen extends Screen {
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
         mouse("remove", t("ctrl") + " + " + t("left_click"));
+        mouse("select_all_units_ctrl_a", t("ctrl") + " + A");
+        mouse("select_same_type_ctrl_z", t("ctrl") + " + Z");
+        mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
         bind("cycle", Keybindings.tab);
         mouse("groups", t("ctrl") + " + 0-9  /  0-9");
@@ -133,11 +143,24 @@ public class ControlsReferenceScreen extends Screen {
         bind("patrol", Keybindings.patrol);
         bind("guard", Keybindings.guard);
         mouse("queue", t("shift") + " + " + t("any_order"));
+        // BAR queue editing (unit/command/QueueEditKeys): Space (or Ctrl) + order inserts, N skips, Ctrl+N cancels last
+        mouse("queue_insert", k(Keybindings.queueInsert) + " / " + t("ctrl") + " + " + t("any_order"));
+        bind("queue_skip", Keybindings.queueSkip);
+        mouse("queue_cancel_last", t("ctrl") + " + " + k(Keybindings.queueSkip));
         mouse("area", t("ctrl") + " + " + t("right_drag"));
 
         header("h_build");
         bind("build", Keybindings.build);
+        bind("build_tab_economy", Keybindings.buildTabEconomy);
+        bind("build_tab_military", Keybindings.buildTabMilitary);
+        bind("build_tab_defence", Keybindings.buildTabDefence);
+        bind("build_tab_tech", Keybindings.buildTabTech);
+        slots("build_grid_row1", Keybindings.buildGrid[0], Keybindings.buildGrid[1], Keybindings.buildGrid[2], Keybindings.buildGrid[3]);
+        slots("build_grid_row2", Keybindings.buildGrid[4], Keybindings.buildGrid[5], Keybindings.buildGrid[6], Keybindings.buildGrid[7]);
+        slots("build_grid_row3", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
+        mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
+        mouse("build_spacing", t("shift") + " + " + t("wheel"));   // BuildingLineClientEvents.onScroll
         bind("rotate_ccw", Keybindings.rotateBuildingCCW);
         bind("rotate_cw", Keybindings.rotateBuildingCW);
         bind("cancel", Keybindings.cancelBuild);
@@ -153,7 +176,7 @@ public class ControlsReferenceScreen extends Screen {
         bind("minimap", Keybindings.minimapToggle);
         bind("chat", Keybindings.chat);
         bind("command_bar", Keybindings.commandBar);
-        mouse("menu", "Esc");
+        mouse("menu", t("shift") + " + Esc");   // guiscreen/PauseFlow: plain Esc cancels (esc_cancel above)
     }
 
     private int panelW() {
