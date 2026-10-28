@@ -36,3 +36,18 @@
 - Must stay distinct from Brassworks (steam machines, Victorian brick and brass): the AI faction is post-industrial -
   clean geometry, glass, light, drones - not gears and smoke.
 - Still to decide with lovish: its look (references), name, roster and roles, and when the lane starts.
+
+## Update 04:26-04:27 - the AI faction's direction (lovish)
+"I want it to be like drones and robots and kinda inspired by Beyond All Reason and the neon faction from T.A.B.S" -
+"kinda like a Tron Legacy faction with AI robots and mecha".
+- LOOK: Tron Legacy's language (inspiration only - no copies of its logos, characters, light cycles or recognizable
+  designs): glossy black and dark-grey bodies and buildings, clean hard geometry, thin GLOWING LIGHT LINES tracing every
+  edge and seam (one or two light colours per team), circuit-like patterns on floors and walls, light as the only
+  ornament. Readable from the RTS camera by its light lines. Hyper-real materials (polished, glossy, metal) with emissive
+  edges - the block pack can add proper emissive light-strip blocks.
+- UNITS: drones, robots and MECHA. From Beyond All Reason: walking bots vs tracked/hover vehicles, a commander mech,
+  constructor drones, scale from small bots to giant mechs (game enders). From TABS Neon (a Closed Alpha faction, campaign
+  levels 21-25 - its units never returned in the full game): energy weapons - energy pistols, energy swords, a tesla unit,
+  a gravity unit, a long-range beamer, a projectile shield, an energy-sword master (a hero/boss).
+- Distinct from Brassworks (steam, Victorian brass): clean, digital, light - no gears, smoke or rivets.
+- Next: lovish's reference pictures for the look; then name, roster and roles; the lane starts when lovish says.
