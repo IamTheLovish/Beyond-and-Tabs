@@ -114,6 +114,15 @@ public final class Quadruped {
 
     private Quadruped() {}
 
+    /**
+     * The exertion the breath runs on: the living army's shared one (design/living_army.md) when the unit has a slot
+     * in the shared motion state - running, fighting, settling over ~10 s like every other unit - else the rig's own.
+     */
+    public static float exertion(float own, int slotBase, float[] slab) {
+        return slotBase < 0 ? own
+            : slab[slotBase + com.solegendary.reignofnether.unit.modelling.motion.AnimState.EXERTION];
+    }
+
     /** A DSL rotation (degrees, y up, facing -z) added to a part (MC: -x, +y, -z radians), scaled by k. */
     public static void dsl(ModelPart p, float x, float y, float z, float k) {
         if (p == null || k == 0f)
@@ -156,7 +165,10 @@ public final class Quadruped {
         if (attackTime > 0f && (st[3] <= 0f || attackTime < st[3]))
             st[2] = age;                              // the swing began this frame: start our own, slower clip
         st[3] = attackTime;
-        float exert = st[0];
+        // the A/B toggle (Numpad 0) puts the bison back on its own exertion with the rest of the army
+        int slot = com.solegendary.reignofnether.unit.modelling.motion.AnimStates.enabled()
+            ? com.solegendary.reignofnether.unit.modelling.motion.AnimStates.base(id) : -1;
+        float exert = exertion(st[0], slot, com.solegendary.reignofnether.unit.modelling.motion.AnimStates.slab());
         float idle = 1f - amt;
 
         // ---- the gait ---------------------------------------------------------------------------------------------

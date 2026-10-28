@@ -52,6 +52,9 @@ public class HeroServerEvents {
             }
         }
 
+        // a commander or a hero fell (no totem saved it): a one-time XP burst for the enemy heroes near it
+        HeroProgression.onDecisiveKill(evt.getEntity());
+
         Level level = evt.getEntity().level();
         if (evt.getEntity() instanceof Unit deadUnit) {
             int popCost = deadUnit.getCost().population;
@@ -110,7 +113,7 @@ public class HeroServerEvents {
             );
             fallenHeroes.add(fallenHero);
             FallenHeroClientboundPacket.addFallenHero(fallenHero);
-            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level(), false);   // marked dirty, no disk write mid-fight
+            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level());   // marked dirty, no disk write mid-fight
 
             for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers) {
                 if (rtsPlayer.name.equals(heroUnit.getOwnerName()) ||

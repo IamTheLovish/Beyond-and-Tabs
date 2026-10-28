@@ -387,6 +387,11 @@ def building_stats():
         name = os.path.basename(cls)
         src = _read(path)
         hp = re.search(r'this\.maxHealth\s*=\s*([\d.]+)', src)
+        if not hp:   # a health that lives in raid/RaidTuning.java (the early-raid numbers: one tuning place)
+            ref = re.search(r'this\.maxHealth\s*=\s*(?:com\.solegendary\.reignofnether\.raid\.)?RaidTuning\.(\w+)', src)
+            if ref:
+                tuning = _read(os.path.join(SRC, 'raid/RaidTuning.java'))
+                hp = re.search(r'\b' + ref.group(1) + r'\s*=\s*([\d.]+)d?;', tuning)
         rng = re.search(r'int get(?:Attack)?Range\([^)]*\)\s*\{\s*return\s+(\d+)', src)
         mi = re.search(r'this\.metalIncome\s*=\s*([\d.]+)', src)
         ei = re.search(r'this\.energyIncome\s*=\s*([\d.]+)', src)
