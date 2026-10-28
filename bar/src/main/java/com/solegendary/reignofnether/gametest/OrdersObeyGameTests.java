@@ -310,6 +310,9 @@ public class OrdersObeyGameTests {
         long[] shiftedFor = { Long.MIN_VALUE };
         int[] shifts = { 0 };
         StringBuilder events = new StringBuilder();
+        StringBuilder trace = new StringBuilder();
+        long[] traced = { Long.MIN_VALUE, -1, -1, Long.MIN_VALUE };
+        BlockPos[] tracedEnd = { null };
         boolean[] done = { false };
         ArenaReady.whenTicking(helper, made, 150, tick -> {
             if (level.getChunkSource().getChunkNow(far.getX() >> 4, far.getZ() >> 4) != null) {
@@ -328,6 +331,37 @@ public class OrdersObeyGameTests {
             long t = helper.getTick() - ordered[0];
             MoveToTargetBlockGoal goal = ((Unit) m).getMoveGoal();
             boolean idle = goal.getMoveTarget() == null;
+            // every request, path result, navigation start/stop and nudge, with where the unit stood: a give-up that never
+            // comes shows which repath read as progress (CI stress on #294, 40628389476: 2 shifts, then it stood
+            // 3 blocks back from the wall with its order)
+            BlockPos fin = goal.getFinalNodePos();
+            boolean navDone = m.getNavigation().isDone();
+            long nudge = StuckNudge.lastNudge(m);
+            if (goal.getLastRequestTime() != traced[0] || goal.isPathPending() != (traced[1] == 1)
+                    || navDone != (traced[2] == 1) || nudge != traced[3] || !java.util.Objects.equals(fin, tracedEnd[0])) {
+                traced[0] = goal.getLastRequestTime();
+                traced[1] = goal.isPathPending() ? 1 : 0;
+                traced[2] = navDone ? 1 : 0;
+                traced[3] = nudge;
+                tracedEnd[0] = fin;
+                if (trace.length() < 6000) {
+                    net.minecraft.world.level.pathfinder.Path p = m.getNavigation().getPath();
+                    trace.append(" t").append(t).append(goal.isPathPending() ? " req" : navDone ? " done" : " nav")
+                        .append(" at ").append(TerrainGameTests.f(m.getX() - startX)).append(",")
+                        .append(TerrainGameTests.f(m.getZ())).append(m.onGround() ? "" : " air")
+                        .append(" end ").append(fin == null ? "none" : (fin.getX() - pad.getX()) + "," + fin.getY() + "," + fin.getZ())
+                        .append(p == null ? "" : " n" + p.getNextNodeIndex() + "/" + p.getNodeCount())
+                        .append(" stuck ").append(stuckRepaths(goal)).append(goal.isInBackoff() ? " backoff" : "")
+                        .append(" req@").append(goal.getLastRequestTime() - level.getGameTime());
+                    if (nudge >= 0 && level.getGameTime() - nudge < 2)
+                        trace.append(" NUDGE");
+                    if (goal.isPathPending()) {
+                        BlockPos edge = com.solegendary.reignofnether.unit.pathfinding.RtsPathfinder.lastLoadedToward(level, m.blockPosition(), far);
+                        trace.append(" edge ").append(edge == null ? "none" : (edge.getX() - pad.getX()) + "," + edge.getY() + "," + edge.getZ());
+                    }
+                    trace.append(" rts ").append(UnitServerEvents.rtsPathfinding).append(";");
+                }
+            }
             // at rest at the wall after this request's path came in: shift it a block along the wall, once per request
             if (!idle && m.getX() - startX >= 8 && !goal.isPathPending() && m.getNavigation().isDone()
                     && goal.getLastRequestTime() != shiftedFor[0]) {
@@ -348,7 +382,7 @@ public class OrdersObeyGameTests {
                 if (!idle)
                     problems.add("the unit still had its order after " + t + " ticks (" + shifts[0] + " shifts along the"
                         + " wall, moved " + TerrainGameTests.f(m.getX() - startX) + " east, last request at "
-                        + goal.getLastRequestTime() + ", now " + level.getGameTime() + "):" + events);
+                        + goal.getLastRequestTime() + ", now " + level.getGameTime() + "):" + events + " trace:" + trace);
                 else if (m.getX() - startX < 5)
                     problems.add("the unit gave up without walking toward the target (moved "
                         + TerrainGameTests.f(m.getX() - startX) + " east)");
@@ -356,13 +390,44 @@ public class OrdersObeyGameTests {
                 // came to rest there passes on any code)
                 else if (shifts[0] < 2)
                     problems.add("the unit gave up after only " + shifts[0] + " shifts along the wall: the test did not"
-                        + " exercise the drift:" + events);
+                        + " exercise the drift:" + events + " trace:" + trace);
+                ReignOfNether.LOGGER.info("[Orders] shifted along the wall, {} ticks, idle {}, {} shifts:{} trace:{}", t, idle,
+                    shifts[0], events, trace);
                 TerrainGameTests.finish(helper, problems);
             } finally {
                 UnitServerEvents.rtsPathfinding = wasRts;
                 TerrainGameTests.cleanUp(made);
             }
         });
+    }
+
+    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
+    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_2", timeoutTicks = 800)
+    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_2(GameTestHelper helper) {
+        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
+    }
+
+    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
+    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_3", timeoutTicks = 800)
+    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_3(GameTestHelper helper) {
+        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
+    }
+
+    // DIAGNOSTICS ONLY (removed before merge): more samples of the flake per stress runner
+    @GameTest(template = ARENA, batch = BATCH_RTS_SHIFTED + "_4", timeoutTicks = 800)
+    public static void a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks_4(GameTestHelper helper) {
+        a_unit_shifted_along_the_wall_still_gives_up_a_move_into_unloaded_chunks(helper);
+    }
+
+    // the move goal's count of repaths in a row that made no progress (diagnostics only: -1 if it cannot be read)
+    static int stuckRepaths(MoveToTargetBlockGoal goal) {
+        try {
+            java.lang.reflect.Field f = MoveToTargetBlockGoal.class.getDeclaredField("stuckRepaths");
+            f.setAccessible(true);
+            return f.getInt(goal);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return -1;
+        }
     }
 
     // ------------------------------------------------------------------- (c) Stop after a queued big formation move
