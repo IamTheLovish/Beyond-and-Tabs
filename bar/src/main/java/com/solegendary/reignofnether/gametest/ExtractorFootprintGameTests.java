@@ -184,6 +184,54 @@ public class ExtractorFootprintGameTests {
         }
     }
 
+    /**
+     * A patch cut into a hillside (flake-stress 40609781800: "pad dry (rim +9)", every obstruction "+9 grass_block" or
+     * "+9 dirt_path"): the pad clears 8 up, the hill's top stays as a roof over the footprint and the extractor clips it.
+     * A platform high above the terrain with a mound 12 tall over two rows of the pad, then the player's origin.
+     */
+    @GameTest(template = ARENA)
+    public static void a_stamped_patch_clears_a_hill_taller_than_the_pad(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 230;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                if (dz <= -2)   // the hill: dirt up to +11, grass on top
+                    for (int k = 1; k <= 12; k++)
+                        level.setBlock(new BlockPos(cx + dx, y + k, cz + dz), (k == 12 ? net.minecraft.world.level.block.Blocks.GRASS_BLOCK
+                            : net.minecraft.world.level.block.Blocks.DIRT).defaultBlockState(), 2);
+            }
+        MetalPatches.forgetAll();
+        try {
+            MetalPatches.stamp(level, cx, cz);
+            BlockPos centre = new BlockPos(cx, y, cz);
+            if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
+                helper.fail("stamp() did not leave a patch block at " + centre + " (solidTop says " + MetalPatches.solidTop(level, cx, cz) + ")");
+                return;
+            }
+            List<String> refused = new ArrayList<>();
+            for (ResourceLocation key : new ArrayList<>(Factions.PLAYABLE_FACTIONS)) {
+                Faction f = Factions.getFaction(key);
+                Building e = Factions.isLive(f) ? FactionTraits.of(f).metalExtractor.get() : null;
+                if (e == null)
+                    continue;
+                String err = BuildingValidators.getPlacementValidityError(level, e, centre.offset(-2, 0, -2), "gametest_footprint",
+                    Rotation.NONE, false, false, true);
+                if (err != null)
+                    refused.add(e.structureName + " " + err);
+            }
+            if (refused.isEmpty())
+                helper.succeed();
+            else
+                helper.fail("a patch stamped against a hill 12 tall refuses: " + refused + " (pad " + obstructions(level, centre) + ")");
+        } finally {
+            MetalPatches.forgetAll();
+        }
+    }
+
     /** Each unplaceable patch with the errors it gave, per extractor; null when every patch takes every extractor. */
     private static String check(ServerLevel level, List<BlockPos> patches, List<BlockPos> starts) {
         List<Building> extractors = new ArrayList<>();
