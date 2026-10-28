@@ -122,3 +122,21 @@ GameTests (end of `gametest/SkirmishGameTests.java`): `mana_wells_survive_reload
 `capture_point_and_hired_wolves_survive_reload`, `match_history_and_awards_survive_reload` and
 `units_survive_reload_0..7`. Each one writes the records, sends them through real NBT bytes, clears them, loads
 them back and checks they are equal.
+
+## When RTS data is written (plan 014, the save hitch)
+
+Every RTS `*SaveData` (buildings, nether zones, gather targets, fallen heroes, resources, players, research,
+custom buildings, survival, start positions, tutorial, scenario roles) is only **marked dirty** during play. Nothing
+on a timer or a game event calls `getDataStorage().save()` any more: that writes every dirty saved-data file
+synchronously on the server thread, and the old 30 s timers (units, buildings, resources) and 60 s timer (players)
+plus the per-event writes (research, nether zones, joins, defeats, a reset wrote it seven times) were mid-fight hitches.
+
+- **World save** (autosave every 6000 ticks, `/save-all`, singleplayer pause): `mixin/ServerLevelMixin` calls
+  `persistence/RtsSaves.snapshot` at the head of `ServerLevel.save` for the overworld, then vanilla writes it all
+  once. RTS data and the chunks it describes are written together, so a crash loses the same five minutes of both.
+  `/save-off` (`skipSave`) skips the snapshot too.
+- **Stop**: Forge fires `ServerStoppingEvent` before the final save, and the stopping handlers save then clear their
+  live lists. `RtsSaves` turns the snapshot off at HIGHEST priority (so the final save cannot write empty lists) and
+  flushes once at LOWEST, after every handler.
+- **Scenario editor Save** is the one in-game flush (no match running).
+- `RtsSavesSourceTest` fails on any new `getDataStorage().save()` outside `RtsSaves` or a `SAVE_TICKS_MAX` timer.

@@ -243,14 +243,11 @@ public class UnitServerEvents {
 
     private static boolean isServerStopping = false;
 
-    private static final int SAVE_TICKS_MAX = 600;
-    private static int saveTicks = 0;
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
             return;
         knockbackIgnoreIds.clear();   // marks live for their own hit's call stack only (see the field)
-        saveTicks += 1;
         // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
         if (evt.getServer().getTickCount() % 20 == 0) {
             int sysChunks = Sys.begin(Sys.CHUNK_LOADER);
@@ -260,13 +257,8 @@ public class UnitServerEvents {
                 Sys.end(sysChunks);
             }
         }
-        if (saveTicks >= SAVE_TICKS_MAX) {
-            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-            if (level != null) {
-                saveGatherTargets(level);
-                saveTicks = 0;
-            }
-        }
+        // the gather targets reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014), not on a
+        // 30 s timer of their own
     }
 
     @SubscribeEvent
@@ -303,25 +295,15 @@ public class UnitServerEvents {
         ParticleUtil.addParticleExplosion(ParticleTypes.POOF, 35, level, entity.position());
     }
 
-    public static void saveFallenHeroUnits(ServerLevel level) {
-        saveFallenHeroUnits(level, true);
-    }
-
     /**
-     * Copies the fallen heroes into their save data. {@code flush} writes every dirty save file to disk now: right
-     * for the server stopping, wrong on each hero death mid-fight (a synchronous disk write of all the world's saved
-     * data on the server thread) - there the data is only marked dirty and Minecraft's autosave / the stop writes it.
-     * The log line counted every living unit ("Saved 615 fallen hero units" in a tester's match), not the heroes.
+     * Copies the fallen heroes into their save data and marks it dirty; Minecraft's world save or the stop writes it
+     * (persistence/RtsSaves, plan 014). It used to write every saved-data file to disk on each hero death mid-fight.
      */
-    public static void saveFallenHeroUnits(ServerLevel level, boolean flush) {
+    public static void saveFallenHeroUnits(ServerLevel level) {
         HeroUnitSaveData data = HeroUnitSaveData.getInstance(level);
         data.heroUnits.clear();
         data.heroUnits.addAll(HeroServerEvents.fallenHeroes);
         data.save();
-        if (flush) {
-            level.getDataStorage().save();
-            ReignOfNether.LOGGER.info("Saved " + HeroServerEvents.fallenHeroes.size() + " fallen hero units");
-        }
     }
 
     public static void saveGatherTargets(ServerLevel level) {
@@ -341,9 +323,7 @@ public class UnitServerEvents {
                 }
             }
         });
-        data.save();
-        level.getDataStorage().save();
-        //ReignOfNether.LOGGER.info("Saved " + numWorkersSaved + " gatherTargets");
+        data.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent

@@ -123,8 +123,7 @@ public class ResourcesServerEvents {
             ));
             //ReignOfNether.LOGGER.info("saved resources in serverevents: " + r.ownerName + "|" + r.food + "|" + r.wood + "|" + r.ore);
         });
-        data.save();
-        serverLevel.getDataStorage().save();
+        data.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
@@ -140,8 +139,6 @@ public class ResourcesServerEvents {
         }
     }
 
-    private static final int SAVE_TICKS_MAX = 600;
-    private static int saveTicks = 0;
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
@@ -153,15 +150,7 @@ public class ResourcesServerEvents {
         } finally {
             Sys.end(sysEconomy);
         }
-
-        saveTicks += 1;
-        if (saveTicks >= SAVE_TICKS_MAX) {
-            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-            if (level != null) {
-                saveResources(level);
-                saveTicks = 0;
-            }
-        }
+        // resources reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014), not every 30 s
     }
 
     @SubscribeEvent

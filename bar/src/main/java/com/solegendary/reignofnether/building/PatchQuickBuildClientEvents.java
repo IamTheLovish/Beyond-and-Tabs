@@ -76,6 +76,12 @@ public class PatchQuickBuildClientEvents {
         for (BlockPos p : new BlockPos[]{ bp, bp.below(), bp.above() })
             if (MC.level.getBlockState(p).is(MetalPatches.PATCH_BLOCK))
                 return p;
+        // never-explored fog shows the ground from before the patches were stamped: the synced list still knows them
+        // (BuildingValidators.isKnownPatchUnderFog lets the extractor's blueprint go there)
+        for (BlockPos c : MetalPatchesClient.getPatches())
+            if (Math.abs(c.getX() - bp.getX()) + Math.abs(c.getZ() - bp.getZ()) <= 1 && Math.abs(c.getY() - bp.getY()) <= 3
+                    && !com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isInBrightChunk(c))
+                return c;
         return null;
     }
 

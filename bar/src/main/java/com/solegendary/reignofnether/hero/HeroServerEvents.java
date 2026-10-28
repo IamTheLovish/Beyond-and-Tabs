@@ -113,7 +113,7 @@ public class HeroServerEvents {
             );
             fallenHeroes.add(fallenHero);
             FallenHeroClientboundPacket.addFallenHero(fallenHero);
-            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level(), false);   // marked dirty, no disk write mid-fight
+            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level());   // marked dirty, no disk write mid-fight
 
             for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers) {
                 if (rtsPlayer.name.equals(heroUnit.getOwnerName()) ||
