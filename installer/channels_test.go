@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -416,5 +417,107 @@ func TestLogLockProbe(t *testing.T) {
 	}}
 	if !backFails.GameOpen() {
 		t.Fatal("rename-back failed: treat the game as possibly running")
+	}
+}
+
+// blockingPackwiz: an update that stays "running" until release is closed, counting runs (safe across goroutines).
+type blockingPackwiz struct {
+	mu       sync.Mutex
+	calls    int
+	args     []string
+	started  chan struct{}
+	release  chan struct{}
+	install  string
+	startedO sync.Once
+}
+
+func (b *blockingPackwiz) Run(dir, exe string, args []string) (string, error) {
+	b.mu.Lock()
+	b.calls++
+	b.args = args
+	b.mu.Unlock()
+	b.startedO.Do(func() { close(b.started) })
+	<-b.release
+	if err := os.WriteFile(filepath.Join(dir, "mods", b.install), nil, 0o644); err != nil {
+		return "", err
+	}
+	return "Finished successfully!\n", nil
+}
+
+// PR #267 review finding 6: switching the channel while PLAY (install + launch) is running must be refused with a
+// clear note, start no second install or launch, and leave the saved state and the instance on one channel.
+func TestSetChannelWhilePlayRunningIsRefused(t *testing.T) {
+	fake := &blockingPackwiz{started: make(chan struct{}), release: make(chan struct{}), install: "beyondandtabs-2026.10.25-2235-aaaaaaa.jar"}
+	l, p, launched := newChannelTestLauncher(t, &fakePackwiz{})
+	l.packwiz = fake
+	srv := fakeActions(t, "bbbbbbb")
+	l.watcher = newUpdateWatcher(&ghClient{base: srv.URL, client: srv.Client(), budget: pollCallBudget})
+
+	type playOut struct {
+		res playResult
+		err error
+	}
+	done := make(chan playOut, 1)
+	go func() {
+		res, err := l.play()
+		done <- playOut{res, err}
+	}()
+	<-fake.started // PLAY holds the install
+
+	// the channel switch (twice, from two goroutines) and a watcher install attempt all arrive during the install
+	var wg sync.WaitGroup
+	errs := make([]error, 2)
+	for i := range errs {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			errs[i] = l.setChannel(channelFast)
+		}(i)
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		l.autoInstall(channels[1], "aaaaaaa", "bbbbbbb")
+	}()
+	wg.Wait()
+	for i, err := range errs {
+		if err == nil || !strings.Contains(err.Error(), "being updated") {
+			t.Fatalf("switch %d during PLAY must be refused with a clear note, got %v", i, err)
+		}
+	}
+	if st := readState(p.state); st.Channel != "" {
+		t.Fatalf("a refused switch must not save anything: %+v", st)
+	}
+	if c := l.view(t0).Channel; c != channelTested {
+		t.Fatalf("page still shows the old channel, got %q", c)
+	}
+
+	close(fake.release)
+	out := <-done
+	if out.err != nil || !out.res.Launched {
+		t.Fatalf("PLAY must finish and launch: %+v %v", out.res, out.err)
+	}
+	fake.mu.Lock()
+	calls, last := fake.calls, fake.args[len(fake.args)-1]
+	fake.mu.Unlock()
+	if calls != 1 || *launched != 1 {
+		t.Fatalf("exactly one install and one launch: installs=%d launches=%d", calls, *launched)
+	}
+	if last != packTomlURL {
+		t.Fatalf("PLAY installed the tested pack it started with, got %q", last)
+	}
+	cfg, _ := os.ReadFile(instanceCfgPath(p))
+	if !strings.Contains(string(cfg), packTomlURL) || strings.Contains(string(cfg), "/fast/") {
+		t.Fatalf("instance.cfg must stay on the tested pack:\n%s", cfg)
+	}
+	if st := readState(p.state); st.Channel != "" || st.LastPlayedSha != "aaaaaaa" {
+		t.Fatalf("state must be the finished PLAY's: %+v", st)
+	}
+	// after PLAY the switch works
+	if err := l.setChannel(channelFast); err != nil {
+		t.Fatalf("switch after PLAY: %v", err)
+	}
+	if st := readState(p.state); st.Channel != channelFast || l.view(t0).Channel != channelFast {
+		t.Fatalf("switch after PLAY must save: %+v", st)
 	}
 }
