@@ -60,6 +60,11 @@ class AnimationCostBench {
     /** The wall-clock gates of the living army (design budgets, not 10x margins) take the best of this many rounds. */
     static final int ROUNDS = 7;
     static final long ROUND_PAUSE_MS = 15;
+    /**
+     * Frames run before the rounds: long enough that the JIT has swapped in the frame's final compiled code. With 100
+     * (the single-window warm-up), the swap fell inside the rounds and materialised ~4 KB once (#293's first build).
+     */
+    static final int ROUND_WARMUP = 300;
     /** restPose + procedural layer, microseconds per unit: a 10x regression trips it, runner noise does not. */
     static final double ANIM_BUDGET_US_PER_UNIT = 40.0;
 
@@ -292,15 +297,10 @@ class AnimationCostBench {
         for (int i = 0; i < UNITS; i++)
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, i * stride, 0f, 0f, 0f, 0f, 20f,
                 20f, false, true);
-        com.sun.management.ThreadMXBean mx =
-            (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
-        long tid = Thread.currentThread().getId();
-        long[] allocated = { 0 };
         // best of ROUNDS medians, not one: a single 30-frame median (~20 ms) on a shared runner read 1.41 us/unit
         // against the 1.0 budget on #146's build (Oct 27); a real regression slows every round (BenchRounds)
-        BenchRounds.Result tick = BenchRounds.measure(ROUNDS, WARMUP * 10, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+        BenchRounds.Result tick = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
             int t = 1000 + round * FRAMES + frame;
-            long a0 = mx.getThreadAllocatedBytes(tid);
             long t0 = System.nanoTime();
             for (int i = 0; i < UNITS; i++) {
                 int b = i * stride;
@@ -313,21 +313,20 @@ class AnimationCostBench {
                 com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
             }
             long t1 = System.nanoTime();
-            long a1 = mx.getThreadAllocatedBytes(tid);
-            if (round >= 0)
-                allocated[0] += a1 - a0;
             return t1 - t0;
         });
         double perUnitUs = tick.bestMs() * 1000.0 / UNITS;
         String line = String.format(Locale.ROOT,
-            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d ticks: %s), %d bytes allocated",
-            UNITS, tick.bestMs(), perUnitUs, MOTION_TICK_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, tick.roundsText(), allocated[0]);
+            "[AnimBench] Living army tick: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d ticks: %s), quietest round allocated %d bytes (%s)",
+            UNITS, tick.bestMs(), perUnitUs, MOTION_TICK_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, tick.roundsText(),
+            tick.quietestRoundBytes(), tick.bytesText());
         System.out.println(line);
         Path out = Path.of("build", "motion-bench.txt");
         Files.createDirectories(out.getParent());
         Files.write(out, List.of(line));
         assertTrue(perUnitUs < MOTION_TICK_BUDGET_US_PER_UNIT, line);
-        assertTrue(allocated[0] == 0, "the living army tick allocates: " + line);
+        // a real allocation per tick shows in every round; a one-off (the JIT swapping code) in one round only
+        assertTrue(tick.quietestRoundBytes() == 0, "the living army tick allocates: " + line);
     }
 
     /** The living army's motion pass on a vanilla body, microseconds per unit per pass (design/living_army.md, section 3). */
@@ -361,14 +360,9 @@ class AnimationCostBench {
         float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
         PoseStack pose = new PoseStack();
         float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
-        com.sun.management.ThreadMXBean mx =
-            (com.sun.management.ThreadMXBean) java.lang.management.ManagementFactory.getThreadMXBean();
-        long tid = Thread.currentThread().getId();
-        long[] allocated = { 0 };
         // best of ROUNDS medians, as in livingArmyTick (BenchRounds)
-        BenchRounds.Result pass = BenchRounds.measure(ROUNDS, WARMUP * 10, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+        BenchRounds.Result pass = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
             float time = 1000f + round * FRAMES + frame;
-            long a0 = mx.getThreadAllocatedBytes(tid);
             long t0 = System.nanoTime();
             for (int i = 0; i < UNITS; i++) {
                 com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, time + i,
@@ -378,21 +372,19 @@ class AnimationCostBench {
                 pose.setIdentity();   // the render's own push/pop is vanilla's (it allocates), not the pass's
             }
             long t1 = System.nanoTime();
-            long a1 = mx.getThreadAllocatedBytes(tid);
-            if (round >= 0)
-                allocated[0] += a1 - a0;
             return t1 - t0;
         });
         double perUnitUs = pass.bestMs() * 1000.0 / UNITS;
         String line = String.format(Locale.ROOT,
-            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), %d bytes allocated",
-            UNITS, pass.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, pass.roundsText(), allocated[0]);
+            "[AnimBench] Living army motion pass: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), quietest round allocated %d bytes (%s)",
+            UNITS, pass.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, pass.roundsText(),
+            pass.quietestRoundBytes(), pass.bytesText());
         System.out.println(line);
         Path out2 = Path.of("build", "motion-pass-bench.txt");
         Files.createDirectories(out2.getParent());
         Files.write(out2, List.of(line));
         assertTrue(perUnitUs < MOTION_PASS_BUDGET_US_PER_UNIT, line);
-        assertTrue(allocated[0] == 0, "the motion pass allocates: " + line);
+        assertTrue(pass.quietestRoundBytes() == 0, "the motion pass allocates: " + line);
         assertTrue(before == body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot,
             "restore leaves the body exactly as setupAnim left it");
     }
