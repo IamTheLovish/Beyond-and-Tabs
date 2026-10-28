@@ -389,6 +389,73 @@ public class DragonDiveGameTests {
         });
     }
 
+    /**
+     * A spot inside a cliff that rises past the dragon's own height is refused (no dive, no cooldown) - r2 scanned
+     * down from the dragon's block, so a cliff beside it gave a ledge above it as the "ground" (#300 review round 2).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void bone_dragon_dive_refuses_a_spot_inside_a_cliff(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 290);
+        List<BlockPos> cliff = new ArrayList<>();
+        for (int y = 0; y <= 9; y++)
+            cliff.add(new BlockPos(pad.getX() + 12, pad.getY() + y, pad.getZ() + 8));
+        for (BlockPos b : cliff)
+            level.setBlock(b, Blocks.STONE.defaultBlockState(), 3);
+        var dragon = (BoneDragonUnit) put(level, pad, EntityRegistrar.BONE_DRAGON_UNIT.get(), "gametest_dive_cliff", 4.5, 5, 8.5);
+        helper.runAfterDelay(3, () -> {
+            try {
+                if (dragon == null)
+                    helper.fail("could not create the dragon");
+                else if (dragon.startDive(new Vec3(pad.getX() + 12.5, pad.getY(), pad.getZ() + 8.5)) || dragon.isDiving())
+                    helper.fail("it took a spot inside a cliff higher than itself (dive to y "
+                        + (dragon.diveTarget() == null ? "?" : String.format("%.0f", dragon.diveTarget().y - pad.getY())) + " over the pad)");
+                else
+                    helper.succeed();
+            } finally {
+                if (dragon != null)
+                    dragon.discard();
+                for (BlockPos b : cliff)
+                    level.setBlock(b, Blocks.AIR.defaultBlockState(), 3);
+            }
+        });
+    }
+
+    /** Water or lava at the spot is no ground to land on: refused (r2 scanned through them to the bed). */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void bone_dragon_dive_refuses_water_and_lava(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pad = skyPad(helper, 290);
+        BlockPos wet = new BlockPos(pad.getX() + 10, pad.getY(), pad.getZ() + 4), hot = new BlockPos(pad.getX() + 10, pad.getY(), pad.getZ() + 12);
+        var dragon = (BoneDragonUnit) put(level, pad, EntityRegistrar.BONE_DRAGON_UNIT.get(), "gametest_dive_wet", 4.5, 5, 8.5);
+        helper.runAfterDelay(2, () -> {
+            level.setBlock(wet, Blocks.WATER.defaultBlockState(), 2);
+            level.setBlock(hot, Blocks.LAVA.defaultBlockState(), 2);
+        });
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (dragon == null) {
+                    problems.add("could not create the dragon");
+                    return;
+                }
+                if (dragon.startDive(Vec3.atBottomCenterOf(wet)))
+                    problems.add("it dived into water");
+                if (!dragon.isDiving() && dragon.startDive(Vec3.atBottomCenterOf(hot)))
+                    problems.add("it dived into lava");
+            } finally {
+                if (dragon != null)
+                    dragon.discard();
+                level.setBlock(wet, Blocks.AIR.defaultBlockState(), 3);
+                level.setBlock(hot, Blocks.AIR.defaultBlockState(), 3);
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            }
+        });
+    }
+
     /** Saved and loaded again while down: still down for the rest of its 10 s, the cooldown still running. */
     @GameTest(template = ARENA, timeoutTicks = 60 + BoneDragonUnit.LAND_TICKS + 120)
     public static void bone_dragon_dive_state_and_cooldown_survive_a_reload(GameTestHelper helper) {
