@@ -1029,7 +1029,10 @@ GRASS_TOPS = GRASS_TOPS + tuple("grass_block_top_v%d" % k for k in range(3, 7))
 # patches carry onto the plants), cut-out. Luma a touch above the lawn's (blades catch more light than the turf under
 # them), SSS like the leaves (thin blades glow when the sun is behind them under labPBR).
 for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top"):
-    TARGETS[_p] = dict(luma=0.48, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)   # r29b: -15% (critic: lime)
+    # r30: 0.48 -> 0.62. In game, at noon, the tufts drew at 0.64-0.73 of the lawn's luma (eyes runs
+    # 40725608295 plain / 40725612987 shaders): a leaning quad gets less sun than the top face under it, so the
+    # plants read as dark stamps (critic r30, fault 2). The r29b "lime" note was from offline renders, unlit
+    TARGETS[_p] = dict(luma=0.62, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)
 # round 29b: dead blades, dry stalks and seed heads in their own colour - a tinted greyscale sprite can only be green,
 # so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
