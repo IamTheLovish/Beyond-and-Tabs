@@ -51,14 +51,18 @@ class GrassTintTest {
 
     @Test
     void colourStaysInAMeadowsRange() {
-        double lumaBase = luma(PLAINS_GRASS);
+        // the variation round the grass's own base colour (round 5 moved that base on purpose, OLIVE_GRASS: the range
+        // is about the patches, not the base)
+        double br = r(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[0], bg = g(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[1],
+            bb = b(PLAINS_GRASS) * GrassTint.OLIVE_GRASS[2];
+        double lumaBase = 0.2126 * br + 0.7152 * bg + 0.0722 * bb;
         for (int x = -1000; x < 1000; x += 7) {
             for (int z = -1000; z < 1000; z += 11) {
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
                 assertTrue(Math.abs(luma(c) - lumaBase) <= 0.26 * lumaBase, "luma at " + x + ", " + z);
-                assertTrue(Math.abs(r(c) - r(PLAINS_GRASS)) <= 0.42 * r(PLAINS_GRASS) + 1, "red at " + x + ", " + z);
-                assertTrue(Math.abs(g(c) - g(PLAINS_GRASS)) <= 0.42 * g(PLAINS_GRASS) + 1, "green at " + x + ", " + z);
-                assertTrue(Math.abs(b(c) - b(PLAINS_GRASS)) <= 0.42 * b(PLAINS_GRASS) + 1, "blue at " + x + ", " + z);
+                assertTrue(Math.abs(r(c) - br) <= 0.42 * br + 1, "red at " + x + ", " + z);
+                assertTrue(Math.abs(g(c) - bg) <= 0.42 * bg + 1, "green at " + x + ", " + z);
+                assertTrue(Math.abs(b(c) - bb) <= 0.42 * bb + 1, "blue at " + x + ", " + z);
                 assertEquals(0, c & 0xFF000000, "no bits above the rgb");
             }
         }

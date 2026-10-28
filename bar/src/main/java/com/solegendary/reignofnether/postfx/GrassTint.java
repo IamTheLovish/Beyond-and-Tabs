@@ -41,6 +41,12 @@ public final class GrassTint {
     public static final int FOLIAGE = 2;
 
     static final double[] OLIVE = {1.05, 0.97, 1.0};
+    /**
+     * Grass only, round 5 (Oct 28, noon eyes stills): the lawn read too blue-green - hue 80 under lovish's
+     * Complementary preset, 96 in the plain lane, the reference scan 72. A little more red, a little less green and
+     * blue: the hue moves ~7 degrees toward yellow-green, luma -2%, the saturation holds. Leaves keep OLIVE.
+     */
+    static final double[] OLIVE_GRASS = {1.10, 0.94, 0.95};
 
     static final double[] CELLS = {48.0, 14.0, 4.5};
     static final double[] WEIGHTS = {1.0, 0.8, 0.6};
@@ -100,10 +106,11 @@ public final class GrassTint {
         double v = (1 + VALUE * f) * (1 - CLUMP_DARK * m) * (1 + 0.10 * s)
                 * (1 + MOTTLE * (mottle > 0 ? mottle : 1.6 * mottle));
         double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
-        double r = ((rgb >> 16) & 0xFF) * OLIVE[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
+        double[] o = salt == GRASS ? OLIVE_GRASS : OLIVE;
+        double r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
                 * (1 - 0.02 * m);
-        double g = ((rgb >> 8) & 0xFF) * OLIVE[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s);
-        double b = (rgb & 0xFF) * OLIVE[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m);
+        double g = ((rgb >> 8) & 0xFF) * o[1] * v * (1 - 0.01 * dp - 0.03 * dn) * (1 + 0.04 * s);
+        double b = (rgb & 0xFF) * o[2] * v * (1 - 0.9 * Math.max(hm, 0)) * (1 - 0.15 * dp) * (1 - 0.12 * s) * (1 - 0.02 * m);
         return (channel(r) << 16) | (channel(g) << 8) | channel(b);
     }
 
