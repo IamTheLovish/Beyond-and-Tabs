@@ -184,6 +184,158 @@ public class HeroAiV2GameTests {
         }
     }
 
+    /** A player's attack order on {@code target}, as the server takes one from the player's client. */
+    static void attack(GameTestHelper helper, String owner, Mob unit, Mob target) {
+        CommandQueues.issue(helper.getLevel(), owner, UnitAction.ATTACK, target.getId(), new int[] { unit.getId() },
+            BlockPos.ZERO, BlockPos.ZERO, QueueMode.REPLACE);
+    }
+
+    /**
+     * An attack order on an enemy seven blocks off: the hero opens with Shield Charge onto that same enemy (Judgement,
+     * its follow-up, is ready), not onto the nearer enemy beside it. Its legs are held (speed 0) so that only the charge
+     * can bring it there. Main (Mode A, Oct 28, item 3): ATTACK lets the brain move nothing, so a melee hero ordered onto
+     * an enemy walks the whole way and never uses its charge on the target it was given.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_attack", timeoutTicks = 200)
+    public static void hero_ai_v2_an_attack_order_opens_with_the_charge_on_its_target(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2_attack"), them = me + "_foe";
+        Mob hero = paladin(helper, me, 4, 3);
+        Mob target = dummy(helper, them, 4, 10);
+        Mob other = dummy(helper, them, 10, 5);
+        List<Mob> mobs = mobs(hero, target, other);
+        if (!(hero instanceof FactionHero p) || target == null || other == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        target.setInvulnerable(false);   // a target the order may hit (it stands on Hold fire all the same)
+        AttributeInstance speed = hero.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null)
+            speed.setBaseValue(0);
+        FactionHeroAbility charge = HeroAiGameTests.learn(p, 0);
+        HeroAiGameTests.learn(p, 1);   // Judgement, the charge's follow-up
+        int[] chargedAt = { -1 };
+        double[] landed = { Double.MAX_VALUE, Double.MAX_VALUE };
+        helper.runAfterDelay(2, () -> attack(helper, me, hero, target));
+        for (int t = 3; t <= 160; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (chargedAt[0] < 0 && !charge.isOffCooldown(p))
+                    chargedAt[0] = tick;
+                if (chargedAt[0] >= 0 && tick == chargedAt[0] + 20) {
+                    landed[0] = hero.distanceTo(target);
+                    landed[1] = hero.distanceTo(other);
+                }
+                if (tick < 160)
+                    return;
+                List<String> problems = new ArrayList<>();
+                if (chargedAt[0] < 0)
+                    problems.add(String.format("under an attack order the hero never used Shield Charge on its target (still %.1f blocks off)",
+                        hero.distanceTo(target)));
+                else if (landed[0] > 3 || landed[1] < landed[0])
+                    problems.add(String.format("the charge did not land on the ordered target (%.1f blocks from it, %.1f from the other enemy)",
+                        landed[0], landed[1]));
+                HeroAiGameTests.finish(helper, problems, mobs, null);
+            });
+        }
+    }
+
+    /**
+     * Right after a move order is done the hero is the brain's again, and it goes for the enemy in its reach. The move
+     * test only asks that the hero got to its spot (Mode A, Oct 28, item 5: nothing tested the aggression after it):
+     * here an enemy stands five blocks past the spot, on Hold fire, and the hero must have it by the end. Before the
+     * spot the hero keeps to its lane (no chase while the order runs).
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_after_move", timeoutTicks = 360)
+    public static void hero_ai_v2_a_hero_fights_right_after_its_move_order(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2_after_move"), them = me + "_foe";
+        Mob hero = paladin(helper, me, 3, 1);
+        Mob foe = dummy(helper, them, 8, 9);
+        List<Mob> mobs = mobs(hero, foe);
+        if (!(hero instanceof FactionHero) || foe == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        BlockPos dest = at(helper, 3, 8);
+        double lane = hero.getX();
+        double[] worst = { 0 };
+        double[] closest = { Double.MAX_VALUE };
+        int[] arrived = { -1 }, reachedFoe = { -1 };
+        helper.runAfterDelay(2, () -> order(helper, me, hero, UnitAction.MOVE, dest));
+        for (int t = 3; t <= 320; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (arrived[0] < 0) {
+                    worst[0] = Math.max(worst[0], Math.abs(hero.getX() - lane));
+                    closest[0] = Math.min(closest[0], flat(hero, dest.getX() + 0.5, dest.getZ() + 0.5));
+                    if (closest[0] <= 1.5)
+                        arrived[0] = tick;
+                } else if (reachedFoe[0] < 0 && hero.distanceTo(foe) <= 2.5) {
+                    reachedFoe[0] = tick;
+                }
+                if (tick < 320)
+                    return;
+                List<String> problems = new ArrayList<>();
+                if (worst[0] > 2.5)
+                    problems.add(String.format("the hero left its lane by %.1f blocks during the move order", worst[0]));
+                if (arrived[0] < 0)
+                    problems.add(String.format("the hero never got to where it was sent (%.1f blocks short at best)", closest[0]));
+                else if (reachedFoe[0] < 0)
+                    problems.add(String.format("after its move order the hero never went for the enemy %.1f blocks off (state %s)",
+                        hero.distanceTo(foe), state(hero)));
+                HeroAiGameTests.finish(helper, problems, mobs, null);
+            });
+        }
+    }
+
+    /**
+     * The player takes the hero (possession, or the Hero AI switched off): the brain lets go of what it saw too, so it
+     * keeps no hold on units that may die or unload while the player has the hero. Main (Mode A note, Oct 28): off()
+     * dropped the combo but kept the last scan's lists of enemies, friends and towers.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_off", timeoutTicks = 160)
+    public static void hero_ai_v2_switched_off_the_brain_forgets_what_it_saw(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2_off"), them = me + "_foe";
+        Mob hero = paladin(helper, me, 4, 3);
+        Mob foe = dummy(helper, them, 4, 9);
+        List<Mob> mobs = mobs(hero, foe);
+        if (!(hero instanceof FactionHero p) || foe == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        int[] offAt = { -1 };
+        boolean[] done = { false };
+        Runnable cleanup = () -> HeroBot.setAiEnabled(me, true);
+        for (int t = 1; t <= 120; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                HeroBrain b = p.heroCore().brainIfAny();
+                if (offAt[0] < 0) {
+                    if (b != null && b.active() && !b.seen.enemies.isEmpty()) {
+                        offAt[0] = tick;
+                        HeroBot.setAiEnabled(me, false);   // the player switches the Hero AI off
+                    } else if (tick == 100) {
+                        done[0] = true;
+                        HeroAiGameTests.finish(helper, List.of("setup: the brain never saw the enemy"), mobs, cleanup);
+                    }
+                } else if (tick == offAt[0] + 5) {
+                    done[0] = true;
+                    List<String> problems = new ArrayList<>();
+                    if (b == null || b.active())
+                        problems.add("the brain did not let go of the hero when the Hero AI was switched off");
+                    else if (!b.seen.enemies.isEmpty() || !b.seen.friends.isEmpty() || !b.seen.towers.isEmpty())
+                        problems.add(String.format("switched off, the brain still holds its last scan (%d enemies, %d friends, %d towers)",
+                            b.seen.enemies.size(), b.seen.friends.size(), b.seen.towers.size()));
+                    HeroAiGameTests.finish(helper, problems, mobs, cleanup);
+                }
+            });
+        }
+    }
+
     // ------------------------------------------------------------------------------------------ retreat (D030)
 
     /**
@@ -501,6 +653,21 @@ public class HeroAiV2GameTests {
         return bot;
     }
 
+    /**
+     * The last word of a bot test, a few ticks before its timeout: if nothing has finished it, it fails here, through
+     * finish, so the test bot leaves BotServerEvents.brains (a framework timeout runs no cleanup, and the bot would think
+     * on for the rest of the run).
+     */
+    static void botGuard(GameTestHelper helper, int tick, boolean[] done, List<Mob> mobs, Runnable cleanup) {
+        helper.runAfterDelay(tick, () -> {
+            if (done[0])
+                return;
+            done[0] = true;
+            HeroAiGameTests.finish(helper, List.of("timed out before the test could decide (the test bot is unregistered)"),
+                mobs, cleanup);
+        });
+    }
+
     static HeroBrain.State state(Mob hero) {
         HeroBrain b = ((FactionHero) hero).heroCore().brainIfAny();
         return b == null ? HeroBrain.State.OFF : b.state;
@@ -521,8 +688,9 @@ public class HeroAiV2GameTests {
         boolean[] done = { false };
         Runnable cleanup = () -> BotServerEvents.brains.remove(bot);
         helper.runAfterDelay(2, () -> hero.setHealth(hero.getMaxHealth() * 0.25f));
-        // every check is scheduled here, from the top (a runnable that schedules more breaks the test's runnable map)
-        for (int t = 3; t <= 360; t++) {
+        // every check is scheduled here, from the top (a runnable that schedules more breaks the test's runnable map);
+        // a rest seen by tick 260 leaves the order its 120 ticks before the guard at 390
+        for (int t = 3; t <= 385; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
                 if (done[0])
@@ -544,13 +712,14 @@ public class HeroAiV2GameTests {
                                 moved[0], tick - restAt[0], state(hero)));
                         HeroAiGameTests.finish(helper, problems, mobs, cleanup);
                     }
-                } else if (tick == 360) {
+                } else if (tick == 260) {
                     done[0] = true;
                     HeroAiGameTests.finish(helper, List.of("setup: the bot hero at a quarter health never fled and rested (state "
                         + state(hero) + ")"), mobs, cleanup);
                 }
             });
         }
+        botGuard(helper, 390, done, mobs, cleanup);
     }
 
     /**
@@ -594,5 +763,6 @@ public class HeroAiV2GameTests {
                 }
             });
         }
+        botGuard(helper, 880, done, mobs, cleanup);
     }
 }
