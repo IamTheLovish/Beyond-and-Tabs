@@ -1070,6 +1070,7 @@ public class BuildingServerEvents {
         });
 
         for (BuildingPlacement building : buildingsToDestroy) {
+            building.getBuilding().onFellToDamage(serverLevel, building);   // death blasts (EnergyConverter's chain)
             building.destroy(serverLevel);
         }
 
