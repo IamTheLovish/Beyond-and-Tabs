@@ -29,10 +29,15 @@ class MapLayoutTest {
         return BUILT.computeIfAbsent(preset + java.util.Arrays.toString(teams) + seed, k -> MapLayout.build(preset, teams, seed));
     }
 
+    /**
+     * The hand-made maps: copies of one slot's ground and metal for every slot, the start positions fixed by the map.
+     * A generated map is fair by measure, not by copy (different sides evened out, a square arena), so these rules
+     * don't apply to it - its own are in MapGenGameTests and maps/gen (the same split as MapSeedGameTests.premade).
+     */
     private static List<MapPreset> premade() {
         List<MapPreset> out = new ArrayList<>();
         for (MapPreset p : MapPreset.values())
-            if (p.premade())
+            if (p.handmade())
                 out.add(p);
         return out;
     }
