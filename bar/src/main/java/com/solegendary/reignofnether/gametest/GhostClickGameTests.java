@@ -95,6 +95,14 @@ public class GhostClickGameTests {
             return;
         }
         BlockPos step = b.blockPosition().offset(3, 0, 0);
+        // the move B is queued behind must be one it can finish: a spot on the pad (the queue starts the Shift order only
+        // once B is idle, so a move to the void beyond the edge leaves the test waiting on how the move goal gives up)
+        if (s.level.getBlockState(step.below()).isAir()) {
+            problems.add("(setup) B's move goes off the pad: no ground under " + step.toShortString() + " (pad radius "
+                + BuilderAssistGameTests.PAD_R + " around " + s.cx + ", " + s.cz + "; B at " + b.blockPosition().toShortString() + ")");
+            finish(helper, s, problems);
+            return;
+        }
         CommandQueues.issue(s.level, s.owner, UnitAction.MOVE, -1, new int[] { b.getId() }, step, BlockPos.ZERO,
             QueueMode.REPLACE);
         CommandQueues.issue(s.level, s.owner, UnitAction.BUILD_REPAIR, -1, new int[] { b.getId() }, s.bp.centrePos,
