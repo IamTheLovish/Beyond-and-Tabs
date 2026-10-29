@@ -91,6 +91,13 @@ public class BuildingDamageGameTests {
     public static void arrows_take_twice_the_old_health_off_a_building(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         RaidGameTests.Pads pads = new RaidGameTests.Pads(level, 11, 1);
+        // the tick callback is registered here, once, and idles until the pad is ready: vanilla iterates its tick-time map
+        // while it runs the callbacks, so registering from inside whenEntitiesReady's callback corrupts it (DragonDiveGameTests)
+        Runnable[] volley = { null };
+        helper.onEachTick(() -> {
+            if (volley[0] != null)
+                volley[0].run();
+        });
         GameTestChunks.whenEntitiesReady(helper, level, pads.chunks, 5, 400, 1300, "building damage pad", () -> {
             RaidGameTests.Cell c = pads.cells.get(0);
             Building tower = Defences.sets().get(0).raidTower();
@@ -110,7 +117,7 @@ public class BuildingDamageGameTests {
             int[] fired = { 0, -1 };   // arrows fired; the tick the last one left
             List<Arrow> shot = new ArrayList<>();
             boolean[] over = { false };
-            helper.onEachTick(() -> {
+            volley[0] = () -> {
                 if (over[0])
                     return;
                 if (fired[0] < arrows) {
@@ -143,7 +150,7 @@ public class BuildingDamageGameTests {
                         + String.format(Locale.ROOT, "%.1f", expectedOld) + " is wanted, this is more than that (applied twice?)");
                 else
                     helper.succeed();
-            });
+            };
         });
     }
 }

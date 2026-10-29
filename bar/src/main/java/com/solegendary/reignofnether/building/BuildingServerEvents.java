@@ -1158,17 +1158,18 @@ public class BuildingServerEvents {
             }
             for (BuildingPlacement building : affectedBuildings) {
                 float atkDmg = 0;
+                boolean byUnit = ghastUnit != null || creeperUnit != null || pillagerUnit != null;
                 if (ghastUnit != null) {
-                    atkDmg = BuildingDamage.unit(ghastUnit.getUnitAttackDamage());
+                    atkDmg = ghastUnit.getUnitAttackDamage();
                     building.lastAttacker = ghastUnit;
                 } else if (creeperUnit != null) {
-                    atkDmg = BuildingDamage.unit(creeperUnit.getUnitAttackDamage());
+                    atkDmg = creeperUnit.getUnitAttackDamage();
                     if (creeperUnit.isPowered()) {
                         atkDmg *= CreeperUnit.CHARGED_DAMAGE_MULT;
                     }
                     building.lastAttacker = creeperUnit;
                 } else if (pillagerUnit != null) {
-                    atkDmg = BuildingDamage.unit(pillagerUnit.getUnitAttackDamage() / 2);
+                    atkDmg = pillagerUnit.getUnitAttackDamage() / 2;
                     building.lastAttacker = pillagerUnit;
                 } else if (exp.getExploder() instanceof AdjustablePrimedTnt aTNT) {
                     atkDmg = aTNT.getExplosionPower() *  AdjustablePrimedTnt.DAMAGE_PER_POWER;
@@ -1184,7 +1185,8 @@ public class BuildingServerEvents {
                             le.hurt(exp.getDamageSource(), (random.nextFloat(atkDmg + 1)) / 2f);
                     }
 
-                    building.destroyRandomBlocks(atkDmg, building.lastAttacker);
+                    // a unit's explosion brings the building down faster (BuildingDamage); the occupants above take the old hit
+                    building.destroyRandomBlocks(byUnit ? BuildingDamage.unit(atkDmg) : atkDmg, building.lastAttacker);
                 }
 
             }
