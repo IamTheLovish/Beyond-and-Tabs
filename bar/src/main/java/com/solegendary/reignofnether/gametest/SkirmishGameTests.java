@@ -1592,14 +1592,22 @@ public class SkirmishGameTests {
      * run (the world is the same each time, and that strip is water or cliff); null only if no candidate row is dry.
      */
     static net.minecraft.world.phys.Vec3[] soakAnyRow(ServerLevel level, int x, int z, int count) {
-        for (int bz : soakLines(z))
-            for (int step = 0; step < 16; step++) {
-                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, count);
-                if (row != null)
-                    return row;
-            }
+        for (int region : SOAK_REGIONS)
+            for (int bz : soakLines(z))
+                for (int step = 0; step < 16; step++) {
+                    net.minecraft.world.phys.Vec3[] row = soakRow(level, x + region + step * 96, bz, count);
+                    if (row != null)
+                        return row;
+                }
         return null;
     }
+
+    /**
+     * How far out (in x) the whole scan is repeated when it found nothing: the seed is random per CI run, and a sea can
+     * cover all 8 lines x 16 steps (CI 40769984539: "no dry ground for five bot bases near x=1508 (0 dry rows of three
+     * found ...)"). The first region is the old scan, so a world that had ground there still uses it.
+     */
+    static final int[] SOAK_REGIONS = { 0, 3000, 6000 };
 
     /**
      * Five base sites for the soak: a dry row of three ({@link #soakRow}) and two more seats beside it
@@ -1609,20 +1617,21 @@ public class SkirmishGameTests {
      * failure message.
      */
     static net.minecraft.world.phys.Vec3[] soakFiveStarts(ServerLevel level, int x, int z, int[] rowsTried) {
-        for (int bz : soakLines(z))
-            for (int step = 0; step < 16; step++) {
-                net.minecraft.world.phys.Vec3[] row = soakRow(level, x + step * 96, bz, 3);
-                if (row == null)
-                    continue;
-                rowsTried[0]++;
-                net.minecraft.world.phys.Vec3 extra = soakExtraStart(level, row);
-                if (extra == null)
-                    continue;
-                net.minecraft.world.phys.Vec3 extra2 = soakExtraStart(level,
-                    new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra });
-                if (extra2 != null)
-                    return new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra, extra2 };
-            }
+        for (int region : SOAK_REGIONS)
+            for (int bz : soakLines(z))
+                for (int step = 0; step < 16; step++) {
+                    net.minecraft.world.phys.Vec3[] row = soakRow(level, x + region + step * 96, bz, 3);
+                    if (row == null)
+                        continue;
+                    rowsTried[0]++;
+                    net.minecraft.world.phys.Vec3 extra = soakExtraStart(level, row);
+                    if (extra == null)
+                        continue;
+                    net.minecraft.world.phys.Vec3 extra2 = soakExtraStart(level,
+                        new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra });
+                    if (extra2 != null)
+                        return new net.minecraft.world.phys.Vec3[] { row[0], row[1], row[2], extra, extra2 };
+                }
         return null;
     }
 
@@ -12912,9 +12921,10 @@ public class SkirmishGameTests {
         helper.runAfterDelay(100, () -> {
             // dry ground for both bases: try a few centres out past x+1500 on the far side from the soak
             BlockPos centre = null;
-            // three columns of six: siteOk now reads real ground (it loads the chunk), so an ocean can wet a whole column
-            for (int k = 0; k < 18 && centre == null; k++) {
-                int cx = origin.getX() + 1500 + 500 * (k / 6), cz = origin.getZ() - 1500 - 500 * (k % 6);
+            // six columns of six, 1000 apart: siteOk reads real ground (it loads the chunk), so a sea can wet three
+            // columns 500 apart (CI 40769984539: "no dry ground for two lobby bases near x=1568")
+            for (int k = 0; k < 36 && centre == null; k++) {
+                int cx = origin.getX() + 1500 + 1000 * (k / 6), cz = origin.getZ() - 1500 - 500 * (k % 6);
                 BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
                 for (var p : com.solegendary.reignofnether.matchstart.MultiplayerLobby.startPositions(level, c, 2, 1, 0))
@@ -14759,8 +14769,9 @@ public class SkirmishGameTests {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
         helper.runAfterDelay(200, () -> {
             BlockPos centre = null;
-            for (int k = 0; k < 6 && centre == null; k++) {
-                int cx = origin.getX() - 1500, cz = origin.getZ() + 1500 + 500 * k;
+            // six columns of six, 1000 apart: siteOk reads real ground (it loads the chunk), so a line could all be sea
+            for (int k = 0; k < 36 && centre == null; k++) {
+                int cx = origin.getX() - 1500 - 1000 * (k / 6), cz = origin.getZ() + 1500 + 500 * (k % 6);
                 BlockPos c = new BlockPos(cx, com.solegendary.reignofnether.resources.MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
                 for (var p : com.solegendary.reignofnether.matchstart.MultiplayerLobby.startPositions(level, c, 1, 1, 0))
