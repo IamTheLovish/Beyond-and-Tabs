@@ -1,0 +1,38 @@
+{
+ "title": "blade_dancer_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.57s  (tick 11)",
+  "3  +1.00s  (tick 20)",
+  "4  +1.58s  (tick 32)",
+  "5  +2.22s  (tick 44)",
+  "6  +2.65s  (tick 53)",
+  "7  +3.26s  (tick 65)",
+  "8  +3.68s  (tick 74)",
+  "9  +4.25s  (tick 85)",
+  "10  +4.85s  (tick 97)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.57s  (tick 11)",
+   "3  +1.00s  (tick 20)",
+   "4  +1.58s  (tick 32)",
+   "5  +2.22s  (tick 44)",
+   "6  +2.65s  (tick 53)",
+   "7  +3.26s  (tick 65)",
+   "8  +3.68s  (tick 74)",
+   "9  +4.25s  (tick 85)",
+   "10  +4.85s  (tick 97)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

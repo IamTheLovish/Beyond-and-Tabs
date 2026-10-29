@@ -1,0 +1,32 @@
+20_anim: 10 run(s) on a pad at [-163, 71, -3]: vindicator_unit:death:side+front:0:100,zombie_unit:death:side:0:100,grunt_unit:death:side:0:100,leafblade_unit:death:side:0:100,cutlass_raider_unit:death:side:0:100,blade_dancer_unit:death:side:0:100,rifle_squad_unit:death:side:0:100,vindicator_unit:attack:side,pillager_unit:attack:side
+20_anim: run 0 - vindicator_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 0 - vindicator_unit is VindicatorUnit (id 102), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 0 27 frames in 100 ticks (5 s wall)
+20_anim: run 1 - vindicator_unit / death / front summoned at [-163, 71, -3]
+20_anim: run 1 - vindicator_unit is VindicatorUnit (id 132), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 1 24 frames in 100 ticks (5 s wall)
+20_anim: run 2 - zombie_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 2 - zombie_unit is ZombieUnit (id 138), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 2 24 frames in 100 ticks (5 s wall)
+20_anim: run 3 - grunt_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 3 - grunt_unit is GruntUnit (id 144), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 3 25 frames in 100 ticks (5 s wall)
+20_anim: run 4 - leafblade_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 4 - leafblade_unit is LeafbladeUnit (id 150), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 4 23 frames in 100 ticks (5 s wall)
+20_anim: run 5 - cutlass_raider_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 5 - cutlass_raider_unit is CutlassRaiderUnit (id 164), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 5 24 frames in 100 ticks (5 s wall)
+20_anim: run 6 - blade_dancer_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 6 - blade_dancer_unit is BladeDancerUnit (id 170), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 6 25 frames in 100 ticks (5 s wall)
+20_anim: run 7 - rifle_squad_unit / death / side summoned at [-163, 71, -3]
+20_anim: run 7 - rifle_squad_unit is RifleSquadUnit (id 176), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 7 24 frames in 100 ticks (5 s wall)
+20_anim: run 8 - vindicator_unit / attack / side summoned at [-163, 71, -3]
+20_anim: run 8 - vindicator_unit is VindicatorUnit (id 183), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 8 24 frames in 100 ticks (5 s wall)
+20_anim: run 9 - pillager_unit / attack / side summoned at [-163, 71, -3]
+20_anim: run 9 - pillager_unit is PillagerUnit (id 193), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 9 26 frames in 100 ticks (5 s wall)
+20_anim: done, 0 of 10 runs failed

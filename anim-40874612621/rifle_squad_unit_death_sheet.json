@@ -1,0 +1,38 @@
+{
+ "title": "rifle_squad_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.54s  (tick 11)",
+  "3  +0.95s  (tick 19)",
+  "4  +1.59s  (tick 32)",
+  "5  +2.21s  (tick 44)",
+  "6  +2.69s  (tick 54)",
+  "7  +3.11s  (tick 62)",
+  "8  +3.71s  (tick 74)",
+  "9  +4.16s  (tick 83)",
+  "10  +4.79s  (tick 96)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.54s  (tick 11)",
+   "3  +0.95s  (tick 19)",
+   "4  +1.59s  (tick 32)",
+   "5  +2.21s  (tick 44)",
+   "6  +2.69s  (tick 54)",
+   "7  +3.11s  (tick 62)",
+   "8  +3.71s  (tick 74)",
+   "9  +4.16s  (tick 83)",
+   "10  +4.79s  (tick 96)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

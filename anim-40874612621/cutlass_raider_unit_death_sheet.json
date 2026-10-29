@@ -1,0 +1,38 @@
+{
+ "title": "cutlass_raider_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.58s  (tick 12)",
+  "3  +0.99s  (tick 20)",
+  "4  +1.67s  (tick 33)",
+  "5  +2.09s  (tick 42)",
+  "6  +2.78s  (tick 56)",
+  "7  +3.18s  (tick 64)",
+  "8  +3.75s  (tick 75)",
+  "9  +4.39s  (tick 88)",
+  "10  +4.86s  (tick 97)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.58s  (tick 12)",
+   "3  +0.99s  (tick 20)",
+   "4  +1.67s  (tick 33)",
+   "5  +2.09s  (tick 42)",
+   "6  +2.78s  (tick 56)",
+   "7  +3.18s  (tick 64)",
+   "8  +3.75s  (tick 75)",
+   "9  +4.39s  (tick 88)",
+   "10  +4.86s  (tick 97)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}
