@@ -62,6 +62,7 @@ public abstract class Building {
     public boolean shouldDestroyOnReset = true;
     public boolean drawAggro = true;
 
+    // base sights: the fog a building reveals is these times the Vision multiplier (BuildingPlacement.getSightRange)
     public static final int CAPITOL_SIGHT_RANGE = 32;
     public static final int DEFAULT_SIGHT_RANGE = 16;
     public static final int GARRISONED_BONUS_SIGHT_RANGE = 16;
