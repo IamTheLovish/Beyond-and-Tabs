@@ -13,7 +13,6 @@ import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
-import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.entities.BlazeUnitFireball;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.entities.WindcallerProjectile;
@@ -209,33 +208,6 @@ public class UnitServerEvents {
         return allUnitsModCount;
     }
 
-    // Per-owner sum of unit population, memoised for the current server tick. getCurrentPopulation used to scan
-    // every unit on every call, and it was called per active production item per tick (the old cap check), the
-    // HUD, the scoreboard, etc. Keyed by
-    // (server tick, allUnits size, allUnitsModCount) so a unit spawning/dying mid-tick is reflected immediately.
-    // Only the unit part is cached: production queues are still counted live, so queuing several items in the
-    // same tick is checked exactly as before. (A unit changing owner or pop cost - slime resize - is picked up
-    // on the next tick at the latest.)
-    private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
-    private static long unitPopulationCacheTick = Long.MIN_VALUE;
-    private static int unitPopulationCacheSize = -1;
-    private static int unitPopulationCacheModCount = -1;
-
-    private static int getUnitPopulation(String ownerName) {
-        long tick = serverLevel != null ? serverLevel.getGameTime() : Long.MIN_VALUE + 1;
-        if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheSize ||
-                allUnitsModCount != unitPopulationCacheModCount || serverLevel == null) {
-            unitPopulationCache.clear();
-            for (LivingEntity entity : allUnits)
-                if (entity instanceof Unit unit && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(entity))   // a Mirror Mage's decoy is no one
-                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
-            unitPopulationCacheTick = tick;
-            unitPopulationCacheSize = allUnits.size();
-            unitPopulationCacheModCount = allUnitsModCount;
-        }
-        return unitPopulationCache.getOrDefault(ownerName, 0);
-    }
-
     public static final ArrayList<TargetResourcesSave> savedTargetResources = new ArrayList<>();
 
     private static boolean isServerStopping = false;
@@ -378,14 +350,6 @@ public class UnitServerEvents {
                     && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))   // a decoy is no one
                 n++;
         return n;
-    }
-
-    private static final QueuePopulation queuePopulation = new QueuePopulation();
-
-    public static int getCurrentPopulation(String ownerName) {
-        // the queue part is memoised per owner per tick too (QueuePopulation: any queue change recounts at once)
-        return getUnitPopulation(ownerName) + queuePopulation.of(ownerName, BuildingServerEvents.getBuildings(), false,
-            serverLevel != null ? serverLevel.getGameTime() : 0, serverLevel != null);
     }
 
     // manually provide all the variables required to do unit actions

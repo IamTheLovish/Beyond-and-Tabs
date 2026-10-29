@@ -9399,7 +9399,7 @@ public class SkirmishGameTests {
                 level.addFreshEntity(e);
         com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(sage);
         helper.runAfterDelay(5, () -> {
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
+            int unitsBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner);
             // never a commander
             if (com.solegendary.reignofnether.ability.abilities.MirrorImages.cast(level, mage, owner, sage, true) != null
                     || Math.abs(pool.getEnergy() - 500) > 0.01f) {
@@ -9432,8 +9432,8 @@ public class SkirmishGameTests {
             if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitToEntityRelationship((com.solegendary.reignofnether.unit.interfaces.Unit) foe, decoys.get(0))
                     != com.solegendary.reignofnether.unit.Relationship.HOSTILE)
                 helper.fail("an enemy does not see a decoy as hostile");
-            if (com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) != popBefore)
-                helper.fail("decoys count toward population: " + com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner) + " vs " + popBefore);
+            if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) != unitsBefore)   // (was population)
+                helper.fail("decoys count as units: " + com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner) + " vs " + unitsBefore);
             // a decoy's blow lands no damage
             float foeHp = foe.getHealth();
             foe.hurt(level.damageSources().mobAttack(decoys.get(0)), 6f);

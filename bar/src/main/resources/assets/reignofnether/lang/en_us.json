@@ -1552,6 +1552,7 @@
   "tutorial.reignofnether.vindicators": "Vindicators are melee units with high health and moderate damage.",
   "tutorial.reignofnether.pillagers": "Pillagers are ranged units which attack slowly but with high damage.",
   "tutorial.reignofnether.produce_illagers": "Select your barracks and produce a total of 3 Pillagers and/or Vindicators. If you need more food try building a farm or hunt more animals. If you need more population supply, try building a house.",
+  "tutorial.reignofnether.produce_illagers_no_pop": "Select your barracks and produce a total of 3 Pillagers and/or Vindicators. If you need more food try building a farm or hunt more animals.",
   "tutorial.reignofnether.three_units": "Try building 3 units from here to continue.",
   "tutorial.reignofnether.awesome": "Awesome!",
   "tutorial.reignofnether.tip.select_military": "TIP: If you lose track of your military units, you can press K or click the button on the right to select all of them at once.",

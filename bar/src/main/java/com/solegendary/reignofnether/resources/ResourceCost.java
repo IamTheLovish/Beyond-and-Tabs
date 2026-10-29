@@ -5,7 +5,7 @@ import com.solegendary.reignofnether.config.ResourceCostConfigEntry;
 import java.util.HashMap;
 
 // defined here because we need to be able to access in both
-// static (for ProductionItems) and nonstatic (for getCurrentPopulation) contexts
+// static (for ProductionItems) and nonstatic (per unit) contexts
 // and we can't declare static getters in the Unit interface
 
 public class ResourceCost {

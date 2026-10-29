@@ -828,7 +828,7 @@ public class TutorialClientEvents {
             case BUILD_ARMY -> {
                 if (stageProgress == 0) {
                     TutorialServerboundPacket.doServerAction(TutorialAction.SET_DAY_TIME);
-                    setHelpButtonText("tutorial.reignofnether.produce_illagers");
+                    setHelpButtonText("tutorial.reignofnether.produce_illagers_no_pop");
                     TutorialRendering.clearButtonName();
                     msg("tutorial.reignofnether.three_units");
                     progressStage();

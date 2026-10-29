@@ -25,6 +25,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -66,12 +67,32 @@ public class NoMaxPopulationGameTests {
         return found[0];
     }
 
+    /** A gamerule's stored value by name, or null when there is no such rule (on the head: maxPopulation). */
+    private static String gameruleValue(ServerLevel level, String name) {
+        String[] value = {null};
+        GameRules.visitGameRuleTypes(new GameRules.GameRuleTypeVisitor() {
+            @Override
+            public <T extends GameRules.Value<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
+                if (key.getId().equals(name))
+                    value[0] = level.getGameRules().getRule(key).serialize();
+            }
+        });
+        return value[0];
+    }
+
+    /** A command as the server runs it (permission 4, no chat output); one naming an unknown rule simply fails. */
+    private static void command(ServerLevel level, String cmd) {
+        MinecraftServer server = level.getServer();
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), cmd);
+    }
+
     /**
      * Production with resources is never refused, and an old save's cap is ignored. A level.dat that stored
      * {@code maxPopulation 0} (no room at all under the old rule) loads without the rule; then an ordinary lab - a
      * Villager Barracks, not a graveyard (GraveyardGameTests covers those) - takes all twelve Vindicators and every one
-     * walks out. On main the rule loads back and the gamerule still exists. Runs in one tick (the queue is ticked by
-     * hand), with the barracks gone whatever happens.
+     * walks out - after {@code /gamerule maxPopulation 0}, a host's cap of 0 set the old way, which fails on the head
+     * (no such rule) and is ignored, so the same test is red before the change (PR #394 review r2). Runs in one tick
+     * (the queue is ticked by hand), with the barracks gone and any old rule put back whatever happens.
      */
     @GameTest(template = ARENA)
     public static void no_max_population_production_goes_past_an_old_cap(GameTestHelper helper) {
@@ -88,6 +109,8 @@ public class NoMaxPopulationGameTests {
         } catch (RuntimeException ex) {
             problems.add("an old save's maxPopulation threw on load: " + ex);
         }
+        String before = gameruleValue(level, "maxPopulation");   // null on the head: there is no such rule
+        command(level, "gamerule maxPopulation 0");
         String owner = "gametest_nomaxpop_" + helper.absolutePos(BlockPos.ZERO).asLong();
         Resources pool = new Resources(owner, 0, 100000, 100000);
         ResourcesServerEvents.resourcesList.add(pool);
@@ -136,6 +159,8 @@ public class NoMaxPopulationGameTests {
                     level.setBlock(blk.getBlockPos(), Blocks.AIR.defaultBlockState(), 2);
             }
             ResourcesServerEvents.resourcesList.remove(pool);
+            if (before != null)
+                command(level, "gamerule maxPopulation " + before);
         }
         if (problems.isEmpty())
             helper.succeed();
@@ -146,6 +171,42 @@ public class NoMaxPopulationGameTests {
     private static List<LivingEntity> ownUnits(ServerLevel level, ProductionPlacement lab, String owner) {
         return new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class, lab.getAABB().inflate(24),
             e -> e instanceof Unit u && owner.equals(u.getOwnerName())));
+    }
+
+    /**
+     * The unit count that replaces population on the scoreboard ("resources.units") and the player panel: three
+     * vindicators are three units, whatever their size weight, and another owner has none of them.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void no_max_population_unit_count_counts_units(GameTestHelper helper) {
+        String owner = "gametest_unitcount_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        List<Mob> units = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            Mob m = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 3 + i * 3, 8);
+            if (m != null) {
+                m.setNoAi(true);
+                units.add(m);
+            }
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (units.size() != 3)
+                    problems.add("setup: " + units.size() + " of 3 vindicators spawned");
+                int count = com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner);
+                if (count != units.size())
+                    problems.add("the unit count is " + count + " for " + units.size() + " units");
+                if (com.solegendary.reignofnether.unit.UnitServerEvents.getUnitCount(owner + "_other") != 0)
+                    problems.add("another owner counts these units");
+            } finally {
+                for (Mob m : units)
+                    m.discard();
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        });
     }
 
     /**
