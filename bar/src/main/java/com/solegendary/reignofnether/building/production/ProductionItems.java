@@ -199,6 +199,7 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.EarthshakerProd EARTHSHAKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "earthshaker"), new com.solegendary.reignofnether.unit.units.storm.EarthshakerProd());
     public static final com.solegendary.reignofnether.unit.units.storm.GravityMonkProd GRAVITY_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravity_monk"), new com.solegendary.reignofnether.unit.units.storm.GravityMonkProd());
     public static final com.solegendary.reignofnether.unit.units.storm.MirrorMageProd MIRROR_MAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage"), new com.solegendary.reignofnether.unit.units.storm.MirrorMageProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.SparkSageProd SPARK_SAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "spark_sage"), new com.solegendary.reignofnether.unit.units.storm.SparkSageProd());
     // Stormcallers slice 4: the rest of the Observatory's T2, and Heaven's Gate's Celestial Dragon (T3)
     public static final com.solegendary.reignofnether.unit.units.storm.SeerProd SEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seer"), new com.solegendary.reignofnether.unit.units.storm.SeerProd());
     public static final com.solegendary.reignofnether.unit.units.storm.LanternFortressProd LANTERN_FORTRESS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lantern_fortress"), new com.solegendary.reignofnether.unit.units.storm.LanternFortressProd());
@@ -263,6 +264,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.engineers.SalvagerProd SALVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "salvager"), new com.solegendary.reignofnether.unit.units.engineers.SalvagerProd());
     public static final com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd JADE_MENDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_mender"), new com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd());
     public static final com.solegendary.reignofnether.unit.units.engineers.PioneerProd PIONEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer"), new com.solegendary.reignofnether.unit.units.engineers.PioneerProd());
+    // the Brassworks essence caster (design/essence_casters.md; appended last so no existing item's id moves)
+    public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -351,6 +354,7 @@ public class ProductionItems {
         EARTHSHAKER,
         GRAVITY_MONK,
         MIRROR_MAGE,
+        SPARK_SAGE,
         SEER,
         LANTERN_FORTRESS,
         PHOENIX,
@@ -402,6 +406,7 @@ public class ProductionItems {
         DRILL_BURROWER,
         REPAIR_CRAWLER,
         CLOCKWORK_SPIDER,
+        SOUL_ENGINEER,
         DAWN_PALADIN,
         DAWN_PALADIN_REVIVE,
         GRAVECALLER,

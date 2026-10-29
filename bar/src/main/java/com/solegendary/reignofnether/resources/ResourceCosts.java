@@ -97,6 +97,7 @@ public class ResourceCosts {
     public static final ResourceCost EARTHSHAKER = new ResourceCost(ID, "EARTHSHAKER");
     public static final ResourceCost GRAVITY_MONK = new ResourceCost(ID, "GRAVITY_MONK");
     public static final ResourceCost MIRROR_MAGE = new ResourceCost(ID, "MIRROR_MAGE");
+    public static final ResourceCost SPARK_SAGE = new ResourceCost(ID, "SPARK_SAGE");
     public static final ResourceCost CELESTIAL_OBSERVATORY = new ResourceCost(ID, "CELESTIAL_OBSERVATORY");
     // Stormcallers slice 4 (the rest of T2, Heaven's Gate and the Celestial Dragon)
     public static final ResourceCost SEER = new ResourceCost(ID, "SEER");
@@ -294,6 +295,7 @@ public class ResourceCosts {
     public static final ResourceCost DRILL_BURROWER = new ResourceCost(ID, "DRILL_BURROWER");
     public static final ResourceCost REPAIR_CRAWLER = new ResourceCost(ID, "REPAIR_CRAWLER");
     public static final ResourceCost CLOCKWORK_SPIDER = new ResourceCost(ID, "CLOCKWORK_SPIDER");
+    public static final ResourceCost SOUL_ENGINEER = new ResourceCost(ID, "SOUL_ENGINEER");
     public static final ResourceCost ASSEMBLY_WORKS = new ResourceCost(ID, "ASSEMBLY_WORKS");
     public static final ResourceCost RAIL_BATTERY = new ResourceCost(ID, "RAIL_BATTERY");
     public static final ResourceCost IRON_LEVIATHAN_ENGINE = new ResourceCost(ID, "IRON_LEVIATHAN_ENGINE");
@@ -450,6 +452,7 @@ public class ResourceCosts {
         EARTHSHAKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EARTHSHAKER);
         GRAVITY_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVITY_MONK);
         MIRROR_MAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MIRROR_MAGE);
+        SPARK_SAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPARK_SAGE);
         CELESTIAL_OBSERVATORY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CELESTIAL_OBSERVATORY);
         SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEER);
         LANTERN_FORTRESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LANTERN_FORTRESS);
@@ -634,6 +637,7 @@ public class ResourceCosts {
         DRILL_BURROWER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.DRILL_BURROWER);
         REPAIR_CRAWLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REPAIR_CRAWLER);
         CLOCKWORK_SPIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CLOCKWORK_SPIDER);
+        SOUL_ENGINEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SOUL_ENGINEER);
         ASSEMBLY_WORKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ASSEMBLY_WORKS);
         RAIL_BATTERY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.RAIL_BATTERY);
         IRON_LEVIATHAN_ENGINE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.IRON_LEVIATHAN_ENGINE);

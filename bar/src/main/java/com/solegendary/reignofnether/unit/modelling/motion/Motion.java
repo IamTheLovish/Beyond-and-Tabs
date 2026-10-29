@@ -98,6 +98,15 @@ public final class Motion {
             add(out, ROOT, RZ, -st * sn * 0.8f * D);
             add(out, ROOT, TZ, -st * c * 0.3f);
             add(out, ROOT, TX, -st * sn * 0.3f);
+
+            // contact recoil: the unit's own blow landed - the weapon stops on the target, the arms and torso jolt
+            // back and shudder still (Kinematics.onContact, the same frame as the target's flinch)
+            float rc = Life.springAt(s, b + SP_RECOIL, partial) * gFlinch;
+            add(out, ARM_R, RX, -rc * 1.2f * D);
+            add(out, ARM_L, RX, -rc * 0.8f * D);
+            add(out, ARMS, RX, -rc * 0.8f * D);
+            add(out, BODY, RX, -rc * 0.45f * D);
+            add(out, HEAD, RX, -rc * 0.3f * D);
         }
 
         if (!flinchOnly) {
