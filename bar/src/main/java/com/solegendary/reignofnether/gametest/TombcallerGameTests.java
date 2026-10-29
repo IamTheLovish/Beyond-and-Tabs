@@ -569,7 +569,10 @@ public class TombcallerGameTests {
                     return;
                 if (TombcallerServerEvents.stoneCount(caller) != RaiseTombstone.MAX_STONES)
                     early.add("with one stone unloaded the caster counts " + TombcallerServerEvents.stoneCount(caller) + " stones, expected 3");
-                if (RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true) != null || Essence.get(caller) != 30)
+                TombstoneUnit fourth = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true);
+                if (fourth != null)
+                    stones.add(fourth);
+                if (fourth != null || Essence.get(caller) != 30)
                     early.add("with one stone unloaded a fourth was raised (essence " + Essence.get(caller) + ")");
                 Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
                 if (back == null || !level.addFreshEntity(back))
