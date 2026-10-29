@@ -24,7 +24,6 @@ import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
-import com.solegendary.reignofnether.unit.units.monsters.RisenSkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
@@ -597,9 +596,9 @@ public class TombcallerGameTests {
     }
 
     /**
-     * A stone raises a Risen Skeleton when its time comes: a RisenSkeletonUnit for its owner, marked summoned, crumbling
-     * 30 s later, beside the stone, costing no population (the owner's population stays 0), and the next raise is 20 s
-     * on. When the next raise comes with that one still standing, a second rises beside it (lovish: every 20 s,
+     * A stone raises a Risen Skeleton when its time comes: a skeleton for its owner, marked summoned, crumbling 30 s
+     * later, beside the stone, counted for no population (lovish: no summon takes any; the essence base's one rule, so
+     * the owner's population stays 0), and the next raise is 20 s on. When the next raise comes with that one still standing, a second rises beside it (lovish: every 20 s,
      * whatever still stands); one killed drops no wisp.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
@@ -623,12 +622,10 @@ public class TombcallerGameTests {
                     early.add("the stone raised " + first.size() + " skeletons when its time came, expected 1");
                 } else {
                     Mob m = first.get(0);
-                    if (!(m instanceof RisenSkeletonUnit) || !owner.equals(((Unit) m).getOwnerName()))
+                    if (!(m instanceof SkeletonUnit) || !owner.equals(((Unit) m).getOwnerName()))
                         early.add("the risen unit is a " + m.getClass().getSimpleName() + " of " + ((Unit) m).getOwnerName());
                     if (!Essence.isSummoned(m) || !TombcallerServerEvents.isRisen(m))
                         early.add("the Risen Skeleton is not marked summoned / risen");
-                    if (((Unit) m).getCost().population != 0)
-                        early.add("the Risen Skeleton costs " + ((Unit) m).getCost().population + " population, lovish set none");
                     long left = TombcallerServerEvents.risenEnd(m) - now;
                     if (left < 30 * 20 - 4 || left > 30 * 20)
                         early.add("the Risen Skeleton crumbles in " + left + " ticks, expected 600");

@@ -194,7 +194,6 @@ public class Factions {
 		registerEntity(MONSTERS, EntityRegistrar.CREEPER_UNIT.get(), ProductionItems.CREEPER);
 		registerEntity(MONSTERS, EntityRegistrar.WRAITH_UNIT.get(), ProductionItems.WRAITH);
 		registerEntity(MONSTERS, EntityRegistrar.TOMBCALLER_UNIT.get(), ProductionItems.TOMBCALLER);
-		registerEntity(MONSTERS, EntityRegistrar.RISEN_SKELETON_UNIT.get());   // raised by tombstones, never trained
 		registerEntity(MONSTERS, EntityRegistrar.SLIME_UNIT.get(), ProductionItems.SLIME);
 		registerEntity(MONSTERS, EntityRegistrar.WARDEN_UNIT.get(), ProductionItems.WARDEN);
 		registerEntity(MONSTERS, EntityRegistrar.BONE_DRAGON_UNIT.get(), ProductionItems.BONE_DRAGON);

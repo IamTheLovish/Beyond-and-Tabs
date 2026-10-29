@@ -39,7 +39,6 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), ZombiePiglinUnit.createAttributes().build());
         evt.put(EntityRegistrar.ZOGLIN_UNIT.get(), ZoglinUnit.createAttributes().build());
         evt.put(EntityRegistrar.SKELETON_UNIT.get(), SkeletonUnit.createAttributes().build());
-        evt.put(EntityRegistrar.RISEN_SKELETON_UNIT.get(), SkeletonUnit.createAttributes().build());
         evt.put(EntityRegistrar.HUSK_UNIT.get(), HuskUnit.createAttributes().build());
         evt.put(EntityRegistrar.DROWNED_UNIT.get(), DrownedUnit.createAttributes().build());
         evt.put(EntityRegistrar.STRAY_UNIT.get(), StrayUnit.createAttributes().build());
