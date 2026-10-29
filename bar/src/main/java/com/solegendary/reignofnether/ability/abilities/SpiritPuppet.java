@@ -95,6 +95,7 @@ public class SpiritPuppet extends Ability {
      * takes it - so a refusal never costs essence. True when cast; no cooldown handling here (the bot and the tests).
      */
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, LivingEntity target, boolean quiet) {
+        if (true) return false;   // STUB (tests-first commit): the real rule lands with the implementation
         if (owner == null || owner.isBlank() || target == null || !target.isAlive() || !(target instanceof Unit u)
                 || u.getOwnerName().isBlank() || AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner)
                 || SpiritPuppets.isPuppet(target) || !SpiritPuppets.mayTake(target)) {
