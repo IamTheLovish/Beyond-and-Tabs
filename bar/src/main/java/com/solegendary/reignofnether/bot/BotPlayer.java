@@ -604,12 +604,6 @@ public class BotPlayer {
             if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
-            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
-            if (!done && floating()) {
-                BuildingPlacement annexLab = labWantingAnnex(buildings);
-                if (annexLab != null)
-                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
-            }
             // energy starved (under 30% with metal to spare): wind first, or every lab stalls
             if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -629,6 +623,14 @@ public class BotPlayer {
             if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
                     && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
                 done = placeTechBuilding(level, kit.t2Lab(), armyBuildings + 2, workers, 3);   // 3 builders: the lab is 504 builder-seconds
+            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction). Behind the tech buildings:
+            // ahead of them, a floating easy bot whose Dungeon was cancelled once laid annexes every think and never
+            // re-laid it (bots_reach_tier_2, flake-stress 40806850709 / 40806858215, Oct 29)
+            if (!done && floating()) {
+                BuildingPlacement annexLab = labWantingAnnex(buildings);
+                if (annexLab != null)
+                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
+            }
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
@@ -778,7 +780,11 @@ public class BotPlayer {
         // Tier 2 researched and its lab not standing yet, with the tier gate's army out: the T1 labs finish what they
         // hold and queue no more, so the lab's metal is not eaten by repeat queues (the easy bot fielded 225 fighters on
         // an empty pool and never raised its Dungeon in bots_reach_tier_2, Oct 28)
-        boolean savingForT2Lab = tier2 && kit.t2Lab() != null && army.size() >= tuning.t2MinArmy()
+        // The same while the research itself runs on an empty pool (an easy bot with 177 fighters sat at 0 metal from
+        // minute 13 and its research never finished, flake-stress 40806858215, Oct 29)
+        boolean researchStarved = !tier2 && metalFill < 0.1f
+            && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
+        boolean savingForT2Lab = (tier2 || researchStarved) && kit.t2Lab() != null && army.size() >= tuning.t2MinArmy()
             && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
