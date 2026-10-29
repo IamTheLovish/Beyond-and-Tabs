@@ -215,6 +215,37 @@ class PlantSprites(unittest.TestCase):
                 med = float(np.median(sh[green > 0]))
                 self.assertGreaterEqual(med, 0.70, "grass_%d_%s body %.3f" % (v, size, med))
 
+    def test_short_grass_core_is_thin_from_above(self):
+        # r36 (critic r35b: the big tufts "read as fist-sized dark splats with a hard shadow halo"): every quad of a
+        # tuft carries the whole drawing from the one root, so from the RTS camera (and the sun) its bases stack into
+        # a solid core. No upright pair under the leaning quads (edge-on from the RTS camera, but six bases deep at
+        # the root), and at most ~30% of a tuft's footprint under >= 3 opaque quads (r35 with r36's sizes: 38%)
+        stacked = []
+        for k in gen_blocks.GRASS_TUFTS:
+            model = gen_blocks.MODEL_OVERRIDES["grass" + k]
+            for el in model["elements"]:
+                self.assertNotEqual(el["rotation"]["axis"], "y", "grass%s keeps an upright crossed quad" % k)
+            cells = _screen_cells(model)
+            stacked.append(sum(1 for v in cells.values() if v >= 3) / len(cells))
+        self.assertLessEqual(float(np.mean(stacked)), 0.30, "stacked %s" % np.round(stacked, 2))
+        self.assertLessEqual(max(stacked), 0.40, "stacked %s" % np.round(stacked, 2))
+
+    def test_short_grass_base_is_light_and_thin(self):
+        # r36: the lowest 15% of a tuft no darker than the drawn body less a step (r35: median 0.63-0.66 against the
+        # lawn's 0.56) and a narrower crown: fewer opaque texels there than r35's (0.25 / 0.23 / 0.26 of the band
+        # at full size)
+        r35 = {0: 0.253, 1: 0.233, 2: 0.259}
+        for v in range(3):
+            for size in ps.SIZES:
+                H, sh, green, straw = ps.grass_clump(N, np.random.default_rng(7 + v), variant=v, size=size)
+                a = np.maximum(green, straw) > 0
+                low = slice(N - int(0.15 * _height(a)), N)
+                med = float(np.median(sh[low][green[low] > 0]))
+                self.assertGreaterEqual(med, 0.68, "grass_%d_%s base %.3f" % (v, size, med))
+                if size == 1.0:
+                    fill = float(a[low].mean())
+                    self.assertLess(fill, r35[v] - 0.02, "grass_%d base fills %.3f of its band" % (v, fill))
+
     def test_fern_cards_grow_from_the_bottom_centre(self):
         # the rosette's cards are hinged at the root: a card's sprite must start at the middle of its bottom edge
         for k in range(2):
