@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.mixin.fogofwar;
 
+import com.solegendary.reignofnether.fogofwar.FogExploration;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.postfx.CanopyShade;
 import com.solegendary.reignofnether.postfx.GrassTint;
@@ -85,6 +86,13 @@ public abstract class BiomeColorsMixin {
         int r = (((original >> 16) & 0xFF) * ((tint >> 16) & 0xFF)) / 255;
         int g = (((original >> 8)  & 0xFF) * ((tint >> 8)  & 0xFF)) / 255;
         int b = (( original        & 0xFF) * ( tint        & 0xFF)) / 255;
-        cir.setReturnValue((r << 16) | (g << 8) | b);
+        int fogged = (r << 16) | (g << 8) | b;
+        // never-explored ground goes on to the darker tint - here, not in FogTintingBlockColor (Oct 29): Embeddium's
+        // per-vertex blending calls BiomeColors directly and never sees the wrapper
+        if (tint == FogOfWarClientEvents.FOG_TINT_RGB && !FogOfWarClientEvents.isBlockVisible(pos)
+                && !FogExploration.isExplored(pos.getX() >> 4, pos.getZ() >> 4))
+            fogged = FogExploration.dimToUnexplored(fogged, FogOfWarClientEvents.FOG_TINT_RGB,
+                    FogOfWarClientEvents.FOG_TINT_UNEXPLORED);
+        cir.setReturnValue(fogged);
     }
 }
