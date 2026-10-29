@@ -72,9 +72,10 @@ public final class MistPass {
     private static ValleyField.Result valley = null;
     private static int valleyBase = 64, valleyX = Integer.MIN_VALUE, valleyZ = Integer.MIN_VALUE;
     private static long valleyTick = Long.MIN_VALUE;
-    /** r11d: the one direction the strands stream in (ValleyField.flow); its sign follows the last one, never jumps. */
-    private static double flowX = 1, flowZ = 0, windX = 1, windZ = 0;
-    private static Uniform flowU;
+    /** r11e: each 32-block cell's strand direction (ValleyField.cellAngles), the texture's alpha. */
+    static final int STRAND_CELL = 32;
+    private static double[][] angles = null;
+    private static double windX = 1, windZ = 0;
     private static TextureTarget target = null;
     private static DynamicTexture vis = null;
     private static int visX = 0, visZ = 0;
@@ -120,7 +121,6 @@ public final class MistPass {
         fogMaxU = s.getUniform("FogBoostMax");
         maxCoverU = s.getUniform("MaxCover");
         valleyBaseU = s.getUniform("ValleyBase");
-        flowU = s.getUniform("FlowDir");
     }
 
     /** The volume can draw this frame: loaded, no shader pack, the mist allowed (setting, eyes rig), the overworld. */
@@ -213,10 +213,12 @@ public final class MistPass {
             lb = Math.min(0.97f, c[2] * 0.65f + sky[2] * 0.4f);
         // r11 (the approved paintover): lit tops a warm off-white, the shaded body a cool lavender-grey - r8-r10's tops
         // took 40% of the sky's blue by day and read as a grey-blue film. The hour's colour still leads at dawn and dusk
-        float warm = 0.75f;   // r11b 0.55 -> 0.75: r48's tops read pale blue over the water, not lit white
-        lr = Math.min(0.97f, lr * (1 - warm) + 0.95f * warm);
-        lg = Math.min(0.97f, lg * (1 - warm) + 0.92f * warm);
-        lb = Math.min(0.97f, lb * (1 - warm) + 0.84f * warm);
+        // r11b 0.55 -> 0.75 (r48's tops read pale blue); r11e: a near-neutral white (r52's strands came out cream - the
+        // Enchanted grade after this pass adds its own gold)
+        float warm = 0.75f;
+        lr = Math.min(0.97f, lr * (1 - warm) + 0.94f * warm);
+        lg = Math.min(0.97f, lg * (1 - warm) + 0.94f * warm);
+        lb = Math.min(0.97f, lb * (1 - warm) + 0.91f * warm);
         float cl = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
         if (litU != null) litU.set(lr, lg, lb);
         if (deepU != null) deepU.set(0.70f * cl / 0.9f, 0.73f * cl / 0.9f, 0.80f * cl / 0.9f);
@@ -224,7 +226,6 @@ public final class MistPass {
         set(maxCoverU, (float) MistMath.MAX_COVER);
         updateVis(cam);
         set(valleyBaseU, (float) valleyBase);
-        if (flowU != null) flowU.set((float) flowX, (float) flowZ);
         if (visOriginU != null) visOriginU.set((float) visX, (float) visZ);
         set(visInvSizeU, 1f / (VIS_N * VIS_STEP));
     }
@@ -277,7 +278,8 @@ public final class MistPass {
                 }
                 int g = (int) Math.round(255 * valley.cover[i][j]);
                 int b = ValleyField.encodeHeight(valley.smooth[i][j], valleyBase);
-                img.setPixelRGBA(i, j, 0xFF000000 | (b << 16) | (g << 8) | r);   // ABGR: r fog, g cover, b ground
+                int a = ValleyField.encodeAngle(angles[i][j]);
+                img.setPixelRGBA(i, j, (a << 24) | (b << 16) | (g << 8) | r);   // ABGR: r fog, g cover, b ground, a strand angle
             }
         vis.upload();
         // r11b (eyes r48: the mist drawn as hard 2 x 2-block squares): NativeImage's upload sets the texture's filter
@@ -312,10 +314,8 @@ public final class MistPass {
                 w[i][j] = MC.level.getFluidState(p.set(x, top, z)).is(FluidTags.WATER);
             }
         valley = ValleyField.compute(h, w, VIS_STEP);
-        boolean first = flowX == 1 && flowZ == 0;
-        double[] f = ValleyField.flow(valley.cover, first ? windX : flowX, first ? windZ : flowZ);
-        flowX = f[0];
-        flowZ = f[1];
+        angles = ValleyField.cellAngles(valley.cover, nx + VIS_STEP / 2, nz + VIS_STEP / 2, VIS_STEP, STRAND_CELL,
+            Math.atan2(windZ, windX));
     }
 
     private static void draw(RenderTarget main) {

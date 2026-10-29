@@ -17,7 +17,8 @@
 uniform sampler2D DiffuseSampler;
 uniform sampler2D DepthSampler;
 uniform sampler2D VisSampler;       // round VisOrigin: r = fog of war (0 in sight, else the boost's share), g = where the
-                                    // mist lies (ValleyField.cover), b = the smoothed ground (ValleyField.encodeHeight)
+                                    // mist lies (ValleyField.cover), b = the smoothed ground (ValleyField.encodeHeight),
+                                    // a = the 32-block cell's strand angle / pi (ValleyField.cellAngles)
 
 uniform mat4 InvProjMat;            // inverse projection (RTS ortho or perspective)
 uniform mat4 InvViewMat;            // inverse view rotation: view space -> camera-relative world
@@ -36,7 +37,6 @@ uniform vec2 VisOrigin;             // world x, z of the fog texture's corner
 uniform float VisInvSize;           // 1 / blocks the fog texture spans
 uniform float FogBoostMax;          // the boost at r = 1 (MistMath.FOG_UNEXPLORED)
 uniform float MaxCover;             // MistMath.MAX_COVER
-uniform vec2 FlowDir;               // r11d: the one direction the strands stream in (ValleyField.flow)
 uniform float ValleyBase;           // r11: the base of VisSampler's ground channel (ValleyField.encodeHeight)
 
 in vec2 texCoord;
@@ -100,9 +100,38 @@ vec4 visAt(vec2 xz) {
     return texture(VisSampler, uv);
 }
 
-// r11d: the strands stream along FlowDir - ONE direction for the view (ValleyField.flow, the river's own). r11-r11c took
-// it per pixel from the cover's slope: turning the noise round world coordinates hundreds of blocks out sheared it
-// wherever the direction changed - rims along the banks that read as ice floes (eyes r50 / r51b; mist lab, Oct 29)
+// r11e: the strands follow the river cell by cell. Each 32-block world cell has one direction (the texture's alpha,
+// ValleyField.cellAngles); the strand noise is evaluated in the 4 nearest cells' RIGID frames (origin = the cell's
+// centre) and blended. r11-r11c turned the noise per pixel round world coordinates hundreds of blocks out - it sheared
+// into rims (eyes r50 / r51b); r11d's one direction for the view ran across Verdant's ring river (eyes r52).
+const float STRAND_CELL = 32.0;
+
+float cellAngle(vec2 centre) {
+    vec4 v = visAt(centre);
+    return v.b < 0.0 ? atan(WindDir.y, WindDir.x) : v.a * 3.14159265;
+}
+
+float cellCover(vec2 xz) {
+    vec2 g = xz / STRAND_CELL - 0.5;
+    vec2 i0 = floor(g);
+    vec2 f = g - i0;
+    f = f * f * (3.0 - 2.0 * f);
+    float s = 0.0;
+    for (int k = 0; k < 4; k++) {
+        vec2 o = vec2(float(k & 1), float(k >> 1));
+        vec2 cell = i0 + o;
+        vec2 c = (cell + 0.5) * STRAND_CELL;
+        float a = cellAngle(c);
+        vec2 d = vec2(cos(a), sin(a));
+        vec2 r = xz - c + Offset.xz;                      // the wind's drift, in each cell's frame
+        float u = dot(r, d) + 37.0 * cell.x + 11.0 * cell.y;
+        float v = dot(r, vec2(-d.y, d.x)) + 23.0 * cell.y - 5.0 * cell.x;
+        // mist lab variant b (Oct 29): strands ~17 blocks along, ~2 across
+        float n = fbm(vec3(u * 0.06, Time * 0.004, v * 0.45));
+        s += n * mix(1.0 - f.x, f.x, o.x) * mix(1.0 - f.y, f.y, o.y);
+    }
+    return s;
+}
 
 // r9 (lovish, Oct 29: "mist needs to be improved still still looks fake"): fog BANKS, not a tinted film. r6-r8's
 // exponential layer put a thin veil over everything - a grey filter laid over the scene, which is what read fake.
@@ -118,15 +147,14 @@ const float BANK_DENSITY = 2.5;     // r11b 1.7 -> 2.6: r48's banks too thin to 
 
 struct Bank { float cover; float top; };
 
-Bank bankAt(vec3 k, float fogShare, float local) {
+Bank bankAt(vec3 k, float fogShare, float local, float cov) {
     Bank b;
     // r11: the banks lie where ValleyField says (the water, the low banks, hollows); the large noise only breaks them
     // into strands and gaps, it never puts mist on open lawn. Out of sight a little more lies there (lovish, Oct 29)
-    // r11d (mist lab variant g, matched to the approved paintover): strands ~17 blocks along, ~2 across
-    float cov = fbm(vec3(k.x * 0.06, Time * 0.004, k.z * 0.45));
+    // r11e: cov = cellCover at the ray's middle (the strands; computed once per pixel)
     // r11b (eyes r48: over the water one uniform faint sheet - 0.35 + 0.85 x cov saturated the body everywhere):
     // the large noise now opens real gaps between strands
-    b.cover = local * (2.2 * cov - 0.9) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
+    b.cover = local * (2.2 * cov - 0.6) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
     float billow = vnoise(vec3(k.x * 0.11, Time * 0.03, k.z * 0.2)) - 0.5;
     b.top = 1.0 + 3.6 * smoothstep(0.32, 0.78, b.cover) + 1.4 * billow;
     return b;
@@ -187,10 +215,11 @@ void main() {
     float ds = len / float(STEPS);
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     float fogShare = clamp(vis.r, 0.0, 1.0);
-    vec2 flow = FlowDir;
+    vec2 flow = WindDir;                       // the warp, detail and streak frames: one global direction, never sheared
     float boost = 1.0 + (FogBoostMax - 1.0) * fogShare;
     vec2 warp = warpAt(windFrame(surface + toViewer * (t0 + 0.5 * len), flow));
 
+    float covC = cellCover((surface + toViewer * (t0 + 0.5 * len)).xz);
     vec3 c = scene.rgb;
     float trans = 1.0;
     // back to front: from the surface toward the viewer
@@ -199,7 +228,7 @@ void main() {
         vec3 k = windFrame(w, flow);
         k.xz += warp;
         float h = w.y - ground;
-        Bank b = bankAt(k, fogShare, local);
+        Bank b = bankAt(k, fogShare, local, covC);
         if (h > b.top + 4.0 && h > 3.0 * HAZE_HEIGHT)
             continue;                                          // clear air above this bank and the haze
         float detail = fbm(k * vec3(0.1, 0.3, 0.5) + vec3(0.0, Time * 0.05, 0.0));
