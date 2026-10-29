@@ -195,8 +195,15 @@ void main() {
     vec3 washed = mix(scene.rgb, vec3(luma), 0.6 * seen);
     c += (washed - scene.rgb) * trans;          // back-to-front mixing leaves scene x trans in c: wash that share only
     // in sight a unit in a hollow must read: the cap is lower there; out of sight the mist may close in
-    float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare);
+    // r10b (lab A/B): a hard cap turned every deep hollow into one flat grey pond - every pixel hit the same cover.
+    // A soft knee instead, and the cap itself streaked by the wisp noise at the surface, so a full pool keeps its
+    // thicker and thinner strands.
+    vec3 ks = windFrame(surface);
+    ks.xz += warp;
+    float streak = fbm(ks * vec3(0.16, 0.3, 0.5) + vec3(0.0, Time * 0.04, 0.0));
+    float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare) * (0.72 + 0.5 * streak);
     float cover = 1.0 - trans;
-    float kc = cover > cap ? cap / cover : 1.0;
+    float soft = cap * (1.0 - exp(-cover / max(cap, 1e-3)));   // ~cover when thin, eases toward cap when thick
+    float kc = cover > 1e-4 ? min(soft / cover, 1.0) : 1.0;
     fragColor = vec4(mix(scene.rgb, c, kc), scene.a);
 }
