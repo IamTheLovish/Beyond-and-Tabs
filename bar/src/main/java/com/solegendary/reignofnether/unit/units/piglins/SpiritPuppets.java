@@ -45,6 +45,7 @@ import java.util.UUID;
  * A puppet that dies is a normal death - it is not a summon, so it drops its essence wisp - and its record goes with it.
  * A puppet whose owner was beaten in the meantime (MatchRoster.isFinished: MatchOutcome's strip skipped it, it was the
  * puppeteer's then) is not handed to a finished side: it is stripped and killed as the strip would have done.
+ * A puppet takes no population from the puppeteer: it counts for its original owner all along ({@link #populationOwner}).
  * Server side only.
  */
 public final class SpiritPuppets {
@@ -72,6 +73,16 @@ public final class SpiritPuppets {
 
     public static int activeCount() {
         return ACTIVE.size();
+    }
+
+    /**
+     * Whose population {@code unit} counts in (UnitServerEvents.getUnitPopulation): a puppet's original owner's, as if
+     * it had never left (lovish, Oct 29: a steal takes no population from the Shaman's owner - no cap check, no change);
+     * anything else its owner's.
+     */
+    public static String populationOwner(LivingEntity e, Unit unit) {
+        String original = originalOwner(e);
+        return original != null ? original : unit.getOwnerName();
     }
 
     /**

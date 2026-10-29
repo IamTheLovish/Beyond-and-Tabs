@@ -218,7 +218,8 @@ public class UnitServerEvents {
     // (server tick, allUnits size, allUnitsModCount) so a unit spawning/dying mid-tick is reflected immediately.
     // Only the unit part is cached: production queues are still counted live, so queuing several items in the
     // same tick is checked exactly as before. (A unit changing owner or pop cost - slime resize - is picked up
-    // on the next tick at the latest.)
+    // on the next tick at the latest.) A Voodoo Shaman's Spirit Puppet counts for its original owner the whole time
+    // (lovish, Oct 29: a steal takes no population from the Shaman's owner, and frees none for its own).
     private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
     private static long unitPopulationCacheTick = Long.MIN_VALUE;
     private static int unitPopulationCacheSize = -1;
@@ -231,7 +232,8 @@ public class UnitServerEvents {
             unitPopulationCache.clear();
             for (LivingEntity entity : allUnits)
                 if (entity instanceof Unit unit && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(entity))   // a Mirror Mage's decoy is no one
-                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+                    unitPopulationCache.merge(com.solegendary.reignofnether.unit.units.piglins.SpiritPuppets.populationOwner(entity, unit),
+                        unit.getCost().population, Integer::sum);
             unitPopulationCacheTick = tick;
             unitPopulationCacheSize = allUnits.size();
             unitPopulationCacheModCount = allUnitsModCount;

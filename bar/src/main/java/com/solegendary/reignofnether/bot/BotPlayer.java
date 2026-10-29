@@ -72,7 +72,8 @@ public class BotPlayer {
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
-                            ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
+                            ProductionItems.GOREHORN_RHINO,   // big-units T2 beast
+                            ProductionItems.VOODOO_SHAMAN),   // essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
                     Buildings.FORTRESS, ProductionItems.WAR_MAMMOTH, Buildings.ENERGY_CONVERTER_PIGLINS);
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)

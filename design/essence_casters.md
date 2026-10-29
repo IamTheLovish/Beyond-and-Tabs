@@ -101,4 +101,8 @@ fetish for a staff (3 damage, 0.6 hits/s).
   to its cost (BarFx.tierOf: T2 from 120 metal, T3 from 500).
 - Every refusal (bad target, wrong tier, out of reach, short of essence) spends nothing and sets no cooldown. Hex and
   Blood Totem autocast only with the essence to pay (canAutocastNow; the base's autocastEssence gate will do the same).
-- Not in this PR: the bots do not train it yet, and its essence is not on the HUD yet.
+- **Population** (lovish, Oct 29): a puppet takes no population from the Shaman's owner; it counts for its original
+  owner the whole time (SpiritPuppets.populationOwner in UnitServerEvents.getUnitPopulation).
+- **Bots** (lovish, Oct 29): the Horde bot kit trains it at the Flame Sanctuary (one of its six T2 picks). Hex and Blood
+  Totem autocast (only with the essence to pay); Spirit Puppet and Empower stay manual for bots and players.
+- Not in this PR: its essence is not on the HUD yet.

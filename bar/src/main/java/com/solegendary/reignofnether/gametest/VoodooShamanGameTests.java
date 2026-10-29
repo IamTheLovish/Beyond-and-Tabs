@@ -2,10 +2,14 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoCaster;
+import com.solegendary.reignofnether.ability.AutoRule;
+import com.solegendary.reignofnether.ability.AutocastState;
 import com.solegendary.reignofnether.ability.abilities.BloodTotem;
 import com.solegendary.reignofnether.ability.abilities.Empower;
 import com.solegendary.reignofnether.ability.abilities.Hex;
 import com.solegendary.reignofnether.ability.abilities.SpiritPuppet;
+import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
@@ -30,6 +34,7 @@ import com.solegendary.reignofnether.resources.WreckServerEvents;
 import com.solegendary.reignofnether.unit.SelectionKeep;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.UnitTier;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -902,6 +907,109 @@ public class VoodooShamanGameTests {
                     problems.add("the dead puppet is still tracked");
             } finally {
                 cleanUp(helper, made, spots);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * lovish (Oct 29): a Spirit Puppet steal takes no population from the Shaman's owner - no cap check, no change. The
+     * puppet keeps counting for its original owner (who cannot queue into the room it left), the puppeteer's count stays
+     * where it was.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void voodoo_spirit_puppet_takes_no_population(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "puppopa"), b = owner(helper, "puppopb");
+        Mob caster = shaman(helper, a, 3, 3, 20, made);
+        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
+        if (made.size() < 2) {
+            spawnFailed(helper, made, "the shaman and the enemy");
+            return;
+        }
+        int[] before = new int[2];
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                before[0] = UnitServerEvents.getCurrentPopulation(a);
+                before[1] = UnitServerEvents.getCurrentPopulation(b);
+                castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
+                if (!a.equals(((Unit) foe).getOwnerName()))
+                    early.add("Spirit Puppet did not take the Vindicator: the test lost its point");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(5, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                int popA = UnitServerEvents.getCurrentPopulation(a), popB = UnitServerEvents.getCurrentPopulation(b);
+                if (before[1] < ((Unit) foe).getCost().population)
+                    problems.add("the owner's population did not count the Vindicator before the steal (" + before[1] + ")");
+                if (popA != before[0])
+                    problems.add("the puppeteer's population went " + before[0] + " -> " + popA + " with the puppet");
+                if (popB != before[1])
+                    problems.add("the owner's population went " + before[1] + " -> " + popB + " while its unit is a puppet");
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * lovish (Oct 29): the bots build and use every caster. The Horde bot kit trains the shaman at its T2 lab; a fresh
+     * shaman autocasts Hex and Blood Totem (Spirit Puppet and Empower stay manual), and one AutoCaster look by a shaman
+     * holding 10 essence hexes the enemy beside it. A shaman short of the essence does not try (no order, so its attack
+     * target is kept) - the AutoCaster's order would reset it before the refusal.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void voodoo_bots_train_the_shaman_and_it_autocasts_hex_only_with_the_essence(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "bota"), b = owner(helper, "botb");
+        Mob rich = still(helper, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), a, 3, 3, made);
+        Mob poor = still(helper, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), a, 3, 12, made);
+        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
+        Mob foe2 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 12, made);
+        if (made.size() < 4) {
+            spawnFailed(helper, made, "the shamans and the enemies");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                BotPlayer.Kit kit = BotPlayer.kitFor(Factions.PIGLINS);
+                if (kit == null || !kit.t2Army().contains(ProductionItems.VOODOO_SHAMAN))
+                    problems.add("the Horde bot kit does not train the Voodoo Shaman");
+                Unit ru = (Unit) rich;
+                Hex hex = ability(rich, Hex.class);
+                BloodTotem totem = ability(rich, BloodTotem.class);
+                SpiritPuppet puppet = ability(rich, SpiritPuppet.class);
+                Empower empower = ability(rich, Empower.class);
+                if (hex == null || totem == null || puppet == null || empower == null) {
+                    problems.add("the shaman lacks an ability");
+                } else {
+                    if (!AutocastState.isOn(ru, hex) || !AutocastState.isOn(ru, totem))
+                        problems.add("a fresh shaman does not autocast Hex and Blood Totem");
+                    if (puppet.getAutoRule() != AutoRule.MANUAL || empower.getAutoRule() != AutoRule.MANUAL)
+                        problems.add("Spirit Puppet or Empower is autocast (" + puppet.getAutoRule() + ", " + empower.getAutoRule() + ")");
+                    Essence.add(rich, 10);
+                    AutoCaster.look(level, rich, ru);
+                    if (!Hex.isHexed(foe) || Essence.get(rich) != 5)
+                        problems.add("one AutoCaster look did not hex the enemy beside the shaman (essence " + Essence.get(rich) + ")");
+                    Essence.add(poor, 4);
+                    ((Unit) poor).getTargetGoal().setTarget(foe2);
+                    boolean cast = AutoCaster.look(level, poor, (Unit) poor);
+                    if (cast || Hex.isHexed(foe2) || Essence.get(poor) != 4)
+                        problems.add("a shaman with 4 essence autocast (essence " + Essence.get(poor) + ")");
+                    if (((Unit) poor).getTargetGoal().getTarget() != foe2)
+                        problems.add("a short shaman's look dropped its attack target");
+                }
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                cleanUp(helper, made, List.of());
             }
             finish(helper, problems);
         });
