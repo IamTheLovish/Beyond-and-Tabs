@@ -96,6 +96,34 @@ float fogAt(vec2 xz) {
     return texture(VisSampler, uv).r;
 }
 
+// r9 (lovish, Oct 29: "mist needs to be improved still still looks fake"): fog BANKS, not a tinted film. r6-r8's
+// exponential layer put a thin veil over everything - a grey filter laid over the scene, which is what read fake.
+// Real valley fog seen from above is a cloud sea: dense banks with a billowing top surface lit by the sky, clear air
+// between them, wispy torn edges, deeper banks over lower ground. Per sample:
+//   cover   where banks lie: large, wind-stretched, slowly drifting patches (out of sight more of the ground is covered)
+//   top     the bank's top surface over the floor: higher where the cover is strong, billowing on a finer noise
+//   body    dense under the top, a soft 1.4-block top edge; zero above it
+//   erosion the detail noise tears the edges into wisps and gives the inside its texture
+// Lit from above: a sample near its bank's top takes LitColor, deeper inside the cool DeepColor; the bank's own top
+// shades what lies under it (no extra noise: the same cover and top a little higher).
+const float BANK_DENSITY = 1.7;
+
+struct Bank { float cover; float top; };
+
+Bank bankAt(vec3 k, float fogShare) {
+    Bank b;
+    float cov = fbm(vec3(k.x * 0.022, Time * 0.004, k.z * 0.045));
+    b.cover = cov + 0.22 * fogShare;                          // out of sight more of the ground lies under mist
+    float billow = vnoise(vec3(k.x * 0.11, Time * 0.03, k.z * 0.2)) - 0.5;
+    b.top = 1.0 + 3.6 * smoothstep(0.32, 0.78, b.cover) + 1.4 * billow;
+    return b;
+}
+
+float bankBody(Bank b, float h, float detail) {
+    float body = smoothstep(b.top + 0.5, b.top - 0.9, h);
+    return body * smoothstep(0.30, 0.58, b.cover + 0.5 * (detail - 0.5));
+}
+
 void main() {
     vec4 scene = texture(DiffuseSampler, texCoord);
     float depth = texture(DepthSampler, texCoord).r;
@@ -106,7 +134,7 @@ void main() {
     vec4 v = InvProjMat * vec4(vec3(texCoord, depth) * 2.0 - 1.0, 1.0);
     vec3 rel = (InvViewMat * vec4(v.xyz / v.w, 1.0)).xyz;       // camera-relative world
     vec3 surface = CamPos + rel;
-    float top = Floor + 3.0 * Height;                          // above this the layer is as good as clear
+    float top = Floor + 6.8;                                   // the highest a bank's top reaches
     if (surface.y >= top) {
         fragColor = scene;
         return;
@@ -116,9 +144,9 @@ void main() {
     float toTop = toViewer.y > 1e-3 ? (top - surface.y) / toViewer.y : MAX_PATH;
     float len = min(min(toEye, toTop), MAX_PATH);
     float ds = len / float(STEPS);
-    // interleaved-gradient jitter of the first sample: no banding between the steps
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-    float boost = 1.0 + (FogBoostMax - 1.0) * fogAt(surface.xz);
+    float fogShare = clamp(fogAt(surface.xz), 0.0, 1.0);
+    float boost = 1.0 + (FogBoostMax - 1.0) * fogShare;
     vec2 warp = warpAt(windFrame(surface + toViewer * (0.5 * len)));
 
     vec3 c = scene.rgb;
@@ -126,27 +154,30 @@ void main() {
     // back to front: from the surface toward the viewer
     for (int i = 0; i < STEPS; i++) {
         vec3 w = surface + toViewer * ((float(i) + jitter) * ds);
-        // below the floor the density holds at the floor's (review, Oct 29: exp(-h) under it reached 15x and every
-        // pixel a few blocks under the camera's ground average went opaque DeepColor - the first in-game still's
-        // band and its black, block-stepped edges). A hollow still fills: its ray runs through more of the layer
-        float h = max(w.y - Floor, 0.0);
-        float prof = exp(-h / Height);
-        float shape = 0.15 + 1.8 * wisps(windFrame(w), warp);
-        float dens = min(Density * boost * prof * shape, 2.5);
+        vec3 k = windFrame(w);
+        k.xz += warp;
+        float h = w.y - Floor;
+        Bank b = bankAt(k, fogShare);
+        if (h > b.top + 0.6)
+            continue;                                          // clear air above this bank
+        float detail = fbm(k * vec3(0.07, 0.3, 0.22) + vec3(0.0, Time * 0.05, 0.0));
+        float body = bankBody(b, h, detail);
+        float dens = Density * sqrt(boost) * BANK_DENSITY * body;
         float a = 1.0 - exp(-Sigma * dens * ds);
-        // lit on top and where it is thin; cool and dim in the thick low core
-        float lit = clamp(0.35 + 0.5 * clamp(h / (2.0 * Height), 0.0, 1.0) + 0.3 * (1.0 - min(dens, 1.5) / 1.5), 0.0, 1.0);
-        // self-shadow (review idea): the mist above this sample, toward the sky, dims it - strands get bright tops
-        // and darker undersides, and a thick bank darkens inside instead of reading as one flat wash
-        float hs = h + 1.5;
-        float above = min(Density * boost * exp(-hs / Height) * (0.15 + 1.8 * wisps(windFrame(w + vec3(0.0, 1.5, 0.0)), warp)), 2.5);
-        float sun = exp(-Sigma * above * 4.0);
-        c = mix(c, mix(DeepColor, LitColor, lit) * mix(0.62, 1.0, sun), a);
+        // light: bright at the bank's top, cool and dim deeper in; the bank above a sample shades it
+        float nearTop = clamp((h - (b.top - 2.2)) / 2.2, 0.0, 1.0);
+        float shade = bankBody(b, h + 1.2, detail);
+        // the billows: the top surface's slope toward the low sun (from the wind's upwind side) lights one flank and
+        // shades the other, so the cloud sea has relief instead of reading as flat white paint
+        float slope = b.top - bankAt(k + vec3(-1.5, 0.0, 0.8), fogShare).top;
+        float lit = clamp(0.25 + 0.75 * nearTop * (1.0 - 0.6 * shade) + 0.15 * (1.0 - body) + 0.22 * slope * nearTop,
+            0.0, 1.0);
+        c = mix(c, mix(DeepColor, LitColor, lit), a);
         trans *= 1.0 - a;
     }
     // in sight a unit in a hollow must read: the cap is lower there; out of sight the mist may close in
-    float cap = mix(MaxCover * 0.76, MaxCover * 1.08, clamp(fogAt(surface.xz), 0.0, 1.0));
+    float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare);
     float cover = 1.0 - trans;
-    float k = cover > cap ? cap / cover : 1.0;
-    fragColor = vec4(mix(scene.rgb, c, k), scene.a);
+    float kc = cover > cap ? cap / cover : 1.0;
+    fragColor = vec4(mix(scene.rgb, c, kc), scene.a);
 }
