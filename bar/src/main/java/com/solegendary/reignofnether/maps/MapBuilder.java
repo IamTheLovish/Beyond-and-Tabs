@@ -123,6 +123,11 @@ public final class MapBuilder {
         /** Forest columns offered to TreeScatter ({dx, dz} from the centre) and each one's ground y (M6). */
         final List<int[]> treeOffers = new ArrayList<>();
         final java.util.Map<Long, Integer> treeGround = new java.util.HashMap<>();
+        /** The plan (made once the terrain is done), the next tree to plant, and what has been planted so far. */
+        List<TreeScatter.Tree> treePlan = null;
+        int nextTree = 0, treesGrown = 0, treeBlocks = 0, treeVanilla = 0;
+        long treeNanos = 0;
+        final List<BlockPos> planted = new ArrayList<>();
         final List<BlockPos> decor = new ArrayList<>();
         /** Plant cover: the column's air block above its grass, and what grows there (an index into PLANTS). */
         final List<BlockPos> plants = new ArrayList<>();
@@ -252,8 +257,12 @@ public final class MapBuilder {
                         j.stage = 2;
                 }
                 case 2 -> {
-                    decorate(j);
-                    j.stage = 3;
+                    // M6: our trees, inside the per-tick budget like the terrain and the groves (review, Oct 29: a
+                    // 4v4 Verdant Valley writes a few hundred thousand blocks of trees - one long tick done at once)
+                    if (plantTrees(j, deadline)) {
+                        decorate(j);
+                        j.stage = 3;
+                    }
                 }
                 case 3 -> {
                     stampEconomy(j.level, j.layout, j.cx, j.cz, j.pal);
@@ -556,36 +565,47 @@ public final class MapBuilder {
 
     // ------------------------------------------------------------------------------------------ decoration
 
-    private static void decorate(Job j) {
-        ServerLevel level = j.level;
-        int grown = 0;
+    /**
+     * Plants the planned trees until the deadline: true when every tree is in. Our own templates where TreeScatter
+     * plans them - natural, roughly fair (each side its own woods, its wood within ~15% of the others'); vanilla's tree
+     * only where a template can't be read (M6).
+     */
+    private static boolean plantTrees(Job j, long deadline) {
+        if (j.pal.tree() == null)
+            return true;
         long t0 = System.nanoTime();
-        int blocks = 0, vanilla = 0;
-        List<BlockPos> planted = new ArrayList<>();
-        if (j.pal.tree() != null) {
-            // M6: our own templates where TreeScatter plans them - natural, roughly fair (each side its own woods,
-            // its wood within ~15% of the others'); vanilla's tree only where a template can't be read
-            var holder = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
-            for (TreeScatter.Tree t : TreeScatter.plan(j.layout, j.treeOffers)) {
-                int x = j.cx + t.dx(), z = j.cz + t.dz();
-                Integer g = j.treeGround.get(BlockPos.asLong(x, 0, z));
-                if (g == null)
-                    continue;
-                int n = TreeTemplates.place(level, t, x, z, g, j.pal.sub());
-                if (n < 0 && holder.isPresent() && holder.get().value().place(level,
-                        level.getChunkSource().getGenerator(), level.getRandom(), new BlockPos(x, g + 1, z))) {
-                    vanilla++;
-                    grown++;
-                    planted.add(new BlockPos(x, g + 1, z));
-                } else if (n >= 0) {
-                    blocks += n;
-                    grown++;
-                    planted.add(new BlockPos(x, g + 1, z));
-                }
+        ServerLevel level = j.level;
+        if (j.treePlan == null)
+            j.treePlan = TreeScatter.plan(j.layout, j.treeOffers);
+        var holder = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
+        while (j.nextTree < j.treePlan.size() && System.nanoTime() < deadline) {
+            TreeScatter.Tree t = j.treePlan.get(j.nextTree++);
+            int x = j.cx + t.dx(), z = j.cz + t.dz();
+            Integer g = j.treeGround.get(BlockPos.asLong(x, 0, z));
+            if (g == null)
+                continue;
+            int n = TreeTemplates.place(level, t, x, z, g, j.pal.sub());
+            if (n < 0 && holder.isPresent() && holder.get().value().place(level,
+                    level.getChunkSource().getGenerator(), level.getRandom(), new BlockPos(x, g + 1, z))) {
+                j.treeVanilla++;
+                j.treesGrown++;
+                j.planted.add(new BlockPos(x, g + 1, z));
+            } else if (n >= 0) {
+                j.treeBlocks += n;
+                j.treesGrown++;
+                j.planted.add(new BlockPos(x, g + 1, z));
             }
         }
-        long treeMs = (System.nanoTime() - t0) / 1_000_000;
-        lastPlanted = List.copyOf(planted);
+        j.treeNanos += System.nanoTime() - t0;
+        boolean done = j.nextTree >= j.treePlan.size();
+        if (done)
+            lastPlanted = List.copyOf(j.planted);
+        return done;
+    }
+
+    private static void decorate(Job j) {
+        ServerLevel level = j.level;
+        int grown = j.treesGrown;
         // desert scatter: cacti and dead bushes (StartAreaClearing clears them off the bases)
         for (int i = 0; i < j.decor.size(); i++) {
             BlockPos d = j.decor.get(i);
@@ -603,8 +623,8 @@ public final class MapBuilder {
         for (MapLayout.Spot s : j.layout.vents)
             stampVent(level, j.cx + s.dx(), j.cz + s.dz());
         int plants = plant(j);
-        ReignOfNether.LOGGER.info("[MapBuilder] trees: {} planted ({} vanilla fallbacks), {} blocks, {} ms", grown, vanilla,
-            blocks, treeMs);
+        ReignOfNether.LOGGER.info("[MapBuilder] trees: {} planted ({} vanilla fallbacks), {} blocks, {} ms over the ticks",
+            grown, j.treeVanilla, j.treeBlocks, j.treeNanos / 1_000_000);
         ReignOfNether.LOGGER.info("[MapBuilder] {} trees, {} groves, {} decor, {} plants, {} pillars, {} vents", grown,
             j.groves.size(), j.decor.size(), plants, j.layout.pillars.size(), j.layout.vents.size());
     }

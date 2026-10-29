@@ -98,9 +98,11 @@ public final class TreeScatter {
         List<List<Cand>> bySide = new ArrayList<>();
         for (int i = 0; i < l.n; i++)
             bySide.add(new ArrayList<>());
+        int[] offeredPerSide = new int[l.n];   // before the keep-outs: the same count on every side (folded terrain)
         for (int[] c : offered) {
             int dx = c[0], dz = c[1];
-            int side = sideOf(l, dx, dz);
+            int side = sideOf(l, dx, dz);   // once per column (review, Oct 29: counting per side redid it n times)
+            offeredPerSide[side]++;
             // the widest crown of the mix keeps every species off the economy alike: a per-species keep-out would
             // push the big oaks out of the narrow lanes and tilt the mix toward bushes
             if (!clear(l, dx, dz, crown))
@@ -117,7 +119,7 @@ public final class TreeScatter {
         int[] next = new int[l.n], planted = new int[l.n];
         for (int side = 0; side < l.n; side++) {
             // the side's offered columns before the keep-outs: the same count on every side (the terrain is folded)
-            budget[side] = DENSITY * countOffered(l, offered, side) * meanWeight
+            budget[side] = DENSITY * offeredPerSide[side] * meanWeight
                 * (1 + JITTER * (2 * h(seed, side, 0, 97) - 1));
             bySide.get(side).sort(Comparator.comparingDouble((Cand c) -> c.turn).thenComparingInt(c -> c.dx)
                 .thenComparingInt(c -> c.dz));
@@ -147,14 +149,6 @@ public final class TreeScatter {
     }
 
     private record Cand(int dx, int dz, double turn) { }
-
-    private static int countOffered(MapLayout l, List<int[]> offered, int side) {
-        int n = 0;
-        for (int[] c : offered)
-            if (sideOf(l, c[0], c[1]) == side)
-                n++;
-        return n;
-    }
 
     /** The side a column counts for: the start nearest in angle (the wedge round it). */
     static int sideOf(MapLayout l, double dx, double dz) {
