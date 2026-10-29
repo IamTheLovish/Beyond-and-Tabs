@@ -1022,6 +1022,10 @@ public class VoodooShamanGameTests {
                 BotPlayer.Kit kit = BotPlayer.kitFor(Factions.PIGLINS);
                 if (kit == null || !kit.t2Army().contains(ProductionItems.VOODOO_SHAMAN))
                     problems.add("the Horde bot kit does not train the Voodoo Shaman");
+                // BotPlayer.think puts every non-worker AttackerUnit in its army list: the shaman marches with the attack
+                // waves (casters that are not attackers need the "healers follow the army" line; this one does not)
+                if (!(rich instanceof AttackerUnit) || rich instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit)
+                    problems.add("the shaman is not a non-worker attacker: a bot's army list would never hold it");
                 Unit ru = (Unit) rich;
                 Hex hex = ability(rich, Hex.class);
                 BloodTotem totem = ability(rich, BloodTotem.class);
