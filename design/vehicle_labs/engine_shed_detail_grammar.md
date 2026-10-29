@@ -435,3 +435,15 @@ A Mediterranean villa on a terraced cliff, rendered with shaders at golden hour.
 - Building: terracotta roofs with thick eaves, pale plaster on a stone base, arches and loggias, terraces and
   stairs stepping down the slope, vines and plants growing ON the building, a pool. Nature integrated with the
   architecture is a big part of why it reads real.
+
+## (s) ref59 - lovish's reference, Oct 28 22:55 (design/refs/vehicle_labs/ref59_stacked_city_on_viaduct.png)
+A vertical city of stacked timber-and-plaster buildings hanging off a giant stone viaduct, sunset shaders.
+1. **Density by accretion:** dozens of small volumes, each a real little building with its own roof, windows and
+   balcony, stacked and cantilevered on brackets. Detail = many complete small things, not texture on one big thing.
+2. **Roofs at every level** with upturned (kicked) eaves in green tile - a roof edge every few blocks of height,
+   each with a shadow line under it.
+3. **Scale contrast:** plain massive stone piers and arches against intricate clutter - the plain part makes the
+   detailed part read as detailed.
+4. **Scattered warm lights** (red lanterns, lit windows) and a moving element (the cable car) bring it alive.
+Faction fit: the East-Asian look suits the Lotus faction's buildings (tools/lab_lotus_academy.py). For Brassworks,
+take the method: tiers as clusters of small complete volumes, roofs at every level, plain piers vs busy infill.
