@@ -50,6 +50,7 @@ public class GraveTide extends Ability {
     public GraveTide() {
         super(UnitAction.GRAVE_TIDE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, false);
         this.autoRule(AutoRule.SELF_IN_COMBAT);
+        this.autocastEssence = ESSENCE_COST;   // the AutoCaster's essence gate (essence base Revision 1)
         this.showRangeCircle = false;
         this.showRadiusCircle = true;
     }

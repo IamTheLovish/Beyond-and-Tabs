@@ -46,6 +46,10 @@ public class StormOakPlacement extends BuildingPlacement {
 
     /** Ticks until the next bolt may fall (0 = ready). Not saved: a reloaded oak is ready at once, like a fresh one. */
     public int cooldown = 0;
+    /** The enemy owner a game test limits {@link #tickStrike}'s targets to (null in play: game tests share one world). */
+    @Nullable public String onlyFoe = null;
+    /** The last look found a target: the oak looks again the tick it is ready, not at the next SCAN_TICKS. */
+    private boolean engaged = false;
 
     private final List<LivingEntity> scratch = new ArrayList<>();     // grid query results, reused
     private final List<LivingEntity> foes = new ArrayList<>();
@@ -62,15 +66,18 @@ public class StormOakPlacement extends BuildingPlacement {
             tickStrike(sl);
     }
 
-    /** One server tick of the weapon: counts the cooldown down, then strikes when ready. Public for the game test. */
+    /**
+     * One server tick of the weapon: counts the cooldown down and strikes on the tick it reaches 0 if the last look
+     * found a target, so an oak in a fight strikes every COOLDOWN_TICKS exactly; an idle one looks only every
+     * SCAN_TICKS. It used to skip that tick and wait for the next SCAN_TICKS: 130 ticks a bolt, not 120
+     * (DefenceTower's tickWeapon had the same). Public for the game test.
+     */
     public void tickStrike(ServerLevel sl) {
-        if (cooldown > 0) {
-            cooldown--;
+        if (cooldown > 0 && --cooldown > 0)
             return;
-        }
-        if (!isBuilt || isDestroyedServerside || tickAge % SCAN_TICKS != 0)
+        if (!isBuilt || isDestroyedServerside || (!engaged && tickAge % SCAN_TICKS != 0))
             return;
-        strike(sl, null);
+        engaged = strike(sl, onlyFoe) != null;
     }
 
     /**

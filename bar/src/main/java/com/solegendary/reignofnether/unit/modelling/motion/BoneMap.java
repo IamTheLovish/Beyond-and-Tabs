@@ -28,6 +28,15 @@ public final class BoneMap {
     final boolean hierarchical;
     /** The rig breathes by itself: no second breath on top. */
     final boolean noBreath;
+    /**
+     * The death-pose contract ({@link DeathFall}): the body falls by itself instead of vanilla's flip, posing these
+     * parts (indexed by DeathFall's bones: Motion's eight, then the forearms and shins); null = vanilla's flip.
+     */
+    ModelPart[] death;
+    /** The death's torso bends about its own pivot, the head and arms following as its children. */
+    boolean deathHierarchical;
+    /** The death parts include elbows and knees (a jointed rig). */
+    boolean jointed;
 
     BoneMap(float waistY, boolean flinchOnly) {
         this(waistY, flinchOnly, false, false);
@@ -43,6 +52,28 @@ public final class BoneMap {
     BoneMap set(int bone, ModelPart part) {
         parts[bone] = part;
         return this;
+    }
+
+    /** The death falls on the same parts as the living army (a vanilla body: no elbows, no knees). */
+    BoneMap fallsAsIs() {
+        death = new ModelPart[DeathFall.BONES];
+        System.arraycopy(parts, 0, death, 0, Motion.BONES);
+        deathHierarchical = hierarchical;
+        jointed = false;
+        return this;
+    }
+
+    /** The death falls on a jointed rig's own parts (its chest as the torso, its forearms and shins). */
+    BoneMap fallsJointed(ModelPart[] parts) {
+        death = parts;
+        deathHierarchical = true;
+        jointed = true;
+        return this;
+    }
+
+    /** True when the body falls by {@link DeathFall} rather than vanilla's flip. */
+    public boolean deathPose() {
+        return death != null;
     }
 
     BoneMap follow(ModelPart follower, ModelPart leader) {

@@ -41,7 +41,8 @@ import java.util.Map;
  * <p>
  * An essence carrier ({@link Essence#isCarrier}) with room pulls the wisps within {@link #GATHER_RANGE} blocks of it:
  * they fly to it at {@link #PULL_SPEED} blocks a tick and give it their essence on touch; a wisp worth more than the
- * room left keeps the rest and floats on, so a full carrier never wastes essence.
+ * room left keeps the rest and floats on, so a full carrier never wastes essence. A carrier that dies drops the essence it
+ * held as a second wisp (a summoned one drops nothing at all).
  * <p>
  * A wisp is a vanilla block display (like a wreck: no collision, no pathing impact, no packets of our own, saved with
  * the world), a small glowing diamond carrying its value and birth tick in its persistent data. Server side only.
@@ -102,7 +103,14 @@ public class EssenceServerEvents {
             return;
         ResourceCost cost = unit.getCost();
         int value = Essence.essenceFor(cost == null ? 0 : cost.metal());
-        spawnWisp(level, le.getX(), le.getY() + Math.min(1.5, le.getBbHeight() * 0.6), le.getZ(), value);
+        double y = le.getY() + Math.min(1.5, le.getBbHeight() * 0.6);
+        spawnWisp(level, le.getX(), y, le.getZ(), value);
+        // a carrier drops what it held too (Revision 1: decisive kills pay - killing the enemy's caster frees its store)
+        int held = Essence.get(le);
+        if (held > 0) {
+            le.getPersistentData().putInt(Essence.KEY, 0);
+            spawnWisp(level, le.getX(), y + 0.3, le.getZ(), held);
+        }
     }
 
     /** Drops a wisp worth {@code value} essence at x/y/z (its middle); null if none could be made. */
