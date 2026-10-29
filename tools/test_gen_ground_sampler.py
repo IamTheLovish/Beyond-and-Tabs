@@ -5,6 +5,7 @@ south and west faces), every terrace is reachable on foot from the track over st
 unit in a 1-wide slot at a wall's foot, and no banned block (azalea, rooted dirt, dirt path, decaying bush leaves) is
 used. Pure Python, no block pack needed."""
 import gzip
+import hashlib
 import os
 import subprocess
 import sys
@@ -20,6 +21,7 @@ ROOT = os.path.dirname(HERE)
 PASSABLE = ("air", "grass", "fern", "tall_grass", "large_fern", "poppy", "dandelion", "oxeye_daisy", "azure_bluet",
             "cornflower", "vine", "moss_carpet")
 _CACHE = {}
+BEFORE_MD5 = "dba1f61e89924e5ea714912ec5b38187"     # r3's ground_before.nbt (d251ce36 zipped), unzipped
 
 
 def after():
@@ -46,22 +48,30 @@ def names(s):
 
 
 def surfaces(s):
-    """Per column off the building: (y of the block a unit stands on, its name) or None where nothing can stand
-    (leaves, logs, a rock or a slab over the ground, under 2 blocks of headroom)."""
+    """Per column off the building: (y of the block a unit stands on, its name), or None where nothing can stand. A
+    unit stands on the highest solid block (not leaves or a log) with 2 passable blocks over it; leaves or a log right
+    over the ground (a bush, a trunk) leave the column None. Leaves draped higher up (over a wall's foot) let it pass."""
     blocks = names(s)
     sx, sy, sz = s.size
     out = {}
     for x in range(sx):
         for z in range(sz):
-            col = [(y, blocks[(x, y, z)][0]) for y in range(sy) if (x, y, z) in blocks]
-            solid = [(y, n) for y, n in col if n not in PASSABLE]
-            if not solid:
-                continue
-            y, n = solid[-1]
-            if "leaves" in n or n.endswith(("_log", "_wood", "_slab")):
-                out[(x, z)] = None
-                continue
-            out[(x, z)] = (y, n)
+            kind = {y: blocks[(x, y, z)][0] for y in range(sy) if (x, y, z) in blocks}
+
+            def free(y):
+                return kind.get(y, "air") in PASSABLE
+            stand = None
+            for y in sorted(kind, reverse=True):
+                n = kind[y]
+                if n in PASSABLE or "leaves" in n or n.endswith(("_log", "_wood")):
+                    continue
+                if y + 1 in kind and not free(y + 1) or y + 2 in kind and not free(y + 2):
+                    break                                        # covered (a bush, a trunk, a slab of rock)
+                if not n.endswith("_slab"):
+                    stand = (y, n)
+                break
+            if stand or kind:
+                out[(x, z)] = stand
     return out
 
 
@@ -87,8 +97,11 @@ def walk(s, start):
 
 class GroundSamplerTest(unittest.TestCase):
     def test_before_is_byte_identical(self):
+        """Against r3's BEFORE (md5 of the unzipped NBT), not the file on disk: the generator rewrites that one."""
         s, *_ = G.build(False)
-        self.assertEqual(nbt_bytes(s), committed(os.path.join(ROOT, "design", "eyes", "ground_before.nbt")))
+        self.assertEqual(hashlib.md5(nbt_bytes(s)).hexdigest(), BEFORE_MD5)
+        self.assertEqual(hashlib.md5(committed(os.path.join(ROOT, "design", "eyes", "ground_before.nbt"))).hexdigest(),
+                         BEFORE_MD5)
 
     def test_after_is_deterministic_and_committed(self):
         a = nbt_bytes(after()[0])
@@ -164,7 +177,9 @@ class GroundSamplerTest(unittest.TestCase):
         surf = surfaces(s)
 
         def open_(a, q):
-            b = surf.get(q)
+            if q not in surf:                                    # off the sampler: open ground in game
+                return True
+            b = surf[q]
             return b is not None and abs(b[0] - a[0]) <= 1
         slots = []
         for (x, z), h in ground.items():
