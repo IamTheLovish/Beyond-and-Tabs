@@ -31,7 +31,13 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# Tag, self-built jar, judge (Oct 28 2026): input `tag` names a dispatched run "eyes [<tag>]" so a session finds ITS run
+# by name (tools/eyes_dispatch.py) - inputs are not readable over REST and two dispatches a minute apart got mixed up;
+# input `build_jar` compiles the jar here (assemble, no tests, one runner, ~4 min) instead of waiting for a branch's
+# full 9-job build to keep `bar-mod`; and a structure run judges its own stills (tools/eyes_judge.py: proof gate,
+# numbers, critic sheet) into judge.md / judge.json / *-sheet.png on its branch and the job summary.
 name: eyes
+run-name: ${{ inputs.tag && format('eyes [{0}]', inputs.tag) || github.event.workflow_run.display_title || 'eyes' }}
 on:
   workflow_dispatch:
     inputs:
@@ -62,6 +68,14 @@ on:
         default: false
       branch_pack:
         description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
+        type: boolean
+        default: false
+      tag:
+        description: "A name for this run: it shows as 'eyes [<tag>]' so the dispatching session finds its own run (tools/eyes_dispatch.py makes a unique one)"
+        required: false
+        default: ''
+      build_jar:
+        description: "Compile the jar in this run (gradle assemble, no tests, ~4 min) instead of downloading a build run's bar-mod - no wait for the branch's full test build"
         type: boolean
         default: false
       build_run:
@@ -131,14 +145,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: '17' }
+        with:
+          distribution: temurin
+          java-version: '17'
+          # the build job's Gradle caches (Forge, Minecraft, deobfuscated jars): a self-built jar restores them
+          cache: ${{ inputs.build_jar && 'gradle' || '' }}
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: Build the jar here (dispatch input `build_jar`)
+        if: inputs.build_jar
+        run: |
+          set -euo pipefail
+          # what job bar does before gradle, minus the dev-time count (a zero file; the jar only shows it on the title)
+          printf '%s' '{"hours": 0, "commits": 0, "since": 0}' > bar/src/main/resources/assets/reignofnether/devtime.json
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          python3 tools/mesh_export.py --from-dsl design/models/sunforged_paladin_radiant_winged.json
+          cd bar && chmod +x gradlew && ./gradlew assemble --no-daemon --stacktrace 2>&1 | tail -40
+          ls -l build/libs
+          mkdir -p ../dl-self && cp build/libs/*.jar ../dl-self/
+          echo "SELF_JAR=1" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] jar compiled in this run from ${GITHUB_SHA::7} (build_jar)"
       - name: Gather the mods (our bar-dev jar + the tester pack's dependencies, sha512-checked)
         run: |
           set -euo pipefail
           mkdir -p run/mods dl
           # dispatched on a feature branch without a build_run: that branch's own build (its PR build keeps the jar as
           # artifact bar-mod for 3 days) - the build of the dispatched commit if there is one, else its newest with a jar
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${BUILD_RUN:-}" ] && [ "$GITHUB_REF_NAME" != "main" ]; then
+          if [ "${SELF_JAR:-0}" = "1" ]; then
+            # build_jar: the jar this run just compiled; the stills are labelled with this very commit
+            echo "BUILD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+            BUILD_SHA=$GITHUB_SHA
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${BUILD_RUN:-}" ] && [ "$GITHUB_REF_NAME" != "main" ]; then
             runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?branch=$GITHUB_REF_NAME&per_page=30" \
               --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
             pick=""
@@ -156,7 +195,7 @@ jobs:
             echo "BUILD_RUN=$BUILD_RUN" >> "$GITHUB_ENV"
             echo "::notice::[Eyes] branch $GITHUB_REF_NAME: testing the jar of its build run $BUILD_RUN"
           fi
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${BUILD_RUN:-}" ]; then
+          if [ "${SELF_JAR:-0}" != "1" ] && [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${BUILD_RUN:-}" ]; then
             # a dispatch pinned to a build: label the stills with that build's commit, not main's head
             BUILD_SHA=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" --jq .head_sha)
             echo "BUILD_SHA=$BUILD_SHA" >> "$GITHUB_ENV"
@@ -164,7 +203,10 @@ jobs:
           fi
           # the triggering build's own jar; failing that, bar-dev ONLY if its notes name this very commit (Oct 15:
           # run 38668033399 was labelled 695c8cd and tested 506ca6b's jar - bar-dev had moved on underneath it)
-          if [ -n "${BUILD_RUN:-}" ] && gh run download "$BUILD_RUN" -n bar-mod -D dl --repo "$GITHUB_REPOSITORY"; then
+          if [ "${SELF_JAR:-0}" = "1" ]; then
+            cp dl-self/*.jar dl/
+            echo "jar: compiled in this run (build_jar) from ${GITHUB_SHA::7}"
+          elif [ -n "${BUILD_RUN:-}" ] && gh run download "$BUILD_RUN" -n bar-mod -D dl --repo "$GITHUB_REPOSITORY"; then
             echo "jar: artifact bar-mod of build run $BUILD_RUN"
           else
             gh release download bar-dev --repo "$GITHUB_REPOSITORY" --pattern '*.jar' --dir dl --clobber
@@ -502,11 +544,25 @@ jobs:
             [ "$pushed" = 1 ] && echo "::notice::[Eyes] 18_overlays published to eyes-overlays/$dest" \
               || echo "::warning::[Eyes] eyes-overlays/$dest not pushed after 6 tries; the stills are in this run's artifact"
           else
+            if [ -n "${STRUCTURES:-}" ]; then
+              # the run judges its own structure stills: proof gate + numbers + critic sheet (tools/eyes_judge.py).
+              # A failed gate is reported, never fails the run (the "Fail loudly" step judges the tour itself).
+              python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || true
+              # the judge reads the build from README.md (written again below): without it judge.md said "build ?"
+              echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > out/README.md
+              rc=0
+              python3 tools/eyes_judge.py "$EYES_BRANCH=out" --save out/judge.json --sheet-dir out \
+                > out/judge.md 2> out/judge-fail.txt || rc=$?
+              cat out/judge.md >> "$GITHUB_STEP_SUMMARY" || true
+              if [ "$rc" = 0 ]; then echo "::notice::[Eyes] judge: every RTS still has proof (judge.md, judge.json, sheet on $EYES_BRANCH)"
+              else echo "::warning::[Eyes] judge: exit $rc - $(tail -1 out/judge-fail.txt)"; head -5 out/judge-fail.txt | sed 's/^/::warning::/'; fi
+            fi
             cd out
             git init -q -b "$EYES_BRANCH"
             git config user.name "eyes-bot"
             git config user.email "eyes-bot@users.noreply.github.com"
             echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > README.md
+            echo "Eyes run $GITHUB_RUN_ID${{ inputs.tag && format(', tag {0}', inputs.tag) || '' }}" >> README.md
             git add -A
             git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
             git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
