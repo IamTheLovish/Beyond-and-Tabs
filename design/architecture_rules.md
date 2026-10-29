@@ -55,6 +55,8 @@ houses (2012-13, still good) = cross-gabled roofs with 1-block eaves, half-timbe
 fence balustrades, a stone plinth.
 
 ## 3. Gates (a generator test checks these on the built structure, with tools/schem_study.py)
+Measured by ONE module: `tools/building_gates.py` (`gates(build)`; tests with a red case per gate in
+tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` (R1-R16, any faction's material set).
 - G1 eaves: every camera-facing eave and verge oversails its wall by >= 1 block (`eave_overhang`). The oversailing
   piece may be the roof itself OR a pale trim lip / cornice course under it (the recipe study re-measured the
   factory: 136 of its ~148 overhang cells are pale trim slabs and stairs, only 6 are copper roof) - what matters is the
