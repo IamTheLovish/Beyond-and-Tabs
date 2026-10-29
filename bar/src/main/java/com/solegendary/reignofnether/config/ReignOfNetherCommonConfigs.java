@@ -72,6 +72,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.CUTLASS_RAIDER.define(BUILDER);
         UnitCosts.REEF_GUARD.define(BUILDER);
         UnitCosts.BOMBARD_CREW.define(BUILDER);
+        UnitCosts.SIEGE_LOBBER.define(BUILDER);
         UnitCosts.TIDE_PRIEST.define(BUILDER);
         UnitCosts.HARPOONER.define(BUILDER);
         UnitCosts.FLAK_SWIVEL.define(BUILDER);
@@ -398,6 +399,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry CUTLASS_RAIDER = ResourceCostConfigEntry.Unit(130,0,7,26,2, ResourceCosts.CUTLASS_RAIDER, "Cutlass Raider Config");
         public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,25,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
         public static final ResourceCostConfigEntry BOMBARD_CREW = ResourceCostConfigEntry.Unit(100,80,40,34,3, ResourceCosts.BOMBARD_CREW, "Bombard Crew Config");
+        // every faction's T1 siege lobber (design/siege_t1.md): 95 metal / 130 energy, the Vindicator's price, 24 s, 2 pop
+        public static final ResourceCostConfigEntry SIEGE_LOBBER = ResourceCostConfigEntry.Unit(70,50,40,24,2, ResourceCosts.SIEGE_LOBBER, "Siege Lobber Config");
         public static final ResourceCostConfigEntry TIDE_PRIEST = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.TIDE_PRIEST, "Tide Priest Config");
         // slice 2: the Harpooner prices like a Thornbow plus a little ore for the pull (80m/150e vs 65m/150e); the Flak
         // Swivel is T1 anti-air under the Court's T2 Wisp Choir (90m/150e vs 155m/180e); the Mudskipper Sloop is a

@@ -53,6 +53,22 @@ damage, max rank 3).
 2. One PR per race caster: the unit, its T2 lab button, its 3 abilities, autocast rules and tests, built on the API
    below.
 
+## Revision 1 (Oct 29 design review; base fixes in the PR stacked on PR 1, branch claude/essence-base-r1)
+The design review of Oct 29 (Fable, ~07:50Z) found these base-level holes; the caster-specific findings go to the caster PRs.
+- **Summons give nothing.** `unit/Summons` is the one rule (`Summons.mark` / `isSummoned`; `Essence.markSummoned`
+  delegates): a summon's death drops no essence wisp, sends no hero XP orbs and gives its killer no veterancy
+  experience. Existing markers (`bt_risen`, awakened, decoys, summoned zombies and bees, turrets, drones) are read, not
+  replaced, since `bt_risen` also means no wreck and an 8-per-owner cap. A fallen summoned hero still gives the
+  decisive-kill XP burst. Wrecks keep their own older list.
+- **Empower is limited.** 20 s cooldown; one rank per target per 60 s (`bt_empowered_at` on the target); never on a
+  hero, commander, experimental (`DefenceTower.isExperimental`) or summon. `Empower.setTargetHook(type, hook)` replaces
+  the rank for one unit type and its own `accepts` replaces those refusals - the Grave Adept's 120 XP in its PR.
+- **A dead carrier drops what it held** as a second wisp (a summoned carrier drops nothing).
+- **Bots:** `Ability.autocastEssence` (the AutoCaster casts only when the caster holds it) and `AutoRule.BUILDING_HURT`
+  (the most hurt friendly building under 70% health whose footprint is within reach).
+- Not in this base PR (they belong to the caster PRs): the damage and heal numbers, the renames, Spirit Puppet's
+  channel, the totem and sapling HP, lobbers vs tombstones, Soul Boiler's 24-block reach.
+
 ## The API for the caster PRs (PR 1)
 `com.solegendary.reignofnether.essence`:
 - `EssenceCarrier` - marker interface: a caster unit class implements it and gathers/holds essence; no other wiring.

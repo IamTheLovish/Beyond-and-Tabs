@@ -35,7 +35,10 @@ import java.util.List;
  * own goal casts ({@link Ability#autocastByUnit}); never on a friend for an enemy rule or on an enemy for an ally rule;
  * a unit on hold fire never casts at enemies by itself and one on return fire only at the unit it is already fighting;
  * never while stunned, frozen, uncontrollable, sealed, garrisoned, mid-cast or walking a move order (the cast's reset
- * would stop it). Energy spells cast only while the owner's pool keeps {@link #ENERGY_RESERVE} over the cost.
+ * would stop it). Energy spells cast only while the owner's pool keeps {@link #ENERGY_RESERVE} over the cost; essence
+ * spells ({@link Ability#autocastEssence}) only while the caster itself holds the cost (design/essence_casters.md
+ * Revision 1: bots use essence spells, and never order one that would be refused). {@link AutoRule#BUILDING_HURT} aims
+ * at the most hurt friendly building in reach ({@link #mostHurtBuilding}).
  * Server thread only; hooked from UnitServerEvents.onWorldTick.
  */
 public final class AutoCaster {
@@ -119,6 +122,8 @@ public final class AutoCaster {
                 continue;
             if (ability.autocastEnergy > 0 && !canAffordEnergy(owner, ability.autocastEnergy))
                 continue;
+            if (ability.autocastEssence > 0 && com.solegendary.reignofnether.essence.Essence.get(le) < ability.autocastEssence)
+                continue;
             if (!ability.canAutocastNow(level, unit))
                 continue;
             if (cast(level, le, unit, ability, rule))
@@ -168,10 +173,47 @@ public final class AutoCaster {
                 // a self-centred heal is cast where the healer stands; an aimed one at the friend's feet
                 return order(level, self, unit, ability, -1, ability.range > 0 ? ally.blockPosition() : self.blockPosition());
             }
+            case BUILDING_HURT -> {
+                com.solegendary.reignofnether.building.BuildingPlacement b = mostHurtBuilding(self, unit, reach(ability));
+                if (b == null)
+                    return false;
+                return order(level, self, unit, ability, -1, b.centrePos);
+            }
             default -> {
                 return false;
             }
         }
+    }
+
+    /**
+     * The most hurt built friendly (own or allied) building under {@link #ALLY_HURT_FRACTION} of its health whose
+     * footprint comes within {@code reach} blocks of {@code self} (measured to the nearest edge, so a big building's
+     * centre may lie farther off). Null when none. Public for the game test.
+     */
+    public static com.solegendary.reignofnether.building.BuildingPlacement mostHurtBuilding(LivingEntity self, Unit unit, float reach) {
+        String owner = unit.getOwnerName();
+        com.solegendary.reignofnether.building.BuildingPlacement best = null;
+        float bestFrac = ALLY_HURT_FRACTION;
+        double r2 = reach * reach;
+        for (com.solegendary.reignofnether.building.BuildingPlacement b : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()) {
+            if (b.level != self.level() || !b.isBuilt || b.isDestroyedServerside || b.ownerName == null)
+                continue;
+            if (!b.ownerName.equals(owner) && !com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(owner, b.ownerName))
+                continue;
+            int max = b.getMaxHealth(), hp = b.getHealth();
+            if (max <= 0 || hp <= 0)
+                continue;
+            float frac = (float) hp / max;
+            if (frac >= bestFrac)
+                continue;
+            double dx = Math.max(0, Math.max(b.minCorner.getX() - self.getX(), self.getX() - (b.maxCorner.getX() + 1)));
+            double dz = Math.max(0, Math.max(b.minCorner.getZ() - self.getZ(), self.getZ() - (b.maxCorner.getZ() + 1)));
+            if (dx * dx + dz * dz > r2)
+                continue;
+            best = b;
+            bestFrac = frac;
+        }
+        return best;
     }
 
     private static boolean orderAt(ServerLevel level, LivingEntity self, Unit unit, Ability ability, LivingEntity target) {

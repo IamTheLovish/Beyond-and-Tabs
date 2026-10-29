@@ -261,7 +261,13 @@ public class BuildingPlacement {
                         maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
     }
 
+    /** How far the building reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public int getSightRange() {
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight; placements with their own sight override this, not getSightRange. */
+    public int getBaseSightRange() {
         if (isCapitol)
             return Building.CAPITOL_SIGHT_RANGE;
         else if (getBuilding().hasActiveAddon(GarrisonableBuildingAddon.class) &&
@@ -879,12 +885,23 @@ public class BuildingPlacement {
             intAmount += 1;
         }
 
+        // a building's own water (a pool, a waterlogged block) goes last: the blocks next to it are never picked, but
+        // breaking the water itself left the wall beside the gap dry for the ~5 ticks the rest took to flow back, a hit
+        // in that window broke the wall, and the pool poured out onto the raiders round the building - they floated off
+        // it, and Verdant's extractor (its pool a block up on its south edge) took 15-28 s instead of 10 / 22 s
+        // (RaidGameTests.raid_hits_leave_an_extractors_pool_till_last)
         var placedBlocks = new ArrayList<BuildingBlock>();
+        var poolBlocks = new ArrayList<BuildingBlock>();
         for (BuildingBlock block : blocks) {
             if (!isDestroyedAndNotNextToLiquid(block)) continue;
-            placedBlocks.add(block);
+            if (getLevel().getBlockState(block.getBlockPos()).getFluidState().isEmpty())
+                placedBlocks.add(block);
+            else
+                poolBlocks.add(block);
         }
         Collections.shuffle(placedBlocks);
+        Collections.shuffle(poolBlocks);
+        placedBlocks.addAll(poolBlocks);
         for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
             BlockPos bp = placedBlocks.get(i).getBlockPos();
             com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));

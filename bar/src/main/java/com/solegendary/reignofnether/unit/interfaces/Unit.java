@@ -102,7 +102,7 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public interface Unit {
 
-    int DEFAULT_SIGHT_RANGE = 16;
+    int DEFAULT_SIGHT_RANGE = 16;   // base: the fog a unit reveals is its sight times the Vision multiplier (getSightRange)
     int ANCHOR_RETREAT_RANGE = 30;
 
     int PIGLIN_HEALING_TICKS = 8 * ResourceCost.TICKS_PER_SECOND;
@@ -207,7 +207,15 @@ public interface Unit {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MAX_HEALTH);
         return (float) (attr != null ? attr.getValue() : Attributes.MAX_HEALTH.getDefaultValue()) + bonus;
     }
+    /** How far the unit reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public default int getSightRange() {
+        if (this instanceof IndirectFire && this instanceof AttackerUnit gun)   // artillery: short of its gun, unscaled
+            return com.solegendary.reignofnether.fogofwar.Vision.artillery(getBaseSightRange(), gun.getAttackRange());
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight, from the SIGHT_RANGE attribute; units with a sight bonus override this, not getSightRange. */
+    public default int getBaseSightRange() {
         AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.SIGHT_RANGE.get());
         return (int) Math.round(attr != null ? attr.getValue() : AttributeRegistrar.SIGHT_RANGE.get().getDefaultValue());
     }
