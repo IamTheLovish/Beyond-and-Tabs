@@ -39,6 +39,44 @@ class Tones(unittest.TestCase):
                 self.assertTrue(all(n == 1 for n in runs(row, 2)), (seed, row))       # pale cells single
                 s = "".join(map(str, row))
                 self.assertNotIn("101", s, (seed, row))                               # never a chequer
+                self.assertNotIn("202", s, (seed, row))                               # nor a pale one (20202)
+
+    def test_no_pale_chequer_over_many_seeds(self):
+        """review, Oct 29: '202' (a pale chequer) in 900 of 2000 seeds - pale cells stand 2+ base cells apart."""
+        bad = [seed for seed in range(2000) if any("202" in "".join(map(str, row)) for row in R.tones(5, 20, seed=seed))]
+        self.assertEqual(bad, [])
+
+    def test_no_chequer_across_courses(self):
+        """r9 (Oct 29): a gable from #383's tones() made building_gates' G6 chequer (a b a over b a b) across two
+        courses at seed 21 - a single dark cell over a gap under a single dark cell beside the same thing shifted
+        by one. No 3 x 2 alternation in either direction of the grid, over many seeds."""
+        def chequer(g):
+            for k in range(len(g)):
+                for i in range(len(g[k])):
+                    for di, dk in ((1, 0), (0, 1)):          # along the course or across the courses
+                        try:
+                            a, b = g[k][i], g[k + di][i + dk]
+                            cells = [[g[k + j * di + m * dk][i + j * dk + m * di] for m in range(3)] for j in (0, 1)]
+                        except IndexError:
+                            continue
+                        if a != b and cells == [[a, b, a], [b, a, b]]:
+                            return True
+            return False
+        bad = [seed for seed in range(300) if chequer(R.tones(4, 11, seed=seed)) or chequer(R.tones(5, 20, seed=seed))]
+        self.assertEqual(bad, [])
+
+    def test_off_target_raises(self):
+        """After its attempts tones() / retone() returned an off-target grid silently; now they say so."""
+        with self.assertRaises(ValueError):
+            R.tones(1, 2, seed=0)                  # 2 cells: a base share of 0, 50 or 100 %, never 55-72 %
+        with self.assertRaises(ValueError):
+            R.retone({(x, 0, 0): ("bricks", {}) for x in range(2)}, R.SLATE)
+
+    def test_even_span_oversails_all_round(self):
+        """The works shed's 6-wide gable: the same 1-block ring as an odd span (eaves 2 x 12, verges 2 x 6, less the
+        two-cell crest's ends)."""
+        r = R.gable(6, 10, seed=0)
+        self.assertEqual(S.eave_overhang(S.Build({**walls(6, 10), **r})), {1: 2 * 12 + 2 * 6 - 4})
 
     def test_wet_eaves_bleached_ridge(self):
         dark_low = dark_high = pale_low = pale_high = 0
@@ -69,9 +107,17 @@ class Gable(unittest.TestCase):
         self.r = R.gable(self.span, self.length, seed=1)
 
     def test_eaves_overhang_one_block(self):
-        b = S.Build({**walls(self.span, self.length), **self.r})
-        hist = S.eave_overhang(b)
-        self.assertEqual(set(hist), {1})                          # every eave and verge cell is 1 block proud
+        """Every eave and verge cell is 1 block proud: the overhang count is the whole ring round the walls (two
+        eaves of length + 2, two verges of span), less the ridge cap's ends (a full block, not a roof shape). A roof
+        with its verges or one eave missing also measures {1: n} - the count is what catches it (review, Oct 29)."""
+        def over(r):
+            return S.eave_overhang(S.Build({**walls(self.span, self.length), **r}))
+        ring = 2 * (self.length + 2) + 2 * self.span - 2
+        self.assertEqual(over(self.r), {1: ring})
+        no_verges = {q: c for q, c in self.r.items() if q[2] not in (-1, self.length) or c[0] in R.SLATE["ridge"]}
+        no_eave = {q: c for q, c in self.r.items() if q[0] != -1}
+        self.assertNotEqual(over(no_verges), {1: ring})
+        self.assertNotEqual(over(no_eave), {1: ring})
 
     def test_slate_pitch_rises_half_a_block_per_block(self):
         tops = {}
