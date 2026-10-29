@@ -13,7 +13,6 @@ axis "z" maps u -> x, v -> z; axis "x" maps u -> z, v -> x. Vanilla slab pairs m
 Macaw's lower / upper_lower roof shapes take their place once their ids are verified from the CI block list.
 Tests: tools/test_roof_kit.py.
 """
-import math
 import random
 
 # tone families: (full, stairs, slab) per tone T0 / T1 / T2
@@ -21,7 +20,7 @@ SLATE = {
     "tones": (("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"),             # T0 slate
               ("polished_blackstone", "polished_blackstone_stairs", "polished_blackstone_slab"),  # T1 wet, darker
               ("polished_deepslate", "polished_deepslate_stairs", "polished_deepslate_slab")),    # T2 bleached
-    "ridge": ("polished_blackstone_bricks",),
+    "ridge": ("polished_blackstone_bricks", "polished_blackstone_brick_stairs", "polished_blackstone_brick_slab"),
     "verge": ("dark_oak_planks", "dark_oak_stairs", "dark_oak_slab"),
     "gutter": "waxed_exposed_cut_copper_stairs",
 }
@@ -29,7 +28,7 @@ COPPER = {
     "tones": (("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"),
               ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab"),
               ("waxed_exposed_cut_copper", "waxed_exposed_cut_copper_stairs", "waxed_exposed_cut_copper_slab")),
-    "ridge": ("waxed_cut_copper",),
+    "ridge": ("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"),
     "verge": ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab"),
     "gutter": "waxed_exposed_cut_copper_stairs",
 }
@@ -40,12 +39,6 @@ def family(name, mats):
         if name in fam:
             return i
     return None
-
-
-def _RATES(t):
-    """(dark-run start, pale cell) rates at height t (0 eave .. 1 ridge): wet low, bleached high. Tuned so a grid's
-    median base share is ~0.68, inside 55-72 % (the r6 rates 0.35 / 0.03 gave ~0.80 and hit the band 3 % of tries)."""
-    return 1.0 - 0.9 * t, 0.05 + 0.3 * t
 
 
 def _course(rng, n, p_dark, p_pale):
@@ -68,6 +61,18 @@ def _course(rng, n, p_dark, p_pale):
     return row
 
 
+def _cross_chequer(g):
+    """A 3 x 2 alternation a b a / b a b running across the courses (three courses up, two cells along): what a
+    course-by-course draw can still make (along a course _course already forbids it). Seen from above it is the
+    chequer building_gates' G6 measures."""
+    for k in range(len(g) - 2):
+        for i in range(len(g[k]) - 1):
+            a, b = g[k][i], g[k][i + 1]
+            if a != b and (g[k + 1][i], g[k + 1][i + 1], g[k + 2][i], g[k + 2][i + 1]) == (b, a, a, b):
+                return True
+    return False
+
+
 def tones(courses, length, seed=0):
     """[course 0 = eave .. course K-1 = ridge][cell] -> tone 0 / 1 / 2 (see the module doc)."""
     for attempt in range(200):
@@ -75,9 +80,10 @@ def tones(courses, length, seed=0):
         g = []
         for k in range(courses):
             t = k / max(1, courses - 1)
-            g.append(_course(rng, length, *_RATES(t)))
+            g.append(_course(rng, length, 1.0 - 0.9 * t, 0.05 + 0.3 * t))   # median base share ~0.68 (the old
+            #   0.35 / 0.03 gave ~0.80 and hit 55-72 % in ~3 % of tries; raising off target showed it)
         flat = [x for row in g for x in row]
-        if 0.55 <= flat.count(0) / len(flat) <= 0.72:
+        if 0.55 <= flat.count(0) / len(flat) <= 0.72 and not _cross_chequer(g):
             return g
     raise ValueError("no %d x %d course grid with a 55-72 %% base tone (seed %d)" % (courses, length, seed))
 
@@ -98,22 +104,22 @@ def gable(span, length, axis="z", seed=0, mats=SLATE, overhang=1):
     out = {}
     u0, u1 = -overhang, span - 1 + overhang
     v0, v1 = -overhang, length - 1 + overhang
-    mid = (u0 + u1) / 2                          # an even span has its ridge over the 2 middle cells
-    half_cells = int(mid - u0)                   # courses from the eave to the ridge on one side
-    g_front = tones(half_cells, v1 - v0 + 1, seed)
-    g_back = tones(half_cells, v1 - v0 + 1, seed + 1000)
+    mid = (u0 + u1) / 2
+    half_cells = int(mid - u0)                   # cells from the eave to the ridge on one side
+    g_front = tones(half_cells, v1 - v0 - 1, seed)           # the courses between the verges: graded on the
+    g_back = tones(half_cells, v1 - v0 - 1, seed + 1000)     # cells that show them (the verges are fixed)
     for u in range(u0, u1 + 1):
         d = min(u - u0, u1 - u)                  # course index from the nearer eave
         side = 1 if u < mid else -1
         for v in range(v0, v1 + 1):
-            if d == half_cells:
+            if u == mid or d >= half_cells:      # the crest: one cell (odd span) or two (even span) of ridge cap
                 _place(out, axis, u, d // 2, v, mats["ridge"][0], {})   # half a block proud of the top courses
                 continue
             y, typ = d // 2, ("bottom" if d % 2 == 0 else "top")
             if v in (v0, v1):                    # the verge: the dark bargeboard edge at both gable ends
                 name = mats["verge"][2]
             else:
-                tone = (g_front if side == 1 else g_back)[d][v - v0]
+                tone = (g_front if side == 1 else g_back)[d][v - v0 - 1]
                 name = mats["tones"][tone][2]
             _place(out, axis, u, y, v, name, {"type": typ, "waterlogged": "false"})
         if u in (u0, u1):                        # the gutter under each eave, tall side against the wall
@@ -131,60 +137,119 @@ def shape(name):
 _STEP = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}
 
 
-def _graded(groups, mats_seed, base=(0.55, 0.72), heights=None):
-    """groups: [course 0 = eave / lowest .. K] lists of keys in order along the course; `heights` (optional, one per
-    group, 0 eave .. 1 ridge) when several groups share a height. Returns {key: tone}, the base tone 55-72 % over all
-    keys, wet (dark) low, bleached (pale) high, no chequer and no 4+ dark run in a course."""
+def _graded(groups, mats_seed, base=(0.55, 0.72)):
+    """groups: [course 0 = eave / lowest .. K] lists of keys in order along the course. Returns {key: tone}, the base
+    tone 55-72 % over all keys, wet (dark) low, bleached (pale) high, no chequer and no 4+ dark run in a course."""
     keys = [k for g in groups for k in g]
     K = max(1, len(groups) - 1)
     for attempt in range(400):
         rng = random.Random(mats_seed * 7919 + attempt)
-        out = {}
+        f = 1 + (attempt // 50) * 0.25          # long courses read paler (each dark run is followed by 2-5 base
+        out = {}                                # cells), so the weathering is turned up until the share holds
         for i, g in enumerate(groups):
-            t = heights[i] if heights else i / K
-            for k, tone in zip(g, _course(rng, len(g), *_RATES(t))):
+            t = i / K
+            for k, tone in zip(g, _course(rng, len(g), f * (0.35 - 0.25 * t), f * (0.03 + 0.09 * t))):
                 out[k] = tone
         three = len(keys) < 12 or set(out.values()) == {0, 1, 2}     # a roof shows all three tones
-        if keys and three and base[0] <= sum(v == 0 for v in out.values()) / len(keys) <= base[1]:
+        if keys and three and base[0] <= sum(v == 0 for v in out.values()) / len(keys) <= base[1] and _wet_low(groups, out):
             return out
-    raise ValueError("no course grading of %d cells with a %d-%d %% base tone" % (len(keys), 100 * base[0],
-                                                                                   100 * base[1]))
+    raise ValueError("no course grading of %d cells with a %d-%d %% base tone, wet low" % (
+        len(keys), 100 * base[0], 100 * base[1]))
 
 
-def retone(cells, mats, seed=0, along=None):
-    """Lay courses on cells that already have their shapes (a frozen cone, a clipped gable): the full / stairs / slab
-    cells take the tone family's same shape and keep their states; walls and other shapes are left as they are.
-    A course is each row (y) in ring order round its centre (a cone, a pyramid) or, with along="x" / "z", each
-    unbroken line of cells along that axis at one height (a gable's courses run along its ridge)."""
+def _wet_low(groups, tone):
+    """The eave (lowest course) at least as dark as the top course, and the lower half darker than the upper."""
+    if len(groups) < 2:
+        return True
+    dark = lambda gs: sum(tone[k] == 1 for g in gs for k in g) / max(1, sum(len(g) for g in gs))   # noqa: E731
+    h = len(groups) // 2
+    return dark(groups[:1]) > dark(groups[-1:]) and dark(groups[:h]) > dark(groups[h:])
+
+
+def field(H, seed=0, mats=SLATE, fixed=None, around=None, regions=None, along=None):
+    """A roof over a height field H {(x, z): top height, a multiple of 0.5}: hips, half-hips, pyramid faces. A column
+    tops in a stair whose tall side faces its highest neighbour (uphill), a bottom slab at a half height, or - with no
+    higher neighbour in its own roof - the ridge cap (a block, or the ridge slab at a half height); under the top
+    only the cells a lower neighbour shows (the riser), in the column's tone (the ridge's under a ridge cap).
+    regions: the roofs (sets of columns); each is graded on its own (the tone rule of `tones` over its tile columns:
+    the ridge and fixed columns aren't graded) and a stair looks uphill only within its own roof - a hall ridge runs
+    into a wing's hip face, it doesn't climb it - while risers drop to any roof beside them. fixed {(x, z): (full,
+    stairs, slab)} sets a column's material (a verge, a valley). around {(x, z): height}: roofs or towers beside the
+    field - stairs face up to them, risers drop to them. along(column): the order of a course's cells (default z, x).
+    Returns {(x, y, z): (name, props)}."""
+    fixed = fixed or {}
+    around = around or {}
+    regions = regions or [set(H)]
+    owner = {c: i for i, reg in enumerate(regions) for c in reg}
+
+    def near(c, own):
+        out = {}
+        for d in _STEP:
+            n = (c[0] + d[0], c[1] + d[1])
+            if n in H and (not own or owner.get(n) == owner.get(c)):
+                out[d] = H[n]
+            elif n not in H and n in around:
+                out[d] = around[n]
+        return out
+
+    ridge = {c for c in H if not any(v > H[c] for v in near(c, True).values())}
+    tone = {}
+    for i, reg in enumerate(regions):
+        cols = [c for c in reg if c in H and c not in fixed and c not in ridge]
+        if not cols:
+            continue
+        lo = min(H[c] for c in cols)
+        courses = {}
+        for c in cols:
+            courses.setdefault(int(round(2 * (H[c] - lo))), []).append(c)
+        groups = [sorted(courses[k], key=along or (lambda c: (c[1], c[0]))) for k in sorted(courses)]
+        tone.update(_graded(groups, seed + 101 * i))
+    out = {}
+    for c, h in H.items():
+        x, z = c
+        fam = fixed.get(c) or (mats["ridge"] if c in ridge else mats["tones"][tone.get(c, 0)])
+        up = near(c, True)
+        if c in ridge and h % 1:
+            ytop = int(h - 0.5)
+            out[(x, ytop, z)] = (fam[2], {"type": "bottom", "waterlogged": "false"})
+        elif c in ridge:
+            ytop = int(h) - 1
+            out[(x, ytop, z)] = (fam[0], {})
+        elif h % 1:                                           # x.5: a bottom slab
+            ytop = int(h - 0.5)
+            out[(x, ytop, z)] = (fam[2], {"type": "bottom", "waterlogged": "false"})
+        else:
+            ytop = int(h) - 1
+            d = max(up, key=lambda d: (up[d], d))
+            out[(x, ytop, z)] = (fam[1], {"facing": _STEP[d], "half": "bottom", "shape": "straight",
+                                          "waterlogged": "false"})
+        low = min(near(c, False).values(), default=h)
+        for y in range(int(low), ytop):                       # the riser a lower neighbour shows
+            out[(x, y, z)] = (fam[0], {})
+    return out
+
+
+def retone(cells, mats, seed=0, course=None, along=None):
+    """Lay courses on cells that already have their shapes (a frozen cone, a clipped gable): course(q) orders the
+    courses from the eave (wet, darker) up (default: the row y), along(q) orders the cells within a course (default:
+    round the row's centre); full / stairs / slab cells take the tone family's same shape and keep their states;
+    walls and other shapes are left as they are."""
+    import math
+    course = course or (lambda q: q[1])
     rows = {}
     for q, (n, _) in cells.items():
         if shape(n) < 3:
-            rows.setdefault(q[1], []).append(q)
-    groups, heights = [], []
-    ys = sorted(rows)
-    for y in ys:
-        r = rows[y]
-        t = (y - ys[0]) / max(1, ys[-1] - ys[0])
+            rows.setdefault(course(q), []).append(q)
+    groups = []
+    for k in sorted(rows):
+        r = rows[k]
         if along:
-            a = {"x": 0, "z": 2}[along]
-            b = 2 - a
-            for line in sorted({q[b] for q in r}):
-                qs = sorted((q for q in r if q[b] == line), key=lambda q: q[a])
-                run = [qs[0]]
-                for q in qs[1:]:
-                    if q[a] != run[-1][a] + 1:          # a gap ends the course
-                        groups.append(run)
-                        heights.append(t)
-                        run = []
-                    run.append(q)
-                groups.append(run)
-                heights.append(t)
-        else:
-            cx = sum(q[0] for q in r) / len(r)
-            cz = sum(q[2] for q in r) / len(r)
-            groups.append(sorted(r, key=lambda q: (round(math.atan2(q[2] - cz, q[0] - cx), 9), q)))
-            heights.append(t)
-    tone = _graded(groups, seed, heights=heights)
+            groups.append(sorted(r, key=along))
+            continue
+        cx = sum(q[0] for q in r) / len(r)
+        cz = sum(q[2] for q in r) / len(r)
+        groups.append(sorted(r, key=lambda q: (round(math.atan2(q[2] - cz, q[0] - cx), 9), q)))
+    tone = _graded(groups, seed)
     out = dict(cells)
     for q, t in tone.items():
         n, p = cells[q]

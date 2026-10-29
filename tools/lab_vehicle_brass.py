@@ -437,8 +437,14 @@ def slate_tone(n):
 
 
 def retone(g, cells, mats, seed, along=None):
-    """roof_kit's courses on cells already in their shapes (tools/roof_kit.py retone)."""
-    g.b.update(RK.retone({q: g.b[q] for q in cells}, mats, seed=seed, along=along))
+    """roof_kit's courses on cells already in their shapes (tools/roof_kit.py retone): a course per row (y), its
+    cells ordered round the row (a cone) or, with along "x" / "z", line by line along that axis (a gable's courses
+    run along its ridge)."""
+    key = None
+    if along:
+        a = {"x": 0, "z": 2}[along]
+        key = lambda q: (q[2 - a], q[a])        # noqa: E731
+    g.b.update(RK.retone({q: g.b[q] for q in cells}, mats, seed=seed, along=key))
 
 
 # ============================================================================================ r8 walls and roofs

@@ -185,6 +185,36 @@ class Measures(unittest.TestCase):
         self.assertNotIn((3, 4, 3), cells)
         self.assertEqual(S.overhang_cells(_box_with_eaves(0)), {})
 
+    def test_eave_cells_name_where_the_overhang_is(self):
+        """r8 (Oct 29): the cells behind eave_overhang's histogram, so a test can ask WHICH eaves oversail."""
+        e = S.eave_cells(_box_with_eaves(1))
+        self.assertEqual(len(e), 24)
+        self.assertEqual(set(e.values()), {1})
+        self.assertIn((0, 4, 3), e)
+        self.assertNotIn((3, 4, 3), e)
+        self.assertEqual(S.eave_cells(_box_with_eaves(0)), {})
+        self.assertEqual(sorted(e.values()).count(1), S.eave_overhang(_box_with_eaves(1))[1])
+
+    def test_a_foundation_slab_is_not_a_wall(self):
+        """r8: a building standing on a full-plot foundation course (the Engine Shed's tuff slab) still shows its eaves -
+        the bottom layer carries the walls, it isn't one."""
+        b = _box_with_eaves(1)
+        for x in range(7):
+            for z in range(7):
+                b.blocks[(x, 0, z)] = ("tuff", {})
+        self.assertEqual(S.eave_overhang(b), {1: 24})
+
+    def test_downpipes_and_lamps_under_an_eave_are_not_walls(self):
+        """r8: a downpipe (lightning rod, wall post, chain) or a lamp standing under an eave doesn't turn the eave into
+        a wall top - only the walls' own blocks make the footprint."""
+        b = _box_with_eaves(1)
+        b.blocks[(0, 1, 3)] = ("lantern", {})
+        for y in (2, 3):
+            b.blocks[(0, y, 3)] = ("lightning_rod", {"facing": "up"})
+        b.blocks[(6, 3, 3)] = ("polished_blackstone_brick_wall", {})
+        b.blocks[(3, 3, 6)] = ("chain", {})
+        self.assertEqual(S.eave_overhang(b), {1: 24})
+
     def test_roof_cells_are_sky_exposed_shapes(self):
         b = _box_with_eaves(0)
         self.assertEqual(len(S.roof_cells(b)), 25)

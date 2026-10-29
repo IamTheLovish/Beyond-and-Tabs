@@ -28,13 +28,22 @@ All also in Project "4": `claude/architecture-rules-2026-10-29.md`, `claude/deta
 | tools/roof_kit.py (+test, 11 cases, mutation-checked) | pushed | slab-pair slate pitch, eave + verge overhang 1, copper gutters, ridge, SLATE / COPPER tones; swap to Macaw's shapes once ids are known |
 | tools/schem_study.py (+test, 13 cases) | pushed | reads .nbt / .schem v2+v3 / .litematic / legacy .schematic; eave_overhang, roof_cells, depth_layers, palette_shares, section |
 | design/architecture_rules.md | pushed | principles + measured table + gates G1-G7 (G1 counts a pale trim lip as the eave) |
-| Engine Shed **r8** (roofs + walls) | Opus builder agent was mid-run at handoff (uncommitted roof_kit/test edits). Told to push green to claude/vehicle-labs or WIP to `claude/vehicle-labs-r8-wip`, then dispatch eyes plain + shaders | check which branch moved (`git log origin/claude/vehicle-labs -3`, `git ls-remote origin claude/vehicle-labs-r8-wip`); if nothing landed, rebuild r8 from the brief below |
+| Engine Shed **r8** (roofs + walls) | **pushed 96a7798** (+ 4bd86cb kit extensions), 10 r8 tests red on r7 -> green; eave overhang {1: 2} -> {1: 55}, bricks 30.6 % top block, red_terracotta 2.2 %, biggest face plane west 55 -> 41 %, south 68 -> 29 %; thin blocks still 0.5 % (r9). Eyes runs: plain 40829833742, shaders 40829836103 | read the stills (eyes-structures / eyes-structures-shaders, bat_eyes_15_brass_t1_*), fresh Fable critic, then lovish. Offline preview: the cone reads mostly DARK (~72 % of its top cells are ribs/ledges/corbels) and the wing verges are heavy dark oak - builder's questions for lovish: greener cone with fewer dark lines? dark-oak bargeboard or a stone verge? |
 | r9 (detail) | not started | detail_recipes top 8: eave band R1+R2, pilasters + lanterns R7, tall lit windows R8, cone corbel table R10, copper cone ribs R12, shed roof lights R5, banded stack R11, receding portal R9; gates G2 (>= 8 % thin blocks) + G5 (depth) |
 | Macaw's Roofs block ids | NOT obtained | CI job logs are on blob.core.windows.net, unreachable from the cloud workspace (only annotations via api.github.com are). Fastest: ask Itachi 3 (on lovish's PC) to run `unzip -Z1 <mods>/mcw-roofs-2.3.2-mc1.20.1forge.jar \| grep blockstates/` and save the list to the Project. `[ModBlocksAll]` logging (bar BuildingBlockModGameTests) is pushed and harmless. |
 | CI run 40814065387 | shard 8 failed `raid_t1_vehicles_break_windmills_and_extractors_faster_than_infantry` - the known raid flake #353 diagnoses | not caused by this session's changes |
 | #353 raid diagnostics | green, waiting for lovish's OK to merge (asked twice, no answer yet) | claim `flake-raid-party-times` held |
 
 Claims held: `vehicle-labs`, `flake-raid-party-times`.
+
+## r8 critic (fresh Fable, in game, Oct 29) and the r9 plan
+Scores realism 3, detail 4, roof 3, tower 3, cohesion 4 (row in SCORES.md). Ranked fixes: (1) roof too dark - roof
+luma 61 < walls 78: slate as a 2-tone mid-grey (polished_andesite / stone_bricks ~60 % + deepslate_tiles ~40 %) in
+eave-parallel courses, deepslate only in the 2 wet eave courses, target roof luma >= walls; (2) tower reads as a pyramid
+- critic proposes collapsing 5 stages to 3 (brick base with quoins / body with iron-bar windows / one full copper cone,
+1-block oversail per stage, fence + chain spikes like ref62) - THIS BREAKS THE FROZEN CONE OUTLINE: ask lovish first;
+(3) empty main roof - 3-4 dormers per long slope, a glazed roof light, a second chimney; (4) eave lip + cornice + dentil
+course under every eave (recipe R1+R2); (5) life - lanterns on piers, a stone apron and ramp at the door, ridge vents.
 
 ## r8 brief (if it must be redone)
 Roofs and walls only, frozen massing (cone tops 11 15 19 23 25 23 19 15 11 over z 8..16; lane x 0..8 z 10..14 y 1..8;
