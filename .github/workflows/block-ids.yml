@@ -39,7 +39,8 @@ jobs:
             bar/gradle.properties
             bar/gradle/wrapper/gradle-wrapper.properties
       - name: The development time file the jar expects (not counted here)
-        run: printf '%s' '{"hours": 0, "commits": 0, "since": 0}' > bar/src/main/resources/assets/reignofnether/devtime.json
+        run: |
+          printf '%s' '{"hours": 0, "commits": 0, "since": 0}' > bar/src/main/resources/assets/reignofnether/devtime.json
       - name: The building-block mod GameTests alone (they write the id dump)
         working-directory: bar
         env:
@@ -60,11 +61,11 @@ jobs:
           f=bar/run-gametest/mod_block_ids.json
           if [ ! -f "$f" ]; then echo "::error::the GameTest wrote no $f"; exit 1; fi
           cp "$f" out/
-          python3 -c "
-          import json, sys
+          python3 - <<'PY'
+          import json
           d = json.load(open('out/mod_block_ids.json'))
-          print('::notice::[Block ids] ' + ', '.join('%s %s: %d' % (m, v.get('version', '?'), v['count']) for m, v in d.items()))
-          "
+          print('::notice::[Block ids] ' + ', '.join('%s %s = %d' % (m, v.get('version', '?'), v['count']) for m, v in d.items()))
+          PY
           # the third-party jars Gradle resolved (Modrinth maven + cursemaven): the hashes the tester pack pins
           find ~/.gradle/caches/modules-2/files-2.1/maven.modrinth ~/.gradle/caches/modules-2/files-2.1/curse.maven \
             -name '*.jar' ! -name '*-sources.jar' 2>/dev/null | sort | while read -r j; do
