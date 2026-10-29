@@ -1329,52 +1329,35 @@ public class BotPlayer {
      * centre. Cheap: one centroid pass over the army and a few checks a think; the choke scan is a few dozen
      * heightmap reads every 5 minutes.
      */
-    /**
-     * The units that are not fighters but belong with the army follow its centre: neither is an AttackerUnit, so the
-     * army list never holds them and they would otherwise idle at the lab. One that is more than 10 blocks from the
-     * centre and not already walking within 8 of it is sent there. Every faction, every think. Public for the game test.
-     */
-    public void supportFollowsArmy(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army) {
-        if (army.isEmpty())
-            return;
-        double cx = 0, cz = 0;
-        for (LivingEntity le : army) { cx += le.getX(); cz += le.getZ(); }
-        BlockPos centre = null;
-        List<LivingEntity> lagging = new ArrayList<>();
-        for (LivingEntity le : mine) {
-            if (!followsArmy(le))
-                continue;
-            Unit mb = (Unit) le;
-            if (centre == null)
-                centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
-            BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
-            if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
-                    && (mt == null || mt.distSqr(centre) > 8 * 8))
-                lagging.add(le);
-        }
-        if (centre != null)
-            order(lagging, UnitAction.MOVE, centre);
-    }
-
-    /** A non-fighter that goes with the army ({@link #supportFollowsArmy}). Public for the game test. */
-    public static boolean followsArmy(LivingEntity le) {
-        // every essence caster, whatever its race (design/essence_casters.md): it gathers the wisps of the fallen, so it
-        // belongs where the fighting is - a fighting one is in the army list already, a worker never goes
-        if (com.solegendary.reignofnether.essence.Essence.isCarrier(le) && !(le instanceof AttackerUnit) && !(le instanceof WorkerUnit))
-            return true;
-        // healers and support casters (Moonwell Bearer, Bloom Priestess, Tide Priest; the Scribe seals from the line,
-        // the Seer watches from it, the Lantern Fortress shields it)
-        return le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit;
-    }
-
     void verdantHabits(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army, List<LivingEntity> workers,
                        List<BuildingPlacement> buildings, long gameTime, long minutes) {
-        supportFollowsArmy(level, mine, army);
+        // healers follow the army
+        if (!army.isEmpty()) {
+            double cx = 0, cz = 0;
+            for (LivingEntity le : army) { cx += le.getX(); cz += le.getZ(); }
+            BlockPos centre = null;
+            List<LivingEntity> lagging = new ArrayList<>();
+            for (LivingEntity le : mine) {
+                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
+                // army list never holds them and they would otherwise idle at the lab)
+                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
+                    continue;
+                Unit mb = (Unit) le;
+                if (centre == null)
+                    centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
+                BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
+                if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
+                        && (mt == null || mt.distSqr(centre) > 8 * 8))
+                    lagging.add(le);
+            }
+            if (centre != null)
+                order(lagging, UnitAction.MOVE, centre);
+        }
         if (minutes < 2 || home == null)
             return;
         if (choke == null || gameTime - chokeAt > 20 * 60 * 5) {

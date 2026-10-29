@@ -455,9 +455,10 @@ public class AngelCallerGameTests {
 
     /**
      * A bot's Angel Caller goes with its army (review round 3: trained, it would otherwise stand at the Arcane Tower with
-     * no essence - the bot's army list holds only attackers). Every essence caster - the Angel Caller included - is one
-     * of the units that follow the army (BotPlayer.followsArmy), a plain worker and a fighter are not; a caller 12
-     * blocks behind three of the bot's soldiers is sent to them and gets there, one beside them is left alone.
+     * no essence - the bot's army list holds only attackers). The bot's "healers follow the army" step (in
+     * BotPlayer.verdantHabits, which every faction's think runs; called here by reflection, before its 2-minute habits)
+     * sends a caller 12 blocks behind three of the bot's soldiers to them, and it gets there; one already beside them
+     * and a plain worker are left alone.
      */
     @GameTest(template = ARENA, timeoutTicks = 200, batch = "angel_caller_bot")
     public static void angel_caller_lagging_behind_a_bot_army_is_sent_to_it(GameTestHelper helper) {
@@ -481,16 +482,24 @@ public class AngelCallerGameTests {
         AutocastState.setAll((Unit) lagging, false);
         AutocastState.setAll((Unit) near, false);
         List<String> problems = new ArrayList<>();
-        if (!com.solegendary.reignofnether.bot.BotPlayer.followsArmy(lagging))
-            problems.add("an Angel Caller is not one of the units that follow a bot's army");
-        if (com.solegendary.reignofnether.bot.BotPlayer.followsArmy(worker) || com.solegendary.reignofnether.bot.BotPlayer.followsArmy(soldiers.get(0)))
-            problems.add("a worker or a fighter counts as a unit that follows the army");
         var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.VILLAGERS,
             com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
         brain.enemyFilter = o -> false;
         double startGap = lagging.distanceTo(soldiers.get(1));
-        Vec3 nearAt = near.position();
-        helper.runAfterDelay(2, () -> brain.supportFollowsArmy(level, new ArrayList<>(units), new ArrayList<>(soldiers)));
+        Vec3 nearAt = near.position(), workerAt = worker.position();
+        helper.runAfterDelay(2, () -> {
+            try {
+                java.lang.reflect.Method habits = com.solegendary.reignofnether.bot.BotPlayer.class.getDeclaredMethod("verdantHabits",
+                    ServerLevel.class, List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                List<LivingEntity> mine = new ArrayList<>(units), army = new ArrayList<>(soldiers), workers = new ArrayList<>();
+                workers.add(worker);
+                // minutes 0: only the follow-the-army step runs (the choke habits start at 2 minutes)
+                habits.invoke(brain, level, mine, army, workers, new ArrayList<>(), level.getGameTime(), 0L);
+            } catch (ReflectiveOperationException e) {
+                problems.add("could not run the bot's verdantHabits: " + e);
+            }
+        });
         helper.runAfterDelay(180, () -> {
             try {
                 double gap = lagging.distanceTo(soldiers.get(1));
@@ -499,6 +508,8 @@ public class AngelCallerGameTests {
                         + String.format("%.1f", startGap) + " away)");
                 if (near.position().distanceTo(nearAt) > 2)
                     problems.add("the Angel Caller already with the army was moved " + String.format("%.1f", near.position().distanceTo(nearAt)) + " blocks");
+                if (worker.position().distanceTo(workerAt) > 0.5)
+                    problems.add("the bot's worker was sent along with the army");
             } finally {
                 cleanUp(null, units, List.of());
             }
