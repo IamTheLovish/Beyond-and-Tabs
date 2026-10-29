@@ -112,6 +112,9 @@ public class DragonFlightGameTests {
                     problems.add(String.format("it did not reach the point: %.1f blocks off", off));
                 if (speed > 0.05)
                     problems.add(String.format("it is still coasting at %.2f b/t", speed));
+                if (off > 3 || speed > 0.05)    // stress 40797860434: late and still coasting - did it tick all along?
+                    problems.add(String.format("its age %d at test tick 245, ordered at its age %d; %s", dragon.tickCount,
+                        ageAtOrder[0], tail(trace, 3)));
                 if (problems.isEmpty())
                     helper.succeed();
                 else
@@ -153,9 +156,14 @@ public class DragonFlightGameTests {
         final double[] worst = { 0 };
         final String[] jump = { "" };
         final List<String> trace = new ArrayList<>();
-        for (int t = 1; t <= 40; t++) {
+        final boolean[] done = { false };
+        // judged on the dragon's own 40 ticks, not the test's: stress 40797860434 had one fly 1.7 blocks in 40 test ticks
+        // (a full 40 ticks' climb to speed is ~6), so the dragon's age goes in the message and gates the verdict
+        for (int t = 1; t <= 75; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
                 float yaw = dragon.getYRot();
                 trace.add(sample(tick, dragon));
                 double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
@@ -166,24 +174,25 @@ public class DragonFlightGameTests {
                 }
                 worst[0] = Math.max(worst[0], step);
                 last[0] = yaw;
+                if (dragon.tickCount < 40 && tick < 75)
+                    return;
+                done[0] = true;
+                try {
+                    if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
+                        helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s", worst[0],
+                            com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0]));
+                    else if (startX - dragon.getX() < 2)
+                        helper.fail(String.format("it did not fly off on its order: %.1f blocks along -x by its age %d"
+                            + " (test tick %d; %s)", startX - dragon.getX(), dragon.tickCount, tick, tail(trace, 3)));
+                    else if (Math.abs(net.minecraft.util.Mth.wrapDegrees(dragon.getYRot() - 90f)) > 10)
+                        helper.fail(String.format("flying straight ahead it ended facing %.1f, not 90", dragon.getYRot()));
+                    else
+                        helper.succeed();
+                } finally {
+                    dragon.discard();
+                }
             });
         }
-        helper.runAfterDelay(42, () -> {
-            try {
-                if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
-                    helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s", worst[0],
-                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0]));
-                else if (startX - dragon.getX() < 2)
-                    helper.fail(String.format("it did not fly off on its order: %.1f blocks along -x in 40 ticks",
-                        startX - dragon.getX()));
-                else if (Math.abs(net.minecraft.util.Mth.wrapDegrees(dragon.getYRot() - 90f)) > 10)
-                    helper.fail(String.format("flying straight ahead it ended facing %.1f, not 90", dragon.getYRot()));
-                else
-                    helper.succeed();
-            } finally {
-                dragon.discard();
-            }
-        });
     }
 
     /**
@@ -244,9 +253,13 @@ public class DragonFlightGameTests {
             RegressionGameTests.clear(level, bp);
         };
         helper.runAfterDelay(95, cleanup);   // a timeout must not leave a registered Barracks behind
-        for (int t = 1; t <= 40; t++) {
+        final boolean[] done = { false };
+        // judged on the dragon's own 40 ticks, not the test's (see bone_dragon_ordered_at_spawn_keeps_its_yaw)
+        for (int t = 1; t <= 90; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
                 float yaw = dragon.getYRot();
                 trace.add(sample(tick, dragon));
                 double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
@@ -257,27 +270,34 @@ public class DragonFlightGameTests {
                 }
                 worst[0] = Math.max(worst[0], step);
                 last[0] = yaw;
+                if (dragon.tickCount < 40 && tick < 90)
+                    return;
+                done[0] = true;
+                try {
+                    double moved = Math.sqrt((dragon.getX() - sx) * (dragon.getX() - sx) + (dragon.getZ() - sz) * (dragon.getZ() - sz));
+                    String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s)",
+                        sx, sy, sz, spawnYaw, ageAtOrder[0], ordered[0]);
+                    if (ordered[0] == null || ageAtOrder[0] != 0)
+                        helper.fail("setup: the rally move did not reach the dragon before its first tick, so this does not"
+                            + " test production's order" + setup);
+                    else if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
+                        helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s%s", worst[0],
+                            com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0], setup));
+                    else if (moved < 1)
+                        helper.fail(String.format("it did not fly off to the rally point: %.1f blocks by its age %d (test tick"
+                            + " %d; %s)%s", moved, dragon.tickCount, tick, tail(trace, 3), setup));
+                    else
+                        helper.succeed();
+                } finally {
+                    cleanup.run();
+                }
             });
         }
-        helper.runAfterDelay(42, () -> {
-            try {
-                double moved = Math.sqrt((dragon.getX() - sx) * (dragon.getX() - sx) + (dragon.getZ() - sz) * (dragon.getZ() - sz));
-                String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s)",
-                    sx, sy, sz, spawnYaw, ageAtOrder[0], ordered[0]);
-                if (ordered[0] == null || ageAtOrder[0] != 0)
-                    helper.fail("setup: the rally move did not reach the dragon before its first tick, so this does not"
-                        + " test production's order" + setup);
-                else if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
-                    helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s%s", worst[0],
-                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0], setup));
-                else if (moved < 1)
-                    helper.fail(String.format("it did not fly off to the rally point: %.1f blocks in 40 ticks%s", moved, setup));
-                else
-                    helper.succeed();
-            } finally {
-                cleanup.run();
-            }
-        });
+    }
+
+    /** The last n samples of a trace, for a failure message. */
+    private static String tail(List<String> trace, int n) {
+        return trace.isEmpty() ? "no samples" : String.join(" | ", trace.subList(Math.max(0, trace.size() - n), trace.size()));
     }
 
     /** One sampled tick for a failure message: test tick, the dragon's own age, yaw, nose, cruising, a move, speed. */
