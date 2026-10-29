@@ -54,12 +54,27 @@ public final class WorldLookPass {
     private static final Minecraft MC = Minecraft.getInstance();
     private static final ResourceLocation SHADER = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bat_postfx");
 
-    // per look, [subtle, full]. Haze caps: well below opaque, so far overlays stay legible.
-    private static final float[] HAZE_MAX = { 0.30f, 0.45f };
-    private static final float[] CONTRAST = { 0.10f, 0.18f };     // midtone slope 1.10 / 1.18, black and white fixed
-    private static final float[] SPLIT_TONE = { 0.5f, 0.9f };
-    private static final float[] SATURATION = { 0.96f, 0.92f };   // never above 1: the miniature lesson
-    private static final float[] VIGNETTE = { 0.05f, 0.09f };      // the HUD already frames the RTS view
+    // per look, [subtle, full, enchanted]. Haze caps: well below opaque, so far overlays stay legible.
+    // Enchanted (lovish Oct 28: "the game needs a shader to dim it down a bit and make it look more saturated and
+    // whimsy ... fantasy esque"; he picked "B Enchanted" from three strengths previewed on eyes stills): dimmer, richer
+    // dull colours (vibrance, not saturation: team colours and glows keep theirs), golden highlights and warm
+    // shadows, a soft glow of the bright areas. The default look since Oct 28.
+    // Its shadow tint is warm, not violet-blue (lovish's option B, Oct 28 night): the shadow bell peaks at luma 0.25,
+    // where Exposure and the S-curve park the noon lawn, so a blue tint cast the whole terrain blue-green (r34 eyes
+    // still, shaders off: hue 82 -> 93, V 0.39 -> 0.32; real grass is hue ~72). Warm shadows and Exposure 0.95 keep
+    // it olive and a little dimmer than the look off (tools/test_world_look.py).
+    private static final float[] HAZE_MAX = { 0.30f, 0.45f, 0.30f };
+    private static final float[] CONTRAST = { 0.10f, 0.18f, 0.18f };     // midtone slope, black and white fixed
+    private static final float[] SPLIT_TONE = { 0.5f, 0.9f, 1.2f };
+    private static final float[] SATURATION = { 0.96f, 0.92f, 1.0f };    // Subtle / Full stay at or below neutral
+    private static final float[] VIGNETTE = { 0.05f, 0.09f, 0.16f };      // the HUD already frames the RTS view
+    private static final float[] EXPOSURE = { 1f, 1f, 0.95f };
+    private static final float[] VIBRANCE = { 0f, 0f, 0.45f };
+    private static final float[] GLOW = { 0f, 0f, 0.30f };
+    private static final float[] GLOW_THRESHOLD = { 0.5f, 0.5f, 0.50f };
+    private static final float[] GLOW_RADIUS = { 0.02f, 0.02f, 0.016f };  // of the screen height (~14 px at 900)
+    private static final float[][] SHADOW_TINT = { { 0.96f, 1f, 1.06f }, { 0.96f, 1f, 1.06f }, { 1.06f, 1f, 0.90f } };
+    private static final float[][] HIGHLIGHT_TINT = { { 1.04f, 1f, 0.94f }, { 1.04f, 1f, 0.94f }, { 1.09f, 1f, 0.85f } };
     private static final float HAZE_MAX_LIMIT = 0.85f;            // at 200% haze strength
 
     // First person: clear for the nearest blocks (the fight in front of you), one e-fold at 180 blocks - a gentle lead
@@ -80,9 +95,10 @@ public final class WorldLookPass {
     private static ShaderInstance shader = null;    // null until loaded, or after a failed load
     private static Uniform invProjU, hazeColorU, hazeStartU, hazeInvScaleU, hazeMaxU, orthoU;
     private static Uniform contrastU, splitToneU, saturationU, vignetteU, aspectU, edgeAaU;
+    private static Uniform exposureU, vibranceU, glowU, glowThresholdU, glowRadiusU, shadowTintU, highlightTintU;
     private static TextureTarget target = null;     // the pass's output, blitted back into the main target
     private static boolean failed = false;          // a render-time error: off until the next resource reload
-    private static final int STATE_PACK = 3;        // logState: after DisplaySettings' LOOK_OFF / SUBTLE / FULL
+    private static final int STATE_PACK = 4;        // logState: past DisplaySettings' LOOK_OFF ... LOOK_ENCHANTED
     private static int loggedState = -1;
 
     private static final Matrix4f invProj = new Matrix4f();
@@ -122,10 +138,22 @@ public final class WorldLookPass {
         vignetteU = s.getUniform("Vignette");
         aspectU = s.getUniform("Aspect");
         edgeAaU = s.getUniform("EdgeAA");
+        exposureU = s.getUniform("Exposure");
+        vibranceU = s.getUniform("Vibrance");
+        glowU = s.getUniform("Glow");
+        glowThresholdU = s.getUniform("GlowThreshold");
+        glowRadiusU = s.getUniform("GlowRadius");
+        shadowTintU = s.getUniform("ShadowTint");
+        highlightTintU = s.getUniform("HighlightTint");
     }
 
     private static ShaderInstance currentShader() {
         return shader;
+    }
+
+    /** Vanilla's sky-tracking fog colour this frame (before the RTS view's map-edge override): the valley mist's light. */
+    public static float[] skyFog() {
+        return new float[] { skyR, skyG, skyB };
     }
 
     /** Vanilla's fog colour before any override (sky, biome, time of day, weather), captured every frame. */
@@ -151,7 +179,7 @@ public final class WorldLookPass {
             // the edge smoothing reads the colour between texels: LINEAR for this pass only (texel centres read the
             // same either way, so the rest of the pass is unchanged)
             main.setFilterMode(GL11.GL_LINEAR);
-            setUniforms(evt, look == DisplaySettings.LOOK_FULL ? 1 : 0, main);
+            setUniforms(evt, look == DisplaySettings.LOOK_ENCHANTED ? 2 : look == DisplaySettings.LOOK_FULL ? 1 : 0, main);
             draw(main);
         } catch (Exception | LinkageError e) {
             failed = true;
@@ -210,7 +238,14 @@ public final class WorldLookPass {
         set(saturationU, SATURATION[m]);
         set(vignetteU, VIGNETTE[m]);
         set(aspectU, (float) main.width / main.height);
-        set(edgeAaU, 1f);   // both looks: the edges are the same problem at every strength
+        set(edgeAaU, 1f);   // every look: the edges are the same problem at every strength
+        set(exposureU, EXPOSURE[m]);
+        set(vibranceU, VIBRANCE[m]);
+        set(glowU, GLOW[m]);
+        set(glowThresholdU, GLOW_THRESHOLD[m]);
+        set(glowRadiusU, GLOW_RADIUS[m]);
+        if (shadowTintU != null) shadowTintU.set(SHADOW_TINT[m][0], SHADOW_TINT[m][1], SHADOW_TINT[m][2]);
+        if (highlightTintU != null) highlightTintU.set(HIGHLIGHT_TINT[m][0], HIGHLIGHT_TINT[m][1], HIGHLIGHT_TINT[m][2]);
     }
 
     private static void set(Uniform u, float v) {

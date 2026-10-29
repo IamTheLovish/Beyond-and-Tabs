@@ -167,6 +167,8 @@ def shape_for(name, props):
         lo, hi = (0.5, 1) if half == "top" else (0, 0.5)
         up = (0, 0.5) if half == "top" else (0.5, 1)
         return [(0, 1, lo, hi, 0, 1), _side_box(facing, 0.5, *up)]
+    if n == "vine":                                      # a thin sheet on each side it clings to
+        return [_side_box(f, 0.06) for f in ("north", "south", "east", "west") if props.get(f) == "true"] or FULL
     if n.endswith("_carpet") or n in ("moss_carpet", "snow"):
         return [(0, 1, 0, 0.07, 0, 1)]
     if n.endswith("_trapdoor"):
@@ -208,6 +210,13 @@ def shape_for(name, props):
         return [(0.06, 0.94, 0, 0.06, 0.06, 0.94)]
     if n.endswith("_button"):
         return [(0.35, 0.65, 0.35, 0.65, 0.35, 0.65)]
+    if n == "vine":   # a thin sheet on every face it claims (was a full cube: overgrowth previews read as hedges)
+        boxes = [_side_box(f, 0.06) for f in DIR if props.get(f) == "true"]
+        if props.get("up") == "true":
+            boxes.append((0, 1, 0.94, 1, 0, 1))
+        return boxes or [_side_box("north", 0.06)]
+    if n == "flower_pot" or n.startswith("potted_"):
+        return [(0.31, 0.69, 0, 0.375, 0.31, 0.69), (0.35, 0.65, 0.375, 0.8, 0.35, 0.65)]
     if n in PLANTS or n.endswith(("_coral", "_coral_fan", "_sapling", "_tulip")) or "flower" in n and "leaves" not in n:
         return [(0.3, 0.7, 0, 0.7, 0.3, 0.7)]
     if n in ("anvil", "grindstone", "brewing_stand", "cauldron", "composter"):

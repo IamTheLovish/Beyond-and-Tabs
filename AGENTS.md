@@ -218,7 +218,8 @@ All run on GitHub Actions, never on anyone's PC:
   **Structure photos** (input `structure`: names in the jar or `.nbt` paths, comma-separated): instead of the tour,
   each structure is stamped on a flat pad and shot four ways (`bat_eyes_15_<name>_rts`, `_rts_close`, `_34` - a
   first-person 3/4 view - and `_dusk`) to branch `eyes-structures` (`eyes-structures-shaders` with `shaders`). Judge a
-  new building design here, with real textures and glass, before asking lovish. For a design on a feature branch,
+  new building design here, with real textures and glass, before asking lovish. Input `mist` (with `structure`) lets the
+  valley mist (ambient/mist) into those stills and adds a dawn still `15_<name>_mist_rts`; it publishes to `<lane>-mist`. For a design on a feature branch,
   dispatch the workflow with `ref=<that branch>`: it uses that branch's build (the header of eyes.yml has the call).
 - **bot-ladder.yml** (nightly 07:03 UTC + `workflow_dispatch`; Oct 22, lovish approved) - bot vs bot full matches, one per hosted
   runner (a 40-match matrix = two waves of the ~20 runners), every Difficulty pair x faction pair

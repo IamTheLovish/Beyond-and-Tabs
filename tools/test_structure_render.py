@@ -2,6 +2,7 @@
 """tools/structure_render.py's light pass on tiny scenes, without the block pack (every block takes its flat palette
 colour): the sun lights the face that looks at it, a tower's shadow falls away from the sun, the foot of a wall is
 occluded, light sources stay bright, and --flat keeps Minecraft's fixed face shades exactly."""
+import math
 import os
 import sys
 import unittest
@@ -88,6 +89,25 @@ class LightPass(unittest.TestCase):
         lit, flat = draw(root, light(sky=True)), draw(root, None)
         for at in ((15.5, 2, 5.5), (15.5, 1.5, 6), (15, 1.5, 5.5)):   # top, south, west
             np.testing.assert_allclose(pixel(lit, *at), pixel(flat, *at), atol=1)
+
+    def test_tilt_draws_the_rts_cameras_true_relief(self):
+        # tilt=64.8 (the eyes RTS camera): a block edge is PX px, a side cos(64.8) of it tall (0.43, against the
+        # preview's 0.6 of a block over a quarter-block top: relief ~3x too steep), and the light pass still finds
+        # every face from the new projection
+        root = scene()
+        img, *_ = SR.render_root(root, NoPack(), SR.Faces(NoPack()), PX, light(ao=0, shadows=False), tilt=64.8)
+        th = math.radians(64.8)
+        hw, qh, hh = PX / math.sqrt(2), PX * math.sin(th) / math.sqrt(2), PX * math.cos(th)
+        left, top = img.info["origin"]
+        rgb = np.asarray(img.convert("RGB"), dtype=np.float64)
+
+        def at(X, Y, Z):
+            return rgb[int((Z - X) * qh - Y * hh - top), int((X + Z) * hw - left)]
+        bg = np.asarray(SR.BACKGROUND, dtype=np.float64)
+        self.assertGreater(np.abs(at(5.5, 8.9, 13) - bg).sum(), 30)     # the pillar's south face, near its top
+        self.assertGreater(np.abs(at(12.5, 1, 18.5) - bg).sum(), 30)    # the floor
+        # the canvas spans the floor's far corner (top at y 1) to its near corner (bottom at y 0): 50 rows of qh + hh
+        self.assertAlmostEqual(img.height - 9, 50 * qh + hh, delta=2)
 
     def test_shadow_sweep_follows_the_sun(self):
         grid = np.zeros((8, 8, 8), dtype=bool)

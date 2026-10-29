@@ -140,15 +140,18 @@ def _uv(lo_u, lo_v, hi_u, hi_v):
     return tuple(round(min(1.0, max(0.0, c)), 3) for c in (lo_u, lo_v, hi_u, hi_v))
 
 
-def render(path, tx, faces, px, light=None, ground=0):
+def render(path, tx, faces, px, light=None, ground=0, tilt=None):
     """One building on its own canvas (cropped to it; None when the file holds only air), with its size (x, y, z), the
     number of blocks drawn and how many of them took a texture from our pack. light: a Light, or None for the flat
     look; ground: a grass plane this many blocks around the building (0 = none)."""
-    return render_root(PS.load_nbt(path), tx, faces, px, light, ground)
+    return render_root(PS.load_nbt(path), tx, faces, px, light, ground, tilt)
 
 
-def render_root(root, tx, faces, px, light=None, ground=0):
-    """render() of a structure already read: {"size", "palette", "blocks"} as in the .nbt."""
+def render_root(root, tx, faces, px, light=None, ground=0, tilt=None):
+    """render() of a structure already read: {"size", "palette", "blocks"} as in the .nbt. tilt: None draws the
+    preview's steep-sided view (sides 0.6 of a block tall against a quarter-block top rhombus: relief ~3x the game's);
+    a pitch in degrees (the RTS camera: 64.8) draws a true orthographic view from that pitch, px being a block edge's
+    length on screen (the eyes rig's zoom 30 = 30 px a block), so a 1-block step shows cos(pitch) of a block of face."""
     looks = [look_of(e, tx) for e in root.get("palette") or (root.get("palettes") or [[]])[0]]
     blocks = [(tuple(b["pos"]), looks[b["state"]]) for b in root.get("blocks", [])
               if not PS.invisible(looks[b["state"]].name)]
@@ -173,6 +176,9 @@ def render_root(root, tx, faces, px, light=None, ground=0):
         if any(show):
             boxes += [((x, y, z), box, lk, show) for box in lk.shape]
     hw, qh, hh = px / 2, px / 4, px * 0.6       # half a block's width, a quarter (the top rhombus), a side's height
+    if tilt is not None:                         # the game's camera: yaw 45, pitch `tilt`, orthographic
+        th = math.radians(tilt)
+        hw, qh, hh = px / math.sqrt(2), px * math.sin(th) / math.sqrt(2), px * math.cos(th)
 
     def P(X, Y, Z):
         # +x (east) runs up-right on screen and +z (south) down-right: the camera's right is south-east
@@ -365,6 +371,9 @@ def main():
                     help="sky-blue ambient light and a warm sun (off: white light)")
     ap.add_argument("--ground", type=int, default=0, metavar="N",
                     help="a grass plane under the building, N blocks around it, to catch its shadow (default none)")
+    ap.add_argument("--tilt", type=float, default=None, metavar="DEG",
+                    help="draw the RTS camera's true view from this pitch (the eyes rig: 64.8; --px is then a block "
+                         "edge on screen, 30 at its zoom) instead of the preview's exaggerated relief")
     ap.add_argument("--ref", action="append", default=[], metavar="IMAGE",
                     help="a reference picture to put beside the renders at their height (repeatable)")
     a = ap.parse_args()
@@ -377,7 +386,7 @@ def main():
     for arg in a.structures:
         path = structure_path(arg)
         label = os.path.splitext(os.path.basename(path))[0]
-        img, size, total, textured = render(path, tx, faces, a.px, light, a.ground)
+        img, size, total, textured = render(path, tx, faces, a.px, light, a.ground, a.tilt)
         size = "x".join(str(v) for v in size)
         if img is None:
             print("%-28s %-9s only air - skipped" % (label, size))

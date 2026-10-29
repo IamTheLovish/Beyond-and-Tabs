@@ -61,6 +61,24 @@ public class ParticleRegistrar {
             PARTICLES.register("mana",
                     () -> new SimpleParticleType(false));
 
+    // ambient life (ambient/AmbientLifeClientEvents): butterflies by day, fireflies at night, round the camera's view
+    public static final RegistryObject<SimpleParticleType> BUTTERFLY =
+            PARTICLES.register("butterfly",
+                    () -> new SimpleParticleType(true));
+
+    public static final RegistryObject<SimpleParticleType> FIREFLY =
+            PARTICLES.register("firefly",
+                    () -> new SimpleParticleType(true));
+
+    public static final RegistryObject<SimpleParticleType> BIRD =
+            PARTICLES.register("bird",
+                    () -> new SimpleParticleType(true));
+
+    // the living valley mist (ambient/mist/MistClientEvents): soft wisps that pool in hollows at dawn and dusk
+    public static final RegistryObject<SimpleParticleType> MIST =
+            PARTICLES.register("mist",
+                    () -> new SimpleParticleType(true));
+
     public static void init(FMLJavaModLoadingContext context) {
         PARTICLES.register(context.getModEventBus());
     }
