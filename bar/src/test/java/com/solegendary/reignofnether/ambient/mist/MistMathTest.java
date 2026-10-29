@@ -162,21 +162,28 @@ class MistMathTest {
 
     // ------------------------------------------------------------------------------------------- time of day
 
+    // Retired Oct 29 (r11): densityThroughTheDay pinned "none from 4000 to 9000" (the Oct 28 design). A skirmish starts
+    // at day time 5000 with the daylight cycle OFF (DayClock MORNING), so that curve meant no mist in any normal match;
+    // lovish approved the r11 look on a morning still (Oct 29 18:05, the paintover): river mist that lingers through
+    // the day. It no longer films the lawn at any density - ValleyField limits it to the water, the low banks and hollows.
     @Test
     void densityThroughTheDay() {
         Object[][] rows = {
-            { 23000L, 1.0 }, { 23500L, 1.0 }, { 0L, 1.0 }, { 1500L, 1.0 },    // dawn: thick
-            { 2750L, 0.5 },                                                   // burning off
-            { 4000L, 0.0 }, { 6000L, 0.0 }, { 9000L, 0.0 },                   // late morning to afternoon: none
-            { 10250L, 0.35 },                                                 // rising again
-            { 11500L, 0.7 }, { 12500L, 0.7 }, { 13500L, 0.7 },               // dusk
-            { 14250L, 0.475 },
-            { 15000L, 0.25 }, { 18000L, 0.25 }, { 21500L, 0.25 },             // night: a little
-            { 22250L, 0.625 },
-            { 24000L + 1000L, 1.0 }, { -1000L, 1.0 }, { 48000L + 6000L, 0.0 }, // wraps either way
+            { 23000L, 1.0 }, { 0L, 1.0 }, { 1500L, 1.0 },                     // dawn: thick
+            { 4000L, 0.75 },                                                  // morning: the river mist lingers
+            { 6000L, 0.5 }, { 9000L, 0.5 },                                   // midday to afternoon: thinner, still there
+            { 11500L, 0.8 }, { 13500L, 0.8 },                                 // dusk
+            { 15000L, 0.5 }, { 21500L, 0.5 },                                 // night
+            { 24000L + 1000L, 1.0 }, { -1000L, 1.0 }, { 48000L + 6000L, 0.5 }, // wraps either way
         };
         for (Object[] r : rows)
             assertEquals((double) r[1], MistMath.density((long) r[0]), 1e-9, "density at " + r[0]);
+    }
+
+    @Test
+    void mistAtTheSkirmishStart() {
+        // DayClock MORNING (5000), cycle off: the time every quick battle is played at
+        assertTrue(MistMath.density(5000) >= 0.55, "density at the skirmish start: " + MistMath.density(5000));
     }
 
     @Test

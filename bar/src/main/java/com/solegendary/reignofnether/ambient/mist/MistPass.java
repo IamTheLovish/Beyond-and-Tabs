@@ -25,7 +25,10 @@ import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RegisterShadersEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -63,7 +66,12 @@ public final class MistPass {
     private static ShaderInstance shader = null;
     private static boolean failed = false;
     private static Uniform invProjU, invViewU, camPosU, orthoU, floorU, heightU, sigmaU, densityU, offsetU, windU, timeU;
-    private static Uniform litU, deepU, visOriginU, visInvSizeU, fogMaxU, maxCoverU;
+    private static Uniform litU, deepU, visOriginU, visInvSizeU, fogMaxU, maxCoverU, valleyBaseU;
+    /** r11: where the mist lies (ValleyField) - recomputed when the camera moves or every VALLEY_PERIOD ticks. */
+    static final int VALLEY_PERIOD = 40;
+    private static ValleyField.Result valley = null;
+    private static int valleyBase = 64, valleyX = Integer.MIN_VALUE, valleyZ = Integer.MIN_VALUE;
+    private static long valleyTick = Long.MIN_VALUE;
     private static TextureTarget target = null;
     private static DynamicTexture vis = null;
     private static int visX = 0, visZ = 0;
@@ -108,6 +116,7 @@ public final class MistPass {
         visInvSizeU = s.getUniform("VisInvSize");
         fogMaxU = s.getUniform("FogBoostMax");
         maxCoverU = s.getUniform("MaxCover");
+        valleyBaseU = s.getUniform("ValleyBase");
     }
 
     /** The volume can draw this frame: loaded, no shader pack, the mist allowed (setting, eyes rig), the overworld. */
@@ -196,11 +205,19 @@ public final class MistPass {
         float[] sky = com.solegendary.reignofnether.postfx.WorldLookPass.skyFog();
         float lr = Math.min(0.97f, c[0] * 0.65f + sky[0] * 0.4f), lg = Math.min(0.97f, c[1] * 0.65f + sky[1] * 0.4f),
             lb = Math.min(0.97f, c[2] * 0.65f + sky[2] * 0.4f);
+        // r11 (the approved paintover): lit tops a warm off-white, the shaded body a cool lavender-grey - r8-r10's tops
+        // took 40% of the sky's blue by day and read as a grey-blue film. The hour's colour still leads at dawn and dusk
+        float warm = 0.55f;
+        lr = Math.min(0.97f, lr * (1 - warm) + 0.95f * warm);
+        lg = Math.min(0.97f, lg * (1 - warm) + 0.92f * warm);
+        lb = Math.min(0.97f, lb * (1 - warm) + 0.84f * warm);
+        float cl = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
         if (litU != null) litU.set(lr, lg, lb);
-        if (deepU != null) deepU.set(c[0] * 0.52f, c[1] * 0.6f, c[2] * 0.76f);
+        if (deepU != null) deepU.set(0.70f * cl / 0.9f, 0.73f * cl / 0.9f, 0.80f * cl / 0.9f);
         set(fogMaxU, (float) MistMath.FOG_UNEXPLORED);
         set(maxCoverU, (float) MistMath.MAX_COVER);
         updateVis(cam);
+        set(valleyBaseU, (float) valleyBase);
         if (visOriginU != null) visOriginU.set((float) visX, (float) visZ);
         set(visInvSizeU, 1f / (VIS_N * VIS_STEP));
     }
@@ -238,6 +255,8 @@ public final class MistPass {
         NativeImage img = vis.getPixels();
         if (img == null)
             return;
+        if (valley == null || nx != valleyX || nz != valleyZ || tick - valleyTick >= VALLEY_PERIOD || tick < valleyTick)
+            updateValley(nx, nz, tick);
         boolean fogOn = FogOfWarClientEvents.isEnabled();
         double span = MistMath.FOG_UNEXPLORED - 1;
         for (int i = 0; i < VIS_N; i++)
@@ -249,9 +268,39 @@ public final class MistPass {
                     double b = MistMath.fogBoost(true, visible, visible || FogExploration.isExplored(x >> 4, z >> 4));
                     r = (int) Math.round(255 * (b - 1) / span);
                 }
-                img.setPixelRGBA(i, j, 0xFF000000 | r);   // ABGR: r in the low byte
+                int g = (int) Math.round(255 * valley.cover[i][j]);
+                int b = ValleyField.encodeHeight(valley.smooth[i][j], valleyBase);
+                img.setPixelRGBA(i, j, 0xFF000000 | (b << 16) | (g << 8) | r);   // ABGR: r fog, g cover, b ground
             }
         vis.upload();
+    }
+
+    /**
+     * The columns of the texture's grid: the ground without leaves (the water's surface on water) and whether it is
+     * water, then ValleyField. A column in an unloaded chunk takes the camera's ground and counts as dry.
+     */
+    private static void updateValley(int nx, int nz, long tick) {
+        valleyX = nx;
+        valleyZ = nz;
+        valleyTick = tick;
+        valleyBase = (int) Math.floor(OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getGroundY()
+            : (MC.player != null ? MC.player.getY() : 64));
+        int[][] h = new int[VIS_N][VIS_N];
+        boolean[][] w = new boolean[VIS_N][VIS_N];
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int min = MC.level.getMinBuildHeight();
+        for (int i = 0; i < VIS_N; i++)
+            for (int j = 0; j < VIS_N; j++) {
+                int x = nx + i * VIS_STEP + VIS_STEP / 2, z = nz + j * VIS_STEP + VIS_STEP / 2;
+                int top = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+                if (top <= min) {
+                    h[i][j] = valleyBase;
+                    continue;
+                }
+                h[i][j] = top;
+                w[i][j] = MC.level.getFluidState(p.set(x, top, z)).is(FluidTags.WATER);
+            }
+        valley = ValleyField.compute(h, w, VIS_STEP);
     }
 
     private static void draw(RenderTarget main) {
@@ -298,5 +347,7 @@ public final class MistPass {
         lastNanos = 0;
         drawing = false;
         visTick = Long.MIN_VALUE;
+        valley = null;
+        valleyTick = Long.MIN_VALUE;
     }
 }

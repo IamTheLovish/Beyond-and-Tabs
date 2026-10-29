@@ -16,7 +16,8 @@
 
 uniform sampler2D DiffuseSampler;
 uniform sampler2D DepthSampler;
-uniform sampler2D VisSampler;       // fog of war round VisOrigin: r = 0 in sight, else the boost's share (see below)
+uniform sampler2D VisSampler;       // round VisOrigin: r = fog of war (0 in sight, else the boost's share), g = where the
+                                    // mist lies (ValleyField.cover), b = the smoothed ground (ValleyField.encodeHeight)
 
 uniform mat4 InvProjMat;            // inverse projection (RTS ortho or perspective)
 uniform mat4 InvViewMat;            // inverse view rotation: view space -> camera-relative world
@@ -35,6 +36,7 @@ uniform vec2 VisOrigin;             // world x, z of the fog texture's corner
 uniform float VisInvSize;           // 1 / blocks the fog texture spans
 uniform float FogBoostMax;          // the boost at r = 1 (MistMath.FOG_UNEXPLORED)
 uniform float MaxCover;             // MistMath.MAX_COVER
+uniform float ValleyBase;           // r11: the base of VisSampler's ground channel (ValleyField.encodeHeight)
 
 in vec2 texCoord;
 out vec4 fragColor;
@@ -66,9 +68,9 @@ float fbm(vec3 p) {
 }
 
 // a world position in the wind's frame: along, up, across - stretched along the wind so the strands stream with it
-vec3 windFrame(vec3 w) {
+vec3 windFrame(vec3 w, vec2 dir) {
     vec3 q = w + Offset;
-    return vec3(dot(q.xz, WindDir), q.y, dot(q.xz, vec2(-WindDir.y, WindDir.x)));
+    return vec3(dot(q.xz, dir), q.y, dot(q.xz, vec2(-dir.y, dir.x)));
 }
 
 // the warp at a point (wind frame): a slow, large field that turns over time, so the strands bend and curl instead of
@@ -89,11 +91,27 @@ float wisps(vec3 k, vec2 warp) {
     return smoothstep(0.4, 0.7, n);
 }
 
-float fogAt(vec2 xz) {
+// r11: the whole texel - fog share, where the mist lies, the smoothed ground; off the texture: no mist, ground unknown
+vec4 visAt(vec2 xz) {
     vec2 uv = (xz - VisOrigin) * VisInvSize;
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
-        return 0.0;
-    return texture(VisSampler, uv).r;
+        return vec4(0.0, 0.0, -1.0, 0.0);
+    return texture(VisSampler, uv);
+}
+
+// r11 (lovish approved the paintover, Oct 29 18:05): the strands stream ALONG the river - across the cover's slope
+// (the cover falls away from the water, so its contours run with the banks); the wind where the cover is flat
+vec2 flowAt(vec2 xz) {
+    float e = 2.0;                                      // two blocks
+    float gx = visAt(xz + vec2(e, 0.0)).g - visAt(xz - vec2(e, 0.0)).g;
+    float gz = visAt(xz + vec2(0.0, e)).g - visAt(xz - vec2(0.0, e)).g;
+    vec2 along = vec2(-gz, gx);
+    float m = length(along);
+    if (m < 0.02)
+        return WindDir;
+    along /= m;
+    along *= sign(dot(along, WindDir) + 1e-4);           // the wind's side of the two: the drift keeps one heading
+    return normalize(mix(WindDir, along, smoothstep(0.02, 0.08, m)));
 }
 
 // r9 (lovish, Oct 29: "mist needs to be improved still still looks fake"): fog BANKS, not a tinted film. r6-r8's
@@ -110,10 +128,12 @@ const float BANK_DENSITY = 1.7;
 
 struct Bank { float cover; float top; };
 
-Bank bankAt(vec3 k, float fogShare) {
+Bank bankAt(vec3 k, float fogShare, float local) {
     Bank b;
+    // r11: the banks lie where ValleyField says (the water, the low banks, hollows); the large noise only breaks them
+    // into strands and gaps, it never puts mist on open lawn. Out of sight a little more lies there (lovish, Oct 29)
     float cov = fbm(vec3(k.x * 0.022, Time * 0.004, k.z * 0.045));
-    b.cover = cov + 0.22 * fogShare;                          // out of sight more of the ground lies under mist
+    b.cover = local * (0.35 + 0.85 * cov) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
     float billow = vnoise(vec3(k.x * 0.11, Time * 0.03, k.z * 0.2)) - 0.5;
     b.top = 1.0 + 3.6 * smoothstep(0.32, 0.78, b.cover) + 1.4 * billow;
     return b;
@@ -147,42 +167,55 @@ void main() {
     vec4 v = InvProjMat * vec4(vec3(texCoord, depth) * 2.0 - 1.0, 1.0);
     vec3 rel = (InvViewMat * vec4(v.xyz / v.w, 1.0)).xyz;       // camera-relative world
     vec3 surface = CamPos + rel;
-    float top = Floor + 6.8;                                   // the highest a bank's top reaches
+    vec4 vis = visAt(surface.xz);
+    float local = vis.g;
+    if (local <= 0.004) {                                      // r11: open lawn - no mist, no film
+        fragColor = scene;
+        return;
+    }
+    // r11: measured from the smoothed ground (ValleyField), not one floor for the whole view - the mist follows the
+    // valley, and its edge no longer draws every one-block terrace step
+    float ground = vis.b >= 0.0 ? ValleyBase - 8.0 + vis.b * 32.0 : Floor;
+    float top = ground + 6.8;                                  // the highest a bank's top reaches
     if (surface.y >= top) {
         fragColor = scene;
         return;
     }
     vec3 toViewer = Ortho > 0.5 ? normalize((InvViewMat * vec4(0.0, 0.0, 1.0, 0.0)).xyz) : normalize(-rel);
     float toEye = Ortho > 0.5 ? 1e6 : length(rel);
+    // the ray starts no lower than half a block under the smoothed ground: a pixel one terrace down does not look
+    // through an extra block of mist (the step), it looks through the same layer as its neighbour
+    float t0 = toViewer.y > 1e-3 ? max(0.0, (ground - 0.5 - surface.y) / toViewer.y) : 0.0;
     float toTop = toViewer.y > 1e-3 ? (top - surface.y) / toViewer.y : MAX_PATH;
-    float len = min(min(toEye, toTop), MAX_PATH);
+    float len = max(min(min(toEye, toTop), MAX_PATH) - t0, 0.0);
     float ds = len / float(STEPS);
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
-    float fogShare = clamp(fogAt(surface.xz), 0.0, 1.0);
+    float fogShare = clamp(vis.r, 0.0, 1.0);
+    vec2 flow = flowAt(surface.xz);
     float boost = 1.0 + (FogBoostMax - 1.0) * fogShare;
-    vec2 warp = warpAt(windFrame(surface + toViewer * (0.5 * len)));
+    vec2 warp = warpAt(windFrame(surface + toViewer * (t0 + 0.5 * len), flow));
 
     vec3 c = scene.rgb;
     float trans = 1.0;
     // back to front: from the surface toward the viewer
     for (int i = 0; i < STEPS; i++) {
-        vec3 w = surface + toViewer * ((float(i) + jitter) * ds);
-        vec3 k = windFrame(w);
+        vec3 w = surface + toViewer * (t0 + (float(i) + jitter) * ds);
+        vec3 k = windFrame(w, flow);
         k.xz += warp;
-        float h = w.y - Floor;
-        Bank b = bankAt(k, fogShare);
+        float h = w.y - ground;
+        Bank b = bankAt(k, fogShare, local);
         if (h > b.top + 1.2 && h > 3.0 * HAZE_HEIGHT)
             continue;                                          // clear air above this bank and the haze
         float detail = fbm(k * vec3(0.07, 0.3, 0.22) + vec3(0.0, Time * 0.05, 0.0));
         float body = bankBody(b, h, detail);
-        float dens = Density * sqrt(boost) * (BANK_DENSITY * body + hazeAt(h, detail));
+        float dens = Density * sqrt(boost) * (BANK_DENSITY * body + local * hazeAt(h, detail));
         float a = 1.0 - exp(-Sigma * dens * ds);
         // light: bright at the bank's top, cool and dim deeper in; the bank above a sample shades it
         float nearTop = clamp((h - (b.top - 2.2)) / 2.2, 0.0, 1.0);
         float shade = bankBody(b, h + 1.2, detail);
         // the billows: the top surface's slope toward the low sun (from the wind's upwind side) lights one flank and
         // shades the other, so the cloud sea has relief instead of reading as flat white paint
-        float slope = b.top - bankAt(k + vec3(-1.5, 0.0, 0.8), fogShare).top;
+        float slope = b.top - bankAt(k + vec3(-1.5, 0.0, 0.8), fogShare, local).top;
         float lit = clamp(0.25 + 0.75 * nearTop * (1.0 - 0.6 * shade) + 0.15 * (1.0 - body) + 0.22 * slope * nearTop,
             0.0, 1.0);
         vec3 deep = mix(DeepColor, LitColor, DEEP_LIFT);
@@ -192,13 +225,13 @@ void main() {
     // aerial perspective: what shows through the mist loses colour with the mist's cover (lit through, not tinted)
     float seen = 1.0 - trans;
     float luma = dot(scene.rgb, vec3(0.2126, 0.7152, 0.0722));
-    vec3 washed = mix(scene.rgb, vec3(luma), 0.6 * seen);
+    vec3 washed = mix(scene.rgb, vec3(luma), 0.35 * seen);      // r11: 0.6 greyed the ground under any mist
     c += (washed - scene.rgb) * trans;          // back-to-front mixing leaves scene x trans in c: wash that share only
     // in sight a unit in a hollow must read: the cap is lower there; out of sight the mist may close in
     // r10b (lab A/B): a hard cap turned every deep hollow into one flat grey pond - every pixel hit the same cover.
     // A soft knee instead, and the cap itself streaked by the wisp noise at the surface, so a full pool keeps its
     // thicker and thinner strands.
-    vec3 ks = windFrame(surface);
+    vec3 ks = windFrame(surface, flow);
     ks.xz += warp;
     float streak = fbm(ks * vec3(0.16, 0.3, 0.5) + vec3(0.0, Time * 0.04, 0.0));
     float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare) * (0.72 + 0.5 * streak);
