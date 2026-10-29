@@ -179,7 +179,7 @@ public final class MistMath {
 
     /**
      * r4: 0.12-0.25 (r3: 0.2-0.5 read as separate cotton balls; r2: 0.15-0.35 never showed - MistParticle.MIST_SHEET).
-     * mean alpha is about a fifth of this, so overlapping wisps build a sheet rather than a white blot.
+     * A wisp's mean alpha is about a fifth of this (SPRITE_MEAN), so overlapping wisps build a veil, not a blot.
      */
     public static final double ALPHA_MIN = 0.12, ALPHA_MAX = 0.25;
     /** The mist sprites' own centre alpha, and their mean alpha over the whole quad (tools/mist_sprites.py). */
