@@ -148,8 +148,6 @@ public class CallAngel extends Ability {
      */
     @Nullable
     public static AngelUnit cast(ServerLevel sl, LivingEntity caster, String owner, Kind kind, boolean quiet) {
-        if (owner != null)   // STUB (red): the calls do nothing yet
-            return null;
         if (owner == null || owner.isEmpty() || caster == null || !caster.isAlive())
             return null;
         if (AngelUnit.liveFor(caster, kind) != null) {

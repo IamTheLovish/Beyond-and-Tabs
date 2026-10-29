@@ -49,7 +49,7 @@ import java.util.List;
  * </ul>
  * Placeholder look: the Dome Cleric's body (AngelCallerRenderer) until its own art comes.
  */
-public class AngelCallerUnit extends PathfinderMob implements Unit {   // STUB (red): not a carrier yet
+public class AngelCallerUnit extends PathfinderMob implements Unit, EssenceCarrier {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new CallAngel(CallAngel.Kind.MENDER), Keybindings.abilitySlot1);
