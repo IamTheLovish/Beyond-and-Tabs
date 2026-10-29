@@ -383,3 +383,11 @@ A dark stepped monolith at dusk over glowing cyan water (dark-fantasy / AI-facti
 2. **Lighting is the detail at dusk:** many small warm lights deep in recesses and under ledges, vertical light strips
    up the centre axis, so the silhouette glows from inside. Our r6 had "no door glow at dusk".
 3. Mood only: the cyan pools and the all-black material belong to Gravebound / the new AI faction, not Brassworks.
+
+## (n) ref52 + ref53 - lovish's references, Oct 28 22:52
+- ref52 (snow outpost, AI-generated): a heavy cantilevered roof slab over a recessed lit storey (warm soffit lights),
+  a timber deck on dark posts with railings and stairs. Lesson for all labs: the roof's UNDERSIDE is a lit, detailed
+  surface; decks and railings on posts give see-through depth.
+- ref53 (blue spire city between rock pillars): vertical light strips running the full height of spires, glowing
+  orbs at the joints, rock vs built scale contrast, mirrored in water at dusk. Fits the new AI faction or a magic
+  faction, not Brassworks. Lesson: light that follows the structure's lines (arrises, ribs) reads as designed.
