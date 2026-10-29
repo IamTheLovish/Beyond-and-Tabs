@@ -425,6 +425,10 @@ public class AngelCallerGameTests {
                 problems.add("with a friend fighting 3 blocks off the caster called " + angels(caster, A).size() + " Seraph Archers, expected 1");
             if (!angels(caster, S).isEmpty())
                 problems.add("the caster called a Sword Seraph with 15 essence left (it costs 20)");
+            CallAngel sword = call(caster, S);
+            if (sword != null && sword.canAutocastNow(level, (Unit) caster))
+                problems.add("the Sword Seraph's autocast is willing with 15 essence (it costs 20): a short caster would try and be"
+                    + " refused every look");
             int left = Essence.get(caster);
             if (left != Essence.CAPACITY - M.essence - A.essence)
                 problems.add("after a Mender and an Archer the caster holds " + left + " essence, expected "
@@ -444,6 +448,59 @@ public class AngelCallerGameTests {
                         + angels(caster, A).size());
             } finally {
                 cleanUp(caster, units, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * A bot's Angel Caller goes with its army (review round 3: trained, it would otherwise stand at the Arcane Tower with
+     * no essence - the bot's army list holds only attackers). Every essence caster - the Angel Caller included - is one
+     * of the units that follow the army (BotPlayer.followsArmy), a plain worker and a fighter are not; a caller 12
+     * blocks behind three of the bot's soldiers is sent to them and gets there, one beside them is left alone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = "angel_caller_bot")
+    public static void angel_caller_lagging_behind_a_bot_army_is_sent_to_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "bot");
+        List<Mob> soldiers = new ArrayList<>();
+        for (int i = 0; i < 3; i++)
+            soldiers.add(still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 13, 2 + i));
+        Mob lagging = HeroGameTests.spawnUnit(helper, EntityRegistrar.ANGEL_CALLER_UNIT.get(), owner, 1, 13);
+        Mob near = HeroGameTests.spawnUnit(helper, EntityRegistrar.ANGEL_CALLER_UNIT.get(), owner, 12, 4);
+        Mob worker = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), owner, 2, 2);
+        List<Mob> units = new ArrayList<>(soldiers);
+        units.add(lagging);
+        units.add(near);
+        units.add(worker);
+        if (units.contains(null)) {
+            cleanUp(null, units.stream().filter(java.util.Objects::nonNull).toList(), List.of());
+            helper.fail("could not spawn the bot's units");
+            return;
+        }
+        AutocastState.setAll((Unit) lagging, false);
+        AutocastState.setAll((Unit) near, false);
+        List<String> problems = new ArrayList<>();
+        if (!com.solegendary.reignofnether.bot.BotPlayer.followsArmy(lagging))
+            problems.add("an Angel Caller is not one of the units that follow a bot's army");
+        if (com.solegendary.reignofnether.bot.BotPlayer.followsArmy(worker) || com.solegendary.reignofnether.bot.BotPlayer.followsArmy(soldiers.get(0)))
+            problems.add("a worker or a fighter counts as a unit that follows the army");
+        var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.VILLAGERS,
+            com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
+        brain.enemyFilter = o -> false;
+        double startGap = lagging.distanceTo(soldiers.get(1));
+        Vec3 nearAt = near.position();
+        helper.runAfterDelay(2, () -> brain.supportFollowsArmy(level, new ArrayList<>(units), new ArrayList<>(soldiers)));
+        helper.runAfterDelay(180, () -> {
+            try {
+                double gap = lagging.distanceTo(soldiers.get(1));
+                if (gap > 8)
+                    problems.add("the lagging Angel Caller is still " + String.format("%.1f", gap) + " blocks from the army (it started "
+                        + String.format("%.1f", startGap) + " away)");
+                if (near.position().distanceTo(nearAt) > 2)
+                    problems.add("the Angel Caller already with the army was moved " + String.format("%.1f", near.position().distanceTo(nearAt)) + " blocks");
+            } finally {
+                cleanUp(null, units, List.of());
             }
             finish(helper, problems);
         });
