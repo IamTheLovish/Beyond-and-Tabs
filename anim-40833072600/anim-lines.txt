@@ -1,0 +1,11 @@
+20_anim: 3 run(s) on a pad at [-164, 71, 1]: vindicator_unit:death:side+front:0:60,vindicator_unit:attack:side
+20_anim: run 0 - vindicator_unit / death / side summoned at [-164, 71, 1]
+20_anim: run 0 - vindicator_unit is VindicatorUnit (id 99), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 0 18 frames in 60 ticks (3 s wall)
+20_anim: run 1 - vindicator_unit / death / front summoned at [-164, 71, 1]
+20_anim: run 1 - vindicator_unit is VindicatorUnit (id 111), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 1 19 frames in 60 ticks (3 s wall)
+20_anim: run 2 - vindicator_unit / attack / side summoned at [-164, 71, 1]
+20_anim: run 2 - vindicator_unit is VindicatorUnit (id 123), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 2 28 frames in 100 ticks (5 s wall)
+20_anim: done, 0 of 3 runs failed

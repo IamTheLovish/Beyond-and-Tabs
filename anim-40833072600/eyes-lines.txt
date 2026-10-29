@@ -1,0 +1,155 @@
+[07:13:03] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[07:13:05] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[07:13:05] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[07:13:05] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[07:13:05] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[07:13:14] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[07:13:15] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[07:13:23] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[07:13:31] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[07:13:38] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[07:13:39] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[07:14:08] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:14:38] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:15:08] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[07:15:08] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793258108798
+[07:15:08] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[07:15:12] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793258112892
+[07:15:12] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[07:15:13] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[07:15:15] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[07:15:31] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[07:15:31] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[07:15:45] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 119 s left (client tick 269, camera at [-233, 91, 10]); our slot -224, 2; a bot's start 216, 2; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (34469 columns, 1900 quads), 382 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending
+[07:15:48] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 115 s left, zoom 36.0, camera at [-232, 91, 10]; markers: 2 boxes, 13 frames drawn; team 0 (mine) fill built (34469 columns, 1900 quads), 399 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[07:15:48] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793258148444
+[07:15:48] [IO-Worker-2/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[07:15:50] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-230, 91, 8]; markers: 2 boxes, 21 frames drawn; team 0 (mine) fill built (34469 columns, 1900 quads), 408 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[07:15:50] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793258150325
+[07:15:50] [IO-Worker-5/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[07:15:52] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-229, 91, 7]; markers: 2 boxes, 31 frames drawn; team 0 (mine) fill built (36691 columns, 1963 quads), 451 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[07:15:52] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793258152355
+[07:15:52] [IO-Worker-8/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[07:15:57] [Render thread/INFO]: [Eyes] 01f: eye at [216, 69, 22] y 70 looking at the start 216, 2 (20 blocks away; ground there 71); 106 s left; markers: 2 boxes, 87 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known; team 1 fill built (37708 columns, 2170 quads), 426 perimeter heights known
+[07:15:57] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793258157040
+[07:15:57] [IO-Worker-5/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[07:15:57] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:15:59] [Render thread/INFO]: [Eyes] 01e: start placed at -224, 2 with 104 s left; the phase ends 3 s later
+[07:16:00] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 103 s left, zoom 36.0, camera at [-231, 89, 9]; markers: 2 boxes, 111 frames drawn; team 0 (mine) fill built (18206 columns, 996 quads), 252 perimeter heights known; team 1 fill none (0 columns, 0 quads), 0 perimeter heights known
+[07:16:00] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793258160819
+[07:16:01] [IO-Worker-9/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[07:16:28] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[07:16:31] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793258191170
+[07:16:31] [Server thread/INFO]: [Eyes] ground 0:30 round [-232, 9]: {minecraft:blue_stained_glass=8, minecraft:calcite=2, minecraft:diorite_wall=3, minecraft:grass_block=2165, minecraft:lantern=12, minecraft:lapis_block=5, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=4, minecraft:quartz_pillar=4, minecraft:raw_iron_block=14, minecraft:smooth_quartz=93, minecraft:smooth_quartz_stairs=43, minecraft:stone_brick_stairs=8}
+[07:16:31] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793258191385
+[07:16:31] [Render thread/INFO]: [Eyes] 20_anim: 3 run(s) on a pad at [-164, 71, 1]: vindicator_unit:death:side+front:0:60,vindicator_unit:attack:side
+[07:16:31] [IO-Worker-10/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[07:16:31] [IO-Worker-2/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[07:16:35] [Render thread/INFO]: [Eyes] 20_anim: run 0 - vindicator_unit / death / side summoned at [-164, 71, 1]
+[07:16:35] [Render thread/INFO]: [Eyes] 20_anim: run 0 - vindicator_unit is VindicatorUnit (id 99), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:37] [Render thread/INFO]: [Eyes] anim-run 0 vindicator_unit death side window 60 ticks from game tick 126, a frame every 1.7 ticks, unit at [-164, 71, 1]
+[07:16:37] [Render thread/INFO]: [Eyes] anim-frame 0 side 0 bat_eyes_20_anim_r00_side_f000.png t=126.12 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:37] [Render thread/INFO]: [Eyes] anim-beat 0 tick 1 frames 1 unit [-164, 71, 1] wall 0.1 s screen none paused false
+[07:16:37] [Server thread/INFO]: [Eyes] anim-beat-server tick 1257 unit [-164, 71, 1] noAi false navDone true owner-side game time 1257
+[07:16:37] [Render thread/INFO]: [Eyes] anim-frame 0 side 1 bat_eyes_20_anim_r00_side_f001.png t=129.90 swing=0.00 limb=0.54 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 2 bat_eyes_20_anim_r00_side_f002.png t=132.26 swing=0.00 limb=0.12 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 3 bat_eyes_20_anim_r00_side_f003.png t=135.20 swing=0.00 limb=0.03 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 4 bat_eyes_20_anim_r00_side_f004.png t=137.88 swing=0.00 limb=0.01 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 5 bat_eyes_20_anim_r00_side_f005.png t=141.22 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 6 bat_eyes_20_anim_r00_side_f006.png t=144.44 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:38] [Render thread/INFO]: [Eyes] anim-beat 0 tick 21 frames 7 unit [-164, 71, 1] wall 1.1 s screen none paused false
+[07:16:38] [Server thread/INFO]: [Eyes] anim-beat-server tick 1277 unit gone noAi - navDone - owner-side game time 1277
+[07:16:38] [Render thread/INFO]: [Eyes] anim-frame 0 side 7 bat_eyes_20_anim_r00_side_f007.png t=147.36 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 8 bat_eyes_20_anim_r00_side_f008.png t=150.90 gone
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 9 bat_eyes_20_anim_r00_side_f009.png t=154.80 gone
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 10 bat_eyes_20_anim_r00_side_f010.png t=157.94 gone
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 11 bat_eyes_20_anim_r00_side_f011.png t=161.18 gone
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 12 bat_eyes_20_anim_r00_side_f012.png t=164.40 gone
+[07:16:39] [Render thread/INFO]: [Eyes] anim-beat 0 tick 41 frames 13 unit gone wall 2.1 s screen none paused false
+[07:16:39] [Server thread/INFO]: [Eyes] anim-beat-server tick 1297 unit gone noAi - navDone - owner-side game time 1297
+[07:16:39] [Render thread/INFO]: [Eyes] anim-frame 0 side 13 bat_eyes_20_anim_r00_side_f013.png t=167.78 gone
+[07:16:40] [Render thread/INFO]: [Eyes] anim-frame 0 side 14 bat_eyes_20_anim_r00_side_f014.png t=171.86 gone
+[07:16:40] [Render thread/INFO]: [Eyes] anim-frame 0 side 15 bat_eyes_20_anim_r00_side_f015.png t=176.38 gone
+[07:16:40] [Render thread/INFO]: [Eyes] anim-frame 0 side 16 bat_eyes_20_anim_r00_side_f016.png t=180.08 gone
+[07:16:40] [Render thread/INFO]: [Eyes] anim-frame 0 side 17 bat_eyes_20_anim_r00_side_f017.png t=183.56 gone
+[07:16:40] [Render thread/INFO]: [Eyes] anim-run-end 0 18 frames in 60 ticks (3 s wall)
+[07:16:41] [Render thread/INFO]: [Eyes] 20_anim: run 1 - vindicator_unit / death / front summoned at [-164, 71, 1]
+[07:16:41] [Render thread/INFO]: [Eyes] 20_anim: run 1 - vindicator_unit is VindicatorUnit (id 111), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:43] [Render thread/INFO]: [Eyes] anim-run 1 vindicator_unit death front window 60 ticks from game tick 241, a frame every 1.7 ticks, unit at [-164, 71, 1]
+[07:16:43] [Render thread/INFO]: [Eyes] anim-beat 1 tick 1 frames 0 unit [-164, 71, 1] wall 0.0 s screen none paused false
+[07:16:43] [Server thread/INFO]: [Eyes] anim-beat-server tick 1371 unit [-164, 71, 1] noAi false navDone true owner-side game time 1371
+[07:16:43] [Render thread/INFO]: [Eyes] anim-frame 1 front 0 bat_eyes_20_anim_r01_front_f000.png t=242.14 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:43] [Render thread/INFO]: [Eyes] anim-frame 1 front 1 bat_eyes_20_anim_r01_front_f001.png t=245.02 swing=0.00 limb=0.32 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:43] [Render thread/INFO]: [Eyes] anim-frame 1 front 2 bat_eyes_20_anim_r01_front_f002.png t=247.12 swing=0.00 limb=0.12 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:43] [Render thread/INFO]: [Eyes] anim-frame 1 front 3 bat_eyes_20_anim_r01_front_f003.png t=249.80 swing=0.00 limb=0.04 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 4 bat_eyes_20_anim_r01_front_f004.png t=252.84 swing=0.00 limb=0.01 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 5 bat_eyes_20_anim_r01_front_f005.png t=257.02 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 6 bat_eyes_20_anim_r01_front_f006.png t=260.42 swing=0.00 limb=0.00 yaw=-90.0 pos=-163.5,71.0,1.5
+[07:16:44] [Render thread/INFO]: [Eyes] anim-beat 1 tick 21 frames 7 unit gone wall 1.1 s screen none paused false
+[07:16:44] [Server thread/INFO]: [Eyes] anim-beat-server tick 1393 unit gone noAi - navDone - owner-side game time 1393
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 7 bat_eyes_20_anim_r01_front_f007.png t=263.72 gone
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 8 bat_eyes_20_anim_r01_front_f008.png t=266.56 gone
+[07:16:44] [Render thread/INFO]: [Eyes] anim-frame 1 front 9 bat_eyes_20_anim_r01_front_f009.png t=269.28 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 10 bat_eyes_20_anim_r01_front_f010.png t=272.96 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 11 bat_eyes_20_anim_r01_front_f011.png t=276.42 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 12 bat_eyes_20_anim_r01_front_f012.png t=279.50 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-beat 1 tick 41 frames 13 unit gone wall 2.0 s screen none paused false
+[07:16:45] [Server thread/INFO]: [Eyes] anim-beat-server tick 1412 unit gone noAi - navDone - owner-side game time 1412
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 13 bat_eyes_20_anim_r01_front_f013.png t=282.88 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 14 bat_eyes_20_anim_r01_front_f014.png t=286.52 gone
+[07:16:45] [Render thread/INFO]: [Eyes] anim-frame 1 front 15 bat_eyes_20_anim_r01_front_f015.png t=290.00 gone
+[07:16:46] [Render thread/INFO]: [Eyes] anim-frame 1 front 16 bat_eyes_20_anim_r01_front_f016.png t=293.82 gone
+[07:16:46] [Render thread/INFO]: [Eyes] anim-frame 1 front 17 bat_eyes_20_anim_r01_front_f017.png t=298.20 gone
+[07:16:46] [Render thread/INFO]: [Eyes] anim-frame 1 front 18 bat_eyes_20_anim_r01_front_f018.png t=300.98 gone
+[07:16:46] [Render thread/INFO]: [Eyes] anim-run-end 1 19 frames in 60 ticks (3 s wall)
+[07:16:47] [Render thread/INFO]: [Eyes] 20_anim: run 2 - vindicator_unit / attack / side summoned at [-164, 71, 1]
+[07:16:47] [Render thread/INFO]: [Eyes] 20_anim: run 2 - vindicator_unit is VindicatorUnit (id 123), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:49] [Render thread/INFO]: [Eyes] anim-run 2 vindicator_unit attack side window 100 ticks from game tick 356, a frame every 2.8 ticks, unit at [-162, 71, 1]
+[07:16:49] [Render thread/INFO]: [Eyes] anim-frame 2 side 0 bat_eyes_20_anim_r02_side_f000.png t=356.56 swing=0.52 limb=0.35 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:49] [Render thread/INFO]: [Eyes] anim-beat 2 tick 1 frames 1 unit [-162, 71, 1] wall 0.1 s screen none paused false
+[07:16:49] [Server thread/INFO]: [Eyes] anim-beat-server tick 1487 unit [-162, 71, 1] noAi false navDone true owner-side game time 1487
+[07:16:49] [Render thread/INFO]: [Eyes] anim-frame 2 side 1 bat_eyes_20_anim_r02_side_f001.png t=360.46 swing=0.00 limb=0.06 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:49] [Render thread/INFO]: [Eyes] anim-frame 2 side 2 bat_eyes_20_anim_r02_side_f002.png t=364.58 swing=0.00 limb=0.01 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:49] [Render thread/INFO]: [Eyes] anim-frame 2 side 3 bat_eyes_20_anim_r02_side_f003.png t=368.80 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:50] [Render thread/INFO]: [Eyes] anim-frame 2 side 4 bat_eyes_20_anim_r02_side_f004.png t=374.16 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:50] [Render thread/INFO]: [Eyes] anim-beat 2 tick 21 frames 5 unit [-162, 71, 1] wall 1.1 s screen none paused false
+[07:16:50] [Server thread/INFO]: [Eyes] anim-beat-server tick 1508 unit [-162, 71, 1] noAi false navDone true owner-side game time 1508
+[07:16:50] [Render thread/INFO]: [Eyes] anim-frame 2 side 5 bat_eyes_20_anim_r02_side_f005.png t=378.42 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:50] [Render thread/INFO]: [Eyes] anim-frame 2 side 6 bat_eyes_20_anim_r02_side_f006.png t=382.40 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:50] [Render thread/INFO]: [Eyes] anim-frame 2 side 7 bat_eyes_20_anim_r02_side_f007.png t=385.48 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:50] [Render thread/INFO]: [Eyes] anim-frame 2 side 8 bat_eyes_20_anim_r02_side_f008.png t=388.88 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 9 bat_eyes_20_anim_r02_side_f009.png t=391.70 swing=0.23 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 10 bat_eyes_20_anim_r02_side_f010.png t=395.16 swing=0.44 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-beat 2 tick 41 frames 11 unit [-162, 71, 1] wall 2.1 s screen none paused false
+[07:16:51] [Server thread/INFO]: [Eyes] anim-beat-server tick 1528 unit [-162, 71, 1] noAi false navDone true owner-side game time 1528
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 11 bat_eyes_20_anim_r02_side_f011.png t=398.66 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 12 bat_eyes_20_anim_r02_side_f012.png t=401.90 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 13 bat_eyes_20_anim_r02_side_f013.png t=404.86 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:51] [Render thread/INFO]: [Eyes] anim-frame 2 side 14 bat_eyes_20_anim_r02_side_f014.png t=408.14 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 15 bat_eyes_20_anim_r02_side_f015.png t=411.32 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 16 bat_eyes_20_anim_r02_side_f016.png t=414.26 swing=0.00 limb=0.00 yaw=-91.3 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-beat 2 tick 61 frames 17 unit [-162, 71, 1] wall 3.1 s screen none paused false
+[07:16:52] [Server thread/INFO]: [Eyes] anim-beat-server tick 1547 unit [-162, 71, 1] noAi false navDone true owner-side game time 1547
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 17 bat_eyes_20_anim_r02_side_f017.png t=417.96 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 18 bat_eyes_20_anim_r02_side_f018.png t=422.10 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 19 bat_eyes_20_anim_r02_side_f019.png t=427.20 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:52] [Render thread/INFO]: [Eyes] anim-frame 2 side 20 bat_eyes_20_anim_r02_side_f020.png t=430.40 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 21 bat_eyes_20_anim_r02_side_f021.png t=433.42 swing=0.14 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 22 bat_eyes_20_anim_r02_side_f022.png t=436.20 swing=0.43 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-beat 2 tick 81 frames 23 unit [-162, 71, 1] wall 4.1 s screen none paused false
+[07:16:53] [Server thread/INFO]: [Eyes] anim-beat-server tick 1569 unit [-162, 71, 1] noAi false navDone true owner-side game time 1569
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 23 bat_eyes_20_anim_r02_side_f023.png t=439.48 swing=0.91 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 24 bat_eyes_20_anim_r02_side_f024.png t=442.54 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 25 bat_eyes_20_anim_r02_side_f025.png t=446.02 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:53] [Render thread/INFO]: [Eyes] anim-frame 2 side 26 bat_eyes_20_anim_r02_side_f026.png t=449.02 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:54] [Render thread/INFO]: [Eyes] anim-frame 2 side 27 bat_eyes_20_anim_r02_side_f027.png t=452.52 swing=0.00 limb=0.00 yaw=-91.4 pos=-161.9,71.0,1.5
+[07:16:54] [Render thread/INFO]: [Eyes] anim-run-end 2 28 frames in 100 ticks (5 s wall)
+[07:16:54] [Render thread/INFO]: [Eyes] 20_anim: done, 0 of 3 runs failed
+[07:16:56] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[07:16:56] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png, reignofnether:textures/entities/squire_runner_unit.png, reignofnether:textures/entities/squire_runner_unit_glow.png, reignofnether:textures/entities/squire_runner_unit_team.png]
+[07:16:56] [Render thread/INFO]: [Eyes] tour complete

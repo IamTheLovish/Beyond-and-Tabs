@@ -1,0 +1,38 @@
+{
+ "title": "vindicator_unit / attack   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)  sw=0.5",
+  "2  +0.61s  (tick 12)  sw=0.0",
+  "3  +1.09s  (tick 22)  sw=0.0",
+  "4  +1.62s  (tick 32)  sw=0.0",
+  "5  +2.11s  (tick 42)  sw=0.0",
+  "6  +2.74s  (tick 55)  sw=0.0",
+  "7  +3.28s  (tick 66)  sw=0.0",
+  "8  +3.69s  (tick 74)  sw=0.0",
+  "9  +4.30s  (tick 86)  sw=0.0",
+  "10  +4.80s  (tick 96)  sw=0.0"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)  sw=0.5",
+   "2  +0.61s  (tick 12)  sw=0.0",
+   "3  +1.09s  (tick 22)  sw=0.0",
+   "4  +1.62s  (tick 32)  sw=0.0",
+   "5  +2.11s  (tick 42)  sw=0.0",
+   "6  +2.74s  (tick 55)  sw=0.0",
+   "7  +3.28s  (tick 66)  sw=0.0",
+   "8  +3.69s  (tick 74)  sw=0.0",
+   "9  +4.30s  (tick 86)  sw=0.0",
+   "10  +4.80s  (tick 96)  sw=0.0"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

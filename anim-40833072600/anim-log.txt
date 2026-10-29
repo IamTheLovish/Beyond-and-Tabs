@@ -1,0 +1,49 @@
+[07:13:05] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[07:13:05] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[07:13:05] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[07:13:05] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+java.io.IOException: Could not retrieve profile key pair
+[07:13:31] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+java.lang.IllegalStateException: Failed to open OpenAL device
+[07:13:39] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[07:15:31] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[07:15:31] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[07:16:31] [Render thread/INFO]: [Eyes] 20_anim: 3 run(s) on a pad at [-164, 71, 1]: vindicator_unit:death:side+front:0:60,vindicator_unit:attack:side
+[07:16:35] [Render thread/INFO]: [Eyes] 20_anim: run 0 - vindicator_unit / death / side summoned at [-164, 71, 1]
+[07:16:35] [Render thread/INFO]: [Eyes] 20_anim: run 0 - vindicator_unit is VindicatorUnit (id 99), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:37] [Render thread/INFO]: [Eyes] anim-run 0 vindicator_unit death side window 60 ticks from game tick 126, a frame every 1.7 ticks, unit at [-164, 71, 1]
+[07:16:37] [Render thread/INFO]: [Eyes] anim-beat 0 tick 1 frames 1 unit [-164, 71, 1] wall 0.1 s screen none paused false
+[07:16:37] [Server thread/INFO]: [Eyes] anim-beat-server tick 1257 unit [-164, 71, 1] noAi false navDone true owner-side game time 1257
+[07:16:38] [Render thread/INFO]: [Eyes] anim-beat 0 tick 21 frames 7 unit [-164, 71, 1] wall 1.1 s screen none paused false
+[07:16:38] [Server thread/INFO]: [Eyes] anim-beat-server tick 1277 unit gone noAi - navDone - owner-side game time 1277
+[07:16:39] [Render thread/INFO]: [Eyes] anim-beat 0 tick 41 frames 13 unit gone wall 2.1 s screen none paused false
+[07:16:39] [Server thread/INFO]: [Eyes] anim-beat-server tick 1297 unit gone noAi - navDone - owner-side game time 1297
+[07:16:40] [Render thread/INFO]: [Eyes] anim-run-end 0 18 frames in 60 ticks (3 s wall)
+[07:16:41] [Render thread/INFO]: [Eyes] 20_anim: run 1 - vindicator_unit / death / front summoned at [-164, 71, 1]
+[07:16:41] [Render thread/INFO]: [Eyes] 20_anim: run 1 - vindicator_unit is VindicatorUnit (id 111), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:43] [Render thread/INFO]: [Eyes] anim-run 1 vindicator_unit death front window 60 ticks from game tick 241, a frame every 1.7 ticks, unit at [-164, 71, 1]
+[07:16:43] [Render thread/INFO]: [Eyes] anim-beat 1 tick 1 frames 0 unit [-164, 71, 1] wall 0.0 s screen none paused false
+[07:16:43] [Server thread/INFO]: [Eyes] anim-beat-server tick 1371 unit [-164, 71, 1] noAi false navDone true owner-side game time 1371
+[07:16:44] [Render thread/INFO]: [Eyes] anim-beat 1 tick 21 frames 7 unit gone wall 1.1 s screen none paused false
+[07:16:44] [Server thread/INFO]: [Eyes] anim-beat-server tick 1393 unit gone noAi - navDone - owner-side game time 1393
+[07:16:45] [Render thread/INFO]: [Eyes] anim-beat 1 tick 41 frames 13 unit gone wall 2.0 s screen none paused false
+[07:16:45] [Server thread/INFO]: [Eyes] anim-beat-server tick 1412 unit gone noAi - navDone - owner-side game time 1412
+[07:16:46] [Render thread/INFO]: [Eyes] anim-run-end 1 19 frames in 60 ticks (3 s wall)
+[07:16:47] [Render thread/INFO]: [Eyes] 20_anim: run 2 - vindicator_unit / attack / side summoned at [-164, 71, 1]
+[07:16:47] [Render thread/INFO]: [Eyes] 20_anim: run 2 - vindicator_unit is VindicatorUnit (id 123), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+[07:16:49] [Render thread/INFO]: [Eyes] anim-run 2 vindicator_unit attack side window 100 ticks from game tick 356, a frame every 2.8 ticks, unit at [-162, 71, 1]
+[07:16:49] [Render thread/INFO]: [Eyes] anim-beat 2 tick 1 frames 1 unit [-162, 71, 1] wall 0.1 s screen none paused false
+[07:16:49] [Server thread/INFO]: [Eyes] anim-beat-server tick 1487 unit [-162, 71, 1] noAi false navDone true owner-side game time 1487
+[07:16:50] [Render thread/INFO]: [Eyes] anim-beat 2 tick 21 frames 5 unit [-162, 71, 1] wall 1.1 s screen none paused false
+[07:16:50] [Server thread/INFO]: [Eyes] anim-beat-server tick 1508 unit [-162, 71, 1] noAi false navDone true owner-side game time 1508
+[07:16:51] [Render thread/INFO]: [Eyes] anim-beat 2 tick 41 frames 11 unit [-162, 71, 1] wall 2.1 s screen none paused false
+[07:16:51] [Server thread/INFO]: [Eyes] anim-beat-server tick 1528 unit [-162, 71, 1] noAi false navDone true owner-side game time 1528
+[07:16:52] [Render thread/INFO]: [Eyes] anim-beat 2 tick 61 frames 17 unit [-162, 71, 1] wall 3.1 s screen none paused false
+[07:16:52] [Server thread/INFO]: [Eyes] anim-beat-server tick 1547 unit [-162, 71, 1] noAi false navDone true owner-side game time 1547
+[07:16:53] [Render thread/INFO]: [Eyes] anim-beat 2 tick 81 frames 23 unit [-162, 71, 1] wall 4.1 s screen none paused false
+[07:16:53] [Server thread/INFO]: [Eyes] anim-beat-server tick 1569 unit [-162, 71, 1] noAi false navDone true owner-side game time 1569
+[07:16:54] [Render thread/INFO]: [Eyes] anim-run-end 2 28 frames in 100 ticks (5 s wall)
+[07:16:54] [Render thread/INFO]: [Eyes] 20_anim: done, 0 of 3 runs failed
