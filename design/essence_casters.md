@@ -17,12 +17,15 @@ Names are placeholders; numbers are tuned later.
 
 ## Essence
 - Every unit that dies (either side) drops a floating essence wisp: 1 essence per 25 metal of its cost, at least 1
-  (a 50-metal villager 2, a 95-metal vindicator 3, a 300-metal T2 12). Summoned and temporary units (risen, awakened,
-  decoys, summoned zombies, hero summons, deployed turrets, and later the casters' own summons) drop none, so summons
-  cannot farm essence.
+  (a 50-metal villager 2, a 95-metal vindicator 3, a 300-metal T2 12). Summoned and temporary units drop none, so
+  summons cannot farm essence: risen, awakened treants, decoys, summoned zombies and bees, every hero summon (Raise the
+  Fallen's skeletons included), deployed turrets, Iron Leviathan Engine drones, an infested building's limited-life
+  silverfish, and later the casters' own summons. Free units that are not temporary (capture-camp wolves, bought
+  totems) do drop: lovish's call if that should change.
 - Wisps float in place for 45 s, then fade. At most 200 on the map (the oldest go first).
 - A caster gathers the wisps within 8 blocks automatically (they fly to it) and holds up to 30 essence. A full caster
-  leaves wisps where they float; a wisp worth more than the room left keeps the rest.
+  leaves wisps where they float; a wisp worth more than the room left keeps the rest. A carrier's essence is lost
+  when it dies (it is not dropped again as a wisp).
 
 ## lovish's answers (~05:25Z)
 New caster per race (7, T2 lab); essence drops on every death (both sides); each caster has 3 distinct abilities;

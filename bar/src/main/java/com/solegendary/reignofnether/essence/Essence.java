@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.essence;
 import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
 import com.solegendary.reignofnether.mana.DecoyServerEvents;
 import com.solegendary.reignofnether.unit.DragonRaiseServerEvents;
+import com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit;
 import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
 import com.solegendary.reignofnether.unit.units.neutral.BeeUnit;
@@ -88,15 +89,17 @@ public final class Essence {
     }
 
     /**
-     * Summoned or temporary: dies without a wisp. The marked ones, and the summons that existed before essence - a
-     * Bone Dragon's risen, an awakened treant (Awaken Thicket and the World Tree Walker's grove), a Mirror Mage's
-     * decoy, a necromancer's zombie or a summoned bee, a deployed turret - by their own markers.
+     * Summoned or temporary: dies without a wisp. The marked ones (hero summons in HeroCore.addSummon, an infested
+     * building's limited-life silverfish), and the summons that existed before essence by their own markers - a Bone
+     * Dragon's risen, an awakened treant (Awaken Thicket and the World Tree Walker's grove), a Mirror Mage's decoy, a
+     * necromancer's zombie or a summoned bee - and the free machines by class: a deployed turret, an Iron Leviathan
+     * Engine's clockwork drone (replaced every wave for nothing, so it could be farmed).
      */
     public static boolean isSummoned(Entity e) {
         if (e == null)
             return false;
         if (e.getTags().contains(NO_ESSENCE_TAG) || DragonRaiseServerEvents.isRisen(e) || AwakenThicket.isAwakened(e)
-                || DecoyServerEvents.isDecoy(e) || e instanceof DeployedTurretUnit)
+                || DecoyServerEvents.isDecoy(e) || e instanceof DeployedTurretUnit || e instanceof ClockworkDroneUnit)
             return true;
         return (e instanceof ZombieUnit z && z.isSummoned()) || (e instanceof BeeUnit b && b.isSummoned());
     }

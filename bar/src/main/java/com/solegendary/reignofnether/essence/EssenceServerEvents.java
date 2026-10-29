@@ -151,9 +151,15 @@ public class EssenceServerEvents {
         if (!wisps.contains(evt.getEntity()))
             wisps.add(evt.getEntity());
         while (wisps.size() > MAX_WISPS) {
-            Entity oldest = wisps.remove(0);
-            pulls.remove(oldest);
-            oldest.discard();
+            // the oldest by birth tick, not by join order: a chunk reloaded later rejoins its old wisps last (PR 360
+            // review); a tie (one tick's drops) goes in join order
+            int oldest = 0;
+            for (int i = 1; i < wisps.size(); i++)
+                if (bornOf(wisps.get(i)) < bornOf(wisps.get(oldest)))
+                    oldest = i;
+            Entity w = wisps.remove(oldest);
+            pulls.remove(w);
+            w.discard();
         }
     }
 
@@ -168,25 +174,27 @@ public class EssenceServerEvents {
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || evt.getServer() == null)
             return;
-        tick(evt.getServer().overworld());
+        tick(evt.getServer().overworld().getGameTime());
     }
 
-    /** One tick of the wisps: the fade (once a second), the carrier scan, the pulls. */
-    static void tick(ServerLevel level) {
+    /**
+     * One tick of the wisps in every dimension (a death anywhere drops one): the fade (once a second), the carrier scan,
+     * the pulls. {@code now} is the overworld's game time, which every dimension shares (the wisps' birth ticks too).
+     */
+    static void tick(long now) {
         if (wisps.isEmpty()) {
             pulls.clear();
             return;
         }
-        long now = level.getGameTime();
         if (now % 20 == 0)
-            fade(level, now);
+            fade(now);
         if (now % SCAN_TICKS == 0)
-            findCarriers(level);
+            findCarriers();
         if (!pulls.isEmpty())
-            pull(level);
+            pull();
     }
 
-    private static void fade(ServerLevel level, long now) {
+    private static void fade(long now) {
         boolean shimmer = now % 40 == 0;
         for (int i = wisps.size() - 1; i >= 0; i--) {   // backwards: remove(i)
             Entity w = wisps.get(i);
@@ -194,7 +202,7 @@ public class EssenceServerEvents {
                 wisps.remove(i);
                 continue;
             }
-            if (w.level() != level)
+            if (!(w.level() instanceof ServerLevel level))
                 continue;
             long born = bornOf(w);
             if (born > now) {   // a /time set rewound the clock: restart this wisp's
@@ -211,10 +219,10 @@ public class EssenceServerEvents {
     }
 
     /** Free wisps within reach of a carrier with room start flying to the nearest one. */
-    private static void findCarriers(ServerLevel level) {
+    private static void findCarriers() {
         carriers.clear();
         for (LivingEntity le : UnitServerEvents.getAllUnits())
-            if (le.level() == level && le.isAlive() && Essence.room(le) > 0)   // room > 0: a carrier, not full
+            if (le.isAlive() && Essence.room(le) > 0)   // room > 0: a carrier, not full
                 carriers.add(le);
         if (carriers.isEmpty()) {
             pulls.clear();
@@ -222,7 +230,7 @@ public class EssenceServerEvents {
         }
         double r2 = GATHER_RANGE * GATHER_RANGE;
         for (Entity w : wisps) {
-            if (w.isRemoved() || w.level() != level)
+            if (w.isRemoved())
                 continue;
             LivingEntity cur = pulls.get(w);
             if (cur != null && cur.isAlive() && Essence.room(cur) > 0)
@@ -230,6 +238,8 @@ public class EssenceServerEvents {
             LivingEntity best = null;
             double bestD = r2;
             for (LivingEntity c : carriers) {
+                if (c.level() != w.level())
+                    continue;
                 double d = w.distanceToSqr(c.getX(), c.getY() + c.getBbHeight() * 0.5, c.getZ());
                 if (d <= bestD) {
                     bestD = d;
@@ -244,13 +254,14 @@ public class EssenceServerEvents {
     }
 
     /** Pulled wisps fly one step to their carrier; one that arrives gives what fits and floats on with the rest. */
-    private static void pull(ServerLevel level) {
+    private static void pull() {
         Iterator<Map.Entry<Entity, LivingEntity>> it = pulls.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Entity, LivingEntity> e = it.next();
             Entity w = e.getKey();
             LivingEntity c = e.getValue();
-            if (w.isRemoved() || !c.isAlive() || c.isRemoved() || c.level() != w.level() || Essence.room(c) <= 0) {
+            if (w.isRemoved() || !c.isAlive() || c.isRemoved() || c.level() != w.level() || Essence.room(c) <= 0
+                    || !(c.level() instanceof ServerLevel level)) {
                 it.remove();
                 continue;
             }

@@ -238,7 +238,8 @@ public final class HeroFx {
 
     /** A temporary summon of the hero: it crumbles at {@code endTick} or with the hero (HeroCore's summon list). */
     public static void addSummon(Mob hero, net.minecraft.world.entity.Entity e, long endTick) {
-        com.solegendary.reignofnether.essence.Essence.markSummoned(e);   // a summon's death drops no essence wisp
+        // a summon's death drops no essence wisp (a faction hero's is also marked in HeroCore.addSummon; this covers any other caster)
+        com.solegendary.reignofnether.essence.Essence.markSummoned(e);
         if (hero instanceof FactionHero fh)
             fh.heroCore().addSummon(e, endTick);
     }

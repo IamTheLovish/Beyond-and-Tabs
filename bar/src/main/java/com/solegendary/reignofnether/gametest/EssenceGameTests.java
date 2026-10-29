@@ -5,6 +5,9 @@ import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
 import com.solegendary.reignofnether.ability.abilities.Empower;
 import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.essence.EssenceServerEvents;
+import com.solegendary.reignofnether.hero.FactionHero;
+import com.solegendary.reignofnether.hero.FactionHeroAbility;
+import com.solegendary.reignofnether.hero.HeroKits;
 import com.solegendary.reignofnether.mana.DecoyServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
@@ -12,6 +15,10 @@ import com.solegendary.reignofnether.unit.DragonRaiseServerEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit;
+import com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineUnit;
+import com.solegendary.reignofnether.unit.units.monsters.SilverfishUnit;
+import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
 
 import net.minecraft.core.BlockPos;
@@ -23,6 +30,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -69,13 +77,6 @@ public class EssenceGameTests {
         return found;
     }
 
-    private static int valueNear(Vec3 at) {
-        int sum = 0;
-        for (Entity w : wispsNear(at, 1.5))
-            sum += EssenceServerEvents.valueOf(w);
-        return sum;
-    }
-
     /** Wisps and wrecks the units of a test left where they fell: gone, whatever the verdict. */
     private static void clearDrops(List<Vec3> spots) {
         for (Vec3 at : spots) {
@@ -90,6 +91,21 @@ public class EssenceGameTests {
         for (Entity e : entities)
             if (e != null && !e.isRemoved())
                 e.discard();
+    }
+
+    /**
+     * Kills each unit, recording (never throwing) what went wrong: an early callback that threw would end the test
+     * before the verdict callback's cleanup ran.
+     */
+    private static void killEach(List<? extends LivingEntity> units, List<String> problems) {
+        for (LivingEntity u : units) {
+            try {
+                if (u.isAlive())
+                    u.kill();
+            } catch (RuntimeException ex) {
+                problems.add("killing " + EntityType.getKey(u.getType()).getPath() + " threw " + ex);
+            }
+        }
     }
 
     private static void finish(GameTestHelper helper, List<String> problems) {
@@ -144,9 +160,10 @@ public class EssenceGameTests {
             spots.add(m.position());
             want[i] = Math.max(1, (int) Math.floor(((Unit) m).getCost().metal() / 25f));
         }
-        helper.runAfterDelay(3, () -> units.forEach(Mob::kill));
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(3, () -> killEach(units, early));
         helper.runAfterDelay(8, () -> {
-            List<String> problems = new ArrayList<>();
+            List<String> problems = new ArrayList<>(early);
             try {
                 if (Essence.METAL_PER_ESSENCE != 25f)
                     problems.add("lovish set 1 essence per 25 metal, the constant says " + Essence.METAL_PER_ESSENCE);
@@ -203,9 +220,10 @@ public class EssenceGameTests {
         List<Vec3> spots = new ArrayList<>();
         for (Mob m : units)
             spots.add(m.position());
-        helper.runAfterDelay(2, () -> units.forEach(Mob::kill));
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> killEach(units, early));
         helper.runAfterDelay(8, () -> {
-            List<String> problems = new ArrayList<>();
+            List<String> problems = new ArrayList<>(early);
             try {
                 String[] names = { "risen", "awakened", "decoy", "summoned zombie", "markSummoned" };
                 for (int i = 0; i < names.length; i++) {
@@ -222,6 +240,95 @@ public class EssenceGameTests {
             } finally {
                 clearDrops(spots);
                 discardAll(units);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * The summons made outside the old markers, through their real spawn paths (PR 360 review round 1): a Gravecaller's
+     * Raise the Fallen skeletons (HeroCore.addSummon), an Iron Leviathan Engine's clockwork drones (a free wave,
+     * replaced for nothing) and an infested building's limited-life silverfish (setLimitedLife). Killed, none of them
+     * drops a wisp; a plain skeleton killed beside them does.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    public static void essence_hero_skeletons_drones_and_silverfish_drop_no_wisp(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "realsummon");
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.GRAVECALLER, owner, 2, 2);
+        Mob silverfish = still(helper, EntityRegistrar.SILVERFISH_UNIT.get(), owner, 13, 3);
+        Mob plain = still(helper, EntityRegistrar.SKELETON_UNIT.get(), owner, 13, 13);
+        IronLeviathanEngineUnit engine = EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get().create(level);   // never added: only its drones are
+        List<Entity> all = new ArrayList<>();
+        for (Entity e : new Entity[] { hero, silverfish, plain })
+            if (e != null)
+                all.add(e);
+        if (!(hero instanceof FactionHero fh) || silverfish == null || plain == null || engine == null) {
+            discardAll(all);
+            if (engine != null)
+                engine.discard();
+            helper.fail("could not spawn the Gravecaller, the silverfish, the skeleton or the engine");
+            return;
+        }
+        ((SilverfishUnit) silverfish).setLimitedLife();
+        // Raise the Fallen (slot 3) at rank 1, cast for real: two skeletons claw out round the aimed spot
+        FactionHeroAbility raise = HeroKits.ability(fh, 2);
+        raise.setRank(fh, 1);
+        raise.updateStatsForRank(fh);
+        fh.setMana(fh.getMaxMana());
+        BlockPos aimAt = helper.absolutePos(new BlockPos(5, 2, 10));
+        Vec3 aim = new Vec3(aimAt.getX() + 0.5, aimAt.getY(), aimAt.getZ() + 0.5);
+        boolean cast = raise.castNow(fh, null, aim);
+        List<LivingEntity> skeletons = new ArrayList<>();
+        for (SkeletonUnit sk : level.getEntitiesOfClass(SkeletonUnit.class, new AABB(aimAt).inflate(4)))
+            if (sk != plain && owner.equals(sk.getOwnerName()))
+                skeletons.add(sk);
+        // an engine's wave, launched for real (its drones join the world; the engine never does)
+        BlockPos engineAt = helper.absolutePos(new BlockPos(9, 2, 6));
+        engine.moveTo(engineAt.getX() + 0.5, engineAt.getY(), engineAt.getZ() + 0.5, 0, 0);
+        engine.setOwnerName(owner);
+        int launched = engine.launchDrones(level);
+        List<LivingEntity> drones = new ArrayList<>();
+        for (ClockworkDroneUnit d : level.getEntitiesOfClass(ClockworkDroneUnit.class, engine.getBoundingBox().inflate(12)))
+            if (d.getEngine() == engine)
+                drones.add(d);
+        all.addAll(skeletons);
+        all.addAll(drones);
+        List<LivingEntity> victims = new ArrayList<>(skeletons);
+        victims.addAll(drones);
+        victims.add(silverfish);
+        victims.add(plain);
+        List<Vec3> spots = new ArrayList<>();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            for (LivingEntity v : victims)
+                spots.add(v.position());   // where each falls (a drone flies: read it at the kill)
+            killEach(victims, early);
+        });
+        helper.runAfterDelay(8, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (!cast || skeletons.size() < 2)
+                    problems.add("Raise the Fallen raised " + skeletons.size() + " skeletons (cast " + cast + "), expected 2");
+                if (launched < 1 || drones.size() != launched)
+                    problems.add("the engine launched " + launched + " drones, found " + drones.size());
+                int last = victims.size() - 1;
+                for (int i = 0; i < last; i++) {
+                    LivingEntity v = victims.get(i);
+                    String what = v instanceof SkeletonUnit ? "a Raise the Fallen skeleton"
+                        : v instanceof ClockworkDroneUnit ? "a clockwork drone" : "a limited-life silverfish";
+                    if (!Essence.isSummoned(v))
+                        problems.add(what + " does not count as summoned");
+                    int n = i < spots.size() ? wispsNear(spots.get(i), 1.5).size() : 0;
+                    if (n > 0)
+                        problems.add(what + " dropped " + n + " wisp(s): summons must not farm essence");
+                }
+                if (spots.size() > last && wispsNear(spots.get(last), 1.5).size() != 1)
+                    problems.add("the plain skeleton beside them left " + wispsNear(spots.get(last), 1.5).size() + " wisps, expected 1");
+            } finally {
+                clearDrops(spots);
+                discardAll(all);
+                engine.discard();
             }
             finish(helper, problems);
         });
@@ -394,7 +501,8 @@ public class EssenceGameTests {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "cap30");
         Mob carrier = carrier(helper, owner, 2, 2, 25);
-        Mob bank = carrier(helper, owner, 13, 13, 0);
+        // a plain unit until the verdict: an empty carrier standing 80 ticks could pull a neighbouring arena's wisp
+        Mob bank = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), owner, 13, 13);
         Mob plain = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), owner, 13, 2);
         List<Entity> all = new ArrayList<>(java.util.Arrays.asList(carrier, bank, plain));
         if (all.contains(null)) {
@@ -423,7 +531,8 @@ public class EssenceGameTests {
                     problems.add("the 12-essence wisp vanished into a carrier with room for 5: 7 essence lost");
                 else if (EssenceServerEvents.valueOf(wisp) != 7)
                     problems.add("the wisp kept " + EssenceServerEvents.valueOf(wisp) + " essence, expected 12 - 5 = 7");
-                // the API, on a carrier no wisp is near
+                // the API, on a carrier no wisp is near (made one only now)
+                Essence.setCarrier(bank, true);
                 int got = Essence.add(bank, 40);
                 if (got != 30 || Essence.get(bank) != 30)
                     problems.add("add(40) on an empty carrier took " + got + " and holds " + Essence.get(bank) + ", expected 30 and 30");
