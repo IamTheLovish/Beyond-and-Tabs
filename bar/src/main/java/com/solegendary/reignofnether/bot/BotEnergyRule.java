@@ -20,6 +20,18 @@ public final class BotEnergyRule {
     /** Extractors a bot raises before it asks for energy: BAR's "2-3 mexes, then energy". */
     public static final int FREE_EXTRACTORS = 2;
 
+    /** Energy fill (0-1) under which a bot's capitol stops training workers, so its sites get the energy. */
+    public static final float PAUSE_TRAINING_BELOW = 0.1f;
+
+    /**
+     * Whether the capitol should hold its worker training: with energy all but gone. A worker is 250 energy (EnergyCosts):
+     * two in the queue draw 23 energy/s, more than the capitol's 20, and every site stalls with it - PR #388's CI soak had
+     * a hard bot stuck four minutes on an unfinished wind. A BAR player stops the factory until the energy is back.
+     */
+    public static boolean pauseWorkerTraining(float energyFill) {
+        return energyFill < PAUSE_TRAINING_BELOW;
+    }
+
     /** Energy/s a base with these extractors and labs wants (the next extractor counted when {@code nextExtractor}). */
     public static float energyWanted(int extractors, int labs, boolean nextExtractor) {
         return ENERGY_PER_EXTRACTOR * (extractors + (nextExtractor ? 1 : 0)) + ENERGY_PER_LAB * labs;

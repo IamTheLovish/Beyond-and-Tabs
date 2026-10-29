@@ -33,6 +33,16 @@ class BotEnergyRuleTest {
     }
 
     @Test
+    void theCapitolStopsTrainingWorkersWhileEnergyIsStalled() {
+        // PR #388 CI: a hard bot's capitol trained 250-energy workers two at a time (11-23 E/s) on its 20 E/s and every
+        // site stalled together - no wind, no lab in 4 minutes. A BAR player stops the factory while energy stalls
+        assertTrue(BotEnergyRule.pauseWorkerTraining(0f));
+        assertTrue(BotEnergyRule.pauseWorkerTraining(0.05f));
+        assertFalse(BotEnergyRule.pauseWorkerTraining(0.3f));
+        assertFalse(BotEnergyRule.pauseWorkerTraining(1f));
+    }
+
+    @Test
     void aTrainingLabWantsItsOwnEnergy() {
         assertFalse(BotEnergyRule.energyBeforeNextExtractor(4, 0, CAPITOL + 2 * WIND));
         assertTrue(BotEnergyRule.energyBeforeNextExtractor(4, 1, CAPITOL + 2 * WIND));

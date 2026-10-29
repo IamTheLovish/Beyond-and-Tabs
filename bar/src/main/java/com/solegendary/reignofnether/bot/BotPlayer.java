@@ -922,6 +922,11 @@ public class BotPlayer {
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
         if (techPending || workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
             return;
+        // energy all but gone: no new worker until it is back, or the queue starves every site (bot/BotEnergyRule)
+        if (BotEnergyRule.pauseWorkerTraining(energyFill) && !pp.productionQueue.isEmpty())
+            return;
+        if (BotEnergyRule.pauseWorkerTraining(energyFill) && workerCount >= tuning.workerBase())
+            return;
         // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
         if (pp.productionQueue.size() < (floating() ? 2 : 1))
             pp.startProductionItem(kit.worker());
