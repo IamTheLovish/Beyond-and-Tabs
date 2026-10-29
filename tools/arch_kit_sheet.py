@@ -63,6 +63,8 @@ def piece(name, m):
         return mounted(m, K.hip_roof(m, 7), 7, 7, h=6)
     if name == "roof_light":
         return _barrel(m)
+    if name == "dormer":
+        return K.dormer_on_roof(m)
     if name == "eave":                        # the band on a 3-high wall: its y 0 is the course under the wall top
         w = K.blank()
         for x in range(7):
@@ -100,12 +102,22 @@ SHEETS = {       # name -> [(set, part)], packed in shelves back (north) to fron
     "arch_kit_details": [("brassworks", "gear"), ("brassworks", "machinery"), ("brassworks", "clerestory"),
                          ("brassworks", "tone_wall"), ("brassworks", "balustrade"), ("brassworks", "parapet"),
                          ("brassworks", "string_course"), ("brassworks", "window_tall")],
-    "arch_kit_sunforged": [("sunforged", "half_timber"), ("sunforged", "portal"), ("sunforged", "balustrade"),
-                           ("sunforged", "tone_wall"), ("sunforged", "bay_tall"), ("sunforged", "pier"),
-                           ("sunforged", "cornice")],
+    "arch_kit_sunforged": [("sunforged", "hip_roof"), ("sunforged", "portal"), ("sunforged", "half_timber"),
+                           ("sunforged", "tone_wall"), ("sunforged", "bay_tall"), ("sunforged", "balustrade")],
     "arch_kit_gravebound": [("gravebound", "portal"), ("gravebound", "corbel_stage"), ("gravebound", "chimney"),
                             ("gravebound", "spire"), ("gravebound", "bay_tall"), ("gravebound", "balustrade")],
 }
+
+
+R3 = {           # round 3 reshoots only the reworked parts (r3 critic), each sheet close enough to judge
+    "arch_kit_r3_roofs": [("brassworks", "hip_roof"), ("brassworks", "dormer"), ("brassworks", "chimney"),
+                          ("brassworks", "roof_light")],
+    "arch_kit_r3_towers": [("brassworks", "dome"), ("brassworks", "spire"), ("gravebound", "spire")],
+    "arch_kit_r3_walls": [("brassworks", "half_timber"), ("brassworks", "portal"), ("brassworks", "tone_wall"),
+                          ("brassworks", "gear"), ("brassworks", "machinery")],
+    "arch_kit_sunforged": SHEETS["arch_kit_sunforged"],
+}
+SHEETS.update(R3)
 
 
 def _pack(parts):

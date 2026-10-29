@@ -230,12 +230,13 @@ def lights(b, faces=("south", "west"), bay=4):
     return {"ok": all(v["lit"] >= v["bays"] for v in out.values()), "faces": out}
 
 
-CHEQUER_MAX = 0.2      # roof_kit's own courses reach ~0.15 at worst over 40 seeds; an alternating roof is ~1.0
+CHEQUER_MAX = 0.1      # roof_kit's own courses never reach it; an alternating roof is ~1.0
 
 
 def roof_chequer(b):
     """G6: the share of the visible roof cells (roof shapes on top of their column, at or above the eave) that sit in
-    a 2 x 2 alternation a b / b a seen from above - a chequer, or a diagonal line of single contrasting cells."""
+    a 3 x 2 alternation a b a / b a b seen from above - a chequer. A diagonal line (a hip drawn one cell wide) makes
+    2 x 2 alternations all along it but never three in a row, so it is a line, not a chequer."""
     _, _, eave = _frame(b)
     top = {}
     for (x, y, z), (n, _) in b.blocks.items():
@@ -244,9 +245,16 @@ def roof_chequer(b):
     g = {c: n for c, (y, n) in top.items() if S.is_roof_shape(n) and y >= eave}
     bad = set()
     for (x, z), a in g.items():
-        c = g.get((x + 1, z))
-        if c is not None and c != a and g.get((x, z + 1)) == c and g.get((x + 1, z + 1)) == a:
-            bad |= {(x, z), (x + 1, z), (x, z + 1), (x + 1, z + 1)}
+        for dx, dz in ((1, 0), (0, 1)):               # a b a over b a b, along x or along z
+            ox, oz = dz, dx
+            cells = [(x + k * dx + j * ox, z + k * dz + j * oz) for j in (0, 1) for k in (0, 1, 2)]
+            want = [a if (k + j) % 2 == 0 else None for j in (0, 1) for k in (0, 1, 2)]
+            got = [g.get(q) for q in cells]
+            b = got[1]
+            if b is None or b == a:
+                continue
+            if all(v == (a if w is not None else b) for v, w in zip(got, want)):
+                bad |= set(cells)
     return len(bad) / len(g) if g else 0.0
 
 

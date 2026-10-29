@@ -207,17 +207,35 @@ class G6NoChequer(unittest.TestCase):
         self.assertGreater(r, 0.5)
         self.assertFalse(G.gates(B(self.chequer_roof()))["G6"]["ok"])
 
-    def test_red_one_cell_hip_lines(self):
-        """A pyramid roof in one slate whose four hips are single wood cells down the diagonals - the r1 hip_roof the
-        critic called 'chequered wood patches'."""
+    def test_red_a_chequer_patch_in_a_slate_roof(self):
+        """A 4 x 4 chequer patch of wood and slate set into an otherwise plain slate roof (r1's hip_roof patches)."""
+        c = gable_on(box(9, 9, 5, base="polished_andesite"), 9, 9, 5)
+        top = {}
+        for (x, y, z), (n, _) in c.items():
+            if y > top.get((x, z), (-1, None))[0]:
+                top[(x, z)] = (y, n)
+        for (x, z), (y, n) in top.items():
+            if 1 <= x <= 4 and 0 <= z <= 3 and n.endswith("_slab"):
+                c[(x, y, z)] = ("dark_oak_slab" if (x + z) % 2 else "deepslate_tile_slab", c[(x, y, z)][1])
+        self.assertGreater(G.roof_chequer(B(c)), 0.0)
+        r = G.roof_chequer(B(c))
+        c2 = dict(c)
+        for (x, z), (y, n) in top.items():
+            if 1 <= x <= 4 and 0 <= z <= 3 and n.endswith("_slab"):
+                c2[(x, y, z)] = ("deepslate_tile_slab", c[(x, y, z)][1])
+        self.assertGreater(r, G.roof_chequer(B(c2)))
+
+    def test_green_a_diagonal_hip_line_is_a_line(self):
+        """A pyramid roof in one slate with its four hips one cell wide in a darker slate is a drawn line, not a
+        chequer (r3 critic: hips = a 1-wide line of the dark T1 slate)."""
         c = box(9, 9, 5, base="polished_andesite")
         for x in range(-1, 10):
             for z in range(-1, 10):
                 d = min(x + 1, 9 - x, z + 1, 9 - z)
                 hip = abs(x - 4) == abs(z - 4)
-                c[(x, 6 + d // 2, z)] = ("dark_oak_slab" if hip else "deepslate_tile_slab",
+                c[(x, 6 + d // 2, z)] = ("polished_blackstone_slab" if hip else "deepslate_tile_slab",
                                          {"type": "bottom" if d % 2 == 0 else "top"})
-        self.assertGreater(G.roof_chequer(B(c)), G.CHEQUER_MAX)
+        self.assertLessEqual(G.roof_chequer(B(c)), G.CHEQUER_MAX)
 
     def test_green_roof_kit_gables(self):
         """The roof kit's three-tone courses stay under the line for every seed (they were built never to chequer)."""

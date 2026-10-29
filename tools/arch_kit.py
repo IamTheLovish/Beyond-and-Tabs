@@ -65,7 +65,7 @@ class Mats(NamedTuple):
     light: tuple       # (lantern, glow block)
     timber: Timber
     render: str        # half-timber infill
-    rib: Fam           # fresh copper: glazing ribs, purlins, wheels (weathered `metal` stays at the eaves)
+    rib: Fam           # dark iron: glazing ribs, purlins, wheels (r3: fresh orange copper is out of palette)
     glaze: str         # roof glass: a light-grey / tinted pane (clear panes in a roof read as scaffolding)
     pier: str          # pier body: never a glaring white (r1 sheet: pure quartz piers)
 
@@ -86,27 +86,36 @@ BRASSWORKS = Mats(   # red brick, pale diorite dressings, blue-brick (blackstone
     Fam("polished_diorite", "polished_diorite_stairs", "polished_diorite_slab", "diorite_wall"),
     Fam("polished_blackstone_bricks", "polished_blackstone_brick_stairs", "polished_blackstone_brick_slab",
         "polished_blackstone_brick_wall"),
-    R.SLATE,
+    dict(R.SLATE, gutter="waxed_weathered_cut_copper_stairs"),
     Fam("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab"),
     ("glass_pane", "glass"), ("lantern", "shroomlight"),
     Timber("stripped_dark_oak_log", "dark_oak_planks", "dark_oak_stairs", "dark_oak_slab", "dark_oak_trapdoor",
            "dark_oak_fence"),
     "white_terracotta",
-    Fam("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"),
+    Fam("polished_blackstone", "polished_blackstone_stairs", "polished_blackstone_slab", "polished_blackstone_wall"),
     "light_gray_stained_glass_pane", "bricks")
 
-SUNFORGED = Mats(    # the angels: white quartz, warm sandstone dressings, diorite second tone, green copper roofs, gold
+SUNFORGED_ROOF = {   # the angels' deep roofs: dark slate courses, a green-copper ridge, gilt-free (gold is the accent)
+    "tones": (("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"),
+              ("polished_deepslate", "polished_deepslate_stairs", "polished_deepslate_slab"),
+              ("deepslate_bricks", "deepslate_brick_stairs", "deepslate_brick_slab")),
+    "ridge": ("waxed_oxidized_cut_copper",),
+    "verge": ("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"),
+    "gutter": "waxed_weathered_cut_copper_stairs",
+}
+
+SUNFORGED = Mats(    # the angels: white quartz walls, warm sandstone dressings, a DARK slate third tone (r3: washed out)
     "sunforged",
     Fam("smooth_quartz", "smooth_quartz_stairs", "smooth_quartz_slab", "diorite_wall"),
     Fam("polished_diorite", "polished_diorite_stairs", "polished_diorite_slab", "diorite_wall"),
     Fam("smooth_sandstone", "smooth_sandstone_stairs", "smooth_sandstone_slab", "sandstone_wall"),
-    Fam("stone_bricks", "stone_brick_stairs", "stone_brick_slab", "stone_brick_wall"),
-    R.COPPER,
-    Fam("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"),
+    Fam("polished_deepslate", "polished_deepslate_stairs", "polished_deepslate_slab", "polished_deepslate_wall"),
+    SUNFORGED_ROOF,
+    Fam("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"),
     ("yellow_stained_glass_pane", "yellow_stained_glass"), ("lantern", "glowstone"),
     Timber("stripped_birch_log", "birch_planks", "birch_stairs", "birch_slab", "birch_trapdoor", "birch_fence"),
     "calcite",
-    Fam("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab"),
+    Fam("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab", "deepslate_tile_wall"),
     "white_stained_glass_pane", "calcite")
 
 GRAVEBOUND = Mats(   # deepslate walls, bone dressings, blackstone roofs, verdigris, sickly green light
@@ -122,7 +131,7 @@ GRAVEBOUND = Mats(   # deepslate walls, bone dressings, blackstone roofs, verdig
     Timber("dark_oak_log", "dark_oak_planks", "dark_oak_stairs", "dark_oak_slab", "dark_oak_trapdoor",
            "dark_oak_fence"),
     "bone_block",
-    Fam("waxed_exposed_cut_copper", "waxed_exposed_cut_copper_stairs", "waxed_exposed_cut_copper_slab"),
+    Fam("polished_blackstone", "polished_blackstone_stairs", "polished_blackstone_slab", "polished_blackstone_wall"),
     "gray_stained_glass_pane", "deepslate_bricks")
 
 SETS = (BRASSWORKS, SUNFORGED, GRAVEBOUND)
@@ -245,24 +254,20 @@ def cresting(roof, m, every=4):
 
 def hip_roof(m, w, seed=0):
     """R3: a pyramid hip roof over a w x w tower (walls x, z 0..w-1), 1 proud all round, in slab pairs (26.5 deg).
-    Each COURSE (ring) is one continuous tone - wet T1 at the eave, T0 in the body, bleached T2 under the apex - and
-    the HIPS are a 3-cell band of the verge (timber) down the diagonals, so no 2 x 2 window ever alternates (G6: r1's
-    one-cell hips chequered both diagonals). A ridge-block apex with a lightning-rod finial, gutters under the eaves.
-    `seed` is kept for the generators' call signature (the courses are structural, not random)."""
+    Every face cell is the roof's base tone T0; the HIPS are a 1-wide line of the dark T1 down the diagonals and the
+    eave ring is T1 too (wet), so the roof reads as four planes meeting on dark lines - no timber anywhere (r2: a
+    brown X in a brown frame) and no chequer (G6). A ridge-block apex with a lightning-rod finial, gutters under the
+    eaves. `seed` is kept for the generators' call signature (the courses are structural, not random)."""
     p = blank()
     lo, hi = -1, w
     c = (w - 1) / 2
-    rings = (hi - lo) // 2
+    t0, t1 = m.roof["tones"][0][2], m.roof["tones"][1][2]
     for x in range(lo, hi + 1):
         for z in range(lo, hi + 1):
             d = min(x - lo, hi - x, z - lo, hi - z)
             y, typ = d // 2, ("bottom" if d % 2 == 0 else "top")
-            if abs(abs(x - c) - abs(z - c)) <= 1 and (x, z) != (c, c):
-                name = m.roof["verge"][2]
-            else:
-                tone = 1 if d == 0 else 2 if d >= rings - 1 else 0
-                name = m.roof["tones"][tone][2]
-            slab(p, x, y, z, name, typ)
+            hip = abs(x - c) == abs(z - c) and (x, z) != (c, c)
+            slab(p, x, y, z, t1 if (hip or d == 0) else t0, typ)
             if d == 0 and not (x in (lo, hi) and z in (lo, hi)):
                 f = "south" if z == lo else "north" if z == hi else "east" if x == lo else "west"
                 stair(p, x, -1, z, m.roof["gutter"], f, "top")
@@ -275,31 +280,55 @@ def hip_roof(m, w, seed=0):
 
 # ============================================================================================ R4-R5 roof openings
 def dormer(m):
-    """R4: a 3-wide dormer eye x -2..2 riding up through a slope behind it: a pale sill course with a proud sill
-    stair, 3 x 2 panes set one back between timber cheeks, a little gable in the ROOF's own stairs (rake facing in)
-    running back 3 cells into the main slope, a slab cap, a lantern behind the glass."""
+    """R4: a 3-wide dormer eye x -1..1 that rides up through a slope behind it and reads as a little roofed house: a
+    pale sill course with a proud sill slab, 3 x 2 panes set one back between timber cheeks (x -2 / 2), a lantern
+    behind the glass; over the head a GABLE in the roof's own stairs - eave stairs 1 past the cheeks (x -3 / 3), then
+    rake rows narrowing to a ridge block and a slab cap - oversailing the face by 1 (its own eaves) and running back
+    3 cells into the main slope (r2: a box)."""
     p = blank()
-    t0 = m.roof["tones"][0]
+    t0, t1 = m.roof["tones"][0], m.roof["tones"][1]
     for x in range(-2, 3):
         p.set(x, 0, 0, m.trim.full)
     for x in range(-1, 2):
-        stair(p, x, 0, 1, m.trim.stairs, "north", "top")
+        slab(p, x, 0, 1, m.trim.slab, "top")
         for y in (1, 2):
             p.set(x, y, 0, "air")
             p.set(x, y, -1, m.glass[0])
-        p.set(x, 3, 0, m.timber.planks)
-    for z in range(-3, 1):
-        for x in (-2, 2):
-            for y in (1, 2):
-                p.set(x, y, z, m.timber.planks)
-        stair(p, -2, 3, z, t0[1], "east")
-        stair(p, 2, 3, z, t0[1], "west")
-        stair(p, -1, 4, z, t0[1], "east")
-        stair(p, 1, 4, z, t0[1], "west")
-        p.set(0, 4, z, t0[0])
-        slab(p, 0, 5, z, t0[2])
+        p.set(x, 3, 0, m.wall2.full)
+    for z in range(-3, 2):
+        if z <= 0:
+            for x in (-2, 2):
+                for y in (1, 2, 3):
+                    p.set(x, y, z, m.timber.planks)
+            for x in (-1, 0, 1):
+                p.set(x, 3, z, m.wall2.full)
+        stair(p, -3, 3, z, t1[1], "east")
+        stair(p, 3, 3, z, t1[1], "west")
+        stair(p, -2, 4, z, t0[1], "east")
+        stair(p, 2, 4, z, t0[1], "west")
+        if z <= 0:
+            p.set(-1, 4, z, m.wall2.full)
+            p.set(1, 4, z, m.wall2.full)
+            p.set(0, 4, z, m.wall2.full)
+        stair(p, -1, 5, z, t0[1], "east")
+        stair(p, 1, 5, z, t0[1], "west")
+        p.set(0, 5, z, m.roof["ridge"][0])
+        slab(p, 0, 6, z, t1[2])
     p.set(0, 0, -2, m.trim.full)
     _lantern(p, 0, 1, -2, m)
+    return p
+
+
+def dormer_on_roof(m, seed=0):
+    """A dormer standing in a roof_kit slope (for the sheet and the silhouette test): the slope rises north (-z) from
+    an eave at z 1; the dormer's sill sits on the slope at z -2 and its gable breaks the roof line."""
+    p = blank()
+    roof = R.gable(9, 9, axis="x", seed=seed, mats=m.roof)
+    for (x, y, z), v in roof.items():
+        if z <= 4:
+            p.b[(x - 4, y, z - 4)] = v
+    for (x, y, z), v in dormer(m).b.items():
+        p.b[(x, y + 1, z - 2)] = v
     return p
 
 
@@ -326,9 +355,9 @@ def clerestory(m, L):
 
 def roof_light(m, L):
     """R5: a glazed barrel roof x 0..L-1 over a lane z -3..3: a stepped quarter-circle each side (1 up, 1 in, 1 up,
-    2 in) glazed in the set's tinted GLAZE panes, a fresh-copper RIB across the whole profile every 3rd cell (and at
-    the far end), a copper PURLIN along the crown; weathered copper only at the eave course (y 0). r1 sheet: a
-    clear-glass grid read as scaffolding, verdigris ribs as vines."""
+    2 in) glazed in the set's tinted GLAZE panes, a dark-iron RIB across the whole profile every 3rd cell (and at the
+    far end), a dark PURLIN along the crown; weathered copper only at the eave course (y 0). r1: a clear-glass grid
+    read as scaffolding, verdigris ribs as vines; r2: fresh orange copper ribs were out of palette."""
     prof = {-3: (0, 1), -2: (2,), -1: (3,), 0: (3,), 1: (3,), 2: (2,), 3: (0, 1)}
     p = blank()
     for x in range(L):
@@ -441,14 +470,15 @@ def bay(m, kind="tall"):
 
 def portal(m, w=3, h=4, orders=3):
     """R9: a receding portal in a wall plane z 0: `orders` nested orders, each ONE deeper (z 0, -1, ...) and one
-    narrower each side, each in a finer stone (dark -> second tone -> pale trim, then the trim again). Every order's
+    narrower each side, each in its own NON-pale stone (dark -> wall -> second tone) so the pale reveals read against
+    it (r2: pale on pale). Every order's
     opening is lined with PALE stairs - jamb stairs stepping down into the opening (a chamfered reveal) and an
     upside-down stair soffit under its head - so the arch reads as three concentric pale rings, from the front and
     from above (r1 sheet: a square hole). Over the outer order a stepped pale HOOD (a little pediment, 3 rows); the
     door plane (timber, a centre post) behind the last order; a pale step row 1 proud across the whole front,
     lanterns on pale posts each side."""
     p = blank()
-    mats = [m.dark, m.wall2, m.trim] + [m.trim] * max(0, orders - 3)
+    mats = [m.dark, m.wall, m.wall2] + [m.wall2] * max(0, orders - 3)      # never pale: the reveals are
     half = [(w - 1) // 2 + (orders - 1 - k) for k in range(orders)]
     hk = [h + (orders - 1 - k) for k in range(orders)]
     X = half[0] + 1
@@ -546,6 +576,12 @@ def chimney(m, h=10, w=3, roof_y=None):
             corner = x in (0, w - 1) and z in (0, w - 1)
             if corner:
                 p.set(x, h, z, m.dark.wall)
+    for x in range(-1, w + 1):                                   # a pale ring under the cap, proud (r2: a dark mushroom)
+        for z in range(-1, w + 1):
+            if x in (-1, w) or z in (-1, w):
+                slab(p, x, h, z, m.trim.slab, "top")
+    for x in range(w):
+        for z in range(w):
             slab(p, x, h + 1, z, m.dark.slab)
     if roof_y is not None:
         for x in range(-1, w + 1):
@@ -564,54 +600,102 @@ def _ring(w):
 
 
 def spire(m):
-    """R12: a copper spire on the axis (0, 0): a bulb (rings of half-width 2, copper faces, pale RIBS on the four
-    cardinal meridians, a stair shoulder), a NECK of three thin rings (pale top-slab cornice, dark wall collar), a
-    second small bulb, a needle with a dark collar, a lightning-rod tip."""
+    """R12: a needle spire on the axis (0, 0), ~22 tall: a 5 x 5 tower stub (y 0..3, a pale base course, a lit slit
+    each face), a CORBEL ring (upside-down dark stairs at y 4) carrying an oversailing pale course 7 x 7 (y 5),
+    then the needle in the set's metal: a 7 x 7 broach for 2 rows, 5 x 5 for 4, 3 x 3 for 6, 1 x 1 for 6, each
+    step-in finished with a ring of stairs (tall back to the axis), dark-iron rib cells on the meridians, a dark collar under the tip, a lightning rod (r2: a stepped pyramid on
+    a cube)."""
     p = blank()
-
-    def ring(y, w, face, rib, st=False):
-        for x, z in _ring(w):
-            cardinal = x == 0 or z == 0
-            n = rib if cardinal else face
-            if st:
-                f = gp.toward(x, z)
-                stair(p, x, y, z, (m.trim.stairs if cardinal else m.metal.stairs), f)
-            else:
-                p.set(x, y, z, n)
-    ring(0, 2, m.metal.full, m.trim.full)
-    ring(1, 2, m.metal.full, m.trim.full)
-    ring(2, 2, None, None, st=True)
-    for x, z in _ring(1) + [(0, 0)]:
-        p.set(x, 2, z, m.metal.full)
-    for x, z in _ring(1):
-        slab(p, x, 3, z, m.trim.slab, "top")
-        p.set(x, 4, z, m.dark.wall)
-    p.set(0, 3, 0, m.dark.full)
-    p.set(0, 4, 0, m.dark.full)
-    ring(5, 1, m.metal.full, m.trim.full)
-    p.set(0, 5, 0, m.metal.full)
-    ring(6, 1, None, None, st=True)
-    p.set(0, 6, 0, m.metal.full)
-    p.set(0, 7, 0, m.metal.full)
-    p.set(0, 8, 0, m.dark.wall)
-    p.set(0, 9, 0, m.metal.full)
-    p.set(0, 10, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    for y in range(4):
+        for x, z in _ring(2):
+            p.set(x, y, z, m.trim.full if y == 0 else m.wall.full)
+    for f, (x, z) in (("south", (0, 2)), ("north", (0, -2)), ("east", (2, 0)), ("west", (-2, 0))):
+        p.set(x, 2, z, m.glass[0])
+    p.set(0, 1, 0, m.trim.full)
+    _lantern(p, 0, 2, 0, m)
+    for x, z in _ring(3):
+        if max(abs(x), abs(z)) == 3 and not (abs(x) == 3 and abs(z) == 3):
+            stair(p, x, 4, z, m.dark.stairs, gp.toward(x, z), "top")
+    for x, z in _ring(2) + _ring(1) + [(0, 0)]:
+        p.set(x, 4, z, m.wall.full)
+    for x, z in _ring(3) + _ring(2) + _ring(1) + [(0, 0)]:
+        p.set(x, 5, z, m.trim.full)
+    y = 6
+    for w, rows in ((3, 2), (2, 4), (1, 6), (0, 6)):
+        for k in range(rows):
+            for x, z in (_ring(w) if w else [(0, 0)]):
+                if k == rows - 1 and w > 0:
+                    stair(p, x, y, z, m.metal.stairs, gp.toward(x, z))
+                else:
+                    p.set(x, y, z, m.rib.full if (w and (x == 0 or z == 0) and k % 3 == 1) else m.metal.full)
+            for q in range(w - 1, -1, -1):
+                for x, z in (_ring(q) if q else [(0, 0)]):
+                    p.set(x, y, z, m.metal.full)
+            y += 1
+    p.set(0, y, 0, m.dark.wall)
+    p.set(0, y + 1, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
     return p
 
 
-def gothic_pal(m):
-    """gothic_parts roles -> the set (for the parts the kit wraps from it)."""
-    return {"band": m.dark.full, "band_st": m.dark.stairs, "pillar": m.timber.log, "win_lit": m.glass[0],
-            "wall": m.wall.full, "light": m.light[1], "trim": m.trim.full, "trim_st": m.trim.stairs,
-            "carve": m.wall2.full, "bars": "iron_bars", "rail": m.trim.wall, "spike": "lightning_rod",
-            "needle": m.roof["tones"][0][0], "gold": m.metal.full}
-
-
 def dome(m, r=4):
-    """R12: gothic_parts.ribbed_dome in the set: a drum of columns and lit windows, a cornice, pinnacles, the dome in
-    the roof's T0 with pale ribs, a metal band at its foot and a metal knop on top."""
-    d, _ = gp.ribbed_dome(r, pal=gothic_pal(m))
-    return recolour(d, {})
+    """R12: a ribbed dome on a stone drum, axis (0, 0). The DRUM (y 0..4): a dark base ring, the wall stone banded in
+    the second tone with lit windows on the 8 meridians, a pale stair cornice 1 proud (y 5) and a pale slab ring. The
+    DOME (y 6..): a hemisphere in the roof's base tone with 8 continuous meridian RIBS - exactly one pale cell per
+    course on each meridian, so every rib is a connected line from the drum to the crown - and a metal crown with a
+    lantern and lightning rod; 4 thin pinnacles on the diagonals of the cornice (r2: a chequered 'panda ball' with
+    10 candles on a log-and-brick cake)."""
+    p = blank()
+    D = r + 1
+    rows = {}
+    for x in range(-D, D + 1):
+        for z in range(-D, D + 1):
+            d = math.hypot(x, z)
+            if d < r + 0.5:
+                rows.setdefault("in", []).append((x, z))
+            if r - 0.5 <= d < r + 0.5:
+                rows.setdefault("rim", []).append((x, z))
+            if r + 0.5 <= d < r + 1.5:
+                rows.setdefault("out", []).append((x, z))
+    mer = {k: (round(math.cos(k * math.pi / 4) * r), round(math.sin(k * math.pi / 4) * r)) for k in range(8)}
+    for y in range(5):
+        for (x, z) in rows["rim"]:
+            if y == 0:
+                n = m.dark.full
+            elif (x, z) in mer.values() and y in (2, 3):
+                n = m.glass[0]
+            else:
+                n = m.wall2.full if y == 1 else m.wall.full
+            p.set(x, y, z, n)
+        for (x, z) in rows["in"]:
+            if (x, z) not in rows["rim"] and y in (0, 4):
+                p.set(x, y, z, m.wall.full)
+    p.set(0, 1, 0, m.wall.full)
+    _lantern(p, 0, 2, 0, m)
+    for (x, z) in rows["out"]:
+        stair(p, x, 5, z, m.trim.stairs, gp.toward(x, z), "top")
+    for (x, z) in rows["in"]:
+        p.set(x, 5, z, m.trim.full)
+    for k in (1, 3, 5, 7):                                   # 4 pinnacles on the diagonals
+        a = k * math.pi / 4
+        x, z = round(math.cos(a) * (r + 1)), round(math.sin(a) * (r + 1))
+        p.set(x, 6, z, m.trim.wall)
+        p.set(x, 7, z, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    y0 = 6
+    t0 = m.roof["tones"][0][0]
+    radii = [r, r] + [rr for k in range(r - 1, 1, -1) for rr in (k, k)][:2 * (r - 2) - 1]   # 4 4 3 3 2
+    for k, rr in enumerate(radii):
+        y = y0 + k
+        ribs = {(round(math.cos(j * math.pi / 4) * rr), round(math.sin(j * math.pi / 4) * rr)) for j in range(8)}
+        for x in range(-rr, rr + 1):
+            for z in range(-rr, rr + 1):
+                if math.hypot(x, z) < rr + 0.5:
+                    p.set(x, y, z, m.trim.full if (x, z) in ribs else t0)
+    top = y0 + len(radii) - 1
+    for (x, z) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
+        p.set(x, top + 1, z, m.metal.full)
+    p.set(0, top + 2, 0, m.metal.full)
+    p.set(0, top + 3, 0, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    return p
 
 
 # ============================================================================================ R13-R16 railings ... machinery
@@ -641,12 +725,14 @@ def balustrade(m, L, every=4, panel="balusters"):
 def half_timber(m, L):
     """R14: a two-storey front x 0..L-1. Lower storey: a pale base course and the wall material (z 0, y 1..3) - the
     brick shows. The JETTY: a horizontal log plate 1 proud at the floor line (y 4) carried on upside-down timber stair
-    BRACKETS under every post. Upper storey (y 5..7): the timber is the FRAME, not the fill - 1-block posts 1 proud
-    (z 1) every 3 cells and at the corners, a knee brace in one corner of each outer bay, the pale RENDER infill one
-    block back (z 0) between them, glass panes in the middle bay; a log top plate (y 8) under a pale slab coping
-    (r1 sheet: a timber box read as a dark crate)."""
+    BRACKETS under every post. Upper storey (y 5..7): the timber is the FRAME, not the fill - 1-wide posts (z 1)
+    every 4 cells and at the corners, the pale RENDER infill one block back between them (timber <= 30 % of the
+    panel; the jetty brackets are the only braces), glass panes in the middle bay; a log top plate (y 8)
+    under a pale slab coping (r1: a timber box read as a dark crate; r2: timber was still ~60 % of the panel)."""
     p = blank()
-    posts = sorted(set(range(0, L, 3)) | {L - 1})
+    posts = sorted(set(range(0, L, 4)) | {L - 1})
+    if L - 1 - (posts[-2] if len(posts) > 1 else 0) < 2:
+        posts.remove(posts[-2])
     for x in range(L):
         p.set(x, 0, 0, m.trim.full)
         for y in (1, 2, 3):
@@ -664,86 +750,110 @@ def half_timber(m, L):
     for x in posts:
         stair(p, x, 3, 1, m.timber.stairs, "north", "top")
     bays = [(a + 1, b - 1) for a, b in zip(posts, posts[1:]) if b - a > 1]
-    for i, (a, b) in enumerate(bays):
-        if i == len(bays) // 2 and len(bays) >= 3:
-            for x in range(a, b + 1):
-                for y in (6, 7):
-                    p.set(x, y, 0, m.glass[0])
-        elif i < len(bays) // 2:
-            stair(p, a, 7, 1, m.timber.stairs, "west", "top")
-        else:
-            stair(p, b, 7, 1, m.timber.stairs, "east", "top")
+    a, b = bays[len(bays) // 2 if len(bays) >= 3 else 0]
+    for x in range(a, b + 1):                                     # the glazed bay
+        for y in (6, 7):
+            p.set(x, y, 0, m.glass[0])
     return p
 
 
 def tone_wall(m, L, H, seed=0):
-    """R15: a wall face x 0..L-1, y 0..H-1 whose tones go where the structure and the water are - a pale plinth
-    course (y 0), pale long-and-short QUOINS at both corners (the corner column whole, the next column every other
-    course), ONE whole band course of the second tone under the top (y H-1: the course under a lip), and wet runs of
-    2 at the wall foot (y 1) - never scattered, never a chequer; the second tone stays 10-25 % of the body."""
+    """R15: a wall face x 0..L-1, y 0..H-1 with its tones where the water goes (r2: pale patches mid-wall). A dark
+    plinth (y 0); the darker second tone in WET runs of 2-3 at the foot (y 1), where splash and damp rise; a window
+    sill (pale slab 1 proud) every 5 cells at y 3 with a second-tone DRIP cell under each; the body plain; the top
+    course (y H-1) pale, bleached under the lip. Never scattered, never a chequer; the second tone 10-25 % of the
+    body (y 1..H-2)."""
     rng = random.Random(seed)
     p = blank()
     for x in range(L):
-        p.set(x, 0, 0, m.trim.full)
+        p.set(x, 0, 0, m.dark.full)
         for y in range(1, H):
-            p.set(x, y, 0, m.wall2.full if y == H - 1 else m.wall.full)
-    for y in range(1, H - 1):
-        for x0, x1 in ((0, 1), (L - 1, L - 2)):
-            p.set(x0, y, 0, m.trim.full)
-            if y % 2 == 1:
-                p.set(x1, y, 0, m.trim.full)
-    body = L * (H - 1)
-    room = int(0.25 * body) - L
-    x = 2 + rng.randint(0, 2)
-    while room >= 2 and x <= L - 5:
-        p.set(x, 1, 0, m.wall2.full)
-        p.set(x + 1, 1, 0, m.wall2.full)
-        room -= 2
-        x += rng.randint(4, 8)
+            p.set(x, y, 0, m.trim.full if y == H - 1 else m.wall.full)
+    sills = list(range(2, L - 1, 5))
+    for x in sills:
+        slab(p, x, 3, 1, m.trim.slab, "top")
+        p.set(x, 2, 0, m.wall2.full)
+    near = {c + d for c in sills for d in (-1, 0, 1)}
+    segs, run = [], []
+    for x in range(L + 1):
+        if x < L and x not in near:
+            run.append(x)
+        else:
+            if len(run) >= 2:
+                segs.append(run)
+            run = []
+    rng.shuffle(segs)
+    need = int(0.12 * L * (H - 2)) - len(sills)
+    for seg in segs:
+        if need <= 0:
+            break
+        k = max(2, min(len(seg), need))
+        a = rng.randint(0, len(seg) - k)
+        for c in seg[a:a + k]:
+            p.set(c, 1, 0, m.wall2.full)
+        need -= k
     return p
 
 
 def machinery(m, L=9):
-    """R16: a greeble band against a wall (the part's z 1 is the first cell in front of the wall plane): every
-    greeble is a run + a joint + a fitting - a dark pipe RUN along y 3, ELBOWS (full blocks) at both ends, a drop to
-    the ground at x 0, a JOINT over a 2 x 2 metal TANK with a VALVE (lever) under the run beside it, a cauldron, a
-    grindstone pump on the far foot, a lightning-rod VENT on the far elbow."""
+    """R16: a machinery band against a wall (z 1 is the first cell in front of the wall plane), 5 high: a dark
+    HOUSING plinth along the foot (y 0, slab top), a pipe RUN along y 3 with ELBOWS at both ends and a drop to the
+    housing at x 0, a 2 x 2 dark-metal TANK on the housing with a weathered-copper band and a VALVE (lever) on the
+    run beside its joint, a cauldron, a grindstone pump, a second thin pipe at y 4, a lightning-rod VENT on the far
+    elbow - one machine, not a few sticks (r2: unreadable at RTS zoom)."""
     p = blank()
+    for x in range(L):
+        p.set(x, 0, 1, m.dark.full)
     for x in range(1, L - 1):
         p.set(x, 3, 1, m.dark.wall)
+        if x % 2 == 0:
+            p.set(x, 4, 1, "chain", axis="x", waterlogged="false")
     p.set(0, 3, 1, m.dark.full)
     p.set(L - 1, 3, 1, m.dark.full)
-    for y in range(3):
+    p.set(0, 4, 1, m.dark.full)
+    p.set(L - 1, 4, 1, m.dark.full)
+    for y in (1, 2):
         p.set(0, y, 1, m.dark.wall)
-    t = L - 5
+    t = 2
     for x in (t, t + 1):
-        for y in (0, 1):
-            p.set(x, y, 1, m.metal.full)
-    p.set(t, 2, 1, m.dark.full)
-    p.set(t + 1, 2, 1, "lever", face="floor", facing="south", powered="false")
-    p.set(t + 2, 0, 1, "cauldron")
-    p.set(L - 1, 0, 1, "grindstone", face="floor", facing="south")
-    p.set(L - 1, 4, 1, "lightning_rod", facing="up", powered="false", waterlogged="false")
+        p.set(x, 1, 1, m.rib.full)
+        p.set(x, 2, 1, m.metal.full)
+    p.set(t + 2, 2, 1, "lever", face="floor", facing="south", powered="false")
+    p.set(t + 2, 1, 1, m.dark.wall)
+    p.set(t + 3, 1, 1, m.dark.wall)
+    p.set(t + 3, 2, 1, m.dark.wall)
+    p.set(t + 4, 1, 1, "cauldron")
+    p.set(t + 5, 1, 1, "grindstone", face="floor", facing="south")
+    p.set(t + 5, 2, 1, m.dark.wall)
+    p.set(L - 1, 5, 1, "lightning_rod", facing="up", powered="false", waterlogged="false")
     return p
 
 
 def gear(m, r=3):
-    """R16: ONE big wheel standing against a wall (all of it at z 1, the wall plane z 0 behind): a rim of fresh-copper
-    blocks on the four axes and copper STAIRS between them turned so the rim reads round, thin chain spokes on the
-    four axes, a GRINDSTONE hub mounted on the wall (r1 sheet: the bars-and-blocks flywheel read as a pile)."""
+    """R16: ONE big wheel in front of a machinery band (r2: a lone orange donut). The band (z 1, against the wall):
+    a dark housing course along the foot, a pipe run across behind the wheel's axle, longer than the wheel, with
+    elbows. The wheel (z 2): a rim of dark-iron blocks on the four axes and dark-iron STAIRS between them turned so it
+    reads round, thin chain spokes on the four axes, a GRINDSTONE hub on a dark bearing block behind it."""
     p = blank()
+    L = 2 * r + 5
+    for x in range(-L // 2, L // 2 + 1):
+        p.set(x, -r - 1, 1, m.dark.full)
+        p.set(x, 0, 1, m.dark.wall)
+    p.set(-L // 2, 0, 1, m.dark.full)
+    p.set(L // 2, 0, 1, m.dark.full)
+    p.set(0, 0, 1, m.dark.full)
     for x in range(-r - 1, r + 2):
         for y in range(-r - 1, r + 2):
             d = math.hypot(x, y)
             if r - 0.5 <= d < r + 0.6:
                 if x == 0 or y == 0:
-                    p.set(x, y, 1, m.rib.full)
+                    p.set(x, y, 2, m.rib.full)
                 else:
-                    stair(p, x, y, 1, m.rib.stairs, "west" if x > 0 else "east", "bottom" if y > 0 else "top")
+                    stair(p, x, y, 2, m.rib.stairs, "west" if x > 0 else "east", "bottom" if y > 0 else "top")
     for k in range(1, r):
         for (x, y, ax) in ((k, 0, "x"), (-k, 0, "x"), (0, k, "y"), (0, -k, "y")):
-            p.set(x, y, 1, "chain", axis=ax, waterlogged="false")
-    p.set(0, 0, 1, "grindstone", face="wall", facing="south")
+            p.set(x, y, 2, "chain", axis=ax, waterlogged="false")
+    p.set(0, 0, 2, "grindstone", face="wall", facing="south")
     return p
 
 
