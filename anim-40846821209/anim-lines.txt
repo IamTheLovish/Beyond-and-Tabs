@@ -1,0 +1,17 @@
+20_anim: 3 run(s) on a pad at [-169, 72, -2]: bone_dragon_unit:turn:side+front+rear:0:0
+20_anim: run 0 - bone_dragon_unit / turn / side summoned at [-169, 72, -2]
+20_anim: run 0 - bone_dragon_unit is BoneDragonUnit (id 76), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+anim-leg 0 1 to 28, -28
+anim-leg 0 2 to 56, -28
+anim-run-end 0 32 frames in 240 ticks (12 s wall)
+20_anim: run 1 - bone_dragon_unit / turn / front summoned at [-169, 72, -2]
+20_anim: run 1 - bone_dragon_unit is BoneDragonUnit (id 103), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+anim-leg 1 1 to 28, -28
+anim-leg 1 2 to 56, -28
+anim-run-end 1 30 frames in 240 ticks (12 s wall)
+20_anim: run 2 - bone_dragon_unit / turn / rear summoned at [-169, 72, -2]
+20_anim: run 2 - bone_dragon_unit is BoneDragonUnit (id 105), hitbox 3.15 x 1.75 blocks, camera 10.1 blocks away
+anim-leg 2 1 to 28, -28
+anim-leg 2 2 to 56, -28
+anim-run-end 2 31 frames in 240 ticks (12 s wall)
+20_anim: done, 0 of 3 runs failed

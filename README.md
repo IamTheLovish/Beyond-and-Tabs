@@ -1,2 +1,3 @@
 - anim-39886006187: spec bone_dragon_unit:turn:rear+side:0:0, build 942601e, 2026-10-23T01:53:54Z
 - anim-40833072600: spec vindicator_unit:death:side+front:0:60,vindicator_unit:attack:side, build b73a8f9, 2026-10-29T07:17:22Z
+- anim-40846821209: spec bone_dragon_unit:turn:side+front+rear:0:0, build b73a8f9, 2026-10-29T09:45:01Z

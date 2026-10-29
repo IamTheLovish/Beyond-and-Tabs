@@ -1,0 +1,64 @@
+{
+ "title": "bone_dragon_unit / turn   real game client   window 240 ticks (12.0 s)   views side/front/rear   10 frames",
+ "views": [
+  "side",
+  "front",
+  "rear"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +1.48s  (tick 30)",
+  "3  +2.55s  (tick 51)",
+  "4  +3.75s  (tick 75)",
+  "5  +5.22s  (tick 104)",
+  "6  +6.46s  (tick 129)",
+  "7  +7.65s  (tick 153)",
+  "8  +9.23s  (tick 185)",
+  "9  +10.28s  (tick 206)",
+  "10  +11.77s  (tick 235)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.48s  (tick 30)",
+   "3  +2.55s  (tick 51)",
+   "4  +3.75s  (tick 75)",
+   "5  +5.22s  (tick 104)",
+   "6  +6.46s  (tick 129)",
+   "7  +7.65s  (tick 153)",
+   "8  +9.23s  (tick 185)",
+   "9  +10.28s  (tick 206)",
+   "10  +11.77s  (tick 235)"
+  ],
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.21s  (tick 24)",
+   "3  +2.42s  (tick 48)",
+   "4  +4.09s  (tick 82)",
+   "5  +5.33s  (tick 107)",
+   "6  +6.51s  (tick 130)",
+   "7  +7.74s  (tick 155)",
+   "8  +8.92s  (tick 178)",
+   "9  +10.52s  (tick 210)",
+   "10  +11.72s  (tick 234)"
+  ],
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.15s  (tick 23)",
+   "3  +2.61s  (tick 52)",
+   "4  +4.15s  (tick 83)",
+   "5  +5.37s  (tick 107)",
+   "6  +6.58s  (tick 132)",
+   "7  +7.79s  (tick 156)",
+   "8  +9.41s  (tick 188)",
+   "9  +10.60s  (tick 212)",
+   "10  +11.88s  (tick 238)"
+  ]
+ ],
+ "size": [
+  1544,
+  2000
+ ],
+ "warnings": []
+}
