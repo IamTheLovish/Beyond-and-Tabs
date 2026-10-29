@@ -1018,7 +1018,8 @@ public class BotPlayer {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
                 if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
                     continue;
-                workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(origin), v.blockPosition().distSqr(origin)));
+                workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, kit.extractor()) ? 1 : 0)
+                    .thenComparingDouble(u -> u.blockPosition().distSqr(origin)));   // tech builders last (placeNearImpl)
                 return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
                         new int[] { workers.get(0).getId() }, false, false, false, true) != null;
             }
@@ -2447,7 +2448,11 @@ public class BotPlayer {
                     lastSiteRejections.merge(error, 1, Integer::sum);
                 else {
                     final BlockPos surfaceSite = site;
-                    workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surfaceSite), v.blockPosition().distSqr(surfaceSite)));
+                    // nearest first, but the builders of an unfinished tech building (T1 requirement, T2 lab) last: the
+                    // next site took the Dungeon's builders and the watch cancelled it at 20 of 63 blocks
+                    // (bots_reach_tier_2, flake-stress 40817960311, Oct 29)
+                    workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, building) ? 1 : 0)
+                        .thenComparingDouble(u -> u.blockPosition().distSqr(surfaceSite)));
                     int take = Math.min(builders, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
@@ -2457,6 +2462,15 @@ public class BotPlayer {
             }
         }
         return false;
+    }
+
+    /** The worker is building an unfinished T1 requirement or T2 lab of this bot's, and {@code next} is something else. */
+    boolean buildsTech(LivingEntity worker, Building next) {
+        BuildingPlacement target = BotSiteWatch.targetOf(worker);
+        if (target == null || target.isBuilt || kit.t2Lab() == null || target.getBuilding() == next)
+            return false;
+        Building b = target.getBuilding();
+        return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
     }
 
     /**
