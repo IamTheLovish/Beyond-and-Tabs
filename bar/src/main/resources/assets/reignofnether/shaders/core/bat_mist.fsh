@@ -148,11 +148,14 @@ Bank bankAt(vec3 k, float fogShare, float local) {
 // colour lifted toward the lit one, and the ground seen through mist desaturated (aerial perspective).
 const float HAZE = 0.16;            // the ground haze's share of a bank's density at the floor
 const float HAZE_HEIGHT = 1.6;      // blocks per e-fold of the haze (no growth below the floor: the r8 lesson)
-const float DEEP_LIFT = 0.45;       // how far the shaded core is lifted toward the lit colour
+const float DEEP_LIFT = 0.8;        // how far the shaded core is lifted toward the lit colour (r11c 0.45 -> 0.8: eyes r50's
+                                    // core was darker than the water under it - mist darkened the river)
 
 float bankBody(Bank b, float h, float detail) {
-    float body = smoothstep(b.top + 1.1, b.top - 1.8, h);
-    return body * smoothstep(0.24, 0.64, b.cover + 0.5 * (detail - 0.5));
+    // r11c (eyes r50: the banks read as glass slabs - a top cut off over 3 blocks draws its contour as a line): the
+    // top thins over ~6 blocks, and the detail noise erodes it, so the edge is a fade, never a rim
+    float body = smoothstep(b.top + 2.5 + 1.5 * detail, b.top - 3.5, h);
+    return body * smoothstep(0.12, 0.75, b.cover + 0.6 * (detail - 0.5));
 }
 
 float hazeAt(float h, float detail) {
@@ -213,13 +216,11 @@ void main() {
         float dens = Density * sqrt(boost) * (BANK_DENSITY * body + local * hazeAt(h, detail));
         float a = 1.0 - exp(-Sigma * dens * ds);
         // light: bright at the bank's top, cool and dim deeper in; the bank above a sample shades it
-        float nearTop = clamp((h - (b.top - 2.2)) / 2.2, 0.0, 1.0);
-        float shade = bankBody(b, h + 1.2, detail);
-        // the billows: the top surface's slope toward the low sun (from the wind's upwind side) lights one flank and
-        // shades the other, so the cloud sea has relief instead of reading as flat white paint
-        float slope = b.top - bankAt(k + vec3(-1.5, 0.0, 0.8), fogShare, local).top;
-        float lit = clamp(0.25 + 0.75 * nearTop * (1.0 - 0.6 * shade) + 0.15 * (1.0 - body) + 0.22 * slope * nearTop,
-            0.0, 1.0);
+        // r11c: lit by how much mist lies above the sample, not like a surface - r9-r11b's top band and billow slope
+        // light drew bright rims and dark outlines (eyes r50: ice floes, not mist). Thin mist is bright, the thick
+        // core a little cooler; no outlines anywhere
+        float shade = bankBody(b, h + 1.5, detail);
+        float lit = clamp(0.95 - 0.35 * shade * body, 0.0, 1.0);
         vec3 deep = mix(DeepColor, LitColor, DEEP_LIFT);
         c = mix(c, mix(deep, LitColor, lit), a);
         trans *= 1.0 - a;
