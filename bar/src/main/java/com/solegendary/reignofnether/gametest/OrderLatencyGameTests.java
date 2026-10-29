@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -24,6 +25,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -112,6 +114,9 @@ public class OrderLatencyGameTests {
         int orderTick = -1;     // the unit's tickCount when the order was handled (its last finished tick)
         int firstMove = -1, firstSeen = -1;
         Vec3 orderPos;
+        // what the unit's pathing looked like, one entry per tick from the order until it first moved: printed only
+        // when the test fails (a late first step), so a passing run says nothing
+        final StringBuilder trace = new StringBuilder();
 
         Probe(ServerLevel level, Mob mob, int phase) {
             this.mob = mob;
@@ -132,10 +137,21 @@ public class OrderLatencyGameTests {
                 return;
             double dx = mob.getX() - orderPos.x, dz = mob.getZ() - orderPos.z;
             boolean moved = dx * dx + dz * dz > MOVED * MOVED;
+            if (firstMove < 0 && trace.length() < 400)
+                trace.append(" +").append(mob.tickCount - orderTick).append('{').append(state()).append('}');
             if (moved && firstMove < 0)
                 firstMove = mob.tickCount;
             if (moved && sent && firstSeen < 0)
                 firstSeen = mob.tickCount;
+        }
+
+        /** rts flag, the move goal's request in flight / running, the navigation's path, on the ground: one tick's look. */
+        String state() {
+            Path path = mob.getNavigation().getPath();
+            String nav = path == null ? "nopath" : (path.isDone() ? "done" : "node" + path.getNextNodeIndex() + "/" + path.getNodeCount());
+            var goal = ((Unit) mob).getMoveGoal();
+            return (UnitServerEvents.rtsPathfinding ? "rts " : "vanilla ") + (goal.isPathPending() ? "pending " : "")
+                + (goal.isGoalRunning() ? "goal " : "nogoal ") + nav + (mob.onGround() ? "" : " AIR");
         }
 
         int moveLatency() { return firstMove < 0 ? -1 : firstMove - orderTick; }
@@ -300,7 +316,7 @@ public class OrderLatencyGameTests {
                             p.mob.getTarget() == null ? "none" : "#" + p.mob.getTarget().getId()));
                     else if (seen[i] > MAX_SEEN)
                         problems.add("unit " + i + " (#" + p.mob.getId() + ") seen moving " + seen[i] + " ticks after its order (moved at "
-                            + move[i] + ")");
+                            + move[i] + "); per tick from the order:" + p.trace);
                 }
                 String line = String.format(Locale.ROOT, "%s: move start %s, seen by clients %s (unit ticks after the order; max %d, "
                         + "median %d)", name, Arrays.toString(move), Arrays.toString(seen), max(seen), median(seen));
