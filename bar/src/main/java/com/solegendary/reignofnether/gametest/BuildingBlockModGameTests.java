@@ -77,6 +77,8 @@ public class BuildingBlockModGameTests {
             TreeSet<String> ids = e.getValue();
             // the vocabulary for whoever writes the next structure (tools/ci_gametests.sh makes it a CI notice)
             ReignOfNether.LOGGER.info("[ModBlocks] {}: {} blocks, e.g. {}", mod, ids.size(), sample(ids, 30));
+            // the whole vocabulary, one line per mod, for builders reading the job log (not a notice: too long)
+            ReignOfNether.LOGGER.info("[ModBlocksAll] {}: {}", mod, String.join(" ", ids));
             for (String id : KNOWN_BLOCKS.get(mod))
                 if (!ids.contains(id))
                     problems.add(id + " is not registered (" + mod + " has " + ids.size() + " blocks, e.g. "
