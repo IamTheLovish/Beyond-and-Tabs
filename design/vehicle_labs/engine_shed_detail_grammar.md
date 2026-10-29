@@ -500,3 +500,12 @@ crenellated on top, so each step in the outline is a deep shadow band with a lit
 Between crowns: vertical pilaster strips, tall slot windows and buttresses down the corners.
 Rule for the Engine Shed's cone: at each tier change (y 11, 15, 19, 23) a 1-block corbel course + parapet that
 projects over the tier below; tier faces get strips and slots; the outline (11 15 19 23 25...) stays frozen.
+
+## (z) ref67 - lovish's reference, Oct 28 22:58 (design/refs/vehicle_labs/ref67_gothic_chapel_misty_forest.png)
+A gothic chapel in a misty forest, shaders with fog and volumetric light.
+1. **The portal answer:** the door sits at the back of 2-3 receding pointed arches (archivolts), each ring one block
+   further in - a deep, graded shadow funnel that reads as a door, not a black hole (r1) or an owl face (r5). Lanterns
+   either side at the threshold. For the Engine Shed's 5x8 lane: frame its mouth with stepped jamb rings at x 0 / 1.
+2. Pale stone walls framed by dark contrasting pinnacles and buttresses - structure drawn in a darker line.
+3. Atmosphere: fog, light shafts through trees, warm lanterns against cool mist - shaders + nature again.
+Faction fit: Gravebound / the dark-fantasy accent.
