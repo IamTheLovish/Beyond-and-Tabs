@@ -89,6 +89,8 @@ public final class UnitInfoCard {
         Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),
         Map.entry("TidePriestUnit", Role.SUPPORT), Map.entry("CutlassRaiderUnit", Role.RAIDER),
         Map.entry("GullSpotterUnit", Role.RAIDER),
+        // every faction's T1 siege lobber (design/siege_t1.md)
+        Map.entry("SiegeLobberUnit", Role.ARTILLERY),
         // slice 2: the Harpooner and the Flak Swivel are ranged skirmishers (the pull and the anti-air bonus are on the
         // damage line), the Mudskipper Sloop a raider
         Map.entry("HarpoonerUnit", Role.SKIRMISHER), Map.entry("FlakSwivelUnit", Role.SKIRMISHER),
@@ -123,6 +125,8 @@ public final class UnitInfoCard {
         // Gravity Monk and the Mirror Mage are controllers; the Ley Master falls to the worker rule
         Map.entry("ThunderDragonUnit", Role.SKIRMISHER), Map.entry("EarthshakerUnit", Role.TANK),
         Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT),
+        // the essence caster: a blink, chain lightning and a storm cloud, never a weapon of its own
+        Map.entry("SparkSageUnit", Role.SUPPORT),
         // slice 4: the Seer watches, the Lantern Fortress shields (both support), the Phoenix dives (a raider), the
         // Celestial Dragon is the faction's experimental
         Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),

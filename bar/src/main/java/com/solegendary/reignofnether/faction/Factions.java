@@ -271,6 +271,7 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.EARTHSHAKER_UNIT.get(), ProductionItems.EARTHSHAKER);
 		registerEntity(STORMCALLERS, EntityRegistrar.GRAVITY_MONK_UNIT.get(), ProductionItems.GRAVITY_MONK);
 		registerEntity(STORMCALLERS, EntityRegistrar.MIRROR_MAGE_UNIT.get(), ProductionItems.MIRROR_MAGE);
+		registerEntity(STORMCALLERS, EntityRegistrar.SPARK_SAGE_UNIT.get(), ProductionItems.SPARK_SAGE);   // essence caster
 		// Stormcallers slice 4: the rest of T2 and the T3 experimental
 		registerEntity(STORMCALLERS, EntityRegistrar.SEER_UNIT.get(), ProductionItems.SEER);
 		registerEntity(STORMCALLERS, EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), ProductionItems.LANTERN_FORTRESS);
@@ -327,6 +328,14 @@ public class Factions {
 		registerEntity(TIDEWROUGHT, EntityRegistrar.CORSAIR_CAPTAIN_UNIT.get());
 		registerEntity(STORMCALLERS, EntityRegistrar.STORM_WITCH_UNIT.get());
 		registerEntity(BRASSWORKS, EntityRegistrar.ARCH_ENGINEER_UNIT.get());
+		// the T1 siege lobbers (design/siege_t1.md), each at its faction's T1 lab
+		registerEntity(VILLAGERS, EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get(), ProductionItems.SUNFIRE_MANGONEL);
+		registerEntity(MONSTERS, EntityRegistrar.SKULL_HURLER_UNIT.get(), ProductionItems.SKULL_HURLER);
+		registerEntity(PIGLINS, EntityRegistrar.BOULDER_CHUCKER_UNIT.get(), ProductionItems.BOULDER_CHUCKER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.BURL_SLINGER_UNIT.get(), ProductionItems.BURL_SLINGER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.POWDER_MONKEY_UNIT.get(), ProductionItems.POWDER_MONKEY);
+		registerEntity(STORMCALLERS, EntityRegistrar.THUNDERSTONE_MONK_UNIT.get(), ProductionItems.THUNDERSTONE_MONK);
+		registerEntity(BRASSWORKS, EntityRegistrar.STEAM_LOBBER_UNIT.get(), ProductionItems.STEAM_LOBBER);
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
 		registerEntity(NEUTRAL, EntityRegistrar.POLAR_BEAR_UNIT.get(), ProductionItems.POLAR_BEAR);

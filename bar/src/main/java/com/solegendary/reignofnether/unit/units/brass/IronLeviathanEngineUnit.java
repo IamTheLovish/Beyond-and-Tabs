@@ -71,7 +71,8 @@ import java.util.List;
  * lobbed over walls and ridges ({@link com.solegendary.reignofnether.unit.interfaces.IndirectFire}, #55) with no dead
  * zone (the barrel can depress), led onto moving targets; it dents buildings like every shell. Attack Ground shells a
  * spot. It fires at will at whatever stands within its reach (the Mortar Galley's rule too); its own eyes reveal
- * {@link #SIGHT_RANGE} blocks of fog, short of the gun - BAR's "artillery needs a spotter" is a follow-up for every
+ * {@link #SIGHT_RANGE} blocks of fog, short of the gun (artillery is exempt from the Vision multiplier and always sees
+ * less than its gun reaches, Spyglass included: Vision.artillery) - BAR's "artillery needs a spotter" is a follow-up for every
  * artillery piece (vision-gated auto-targeting), not this unit's alone.</li>
  * <li><b>Drones</b>: every {@link #DRONE_INTERVAL_TICKS} it launches {@link #DRONES_PER_WAVE} {@link ClockworkDroneUnit}s
  * from its deck while fewer than {@link #DRONE_CAP} are alive; they guard it, join its fights and fall apart when it
@@ -238,7 +239,7 @@ public class IronLeviathanEngineUnit extends Ravager implements Unit, AttackerUn
     final static public float movementSpeed = 0.15f;   // slow on purpose: its job is to stay back behind an escort (t3-roles, section 5)
     final static public float attackRange = 32.0f;     // 16 -> 32 (t3-roles): siege artillery outranges every tower (Flak 24) and the Mortar Galley (30); a T1 Bombard Crew reaches 22
     final static public float aggroRange = 32;         // 16 -> 32: shells whatever is spotted at its full reach
-    final static public int SIGHT_RANGE = 24;          // 20 -> 24: a tall fortress reveals far, still short of its gun (the fog it lifts, not what it may shoot)
+    final static public int SIGHT_RANGE = 24;          // 20 -> 24: a tall fortress reveals far, still short of its gun (artillery: no Vision multiplier, Vision.artillery)
     /** Lobs over walls (IndirectFire: no line of sight needed) with no dead zone - the barrel can depress. */
     public static final float MIN_RANGE = 0f;
     @Override public float getMinRange() { return MIN_RANGE; }
