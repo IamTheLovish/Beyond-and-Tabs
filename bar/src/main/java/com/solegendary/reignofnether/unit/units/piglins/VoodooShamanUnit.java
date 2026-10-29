@@ -62,13 +62,10 @@ import java.util.List;
  * hot buildings) with a weak staff swing: 60 HP, between the Ghast (50) and the Wither Skeleton (100), sturdier than the
  * other races' casters (40-45) as the Horde's units are. Placeholder look: the Spear Thrower's fur-cloaked skin.
  */
-public class VoodooShamanUnit extends PiglinBrute implements Unit, AttackerUnit, EssenceCarrier {
+public class VoodooShamanUnit extends PiglinBrute implements Unit, AttackerUnit {   // STUB: no EssenceCarrier yet
     public static final Abilities ABILITIES = new Abilities();
     static {
-        ABILITIES.add(new Hex(), Keybindings.abilitySlot1);
-        ABILITIES.add(new BloodTotem(), Keybindings.abilitySlot2);
-        ABILITIES.add(new SpiritPuppet(), Keybindings.abilitySlot3);
-        ABILITIES.add(new Empower(), Keybindings.abilitySlot4);
+        // STUB (tests-first commit): Hex, Blood Totem, Spirit Puppet and Empower land with the implementation
     }
 
     //region
