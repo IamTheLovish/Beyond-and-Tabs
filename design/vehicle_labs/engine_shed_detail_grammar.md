@@ -457,3 +457,12 @@ A workshop built as a giant crafting table, isometric view - the clearest "reads
 3. **Open, lit interior** visible through big openings: barrels, crates, a workbench, tools - the building works.
 4. **Clear emblem panels** (white field, one dark tool icon) instead of busy ornament - readable at ~36 px/block.
 5. A rough stone base with stairs and grass/stone scatter seats it into the ground.
+
+## (u) ref61 - lovish's reference, Oct 28 22:56 (design/refs/vehicle_labs/ref61_parterre_garden_from_above.png)
+A formal parterre seen from above: hedge scrollwork (leaves) on a lattice lawn with path lines, a round fountain,
+a stone plaza with trees, framed by palace wings.
+Lesson: **the ground plane is architecture.** From the RTS camera the ground round a building is as big as its roof;
+r7 sits on flat grass. Every building's plot edge gets designed ground: paving that changes at thresholds, aprons
+in front of doors, planting beds, yard surfaces (for Brassworks: setts, rail track, coal-stained cobble, iron
+drain grates; for capitols: parterres and fountains like this). Capitol / town-centre scale belongs to the "base
+becomes a city" goal; lab scale is the apron and yard.
