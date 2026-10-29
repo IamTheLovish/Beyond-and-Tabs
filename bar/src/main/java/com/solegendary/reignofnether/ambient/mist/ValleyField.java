@@ -119,32 +119,56 @@ public final class ValleyField {
     }
 
     /**
-     * The one direction the strands stream in across the whole view (r11d): the river's own - across the cover's slope,
-     * from the slope's structure tensor (so the two banks' opposite slopes add up instead of cancelling) - signed to
-     * the wind's side; the wind (windX, windZ, a unit vector) where no water or hollow sets one. Per-pixel directions
-     * sheared the noise into rims (eyes r50 / r51b).
+     * r11e: each 32-block world cell's strand direction (an angle in x, z, mod pi), for every texel of the grid - the
+     * river's own there (the cover slope's structure tensor over the cell and half a cell round it), the wind's angle
+     * where nothing sets one. One value per cell, the cells on the world grid: the shader evaluates the strands in the
+     * 4 nearest cells' rigid frames and blends them, so a curving river (Verdant's ring) is followed without the shear
+     * that per-pixel directions made (r11c's rims) or the wrong way one direction for the view went (eyes r52).
      */
-    public static double[] flow(double[][] cover, double windX, double windZ) {
+    public static double[][] cellAngles(double[][] cover, int originX, int originZ, int step, int cell, double windAngle) {
         int n = cover.length, m = cover[0].length;
-        double sxx = 0, szz = 0, sxz = 0;
+        double[][] gx = new double[n][m], gz = new double[n][m];
         for (int i = 1; i < n - 1; i++)
             for (int j = 1; j < m - 1; j++) {
-                double gx = (cover[i + 1][j] - cover[i - 1][j]) / 2, gz = (cover[i][j + 1] - cover[i][j - 1]) / 2;
-                sxx += gx * gx;
-                szz += gz * gz;
-                sxz += gx * gz;
+                gx[i][j] = (cover[i + 1][j] - cover[i - 1][j]) / 2;
+                gz[i][j] = (cover[i][j + 1] - cover[i][j - 1]) / 2;
             }
-        double tr = sxx + szz;
-        if (tr < 1e-3)
-            return new double[] { windX, windZ };
-        // the tensor's main axis is the slope's; the strands run across it
-        double angle = 0.5 * Math.atan2(2 * sxz, sxx - szz);
-        double ax = -Math.sin(angle), az = Math.cos(angle);
-        if (ax * windX + az * windZ < 0) {
-            ax = -ax;
-            az = -az;
-        }
-        return new double[] { ax, az };
+        double[][] out = new double[n][m];
+        java.util.Map<Long, Double> perCell = new java.util.HashMap<>();
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                int x = originX + i * step, z = originZ + j * step;
+                int cxi = Math.floorDiv(x, cell), czi = Math.floorDiv(z, cell);
+                long key = ((long) cxi << 32) ^ (czi & 0xffffffffL);
+                Double a = perCell.get(key);
+                if (a == null) {
+                    double sxx = 0, szz = 0, sxz = 0;
+                    int x0 = cxi * cell - cell / 2, x1 = (cxi + 1) * cell + cell / 2;
+                    int z0 = czi * cell - cell / 2, z1 = (czi + 1) * cell + cell / 2;
+                    for (int ii = Math.max(1, Math.floorDiv(x0 - originX, step)); ii < Math.min(n - 1, Math.floorDiv(x1 - originX, step)); ii++)
+                        for (int jj = Math.max(1, Math.floorDiv(z0 - originZ, step)); jj < Math.min(m - 1, Math.floorDiv(z1 - originZ, step)); jj++) {
+                            sxx += gx[ii][jj] * gx[ii][jj];
+                            szz += gz[ii][jj] * gz[ii][jj];
+                            sxz += gx[ii][jj] * gz[ii][jj];
+                        }
+                    if (sxx + szz < 1e-3)
+                        a = windAngle;
+                    else {
+                        double slope = 0.5 * Math.atan2(2 * sxz, sxx - szz);   // the slope's axis
+                        a = slope + Math.PI / 2;                              // the strands run across it
+                    }
+                    perCell.put(key, a);
+                }
+                out[i][j] = a;
+            }
+        return out;
+    }
+
+    /** An angle (mod pi) as the texture's byte, and back: 256 steps over half a turn. */
+    public static int encodeAngle(double a) {
+        double t = a / Math.PI;
+        t -= Math.floor(t);
+        return (int) Math.round(t * 255) & 0xFF;
     }
 
     /** A height as the texture's byte: base - HEIGHT_BELOW .. + HEIGHT_SPAN over 0..255, clamped. */
