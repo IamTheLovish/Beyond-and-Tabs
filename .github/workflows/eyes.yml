@@ -548,6 +548,8 @@ jobs:
               # the run judges its own structure stills: proof gate + numbers + critic sheet (tools/eyes_judge.py).
               # A failed gate is reported, never fails the run (the "Fail loudly" step judges the tour itself).
               python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || true
+              # the judge reads the build from README.md (written again below): without it judge.md said "build ?"
+              echo "Screenshots from build ${BUILD_SHA::7} at $(date -u +%FT%TZ)" > out/README.md
               rc=0
               python3 tools/eyes_judge.py "$EYES_BRANCH=out" --save out/judge.json --sheet-dir out \
                 > out/judge.md 2> out/judge-fail.txt || rc=$?
