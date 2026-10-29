@@ -65,18 +65,26 @@ float fbm(vec3 p) {
     return n / 0.875;
 }
 
-// the wisp mask at a world position: 0 clear .. 1 a dense strand
-float wisps(vec3 w) {
+// a world position in the wind's frame: along, up, across - stretched along the wind so the strands stream with it
+vec3 windFrame(vec3 w) {
     vec3 q = w + Offset;
-    // in the wind's frame: along, up, across - stretched along the wind so the strands stream with it
-    vec3 k = vec3(dot(q.xz, WindDir), q.y, dot(q.xz, vec2(-WindDir.y, WindDir.x)));
-    // a slow, large warp field that turns over time: the strands bend and curl instead of sliding as one sheet
+    return vec3(dot(q.xz, WindDir), q.y, dot(q.xz, vec2(-WindDir.y, WindDir.x)));
+}
+
+// the warp at a point (wind frame): a slow, large field that turns over time, so the strands bend and curl instead of
+// sliding as one sheet, plus a finer one for their own eddies. Once per pixel, at the middle of its ray (review, Oct
+// 29: the two fields barely change across a step, and they were 4 of the 7 noise lookups in every step)
+vec2 warpAt(vec3 k) {
     vec2 warp = vec2(vnoise(k * 0.03 + vec3(0.0, Time * 0.035, 0.0)),
                      vnoise(k * 0.03 + vec3(7.3, Time * 0.035 + 3.1, 2.9))) - 0.5;
-    k.xz += warp * 16.0;
-    // a second, finer warp: the strands' own curls and eddies
-    vec2 curl = vec2(vnoise(k * 0.11 + vec3(1.7, Time * 0.09, 4.2)), vnoise(k * 0.11 + vec3(9.1, Time * 0.09, 0.6))) - 0.5;
-    k.xz += curl * 4.0;
+    vec3 k2 = k + vec3(warp.x, 0.0, warp.y) * 16.0;
+    vec2 curl = vec2(vnoise(k2 * 0.11 + vec3(1.7, Time * 0.09, 4.2)), vnoise(k2 * 0.11 + vec3(9.1, Time * 0.09, 0.6))) - 0.5;
+    return warp * 16.0 + curl * 4.0;
+}
+
+// the wisp mask: 0 clear .. 1 a dense strand
+float wisps(vec3 k, vec2 warp) {
+    k.xz += warp;
     float n = fbm(k * vec3(0.045, 0.2, 0.1) + vec3(0.0, Time * 0.02, 0.0));
     return smoothstep(0.4, 0.7, n);
 }
@@ -111,20 +119,29 @@ void main() {
     // interleaved-gradient jitter of the first sample: no banding between the steps
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     float boost = 1.0 + (FogBoostMax - 1.0) * fogAt(surface.xz);
+    vec2 warp = warpAt(windFrame(surface + toViewer * (0.5 * len)));
 
     vec3 c = scene.rgb;
     float trans = 1.0;
     // back to front: from the surface toward the viewer
     for (int i = 0; i < STEPS; i++) {
         vec3 w = surface + toViewer * ((float(i) + jitter) * ds);
-        float h = max(w.y - Floor, -6.0);
+        // below the floor the density holds at the floor's (review, Oct 29: exp(-h) under it reached 15x and every
+        // pixel a few blocks under the camera's ground average went opaque DeepColor - the first in-game still's
+        // band and its black, block-stepped edges). A hollow still fills: its ray runs through more of the layer
+        float h = max(w.y - Floor, 0.0);
         float prof = exp(-h / Height);
-        float shape = 0.15 + 1.8 * wisps(w);
-        float dens = Density * boost * prof * shape;
+        float shape = 0.15 + 1.8 * wisps(windFrame(w), warp);
+        float dens = min(Density * boost * prof * shape, 2.5);
         float a = 1.0 - exp(-Sigma * dens * ds);
         // lit on top and where it is thin; cool and dim in the thick low core
-        float lit = clamp(0.15 + 0.6 * clamp(h / (2.0 * Height), 0.0, 1.0) + 0.35 * (1.0 - min(dens, 1.5) / 1.5), 0.0, 1.0);
-        c = mix(c, mix(DeepColor, LitColor, lit), a);
+        float lit = clamp(0.35 + 0.5 * clamp(h / (2.0 * Height), 0.0, 1.0) + 0.3 * (1.0 - min(dens, 1.5) / 1.5), 0.0, 1.0);
+        // self-shadow (review idea): the mist above this sample, toward the sky, dims it - strands get bright tops
+        // and darker undersides, and a thick bank darkens inside instead of reading as one flat wash
+        float hs = h + 1.5;
+        float above = min(Density * boost * exp(-hs / Height) * (0.15 + 1.8 * wisps(windFrame(w + vec3(0.0, 1.5, 0.0)), warp)), 2.5);
+        float sun = exp(-Sigma * above * 4.0);
+        c = mix(c, mix(DeepColor, LitColor, lit) * mix(0.62, 1.0, sun), a);
         trans *= 1.0 - a;
     }
     // in sight a unit in a hollow must read: the cap is lower there; out of sight the mist may close in
