@@ -17,7 +17,7 @@ public final class VoodooServerEvents {
 
     @SubscribeEvent
     public static void onAttack(LivingAttackEvent evt) {
-        if (!evt.getEntity().level().isClientSide() && evt.getSource().getEntity() instanceof LivingEntity attacker
+        if (false && !evt.getEntity().level().isClientSide() && evt.getSource().getEntity() instanceof LivingEntity attacker   // STUB
                 && Hex.isHexed(attacker))
             evt.setCanceled(true);
     }
