@@ -162,6 +162,14 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd CUTLASS_RAIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "cutlass_raider"), new com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd());
     public static final com.solegendary.reignofnether.unit.units.tide.ReefGuardProd REEF_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "reef_guard"), new com.solegendary.reignofnether.unit.units.tide.ReefGuardProd());
     public static final com.solegendary.reignofnether.unit.units.tide.BombardCrewProd BOMBARD_CREW = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_crew"), new com.solegendary.reignofnether.unit.units.tide.BombardCrewProd());
+    // the T1 siege lobbers, one per faction (design/siege_t1.md)
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd SUNFIRE_MANGONEL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sunfire_mangonel"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.SUNFIRE_MANGONEL, "sunfire_mangonel", () -> EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd SKULL_HURLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "skull_hurler"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.SKULL_HURLER, "skull_hurler", () -> EntityRegistrar.SKULL_HURLER_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd BOULDER_CHUCKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "boulder_chucker"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.BOULDER_CHUCKER, "boulder_chucker", () -> EntityRegistrar.BOULDER_CHUCKER_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd BURL_SLINGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "burl_slinger"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.BURL_SLINGER, "burl_slinger", () -> EntityRegistrar.BURL_SLINGER_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd POWDER_MONKEY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "powder_monkey"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.POWDER_MONKEY, "powder_monkey", () -> EntityRegistrar.POWDER_MONKEY_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd THUNDERSTONE_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thunderstone_monk"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.THUNDERSTONE_MONK, "thunderstone_monk", () -> EntityRegistrar.THUNDERSTONE_MONK_UNIT.get()));
+    public static final com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd STEAM_LOBBER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_lobber"), new com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd(com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.STEAM_LOBBER, "steam_lobber", () -> EntityRegistrar.STEAM_LOBBER_UNIT.get()));
     public static final com.solegendary.reignofnether.unit.units.tide.TidePriestProd TIDE_PRIEST = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_priest"), new com.solegendary.reignofnether.unit.units.tide.TidePriestProd());
     // Tidewrought slice 2
     public static final com.solegendary.reignofnether.unit.units.tide.HarpoonerProd HARPOONER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harpooner"), new com.solegendary.reignofnether.unit.units.tide.HarpoonerProd());
@@ -191,6 +199,7 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.storm.EarthshakerProd EARTHSHAKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "earthshaker"), new com.solegendary.reignofnether.unit.units.storm.EarthshakerProd());
     public static final com.solegendary.reignofnether.unit.units.storm.GravityMonkProd GRAVITY_MONK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gravity_monk"), new com.solegendary.reignofnether.unit.units.storm.GravityMonkProd());
     public static final com.solegendary.reignofnether.unit.units.storm.MirrorMageProd MIRROR_MAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage"), new com.solegendary.reignofnether.unit.units.storm.MirrorMageProd());
+    public static final com.solegendary.reignofnether.unit.units.storm.SparkSageProd SPARK_SAGE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "spark_sage"), new com.solegendary.reignofnether.unit.units.storm.SparkSageProd());
     // Stormcallers slice 4: the rest of the Observatory's T2, and Heaven's Gate's Celestial Dragon (T3)
     public static final com.solegendary.reignofnether.unit.units.storm.SeerProd SEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seer"), new com.solegendary.reignofnether.unit.units.storm.SeerProd());
     public static final com.solegendary.reignofnether.unit.units.storm.LanternFortressProd LANTERN_FORTRESS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "lantern_fortress"), new com.solegendary.reignofnether.unit.units.storm.LanternFortressProd());
@@ -255,6 +264,8 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.engineers.SalvagerProd SALVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "salvager"), new com.solegendary.reignofnether.unit.units.engineers.SalvagerProd());
     public static final com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd JADE_MENDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "jade_mender"), new com.solegendary.reignofnether.unit.units.engineers.JadeMenderProd());
     public static final com.solegendary.reignofnether.unit.units.engineers.PioneerProd PIONEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer"), new com.solegendary.reignofnether.unit.units.engineers.PioneerProd());
+    // the Brassworks essence caster (design/essence_casters.md; appended last so no existing item's id moves)
+    public static final com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd SOUL_ENGINEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer"), new com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd());
 
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
@@ -313,6 +324,13 @@ public class ProductionItems {
         CUTLASS_RAIDER,
         REEF_GUARD,
         BOMBARD_CREW,
+        SUNFIRE_MANGONEL,
+        SKULL_HURLER,
+        BOULDER_CHUCKER,
+        BURL_SLINGER,
+        POWDER_MONKEY,
+        THUNDERSTONE_MONK,
+        STEAM_LOBBER,
         TIDE_PRIEST,
         HARPOONER,
         FLAK_SWIVEL,
@@ -336,6 +354,7 @@ public class ProductionItems {
         EARTHSHAKER,
         GRAVITY_MONK,
         MIRROR_MAGE,
+        SPARK_SAGE,
         SEER,
         LANTERN_FORTRESS,
         PHOENIX,
@@ -387,6 +406,7 @@ public class ProductionItems {
         DRILL_BURROWER,
         REPAIR_CRAWLER,
         CLOCKWORK_SPIDER,
+        SOUL_ENGINEER,
         DAWN_PALADIN,
         DAWN_PALADIN_REVIVE,
         GRAVECALLER,

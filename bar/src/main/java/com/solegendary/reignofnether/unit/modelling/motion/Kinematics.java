@@ -29,6 +29,8 @@ public final class Kinematics {
     public static final int SIZE_WINDOW = 3;
     /** Impulses (degrees per tick) a hit gives the flinch and stagger springs. */
     public static final float FLINCH_KICK = 9f, STAGGER_KICK = 10f;
+    /** The impulse a landed blow gives its attacker's recoil spring (degrees per tick), and that spring's stiffness and damping. */
+    public static final float RECOIL_KICK = 18f, RECOIL_OMEGA = 1.1f, RECOIL_ZETA = 0.3f;
 
     /**
      * @param dx,dy,dz   the unit's movement this tick (x - xo ...), blocks
@@ -99,6 +101,7 @@ public final class Kinematics {
         Life.spring(s, b + SP_FLINCH_X, 0f, 0.9f, 0.5f, 1f);
         Life.spring(s, b + SP_FLINCH_Z, 0f, 0.9f, 0.5f, 1f);
         Life.spring(s, b + SP_STAGGER, 0f, 0.5f, 0.55f, 1f);
+        Life.spring(s, b + SP_RECOIL, 0f, RECOIL_OMEGA, RECOIL_ZETA, 1f);
 
         for (int i = 0; i < STRIDE; i++)
             if (!Float.isFinite(s[b + i])) {
@@ -118,6 +121,16 @@ public final class Kinematics {
         s[b + HIT_HEALTH0] = s[b + LAST_HEALTH];
         s[b + SP_FLINCH_X + 1] -= Mth.cos(dirRad) * FLINCH_KICK;   // from the front: bent back
         s[b + SP_FLINCH_Z + 1] -= Mth.sin(dirRad) * FLINCH_KICK;   // from the right: bent to the left
+    }
+
+    /**
+     * The contact event, attacker side: this unit's blow landed (the client's damage event names it as the direct
+     * source - for a keyed swing that is HeldBlow's hit key, the frame the blade arrives). The weapon stops on the
+     * target: the arms and torso jolt back and shudder still. Stamped in the same call as the target's {@link #onHit},
+     * so the two show on the same frame.
+     */
+    public static void onContact(float[] s, int b) {
+        s[b + SP_RECOIL + 1] += RECOIL_KICK;
     }
 
     /**

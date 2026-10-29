@@ -56,7 +56,9 @@ public class HeroServerEvents {
         HeroProgression.onDecisiveKill(evt.getEntity());
 
         Level level = evt.getEntity().level();
-        if (evt.getEntity() instanceof Unit deadUnit) {
+        // a summon's death pays no XP orbs (design/essence_casters.md Revision 1: a side must not feed its own free
+        // units to its own heroes); a fallen summoned hero still gives the decisive-kill burst above
+        if (evt.getEntity() instanceof Unit deadUnit && !com.solegendary.reignofnether.unit.Summons.isSummoned(evt.getEntity())) {
             int popCost = deadUnit.getCost().population;
             if (popCost > 0) {
                 for (LivingEntity unit : UnitServerEvents.getAllUnits()) {

@@ -29,6 +29,9 @@ import java.util.WeakHashMap;
  * and our generated rigs ({@link SplitPasses}) get breath-and-flinch on their own hierarchy, the rigs without a second
  * breath. Anything else - {@link OwnMotion}, the Bone Dragon while its rework (PR #145) is open, a quadruped, an Alex's
  * Mobs creature - gets no map and is left exactly as it was.
+ * The humans fall by {@link DeathFall} instead of vanilla's flip (the death-pose contract, humans first): the
+ * humanoid, illager and villager families on their living-army parts, and the generated human rigs on their own
+ * jointed parts (chest, arms, forearms, thighs, shins), found by name.
  * A model class whose pass throws is switched off for the session ({@link #disable}).
  */
 @OnlyIn(Dist.CLIENT)
@@ -74,7 +77,7 @@ public final class BoneMaps {
                     .follow(pl.rightPants, pl.rightLeg).follow(pl.leftPants, pl.leftLeg);
             if (model instanceof VillagerUnitModel<?> v)
                 m.set(Motion.ARMS, v.crossedArms);
-            return m;
+            return m.fallsAsIs();
         }
         if (model instanceof IllagerModel<?> il) {
             ModelPart root = il.root();
@@ -83,7 +86,7 @@ public final class BoneMaps {
                 .set(Motion.ARMS, child(root, "arms"))
                 .set(Motion.ARM_R, child(root, "right_arm")).set(Motion.ARM_L, child(root, "left_arm"))
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
-            return m;   // the illager's hat is the head's child: it follows the head by itself
+            return m.fallsAsIs();   // the illager's hat is the head's child: it follows the head by itself
         }
         if (model instanceof IronGolemModel<?> g) {
             ModelPart root = g.root();
@@ -97,7 +100,8 @@ public final class BoneMaps {
             return new BoneMap(12f, false)
                 .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
                 .set(Motion.ARMS, child(root, "arms"))
-                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
+                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"))
+                .fallsAsIs();
         }
         if (model instanceof SpiderModel<?> sp) {
             ModelPart root = sp.root();
@@ -111,12 +115,51 @@ public final class BoneMaps {
             ModelPart body = descendant(hm, "body"), head = descendant(hm, "head");
             if (body != null && !bendsAlone(body, head))
                 body = null;      // bending it would part the head from the torso, or swing the legs and feet
+            if (body == null && !keyframes) {
+                // a generated human whose body is its pelvis (the Halberdier): its chest is the torso that flinches
+                ModelPart chest = descendant(hm, "chest");
+                if (chest != null && bendsAlone(chest, head))
+                    body = chest;
+            }
             if (body == null && head == null)
                 return NONE;
-            return new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
+            BoneMap m = new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
                 .set(Motion.BODY, body).set(Motion.HEAD, head);
+            ModelPart[] fall = keyframes ? null : humanRig(hm, head);
+            return fall == null ? m : m.fallsJointed(fall);
         }
         return NONE;
+    }
+
+    /**
+     * A generated human rig's parts for its death ({@link DeathFall}'s bones), or null when the rig is not a human
+     * (a quadruped, a dragon) or lacks one of them. The torso is the part that carries the head and arms but not the
+     * legs: the chest where the body is a pelvis (the Halberdier), else the body itself (the Levy, the Squire); the
+     * thighs are the legs, the forearms and shins the elbows and knees (tools/human_kit.py's names).
+     */
+    static ModelPart[] humanRig(HierarchicalModel<?> hm, ModelPart head) {
+        if (head == null)
+            return null;
+        ModelPart torso = descendant(hm, "chest");
+        if (torso == null || !bendsAlone(torso, head))
+            torso = descendant(hm, "body");
+        if (torso == null || !bendsAlone(torso, head))
+            return null;
+        ModelPart[] p = new ModelPart[DeathFall.BONES];
+        p[Motion.BODY] = torso;
+        p[Motion.HEAD] = head;
+        p[Motion.ARM_R] = descendant(hm, "right_arm");
+        p[Motion.ARM_L] = descendant(hm, "left_arm");
+        p[Motion.LEG_R] = descendant(hm, "right_thigh");
+        p[Motion.LEG_L] = descendant(hm, "left_thigh");
+        p[DeathFall.FORE_R] = descendant(hm, "right_fore");
+        p[DeathFall.FORE_L] = descendant(hm, "left_fore");
+        p[DeathFall.KNEE_R] = descendant(hm, "right_shin");
+        p[DeathFall.KNEE_L] = descendant(hm, "left_shin");
+        for (int bone : new int[] {Motion.ARM_R, Motion.ARM_L, Motion.LEG_R, Motion.LEG_L})
+            if (p[bone] == null)
+                return null;
+        return p;
     }
 
     /** Every leg, thigh and foot name our rigs and keyframe models use (bone names are not readable from a part). */

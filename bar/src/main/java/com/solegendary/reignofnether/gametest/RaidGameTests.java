@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.bot.BotArmy;
 import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
+import com.solegendary.reignofnether.building.BuildingDamage;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -67,14 +68,20 @@ public class RaidGameTests {
 
     /** A party of 6 raiders on a lone worker (design: ~2-4 s) and on a group of 4 (design: ~8-12 s). */
     static final float LONE_PURE_MAX = 5f, LONE_TOTAL_MAX = 11f, GROUP_PURE_MAX = 13f, GROUP_TOTAL_MAX = 24f;
-    /** 6 infantry raiders on a converter (design: 4-6 s for 4-6 units). */
-    static final float CONV_MIN = 2.5f, CONV_MAX = 8f;
-    /** 6 infantry raiders on a windmill, and on a T1 extractor (design: 12-18 s for 4-6 units). */
-    static final float WIND_INF_MIN = 5f, WIND_INF_MAX = 19f, EXT_INF_MIN = 7f, EXT_INF_MAX = 28f;
-    /** 4 melee T1 vehicles on a windmill (design 5-8 s), a T1 extractor (design 6-10 s) and a T2 extractor (~2x). */
-    static final float WIND_VEH_MAX = 12f, EXT_VEH_MAX = 14f, EXT2_VEH_MAX = 28f;
+    /**
+     * Units bring buildings down {@link BuildingDamage#GLOBAL_MULT} times as fast as the base rate (lovish, Oct 28:
+     * "buildings are so tanky"; building health is unchanged), so every building window below is the design time at the
+     * base rate over it. The roles and ratios are untouched: only the clock runs faster.
+     */
+    static final float K = BuildingDamage.GLOBAL_MULT;
+    /** 6 infantry raiders on a converter (base design: 4-6 s for 4-6 units). */
+    static final float CONV_MIN = 2.5f / K, CONV_MAX = 8f / K;
+    /** 6 infantry raiders on a windmill, and on a T1 extractor (base design: 12-18 s for 4-6 units). */
+    static final float WIND_INF_MIN = 5f / K, WIND_INF_MAX = 19f / K, EXT_INF_MIN = 7f / K, EXT_INF_MAX = 28f / K;
+    /** 4 melee T1 vehicles on a windmill (base design 5-8 s), a T1 extractor (base design 6-10 s) and a T2 extractor (~2x). */
+    static final float WIND_VEH_MAX = 12f / K, EXT_VEH_MAX = 14f / K, EXT2_VEH_MAX = 28f / K;
     /** Artillery lands its shells from range and starts later: looser. */
-    static final float WIND_ART_MAX = 25f, EXT_ART_MAX = 32f, EXT2_ART_MAX = 50f;
+    static final float WIND_ART_MAX = 25f / K, EXT_ART_MAX = 32f / K, EXT2_ART_MAX = 50f / K;
 
     // ---------------------------------------------------------------------------------------------------------------
     // The factions' pieces
@@ -166,8 +173,18 @@ public class RaidGameTests {
         BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(b, level, origin, Rotation.NONE, owner, false);
         if (bp == null)
             return null;
-        if (t2 && b instanceof MetalExtractor mex)
-            bp.changeStructure(mex.getUpgradedStructureName(1));
+        if (t2 && b instanceof MetalExtractor mex) {
+            // the tower stands before the structure swap, as a refitted T1's pool does in a match: changeStructure on an
+            // empty site queued every T2 block, and buildNextBlock laid them one a tick (the pool's water with them)
+            // while a test was already breaking the building - water over a broken basin spilled onto the patch
+            // (PR #297's CI, Build run 40638083212, "ground_not_flat")
+            String t2Name = mex.getUpgradedStructureName(1);
+            for (BuildingBlock bb : BuildingUtils.getAbsoluteBlockData(
+                    com.solegendary.reignofnether.building.BuildingBlockData.getBuildingBlocksFromNbt(t2Name, level), level, origin, Rotation.NONE))
+                if (!bb.getBlockState().isAir())
+                    level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
+            bp.changeStructure(t2Name);
+        }
         for (BuildingBlock bb : bp.getBlocks())
             if (!bb.getBlockState().isAir())
                 level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
@@ -598,10 +615,10 @@ public class RaidGameTests {
                 fmt(refs[0].getMaxHealth() / (6 * inf) / 1f), fmt(refs[1].getMaxHealth() / (6 * inf)), fmt(refs[2].getMaxHealth() / (6 * inf)),
                 fmt(refs[3].getMaxHealth() / (6 * inf)), fmt(tower.getMaxHealth() / (6 * inf)), fmt(capitol.getMaxHealth() / (6 * inf)),
                 fmt(refs[0].getMaxHealth() / (4 * inf)), fmt(refs[1].getMaxHealth() / (4 * inf)), fmt(refs[2].getMaxHealth() / (4 * inf)));
-            if (tower.getMaxHealth() / (6 * inf) < 20f)
-                problems.add(f.name() + ": 6 " + f.raiderName() + " raze a tower in " + fmt(tower.getMaxHealth() / (6 * inf)) + " s (minimum 20)");
-            if (capitol.getMaxHealth() / (6 * inf) < 30f)
-                problems.add(f.name() + ": 6 " + f.raiderName() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (6 * inf)) + " s (minimum 30)");
+            if (tower.getMaxHealth() / (6 * inf) < 20f / K)
+                problems.add(f.name() + ": 6 " + f.raiderName() + " raze a tower in " + fmt(tower.getMaxHealth() / (6 * inf)) + " s (minimum " + fmt(20f / K) + ")");
+            if (capitol.getMaxHealth() / (6 * inf) < 30f / K)
+                problems.add(f.name() + ": 6 " + f.raiderName() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (6 * inf)) + " s (minimum " + fmt(30f / K) + ")");
             raider.discard();
         }
         for (Veh veh : vehicles()) {
@@ -614,19 +631,20 @@ public class RaidGameTests {
             }
             float v = hps(m, refs[1]);
             ReignOfNether.LOGGER.info("[Raid] table vehicle {}: {}/s per unit (target {}); x4 windmill {}s extractor {}s extractor2 {}s tower {}s capitol {}s; x3 windmill {}s extractor {}s",
-                veh.name(), String.format(Locale.ROOT, "%.2f", v), RaidTuning.VEHICLE_BUILDING_HPS,
+                veh.name(), String.format(Locale.ROOT, "%.2f", v), RaidTuning.VEHICLE_BUILDING_HPS * K,
                 fmt(refs[1].getMaxHealth() / (4 * v)), fmt(refs[2].getMaxHealth() / (4 * v)), fmt(refs[3].getMaxHealth() / (4 * v)),
                 fmt(tower.getMaxHealth() / (4 * v)), fmt(capitol.getMaxHealth() / (4 * v)),
                 fmt(refs[1].getMaxHealth() / (3 * v)), fmt(refs[2].getMaxHealth() / (3 * v)));
-            if (Math.abs(v - RaidTuning.VEHICLE_BUILDING_HPS) > RaidTuning.VEHICLE_BUILDING_HPS * 0.12f)
-                problems.add(veh.name() + " does " + v + " health/s to a building, not about " + RaidTuning.VEHICLE_BUILDING_HPS);
+            if (Math.abs(v - RaidTuning.VEHICLE_BUILDING_HPS * K) > RaidTuning.VEHICLE_BUILDING_HPS * K * 0.12f)
+                problems.add(veh.name() + " does " + v + " health/s to a building, not about " + RaidTuning.VEHICLE_BUILDING_HPS * K
+                    + " (" + RaidTuning.VEHICLE_BUILDING_HPS + " x " + K + ")");
             if (v < maxInfantry * 1.9f)
                 problems.add(veh.name() + " (" + v + "/s) is not nearly twice the best infantry raider (" + maxInfantry + "/s) against buildings");
             // faster than the infantry on the towers and the capitol too, but those stay tough
-            if (tower.getMaxHealth() / (4 * v) < 10f)
-                problems.add("4 " + veh.name() + " raze a tower in " + fmt(tower.getMaxHealth() / (4 * v)) + " s (minimum 10)");
-            if (capitol.getMaxHealth() / (4 * v) < 18f)
-                problems.add("4 " + veh.name() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (4 * v)) + " s (minimum 18)");
+            if (tower.getMaxHealth() / (4 * v) < 10f / K)
+                problems.add("4 " + veh.name() + " raze a tower in " + fmt(tower.getMaxHealth() / (4 * v)) + " s (minimum " + fmt(10f / K) + ")");
+            if (capitol.getMaxHealth() / (4 * v) < 18f / K)
+                problems.add("4 " + veh.name() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (4 * v)) + " s (minimum " + fmt(18f / K) + ")");
             m.discard();
         }
         ReignOfNether.LOGGER.info("[Raid] table gaps: Sunforged has no fast T1 raider and no T1 vehicle; Gravebound has no T1 vehicle");
@@ -762,6 +780,14 @@ public class RaidGameTests {
                     problems.add("could not place the " + (round == 1 ? "T2" : "T1") + " extractor");
                     continue;
                 }
+                // the extractor must be handed over standing, with nothing left to lay: a block still queued is laid one
+                // a tick by buildNextBlock while the blows below are breaking the building, with no look at its
+                // neighbours - a pool's water laid back over a broken basin spills onto the patch (PR #297's CI, Build
+                // run 40638083212: flowing water beside the T2, "ground_not_flat"). A player's extractor never has its
+                // water queued: the upgrade swaps the structure on a T1 whose pool already stands.
+                String state = cur[round].constructionState();
+                if (!state.startsWith("queue 0,"))
+                    problems.add("the " + (round == 1 ? "T2" : "T1") + " extractor was handed over with blocks still to lay: " + state);
             }
         });
         helper.onEachTick(() -> {
@@ -1339,5 +1365,127 @@ public class RaidGameTests {
             helper.fail("two bot converter slots are only " + min + " apart, inside the " + RaidTuning.CONVERTER_BLAST_RADIUS + " blast radius");
         else
             helper.succeed();
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // 9. Hits leave an extractor's pool till last
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every faction's extractor, T1 and T2 (Verdant's eight times each: its pool sits a block up on the building's south
+     * edge, walled by stairs, mangrove roots and bricks), hit one block at a time every 4 ticks - about the rate of six
+     * infantry raiders - until it falls. No hit may break a block of its pool while it stands, and no water may get out
+     * of its footprint. Blocks next to water are never picked, but the pool's own water was: once a hit broke it, the
+     * wall beside the gap had no water next to it for the ~5 ticks the pool took to flow back, the next hits could break
+     * the wall, and the pool poured onto the raiders round the building. They floated off it (CI trace: 8-21 raider
+     * seconds in water, 13 repaths), and Verdant's extractor fights took 15-28 s instead of 10 / 22 s - the
+     * raid_infantry_party_times_against_eco_buildings flake, ~1 run in 26 (flake-stress 40819473983).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 1500)
+    public static void raid_hits_leave_an_extractors_pool_till_last(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> names = new ArrayList<>();
+        List<Building> kinds = new ArrayList<>();
+        List<Boolean> tiers = new ArrayList<>();
+        for (Fac f : facs())
+            for (int t2 = 0; t2 < 2; t2++)
+                for (int k = 0; k < (f.name().equals("Verdant") ? 8 : 1); k++) {
+                    names.add(f.name() + (t2 == 1 ? " T2" : " T1") + " #" + (k + 1));
+                    kinds.add(f.ext());
+                    tiers.add(t2 == 1);
+                }
+        Pads pads = new Pads(level, 10, names.size());
+        // per extractor: its placement, its pool's cells, and [pool cells a hit broke, most water cells seen outside the
+        // footprint, hits]
+        List<BuildingPlacement> placements = new ArrayList<>();
+        List<String> placed = new ArrayList<>();
+        List<List<BlockPos>> pools = new ArrayList<>();
+        List<int[]> counts = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        for (int i = 0; i < names.size(); i++) {
+            Cell c = pads.cells.get(i);
+            BuildingPlacement bp = build(level, kinds.get(i), new BlockPos(c.x0() + 13, PAD_Y + 1, c.z0() + 5), "gametest_raid_pool_" + i, tiers.get(i));
+            if (bp == null) {
+                problems.add("could not place " + names.get(i));
+                continue;
+            }
+            List<BlockPos> pool = new ArrayList<>();
+            for (BuildingBlock bb : bp.getBlocks())
+                if (!bb.getBlockState().getFluidState().isEmpty())
+                    pool.add(bb.getBlockPos());
+            placements.add(bp);
+            placed.add(names.get(i));
+            pools.add(pool);
+            counts.add(new int[3]);
+        }
+        Runnable cleanup = () -> {
+            for (BuildingPlacement bp : placements)
+                BuildingServerEvents.getBuildings().remove(bp);
+            pads.release();
+        };
+        if (!problems.isEmpty()) {
+            cleanup.run();
+            helper.fail(String.join("; ", problems));
+            return;
+        }
+        int[] tick = { 0 };
+        boolean[] over = { false };
+        helper.onEachTick(() -> {
+            if (over[0] || ++tick[0] % 4 != 0)
+                return;
+            boolean standing = false;
+            for (int i = 0; i < placements.size(); i++) {
+                BuildingPlacement bp = placements.get(i);
+                if (bp.shouldBeDestroyed() || !BuildingServerEvents.getBuildings().contains(bp))
+                    continue;
+                standing = true;
+                List<BlockPos> pool = pools.get(i);
+                int[] n = counts.get(i);
+                boolean[] wet = new boolean[pool.size()];
+                for (int k = 0; k < pool.size(); k++)
+                    wet[k] = !level.getFluidState(pool.get(k)).isEmpty();
+                bp.destroyRandomBlocks(bp.getHealthPerBlock() / 2);   // one block
+                n[2]++;
+                for (int k = 0; k < pool.size(); k++)
+                    if (wet[k] && level.getFluidState(pool.get(k)).isEmpty())
+                        n[0]++;
+                int outside = 0;
+                for (BlockPos p : BlockPos.betweenClosed(bp.minCorner.getX() - 4, PAD_Y + 1, bp.minCorner.getZ() - 4,
+                        bp.maxCorner.getX() + 4, PAD_Y + 2, bp.maxCorner.getZ() + 4)) {
+                    boolean inside = p.getX() >= bp.minCorner.getX() && p.getX() <= bp.maxCorner.getX()
+                        && p.getZ() >= bp.minCorner.getZ() && p.getZ() <= bp.maxCorner.getZ();
+                    if (!inside && !level.getFluidState(p).isEmpty())
+                        outside++;
+                }
+                n[1] = Math.max(n[1], outside);
+            }
+            if (standing && tick[0] < 1200)
+                return;
+            over[0] = true;
+            try {
+                int broken = 0, spilled = 0;
+                for (int i = 0; i < placements.size(); i++) {
+                    int[] n = counts.get(i);
+                    if (n[0] > 0 || n[1] > 0)
+                        problems.add(placed.get(i) + ": " + n[0] + " pool cell(s) broken by hits, " + n[1] + " water cell(s) outside its footprint ("
+                            + n[2] + " hits)");
+                    if (n[0] > 0)
+                        broken++;
+                    if (n[1] > 0)
+                        spilled++;
+                    BuildingPlacement bp = placements.get(i);
+                    if (!bp.shouldBeDestroyed() && BuildingServerEvents.getBuildings().contains(bp))
+                        problems.add(placed.get(i) + " still stands after " + n[2] + " one-block hits");
+                }
+                ReignOfNether.LOGGER.info("[Raid] other pools: {} extractors hit to the ground, {} had their pool broken by a hit, {} spilled water outside",
+                    placements.size(), broken, spilled);
+                if (!problems.isEmpty())
+                    helper.fail(String.join("; ", problems));
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
     }
 }
