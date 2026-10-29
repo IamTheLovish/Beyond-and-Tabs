@@ -27,3 +27,9 @@ You need: a Minecraft Java Edition account and the file BeyondAndTabs-test.mrpac
 
 If it says your mods do not match, ask lovish for the newest .mrpack - his game and
 yours must use the same version.
+
+Credits
+-------
+The shaders in this pack are Complementary Reimagined by EminGT (https://www.complementary.dev/ ,
+source: https://github.com/ComplementaryDevelopment/ComplementaryReimagined). Used unmodified;
+we only ship settings (its options file). It is used under Complementary's own licence.

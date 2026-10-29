@@ -69,6 +69,27 @@ def write(root, rel, text):
 # reads our _n / _s maps; Complementary's own default (RP_MODE 1) ignores them. The two settings files are "preserve":
 # written once, then a player's own choices (K toggles shaders, O opens their menu) survive every update.
 SHADER_PROJECT, SHADER_VERSION = "complementary-reimagined", "r5.9.3"
+# Grass tufts without dark stars (Oct 28, eyes r33; tools/test_shader_settings.py): Complementary's shadow pass pushes
+# grass / fern quads sideways at noon, more the further the camera (shadow.glsl ~315, under PERPENDICULAR_TWEAKS), so
+# from the RTS camera every tuft cast a 1-1.5 block dark star. Its licence (1.2c) forbids shipping it modified, so
+# settings it is, until its author answers: DETAIL_QUALITY 0 drops the tweak; TAA and the leaf shadows are put back to
+# what the default (DETAIL_QUALITY 2) gives. Dark share on open meadow 0.050 -> 0.005; buildings kept their light.
+FOLIAGE_SHADOW_FIX = (("DETAIL_QUALITY", "0"), ("TAA_DEFINE", "1"), ("LEAF_SHADOW_OPTIMISATION_DEFINE", "0"))
+
+
+def complementary_options(extra="", rp_mode=3):
+    """The text of Complementary's options file: RP_MODE, the foliage shadow fix, then `extra` ("K=V;K=V", the eyes
+    lane's shader_options) - an extra key replaces a shipped one rather than repeating it."""
+    opts = {"RP_MODE": str(rp_mode)}
+    opts.update(FOLIAGE_SHADOW_FIX)
+    for kv in (s.strip() for s in extra.split(";")):
+        if not kv:
+            continue
+        if "=" not in kv:
+            raise ValueError(f"shader option {kv!r} is not KEY=VALUE")
+        k, v = kv.split("=", 1)
+        opts[k.strip()] = v.strip()
+    return "".join(f"{k}={v}\n" for k, v in opts.items())
 
 
 def resolve_shader(tmp):
@@ -94,7 +115,7 @@ def shader_files(shader):
     props = (f"enableShaders=true\nshaderPack={name}\ndisableUpdateMessage=true\nmaxShadowRenderDistance=12\n")
     return [
         (f"shaderpacks/{slug(name)}.pw.toml", metafile("Complementary Reimagined", name, "client", url, sha), True, False),
-        (f"shaderpacks/{name}.txt", "RP_MODE=3\n", False, True),
+        (f"shaderpacks/{name}.txt", complementary_options(), False, True),
         ("config/oculus.properties", props, False, True),
     ]
 

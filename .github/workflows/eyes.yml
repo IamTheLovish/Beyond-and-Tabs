@@ -305,6 +305,15 @@ jobs:
           cr = versions('bliss-shader' if pack == 'bliss' else 'complementary-reimagined', 'iris')
           if not cr:
               raise SystemExit('no %s version for Iris / 1.20.1 on Modrinth' % pack)
+          if pack != 'bliss':
+              # what players get (pack/build_packwiz.py): the pinned version and the shipped options file
+              import sys
+              sys.path.insert(0, 'pack')
+              import build_packwiz
+              cr = [v for v in cr if v['version_number'] == build_packwiz.SHADER_VERSION]
+              if not cr:
+                  raise SystemExit('Complementary %s (build_packwiz.SHADER_VERSION) not on Modrinth for Iris / 1.20.1'
+                                   % build_packwiz.SHADER_VERSION)
           f = primary(cr[0]); fetch(f, 'run/shaderpacks/' + f['filename'])
           for name in ('oculus.properties', 'iris.properties'):
               open('run/config/' + name, 'w').write(
@@ -319,14 +328,17 @@ jobs:
               # beside its own hardcoded ones. POM and DOF stay off (Complementary's lane runs without them too)
               opts = ('Specular_Reflections=true\nMATERIAL_AO=true\nEMISSIVE_TYPE=2\nSSS_TYPE=2\n' if rp == 'labpbr'
                       else '')
-          else:
-              opts = 'RP_MODE=%d\n' % (3 if rp == 'labpbr' else 1)
           extra = [kv.strip() for kv in os.environ.get('SHADER_OPTIONS', '').split(';') if kv.strip()]
           for kv in extra:
               if '=' not in kv:
                   raise SystemExit('shader_options: %r is not KEY=VALUE' % kv)
-          if extra:
+          if pack != 'bliss':
+              # the shipped options (RP_MODE, the grass tufts' shadow fix); a shader_options key replaces a shipped one,
+              # so an A/B against the old look is e.g. DETAIL_QUALITY=2
+              opts = build_packwiz.complementary_options(';'.join(extra), 3 if rp == 'labpbr' else 1)
+          elif extra:
               opts += ''.join(kv + '\n' for kv in extra)
+          if extra:
               print('::notice::[Eyes] extra shader options: ' + '; '.join(extra))
           open('run/shaderpacks/%s.txt' % f['filename'], 'w').write(opts)
           print(pack, 'options:', opts.replace('\n', ' ') or '(defaults)', '(%s)' % rp)
