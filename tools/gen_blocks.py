@@ -94,7 +94,9 @@ TARGETS = {
     # pockets between them - the volume reads at the RTS zoom); GrassTint.CANOPY cools the foliage colour.
     "oak_leaves":       dict(luma=0.47, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     # birch (critic r38: "birch vs oak identity: zero at the crown"): a lighter, airier crown than the oak's
-    "birch_leaves":     dict(luma=0.58, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    # r41 (critic r40: with the oak fixed - oak V 0.21 / 0.35 - the birch crown sits at the lawn's value, V 0.28 vs
+    # 0.35 plain, 0.49 vs 0.51 shaders): ~10% darker and a little more clump contrast; still the lighter species
+    "birch_leaves":     dict(luma=0.52, std=0.125, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "spruce_leaves":    dict(luma=0.44, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
     "acacia_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "jungle_leaves":    dict(luma=0.46, std=0.125, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
