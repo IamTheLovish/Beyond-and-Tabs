@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -39,6 +40,9 @@ public final class Corpses {
     private static final double MAX_DIST = 160;
 
     private static final LivingEntity[] HELD = new LivingEntity[MAX];
+    // each body's culling box, made once when it is kept (it no longer moves): the upright box grown by its height,
+    // as the body lies up to its height along the fall
+    private static final AABB[] BOX = new AABB[MAX];
     private static int count = 0;
     private static boolean drawing = false;
     private static boolean disabled = false;
@@ -84,17 +88,22 @@ public final class Corpses {
         le.swinging = false;
         le.attackAnim = le.oAttackAnim = 0f;
         le.hurtTime = 0;
+        BOX[count] = le.getBoundingBoxForCulling().inflate(le.getBbHeight());
         HELD[count++] = le;
     }
 
     private static void drop(int i) {
         System.arraycopy(HELD, i + 1, HELD, i, count - i - 1);
+        System.arraycopy(BOX, i + 1, BOX, i, count - i - 1);
+        BOX[count - 1] = null;
         HELD[--count] = null;
     }
 
     private static void clear() {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count; i++) {
             HELD[i] = null;
+            BOX[i] = null;
+        }
         count = 0;
     }
 
@@ -124,7 +133,7 @@ public final class Corpses {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES || count == 0 || disabled)
             return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null)
+        if (mc.level == null || mc.level != lastLevel)     // a new level: its first frame may come before the tick
             return;
         Vec3 cam = evt.getCamera().getPosition();
         Frustum frustum = evt.getFrustum();
@@ -139,7 +148,7 @@ public final class Corpses {
                 LivingEntity le = HELD[i];
                 double dx = le.getX() - cam.x, dy = le.getY() - cam.y, dz = le.getZ() - cam.z;
                 if (dx * dx + dy * dy + dz * dz > MAX_DIST * MAX_DIST
-                    || (frustum != null && !frustum.isVisible(le.getBoundingBoxForCulling())))
+                    || (frustum != null && !frustum.isVisible(BOX[i])))
                     continue;
                 double sink = DeathFall.sinkBlocks(le.deathTime + partial);
                 dispatcher.render(le, dx, dy - sink, dz, le.getYRot(), partial, pose, buffers,
