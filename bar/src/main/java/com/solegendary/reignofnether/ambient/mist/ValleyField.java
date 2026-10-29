@@ -118,6 +118,35 @@ public final class ValleyField {
         return out;
     }
 
+    /**
+     * The one direction the strands stream in across the whole view (r11d): the river's own - across the cover's slope,
+     * from the slope's structure tensor (so the two banks' opposite slopes add up instead of cancelling) - signed to
+     * the wind's side; the wind (windX, windZ, a unit vector) where no water or hollow sets one. Per-pixel directions
+     * sheared the noise into rims (eyes r50 / r51b).
+     */
+    public static double[] flow(double[][] cover, double windX, double windZ) {
+        int n = cover.length, m = cover[0].length;
+        double sxx = 0, szz = 0, sxz = 0;
+        for (int i = 1; i < n - 1; i++)
+            for (int j = 1; j < m - 1; j++) {
+                double gx = (cover[i + 1][j] - cover[i - 1][j]) / 2, gz = (cover[i][j + 1] - cover[i][j - 1]) / 2;
+                sxx += gx * gx;
+                szz += gz * gz;
+                sxz += gx * gz;
+            }
+        double tr = sxx + szz;
+        if (tr < 1e-3)
+            return new double[] { windX, windZ };
+        // the tensor's main axis is the slope's; the strands run across it
+        double angle = 0.5 * Math.atan2(2 * sxz, sxx - szz);
+        double ax = -Math.sin(angle), az = Math.cos(angle);
+        if (ax * windX + az * windZ < 0) {
+            ax = -ax;
+            az = -az;
+        }
+        return new double[] { ax, az };
+    }
+
     /** A height as the texture's byte: base - HEIGHT_BELOW .. + HEIGHT_SPAN over 0..255, clamped. */
     public static int encodeHeight(double y, int base) {
         double t = (y - (base - HEIGHT_BELOW)) / HEIGHT_SPAN;

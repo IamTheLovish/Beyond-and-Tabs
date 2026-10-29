@@ -114,6 +114,34 @@ class ValleyFieldTest {
     }
 
     @Test
+    void theStrandsRunAlongTheRiver() {
+        // r11d (eyes r50 / r51b: the strands' direction was worked out per pixel, and turning the noise round world
+        // coordinates hundreds of blocks out sheared it into rims along the banks): ONE direction for the view - the
+        // river's own, across the cover's slope; the wind's where no water or hollow sets one
+        int[][] h = flat(64);
+        boolean[][] w = river(h, 64);                                   // runs along z
+        ValleyField.Result r = ValleyField.compute(h, w, STEP);
+        double[] f = ValleyField.flow(r.cover, 1, 0);
+        assertEquals(1.0, Math.hypot(f[0], f[1]), 1e-9, "a unit vector");
+        assertTrue(Math.abs(f[1]) >= 0.98, "along z, the river's way: " + f[0] + ", " + f[1]);
+        // a diagonal river: along (1, 1)
+        int[][] h2 = flat(64);
+        boolean[][] w2 = new boolean[N][N];
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                if (Math.abs(i - j) <= 1) { w2[i][j] = true; h2[i][j] = 63; }
+        double[] g = ValleyField.flow(ValleyField.compute(h2, w2, STEP).cover, 1, 0);
+        assertTrue(Math.abs(g[0] - g[1]) <= 0.1 && g[0] > 0.6, "along the diagonal: " + g[0] + ", " + g[1]);
+        // no water, no hollow: the wind
+        double[] k = ValleyField.flow(ValleyField.compute(flat(70), new boolean[N][N], STEP).cover, 0.6, 0.8);
+        assertEquals(0.6, k[0], 1e-9);
+        assertEquals(0.8, k[1], 1e-9);
+        // the wind picks which of the two ways along the river (the drift keeps one heading)
+        double[] back = ValleyField.flow(r.cover, 0, -1);
+        assertTrue(back[1] < 0, "the wind's side: " + back[1]);
+    }
+
+    @Test
     void theTextureCarriesHeightToAnEighthOfABlock() {
         int base = 64;
         for (double y = base - 8; y <= base + 23.8; y += 0.37) {
