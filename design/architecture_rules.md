@@ -55,6 +55,8 @@ houses (2012-13, still good) = cross-gabled roofs with 1-block eaves, half-timbe
 fence balustrades, a stone plinth.
 
 ## 3. Gates (a generator test checks these on the built structure, with tools/schem_study.py)
+Measured by ONE module: `tools/building_gates.py` (`gates(build)`; tests with a red case per gate in
+tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` (R1-R16, any faction's material set).
 - G1 eaves: every camera-facing eave and verge oversails its wall by >= 1 block (`eave_overhang`). The oversailing
   piece may be the roof itself OR a pale trim lip / cornice course under it (the recipe study re-measured the
   factory: 136 of its ~148 overhang cells are pale trim slabs and stairs, only 6 are copper roof) - what matters is the
@@ -65,3 +67,26 @@ fence balustrades, a stone plinth.
 - G5 depth: on the two camera faces no depth plane holds more than 45 % of the face cells, >= 3 planes over 10 %.
 - G6 roof tiling: roof_kit courses (T0 55-72 %, no chequer, wet eaves) + ridge, verges and gutters.
 - G7 base-body-cap: a distinct base course at y 1 and a cap line (cornice / eave) on every wall run.
+- Camera (r4): test what the photo camera SEES, not what the generator meant - `camera(b, view)` (top, the sides and
+  the 3/4 stills `34s` / `34w`: the first block on each ray) and `camera_chequer` (no a-b-a-b-a run or 3 x 2
+  alternation, a stair, slab and full block of one stone counting as different shades). The r2-r3 dome passed
+  "8 connected ribs" and G6 while every photo showed a chequer; its camera test went red first.
+- Trim (r5): pale dressings are grey cut stone (smooth stone / stone-brick shapes) - calcite and diorite read as snow
+  at RTS zoom; verges are dark stone or the set's metal, never wood (dark oak bargeboards read orange). Roof SHAPES
+  (hip / pyramid) are held for the Macaw's Roofs mod.
+
+## 4. Kit status (r6, Oct 29 2026: frozen at part level - the next gains come from composing parts on real buildings)
+`tools/arch_kit.py`, any set (Mats); stamp with `host.place(part, ox, oy, oz, rot)`, front south. All READY except:
+- HELD: hip / pyramid roof (`hip_roof`) - waits for Macaw's Roofs block ids.
+- DO NOT USE yet (final r6 critic, realism 5.5 / detail 6.5): `dome` ribs (read as a cabbage - plain shell or ribs
+  +1 proud in the shell block), `gear` on a dark wall (mount on brick / stone brick), `half_timber` as built (infill
+  doesn't read), `tone_wall` panel (reads as a painted patch - scatter 1-2 blocks instead), the copper `eave` gutter
+  stripe (use a pale trim lip), the 1-wide dark pinnacle posts round the dome base. Best parts: `roof_light`, `dormer`.
+- Roofs: `oversail` gable 1 proud + `cresting` on the ridge; `eave` band at the wall top (weathered copper slab
+  gutter); `dormer` (3x2 light, wall-brick frame, stair gablet) up through a slope; `roof_light` tinted 2x3 panels
+  set flush in a flat/low roof; `chimney` through a slope, `stack` for a works chimney; `clerestory` between roofs.
+- Walls: `string_course` at the sill line, `cornice` under the eave, `pier` (+ lantern) on every bay line, `window` /
+  `bay` between piers, `portal` (receding orders) at the door, `corbel_stage` under an upper stage, `tone_wall` on
+  the plain runs (clean top, stain, moss foot), `half_timber` as an upper storey (posts 3 apart, jettied 1).
+- Towers / details: `spire` or `dome` on a round drum at a corner or crossing; `balustrade` on a flat roof or
+  terrace edge (posts every 4); `machinery` band + `gear` disc on a works wall.
