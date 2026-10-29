@@ -275,8 +275,8 @@ public class GraveyardExitGameTests {
                     all &= ok;
                 }
                 if (all) {
-                    ReignOfNether.LOGGER.info("[GraveyardExit] {}: {} of {} out and at the rally by tick {} (out at {})",
-                        layout, raised.size(), UNITS, tick - readyAt[0], java.util.Arrays.toString(firstOut));
+                    ReignOfNether.LOGGER.info("[GraveyardExit] {}: {} of {} out and at the rally by tick {} (out at {}); {}",
+                        layout, raised.size(), UNITS, tick - readyAt[0], java.util.Arrays.toString(firstOut), pathStatsOf(raised));
                     finish.accept(null);
                     return;
                 }
@@ -377,6 +377,15 @@ public class GraveyardExitGameTests {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
+    private static String pathStatsOf(List<ZombieUnit> units) {
+        List<String> out = new ArrayList<>();
+        for (ZombieUnit z : units) {
+            MoveToTargetBlockGoal g = ((Unit) z).getMoveGoal();
+            out.add(g == null ? "no goal" : g.pathStats());
+        }
+        return String.join(" | ", out);
+    }
+
     private static String describe(ServerLevel level, ZombieUnit z, BuildingPlacement gy, BlockPos rally) {
         MoveToTargetBlockGoal goal = ((Unit) z).getMoveGoal();
         BlockPos cell = UnitUnstick.standCell(z);
@@ -386,7 +395,8 @@ public class GraveyardExitGameTests {
             goal == null || goal.getMoveTarget() == null ? "none" : goal.getMoveTarget().toShortString(),
             z.getNavigation().isDone(), goal != null && goal.isPathPending(), goal != null && goal.isGoalRunning(),
             goal == null || goal.getLastUnreachableTarget() == null ? "none" : goal.getLastUnreachableTarget().toShortString(),
-            ((Unit) z).isIdle(), UnitUnstick.isPocketed(level, cell), z.isAlive() ? "" : " DEAD");
+            ((Unit) z).isIdle(), UnitUnstick.isPocketed(level, cell), z.isAlive() ? "" : " DEAD")
+            + (goal == null ? "" : ", " + goal.pathStats());
     }
 
     private static List<ZombieUnit> zombiesOf(ServerLevel level, GraveyardPlacement gy, String owner) {
