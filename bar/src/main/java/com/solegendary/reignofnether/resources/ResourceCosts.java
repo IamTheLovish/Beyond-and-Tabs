@@ -63,6 +63,8 @@ public class ResourceCosts {
     public static final ResourceCost CUTLASS_RAIDER = new ResourceCost(ID, "CUTLASS_RAIDER");
     public static final ResourceCost REEF_GUARD = new ResourceCost(ID, "REEF_GUARD");
     public static final ResourceCost BOMBARD_CREW = new ResourceCost(ID, "BOMBARD_CREW");
+    /** Every faction's T1 siege lobber (design/siege_t1.md): one shared price. */
+    public static final ResourceCost SIEGE_LOBBER = new ResourceCost(ID, "SIEGE_LOBBER");
     public static final ResourceCost TIDE_PRIEST = new ResourceCost(ID, "TIDE_PRIEST");
     public static final ResourceCost HARPOONER = new ResourceCost(ID, "HARPOONER");
     public static final ResourceCost FLAK_SWIVEL = new ResourceCost(ID, "FLAK_SWIVEL");
@@ -420,6 +422,7 @@ public class ResourceCosts {
         CUTLASS_RAIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CUTLASS_RAIDER);
         REEF_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REEF_GUARD);
         BOMBARD_CREW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BOMBARD_CREW);
+        SIEGE_LOBBER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SIEGE_LOBBER);
         TIDE_PRIEST.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_PRIEST);
         HARPOONER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARPOONER);
         FLAK_SWIVEL.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FLAK_SWIVEL);

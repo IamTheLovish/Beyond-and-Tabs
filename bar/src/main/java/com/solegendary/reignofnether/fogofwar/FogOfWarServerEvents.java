@@ -643,7 +643,7 @@ public class FogOfWarServerEvents {
         }
         // held Sunken Bells and Watchtowers see round themselves for their owner (design/maps.md)
         for (net.minecraft.world.entity.Entity p : com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints()) {
-            int sight = com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(p);
+            int sight = Vision.scaled(com.solegendary.reignofnether.startpos.CapturePointServerEvents.sightOf(p));
             String owner = sight > 0 ? com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(p) : "";
             if (!owner.isEmpty() && !p.isRemoved())
                 addViewer(viewersByOwner.computeIfAbsent(owner, k -> new Long2IntOpenHashMap()),

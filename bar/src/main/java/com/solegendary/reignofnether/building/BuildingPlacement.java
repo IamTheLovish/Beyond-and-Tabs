@@ -267,7 +267,13 @@ public class BuildingPlacement {
                         maxCorner.getX(), maxCorner.getY(), maxCorner.getZ());
     }
 
+    /** How far the building reveals fog: its designed sight ({@link #getBaseSightRange}) times the global Vision multiplier. */
     public int getSightRange() {
+        return com.solegendary.reignofnether.fogofwar.Vision.scaled(getBaseSightRange());
+    }
+
+    /** The designed sight; placements with their own sight override this, not getSightRange. */
+    public int getBaseSightRange() {
         if (isCapitol)
             return Building.CAPITOL_SIGHT_RANGE;
         else if (getBuilding().hasActiveAddon(GarrisonableBuildingAddon.class) &&
