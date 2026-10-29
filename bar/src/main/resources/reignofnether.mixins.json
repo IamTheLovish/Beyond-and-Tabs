@@ -116,6 +116,7 @@
     "LoadingOverlayAccessor",
     "LoadingOverlayMixin",
     "ForgeLoadingOverlayMixin",
-    "WaitingScreenBackdropMixin"
+    "WaitingScreenBackdropMixin",
+    "VfxEntityLightMixin"
   ]
 }

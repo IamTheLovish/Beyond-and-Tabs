@@ -173,6 +173,7 @@ public final class BarFxClient {
                 // (SfxClient does its own fog and distance checks and rate limits)
                 com.solegendary.reignofnether.sounds.SfxClient.onFx(e);
                 if (e.type == BarFx.DOME) { DomeFx.ingest(e, clock); continue; }   // kept even off screen: it lasts seconds
+                if (e.type == BarFx.VFX) { VfxClient.ingest(e); continue; }       // data-driven effects: own culling + fog check
                 if (e.type == BarFx.SFX || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
                     case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, BarFx.shotFaction(e.flags), e.x, e.y, e.z, e.a, e.b, e.c); }
@@ -928,6 +929,7 @@ public final class BarFxClient {
         boolean busy = live.size() > MAX * 3 / 4;
         for (Entity e : level.entitiesForRendering()) {
             if (!(e instanceof Projectile) || e.isRemoved()) continue;
+            if (VfxClient.projectileVisual(e) != null) continue;   // drawn by its vfx visual (core, ribbon, light)
             Vec3 v = e.getDeltaMovement();
             double sp2 = v.lengthSqr();
             if (sp2 < .02) continue;

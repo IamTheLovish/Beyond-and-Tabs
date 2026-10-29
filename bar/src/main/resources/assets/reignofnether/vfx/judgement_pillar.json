@@ -1,0 +1,11 @@
+{
+  "comment": "Dawn Paladin's Judgement: a narrow shaft of sunlight strikes one enemy - a quick sigil, the shaft, a spark splash and a short flash of light on the ground.",
+  "timeline": { "windup": 0.2, "peak": 0.35, "fade": 0.6 },
+  "light": { "color": "#FFD9A6", "radius": 7, "intensity": 0.9, "y": 1.5 },
+  "layers": [
+    { "type": "ground", "tile": "sigil_star", "radius": 1.6, "spin": 40, "color": "#FFD078", "alpha": 0.75, "grow": 0.2, "grow_from": 0.4 },
+    { "type": "ground", "tile": "shockwave", "radius": 3.0, "color": "#FFE6B8", "alpha": 0.6, "start": "peak", "end": 0.9, "fade_in": 0.03, "grow": 0.35, "grow_from": 0.1 },
+    { "type": "beam", "radius": 0.45, "height": 36, "scroll": 2.5, "core": 0.4, "core_color": "#FFFFFF", "color": "#FFCF80", "alpha": 0.8, "fade_in": 0.08, "grow": 0.15, "grow_from": 0.2 },
+    { "type": "emitter", "particle": "spark", "shape": "point", "y": 0.5, "start": "peak", "end": 0.7, "burst": 24, "rate": 0, "velocity": [0, 3, 0], "spread": 2.5, "outward": 4.5, "color": "#FFF0C8", "color_end": "#FF9040" }
+  ]
+}

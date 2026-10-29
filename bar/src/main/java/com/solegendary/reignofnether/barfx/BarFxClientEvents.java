@@ -13,6 +13,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public class BarFxClientEvents {
     private static boolean failedOnce = false;
     private static boolean scarsFailedOnce = false;
+    private static boolean vfxFailedOnce = false;
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent evt) {
@@ -46,6 +47,23 @@ public class BarFxClientEvents {
         } finally {
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
+        // the data-driven spell effects (VfxClient) after BarFx's pass (whose camera they reuse), timed on their own
+        // [FrameParts] line "vfx"; same rules: never in the shader pack's shadow map, never take the game down
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS
+                || com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays())
+            return;
+        int vp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.VFX);
+        try {
+            VfxClient.onRenderFrame(evt.getPoseStack(), evt.getPartialTick());
+        } catch (Exception e) {
+            if (!vfxFailedOnce) {
+                vfxFailedOnce = true;
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.error("Vfx render failed", e);
+            }
+            VfxClient.clear();
+        } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(vp);
+        }
     }
 
     /** First-person / free camera: a slight decaying jolt (the RTS camera shakes via its projection instead). */
@@ -63,6 +81,7 @@ public class BarFxClientEvents {
     @SubscribeEvent
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut evt) {
         BarFxClient.clear();
+        VfxClient.clear();
         com.solegendary.reignofnether.sounds.SfxClient.reset();
     }
 }

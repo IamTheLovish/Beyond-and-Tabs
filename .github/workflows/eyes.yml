@@ -31,6 +31,10 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# Spell effects (input `vfx`, Oct 22 2026, design/vfx.md): instead of the tour, a Dawn Paladin and four of ours beside
+# our base, the paladin's sun_pillar (cast circle + sky pillar) played through the real server path at half speed so
+# a slow software-rendered client still catches its phases: RTS wind-up, RTS peak, first-person 3/4 peak (EyesDirector
+# scene 19, EyesVfxScene) and the [FrameParts] vfx cost in the log. Publishes to eyes-vfx (eyes-vfx-shaders).
 name: eyes
 on:
   workflow_dispatch:
@@ -54,6 +58,10 @@ on:
         default: false
       fog:
         description: "Fog of war instead of the tour: fog on, a dozen marching into the dark, the surface-band vs whole-column re-mesh A/B and the fog edge stills (EyesDirector scene 17); keeps Embeddium in the plain lane. Publishes to eyes-fog (-shaders)"
+        type: boolean
+        default: false
+      vfx:
+        description: "Spell effects instead of the tour: the Dawn Paladin's sun_pillar (cast circle + sky pillar) at half speed - RTS wind-up, RTS peak, first-person 3/4 peak (EyesDirector scene 19). Publishes to eyes-vfx (-shaders)"
         type: boolean
         default: false
       overlays:
@@ -102,7 +110,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.vfx && 'vfx-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -112,9 +120,10 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.vfx && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
+      VFX: ${{ inputs.vfx && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
       STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
@@ -127,7 +136,7 @@ jobs:
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.vfx && (inputs.shaders && 'eyes-vfx-shaders' || 'eyes-vfx') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -201,8 +210,8 @@ jobs:
               # software GL: skip the renderer replacements (as the Mac pack does) and the tunnel - except Embeddium in
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
               # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
-              # meant for the testers' renderer
-              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              # meant for the testers' renderer; so does a vfx run (its plain lane crashed at init without it, run 39862173830)
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or os.environ.get('VFX') == '1'
               # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
               # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
@@ -260,6 +269,9 @@ jobs:
       - name: Fog scene only (dispatch input `fog`; EyesDirector scene 17)
         if: env.FOG == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.fog=true' >> "$GITHUB_ENV"
+      - name: Spell effects scene only (dispatch input `vfx`; EyesDirector scene 19)
+        if: env.VFX == '1'
+        run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.vfx=true' >> "$GITHUB_ENV"
       - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
         if: env.OVERLAYS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
@@ -533,6 +545,12 @@ jobs:
             ls out | grep '^bat_eyes_17_' | sed 's/^/::notice::[Eyes] still /' || true
             grep -h "17_fog A/B" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^/::notice::/' || true
             [ "$got" -ge 3 ] || { echo "::error::only $got fog stills (expected 3)"; exit 1; }
+          fi
+          if [ "${VFX:-0}" = "1" ]; then   # a vfx run: the three stills of scene 19 and the effect's frame cost
+            got=$(find out -name 'bat_eyes_19_vfx_*.png' | wc -l)
+            ls out | grep '^bat_eyes_19_' | sed 's/^/::notice::[Eyes] still /' || true
+            grep -h "19_vfx cost" out/eyes-lines.txt 2>/dev/null | head -1 | sed 's/^/::notice::/' || true
+            [ "$got" -ge 3 ] || { echo "::error::only $got vfx stills (expected 3)"; exit 1; }
           fi
           if [ "${OVERLAYS:-0}" = "1" ]; then   # an overlays run: the three stills of scene 18 and its numbers
             got=$(find out -name 'bat_eyes_18_overlays*.png' | wc -l)

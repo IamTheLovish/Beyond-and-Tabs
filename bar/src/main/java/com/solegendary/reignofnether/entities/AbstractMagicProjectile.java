@@ -41,9 +41,26 @@ public abstract class AbstractMagicProjectile extends AbstractHurtingProjectile 
     protected void onHitEntity(EntityHitResult pResult) {
         if (!this.level().isClientSide && this.getOwner() instanceof AttackerUnit aUnit) {
             pResult.getEntity().hurt(damageSources().mobProjectile(this, (LivingEntity) this.getOwner()), aUnit.getUnitAttackDamage());
-            ParticleUtil.addParticleExplosion(particleType, 10, level(), position());
+            impactEffect();
             discard();
         }
+    }
+
+    /**
+     * The data-driven impact effect (assets/reignofnether/vfx/<id>.json, design/vfx.md) this projectile plays where it
+     * lands, or null for the old burst of its trail particle. Overridden by projectiles on the vfx visual layer.
+     */
+    protected String impactVfx() {
+        return null;
+    }
+
+    /** The impact: the vfx effect when there is one (fog-filtered BarFx event), else the old particle burst. */
+    protected void impactEffect() {
+        String id = impactVfx();
+        if (id != null)
+            com.solegendary.reignofnether.barfx.vfx.Vfx.at(level(), id, position());
+        else
+            ParticleUtil.addParticleExplosion(particleType, 10, level(), position());
     }
 
     @Override

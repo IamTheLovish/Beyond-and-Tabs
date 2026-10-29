@@ -53,13 +53,16 @@ public final class FrameParts {
     // the sum of the three is the old worldMarkers number
     public static final int MARKERS_RANGE = 13;    // BlockClientEvents: range indicator highlights
     public static final int MARKERS_METAL = 14;    // MetalPatchMarkerClientEvents: rings and gems
-    public static final int FRAME_SECTIONS = 15;
+    // Oct 22 (vfx foundation): the data-driven spell effects (barfx/VfxClient: sigils, rings, beams, emitters, cast
+    // light, projectile visuals) on their own line, so a big fight's magic cost is visible apart from BarFx's
+    public static final int VFX = 15;              // VfxClient: step + draw of effects and projectile visuals
+    public static final int FRAME_SECTIONS = 16;
     // client-tick sections, timed per client tick
-    public static final int UNIT_TICK = 15;        // Unit.tick on the client
-    public static final int SECTIONS = 16;
+    public static final int UNIT_TICK = 16;        // Unit.tick on the client
+    public static final int SECTIONS = 17;
 
     static final String[] NAMES = { "unitOverlays", "buildingBoxes", "strategicIcons", "minimap", "hud", "unitBodies",
-            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "unitTick" };
+            "unitRings", "buildingParts", "buildingDecor", "bars", "worldFx", "worldMarkers", "unitShadow", "markersRange", "markersMetal", "vfx", "unitTick" };
     private static final String[] PROFILER_NAMES = new String[SECTIONS];
     static {
         for (int i = 0; i < SECTIONS; i++)
