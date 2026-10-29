@@ -58,7 +58,8 @@ CROPS = {                       # per still, by short name (the key without its 
 # 15_<name>_close stands 5 blocks from the footprint's middle, looking slightly down: the ground in front of the feet is
 # the lower middle of the 1600x900 still (the RTS default crop is the horizon there)
 CLOSE_CROP = (500, 520, 1100, 820)
-METRICS = ("hue", "sat", "luma", "dark_share", "stars")      # the compared metrics (luma01 is luma / 255)
+METRICS = ("hue", "sat", "luma", "dark_share", "stars",      # the compared metrics (luma01 is luma / 255)
+           "mass_share", "dark_share_open", "stars_open")
 SHEET_MAX_W = 2500
 THUMB_W = 800
 PAD = 12
@@ -175,8 +176,65 @@ def measure(im, box):
         ls.append(0.299 * r + 0.587 * g + 0.114 * b)
     ml = statistics.median(ls)
     dark = sum(1 for v in ls if v < DARK_FRACTION * ml) / len(ls)
+    # the open-ground numbers (Oct 29, r40: a darker oak canopy in the crop counted as dark share and as stars - the
+    # judge punished the fix): the same definitions over the pixels outside the big dark masses (mass_mask)
+    mask = mass_mask(im, box)
+    open_ls = [v for v, m in zip(ls, mask) if not m]
+    if open_ls:
+        mo = statistics.median(open_ls)
+        dark_open = sum(1 for v in open_ls if v < DARK_FRACTION * mo) / len(open_ls)
+    else:
+        dark_open = None
     return {"hue": statistics.median(hs), "sat": statistics.median(ss), "luma": ml, "luma01": ml / 255,
-            "dark_share": dark, "stars": count_stars(im, box)}
+            "dark_share": dark, "stars": count_stars(im, box),
+            "mass_share": sum(mask) / len(mask), "dark_share_open": dark_open,
+            "stars_open": count_stars(im, box, mask) if open_ls else None}
+
+
+MASS_BLUR = 6                  # px: a canopy's clumps and a tree's shadow blur into one mass; tuft stars fade out
+MASS_FRACTION = 0.85           # "dark" for a mass: under this share of the blurred crop's median luma
+MASS_MIN = 1500                # px: a connected dark region at least this big is a canopy / shadow / wall, not lawn
+MASS_PAD = 4                   # px grown round each mass: its soft, half-dark rim belongs to it
+
+
+def _regions(flags, w, h):
+    """4-connected regions of the truthy cells of a w x h bytearray -> lists of indices (flags is consumed)."""
+    out = []
+    for start in range(w * h):
+        if not flags[start]:
+            continue
+        flags[start] = 0
+        stack, cells = [start], []
+        while stack:
+            i = stack.pop()
+            cells.append(i)
+            x, y = i % w, i // w
+            for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, y > 0), (i + w, y < h - 1)):
+                if ok and flags[j]:
+                    flags[j] = 0
+                    stack.append(j)
+        out.append(cells)
+    return out
+
+
+def mass_mask(im, box):
+    """1 per crop pixel that lies in a big dark MASS - a tree crown, a tree's or a wall's shadow - else 0 (row-major,
+    the crop's size). After a MASS_BLUR px blur, the 4-connected regions under MASS_FRACTION x the median luma with
+    at least MASS_MIN px, grown by MASS_PAD px. The lawn's grain and its tuft stars are far smaller and stay open."""
+    from PIL import ImageFilter
+    g = im.convert("L").crop(box).filter(ImageFilter.GaussianBlur(MASS_BLUR))
+    w, h = g.size
+    px = g.tobytes()
+    cut = MASS_FRACTION * statistics.median(px)
+    keep = bytearray(w * h)
+    for cells in _regions(bytearray(1 if v < cut else 0 for v in px), w, h):
+        if len(cells) >= MASS_MIN:
+            for i in cells:
+                keep[i] = 255
+    if MASS_PAD and any(keep):
+        keep = bytearray(Image.frombytes("L", (w, h), bytes(keep)).filter(ImageFilter.MaxFilter(2 * MASS_PAD + 1))
+                         .tobytes())
+    return bytearray(1 if v else 0 for v in keep)
 
 
 STAR_BLUR = 2                  # px: smooths lawn grain away before the threshold
@@ -184,33 +242,21 @@ STAR_FRACTION = 0.75           # "dark" for a star: under this share of the blur
 STAR_MIN, STAR_MAX = 15, 300   # px: a tuft's shadow star at the RTS zoom; bigger is a tree / wall / building shadow
 
 
-def count_stars(im, box):
+def count_stars(im, box, mask=None):
     """Tuft-sized dark spots in the crop (the Oct 28 grass-tuft "stars"): after a STAR_BLUR px Gaussian blur, the
     4-connected regions under STAR_FRACTION x the median luma whose size is STAR_MIN..STAR_MAX px. Big static
-    shadows (trees, walls, the battlefield-wall smears) and lawn grain do not count, unlike in the dark share."""
+    shadows (trees, walls, the battlefield-wall smears) and lawn grain do not count, unlike in the dark share.
+    mask (mass_mask): only the open ground - the median is taken over it and a spot touching a mass is not a star
+    (a dark canopy's clump pockets are star-sized)."""
     from PIL import ImageFilter
     g = im.convert("L").crop(box).filter(ImageFilter.GaussianBlur(STAR_BLUR))
     w, h = g.size
     px = g.tobytes()
-    cut = STAR_FRACTION * statistics.median(px)
+    ref = [v for v, m in zip(px, mask) if not m] if mask is not None else px
+    cut = STAR_FRACTION * statistics.median(ref)
     dark = bytearray(1 if v < cut else 0 for v in px)
-    stars = 0
-    for start in range(w * h):
-        if not dark[start]:
-            continue
-        dark[start] = 0
-        stack, size = [start], 0
-        while stack:
-            i = stack.pop()
-            size += 1
-            x, y = i % w, i // w
-            for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, y > 0), (i + w, y < h - 1)):
-                if ok and dark[j]:
-                    dark[j] = 0
-                    stack.append(j)
-        if STAR_MIN <= size <= STAR_MAX:
-            stars += 1
-    return stars
+    return sum(1 for cells in _regions(dark, w, h)
+               if STAR_MIN <= len(cells) <= STAR_MAX and not (mask is not None and any(mask[i] for i in cells)))
 
 
 def parse_box(text):
@@ -306,11 +352,11 @@ def judge_lane(lane_dir, label, crops, min_share=MIN_CLIENT_SHARE, aim_tol=AIM_T
         metrics = None
         if not problems and image is not None:
             try:
-                metrics = {k: round(v, 5) for k, v in measure(image, box).items()}
+                metrics = {k: None if v is None else round(v, 5) for k, v in measure(image, box).items()}
                 if is_first_person_close(key):
                     # a star is a tuft's shadow at the RTS zoom (STAR_MIN..STAR_MAX px); 5 blocks away the same
                     # tuft is many times bigger, so the count would mean nothing: no number rather than a wrong one
-                    metrics["stars"] = None
+                    metrics["stars"] = metrics["stars_open"] = None
             except ValueError as e:
                 raise ValueError(f"{label}/{key}: {e}") from None
         lane["stills"][key] = {
@@ -385,7 +431,9 @@ def _font(size):
 def _numbers(st):
     m = st["metrics"]
     return (f"hue {m['hue']:.0f} deg   sat {m['sat']:.0f}   luma {m['luma']:.0f} ({m['luma01']:.2f})   "
-            f"dark share {m['dark_share']:.3f}   stars {'-' if m['stars'] is None else m['stars']}")
+            f"dark share {m['dark_share']:.3f}   stars {'-' if m['stars'] is None else m['stars']}"
+            + (f"   | open ground (masses {m['mass_share']:.0%} masked): dark {_cell(m.get('dark_share_open'), '.3f')}"
+               f"   stars {_cell(m.get('stars_open'), 'd')}" if m.get("mass_share") is not None else ""))
 
 
 def build_sheet(lane_dir, label, lane, max_width=SHEET_MAX_W):
@@ -501,7 +549,8 @@ def _pair_text(row):
         return row["note"]
     d = row["delta"]
     parts = []
-    for m, f in (("hue", "+.0f"), ("sat", "+.0f"), ("luma", "+.0f"), ("dark_share", "+.3f"), ("stars", "+.0f")):
+    for m, f in (("hue", "+.0f"), ("sat", "+.0f"), ("luma", "+.0f"), ("dark_share", "+.3f"), ("stars", "+.0f"),
+                 ("dark_share_open", "+.3f"), ("stars_open", "+.0f")):
         if d.get(m) is not None:
             parts.append(f"{m} {format(d[m], f)}")
     return "B - A:  " + "   ".join(parts)
@@ -569,8 +618,9 @@ def build_pair_sheet(dir_a, a, dir_b, b, max_width=SHEET_MAX_W):
 
 def pair_table(a, b, rows):
     out = [f"### {a['label']} vs {b['label']} (B - A)", "",
-           "| still | hue A / B | sat A / B | luma A / B | dark share A / B | stars A / B | note |",
-           "|---|---:|---:|---:|---:|---:|---|"]
+           "| still | hue A / B | sat A / B | luma A / B | dark share A / B | stars A / B | open dark A / B "
+           "| open stars A / B | note |",
+           "|---|---:|---:|---:|---:|---:|---:|---:|---|"]
 
     def ab(row, m, f):
         x = row["a"] and row["a"].get(m)
@@ -579,7 +629,8 @@ def pair_table(a, b, rows):
 
     for r in rows:
         out.append(f"| {r['still']} | {ab(r, 'hue', '.0f')} | {ab(r, 'sat', '.0f')} | {ab(r, 'luma', '.0f')} | "
-                   f"{ab(r, 'dark_share', '.3f')} | {ab(r, 'stars', 'd')} | {r['note'] or _pair_text(r)} |")
+                   f"{ab(r, 'dark_share', '.3f')} | {ab(r, 'stars', 'd')} | {ab(r, 'dark_share_open', '.3f')} | "
+                   f"{ab(r, 'stars_open', 'd')} | {r['note'] or _pair_text(r)} |")
     return out
 
 
@@ -591,22 +642,26 @@ def _cell(v, fmt):
 
 def table(lanes):
     out = ["| lane | still | proof | client / server | crop | hue (deg) | sat (0-100) | luma (0-255) | luma (0-1) "
-           "| dark share | stars |", "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|"]
+           "| dark share | stars | mass share | dark share open | stars open |",
+           "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for label, lane in lanes.items():
         for key, st in lane["stills"].items():
             pr, m, c = st["proof"], st["metrics"], st["crop"]
-            out.append("| {} | {} | {} | {} / {} | ({},{})-({},{}) {} | {} | {} | {} | {} | {} | {} |".format(
+            out.append("| {} | {} | {} | {} / {} | ({},{})-({},{}) {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 label, key, "PASS" if pr["ok"] else "FAIL", _cell(pr["client"], "d"), _cell(pr["server"], "d"),
                 c[0], c[1], c[2], c[3], st["crop_source"],
                 _cell(m and m["hue"], ".0f"), _cell(m and m["sat"], ".0f"), _cell(m and m["luma"], ".0f"),
-                _cell(m and m["luma01"], ".2f"), _cell(m and m["dark_share"], ".3f"), _cell(m and m["stars"], "d")))
+                _cell(m and m["luma01"], ".2f"), _cell(m and m["dark_share"], ".3f"), _cell(m and m["stars"], "d"),
+                _cell(m and m.get("mass_share"), ".3f"), _cell(m and m.get("dark_share_open"), ".3f"),
+                _cell(m and m.get("stars_open"), "d")))
     return out
 
 
 def delta_table(rows):
     out = ["| lane | still | metric | before | after | change | note |", "|---|---|---|---:|---:|---:|---|"]
     for r in rows:
-        f = {"dark_share": ".3f", "stars": ".0f"}.get(r["metric"], ".1f")
+        f = {"dark_share": ".3f", "stars": ".0f", "mass_share": ".3f", "dark_share_open": ".3f",
+             "stars_open": ".0f"}.get(r["metric"], ".1f")
         out.append("| {} | {} | {} | {} | {} | {} | {} |".format(
             r["lane"], r["still"], r["metric"], _cell(r["old"], f), _cell(r["new"], f),
             "-" if r["delta"] is None else format(r["delta"], "+" + f), r["note"]))

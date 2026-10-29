@@ -247,6 +247,33 @@ class Measure(unittest.TestCase):
         self.assertEqual(EJ().measure(im, (0, 0, 200, 200))["stars"], 5)
         self.assertEqual(EJ().measure(im, (0, 0, 50, 50))["stars"], 1)    # only the crop counts
 
+    def test_open_ground_numbers_leave_a_dark_canopy_out(self):
+        # Oct 29 (r40): a darker oak crown in the crop raised stars and dark share - the judge punished the fix. A
+        # crown near the lawn's value with star-sized dark pockets between its clumps is one MASS after a 6 px blur;
+        # the open-ground numbers measure the lawn outside it only
+        rng = random.Random(5)
+        im = Image.new("RGB", (240, 240))
+        im.putdata([(v, v, v) for v in (150 + rng.randrange(-12, 13) for _ in range(240 * 240))])
+        for x, y in ((15, 15), (60, 20), (20, 200), (200, 20)):
+            im.paste((60, 60, 60), (x, y, x + 8, y + 8))                 # four lawn tuft stars
+        im.paste((130, 130, 130), (100, 100, 200, 200))                   # the crown ...
+        for x in range(105, 195, 20):
+            for y in range(105, 195, 20):
+                im.paste((60, 60, 60), (x, y, x + 10, y + 10))           # ... and its clump pockets
+        m = EJ().measure(im, (0, 0, 240, 240))
+        self.assertGreater(m["stars"], 4)                                 # the pockets count as stars
+        self.assertEqual(m["stars_open"], 4)                              # on open ground: the lawn's four only
+        self.assertGreater(m["mass_share"], 0.15)
+        self.assertLess(m["mass_share"], 0.30)
+        self.assertLess(m["dark_share_open"], m["dark_share"])
+        # a lawn alone has no mass: the open numbers are the plain ones
+        lawn = Image.new("RGB", (120, 120))
+        lawn.putdata([(v, v, v) for v in (150 + rng.randrange(-12, 13) for _ in range(120 * 120))])
+        lawn.paste((60, 60, 60), (30, 30, 38, 38))
+        m = EJ().measure(lawn, (0, 0, 120, 120))
+        self.assertEqual(m["mass_share"], 0)
+        self.assertEqual((m["stars_open"], m["dark_share_open"]), (m["stars"], m["dark_share"]))
+
     def test_only_the_crop_is_measured(self):
         im = Image.new("RGB", (40, 40), (255, 0, 0))
         im.paste((0, 0, 255), (10, 10, 30, 30))
@@ -309,7 +336,8 @@ class Compare(unittest.TestCase):
         m2 = {"hue": 85.0, "sat": 55.0, "luma": 130.0, "luma01": 0.51, "dark_share": 0.05}
         rows = EJ().compare(self.doc(self.M1), self.doc(m2))
         by = {r["metric"]: r for r in rows}
-        self.assertEqual(set(by), {"hue", "sat", "luma", "dark_share", "stars"})
+        self.assertEqual(set(by), {"hue", "sat", "luma", "dark_share", "stars", "mass_share", "dark_share_open",
+                                   "stars_open"})
         self.assertIsNone(by["stars"]["delta"])                   # neither round measured stars: no delta, said why
         self.assertIn("not measured", by["stars"]["note"])
         rows = EJ().compare(self.doc(dict(self.M1, stars=626)), self.doc(dict(m2, stars=189)))
@@ -487,7 +515,7 @@ class Cli(unittest.TestCase):
         self.assertEqual(code, 0, out + err)
         self.assertIn("1111111", out)
         self.assertIn("2222222", out)
-        dark = [ln for ln in out.splitlines() if "dark_share" in ln and KEY in ln]
+        dark = [ln for ln in out.splitlines() if "| dark_share |" in ln and KEY in ln]
         self.assertEqual(len(dark), 1, out)
         self.assertIn("+0.375", dark[0])        # 12 of the crop's 32 columns are dark: 0.375
 
