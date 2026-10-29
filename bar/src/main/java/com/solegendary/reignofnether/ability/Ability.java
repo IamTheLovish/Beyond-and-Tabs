@@ -107,6 +107,15 @@ public class Ability {
     }
 
     /**
+     * For SUMMON_WHEN_FREE: also cast when a friendly unit within this many blocks is fighting, not only when the
+     * caster itself is - for a summoner that stays behind its army and never fights (the Angel Caller). 0 (the
+     * default): only the caster's own fight counts, as before.
+     */
+    public double summonForFightsWithin() {
+        return 0;
+    }
+
+    /**
      * The research that unlocks this ability (its button is hidden without it). The autocast is on by default now, so
      * the gate the hidden button used to be lives here: no autocast before the owner researched it.
      */

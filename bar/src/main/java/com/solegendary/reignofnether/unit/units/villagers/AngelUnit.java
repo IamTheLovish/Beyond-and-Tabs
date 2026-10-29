@@ -133,9 +133,9 @@ public abstract class AngelUnit extends PathfinderMob implements Unit {
         this.entityData.define(onDeathCommandDataAccessor, "");
     }
 
-    // free: the caster paid essence for it (no population, no wreck - like the Engine's drones)
+    // free: the caster paid essence for it (no population, no metal, no wreck; lovish: "angels take no population")
     @Nullable
-    public ResourceCost getCost() {return ResourceCosts.DEPLOYED_TURRET;}
+    public ResourceCost getCost() {return ResourceCosts.ANGEL;}
 
     // endregion
 

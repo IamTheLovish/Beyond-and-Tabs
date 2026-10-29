@@ -134,6 +134,14 @@ public class CallAngel extends Ability {
         }
     }
 
+    /** The caster stays behind its army: its fighters come when a friend within this many blocks is in a fight. */
+    public static final double CALL_FOR_FIGHTS_WITHIN = 12;
+
+    @Override
+    public double summonForFightsWithin() {
+        return CALL_FOR_FIGHTS_WITHIN;
+    }
+
     @Override
     public int liveSummons(ServerLevel level, Unit unit) {
         return unit instanceof LivingEntity le && AngelUnit.liveFor(le, kind) != null ? 1 : 0;
