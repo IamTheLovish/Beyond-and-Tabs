@@ -1,5 +1,9 @@
 package com.solegendary.reignofnether.unit.interfaces;
 
+import com.solegendary.reignofnether.unit.HeldBlow;
+
+import javax.annotation.Nullable;
+
 /**
  * A unit whose attack animation is a keyed clip of a known length: vanilla plays an arm swing over 6 ticks
  * ({@code LivingEntity.getCurrentSwingDuration}), and a body whose attack is sampled by {@code attackTime} (0..1 over
@@ -12,4 +16,18 @@ public interface KeyedSwing {
 
     /** The attack clip's length in ticks, or 0 to keep vanilla's swing (a body without a keyed attack). */
     int keyedSwingTicks();
+
+    /**
+     * Ticks from the swing's start to the clip's hit key, where the blow lands (HeldBlow), or 0 to land it with the
+     * swing as vanilla does.
+     */
+    default int keyedHitTicks() {
+        return 0;
+    }
+
+    /** The blow held from the swing to the hit key; null for a body that lands it with the swing. */
+    @Nullable
+    default HeldBlow heldBlow() {
+        return null;
+    }
 }

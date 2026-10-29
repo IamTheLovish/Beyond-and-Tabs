@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
@@ -228,6 +229,9 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit, Ke
 
     public void tick() {
         this.setCanPickUpLoot(true);
+        // before the rest of the tick, so a blow held on the swing's tick lands keyedHitTicks() ticks later exactly
+        if (!this.level().isClientSide())
+            heldBlow.tick(this);
         super.tick();
         Unit.tick(this);
         AttackerUnit.tick(this);
@@ -364,5 +368,18 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit, Ke
     @Override
     public int keyedSwingTicks() {
         return getClass() == VindicatorUnit.class ? HalberdierAnim.THRUST_TICKS : 0;
+    }
+
+    /** The thrust's blade arrives at THRUST_HIT_P of the clip (0.27 x 18 = tick 5): the blow lands there, not at 0. */
+    @Override
+    public int keyedHitTicks() {
+        return getClass() == VindicatorUnit.class ? Math.round(HalberdierAnim.THRUST_HIT_P * HalberdierAnim.THRUST_TICKS) : 0;
+    }
+
+    private final HeldBlow heldBlow = new HeldBlow();
+
+    @Override
+    public HeldBlow heldBlow() {
+        return heldBlow;
     }
 }

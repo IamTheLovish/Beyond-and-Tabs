@@ -656,7 +656,10 @@ public final class PossessionServer {
                 shooter.performUnitRangedAttack(at.x, at.y, at.z, velocity);
             }
         } else if (target != null) {
-            mob.doHurtTarget(target);
+            // the unit's own held blow: a keyed thrust lands at its hit key under a player's hand too (the close camera
+            // shows an early flinch the most); letting go of the unit drops a blow still held
+            com.solegendary.reignofnether.unit.HeldBlow.strike(mob, target, Math.max(reach, mob.distanceTo(target)),
+                () -> isPossessed(mob));
         }
         p.attackCooldown = Math.max(4, Math.round(attacker.getAttackCooldown() * COOLDOWN_MULT));
         return true;
