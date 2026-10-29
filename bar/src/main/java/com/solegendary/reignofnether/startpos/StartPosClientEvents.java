@@ -173,6 +173,7 @@ public class StartPosClientEvents {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_STARTPOS);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
@@ -195,6 +196,7 @@ public class StartPosClientEvents {
                 }
             }
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
