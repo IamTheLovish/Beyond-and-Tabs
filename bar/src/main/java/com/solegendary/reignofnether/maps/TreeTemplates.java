@@ -35,14 +35,14 @@ public final class TreeTemplates {
     private TreeTemplates() { }
 
     /** A template read from the jar: its x / z size and every block, {x, y, z} with the state. */
-    record Template(int sizeX, int sizeZ, List<int[]> pos, List<BlockState> states) { }
+    public record Template(int sizeX, int sizeZ, List<int[]> pos, List<BlockState> states) { }
 
     private static final Map<String, Template> CACHE = new HashMap<>();
     /** Under each ground-layer log over air, at most this many blocks of subsoil. */
     static final int MAX_FOOT_FILL = 2;
 
     /** The template, or null when the file is missing or unreadable (MapBuilder falls back to vanilla's tree). */
-    static Template load(ServerLevel level, String name) {
+    public static Template load(ServerLevel level, String name) {
         if (CACHE.containsKey(name))
             return CACHE.get(name);
         Template t = read(level.holderLookup(Registries.BLOCK), name);
@@ -85,7 +85,7 @@ public final class TreeTemplates {
      * Writes the tree with its trunk column at (x, z), its ground layer (template y 0) at groundY + 1. Returns the
      * blocks written, or -1 if the template could not be read.
      */
-    static int place(ServerLevel level, TreeScatter.Tree tree, int x, int z, int groundY, BlockState subsoil) {
+    public static int place(ServerLevel level, TreeScatter.Tree tree, int x, int z, int groundY, BlockState subsoil) {
         Template t = load(level, tree.template());
         if (t == null)
             return -1;
