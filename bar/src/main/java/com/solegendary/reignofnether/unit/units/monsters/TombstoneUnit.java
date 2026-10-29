@@ -17,8 +17,7 @@ import java.util.UUID;
  * 29: "tombstones that spread creep and summon units passively", then "tone down"). A summoned, stationary unit raised
  * by Raise Tombstone: it stands {@link #LIFETIME_SECONDS} s or until killed, spreads grave creep round itself (radius
  * growing a block every {@link #CREEP_TICKS_PER_BLOCK} ticks up to {@link #CREEP_MAX_RADIUS}, fading over
- * {@link #CREEP_FADE_SECONDS} s once it falls) and raises a Risen Skeleton every {@link #RAISE_EVERY_SECONDS} s, at most
- * {@link #MAX_SKELETONS} standing. The rules live in essence/TombcallerServerEvents; this holds the stone's numbers
+ * {@link #CREEP_FADE_SECONDS} s once it falls) and raises a Risen Skeleton every {@link #RAISE_EVERY_SECONDS} s. The rules live in essence/TombcallerServerEvents; this holds the stone's numbers
  * (every tombstone number is here, for lovish to tune in one place) and its saved clock.
  * <p>
  * A unit, not a building: it takes damage at the unit rate (lovish: 150 HP "at unit damage rate"), with none of the
@@ -35,8 +34,8 @@ public class TombstoneUnit extends AbstractTotem {
     public static final int CREEP_TICKS_PER_BLOCK = 40;
     public static final int CREEP_FADE_SECONDS = 10;
     public static final int RAISE_EVERY_SECONDS = 20;
+    /** A Risen Skeleton (no population) lives this long; one rises every 20 s whatever still stands (lovish, Oct 29). */
     public static final int SKELETON_LIFETIME_SECONDS = 30;
-    public static final int MAX_SKELETONS = 1;
     /** Gravebound friends on the creep regenerate this much a second. */
     public static final float CREEP_REGEN_PER_SECOND = 2f;
     /** Enemy units on the creep move this much slower. */

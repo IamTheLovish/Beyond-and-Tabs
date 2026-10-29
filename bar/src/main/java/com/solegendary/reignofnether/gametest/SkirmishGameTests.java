@@ -6118,7 +6118,9 @@ public class SkirmishGameTests {
         // (deployed_turret_unit: the Brassworks Guildmaster's Deploy Turret summon - registered to the faction so its
         // kills/colour/ownership read as Brassworks, but DeployTurret spawns it and pays its 40 metal)
         // (clockwork_drone_unit: launched by the Iron Leviathan Engine, never trained)
-        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit", "clockwork_drone_unit");
+        // (risen_skeleton_unit: a Tombcaller's tombstone raises it, registered to Gravebound so the creep heals it)
+        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit", "clockwork_drone_unit",
+            "risen_skeleton_unit");
         List<String> gaps = new ArrayList<>();
         int checked = 0;
         for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
