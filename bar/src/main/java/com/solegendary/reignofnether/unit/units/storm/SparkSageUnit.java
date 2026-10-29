@@ -53,7 +53,7 @@ import java.util.List;
  * apply), not a subclass: the bots and tests find Mirror Mages by class. Placeholder look: the Wind Monk's robe
  * (SparkSageRenderer).
  */
-public class SparkSageUnit extends Pillager implements Unit, SupportUnit {   // STUB (tests first): not an essence carrier yet
+public class SparkSageUnit extends Pillager implements Unit, SupportUnit, EssenceCarrier {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new StaticStep(), Keybindings.abilitySlot1);

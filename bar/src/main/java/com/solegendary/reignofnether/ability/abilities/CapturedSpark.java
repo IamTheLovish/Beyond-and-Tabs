@@ -106,7 +106,6 @@ public class CapturedSpark extends Ability {
      * bot and the game test (no cooldown handling here).
      */
     public static int cast(ServerLevel sl, LivingEntity caster, String owner, LivingEntity first, boolean quiet) {
-        if (true) return 0;   // STUB (tests first)
         if (owner == null || owner.isBlank())
             return 0;
         if (first == null || first == caster || !first.isAlive() || first.level() != sl || !(first instanceof Unit fu)

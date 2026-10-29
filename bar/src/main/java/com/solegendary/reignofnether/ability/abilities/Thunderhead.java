@@ -151,7 +151,6 @@ public class Thunderhead extends Ability {
      */
     @Nullable
     public static Cloud cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
-        if (true) return null;   // STUB (tests first)
         if (owner == null || owner.isBlank() || at == null)
             return null;
         double cx = at.getX() + 0.5, cz = at.getZ() + 0.5;

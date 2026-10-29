@@ -122,7 +122,6 @@ public class StaticStep extends Ability {
      * cooldown handling here).
      */
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, Vec3 aim, boolean quiet) {
-        if (true) return false;   // STUB (tests first)
         if (owner == null || owner.isBlank() || aim == null)
             return false;
         Vec3 spot = Blink.landingSpot(sl, caster, aim, RANGE);
