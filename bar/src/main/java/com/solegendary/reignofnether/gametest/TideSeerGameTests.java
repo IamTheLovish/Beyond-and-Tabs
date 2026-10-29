@@ -728,6 +728,56 @@ public class TideSeerGameTests {
     // ------------------------------------------------------------------------------------------ the bots
 
     /**
+     * The Tidewrought bots train the Tide Seer (it is in their Drydock army) and spend its Empower (MANUAL for players)
+     * through BotPlayer.tideSeers: a Seer holding Empower's 15 plus a Drowned Tithe's 10 ranks up the priciest friend in
+     * reach (an Iron Golem over a vindicator) and keeps 10; one holding 24 keeps it all for its spells.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tide_seer_bots_train_it_and_empower_with_spare_essence(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "bot");
+        Mob poor = seer(helper, me, 2, 2, 24);
+        Mob poorFriend = vindicator(helper, me, 4, 2);
+        Mob rich = seer(helper, me, 2, 12, 25);
+        Mob cheap = vindicator(helper, me, 4, 12);
+        Mob dear = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), me, 5, 14);
+        List<Entity> all = live(poor, poorFriend, rich, cheap, dear);
+        if (all.size() != 5) {
+            cleanUp(helper, all);
+            helper.fail("could not spawn the two Tide Seers and their three friends");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.TIDEWROUGHT);
+                if (kit == null || !kit.t2Army().contains(ProductionItems.TIDE_SEER))
+                    problems.add("the Tidewrought bot's T2 army has no Tide Seer");
+                var brain = new com.solegendary.reignofnether.bot.BotPlayer(me, Factions.TIDEWROUGHT,
+                    com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(8, 2, 8)));
+                brain.tideSeers(level, new ArrayList<>(List.of(poor, poorFriend, rich, cheap, dear)));
+                if (Essence.get(poor) != 24 || VeterancyServerEvents.getRank(poorFriend) != 0)
+                    problems.add("a bot Seer with 24 essence empowered (" + Essence.get(poor) + " left, friend rank "
+                        + VeterancyServerEvents.getRank(poorFriend) + "): it should keep 10 after Empower's 15");
+                if (VeterancyServerEvents.getRank(dear) != 1)
+                    problems.add("the Iron Golem beside a bot Seer with 25 essence is rank " + VeterancyServerEvents.getRank(dear)
+                        + ", expected 1 (the priciest friend in reach)");
+                if (VeterancyServerEvents.getRank(cheap) != 0)
+                    problems.add("the vindicator was empowered too (rank " + VeterancyServerEvents.getRank(cheap) + ")");
+                if (Essence.get(rich) != 10)
+                    problems.add("the bot Seer holds " + Essence.get(rich) + " essence after Empower, expected 25 - 15 = 10");
+                if (cooldown(rich, Empower.class) <= 0)
+                    problems.add("the bot's Empower set no cooldown");
+            } catch (RuntimeException ex) {
+                problems.add("the bot habit threw " + ex);
+            } finally {
+                cleanUp(helper, all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
      * The bots' AutoCaster uses the Tide Seer (design/essence_casters.md Revision 1: bots use essence spells and never
      * order one that would be refused). A Tide Seer with 30 essence 5 blocks from a knot of 3 enemies casts Brine Bolt
      * on its first look, Drowned Tithe on the crowd on its second (the bolt now cooling down), and nothing on its third:

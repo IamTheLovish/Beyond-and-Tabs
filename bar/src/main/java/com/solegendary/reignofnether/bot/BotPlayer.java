@@ -2046,6 +2046,14 @@ public class BotPlayer {
         return best;
     }
 
+    /** Essence a Tide Seer keeps after an Empower: enough for a Drowned Tithe, its crowd spell. */
+    public static final int SEER_EMPOWER_RESERVE = com.solegendary.reignofnether.ability.abilities.DrownedTithe.ESSENCE_COST;
+
+    /**
+     * Tide Seers (the Tidewrought essence caster), for any bot that fields them. STUB (tests first, expected red).
+     */
+    public void tideSeers(ServerLevel level, List<LivingEntity> mine) { }
+
     /** Enemy units in a Leviathan's slam arc that make Tidal Slam worth its 50 s cooldown. */
     static final int LEVIATHAN_SLAM_MIN_FOES = 3;
 
