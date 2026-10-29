@@ -107,6 +107,9 @@ public class DefenceGameTests {
         BlockPos base = helper.absolutePos(BlockPos.ZERO);
         final int y0 = 210;
         int bx = base.getX(), bz = base.getZ();
+        // the floor and the wall (abs y 210-222, outside the arena) are put back when the test ends, pass or fail:
+        // they stayed for the next test at this slot, which builds its own pads at 200-216
+        TestCleanup.blocks(helper).region(new BlockPos(bx, y0, bz), new BlockPos(bx + 15, y0 + 12, bz + 15));
         for (int x = 0; x < 16; x++)
             for (int z = 0; z < 16; z++) {
                 level.setBlock(new BlockPos(bx + x, y0, bz + z), Blocks.STONE.defaultBlockState(), 2);
