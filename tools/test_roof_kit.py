@@ -117,5 +117,88 @@ class Gable(unittest.TestCase):
                             + (R.COPPER["gutter"],) for n, _ in r.values()))
 
 
+def wing(x, z):
+    """The r8 wing's half-pyramid (a hip roof cut by its gable at z 0): 1.5 up per block across x from the eave at
+    x 0, 2 up per block along z from the gable."""
+    return min(9 + 1.5 * min(x, 8 - x), 15 - 2 * z)
+
+
+class Field(unittest.TestCase):
+    """r8 (Oct 29): a roof over any height field - hips, pyramid faces, half-hips - from the same course rule."""
+    def setUp(self):
+        self.H = {(x, z): wing(x, z) for x in range(9) for z in range(4)}
+        self.r = R.field(self.H, seed=3)
+
+    def top(self, x, z):
+        y = max(q[1] for q in self.r if (q[0], q[2]) == (x, z))
+        return y, self.r[(x, y, z)]
+
+    def test_heights_become_shapes(self):
+        y, (n, p) = self.top(1, 0)                                # 10.5: a bottom slab at y 10
+        self.assertEqual((y, R.shape(n), p.get("type")), (10, 2, "bottom"))
+        y, (n, p) = self.top(0, 2)                                # 9 at the eave: a stair at y 8, uphill east
+        self.assertEqual((y, R.shape(n), p["facing"]), (8, 1, "east"))
+        y, (n, p) = self.top(3, 1)                                # 13 under the gable's 13.5: uphill north
+        self.assertEqual((y, R.shape(n), p["facing"]), (12, 1, "north"))
+        y, (n, _) = self.top(4, 0)                                # 15, nothing higher round it: the ridge cap
+        self.assertEqual((y, n), (14, R.SLATE["ridge"][0]))
+
+    def test_every_column_tops_at_its_height(self):
+        for (x, z), h in self.H.items():
+            y, (n, p) = self.top(x, z)
+            self.assertEqual(y + (0.5 if p.get("type") == "bottom" else 1.0), h, (x, z))
+
+    def test_risers_only_where_a_lower_neighbour_shows_them(self):
+        self.assertEqual(self.r[(1, 9, 0)][0], R.SLATE["tones"][R.family(self.r[(1, 9, 0)][0], R.SLATE)][0])
+        self.assertNotIn((1, 8, 0), self.r)                       # the eave's stair tops at 9: y 8 is hidden
+        for (x, y, z), (n, p) in self.r.items():
+            h = self.H[(x, z)]
+            if y + 1 < h - 0.5:                                   # a cell under the top: some neighbour shows it
+                self.assertTrue(any(self.H.get((x + a, z + b), 99) < y + 1
+                                    for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))), (x, y, z))
+
+    def test_fixed_families_and_three_tones(self):
+        stone = ("polished_andesite", "polished_andesite_stairs", "polished_andesite_slab")
+        r = R.field(self.H, seed=3, fixed={(x, 0): stone for x in range(9)})
+        self.assertTrue(all(n in stone for (x, y, z), (n, _) in r.items() if z == 0))
+        self.assertEqual({R.family(n, R.SLATE) for (x, y, z), (n, _) in r.items() if z > 0} - {None}, {0, 1, 2})
+
+    def test_oversails_its_walls(self):
+        b = S.Build({**{(x, y, z): ("bricks", {}) for x in range(1, 9) for z in range(4) for y in range(1, 8)
+                        if x in (1, 8) or z in (0, 3)}, **self.r})
+        self.assertEqual(set(S.eave_overhang(b)), {1})            # the x 0 eave course, 1 proud of the wall
+
+
+class Retone(unittest.TestCase):
+    """r8: courses laid on cells that already have their shapes (the tower cone's frozen voxels, a clipped gable)."""
+    def setUp(self):
+        self.cells = {}
+        for y in range(10):                                       # a stepped face: rows of full blocks and stairs
+            for z in range(-8 + y // 2, 9 - y // 2):
+                self.cells[(y // 2, y, z)] = (("bricks", {}) if y % 2 == 0 else
+                                              ("brick_stairs", {"facing": "east", "half": "bottom"}))
+
+    def test_keeps_shapes_and_states(self):
+        r = R.retone(self.cells, R.COPPER, seed=5)
+        self.assertEqual(set(r), set(self.cells))
+        for q, (n, p) in r.items():
+            self.assertEqual(R.shape(n), R.shape(self.cells[q][0]), q)
+            self.assertEqual(p, self.cells[q][1], q)
+            self.assertIsNotNone(R.family(n, R.COPPER), n)
+
+    def test_base_tone_share_holds_on_the_cells_themselves(self):
+        for seed in range(20):
+            r = R.retone(self.cells, R.COPPER, seed=seed)
+            share = sum(R.family(n, R.COPPER) == 0 for n, _ in r.values()) / len(r)
+            self.assertTrue(0.55 <= share <= 0.72, (seed, share))
+
+    def test_no_chequer_along_a_course(self):
+        r = R.retone(self.cells, R.SLATE, seed=2)
+        for y in range(10):
+            row = "".join(str(R.family(r[q][0], R.SLATE)) for q in sorted(q for q in r if q[1] == y))
+            self.assertNotIn("101", row, y)
+            self.assertNotIn("1111", row, y)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -114,3 +114,86 @@ def gable(span, length, axis="z", seed=0, mats=SLATE, overhang=1):
                 _place(out, axis, u, -1, v, mats["gutter"],
                        {"facing": _uphill(axis, side), "half": "top", "shape": "straight", "waterlogged": "false"})
     return out
+
+
+def shape(name):
+    """0 full block, 1 stairs, 2 slab, 3 wall."""
+    return 1 if name.endswith("_stairs") else 2 if name.endswith("_slab") else 3 if name.endswith("_wall") else 0
+
+
+_STEP = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}
+
+
+def _graded(groups, mats_seed, base=(0.55, 0.72)):
+    """groups: [course 0 = eave / lowest .. K] lists of keys in order along the course. Returns {key: tone}, the base
+    tone 55-72 % over all keys, wet (dark) low, bleached (pale) high, no chequer and no 4+ dark run in a course."""
+    keys = [k for g in groups for k in g]
+    K = max(1, len(groups) - 1)
+    for attempt in range(400):
+        rng = random.Random(mats_seed * 7919 + attempt)
+        out = {}
+        for i, g in enumerate(groups):
+            t = i / K
+            for k, tone in zip(g, _course(rng, len(g), 0.35 - 0.25 * t, 0.03 + 0.09 * t)):
+                out[k] = tone
+        three = len(keys) < 12 or set(out.values()) == {0, 1, 2}     # a roof shows all three tones
+        if keys and three and base[0] <= sum(v == 0 for v in out.values()) / len(keys) <= base[1]:
+            return out
+    return out
+
+
+def field(H, seed=0, mats=SLATE, fixed=None):
+    """A roof over a height field H {(x, z): top height, a multiple of 0.5}: hips, half-hips, pyramid faces. A column
+    tops in a bottom slab (x.5), a stair whose tall side faces its highest neighbour (uphill), or - with no higher
+    neighbour - the ridge cap; under the top, only the cells a lower neighbour shows (the riser), in the column's
+    tone. Courses (one per half-block of height) take the tone rule of `tones`. fixed {(x, z): (full, stairs, slab)}
+    sets a column's material outright (a stone verge or trim line). Returns {(x, y, z): (name, props)}."""
+    fixed = fixed or {}
+    lo = min(H.values())
+    courses = {}
+    for (x, z), h in H.items():
+        courses.setdefault(int(round(2 * (h - lo))), []).append((x, z))
+    groups = [sorted(courses[k], key=lambda c: (c[1], c[0])) for k in sorted(courses)]
+    tone = _graded(groups, seed)
+    out = {}
+    for (x, z), h in H.items():
+        fam = fixed.get((x, z)) or mats["tones"][tone[(x, z)]]
+        nb = {d: H[(x + d[0], z + d[1])] for d in _STEP if (x + d[0], z + d[1]) in H}
+        if h % 1:                                             # x.5: a bottom slab
+            ytop = int(h - 0.5)
+            out[(x, ytop, z)] = (fam[2], {"type": "bottom", "waterlogged": "false"})
+        else:
+            ytop = int(h) - 1
+            up = max(nb, key=lambda d: (nb[d], d), default=None)
+            if up is not None and nb[up] > h:
+                out[(x, ytop, z)] = (fam[1], {"facing": _STEP[up], "half": "bottom", "shape": "straight",
+                                              "waterlogged": "false"})
+            else:
+                out[(x, ytop, z)] = ((fixed[(x, z)][0] if (x, z) in fixed else mats["ridge"][0]), {})
+        low = min(nb.values(), default=h)
+        for y in range(int(low), ytop):                       # the riser a lower neighbour shows
+            out[(x, y, z)] = (fam[0], {})
+    return out
+
+
+def retone(cells, mats, seed=0):
+    """Lay courses on cells that already have their shapes (a frozen cone, a clipped gable): each row (y) is a course
+    in ring order round its centre, the full / stairs / slab cells take the tone family's same shape and keep their
+    states; walls and other shapes are left as they are."""
+    rows = {}
+    for q, (n, _) in cells.items():
+        if shape(n) < 3:
+            rows.setdefault(q[1], []).append(q)
+    groups = []
+    import math
+    for y in sorted(rows):
+        r = rows[y]
+        cx = sum(q[0] for q in r) / len(r)
+        cz = sum(q[2] for q in r) / len(r)
+        groups.append(sorted(r, key=lambda q: (round(math.atan2(q[2] - cz, q[0] - cx), 9), q)))
+    tone = _graded(groups, seed)
+    out = dict(cells)
+    for q, t in tone.items():
+        n, p = cells[q]
+        out[q] = (mats["tones"][t][shape(n)], p)
+    return out
