@@ -576,6 +576,56 @@ public class AngelCallerGameTests {
     }
 
     /**
+     * lovish (revision answers, Oct 29): the low Seraph Archer can be hit by "melee units and ground towers". The
+     * Sunforged anti-raid tower and its enhanced twin (ground-only: they never shoot a flyer) shoot an enemy Seraph
+     * Archer hovering at its flight height 4 blocks off - and still ignore a Gyrocopter Gunship (an ordinary flyer)
+     * beside it; the Sky Watch (anti-air) still shoots the archer too. Weapons ticked synchronously, as AntiAirGameTests.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = "angel_caller_towers")
+    public static void angel_caller_seraph_archer_is_shot_by_ground_raid_towers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "towers"), foe = owner(helper, "towersfoe");
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        List<Mob> spawned = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        try {
+            var towers = List.of(com.solegendary.reignofnether.building.buildings.defence.Defences.VILLAGERS.raidTower(),
+                com.solegendary.reignofnether.building.buildings.defence.Defences.VILLAGERS_TOWERS.raidTowerHeavy(),
+                com.solegendary.reignofnether.building.buildings.defence.Defences.VILLAGERS_TOWERS.skyWatch());
+            for (var tower : towers) {
+                var p = AntiAirGameTests.place(helper, tower, owner, foe);
+                if (p == null) {
+                    problems.add(tower.name + " is not a DefenceTowerPlacement");
+                    continue;
+                }
+                double cx = p.centrePos.getX() + 0.5, cz = p.centrePos.getZ() + 0.5;
+                Mob archer = AntiAirGameTests.spawn(level, EntityRegistrar.SERAPH_ARCHER_UNIT.get(), cx + 4, gy + SeraphArcherUnit.FLIGHT_HEIGHT, cz, foe, spawned);
+                Mob high = AntiAirGameTests.spawn(level, EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), cx - 4, gy + 6, cz, foe, spawned);
+                if (archer == null || high == null || !((Unit) archer).isFlyingUnit() || !((Unit) high).isFlyingUnit()) {
+                    problems.add("could not make a flying Seraph Archer and a Gyrocopter Gunship");
+                    break;
+                }
+                com.solegendary.reignofnether.unit.UnitGrid.invalidate();
+                float archerHp = archer.getHealth(), highHp = high.getHealth();
+                AntiAirGameTests.tickUntil(level, p, List.of(archer, high), 60, () -> archer.getHealth() < archerHp);
+                if (archer.getHealth() >= archerHp)
+                    problems.add(tower.name + " (" + tower.kind + ") never shot a Seraph Archer hovering "
+                        + SeraphArcherUnit.FLIGHT_HEIGHT + " blocks up 4 blocks off");
+                boolean groundOnly = !tower.kind.hitsAir;
+                if (groundOnly && high.getHealth() < highHp)
+                    problems.add(tower.name + " (ground-only) shot an ordinary flyer");
+                archer.discard();
+                high.discard();
+            }
+        } finally {
+            for (Mob m : spawned)
+                m.discard();
+        }
+        finish(helper, problems);
+    }
+
+    /**
      * The Sword Seraph flies (hovers above the ground while no enemy is near), then dives onto an enemy that appears 7
      * blocks off and hits it in melee, lives its 30 s and fades without a wisp.
      */
