@@ -294,7 +294,9 @@ public class UnitClientEvents {
     private static int unitPopulationCacheVirtual = -1;
 
     // the population the server last synced per unit id (Summons.population: 0 for a summon, whose tag never reaches
-    // the client); read through PopulationTally
+    // the client); read through PopulationTally. Client thread only: never touched from an entity event, which on a
+    // singleplayer or LAN host also fires on the server thread (PR 374 review). Entity ids are never reused in a
+    // session and logout clears it, so a unit that leaves keeps its entry (and counts right when it comes back).
     private static final it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap syncedPopulation = new it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap();
 
     /** What {@code le} adds to its owner's population on this client (0 for a summon once synced). */
@@ -825,11 +827,6 @@ public class UnitClientEvents {
                 idleWorkerIds.removeIf(id -> id == evt.getEntity().getId());
                 idleT2BuilderIds.removeIf(id -> id == evt.getEntity().getId());
             }
-            // a unit gone from the client may still be counted through its minimap VirtualUnit (its own synced
-            // population), so only a removed (dead or discarded) one forgets its entry
-            if (evt.getEntity().isRemoved() && evt.getEntity().getRemovalReason() != null
-                    && evt.getEntity().getRemovalReason().shouldDestroy())
-                syncedPopulation.remove(evt.getEntity().getId());
         } catch (Exception e) {
             ReignOfNether.LOGGER.warn("Error while trying to remove an idleWorkerId");
         }

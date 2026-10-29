@@ -80,9 +80,9 @@ public class SummonPopulationGameTests {
 
     /**
      * Each summon path, made for real beside one normal vindicator, and the owner's population is the vindicator's
-     * alone: a Bone Dragon's risen skeleton (raised with no population supply at all), an awakened treant, a Mirror
+     * alone: a Bone Dragon's risen skeleton (raised with the unit cap at 0), an awakened treant, a Mirror
      * Mage's decoy, a hero summon, a limited-life silverfish, an engine's drones, a deployed turret and a Lich Regent's
-     * ghoul (raised from a wreck, with no population supply).
+     * ghoul (raised from a wreck, with the unit cap at 0).
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void summon_pop_summons_take_no_population(GameTestHelper helper) {
@@ -115,6 +115,8 @@ public class SummonPopulationGameTests {
         int[] drones = { 0 }, ghouls = { 0 };
         Entity[] wreckOut = { null };
         helper.runAfterDelay(2, () -> {
+            int cap = UnitServerEvents.maxPopulation;
+            UnitServerEvents.maxPopulation = 0;   // no room at all (restored below, synchronously, whatever happens)
             try {
                 risen[0] = DragonRaiseServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(12, 2, 3)));
                 treant[0] = AwakenThicket.awakenOn(level, owner, helper.absolutePos(new BlockPos(12, 1, 7)), 400);
@@ -127,19 +129,21 @@ public class SummonPopulationGameTests {
                 ghouls[0] = RaiseDead.raise(level, normal, owner);
             } catch (RuntimeException ex) {
                 early.add("a summon path threw " + ex);
+            } finally {
+                UnitServerEvents.maxPopulation = cap;
             }
         });
         helper.runAfterDelay(4, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (risen[0] == null)
-                    problems.add("no Bone Dragon skeleton rose for an owner with no population supply (a summon takes none)");
+                    problems.add("no Bone Dragon skeleton rose with the unit cap at 0 (a summon takes no population)");
                 if (treant[0] == null)
                     problems.add("no treant awoke");
                 if (drones[0] < 1)
                     problems.add("the engine launched no drones");
                 if (ghouls[0] != 1)
-                    problems.add("the Lich Regent raised " + ghouls[0] + " ghouls from a wreck with no population supply, expected 1");
+                    problems.add("the Lich Regent raised " + ghouls[0] + " ghouls from a wreck with the unit cap at 0, expected 1");
                 for (ZombieUnit g : level.getEntitiesOfClass(ZombieUnit.class, new AABB(normal.blockPosition()).inflate(6)))
                     if (owner.equals(g.getOwnerName()) && !Summons.isSummoned(g))
                         problems.add("a Lich Regent ghoul is not marked as a summon");
@@ -159,23 +163,30 @@ public class SummonPopulationGameTests {
         });
     }
 
-    /** No population room needed, but the Bone Dragon's cap of 8 risen per owner holds: the ninth raise is refused. */
+    /** No population room needed (the unit cap at 0), but the Bone Dragon's cap of 8 risen per owner holds: the ninth raise is refused. */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void summon_pop_risen_cap_of_8_still_holds(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "cap");
         helper.runAfterDelay(2, () -> {
             List<String> problems = new ArrayList<>();
+            int cap = UnitServerEvents.maxPopulation;
             try {
                 int rose = 0;
-                for (int i = 0; i < DragonRaiseServerEvents.MAX_RISEN; i++)
-                    if (DragonRaiseServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(2 + (i % 4) * 3, 2, 3 + (i / 4) * 5))) != null)
-                        rose++;
-                Entity ninth = DragonRaiseServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(13, 2, 13)));
+                Entity ninth;
+                UnitServerEvents.maxPopulation = 0;   // no room at all: only the risen cap may refuse
+                try {
+                    for (int i = 0; i < DragonRaiseServerEvents.MAX_RISEN; i++)
+                        if (DragonRaiseServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(2 + (i % 4) * 3, 2, 3 + (i / 4) * 5))) != null)
+                            rose++;
+                    ninth = DragonRaiseServerEvents.raise(level, owner, helper.absolutePos(new BlockPos(13, 2, 13)));
+                } finally {
+                    UnitServerEvents.maxPopulation = cap;
+                }
                 if (DragonRaiseServerEvents.MAX_RISEN != 8)
                     problems.add("the risen cap is " + DragonRaiseServerEvents.MAX_RISEN + ", not 8");
                 if (rose != DragonRaiseServerEvents.MAX_RISEN)
-                    problems.add("only " + rose + " of " + DragonRaiseServerEvents.MAX_RISEN + " skeletons rose for an owner with no population supply");
+                    problems.add("only " + rose + " of " + DragonRaiseServerEvents.MAX_RISEN + " skeletons rose with the unit cap at 0");
                 if (ninth != null)
                     problems.add("a ninth skeleton rose past the cap of 8");
                 if (UnitServerEvents.getCurrentPopulation(owner) != 0)
