@@ -28,6 +28,9 @@ import com.solegendary.reignofnether.unit.UnitActionItem;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
+import com.solegendary.reignofnether.unit.support.SupportBrain;
+import com.solegendary.reignofnether.unit.support.SupportState;
 import com.solegendary.reignofnether.unit.units.storm.SparkSageProd;
 import com.solegendary.reignofnether.unit.units.storm.SparkSageUnit;
 
@@ -78,6 +81,8 @@ public class SparkSageGameTests {
     static final String BATCH = "caster_storm";
     /** A vindicator's health: 75, no magic resist, so a spell's damage is read straight off it. */
     static final float VINDICATOR_HP = 75f;
+    /** How long after its danger step begins a Sage has to walk it and be looked at by the AutoCaster (once a second). */
+    static final int STEP_THEN_CAST_TICKS = 140;
 
     private static String owner(GameTestHelper helper, String what) {
         return "gametest_sparksage_" + what + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -920,6 +925,67 @@ public class SparkSageGameTests {
                     problems.add("the bot gave " + moves + " move orders for its Sage 15.6 blocks from the army, expected 1 (to the army's centre)");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 problems.add("the bot's habits threw " + ex);
+            } finally {
+                discardAll(all);
+                finish(helper, problems);
+            }
+        });
+    }
+
+    /**
+     * The game as played, not the standIdle() shortcut: a Spark Sage left to its SupportBrain (AI on, autocast as
+     * trained) with an enemy coming for it 2 blocks off takes its danger step, and once the step ends the world's own
+     * AutoCaster pass sparks the enemy (30 damage, 10 essence). AutoCaster leaves a unit walking a move order alone, so
+     * this is the cast standIdle() skips over. The essence comes only once the step has begun, so the spark cannot land
+     * before it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
+    public static void spark_sage_autocasts_once_its_danger_step_ends(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = owner(helper, "kite"), foe = owner(helper, "kitefoe");
+        Mob caster = HeroGameTests.spawnUnit(helper, EntityRegistrar.SPARK_SAGE_UNIT.get(), me, 8, 8);
+        Mob target = vindicator(helper, foe, 6, 8);
+        List<Entity> all = live(caster, target);
+        if (all.size() != 2) {
+            discardAll(all);
+            helper.fail("could not spawn the Spark Sage and its enemy");
+            return;
+        }
+        int[] stepAt = { -1 };
+        boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            int t = (int) helper.getTick();
+            SupportState s = ((SupportUnit) caster).getSupportState();
+            if (stepAt[0] < 0) {
+                ReactionGameTests.aim(target, caster);   // coming for the Sage
+                if (s.kites > 0) {
+                    stepAt[0] = t;
+                    Essence.add(caster, CapturedSpark.ESSENCE_COST);
+                    return;
+                }
+                if (t < 100)
+                    return;
+            } else if (VINDICATOR_HP - target.getHealth() < 1f && t < stepAt[0] + STEP_THEN_CAST_TICKS) {
+                return;
+            }
+            done[0] = true;
+            List<String> problems = new ArrayList<>();
+            try {
+                double off = Math.hypot(caster.getX() - target.getX(), caster.getZ() - target.getZ());
+                if (stepAt[0] < 0) {
+                    problems.add("the Sage never took its danger step from the enemy 2 blocks off (" + off + " off after " + t + " ticks)");
+                } else {
+                    if (Math.abs(VINDICATOR_HP - target.getHealth() - 30f) > 0.01f)
+                        problems.add("the Sage did not spark the enemy after its step (it lost " + (VINDICATOR_HP - target.getHealth())
+                            + " by " + (t - stepAt[0]) + " ticks after the step began; " + String.format("%.2f", off)
+                            + " blocks off, move target " + ((Unit) caster).getMoveGoal().getMoveTarget() + ")");
+                    if (Essence.get(caster) != 0)
+                        problems.add("the spark left " + Essence.get(caster) + " essence, expected 0");
+                    if (off < SupportBrain.DANGER_RADIUS)
+                        problems.add("the Sage's step left it only " + String.format("%.2f", off) + " blocks off");
+                }
             } finally {
                 discardAll(all);
                 finish(helper, problems);
