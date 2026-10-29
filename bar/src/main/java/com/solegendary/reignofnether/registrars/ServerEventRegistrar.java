@@ -106,7 +106,6 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.PlantThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.blocks.ThicketCover.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
-        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SeedOfRenewal.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SproutGuardian.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);

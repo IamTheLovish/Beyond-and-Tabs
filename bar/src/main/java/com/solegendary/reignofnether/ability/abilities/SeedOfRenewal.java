@@ -9,19 +9,19 @@ import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.hud.HudClientboundPacket;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.monsters.AbstractTotem;
+import com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit;
 import com.solegendary.reignofnether.util.MyMath;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -29,54 +29,42 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
- * Verdant essence caster (the Thornweaver; design/essence_casters.md, lovish approved draft 2 on Oct 29): <b>Seed of
- * Renewal</b>, the mid spell. Aim a spot within {@link #RANGE} blocks: a flowering sapling sprouts there and, once a
- * second for {@link #LIFETIME_TICKS} ticks, heals every friendly unit within {@link #RADIUS} blocks of it by
- * {@link #HEAL_PER_SECOND} HP (12 pulses, 72 HP to a friend that stays). {@link #ESSENCE_COST} essence,
- * {@link #CD_SECONDS} s cooldown; refused (nothing spent, no cooldown) when the caster is short of essence. Autocast:
- * at a hurt friend's feet.
+ * Verdant essence caster (the Thornweaver; design/essence_casters.md, lovish approved draft 2 on Oct 29, Revision 1):
+ * <b>Seed of Renewal</b>, the mid spell. Aim a spot within {@link #RANGE} blocks: a flowering sapling sprouts there
+ * and, once a second for {@link #LIFETIME_TICKS} ticks, heals every friendly unit within {@link #RADIUS} blocks of it
+ * by {@link #HEAL_PER_SECOND} HP (10 pulses, 30 HP to a friend that stays: Revision 1 scaled it to the Bloom
+ * Priestess, whose Bloom heals 12 in 8 blocks every 20 s). {@link #ESSENCE_COST} essence, {@link #CD_SECONDS} s
+ * cooldown; refused (nothing spent, no cooldown) when the caster is short of essence or there is no ground to grow on.
+ * Autocast: at a hurt friend's feet.
  * <p>
- * The sapling is a block display, not a unit - it cannot be attacked, and it is marked summoned
- * ({@link Essence#markSummoned}) so nothing could ever farm a wisp from it. Its owner, end and next pulse live in its
- * persistent data, so a sapling saved with the world or reloaded with its chunk keeps healing on its own clock.
- * Registered as an event class: the server tick pulses and withers the saplings.
+ * The sapling is a unit of the caster's owner ({@link RenewalSaplingUnit}, 100 HP, Revision 1: "can be targeted"), so
+ * the enemy can answer it by cutting it down. It runs its own pulses and withers by itself; it is marked summoned
+ * ({@link Essence#markSummoned}) and tagged {@link #TAG}, so its death never drops essence.
  */
 public class SeedOfRenewal extends Ability {
 
     public static final int ESSENCE_COST = 10;
     public static final int CD_SECONDS = 25;
     public static final int RADIUS = 6;
-    public static final float HEAL_PER_SECOND = 6f;
+    public static final float HEAL_PER_SECOND = 3f;
     public static final int PULSE_TICKS = 20;
-    public static final int LIFETIME_TICKS = 12 * 20;
+    public static final int LIFETIME_TICKS = 10 * 20;
     /** Not in lovish's draft: how far the caster plants it, a placeholder for him to tune. */
     public static final int RANGE = 8;
     /** How far above or below the aimed ground the sapling (or a Sprout Guardian) may stand: a hillside, not a cliff. */
     public static final int MAX_DY = 4;
     public static final String TAG = "bt_renewal_sapling";
     public static final String MSG_NO_GROUND = "hud.essence.reignofnether.no_ground";
-    static final String KEY_OWNER = "bt_renewal_owner";
-    static final String KEY_END = "bt_renewal_end";
-    static final String KEY_NEXT = "bt_renewal_next";
 
-    // every live sapling (server thread only): a handful at most, so the tick walks them all
-    static final List<Entity> SAPLINGS = new ArrayList<>();
-    private static final List<LivingEntity> scratch = new ArrayList<>();
+    private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
 
     public SeedOfRenewal() {
         super(UnitAction.SEED_OF_RENEWAL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
@@ -102,8 +90,9 @@ public class SeedOfRenewal extends Ability {
             null,
             List.of(
                 FormattedCharSequence.forward("Seed of Renewal  (" + ESSENCE_COST + " essence, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("Plants a sapling up to " + RANGE + " blocks away: for " + LIFETIME_TICKS / 20
-                    + " s it heals friendly units within " + RADIUS + " blocks for " + (int) HEAL_PER_SECOND + " HP a second.", Style.EMPTY),
+                FormattedCharSequence.forward("Plants a sapling (" + (int) RenewalSaplingUnit.HEALTH + " HP) up to " + RANGE + " blocks away: for "
+                    + LIFETIME_TICKS / 20 + " s it heals friendly units within " + RADIUS + " blocks for " + (int) HEAL_PER_SECOND
+                    + " HP a second.", Style.EMPTY),
                 FormattedCharSequence.forward("Where the old fell, the new take root.", Style.EMPTY.withItalic(true))
             ),
             this,
@@ -132,17 +121,12 @@ public class SeedOfRenewal extends Ability {
         return e != null && e.getTags().contains(TAG);
     }
 
-    /** The live saplings (for the game test). */
-    public static List<Entity> getSaplings() {
-        return SAPLINGS;
-    }
-
     /**
      * The rule: checks the essence, plants the sapling on the ground by {@code at} (the aimed ground block), then
      * spends - so a refusal (short of essence, no ground there, or no sapling could be made) never costs essence.
      * Returns the sapling, or null when refused. Public for the bot and the game test (no cooldown handling here).
      */
-    public static Entity cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
+    public static LivingEntity cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
         if (owner == null || owner.isBlank() || at == null)
             return null;
         if (Essence.get(caster) < ESSENCE_COST) {
@@ -156,12 +140,11 @@ public class SeedOfRenewal extends Ability {
                 HudClientboundPacket.showTempMessageI18n(owner, MSG_NO_GROUND);
             return null;
         }
-        Entity sapling = plant(sl, owner, cell);
+        LivingEntity sapling = plant(sl, owner, cell);
         if (sapling == null)
             return null;
         if (!Essence.trySpend(caster, ESSENCE_COST)) {   // checked above; never true unless something spent in between
             sapling.discard();
-            SAPLINGS.remove(sapling);
             return null;
         }
         return sapling;
@@ -187,52 +170,28 @@ public class SeedOfRenewal extends Ability {
         return null;
     }
 
-    /** A sapling for {@code owner} standing in the block {@code cell} (its bottom face on the ground below). */
-    static Entity plant(ServerLevel sl, String owner, BlockPos cell) {
-        Entity display = EntityType.BLOCK_DISPLAY.create(sl);
-        if (display == null)
+    /** A sapling for {@code owner} standing in the block {@code cell} (on the ground below it); null if none spawned. */
+    static LivingEntity plant(ServerLevel sl, String owner, BlockPos cell) {
+        Entity e = UnitServerEvents.spawnMob(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), sl, cell.below(), owner);
+        if (!(e instanceof RenewalSaplingUnit sapling))
             return null;
-        CompoundTag tag = new CompoundTag();
-        display.saveWithoutId(tag);
-        tag.put("block_state", NbtUtils.writeBlockState(Blocks.FLOWERING_AZALEA.defaultBlockState()));
-        CompoundTag tf = new CompoundTag();
-        tf.put("left_rotation", floats(0, 0, 0, 1));
-        tf.put("right_rotation", floats(0, 0, 0, 1));
-        tf.put("translation", floats(-0.5f, 0, -0.5f));   // the block centred on the entity, standing on its feet
-        tf.put("scale", floats(1, 1, 1));
-        tag.put("transformation", tf);
-        display.load(tag);
-        display.moveTo(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5, 0, 0);
-        display.addTag(TAG);
-        Essence.markSummoned(display);
-        long now = sl.getGameTime();
-        display.getPersistentData().putString(KEY_OWNER, owner);
-        display.getPersistentData().putLong(KEY_END, now + LIFETIME_TICKS);
-        display.getPersistentData().putLong(KEY_NEXT, now + PULSE_TICKS);
-        sl.addFreshEntity(display);   // onJoin tracks it
-        if (!SAPLINGS.contains(display))
-            SAPLINGS.add(display);
-        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, display.getX(), display.getY() + 0.6, display.getZ(), 12, 0.5, 0.4, 0.5, 0.0);
+        Essence.markSummoned(sapling);
+        sapling.addTag(TAG);
+        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sapling.getX(), sapling.getY() + 0.6, sapling.getZ(), 12, 0.5, 0.4, 0.5, 0.0);
         sl.playSound(null, cell, SoundEvents.AZALEA_PLACE, SoundSource.NEUTRAL, 1.5f, 0.8f);
-        return display;
-    }
-
-    private static ListTag floats(float... v) {
-        ListTag list = new ListTag();
-        for (float f : v)
-            list.add(FloatTag.valueOf(f));
-        return list;
+        return sapling;
     }
 
     /**
      * One pulse: {@code amount} HP to every friendly unit (the owner's or an ally's, never a foe) within {@link #RADIUS}
-     * of the sapling that is not at full health. Returns how many it healed.
+     * of the sapling that is not at full health - never a sapling or a totem (it would mend itself as it is cut down).
+     * Returns how many it healed. Called by {@link RenewalSaplingUnit}'s tick.
      */
-    public static int pulse(ServerLevel sl, Entity sapling, String owner, float amount) {   // public for RenewalSaplingUnit (Revision 1, next commit)
+    public static int pulse(ServerLevel sl, Entity sapling, String owner, float amount) {
         int n = 0;
         double r2 = (double) RADIUS * RADIUS;
         for (LivingEntity le : UnitGrid.near(sl, sapling.getX(), sapling.getZ(), RADIUS, scratch)) {
-            if (!le.isAlive() || le.level() != sl || !(le instanceof Unit u) || le.distanceToSqr(sapling) > r2)
+            if (!le.isAlive() || le.level() != sl || !(le instanceof Unit u) || le instanceof AbstractTotem || le.distanceToSqr(sapling) > r2)
                 continue;
             String o = u.getOwnerName();
             if (o == null || !AlliancesServerEvents.isAlliedOrOwned(owner, o) || le.getHealth() >= le.getMaxHealth())
@@ -244,57 +203,5 @@ public class SeedOfRenewal extends Ability {
         if (n > 0)
             sl.sendParticles(ParticleTypes.SPORE_BLOSSOM_AIR, sapling.getX(), sapling.getY() + 1.2, sapling.getZ(), 3, 0.6, 0.2, 0.6, 0.0);
         return n;
-    }
-
-    /** A sapling that (re)loads from disk is a new entity object: adopt it, its clock is in its persistent data. */
-    @SubscribeEvent
-    public static void onJoin(EntityJoinLevelEvent evt) {
-        if (evt.getLevel().isClientSide() || !isSapling(evt.getEntity()))
-            return;
-        SAPLINGS.removeIf(Entity::isRemoved);
-        if (!SAPLINGS.contains(evt.getEntity()))
-            SAPLINGS.add(evt.getEntity());
-    }
-
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent evt) {
-        if (evt.phase != TickEvent.Phase.END || evt.getServer() == null || SAPLINGS.isEmpty())
-            return;
-        Iterator<Entity> it = SAPLINGS.iterator();
-        List<Entity> withered = new ArrayList<>();
-        while (it.hasNext()) {
-            Entity s = it.next();
-            if (s.isRemoved()) {
-                it.remove();
-                continue;
-            }
-            if (!(s.level() instanceof ServerLevel sl) || sl.getServer() != evt.getServer())
-                continue;
-            CompoundTag data = s.getPersistentData();
-            long now = sl.getGameTime(), end = data.getLong(KEY_END), next = data.getLong(KEY_NEXT);
-            String owner = data.getString(KEY_OWNER);
-            // every pulse whose second has come, up to the last one at the end (a lagging tick never skips a pulse)
-            while (next <= now && next <= end) {
-                pulse(sl, s, owner, HEAL_PER_SECOND);
-                next += PULSE_TICKS;
-            }
-            data.putLong(KEY_NEXT, next);
-            if (now >= end) {
-                it.remove();
-                withered.add(s);
-            }
-        }
-        for (Entity s : withered) {
-            if (s.level() instanceof ServerLevel sl) {
-                sl.sendParticles(ParticleTypes.FALLING_SPORE_BLOSSOM, s.getX(), s.getY() + 0.8, s.getZ(), 8, 0.4, 0.3, 0.4, 0.0);
-                sl.playSound(null, s.blockPosition(), SoundEvents.AZALEA_LEAVES_BREAK, SoundSource.NEUTRAL, 1f, 0.8f);
-            }
-            s.discard();
-        }
-    }
-
-    @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent evt) {
-        SAPLINGS.clear();
     }
 }
