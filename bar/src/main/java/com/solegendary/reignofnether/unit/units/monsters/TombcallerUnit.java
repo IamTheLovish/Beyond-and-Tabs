@@ -19,8 +19,8 @@ import javax.annotation.Nullable;
 
 /**
  * Gravebound essence caster - the <b>Tombcaller</b> (placeholder name; design/essence_casters.md "Gravebound
- * Gravecaller" and Revision 1, which renamed it: Gravecaller is the Gravebound hero). Trained at the Dungeon, the
- * Gravebound T2 lab. It gathers the essence wisps the dead leave within 8 blocks (12 on its own grave creep; holds 30)
+ * Gravecaller" and Revision 1, which renamed it: Gravecaller is the Gravebound hero). Trained at the Graveyard, the
+ * Gravebound T1 army building (lovish Oct 29: casters are tier 1). It gathers the essence wisps the dead leave within 8 blocks (12 on its own grave creep; holds 30)
  * and spends them: {@link RaiseTombstone} (10), {@link GraveTide} (5) and the shared {@link Empower} (15). Call the
  * Necromancer (the Grave Adept) follows in its own PR.
  * <p>

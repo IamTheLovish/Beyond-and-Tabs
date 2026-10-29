@@ -20,7 +20,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 
-/** The Gravebound essence caster, trained at the Dungeon (the T2 lab; design/essence_casters.md). */
+/** The Gravebound essence caster, trained at the Graveyard (tier 1: lovish Oct 29; design/essence_casters.md). */
 public class TombcallerProd extends ProductionItem implements IUnitProductionItem {
 
     public final static String itemName = "Tombcaller";
