@@ -267,7 +267,10 @@ public class GraveAdeptGameTests {
                     throw new IllegalStateException("the Tombcaller has no Call the Necromancer");
                 if (call.liveSummons(level, (Unit) caller) != 1)
                     early.add("with its Adept unloaded the Tombcaller counts no Adept");
-                if (CallNecromancer.cast(level, caller, owner, true) != null || Essence.get(caller) != 50)
+                GraveAdeptUnit second = CallNecromancer.cast(level, caller, owner, true);
+                if (second != null)
+                    all.add(second);
+                if (second != null || Essence.get(caller) != 50)
                     early.add("with its Adept unloaded a second was called (essence " + Essence.get(caller) + ")");
                 Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
                 if (back == null || !level.addFreshEntity(back))
