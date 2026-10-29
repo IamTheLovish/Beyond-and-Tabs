@@ -50,7 +50,7 @@ import java.util.List;
 
 /**
  * Ironhide Horde essence caster - the <b>Voodoo Shaman</b> (placeholder name; design/essence_casters.md, lovish approved
- * draft 2 on Oct 29): a war-painted piglin witch-doctor trained at the Military Portal (T1, lovish Oct 29). An
+ * draft 2 on Oct 29): a war-painted piglin witch-doctor trained at the Flame Sanctuary (the Horde's T2 lab). An
  * {@link EssenceCarrier}: it gathers the essence wisps the dead leave (8 blocks, holds 30) and spends them on
  * <ul>
  *   <li>{@link Hex} (5): an enemy T1-T2 unit can neither attack nor cast for 4 s;</li>

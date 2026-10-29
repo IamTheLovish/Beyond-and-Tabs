@@ -87,8 +87,8 @@ the unit and needs no packet of its own; a caster PR that shows essence on the H
 vanilla block display (like a wreck) carrying its value and birth tick in its persistent data, saved with the world.
 
 ## Horde: Voodoo Shaman (caster PR, branch claude/caster-horde)
-`unit/units/piglins/VoodooShamanUnit`, trained at the Military Portal (the Horde's T1 army building, button 6; lovish,
-Oct 29: "essence casters should be tier 1 like rez bots" - it was the Flame Sanctuary's tenth button). Placeholder body: the Brute's piglin plumbing with the Spear Thrower's skin and a bone
+`unit/units/piglins/VoodooShamanUnit`, trained at the Flame Sanctuary (the Horde's T2 lab, button 10 / P, as the
+Celestial Observatory's tenth). Placeholder body: the Brute's piglin plumbing with the Spear Thrower's skin and a bone
 fetish for a staff (3 damage, 0.6 hits/s).
 - **Cost and health (this PR's pick, for lovish to tune):** 175 metal / 220 energy, 3 pop, 35 s (the Bloom Priestess's
   metal and energy, the Witch's 35 s: a T2 support caster sits between the Blaze, 135 / 90, and the Wither Skeleton, 245 / 160); 60 HP, between the
@@ -119,6 +119,6 @@ fetish for a staff (3 damage, 0.6 hits/s).
   Blood Totem autocast only with the essence to pay (canAutocastNow; the base's autocastEssence gate will do the same).
 - **Population** (lovish, Oct 29): a puppet takes no population from the Shaman's owner; it counts for its original
   owner the whole time (SpiritPuppets.populationOwner in UnitServerEvents.getUnitPopulation).
-- **Bots** (lovish, Oct 29): the Horde bot kit trains it with its T1 army at the Military Portal (one of its three T1 picks). Hex and Blood
+- **Bots** (lovish, Oct 29): the Horde bot kit trains it at the Flame Sanctuary (one of its six T2 picks). Hex and Blood
   Totem autocast (only with the essence to pay); Spirit Puppet and Empower stay manual for bots and players.
 - Not in this PR: its essence is not on the HUD yet.
