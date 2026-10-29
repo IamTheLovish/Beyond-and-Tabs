@@ -181,7 +181,7 @@ void main() {
     // r11: measured from the smoothed ground (ValleyField), not one floor for the whole view - the mist follows the
     // valley, and its edge no longer draws every one-block terrace step
     float ground = vis.b >= 0.0 ? ValleyBase - 8.0 + vis.b * 32.0 : Floor;
-    float top = ground + 6.8;                                  // the highest a bank's top reaches
+    float top = ground + 10.5;   // the highest a bank's soft top reaches (r11c: 6.8 cut the fade)
     if (surface.y >= top) {
         fragColor = scene;
         return;
@@ -209,7 +209,7 @@ void main() {
         k.xz += warp;
         float h = w.y - ground;
         Bank b = bankAt(k, fogShare, local);
-        if (h > b.top + 1.2 && h > 3.0 * HAZE_HEIGHT)
+        if (h > b.top + 4.0 && h > 3.0 * HAZE_HEIGHT)
             continue;                                          // clear air above this bank and the haze
         float detail = fbm(k * vec3(0.07, 0.3, 0.22) + vec3(0.0, Time * 0.05, 0.0));
         float body = bankBody(b, h, detail);
