@@ -120,7 +120,6 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), PiglinUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ZOGLIN_UNIT.get(), ZoglinRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SKELETON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SkeletonUnitRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.RISEN_SKELETON_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SkeletonUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.HUSK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HuskUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DROWNED_UNIT.get(), DrownedRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.STRAY_UNIT.get(), StrayRenderer::new);

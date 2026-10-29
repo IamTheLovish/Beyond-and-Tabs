@@ -42,8 +42,8 @@ import java.util.UUID;
  * lovish's "tone down"; every tombstone number is on {@link TombstoneUnit}). Server side only.
  * <ul>
  *   <li><b>Tombstones</b> are watched from the moment they join (a reload included): each crumbles at its saved end
- *       tick and raises a Risen Skeleton (RisenSkeletonUnit: no population) at its saved raise tick, every 20 s
- *       whatever still stands. A skeleton carries its crumble tick and its stone's UUID, is a summon and vanishes on
+ *       tick and raises a Risen Skeleton (a summon: no population, the essence base's one rule) at its saved raise
+ *       tick, every 20 s whatever still stands. A skeleton carries its crumble tick and its stone's UUID, is a summon and vanishes on
  *       time.</li>
  *   <li><b>Grave creep</b> is an area, not blocks: a standing stone's disc (growing with its age) and, once the stone
  *       dies, a fading disc that shrinks to nothing over {@link TombstoneUnit#CREEP_FADE_SECONDS} s. Every
@@ -318,7 +318,7 @@ public final class TombcallerServerEvents {
      * it joins, crumbling {@code lifetimeSeconds} later. Null if none could be made.
      */
     public static Mob raiseSkeleton(ServerLevel sl, Entity source, String owner, int lifetimeSeconds, long now) {
-        EntityType<? extends Mob> type = EntityRegistrar.RISEN_SKELETON_UNIT.get();
+        EntityType<? extends Mob> type = EntityRegistrar.SKELETON_UNIT.get();
         Mob m = type.create(sl);
         if (m == null)
             return null;
