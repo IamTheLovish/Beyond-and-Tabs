@@ -859,4 +859,59 @@ public class SparkSageGameTests {
             }
         });
     }
+
+    /**
+     * A bot's Spark Sage is not an attacker, so the bot's army list never holds it: the "healers follow the army" habit
+     * (BotPlayer.verdantHabits, run for every faction's bot) must walk it to the army's centre, or it idles at its lab
+     * with no essence (PR 364 round 3 review). A Sage 17 blocks from the army is ordered to MOVE to the army's centre.
+     * The habit is package-private and the edit to BotPlayer is shared word for word by every caster PR, so the test
+     * reaches it by reflection and reads the bot's orderListener hook.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void spark_sage_bot_walks_a_lagging_sage_to_its_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "follow");
+        Mob caster = sage(helper, me, 2, 2, 0);
+        Mob fighter = vindicator(helper, me, 13, 13);   // the bot's army: one attacker, 15.6 blocks off
+        List<Entity> all = live(caster, fighter);
+        if (all.size() != 2) {
+            discardAll(all);
+            helper.fail("could not spawn the Spark Sage and the fighter");
+            return;
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                com.solegendary.reignofnether.bot.BotPlayer bot = new com.solegendary.reignofnether.bot.BotPlayer(me,
+                    Factions.STORMCALLERS, com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, null);
+                List<UnitAction> actions = new ArrayList<>();
+                List<BlockPos> targets = new ArrayList<>();
+                bot.orderListener = (action, target) -> { actions.add(action); targets.add(target); };
+                java.lang.reflect.Method habits = com.solegendary.reignofnether.bot.BotPlayer.class.getDeclaredMethod("verdantHabits",
+                    ServerLevel.class, List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                List<net.minecraft.world.entity.LivingEntity> mine = new ArrayList<>(List.of(caster, fighter));
+                List<net.minecraft.world.entity.LivingEntity> army = new ArrayList<>(List.of(fighter));
+                // minute 0, no home: only the follow-the-army part runs, not the choke picket
+                habits.invoke(bot, level, mine, army, new ArrayList<>(), new ArrayList<>(), 0L, 0L);
+                int moves = 0;
+                for (int i = 0; i < actions.size(); i++) {
+                    if (actions.get(i) != UnitAction.MOVE)
+                        continue;
+                    moves++;
+                    BlockPos t = targets.get(i);
+                    if (Math.abs(t.getX() - fighter.getBlockX()) > 1 || Math.abs(t.getZ() - fighter.getBlockZ()) > 1)
+                        problems.add("the bot sent its Sage to " + t.getX() + "," + t.getZ() + ", not to the army at "
+                            + fighter.getBlockX() + "," + fighter.getBlockZ());
+                }
+                if (moves != 1)
+                    problems.add("the bot gave " + moves + " move orders for its Sage 15.6 blocks from the army, expected 1 (to the army's centre)");
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                problems.add("the bot's habits threw " + ex);
+            } finally {
+                discardAll(all);
+                finish(helper, problems);
+            }
+        });
+    }
 }
