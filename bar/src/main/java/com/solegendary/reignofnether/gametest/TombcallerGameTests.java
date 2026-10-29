@@ -193,21 +193,24 @@ public class TombcallerGameTests {
     // ------------------------------------------------------------------------------------------- the unit itself
 
     /**
-     * The Dungeon trains the Tombcaller: its item names the unit registered to Gravebound, completing it (the real
+     * The Graveyard (the Gravebound T1 army building) trains the Tombcaller and the Dungeon (the T2 lab) does not
+     * (lovish Oct 29: "essence casters should be tier 1"): its item names the unit registered to Gravebound, completing it (the real
      * onComplete -> produceUnit path) makes an owned Tombcaller that is an essence carrier, costs its ResourceCosts entry
      * (metal and population above 0), has its 40 health, and carries Raise Tombstone, Grave Tide and Empower with the
      * draft's essence costs and cooldowns. The placement is never registered; the unit is removed at the end.
      */
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
-    public static void tombcaller_trains_at_the_dungeon_with_its_cost(GameTestHelper helper) {
+    public static void tombcaller_trains_at_the_graveyard_with_its_cost(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "train");
         List<String> problems = new ArrayList<>();
         List<Entity> made = new ArrayList<>();
         try {
-            Building dungeon = Buildings.DUNGEON;
-            if (!(dungeon instanceof ProductionBuilding lab) || !lab.productions.get().contains(ProductionItems.TOMBCALLER))
-                problems.add("the Dungeon (the Gravebound T2 lab) does not train the Tombcaller");
+            Building graveyard = Buildings.GRAVEYARD;
+            if (!(graveyard instanceof ProductionBuilding t1) || !t1.productions.get().contains(ProductionItems.TOMBCALLER))
+                problems.add("the Graveyard (the Gravebound T1 army building) does not train the Tombcaller");
+            if (Buildings.DUNGEON instanceof ProductionBuilding lab && lab.productions.get().contains(ProductionItems.TOMBCALLER))
+                problems.add("the Dungeon (the T2 lab) still trains the Tombcaller: it is a tier-1 unit");
             if (!Factions.MONSTERS.key.equals(Factions.ENTITY_FACTION.get(EntityType.getKey(EntityRegistrar.TOMBCALLER_UNIT.get()))))
                 problems.add("the Tombcaller is not registered to Gravebound");
             if (EntityRegistrar.getEntityType(ProductionItems.TOMBCALLER.getItemName()) != EntityRegistrar.TOMBCALLER_UNIT.get())
@@ -216,10 +219,10 @@ public class TombcallerGameTests {
             if (cost.metal() <= 0 || cost.population <= 0)
                 problems.add("the Tombcaller costs " + cost.metal() + " metal and " + cost.population + " population: it must cost something");
             BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(dungeon, level,
+            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(graveyard, level,
                 new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
             if (!(bp instanceof ProductionPlacement pp)) {
-                problems.add("the Dungeon is not a production placement");
+                problems.add("the Graveyard is not a production placement");
             } else {
                 pp.isBuilt = true;
                 ProductionItems.TOMBCALLER.onComplete.accept(level, pp);
@@ -252,8 +255,10 @@ public class TombcallerGameTests {
                     // bots train it and it casts by itself (lovish: "bots build and use all 7 casters"): its spells
                     // autocast by default, Empower (the player's pick of who earns a rank) does not
                     var botKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.MONSTERS);
-                    if (botKit == null || !botKit.t2Army().contains(ProductionItems.TOMBCALLER))
-                        problems.add("the Gravebound bots do not train the Tombcaller");
+                    if (botKit == null || !botKit.army().contains(ProductionItems.TOMBCALLER))
+                        problems.add("the Gravebound bots do not train the Tombcaller with their tier-1 army");
+                    if (botKit != null && botKit.t2Army().contains(ProductionItems.TOMBCALLER))
+                        problems.add("the Gravebound bots still list the Tombcaller in their tier-2 army");
                     for (Ability a : ((Unit) unit).getAbilities().get()) {
                         boolean on = AutocastState.isOn((Unit) unit, a);
                         if (a instanceof Empower ? on : !on)
