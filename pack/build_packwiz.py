@@ -7,6 +7,8 @@ Testers import a small Prism instance ONCE; its pre-launch command runs packwiz-
 The third-party mods are the same set as the .mrpack tester pack (build_pack.py: lovish's instance_mods.json resolved
 on Modrinth by sha1, plus e4mc and its dependencies) and download from cdn.modrinth.com. Our own jar and our
 realistic resource pack download from the download repo's release assets. Every file carries a sha512.
+No shader pack and no shader loader ship (Oct 29: Complementary Reimagined's author refused us permission; our own
+shader pack will add them back). tools/test_pack_no_complementary.py fails if a Complementary file ever gets in.
 
 Two variants: windows/ (everything) and mac/ (without build_pack.MAC_SKIP: Embeddium, ImmediatelyFast, Embeddium Extra - like macpack.yml).
 
@@ -64,42 +66,7 @@ def write(root, rel, text):
     return text
 
 
-# The shader look (lovish Oct 22: "the game needs better graphics, everything still feels flat"): Complementary
-# Reimagined on Oculus (build_pack.EXTRA_PROJECTS), the pack the eyes shader lane photographs. RP_MODE 3 = labPBR, so it
-# reads our _n / _s maps; Complementary's own default (RP_MODE 1) ignores them. The two settings files are "preserve":
-# written once, then a player's own choices (K toggles shaders, O opens their menu) survive every update.
-SHADER_PROJECT, SHADER_VERSION = "complementary-reimagined", "r5.9.3"
-
-
-def resolve_shader(tmp):
-    """(filename, url, sha512) of the pinned Complementary Reimagined zip, checked against Modrinth's own hashes."""
-    vs = build_pack.get_json(f"{build_pack.API}/project/{SHADER_PROJECT}/version") or []
-    v = next((v for v in vs if v["version_number"] == SHADER_VERSION), None)
-    if v is None:
-        sys.exit(f"::error::{SHADER_PROJECT} {SHADER_VERSION} not found on Modrinth")
-    f = next((f for f in v["files"] if f.get("primary")), v["files"][0])
-    dest = os.path.join(tmp, f["filename"])
-    build_pack.download(f["url"], dest)
-    sha1, sha512 = build_pack.file_hashes(dest)
-    if sha512 != f["hashes"]["sha512"] or sha1 != f["hashes"]["sha1"]:
-        sys.exit(f"::error::{f['filename']}: downloaded bytes do not match Modrinth's hashes")
-    if not f["url"].startswith("https://cdn.modrinth.com/"):
-        sys.exit(f"::error::shader pack download not on cdn.modrinth.com: {f['url']}")
-    return f["filename"], f["url"], sha512
-
-
-def shader_files(shader):
-    """Pack files for the shader look: the zip's metafile and the two preserved settings files."""
-    name, url, sha = shader
-    props = (f"enableShaders=true\nshaderPack={name}\ndisableUpdateMessage=true\nmaxShadowRenderDistance=12\n")
-    return [
-        (f"shaderpacks/{slug(name)}.pw.toml", metafile("Complementary Reimagined", name, "client", url, sha), True, False),
-        (f"shaderpacks/{name}.txt", "RP_MODE=3\n", False, True),
-        ("config/oculus.properties", props, False, True),
-    ]
-
-
-def build_variant(root, entries, our, rp, version, skip, shader=None):
+def build_variant(root, entries, our, rp, version, skip):
     """entries: [(filename, side, url, sha512)] for third-party mods; our / rp: (filename, url, sha512)."""
     files = []  # (rel path, text, metafile?, preserve?)
     for filename, side, url, sha in entries:
@@ -111,8 +78,6 @@ def build_variant(root, entries, our, rp, version, skip, shader=None):
     files.append((f"resourcepacks/{slug(rp[0])}.pw.toml",
                   metafile("Beyond and Tabs - Realistic", rp[0], "client", rp[1], rp[2]), True, False))
     # options.txt is only written when the tester has none yet (preserve): it switches our resource pack on once.
-    if shader is not None and not any(k == "oculus" for k in skip):
-        files += shader_files(shader)
     options = (f"version:{MC_DATA_VERSION}\n"
                f"resourcePacks:[\"vanilla\",\"file/{rp[0]}\"]\n")
     files.append(("options.txt", options, False, True))
@@ -145,7 +110,6 @@ def main():
     mods, projects = build_pack.resolve_instance_mods()
     with tempfile.TemporaryDirectory() as tmp:
         e4mc, _ = build_pack.resolve_e4mc(tmp, projects)
-        shader = resolve_shader(tmp)
     entries = []
     for e in mods + e4mc:
         filename = os.path.basename(e["path"])
@@ -162,7 +126,7 @@ def main():
 
     summary = {"version": version, "jar": our[0], "jar_sha512": our[2], "variants": {}}
     for variant, skip in (("windows", ()), ("mac", MAC_SKIP)):
-        n = build_variant(os.path.join(out_dir, variant), entries, our, rp, version, skip, shader)
+        n = build_variant(os.path.join(out_dir, variant), entries, our, rp, version, skip)
         summary["variants"][variant] = n
         print(f"{variant}: {n} files")
     with open(os.path.join(out_dir, "summary.json"), "w") as f:

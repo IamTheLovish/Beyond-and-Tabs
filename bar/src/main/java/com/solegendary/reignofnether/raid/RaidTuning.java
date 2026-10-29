@@ -81,10 +81,14 @@ public final class RaidTuning {
         return base <= 0 ? 0 : Math.max(0f, VEHICLE_BUILDING_HPS / base - 1f);
     }
 
-    /** The T1 vehicles: the melee beasts (Hoglin, Sentinel Treant, Mudskipper Sloop) and the T1 siege (Bombard Crew, Rocket Battery, Mortar Crawler). */
+    /**
+     * The T1 vehicles: the melee beasts (Hoglin, Sentinel Treant, Mudskipper Sloop), the T1 artillery (Bombard Crew,
+     * Rocket Battery, Mortar Crawler) and every faction's siege lobber (design/siege_t1.md).
+     */
     public static boolean isT1Vehicle(Entity e) {
         return e instanceof HoglinUnit || e instanceof SentinelTreantUnit || e instanceof MudskipperSloopUnit
-            || e instanceof BombardCrewUnit || e instanceof RocketBatteryUnit || e instanceof MortarCrawlerUnit;
+            || e instanceof BombardCrewUnit || e instanceof RocketBatteryUnit || e instanceof MortarCrawlerUnit
+            || e instanceof com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit;
     }
 
     // ---------------------------------------------------------------- workers
