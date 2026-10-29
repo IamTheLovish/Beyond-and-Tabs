@@ -821,84 +821,8 @@ public class TombcallerGameTests {
         });
     }
 
-    /**
-     * A stone raises a Risen Skeleton when its time comes: a skeleton for its owner, marked summoned, crumbling 30 s
-     * later, beside the stone, counted for no population (lovish: no summon takes any; the essence base's one rule, so
-     * the owner's population stays 0), and the next raise is 20 s on. When the next raise comes with that one still standing, a second rises beside it (lovish: every 20 s,
-     * whatever still stands); one killed drops no wisp.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void tombstone_raises_a_pop_free_skeleton_every_20_seconds(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = owner(helper, "risen");
-        TombstoneUnit s = stone(helper, null, owner, 8, 8, 0, false);
-        if (s == null) {
-            helper.fail("could not raise the stone");
-            return;
-        }
-        List<String> early = new ArrayList<>();
-        List<Mob> first = new ArrayList<>();
-        Vec3[] killedAt = { null };
-        helper.runAfterDelay(2, () -> s.setNextRaise(level.getGameTime()));
-        helper.runAfterDelay(4, () -> {
-            try {
-                long now = level.getGameTime();
-                first.addAll(TombcallerServerEvents.risenOf(s));
-                if (first.size() != 1) {
-                    early.add("the stone raised " + first.size() + " skeletons when its time came, expected 1");
-                } else {
-                    Mob m = first.get(0);
-                    if (!(m instanceof SkeletonUnit) || !owner.equals(((Unit) m).getOwnerName()))
-                        early.add("the risen unit is a " + m.getClass().getSimpleName() + " of " + ((Unit) m).getOwnerName());
-                    if (!Essence.isSummoned(m) || !TombcallerServerEvents.isRisen(m))
-                        early.add("the Risen Skeleton is not marked summoned / risen");
-                    long left = TombcallerServerEvents.risenEnd(m) - now;
-                    if (left < 30 * 20 - 4 || left > 30 * 20)
-                        early.add("the Risen Skeleton crumbles in " + left + " ticks, expected 600");
-                    if (m.distanceTo(s) > 3)
-                        early.add("the skeleton rose " + String.format("%.1f", m.distanceTo(s)) + " blocks from the stone");
-                }
-                if (UnitServerEvents.getCurrentPopulation(owner) != 0)
-                    early.add("with a skeleton up the owner's population is " + UnitServerEvents.getCurrentPopulation(owner) + ", expected 0");
-                if (s.nextRaise() - now < 20 * 20 - 4)
-                    early.add("the stone's next raise is " + (s.nextRaise() - now) + " ticks off, expected 20 s");
-                s.setNextRaise(now);   // time again, with one standing
-            } catch (RuntimeException ex) {
-                early.add("threw " + ex);
-            }
-        });
-        helper.runAfterDelay(7, () -> {
-            try {
-                List<Mob> now = TombcallerServerEvents.risenOf(s);
-                if (now.size() != first.size() + 1)
-                    early.add("the next raise with one standing left " + now.size() + " skeletons, expected " + (first.size() + 1));
-                for (Mob m : now)
-                    if (!first.contains(m))
-                        first.add(m);
-                if (!first.isEmpty()) {
-                    killedAt[0] = first.get(0).position();
-                    first.get(0).kill();
-                }
-            } catch (RuntimeException ex) {
-                early.add("killing the skeleton threw " + ex);
-            }
-        });
-        helper.runAfterDelay(11, () -> {
-            List<String> problems = new ArrayList<>(early);
-            try {
-                if (TombstoneUnit.RAISE_EVERY_SECONDS != 20 || TombstoneUnit.SKELETON_LIFETIME_SECONDS != 30)
-                    problems.add("lovish set a skeleton every 20 s, 30 s each");
-                if (killedAt[0] != null && wispsNear(killedAt[0], 2) > 0)
-                    problems.add("the killed Risen Skeleton dropped an essence wisp");
-            } finally {
-                if (killedAt[0] != null)
-                    clearWispsNear(killedAt[0], 2);
-                discardAll(first);
-                clearStones(level, List.of(s), owner);
-            }
-            finish(helper, problems);
-        });
-    }
+    // tombstone_raises_a_pop_free_skeleton_every_20_seconds is retired: lovish Oct 29, "there should be no population in
+    // this game" - no max population, so #374 (pop-free summons) is superseded and the pop check has nothing to prove.
 
     /**
      * Killing a stone does not lift its creep at once: it fades over 10 s. A cell 5 blocks off is still on it just after
