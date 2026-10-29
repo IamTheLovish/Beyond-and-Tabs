@@ -175,15 +175,29 @@ public class SoulBoiler extends Ability {
     }
 
     /**
-     * The autocast's pick: the nearest friendly building within reach that is not boiling and has work, or null. Public
-     * for the game test.
+     * Whether the boil would speed anything up right now (the autocast's test; a player's hand-cast only needs
+     * {@link #hasWork}): a site that someone is building (a worker on it, an annex lending power, or one that builds
+     * itself), or a built building whose first queued item is not held at the population cap.
+     */
+    public static boolean isWorking(BuildingPlacement b) {
+        if (!b.isBuilt)
+            return b.selfBuilding || !b.getBuilders().isEmpty()
+                || (b.getLevel() != null && b.assistUntilTick > b.getLevel().getGameTime());
+        if (!(b instanceof ProductionPlacement pp) || pp.productionQueue.isEmpty())
+            return false;
+        return pp.productionQueue.get(0).item.isBelowPopulationSupply(pp);
+    }
+
+    /**
+     * The autocast's pick: the nearest friendly building within reach that is not boiling and is working
+     * ({@link #isWorking}), or null. Public for the game test.
      */
     @Nullable
     public static BuildingPlacement busiestInReach(ServerLevel sl, LivingEntity caster, String owner) {
         BuildingPlacement best = null;
         double bestD = Double.MAX_VALUE;
         for (BuildingPlacement b : BuildingServerEvents.getBuildings()) {
-            if (b.level != sl || b.isDestroyedServerside || !isFriendly(b, owner) || isBoiling(b) || !hasWork(b))
+            if (b.level != sl || b.isDestroyedServerside || !isFriendly(b, owner) || isBoiling(b) || !isWorking(b))
                 continue;
             double d = edgeDistance(caster, b);
             if (d <= RANGE && d < bestD) {

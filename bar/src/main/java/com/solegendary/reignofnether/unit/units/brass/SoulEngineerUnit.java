@@ -215,11 +215,19 @@ public class SoulEngineerUnit extends Vindicator implements Unit, SupportUnit, E
 
     /**
      * Soul Boiler's autocast (it is {@code autocastByUnit}: no AutoRule aims at a busy building), once a second: with
-     * the switch on, off cooldown and the essence in hand, it boils the nearest friendly building in reach that is going
-     * up or has a queue. True when it cast. Public for the game test.
+     * the switch on, off cooldown and the essence in hand, and none of the AutoCaster's gates shut, it boils the
+     * nearest friendly building in reach that is working (SoulBoiler.isWorking: a site with a builder, or a queue not
+     * held at the population cap). True when it cast. Public for the game test.
      */
     public boolean autoBoil() {
         if (!(level() instanceof ServerLevel sl) || !isAlive() || getOwnerName() == null || getOwnerName().isBlank())
+            return false;
+        // the AutoCaster's gates (AutoCaster.look): never while stunned, frozen, uncontrollable, sealed, garrisoned or
+        // mid-cast - this autocast runs outside it
+        if (hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.STUN.get())
+                || hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.FREEZE.get())
+                || hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.UNCONTROLLABLE.get())
+                || com.solegendary.reignofnether.mana.SealServerEvents.isSealed(this) || isGarrisoned() || isCasting())
             return false;
         SoulBoiler boiler = null;
         for (Ability a : abilities.get())

@@ -781,6 +781,17 @@ public class BuildingPlacement {
     }
 
     /**
+     * The site's own multipliers on its builders' power: the first-capitol bonus ({@link #buildSpeedMult}), the Soul
+     * Boiler (SoulBoiler.speedMult) and the economy pace (EconomyPace: construction speeds up / slows down with income,
+     * so a paced match keeps the same build-time-to-income ratio; cost per building is unchanged - only how fast it
+     * flows). Public for the game test.
+     */
+    public float boostedBuildPower(float buildPower) {
+        return buildPower * buildSpeedMult * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this)
+            * com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+    }
+
+    /**
      * Puts missing blocks straight back - no builder, no wood, lowest first, dry before wet - until the building has
      * regained {@code hp} health (it may overshoot by under one block's share) or is whole. The Soul Engineer's Patch
      * Kit (ability/abilities/PatchKit). Returns the health regained. Server only.
@@ -1478,10 +1489,7 @@ public class BuildingPlacement {
         // still rises, slowly
         if (assistUntilTick > serverLevel.getGameTime())
             buildPower += assistPower;
-        buildPower *= buildSpeedMult * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this);
-        // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
-        // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
-        buildPower *= com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+        buildPower = boostedBuildPower(buildPower);
 
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing

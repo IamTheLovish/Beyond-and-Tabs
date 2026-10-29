@@ -205,6 +205,14 @@ public class SoulEngineerGameTests {
         return bp.getHealthPerBlock() / 2 / bp.minBlocksPercent;
     }
 
+    /**
+     * Clears every order and move target (Unit.fullResetBehaviours): the support brain may have set one, and the
+     * AutoCaster leaves a unit walking a move order alone (the Spark Sage's autocast tests failed 8/8 without it).
+     */
+    private static void standIdle(Mob caster) {
+        Unit.fullResetBehaviours((Unit) caster);
+    }
+
     /** Stands the caster {@code gap} blocks east of the building's east edge, on the building's middle row. */
     private static void beside(Mob caster, BuildingPlacement bp, double gap) {
         caster.moveTo(bp.maxCorner.getX() + 1 + gap, caster.getY(), bp.centrePos.getZ() + 0.5, 0, 0);
@@ -580,9 +588,11 @@ public class SoulEngineerGameTests {
                     return;
                 }
                 int hurt = bp.getHealth();
+                standIdle(caster);
                 if (AutoCaster.look(level, caster, (Unit) caster) || bp.getHealth() != hurt || Essence.get(caster) != 4)
                     problems.add("with 4 of 5 essence the AutoCaster still cast (health " + hurt + " -> " + bp.getHealth() + ")");
                 Essence.add(caster, 1);
+                standIdle(caster);
                 if (!AutoCaster.look(level, caster, (Unit) caster))
                     problems.add("with 5 essence and a building at " + hurt + " of " + bp.getMaxHealth() + " in reach the AutoCaster did not cast");
                 if (bp.getHealth() <= hurt)
@@ -955,8 +965,9 @@ public class SoulEngineerGameTests {
     }
 
     /**
-     * The bots' Soul Boiler: the unit casts it by itself (autoBoil) at a friendly building in reach with work queued -
-     * never at an idle one - and only with 20 essence.
+     * The bots' Soul Boiler: the unit casts it by itself (autoBoil) at a friendly building in reach that is working -
+     * never at an idle one, a queue held at the population cap or a site nobody is building - only with 20 essence, and
+     * never while sealed (the AutoCaster's gates).
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void soul_engineer_soul_boiler_autocasts_at_a_busy_building(GameTestHelper helper) {
@@ -975,13 +986,33 @@ public class SoulEngineerGameTests {
                 Essence.add(caster, 1);
                 if (se.autoBoil() || SoulBoiler.isBoiling(shop))
                     problems.add("the Soul Engineer boiled an idle building by itself");
+                // a unit queued with no population room (the test owner has no supply): the queue is held, no boil
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.STEAM_RUNNER, false, me));
+                if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
+                    problems.add("setup: the test owner has population room for a Steam Runner");
+                else if (se.autoBoil() || SoulBoiler.isBoiling(shop))
+                    problems.add("the Soul Engineer boiled a queue held at the population cap by itself");
+                pp.productionQueue.clear();
+                pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
+                // a friendly site nobody is building, alone in reach
+                BuildingServerEvents.getBuildings().remove(shop);
+                BuildingPlacement idleSite = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
+                if (se.autoBoil() || (idleSite != null && SoulBoiler.isBoiling(idleSite)))
+                    problems.add("the Soul Engineer boiled a site nobody is building by itself");
+                BuildingServerEvents.getBuildings().remove(idleSite);
+                BuildingServerEvents.getBuildings().add(shop);
+                // sealed
+                caster.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    com.solegendary.reignofnether.registrars.MobEffectRegistrar.SEALED.get(), 100, 0));
+                if (se.autoBoil() || SoulBoiler.isBoiling(shop))
+                    problems.add("a sealed Soul Engineer boiled by itself");
+                caster.removeEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.SEALED.get());
                 Essence.trySpend(caster, 1);
                 if (se.autoBoil() || SoulBoiler.isBoiling(shop))
                     problems.add("with 19 essence the Soul Engineer boiled by itself");
                 Essence.add(caster, 1);
                 if (!se.autoBoil() || !SoulBoiler.isBoiling(shop))
-                    problems.add("with 20 essence and a busy building in reach the Soul Engineer did not boil it by itself");
+                    problems.add("with 20 essence and a working building in reach the Soul Engineer did not boil it by itself");
                 if (Essence.get(caster) != 0)
                     problems.add("the autocast left " + Essence.get(caster) + " essence, expected 0");
                 SoulBoiler sb = ability(caster, SoulBoiler.class);
@@ -1075,6 +1106,75 @@ public class SoulEngineerGameTests {
                 problems.add("threw " + ex);
             } finally {
                 discardAll(all);
+                finish(helper, problems);
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------- review round 1
+
+    /** Patch Kit refuses a friendly site still going up (it is built, not repaired): nothing spent, no cooldown. */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void soul_engineer_patch_kit_refuses_a_site_still_going_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "patchsite");
+        Mob caster = engineer(helper, me, 1, 1, 30);
+        BuildingPlacement rising = site(helper, Buildings.MACHINE_SHOP, me, 4, 4, false);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                PatchKit kit = caster == null ? null : ability(caster, PatchKit.class);
+                if (kit == null || rising == null) {
+                    problems.add("could not set up the Soul Engineer and the site");
+                    return;
+                }
+                beside(caster, rising, 3);
+                kit.use(level, (Unit) caster, rising.centrePos);
+                if (Essence.get(caster) != 30)
+                    problems.add("Patch Kit on a site still going up spent essence (" + Essence.get(caster) + " left of 30)");
+                if (((Unit) caster).getCooldown(kit) > 0)
+                    problems.add("Patch Kit on a site still going up set a cooldown");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                BuildingServerEvents.getBuildings().remove(rising);
+                discardAll(live(caster));
+                finish(helper, problems);
+            }
+        });
+    }
+
+    /**
+     * Soul Boiler speeds construction itself: a boiled site's builders' power (BuildingPlacement.boostedBuildPower, the
+     * step tickFlowConstruction takes) is 1.5x an unboiled one's.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void soul_engineer_soul_boiler_speeds_construction_itself(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "boilsite");
+        Mob caster = engineer(helper, me, 1, 1, 20);
+        BuildingPlacement rising = site(helper, Buildings.MACHINE_SHOP, me, 4, 4, false);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                SoulBoiler sb = caster == null ? null : ability(caster, SoulBoiler.class);
+                if (sb == null || rising == null) {
+                    problems.add("could not set up the Soul Engineer and the site");
+                    return;
+                }
+                beside(caster, rising, 3);
+                float p0 = rising.boostedBuildPower(1f);
+                sb.use(level, (Unit) caster, rising.centrePos);
+                float p1 = rising.boostedBuildPower(1f);
+                if (p0 <= 0 || Math.abs(p1 - p0 * 1.5f) > 1e-4f)
+                    problems.add("a boiled site builds with " + p1 + " power for 1, an unboiled one " + p0 + ": expected 1.5x");
+                if (Essence.get(caster) != 0)
+                    problems.add("boiling the site left " + Essence.get(caster) + " essence, expected 0");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                BuildingServerEvents.getBuildings().remove(rising);
+                discardAll(live(caster));
                 finish(helper, problems);
             }
         });
