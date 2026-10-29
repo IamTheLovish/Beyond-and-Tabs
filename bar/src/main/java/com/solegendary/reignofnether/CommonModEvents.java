@@ -108,6 +108,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.GravityMonkUnit.createAttributes().build());
         evt.put(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.MirrorMageUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SPARK_SAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SparkSageUnit.createAttributes().build());
         evt.put(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SeerUnit.createAttributes().build());
         evt.put(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit.createAttributes().build());
         evt.put(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.createAttributes().build());
@@ -168,6 +169,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit.createAttributes().build());
         evt.put(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.createAttributes().build());
         evt.put(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SOUL_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GHOST_FURNACE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit.createAttributes().build());
         // hero slice 2: the seven faction heroes (their body's attributes plus the hero set and the kit's stats)
         evt.put(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit.createAttributes().build());
@@ -302,6 +305,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.EARTHSHAKER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.GRAVITY_MONK_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MIRROR_MAGE_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SPARK_SAGE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LANTERN_FORTRESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.PHOENIX_UNIT_SPAWN_EGG);
@@ -329,6 +333,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.GYROCOPTER_GUNSHIP_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.DRILL_BURROWER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REPAIR_CRAWLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SOUL_ENGINEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.CLOCKWORK_SPIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.IRON_LEVIATHAN_ENGINE_UNIT_SPAWN_EGG);
         }

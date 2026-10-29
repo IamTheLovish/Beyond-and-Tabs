@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.motion.Corpses;
 import com.solegendary.reignofnether.unit.modelling.motion.DeathFall;
 import com.solegendary.reignofnether.unit.modelling.motion.MotionPass;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
@@ -65,7 +66,8 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void ron$render(T entity, boolean bodyVisible, boolean translucent,
                                   boolean glowing, CallbackInfoReturnable<RenderType> cir) {
         ron$currentEntity = entity;
-        if (isTransparent(entity)) {
+        // a fallen body fading out in its faction's finish (unit/modelling/motion/Corpses, DeathFinish) too
+        if (isTransparent(entity) || Corpses.alpha() < 1f) {
             cir.setReturnValue(RenderType.entityTranslucent(this.getTextureLocation(entity)));
             return;
         }
@@ -86,7 +88,8 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void ron$renderWithAlpha(EntityModel<T> model, PoseStack poseStack, VertexConsumer buffer,
                                     int packedLight, int packedOverlay,
                                     float red, float green, float blue, float alpha) {
-        float finalAlpha = ron$currentEntity != null && isTransparent(ron$currentEntity) ? alpha * ALPHA : alpha;
+        float finalAlpha = (ron$currentEntity != null && isTransparent(ron$currentEntity) ? alpha * ALPHA : alpha)
+            * Corpses.alpha();
         model.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, finalAlpha);
     }
 

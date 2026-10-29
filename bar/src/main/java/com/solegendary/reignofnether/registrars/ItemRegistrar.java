@@ -224,6 +224,10 @@ public class ItemRegistrar {
             ITEMS.register("mirror_mage_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MIRROR_MAGE_UNIT,
                     0xB8BCC4, 0xA8231C, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> SPARK_SAGE_UNIT_SPAWN_EGG =
+            ITEMS.register("spark_sage_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SPARK_SAGE_UNIT,
+                    0x3A4A7A, 0xF2E66B, new Item.Properties()));
+
     // Stormcallers slice 4 (the rest of the Observatory's T2 and Heaven's Gate's T3)
     public static final RegistryObject<ForgeSpawnEggItem> SEER_UNIT_SPAWN_EGG =
             ITEMS.register("seer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEER_UNIT,
@@ -501,6 +505,10 @@ public class ItemRegistrar {
     public static final RegistryObject<ForgeSpawnEggItem> REPAIR_CRAWLER_UNIT_SPAWN_EGG =
             ITEMS.register("repair_crawler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.REPAIR_CRAWLER_UNIT,
                     0xC98A2E, 0x7FE07F, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SOUL_ENGINEER_UNIT_SPAWN_EGG =
+            ITEMS.register("soul_engineer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SOUL_ENGINEER_UNIT,
+                    0xC98A2E, 0x6FE3E8, new Item.Properties()));
 
     public static final RegistryObject<ForgeSpawnEggItem> CLOCKWORK_SPIDER_UNIT_SPAWN_EGG =
             ITEMS.register("clockwork_spider_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CLOCKWORK_SPIDER_UNIT,

@@ -546,6 +546,12 @@ public class EntityRegistrar {
                     .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage_unit").toString()));
+    // the Stormcallers' essence caster (design/essence_casters.md): the monks' illager body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.SparkSageUnit>> SPARK_SAGE_UNIT = ENTITIES.register("spark_sage_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.SparkSageUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "spark_sage_unit").toString()));
 
     // Stormcallers slice 4: the rest of the Observatory's T2 (the Seer on the pillager's body, the Lantern Fortress on
     // Alex's Mobs' elephant drawn at 0.75x, the Phoenix on AM's sunbird at 0.55x) and the T3 Celestial Dragon on AM's
@@ -963,6 +969,20 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "repair_crawler_unit").toString()));
 
+    // the Brassworks essence caster (design/essence_casters.md): the Tinker's illager body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit>> SOUL_ENGINEER_UNIT = ENTITIES.register("soul_engineer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_engineer_unit").toString()));
+    // its Ghost Furnace: a still, targetable summon on a totem's plumbing (Revision 1: 150 HP)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit>> GHOST_FURNACE_UNIT = ENTITIES.register("ghost_furnace_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit::new, MobCategory.MISC)
+                    .sized(0.95f, 1.9f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ghost_furnace_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit>> CLOCKWORK_SPIDER_UNIT = ENTITIES.register("clockwork_spider_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit::new, MobCategory.CREATURE)
                     .sized(1.4f, 0.9f)
@@ -1198,6 +1218,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.storm.EarthshakerProd.itemName -> EntityRegistrar.EARTHSHAKER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.GravityMonkProd.itemName -> EntityRegistrar.GRAVITY_MONK_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.MirrorMageProd.itemName -> EntityRegistrar.MIRROR_MAGE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.SparkSageProd.itemName -> EntityRegistrar.SPARK_SAGE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.SeerProd.itemName -> EntityRegistrar.SEER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.LanternFortressProd.itemName -> EntityRegistrar.LANTERN_FORTRESS_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.PhoenixProd.itemName -> EntityRegistrar.PHOENIX_UNIT.get();
@@ -1246,6 +1267,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipProd.itemName -> EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.DrillBurrowerProd.itemName -> EntityRegistrar.DRILL_BURROWER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.RepairCrawlerProd.itemName -> EntityRegistrar.REPAIR_CRAWLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd.itemName -> EntityRegistrar.SOUL_ENGINEER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderProd.itemName -> EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.brass.IronLeviathanEngineProd.itemName -> EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.OriflammeElephantProd.itemName -> EntityRegistrar.ORIFLAMME_ELEPHANT_UNIT.get();

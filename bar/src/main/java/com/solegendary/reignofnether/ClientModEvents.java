@@ -195,6 +195,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.EarthshakerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GravityMonkRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MirrorMageRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SPARK_SAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SparkSageRenderer::new);
         // slice 4: the Seer on the illager body, AM's elephant and sunbird under our skins, the T3 serpent on AM's spectre at 2x
         evt.registerEntityRenderer(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LanternFortressRenderer::new);
@@ -278,6 +279,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GyrocopterGunshipRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DrillBurrowerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SOUL_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SoulEngineerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GHOST_FURNACE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GhostFurnaceRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
         // hero slice 2: the seven faction heroes, each on its body's renderer in its own skin
         evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DawnPaladinRenderer::new);   // its own human body since Oct 21
