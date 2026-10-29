@@ -395,3 +395,14 @@ A dark stepped monolith at dusk over glowing cyan water (dark-fantasy / AI-facti
   planters, two towers of stacked rings/discs, curved terracotta-orange bands wrapping white volumes. Seen from the
   RTS angle. Lesson: from above, a building reads through its TERRACES and courtyards (horizontal planes at many
   levels, each with its own edge trim) - a flat roof is a missed surface. Faction fit: the new AI faction.
+
+## (o) ref55 - lovish's reference, Oct 28 22:52 (design/refs/vehicle_labs/ref55_tiered_tower_blue_domes_bridge.png)
+A stacked fantasy tower: the best answer yet to our tower's "stacked boxes" problem.
+1. **Every tier is a GALLERY, not a solid step:** an arcade of small arches/windows round each drum, a projecting
+   cornice ledge on top, then the next drum set back. Depth (open arches, dark interiors) on every tier.
+2. **Tiled caps:** blue-grey domes/cones with visible courses in 2-3 tones and dark rib lines - the roof tiling
+   system applied to curved roofs. For the Engine Shed tower: each tier's sloped face tiled in slate courses with
+   dark hip ribs at the arrises, instead of red stair steps.
+3. **Varied scale:** drums of different diameters and heights, small turrets beside the big one, an arched bridge
+   with diagonal struts flying out - asymmetry and a silhouette with incident.
+4. Two materials do it all: warm timber/sandstone walls + blue slate roofs (the same wall/roof split as ref45).
