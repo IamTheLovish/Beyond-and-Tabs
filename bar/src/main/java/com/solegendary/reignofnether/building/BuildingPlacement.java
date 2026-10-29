@@ -146,10 +146,14 @@ public class BuildingPlacement {
 
     protected ArrayList<BuildingBlock> scaffoldBlocks = new ArrayList<>();
     /**
-     * Don't set blocks directly
-     * Please use setBlocks()
+     * Don't set blocks directly, and never add to or remove from the list in place:
+     * use setBlocks(), which also keeps the blocks' cached extent (blocksMayReach) true.
      */
     protected ArrayList<BuildingBlock> blocks; // positions are absolute
+    // the box every block of this.blocks lies in (both corners inclusive), kept by setBlocks. Unlike minCorner /
+    // maxCorner it follows the current structure exactly, so a placement check can skip this building with six
+    // compares instead of walking its hundreds of blocks (BuildingValidators.isOverlappingAnyOtherBuilding)
+    private int blocksMinX, blocksMinY, blocksMinZ, blocksMaxX, blocksMaxY, blocksMaxZ;
     protected Map<BlockPos, BuildingBlock> blockMap = new HashMap<>();
     protected Set<BlockPos> placedBlockPosSet = new HashSet<>();
     protected int totalBlocks = 0;
@@ -370,8 +374,18 @@ public class BuildingPlacement {
         this.blocks = blocks;
         // villages that change with the biome (BiomePalette): shape-for-shape swaps, before anything counts the blocks
         BiomePalette.applyOrDefer(this);
-        for (BuildingBlock block : this.blocks)
-            blockMap.put(block.getBlockPos(), block);
+        blocksMinX = blocksMinY = blocksMinZ = Integer.MAX_VALUE;
+        blocksMaxX = blocksMaxY = blocksMaxZ = Integer.MIN_VALUE;
+        for (BuildingBlock block : this.blocks) {
+            BlockPos bp = block.getBlockPos();
+            blockMap.put(bp, block);
+            blocksMinX = Math.min(blocksMinX, bp.getX());
+            blocksMinY = Math.min(blocksMinY, bp.getY());
+            blocksMinZ = Math.min(blocksMinZ, bp.getZ());
+            blocksMaxX = Math.max(blocksMaxX, bp.getX());
+            blocksMaxY = Math.max(blocksMaxY, bp.getY());
+            blocksMaxZ = Math.max(blocksMaxZ, bp.getZ());
+        }
         // counted by position, as placedBlockPosSet is: two entries on one position must not ask for a block that
         // can never be placed
         var index = 0;
@@ -380,6 +394,17 @@ public class BuildingPlacement {
             if (counted.add(block.getBlockPos()) && !blockMap.get(block.getBlockPos()).getBlockState().isAir())
                 index++;
         this.totalBlocks = index;
+    }
+
+    /**
+     * False when no block of this building can lie inside the box {@code min}..{@code max} (corners inclusive) - its
+     * blocks' own extent misses the box - so a per-block overlap scan may be skipped. True means "maybe": the caller
+     * still checks the blocks. Always false for a placement with no blocks.
+     */
+    public boolean blocksMayReach(BlockPos min, BlockPos max) {
+        return blocksMaxX >= min.getX() && blocksMinX <= max.getX()
+            && blocksMaxY >= min.getY() && blocksMinY <= max.getY()
+            && blocksMaxZ >= min.getZ() && blocksMinZ <= max.getZ();
     }
 
     public float getMeleeDamageMult() {
