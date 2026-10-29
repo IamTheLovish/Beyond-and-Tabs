@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.raid;
 
+import com.solegendary.reignofnether.building.BuildingDamage;
 import com.solegendary.reignofnether.unit.units.brass.MortarCrawlerUnit;
 import com.solegendary.reignofnether.unit.units.piglins.HoglinUnit;
 import com.solegendary.reignofnether.unit.units.storm.RocketBatteryUnit;
@@ -25,8 +26,11 @@ import net.minecraft.world.entity.Entity;
  *       (softer than the rest, not as weak as a converter), the T2 extractor about twice that.</li>
  * </ul>
  * Building health here is the number the HUD shows: a hit of A damage takes 2 A health off it (BuildingPlacement:
- * minBlocksPercent 0.5), and an infantry blow is the unit's damage x 0.25 (Building.getMeleeDamageMult), so a raider
- * does {@code damage x attacks/s x 0.5} health per second to a building (a Spider: 1.5).
+ * minBlocksPercent 0.5), and an infantry blow is the unit's damage x 0.25 x {@link BuildingDamage#GLOBAL_MULT}
+ * (Building.getMeleeDamageMult), so a raider does {@code damage x attacks/s x 0.5 x GLOBAL_MULT} health per second to a
+ * building (a Spider: 1.5 before the multiplier, 3.0 with lovish's Oct 28 "buildings are so tanky" x2). The multiplier
+ * speeds every role up alike (building health is unchanged), so the times quoted in this class are the base ones: divide
+ * them by {@code GLOBAL_MULT} for what the game does now, and the game tests do.
  */
 public final class RaidTuning {
     private RaidTuning() { }
@@ -58,13 +62,14 @@ public final class RaidTuning {
     // ---------------------------------------------------------------- vehicles
 
     /**
-     * Health per second one T1 vehicle takes off a building with its normal attack: 3 of them raze a windmill in about
-     * 7 s and a T1 extractor in about 9 s, 4 in 5 and 7 s. An infantry raider does 1.5-2.
+     * Health per second one T1 vehicle takes off a building with its normal attack, before {@link BuildingDamage#GLOBAL_MULT}
+     * (which doubles it, as it does the infantry's): 3 of them raze a windmill in about 7 s and a T1 extractor in about 9 s,
+     * 4 in 5 and 7 s at the base rate. An infantry raider does 1.5-2.
      */
     public static final float VEHICLE_BUILDING_HPS = 3.7f;
 
     /** What a melee blow's damage is multiplied by on a building (Building.getMeleeDamageMult) and the health that costs (x2). */
-    private static final float MELEE_BUILDING_MULT = 0.25f, HEALTH_PER_DAMAGE = 2f;
+    private static final float MELEE_BUILDING_MULT = BuildingDamage.BASE_MELEE_MULT, HEALTH_PER_DAMAGE = 2f;
 
     /**
      * The BUILDING_DAMAGE_BONUS a melee vehicle with this attack needs to do {@link #VEHICLE_BUILDING_HPS} to a

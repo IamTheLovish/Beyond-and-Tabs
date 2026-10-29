@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.bot.BotArmy;
 import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
+import com.solegendary.reignofnether.building.BuildingDamage;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
@@ -67,14 +68,20 @@ public class RaidGameTests {
 
     /** A party of 6 raiders on a lone worker (design: ~2-4 s) and on a group of 4 (design: ~8-12 s). */
     static final float LONE_PURE_MAX = 5f, LONE_TOTAL_MAX = 11f, GROUP_PURE_MAX = 13f, GROUP_TOTAL_MAX = 24f;
-    /** 6 infantry raiders on a converter (design: 4-6 s for 4-6 units). */
-    static final float CONV_MIN = 2.5f, CONV_MAX = 8f;
-    /** 6 infantry raiders on a windmill, and on a T1 extractor (design: 12-18 s for 4-6 units). */
-    static final float WIND_INF_MIN = 5f, WIND_INF_MAX = 19f, EXT_INF_MIN = 7f, EXT_INF_MAX = 28f;
-    /** 4 melee T1 vehicles on a windmill (design 5-8 s), a T1 extractor (design 6-10 s) and a T2 extractor (~2x). */
-    static final float WIND_VEH_MAX = 12f, EXT_VEH_MAX = 14f, EXT2_VEH_MAX = 28f;
+    /**
+     * Units bring buildings down {@link BuildingDamage#GLOBAL_MULT} times as fast as the base rate (lovish, Oct 28:
+     * "buildings are so tanky"; building health is unchanged), so every building window below is the design time at the
+     * base rate over it. The roles and ratios are untouched: only the clock runs faster.
+     */
+    static final float K = BuildingDamage.GLOBAL_MULT;
+    /** 6 infantry raiders on a converter (base design: 4-6 s for 4-6 units). */
+    static final float CONV_MIN = 2.5f / K, CONV_MAX = 8f / K;
+    /** 6 infantry raiders on a windmill, and on a T1 extractor (base design: 12-18 s for 4-6 units). */
+    static final float WIND_INF_MIN = 5f / K, WIND_INF_MAX = 19f / K, EXT_INF_MIN = 7f / K, EXT_INF_MAX = 28f / K;
+    /** 4 melee T1 vehicles on a windmill (base design 5-8 s), a T1 extractor (base design 6-10 s) and a T2 extractor (~2x). */
+    static final float WIND_VEH_MAX = 12f / K, EXT_VEH_MAX = 14f / K, EXT2_VEH_MAX = 28f / K;
     /** Artillery lands its shells from range and starts later: looser. */
-    static final float WIND_ART_MAX = 25f, EXT_ART_MAX = 32f, EXT2_ART_MAX = 50f;
+    static final float WIND_ART_MAX = 25f / K, EXT_ART_MAX = 32f / K, EXT2_ART_MAX = 50f / K;
 
     // ---------------------------------------------------------------------------------------------------------------
     // The factions' pieces
@@ -608,10 +615,10 @@ public class RaidGameTests {
                 fmt(refs[0].getMaxHealth() / (6 * inf) / 1f), fmt(refs[1].getMaxHealth() / (6 * inf)), fmt(refs[2].getMaxHealth() / (6 * inf)),
                 fmt(refs[3].getMaxHealth() / (6 * inf)), fmt(tower.getMaxHealth() / (6 * inf)), fmt(capitol.getMaxHealth() / (6 * inf)),
                 fmt(refs[0].getMaxHealth() / (4 * inf)), fmt(refs[1].getMaxHealth() / (4 * inf)), fmt(refs[2].getMaxHealth() / (4 * inf)));
-            if (tower.getMaxHealth() / (6 * inf) < 20f)
-                problems.add(f.name() + ": 6 " + f.raiderName() + " raze a tower in " + fmt(tower.getMaxHealth() / (6 * inf)) + " s (minimum 20)");
-            if (capitol.getMaxHealth() / (6 * inf) < 30f)
-                problems.add(f.name() + ": 6 " + f.raiderName() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (6 * inf)) + " s (minimum 30)");
+            if (tower.getMaxHealth() / (6 * inf) < 20f / K)
+                problems.add(f.name() + ": 6 " + f.raiderName() + " raze a tower in " + fmt(tower.getMaxHealth() / (6 * inf)) + " s (minimum " + fmt(20f / K) + ")");
+            if (capitol.getMaxHealth() / (6 * inf) < 30f / K)
+                problems.add(f.name() + ": 6 " + f.raiderName() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (6 * inf)) + " s (minimum " + fmt(30f / K) + ")");
             raider.discard();
         }
         for (Veh veh : vehicles()) {
@@ -624,19 +631,20 @@ public class RaidGameTests {
             }
             float v = hps(m, refs[1]);
             ReignOfNether.LOGGER.info("[Raid] table vehicle {}: {}/s per unit (target {}); x4 windmill {}s extractor {}s extractor2 {}s tower {}s capitol {}s; x3 windmill {}s extractor {}s",
-                veh.name(), String.format(Locale.ROOT, "%.2f", v), RaidTuning.VEHICLE_BUILDING_HPS,
+                veh.name(), String.format(Locale.ROOT, "%.2f", v), RaidTuning.VEHICLE_BUILDING_HPS * K,
                 fmt(refs[1].getMaxHealth() / (4 * v)), fmt(refs[2].getMaxHealth() / (4 * v)), fmt(refs[3].getMaxHealth() / (4 * v)),
                 fmt(tower.getMaxHealth() / (4 * v)), fmt(capitol.getMaxHealth() / (4 * v)),
                 fmt(refs[1].getMaxHealth() / (3 * v)), fmt(refs[2].getMaxHealth() / (3 * v)));
-            if (Math.abs(v - RaidTuning.VEHICLE_BUILDING_HPS) > RaidTuning.VEHICLE_BUILDING_HPS * 0.12f)
-                problems.add(veh.name() + " does " + v + " health/s to a building, not about " + RaidTuning.VEHICLE_BUILDING_HPS);
+            if (Math.abs(v - RaidTuning.VEHICLE_BUILDING_HPS * K) > RaidTuning.VEHICLE_BUILDING_HPS * K * 0.12f)
+                problems.add(veh.name() + " does " + v + " health/s to a building, not about " + RaidTuning.VEHICLE_BUILDING_HPS * K
+                    + " (" + RaidTuning.VEHICLE_BUILDING_HPS + " x " + K + ")");
             if (v < maxInfantry * 1.9f)
                 problems.add(veh.name() + " (" + v + "/s) is not nearly twice the best infantry raider (" + maxInfantry + "/s) against buildings");
             // faster than the infantry on the towers and the capitol too, but those stay tough
-            if (tower.getMaxHealth() / (4 * v) < 10f)
-                problems.add("4 " + veh.name() + " raze a tower in " + fmt(tower.getMaxHealth() / (4 * v)) + " s (minimum 10)");
-            if (capitol.getMaxHealth() / (4 * v) < 18f)
-                problems.add("4 " + veh.name() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (4 * v)) + " s (minimum 18)");
+            if (tower.getMaxHealth() / (4 * v) < 10f / K)
+                problems.add("4 " + veh.name() + " raze a tower in " + fmt(tower.getMaxHealth() / (4 * v)) + " s (minimum " + fmt(10f / K) + ")");
+            if (capitol.getMaxHealth() / (4 * v) < 18f / K)
+                problems.add("4 " + veh.name() + " raze the capitol in " + fmt(capitol.getMaxHealth() / (4 * v)) + " s (minimum " + fmt(18f / K) + ")");
             m.discard();
         }
         ReignOfNether.LOGGER.info("[Raid] table gaps: Sunforged has no fast T1 raider and no T1 vehicle; Gravebound has no T1 vehicle");
