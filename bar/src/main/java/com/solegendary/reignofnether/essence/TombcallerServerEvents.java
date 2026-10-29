@@ -122,8 +122,12 @@ public final class TombcallerServerEvents {
 
     /** The Risen Skeletons of {@code stone} still standing. */
     public static List<Mob> risenOf(TombstoneUnit stone) {
+        return risenFrom(stone.getUUID());
+    }
+
+    /** The Risen Skeletons raised by the stone or Grave Adept with UUID {@code id} still standing. */
+    public static List<Mob> risenFrom(UUID id) {
         List<Mob> out = new ArrayList<>();
-        UUID id = stone.getUUID();
         for (Mob m : risen)
             if (m.isAlive() && !m.isRemoved() && m.getPersistentData().hasUUID(RISEN_STONE)
                     && id.equals(m.getPersistentData().getUUID(RISEN_STONE)))
@@ -303,30 +307,34 @@ public final class TombcallerServerEvents {
             if (now >= s.nextRaise()) {
                 s.setNextRaise(now + TombstoneUnit.RAISE_EVERY_SECONDS * 20L);   // a beat with no room is skipped
                 if (risenOf(s).size() < TombstoneUnit.MAX_SKELETONS)
-                    raise(sl, s, now);
+                    raiseSkeleton(sl, s, s.getOwnerName(), TombstoneUnit.SKELETON_LIFETIME_SECONDS, now);
             }
         }
     }
 
-    /** One Risen Skeleton beside {@code stone}, for its owner, marked a summon before it joins. */
-    private static void raise(ServerLevel sl, TombstoneUnit stone, long now) {
+    /**
+     * One Risen Skeleton beside {@code source} (a tombstone or a Grave Adept) for {@code owner}, marked a summon before
+     * it joins, crumbling {@code lifetimeSeconds} later. Null if none could be made.
+     */
+    public static Mob raiseSkeleton(ServerLevel sl, Entity source, String owner, int lifetimeSeconds, long now) {
         EntityType<? extends Mob> type = EntityRegistrar.SKELETON_UNIT.get();
         Mob m = type.create(sl);
         if (m == null)
-            return;
+            return null;
         double ang = sl.random.nextDouble() * Math.PI * 2;
-        Vec3 at = new Vec3(stone.getX() + Math.cos(ang) * 1.2, stone.getY(), stone.getZ() + Math.sin(ang) * 1.2);
+        Vec3 at = new Vec3(source.getX() + Math.cos(ang) * 1.2, source.getY(), source.getZ() + Math.sin(ang) * 1.2);
         BlockPos below = BlockPos.containing(at.x, at.y - 0.5, at.z);
         if (!sl.noCollision(type.getDimensions().makeBoundingBox(at)) || sl.getBlockState(below).getCollisionShape(sl, below).isEmpty())
-            at = stone.position();
+            at = source.position();
         m.moveTo(at.x, at.y, at.z, (float) Math.toDegrees(ang), 0);
-        ((Unit) m).setOwnerName(stone.getOwnerName());
+        ((Unit) m).setOwnerName(owner);
         Essence.markSummoned(m);
         m.addTag(RISEN_TAG);
-        m.getPersistentData().putLong(RISEN_END, now + TombstoneUnit.SKELETON_LIFETIME_SECONDS * 20L);
-        m.getPersistentData().putUUID(RISEN_STONE, stone.getUUID());
+        m.getPersistentData().putLong(RISEN_END, now + lifetimeSeconds * 20L);
+        m.getPersistentData().putUUID(RISEN_STONE, source.getUUID());
         sl.addFreshEntity(m);
         sl.sendParticles(ParticleTypes.SOUL, m.getX(), m.getY() + 0.5, m.getZ(), 10, 0.3, 0.3, 0.3, 0.02);
+        return m;
     }
 
     private static void tickRisen(long now) {

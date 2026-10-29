@@ -3,22 +3,30 @@ package com.solegendary.reignofnether.ability.abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.ability.AutoRule;
+import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.essence.GraveAdeptServerEvents;
+import com.solegendary.reignofnether.essence.TombcallerServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.sounds.SoundAction;
+import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.GraveAdeptUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -100,6 +108,39 @@ public class CallNecromancer extends Ability {
      */
     @Nullable
     public static GraveAdeptUnit cast(ServerLevel sl, LivingEntity caster, String owner, boolean quiet) {
-        return null;
+        if (owner == null || owner.isEmpty())
+            return null;
+        if (GraveAdeptServerEvents.adeptOf(caster) != null) {
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, MSG_ALIVE);
+            return null;
+        }
+        EntityType<GraveAdeptUnit> type = EntityRegistrar.GRAVE_ADEPT_UNIT.get();
+        // beside the caster, to its right, where it fits; else where the caster stands (always room there)
+        double ang = Math.toRadians(caster.getYRot());
+        Vec3 at = new Vec3(caster.getX() - Math.cos(ang) * 1.5, caster.getY(), caster.getZ() - Math.sin(ang) * 1.5);
+        BlockPos below = BlockPos.containing(at.x, at.y - 0.5, at.z);
+        if (!sl.noCollision(type.getDimensions().makeBoundingBox(at)) || sl.getBlockState(below).getCollisionShape(sl, below).isEmpty())
+            at = caster.position();
+        GraveAdeptUnit adept = type.create(sl);
+        if (adept == null)
+            return null;
+        if (!Essence.trySpend(caster, ESSENCE_COST)) {
+            adept.discard();
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, Empower.MSG_SHORT);
+            return null;
+        }
+        long now = sl.getGameTime();
+        adept.moveTo(at.x, at.y, at.z, caster.getYRot(), 0);
+        adept.setOwnerName(owner);
+        Essence.markSummoned(adept);   // before it joins: no essence, no orbs, no veterancy for its own death
+        adept.setCaster(caster);
+        adept.setNextRaise(now + GraveAdeptUnit.RAISE_EVERY_SECONDS * 20L);
+        adept.setNextBolt(now);
+        sl.addFreshEntity(adept);
+        sl.sendParticles(ParticleTypes.SOUL, at.x, at.y + 0.8, at.z, 24, 0.4, 0.6, 0.4, 0.03);
+        SoundClientboundPacket.playSoundAtPos(SoundAction.WRAITH_POSSESS_FULL, adept.blockPosition());
+        return adept;
     }
 }
