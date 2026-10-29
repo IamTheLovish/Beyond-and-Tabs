@@ -113,11 +113,20 @@ public class EntityRegistrar {
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_unit").toString()));
 
     // Gravebound essence caster (design/essence_casters.md): the Wraith's size, as it wears the Wraith's body for now
-    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.SoulbinderUnit>> SOULBINDER_UNIT = ENTITIES.register("soulbinder_unit",
-            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.SoulbinderUnit::new, MobCategory.CREATURE)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit>> TOMBCALLER_UNIT = ENTITIES.register("tombcaller_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.BLAZE.getWidth(), EntityType.BLAZE.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
-                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soulbinder_unit").toString()));
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombcaller_unit").toString()));
+
+    // the Tombcaller's Raise Tombstone: a summoned, stationary unit sized and drawn like a totem for now
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit>> TOMBSTONE_UNIT = ENTITIES.register("tombstone_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit::new, MobCategory.MISC)
+                    .fireImmune()
+                    .sized(0.75f, 1.25f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombstone_unit").toString()));
 
     public static final RegistryObject<EntityType<VillagerUnit>> VILLAGER_UNIT = ENTITIES.register("villager_unit",
             () -> EntityType.Builder.of(VillagerUnit::new, MobCategory.CREATURE)
@@ -1088,7 +1097,7 @@ public class EntityRegistrar {
             case SpiderProd.itemName -> EntityRegistrar.SPIDER_UNIT.get();
             case PoisonSpiderProd.itemName -> EntityRegistrar.POISON_SPIDER_UNIT.get();
             case WraithProd.itemName -> EntityRegistrar.WRAITH_UNIT.get();
-            case com.solegendary.reignofnether.unit.units.monsters.SoulbinderProd.itemName -> EntityRegistrar.SOULBINDER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.TombcallerProd.itemName -> EntityRegistrar.TOMBCALLER_UNIT.get();
             case VillagerProd.itemName -> EntityRegistrar.VILLAGER_UNIT.get();
             case ScoutDogProd.itemName -> EntityRegistrar.SCOUT_DOG_UNIT.get();
             case ScoutCatProd.itemName -> EntityRegistrar.SCOUT_CAT_UNIT.get();

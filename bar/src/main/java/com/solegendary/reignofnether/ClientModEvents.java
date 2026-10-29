@@ -128,7 +128,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.SPIDER_UNIT.get(), SpiderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.POISON_SPIDER_UNIT.get(), PoisonSpiderUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WRAITH_UNIT.get(), WraithRenderer::new);
-        evt.registerEntityRenderer(EntityRegistrar.SOULBINDER_UNIT.get(), WraithRenderer::new);   // placeholder: the Wraith's body
+        evt.registerEntityRenderer(EntityRegistrar.TOMBCALLER_UNIT.get(), WraithRenderer::new);   // placeholder: the Wraith's body
+        evt.registerEntityRenderer(EntityRegistrar.TOMBSTONE_UNIT.get(), TotemOfRegenerationRenderer::new);   // placeholder: a totem's body
         evt.registerEntityRenderer(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), RoyalArchitectRenderer::new);
         // Verdant Court T2: the Stag Lancer wears Alex's Mobs' own moose renderer (always antlered, StagLancerUnit)

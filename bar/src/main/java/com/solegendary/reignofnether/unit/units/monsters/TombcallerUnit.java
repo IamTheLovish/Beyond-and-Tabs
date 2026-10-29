@@ -2,10 +2,8 @@ package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.abilities.Empower;
-import com.solegendary.reignofnether.ability.abilities.SoulChains;
-import com.solegendary.reignofnether.ability.abilities.SoulHarvest;
-import com.solegendary.reignofnether.ability.abilities.Wail;
-import com.solegendary.reignofnether.essence.EssenceCarrier;
+import com.solegendary.reignofnether.ability.abilities.GraveTide;
+import com.solegendary.reignofnether.ability.abilities.RaiseTombstone;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
@@ -19,22 +17,22 @@ import net.minecraft.world.level.Level;
 import javax.annotation.Nullable;
 
 /**
- * Gravebound essence caster - the <b>Soulbinder</b> (placeholder name; design/essence_casters.md, lovish approved draft 2
- * on Oct 29 2026). Trained at the Dungeon, the Gravebound T2 lab. It gathers the essence wisps the dead leave within 8
- * blocks (holds 30) and spends them: {@link Wail} (5), {@link SoulHarvest} (10), {@link SoulChains} (20) and the shared
- * {@link Empower} (15).
+ * Gravebound essence caster - the <b>Tombcaller</b> (placeholder name; design/essence_casters.md "Gravebound
+ * Gravecaller" and Revision 1, which renamed it: Gravecaller is the Gravebound hero). Trained at the Dungeon, the
+ * Gravebound T2 lab. It gathers the essence wisps the dead leave within 8 blocks (12 on its own grave creep; holds 30)
+ * and spends them: {@link RaiseTombstone} (10), {@link GraveTide} (5) and the shared {@link Empower} (15). Call the
+ * Necromancer (the Grave Adept) follows in its own PR.
  * <p>
  * A Wraith underneath (placeholder look: the Wraith's body, sounds, sunburn and evasion, so it reads as Gravebound at
  * once) with its own abilities in place of Fear, Possess and Crypt Tide, its own cost and a little more health.
  */
-public class SoulbinderUnit extends WraithUnit implements EssenceCarrier {
+public class TombcallerUnit extends WraithUnit {
 
     public static final Abilities SOUL_ABILITIES = new Abilities();
     static {
-        SOUL_ABILITIES.add(new Wail(), Keybindings.abilitySlot1);
-        SOUL_ABILITIES.add(new SoulHarvest(), Keybindings.abilitySlot2);
-        SOUL_ABILITIES.add(new SoulChains(), Keybindings.abilitySlot3);
-        SOUL_ABILITIES.add(new Empower(), Keybindings.abilitySlot4);
+        SOUL_ABILITIES.add(new RaiseTombstone(), Keybindings.abilitySlot1);
+        SOUL_ABILITIES.add(new GraveTide(), Keybindings.abilitySlot2);
+        SOUL_ABILITIES.add(new Empower(), Keybindings.abilitySlot3);
     }
 
     /** The Wraith's 35 and a little more: it is worth protecting (the Witch and the Evoker have 40). */
@@ -42,7 +40,7 @@ public class SoulbinderUnit extends WraithUnit implements EssenceCarrier {
 
     private Abilities soulAbilities = SOUL_ABILITIES.clone();
 
-    public SoulbinderUnit(EntityType<? extends Monster> entityType, Level level) {
+    public TombcallerUnit(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
     }
 
@@ -60,11 +58,11 @@ public class SoulbinderUnit extends WraithUnit implements EssenceCarrier {
     @Nullable
     @Override
     public ResourceCost getCost() {
-        return ResourceCosts.SOULBINDER;
+        return ResourceCosts.TOMBCALLER;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return WraithUnit.createAttributes()
-            .add(Attributes.MAX_HEALTH, SoulbinderUnit.maxHealth);
+            .add(Attributes.MAX_HEALTH, TombcallerUnit.maxHealth);
     }
 }

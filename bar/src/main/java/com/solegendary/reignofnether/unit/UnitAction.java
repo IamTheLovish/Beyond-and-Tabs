@@ -224,8 +224,7 @@ public enum UnitAction {
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
     EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
-    // Gravebound Soulbinder (essence caster, design/essence_casters.md)
-    WAIL,                   // 5 essence: enemies in a cone in front of it flee for 2 s
-    SOUL_HARVEST,           // 10 essence: two spectral skeletons fight for 20 s
-    SOUL_CHAINS             // 20 essence: up to 4 enemies linked for 10 s share half the damage one of them takes
+    // Gravebound Tombcaller (essence caster, design/essence_casters.md "Gravebound Gravecaller" + Revision 1)
+    RAISE_TOMBSTONE,        // 10 essence: a tombstone that spreads grave creep and raises a skeleton every 20 s
+    GRAVE_TIDE              // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
 }

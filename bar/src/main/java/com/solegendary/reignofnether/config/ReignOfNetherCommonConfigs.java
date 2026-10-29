@@ -33,7 +33,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SPIDER.define(BUILDER);
         UnitCosts.POISON_SPIDER.define(BUILDER);
         UnitCosts.WRAITH.define(BUILDER);
-        UnitCosts.SOULBINDER.define(BUILDER);
+        UnitCosts.TOMBCALLER.define(BUILDER);
         UnitCosts.SLIME.define(BUILDER);
         UnitCosts.WARDEN.define(BUILDER);
         UnitCosts.ZOMBIE_PIGLIN.define(BUILDER);
@@ -360,9 +360,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.SPIDER, "Spider Config");
         public static final ResourceCostConfigEntry POISON_SPIDER = ResourceCostConfigEntry.Unit(80,20,10,25,2, ResourceCosts.POISON_SPIDER, "Poison Spider Config");
         public static final ResourceCostConfigEntry WRAITH = ResourceCostConfigEntry.Unit(70,0,70,30,2, ResourceCosts.WRAITH, "Wraith Config");
-        // Gravebound essence caster (design/essence_casters.md): a Wraith-and-a-bit, as the Witch is to the Evoker - four
-        // abilities on a fragile body, paid for in the Wraith's own food and ore (placeholder numbers for lovish)
-        public static final ResourceCostConfigEntry SOULBINDER = ResourceCostConfigEntry.Unit(90,0,90,35,2, ResourceCosts.SOULBINDER, "Soulbinder Config");
+        // Gravebound essence caster (design/essence_casters.md): a Wraith-and-a-bit, as the Witch is to the Evoker - its
+        // essence spells on a fragile body, paid for in the Wraith's own food and ore (placeholder numbers for lovish)
+        public static final ResourceCostConfigEntry TOMBCALLER = ResourceCostConfigEntry.Unit(90,0,90,35,2, ResourceCosts.TOMBCALLER, "Tombcaller Config");
         public static final ResourceCostConfigEntry SLIME = ResourceCostConfigEntry.Unit(40,40,40,25,2, ResourceCosts.SLIME, "Slime Config");
         public static final ResourceCostConfigEntry WARDEN = ResourceCostConfigEntry.Unit(275,0,125,50,5, ResourceCosts.WARDEN, "Warden Config");
         public static final ResourceCostConfigEntry NECROMANCER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.NECROMANCER, "Necromancer Config");

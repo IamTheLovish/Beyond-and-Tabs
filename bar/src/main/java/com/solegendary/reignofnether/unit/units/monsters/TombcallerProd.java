@@ -21,54 +21,54 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 /** The Gravebound essence caster, trained at the Dungeon (the T2 lab; design/essence_casters.md). */
-public class SoulbinderProd extends ProductionItem implements IUnitProductionItem {
+public class TombcallerProd extends ProductionItem implements IUnitProductionItem {
 
-    public final static String itemName = "Soulbinder";
-    public final static ResourceCost cost = ResourceCosts.SOULBINDER;
+    public final static String itemName = "Tombcaller";
+    public final static ResourceCost cost = ResourceCosts.TOMBCALLER;
 
-    public SoulbinderProd() {
+    public TombcallerProd() {
         super(cost);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
             if (!level.isClientSide())
-                placement.produceUnit((ServerLevel) level, EntityRegistrar.SOULBINDER_UNIT.get(), placement.ownerName, true);
+                placement.produceUnit((ServerLevel) level, EntityRegistrar.TOMBCALLER_UNIT.get(), placement.ownerName, true);
         };
     }
 
     public String getItemName() {
-        return SoulbinderProd.itemName;
+        return TombcallerProd.itemName;
     }
 
     public UnitSpawnButton getPlaceButton() {
         return new UnitSpawnButton(
                 itemName,
-                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/soulbinder.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/tombcaller.png"),
                 List.of(
-                        Component.translatable("entity.reignofnether.soulbinder_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                        Component.translatable("entity.reignofnether.tombcaller_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
-                        Component.translatable("entity.reignofnether.soulbinder_unit.tooltip1").getVisualOrderText(),
-                        Component.translatable("entity.reignofnether.soulbinder_unit.tooltip2").getVisualOrderText(),
+                        Component.translatable("entity.reignofnether.tombcaller_unit.tooltip1").getVisualOrderText(),
+                        Component.translatable("entity.reignofnether.tombcaller_unit.tooltip2").getVisualOrderText(),
                         FormattedCharSequence.EMPTY,
-                        Component.translatable("entity.reignofnether.soulbinder_unit.tooltip3").getVisualOrderText()
+                        Component.translatable("entity.reignofnether.tombcaller_unit.tooltip3").getVisualOrderText()
                 )
         );
     }
 
     public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
         return new StartProductionButton(
-            SoulbinderProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/soulbinder.png"),
+            TombcallerProd.itemName,
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/tombcaller.png"),
             hotkey,
             () -> false,
             () -> true,
             List.of(
-                Component.translatable("entity.reignofnether.soulbinder_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                Component.translatable("entity.reignofnether.tombcaller_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
                 ResourceCosts.getFormattedPopAndTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
-                Component.translatable("entity.reignofnether.soulbinder_unit.tooltip1").getVisualOrderText(),
-                Component.translatable("entity.reignofnether.soulbinder_unit.tooltip2").getVisualOrderText(),
+                Component.translatable("entity.reignofnether.tombcaller_unit.tooltip1").getVisualOrderText(),
+                Component.translatable("entity.reignofnether.tombcaller_unit.tooltip2").getVisualOrderText(),
                 FormattedCharSequence.forward("", Style.EMPTY),
-                Component.translatable("entity.reignofnether.soulbinder_unit.tooltip3").getVisualOrderText()
+                Component.translatable("entity.reignofnether.tombcaller_unit.tooltip3").getVisualOrderText()
             ),
             this
         );
@@ -76,8 +76,8 @@ public class SoulbinderProd extends ProductionItem implements IUnitProductionIte
 
     public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
         return new StopProductionButton(
-            SoulbinderProd.itemName,
-            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/soulbinder.png"),
+            TombcallerProd.itemName,
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/tombcaller.png"),
             prodBuilding,
             this,
             first
