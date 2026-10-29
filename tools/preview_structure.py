@@ -167,6 +167,8 @@ def shape_for(name, props):
         lo, hi = (0.5, 1) if half == "top" else (0, 0.5)
         up = (0, 0.5) if half == "top" else (0.5, 1)
         return [(0, 1, lo, hi, 0, 1), _side_box(facing, 0.5, *up)]
+    if n == "vine":                                      # a thin sheet on each side it clings to
+        return [_side_box(f, 0.06) for f in ("north", "south", "east", "west") if props.get(f) == "true"] or FULL
     if n.endswith("_carpet") or n in ("moss_carpet", "snow"):
         return [(0, 1, 0, 0.07, 0, 1)]
     if n.endswith("_trapdoor"):

@@ -71,6 +71,28 @@ mostly cropped or behind it). Two changes, kept apart in the code (TRACK, RELIEF
     andesite and loose slabs along the cliff's foot. A tor of jointed pillars (2-5 high) stands in front of it, ~5
     blocks off the building's west wall, with a scree fan downhill. Heights only from smooth profiles and 4-7 block
     noise. The old outcrop (north-east, at the frame's top edge) is gone; the hollow is unchanged.
+
+ROUND 4 (lovish, Oct 28 night, approving a terraced ground from his reference: terraces held by stone retaining walls,
+stone stairs climbing between them, a cliff wall behind, plants spilling over every edge - foreground, middle and
+background everywhere; its foliage deep, hue ~99 / sat ~35 / V ~0.24, never lime). r3's scarp and tor give way to
+TERRACES; the track, fringe, skirt and hollow patches stay. AFTER only (BEFORE is byte-identical, tests pin it):
+ 1. LEVELS: the lowest terrace (y 2) in the south-west, a middle one (6), the building's pad (9), an upper terrace
+    behind it (12) and the cliff top at the north edge (18) - walls 4 / 3 / 3 high, the cliff 6. Each wall follows a
+    stair_line: 4-10 block east-west runs (south faces) stepping south by 1-6 block jogs (west faces), never a 1-block
+    staircase (a comb from the camera). The level never rises to the south or west (terrace_map makes it monotone),
+    so every riser faces the RTS camera, which sees only south and west faces; nothing south-west of the pad stands
+    above it, and across the track the walls run straight so a flight fits.
+ 2. MASONRY: each riser column is a retaining wall - dressed stone in 2.5-4 block patches of stone bricks, mossy and
+    cracked bricks, rubble (cobble, mossy cobble) and andesite, moss rising from the damp foot (no per-block pepper)
+    - under a cap row of polished andesite / stone bricks / smooth stone; the cliff is rock in strata (tuff, stone,
+    andesite) under a mossy lip.
+ 3. FLIGHTS: where the track drops a level, 4-wide stone-brick stairs step down into the lower terrace on a masonry
+    body (3 and 4 rows), and a 4-wide flight climbs from the pad to the upper terrace west of the building. Units
+    climb only by stairs: tests flood-fill every terrace from the door and look for 1-wide slots at wall feet.
+ 4. GREEN: dark oak leaf bushes (persistent) along ~half the wall tops in 6-block stretches, some two high with one
+    behind, spilling over the cap and down the face (2 on the cliff); vines down ~40% of the faces in 5-block
+    stretches; ferns, large ferns and tall grass crowd the wall feet. The birch moves to the middle terrace.
+The structure is 34 tall (was 28) for the pad's 6 extra blocks and the cliff; the eyes rig aims at its middle.
 """
 import collections
 import math
@@ -99,19 +121,26 @@ TONES = {
     "damp": ((0.55, "mud"), (9.0, "podzol")),                                # the hollow
 }
 BAYER4 = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
-# r3 relief, laid out for the eyes RTS camera (it looks north-east, ~65 degrees down, and sees only the south and west
-# faces of a step): a scarp facing south-south-west - its line through SCARP's point, heading SCARP's angle from east
-# toward south (25: off the diagonal, so it rounds into irregular steps, not a regular crenellation), wandering
-# +-1.2 blocks - with high ground behind it, SCARP_H blocks at the edge falling to the plain over SCARP_BACK blocks,
-# running from the sampler's west edge to x SCARP_END, where it slopes down eastward short of the building. Both those
-# slopes go down away from the camera (north-north-east, east), so their steps' faces are hidden and they show no
-# terrace lines - only the scarp's face does. The tor stands in front of it (jointed pillars: x, z, half-length,
-# half-width, angle, height); the stone strata from the plain up.
-SCARP, SCARP_H, SCARP_BACK, SCARP_END = (13.9, 19.5, 25.0), 5.0, 11.0, 20.5
-TOR = ((16.2, 28.8, 2.2, 1.5, 40.0, 5.0), (18.4, 30.1, 1.6, 1.2, 40.0, 3.6), (14.3, 30.6, 1.3, 1.0, -15.0, 2.4))
-STRATA = ((1.5, "tuff"), (3.0, "stone"), (99.0, "andesite"))
-STAIRS = {"tuff": "cobblestone_stairs", "stone": "stone_stairs", "andesite": "andesite_stairs",
-          "cobblestone": "cobblestone_stairs", "mossy_cobblestone": "mossy_cobblestone_stairs"}
+# r4 terraces, laid out for the eyes RTS camera (it looks north-east ~65 degrees down and sees only the south and west
+# faces of a step): the ground's level never rises to the south or west, so every retaining wall and the cliff face the
+# camera. Levels (top block y): the lowest terrace, the middle one, the building's pad, the cliff top behind.
+HGT_AFTER = 34                        # AFTER only (BEFORE keeps HGT): the pad stands 7 over the lowest terrace
+T0, T1, PAD, UP, CLIFF = 2, 6, 9, 12, 18
+LEVELS = (T0, T1, PAD, UP, CLIFF)
+# the walls' lines in plan: (anchor x, its z, run lengths, jog sizes, salt) for stair_line - straight east-west runs
+# (south faces) broken by north-south jogs (west faces), never a 1-block staircase (a crenellated comb from the camera)
+WALL_T1 = (29, 38.5, (4, 8), (3, 6), 95)      # the pad's wall: higher ground north-east of it; T1 to the south-west
+WALL_T0 = (30, 49.5, (4, 8), (3, 6), 96)      # T1's wall over the lowest terrace
+UP_LINE = (10, 15.5, (5, 10), (1, 3), 93)     # the upper terrace behind the pad (z under the line)
+CLIFF_LINE = (10, 7.5, (5, 11), (0, 2), 92)   # the cliff's foot at the back edge
+UP_FLIGHT = range(14, 18)             # the x lanes of the stairs from the pad up to the upper terrace
+WALL_STONE = frozenset(("stone_bricks", "mossy_stone_bricks", "cracked_stone_bricks", "cobblestone",
+                        "mossy_cobblestone", "andesite", "polished_andesite", "smooth_stone"))
+CAP_STONE = frozenset(("polished_andesite", "smooth_stone", "stone_bricks"))
+ROCK_STONE = frozenset(("tuff", "stone", "andesite", "cobblestone", "mossy_cobblestone"))
+STRATA = ((1.5, "tuff"), (3.5, "stone"), (99.0, "andesite"))
+BUSH_LEAVES = ("dark_oak_leaves",)                    # deep green (the reference: hue ~99, sat ~35, V ~0.24)
+FLIGHT_STAIRS = "stone_brick_stairs"
 
 
 def rnoise(x, z, scale, salt, angle=22.5):
@@ -121,53 +150,28 @@ def rnoise(x, z, scale, salt, angle=22.5):
     return vnoise(x * c - z * s + 7.3, x * s + z * c + 3.1, scale, salt)
 
 
-def scarp_front(x, z):
-    """Blocks in front of the scarp's line (toward the camera, south-south-west; negative = behind it), the line
-    wandering by a 7-block noise."""
-    px, pz, ang = SCARP
-    c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-    return (x + 0.5 - px) * -s + (z + 0.5 - pz) * c - 2.4 * (rnoise(x, z, 7.0, 33) - 0.5)
-
-
-def scarp_height(x, z, d_foot):
-    """The high ground's smooth height above the plain (0 = none). Behind the scarp line it falls from SCARP_H to 0
-    over SCARP_BACK blocks; in front it drops within a quarter block (a clean cliff: 0.6 left a mid-height step in
-    front of half the edge, a crenellation) or, by 6-block stretches, over up to 3.25 (a steep broken slope). It slopes down eastward to nothing at x SCARP_END (a slope the camera sees no step faces
-    of - r3's first taper ran south-east and showed its steps as terrace lines) and stays 3+ blocks off the building.
-    6- and 7-block noise only - no per-block noise in the heights."""
-    w = scarp_front(x, z)
-    if w <= 0:
-        f = max(0.0, 1 + w / SCARP_BACK) ** 0.7
-    else:
-        front = 0.25 + 3.0 * max(0.0, rnoise(x, z, 6.0, 35) - 0.55) / 0.45
-        f = max(0.0, 1 - w / front)
-    end = min(1.0, max(0.0, (SCARP_END - x - 0.5) / 3.5))
-    near = min(1.0, max(0.0, (d_foot - 3) / 4.0))
-    return SCARP_H * f * end * near
-
-
-def tor_height(x, z):
-    """The tor's height above the ground under it (0 = none): the highest of its jointed pillars, each a flat top over
-    the inner 72% of an ellipse and a ledge at 55% round it, the top uneven by a 3-block noise - crags of different
-    heights with sheer sides (r3's first try, a dome, read as a ziggurat)."""
-    best = 0.0
-    for bx, bz, half_l, half_w, ang, top in TOR:
-        c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-        lx, lz = x + 0.5 - bx, z + 0.5 - bz
-        r = math.hypot((lx * c + lz * s) / half_l, (-lx * s + lz * c) / half_w)
-        if r < 1:
-            best = max(best, (top if r < 0.72 else 0.55 * top) + 1.0 * (rnoise(x, z, 3.0, 34) - 0.5))
-    return int(best) if best >= 1 else 0
-
-
-def rock_at(x, y, z, top=False):
-    """Stone in strata by height above the plain (wavy by a 6-block noise): tuff low, stone, then andesite; a cobble
-    block now and then, mossy cobble on some tops."""
-    band = y - BASE + 1.2 * (rnoise(x, z, 6.0, 37) - 0.5)
+def rock_at(x, y, z, base, top=False):
+    """Cliff rock in strata by height above the cliff's foot `base` (wavy by a 6-block noise): tuff low, stone, then
+    andesite; cobble in 3-block patches, mossy cobble on some tops."""
+    band = y - base + 1.2 * (rnoise(x, z, 6.0, 37) - 0.5)
     blk = next(b for lim, b in STRATA if band < lim)
-    if top and rnoise(x, z, 3.0, 38) > 0.6:
+    if top and rnoise(x, z, 3.0, 38) > 0.55:
         return "mossy_cobblestone"
-    return "cobblestone" if hash01(x, y * 31 + z, 39) < 0.14 else blk
+    return "cobblestone" if rnoise(x, y * 3.0 + z, 2.5, 39) > 0.72 else blk
+
+
+def wall_stone(x, y, z, low):
+    """A retaining wall's face: dressed stone in courses with rubble patches, moss rising from the damp foot. Patches
+    from 2.5-4 block noise (never a per-block hash: pepper dots at RTS scale, ART-FAULTS)."""
+    m = rnoise(x + 0.5 * y, z - 0.5 * y, 3.0, 101) + 0.35 * max(0.0, 2.0 - (y - low)) / 2.0
+    r = rnoise(x - 0.7 * y, z + 0.7 * y, 4.0, 102)
+    if r > 0.66:
+        return "mossy_cobblestone" if m > 0.55 else "cobblestone"
+    if r < 0.2:
+        return "andesite"
+    if m > 0.62:
+        return "mossy_stone_bricks"
+    return "cracked_stone_bricks" if rnoise(x, y * 2.0 + z, 2.0, 103) > 0.78 else "stone_bricks"
 
 
 def bayer(x, z):
@@ -229,25 +233,205 @@ def entrance_side(size, blocks):
     return max(sides, key=lambda k: sum(1 for p in sides[k] if p not in solid))
 
 
-def height_at(x, z, layered, d_foot=99):
-    """Ground surface y. AFTER: high ground behind a scarp west of the building (r3), a hollow to the south-east, flat
-    round the building (d_foot: blocks to the building's footprint)."""
-    if not layered:
-        return BASE
-    k = scarp_height(x, z, d_foot)
-    if k > 0.15:
-        return BASE + int(round(k + 0.6 * (rnoise(x, z, 4.0, 31) - 0.5)))
-    d_hollow = math.hypot(x - 44, z - 44)
-    h = BASE - 1.6 * max(0.0, 1 - d_hollow / 9.0) ** 1.2
-    # r2b (critic r31: "a clean staircase"): wavy terrace edges from a 3-block noise, only on the relief itself - r2's
-    # per-block dither pitted the whole flat field with 1-block holes and bumps (eyes run 40739254107)
-    if abs(h - BASE) < 0.15:
-        return BASE
-    return int(round(h + 0.7 * (vnoise(x, z, 3.0, 31) - 0.5)))
+def track_rows(ox, oz, bx, bz, side, cells):
+    """r3's track plan, before any heights: rows t = 0, 1, 2... off the entrance wall, each (centre, first core lane,
+    core width) - the apron funnels 5-4-3 wide into a 2-wide core whose centre bends under 0.4 of a block a row - the
+    rows whose outer lane is let go to the fringe, and row_cell(t, lane) -> (x, z)."""
+    def row_cell(t, lane):
+        return {"south": (lane, oz + bz + t), "north": (lane, oz - 1 - t),
+                "east": (ox + bx + t, lane), "west": (ox - 1 - t, lane)}[side]
+    mid = ox + bx / 2.0 if side in ("south", "north") else oz + bz / 2.0
+    rows = []
+    for t in range(N):
+        if not any(row_cell(t, la) in cells for la in range(N)):
+            break
+        centre = mid + 2.6 * math.sin(max(0, t - 2) / 7.0)
+        width = (5, 4, 3)[t] if t < 3 else 2
+        rows.append((centre, int(math.floor(centre - width / 2.0 + 0.5)), width))
+    last = len(rows) - 1
+    thin = set()
+    for t in range(10, last):
+        centre, first, width = rows[t]
+        inner = first if abs(first + 0.5 - centre) <= abs(first + 1.5 - centre) else first + 1
+        pf, pw = rows[t - 1][1:]
+        nf, nw = rows[t + 1][1:]
+        joins = pf <= inner < pf + pw and nf <= inner < nf + nw     # the inner lane alone still meets both rows
+        if joins and t - 1 not in thin and (t * 0.618034 + 0.2) % 1.0 < 0.3 * (t - 10) / max(1, last - 10):
+            thin.add(t)
+    return rows, thin, row_cell
+
+
+def stair_line(spec):
+    """A wall's line in plan, z per x from -1 to N: runs of 4-10 blocks along x, each stepping south by a jog at its
+    east end (so the line never goes north eastward, and the level it bounds stays monotone), anchored to pass the
+    spec's (x, z)."""
+    ax, az, runs, jogs, salt = spec
+    zs, z, i, x = {}, 0.0, 0, -1
+    while x <= N:
+        run = runs[0] + int(hash01(i, 0, salt) * (runs[1] - runs[0] + 1))
+        for _ in range(run):
+            zs[x] = z
+            x += 1
+        z += jogs[0] + int(hash01(i, 1, salt) * (jogs[1] - jogs[0] + 1))
+        i += 1
+    shift = az - zs[ax]
+    return {k: v + shift for k, v in zs.items()}
+
+
+def terrace_map(cells, foot, near_pad, rows, row_cell):
+    """r4: every column's ground level (top block y) - one of LEVELS - and the row where the stairs up to the upper
+    terrace start. In front, two walls on stair_lines (east-west runs with jogs south, following the camera's
+    horizontal), straightened across the track (a flight needs a straight wall across it); behind the pad an upper
+    terrace and the cliff band at the north edge; the building's pad (near_pad) level. Then made monotone - the level
+    never rises to the south or west (a max over everything south-west of a column), so every riser faces the camera -
+    and nothing south-west of the pad stands above it."""
+    zone = {}                                                    # (x, z) -> (row, lateral distance from the centre)
+    for t, (centre, first, width) in enumerate(rows):
+        for la in range(N):
+            zone[row_cell(t, la)] = (t, abs(la + 0.5 - centre))
+
+    w1, w0, wu, wc = (stair_line(sp) for sp in (WALL_T1, WALL_T0, UP_LINE, CLIFF_LINE))
+    lv = {}
+    for x in range(N):
+        for z in range(N):
+            if (x, z) in foot or near_pad(x, z):
+                lv[(x, z)] = PAD
+                continue
+            lx = x
+            if (x, z) in zone and zone[(x, z)][1] <= 5.5:            # across the track: the line at its centre
+                t = zone[(x, z)][0]
+                lx = int(row_cell(t, rows[t][0])[0])
+            lv[(x, z)] = T0 if z > w0[lx] else T1 if z > w1[lx] else PAD
+            if z < wu[x]:
+                lv[(x, z)] = UP
+            if z < wc[x]:
+                lv[(x, z)] = CLIFF
+
+    def close():                                                 # monotone: max over the south-west quadrant
+        for x in range(N):
+            for z in range(N - 1, -1, -1):
+                if x:
+                    lv[(x, z)] = max(lv[(x, z)], lv[(x - 1, z)])
+                if z < N - 1:
+                    lv[(x, z)] = max(lv[(x, z)], lv[(x, z + 1)])
+    close()
+    pad = [p for p in lv if p in foot or near_pad(*p)]
+    px, pz = max(p[0] for p in pad), min(p[1] for p in pad)
+    for (x, z) in lv:                                            # nothing south-west of the pad above it
+        if x <= px and z >= pz:
+            lv[(x, z)] = min(lv[(x, z)], PAD)
+    # the upper terrace's wall runs straight across the stairs' lanes (raise, then close again: still monotone)
+    up_row = max(min(z for z in range(N) if lv[(x, z)] < UP) for x in UP_FLIGHT)
+    for x in UP_FLIGHT:
+        for z in range(up_row):
+            lv[(x, z)] = max(lv[(x, z)], UP)
+    close()
+    return {p: v for p, v in lv.items() if p in cells}, up_row
+
+
+def terraces(s, ground, rows, row_cell, side, track, no_plants, up_row):
+    """r4: the terraces' masonry, flights, cliff rock, vines and leaf bushes on a ground already levelled by
+    terrace_map. Returns {"levels", "flights": [stair cells per flight], "risers", "bushes", "vines"}."""
+    sides = {"south": (0, 1), "west": (-1, 0)}                  # the faces the camera sees, as (dx, dz) to the lower cell
+    up = {"south": "north", "north": "south", "east": "west", "west": "east"}[side]   # a flight climbs toward the door
+    flights, flight_cells = [], set()
+
+    def lay(steps, hi, facing):
+        """A flight: steps[j] are the cells of step j out from the wall, its stair at hi - j on masonry."""
+        cells = []
+        for j, row in enumerate(steps):
+            y = hi - j
+            for q in row:
+                if q not in ground or ground[q] >= y:
+                    continue
+                for yy in range(ground[q] + 1, y):               # the flight's body: masonry under each step
+                    s.set(q[0], yy, q[1], wall_stone(q[0], yy, q[1], ground[q]))
+                s.set(q[0], y, q[1], FLIGHT_STAIRS, facing=facing, half="bottom", shape="straight", waterlogged="false")
+                cells.append((q[0], y, q[1]))
+                flight_cells.add(q)
+                no_plants.add(q)
+        flights.append(cells)
+    # down the track: where its centre lane drops a level, k stair rows step down into the lower terrace, 4 wide
+    for t in range(len(rows) - 1):
+        centre, first, width = rows[t]
+        hi, lo = ground[row_cell(t, int(centre))], ground[row_cell(t + 1, int(centre))]
+        if hi > lo:
+            lanes = range(rows[t + 1][1] - 1, rows[t + 1][1] + rows[t + 1][2] + 1)
+            lay([[row_cell(t + 1 + j, la) for la in lanes] for j in range(hi - lo)], hi, up)
+    # from the pad up to the upper terrace, west of the building
+    lay([[(x, up_row + j) for x in UP_FLIGHT] for j in range(UP - PAD)], UP, "north")
+    # risers: a column standing 2+ over its south or west neighbour shows that face to the camera
+    risers = {}
+    for (x, z), h in ground.items():
+        low = min(ground.get((x + dx, z + dz), h) for dx, dz in sides.values())
+        if h - low >= 2:
+            risers[(x, z)] = low
+    for (x, z), low in risers.items():
+        h = ground[(x, z)]
+        if h == CLIFF:                                           # the cliff: rock in strata, a mossy rock lip
+            for y in range(low + 1, h + 1):
+                s.set(x, y, z, rock_at(x, y, z, low, top=y == h))
+        else:                                                    # a retaining wall under a cap row
+            for y in range(low + 1, h):
+                s.set(x, y, z, wall_stone(x, y, z, low))
+            c = rnoise(x, z, 4.0, 104)
+            s.set(x, h, z, "polished_andesite" if c < 0.55 else "stone_bricks" if c < 0.8 else "smooth_stone")
+        no_plants.add((x, z))
+    # vines down the faces, by stretches; never on the track or a flight
+    vines = 0
+    for (x, z), low in sorted(risers.items()):
+        h = ground[(x, z)]
+        for face, (dx, dz) in sides.items():
+            q = (x + dx, z + dz)
+            if q not in ground or ground[q] > h - 2 or q in flight_cells or q in track:
+                continue
+            if rnoise(x, z, 5.0, 111 if face == "south" else 112) < 0.6:
+                continue
+            room = h - ground[q] - 1                              # air above the lower cell, up to the cap's height
+            n = max(1, min(room, int(0.3 + 0.8 * room * rnoise(x, z, 2.0, 113) + hash01(x, z, 114))))
+            attach = {"south": "north", "west": "east"}[face]
+            props = {k: "true" if k == attach else "false" for k in ("east", "north", "south", "up", "west")}
+            for y in range(h, h - n, -1):
+                if (q[0], y, q[1]) not in s.blocks:
+                    s.set(q[0], y, q[1], "vine", **props)
+                    vines += 1
+    # leaf bushes along the wall tops, spilling over the edge (dark leaves, persistent, never on the walking line)
+    keep_clear = set(track) | flight_cells
+    for (x, z) in list(flight_cells):
+        keep_clear |= {(x + dx, z + dz) for dx in (-1, 0, 1) for dz in (-2, -1, 0, 1)}
+    bushes = 0
+
+    def leaf(x, y, z, salt):
+        nonlocal bushes
+        if (x, y, z) in s.blocks or not 0 <= y < s.size[1]:
+            return
+        s.set(x, y, z, BUSH_LEAVES[0], persistent="true", distance="7", waterlogged="false")
+        bushes += 1
+    for (x, z), low in sorted(risers.items()):
+        h = ground[(x, z)]
+        if (x, z) in keep_clear or rnoise(x, z, 6.0, 121) < 0.5:
+            continue
+        leaf(x, h + 1, z, 122)
+        no_plants.add((x, z))
+        if rnoise(x, z, 3.0, 123) > 0.55:                         # a fuller bush: a second block up, one in behind
+            leaf(x, h + 2, z, 122)
+            for b in ((x, z - 1), (x + 1, z)):
+                if b in ground and ground[b] == h and b not in keep_clear and b not in risers:
+                    leaf(b[0], h + 1, b[1], 122)
+                    no_plants.add(b)
+        for dx, dz in sides.values():                             # the spill: over the cap, down the face
+            q = (x + dx, z + dz)
+            if q not in ground or q in keep_clear or h - ground[q] < 3:
+                continue
+            if hash01(x, z, 124) < 0.75:
+                leaf(q[0], h, q[1], 125)
+                if h - ground[q] >= 5 and hash01(x, z, 126) < 0.6:  # the cliff: a longer drape
+                    leaf(q[0], h - 1, q[1], 125)
+    return {"levels": LEVELS, "flights": flights, "risers": risers, "bushes": bushes, "vines": vines}
 
 
 def build(layered):
-    s = Structure(N, HGT, N)
+    s = Structure(N, HGT_AFTER if layered else HGT, N)
     (bx, by, bz), blocks = load_building()
     ox, oz = (N - bx) // 2, (N - bz) // 2
     foot = {(ox + x, oz + z) for (x, y, z), n, _ in blocks if y == 0}
@@ -258,24 +442,31 @@ def build(layered):
         dz = max(oz - z, 0, z - (oz + bz - 1))
         return max(dx, dz), dx, dz
 
+    cells = {(x, z) for x in range(N) for z in range(N)} - foot
+    rows, thin, row_cell = track_rows(ox, oz, bx, bz, side, cells)
+    if layered:
+        levels, up_row = terrace_map(cells, foot, lambda x, z: dist_to_foot(x, z)[0] <= 2, rows, row_cell)
+    floor = PAD if layered else BASE
     ground = {}
     for x in range(N):
         for z in range(N):
             if (x, z) in foot:
                 continue
-            h = height_at(x, z, layered, dist_to_foot(x, z)[0])
+            h = levels[(x, z)] if layered else BASE
             for y in range(0, h):
                 s.set(x, y, z, "dirt")
             ground[(x, z)] = h
             s.set(x, h, z, "grass_block", snowy="false")
     for (x, y, z), n, props in blocks:                          # the building, its foundation at the ground level
         if n != "air" and n != "structure_void":
-            s.set(ox + x, BASE + y, oz + z, n, **props)
+            s.set(ox + x, floor + y, oz + z, n, **props)
     for (x, z) in foot:
-        for y in range(0, BASE):
+        for y in range(0, floor):
             s.set(x, y, z, "dirt")
 
-    trees = [(gen_trees.oak(3), 0, 40), (gen_trees.oak(11, old=True), 38, 36), (gen_trees.birch(5), 6, 2)]
+    # r4: AFTER's birch stands on the middle terrace in the north-west (its old spot is the cliff's edge now)
+    trees = [(gen_trees.oak(3), 0, 40), (gen_trees.oak(11, old=True), 38, 36),
+             (gen_trees.birch(5), -3, 12) if layered else (gen_trees.birch(5), 6, 2)]
     half = gen_trees.SIZE // 2
     trunks = [(tx + half, tz + half) for _, tx, tz in trees]
     no_plants = set()
@@ -334,27 +525,6 @@ def build(layered):
         # 2. TRACK (r3; critic r34: "fragments into coarse diagonal blobs... one continuous path with a coarse-dirt
         # fringe"): rows t = 0, 1, 2... off the entrance wall; the apron funnels 5-4-3 wide into a 2-wide core that is
         # never broken, then a 3-block fringe each side, coarse dirt to gravel flecks to lawn
-        def row_cell(t, lane):                                    # row t off the wall, lateral block `lane`
-            return {"south": (lane, oz + bz + t), "north": (lane, oz - 1 - t),
-                    "east": (ox + bx + t, lane), "west": (ox - 1 - t, lane)}[side]
-        mid = ox + bx / 2.0 if side in ("south", "north") else oz + bz / 2.0
-        rows = []                                                 # per row: the centre, the core lanes (first, width)
-        for t in range(N):
-            if not any(row_cell(t, la) in ground for la in range(N)):
-                break
-            centre = mid + 2.6 * math.sin(max(0, t - 2) / 7.0)  # a slow bend: under 0.4 of a block a row
-            width = (5, 4, 3)[t] if t < 3 else 2
-            rows.append((centre, int(math.floor(centre - width / 2.0 + 0.5)), width))
-        last = len(rows) - 1
-        thin = set()                                              # rows whose outer lane is let go to the fringe
-        for t in range(10, last):
-            centre, first, width = rows[t]
-            inner = first if abs(first + 0.5 - centre) <= abs(first + 1.5 - centre) else first + 1
-            pf, pw = rows[t - 1][1:]
-            nf, nw = rows[t + 1][1:]
-            joins = pf <= inner < pf + pw and nf <= inner < nf + nw     # the inner lane alone still meets both rows
-            if joins and t - 1 not in thin and (t * 0.618034 + 0.2) % 1.0 < 0.3 * (t - 10) / max(1, last - 10):
-                thin.add(t)
         track = set()
         for t, (centre, first, width) in enumerate(rows):
             lanes = list(range(first, first + width))
@@ -396,91 +566,9 @@ def build(layered):
                 track.add(q)
         stats["track"] = (rows, thin, row_cell)
 
-        # 3. RELIEF (r3; critic r34: "the stair-step shelves at left are flat terraces... rock outcrop not visible from
-        # the RTS camera"): the scarp shows rock in strata under a turf lip, its broken stretches gravel and rock steps
-        # with a stair at their foot, talus along its foot; then the tor and its scree fan
-        def nbrs(x, z):
-            return [q for q in ((x + 1, z), (x - 1, z), (x, z + 1), (x, z - 1)) if q in ground]
-        surf = dict(ground)                                       # the top y per column, the tor included
-        rocky, talus = set(), set()
-        for (x, z), h in ground.items():
-            if h <= BASE or (x, z) in track:
-                continue
-            low = min(ground[q] for q in nbrs(x, z))
-            if h - low >= 2:                                      # the cliff: rock under a turf (or dry) lip
-                for y in range(low + 1, h):
-                    s.set(x, y, z, rock_at(x, y, z))
-                if rnoise(x, z, 3.0, 40) > 0.62:
-                    s.set(x, h, z, "coarse_dirt" if hash01(x, z, 41) < 0.6 else "gravel")
-                    no_plants.add((x, z))
-                rocky.add((x, z))
-                talus |= {q for q in nbrs(x, z) if ground[q] <= h - 2}
-            elif (h - low == 1 and rnoise(x, z, 6.0, 35) > 0.55 and abs(scarp_front(x, z)) < 2.5
-                  and any(ground[q] < h for q in ((x, z + 1), (x - 1, z)) if q in ground)):
-                # a broken stretch of the scarp (a face the camera sees): rock steps and gravel
-                if rnoise(x, z, 3.0, 42) > 0.45:
-                    s.set(x, h, z, rock_at(x, h, z, top=True))
-                    rocky.add((x, z))
-                else:
-                    s.set(x, h, z, "gravel" if hash01(x, z, 43) < 0.5 else "coarse_dirt")
-                no_plants.add((x, z))
-        tor = {}
-        for (x, z), h in ground.items():
-            t = tor_height(x, z)
-            if t and (x, z) not in track:
-                for y in range(h, h + t + 1):
-                    s.set(x, y, z, rock_at(x, y, z, top=y == h + t))
-                tor[(x, z)] = t
-                surf[(x, z)] = h + t
-                rocky.add((x, z))
-        no_plants |= rocky
-        stairs = slabs = 0
-        for (x, z) in sorted(rocky):                              # a rock stair on a 1-block step's foot: a 45-degree
-            for q in nbrs(x, z):                                  # edge (on the tor's ledges too)
-                if q in track or surf[q] != surf[(x, z)] - 1 or (q[0], surf[q] + 1, q[1]) in s.blocks:
-                    continue
-                if (x, z) in tor or ground[(x, z)] - ground[q] == 1:
-                    if bayer(*q) < 0.45:
-                        facing = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}[
-                            (x - q[0], z - q[1])]
-                        base = rock_at(x, surf[q] + 1, z)
-                        s.set(q[0], surf[q] + 1, q[1], STAIRS.get(base, "stone_stairs"), facing=facing,
-                              half="bottom", shape="straight", waterlogged="false")
-                        no_plants.add(q)
-                        stairs += 1
-        for q in sorted(talus - rocky - track):                   # talus along the cliff's foot
-            x, z = q
-            h = ground[q]
-            r = hash01(x, z, 44)
-            if r < 0.7:
-                s.set(x, h, z, "gravel" if r < 0.3 else "cobblestone" if r < 0.42 else "andesite" if r < 0.52
-                      else "coarse_dirt")
-            if (x, h + 1, z) not in s.blocks and hash01(x, z, 45) < 0.3:
-                s.set(x, h + 1, z, "cobblestone_slab" if hash01(x, z, 46) < 0.5 else "andesite_slab", type="bottom",
-                      waterlogged="false")
-                slabs += 1
-            no_plants.add(q)
-        if tor:                                                   # the scree: a fan downhill (south) of the tor
-            tor_z = sum(b for a, b in tor) / len(tor)
-            for (x, z), h in ground.items():
-                if (x, z) in rocky or (x, z) in track or (x, z) in talus or dist_to_foot(x, z)[0] <= 2:
-                    continue
-                d = min(math.hypot(x - a, z - b) for a, b in tor)
-                if d > 3.6:
-                    continue
-                p = max(0.0, 0.8 - 0.22 * d) * (1.25 if z >= tor_z else 0.5)   # more of it downhill (south)
-                if hash01(x, z, 50) >= p:
-                    continue
-                r = hash01(x, z, 51)
-                s.set(x, h, z, "gravel" if r < 0.4 else "cobblestone" if r < 0.55 else "andesite" if r < 0.68
-                      else "coarse_dirt")
-                no_plants.add((x, z))
-                if d <= 2.3 and (x, h + 1, z) not in s.blocks and hash01(x, z, 52) < 0.35:   # a loose slab of rock
-                    r = hash01(x, z, 53)
-                    s.set(x, h + 1, z, "cobblestone_slab" if r < 0.35 else "andesite_slab" if r < 0.6 else
-                          "mossy_cobblestone_slab" if r < 0.8 else "stone_slab", type="bottom", waterlogged="false")
-                    slabs += 1
-        stats["relief"] = (rocky, tor, stairs, slabs, surf)
+        # 3. TERRACES (r4; lovish's reference: terraces held by stone retaining walls, stone stairs between levels, a
+        # cliff behind, plants spilling over every edge)
+        stats["terraces"] = terraces(s, ground, rows, row_cell, side, track, no_plants, up_row)
     for piece, tx, tz in trees:
         th = ground.get((tx + half, tz + half), BASE)
         gen_trees._write_piece(s, piece, tx, tz, lift=th + 1)
@@ -499,8 +587,14 @@ def build(layered):
                 p = None if hash01(x, z, 52) < 0.7 else p
             if d <= 2 and dx > 0 and dz > 0 and hash01(x, z, 53) < 0.8:   # the unmown corner
                 p = "tall_grass" if hash01(x, z, 54) < 0.6 else "fern"
+            # r4: a wall's foot (the face north or east of the cell) is lush - ferns and tall grass against the stone
+            if any(ground.get(q, -99) - h >= 2 for q in ((x, z - 1), (x + 1, z))) and hash01(x, z, 55) < 0.7:
+                r = hash01(x, z, 56)
+                p = "large_fern" if r < 0.3 else "tall_grass" if r < 0.55 else "fern"
         if p is None:
             continue
+        if layered and p in ("tall_grass", "large_fern") and (x, h + 2, z) in s.blocks:
+            p = "fern"                                            # r4: a vine or leaf hangs there
         if p in ("tall_grass", "large_fern"):
             s.set(x, h + 1, z, p, half="lower")
             s.set(x, h + 2, z, p, half="upper")
@@ -541,12 +635,15 @@ def track_summary(s, ground, stats):
 
     def top(q):
         return names[s.blocks[(q[0], ground[q], q[1])]] if q in ground else None
-    cores, breaks = [], 0
+    cores, breaks, heads = [], 0, 0
     for t, (centre, first, width) in enumerate(rows):
         lanes = [la for la in range(first, first + width)
                  if not (t in thin and la == max(range(first, first + width), key=lambda v: abs(v + 0.5 - centre)))]
         cores.append(lanes)
-        if any(top(row_cell(t, la)) not in EARTH for la in lanes if row_cell(t, la) in ground):
+        tops = [top(row_cell(t, la)) for la in lanes if row_cell(t, la) in ground]
+        if tops and all(n in EARTH or n in CAP_STONE for n in tops) and any(n in CAP_STONE for n in tops):
+            heads += 1                                            # r4: the cap row at a flight's head
+        elif any(n not in EARTH for n in tops):
             breaks += 1
         elif t and not set(lanes) & set(cores[t - 1]):
             breaks += 1
@@ -563,17 +660,18 @@ def track_summary(s, ground, stats):
                     fr[d - 1][1] += 1
     widths = collections.Counter(len(la) for la in cores[3:])
     return (f"track: {len(rows)} rows wall to edge, core widths {dict(sorted(widths.items()))} (apron 5-4-3), "
-            f"{breaks} rows broken; fringe earth 1 / 2 / 3 out: "
+            f"{breaks} rows broken, {heads} flight heads (cap stone); fringe earth 1 / 2 / 3 out: "
             + " / ".join(f"{100 * a / max(1, b):.0f}%" for a, b in fr))
 
 
-def relief_summary(ground, stats):
-    """r3: the high ground's height, the rock-stepped cells, the tor's size and height, the stairs and loose slabs."""
-    rocky, tor, stairs, slabs, surf = stats["relief"]
-    high = [h for h in ground.values() if h > BASE]
-    return (f"relief: high ground y {BASE + 1}-{max(high)} over {len(high)} cells (plain {BASE}); rock-stepped cells "
-            f"{len(rocky) - len(tor)}; tor {len(tor)} cells, {max(tor.values(), default=0)} high (top y "
-            f"{max((surf[p] for p in tor), default=BASE)}); rock stairs {stairs}, loose slabs {slabs}")
+def terrace_summary(ground, stats):
+    """r4: cells per level, risers (wall / cliff columns), the flights and their steps, leaves and vines."""
+    tr = stats["terraces"]
+    per = collections.Counter(ground.values())
+    walls = sum(1 for p in tr["risers"] if ground[p] != CLIFF)
+    return (f"terraces: cells per level {', '.join(f'y {h}: {per[h]}' for h in tr['levels'])}; riser columns "
+            f"{walls} wall + {len(tr['risers']) - walls} cliff; flights {len(tr['flights'])} "
+            f"({', '.join(str(len(f)) for f in tr['flights'])} stairs); bush leaves {tr['bushes']}, vines {tr['vines']}")
 
 
 def main():
@@ -585,7 +683,7 @@ def main():
         print("  ", summary(s, ground))
         if stats:
             print("  ", track_summary(s, ground, stats))
-            print("  ", relief_summary(ground, stats))
+            print("  ", terrace_summary(ground, stats))
 
 
 if __name__ == "__main__":
