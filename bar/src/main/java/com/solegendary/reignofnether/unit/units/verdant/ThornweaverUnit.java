@@ -61,12 +61,13 @@ import java.util.List;
  * A thin copy of the Bloom Priestess's unit plumbing on the Court's illager body (Vindicator), not a subclass: the bot
  * and the healer tests find priestesses by class. Placeholder look: the Elder Druid's robe (ThornweaverRenderer).
  */
-public class ThornweaverUnit extends Vindicator implements Unit, SupportUnit {   // STUB (red run): not yet a carrier
+public class ThornweaverUnit extends Vindicator implements Unit, SupportUnit, EssenceCarrier {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new EntanglingRoots(), Keybindings.abilitySlot1);
         ABILITIES.add(new SeedOfRenewal(), Keybindings.abilitySlot2);
         ABILITIES.add(new SproutGuardian(), Keybindings.abilitySlot3);
+        ABILITIES.add(new Empower(), Keybindings.abilitySlot4);
     }
 
     //region

@@ -143,7 +143,6 @@ public class SeedOfRenewal extends Ability {
      * Returns the sapling, or null when refused. Public for the bot and the game test (no cooldown handling here).
      */
     public static Entity cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
-        if (true) return null;   // STUB for the tests-first (red) run: the rule lands in the next commit
         if (owner == null || owner.isBlank() || at == null)
             return null;
         if (Essence.get(caster) < ESSENCE_COST) {

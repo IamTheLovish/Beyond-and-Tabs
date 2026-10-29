@@ -114,7 +114,6 @@ public class EntanglingRoots extends Ability {
      * bot and the game test (no cooldown handling here).
      */
     public static int cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos centre, boolean quiet) {
-        if (true) return 0;   // STUB for the tests-first (red) run: the rule lands in the next commit
         if (owner == null || owner.isBlank() || centre == null)
             return 0;
         double cx = centre.getX() + 0.5, cz = centre.getZ() + 0.5;
