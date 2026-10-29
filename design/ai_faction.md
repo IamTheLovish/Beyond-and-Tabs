@@ -34,7 +34,7 @@ still come back later as a T3 trick.
 | Nothing needs water, and water gives no bonus. | The maps are dry. |
 | Same roles and prices as the other factions at each tier. | BAR readability; `tools/unit_stats.py` stays comparable. |
 | The shared defence set (`design/defences.md`) in this look, plus one own T2 tower. | One shape and one price per job. |
-| Death style: units **derez** into falling light shards and a fading outline. | Replaces "dissolve into seawater" (the unit-animation lane's per-faction deaths). |
+| Death style: units **derez** into falling light shards and a fading outline. | Replaces "dissolve into seawater" (the unit-animation lane's per-faction deaths). Death PR 382 puts it in the Tidewrought slot until the faction key exists; when slice 1b adds the key, tell the coordinator so the animation session moves it. |
 | Light lines come from an emissive render layer (like vanilla's spider-eyes layer) over a dark glossy skin. | Cheap, readable from the RTS camera by day and night, works on any body. |
 
 ---
@@ -129,7 +129,7 @@ water or for a sea-creature body. Bodies always change (none of Tidewrought's bo
 | Harbourmaster as T2 worker / Abyssal Shipyard as T3 lab | Architect Drone / Titan Gate | Roles, tier gates, tests. |
 | Wreck Harbour, Slipway, Drydock (+ their production lists, hotkey slots, tier checks) | Core Ring, Compiler, Foundry Matrix | Roles and wiring; structures are redrawn. |
 | Bot habits (`tideHabits`, `tideKrakens`, `tideLeviathans`, `tideFogBank`, `turtleMoor`, Riptide aiming, AA queue) | grid-weaving, lancers, Titan, cloak, deploy | The behaviour fits; names change in the cleanup slice. |
-| Tide Seer's reusable parts (PR 368: `TideSeerServerEvents.shove`, `BotPlayer.unitValue`, the Empower habit) | the Hunter Frame PR | Shared helpers. |
+| Tide Seer's reusable parts (PR 368: `TideSeerServerEvents.shove`, `BotPlayer.unitValue`) | the Hunter Frame PR | Shared helpers. Not its `tideSeers` Empower pass: bots use the shared `BotPlayer.useEmpower` from PR 362 (Archon). |
 
 ### Dropped
 
@@ -191,7 +191,7 @@ happen.
 - Last Stand arms in combat below 60% HP.
 - Evolve fires when it can pay and no enemy is within 12 (a safe channel). From stage 2 the bot keeps 10 essence in
   reserve for Last Stand.
-- Empower uses the shared habit.
+- Empower uses the shared `BotPlayer.useEmpower` (Verdant caster PR 362, any Empower carrier), not a faction pass like PR 368's `tideSeers`.
 
 **Art:** one rig. The stages are ModelPart groups shown by a synced stage byte, so there are five looks without five
 models. Evolve and Last Stand get a "lines draw / parts fall" effect from `BarFx`.
