@@ -22,8 +22,6 @@ split, so blades run on from the bottom texture into the top one.
 import math
 
 import numpy as np
-from scipy import ndimage
-from scipy.spatial import cKDTree
 
 SS = 4   # sub-samples per texel side (r34: 2 -> 4)
 
@@ -90,8 +88,8 @@ class Canvas:
         gy, gx = np.mgrid[y0:y1, x0:x1]
         gy, gx = gy.reshape(-1), gx.reshape(-1)
         pix = np.stack([(gx + 0.5) / SS, (gy + 0.5) / SS], -1)
-        d, idx = cKDTree(P).query(pix, distance_upper_bound=wmax + 1)
-        ok = np.isfinite(d)
+        d, idx = _nearest(P, pix)
+        ok = d < wmax + 1                                     # (was a k-d tree's distance_upper_bound)
         gy, gx, pix, idx = gy[ok], gx[ok], pix[ok], idx[ok]
         v = pix - P[idx]
         s = (v * Nr[idx]).sum(1)
@@ -136,8 +134,73 @@ def bleed(img, alpha):
     solid = alpha > 0.5
     if not solid.any():
         return np.full_like(img, 0.5)
-    iy, ix = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)
+    iy, ix = _edt_indices(solid)
     return np.where(solid[..., None] if img.ndim == 3 else solid, img, img[iy, ix])
+
+
+def _edt_indices(solid):
+    """For every texel, the (row, col) of its nearest solid texel by Euclidean distance - an exact two-pass distance
+    transform (Felzenszwalb & Huttenlocher's lower envelope of parabolas), numpy + plain loops, no scipy."""
+    h, w = solid.shape
+    big = h + w + 1
+    # pass 1, down each column: the nearest solid row in the same column, and the gap to it
+    near_row = np.full((h, w), -1, dtype=np.int64)
+    last = np.full(w, -big, dtype=np.int64)
+    for y in range(h):
+        last = np.where(solid[y], y, last)
+        near_row[y] = last
+    nxt = np.full(w, 2 * big, dtype=np.int64)
+    for y in range(h - 1, -1, -1):
+        nxt = np.where(solid[y], y, nxt)
+        near_row[y] = np.where(nxt - y < y - near_row[y], nxt, near_row[y])
+    g2 = (np.arange(h)[:, None] - near_row).astype(np.float64) ** 2
+    # pass 2, along each row: min over columns c of (x - c)^2 + g2[c]
+    iy = np.empty((h, w), dtype=np.int64)
+    ix = np.empty((h, w), dtype=np.int64)
+    inf = float("inf")
+    for y in range(h):
+        f = g2[y].tolist()
+        v = [0] * w
+        z = [0.0] * (w + 1)
+        k = 0
+        z[0], z[1] = -inf, inf
+        for q in range(1, w):
+            while True:
+                p = v[k]
+                sq = ((f[q] + q * q) - (f[p] + p * p)) / (2 * q - 2 * p)
+                if sq <= z[k] and k > 0:
+                    k -= 1
+                    continue
+                if sq <= z[k]:                       # k == 0: the new parabola replaces the first
+                    v[0] = q
+                    z[1] = inf
+                    break
+                k += 1
+                v[k] = q
+                z[k] = sq
+                z[k + 1] = inf
+                break
+        k = 0
+        for x in range(w):
+            while z[k + 1] < x:
+                k += 1
+            ix[y, x] = v[k]
+        iy[y] = near_row[y, ix[y]]
+    return iy, ix
+
+
+def _nearest(points, queries, chunk=1024):
+    """(distance, index) of each query's nearest point - numpy only (CI installs numpy + pillow, no scipy); ties go to
+    the lowest index. Chunked so a big sprite's distance table stays small."""
+    d = np.empty(len(queries))
+    idx = np.empty(len(queries), dtype=np.int64)
+    for i in range(0, len(queries), chunk):
+        q = queries[i:i + chunk]
+        d2 = ((q[:, None, :] - points[None, :, :]) ** 2).sum(-1)
+        j = d2.argmin(1)
+        idx[i:i + chunk] = j
+        d[i:i + chunk] = np.sqrt(d2[np.arange(len(q)), j])
+    return d, idx
 
 
 def _blade_shade(tone):
