@@ -121,7 +121,10 @@ class StillKeys(unittest.TestCase):
         k = EJ().still_key
         self.assertEqual(k("bat_eyes_15_meadow_sampler_rts.png"), "15_meadow_sampler_rts")
         self.assertEqual(k("bat_eyes_15_meadow_sampler_rts_close.png"), "15_meadow_sampler_rts_close")
+        # #332's first-person close still among the plants logs the same proof lines as the RTS stills: judged too
+        self.assertEqual(k("bat_eyes_15_meadow_sampler_close.png"), "15_meadow_sampler_close")
         for other in ("bat_eyes_15_meadow_sampler_34.png", "bat_eyes_15_meadow_sampler_dusk.png",
+                      "bat_eyes_07_army_close.png", "bat_eyes_07b_paladin_close.png",
                       "bat_eyes_02_rts_default.png", "bat_eyes_02b_rts_default_look_off.png",
                       "bat_eyes_01_title.png", "README.md"):
             self.assertIsNone(k(other), other)
@@ -275,6 +278,18 @@ class Crops(unittest.TestCase):
         box, _ = ej.crop_for("15_other_rts", [(KEY, (5, 6, 7, 8)), (None, (9, 9, 19, 19))])
         self.assertEqual(box, (9, 9, 19, 19))
 
+    def test_a_close_still_takes_the_ground_in_front_of_the_feet(self):
+        # 15_<name>_close looks slightly down at the ground 5 blocks away: the default RTS crop (900,80)-(1400,300) is
+        # the horizon there, so the close stills measure the lower middle of the picture instead
+        ej = EJ()
+        box, source = ej.crop_for("15_meadow_sampler_close", [])
+        self.assertEqual(box, ej.CLOSE_CROP)
+        self.assertEqual(source, "close")
+        self.assertGreater(box[1], 1080 // 2)          # below the middle of a 1920x1080 still
+        self.assertNotEqual(ej.crop_for("15_meadow_sampler_rts_close", [])[0], ej.CLOSE_CROP)
+        # a flag still wins
+        self.assertEqual(ej.crop_for("15_meadow_sampler_close", [(None, (1, 2, 3, 4))])[0], (1, 2, 3, 4))
+
     def test_a_malformed_box_is_an_error(self):
         for bad in ("1,2,3", "a,b,c,d", "10,10,5,5", "-1,0,5,5"):
             with self.assertRaises(ValueError, msg=bad):
@@ -400,6 +415,28 @@ class Cli(unittest.TestCase):
         self.assertEqual(code, 0, out + err)
         self.assertIn("not judged", out)
         self.assertIn("15_meadow_sampler_34", out)
+
+    def test_a_close_still_is_gated_and_measured_but_has_no_star_count(self):
+        # stars are tuft-shadow sized at the RTS zoom (15-300 px); 5 blocks away a tuft is far bigger, so a star
+        # count on a close still would be a number that means nothing: it is left out, never compared
+        close = "15_meadow_sampler_close"
+        lane = make_lane(self.root / "lane", keys=(KEY, close))
+        out_json = self.root / "c.json"
+        code, out, err = run(lane, "--crop", SMALL, "--save", out_json)
+        self.assertEqual(code, 0, out + err)
+        st = json.loads(out_json.read_text())["lanes"]["lane"]["stills"]
+        self.assertTrue(st[close]["proof"]["ok"])
+        self.assertIsNotNone(st[close]["metrics"]["luma"])
+        self.assertIsNone(st[close]["metrics"]["stars"])
+        self.assertIsNotNone(st[KEY]["metrics"]["stars"])
+        self.assertNotIn(close, out.split("not judged")[-1] if "not judged" in out else "")
+
+    def test_a_close_still_without_proof_fails_the_gate(self):
+        close = "15_meadow_sampler_close"
+        lane = make_lane(self.root / "lane", keys=(KEY, close), lines=proof_lines(KEY) + proof_lines(close, client=0))
+        code, out, err = run(lane, "--crop", SMALL)
+        self.assertEqual(code, 1)
+        self.assertIn(close, err)
 
     def test_the_default_crop_is_the_meadow_one(self):
         lane = make_lane(self.root / "big", size=(1600, 900))
