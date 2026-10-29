@@ -189,8 +189,8 @@ public class GraveAdeptGameTests {
                         problems.add("the Adept is not marked summoned");
                     if (Factions.getFaction(a) != Factions.MONSTERS)
                         problems.add("the Adept is not Gravebound");
-                    if (a.level() != 0 || a.xp() != 0)
-                        problems.add("a new Adept is level " + a.level() + " with " + a.xp() + " XP, expected 0 and 0");
+                    if (a.adeptLevel() != 0 || a.xp() != 0)
+                        problems.add("a new Adept is level " + a.adeptLevel() + " with " + a.xp() + " XP, expected 0 and 0");
                     if (Math.abs(a.getMaxHealth() - GraveAdeptUnit.maxHealth) > 0.5f)
                         problems.add("a new Adept has " + a.getMaxHealth() + " health, expected " + GraveAdeptUnit.maxHealth);
                     if (a.distanceTo(caller) > 3)
@@ -256,8 +256,8 @@ public class GraveAdeptGameTests {
                     int lvl = step[1];
                     if (a.xp() != total)
                         problems.add("after " + total + " XP added the Adept holds " + a.xp());
-                    if (a.level() != lvl)
-                        problems.add("at " + total + " XP the Adept is level " + a.level() + ", expected " + lvl);
+                    if (a.adeptLevel() != lvl)
+                        problems.add("at " + total + " XP the Adept is level " + a.adeptLevel() + ", expected " + lvl);
                     double hp = GraveAdeptUnit.maxHealth * (1 + 0.15 * lvl);
                     if (Math.abs(a.getMaxHealth() - hp) > 0.05)
                         problems.add("at level " + lvl + " the Adept has " + a.getMaxHealth() + " max health, expected " + hp);
@@ -520,8 +520,8 @@ public class GraveAdeptGameTests {
                 if (GraveAdeptUnit.EMPOWER_XP != 120)
                     problems.add("Revision 1 set 120 XP, EMPOWER_XP is " + GraveAdeptUnit.EMPOWER_XP);
                 empower.use(level, (Unit) caller, fresh);
-                if (fresh.xp() != 120 || fresh.level() != 1)
-                    problems.add("Empower left the Adept with " + fresh.xp() + " XP (level " + fresh.level() + "), expected 120 (level 1)");
+                if (fresh.xp() != 120 || fresh.adeptLevel() != 1)
+                    problems.add("Empower left the Adept with " + fresh.xp() + " XP (level " + fresh.adeptLevel() + "), expected 120 (level 1)");
                 if (VeterancyServerEvents.getRank(fresh) != 0)
                     problems.add("Empower gave the Adept a veterancy rank");
                 if (Essence.get(caller) != 15)

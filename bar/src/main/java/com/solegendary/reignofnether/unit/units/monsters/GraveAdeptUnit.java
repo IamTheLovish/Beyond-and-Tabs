@@ -108,7 +108,7 @@ public class GraveAdeptUnit extends WraithUnit implements EssenceCarrier {
         return Math.min(level, MAX_LEVEL);
     }
 
-    public int level() {
+    public int adeptLevel() {
         return levelFor(xp());
     }
 
