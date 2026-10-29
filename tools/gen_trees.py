@@ -18,9 +18,16 @@ r23): their y = 0 is the ground layer itself (a soil ring and surface roots that
 with their origin ON the surface block. bare_sampler (80 x 31 x 44) holds all 8 bare trees; small_bare_sampler
 (40 x 16 x 24, r24) the 6 small ones only, for photo runners that do not load the big pad's chunks.
 r25: dead trees are a grey acacia_wood pole on a dark oak foot (both wood for ResourceSources), one leaning
-trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks fork at the crown; no twig hooks."""
+trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks fork at the crown; no twig hooks.
+r27 (oak pilot, critic r33 trees 3/10): the oak is rebuilt as 4-6 lumpy lobes on face-joined dark oak limbs, three
+forms (spread, twin, tall; old = a 2x2 stump splitting into two leaders), three leaf tones per lobe (oak()).
+r28 (critic r34: lime tops, the tree vanishes into the lawn): the oak crown's colour only, shapes as r27 - no azalea,
+a dark oak body, oak on the sunlit patches' cores, spruce under (oak_tones()).
+r29 (critic r35b: black-green tops, V too low, sat too high): the crown's top skin is birch sun patches in spruce -
+the two leaves with their own greyer colours - so it is lighter AND less saturated; sides dark oak, underside spruce."""
 import math
 import os
+import shutil
 import random
 import sys
 
@@ -52,9 +59,11 @@ class Tree:
             self.logs[(x, y, z)] = axis
             self.leaf.discard((x, y, z))
 
-    def line(self, a, b, horizontal_axis=True):
+    def line(self, a, b, horizontal_axis=True, faces=False):
         """Logs from a to b, one block per step; a step that moves sideways lies along that axis (a branch), a step
-        up stands upright."""
+        up stands upright. faces=True (r27 oak): a step that moves on all three axes gets two corner blocks, so every
+        block shares a FACE with the last (the two-axis fill below left those joined at an edge only - 6 of 47 logs
+        face-joined to the foot on a sweep of r27 spread oaks)."""
         (x0, y0, z0), (x1, y1, z1) = a, b
         n = max(abs(x1 - x0), abs(y1 - y0), abs(z1 - z0), 1)
         prev = a
@@ -62,7 +71,10 @@ class Tree:
             t = i / n
             p = (round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * t), round(z0 + (z1 - z0) * t))
             d = (p[0] - prev[0], p[1] - prev[1], p[2] - prev[2])
-            if sum(1 for c in d if c) > 1:
+            if faces and all(d):
+                self.put_log((p[0], prev[1], prev[2]), "w")             # over in x, then in z, then up
+                self.put_log((p[0], prev[1], p[2]), "w")
+            elif sum(1 for c in d if c) > 1:
                 # a diagonal step touches the last block only at an edge - the oak's crown read as floating above its
                 # stump (reviewer); fill the corner so every step shares a face
                 self.put_log((p[0], prev[1], p[2]) if d[1] else (p[0], p[1], prev[2]), "w")
@@ -138,9 +150,10 @@ class Tree:
             else:
                 s.set(ox + x, y, oz + z, self.log, axis=axis)
         second, mixed = getattr(self, "second", (None, set()))
+        kinds = getattr(self, "kinds", {})             # r27: a leaf kind per position (the oak's three-tone lobes)
         for p, d in dist.items():
-            s.set(ox + p[0], p[1], oz + p[2], second if p in mixed else self.leaves, distance=str(d), persistent="false",
-                  waterlogged="false")
+            b = kinds.get(p) or (second if p in mixed else self.leaves)
+            s.set(ox + p[0], p[1], oz + p[2], b, distance=str(d), persistent="false", waterlogged="false")
         sx, sy, sz = s.size
         for (x, y, z), b in self.plants.items():
             if (x, y, z) in self.logs or (x, y, z) in dist or not (0 <= ox + x < sx and 0 <= oz + z < sz and y < sy):
@@ -213,60 +226,237 @@ def roots(t, rng, n=3, log=None):
         t.put_log((C + dx, 0, C + dz), "w")
 
 
-def oak(seed, old=False):
-    """Broad, open crown on 3-4 climbing limbs; each limb forks once near its end and every twig carries its own domed
-    clump, so the crown is 6-9 clumps with light between them; a cap clump over the trunk. old=True: a 2x2 trunk for its
-    first blocks (an old oak - the variety a grove needs), the limbs leave higher."""
+OAK_TONES = True    # False = the greybox: one leaf kind, the shapes judged alone (r27 pilot)
+
+
+def lobe(t, c, r, up, down, rng, ragged=0.4):
+    """r27: one crown MASS - a dome over a flatter base with a lumpy outline (three harmonics on the radius: from above a
+    rounded lobe with bays, never a disc or a plus) and a stepped top (each column's height jittered, so the top reads
+    as clustered leaf masses, not a smooth cap)."""
+    cx, cy, cz = c
+    ph = [rng.uniform(0, 2 * math.pi) for _ in range(3)]
+    amp = (rng.uniform(0.10, 0.20), rng.uniform(0.06, 0.14), rng.uniform(0.0, 0.08))
+    R = int(r * 1.45) + 2
+    for x in range(int(cx) - R, int(cx) + R + 1):
+        for z in range(int(cz) - R, int(cz) + R + 1):
+            dx, dz = x - cx, z - cz
+            d, th = math.hypot(dx, dz), math.atan2(dz, dx)
+            rr = r * (1 + amp[0] * math.sin(2 * th + ph[0]) + amp[1] * math.sin(3 * th + ph[1])
+                      + amp[2] * math.sin(5 * th + ph[2]))
+            if d > rr + 0.35:
+                continue
+            k = math.sqrt(max(0.0, 1 - (d / (rr + 0.35)) ** 2))
+            top = cy + up * k + rng.uniform(-ragged, ragged)
+            bot = min(top, cy - down * k + rng.uniform(-ragged, ragged) * 0.5)
+            for y in range(int(round(bot)), int(round(top)) + 1):
+                if 0 <= x < SIZE and 0 <= y < H and 0 <= z < SIZE and (x, y, z) not in t.logs:
+                    t.leaf.add((x, y, z))
+
+
+def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.7,
+              skin="spruce_leaves", cool="oak_leaves"):
+    """r27 (critic r33: flat-shaded one-tone leaf cubes; r32: "two leaf tints, a darker inner shell"): each lobe gets
+    the values a lit leaf mass has - sunlit patches on its top, a body, a darker underside and inner shell (spruce).
+    Patches round a few spots per lobe, not pepper, so the tones read as light on a mass.
+    r28 (critic r34 trees 3/10: "the top has gone lime... the tree vanishes into the grass from the RTS camera"): in
+    game under the shipped shader preset the crown measured hue 92, V 0.50-0.52 against the lawn's hue 74, V 0.61, and
+    r27's azalea tops (51-62% of each template's top, seen from above) hue 80, V 0.72-0.80 - lighter than the lawn, at
+    its hue. Azalea is not biome-tinted: our pack draws it at a fixed yellow-green, luma 103 (0.40), where oak and dark
+    oak are greyscale under the foliage colour (77 and 70) and spruce under the fixed evergreen colour (62). So the
+    crown is now a darker mass: no azalea; a dark oak body; the sunlit patches oak (the lighter tinted leaf) and only
+    within `core` of a spot's centre (19-34% of the top, was 51-62% azalea); the spruce underside and shell as r27.
+    The random draws are r27's, in r27's order: the patches lie where they did and only their kinds change, and the
+    skirt drawn after them is unchanged - the before/after is the colour alone.
+    r29 (critic r35b oak 5/10: "lit crown V 0.30 (hue 93-97, sat 63-65) vs target 0.38-0.45... black-green blobs; raise
+    the lit-face value to ~0.40 by DESATURATING (65 -> ~50) rather than darkening, keep the darker undersides"; lovish's
+    villa reference: foliage hue ~99, sat ~35). Measured on that still (eyes run 40812245168, tree_sampler_a_rts, my
+    HSV): the oak tops' lit faces hue 91, sat 72, V 0.48 against the lawn's hue 80, sat 63, V 0.53-0.56 - the plains
+    foliage colour (#77AB2F, sat 0.73) tints oak and dark oak alike, so no mix of those two can desaturate. The two
+    leaves with their own, greyer colours do: birch (#80A755, sat 0.49; lit in game hue 80, sat 61, V 0.57) and spruce
+    (#619961, sat 0.37; lit hue 107, sat 51, V 0.44), whose hues straddle the target. So only the TOP skin - the faces
+    the RTS camera sees lit - changes: r27's sun patches (whole, `core` 1.7) and its old dark-oak spots become birch,
+    the rest of the top spruce; the sides stay dark oak and the underside spruce. Seen from above (240-oak sweep):
+    birch 67%, spruce 33% (r28: dark oak 63%, oak 29%, spruce 9%); the linear mix of the measured lit colours predicts
+    the tops at hue 86, sat 58, V 0.53 (r28 predicted by the same model: hue 92, sat 70, V 0.48, as measured).
+    No new random draws: positions, skirt and logs stay r28's.
+    r30 (Oct 29, critic r38: "birch vs oak identity: zero at the crown" - r29's oak tops WERE birch leaves): the sun
+    patches and the cool spots back to oak leaves. The pack's r37 leaves and GrassTint's CANOPY now make the tinted
+    oak leaf the darker, cooler crown r29 reached for through birch (plain lane V ~0.26 against the lawn's 0.34), so
+    the oak reads as a dark blue-green mass and the birch as the light, yellow-green one."""
+    top_of = {}
+    for (x, y, z) in t.leaf:
+        top_of[(x, z)] = max(y, top_of.get((x, z), -1))
+    spots = []                                                   # per lobe: its light spots and its dark-oak spots
+    for (cx, cy, cz), r, up, down in lobes:
+        lit = [(cx + rng.uniform(-0.6, 0.6) * r, cz + rng.uniform(-0.6, 0.6) * r) for _ in range(rng.randint(2, 3))]
+        mid = [(cx + rng.uniform(-0.9, 0.9) * r, cz + rng.uniform(-0.9, 0.9) * r) for _ in range(2)]
+        spots.append((lit, mid))
+    kinds = {}
+    for p in t.leaf:
+        x, y, z = p
+        k = min(range(len(lobes)), key=lambda i: ((x - lobes[i][0][0]) ** 2 + (z - lobes[i][0][2]) ** 2) / lobes[i][1] ** 2
+                + ((y - lobes[i][0][1]) / max(lobes[i][2], 1)) ** 2)
+        (cx, cy, cz), r, up, down = lobes[k]
+        lit, mid = spots[k]
+        under = (x, y + 1, z) in t.leaf and (x, y + 2, z) in t.leaf
+        bottom = (x, y - 1, z) not in t.leaf and y <= cy + 0.5
+        kinds[p] = body
+        if under and rng.random() < 0.6:
+            kinds[p] = dark
+        elif bottom and rng.random() < 0.75:
+            kinds[p] = dark
+        elif top_of[(x, z)] == y and any(math.hypot(x - sx, z - sz) < 1.7 for sx, sz in lit) and rng.random() < 0.85:
+            # r27's lit patch (it was all azalea): its inner cells take the lighter leaf, its rim the top's skin
+            kinds[p] = light if any(math.hypot(x - sx, z - sz) < core for sx, sz in lit) else skin
+        elif any(math.hypot(x - sx, z - sz) < 1.5 for sx, sz in mid) and rng.random() < 0.6:
+            if top_of[(x, z)] == y:
+                kinds[p] = cool  # r29: r27's dark-oak patches, on the top: cool spruce patches in the lit skin
+        elif top_of[(x, z)] == y:
+            kinds[p] = skin     # r29: the rest of the top - the lit faces the RTS camera sees - takes the skin leaf
+    t.kinds = kinds
+
+
+OAK_FORMS = ("spread", "twin", "tall")
+
+
+def oak(seed, old=False, form="spread"):
+    """r27 oak pilot (lovish Oct 28: "one reference, an oak pilot to 7/10, then the maps place our own trees"). The
+    reference: his giant mossy oak (Oct 14 batch 3, #10) - a broad sunlit crown of a few HEAVY separate masses on big
+    limbs, a flared foot, flowers at the base - at map-tree size (12-13 high, so a reclaim lane, never a canopy).
+    Fixes the r33 critic (3/10: "vanilla-shaped blobs, flat-shaded leaf cubes, a grey-blue log that reads as
+    stone/ice, opaque canopies"):
+      - the crown is 4-6 LOBES (lobe(): lumpy domes) on limbs that fork from a visible trunk, at different heights and
+        reaches, the crown's weight thrown to one side; gaps of 1-2 blocks between some lobes let light through to
+        the limbs and the ground;
+      - the foot flares and tapers (old: a 2x2 core that SPLITS into two leaders) - never a box column;
+      - bark is dark oak: the measured grey-blue trunk was oak bark (sat 0.34) in the crown's shade under the
+        shader's sky ambient (hue 199, sat 0.19 at noon; hue 25 at dusk); dark oak bark (sat 0.49) should keep its
+        brown there - to be measured in game;
+      - three leaf tones per lobe (oak_tones; r28: darker than the lawn, no azalea).
+    form: "spread" (one heavy reaching limb, two side limbs, a raised leader), "twin" (two stems from a low fork, a
+    gap of sky between the heads), "tall" (a taller trunk, lobes spiralling up it)."""
     rng = random.Random(seed)
-    t = Tree("oak_log", "oak_leaves")
-    h = rng.randint(5, 6) + (1 if old else 0)
-    lean = (rng.choice((-1, 0, 1)), rng.choice((-1, 0, 1)))
-    if old:                                                      # 2x2 at the foot, stepping in: 4, then 2 above
-        # round 8 (eyes 39566783481: the stepped 2x2 foot read as loose cut blocks): the four logs rise together
-        for dx, dz, top_y in ((0, 0, 3), (1, 0, 3), (0, 1, 3), (1, 1, 3)):
-            t.line((C + dx, 0, C + dz), (C + dx, top_y, C + dz))
-        # (round 5: the four buttress roots read as a brown cross of cut logs on the ground from the RTS camera)
-    top = t.line((C, 0, C), (C + lean[0], h, C + lean[1]))
+    t = Tree("dark_oak_log", "oak_leaves")
+    lobes = []
+    lean_a = rng.uniform(0, 2 * math.pi)
+
+    def line(a, b):
+        return t.line(a, b, faces=True)                           # every wood block face-joined to the last
+
+    def reach_to(a, ang, reach, r, y):
+        """The point reach blocks from a along ang at height y, pulled in so a lobe of radius r stays in the box."""
+        lim = 6.5 - 1.15 * r
+        x = max(C - lim, min(C + lim, a[0] + reach * math.cos(ang)))
+        z = max(C - lim, min(C + lim, a[2] + reach * math.sin(ang)))
+        return (round(x), y, round(z))
+
+    def limb(a, end, knee=0.55):
+        """A limb from a to end: out and a little up to a knee, then on and up - a bough that climbs as it reaches."""
+        kx, kz = a[0] + (end[0] - a[0]) * knee, a[2] + (end[2] - a[2]) * knee
+        e = line(a, (round(kx), a[1] + max(1, (end[1] - a[1]) // 3), round(kz)))
+        return line(e, end)
+
+    def add_lobe(end, r, up, down, lift=1.0, sat=None):
+        line(end, (end[0], end[1] + int(lift), end[2]))            # the limb climbs into its lobe (leaves <= 6 away)
+        c = (end[0] + rng.uniform(-0.3, 0.3), end[1] + lift, end[2] + rng.uniform(-0.3, 0.3))
+        lobe(t, c, r, up, down, rng)
+        lobes.append((c, r, up, down))
+        if sat is not None:
+            # a satellite: a twig on past the lobe's edge, out to one side and a block lower, carrying a small lobe of
+            # its own - the crown's edge breaks into a separate mass instead of one round rim
+            sa = sat + rng.choice((1, -1)) * rng.uniform(0.5, 0.9)
+            rs = rng.uniform(1.2, 1.4)
+            tip = reach_to(end, sa, r + 0.6, rs, end[1] - 1)
+            if tip != (end[0], end[1] - 1, end[2]):
+                line(end, tip)
+                c = (tip[0], tip[1] + 0.5, tip[2])
+                lobe(t, c, rs, 1.0, 0.6, rng, ragged=0.3)
+                lobes.append((c, rs, 1.0, 0.6))
+
+    # ---- the foot: flared and tapering (r33: the old oak's 2x2 column read as a stone pillar)
+    back = min(((1, 0), (-1, 0), (0, 1), (0, -1)), key=lambda d: d[0] * math.cos(lean_a) + d[1] * math.sin(lean_a))
     if old:
-        roots(t, rng, 3)
+        # a 2x2 core only 2 high under a light flare; two of its diagonal columns climb on as the two leaders, so the
+        # old trunk reads as a V splitting off a stump, not a box (first r27 pass: a 3-high core read as a stump block)
+        core = ((0, 0), (1, 0), (0, 1), (1, 1))
+        for dx, dz in core:
+            line((C + dx, 0, C + dz), (C + dx, 1, C + dz))
+        ring = [(-1, 0), (-1, 1), (2, 0), (2, 1), (0, -1), (1, -1), (0, 2), (1, 2)]
+        for dx, dz in rng.sample(ring, 3):
+            t.put_log((C + dx, 0, C + dz), "w")
     else:
-        # round 7: roots reaching 2-3 blocks from 2 high read as loose rubble cubes - short, low, touching the trunk
-        claw_roots(t, rng, rng.randint(3, 4), top=1, reach=rng.uniform(1.4, 1.8))
-    n = rng.randint(3, 4)
-    for k in range(n):
-        ang = k * 2 * math.pi / n + rng.uniform(-0.4, 0.4)
-        reach = rng.uniform(1.8, 2.3)                            # r20: 11-13 wide read as a tabletop - narrower
-        start = (top[0], top[1] - k % 2 - 1, top[2])               # limbs leave at two heights, not one knot
-        end = (round(start[0] + reach * math.cos(ang)), start[1] + rng.randint(2, 3),
-               round(start[2] + reach * math.sin(ang)))
-        e = t.line(start, (end[0], start[1] + 1, end[2]))       # limbs climb as they reach out
-        e = t.line(e, end)
-        # round 5: a pad on the elbow too - with pads only on the twig tips the crown read skeletal (logs between)
-        t.clump((e[0], e[1] + 0.3, e[2]), 1.4, 0.8, 1.4, rng, 0.1, dome=0.75)
-        for side in (-0.7, 0.7):                                 # the limb forks: two twigs, a clump each
-            a2 = ang + side
-            tw = (round(e[0] + 1.2 * math.cos(a2)), e[1] + 1, round(e[2] + 1.2 * math.sin(a2)))
-            t.line(e, tw)                                        # (a skipped twig left its clump > 6 from wood)
-            # pads of different proportions and heights, not one "+" stamp repeated (round 3 review)
-            # round 6 (lovish's custom-oak and world-tree references): PADS - wide, flat-bottomed, at staggered heights,
-            # so the crown reads in layers with a shadowed underside and sky between the layers, not one leaf mass
-            # round 7 (review: pads 1 block apart left square holes - a waffle from above): layers overlap
-            lift = rng.choice((0.3, 0.9, 1.5))
-            if lift > 1:                                         # the twig climbs into a raised pad (leaves > 6 decay)
-                t.line(tw, (tw[0], tw[1] + int(lift), tw[2]))
-            t.clump((tw[0] + rng.uniform(-0.4, 0.4), tw[1] + lift, tw[2] + rng.uniform(-0.4, 0.4)),
-                    rng.uniform(1.3, 1.9), rng.uniform(0.8, 1.0), rng.uniform(1.3, 1.9), rng, 0.16, dome=0.75)
-    t.line(top, (top[0], top[1] + 3, top[2]))
-    t.clump((top[0], top[1] + 3.2, top[2]), 1.8, 1.1, 1.8, rng, 0.1, dome=0.7)
-    t.clump((top[0], top[1] + 4.3, top[2]), 1.3, 0.9, 1.3, rng, 0.05, dome=0.2)   # round 8: a crown that domes, not
-                                                                                # a flat plateau
-    t.clump((top[0], top[1] + 1.8, top[2]), 2.6, 1.2, 2.6, rng, 0.05, dome=0.5)   # the core under the top pad: no sky
-                                                                                # through the middle of the crown
-    t.round_out(rng)
-    # r18 (eyes 39585147283: dark_oak_leaves read the same as oak under the shader - same tint, near-same texture):
-    # spruce leaves, a fixed dark blue-green, for the rim and the shaded cells
-    shade(t, rng, "spruce_leaves", rim=(top[0], top[2], 3.0))   # r16: the canopy had zero value contrast with the grass (106 v 106)
+        sides = [back] + rng.sample([d for d in ((1, 0), (-1, 0), (0, 1), (0, -1)) if d != back], 2)
+        for dx, dz in sides:
+            t.put_log((C + dx, 0, C + dz), "w")
+        t.put_log((C + back[0], 1, C + back[1]), "w")            # the buttress on the side the trunk leans from
+
+    if form == "twin":
+        # two stems from a low fork (old: two of the 2x2 core's columns climb on, each its own way), a gap of sky
+        # between the two heads, each stem with a lower side limb
+        a1 = lean_a
+        sign = rng.choice((1, -1))
+        a2 = a1 + sign * rng.uniform(2.4, 2.9)
+        roots_ = ((C, 1, C), (C + 1, 1, C + 1)) if old else ((C, 1, C), (C, 1, C))
+        if not old:
+            line((C, 0, C), (C, 1, C))
+        for i, (a, ang) in enumerate(((roots_[0], a1), (roots_[1], a2))):
+            r = rng.uniform(2.0, 2.2) if i == 0 else rng.uniform(1.8, 2.0)
+            top = reach_to(a, ang, rng.uniform(3.0, 3.4) if i == 0 else rng.uniform(2.5, 2.9), r,
+                           rng.randint(7, 8) if i == 0 else rng.randint(6, 7))
+            mid = (round(a[0] + (top[0] - a[0]) * 0.4), a[1] + 2, round(a[2] + (top[2] - a[2]) * 0.4))
+            m = line(a, mid)
+            line(m, top)
+            add_lobe(top, r, rng.uniform(1.5, 1.8), rng.uniform(0.9, 1.1), sat=ang)
+            # the side limb: lower, shorter, its own lobe - on the far side from the other stem, so the crotch between
+            # the two stems stays open (first r27 pass: a side lobe in the crotch hid the high stem - a floating head)
+            sa = ang + (-sign if i == 0 else sign) * rng.uniform(1.0, 1.4)
+            rs = rng.uniform(1.5, 1.7)
+            side_from = (m[0], m[1] + 1, m[2])
+            if side_from in t.logs:
+                end = reach_to(side_from, sa, rng.uniform(2.8, 3.3), rs, side_from[1] + 1)
+                limb(side_from, end)
+                add_lobe(end, rs, 1.3, 0.8, lift=0.6)
+    elif form == "tall":
+        h = rng.randint(9, 10)
+        mid = line((C, 0, C) if not old else (C, 1, C), (C + round(0.9 * math.cos(lean_a)), 4,
+                                                            C + round(0.9 * math.sin(lean_a))))
+        top = line(mid, (mid[0], h, mid[2]))
+        ang = lean_a + rng.uniform(-0.5, 0.5)
+        for k, (y0, reach, r) in enumerate(((3, 3.8, 1.9), (5, 3.4, 1.8), (7, 2.8, 1.6))):
+            ang += rng.choice((1, -1)) * rng.uniform(2.0, 2.6) if k else 0
+            a = (mid[0], y0, mid[2]) if y0 <= 4 else (top[0], y0, top[2])
+            if a not in t.logs:
+                continue
+            end = reach_to(a, ang, reach, r, y0 + 2)
+            limb(a, end)
+            add_lobe(end, r, rng.uniform(1.4, 1.7), rng.uniform(0.8, 1.0), lift=0.8, sat=ang if k == 0 else None)
+        add_lobe(top, rng.uniform(1.8, 2.0), rng.uniform(1.5, 1.8), rng.uniform(0.9, 1.1))
+    else:                                                          # spread
+        f = rng.randint(3, 4) + (1 if old else 0)
+        fork = line((C, 0, C) if not old else (C, 1, C),
+                      (C + round(0.8 * math.cos(lean_a)), f, C + round(0.8 * math.sin(lean_a))))
+        # the heavy limb: furthest, lowest - the crown's weight thrown to the lean's side
+        r = rng.uniform(1.9, 2.1)
+        a = (fork[0], f - 1, fork[2]) if (fork[0], f - 1, fork[2]) in t.logs else fork
+        ang0 = lean_a + rng.uniform(-0.3, 0.3)
+        end = reach_to(a, ang0, 4.8, r, f + 2)
+        limb(a, end)
+        add_lobe(end, r, rng.uniform(1.5, 1.8), rng.uniform(0.9, 1.1), sat=ang0)
+        for s in (1, -1):                                          # two side limbs, higher and shorter, wide apart
+            r = rng.uniform(1.7, 1.9)
+            ang = lean_a + s * rng.uniform(2.2, 2.6)
+            end = reach_to(fork, ang, rng.uniform(3.8, 4.2), r, f + rng.randint(3, 4))
+            limb(fork, end)
+            add_lobe(end, r, rng.uniform(1.4, 1.7), rng.uniform(0.8, 1.0), sat=ang if rng.random() < 0.5 else None)
+        r = rng.uniform(1.7, 1.9)                                  # the leader: back over the trunk, the crown's top
+        end = reach_to(fork, lean_a + math.pi + rng.uniform(-0.6, 0.6), rng.uniform(1.0, 1.4), r, f + rng.randint(5, 6))
+        line(fork, end)
+        add_lobe(end, r, rng.uniform(1.5, 1.8), rng.uniform(0.9, 1.0))
+    t.round_out(rng, chance=0.5)
+    if OAK_TONES:
+        oak_tones(t, rng, lobes)
     skirt(t, rng, 3.0)
+    t.lobes = lobes
     return t
 
 
@@ -1065,7 +1255,7 @@ def main():
         for v in range(VARIANTS):
             seed = 1000 + 17 * v + 101 * list(SPECIES).index(name)
             tree = fn(seed, (8, 10, 12, 9)[v]) if name == "spruce" else \
-                fn(seed, old=(v == 3)) if name == "oak" else \
+                fn(seed, old=(v == 3), form=("spread", "twin", "tall", "twin")[v]) if name == "oak" else \
                 fn(seed, ("straight", "fork", "lean", "straight")[v]) if name == "birch" else fn(seed)
             s = Structure(SIZE, H, SIZE)
             dropped = tree.write(s)
@@ -1088,6 +1278,8 @@ def main():
             shifted.plants = {(x, y + 1, z): b for (x, y, z), b in tree.plants.items()}
             if hasattr(tree, "second"):
                 shifted.second = (tree.second[0], {(x, y + 1, z) for (x, y, z) in tree.second[1]})
+            if hasattr(tree, "kinds"):
+                shifted.kinds = {(x, y + 1, z): b for (x, y, z), b in tree.kinds.items()}
             _write_clipped(s, shifted, ox, oz)
         s.write(os.path.join(OUT, "tree_sampler_%s.nbt" % label))
     # ground scatter: one .nbt per piece (7 x 4 x 7 footprint, the piece centred) and a sampler with all of them
@@ -1171,6 +1363,8 @@ def _write_piece(s, piece, ox, oz, lift=0):
     shifted.plants = {(x, y + lift, z): b for (x, y, z), b in piece.plants.items()}
     if hasattr(piece, "second"):
         shifted.second = (piece.second[0], {(x, y + lift, z) for (x, y, z) in piece.second[1]})
+    if hasattr(piece, "kinds"):
+        shifted.kinds = {(x, y + lift, z): b for (x, y, z), b in piece.kinds.items()}
     _write_clipped(s, shifted, ox, oz)
 
 
@@ -1187,5 +1381,22 @@ def _write_clipped(s, tree, ox, oz):
     H = old
 
 
+# Maps spec M6: the templates the pre-made maps plant (maps/TreeScatter.Kind) ship in the jar under
+# data/reignofnether/structures/trees/; design/trees stays the art lane's working set (samplers, bare and dead trees
+# waiting for their review). test_gen_trees_shipped.py holds the two copies byte-equal.
+SHIPPED = ("oak", "birch", "spruce", "pine", "acacia", "bush", "boulder")
+SHIPPED_VARIANTS = 4
+SHIP_DIR = os.path.join(ROOT, "bar", "src", "main", "resources", "data", "reignofnether", "structures", "trees")
+
+
+def ship():
+    os.makedirs(SHIP_DIR, exist_ok=True)
+    for name in SHIPPED:
+        for v in range(1, SHIPPED_VARIANTS + 1):
+            f = "%s_%d.nbt" % (name, v)
+            shutil.copyfile(os.path.join(OUT, f), os.path.join(SHIP_DIR, f))
+
+
 if __name__ == "__main__":
     main()
+    ship()

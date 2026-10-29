@@ -153,7 +153,7 @@ public final class EyesDirector {
                     s.team = 0;
                     s.arena = 0;
                     s.metal = 1;
-                    s.map = 0;
+                    s.map = mapId();   // 0, the world's own terrain, unless the run asked for a pre-made map
                     s.seed = EYES_SEED;          // the same world every run, so stills compare run to run (eyes_diff.py)
                     // the start-position phase runs (01b-01f photograph its markers); the director places our start
                     // itself, three seconds before the match, so the later scenes see the same seating as before
@@ -232,8 +232,47 @@ public final class EyesDirector {
                 }
             }
             case 5 -> {   // the first tour ended here; the staged scenes follow
-                if (ticks > 20 * 2)
+                if (MAP.isEmpty()) {
+                    if (ticks > 20 * 2)
+                        next();
+                    return;
+                }
+                // a map run (eyes.yml input `map`, maps spec M6): the planted tree nearest our start, at the default
+                // RTS zoom and close, before the staged scenes
+                if (ticks == 20 * 2) {
+                    // the forests stand away from the starts, under the fog of war: the first map runs framed them
+                    // black. Fog off on both sides for these two stills (the server's filter would hold the trees'
+                    // chunks back otherwise), back on after
+                    fogWasOn = com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isEnabled();
+                    if (fogWasOn) {
+                        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(false);
+                        var srv = mc.getSingleplayerServer();
+                        if (srv != null)
+                            srv.execute(() -> com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false));
+                    }
+                    BlockPos t = nearestPlantedTree(mc);
+                    if (t != null)
+                        OrthoviewClientEvents.centreCameraOnPosInstant(net.minecraft.world.phys.Vec3.atCenterOf(t));
+                    ReignOfNether.LOGGER.info("[Eyes] 05m_forest: {} trees planted on {}, nearest {}",
+                        com.solegendary.reignofnether.maps.MapBuilder.lastPlanted.size(), MAP, t);
+                } else if (ticks == 20 * 14) {   // the fogged chunks stream in after the fog lifts (7 s left holes, shader lane)
+                    shot(mc, "05m_forest_rts");
+                    OrthoviewClientEvents.zoomCam(-1000);   // all the way in
+                } else if (ticks == 20 * 18) {
+                    shot(mc, "05n_forest_rts_close");
+                    OrthoviewClientEvents.zoomCam(1000);
+                    OrthoviewClientEvents.zoomCam(-1000);
+                    OrthoviewClientEvents.zoomCam(40);      // back to a middle zoom, as case 3 leaves it
+                } else if (ticks > 20 * 20) {
+                    if (fogWasOn) {
+                        com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(true);
+                        var srv = mc.getSingleplayerServer();
+                        if (srv != null)
+                            srv.execute(() -> com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(true));
+                        fogWasOn = false;
+                    }
                     next();
+                }
             }
             case 6, 7, 8, 9, 10, 11, 12, 13 -> staged(mc);
             case 14 -> firstPerson(mc);
@@ -889,6 +928,37 @@ public final class EyesDirector {
     // lane's client runs 4-6 ticks a second (see CUES).
     static final int STEP_STRUCTURES = 20;
     static final List<String> STRUCTURES = parseStructures(System.getProperty("bat.eyes.structures", ""));
+    /** -Dbat.eyes.map=VERDANT_VALLEY (eyes.yml input `map`): play that pre-made map instead of the world's own terrain. */
+    static final String MAP = System.getProperty("bat.eyes.map", "");
+    private static boolean fogWasOn = false;   // the map run's forest stills turned the fog off
+
+    /** The SkirmishSetupScreen map id for MAP, or 0 (the world's own terrain, the tour's old map) if unset or unknown. */
+    static int mapId() {
+        for (com.solegendary.reignofnether.maps.MapPreset p : com.solegendary.reignofnether.maps.MapPreset.values())
+            if (p.name().equalsIgnoreCase(MAP))
+                return p.ordinal();
+        return 0;
+    }
+
+    /**
+     * The tree MapBuilder planted nearest our player (the integrated server's list) that we can see - the first map run
+     * framed one under the fog of war, a black still - else the nearest at all, or null.
+     */
+    private static BlockPos nearestPlantedTree(Minecraft mc) {
+        if (mc.player == null)
+            return null;
+        BlockPos best = null;
+        double bd = Double.MAX_VALUE;
+        for (BlockPos t : com.solegendary.reignofnether.maps.MapBuilder.lastPlanted) {
+            boolean seen = com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isBlockVisible(t.getX(), t.getZ());
+            double d = t.distToCenterSqr(mc.player.getX(), t.getY(), mc.player.getZ()) + (seen ? 0 : 1e9);
+            if (d < bd) {
+                bd = d;
+                best = t;
+            }
+        }
+        return best;
+    }
     private static int structureIndex = 0;
     private static int structurePhase = 0;
     private static long phaseNanos = 0;
