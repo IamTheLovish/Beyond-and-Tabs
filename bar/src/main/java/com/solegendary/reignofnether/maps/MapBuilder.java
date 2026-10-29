@@ -50,6 +50,8 @@ public final class MapBuilder {
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
     /** Share of forest columns that grow a tree (sparse: reclaim lanes you can see through) - TreeScatter.DENSITY (M6). */
     static final double TREE_DENSITY = TreeScatter.DENSITY;
+    /** The trunks the last build planted (M6): the eyes rig's map run frames the one nearest its start. */
+    public static volatile List<BlockPos> lastPlanted = List.of();
 
     /** The blocks one map is made of. */
     public record Palette(BlockState top, BlockState grass, BlockState sand, BlockState sub, BlockState deep,
@@ -559,6 +561,7 @@ public final class MapBuilder {
         int grown = 0;
         long t0 = System.nanoTime();
         int blocks = 0, vanilla = 0;
+        List<BlockPos> planted = new ArrayList<>();
         if (j.pal.tree() != null) {
             // M6: our own templates where TreeScatter plans them - natural, roughly fair (each side its own woods,
             // its wood within ~15% of the others'); vanilla's tree only where a template can't be read
@@ -573,13 +576,16 @@ public final class MapBuilder {
                         level.getChunkSource().getGenerator(), level.getRandom(), new BlockPos(x, g + 1, z))) {
                     vanilla++;
                     grown++;
+                    planted.add(new BlockPos(x, g + 1, z));
                 } else if (n >= 0) {
                     blocks += n;
                     grown++;
+                    planted.add(new BlockPos(x, g + 1, z));
                 }
             }
         }
         long treeMs = (System.nanoTime() - t0) / 1_000_000;
+        lastPlanted = List.copyOf(planted);
         // desert scatter: cacti and dead bushes (StartAreaClearing clears them off the bases)
         for (int i = 0; i < j.decor.size(); i++) {
             BlockPos d = j.decor.get(i);
