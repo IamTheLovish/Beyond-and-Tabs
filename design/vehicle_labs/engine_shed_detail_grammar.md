@@ -426,3 +426,12 @@ An industrial complex from the RTS angle (AI-generated): the Brassworks T3/T4 sc
 3. **Pipes on the ground** radiating out to the plot edge and the yard: they tie the building into the map.
 4. A raised plinth with a trimmed edge frames the whole compound.
 For T1: one round banded stack (not square), rooftop vents on the shed, one pipe run to the yard.
+
+## (r) ref58 - lovish, Oct 28 22:53: "can we get the game to look like this" (ref58_villa_shaders_golden_hour.png)
+A Mediterranean villa on a terraced cliff, rendered with shaders at golden hour. Roughly half rendering, half building:
+- Rendering: warm low sun, soft long shadows, ambient occlusion in every recess, distance haze, water reflections -
+  Complementary + our LabPBR pack already do this (eyes `shaders=true`). Our building photos have been judged
+  PLAIN, flat noon light - so we have been judging the hardest possible view. From r8 on, shoot plain AND shaders.
+- Building: terracotta roofs with thick eaves, pale plaster on a stone base, arches and loggias, terraces and
+  stairs stepping down the slope, vines and plants growing ON the building, a pool. Nature integrated with the
+  architecture is a big part of why it reads real.
