@@ -191,8 +191,13 @@ public final class MistPass {
         if (offsetU != null) offsetU.set((float) offX, 0f, (float) offZ);
         if (windU != null) windU.set((float) wx, (float) wz);
         set(timeU, (float) (seconds % 2048.0));
-        if (litU != null) litU.set(c[0], c[1], c[2]);
-        if (deepU != null) deepU.set(c[0] * 0.56f, c[1] * 0.63f, c[2] * 0.76f);
+        // the mist scatters the sky's own light: its top takes a share of the sky colour (rose-gold at dawn, blue by
+        // day), its core stays the cool, dim body - so dawn mist glows instead of reading as grey paint
+        float[] sky = com.solegendary.reignofnether.postfx.WorldLookPass.skyFog();
+        float lr = Math.min(0.97f, c[0] * 0.65f + sky[0] * 0.4f), lg = Math.min(0.97f, c[1] * 0.65f + sky[1] * 0.4f),
+            lb = Math.min(0.97f, c[2] * 0.65f + sky[2] * 0.4f);
+        if (litU != null) litU.set(lr, lg, lb);
+        if (deepU != null) deepU.set(c[0] * 0.52f, c[1] * 0.6f, c[2] * 0.76f);
         set(fogMaxU, (float) MistMath.FOG_UNEXPLORED);
         set(maxCoverU, (float) MistMath.MAX_COVER);
         updateVis(cam);
