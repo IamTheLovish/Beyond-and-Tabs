@@ -1,0 +1,197 @@
+[06:41:30] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[06:41:32] [main/WARN]: Error loading class: vectorwing/farmersdelight/common/block/TomatoVineBlock (java.lang.ClassNotFoundException: vectorwing.farmersdelight.common.block.TomatoVineBlock)
+[06:41:32] [main/WARN]: Error loading class: net/raphimc/immediatelyfast/feature/map_atlas_generation/MapAtlasTexture (java.lang.ClassNotFoundException: net.raphimc.immediatelyfast.feature.map_atlas_generation.MapAtlasTexture)
+[06:41:32] [main/WARN]: Error loading class: mekanism/client/render/entity/RenderFlame (java.lang.ClassNotFoundException: mekanism.client.render.entity.RenderFlame)
+[06:41:32] [main/WARN]: Error loading class: mekanism/client/render/armor/MekaSuitArmor (java.lang.ClassNotFoundException: mekanism.client.render.armor.MekaSuitArmor)
+[06:41:40] [Render thread/ERROR]: Failed to verify authentication
+com.mojang.authlib.exceptions.InvalidCredentialsException: Status: 401
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+Caused by: com.mojang.authlib.exceptions.MinecraftClientHttpException: Status: 401
+[06:41:41] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[06:41:49] [Worker-Main-1/ERROR]: Failed to retrieve profile key pair
+java.io.IOException: Could not retrieve profile key pair
+[06:41:57] [Worker-ResourceReload-1/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[06:42:03] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+java.lang.IllegalStateException: Failed to open OpenAL device
+[06:42:05] [Realms Notification Availability checker #1/INFO]: Could not authorize you against Realms server: javax.ws.rs.BadRequestException: Invalid session
+[06:42:34] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:43:04] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:43:34] [Render thread/INFO]: [Eyes] step 0 screen net.mehvahdjukaar.supplementaries.client.screens.WelcomeMessageScreen level false
+[06:43:34] [Render thread/INFO]: [Eyes] clip-mark 00_unexpected_screen 1793256214611
+[06:43:34] [IO-Worker-2/INFO]: [Eyes] 00_unexpected_screen: Saved screenshot as bat_eyes_00_unexpected_screen.png
+[06:43:38] [Render thread/INFO]: [Eyes] clip-mark 01_title 1793256218737
+[06:43:38] [Render thread/INFO]: [Eyes] resource packs [vanilla, mod_resources, file/BeyondAndTabs-Realistic, Moonlight Mods Dynamic Assets]; block/grass_block_top is 256x256 in the block atlas
+[06:43:39] [IO-Worker-2/INFO]: [Eyes] 01_title: Saved screenshot as bat_eyes_01_title.png
+[06:43:41] [Render thread/ERROR]: Parsing error loading custom advancement supplementaries:recipes/planter_rich: Unknown item id 'farmersdelight:rich_soil'
+[06:43:56] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/blockview/v2/FabricBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.blockview.v2.FabricBlockView)
+[06:43:56] [Render thread/WARN]: Error loading class: net/fabricmc/fabric/api/rendering/data/v1/RenderAttachedBlockView (java.lang.ClassNotFoundException: net.fabricmc.fabric.api.rendering.data.v1.RenderAttachedBlockView)
+[06:44:12] [Render thread/INFO]: [Eyes] 01b_start_boxes: the start phase is on with 119 s left (client tick 285, camera at [-221, 88, -3]); our slot -213, -10; a bot's start 227, -10; markers: 2 boxes, 1 frames drawn; team 0 (mine) fill built (33959 columns, 1871 quads), 370 perimeter heights known; team 1 fill none (0 columns, 0 quads), 52 perimeter heights known, rebuild pending
+[06:44:15] [Render thread/INFO]: [Eyes] 01b_start_boxes_z36: 115 s left, zoom 36.0, camera at [-220, 88, -3]; markers: 2 boxes, 10 frames drawn; team 0 (mine) fill built (33959 columns, 1871 quads), 370 perimeter heights known; team 1 fill built (916 columns, 161 quads), 52 perimeter heights known
+[06:44:15] [Render thread/INFO]: [Eyes] clip-mark 01b_start_boxes_z36 1793256255027
+[06:44:15] [IO-Worker-11/INFO]: [Eyes] 01b_start_boxes_z36: Saved screenshot as bat_eyes_01b_start_boxes_z36.png
+[06:44:17] [Render thread/INFO]: [Eyes] 01c_start_boxes_z60: 113 s left, zoom 60.0, camera at [-218, 88, -5]; markers: 2 boxes, 19 frames drawn; team 0 (mine) fill built (35844 columns, 1984 quads), 404 perimeter heights known; team 1 fill built (916 columns, 161 quads), 52 perimeter heights known
+[06:44:17] [Render thread/INFO]: [Eyes] clip-mark 01c_start_boxes_z60 1793256257135
+[06:44:17] [IO-Worker-4/INFO]: [Eyes] 01c_start_boxes_z60: Saved screenshot as bat_eyes_01c_start_boxes_z60.png
+[06:44:19] [Render thread/INFO]: [Eyes] 01d_start_boxes_z100: 111 s left, zoom 100.0, camera at [-217, 88, -6]; markers: 2 boxes, 28 frames drawn; team 0 (mine) fill built (36896 columns, 2026 quads), 452 perimeter heights known; team 1 fill built (916 columns, 161 quads), 52 perimeter heights known
+[06:44:19] [Render thread/INFO]: [Eyes] clip-mark 01d_start_boxes_z100 1793256259077
+[06:44:19] [IO-Worker-11/INFO]: [Eyes] 01d_start_boxes_z100: Saved screenshot as bat_eyes_01d_start_boxes_z100.png
+[06:44:23] [Render thread/INFO]: [Eyes] 01f: eye at [227, 70, 10] y 71 looking at the start 227, -10 (20 blocks away; ground there 70); 107 s left; markers: 2 boxes, 57 frames drawn; team 0 (mine) fill none (0 columns, 0 quads), 0 perimeter heights known, rebuild pending; team 1 fill built (34039 columns, 2060 quads), 489 perimeter heights known, rebuild pending
+[06:44:23] [Render thread/INFO]: [Eyes] clip-mark 01f_start_boxes_ground 1793256263706
+[06:44:23] [Render thread/INFO]: [Eyes] step 1 screen none level true
+[06:44:24] [IO-Worker-2/INFO]: [Eyes] 01f_start_boxes_ground: Saved screenshot as bat_eyes_01f_start_boxes_ground.png
+[06:44:26] [Render thread/INFO]: [Eyes] 01e: start placed at -213, -10 with 104 s left; the phase ends 3 s later
+[06:44:27] [Render thread/INFO]: [Eyes] 01e_start_placed_z36: 103 s left, zoom 36.0, camera at [-220, 89, -3]; markers: 2 boxes, 72 frames drawn; team 0 (mine) fill built (12160 columns, 784 quads), 184 perimeter heights known; team 1 fill built (916 columns, 161 quads), 52 perimeter heights known
+[06:44:27] [Render thread/INFO]: [Eyes] clip-mark 01e_start_placed_z36 1793256267522
+[06:44:27] [IO-Worker-9/INFO]: [Eyes] 01e_start_placed_z36: Saved screenshot as bat_eyes_01e_start_placed_z36.png
+[06:44:29] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:44:29] [Render thread/INFO]: [Eyes] chat kept off the frames: Enabled fog of war for all players
+[06:44:29] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:44:56] [Render thread/INFO]: [Eyes] step 1 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:44:59] [Render thread/INFO]: [Eyes] clip-mark 02_rts_default 1793256299507
+[06:44:59] [Server thread/INFO]: [Eyes] ground 0:30 round [-221, -3]: {minecraft:blue_stained_glass=16, minecraft:calcite=2, minecraft:coal_ore=6, minecraft:diorite_wall=6, minecraft:grass_block=2159, minecraft:lantern=12, minecraft:lapis_block=19, minecraft:moss_block=3, minecraft:polished_andesite_stairs=20, minecraft:polished_diorite=17, minecraft:quartz_bricks=16, minecraft:quartz_pillar=8, minecraft:raw_iron_block=14, minecraft:smooth_quartz=50, minecraft:smooth_quartz_stairs=45, minecraft:stone_brick_stairs=8}
+[06:44:59] [Render thread/INFO]: [Eyes] clip-mark 02b_rts_default_look_off 1793256299813
+[06:44:59] [Render thread/INFO]: [Eyes] 15 structures: ambient life off for the structure photos
+[06:44:59] [Render thread/INFO]: [Eyes] 15 structures: site axis (1, -1) from the capitol -212, 79, -9 (the wall's ring round 8, -10, radius 280: a 64-wide pad here keeps 49 blocks from it)
+[06:44:59] [Render thread/INFO]: [Eyes] 15_meadow_sampler: fog of war off for the structure photos
+[06:44:59] [Server thread/INFO]: [Eyes] 15 structures: fog of war off, day time 6000 (noon)
+[06:44:59] [Server thread/INFO]: [Eyes] 15_meadow_sampler: pad x -199..-136, z -86..-23 keeps 59.8 blocks from the arena wall's ring (centre 8, -10, radius 280)
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: Disabled fog of war for all players
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [IO-Worker-5/INFO]: [Eyes] 02_rts_default: Saved screenshot as bat_eyes_02_rts_default.png
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [IO-Worker-9/INFO]: [Eyes] 02b_rts_default_look_off: Saved screenshot as bat_eyes_02b_rts_default_look_off.png
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: Dawn breaks
+[06:45:00] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:00] [Render thread/INFO]: [Eyes] 15_meadow_sampler: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/meadow_sampler.nbt' 48x18x48 placed at -191, 71, -78 (pad centre -167, 71, -54)
+[06:45:05] [Render thread/INFO]: [Eyes] 15_meadow_sampler_rts: aimed at -167, 76, -54 - the camera at -172, 91, -49 looks at -167, -54 (27 frames, 5.1 s in the phase)
+[06:45:05] [Render thread/INFO]: [Eyes] 15_meadow_sampler_rts: the structure's box holds 4541 non-air blocks on the client
+[06:45:05] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_rts 1793256305581
+[06:45:05] [Server thread/INFO]: [Eyes] 15_meadow_sampler_rts: ... and 4541 on the server
+[06:45:06] [IO-Worker-10/INFO]: [Eyes] 15_meadow_sampler_rts: Saved screenshot as bat_eyes_15_meadow_sampler_rts.png
+[06:45:10] [Render thread/INFO]: [Eyes] 15_meadow_sampler_rts_close: aimed at -167, 76, -54 - the camera at -172, 91, -49 looks at -167, -54 (25 frames, 4.5 s in the phase)
+[06:45:10] [Render thread/INFO]: [Eyes] 15_meadow_sampler_rts_close: the structure's box holds 4541 non-air blocks on the client
+[06:45:10] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_rts_close 1793256310096
+[06:45:10] [Server thread/INFO]: [Eyes] 15_meadow_sampler_rts_close: ... and 4541 on the server
+[06:45:10] [IO-Worker-11/INFO]: [Eyes] 15_meadow_sampler_rts_close: Saved screenshot as bat_eyes_15_meadow_sampler_rts_close.png
+[06:45:15] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_34 1793256315192
+[06:45:15] [Render thread/INFO]: [Eyes] 15_meadow_sampler_close: standing at -170.5, 73.6, -50.5 (direction -1, 1 from the middle), eye 1.62 over the aim, pitch 18 down
+[06:45:15] [IO-Worker-9/INFO]: [Eyes] 15_meadow_sampler_34: Saved screenshot as bat_eyes_15_meadow_sampler_34.png
+[06:45:20] [Render thread/INFO]: [Eyes] 15_meadow_sampler_close: aimed at -167, 72, -54 - the camera at -171, 74, -50 looks at -167, -54 (34 frames, 5.1 s in the phase)
+[06:45:20] [Render thread/INFO]: [Eyes] 15_meadow_sampler_close: the structure's box holds 4541 non-air blocks on the client
+[06:45:20] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_close 1793256320268
+[06:45:20] [Server thread/INFO]: [Eyes] 15_meadow_sampler_close: ... and 4541 on the server
+[06:45:20] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:20] [Render thread/INFO]: [Eyes] chat kept off the frames: Night falls...
+[06:45:20] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:20] [IO-Worker-6/INFO]: [Eyes] 15_meadow_sampler_close: Saved screenshot as bat_eyes_15_meadow_sampler_close.png
+[06:45:24] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_dusk 1793256324640
+[06:45:25] [IO-Worker-6/INFO]: [Eyes] 15_meadow_sampler_dusk: Saved screenshot as bat_eyes_15_meadow_sampler_dusk.png
+[06:45:26] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:45:33] [Render thread/INFO]: [Eyes] 15_meadow_sampler_golden_rts: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (25 frames, 8.9 s in the phase)
+[06:45:33] [Render thread/INFO]: [Eyes] 15_meadow_sampler_golden_rts: the structure's box holds 4541 non-air blocks on the client
+[06:45:33] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_golden_rts 1793256333576
+[06:45:33] [Server thread/INFO]: [Eyes] 15_meadow_sampler_golden_rts: ... and 4541 on the server
+[06:45:34] [IO-Worker-11/INFO]: [Eyes] 15_meadow_sampler_golden_rts: Saved screenshot as bat_eyes_15_meadow_sampler_golden_rts.png
+[06:45:56] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:45:56] [Render thread/INFO]: [Eyes] 15_meadow_sampler_mist_rts: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (71 frames, 23.0 s in the phase)
+[06:45:56] [Render thread/INFO]: [Eyes] 15_meadow_sampler_mist_rts: the structure's box holds 4541 non-air blocks on the client
+[06:45:56] [Render thread/INFO]: [Eyes] 15_meadow_sampler_mist_rts: 0 mist wisps alive, 20.1 s at dawn, density 1.0, mist drawn as a volume
+[06:45:56] [Render thread/INFO]: [Eyes] clip-mark 15_meadow_sampler_mist_rts 1793256356621
+[06:45:56] [Server thread/INFO]: [Eyes] 15_meadow_sampler_mist_rts: ... and 4541 on the server
+[06:45:56] [Server thread/INFO]: [Eyes] 15_ground_after: pad x -203..-132, z -90..-19 keeps 54.6 blocks from the arena wall's ring (centre 8, -10, radius 280)
+[06:45:57] [IO-Worker-6/INFO]: [Eyes] 15_meadow_sampler_mist_rts: Saved screenshot as bat_eyes_15_meadow_sampler_mist_rts.png
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: Disabled fog of war for all players
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: Dawn breaks
+[06:45:57] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:45:57] [Render thread/INFO]: [Eyes] 15_ground_after: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/ground_after.nbt' 56x34x56 placed at -195, 71, -82 (pad centre -167, 71, -54)
+[06:46:02] [Render thread/INFO]: [Eyes] 15_ground_after_rts: aimed at -167, 81, -54 - the camera at -175, 104, -46 looks at -167, -54 (25 frames, 5.3 s in the phase)
+[06:46:02] [Render thread/INFO]: [Eyes] 15_ground_after_rts: the structure's box holds 35234 non-air blocks on the client
+[06:46:02] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_rts 1793256362788
+[06:46:02] [Server thread/INFO]: [Eyes] 15_ground_after_rts: ... and 35234 on the server
+[06:46:03] [IO-Worker-6/INFO]: [Eyes] 15_ground_after_rts: Saved screenshot as bat_eyes_15_ground_after_rts.png
+[06:46:06] [Render thread/INFO]: [Eyes] 15_ground_after_rts_close: aimed at -167, 81, -54 - the camera at -176, 104, -45 looks at -167, -54 (30 frames, 4.1 s in the phase)
+[06:46:06] [Render thread/INFO]: [Eyes] 15_ground_after_rts_close: the structure's box holds 35234 non-air blocks on the client
+[06:46:06] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_rts_close 1793256366893
+[06:46:06] [Server thread/INFO]: [Eyes] 15_ground_after_rts_close: ... and 35234 on the server
+[06:46:07] [IO-Worker-6/INFO]: [Eyes] 15_ground_after_rts_close: Saved screenshot as bat_eyes_15_ground_after_rts_close.png
+[06:46:11] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_34 1793256371992
+[06:46:11] [Render thread/INFO]: [Eyes] 15_ground_after_close: standing at -170.5, 82.6, -50.5 (direction -1, 1 from the middle), eye 1.62 over the aim, pitch 18 down
+[06:46:12] [IO-Worker-10/INFO]: [Eyes] 15_ground_after_34: Saved screenshot as bat_eyes_15_ground_after_34.png
+[06:46:17] [Render thread/INFO]: [Eyes] 15_ground_after_close: aimed at -167, 81, -54 - the camera at -171, 83, -50 looks at -167, -54 (38 frames, 5.1 s in the phase)
+[06:46:17] [Render thread/INFO]: [Eyes] 15_ground_after_close: the structure's box holds 35235 non-air blocks on the client
+[06:46:17] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_close 1793256377104
+[06:46:17] [Server thread/INFO]: [Eyes] 15_ground_after_close: ... and 35235 on the server
+[06:46:17] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:17] [Render thread/INFO]: [Eyes] chat kept off the frames: Night falls...
+[06:46:17] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:17] [IO-Worker-9/INFO]: [Eyes] 15_ground_after_close: Saved screenshot as bat_eyes_15_ground_after_close.png
+[06:46:20] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_dusk 1793256380583
+[06:46:20] [IO-Worker-9/INFO]: [Eyes] 15_ground_after_dusk: Saved screenshot as bat_eyes_15_ground_after_dusk.png
+[06:46:27] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:46:27] [Render thread/INFO]: [Eyes] 15_ground_after_golden_rts: aimed at -167, 81, -54 - the camera at -177, 109, -44 looks at -167, -54 (25 frames, 6.8 s in the phase)
+[06:46:27] [Render thread/INFO]: [Eyes] 15_ground_after_golden_rts: the structure's box holds 35235 non-air blocks on the client
+[06:46:27] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_golden_rts 1793256387360
+[06:46:27] [Server thread/INFO]: [Eyes] 15_ground_after_golden_rts: ... and 35235 on the server
+[06:46:27] [IO-Worker-4/INFO]: [Eyes] 15_ground_after_golden_rts: Saved screenshot as bat_eyes_15_ground_after_golden_rts.png
+[06:46:50] [Render thread/INFO]: [Eyes] 15_ground_after_mist_rts: aimed at -167, 81, -54 - the camera at -177, 109, -44 looks at -167, -54 (89 frames, 23.5 s in the phase)
+[06:46:50] [Render thread/INFO]: [Eyes] 15_ground_after_mist_rts: the structure's box holds 35235 non-air blocks on the client
+[06:46:50] [Render thread/INFO]: [Eyes] 15_ground_after_mist_rts: 0 mist wisps alive, 20.2 s at dawn, density 1.0, mist drawn as a volume
+[06:46:50] [Render thread/INFO]: [Eyes] clip-mark 15_ground_after_mist_rts 1793256410906
+[06:46:50] [Server thread/INFO]: [Eyes] 15_ground_after_mist_rts: ... and 35235 on the server
+[06:46:50] [Server thread/INFO]: [Eyes] 15_tree_sampler_a: pad x -196..-139, z -73..-36 keeps 66.8 blocks from the arena wall's ring (centre 8, -10, radius 280)
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: Disabled fog of war for all players
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:51] [IO-Worker-5/INFO]: [Eyes] 15_ground_after_mist_rts: Saved screenshot as bat_eyes_15_ground_after_mist_rts.png
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: Dawn breaks
+[06:46:51] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:46:51] [Render thread/INFO]: [Eyes] 15_tree_sampler_a: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/tree_sampler_a.nbt' 42x16x22 placed at -188, 71, -65 (pad centre -167, 71, -54)
+[06:46:56] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_rts: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (30 frames, 5.0 s in the phase)
+[06:46:56] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_rts: the structure's box holds 2228 non-air blocks on the client
+[06:46:56] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_rts 1793256416604
+[06:46:56] [Server thread/INFO]: [Eyes] 15_tree_sampler_a_rts: ... and 2228 on the server
+[06:46:57] [IO-Worker-9/INFO]: [Eyes] 15_tree_sampler_a_rts: Saved screenshot as bat_eyes_15_tree_sampler_a_rts.png
+[06:46:57] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:47:00] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_rts_close: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (32 frames, 4.0 s in the phase)
+[06:47:00] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_rts_close: the structure's box holds 2228 non-air blocks on the client
+[06:47:00] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_rts_close 1793256420625
+[06:47:00] [Server thread/INFO]: [Eyes] 15_tree_sampler_a_rts_close: ... and 2228 on the server
+[06:47:01] [IO-Worker-4/INFO]: [Eyes] 15_tree_sampler_a_rts_close: Saved screenshot as bat_eyes_15_tree_sampler_a_rts_close.png
+[06:47:05] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_34 1793256425707
+[06:47:05] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_close: standing at -170.5, 73.6, -50.5 (direction -1, 1 from the middle), eye 1.62 over the aim, pitch 18 down
+[06:47:06] [IO-Worker-5/INFO]: [Eyes] 15_tree_sampler_a_34: Saved screenshot as bat_eyes_15_tree_sampler_a_34.png
+[06:47:10] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_close: aimed at -167, 72, -54 - the camera at -171, 74, -50 looks at -167, -54 (43 frames, 5.1 s in the phase)
+[06:47:10] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_close: the structure's box holds 2228 non-air blocks on the client
+[06:47:10] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_close 1793256430760
+[06:47:10] [Server thread/INFO]: [Eyes] 15_tree_sampler_a_close: ... and 2228 on the server
+[06:47:10] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:47:10] [Render thread/INFO]: [Eyes] chat kept off the frames: Night falls...
+[06:47:10] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:47:11] [IO-Worker-10/INFO]: [Eyes] 15_tree_sampler_a_close: Saved screenshot as bat_eyes_15_tree_sampler_a_close.png
+[06:47:14] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_dusk 1793256434746
+[06:47:15] [IO-Worker-4/INFO]: [Eyes] 15_tree_sampler_a_dusk: Saved screenshot as bat_eyes_15_tree_sampler_a_dusk.png
+[06:47:22] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_golden_rts: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (25 frames, 7.3 s in the phase)
+[06:47:22] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_golden_rts: the structure's box holds 2228 non-air blocks on the client
+[06:47:22] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_golden_rts 1793256442060
+[06:47:22] [Server thread/INFO]: [Eyes] 15_tree_sampler_a_golden_rts: ... and 2228 on the server
+[06:47:22] [IO-Worker-4/INFO]: [Eyes] 15_tree_sampler_a_golden_rts: Saved screenshot as bat_eyes_15_tree_sampler_a_golden_rts.png
+[06:47:27] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[06:47:44] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_mist_rts: aimed at -167, 76, -54 - the camera at -177, 104, -44 looks at -167, -54 (82 frames, 22.8 s in the phase)
+[06:47:44] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_mist_rts: the structure's box holds 2228 non-air blocks on the client
+[06:47:44] [Render thread/INFO]: [Eyes] 15_tree_sampler_a_mist_rts: 0 mist wisps alive, 20.1 s at dawn, density 1.0, mist drawn as a volume
+[06:47:44] [Render thread/INFO]: [Eyes] clip-mark 15_tree_sampler_a_mist_rts 1793256464902
+[06:47:44] [Server thread/INFO]: [Eyes] 15_tree_sampler_a_mist_rts: ... and 2228 on the server
+[06:47:45] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:47:45] [Render thread/INFO]: [Eyes] chat kept off the frames: Dawn breaks
+[06:47:45] [Render thread/INFO]: [Eyes] chat kept off the frames: 
+[06:47:45] [IO-Worker-10/INFO]: [Eyes] 15_tree_sampler_a_mist_rts: Saved screenshot as bat_eyes_15_tree_sampler_a_mist_rts.png
+[06:47:46] [Render thread/INFO]: [Eyes] unit textures with mips: 0 of 33 registered (up to 3 levels)
+[06:47:46] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
+[06:47:46] [Render thread/INFO]: [Eyes] tour complete
