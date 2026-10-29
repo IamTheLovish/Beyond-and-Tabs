@@ -468,6 +468,12 @@ public class ClientModEvents {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void registerParticles(RegisterParticleProvidersEvent evt) {
+        evt.registerSpriteSet(ParticleRegistrar.BUTTERFLY.get(),
+                com.solegendary.reignofnether.ambient.AmbientCritterParticle.ButterflyProvider::new);
+        evt.registerSpriteSet(ParticleRegistrar.FIREFLY.get(),
+                com.solegendary.reignofnether.ambient.AmbientCritterParticle.FireflyProvider::new);
+        evt.registerSpriteSet(ParticleRegistrar.BIRD.get(),
+                com.solegendary.reignofnether.ambient.AmbientBirdParticle.Provider::new);
         evt.registerSpriteSet(
                 ParticleRegistrar.BIG_ENCHANT.get(),
                 BigEnchantParticle.Provider::new
