@@ -95,11 +95,11 @@ public class BotPlayer {
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
                 null, ProductionItems.SEEDSHAPER,
                 List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT,
-                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
+                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER,
+                        ProductionItems.THORNWEAVER),   // the essence caster, Tier 1 (lovish, Oct 29: bots build and use all seven)
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
-                        ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON,   // the Wisp Choir is queued only against flyers (queueAntiAir)
-                        ProductionItems.THORNWEAVER),   // the essence caster (lovish, Oct 29: bots build and use all seven casters)
+                        ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         // the Tidewrought have no farm, house or tower - every use of those checks for null. Tier 2 brings the Drydock:
         // the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets: tideKrakens) with

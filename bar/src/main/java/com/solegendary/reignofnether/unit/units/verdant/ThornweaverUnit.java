@@ -52,7 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Verdant Court T2 essence caster - the <b>Thornweaver</b> (placeholder name; design/essence_casters.md, lovish
+ * Verdant Court Tier 1 essence caster (trained at the Grove) - the <b>Thornweaver</b> (placeholder name; design/essence_casters.md, lovish
  * approved draft 2 on Oct 29: "one caster per race"). A druid who spends the essence the fallen leave behind
  * ({@link EssenceCarrier}: it pulls the wisps within 8 blocks in and holds up to 30) on three spells - Entangling Roots
  * (5), Seed of Renewal (10) and Sprout Guardian (20) - and the casters' shared Empower (15). It does not fight: the
