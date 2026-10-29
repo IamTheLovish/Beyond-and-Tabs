@@ -83,6 +83,13 @@ public final class UnitUnstick {
         int strikes;
     }
     private static final Map<Mob, Suspect> SUSPECTS = new WeakHashMap<>();
+    /** Diagnostics only (RaidGameTests): told of each rescue / dropped path / forced repath; null otherwise. */
+    @Nullable public static volatile java.util.function.BiConsumer<Mob, String> TRACE = null;
+    public static void trace(Mob mob, String what) {
+        java.util.function.BiConsumer<Mob, String> t = TRACE;
+        if (t != null)
+            t.accept(mob, what);
+    }
 
     /** Server side, every tick from Unit.tick: does nothing except on the unit's staggered check tick. */
     public static void tick(Mob mob) {
@@ -116,12 +123,15 @@ public final class UnitUnstick {
             if (to != null) {
                 if (roof)
                     mob.getPersistentData().remove(KEY_ROOF_SPAWN);
+                trace(mob, isEncased(mob) ? "rescue-encased" : (mob.onGround() && !standable) ? "rescue-blocked" : "rescue-pocket");
                 rescue(mob, to);
-            }
+            } else
+                trace(mob, "rescue-nowhere");
         } else if (pushing && s.strikes >= PUSH_STRIKES) {
             // drop the path: the goal that owns it repaths from here, and a plain move order that keeps ending on the
             // same spot is given up (MoveToTargetBlockGoal.GIVE_UP_AFTER_STUCK_REPATHS) instead of pushed at forever
             SUSPECTS.remove(mob);
+            trace(mob, "push");
             mob.getNavigation().stop();
         }
     }

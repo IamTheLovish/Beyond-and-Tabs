@@ -159,6 +159,7 @@ public class MoveToTargetBlockGoal extends Goal {
      * land) never reached its give-up and stood with its order forever (CI stress 40675281944, 40720999152).
      */
     public void forceRepath() {
+        com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "force" + (moveTarget != null && isRunning ? "" : "-idle"));
         currentRecalcCooldown = RECALC_COOLDOWN_MAX;
         recalcCooldown = 0;
         if (moveTarget != null && isRunning && !this.mob.level().isClientSide())
@@ -433,6 +434,7 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "busy");
             if (pendingRepath) {
                 repathFromX = repathPrevFromX;
                 repathFromZ = repathPrevFromZ;
@@ -466,6 +468,7 @@ public class MoveToTargetBlockGoal extends Goal {
             return;
         }
         if (path == null) {
+            com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "nopath");
             this.mob.getNavigation().stop();
             if (wasRepath) {
                 onStuckRepath(forced);
