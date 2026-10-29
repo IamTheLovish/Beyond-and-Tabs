@@ -270,4 +270,25 @@ class GrassTintTest {
         assertTrue(leafHue >= 95, "leaf hue " + leafHue);
         assertTrue(grassSat <= sat(forest) + 0.03, "grass saturation " + grassSat + " against " + sat(forest));
     }
+
+    @Test
+    void theCanopyIsACoolerDarkerMassThanTheLawnUnderIt() {
+        // round 6 (Oct 29, eyes run 40817045672): the oak crowns measured the lawn's own hue and value from the RTS
+        // camera (81 / 0.33 against 78 / 0.33) and dissolved into the meadow. A canopy seen from above is cooler and
+        // darker than sunlit grass: the same biome colour through FOLIAGE leans blue-green (hue +6 or more) and dims
+        int battlefield = 0x5B9A3E;   // data/reignofnether/worldgen/biome/battlefield.json foliage_color
+        double fh = 0, gh = 0, fv = 0, gv = 0;
+        int n = 0;
+        for (int x = -200; x < 200; x += 7)
+            for (int z = -200; z < 200; z += 7) {
+                int f = GrassTint.apply(battlefield, x, z, GrassTint.FOLIAGE), g = GrassTint.apply(battlefield, x, z, GrassTint.GRASS);
+                fh += hue(f);
+                gh += hue(g);
+                fv += Math.max(Math.max((f >> 16) & 255, (f >> 8) & 255), f & 255);
+                gv += Math.max(Math.max((g >> 16) & 255, (g >> 8) & 255), g & 255);
+                n++;
+            }
+        assertTrue(fh / n - gh / n >= 6, "foliage hue " + fh / n + " against grass " + gh / n);
+        assertTrue(fv / n < 0.99 * gv / n, "foliage value " + fv / n + " against grass " + gv / n);
+    }
 }
