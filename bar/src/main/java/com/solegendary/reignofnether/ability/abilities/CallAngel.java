@@ -83,6 +83,8 @@ public class CallAngel extends Ability {
         this.kind = kind;
         // the healer comes when a friend is hurt, the fighters when the caster is in a fight (and its angel is not out)
         this.autoRule(kind == Kind.MENDER ? AutoRule.ALLY_HURT : AutoRule.SUMMON_WHEN_FREE);
+        // the AutoCaster tries the call only with the essence for it (else the caster is ordered and refuses every look)
+        this.autocastEssence = kind.essence;
     }
 
     @Override
@@ -140,15 +142,6 @@ public class CallAngel extends Ability {
     @Override
     public double summonForFightsWithin() {
         return CALL_FOR_FIGHTS_WITHIN;
-    }
-
-    /**
-     * The AutoCaster tries the call only with the essence for it: a short caster would otherwise be given the order and
-     * refuse it (a "short of essence" message to its owner) every look. Until the base's autocastEssence gate.
-     */
-    @Override
-    public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= kind.essence;
     }
 
     @Override

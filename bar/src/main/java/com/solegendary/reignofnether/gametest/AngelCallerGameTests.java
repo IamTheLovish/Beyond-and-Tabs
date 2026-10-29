@@ -426,9 +426,9 @@ public class AngelCallerGameTests {
             if (!angels(caster, S).isEmpty())
                 problems.add("the caster called a Sword Seraph with 15 essence left (it costs 20)");
             CallAngel sword = call(caster, S);
-            if (sword != null && sword.canAutocastNow(level, (Unit) caster))
-                problems.add("the Sword Seraph's autocast is willing with 15 essence (it costs 20): a short caster would try and be"
-                    + " refused every look");
+            if (sword != null && sword.autocastEssence != S.essence)
+                problems.add("the Sword Seraph's call gates its autocast on " + sword.autocastEssence + " essence (it costs "
+                    + S.essence + "): a short caster would be ordered and refuse every look");
             int left = Essence.get(caster);
             if (left != Essence.CAPACITY - M.essence - A.essence)
                 problems.add("after a Mender and an Archer the caster holds " + left + " essence, expected "
