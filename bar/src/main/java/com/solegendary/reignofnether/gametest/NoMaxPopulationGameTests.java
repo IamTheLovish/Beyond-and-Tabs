@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.abilities.RaiseDead;
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.faction.Factions;
@@ -138,6 +140,28 @@ public class NoMaxPopulationGameTests {
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    /**
+     * lovish, Oct 29: "beyond all reason doesnt use supply or unit cap". No building provides population any more -
+     * capitols, portals, the Sculk Catalyst and the old houses keep their other roles (energy, production) and lose
+     * only the supply line. Every registered building of every faction, as costed from the config.
+     */
+    @GameTest(template = ARENA)
+    public static void no_max_population_no_building_provides_population(GameTestHelper helper) {
+        List<String> supplying = new ArrayList<>();
+        int seen = 0;
+        for (Building b : ReignOfNetherRegistries.BUILDING) {
+            seen++;
+            if (b.cost != null && b.cost.population != 0)
+                supplying.add(b.name + " (" + b.cost.population + ")");
+        }
+        if (seen == 0)
+            helper.fail("setup: no buildings registered");
+        else if (!supplying.isEmpty())
+            helper.fail(supplying.size() + " buildings still provide population: " + String.join(", ", supplying));
+        else
+            helper.succeed();
     }
 
     /**
