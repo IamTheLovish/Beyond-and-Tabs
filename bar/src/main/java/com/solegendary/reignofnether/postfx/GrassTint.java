@@ -60,7 +60,9 @@ public final class GrassTint {
     static final double CONTRAST = 2.6;
     static final double VALUE = 0.045;   // round 4: the blob octaves halved (critic: camouflage, blur)
 
-    static final double[] MOTTLE_CELLS = {3.0, 2.0};
+    // review round 1 (Oct 28): no octave finer than 3 blocks - under Embeddium the colour blends across each block's
+    // corners, so a 2-block cell reads as single-block pips, the "rule 3+" of round 4
+    static final double[] MOTTLE_CELLS = {4.0, 3.0};
     static final double[] MOTTLE_WEIGHTS = {1.0, 0.35};
     static final double MOTTLE = 0.06;    // light side; the dark side is 1.6x (critic: the range sat too mid)
     static final double HUE_MOTTLE = 0.06;
@@ -97,15 +99,20 @@ public final class GrassTint {
 
     /** Straw cover in [0, 1] at block (x, z). */
     static double straw(int x, int z, int salt) {
+        return straw(x, z, salt, dryness(x, z, salt));
+    }
+
+    /** Straw cover given the dryness already worked out at (x, z) (review round 1: apply() computed it twice). */
+    static double straw(int x, int z, int salt, double dry) {
         double st = octaves(x - 1201, z + 911, (salt + 303) * 8, STRAW_CELLS, STRAW_WEIGHTS);
-        return smooth(clamp01((st - STRAW_AT) / STRAW_SOFT)) * clamp01((dryness(x, z, salt) - STRAW_GATE) / 0.4);
+        return smooth(clamp01((st - STRAW_AT) / STRAW_SOFT)) * clamp01((dry - STRAW_GATE) / 0.4);
     }
 
     /** rgb (0xRRGGBB) with the meadow's variation applied at block (x, z). */
     public static int apply(int rgb, int x, int z, int salt) {
         double f = field(x, z, salt);
         double dry = dryness(x, z, salt);
-        double s = straw(x, z, salt);
+        double s = straw(x, z, salt, dry);
         double cl = octaves(x - 3001, z + 1777, (salt + 202) * 8, CLUMP_CELLS, CLUMP_WEIGHTS);
         double m = smooth(clamp01((cl - CLUMP_AT) / CLUMP_SOFT)) * clamp01((CLUMP_GATE - dry) / 0.4) * (1 - s);
         double mottle = octaves(x + 555, z - 777, salt * 8 + 40, MOTTLE_CELLS, MOTTLE_WEIGHTS);
