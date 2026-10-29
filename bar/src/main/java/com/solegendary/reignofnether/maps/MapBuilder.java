@@ -113,8 +113,8 @@ public final class MapBuilder {
         MapLayout layout;
         Palette pal;
         int cx, cz, baseY;
-        /** The plant cover's mix for this preset (null: none - see mixFor). */
-        PlantMix mix;
+        /** The plant cover's mix for this preset (null: none - see PlantCover.mixFor). */
+        PlantCover.Mix mix;
         final List<long[]> chunks = new ArrayList<>();   // {chunkX, chunkZ}
         int nextChunk = 0;
         final List<BlockPos> trees = new ArrayList<>();
@@ -187,7 +187,7 @@ public final class MapBuilder {
         j.level = level;
         j.layout = layout;
         j.pal = paletteFor(layout.preset);
-        j.mix = mixFor(layout.preset);
+        j.mix = PlantCover.mixFor(layout.preset);
         j.cx = cx;
         j.cz = cz;
         j.baseY = baseY;
@@ -353,7 +353,7 @@ public final class MapBuilder {
                         && layout.decorHash(u + 101, v) < 0.0025)
                     j.decor.add(new BlockPos(x, j.baseY + hh + 1, z));
                 else if (j.mix != null && slope < 2 && !railHere && !forest[i][k] && growsOn(j, surf[gi][gk], slope)) {
-                    int kind = plantAt(j.mix, layout, u, v);
+                    int kind = PlantCover.kindAt(j.mix, layout, u, v, slope);
                     if (kind >= 0) {
                         j.plants.add(new BlockPos(x, j.baseY + hh + 1, z));
                         j.plantKinds.add((byte) kind);
@@ -373,27 +373,15 @@ public final class MapBuilder {
      * and ferns only in the densest middle of a meadow, flowers in their own drifts. Plants are soft blocks: a footprint
      * ignores them and clears them on placement (BuildingValidators.isSoftBlock), the cursor ray ignores them
      * (COLLIDER), fire does not spread to them (FireBlockMixin's flammables). Gamerule plantCover (default on).
+     * Where and how thick it grows is PlantCover (plain arithmetic, JUnit-tested); this table is its index order.
      */
-    record PlantMix(double grass, double tall, double fern, double flower, BlockState[] flowers) { }
-
     static final BlockState[] PLANTS = {
         Blocks.GRASS.defaultBlockState(), Blocks.TALL_GRASS.defaultBlockState(), Blocks.FERN.defaultBlockState(),
         Blocks.LARGE_FERN.defaultBlockState(),
         Blocks.POPPY.defaultBlockState(), Blocks.DANDELION.defaultBlockState(), Blocks.OXEYE_DAISY.defaultBlockState(),
         Blocks.AZURE_BLUET.defaultBlockState(), Blocks.CORNFLOWER.defaultBlockState(), Blocks.ALLIUM.defaultBlockState()
     };
-    static final int GRASS = 0, TALL = 1, FERN = 2, LARGE_FERN = 3, FLOWER0 = 4;
-
-    static PlantMix mixFor(MapPreset preset) {
-        BlockState[] meadow = { PLANTS[4], PLANTS[5], PLANTS[6], PLANTS[7], PLANTS[8] };
-        return switch (preset) {
-            case VERDANT_VALLEY -> new PlantMix(0.58, 0.08, 0.04, 0.05, meadow);
-            case HIGHLANDS -> new PlantMix(0.42, 0.05, 0.16, 0.02, new BlockState[] { PLANTS[8], PLANTS[7], PLANTS[9] });
-            case ARCHIPELAGO -> new PlantMix(0.40, 0.05, 0.04, 0.03, new BlockState[] { PLANTS[5], PLANTS[4], PLANTS[6] });
-            case DESERT_MESA -> new PlantMix(0.45, 0.08, 0.08, 0.01, new BlockState[] { PLANTS[5] });   // the oases
-            default -> null;   // nether, end: their own groves, no meadow
-        };
-    }
+    static final int GRASS = PlantCover.GRASS, TALL = PlantCover.TALL, FERN = PlantCover.FERN, LARGE_FERN = PlantCover.LARGE_FERN;
 
     /** Whether the column's top will be a grass block (what grass and flowers stand on). */
     private static boolean growsOn(Job j, MapLayout.Surface surface, int slope) {
@@ -406,38 +394,6 @@ public final class MapBuilder {
         return top != null && top.is(Blocks.GRASS_BLOCK);
     }
 
-    /** A smooth value noise in [0, 1] over slot frame (lattice from decorHash, smoothstep-blended). */
-    static double plantNoise(MapLayout l, double u, double v, double scale, double salt) {
-        double x = u / scale, y = v / scale;
-        int x0 = (int) Math.floor(x), y0 = (int) Math.floor(y);
-        double fx = x - x0, fy = y - y0;
-        fx = fx * fx * (3 - 2 * fx);
-        fy = fy * fy * (3 - 2 * fy);
-        double a = l.decorHash(x0 + salt, y0), b = l.decorHash(x0 + 1 + salt, y0);
-        double c = l.decorHash(x0 + salt, y0 + 1), d = l.decorHash(x0 + 1 + salt, y0 + 1);
-        return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
-    }
-
-    /** What grows at (u, v) in slot frame: an index into PLANTS, or -1 for bare grass. */
-    static int plantAt(PlantMix mix, MapLayout l, double u, double v) {
-        double meadow = 0.65 * plantNoise(l, u, v, 11.0, 0) + 0.35 * plantNoise(l, u, v, 4.0, 200);   // two octaves
-        double dense = Math.max(0, Math.min(1, (meadow - 0.3) / 0.45));
-        double pick = l.decorHash(u + 311, v);
-        if (pick < mix.grass() * dense * (2 - dense)) {
-            double h = l.decorHash(u + 733, v);
-            if (meadow > 0.68 && h < mix.tall())
-                return h < mix.tall() * 0.25 && mix.fern() > 0.1 ? LARGE_FERN : TALL;
-            return h < mix.tall() + mix.fern() ? FERN : GRASS;
-        }
-        if (mix.flower() > 0 && plantNoise(l, u, v, 13.0, 500) > 0.7 && pick > 1 - mix.flower()) {
-            BlockState f = mix.flowers()[(int) (l.decorHash(u + 977, v) * mix.flowers().length) % mix.flowers().length];
-            for (int i = FLOWER0; i < PLANTS.length; i++)
-                if (PLANTS[i] == f)
-                    return i;
-        }
-        return -1;
-    }
-
     /**
      * Plants go in last of the decoration, where the column is still bare grass with air above (a tree, a grove or a
      * cactus may have taken it), and never on the economy's ground: patch pads and extractor squares, capture sites
@@ -448,24 +404,14 @@ public final class MapBuilder {
                 com.solegendary.reignofnether.registrars.GameRuleRegistrar.PLANT_COVER))
             return 0;
         ServerLevel level = j.level;
-        List<int[]> keepOut = new ArrayList<>();   // {x, z, half-size}
-        for (MapLayout.Mex m : j.layout.mexes)
-            keepOut.add(new int[] { j.cx + m.dx(), j.cz + m.dz(), 4 });
-        for (MapLayout.Site st : j.layout.sites)
-            keepOut.add(new int[] { j.cx + st.dx(), j.cz + st.dz(), 6 });
-        for (MapLayout.Spot sp : j.layout.vents)
-            keepOut.add(new int[] { j.cx + sp.dx(), j.cz + sp.dz(), 3 });
-        for (MapLayout.Spot sp : j.layout.pillars)
-            keepOut.add(new int[] { j.cx + sp.dx(), j.cz + sp.dz(), 3 });
+        List<int[]> keepOut = PlantCover.keepOuts(j.layout);
         BlockState upper = Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
         BlockState fernUpper = Blocks.LARGE_FERN.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
         int placed = 0;
-        plants:
         for (int i = 0; i < j.plants.size(); i++) {
             BlockPos at = j.plants.get(i);
-            for (int[] k : keepOut)
-                if (Math.abs(at.getX() - k[0]) <= k[2] && Math.abs(at.getZ() - k[1]) <= k[2])
-                    continue plants;
+            if (PlantCover.keptClear(keepOut, at.getX() - j.cx, at.getZ() - j.cz))
+                continue;
             if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).is(Blocks.GRASS_BLOCK))
                 continue;
             int kind = j.plantKinds.get(i);

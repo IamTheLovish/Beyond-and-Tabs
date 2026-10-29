@@ -153,7 +153,7 @@ public final class EyesDirector {
                     s.team = 0;
                     s.arena = 0;
                     s.metal = 1;
-                    s.map = 0;
+                    s.map = EYES_MAP;
                     s.seed = EYES_SEED;          // the same world every run, so stills compare run to run (eyes_diff.py)
                     // the start-position phase runs (01b-01f photograph its markers); the director places our start
                     // itself, three seconds before the match, so the later scenes see the same seating as before
@@ -1472,6 +1472,24 @@ public final class EyesDirector {
     private static int waitedTicks = 0;              // how long the current still waited for its framing
     // the tour's world seed: any fixed value; changing it re-bases every eyes_diff comparison (approve a new set)
     private static final long EYES_SEED = 4242424242L;
+
+    /**
+     * The map the tour plays (eyes.yml input `map`, -Dbat.eyes.map=<MapPreset name>): the legacy terrain (id 0) unless a
+     * pre-made map is named. The plant cover (MapBuilder / PlantCover) only exists on the pre-made maps, so the Oct 28
+     * "more grass" before / after tours need one; the seed above makes it the same map every run.
+     */
+    static final int EYES_MAP = parseMap(System.getProperty("bat.eyes.map", ""));
+
+    private static int parseMap(String name) {
+        if (name == null || name.isBlank())
+            return 0;
+        try {
+            return com.solegendary.reignofnether.maps.MapPreset.valueOf(name.trim().toUpperCase(java.util.Locale.ROOT)).ordinal();
+        } catch (IllegalArgumentException e) {
+            ReignOfNether.LOGGER.warn("[Eyes] -Dbat.eyes.map={} is no map preset, playing the legacy terrain", name);
+            return 0;
+        }
+    }
     private static int closeUpId = -1;
     private static int standInDue = -1;   // tick by which a summoned stand-in must have reached the client; -1 = none
 
@@ -2272,8 +2290,14 @@ public final class EyesDirector {
         if (server == null || mc.player == null)
             return;
         int cx = mc.player.getBlockX(), cz = mc.player.getBlockZ();
+        // the renderer's re-mesh counters so far (perf/SectionRebuilds), for the plant-cover cost A/B
+        long built = com.solegendary.reignofnether.perf.SectionRebuilds.built(),
+            empty = com.solegendary.reignofnether.perf.SectionRebuilds.empty();
+        String renderer = com.solegendary.reignofnether.perf.SectionRebuilds.renderer();
         server.execute(() -> {
             var level = server.overworld();
+            if (EYES_MAP != 0)
+                plantCensus(level, when, cx, cz, built, empty, renderer);
             java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
             for (int x = cx - 24; x <= cx + 24; x++)
                 for (int z = cz - 24; z <= cz + 24; z++) {
@@ -2284,6 +2308,41 @@ public final class EyesDirector {
                 }
             ReignOfNether.LOGGER.info("[Eyes] ground {} round [{}, {}]: {}", when, cx, cz, counts);
         });
+    }
+
+    /**
+     * Counts the plant blocks standing on the ground within 200 blocks of the camera's column (the pre-made maps'
+     * plant cover, MapBuilder.plant, after StartAreaClearing): the blocks a chunk mesh has to draw on top of the
+     * terrain, by kind, with the renderer's section re-mesh counters beside them. Only chunks that are loaded.
+     */
+    private static void plantCensus(net.minecraft.server.level.ServerLevel level, String when, int cx, int cz,
+                                    long built, long empty, String renderer) {
+        int columns = 0, planted = 0, blocks = 0, tall = 0, ferns = 0, flowers = 0;
+        net.minecraft.core.BlockPos.MutableBlockPos p = new net.minecraft.core.BlockPos.MutableBlockPos();
+        for (int x = cx - 200; x <= cx + 200; x++)
+            for (int z = cz - 200; z <= cz + 200; z++) {
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null)
+                    continue;
+                columns++;
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                var st = level.getBlockState(p.set(x, y, z));
+                if (!(st.is(net.minecraft.tags.BlockTags.FLOWERS) || st.is(net.minecraft.world.level.block.Blocks.GRASS)
+                        || st.is(net.minecraft.world.level.block.Blocks.FERN) || st.is(net.minecraft.world.level.block.Blocks.TALL_GRASS)
+                        || st.is(net.minecraft.world.level.block.Blocks.LARGE_FERN)))
+                    continue;
+                planted++;
+                boolean two = st.is(net.minecraft.world.level.block.Blocks.TALL_GRASS) || st.is(net.minecraft.world.level.block.Blocks.LARGE_FERN);
+                blocks += two ? 2 : 1;
+                if (two)
+                    tall++;
+                if (st.is(net.minecraft.world.level.block.Blocks.FERN) || st.is(net.minecraft.world.level.block.Blocks.LARGE_FERN))
+                    ferns++;
+                if (st.is(net.minecraft.tags.BlockTags.FLOWERS))
+                    flowers++;
+            }
+        ReignOfNether.LOGGER.info("[Eyes] plants {} round [{}, {}]: {} plant blocks on {} of {} columns ({} two-block, {} ferns, {} flowers); "
+                + "renderer {} has re-meshed {} sections ({} empty) so far", when, cx, cz, blocks, planted, columns, tall, ferns,
+            flowers, renderer, built, empty);
     }
 
     private static void next() {
