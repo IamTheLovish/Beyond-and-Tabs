@@ -32,7 +32,7 @@ New caster per race (7, T2 lab); essence drops on every death (both sides); each
 essence can also buy veterancy XP.
 
 ## Abilities, draft 2 (cheap 5 / mid 10 / big 20 essence; cooldowns 12 / 25 / 60 s)
-Sunforged was respecified by lovish (Oct 29): "the angels casters can summon three different angels that help: one that heals, one that is a flying archer and another that is a melee engager that can fly". One angel of each kind per caster: a recast while it lives is refused (nothing spent, no cooldown).
+Sunforged was respecified by lovish (Oct 29): "the angels casters can summon three different angels that help: one that heals, one that is a flying archer and another that is a melee engager that can fly". One angel of each kind per caster: a recast while it lives is refused (nothing spent, no cooldown). Tier 1 (lovish, Oct 29 ~22:05Z: "essence casters should be tier 1 like rez bots"): the Angel Caller trains at the Barracks.
 
 Shared by every caster: **Empower** (15 essence): an ally unit within 6 gains 1 veterancy XP (one rank, +10% HP and
 damage, max rank 3).

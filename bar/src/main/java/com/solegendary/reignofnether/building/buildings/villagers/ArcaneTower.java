@@ -55,7 +55,6 @@ public class ArcaneTower extends ProductionBuilding {
         this.productions.add(ProductionItems.ROYAL_ARCHITECT, Keybindings.abilitySlot6);   // T2 constructor
         this.productions.add(ProductionItems.ORIFLAMME_ELEPHANT, Keybindings.abilitySlot7);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.FIELD_MASON, Keybindings.abilitySlot8);   // combat engineer (design/combat_engineers.md)
-        this.productions.add(ProductionItems.ANGEL_CALLER, Keybindings.abilitySlot9);   // essence caster (design/essence_casters.md)
     }
 
 
