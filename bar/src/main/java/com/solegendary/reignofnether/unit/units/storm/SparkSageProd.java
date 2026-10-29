@@ -5,10 +5,10 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 
 /**
- * Stormcallers T2 essence caster: Static Step, Captured Spark, Thunderhead and Empower, paid in the essence the fallen
- * drop (SparkSageUnit). Does not fight. Trained at the Celestial Observatory once Tier 2 is researched (StormT2Prod).
+ * Stormcallers essence caster: Static Step, Captured Spark, Thunderhead and Empower, paid in the essence the fallen
+ * drop (SparkSageUnit). Does not fight. Tier 1, like rez bots (lovish, Oct 29): trained at the Lotus Academy, no Tier 2.
  */
-public class SparkSageProd extends StormT2Prod {
+public class SparkSageProd extends StormProd {
 
     public final static String itemName = "Spark Sage";
     public final static ResourceCost cost = ResourceCosts.SPARK_SAGE;
