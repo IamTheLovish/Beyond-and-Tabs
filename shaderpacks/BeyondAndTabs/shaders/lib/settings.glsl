@@ -1,0 +1,31 @@
+// Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
+// any other shader pack. design/own_shader_pack.md has the plan, the slices and how each is measured.
+//
+// The pack's settings: what the option screen shows (shaders.properties `screen`), and the directives the loader reads
+// from the source. Every program includes this file, so each directive is seen whichever program the loader reads it
+// from.
+
+// the sun's path tilted off the zenith: vanilla's sun crosses straight overhead, so at noon nothing throws a shadow the
+// RTS camera can see. lovish, Oct 29: the clear tilt, about 30 degrees
+const float sunPathRotation = 30.0; // [0.0 15.0 30.0 45.0]
+
+// the shadow map. The RTS view fits it to what is on screen (lib/shadowfit.glsl), so 2048 is sharp at every zoom
+const int shadowMapResolution = 2048; // [1024 2048 3072 4096]
+// half the side of the box the loader draws shadow casters in (blocks), centred on the camera. The RTS fit picks the
+// part of it on screen; first person uses all of it
+const float shadowDistance = 160.0;
+// draw casters in that box, not out to the render distance (the fit never looks past the box)
+const float shadowDistanceRenderMul = 1.0;
+const bool shadowHardwareFiltering = false;
+// vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
+const float ambientOcclusionLevel = 1.0;
+
+// distance haze strength, as the mod's own haze setting (1 = the Enchanted look's)
+#define HAZE_STRENGTH 1.0 // [0.0 0.5 1.0 1.5 2.0]
+// the colour grade: 1 = Enchanted (lovish's pick, Oct 28), 0 = none (tone curve only)
+#define GRADE 1 // [0 1]
+// edge smoothing on geometry edges (as the mod's world look does without a pack)
+#define EDGE_AA 1 // [0 1]
+
+// block ids from block.properties
+#define ID_FOLIAGE 10001.0

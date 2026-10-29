@@ -884,11 +884,21 @@ public final class EyesDirector {
     //   15_<name>_34        a first-person 3/4 view from the south-west (the side the RTS camera sees), ~30 degrees
     //                       down, from ~1.5x the building's largest size
     //   15_<name>_dusk      the same 3/4 view at dusk (time 13000): lanterns, glow and glass against a dark sky
+    //   15_<name>_rts_t<T>, 15_<name>_34_t<T>
+    //                       with -Dbat.eyes.times=T,... (eyes.yml input `times`): the RTS and 3/4 views again at each
+    //                       day time T - the shader look's times of day (design/own_shader_pack.md: Morning 5000, Dusk
+    //                       11800, Night 18000 beside the noon stills)
+    // After the noon RTS still the camera holds while ShaderBench times BENCH_FRAMES drawn frames: one
+    // "[ShaderBench] 15_<name>_rts" line per structure, the frame-cost ratio between eyes lanes.
     // Placed as plain blocks (StructureTemplate.placeInWorld), not as a building: renderer-drawn parts (sails, rigs)
     // and the building's HP bar are not in these stills. The timeline is wall-clock seconds, not ticks: the shader
     // lane's client runs 4-6 ticks a second (see CUES).
     static final int STEP_STRUCTURES = 20;
     static final List<String> STRUCTURES = parseStructures(System.getProperty("bat.eyes.structures", ""));
+    static final List<Long> EXTRA_TIMES = parseTimes(System.getProperty("bat.eyes.times", ""));
+    static final int BENCH_FRAMES = 60;            // the shader lane draws ~5 frames a second on the runner
+    private static int timeIndex = 0;
+    private static boolean benchStarted = false;
     private static int structureIndex = 0;
     private static int structurePhase = 0;
     private static long phaseNanos = 0;
@@ -905,6 +915,19 @@ public final class EyesDirector {
         for (String s : raw.split(","))
             if (!s.isBlank())
                 out.add(s.trim());
+        return out;
+    }
+
+    static List<Long> parseTimes(String raw) {
+        List<Long> out = new ArrayList<>();
+        for (String s : raw.split(","))
+            if (!s.isBlank()) {
+                try {
+                    out.add(Math.floorMod(Long.parseLong(s.trim()), 24000L));
+                } catch (NumberFormatException e) {
+                    ReignOfNether.LOGGER.warn("[Eyes] bat.eyes.times: '{}' is not a day time - skipped", s.trim());
+                }
+            }
         return out;
     }
 
@@ -978,6 +1001,21 @@ public final class EyesDirector {
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_rts");
+                benchStarted = false;
+                nextPhase(6);
+            }
+            case 6 -> {   // the camera holds still while the bench times its frames (after the screenshot's own frame)
+                if (phaseSeconds() < 2)
+                    return;
+                if (!benchStarted) {
+                    benchStarted = true;
+                    com.solegendary.reignofnether.postfx.ShaderBench.start(label + "_rts", BENCH_FRAMES);
+                    return;
+                }
+                if (com.solegendary.reignofnether.postfx.ShaderBench.running() && phaseSeconds() < 120)
+                    return;
+                if (com.solegendary.reignofnether.postfx.ShaderBench.running())
+                    ReignOfNether.LOGGER.warn("[Eyes] {}: the frame bench did not finish in 120 s", label);
                 // the view height the whole building needs under the RTS tilt: its footprint plus part of its height
                 // (run 39527167948: 1.3x the footprint cropped the 20-tall Temple of the Sun top and bottom)
                 int big = Math.max(structureSize.getX(), structureSize.getZ());
@@ -1017,12 +1055,59 @@ public final class EyesDirector {
                     ReignOfNether.LOGGER.warn("[Eyes] {}_dusk: the client sky is at {} not 13000 after 40 s", label, t);
                 shot(mc, label + "_dusk");
                 var server = mc.getSingleplayerServer();
+                if (!EXTRA_TIMES.isEmpty()) {
+                    timeIndex = 0;
+                    startExtraTime(mc);
+                    return;
+                }
+                long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
+                server.execute(() -> server.overworld().setDayTime(back));
+                nextStructure(mc);
+            }
+            case 7 -> {   // an extra day time: the RTS view once the client's sky is there
+                long want = EXTRA_TIMES.get(timeIndex);
+                long t = mc.level.getDayTime() % 24000;
+                boolean there = Math.abs(t - want) < 150;
+                if (!(there && phaseSeconds() > 4) && phaseSeconds() < 40)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_rts_t{}: the client sky is at {} after 40 s", label, want, t);
+                shot(mc, label + "_rts_t" + want);
+                if (OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                standThreeQuarter(mc);
+                nextPhase(8);
+            }
+            case 8 -> {   // ... and the 3/4 view
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    standThreeQuarter(mc);
+                if (phaseSeconds() < 5)
+                    return;
+                shot(mc, label + "_34_t" + EXTRA_TIMES.get(timeIndex));
+                if (++timeIndex < EXTRA_TIMES.size()) {
+                    startExtraTime(mc);
+                    return;
+                }
+                var server = mc.getSingleplayerServer();
                 long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
                 server.execute(() -> server.overworld().setDayTime(back));
                 nextStructure(mc);
             }
             default -> nextStructure(mc);
         }
+    }
+
+    /** The server to the next extra day time, and the RTS camera back over the structure at the default zoom. */
+    private static void startExtraTime(Minecraft mc) {
+        long want = EXTRA_TIMES.get(timeIndex);
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> server.overworld().setDayTime(want));
+        if (!OrthoviewClientEvents.isEnabled())
+            OrthoviewClientEvents.toggleEnable();
+        mc.options.hideGui = true;
+        setZoom(ZOOM_NORMAL);
+        OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+        nextPhase(7);
     }
 
     private static void nextStructure(Minecraft mc) {

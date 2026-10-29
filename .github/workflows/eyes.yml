@@ -35,6 +35,11 @@
 # the lane's branch, in its own concurrency group - a before / after pinned to one build_run, dispatched while another
 # session photographs the same structure, neither waits for nor replaces the other's snapshot. Delete those branches
 # when the comparison is done.
+# Our own shader pack (input shader_pack `ours`, Oct 29 2026, design/own_shader_pack.md): the shader lane loads
+# shaderpacks/BeyondAndTabs from this checkout instead of a download - Oculus and Embeddium as in the other lanes - and
+# publishes to <lane>-ours. With `times` (comma-separated day times) a structure-photo run adds the RTS and 3/4 views at
+# each of them (15_<name>_rts_t<T>, _34_t<T>); every structure-photo run logs a "[ShaderBench] 15_<name>_rts" line,
+# the frame-cost ratio between lanes. The old pack (complementary) stays only as the CI "before" until slice 3.
 name: eyes
 on:
   workflow_dispatch:
@@ -87,10 +92,14 @@ on:
         options: [labpbr, integrated]
         default: labpbr
       shader_pack:
-        description: "Shader lane: complementary (Complementary Reimagined - the pick for lovish's PC) or bliss (Bliss, an edit of Chocapic13's; his Oct 15 reference clip) - official Modrinth file at run time; bliss publishes to eyes-shaders-bliss"
+        description: "Shader lane: ours (shaderpacks/BeyondAndTabs from this checkout; publishes to <lane>-ours), complementary (Complementary Reimagined - CI-only \"before\" until our slice 3; never shipped) or bliss (Bliss, an edit of Chocapic13's) - official Modrinth file at run time; bliss publishes to eyes-shaders-bliss"
         type: choice
-        options: [complementary, bliss]
+        options: [complementary, bliss, ours]
         default: complementary
+      times:
+        description: "Structure photos: extra day times, comma-separated (e.g. 5000,11800,18000) - the RTS and 3/4 views again at each (15_<name>_rts_t<T>, _34_t<T>)"
+        required: false
+        default: ''
       shader_options:
         description: "Shader lane: extra options for the pack's options file, KEY=VALUE separated by ';' (e.g. BorderFog=false;TOGGLE_VL_FOG=false) - an A/B of the pack's own settings; publishes to <lane>-custom"
         required: false
@@ -131,12 +140,13 @@ jobs:
       RP: ${{ inputs.rp || 'labpbr' }}
       SHADER_PACK: ${{ inputs.shader_pack || 'complementary' }}
       SHADER_OPTIONS: ${{ inputs.shader_options || '' }}
+      TIMES: ${{ inputs.times || '' }}
       LOOK: ${{ inputs.look || 'default' }}
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
       # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), format('{0}{1}', (inputs.shaders && inputs.shader_pack == 'ours') && '-ours' || '', inputs.pack == 'none' && '-nopack' || ''), (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -268,6 +278,13 @@ jobs:
               env.write('STRUCTURE_STILLS=%d\n' % (4 * len(entries)))
           print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
           EOF
+      - name: Extra day times for the structure photos (dispatch input `times`)
+        if: env.TIMES != '' && env.STRUCTURES != ''
+        run: |
+          set -euo pipefail
+          echo "$TIMES" | grep -qE '^[0-9]+(,[0-9]+)*$' || { echo "::error::times must be day times like 5000,11800,18000"; exit 1; }
+          echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.times=$TIMES" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] extra day times: $TIMES"
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
         if: env.SCARS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"
@@ -316,6 +333,19 @@ jobs:
               em = [v for v in em if v['version_number'].startswith('0.3.31')] or em
               f = primary(em[0]); fetch(f, 'run/mods/' + f['filename'])
           pack = os.environ.get('SHADER_PACK', 'complementary')
+          if pack == 'ours':
+              # our own pack, from this checkout (shaderpacks/BeyondAndTabs): no download, no options file - its
+              # defaults are what testers get
+              import shutil
+              shutil.copytree('shaderpacks/BeyondAndTabs', 'run/shaderpacks/BeyondAndTabs')
+              for name in ('oculus.properties', 'iris.properties'):
+                  open('run/config/' + name, 'w').write(
+                      'enableShaders=true' + chr(10) + 'shaderPack=BeyondAndTabs' + chr(10) + 'disableUpdateMessage=true' + chr(10)
+                      + 'maxShadowRenderDistance=12' + chr(10))
+              n = sum(len(fs) for _, _, fs in os.walk('run/shaderpacks/BeyondAndTabs'))
+              got.append('BeyondAndTabs (ours, %d files from %s)' % (n, os.environ.get('GITHUB_SHA', '?')[:9]))
+              print('::notice::[Eyes] shader lane files: ' + '; '.join(got))
+              raise SystemExit(0)
           cr = versions('bliss-shader' if pack == 'bliss' else 'complementary-reimagined', 'iris')
           if not cr:
               raise SystemExit('no %s version for Iris / 1.20.1 on Modrinth' % pack)
@@ -462,6 +492,17 @@ jobs:
             grep -iE "reignofnether|beyondandtabs|missing texture|missing model|Unable to load model" out/warnings.txt \
               | head -10 | sed 's/^/::warning::/' || true
             grep -q "\[Eyes\] tour complete" "$log" && echo "TOUR_COMPLETE=1" >> "$GITHUB_ENV" || true
+            # the shader lane: did a pack really draw? A pack that fails to compile leaves vanilla stills behind a
+            # green run (the mod's world look logs the switch: WorldLookPass.logState)
+            if [ "$SHADERS" = "1" ]; then
+              if grep -q "World look: a shader pack is on" "$log"; then
+                echo "::notice::[Eyes] shader pack $SHADER_PACK drew the frames"
+              else
+                echo "::error::[Eyes] shader lane, but no shader pack drew the frames (no 'World look: a shader pack is on' line)"
+              fi
+              grep -iE "(shader|program).*(error|fail|could not|unable)|(error|fail).*(shader|program|glsl)" "$log" | grep -viE "OpenAL|Narrator" | head -10 | sed 's/^/::warning::/' || true
+            fi
+            grep -oE "\[ShaderBench\] .*" "$log" | sed 's/^/::notice::/' || true
             # which packs loaded, and the size our grass reached the block atlas at (128 or 256 = ours, 16 = vanilla;
             # 256 since the block pack's round 17 builds the grass top at 256x - HIRES in tools/gen_blocks.py)
             packs=$(grep -m1 -oE "\[Eyes\] resource packs .*" "$log" || true)

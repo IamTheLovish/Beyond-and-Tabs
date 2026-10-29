@@ -1,0 +1,14 @@
+option.shadowMapResolution=Shadow quality
+option.shadowMapResolution.comment=Texels of the sun's shadow map. The RTS view fits the map to the screen, so 2048 is sharp at every zoom.
+option.sunPathRotation=Sun tilt
+option.sunPathRotation.comment=Tilts the sun's path so noon still throws shadows you can see from above (30 = lovish's pick).
+option.HAZE_STRENGTH=Distance haze
+option.HAZE_STRENGTH.comment=How much air shows over distant ground (1 = the game's own look).
+option.GRADE=Colour grade
+option.GRADE.comment=Enchanted: a little dimmer, richer colour, golden light, a soft glow. Off: the tone curve only.
+value.GRADE.0=Off
+value.GRADE.1=Enchanted
+option.EDGE_AA=Edge smoothing
+option.EDGE_AA.comment=Smooths unit and building edges without softening textures.
+value.EDGE_AA.0=Off
+value.EDGE_AA.1=On
