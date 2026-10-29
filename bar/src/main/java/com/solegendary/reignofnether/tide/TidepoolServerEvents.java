@@ -531,12 +531,17 @@ public class TidepoolServerEvents {
 
     // ------------------------------------------------------------------ the grid is a sensor (design/ai_faction.md)
 
-    /** How long a pass strips cover for: past the next 1 Hz pass, so a unit that stays on the grid stays seen. */
+    /**
+     * How long a pass strips cover for: past the next 1 Hz pass, so a unit that stays on the grid stays seen. Every
+     * pass renews it for every enemy on the cells, hidden or not (PR 380 review r1): renewing only the hidden ones let
+     * the cover take a unit back each time a reveal ran out, and going under clears its attackers' targets.
+     */
     public static final int GRID_REVEAL_TICKS = 2 * EXPIRY_PASS_TICKS;
 
     /**
      * Strips cover from every enemy unit standing on a pool's cells, for every live pool in {@code level} (or only the
-     * pools of {@code onlyOwner}, so parallel game tests never touch each other's units). Returns how many it lit.
+     * pools of {@code onlyOwner}, so parallel game tests never touch each other's units), and keeps it off for
+     * {@link #GRID_REVEAL_TICKS}. Returns how many enemy units it found on the cells.
      * Runs in the 1 Hz expiry pass: per pool one unit-grid query round its centre and a cell lookup per unit there -
      * no entity search, no allocation. Allies of the owner are never touched; draining pools still sense.
      */
@@ -550,7 +555,7 @@ public class TidepoolServerEvents {
             if (p.removed || p.level != level || (onlyOwner != null && !onlyOwner.equals(p.owner)))
                 continue;
             for (LivingEntity le : UnitGrid.near(level, p.centre.getX() + 0.5, p.centre.getZ() + 0.5, p.radius + 1, scratch)) {
-                if (!le.isAlive() || !(le instanceof Unit u) || !Concealment.isConcealed(le))
+                if (!le.isAlive() || !(le instanceof Unit u))
                     continue;
                 String o = u.getOwnerName();
                 if (o == null || o.isBlank() || o.equals(p.owner) || AlliancesServerEvents.isAllied(p.owner, o))

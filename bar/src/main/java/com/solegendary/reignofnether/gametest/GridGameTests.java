@@ -25,7 +25,8 @@ import java.util.List;
  * Slice 1a of the AI faction (design/ai_faction.md section 6, lovish Oct 29: "Light Grid"): the Tides core's pools
  * play by the Light Grid's rules. Only a grid tile counts (real water gives nothing), a tile never douses fire, and an
  * enemy standing on a player's grid loses its cover (the grid is a sensor). Units are created but only the cover tests
- * adds them to the level (cover is computed from the unit lists); every pass is limited to this test's owners.
+ * add them to the level (cover is computed from the unit lists); a direct pass is limited to the test's owners, and
+ * the real 1 Hz passes the keep test waits on only find its units on its own grid.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
