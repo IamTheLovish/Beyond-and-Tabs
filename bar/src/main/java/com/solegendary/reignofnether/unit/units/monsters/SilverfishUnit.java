@@ -228,8 +228,8 @@ public class SilverfishUnit extends Silverfish implements Unit, AttackerUnit {
 
     public void setLimitedLife() {
         this.hasLimitedLife = true;
-        // an infested building's free silverfish starves after its time: its death drops no essence wisp
-        com.solegendary.reignofnether.essence.Essence.markSummoned(this);
+        // an infested building's free silverfish starves after its time: its death pays nothing (unit/Summons)
+        com.solegendary.reignofnether.unit.Summons.mark(this);
         this.limitedLifeTicks = SILVERFISH_DURATION_SECONDS * ResourceCost.TICKS_PER_SECOND;
     }
 
