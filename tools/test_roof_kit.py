@@ -177,6 +177,22 @@ class Retone(unittest.TestCase):
             share = sum(R.family(n, R.COPPER) == 0 for n, _ in r.values()) / len(r)
             self.assertTrue(0.55 <= share <= 0.72, (seed, share))
 
+    def test_courses_along_an_axis(self):
+        """r8: with `along`, a course is a line of cells at one height running along that axis (a hall roof's courses
+        run along its ridge): every such line free of chequers and 4+ dark runs, wet low, the base share 55-72 %."""
+        cells = {(x, y, z): ("bricks", {}) for x in range(4) for y in range(x, x + 2) for z in range(15)}
+        for seed in range(10):
+            r = R.retone(cells, R.SLATE, seed=seed, along="z")
+            tone = {q: R.family(n, R.SLATE) for q, (n, _) in r.items()}
+            share = sum(t == 0 for t in tone.values()) / len(tone)
+            self.assertTrue(0.55 <= share <= 0.72, (seed, share))
+            for x in range(4):
+                for y in range(x, x + 2):
+                    row = "".join(str(tone[(x, y, z)]) for z in range(15))
+                    self.assertNotIn("101", row, (seed, x, y))
+                    self.assertNotIn("1111", row, (seed, x, y))
+                    self.assertNotIn("202", row, (seed, x, y))
+
     def test_no_chequer_along_a_course(self):
         r = R.retone(self.cells, R.SLATE, seed=2)
         for y in range(10):

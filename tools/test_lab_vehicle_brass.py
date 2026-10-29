@@ -205,16 +205,17 @@ class EngineShedT1Detail(unittest.TestCase):
 
     def test_cone_face_reaches_the_eave_beside_the_door(self):
         """r4: with the 5-wide lane the cone's face and dark arrises come down to the eave on both sides of the door
-        (z 8..9 and 15..16 in the face plane x 0 from y 7), and over the door head the face runs on red - no shoulder."""
+        (z 8..9 and 15..16 in the face plane x 0 from y 7), and over the door head the face runs on - no shoulder.
+        r8 (lovish, Oct 28 22:59: the cone is weathered green COPPER): the row over the head is copper or the R10
+        corbels under the tier's ledge (r7 asked for red here)."""
         for y in range(L.HALL_TOP + 1, L.LANE_H + 1):
             for z in (8, 9, 15, 16):
                 self.assertEqual(self.front_cell(y, z)[0], 0, (y, z))
             for z in (8, 16):
                 self.assertTrue(any(k in self.front_cell(y, z)[1] for k in self.DARK), (y, z))
         y = L.LANE_H + 2
-        red = ("terracotta", "mangrove", "granite")
         row = {z: self.front_cell(y, z)[1] for z in range(9, 16)}
-        self.assertEqual({z: n for z, n in row.items() if not any(k in n for k in red) and n != "lantern"}, {}, y)
+        self.assertEqual({z: n for z, n in row.items() if "copper" not in n and n != CORBEL and n != "lantern"}, {}, y)
 
     def test_door_is_the_bright_spot(self):
         """E: the door is the front's light spot (ref18), not a black hole - the lane's far wall (x 9) and its
@@ -269,19 +270,19 @@ class EngineShedT1Detail(unittest.TestCase):
                 self.assertLessEqual(faces, {inward, "east", "west"}, (y, z))
 
     def test_top_tier_matches_the_body(self):
-        """r6: the top tier (y 20..21) red terracotta - in r5 it rendered 43..48 against the body's 60. r7 (critic on
-        r6, in game: the top a 3 x 3 red stub under a copper block): over it a needle - y 22..23 every cell but the
-        1-wide core (x 4, z 12) a mangrove stair, tall half toward the core; y 24 a blackstone-brick wall post; the
-        copper tip at y 25."""
+        """r6: the top tier (y 20..21) in the cone's body material; r7 (critic in game on r6: the top a 3 x 3 stub
+        under a copper block): over it a needle - y 22..23 every cell but the 1-wide core (x 4, z 12) a stair, tall
+        half toward the core; y 24 a blackstone-brick wall post; the copper tip at y 25. r8: the body is COPPER (r7:
+        red terracotta / mangrove)."""
         for y in (20, 21):
             for z in (11, 12, 13):
                 x, n = self.front_cell(y, z)
-                self.assertEqual(n, "red_terracotta" if not n.endswith("_stairs") else "mangrove_stairs", (y, z))
+                self.assertTrue(n.startswith("waxed_") and "copper" in n, (y, z, n))
         for y in (22, 23):
             ring = [(q, self.rig.b[q]) for q in self.rig.b if q[1] == y and q != (4, y, 12) and self.rig.b[q][0] != "air"]
             self.assertTrue(ring)
             for (x, _, z), (n, p) in ring:
-                self.assertEqual(n, "mangrove_stairs", (x, y, z))
+                self.assertTrue(n.endswith("_stairs") and "copper" in n, (x, y, z, n))
                 want = {"east" if x < 4 else "west" if x > 4 else None, "south" if z < 12 else "north" if z > 12 else None}
                 self.assertIn(p["facing"], want - {None}, (x, y, z))
         self.assertEqual(self.names[(4, 24, 12)], "polished_blackstone_brick_wall")
@@ -296,19 +297,25 @@ class EngineShedT1Detail(unittest.TestCase):
                 self.assertTrue(n.endswith("_slab"), ((x, y, z), n))
 
     def test_shed_is_a_shallow_gable_with_two_lit_slots(self):
-        """r6 (R9; critic on r5: the shed, ~40 % of the RTS view, a black box, median luma 24): a shallow gable of
-        deepslate-tile shapes over x 11..16, z 2..22 - eaves at y 5 (x 11 / 16), the ridge at y 6 over x 13..14 -
-        under the hall ridge; no parapet; two lit 1 x 3 slots in the south wall (z 24); the stack clear above."""
-        for z in range(2, 23):
+        """r6 (R9; critic on r5: the shed, ~40 % of the RTS view, a black box, median luma 24): a shallow gable over
+        x 11..16 - eaves at y 5 (x 11 / 16), the ridge at y 6 over x 13..14 - under the hall ridge; no parapet; two
+        lit 1 x 3 slots in the south wall; the stack clear above. r8 (G1, the brief: "walls may step back 1 from the
+        plot edge so eaves oversail"): the gable runs on to z 24 as its verge, the south wall one back at z 23, so the
+        slots and their lanterns are at z 23 (r7: z 24, x 12 / 15); over the verge only stairs and slabs (no parapet)."""
+        for z in range(2, 25):
             tops = {x: max(y for y in range(SIZE_T1[1]) if (x, y, z) in self.names) for x in range(11, 17)}
             self.assertEqual(tops, {11: 5, 12: 6, 13: 6, 14: 6, 15: 6, 16: 5}, z)
             for x in (11, 16):
                 self.assertTrue(self.names[(x, 5, z)].endswith("_stairs"), (x, z))
-        self.assertEqual([q for q, n in self.names.items() if q[1] == 6 and q[2] == 24 and q[0] >= 11], [])
+        verge = {q: n for q, n in self.names.items() if q[2] == 24 and q[0] >= 11 and q[1] >= 5}
+        self.assertEqual(len(verge), 10)
+        self.assertEqual([n for n in verge.values() if not n.endswith(("_stairs", "_slab"))], [])
+        self.assertEqual([q for q in self.names if q[2] == 24 and q[0] >= 11 and 1 <= q[1] <= 4], [])
         lit = sorted(q for q, n in self.names.items() if n == "lantern" and q[0] >= 11)
-        self.assertEqual(lit, [(12, 2, 24), (15, 2, 24)])
-        for x, _, z in lit:
-            self.assertEqual([self.names.get((x, y, z)) for y in (3, 4)], [None, None])
+        self.assertEqual(lit, [(13, 2, 23), (14, 2, 23)])     # the side walls step back too (x 12..15): the slots
+        for x, _, z in lit:                                    # between the corners, 1 x 2 under the G7 cap at y 4
+            self.assertIsNone(self.names.get((x, 3, z)))
+            self.assertTrue(pale(self.names[(x, 4, z)]), (x, z))
         self.assertGreater(max(y for (x, y, z) in self.names if 13 <= x <= 14 and z <= 1), 6)
 
     def test_eye_is_granite_round_a_red_heart(self):
@@ -318,13 +325,12 @@ class EngineShedT1Detail(unittest.TestCase):
         self.assertEqual(ring, ["polished_granite"] * 4)
         self.assertEqual(self.front_cell(15, 12)[1], "red_nether_bricks")
 
-    def test_upper_spire_is_red_and_arrises_dark(self):
+    def test_upper_spire_is_one_field_and_arrises_dark(self):
         """r4's top tier was 13 of 16 cells dark - a dark cap, a third tier. The top tier (y 20..23, z 11..13) is one
-        red field; the point (y 24) dark under the brass tip (y 25); below y 20 every row's outer columns (the
-        arrises, z = 12 +- half-width) dark from the eave up."""
-        red = ("terracotta", "mangrove", "granite")
+        field, never dark; the point (y 24) dark under the brass tip (y 25); below y 20 every row's outer columns (the
+        arrises, z = 12 +- half-width) dark from the eave up - r8: the dark RIBS of R12 on a copper cone (r7: red)."""
         top = {(y, z): self.front_cell(y, z)[1] for y in range(20, 24) for z in (11, 12, 13)}
-        self.assertEqual({q: n for q, n in top.items() if not any(k in n for k in red)}, {})
+        self.assertEqual({q: n for q, n in top.items() if "copper" not in n or any(k in n for k in self.DARK)}, {})
         self.assertTrue(self.front_cell(24, 12)[1].startswith("polished_blackstone_brick"))
         self.assertTrue(self.front_cell(25, 12)[1].startswith("waxed_cut_copper"))
         for y in range(7, 20):
@@ -337,8 +343,12 @@ class EngineShedT1Detail(unittest.TestCase):
         import facade_audit as FA
         with open(REGIONS) as f:
             regions = json.load(f)
-        rep = FA.audit(self.out, regions)
-        self.assertEqual(len(rep), 13)
+        self.assertEqual(len(regions), 13)
+        # r8: the roof faces (face "up": R4 hall roofs, R5 wing roofs, R9 shed roof) are gated by G6 instead -
+        # roof_kit courses hold the base tone at 55-72 % (design/architecture_rules.md), which this audit's 40 %
+        # top-share rule forbids; every wall and tower face keeps the audit
+        rep = FA.audit(self.out, [r for r in regions if r["face"] != "up"])
+        self.assertEqual(len(rep), 8)
         bad = ["%s: %s" % (r["name"], "; ".join(r["faults"])) for r in rep if r["faults"]]
         self.assertEqual(bad, [])
 
@@ -363,21 +373,13 @@ def committed_cells(path):
             for b in root["blocks"]}
 
 
-# THE KEEPS (critic, round 1): boxes (x0, x1, y0, y1, z0, z1), inclusive, that later rounds must not change - each
-# cell's block AND state equal to the committed design/vehicle_labs/brass_t1.nbt
-KEEPS = {
-    "R4 hall roof N": (0, 10, 7, 10, 3, 6), "R4 hall roof S": (0, 10, 7, 10, 18, 21),
-    "R3 cornice + candles N": (0, 0, 6, 7, 0, 6), "R3 cornice + candles S": (0, 0, 6, 7, 18, 24),
-}
-# Re-mass r3 (lovish chose option b, Oct 28) moved three keeps on purpose, each still pinned:
-# - the hall roofs' last columns z 7 / 17 (r2: the tower's base, its foot stairs and a buttress pinnacle to y 9) are
-#   now the hall roof running into the cone's flank (brief F): each cell equals the committed hall roof one column
-#   out (z 6 / 18), except the buttress cap AT the eave (0, 7, 7 / 17) where z 6 / 18 carry a bay candle;
+CORBEL = "polished_blackstone_brick_stairs"            # r8: R10's corbels under each tier's ledge
+
+
+# Re-mass r3 (lovish chose option b, Oct 28) moved keeps on purpose, each still pinned:
 # - the R7 eye keeps its ELEVATION cells (y 14..16, z 11..13: a pale ring round a deep-red heart), set into the
 #   cone's new face planes (x 1 / 2 instead of 2 / 3);
 # - the buttress pinnacles' brass tips (0, 9, 7 / 17) are gone (brief B: nothing on the tower rises above the eave).
-HALL_EDGE = {7: 6, 17: 18}
-BUTTRESS_CAPS = [(0, 7, 7), (0, 7, 17)]
 EYE = (14, 16, 11, 13)                                    # y0, y1, z0, z1 of the R7 eye in the west elevation
 PINNACLE_TIPS = [(0, 9, 7), (0, 9, 17)]
 # r4 (Oct 28): the lane is 5 x 8, so the door's brass keystone moved from r3's head (0, 11, 12) to the new head
@@ -403,7 +405,11 @@ def eye_roles(cells):
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class EngineShedT1Keeps(unittest.TestCase):
-    """Round 2 must not regress what round 1's critic kept: frozen cell for cell against git HEAD's brass_t1.nbt."""
+    """Round 2 must not regress what round 1's critic kept: frozen cell for cell against git HEAD's brass_t1.nbt.
+    Retired in r8 (lovish, Oct 28 22:59: slate roofs, copper cone, brick walls - the red look rejected):
+    test_keeps_cell_for_cell (froze r7's red R4 hall roofs and the R3 quartz cornice + candles, now slate courses and
+    the R1 eave lip + gutter), test_hall_roofs_run_into_the_cone (froze z 7 to r7's red hall roof at z 6),
+    test_the_eight_bay_candles (the candles stood on that cornice, where the gutter runs now)."""
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
@@ -419,18 +425,6 @@ class EngineShedT1Keeps(unittest.TestCase):
         if self.want is None:
             self.skipTest("no committed brass_t1.nbt (not in git)")
 
-    def test_keeps_cell_for_cell(self):
-        for name, (x0, x1, y0, y1, z0, z1) in KEEPS.items():
-            box = [(x, y, z) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1) for z in range(z0, z1 + 1)]
-            diff = [q for q in box if self.got.get(q) != self.want.get(q)]
-            self.assertEqual(diff, [], name)
-
-    def test_hall_roofs_run_into_the_cone(self):
-        for z, zh in HALL_EDGE.items():
-            box = [(x, y, z) for x in range(0, 11) for y in range(7, 11) if (x, y, z) not in BUTTRESS_CAPS]
-            diff = [q for q in box if self.got.get(q) != self.want.get((q[0], q[1], zh))]
-            self.assertEqual(diff, [], "z %d is not the hall roof of z %d" % (z, zh))
-
     def test_the_eye_keeps_its_elevation(self):
         """The eye's cells and heart stay where r2 put them; r5 turned its ring calcite -> polished granite (the
         critic: +120 luma over the body split the cone) - EngineShedT1Detail.test_eye_is_granite_round_a_red_heart."""
@@ -438,16 +432,220 @@ class EngineShedT1Keeps(unittest.TestCase):
         self.assertEqual(sorted(q for q, r in got.items() if r == "ring"), [(14, 12), (15, 11), (15, 13), (16, 12)])
         self.assertEqual(got[(15, 12)], "heart")
 
-    def test_the_eight_bay_candles(self):
-        lit = sorted(q for q, (n, _) in self.got.items() if n.endswith("candle"))
-        self.assertEqual(lit, [(0, 7, z) for z in L.ARCH_Z])
-
     def test_every_brass_cell_kept(self):
         brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper")
                        and q not in MOVED_BRASS)
         self.assertTrue(brass)
         self.assertEqual([q for q in brass if self.got.get(q) != self.want[q]], [])
 
+
+# ==================================================================================== r8 gates (Oct 29 2026)
+# lovish, Oct 28 22:42 "its not looking realistic enough", 22:59: red BRICK walls, grey SLATE roofs on the halls /
+# shed / wings, weathered green COPPER on the cone; 23:44 "become a master architect". The gates of
+# design/architecture_rules.md (G1 eaves, G3 no block over 25 %, G4 roof family != wall family, G6 roof_kit courses +
+# ridge + verges + gutters, G7 base course + cap line) and the palette, measured with tools/schem_study.py on the
+# built .nbt. Written before the r8 generator and run red on r7. Notes on the measures:
+# - the y 0 pad is the ground (every lab has one), not a wall: G1 measures y >= 1, or the pad's footprint makes
+#   every column "inside the walls" and no eave can ever oversail (r7's {} was partly this);
+# - G3 counts the EXPOSED blocks (a 6-neighbour is air): the greybox's halls, wings, shed and cone are solid, so a
+#   raw count is the hidden core's material, not what anyone sees (the 26 measured builds are hollow);
+# - the camera faces are west (the front) and south (design/vehicle_labs/engine_shed_detail_grammar.md).
+import schem_study as S  # noqa: E402
+import roof_kit as R  # noqa: E402
+
+PALE = ("andesite", "smooth_stone", "stone_brick", "diorite", "calcite", "quartz")
+
+
+def pale(n):
+    """Pale dressed stone (plinths, caps, string courses): not the dark stones whose names contain 'stone_brick'."""
+    return any(k in n for k in PALE) and not any(k in n for k in ("blackstone", "deepslate", "nether"))
+
+
+def brick(n):
+    return n in ("bricks", "brick_stairs", "brick_slab", "brick_wall")
+
+
+def in_cone(q):
+    return 8 <= q[2] <= 16 and q[0] <= 8 and q[1] >= 7
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class EngineShedR8Gates(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        out = os.path.join(cls.tmp.name, "brass_t1.nbt")
+        L.write(L.detail(), out)
+        cls.b = S.load(out)
+        cls.n = {q: n for q, (n, _) in cls.b.blocks.items()}
+        cls.up = S.Build({q: c for q, c in cls.b.blocks.items() if q[1] >= 1})
+        cls.over = S.overhang_cells(cls.up)
+        cls.roofs = S.roof_cells(cls.up)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def exposed(self):
+        n = self.n
+        return [q for q in n if q[1] >= 1 and any(
+            (q[0] + a, q[1] + b, q[2] + c) not in n for a, b, c in
+            ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)))]
+
+    def top(self, x, z):
+        ys = [y for (xx, y, zz) in self.n if (xx, zz) == (x, z)]
+        return (x, max(ys), z) if ys else None
+
+    def band(self, face):
+        """The wall band between the plinth (y 1) and each run's cap, seen from a camera face: per column the front-
+        most cell within 2 of the wall plane, openings (glass, lights) left out. West: the arcade z 1..6, 18..23 (cap
+        y 6; the tower base and the door, z 7..17, are their own region, R6). South: the wings x 1..8 (cap y 7), the
+        hall's corner x 9 (cap y 6), the shed end x 12..15 (cap y 4); x 10..11 is the yard."""
+        out = {}
+        if face == "west":
+            cols = [(z, 6, (0, 1, 2)) for z in list(range(1, 7)) + list(range(18, 24))]
+        else:
+            cols = [(x, 7 if x <= 8 else 6 if x == 9 else 4, (24, 23, 22)) for x in list(range(1, 10)) + list(range(12, 16))]
+        for u, cap, depths in cols:
+            for y in range(2, cap):
+                for d in depths:
+                    q = (d, y, u) if face == "west" else (u, y, d)
+                    if q in self.n:
+                        if not any(k in self.n[q] for k in ("glass", "lantern", "candle")):
+                            out[(u, y)] = self.n[q]
+                        break
+        return out
+
+    # ---------------------------------------------------------------- G1
+    def test_g1_eaves_and_verges_oversail_on_the_camera_faces(self):
+        """Every camera-facing eave and verge 1 proud of its wall: the hall eaves' copper gutter (x 0, y 7, R1: on
+        the pale lip) between wing and buttress, the wings' front verges (their top cell at x 0), the hall's corner
+        (9, 7, 24) over the corner stepped back to z 23, the works shed's south verge (z 24) and west eave (x 11).
+        Not the wings' south end: the frozen outline (z 23 tops 12, z 24 tops 14) makes it a tall gable wall whose top
+        IS the ridge - it cannot oversail inside the 17 x 25 plot."""
+        want = [(0, 7, z) for z in (5, 6, 18, 19)]
+        want += [self.top(0, z) for z in list(range(0, 5)) + list(range(20, 25))]
+        want += [(9, 7, 24)]
+        want += [self.top(x, 24) for x in range(11, 17)] + [(11, 5, z) for z in range(2, 25)]
+        missing = [q for q in want if self.over.get(q, 0) < 1]
+        self.assertEqual(missing, [])
+
+    # ---------------------------------------------------------------- G3
+    def test_g3_no_block_over_a_quarter_of_what_is_seen(self):
+        ex = self.exposed()
+        counts = {}
+        for q in ex:
+            counts[self.n[q]] = counts.get(self.n[q], 0) + 1
+        name = max(counts, key=counts.get)
+        self.assertLessEqual(counts[name] / len(ex), 0.25, (name, counts[name], len(ex)))
+
+    # ---------------------------------------------------------------- G4 + the palette
+    def test_g4_slate_and_copper_roofs_over_brick_walls(self):
+        def fam(n):
+            if R.family(n, R.SLATE) is not None or n in R.SLATE["ridge"] + R.SLATE["verge"]:
+                return "slate"
+            return "copper" if "copper" in n else n
+        halls = [fam(self.n[q]) for q in self.roofs if not in_cone(q)]
+        cone = [fam(self.n[q]) for q in self.roofs if in_cone(q)]
+        walls = list(self.band("west").values()) + list(self.band("south").values())
+        self.assertGreaterEqual(halls.count("slate") / len(halls), 0.6, sorted(set(halls)))
+        self.assertGreaterEqual(cone.count("copper") / len(cone), 0.6, sorted(set(cone)))
+        self.assertGreaterEqual(sum(map(brick, walls)) / len(walls), 0.6)
+        self.assertNotIn("slate", [fam(n) for n in walls if brick(n)])
+
+    def test_palette_red_terracotta_at_most_five_percent(self):
+        v = list(self.n.values())
+        self.assertLessEqual(v.count("red_terracotta") / len(v), 0.05)
+
+    def test_walls_brick_with_a_structured_second_tone(self):
+        """Brick 60-90 % of each camera face's wall band (lovish: ~80 / 20 with a second tone), the second tone in
+        courses and bands - never a chequer: at most 10 % of the band's cells have no same-material 4-neighbour."""
+        import facade_audit as FA
+        for face in ("west", "south"):
+            band = self.band(face)
+            share = sum(map(brick, band.values())) / len(band)
+            self.assertTrue(0.6 <= share <= 0.9, (face, share))
+            lone = [k for k, n in band.items() if not any(
+                FA.material(band.get((k[0] + a, k[1] + b), "")) == FA.material(n)
+                for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+            self.assertLessEqual(len(lone) / len(band), 0.10, (face, lone))
+
+    # ---------------------------------------------------------------- G6
+    def test_g6_hall_roofs_in_slate_courses(self):
+        """The hall roofs (z 3..7, 17..21): roof_kit's three slate tones, T0 55-72 %, no chequer or 4+ dark run along
+        a course (a row of fixed x, y along z); the ridge cap on the hall ridge (x 5)."""
+        cells = [q for q in self.roofs if not in_cone(q) and q[0] <= 10 and (3 <= q[2] <= 7 or 17 <= q[2] <= 21)
+                 and R.family(self.n[q], R.SLATE) is not None]
+        tones = [R.family(self.n[q], R.SLATE) for q in cells]
+        self.assertEqual(set(tones), {0, 1, 2})
+        self.assertTrue(0.55 <= tones.count(0) / len(tones) <= 0.72, tones.count(0) / len(tones))
+        for x in range(0, 11):
+            for y in range(7, 11):
+                for zs in (range(3, 8), range(17, 22)):
+                    row = "".join(str(R.family(self.n[(x, y, z)], R.SLATE)) for z in zs if (x, y, z) in self.n
+                                  and R.family(self.n[(x, y, z)], R.SLATE) is not None)
+                    self.assertNotIn("101", row, (x, y))
+                    self.assertNotIn("1111", row, (x, y))
+        for z in (5, 6, 18, 19):
+            self.assertIn(self.n[self.top(5, z)], R.SLATE["ridge"], z)
+
+    def test_g6_verges_ridges_and_gutters(self):
+        """Dark verges on the wings' front edge (x 0; the brass finials at the ridge ends z 0 / 24 kept) and the
+        shed's south end; the wings' ridges (y 14 at z 0 / 24) and the shed ridge in the ridge stone; copper gutters
+        on the hall eaves' lip and under both shed eaves, stopping at the shed's south wall (z 23)."""
+        for z in list(range(1, 5)) + list(range(20, 24)):
+            self.assertIn(self.n[self.top(0, z)], R.SLATE["verge"], z)
+        for x in range(1, 9):
+            for z in (0, 24):
+                self.assertIn(self.n[(x, 14, z)], R.SLATE["ridge"], (x, z))
+        for x in (11, 12, 15, 16):
+            self.assertIn(self.n[self.top(x, 24)], R.SLATE["verge"], x)
+        for z in range(2, 24):
+            self.assertIn(self.n[self.top(13, z)], R.SLATE["ridge"], z)
+        gut = [(0, 7, z) for z in (5, 6, 18, 19)] + [(x, 4, z) for x in (11, 16) for z in range(2, 24)]
+        self.assertEqual([q for q in gut if self.n.get(q) != R.SLATE["gutter"]], [])
+
+    def test_g6_cone_in_copper_courses_with_ledges(self):
+        """The cone: roof_kit's copper tones on its body (T0 55-72 % of the copper-tone cells seen), dark ribs on the
+        arrises (EngineShedT1Detail.test_upper_spire_is_one_field_and_arrises_dark), and R10 at each tier foot:
+        the step row (y 11 / 15 / 19) a brass ledge (waxed cut copper stairs) across the face, the row under it
+        carrying upside-down dark corbels on every other cell (the teeth of shadow) - the eye's cells aside."""
+        ex = set(self.exposed())
+        tones = [R.family(n, R.COPPER) for q, n in self.n.items() if in_cone(q) and q in ex
+                 and R.family(n, R.COPPER) is not None]
+        self.assertEqual(set(tones), {0, 1, 2})
+        self.assertTrue(0.55 <= tones.count(0) / len(tones) <= 0.72, tones.count(0) / len(tones))
+        eye = {(14, 12), (15, 11), (15, 12), (15, 13), (16, 12)}
+        b = self.b.blocks
+        for ys, fx, zs in ((11, 0, range(9, 16)), (15, 1, range(10, 15)), (19, 2, range(11, 14))):
+            ledge = [(fx, ys, z) for z in zs if (ys, z) not in eye]
+            self.assertTrue(ledge)
+            self.assertEqual([q for q in ledge if self.n.get(q) != "waxed_cut_copper_stairs"], [], ys)
+            row = [(fx, ys - 1, z) for z in zs if (ys - 1, z) not in eye]
+            teeth = [q for q in row if self.n.get(q) == CORBEL and b[q][1].get("half") == "top"]
+            self.assertGreaterEqual(len(teeth), len(row) // 2, ys)
+            self.assertFalse(any((x, y, z + 1) in teeth for x, y, z in teeth), ys)
+
+    # ---------------------------------------------------------------- G7
+    def test_g7_base_course_and_cap_line_on_every_wall_run(self):
+        """A pale base course at y 1 and a cap line on every camera-face wall run: the west arcade (x 1, z 1..6,
+        18..23: base y 1, cap y 6, a gutter or a pale lip 1 proud over it at x 0); the south face - the wings (z 24,
+        x 1..8: base y 1, string course y 7), the hall's corner and the shed end, both stepped back to z 23 (x 9: cap
+        y 6; x 12..15: cap y 4)."""
+        bad = []
+        for z in list(range(1, 7)) + list(range(18, 24)):
+            for q in ((1, 1, z), (1, 6, z)):
+                if not pale(self.n.get(q, "air")):
+                    bad.append(q)
+            lip = self.n.get((0, 6, z), "air")
+            if not (pale(lip) or lip == R.SLATE["gutter"]):
+                bad.append((0, 6, z))
+        runs = [(x, 24, 7) for x in range(1, 9)] + [(9, 23, 6)] + [(x, 23, 4) for x in range(12, 16)]
+        for x, z, cap in runs:
+            for q in ((x, 1, z), (x, cap, z)):
+                if not pale(self.n.get(q, "air")):
+                    bad.append(q)
+        self.assertEqual(bad, [])
 
 if __name__ == "__main__":
     unittest.main()

@@ -280,14 +280,14 @@ def _footprint(cols):
     return {(x, z) for x in range(x0, x1 + 1) for z in range(z0, z1 + 1)} - outside
 
 
-def eave_overhang(b):
-    """{distance: cells} for roof cells outside the walls' footprint below them (Chebyshev blocks to the footprint)
-    - how far real eaves throw their shadow. Ground blocks and roof shapes (stairs, slabs, gutters) don't count as
-    walls, so every course of an oversailing verge is measured, not only the lowest."""
+def overhang_cells(b):
+    """{(x, y, z): distance} for roof cells outside the walls' footprint below them (Chebyshev blocks to the
+    footprint). Ground blocks and roof shapes (stairs, slabs, gutters) don't count as walls, so every course of an
+    oversailing verge is measured, not only the lowest."""
     roofs = roof_cells(b)
     walls = sorted((q for q, (n, _) in b.blocks.items() if n not in AIR and n not in GROUND and not is_roof_shape(n)),
                    key=lambda q: q[1])
-    hist = Counter()
+    out = {}
     for y in sorted({q[1] for q in roofs}):
         cols = {(q[0], q[2]) for q in walls if q[1] < y}
         fp = _footprint(cols)
@@ -296,9 +296,13 @@ def eave_overhang(b):
         for (x, yy, z) in roofs:
             if yy != y or (x, z) in fp:
                 continue
-            d = min(max(abs(x - fx), abs(z - fz)) for fx, fz in fp)
-            hist[d] += 1
-    return dict(hist)
+            out[(x, y, z)] = min(max(abs(x - fx), abs(z - fz)) for fx, fz in fp)
+    return out
+
+
+def eave_overhang(b):
+    """{distance: cells} over overhang_cells - how far real eaves throw their shadow."""
+    return dict(Counter(overhang_cells(b).values()))
 
 
 def depth_layers(b, face):
