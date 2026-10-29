@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hero.HeroFx;
 import com.solegendary.reignofnether.mana.DecoyServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
 import com.solegendary.reignofnether.unit.DragonRaiseServerEvents;
 import com.solegendary.reignofnether.unit.PopulationTally;
@@ -193,6 +194,79 @@ public class SummonPopulationGameTests {
                     problems.add(rose + " risen skeletons count " + UnitServerEvents.getCurrentPopulation(owner) + " population");
             } finally {
                 clearOwner(helper, owner);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * lovish, Oct 29: at most 8 Lich Regent ghouls alive per player (no lifetime) - with no population cost they had
+     * no limit at all, and bots cast Raise Dead on cooldown. Ten wrecks of one ghoul's metal each round the caster:
+     * casts raise 3, 3, 2 and then nothing; the refused cast drains no wreck, and the ability (the path the bot takes too)
+     * sets no cooldown.
+     * One ghoul gone, the next cast raises exactly one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void summon_pop_ghouls_cap_at_8_per_player(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "ghouls");
+        Mob lich = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 8, 8);
+        if (lich == null) {
+            helper.fail("could not spawn the caster");
+            return;
+        }
+        float each = ResourceCosts.ZOMBIE.metal();   // one ghoul empties one wreck, so no cast can come back to it
+        List<Entity> wrecks = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            double a = i * Math.PI * 2 / 10;
+            BlockPos w = helper.absolutePos(new BlockPos(8, 2, 8));
+            Entity wreck = WreckServerEvents.spawnWreck(level, w.getX() + 0.5 + Math.cos(a) * 5, w.getY(),
+                w.getZ() + 0.5 + Math.sin(a) * 5, each, Factions.MONSTERS);
+            if (wreck != null)
+                wrecks.add(wreck);
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (RaiseDead.MAX_GHOULS != 8)
+                    problems.add("lovish set 8 ghouls per player, MAX_GHOULS is " + RaiseDead.MAX_GHOULS);
+                if (wrecks.size() != 10)
+                    problems.add("setup: " + wrecks.size() + " of 10 wrecks spawned");
+                int[] casts = new int[4];
+                for (int i = 0; i < casts.length; i++)
+                    casts[i] = RaiseDead.raise(level, lich, owner);
+                List<ZombieUnit> ghouls = new ArrayList<>();
+                for (ZombieUnit z : level.getEntitiesOfClass(ZombieUnit.class, new AABB(lich.blockPosition()).inflate(12)))
+                    if (z.isAlive() && owner.equals(z.getOwnerName()))
+                        ghouls.add(z);
+                int total = casts[0] + casts[1] + casts[2] + casts[3];
+                if (total != 8 || casts[3] != 0)
+                    problems.add("casts raised " + casts[0] + ", " + casts[1] + ", " + casts[2] + ", " + casts[3]
+                        + " ghouls (" + ghouls.size() + " alive), expected 3, 3, 2, 0: at most 8 per player");
+                if (RaiseDead.liveGhouls(owner) != ghouls.size())
+                    problems.add("liveGhouls says " + RaiseDead.liveGhouls(owner) + ", " + ghouls.size() + " stand");
+                int full = 0;
+                for (Entity w : wrecks)
+                    if (!w.isRemoved() && WreckServerEvents.metalOf(w) >= each - 0.01f)
+                        full++;
+                if (full != wrecks.size() - Math.min(total, wrecks.size()))
+                    problems.add(full + " wrecks are untouched after " + total + " ghouls: a refused raise drained one");
+                // the ability's own path (the bot casts it on cooldown): refused at the cap, no cooldown
+                RaiseDead ability = new RaiseDead();
+                ability.use(level, (Unit) lich, lich.blockPosition());
+                if (((Unit) lich).getCooldown(ability) > 0)
+                    problems.add("Raise Dead at the cap still set its cooldown (a refused cast)");
+                // one gone: room for exactly one more
+                if (!ghouls.isEmpty()) {
+                    ghouls.get(0).discard();
+                    int again = RaiseDead.raise(level, lich, owner);
+                    if (again != 1)
+                        problems.add("with one ghoul gone the next cast raised " + again + ", expected 1");
+                }
+            } finally {
+                clearOwner(helper, owner);
+                for (Entity w : wrecks)
+                    w.discard();
             }
             finish(helper, problems);
         });
