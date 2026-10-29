@@ -255,15 +255,15 @@ public final class EyesDirector {
                         OrthoviewClientEvents.centreCameraOnPosInstant(net.minecraft.world.phys.Vec3.atCenterOf(t));
                     ReignOfNether.LOGGER.info("[Eyes] 05m_forest: {} trees planted on {}, nearest {}",
                         com.solegendary.reignofnether.maps.MapBuilder.lastPlanted.size(), MAP, t);
-                } else if (ticks == 20 * 7) {
+                } else if (ticks == 20 * 14) {   // the fogged chunks stream in after the fog lifts (7 s left holes, shader lane)
                     shot(mc, "05m_forest_rts");
                     OrthoviewClientEvents.zoomCam(-1000);   // all the way in
-                } else if (ticks == 20 * 11) {
+                } else if (ticks == 20 * 18) {
                     shot(mc, "05n_forest_rts_close");
                     OrthoviewClientEvents.zoomCam(1000);
                     OrthoviewClientEvents.zoomCam(-1000);
                     OrthoviewClientEvents.zoomCam(40);      // back to a middle zoom, as case 3 leaves it
-                } else if (ticks > 20 * 13) {
+                } else if (ticks > 20 * 20) {
                     if (fogWasOn) {
                         com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.setEnabled(true);
                         var srv = mc.getSingleplayerServer();
