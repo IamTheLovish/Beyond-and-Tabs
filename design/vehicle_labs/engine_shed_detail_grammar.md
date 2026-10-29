@@ -417,3 +417,12 @@ game's windmills (energy buildings).
    a stone ground storey. Every floor change is a shadow line.
 4. **Life details:** flower boxes, a hanging lantern on an outrigger, a balcony, stone stairs, plants at the base.
 5. Silhouette: a tall main body, a smaller tower on top, lean-to roofs either side stepping down to the ground.
+
+## (q) ref57 - lovish's reference, Oct 28 22:52 (design/refs/vehicle_labs/ref57_industrial_complex_stacks_above.png)
+An industrial complex from the RTS angle (AI-generated): the Brassworks T3/T4 scale target.
+1. **Round banded stacks** of several heights with ring bands every few blocks and domed/caged caps - the cluster
+   is the silhouette from above.
+2. **Rooftop incident everywhere:** vents, small tanks, domes, railings - no roof plane is empty from above.
+3. **Pipes on the ground** radiating out to the plot edge and the yard: they tie the building into the map.
+4. A raised plinth with a trimmed edge frames the whole compound.
+For T1: one round banded stack (not square), rooftop vents on the shed, one pipe run to the yard.
