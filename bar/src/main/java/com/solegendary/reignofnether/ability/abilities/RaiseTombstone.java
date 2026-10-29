@@ -23,7 +23,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -119,36 +118,27 @@ public class RaiseTombstone extends Ability {
     @Nullable
     public static TombstoneUnit cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
         if (owner == null || owner.isEmpty() || at == null)
-            return null;
+            return refuse(sl, owner, null, quiet, "no owner or no spot");
         // the clicked ground block: the stone stands on it; a click in the air over ground: it stands there
         BlockPos feet = solid(sl, at) ? at.above() : at;
         Vec3 spot = Vec3.atBottomCenterOf(feet);
         double dx = spot.x - caster.getX(), dz = spot.z - caster.getZ();
-        if (dx * dx + dz * dz > (RANGE + 0.5) * (RANGE + 0.5) || Math.abs(spot.y - caster.getY()) > MAX_RISE) {
-            if (!quiet)
-                TombcallerServerEvents.warn(sl, owner, MSG_TOO_FAR);
-            return null;
-        }
-        if (TombcallerServerEvents.stoneCount(caster) >= MAX_STONES) {
-            if (!quiet)
-                TombcallerServerEvents.warn(sl, owner, MSG_MAX);
-            return null;
-        }
-        EntityType<TombstoneUnit> type = EntityRegistrar.TOMBSTONE_UNIT.get();
-        if (!solid(sl, feet.below()) || !sl.noCollision(type.getDimensions().makeBoundingBox(spot))) {
-            if (!quiet)
-                TombcallerServerEvents.warn(sl, owner, MSG_NO_ROOM);
-            return null;
-        }
-        TombstoneUnit stone = type.create(sl);
+        if (dx * dx + dz * dz > (RANGE + 0.5) * (RANGE + 0.5) || Math.abs(spot.y - caster.getY()) > MAX_RISE)
+            return refuse(sl, owner, MSG_TOO_FAR, quiet, "too far: " + spot + " from " + caster.position());
+        if (TombcallerServerEvents.stoneCount(caster) >= MAX_STONES)
+            return refuse(sl, owner, MSG_MAX, quiet, "at the cap: " + TombcallerServerEvents.stoneCount(caster) + " stones");
+        // ground under it, and its feet and head cells clear (a 1.25-high stone): blocks only, units may stand there
+        if (!solid(sl, feet.below()) || solid(sl, feet) || solid(sl, feet.above()))
+            return refuse(sl, owner, MSG_NO_ROOM, quiet, "no room at " + feet.toShortString() + " (ground " + solid(sl, feet.below())
+                + ", feet " + sl.getBlockState(feet) + ", head " + sl.getBlockState(feet.above()) + ")");
+        TombstoneUnit stone = EntityRegistrar.TOMBSTONE_UNIT.get().create(sl);
         if (stone == null)
-            return null;
+            return refuse(sl, owner, null, quiet, "the stone could not be made");
         if (!Essence.trySpend(caster, ESSENCE_COST)) {
             stone.discard();
-            if (!quiet)
-                TombcallerServerEvents.warn(sl, owner, Empower.MSG_SHORT);
-            return null;
+            return refuse(sl, owner, Empower.MSG_SHORT, quiet, "short of essence: " + Essence.get(caster));
         }
+        lastRefusal = null;
         stone.moveTo(spot.x, spot.y, spot.z, caster.getYRot(), 0);
         stone.setOwnerName(owner);
         Essence.markSummoned(stone);   // before it joins: no essence, no XP, no veterancy for its killer
@@ -158,6 +148,18 @@ public class RaiseTombstone extends Ability {
         BarFx.shot(sl, caster.getEyePosition(), spot.add(0, 0.8, 0), BarFx.K_MAGIC, caster);
         SoundClientboundPacket.playSoundAtPos(SoundAction.WRAITH_POSSESS_PARTIAL, feet);
         return stone;
+    }
+
+    /** Why the last cast was refused (null after a cast that raised a stone): the game tests' diagnostic. */
+    @Nullable
+    public static String lastRefusal = null;
+
+    @Nullable
+    private static TombstoneUnit refuse(ServerLevel sl, String owner, @Nullable String msg, boolean quiet, String why) {
+        lastRefusal = why;
+        if (!quiet && msg != null)
+            TombcallerServerEvents.warn(sl, owner, msg);
+        return null;
     }
 
     private static boolean solid(ServerLevel sl, BlockPos bp) {

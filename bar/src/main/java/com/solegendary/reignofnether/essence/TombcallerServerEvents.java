@@ -251,6 +251,10 @@ public final class TombcallerServerEvents {
         if (evt.getLevel().isClientSide())
             return;
         if (evt.getEntity() instanceof TombstoneUnit s) {
+            // a stone raised by any other path (a spawn egg, the registry's reload test) starts its clock on joining,
+            // rather than dying at once at an end tick of 0
+            if (s.end() == 0)
+                s.begin(null, evt.getLevel().getGameTime());
             away.remove(s.getUUID());
             if (!stones.contains(s))
                 stones.add(s);

@@ -366,7 +366,8 @@ public class TombcallerGameTests {
                     if (!stones.contains(s) && owner.equals(s.getOwnerName()))
                         stones.add(s);   // cleaned up even if stonesOf missed it
                 if (TombcallerServerEvents.stonesOf(caller).size() != 1) {
-                    problems.add("the caster keeps " + TombcallerServerEvents.stonesOf(caller).size() + " stones after one cast, expected 1");
+                    problems.add("the caster keeps " + TombcallerServerEvents.stonesOf(caller).size() + " stones after one cast, expected 1"
+                        + " (refused: " + RaiseTombstone.lastRefusal + ")");
                 } else {
                     TombstoneUnit s = TombcallerServerEvents.stonesOf(caller).get(0);
                     Vec3 want = cell(helper, 9, 3);
