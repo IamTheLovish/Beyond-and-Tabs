@@ -52,6 +52,7 @@ public class RisingTide extends Ability {
         // self-centred (no range): the CROWD rule then counts enemies round the caster in this radius
         super(UnitAction.RISING_TIDE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, RADIUS, false, true);
         this.autoRule(AutoRule.CROWD);
+        this.autocastEssence = ESSENCE_COST;
         this.showRangeCircle = true;
     }
 
@@ -99,8 +100,6 @@ public class RisingTide extends Ability {
      * Public for the bot and the game test (no cooldown handling here).
      */
     public static Wave cast(ServerLevel sl, LivingEntity caster, String owner, boolean quiet) {
-        // STUB (tests first, expected red): the spell does nothing yet
-        if (true) return null;
         if (owner == null || owner.isBlank())
             return null;
         List<LivingEntity> enemies = new ArrayList<>(), burning = new ArrayList<>();

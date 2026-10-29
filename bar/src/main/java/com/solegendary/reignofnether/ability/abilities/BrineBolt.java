@@ -49,6 +49,7 @@ public class BrineBolt extends Ability {
     public BrineBolt() {
         super(UnitAction.BRINE_BOLT, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
         this.autoRule(AutoRule.ENEMY_IN_RANGE);
+        this.autocastEssence = ESSENCE_COST;
         this.showRangeCircle = true;
     }
 
@@ -91,8 +92,6 @@ public class BrineBolt extends Ability {
      * so a refusal never costs essence. True when cast. Public for the bot and the game test (no cooldown here).
      */
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, LivingEntity target, boolean quiet) {
-        // STUB (tests first, expected red): the spell does nothing yet
-        if (true) return false;
         if (target == null || !TideSeerServerEvents.isEnemy(owner, target)) {
             refuse(owner, MSG_BAD_TARGET, quiet);
             return false;

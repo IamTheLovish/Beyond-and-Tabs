@@ -59,7 +59,7 @@ import java.util.List;
  * A thin copy of the Tide Priest's unit plumbing (the witch body), not a subclass: the bot and the tests find priests by
  * class. Placeholder look: the Tide Priest's own renderer and skin until lovish picks one.
  */
-public class TideSeerUnit extends Witch implements Unit, SupportUnit {   // STUB: not a carrier yet
+public class TideSeerUnit extends Witch implements Unit, SupportUnit, EssenceCarrier {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new BrineBolt(), Keybindings.abilitySlot1);

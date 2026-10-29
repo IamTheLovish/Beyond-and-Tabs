@@ -56,6 +56,7 @@ public class DrownedTithe extends Ability {
     public DrownedTithe() {
         super(UnitAction.DROWNED_TITHE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
         this.autoRule(AutoRule.CROWD);
+        this.autocastEssence = ESSENCE_COST;
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }
@@ -108,8 +109,6 @@ public class DrownedTithe extends Ability {
      * the bot and the game test (no cooldown handling here).
      */
     public static TideSeerServerEvents.Whirlpool cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos centre, boolean quiet) {
-        // STUB (tests first, expected red): the spell does nothing yet
-        if (true) return null;
         if (owner == null || owner.isBlank() || centre == null)
             return null;
         Vec3 c = new Vec3(centre.getX() + 0.5, centre.getY() + 1, centre.getZ() + 0.5);
