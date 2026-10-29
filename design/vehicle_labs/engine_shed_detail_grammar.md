@@ -391,3 +391,7 @@ A dark stepped monolith at dusk over glowing cyan water (dark-fantasy / AI-facti
 - ref53 (blue spire city between rock pillars): vertical light strips running the full height of spires, glowing
   orbs at the joints, rock vs built scale contrast, mirrored in water at dusk. Fits the new AI faction or a magic
   faction, not Brassworks. Lesson: light that follows the structure's lines (arrises, ribs) reads as designed.
+- ref54 (desert future base, from above, AI-generated): a terraced compound on a raised plinth - courtyards, pools,
+  planters, two towers of stacked rings/discs, curved terracotta-orange bands wrapping white volumes. Seen from the
+  RTS angle. Lesson: from above, a building reads through its TERRACES and courtyards (horizontal planes at many
+  levels, each with its own edge trim) - a flat roof is a missed surface. Faction fit: the new AI faction.
