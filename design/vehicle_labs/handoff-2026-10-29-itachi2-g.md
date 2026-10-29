@@ -36,6 +36,15 @@ All also in Project "4": `claude/architecture-rules-2026-10-29.md`, `claude/deta
 
 Claims held: `vehicle-labs`, `flake-raid-party-times`.
 
+## r8 critic (fresh Fable, in game, Oct 29) and the r9 plan
+Scores realism 3, detail 4, roof 3, tower 3, cohesion 4 (row in SCORES.md). Ranked fixes: (1) roof too dark - roof
+luma 61 < walls 78: slate as a 2-tone mid-grey (polished_andesite / stone_bricks ~60 % + deepslate_tiles ~40 %) in
+eave-parallel courses, deepslate only in the 2 wet eave courses, target roof luma >= walls; (2) tower reads as a pyramid
+- critic proposes collapsing 5 stages to 3 (brick base with quoins / body with iron-bar windows / one full copper cone,
+1-block oversail per stage, fence + chain spikes like ref62) - THIS BREAKS THE FROZEN CONE OUTLINE: ask lovish first;
+(3) empty main roof - 3-4 dormers per long slope, a glazed roof light, a second chimney; (4) eave lip + cornice + dentil
+course under every eave (recipe R1+R2); (5) life - lanterns on piers, a stone apron and ramp at the door, ridge vents.
+
 ## r8 brief (if it must be redone)
 Roofs and walls only, frozen massing (cone tops 11 15 19 23 25 23 19 15 11 over z 8..16; lane x 0..8 z 10..14 y 1..8;
 spawn column (8,*,12)); walls may step back 1 from the plot edge so eaves oversail (no block outside 17 x 25, h <= 26).
