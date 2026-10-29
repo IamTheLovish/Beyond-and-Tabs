@@ -46,8 +46,9 @@ public final class MotionPass {
     private static int slidersTick = Integer.MIN_VALUE;
 
     /** The parts touched by the last apply (bones then the hat) and their saved pose: x, y, z, xRot, yRot, zRot. */
-    private static final ModelPart[] TOUCHED = new ModelPart[DeathFall.BONES + BoneMap.MAX_FOLLOWERS];
-    private static final float[] SAVED = new float[(DeathFall.BONES + BoneMap.MAX_FOLLOWERS) * 6];
+    private static final int MAX_TOUCHED = DeathFall.BONES + BoneMap.MAX_FOLLOWERS + BoneMap.MAX_DROPPED;
+    private static final ModelPart[] TOUCHED = new ModelPart[MAX_TOUCHED];
+    private static final float[] SAVED = new float[MAX_TOUCHED * 6];
     private static int touched = 0;
 
     private static void readSliders() {
@@ -131,9 +132,10 @@ public final class MotionPass {
         int b = AnimStates.base(e.getId());
         float[] s = AnimStates.slab();
         try {
-            DeathFall.pose(s, b, e.getId(), e.deathTime - 1 + partial, map.jointed, DEATH_OUT);
+            float t = e.deathTime - 1 + partial;
+            DeathFall.pose(s, b, e.getId(), t, map.jointed, DEATH_OUT);
             s[b + AnimState.DEATH_DRAWN] = 1f;
-            placeFall(map, ps);
+            placeFall(map, ps, DeathFall.dropped(t, s[b + AnimState.DEATH_KIND], e.getId()));
         } catch (RuntimeException ex) {
             restore();
             BoneMaps.disable(model.getClass(), ex);
@@ -145,8 +147,16 @@ public final class MotionPass {
         return DEATH_OUT;
     }
 
-    /** Puts {@link #fallScratch()}'s offsets on the map's death parts and the pose stack (undone by {@link #restore}). */
+    /** {@link #placeFall(BoneMap, PoseStack, float)} with any weapon beside the hand already at rest (a lying body). */
     public static void placeFall(BoneMap map, PoseStack ps) {
+        placeFall(map, ps, 1f);
+    }
+
+    /**
+     * Puts {@link #fallScratch()}'s offsets on the map's death parts and the pose stack (undone by {@link #restore});
+     * a weapon held beside the hand is {@code dropped} (0..1, {@link DeathFall#dropped}) of the way to its rest.
+     */
+    public static void placeFall(BoneMap map, PoseStack ps, float dropped) {
         cur = DEATH_OUT;
         try {
             ModelPart[] p = map.death;
@@ -154,6 +164,8 @@ public final class MotionPass {
                 keep(p[bone]);
             for (int i = 0; i < map.followerCount; i++)
                 keep(map.followers[i]);
+            for (int i = 0; i < map.droppedCount; i++)
+                keep(map.dropped[i]);
             tilt(ps);
             bend(p, map.deathHierarchical, map.waistY);
             limbs(p);
@@ -161,6 +173,8 @@ public final class MotionPass {
             hanging(p[DeathFall.FORE_L], DeathFall.FORE_L);
             hanging(p[DeathFall.KNEE_R], DeathFall.KNEE_R);
             hanging(p[DeathFall.KNEE_L], DeathFall.KNEE_L);
+            for (int i = 0; i < map.droppedCount; i++)
+                settle(map.dropped[i], dropped);
             for (int i = 0; i < map.followerCount; i++)
                 map.followers[i].copyFrom(map.leaders[i]);
         } finally {
@@ -181,6 +195,24 @@ public final class MotionPass {
         limbs(map.parts);
         for (int i = 0; i < map.followerCount; i++)
             map.followers[i].copyFrom(map.leaders[i]);
+    }
+
+    /**
+     * A weapon on a grip beside the hand slips k (0..1) of the way back to its planted rest, its forward offset gone:
+     * upright at rest, it lies along the fallen body in the body's plane. Left at the guard it pointed forwards - at
+     * the sky once the body lay on its back (the Halberdier's halberd stood up beside him in the captures).
+     */
+    private static void settle(ModelPart p, float k) {
+        if (!(k > 0f))
+            return;
+        float x = p.x, y = p.y, z = p.z, rx = p.xRot, ry = p.yRot, rz = p.zRot;
+        p.resetPose();
+        p.x = Mth.lerp(k, x, p.x);
+        p.y = Mth.lerp(k, y, p.y);
+        p.z = Mth.lerp(k, z, 0f);
+        p.xRot = Mth.lerp(k, rx, p.xRot);
+        p.yRot = Mth.lerp(k, ry, p.yRot);
+        p.zRot = Mth.lerp(k, rz, p.zRot);
     }
 
     /** Puts every part the last apply touched back exactly as setupAnim left it. */
