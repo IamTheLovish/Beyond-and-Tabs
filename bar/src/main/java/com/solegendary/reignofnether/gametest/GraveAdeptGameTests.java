@@ -21,6 +21,7 @@ import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -57,6 +58,11 @@ public class GraveAdeptGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
     static final String BATCH = "grave_adept";
+    /**
+     * The one test that kills enemies worth XP runs alone: every test owner is every other's enemy, so its deaths fed
+     * the other tests' Adepts in the shared batch (PR 371 review round 1, run 40834210675).
+     */
+    static final String FEED_BATCH = "grave_adept_feed";
 
     private static String owner(GameTestHelper helper, String what) {
         return "gametest_adept_" + what + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -226,6 +232,76 @@ public class GraveAdeptGameTests {
         });
     }
 
+    /**
+     * One Adept per Tombcaller holds through an unload and a possession: with its Adept's chunk unloaded the call is
+     * refused (nothing spent) and the Adept is still counted; back, it is the caster's again. Possessed (its owner now an
+     * enemy's), it no longer counts, and the call raises a new one for 20 essence.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void grave_adept_one_per_caster_through_unload_and_possession(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "away"), foe = owner(helper, "awayfoe");
+        Mob caller = caller(helper, owner, 3, 12, 50);
+        GraveAdeptUnit first = caller == null ? null : adept(helper, caller, owner, 5, 12, 0);
+        if (caller == null || first == null) {
+            discardAll(nonNull(caller, first));
+            helper.fail("could not spawn the Tombcaller and its Adept");
+            return;
+        }
+        List<Entity> all = new ArrayList<>(List.of(caller, first));
+        CompoundTag saved = new CompoundTag();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (!first.save(saved))
+                    early.add("setup: the Adept would not save");
+                first.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);   // as its chunk unloading does
+            } catch (RuntimeException ex) {
+                early.add("unloading threw " + ex);
+            }
+        });
+        helper.runAfterDelay(4, () -> {
+            try {
+                CallNecromancer call = ability(caller, CallNecromancer.class);
+                if (call == null)
+                    throw new IllegalStateException("the Tombcaller has no Call the Necromancer");
+                if (!GraveAdeptServerEvents.hasAdept(caller) || call.liveSummons(level, (Unit) caller) != 1)
+                    early.add("with its Adept unloaded the Tombcaller counts no Adept");
+                if (CallNecromancer.cast(level, caller, owner, true) != null || Essence.get(caller) != 50)
+                    early.add("with its Adept unloaded a second was called (essence " + Essence.get(caller) + ")");
+                Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
+                if (back == null || !level.addFreshEntity(back))
+                    throw new IllegalStateException("the saved Adept did not load back");
+                all.add(back);
+                if (!(back instanceof GraveAdeptUnit b) || GraveAdeptServerEvents.adeptOf(caller) != b)
+                    early.add("the Adept back from its chunk is not its Tombcaller's");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                GraveAdeptUnit back = GraveAdeptServerEvents.adeptOf(caller);
+                if (back == null)
+                    throw new IllegalStateException("the Adept back from its chunk is gone");
+                back.setOwnerName(foe);   // what a Wraith's full possession does (WraithUnit.onCastPossess)
+                if (GraveAdeptServerEvents.adeptOf(caller) != null || GraveAdeptServerEvents.hasAdept(caller))
+                    problems.add("a possessed Adept still counts as its old Tombcaller's");
+                GraveAdeptUnit fresh = CallNecromancer.cast(level, caller, owner, true);
+                if (fresh != null)
+                    all.add(fresh);
+                if (fresh == null || Essence.get(caller) != 30 || !owner.equals(fresh.getOwnerName()))
+                    problems.add("with its Adept possessed the Tombcaller could not call a new one (essence " + Essence.get(caller) + ")");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
     // -------------------------------------------------------------------------------------------- levels and XP
 
     /**
@@ -243,6 +319,8 @@ public class GraveAdeptGameTests {
         helper.runAfterDelay(2, () -> {
             List<String> problems = new ArrayList<>();
             try {
+                if (a.xp() != 0)
+                    throw new IllegalStateException("setup: the Adept took " + a.xp() + " XP before the test began (a death nearby)");
                 if (!Arrays.equals(GraveAdeptUnit.LEVEL_XP, new int[] { 120, 300, 540, 840, 1200 }))
                     problems.add("Revision 1 set levels at 120/300/540/840/1200 XP, LEVEL_XP is " + Arrays.toString(GraveAdeptUnit.LEVEL_XP));
                 if (GraveAdeptUnit.HP_PER_LEVEL != 0.15 || GraveAdeptUnit.DAMAGE_PER_LEVEL != 0.10)
@@ -278,7 +356,7 @@ public class GraveAdeptGameTests {
      * An enemy vindicator killed 8 blocks from the Adept feeds it exactly what it would pay a hero; an enemy killed 18
      * blocks off, a friend killed beside it and a summoned enemy killed beside it feed nothing.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = FEED_BATCH)
     public static void grave_adept_feeds_on_enemy_deaths_within_16(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "feed"), foe = owner(helper, "feedfoe");
@@ -519,6 +597,8 @@ public class GraveAdeptGameTests {
                     throw new IllegalStateException("the Tombcaller has no Empower");
                 if (GraveAdeptUnit.EMPOWER_XP != 120)
                     problems.add("Revision 1 set 120 XP, EMPOWER_XP is " + GraveAdeptUnit.EMPOWER_XP);
+                if (fresh.xp() != 0)
+                    throw new IllegalStateException("setup: the Adept took " + fresh.xp() + " XP before the test began (a death nearby)");
                 empower.use(level, (Unit) caller, fresh);
                 if (fresh.xp() != 120 || fresh.adeptLevel() != 1)
                     problems.add("Empower left the Adept with " + fresh.xp() + " XP (level " + fresh.adeptLevel() + "), expected 120 (level 1)");

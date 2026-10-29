@@ -31,7 +31,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -65,6 +67,13 @@ public final class GraveAdeptServerEvents {
     static final int BOLT_LOOK_TICKS = 10;
 
     private static final List<GraveAdeptUnit> adepts = new ArrayList<>();
+    /**
+     * Adepts whose chunk unloaded, by their UUID: still their caster's until they come back or die (PR 371 review round
+     * 1: an unloaded Adept let its Tombcaller call a second; the tombstones keep the same map).
+     */
+    private static final Map<UUID, Away> away = new HashMap<>();
+
+    private record Away(UUID caster, String owner) { }
 
     static {
         Empower.setTargetHook(EntityRegistrar.GRAVE_ADEPT_UNIT.get(), new Empower.TargetHook() {
@@ -94,14 +103,35 @@ public final class GraveAdeptServerEvents {
         return value / 2 * 10;
     }
 
-    /** {@code caster}'s Grave Adept, if it stands. */
+    /**
+     * {@code caster}'s Grave Adept, if it stands loaded and still belongs to the caster's owner (one a Wraith possessed
+     * is the enemy's now and no longer counts as the caster's).
+     */
     @Nullable
     public static GraveAdeptUnit adeptOf(LivingEntity caster) {
         UUID id = caster.getUUID();
+        String owner = ownerOf(caster);
         for (GraveAdeptUnit a : adepts)
-            if (a.isAlive() && !a.isRemoved() && id.equals(a.casterId()))
+            if (a.isAlive() && !a.isRemoved() && id.equals(a.casterId()) && owner.equals(a.getOwnerName()))
                 return a;
         return null;
+    }
+
+    /** Whether {@code caster} has an Adept: one {@link #adeptOf} sees, or one of its owner's whose chunk unloaded. */
+    public static boolean hasAdept(LivingEntity caster) {
+        if (adeptOf(caster) != null)
+            return true;
+        UUID id = caster.getUUID();
+        String owner = ownerOf(caster);
+        for (Away w : away.values())
+            if (id.equals(w.caster) && owner.equals(w.owner))
+                return true;
+        return false;
+    }
+
+    private static String ownerOf(LivingEntity le) {
+        String owner = le instanceof Unit u ? u.getOwnerName() : null;
+        return owner == null ? "" : owner;
     }
 
     /** Feeds {@code adept} {@code xp}, applying any new level's health and damage. */
@@ -142,7 +172,10 @@ public final class GraveAdeptServerEvents {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent evt) {
-        if (!evt.getLevel().isClientSide() && evt.getEntity() instanceof GraveAdeptUnit a && !adepts.contains(a))
+        if (evt.getLevel().isClientSide() || !(evt.getEntity() instanceof GraveAdeptUnit a))
+            return;
+        away.remove(a.getUUID());
+        if (!adepts.contains(a))
             adepts.add(a);
     }
 
@@ -154,7 +187,12 @@ public final class GraveAdeptServerEvents {
         if (dead instanceof GraveAdeptUnit adept) {
             burst(sl, adept, evt.getSource().getEntity());
             adepts.remove(adept);
+            away.remove(adept.getUUID());
             return;
+        }
+        if (!away.isEmpty()) {
+            UUID id = dead.getUUID();   // a dead Tombcaller calls no more: its unloaded Adept need not be held for it
+            away.values().removeIf(w -> id.equals(w.caster));
         }
         if (adepts.isEmpty() || !(dead instanceof Unit du) || Summons.isSummoned(dead))
             return;
@@ -178,8 +216,8 @@ public final class GraveAdeptServerEvents {
         if (xp <= 0 || !(killer instanceof Unit ku))
             return;
         String killerOwner = ku.getOwnerName();
-        if (killerOwner == null || killerOwner.isBlank())
-            return;
+        if (killerOwner == null || killerOwner.isBlank() || AlliancesServerEvents.isAlliedOrOwned(killerOwner, adept.getOwnerName()))
+            return;   // only an enemy's kill pays out what it stored
         double r2 = HeroExperienceOrb.RANGE * HeroExperienceOrb.RANGE;
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof HeroUnit hero) || le.level() != sl || !le.isAlive() || le.distanceToSqr(adept) > r2
@@ -202,6 +240,10 @@ public final class GraveAdeptServerEvents {
         for (int i = adepts.size() - 1; i >= 0; i--) {
             GraveAdeptUnit a = adepts.get(i);
             if (a.isRemoved() || !a.isAlive()) {
+                // a death paid out in onDeath; an unload stops watching it but it is still its caster's
+                // (not isAlive(): a removed LivingEntity is never alive, unloaded or not)
+                if (a.getHealth() > 0 && a.getRemovalReason() != null && !a.getRemovalReason().shouldDestroy() && a.casterId() != null)
+                    away.put(a.getUUID(), new Away(a.casterId(), a.getOwnerName()));
                 adepts.remove(i);
                 continue;
             }
@@ -253,5 +295,6 @@ public final class GraveAdeptServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         adepts.clear();
+        away.clear();
     }
 }

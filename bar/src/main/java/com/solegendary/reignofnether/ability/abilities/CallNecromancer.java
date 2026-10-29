@@ -34,16 +34,16 @@ import java.util.List;
 /**
  * Tombcaller: <b>Call the Necromancer</b> (design/essence_casters.md "Gravebound Gravecaller"; lovish: "they can summon
  * a necromancer that can use exp to grow in strength"). A {@link GraveAdeptUnit} rises beside the Tombcaller for its
- * owner and stays until killed; one per Tombcaller. {@link #ESSENCE_COST} essence, {@link #CD_SECONDS} s. Refused -
- * nothing spent, no cooldown - while its Adept stands, with no room beside it, or short of essence. Autocast while
- * fighting with none standing.
+ * owner and stays until killed; one per Tombcaller (counting one whose chunk unloaded; not one a Wraith possessed).
+ * {@link #ESSENCE_COST} essence, {@link #CD_SECONDS} s. Refused - nothing spent, no cooldown - while its Adept stands or
+ * short of essence; with no room beside it, it rises where the Tombcaller stands. Autocast while fighting with none
+ * standing.
  */
 public class CallNecromancer extends Ability {
 
     public static final int ESSENCE_COST = 20;
     public static final int CD_SECONDS = 60;
     public static final String MSG_ALIVE = "hud.essence.reignofnether.adept_alive";
-    public static final String MSG_NO_ROOM = "hud.essence.reignofnether.adept_no_room";
 
     public CallNecromancer() {
         super(UnitAction.CALL_NECROMANCER, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
@@ -54,7 +54,7 @@ public class CallNecromancer extends Ability {
 
     @Override
     public int liveSummons(ServerLevel level, Unit unit) {
-        return unit instanceof LivingEntity le && GraveAdeptServerEvents.adeptOf(le) != null ? 1 : 0;
+        return unit instanceof LivingEntity le && GraveAdeptServerEvents.hasAdept(le) ? 1 : 0;
     }
 
     @Override
@@ -103,14 +103,14 @@ public class CallNecromancer extends Ability {
     }
 
     /**
-     * The rule: checks the caster has no Adept standing and there is room, then spends the essence, then raises it - a
+     * The rule: checks the caster has no Adept standing, then spends the essence, then raises it - a
      * refusal costs nothing. Returns the Adept (null: refused). Public for the bot and the game test.
      */
     @Nullable
     public static GraveAdeptUnit cast(ServerLevel sl, LivingEntity caster, String owner, boolean quiet) {
         if (owner == null || owner.isEmpty())
             return null;
-        if (GraveAdeptServerEvents.adeptOf(caster) != null) {
+        if (GraveAdeptServerEvents.hasAdept(caster)) {
             if (!quiet)
                 TombcallerServerEvents.warn(sl, owner, MSG_ALIVE);
             return null;
