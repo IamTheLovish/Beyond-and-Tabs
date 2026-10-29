@@ -246,6 +246,54 @@ class G6NoChequer(unittest.TestCase):
             self.assertLessEqual(G.roof_chequer(B(c)), G.CHEQUER_MAX, seed)
 
 
+class Camera(unittest.TestCase):
+    """What the camera sees (r4: the dome passed '8 connected ribs' and G6 two rounds running while every photo showed
+    a chequer): the first block per column from above / from a side, every cell shaded by its id."""
+
+    def face(self, pattern):
+        """A wall at z 0 from a list of rows (top row first), one character per block."""
+        ids = {"a": "deepslate_tiles", "b": "polished_diorite", "s": "deepslate_tile_stairs", "c": "bricks"}
+        h = len(pattern)
+        return S.Build({(x, h - 1 - y, 0): (ids[ch], {}) for y, row in enumerate(pattern) for x, ch in enumerate(row)})
+
+    def test_sees_the_first_block_per_column(self):
+        b = S.Build({(0, 0, 0): ("bricks", {}), (0, 0, 1): ("glass_pane", {}), (0, 2, 0): ("air", {}),
+                     (0, 1, 0): ("stone", {})})
+        self.assertEqual(G.camera(b, "south")[(0, 0)][1], "glass_pane")
+        self.assertEqual(G.camera(b, "north")[(0, 0)][1], "bricks")
+        self.assertEqual(G.camera(b, "top")[(0, 0)][:2], ((0, 1, 0), "stone"))
+        self.assertEqual(G.camera(b, "top")[(0, 1)][1], "glass_pane")
+
+    def test_the_34_still_looks_down_from_the_south(self):
+        """A ridge in front of a window at the same height hides it from the 3/4 camera, not from the side camera."""
+        win = {(0, 2, -2): ("glass_pane", {})}
+        ridge = {**win, (0, 3, -1): ("deepslate_tiles", {})}
+        self.assertEqual(G.camera(S.Build(win), "34s")[(0, 4)][1], "glass_pane")
+        self.assertEqual(G.camera(S.Build(ridge), "34s")[(0, 4)][1], "deepslate_tiles")
+        self.assertEqual(G.camera(S.Build(ridge), "south")[(0, 2)][1], "glass_pane")
+
+    def test_red_a_chequered_face(self):
+        self.assertGreater(G.camera_chequer(self.face(["ababab", "bababa", "ababab"]), ("south",))["south"], 0)
+
+    def test_red_one_alternating_row(self):
+        """The r3 dome's top view: a course of slate with a pale rib every other cell - c a b a b a c."""
+        self.assertGreater(G.camera_chequer(self.face(["caaaaaac", "cababac", "caaaaaac"]), ("south",))["south"], 0)
+
+    def test_red_shape_is_a_shade(self):
+        """Stairs and full blocks of ONE stone alternating cell by cell still chequer (they shade differently)."""
+        self.assertGreater(G.camera_chequer(self.face(["asasas", "asasas"]), ("south",))["south"], 0)
+
+    def test_green_lines_are_not_a_chequer(self):
+        """One pale line across a field (a b a) and two hip lines meeting at an apex block are drawn lines."""
+        self.assertEqual(G.camera_chequer(self.face(["aabaa", "aabaa", "aabaa"]), ("south",))["south"], 0)
+        self.assertEqual(G.camera_chequer(self.face(["baaaaab", "abaaaba", "aabcbaa"]), ("south",))["south"], 0)
+
+    def test_tone_classes(self):
+        self.assertEqual([G.tone(n) for n in ("smooth_quartz", "polished_deepslate", "bricks", "glass_pane",
+                                              "lantern", "stripped_birch_log", "dark_oak_planks")],
+                         ["pale", "dark", "mid", "glass", "light", "pale", "dark"])
+
+
 class VanillaIds(unittest.TestCase):
     def test_red_ids_that_do_not_exist_in_1_20_1(self):
         bad = ["smooth_stone_stairs", "polished_andesite_wall", "quartz_brick_stairs", "calcite_stairs",

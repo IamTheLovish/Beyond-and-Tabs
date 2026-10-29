@@ -67,3 +67,7 @@ tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` 
 - G5 depth: on the two camera faces no depth plane holds more than 45 % of the face cells, >= 3 planes over 10 %.
 - G6 roof tiling: roof_kit courses (T0 55-72 %, no chequer, wet eaves) + ridge, verges and gutters.
 - G7 base-body-cap: a distinct base course at y 1 and a cap line (cornice / eave) on every wall run.
+- Camera (r4): test what the photo camera SEES, not what the generator meant - `camera(b, view)` (top, the sides and
+  the 3/4 stills `34s` / `34w`: the first block on each ray) and `camera_chequer` (no a-b-a-b-a run or 3 x 2
+  alternation, a stair, slab and full block of one stone counting as different shades). The r2-r3 dome passed
+  "8 connected ribs" and G6 while every photo showed a chequer; its camera test went red first.

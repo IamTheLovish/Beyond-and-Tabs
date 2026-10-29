@@ -60,7 +60,18 @@ def mat_ids(m):
     out |= set(m.roof["ridge"]) | set(m.roof["verge"]) | {m.roof["gutter"]}
     out |= set(m.glass) | set(m.light) | {n for n in m.timber if n} | {m.render, m.glaze, m.pier}
     out |= {n for n in m.rib if n}
+    out |= {n for n in getattr(m, "reveal", ()) if n} | set(getattr(m, "weather", ()))
     return out
+
+
+def pic(part, view):
+    """The camera's picture of a part (tools/building_gates.camera): {cell: (q, name, props)}."""
+    return G.camera(build(part), view)
+
+
+def sheet_piece(name, m):
+    import arch_kit_sheet as KS
+    return KS.piece(name, m)
 
 
 def ring_box(w, d, h, m=BW):
@@ -135,9 +146,12 @@ class EveryPart(unittest.TestCase):
             self.assertEqual(stray, set(), (name, m.name))
 
     def test_no_unoxidised_copper(self):
-        """Palette rule: copper is weathered or oxidised; fresh orange copper reads as a toy (r3 critic)."""
+        """Palette rule: copper is weathered or oxidised; fresh orange copper reads as a toy (r3 critic). A lightning
+        rod IS fresh copper - in 1.20.1 it never weathers - though its id does not say so (r4: the r3 test let the
+        orange rods on the hip, spire and dome tips through)."""
         for name, _, m, p in self.each():
-            bad = [n for n in names(p) if "copper" in n and "weathered" not in n and "oxidized" not in n]
+            bad = [n for n in names(p) if n == "lightning_rod" or "copper" in n and "weathered" not in n
+                   and "oxidized" not in n]
             self.assertEqual(bad, [], (name, m.name))
 
     def test_rotations_keep_cells_and_turn_facings(self):
@@ -234,18 +248,18 @@ class R2Oversail(unittest.TestCase):
 
 class R3Ridge(unittest.TestCase):
     def test_cresting_comb_on_the_ridge(self):
-        """Iron bars + chains + copper lightning rods, ONE block tall, continuous, on a pale stone coping (r1 sheet:
-        dark ridge blocks with every-other bars read as battlements)."""
+        """Iron bars + chains + dark iron finial posts, ONE block tall, continuous, on a pale stone coping (r1 sheet:
+        dark ridge blocks with every-other bars read as battlements; r3: the copper lightning rods read orange)."""
         roof = K.oversail(BW, 7, 9)
         ridge = {(x, z): y for (x, y, z), (n, _) in roof.b.items() if n == R.SLATE["ridge"][0]}
         c = K.cresting(roof, BW)
         comb = {(x, z): n for (x, y, z), (n, _) in c.b.items() if (x, z) in ridge and y == ridge[(x, z)] + 1}
         self.assertEqual(set(comb), set(ridge))                                # continuous
-        self.assertEqual(set(comb.values()) - {"iron_bars", "chain", "lightning_rod"}, set())
+        self.assertEqual(set(comb.values()) - {"iron_bars", "chain", BW.rib.wall}, set())
         self.assertFalse([q for q in c.b if (q[0], q[2]) in ridge and q[1] > ridge[(q[0], q[2])] + 1])   # 1 tall
         n = Counter(comb.values())
         self.assertGreaterEqual(n["chain"], 1)
-        self.assertGreaterEqual(n["lightning_rod"], 3)
+        self.assertGreaterEqual(n[BW.rib.wall], 3)
         coping = {c.b[(x, y, z)][0] for (x, z), y in ridge.items()}
         self.assertEqual(coping, {BW.trim.full})                                # pale coping, no dark teeth
 
@@ -253,7 +267,7 @@ class R3Ridge(unittest.TestCase):
         h = K.hip_roof(BW, 7)
         hips, faces = Counter(), Counter()
         for (x, y, z), (n, _) in h.b.items():
-            if n == "lightning_rod" or y < 0 or min(x + 1, 7 - x, z + 1, 7 - z) == 0:
+            if S.glyph(n) == "|" or y < 0 or min(x + 1, 7 - x, z + 1, 7 - z) == 0:
                 continue
             fam = R.family(n, BW.roof)
             (hips if abs(x - 3) == abs(z - 3) else faces)[n if fam is None else fam] += 1
@@ -277,10 +291,11 @@ class R3Ridge(unittest.TestCase):
             self.assertFalse([n for n in names(h) if (n in m.roof["verge"] or n in m.timber)
                               and n != m.roof["ridge"][0]], m.name)
             for (x, y, z), (n, _) in h.b.items():
-                if y < 0 or n in (m.roof["ridge"][0], "lightning_rod"):
+                if y < 0 or n == m.roof["ridge"][0] or S.glyph(n) == "|":
                     continue
                 hip = abs(x - 3) == abs(z - 3)
-                self.assertEqual(n == m.roof["tones"][1][2], hip or min(x + 1, 7 - x, z + 1, 7 - z) == 0,
+                cap = max(abs(x - 3), abs(z - 3)) <= 1          # r4: the dark cap where the four hips meet
+                self.assertEqual(R.family(n, m.roof) == 1, hip or cap or min(x + 1, 7 - x, z + 1, 7 - z) == 0,
                                  (m.name, x, y, z, n))
 
     def test_hip_roof_oversails_its_tower(self):
@@ -488,29 +503,31 @@ class R9Portal(unittest.TestCase):
         self.assertEqual(len(set(mats)), 3)
 
     def test_orders_contrast_with_their_pale_reveals(self):
-        """Every order's body is a non-pale stone, so its pale stair reveal reads against it (r2: pale on pale)."""
+        """Every order's body is a stone of another TONE than the set's reveal family, so its stair reveal reads against
+        it (r2: pale on pale; r3: the Sunforged portal - sandstone reveals on quartz - unreadable)."""
         for m in SETS:
             p = K.portal(m, w=3, h=4, orders=3)
             for k in range(3):
                 row = [x for (x, y, z), (n, _) in p.b.items() if z == -k and y == 2 and n not in S.AIR]
                 gap = [x for x in range(min(row), max(row) + 1) if x not in row]
                 body = at(p, (min(gap) - 2, 2, -k))[0]
-                self.assertNotIn(body, m.trim, (m.name, k, body))
-                self.assertEqual(at(p, (min(gap) - 1, 2, -k))[0], m.trim.stairs, (m.name, k))
+                self.assertNotIn(body, m.reveal, (m.name, k, body))
+                self.assertNotEqual(G.tone(body), G.tone(m.reveal.full), (m.name, k, body))
+                self.assertEqual(at(p, (min(gap) - 1, 2, -k))[0], m.reveal.stairs, (m.name, k))
 
     def test_concentric_pale_reveals_and_hood(self):
-        """Each order's jambs are lined with pale stairs (a chamfered reveal) and its head with an upside-down pale
-        stair; a stepped pale hood over the outer order reads from above (r1 sheet: a square hole)."""
+        """Each order's jambs are lined with reveal stairs (a chamfered reveal) and its head with an upside-down reveal
+        stair; a stepped hood over the outer order reads from above (r1 sheet: a square hole)."""
         for m in SETS:
             p = K.portal(m, w=3, h=4, orders=3)
             for k in range(3):
                 row = [x for (x, y, z), (n, _) in p.b.items() if z == -k and y == 2 and n not in S.AIR]
                 gap = [x for x in range(min(row), max(row) + 1) if x not in row]
                 for x in (min(gap) - 1, max(gap) + 1):
-                    self.assertEqual(at(p, (x, 2, -k))[0], m.trim.stairs, (m.name, k, x))
+                    self.assertEqual(at(p, (x, 2, -k))[0], m.reveal.stairs, (m.name, k, x))
                 head = max(y for (x, y, z) in p.b if z == -k and x == 0 and at(p, (0, y - 1, -k))[0] in S.AIR)
                 v = at(p, (0, head, -k))
-                self.assertEqual((v[0], v[1].get("half")), (m.trim.stairs, "top"), (m.name, k))
+                self.assertEqual((v[0], v[1].get("half")), (m.reveal.stairs, "top"), (m.name, k))
             top = max(y for (x, y, z) in p.b if z == 0 and abs(x) <= 3 and at(p, (x, y, z))[0] not in S.AIR
                       and at(p, (x, y, z))[0] != m.light[0])
             wall_top = max(y for (x, y, z), (n, _) in p.b.items() if z == -1)
@@ -605,7 +622,7 @@ class R12DomeSpire(unittest.TestCase):
                 width[y] = max(width.get(y, 0), abs(x), abs(z))
             ys = sorted(width)
             self.assertGreaterEqual(ys[-1] - ys[0] + 1, 20, m.name)
-            self.assertEqual(at(sp, (0, ys[-1], 0))[0], "lightning_rod")
+            self.assertEqual(at(sp, (0, ys[-1], 0))[0], m.rib.wall)                  # a dark finial (r3: no rods)
             corb = [y for y in ys if sum(1 for (x, yy, z), (n, p) in sp.b.items()
                                          if yy == y and n.endswith("_stairs") and p.get("half") == "top") >= 8]
             self.assertTrue(corb, m.name)
@@ -625,25 +642,26 @@ class R12DomeSpire(unittest.TestCase):
         cornice = max(y for (x, y, z), (n, _) in d.b.items() if max(abs(x), abs(z)) == 5)
         courses = {}
         for (x, y, z), v in d.b.items():
-            if y > cornice and v[0] != "lightning_rod":
+            if y > cornice and not (x == z == 0 and S.glyph(v[0]) == "|"):
                 courses.setdefault(y, {})[(x, z)] = v[0]
         return d, cornice, courses
 
-    def test_dome_eight_continuous_meridian_ribs(self):
-        """8 meridian ribs, each exactly one pale cell per course, tracked along its meridian as a connected path,
-        one roof tone between them (r2: per-cell ribs chequered the dome into a 'panda ball')."""
+    def test_dome_continuous_meridian_ribs(self):
+        """4 meridian ribs (r4: 8 on a radius-4 dome close up to every other cell near the crown - the chequer of r2
+        and r3), each exactly one pale cell per course, tracked along its meridian as a connected path, one roof tone
+        between them (r2: per-cell ribs chequered the dome into a 'panda ball')."""
         for m in SETS:
             d, cornice, courses = self.dome_courses(m)
-            ribs = {k: [] for k in range(8)}
+            ribs = {k: [] for k in range(0, 8, 2)}
             for y in sorted(courses):
                 cells = courses[y]
                 pale = [(x, z) for (x, z), n in cells.items() if n in m.trim and S.glyph(n) != "|"]   # not pinnacles
                 if all(n in m.metal for n in cells.values()):
                     continue                                                  # the metal crown / lantern base
-                self.assertEqual(len(pale), 8, (m.name, y, pale))
+                self.assertEqual(len(pale), 4, (m.name, y, pale))
                 for (x, z) in pale:
                     a = math.degrees(math.atan2(z, x)) % 360
-                    k = int(round(a / 45)) % 8
+                    k = int(round(a / 90)) * 2 % 8
                     self.assertLessEqual(abs((a - 45 * k + 180) % 360 - 180), 22.5, (m.name, y, x, z))
                     ribs[k].append((x, y, z))
                 between = {n for q, n in cells.items() if q not in pale and q != (0, 0) and S.glyph(n) not in "|*"}
@@ -740,40 +758,29 @@ def chequer(grid):
 
 
 class R15ToneWall(unittest.TestCase):
-    def faces(self, m, seed=0):
-        w = K.tone_wall(m, 12, 7, seed=seed)
-        return w, {(x, y): n for (x, y, z), (n, _) in w.b.items() if z == 0 and n not in S.AIR}
-
-    def test_never_a_chequer_and_second_tone_10_to_25_percent(self):
+    def test_never_a_chequer_and_never_scattered(self):
+        """The face never chequers, and every tone sits in runs of >= 2 along its row (never a lone cell)."""
         for m in SETS:
             for seed in range(25):
-                w, face = self.faces(m, seed)
+                w = K.tone_wall(m, 12, 7, seed=seed)
+                face = {(x, y): n for (x, y, z), (n, _) in w.b.items() if z == 0 and n not in S.AIR}
                 self.assertFalse(chequer(face), (m.name, seed))
-                body = [n for (x, y), n in face.items() if 1 <= y <= 5]
-                second = sum(1 for n in body if n == m.wall2.full) / len(body)
-                self.assertTrue(0.10 <= second <= 0.25, (m.name, seed, second))
+                for (x, y), n in face.items():
+                    self.assertTrue(face.get((x - 1, y)) == n or face.get((x + 1, y)) == n, (m.name, seed, x, y))
 
     def test_water_logic(self):
-        """Darker second tone at the wet foot and in the drip under each sill, pale only on the top course (r2: pale
-        patches mid-wall), a dark plinth at y 0 - never scattered."""
+        """Darker where the water goes: in every column the tone never gets paler going down, the dark plinth at y 0,
+        the clean wall at the top (r2: pale patches mid-wall)."""
         for m in SETS:
+            stain, moss = m.weather
+            order = [m.wall.full, stain, moss, m.dark.full]
             for seed in range(25):
-                w, face = self.faces(m, seed)
-                sills = {(x, y) for (x, y, z), (n, _) in w.b.items() if z == 1 and n == m.trim.slab}
-                self.assertTrue(sills, m.name)
-                for (x, y), n in face.items():
-                    if n == m.trim.full:
-                        self.assertEqual(y, 6, (m.name, seed, x, y))
-                    elif n == m.dark.full:
-                        self.assertEqual(y, 0, (m.name, seed, x, y))
-                    elif n == m.wall2.full:
-                        foot = y == 1 and (face.get((x - 1, y)) == n or face.get((x + 1, y)) == n)
-                        drip = (x, y + 1) in sills
-                        self.assertTrue(foot or drip, (m.name, seed, x, y))
-                    else:
-                        self.assertEqual(n, m.wall.full, (m.name, seed, x, y, n))
-                self.assertTrue(all(face.get((x, 6)) == m.trim.full for x in range(12)), m.name)
-                self.assertTrue(all(face.get((x, y - 1)) == m.wall2.full for (x, y) in sills), m.name)
+                w = K.tone_wall(m, 12, 7, seed=seed)
+                for x in range(12):
+                    col = [order.index(at(w, (x, y, 0))[0]) for y in range(6, -1, -1)]
+                    self.assertEqual(col, sorted(col), (m.name, seed, x, col))
+                    self.assertEqual(col[0], 0, (m.name, seed, x))
+                    self.assertEqual(col[-1], 3, (m.name, seed, x))
 
 
 class R16Machinery(unittest.TestCase):
@@ -784,8 +791,10 @@ class R16Machinery(unittest.TestCase):
         self.assertGreaterEqual(n[BW.dark.full], 1)                            # an elbow
         self.assertIn("lever", n)                                              # a valve
         self.assertIn("grindstone", n)                                         # a pump
-        self.assertIn("lightning_rod", n)                                      # a vent
+        vent = [q for q, (k, _) in g.b.items() if k == BW.rib.wall and q[0] == 8]
+        self.assertTrue(vent and at(g, (8, vent[0][1] - 1, vent[0][2]))[0] == BW.dark.full)   # a vent on the elbow
         self.assertGreaterEqual(min(q[2] for q in g.b), 1)                     # all of it against the wall
+        self.assertTrue(all(at(g, (x, y, 1))[0] == BW.trim.full for x in range(9) for y in range(5)))   # a pale bed
         for (x, y, z), (k, p) in g.b.items():                                  # every valve sits on a pipe
             if k == "lever":
                 self.assertTrue(any(at(g, (x + a, y, z + c))[0] in (BW.dark.wall, BW.dark.full)
@@ -801,9 +810,9 @@ class R16Machinery(unittest.TestCase):
             self.assertGreaterEqual(len(cover) / 45, 0.4, (m.name, len(cover)))
 
     def test_gear_is_one_big_dark_iron_wheel_on_a_band(self):
-        """One large wheel in front of a machinery band: a rim in the dark iron family (stairs rounding the diagonals),
-        thin chain spokes on the four axes, a grindstone hub on a bearing; behind it (z 1) a band of pipes and a
-        housing longer than the wheel (r2: a lone orange donut)."""
+        """One large wheel in front of a machinery band: a rim ring of iron bars (r3: a dark-iron stair rim read as a
+        deepslate blob), thin chain spokes on the four axes, a grindstone hub on a bearing; behind it (z 1) a band of
+        pipes and a housing longer than the wheel (r2: a lone orange donut)."""
         for m in SETS:
             g = K.gear(m, 3)
             hub = at(g, (0, 0, 2))
@@ -811,14 +820,264 @@ class R16Machinery(unittest.TestCase):
             self.assertNotIn(at(g, (0, 0, 1))[0], S.AIR)                          # the bearing behind the hub
             rim = [(q, v) for q, v in g.b.items() if q[2] == 2 and 2.5 <= math.hypot(q[0], q[1]) <= 3.6]
             self.assertGreaterEqual(len(rim), 12)
-            self.assertTrue(all(v[0] in m.rib for _, v in rim), m.name)
-            self.assertGreaterEqual(sum(1 for _, v in rim if v[0] == m.rib.stairs) / len(rim), 0.5)
-            self.assertTrue(any(k in m.rib.full for k in ("blackstone", "deepslate", "iron")), m.name)
+            self.assertTrue(all(v[0] == "iron_bars" for _, v in rim), m.name)
             spokes = {(x, y) for (x, y, z), (n, _) in g.b.items() if z == 2 and S.glyph(n) == "|"}
             self.assertTrue({(0, 1), (0, -1), (1, 0), (-1, 0)} <= spokes)
             band = {x for (x, y, z), (n, _) in g.b.items() if z == 1 and n == m.dark.wall}
             self.assertGreaterEqual(max(band) - min(band) + 1, 2 * 3 + 3, m.name)
             self.assertEqual({q[2] for q in g.b}, {1, 2})
+
+
+# ---- r4: what the CAMERA sees (r3 critic: 'still reads as isolated samples'; the dome failed two rounds with green
+# intent tests). Each test looks at the part's picture from the photo cameras, never at the generator's bookkeeping.
+class CameraReads(unittest.TestCase):
+    def test_dome_one_dark_shell_ribs_single_pale_stair_lines(self):
+        """The dome seen from above, the sides and the 3/4 still: no a-b-a alternation anywhere (r2, r3: a dark/pale
+        chequer, a pixel pile); above the drum cornice every visible cell is the shell (the roof's dark slate, stairs or
+        slabs only), a rib (a pale STAIR) or the small crown and finial - nothing else pale."""
+        for m in SETS:
+            d = K.dome(m, 4)
+            cornice = max(y for (x, y, z), (n, _) in d.b.items() if max(abs(x), abs(z)) == 5)
+            r = G.camera_chequer(build(d), ("top", "south", "west", "34s", "34w"))
+            self.assertEqual(r, {k: 0 for k in r}, m.name)
+            for view in ("top", "34s", "south"):
+                seen = Counter()
+                for k, (q, n, _) in pic(d, view).items():
+                    if q[1] <= cornice:
+                        continue
+                    if n in m.trim or G.tone(n) == "pale":
+                        self.assertEqual(n, m.trim.stairs, (m.name, view, q, n))
+                        seen["rib"] += 1
+                    elif R.family(n, m.roof) is not None:
+                        self.assertEqual(R.family(n, m.roof), 0, (m.name, view, q, n))
+                        self.assertTrue(n.endswith(("_stairs", "_slab")), (m.name, view, q, n))
+                        seen["shell"] += 1
+                    else:
+                        self.assertTrue(n in m.metal or S.glyph(n) == "|", (m.name, view, q, n))
+                        seen["crown"] += max(abs(q[0]), abs(q[2])) <= 1               # not the cornice pinnacles
+                self.assertGreater(seen["shell"], 2 * seen["rib"], (m.name, view, seen))
+                self.assertLessEqual(seen["crown"], 9, (m.name, view, seen))
+
+    def test_roof_light_glass_rows_under_thin_dark_bars(self):
+        """The glazed barrel reads as glass: no full blocks at all (r3: dark cubes on stilts); glass covers >= 45 % of
+        what the 3/4 and top cameras see (a thin bar covers about half its cell, so it counts half), everything else
+        thin dark bars or the weathered copper eave."""
+        for m in SETS:
+            g = K.roof_light(m, 9)
+            self.assertEqual([n for n in names(g) if S.glyph(n) == "#"], [], m.name)
+            for view in ("34s", "top"):
+                p = pic(g, view)
+                kinds = Counter("glass" if n == m.glaze else "bar" if G.tone(n) == "dark" and S.glyph(n) in "|_"
+                                else "eave" if n in m.metal else n for q, n, _ in p.values())
+                self.assertEqual(set(kinds) - {"glass", "bar", "eave"}, set(), (m.name, view, kinds))
+                area = kinds["glass"] + kinds["eave"] + kinds["bar"] / 2
+                self.assertGreaterEqual(kinds["glass"] / area, 0.45, (m.name, view, kinds))
+                self.assertGreater(kinds["bar"], 0, (m.name, view))
+                self.assertEqual(G.camera_chequer(build(g), (view,))[view], 0, (m.name, view))
+
+    def test_gear_a_ring_of_bars_against_a_pale_wall(self):
+        """From the front the wheel is a ring of iron bars with pale wall inside and outside it, so the round
+        silhouette reads (r3: a deepslate blob)."""
+        for m in SETS:
+            p = {k: n for k, (q, n, _) in pic(K.gear(m, 3), "south").items()}
+            rim = [k for k in p if 2.5 <= math.hypot(*k) < 3.6]
+            self.assertGreaterEqual(len(rim), 12, m.name)
+            self.assertEqual({p[k] for k in rim}, {"iron_bars"}, m.name)
+            ground = [k for k in p if (math.hypot(*k) < 2.5 or 3.6 <= math.hypot(*k) < 4.5) and 0 not in k
+                      and k[1] != -4]
+            self.assertGreaterEqual(len(ground), 16, m.name)
+            self.assertEqual({G.tone(p[k]) for k in ground}, {"pale"}, (m.name, {p[k] for k in ground}))
+            r = G.camera_chequer(build(K.gear(m, 3)), ("south", "34s", "top"))
+            self.assertEqual(r, {k: 0 for k in r}, m.name)
+
+    def test_machinery_dark_parts_read_against_a_pale_ground(self):
+        """The machinery band from the front: dark iron against a pale ground - most dark cells touch pale, and the
+        band is not mostly dark (r3: a deepslate blob)."""
+        for m in SETS:
+            p = {k: n for k, (q, n, _) in pic(K.machinery(m, 9), "south").items()}
+            dark = [k for k, n in p.items() if G.tone(n) == "dark"]
+            self.assertLessEqual(len(dark) / len(p), 0.5, m.name)
+            edged = [k for k in dark if any(G.tone(p.get((k[0] + a, k[1] + b), "air")) == "pale"
+                                            for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+            self.assertGreaterEqual(len(edged) / len(dark), 0.6, (m.name, len(edged), len(dark)))
+            r = G.camera_chequer(build(sheet_piece("machinery", m)), ("south", "34s", "top"))
+            self.assertEqual(r, {k: 0 for k in r}, m.name)
+
+    def test_roof_chimney_a_slender_stack(self):
+        """R11 the roof chimney (y 0 = where it leaves the roof): a 1-wide stack standing >= 3 above the roof, ONE pale
+        slab ring, ONE dark slab cap on top, taller than it is wide from every side (r3: wider than tall, a huge pale
+        ring, a pagoda); no fire to see."""
+        for m in SETS:
+            c = K.roof_chimney(m)
+            for view in ("south", "west"):
+                rows = {}
+                for (u, v), (q, n, _) in pic(c, view).items():
+                    if q[1] >= 1:
+                        rows.setdefault(q[1], []).append(n)
+                top = max(rows)
+                self.assertEqual(rows[top], [m.dark.slab], (m.name, view, rows[top]))
+                pale = [y for y, ns in rows.items() if any(G.tone(n) == "pale" or n in m.trim for n in ns)]
+                self.assertEqual(len(pale), 1, (m.name, view, rows))
+                self.assertTrue(all(n == m.trim.slab for n in rows[pale[0]]), (m.name, rows[pale[0]]))
+                self.assertLessEqual(len(rows[pale[0]]), 3)
+                shaft = [y for y in rows if y not in pale and y != top]
+                self.assertGreaterEqual(len(shaft), 3, (m.name, view))
+                self.assertTrue(all(len(rows[y]) == 1 for y in shaft), (m.name, view, rows))
+                self.assertGreater(len(rows), 3, m.name)
+            for view in ("south", "west", "34s", "top"):
+                self.assertNotIn("campfire", {n for q, n, _ in pic(c, view).values()}, (m.name, view))
+
+    def test_dormer_gable_face_with_a_lit_window_proud_of_the_slope(self):
+        """The dormer on its roof faces the camera DOWN the slope (r3: it looked up the roof, a cut-out): the main slope
+        falls toward the front, the 3/4 camera sees its glass and its gable face, and it stands >= 4 proud of the slope
+        where it meets it; a light behind the glass."""
+        for m in SETS:
+            r = K.dormer_on_roof(m)
+            col = {}
+            for (x, y, z) in r.b:
+                if x == 4:
+                    col[z] = max(col.get(z, -99), y)
+            hs = [col[z] for z in sorted(col)]
+            self.assertEqual(hs, sorted(hs, reverse=True), (m.name, hs))
+            p = pic(r, "34s")
+            glass = [k for k, (q, n, _) in p.items() if n == m.glass[0]]
+            self.assertGreaterEqual(len(glass), 3, m.name)
+            face = [k for k, (q, n, _) in p.items() if n == m.wall2.full and abs(q[0]) <= 1]
+            self.assertGreaterEqual(len(face), 3, m.name)
+            panes = [q for q, (n, _) in r.b.items() if n == m.glass[0]]
+            zf = max(q[2] for q in panes)
+            top = max(y for (x, y, z) in r.b if abs(x) <= 1 and z <= zf + 1)
+            self.assertGreaterEqual(top - col.get(zf, col[max(col)]), 4, m.name)
+            self.assertTrue(any(at(r, (x, y, z - k))[0] == m.light[0] for (x, y, z) in panes for k in (1, 2)), m.name)
+
+    def test_tone_wall_three_tones_by_row_a_gradient(self):
+        """R15 seen from the front: the wall darkens row by row toward the foot - the clean wall on top, the stain
+        through the middle, moss and the dark at the foot - a gradient over >= 4 distinct rows, never one band (r3:
+        one black band), never an alternation."""
+        for m in SETS:
+            stain, moss = m.weather
+            level = {m.dark.full: 0, moss: 1, stain: 2, m.wall.full: 3}
+            for seed in range(25):
+                w = K.tone_wall(m, 12, 7, seed=seed)
+                face = {k: n for k, (q, n, _) in pic(w, "south").items() if q[2] == 0}
+                self.assertFalse(G.alternations(face), (m.name, seed))
+                self.assertEqual(set(face.values()) - set(level), set(), (m.name, seed))
+                rows = [sum(level[face[(x, y)]] for x in range(12)) / 12 for y in range(7)]
+                self.assertEqual(rows, sorted(rows), (m.name, seed, rows))            # never darker higher up
+                self.assertGreaterEqual(len(set(round(v, 2) for v in rows)), 4, (m.name, seed, rows))
+                share = Counter(level[n] for n in face.values())
+                tot = sum(share.values())
+                self.assertGreaterEqual((share[0] + share[1]) / tot, 0.12, (m.name, seed, share))   # the foot
+                self.assertGreaterEqual(share[2] / tot, 0.2, (m.name, seed, share))                  # the stain
+                self.assertGreaterEqual(share[3] / tot, 0.15, (m.name, seed, share))                 # clean wall
+                self.assertGreaterEqual(share[2] / tot, 0.4, (m.name, seed, share))                  # ~60 % stain
+                self.assertEqual(rows[-1], 3, (m.name, seed))                                        # clean top
+
+    def test_hip_roof_stair_slopes_half_block_risers(self):
+        """Every slope cell of the hip roof is a stair (half-block risers) - no full-block or slab rings seen from any
+        camera (r3: a ziggurat of rings) - and its hips stay one dark line from above."""
+        for m in SETS:
+            h = K.hip_roof(m, 7)
+            for (x, y, z), (n, _) in h.b.items():
+                if y >= 0 and n != m.roof["ridge"][0] and S.glyph(n) != "|":
+                    self.assertTrue(n.endswith("_stairs"), (m.name, x, y, z, n))
+            p = ring_box(7, 7, 5, m)
+            p.place(h, 0, 6, 0)
+            for view in ("south", "34s", "top"):
+                for k, (q, n, _) in pic(p, view).items():
+                    if q[1] >= 6 and n != m.roof["ridge"][0] and S.glyph(n) != "|":
+                        self.assertTrue(n.endswith("_stairs"), (m.name, view, q, n))
+            top = {k: n for k, (q, n, _) in pic(h, "top").items()}
+            dark = {k for k, n in top.items() if R.family(n, m.roof) == 1}
+            ring = {k for k in dark if min(k[0] + 1, 7 - k[0], k[1] + 1, 7 - k[1]) == 0}
+            for (x, z) in dark - ring:
+                self.assertTrue(abs(x - 3) == abs(z - 3) or max(abs(x - 3), abs(z - 3)) <= 1, (m.name, x, z))
+
+    def test_spire_stone_drum_and_a_stair_taper(self):
+        """The spire stands on a ROUND stone drum (wall stone, >= 4 rows, its corners cut), and from the coping up the
+        top camera sees only stairs (each stage steps in by a stair ring, no flat cake tier) and the dark finial; from
+        the side its outline never steps in by more than 1 (r3: a wedding cake at 3/4)."""
+        for m in SETS:
+            sp = K.spire(m)
+            corb = min(y for y in {q[1] for q in sp.b} if sum(1 for (x, yy, z), (n, pr) in sp.b.items() if yy == y
+                       and n.endswith("_stairs") and pr.get("half") == "top") >= 8)
+            drum = [y for y in range(corb) if (3, 0, 0) in {(abs(x), yy - y, abs(z)) for (x, yy, z) in sp.b if yy == y}
+                    and at(sp, (3, y, 3))[0] in S.AIR]
+            self.assertGreaterEqual(len(drum), 4, m.name)
+            body = [at(sp, (x, y, z))[0] for y in drum for (x, z) in ((3, 0), (-3, 0), (0, 3), (0, -3), (3, 1))]
+            self.assertGreaterEqual(sum(1 for n in body if n in (m.wall.full, m.wall2.full, m.trim.full)) / len(body),
+                                    0.5, m.name)
+            for k, (q, n, _) in pic(sp, "top").items():
+                if q[1] > corb:
+                    self.assertTrue(n.endswith("_stairs") or S.glyph(n) == "|", (m.name, q, n))
+            rows = {}
+            for (u, v), (q, n, _) in pic(sp, "south").items():
+                rows[v] = max(rows.get(v, 0), abs(u))
+            up = [rows[v] for v in sorted(rows) if v > corb + 1]
+            self.assertTrue(all(a - b <= 1 for a, b in zip(up, up[1:])), (m.name, up))
+            tip = max(q[1] for q in sp.b)
+            self.assertEqual(G.tone(at(sp, (0, tip, 0))[0]), "dark", m.name)
+
+    def test_every_set_reads_dark_against_pale_in_posts_reveals_and_base(self):
+        """A set's REVEAL family (base course, pier strips, opening reveals) and its half-timber posts contrast in tone
+        with the wall and the render they sit on, seen by the camera (r3: the Sunforged walls flat beige, its dark tone
+        only in the roof; its half-timber and portal unreadable)."""
+        for m in SETS:
+            self.assertNotEqual(G.tone(m.reveal.full), G.tone(m.wall.full), m.name)
+            ht = {k: n for k, (q, n, _) in pic(K.half_timber(m, 10), "south").items()}
+            posts = {n for n in ht.values() if n in m.timber}
+            self.assertTrue(posts, m.name)
+            self.assertTrue(all(G.tone(n) != G.tone(m.render) for n in posts), (m.name, posts, m.render))
+            self.assertNotEqual(G.tone(ht[(0, 0)]), G.tone(m.wall.full), m.name)               # the base course
+            pier = {k: n for k, (q, n, _) in pic(K.pier(m, 5), "south").items()}
+            self.assertTrue(all(G.tone(pier[(0, y)]) != G.tone(m.wall.full) for y in range(5)), (m.name, pier))
+            p = {k: n for k, (q, n, _) in pic(K.portal(m), "south").items()}
+            jambs = [k for k, n in p.items() if n == m.reveal.stairs]
+            self.assertGreaterEqual(len(jambs), 12, m.name)
+            for (x, y) in jambs:                                         # every reveal reads against its order body
+                side = [p.get((x + a, y)) for a in (-1, 1)]
+                body = [n for n in side if n and n not in m.reveal and n not in m.timber and S.glyph(n) == "#"]
+                self.assertTrue(all(G.tone(n) != G.tone(m.reveal.full) for n in body), (m.name, x, y, body))
+
+    def test_windows_panes_one_back_on_a_pale_sill(self):
+        """Every glazed wall opening: the pane sits one behind the face of the wall round it, with air in front (the
+        reveal), and a pale slab sill under the opening (r3: black voids with no sill)."""
+        for name in ("window_tall", "window_medium", "window_small", "bay_tall", "half_timber", "dormer"):
+            for m in SETS:
+                p = sheet_piece(name, m)
+                panes = [q for q, (n, _) in p.b.items() if n == m.glass[0]]
+                self.assertTrue(panes, (name, m.name))
+                for (x, y, z) in panes:
+                    self.assertIn(at(p, (x, y, z + 1))[0], S.AIR, (name, m.name, x, y, z))
+                    beside = [zz for (xx, yy, zz), (n, _) in p.b.items() if yy == y and abs(xx - x) <= 3
+                              and n not in S.AIR and n != m.glass[0] and S.glyph(n) == "#"]
+                    self.assertGreaterEqual(max(beside), z + 1, (name, m.name, x, y, z))
+                for x in {q[0] for q in panes}:
+                    low = min(q for q in panes if q[0] == x)
+                    sill = [at(p, (x, low[1] - 1, low[2] + k)) for k in (1, 2)]
+                    self.assertTrue(any(n == m.trim.slab for n, _ in sill), (name, m.name, x, sill))
+
+    def test_no_lightning_rods_iron_finials(self):
+        """The hip, spire and dome tips end in a dark iron finial, never an orange lightning rod (r3 critic)."""
+        for fn in (lambda m: K.hip_roof(m, 7), K.spire, lambda m: K.dome(m, 4)):
+            for m in SETS:
+                p = fn(m)
+                self.assertNotIn("lightning_rod", names(p), m.name)
+                tip = max(q[1] for q in p.b)
+                self.assertEqual({G.tone(n) for (x, y, z), (n, _) in p.b.items() if y == tip}, {"dark"}, m.name)
+
+    def test_compact_photo_sheets_r4(self):
+        """Round 4 reshoots the reworked parts on close sheets (<= 25 wide) and the Sunforged set."""
+        import arch_kit_sheet as KS
+        reworked = {"dome", "roof_light", "gear", "machinery", "chimney", "dormer", "tone_wall", "hip_roof", "spire",
+                    "half_timber", "portal", "bay_tall"}
+        r4 = {part for name in KS.R4 for _, part in KS.SHEETS[name]}
+        self.assertEqual(reworked - r4, set())
+        self.assertEqual(set(KS.R4), {"arch_kit_r4_roofs", "arch_kit_r4_towers", "arch_kit_r4_walls",
+                                      "arch_kit_sunforged"})
+        for name in KS.R4:
+            x0, x1, _, _, z0, z1 = KS.build(name).bbox()
+            self.assertLessEqual(max(x1 - x0 + 1, z1 - z0 + 1), 25, name)
 
 
 # ---- the parts compose ---------------------------------------------------------------------------------------------

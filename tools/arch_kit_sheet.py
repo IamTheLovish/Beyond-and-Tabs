@@ -64,7 +64,9 @@ def piece(name, m):
     if name == "roof_light":
         return _barrel(m)
     if name == "dormer":
-        return K.dormer_on_roof(m)
+        return _on_walls(m, K.dormer_on_roof(m))
+    if name == "chimney":
+        return _chimney_on_roof(m)
     if name == "eave":                        # the band on a 3-high wall: its y 0 is the course under the wall top
         w = K.blank()
         for x in range(7):
@@ -76,6 +78,35 @@ def piece(name, m):
         return w
     p = dict((n, f) for n, _, f in K.CATALOGUE)[name](m)
     return walled(m, p) if name in WALLED else p
+
+
+def _on_walls(m, roof, h=4):
+    """A roof piece standing on the plain walls it covers: the wall box under the columns its eave course spans."""
+    eave = [q for q in roof.b if q[1] == min(y for (_, y, _) in roof.b)]
+    xs, zs = [q[0] for q in eave], [q[2] for q in roof.b]
+    p = K.blank()
+    x0, x1, z0, z1 = min(xs) + 1, max(xs) - 1, min(zs), max(zs) - 1
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            if x in (x0, x1) or z in (z0, z1):
+                for y in range(h):
+                    p.set(x, y, z, m.trim.full if y == 0 else m.wall.full)
+    for (x, y, z), v in roof.b.items():
+        p.b[(x, y + h - min(q[1] for q in eave), z)] = v
+    return p
+
+
+def _chimney_on_roof(m):
+    """The house chimney (R11) rising through the slope of a small gable over a plain wall box, its stack carried down
+    to the wall top inside the roof."""
+    host = mounted(m, K.oversail(m, 7, 7), 7, 7)
+    x, z = 4, 1
+    roof_y = max(y for (xx, y, zz) in host.b if (xx, zz) == (x, z))
+    for y in range(4, roof_y + 1):
+        host.set(x, y, z, m.wall.full)
+    for (a, y, b), v in K.roof_chimney(m).b.items():
+        host.b[(x + a, roof_y + 1 + y, z + b)] = v
+    return host
 
 
 def _barrel(m):
@@ -95,7 +126,7 @@ SHEETS = {       # name -> [(set, part)], packed in shelves back (north) to fron
     "arch_kit_roofs": [("brassworks", "oversail"), ("brassworks", "cresting"), ("brassworks", "hip_roof"),
                        ("brassworks", "dormer")],
     "arch_kit_towers": [("brassworks", "dome"), ("brassworks", "roof_light"), ("brassworks", "spire"),
-                        ("brassworks", "chimney"), ("brassworks", "corbel_stage")],
+                        ("brassworks", "stack"), ("brassworks", "corbel_stage")],
     "arch_kit_walls": [("brassworks", "half_timber"), ("brassworks", "portal"), ("brassworks", "bay_tall"),
                        ("brassworks", "window_medium"), ("brassworks", "window_small"), ("brassworks", "pier"),
                        ("brassworks", "cornice"), ("brassworks", "eave")],
@@ -118,6 +149,16 @@ R3 = {           # round 3 reshoots only the reworked parts (r3 critic), each sh
     "arch_kit_sunforged": SHEETS["arch_kit_sunforged"],
 }
 SHEETS.update(R3)
+
+R4 = {           # round 4 reshoots the parts the r4 critic named, close enough to judge
+    "arch_kit_r4_roofs": [("brassworks", "hip_roof"), ("brassworks", "chimney"), ("brassworks", "dormer"),
+                          ("brassworks", "roof_light")],
+    "arch_kit_r4_towers": [("brassworks", "dome"), ("brassworks", "spire")],
+    "arch_kit_r4_walls": [("brassworks", "tone_wall"), ("brassworks", "gear"), ("brassworks", "machinery"),
+                          ("brassworks", "bay_tall"), ("brassworks", "window_medium")],
+    "arch_kit_sunforged": SHEETS["arch_kit_sunforged"],
+}
+SHEETS.update(R4)
 
 
 def _pack(parts):
