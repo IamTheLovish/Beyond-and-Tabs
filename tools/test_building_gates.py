@@ -246,6 +246,46 @@ class G6NoChequer(unittest.TestCase):
             self.assertLessEqual(G.roof_chequer(B(c)), G.CHEQUER_MAX, seed)
 
 
+class GlassInFrames(unittest.TestCase):
+    """r10: G5 counts a pane recessed 1 behind its frame as relief, a pane in its frame's plane as infill (it is left
+    out); window_glass_set fails glass sunk 2+ behind its frame or with none."""
+
+    def wall(self, pane_z):
+        """A 7-wide brick wall 3 thick (z -2..0, y 1..4) on a stone plinth, 1-wide piers 1 proud (z 1) at x 1 and 5
+        framing a 3 x 2 window (x 2..4, y 2..3) whose panes stand at z pane_z, the opening open in front of them and
+        brick (the room) behind."""
+        b = {(x, 0, z): ("stone", {}) for x in range(7) for z in (-2, -1, 0, 1)}
+        for x in range(7):
+            for y in range(1, 5):
+                for z in (-2, -1, 0):
+                    b[(x, y, z)] = ("bricks", {})
+                if x in (1, 5):
+                    b[(x, y, 1)] = ("bricks", {})
+        for x in (2, 3, 4):
+            for y in (2, 3):
+                for z in range(pane_z, 1):
+                    b.pop((x, y, z), None)
+                b[(x, y, pane_z)] = ("glass_pane", {"east": "true", "west": "true"})
+        return S.Build(b)
+
+    def test_red_a_pane_sunk_two_behind_its_frame(self):
+        self.assertTrue(G.window_glass_set(self.wall(-1)))
+
+    def test_green_a_pane_one_behind_or_in_its_frame(self):
+        self.assertEqual(G.window_glass_set(self.wall(0)), [])
+        self.assertEqual(G.window_glass_set(self.wall(1)), [])
+
+    def bare(self, b):
+        return S.Build({q: v for q, v in b.blocks.items() if v[0] != "glass_pane"})
+
+    def test_a_flush_pane_is_infill_a_recessed_pane_relief(self):
+        """The pane in the piers' plane (z 1) is infill: G5 reads the wall as if it were not there. The same pane 1
+        back (z 0) is a reveal: G5 counts it (the wall without it reads differently)."""
+        flush, recessed = self.wall(1), self.wall(0)
+        self.assertEqual(G.depth(flush, "south")["planes"], G.depth(self.bare(flush), "south")["planes"])
+        self.assertNotEqual(G.depth(recessed, "south")["planes"], G.depth(self.bare(recessed), "south")["planes"])
+
+
 class Camera(unittest.TestCase):
     """What the camera sees (r4: the dome passed '8 connected ribs' and G6 two rounds running while every photo showed
     a chequer): the first block per column from above / from a side, every cell shaded by its id."""
