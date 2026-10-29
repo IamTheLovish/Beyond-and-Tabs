@@ -15,6 +15,9 @@ import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.essence.EssenceServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.hero.PossessionServer;
+import com.solegendary.reignofnether.match.MatchRoster;
+import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.mana.SealServerEvents;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
@@ -53,6 +56,7 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Essence casters PR 2, the Horde's caster (design/essence_casters.md, lovish approved draft 2 on Oct 29, with the
@@ -326,8 +330,8 @@ public class VoodooShamanGameTests {
                         early.add("hexing the " + name + " left " + Essence.get(p[0]) + " essence, expected 10 - 5 = 5");
                     if (Math.abs(cooldown(p[0], ability(p[0], Hex.class)) - Hex.CD_SECONDS * 20) > 2)
                         early.add("hexing the " + name + " set a " + cooldown(p[0], ability(p[0], Hex.class)) + "-tick cooldown, expected 240");
-                    if (!p[1].hasEffect(MobEffectRegistrar.DISARM.get()) || !SealServerEvents.isSealed(p[1]))
-                        early.add("the hexed " + name + " is not disarmed and sealed");
+                    if (!p[1].hasEffect(MobEffectRegistrar.DISARM.get()) || !SealServerEvents.isSealed(p[1]) || !Hex.isHexed(p[1]))
+                        early.add("the hexed " + name + " is not disarmed, sealed and marked hexed");
                     else if (Math.abs(effectTicks(p[1], MobEffectRegistrar.DISARM.get()) - Hex.DURATION_SECONDS * 20) > 3)
                         early.add("the hexed " + name + " is disarmed for " + effectTicks(p[1], MobEffectRegistrar.DISARM.get()) + " ticks, expected 80");
                 }
@@ -347,7 +351,7 @@ public class VoodooShamanGameTests {
             List<String> problems = new ArrayList<>(early);
             try {
                 for (Mob m : new Mob[] { t1, t2 })
-                    if (m.hasEffect(MobEffectRegistrar.DISARM.get()) || SealServerEvents.isSealed(m))
+                    if (m.hasEffect(MobEffectRegistrar.DISARM.get()) || SealServerEvents.isSealed(m) || Hex.isHexed(m))
                         problems.add("the " + EntityType.getKey(m.getType()).getPath() + " is still hexed after 4 s");
             } finally {
                 cleanUp(helper, made, List.of());
@@ -387,17 +391,17 @@ public class VoodooShamanGameTests {
                     castAt(helper, rich, UnitAction.HEX, ally);
                     if (Essence.get(rich) != 10 || cooldown(rich, hex) > 0)
                         problems.add("a refused Hex (T3 / ally) cost " + (10 - Essence.get(rich)) + " essence and set a " + cooldown(rich, hex) + "-tick cooldown");
-                    if (t3.hasEffect(MobEffectRegistrar.DISARM.get()) || ally.hasEffect(MobEffectRegistrar.DISARM.get()))
+                    if (Hex.isHexed(t3) || Hex.isHexed(ally))
                         problems.add("a T3 enemy or an ally was hexed");
                     castAt(helper, poor, UnitAction.HEX, foe2);
-                    if (Essence.get(poor) != 4 || cooldown(poor, ability(poor, Hex.class)) > 0 || foe2.hasEffect(MobEffectRegistrar.DISARM.get()))
+                    if (Essence.get(poor) != 4 || cooldown(poor, ability(poor, Hex.class)) > 0 || Hex.isHexed(foe2))
                         problems.add("a shaman with 4 essence hexed (left " + Essence.get(poor) + ", cooldown " + cooldown(poor, ability(poor, Hex.class)) + ")");
                     castAt(helper, rich, UnitAction.HEX, foe1);
-                    if (Essence.get(rich) != 5 || !foe1.hasEffect(MobEffectRegistrar.DISARM.get()))
+                    if (Essence.get(rich) != 5 || !Hex.isHexed(foe1))
                         problems.add("the valid Hex after the refusals did not land (essence " + Essence.get(rich) + ")");
-                    foe1.removeEffect(MobEffectRegistrar.DISARM.get());
+                    foe1.removeEffect(MobEffectRegistrar.HEXED.get());
                     castAt(helper, rich, UnitAction.HEX, foe1);
-                    if (Essence.get(rich) != 5 || foe1.hasEffect(MobEffectRegistrar.DISARM.get()))
+                    if (Essence.get(rich) != 5 || Hex.isHexed(foe1))
                         problems.add("a second Hex inside the 12 s cooldown was cast (essence " + Essence.get(rich) + ")");
                 }
             } catch (RuntimeException ex) {
@@ -668,6 +672,177 @@ public class VoodooShamanGameTests {
                         problems.add("the puppet of the " + how[i] + " shaman still has a puppet record");
                 }
             } finally {
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Review round 1, B1 (the take side): a puppet the puppeteer drives in first person (a headless possession, as the
+     * artillery tests claim one) is let go when it goes back - the possession ends with the hand-back, so the 15 s steal
+     * cannot become permanent control. The channel is broken early (the shaman is hit) to hand it back.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    public static void voodoo_spirit_puppet_hand_back_ends_the_puppeteers_possession(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "pupposa"), b = owner(helper, "pupposb");
+        UUID driver = UUID.randomUUID();
+        Mob caster = shaman(helper, a, 3, 3, 20, made);
+        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
+        if (made.size() < 2) {
+            spawnFailed(helper, made, "the shaman and the enemy");
+            return;
+        }
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
+                if (!a.equals(((Unit) foe).getOwnerName()))
+                    early.add("Spirit Puppet did not take the Vindicator");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(3, () -> {
+            try {
+                String why = PossessionServer.claim(helper.getLevel(), a, driver, foe.getId(), true);
+                if (why != null)
+                    early.add("the puppeteer could not possess its puppet: " + why);
+                else if (!PossessionServer.isPossessed(foe))
+                    early.add("the claim left the puppet unpossessed");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            try {
+                caster.hurt(caster.damageSources().generic(), 2f);   // breaks the channel: the puppet goes back
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(10, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (!b.equals(((Unit) foe).getOwnerName()))
+                    problems.add("the puppet did not go back to its owner (" + ((Unit) foe).getOwnerName() + ")");
+                if (PossessionServer.isPossessed(foe) || PossessionServer.of(driver) != null)
+                    problems.add("the puppeteer still drives the returned unit in first person");
+            } finally {
+                PossessionServer.release(driver, null);
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Review round 1, B2: a puppet whose owner is beaten during the channel (MatchRoster.finish) is not handed back to a
+     * finished side, where nobody could order it: it is stripped (owner "") and killed, as MatchOutcome's strip does, and
+     * its record goes. The channel is broken early (the shaman is hit).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    public static void voodoo_spirit_puppet_of_a_beaten_owner_is_stripped_not_returned(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "pupdefa"), b = owner(helper, "pupdefb");
+        RTSPlayer beaten = RTSPlayer.getNewScenarioPlayer(b, Factions.VILLAGERS, -9000, -1);
+        Mob caster = shaman(helper, a, 3, 3, 20, made);
+        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
+        if (made.size() < 2) {
+            spawnFailed(helper, made, "the shaman and the enemy");
+            return;
+        }
+        List<Vec3> spots = new ArrayList<>();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
+                if (!a.equals(((Unit) foe).getOwnerName()))
+                    early.add("Spirit Puppet did not take the Vindicator");
+                MatchRoster.finish(beaten);   // its owner is beaten while the puppet is the puppeteer's
+                if (!MatchRoster.isFinished(b))
+                    early.add("MatchRoster.finish did not mark the owner finished: the test lost its point");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(5, () -> {
+            try {
+                spots.add(foe.position());
+                caster.hurt(caster.damageSources().generic(), 2f);   // breaks the channel
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(9, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (foe.isAlive() && !foe.isRemoved())
+                    problems.add("the beaten owner's puppet is still alive, owned by '" + ((Unit) foe).getOwnerName() + "'");
+                if (b.equals(((Unit) foe).getOwnerName()))
+                    problems.add("the puppet was handed back to a beaten side");
+                if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
+                    problems.add("the stripped puppet still has a puppet record");
+            } finally {
+                MatchRoster.FINISHED.remove(beaten);
+                cleanUp(helper, made, spots);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Review round 1, B1 (the other side) and the refusal list: Spirit Puppet is refused - nothing spent, no cooldown, the
+     * owner unchanged - on a unit its owner drives in first person, on a rider and on the unit it rides, and on an enemy
+     * summon (a Blood Totem); Hex refuses the summon too. A plain T1 enemy is then taken (the control).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void voodoo_spirit_puppet_and_hex_refuse_possessed_mounted_and_summoned_targets(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "puprefa"), b = owner(helper, "puprefb");
+        UUID driver = UUID.randomUUID();
+        Mob caster = shaman(helper, a, 3, 3, 25, made);
+        Mob driven = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 1, made);
+        Mob mount = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 5, made);
+        Mob rider = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 5, made);
+        Mob totem = still(helper, EntityRegistrar.BLOOD_TOTEM_UNIT.get(), b, 3, 7, made);
+        Mob plain = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 1, 6, made);   // the control: a valid take
+        if (made.size() < 6) {
+            spawnFailed(helper, made, "the shaman and the targets");
+            return;
+        }
+        Essence.markSummoned(totem);   // as BloodTotem.cast marks it
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                String why = PossessionServer.claim(helper.getLevel(), b, driver, driven.getId(), true);
+                if (why != null)
+                    problems.add("its owner could not possess the Vindicator: " + why);
+                if (!rider.startRiding(mount, true))
+                    problems.add("the rider could not mount: the test lost its point");
+                SpiritPuppet sp = ability(caster, SpiritPuppet.class);
+                Hex hex = ability(caster, Hex.class);
+                Mob[] targets = { driven, rider, mount, totem };
+                String[] what = { "a possessed unit", "a rider", "a unit carrying a rider", "a summoned totem" };
+                for (int i = 0; i < targets.length; i++) {
+                    castAt(helper, caster, UnitAction.SPIRIT_PUPPET, targets[i]);
+                    if (Essence.get(caster) != 25 || cooldown(caster, sp) > 0 || !b.equals(((Unit) targets[i]).getOwnerName()))
+                        problems.add("Spirit Puppet took " + what[i] + " (essence " + Essence.get(caster) + ", owner "
+                            + ((Unit) targets[i]).getOwnerName() + ")");
+                }
+                castAt(helper, caster, UnitAction.HEX, totem);
+                if (Essence.get(caster) != 25 || cooldown(caster, hex) > 0 || Hex.isHexed(totem))
+                    problems.add("Hex hexed a summoned totem (essence " + Essence.get(caster) + ")");
+                castAt(helper, caster, UnitAction.SPIRIT_PUPPET, plain);
+                if (!a.equals(((Unit) plain).getOwnerName()) || Essence.get(caster) != 5)
+                    problems.add("after the refusals a plain T1 enemy was not taken either (essence " + Essence.get(caster)
+                        + "): the refusals prove nothing");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                PossessionServer.release(driver, null);
+                rider.stopRiding();
                 cleanUp(helper, made, List.of());
             }
             finish(helper, problems);

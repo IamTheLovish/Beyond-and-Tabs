@@ -2,7 +2,12 @@ package com.solegendary.reignofnether.unit.units.piglins;
 
 import com.solegendary.reignofnether.ability.abilities.SpiritPuppet;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.essence.Essence;
+import com.solegendary.reignofnether.hero.PossessionServer;
+import com.solegendary.reignofnether.match.MatchRoster;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
+import com.solegendary.reignofnether.unit.GuardServerEvents;
+import com.solegendary.reignofnether.unit.PatrolServerEvents;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
@@ -15,6 +20,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -31,10 +37,14 @@ import java.util.UUID;
  * <b>A channel</b> (Revision 1): the puppet goes back at once when its shaman is hit (any damage that lands), stunned
  * or frozen, more than {@link SpiritPuppet#CHANNEL_RANGE} blocks from it, dead, or gone (not loaded).
  * <p>
- * A hand-over either way is the Wraith's Possess one: the unit's orders are dropped (Unit.fullResetBehaviours), and the
- * units of its new side that were attacking it let go. The client drops it from any selection when its owner changes
+ * A hand-over either way is the Wraith's Possess one, made whole: the unit's orders are dropped
+ * (Unit.fullResetBehaviours, and its patrol route and guard charge, which that reset leaves), anyone driving it in first
+ * person lets go (PossessionServer checks the owner only when control is taken, so a possession would outlive the
+ * hand-over), and the units of its new side that were attacking it let go. The client drops it from any selection when its owner changes
  * (UnitClientEvents, SelectionKeep.ownerFlipped), and the server refuses its old side's orders by owner as for any unit.
  * A puppet that dies is a normal death - it is not a summon, so it drops its essence wisp - and its record goes with it.
+ * A puppet whose owner was beaten in the meantime (MatchRoster.isFinished: MatchOutcome's strip skipped it, it was the
+ * puppeteer's then) is not handed to a finished side: it is stripped and killed as the strip would have done.
  * Server side only.
  */
 public final class SpiritPuppets {
@@ -65,6 +75,16 @@ public final class SpiritPuppets {
     }
 
     /**
+     * Whether Spirit Puppet may take {@code target} at all, beyond tier and side: nobody drives it in first person, it
+     * is not garrisoned (it would fight for the puppeteer from its owner's tower), not riding or carrying anything, and
+     * not a summon (a totem's aura would change sides).
+     */
+    public static boolean mayTake(LivingEntity target) {
+        return target instanceof Unit u && !PossessionServer.isPossessed(target) && !u.isGarrisoned()
+            && !target.isPassenger() && !target.isVehicle() && !Essence.isSummoned(target);
+    }
+
+    /**
      * Gives {@code target} to {@code newOwner} for {@code ticks} while {@code caster} keeps the channel; the caller
      * checked everything (SpiritPuppet.cast).
      */
@@ -89,6 +109,11 @@ public final class SpiritPuppets {
         if (owner == null)
             return;
         forget(puppet);
+        if (puppet instanceof Unit unit && puppet.isAlive() && MatchRoster.isFinished(owner)) {
+            handOver(unit, "");   // MatchOutcome.stripOwnership's way: nobody's, then gone
+            puppet.kill();
+            return;
+        }
         if (puppet instanceof Unit unit && puppet.isAlive()) {
             handOver(unit, owner);
             if (puppet.level() instanceof ServerLevel sl)
@@ -106,6 +131,11 @@ public final class SpiritPuppets {
     /** The Wraith's possession hand-over (WraithUnit.onCastPossess): new owner, no orders, its new side lets go of it. */
     private static void handOver(Unit unit, String owner) {
         LivingEntity le = (LivingEntity) unit;
+        PossessionServer.Possession driven = PossessionServer.ofUnit(le.getId());
+        if (driven != null)
+            PossessionServer.release(driven.player, "The spirits took that unit from you.");
+        PatrolServerEvents.clear(le.getId());
+        GuardServerEvents.clear(le.getId());
         unit.setOwnerName(owner);
         unit.setAnchor(null);
         Unit.fullResetBehaviours(unit);
@@ -159,6 +189,11 @@ public final class SpiritPuppets {
             if (data.hasUUID(KEY_CASTER) && id.equals(data.getUUID(KEY_CASTER)))
                 giveBack(puppet);
         }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent evt) {
+        ACTIVE.clear();
     }
 
     /** A puppet loaded from a save (or back in a loaded chunk) is listed again; one past its time goes back next tick. */

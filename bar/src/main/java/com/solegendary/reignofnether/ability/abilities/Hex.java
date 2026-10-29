@@ -33,9 +33,10 @@ import java.util.List;
  * <b>Hex</b>, the Voodoo Shaman's cheap essence spell (design/essence_casters.md, lovish's draft 2): one enemy unit of
  * tier 1-2 ({@link UnitTier}) within {@link #RANGE} can neither attack nor cast for {@link #DURATION_SECONDS} s, for
  * {@link #ESSENCE_COST} essence and a {@link #CD_SECONDS} s cooldown. The hex is two existing effects for the same time:
- * DISARM (AttackerUnit's attack cooldown never runs out, and VoodooServerEvents cancels any blow it still lands) and the
- * Ink Scribe's SEALED (every ability gate already refuses a sealed unit). Refused - nothing spent, no cooldown - on a T3
- * unit, a hero or commander, an ally, a unit out of reach, one already hexed or one inside a Ward of its own side (as
+ * DISARM (AttackerUnit's attack cooldown never runs out) and the Ink Scribe's SEALED (every ability gate already refuses
+ * a sealed unit), marked by its own HEXED effect, for which VoodooServerEvents cancels any blow the unit still lands. Refused - nothing spent, no cooldown - on a T3
+ * unit, a hero or commander, a summon (a totem, a raised skeleton), an ally, a unit out of reach, one already hexed or
+ * one inside a Ward of its own side (as
  * Seal is: a Ward lifts seals), or when the caster is short of essence. Autocast on the nearest valid enemy
  * (ENEMY_IN_RANGE), like the other single-target strikes.
  * <p>
@@ -57,6 +58,15 @@ public class Hex extends Ability {
         super(UnitAction.HEX, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
         this.autoRule(AutoRule.ENEMY_IN_RANGE);
         this.showRangeCircle = true;
+    }
+
+    /**
+     * No autocast without the essence to pay: the AutoCaster's order resets the shaman's behaviours before the cast
+     * refuses, so a short shaman would drop its target and repeat a HUD message every second in a fight.
+     */
+    @Override
+    public boolean canAutocastNow(net.minecraft.server.level.ServerLevel level, Unit unit) {
+        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
     @Override
@@ -103,15 +113,16 @@ public class Hex extends Ability {
     static String canHex(String owner, LivingEntity target) {
         if (owner == null || target == null || !target.isAlive() || !(target instanceof Unit u)
                 || AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner) || isHexed(target)
-                || com.solegendary.reignofnether.mana.WardServerEvents.protects(target))
+                || com.solegendary.reignofnether.mana.WardServerEvents.protects(target) || Essence.isSummoned(target))
             return MSG_BAD_TARGET;
         if (UnitTier.of(target) > MAX_TIER)
             return MSG_TIER;
         return null;
     }
 
+    /** Hexed: HEXED, Hex's own marker (a Ghast's out-of-bounds DISARM is not a hex). */
     public static boolean isHexed(LivingEntity e) {
-        return e.hasEffect(MobEffectRegistrar.DISARM.get());
+        return e.hasEffect(MobEffectRegistrar.HEXED.get());
     }
 
     /**
@@ -136,6 +147,7 @@ public class Hex extends Ability {
         int ticks = DURATION_SECONDS * ResourceCost.TICKS_PER_SECOND;
         target.addEffect(new MobEffectInstance(MobEffectRegistrar.DISARM.get(), ticks, 0, false, true, true));
         target.addEffect(new MobEffectInstance(MobEffectRegistrar.SEALED.get(), ticks, 0, false, true, true));
+        target.addEffect(new MobEffectInstance(MobEffectRegistrar.HEXED.get(), ticks, 0, false, true, true));
         sl.sendParticles(ParticleTypes.WITCH, target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(),
             18, 0.3, 0.4, 0.3, 0.02);
         BarFx.shot(sl, caster.getEyePosition(), target.getEyePosition(), BarFx.K_MAGIC, caster);

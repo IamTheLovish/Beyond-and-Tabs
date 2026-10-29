@@ -32,7 +32,8 @@ import java.util.List;
  * T1 unit ({@link UnitTier}) within {@link #RANGE} becomes the caster's owner's for {@link #DURATION_SECONDS} s, then
  * goes back to its owner ({@link SpiritPuppets} keeps the record, the clock and the hand-back), for
  * {@link #ESSENCE_COST} essence and a {@link #CD_SECONDS} s cooldown. Refused - nothing spent, no cooldown - on a T2+
- * unit, a hero or commander, an ally, a puppet already, a unit out of reach, or when the caster is short of essence.
+ * unit, a hero or commander, an ally, a puppet already, a unit someone possesses, a garrisoned, mounted or carrying
+ * unit, a summon ({@link SpiritPuppets#mayTake}), a unit out of reach, or when the caster is short of essence.
  * A channel (Revision 1): the puppet goes back at once if the shaman is hit, stunned or more than
  * {@link #CHANNEL_RANGE} blocks from it. Manual: the player picks the one unit worth 20 essence.
  */
@@ -96,7 +97,7 @@ public class SpiritPuppet extends Ability {
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, LivingEntity target, boolean quiet) {
         if (owner == null || owner.isBlank() || target == null || !target.isAlive() || !(target instanceof Unit u)
                 || u.getOwnerName().isBlank() || AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner)
-                || SpiritPuppets.isPuppet(target)) {
+                || SpiritPuppets.isPuppet(target) || !SpiritPuppets.mayTake(target)) {
             if (!quiet && owner != null)
                 HudClientboundPacket.showTempMessageI18n(owner, MSG_BAD_TARGET);
             return false;

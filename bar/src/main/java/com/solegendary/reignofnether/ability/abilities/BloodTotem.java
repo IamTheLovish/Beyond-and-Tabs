@@ -51,6 +51,15 @@ public class BloodTotem extends Ability {
         this.showRangeCircle = true;
     }
 
+    /**
+     * No autocast without the essence to pay: the AutoCaster's order resets the shaman's behaviours before the cast
+     * refuses, so a short shaman would drop its target and repeat a HUD message every second in a fight.
+     */
+    @Override
+    public boolean canAutocastNow(net.minecraft.server.level.ServerLevel level, Unit unit) {
+        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Blood Totem",

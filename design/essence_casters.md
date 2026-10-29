@@ -75,11 +75,12 @@ vanilla block display (like a wreck) carrying its value and birth tick in its pe
 Celestial Observatory's tenth). Placeholder body: the Brute's piglin plumbing with the Spear Thrower's skin and a bone
 fetish for a staff (3 damage, 0.6 hits/s).
 - **Cost and health (this PR's pick, for lovish to tune):** 175 metal / 220 energy, 3 pop, 35 s (the Bloom Priestess's
-  price: a T2 support caster sits between the Blaze, 135 / 90, and the Wither Skeleton, 245 / 160); 60 HP, between the
+  metal and energy, the Witch's 35 s: a T2 support caster sits between the Blaze, 135 / 90, and the Wither Skeleton, 245 / 160); 60 HP, between the
   Ghast (50) and the Wither Skeleton (100), sturdier than the other races' casters (40-45) as Horde units are.
 - **Hex** (5, 12 s, reach 8): DISARM + SEALED for 4 s - no attacks (the attack cooldown never runs out, and
   VoodooServerEvents cancels any blow a hexed unit still lands) and no abilities (every ability gate already refuses
-  a sealed unit). Tier 1-2 only; refused inside the target's own Ward, as Seal is. Autocast on the nearest valid enemy.
+  a sealed unit), marked by its own HEXED effect (only HEXED attackers lose their blows: a Ghast's out-of-bounds
+  DISARM keeps its fireballs). Tier 1-2 only, never a summon; refused inside the target's own Ward, as Seal is. Autocast on the nearest valid enemy.
   Not Seal: the Ink Scribe's Seal (25 energy, 20 s, reach 10) silences any enemy for 6 s and it still fights; Hex
   also stops attacks, for 4 s, on T1-T2 only, and is paid in essence.
 - **Blood Totem** (10, 25 s, planted within 8): a 100 HP totem, no resists, that enemies target like any unit
@@ -88,12 +89,16 @@ fetish for a staff (3 damage, 0.6 hits/s).
   Bloodlust), anyone else BLOOD_TOTEM_SLOW (-15% move speed). Marked summoned. Autocast while fighting, at its feet.
 - **Spirit Puppet** (20, 60 s, reach 8): an enemy T1 unit is the caster's owner's for 15 s (`SpiritPuppets`). A
   channel (Revision 1): it goes back at once if the shaman is hit, stunned or frozen, dies, or is more than 16 blocks
-  from it. The original owner, the hand-back tick and the shaman live in the puppet's persistent data, so a save cannot keep it; each hand-over
+  from it. Refused on a unit someone possesses, a garrisoned, riding or carrying unit, and a summon. Every hand-over
+  also ends any first-person possession of the unit and clears its patrol route and guard charge; a puppet whose owner
+  was beaten meanwhile (MatchRoster.isFinished) is stripped and killed rather than handed to a finished side. The
+  original owner, the hand-back tick and the shaman live in the puppet's persistent data, so a save cannot keep it; each hand-over
   drops its orders and makes its new side's attackers let go (the Wraith's Possess hand-over), the server refuses the
   other side's orders by owner, and the client drops it from any selection when its owner flips
   (`SelectionKeep.ownerFlipped`). Not a summon: a puppet that dies drops its wisp; its record goes with it. Manual.
 - **Tiers** (`unit/UnitTier`): by where a unit is trained - a T2 lab's unit is T2, the faction's T3 building's (or the
   bot kit's T3 unit) is T3, any other trained unit T1; heroes and commanders count as T3; an untrained unit falls back
   to its cost (BarFx.tierOf: T2 from 120 metal, T3 from 500).
-- Every refusal (bad target, wrong tier, out of reach, short of essence) spends nothing and sets no cooldown.
+- Every refusal (bad target, wrong tier, out of reach, short of essence) spends nothing and sets no cooldown. Hex and
+  Blood Totem autocast only with the essence to pay (canAutocastNow; the base's autocastEssence gate will do the same).
 - Not in this PR: the bots do not train it yet, and its essence is not on the HUD yet.

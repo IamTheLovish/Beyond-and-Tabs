@@ -3171,6 +3171,8 @@
   "block.reignofnether.frost_sheet": "Frost Sheet",
   "effect.reignofnether.sealed": "Sealed",
   "effect.reignofnether.sealed.desc": "Can't use abilities",
+  "effect.reignofnether.hexed": "Hexed",
+  "effect.reignofnether.hexed.desc": "Can neither attack nor use abilities",
   "effect.reignofnether.blood_frenzy": "Blood Frenzy",
   "effect.reignofnether.blood_frenzy.desc": "Attacks 25% faster",
   "effect.reignofnether.blood_totem_slow": "Blood Totem",

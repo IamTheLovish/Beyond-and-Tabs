@@ -118,6 +118,10 @@ public class MobEffectRegistrar {
     // and expires it, and cleanses remove it like any harmful effect; mana/SealServerEvents.isSealed is the one check
     public static final RegistryObject<MobEffect> SEALED = MOB_EFFECTS.register("sealed", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x2A2140));
 
+    // the Horde Voodoo Shaman's Hex (ability/abilities/Hex): the marker of a hexed unit, next to the DISARM and SEALED that
+    // do the work - only a HEXED attacker's blows are cancelled (VoodooServerEvents), not every disarmed one's
+    public static final RegistryObject<MobEffect> HEXED = MOB_EFFECTS.register("hexed", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x6B2E8C));
+
     // the Horde Voodoo Shaman's Blood Totem (unit/units/piglins/BloodTotemUnit): allies near it attack 25% faster (read in
     // AttackerUnit.getAttackCooldownMultiplier, like Bloodlust), enemies near it move 15% slower
     public static final RegistryObject<MobEffect> BLOOD_FRENZY = MOB_EFFECTS.register("blood_frenzy", () -> new InstantenousMobEffect(MobEffectCategory.BENEFICIAL, 0xA01010));
