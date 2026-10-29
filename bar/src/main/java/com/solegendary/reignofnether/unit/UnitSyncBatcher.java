@@ -222,8 +222,8 @@ public final class UnitSyncBatcher {
                 new UnitBatchSyncClientboundPacket(entries));
     }
 
-    // Mirrors exactly what the old per-unit packets read from the unit.
-    private static Entry capture(LivingEntity le, Unit unit) {
+    // Mirrors exactly what the old per-unit packets read from the unit. Public for the game test (what a client is sent).
+    public static Entry capture(LivingEntity le, Unit unit) {
         Entry e = new Entry(le.getId());
         // SYNC_STATS
         e.mask |= Field.STATS.bit;

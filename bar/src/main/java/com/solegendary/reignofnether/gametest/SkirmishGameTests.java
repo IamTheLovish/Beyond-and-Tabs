@@ -808,7 +808,10 @@ public class SkirmishGameTests {
         });
     }
 
-    /** Raise Dead: needs population room; with it, a wreck rises as a Ghoul and pays from the wreck first. */
+    /**
+     * Raise Dead: a wreck rises as a Ghoul and pays from the wreck first; the Ghoul is a summon and takes no population
+     * (lovish, Oct 29), so it rises with the unit cap at 0 and the owner's population does not move.
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void raise_dead_turns_wrecks_into_ghouls(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -831,18 +834,16 @@ public class SkirmishGameTests {
                 helper.fail("test wreck did not spawn");
                 return;
             }
-            int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
+            int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no room at all
             com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-            int none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
-            if (none != 0)
-                helper.fail("raised a Ghoul past the unit cap");
-            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
             int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
             int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+            int popAfter = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
             if (raised != 1)
-                helper.fail("expected one Ghoul from one wreck, got " + raised);
+                helper.fail("expected one Ghoul from one wreck with the unit cap at 0 (a summon takes no population), got " + raised);
+            if (popAfter != popBefore)
+                helper.fail("the Ghoul took population: " + popBefore + " -> " + popAfter);
             float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
             if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
                 helper.fail("the Ghoul was not paid from the wreck (" + left + " left)");
@@ -1129,23 +1130,21 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
-    /** Bone Dragon kills rise: needs population room, leaves no wreck, crumbles on time. */
+    /**
+     * Bone Dragon kills rise: no population needed (lovish, Oct 29: summons take no population - it rises even with the
+     * unit cap at 0), leaves no wreck, crumbles on time.
+     */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void dragon_risen_skeletons_are_free_and_temporary(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_wyrm";
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
-        int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
+        int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no room at all
         com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-        var none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
-        if (none != null)
-            helper.fail("raised a skeleton past the unit cap");
-        com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
         var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
+        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
         if (risen == null) {
-            helper.fail("no skeleton rose with population room");
+            helper.fail("no skeleton rose with the unit cap at 0: a summon takes no population");
             return;
         }
         var where = risen.position();   // tests run in parallel: look for a wreck HERE, not at the global count
