@@ -110,6 +110,8 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         // Tidewrought Tides core: tidepool registry/expiry/drain + /rts-tidepool, and the wet buff
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidepoolServerEvents.class);
+        // the Tide Seer's whirlpools and shoves (essence caster)
+        vanillaEventBus.register(com.solegendary.reignofnether.tide.TideSeerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.TidesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.tide.FogBankServerEvents.class);
         // Stormcallers units: the Jade Guard's Jade Mirror

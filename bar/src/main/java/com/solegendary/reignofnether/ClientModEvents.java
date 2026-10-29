@@ -169,6 +169,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MudskipperSloopRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.HARBOURMASTER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HarbourmasterRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.KRAKEN_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.KrakenCallerRenderer::new);
+        // the Tide Seer (essence caster): the Tide Priest's body and skin, a placeholder until lovish picks a look
+        evt.registerEntityRenderer(EntityRegistrar.TIDE_SEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TidePriestRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MORTAR_GALLEY_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MortarGalleyRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SKY_CORSAIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SkyCorsairRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.LEVIATHAN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LeviathanRenderer::new);

@@ -97,6 +97,8 @@ public final class UnitInfoCard {
         // Corsair are splash artillery; the Harbourmaster falls to the worker rule
         Map.entry("KrakenCallerUnit", Role.SUPPORT), Map.entry("MortarGalleyUnit", Role.ARTILLERY),
         Map.entry("SkyCorsairUnit", Role.ARTILLERY),
+        // the essence caster: a bolt, a whirlpool and a wave, never a weapon of its own
+        Map.entry("TideSeerUnit", Role.SUPPORT),
         // Stormcallers: the Jade Guard holds the line (its Mirror answers archers), the Blade Dancer and the Paper Crane
         // are raiders, the Fire Adept and the Wind Monk ranged skirmishers; the Geomancer falls to the worker rule
         Map.entry("JadeGuardUnit", Role.TANK), Map.entry("BladeDancerUnit", Role.RAIDER),

@@ -89,6 +89,7 @@ ROSTER = [
     ('Tidewrought', 't1', 'tide/MudskipperSloopUnit', 'raider'),
     ('Tidewrought', 't1', 'tide/TidePriestUnit', 'support'),
     ('Tidewrought', 'worker2', 'tide/HarbourmasterUnit', 'builder'),
+    ('Tidewrought', 't2', 'tide/TideSeerUnit', 'support'),
     # the Drydock's Kraken Caller, Mortar Galley and Sky Corsair are not listed yet: two of the three deal splash
     # (Bombard shells, bomb lines) the per-target DPS column can't see, and adding them drags the T2 median down far
     # enough to flag every other faction's T2 - list them once the table models splash
