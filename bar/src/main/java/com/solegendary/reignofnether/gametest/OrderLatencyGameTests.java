@@ -164,7 +164,7 @@ public class OrderLatencyGameTests {
      * match's prewarm does) and {@link #QUIET} ticks standing, unit i gets its order {@link #STAGGER}*i ticks after
      * the first: a move to x = {@code targetX}, or an attack on its dummy.
      */
-    private static void run(GameTestHelper helper, String name, boolean rts, EntityType<? extends Mob> type, int x0,
+    static void run(GameTestHelper helper, String name, boolean rts, EntityType<? extends Mob> type, int x0,
                             int count, UnitAction action, int targetX) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
