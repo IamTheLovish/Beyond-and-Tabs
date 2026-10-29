@@ -102,14 +102,6 @@ public final class GrassTint {
     static final double SOFT_LIGHT = 0.20;
     static final double SOFT_DARK = 0.22;
 
-    /**
-     * Eyes r45 (Oct 29): the lawn's base colour on every map. QuickBattle makes skirmish worlds with normal overworld
-     * generation, so a map sits on random biomes and the biome's grass colour (plains, forest, meadow, swamp...)
-     * changed at borders the map never chose - critic r40 #3's "biome patches as rectangles". Vanilla plains: the
-     * colour every tint round was tuned against. Leaves keep their biome colour for now (the canopy was tuned on it).
-     */
-    static final int LAWN_BASE = 0x91BD59;
-
     private GrassTint() {
     }
 
@@ -132,11 +124,6 @@ public final class GrassTint {
     static double straw(int x, int z, int salt, double dry) {
         double st = octaves(x - 1201, z + 911, (salt + 303) * 8, STRAW_CELLS, STRAW_WEIGHTS);
         return smooth(clamp01((st - STRAW_AT) / STRAW_SOFT)) * clamp01((dry - STRAW_GATE) / 0.4);
-    }
-
-    /** The grass colour at block (x, z) on any map: the meadow base varied - whatever biome lies under the map. */
-    public static int lawn(int x, int z) {
-        return apply(LAWN_BASE, x, z, GRASS);
     }
 
     /** rgb (0xRRGGBB) with the meadow's variation applied at block (x, z). */

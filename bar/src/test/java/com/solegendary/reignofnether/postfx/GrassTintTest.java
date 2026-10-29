@@ -29,22 +29,6 @@ class GrassTintTest {
     private static double luma(int c) { return 0.2126 * r(c) + 0.7152 * g(c) + 0.0722 * b(c); }
 
     @Test
-    void theLawnIsOneMeadowWhateverBiomeIsUnderTheMap() {
-        // eyes r45 (Oct 29): critic r40 #3's "biome patches as rectangles" were literal - QuickBattle makes every
-        // skirmish world with normal overworld generation, so a map sits on random plains / forest / meadow / swamp
-        // biomes whose grass colours change at borders the map never chose (r/g std 0.049 across one RTS still).
-        // The lawn's colour is now the game's: BiomeColorsMixin hands every grass block GrassTint.lawn(x, z), which
-        // takes no biome - one meadow base, varied by the tint. (The mixin is MC-bound: the proof that the biome is
-        // gone is the eyes still - hue std of the open lawn - not this test.)
-        for (int x = -200; x < 200; x += 13) {
-            for (int z = -200; z < 200; z += 17) {
-                assertEquals(GrassTint.apply(GrassTint.LAWN_BASE, x, z, GrassTint.GRASS), GrassTint.lawn(x, z), "x " + x + " z " + z);
-            }
-        }
-        assertEquals(PLAINS_GRASS, GrassTint.LAWN_BASE, "the meadow base is vanilla plains, the colour every test here tunes against");
-    }
-
-    @Test
     void sameBlockSameColourEveryCall() {
         for (int x = -300; x < 300; x += 37) {
             for (int z = -300; z < 300; z += 41) {
