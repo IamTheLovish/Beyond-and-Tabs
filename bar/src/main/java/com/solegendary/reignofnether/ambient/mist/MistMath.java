@@ -178,12 +178,33 @@ public final class MistMath {
     // ---- the look ----
 
     /**
-     * r3: 0.2-0.5 (r2's 0.15-0.35 never showed: see MistParticle.MIST_SHEET). With the sprite's soft falloff a wisp's
+     * r4: 0.12-0.25 (r3: 0.2-0.5 read as separate cotton balls; r2: 0.15-0.35 never showed - MistParticle.MIST_SHEET).
      * mean alpha is about a fifth of this, so overlapping wisps build a sheet rather than a white blot.
      */
-    public static final double ALPHA_MIN = 0.2, ALPHA_MAX = 0.5;
-    /** The mist sprites' own centre alpha (tools/mist_sprites.py). */
-    public static final double SPRITE_PEAK = 0.9;
+    public static final double ALPHA_MIN = 0.12, ALPHA_MAX = 0.25;
+    /** The mist sprites' own centre alpha, and their mean alpha over the whole quad (tools/mist_sprites.py). */
+    public static final double SPRITE_PEAK = 0.9, SPRITE_MEAN = 0.18;
+    /** r4: a wisp is drawn this many times longer along the wind than across - a band of mist, not a disc. */
+    public static final double ASPECT = 1.7;
+
+    /** Mean width across (blocks) over a wisp's life: the mean start size, grown by half its 1.2x. */
+    static double meanSize() {
+        return (startSize(0) + startSize(1)) / 2 * 1.1;
+    }
+
+    /** How many wisps one wisp overlaps, on average, at this zoom: cap x quad area / the spawn disc's area. */
+    public static double overlaps(float zoom) {
+        double area = meanSize() * meanSize() * ASPECT, r = radius(zoom);
+        return cap(BASE_CAP, zoom, false) * area / (Math.PI * r * r);
+    }
+
+    /**
+     * The share of open ground (column score {@code score}) under mist at full density and this zoom: the wisps'
+     * coverage as independent soft layers, 1 - exp(-overlaps x mean alpha). The tests hold dawn meadow at 20-45%.
+     */
+    public static double expectedCover(float zoom, double score) {
+        return 1 - Math.exp(-overlaps(zoom) * peakAlpha(score, 1.0) * SPRITE_MEAN);
+    }
     /** Vanilla's particle shader (particle.fsh) discards every fragment under this alpha: why r1 and r2 were invisible. */
     public static final double VANILLA_PARTICLE_CUT = 0.1;
     /** Ticks to fade in (3 s) and out (4 s): mist gathers and thins, it never pops. */
@@ -205,9 +226,9 @@ public final class MistMath {
         return 400 + (int) Math.round(300 * clamp01(r));
     }
 
-    /** Width in blocks at birth (the quad's side; its soft edge fades to nothing), from a random 0-1: 5-10. */
+    /** Width across in blocks at birth (the quad's short side; its soft edge fades to nothing), from a random 0-1: 8-13. */
     public static double startSize(double r) {
-        return 5 + 5 * clamp01(r);
+        return 8 + 5 * clamp01(r);
     }
 
     /** It grows slowly: 1.2x by the end of its life (so 5-12 blocks). */
@@ -281,7 +302,7 @@ public final class MistMath {
     // ---- the eyes rig ----
 
     /** The day time of the 15_<name>_mist_rts still: the thick of dawn. */
-    public static final long EYES_DAWN_TIME = 23500;
+    public static final long EYES_DAWN_TIME = 300;   // r4: just after sunrise (r3's 23500 was dark with shaders)
 
     /**
      * Whether mist may show: always in play; while the eyes rig photographs structures (EyesPhotoBooth.ambientLifeOff)
