@@ -209,12 +209,13 @@ public class DragonFlightGameTests {
      * slot (GameTestTicker, after the level ticks), so produceUnit here reproduces that order exactly. The random yaw
      * is fixed here to the way to the rally point, so the flight needs no turn and any one-tick swing is the bug.
      * <p>
-     * Produced {@link #SETTLE} ticks in, not in the test's first tick: alone in its batch on a slow runner (stress
-     * 40825509632, 3 of 7, all on the slower east-region runners) the rally move had not reached the dragon by its first
-     * tick, so the setup check refused to judge it. The batch's first tick is the one that loads the slot's chunks;
-     * a few ticks later the world is settled, and production is still in the GameTestTicker slot after the level ticks.
+     * Produced only once the arena's entity sections are loaded and entity-ticking (GameTestChunks.whenEntitiesReady),
+     * not at a fixed tick: the structure's FORCED tickets load blocks first and entities later, and a dragon added to a
+     * section still loading stays out of level.getEntity, so CommandQueues drops its rally move. Stress 40825509632 (3
+     * of 7, at test tick 0) and 40871732997 (1 of 8, at tick 5: "found by id false, entity ticking false") on the slower
+     * east-region runners. Production is still in the GameTestTicker slot after the level ticks.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100 + SETTLE)
+    @GameTest(template = ARENA, timeoutTicks = CHUNK_CAP + 100)
     public static void bone_dragon_produced_to_a_rally_point_keeps_its_yaw(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos pad = skyPad(helper, 290);
@@ -251,13 +252,21 @@ public class DragonFlightGameTests {
         final int[] ageAtOrder = { -2 };
         final BlockPos[] ordered = { null };
         final String[] atOrder = { "the check never ran" };
-        helper.runAfterDelay(SETTLE, () -> {
+        final long[] producedAt = { -1 };
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        List<long[]> chunks = new ArrayList<>();   // the arena, the Barracks' spawn ring round it and the rally point
+        for (int cx = (corner.getX() - 8) >> 4; cx <= (corner.getX() + 24) >> 4; cx++)
+            for (int cz = (corner.getZ() - 8) >> 4; cz <= (corner.getZ() + 24) >> 4; cz++)
+                chunks.add(new long[] { cx, cz });
+        // the sampler below is registered at the test's start, not from this callback (see BuildingDamageGameTests)
+        GameTestChunks.whenEntitiesReady(helper, level, chunks, 5, 100, CHUNK_CAP, "dragon rally arena", () -> {
             Entity produced = pp.produceUnit(level, EntityRegistrar.BONE_DRAGON_UNIT.get(), owner, false);
             if (!(produced instanceof Mob dragon) || !(produced instanceof Unit unit)) {
                 helper.fail("the Barracks produced no Bone Dragon: " + produced);
                 return;
             }
             made[0] = dragon;
+            producedAt[0] = helper.getTick();
             spawnYaw[0] = (float) Math.toDegrees(-Math.atan2(rally.getX() + 0.5 - dragon.getX(), rally.getZ() + 0.5 - dragon.getZ()));
             dragon.setYRot(spawnYaw[0]);
             dragon.yBodyRot = spawnYaw[0];
@@ -279,53 +288,52 @@ public class DragonFlightGameTests {
         final String[] jump = { "" };
         final List<String> trace = new ArrayList<>();
         final boolean[] done = { false };
-        // judged on the dragon's own 40 ticks, not the test's (see bone_dragon_ordered_at_spawn_keeps_its_yaw)
-        for (int t = 1; t <= 90; t++) {
-            final int tick = t;
-            helper.runAfterDelay(SETTLE + t, () -> {
-                Mob dragon = made[0];
-                if (done[0] || dragon == null)
-                    return;
-                if (Float.isNaN(last[0]))
-                    last[0] = spawnYaw[0];
-                float yaw = dragon.getYRot();
-                trace.add(sample(tick, dragon));
-                double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
-                if (step > worst[0]) {
-                    int i = trace.size() - 1;
-                    jump[0] = String.format(" at tick %d, %.1f -> %.1f (%s)", tick, last[0], yaw,
-                        String.join(" | ", trace.subList(Math.max(0, i - 2), i + 1)));
-                }
-                worst[0] = Math.max(worst[0], step);
-                last[0] = yaw;
-                if (dragon.tickCount < 40 && tick < 90)
-                    return;
-                done[0] = true;
-                try {
-                    double dx = dragon.getX() - start[0], dz = dragon.getZ() - start[2];
-                    double moved = Math.sqrt(dx * dx + dz * dz);
-                    String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s; %s)",
-                        start[0], start[1], start[2], spawnYaw[0], ageAtOrder[0], ordered[0], atOrder[0]);
-                    if (ordered[0] == null || ageAtOrder[0] != 0)
-                        helper.fail("setup: the rally move did not reach the dragon before its first tick, so this does not"
-                            + " test production's order" + setup);
-                    else if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
-                        helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s%s", worst[0],
-                            com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0], setup));
-                    else if (moved < 1)
-                        helper.fail(String.format("it did not fly off to the rally point: %.1f blocks by its age %d (test tick"
-                            + " %d; %s)%s", moved, dragon.tickCount, tick, tail(trace, 3), setup));
-                    else
-                        helper.succeed();
-                } finally {
-                    cleanup.run();
-                }
-            });
-        }
+        // judged on the dragon's own 40 ticks, not the test's (see bone_dragon_ordered_at_spawn_keeps_its_yaw); idles until
+        // the dragon is made, then counts test ticks from the one it was made in
+        helper.onEachTick(() -> {
+            Mob dragon = made[0];
+            if (done[0] || dragon == null || helper.getTick() <= producedAt[0])
+                return;
+            final int tick = (int) (helper.getTick() - producedAt[0]);
+            if (Float.isNaN(last[0]))
+                last[0] = spawnYaw[0];
+            float yaw = dragon.getYRot();
+            trace.add(sample(tick, dragon));
+            double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
+            if (step > worst[0]) {
+                int i = trace.size() - 1;
+                jump[0] = String.format(" at tick %d, %.1f -> %.1f (%s)", tick, last[0], yaw,
+                    String.join(" | ", trace.subList(Math.max(0, i - 2), i + 1)));
+            }
+            worst[0] = Math.max(worst[0], step);
+            last[0] = yaw;
+            if (dragon.tickCount < 40 && tick < 90)
+                return;
+            done[0] = true;
+            try {
+                double dx = dragon.getX() - start[0], dz = dragon.getZ() - start[2];
+                double moved = Math.sqrt(dx * dx + dz * dz);
+                String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s; %s)",
+                    start[0], start[1], start[2], spawnYaw[0], ageAtOrder[0], ordered[0], atOrder[0]);
+                if (ordered[0] == null || ageAtOrder[0] != 0)
+                    helper.fail("setup: the rally move did not reach the dragon before its first tick, so this does not"
+                        + " test production's order" + setup);
+                else if (worst[0] > com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW + 0.5)
+                    helper.fail(String.format("the yaw jumped %.1f deg in one tick (cap %.1f)%s%s", worst[0],
+                        com.solegendary.reignofnether.unit.controls.DragonFlight.TURN_SLOW, jump[0], setup));
+                else if (moved < 1)
+                    helper.fail(String.format("it did not fly off to the rally point: %.1f blocks by its age %d (test tick"
+                        + " %d; %s)%s", moved, dragon.tickCount, tick, tail(trace, 3), setup));
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
     }
 
-    /** Ticks the rally-point test waits before the Barracks produces: past the batch's first, chunk-loading tick. */
-    static final int SETTLE = 5;
+    /** Test ticks the rally-point test waits at most for its arena's entity sections before it fails on them. */
+    static final int CHUNK_CAP = 400;
 
     /** The last n samples of a trace, for a failure message. */
     private static String tail(List<String> trace, int n) {
