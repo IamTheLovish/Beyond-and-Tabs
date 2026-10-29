@@ -187,7 +187,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.BONESETTER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.BonesetterUnit.createAttributes().build());
         evt.put(EntityRegistrar.WRECKER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.WreckerUnit.createAttributes().build());
         evt.put(EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit.createAttributes().build());
-        evt.put(EntityRegistrar.BLOOD_TOTEM_UNIT.get(), AbstractTotem.createAttributes().build());
+        evt.put(EntityRegistrar.BLOOD_TOTEM_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROOTWARDEN_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit.createAttributes().build());
         evt.put(EntityRegistrar.SALVAGER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.SalvagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.JADE_MENDER_UNIT.get(), com.solegendary.reignofnether.unit.units.engineers.JadeMenderUnit.createAttributes().build());

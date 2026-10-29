@@ -21,6 +21,8 @@ import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.resources.Resources;
+import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
 import com.solegendary.reignofnether.unit.SelectionKeep;
 import com.solegendary.reignofnether.unit.UnitAction;
@@ -31,6 +33,7 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit;
 import com.solegendary.reignofnether.unit.units.piglins.SpiritPuppets;
 import com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit;
+import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -52,20 +55,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Essence casters PR 2, the Horde's caster (design/essence_casters.md, lovish approved draft 2 on Oct 29): the
- * <b>Voodoo Shaman</b> (placeholder name), trained at the Flame Sanctuary, an essence carrier with three essence abilities
- * and the shared Empower. Written before the code, from the approved numbers:
+ * Essence casters PR 2, the Horde's caster (design/essence_casters.md, lovish approved draft 2 on Oct 29, with the
+ * coordinator's Revision 1): the <b>Voodoo Shaman</b> (placeholder name), trained at the Flame Sanctuary, an essence
+ * carrier with three essence abilities and the shared Empower. Written before the code, from the approved numbers:
  * <ul>
  *   <li>Hex (5 essence, 12 s): one enemy unit of tier 1-2 can neither attack nor cast for 4 s; a T3 target, an ally or a
  *       short caster is refused with nothing spent and no cooldown;</li>
- *   <li>Blood Totem (10 essence, 25 s): a totem for 15 s; allies within 8 attack 25% faster, enemies within 8 move 15%
- *       slower; the totem is a summon (its death drops no essence);</li>
- *   <li>Spirit Puppet (20 essence, 60 s): one enemy T1 unit is the caster's owner's for 15 s, then goes back to its owner
- *       with its orders cleared; refused on T2+; a puppet that dies drops essence as any unit does.</li>
+ *   <li>Blood Totem (10 essence, 25 s): a 100 HP totem enemies can target, for 15 s; allies within 8 attack 25% faster,
+ *       enemies within 8 move 15% slower; the totem is a summon (its death drops no essence);</li>
+ *   <li>Spirit Puppet (20 essence, 60 s): a channel - one enemy T1 unit is the caster's owner's for 15 s, then goes back
+ *       with its orders cleared; it goes back at once if the shaman is hit, stunned or more than 16 blocks from it;
+ *       refused on T2+; a puppet that dies drops essence as any unit does.</li>
  * </ul>
  * Every cast goes through the order path a click takes ({@link UnitActionItem}), so the cooldown gate is the real one.
- * Each test registers what it spawns with {@link TestCleanup} (gone however the test ends), schedules every callback up
- * front, records in the early ones and judges in the last. The shaman's autocasts are switched off so only the test casts.
+ * Every callback is scheduled up front; the early ones record (never throw), the last one judges and cleans up in a
+ * finally, whatever the verdict. The shaman's autocasts are switched off so only the test casts.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -89,7 +93,7 @@ public class VoodooShamanGameTests {
             helper.fail(String.join("; ", problems));
     }
 
-    /** A unit that stands where it is put (no AI), registered for cleanup. */
+    /** A unit that stands where it is put (no AI), added to {@code made} for the cleanup. */
     private static Mob still(GameTestHelper helper, EntityType<? extends Mob> type, String owner, int x, int z, List<Entity> made) {
         Mob m = HeroGameTests.spawnUnit(helper, type, owner, x, z);
         if (m != null) {
@@ -153,16 +157,33 @@ public class VoodooShamanGameTests {
         return found;
     }
 
-    /** Wisps and wrecks left at the spots, gone at the end whatever the verdict. */
-    private static void clearDropsAtEnd(GameTestHelper helper, List<Vec3> spots) {
-        TestCleanup.atEnd(helper, () -> {
-            for (Vec3 at : spots) {
-                wispsNear(at, 2.5).forEach(Entity::discard);
-                for (Entity w : WreckServerEvents.getWrecks())
-                    if (!w.isRemoved() && w.position().distanceToSqr(at) < 2.5 * 2.5)
-                        w.discard();
-            }
-        });
+    /**
+     * The cleanup every test's last callback runs in its finally: its units, the totems standing in its arena (made by a
+     * cast, possibly after the early callback last looked), any puppet record left, and the wisps and wrecks at its spots.
+     */
+    private static void cleanUp(GameTestHelper helper, List<Entity> made, List<Vec3> spots) {
+        AABB arena = new AABB(helper.absolutePos(BlockPos.ZERO)).expandTowards(16, 6, 16).inflate(2);
+        for (BloodTotemUnit t : helper.getLevel().getEntitiesOfClass(BloodTotemUnit.class, arena))
+            if (!made.contains(t))
+                made.add(t);
+        for (Entity e : made) {
+            if (e instanceof LivingEntity le && SpiritPuppets.isPuppet(le))
+                SpiritPuppets.giveBack(le);
+            if (!e.isRemoved())
+                e.discard();
+        }
+        for (Vec3 at : spots) {
+            wispsNear(at, 2.5).forEach(Entity::discard);
+            for (Entity w : WreckServerEvents.getWrecks())
+                if (!w.isRemoved() && w.position().distanceToSqr(at) < 2.5 * 2.5)
+                    w.discard();
+        }
+    }
+
+    /** A spawn failed: clean up what was made and fail at once. */
+    private static void spawnFailed(GameTestHelper helper, List<Entity> made, String what) {
+        cleanUp(helper, made, List.of());
+        helper.fail("could not spawn " + what);
     }
 
     // ------------------------------------------------------------------------------------------------ the unit
@@ -177,9 +198,10 @@ public class VoodooShamanGameTests {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String owner = owner(helper, "train");
-        TestCleanup.atEnd(helper, () -> ResearchServerEvents.removeAllResearchFor(owner));
+        // a pool for the test owner, as the engineers' training test has (BAR queues with 0 resources)
+        Resources pool = new Resources(owner, 0, 0, 0);
+        ResourcesServerEvents.resourcesList.add(pool);
         try {
             if (!(Buildings.FLAME_SANCTUARY instanceof ProductionBuilding lab) || !lab.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
                 problems.add("the Flame Sanctuary does not train the Voodoo Shaman");
@@ -230,6 +252,10 @@ public class VoodooShamanGameTests {
             }
         } catch (RuntimeException ex) {
             problems.add("threw " + ex);
+        } finally {
+            cleanUp(helper, made, List.of());
+            ResourcesServerEvents.resourcesList.remove(pool);
+            ResearchServerEvents.removeAllResearchFor(owner);
         }
         finish(helper, problems);
     }
@@ -238,10 +264,9 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 120, batch = BATCH)
     public static void voodoo_shaman_gathers_essence_wisps(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         Mob caster = shaman(helper, owner(helper, "gather"), 3, 3, 0, made);
         if (caster == null) {
-            helper.fail("could not spawn the shaman");
+            spawnFailed(helper, made, "the shaman");
             return;
         }
         Entity wisp = EssenceServerEvents.spawnWisp(helper.getLevel(), caster.getX() + 5, caster.getY() + 1, caster.getZ(), 4);
@@ -249,12 +274,16 @@ public class VoodooShamanGameTests {
             made.add(wisp);
         helper.runAfterDelay(100, () -> {
             List<String> problems = new ArrayList<>();
-            if (wisp == null)
-                problems.add("spawnWisp made no wisp");
-            if (!Essence.isCarrier(caster))
-                problems.add("the shaman is not an essence carrier");
-            if (Essence.get(caster) != 4)
-                problems.add("the shaman holds " + Essence.get(caster) + " essence, expected the wisp's 4");
+            try {
+                if (wisp == null)
+                    problems.add("spawnWisp made no wisp");
+                if (!Essence.isCarrier(caster))
+                    problems.add("the shaman is not an essence carrier");
+                if (Essence.get(caster) != 4)
+                    problems.add("the shaman holds " + Essence.get(caster) + " essence, expected the wisp's 4");
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
             finish(helper, problems);
         });
     }
@@ -269,7 +298,6 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 140, batch = BATCH)
     public static void voodoo_hex_disarms_and_seals_a_t1_or_t2_enemy_for_4_seconds(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "hexa"), b = owner(helper, "hexb");
         Mob casterA = shaman(helper, a, 3, 3, 10, made);
         Mob casterB = shaman(helper, a, 3, 12, 10, made);
@@ -279,7 +307,7 @@ public class VoodooShamanGameTests {
         Mob victim1 = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), a, 7, 4, made);
         Mob victim2 = still(helper, EntityRegistrar.VILLAGER_UNIT.get(), a, 13, 4, made);
         if (made.size() < 7) {
-            helper.fail("could not spawn the shamans, the enemies and the victims");
+            spawnFailed(helper, made, "the shamans, the enemies and the victims");
             return;
         }
         List<String> early = new ArrayList<>();
@@ -317,9 +345,13 @@ public class VoodooShamanGameTests {
         });
         helper.runAfterDelay(3 + Hex.DURATION_SECONDS * 20 + 10, () -> {
             List<String> problems = new ArrayList<>(early);
-            for (Mob m : new Mob[] { t1, t2 })
-                if (m.hasEffect(MobEffectRegistrar.DISARM.get()) || SealServerEvents.isSealed(m))
-                    problems.add("the " + EntityType.getKey(m.getType()).getPath() + " is still hexed after 4 s");
+            try {
+                for (Mob m : new Mob[] { t1, t2 })
+                    if (m.hasEffect(MobEffectRegistrar.DISARM.get()) || SealServerEvents.isSealed(m))
+                        problems.add("the " + EntityType.getKey(m.getType()).getPath() + " is still hexed after 4 s");
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
             finish(helper, problems);
         });
     }
@@ -331,7 +363,6 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void voodoo_hex_refuses_t3_allies_short_essence_and_its_cooldown(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "hexra"), b = owner(helper, "hexrb");
         Mob rich = shaman(helper, a, 3, 3, 10, made);
         Mob poor = shaman(helper, a, 3, 13, 4, made);
@@ -340,7 +371,7 @@ public class VoodooShamanGameTests {
         Mob foe1 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 5, 1, made);
         Mob foe2 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 13, made);
         if (made.size() < 6) {
-            helper.fail("could not spawn the shamans and their targets");
+            spawnFailed(helper, made, "the shamans and their targets");
             return;
         }
         helper.runAfterDelay(3, () -> {
@@ -371,6 +402,8 @@ public class VoodooShamanGameTests {
                 }
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
+            } finally {
+                cleanUp(helper, made, List.of());
             }
             finish(helper, problems);
         });
@@ -379,14 +412,14 @@ public class VoodooShamanGameTests {
     // ------------------------------------------------------------------------------------------------ Blood Totem
 
     /**
-     * Blood Totem: 10 essence and a 25 s cooldown raise a totem at the clicked spot; within 8 blocks of it an ally attacks
-     * 25% faster and an enemy moves 15% slower, each against an identical unit 11+ blocks away that is untouched.
+     * Blood Totem: 10 essence and a 25 s cooldown raise a 100 HP totem at the clicked spot; within 8 blocks of it an ally
+     * attacks 25% faster and an enemy moves 15% slower, each against an identical unit 11+ blocks away that is untouched.
+     * An enemy may target the totem and its blow lands.
      */
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
     public static void voodoo_blood_totem_speeds_allies_and_slows_enemies_within_8(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "tota"), b = owner(helper, "totb");
         Mob caster = shaman(helper, a, 2, 2, 12, made);
         Mob allyIn = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), a, 5, 4, made);
@@ -394,7 +427,7 @@ public class VoodooShamanGameTests {
         Mob foeIn = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 2, 9, made);
         Mob foeOut = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 14, 12, made);
         if (made.size() < 5) {
-            helper.fail("could not spawn the shaman and the four units");
+            spawnFailed(helper, made, "the shaman and the four units");
             return;
         }
         BlockPos ground = new BlockPos(2, 1, 4);
@@ -419,6 +452,8 @@ public class VoodooShamanGameTests {
                         early.add("the totem is not the shaman's owner's");
                     if (!Essence.isSummoned(totems.get(0)))
                         early.add("the totem is not marked summoned");
+                    if (Math.abs(totems.get(0).getMaxHealth() - 100f) > 0.5f)
+                        early.add("the totem has " + totems.get(0).getMaxHealth() + " max health, Revision 1 set 100");
                 }
             } catch (RuntimeException ex) {
                 early.add("threw " + ex);
@@ -426,17 +461,31 @@ public class VoodooShamanGameTests {
         });
         helper.runAfterDelay(30, () -> {
             List<String> problems = new ArrayList<>(early);
-            float in = ((AttackerUnit) allyIn).getAttacksPerSecond(), out = ((AttackerUnit) allyOut).getAttacksPerSecond();
-            if (out <= 0 || Math.abs(in / out - 1.25f) > 0.01f)
-                problems.add("the ally within 8 attacks " + in + "/s against " + out + "/s outside, expected x1.25");
-            if (!allyIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) || allyOut.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()))
-                problems.add("the frenzy is on the wrong allies (in " + allyIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get())
-                    + ", out " + allyOut.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) + ")");
-            double sIn = foeIn.getAttributeValue(Attributes.MOVEMENT_SPEED), sOut = foeOut.getAttributeValue(Attributes.MOVEMENT_SPEED);
-            if (sOut <= 0 || Math.abs(sIn / sOut - 0.85) > 0.01)
-                problems.add("the enemy within 8 moves at " + sIn + " against " + sOut + " outside, expected x0.85");
-            if (foeIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) || allyIn.hasEffect(MobEffectRegistrar.BLOOD_TOTEM_SLOW.get()))
-                problems.add("the totem buffed an enemy or slowed an ally");
+            try {
+                float in = ((AttackerUnit) allyIn).getAttacksPerSecond(), out = ((AttackerUnit) allyOut).getAttacksPerSecond();
+                if (out <= 0 || Math.abs(in / out - 1.25f) > 0.01f)
+                    problems.add("the ally within 8 attacks " + in + "/s against " + out + "/s outside, expected x1.25");
+                if (!allyIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) || allyOut.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()))
+                    problems.add("the frenzy is on the wrong allies (in " + allyIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get())
+                        + ", out " + allyOut.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) + ")");
+                double sIn = foeIn.getAttributeValue(Attributes.MOVEMENT_SPEED), sOut = foeOut.getAttributeValue(Attributes.MOVEMENT_SPEED);
+                if (sOut <= 0 || Math.abs(sIn / sOut - 0.85) > 0.01)
+                    problems.add("the enemy within 8 moves at " + sIn + " against " + sOut + " outside, expected x0.85");
+                if (foeIn.hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get()) || allyIn.hasEffect(MobEffectRegistrar.BLOOD_TOTEM_SLOW.get()))
+                    problems.add("the totem buffed an enemy or slowed an ally");
+                List<BloodTotemUnit> totems = totemsNear(level, spot, 2);
+                if (!totems.isEmpty()) {
+                    BloodTotemUnit totem = totems.get(0);
+                    if (!MiscUtil.isIdleOrMoveAttackable(foeIn, totem, false))
+                        problems.add("an enemy may not target the totem");
+                    float before = totem.getHealth();
+                    foeIn.doHurtTarget(totem);
+                    if (totem.getHealth() >= before)
+                        problems.add("an enemy's blow left the totem at " + totem.getHealth() + " of " + before);
+                }
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
             finish(helper, problems);
         });
     }
@@ -449,18 +498,16 @@ public class VoodooShamanGameTests {
     public static void voodoo_blood_totem_lasts_15_seconds_drops_no_essence_and_refuses_when_short(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "totl");
         Mob caster = shaman(helper, a, 3, 3, 10, made);
         Mob poor = shaman(helper, a, 12, 12, 9, made);
         if (made.size() < 2) {
-            helper.fail("could not spawn the shamans");
+            spawnFailed(helper, made, "the shamans");
             return;
         }
         BlockPos ground = new BlockPos(6, 1, 6), poorGround = new BlockPos(12, 1, 9);
         Vec3 spot = Vec3.atBottomCenterOf(helper.absolutePos(ground.above()));
         Vec3 poorSpot = Vec3.atBottomCenterOf(helper.absolutePos(poorGround.above()));
-        clearDropsAtEnd(helper, List.of(spot));
         List<String> early = new ArrayList<>();
         helper.runAfterDelay(2, () -> {
             try {
@@ -482,11 +529,15 @@ public class VoodooShamanGameTests {
         });
         helper.runAfterDelay(2 + BloodTotem.DURATION_SECONDS * 20 + 25, () -> {
             List<String> problems = new ArrayList<>(early);
-            if (!totemsNear(level, spot, 2).isEmpty())
-                problems.add("the totem still stands after 15 s");
-            List<Entity> wisps = wispsNear(spot, 2);
-            if (!wisps.isEmpty())
-                problems.add("the fallen totem left " + wisps.size() + " essence wisp(s): a summon must drop none");
+            try {
+                if (!totemsNear(level, spot, 2).isEmpty())
+                    problems.add("the totem still stands after 15 s");
+                List<Entity> wisps = wispsNear(spot, 2);
+                if (!wisps.isEmpty())
+                    problems.add("the fallen totem left " + wisps.size() + " essence wisp(s): a summon must drop none");
+            } finally {
+                cleanUp(helper, made, List.of(spot));
+            }
             finish(helper, problems);
         });
     }
@@ -496,18 +547,18 @@ public class VoodooShamanGameTests {
     /**
      * Spirit Puppet on a T1 enemy (a Vindicator): 20 essence and a 60 s cooldown make it the caster's owner's for 15 s -
      * its old orders dropped, its old owner unable to order it, the new one able - and then it goes back to its owner with
-     * whatever the puppeteer ordered cleared and no puppet record left.
+     * whatever the puppeteer ordered cleared and no puppet record left. The shaman stands 4 blocks off, unhurt, unstunned:
+     * the channel holds the whole 15 s.
      */
     @GameTest(template = ARENA, timeoutTicks = 360, batch = BATCH)
     public static void voodoo_spirit_puppet_controls_a_t1_enemy_for_15_seconds_then_returns_it(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "pupa"), b = owner(helper, "pupb");
         Mob caster = shaman(helper, a, 3, 3, 20, made);
         Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
         if (made.size() < 2) {
-            helper.fail("could not spawn the shaman and the enemy");
+            spawnFailed(helper, made, "the shaman and the enemy");
             return;
         }
         BlockPos bOrder = helper.absolutePos(new BlockPos(12, 2, 12)), aOrder = helper.absolutePos(new BlockPos(2, 2, 12));
@@ -540,20 +591,85 @@ public class VoodooShamanGameTests {
         });
         helper.runAfterDelay(2 + SpiritPuppet.DURATION_SECONDS * 20 - 20, () -> {
             if (!a.equals(((Unit) foe).getOwnerName()))
-                early.add("the puppet went back before 14 s");
+                early.add("the puppet went back before 14 s (the channel broke with nothing breaking it)");
         });
         helper.runAfterDelay(2 + SpiritPuppet.DURATION_SECONDS * 20 + 20, () -> {
             List<String> problems = new ArrayList<>(early);
-            if (!b.equals(((Unit) foe).getOwnerName()))
-                problems.add("after 15 s the puppet belongs to " + ((Unit) foe).getOwnerName() + ", not its owner");
-            if (SpiritPuppets.isPuppet(foe))
-                problems.add("the returned unit still carries a puppet record");
-            if (((Unit) foe).getMoveGoal().getMoveTarget() != null)
-                problems.add("the returned unit kept the puppeteer's move order");
-            if (!UnitActionItem.mayCommand(level, b, (Unit) foe, false) || UnitActionItem.mayCommand(level, a, (Unit) foe, false))
-                problems.add("the order rights did not go back to the owner");
-            if (!foe.isAlive())
-                problems.add("the puppet died");
+            try {
+                if (!b.equals(((Unit) foe).getOwnerName()))
+                    problems.add("after 15 s the puppet belongs to " + ((Unit) foe).getOwnerName() + ", not its owner");
+                if (SpiritPuppets.isPuppet(foe))
+                    problems.add("the returned unit still carries a puppet record");
+                if (((Unit) foe).getMoveGoal().getMoveTarget() != null)
+                    problems.add("the returned unit kept the puppeteer's move order");
+                if (!UnitActionItem.mayCommand(level, b, (Unit) foe, false) || UnitActionItem.mayCommand(level, a, (Unit) foe, false))
+                    problems.add("the order rights did not go back to the owner");
+                if (!foe.isAlive())
+                    problems.add("the puppet died");
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Spirit Puppet is a channel (Revision 1): three shamans each take a T1 enemy, then one is hit, one is stunned and one
+     * walks 17 blocks from its puppet - each puppet goes back to its owner at once (orders cleared, record gone), well
+     * before the 15 s.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    public static void voodoo_spirit_puppet_breaks_when_the_shaman_is_hit_stunned_or_16_blocks_away(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "pupca"), b = owner(helper, "pupcb");
+        Mob hit = shaman(helper, a, 2, 2, 20, made);
+        Mob stunned = shaman(helper, a, 2, 7, 20, made);
+        Mob walker = shaman(helper, a, 2, 12, 20, made);
+        Mob foeHit = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 2, made);
+        Mob foeStunned = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 7, made);
+        Mob foeWalker = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 12, made);
+        if (made.size() < 6) {
+            spawnFailed(helper, made, "the shamans and the enemies");
+            return;
+        }
+        Mob[][] pairs = { { hit, foeHit }, { stunned, foeStunned }, { walker, foeWalker } };
+        String[] how = { "hit", "stunned", "17 blocks away" };
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                for (int i = 0; i < pairs.length; i++) {
+                    castAt(helper, pairs[i][0], UnitAction.SPIRIT_PUPPET, pairs[i][1]);
+                    if (!a.equals(((Unit) pairs[i][1]).getOwnerName()))
+                        early.add("the " + how[i] + " shaman's Spirit Puppet did not take its Vindicator");
+                }
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            try {
+                hit.hurt(hit.damageSources().generic(), 2f);
+                stunned.addEffect(new MobEffectInstance(MobEffectRegistrar.STUN.get(), 40));
+                walker.teleportTo(foeWalker.getX() + 17, walker.getY(), walker.getZ());
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(12, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (SpiritPuppet.CHANNEL_RANGE != 16)
+                    problems.add("Revision 1 breaks the channel beyond 16 blocks, CHANNEL_RANGE is " + SpiritPuppet.CHANNEL_RANGE);
+                for (int i = 0; i < pairs.length; i++) {
+                    Mob foe = pairs[i][1];
+                    if (!b.equals(((Unit) foe).getOwnerName()))
+                        problems.add("the puppet of the " + how[i] + " shaman is still " + ((Unit) foe).getOwnerName() + "'s");
+                    if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
+                        problems.add("the puppet of the " + how[i] + " shaman still has a puppet record");
+                }
+            } finally {
+                cleanUp(helper, made, List.of());
+            }
             finish(helper, problems);
         });
     }
@@ -566,7 +682,6 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
     public static void voodoo_spirit_puppet_refuses_t2_and_short_essence_and_a_dead_puppet_drops_essence(GameTestHelper helper) {
         List<Entity> made = new ArrayList<>();
-        TestCleanup.entities(helper, made);
         String a = owner(helper, "pupra"), b = owner(helper, "puprb");
         Mob rich = shaman(helper, a, 3, 3, 20, made);
         Mob poor = shaman(helper, a, 3, 12, 19, made);
@@ -574,11 +689,10 @@ public class VoodooShamanGameTests {
         Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 2, made);
         Mob foe2 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 6, 12, made);
         if (made.size() < 5) {
-            helper.fail("could not spawn the shamans and their targets");
+            spawnFailed(helper, made, "the shamans and their targets");
             return;
         }
         List<Vec3> spots = new ArrayList<>();
-        clearDropsAtEnd(helper, spots);
         List<String> early = new ArrayList<>();
         int want = Essence.essenceFor(((Unit) foe).getCost().metal());
         helper.runAfterDelay(2, () -> {
@@ -601,15 +715,19 @@ public class VoodooShamanGameTests {
         });
         helper.runAfterDelay(8, () -> {
             List<String> problems = new ArrayList<>(early);
-            if (!spots.isEmpty()) {
-                List<Entity> wisps = wispsNear(spots.get(0), 1.5);
-                if (wisps.size() != 1)
-                    problems.add("the dead puppet left " + wisps.size() + " wisps, expected 1");
-                else if (EssenceServerEvents.valueOf(wisps.get(0)) != want)
-                    problems.add("the dead puppet's wisp is worth " + EssenceServerEvents.valueOf(wisps.get(0)) + ", expected " + want);
+            try {
+                if (!spots.isEmpty()) {
+                    List<Entity> wisps = wispsNear(spots.get(0), 1.5);
+                    if (wisps.size() != 1)
+                        problems.add("the dead puppet left " + wisps.size() + " wisps, expected 1");
+                    else if (EssenceServerEvents.valueOf(wisps.get(0)) != want)
+                        problems.add("the dead puppet's wisp is worth " + EssenceServerEvents.valueOf(wisps.get(0)) + ", expected " + want);
+                }
+                if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
+                    problems.add("the dead puppet is still tracked");
+            } finally {
+                cleanUp(helper, made, spots);
             }
-            if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
-                problems.add("the dead puppet is still tracked");
             finish(helper, problems);
         });
     }

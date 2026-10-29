@@ -2,26 +2,34 @@ package com.solegendary.reignofnether.unit.units.piglins;
 
 import com.solegendary.reignofnether.ability.abilities.SpiritPuppet;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * The Voodoo Shaman's Spirit Puppets ({@link SpiritPuppet}): a taken unit's original owner and the game tick it goes
- * back are kept in its persistent data ({@link #KEY_OWNER}, {@link #KEY_UNTIL}), so a save in the middle of the 15 s
- * cannot leave it with the puppeteer for good; this class holds the live list and hands each one back on time.
+ * The Voodoo Shaman's Spirit Puppets ({@link SpiritPuppet}): a taken unit's original owner, the game tick it goes back
+ * and the shaman holding it are kept in its persistent data ({@link #KEY_OWNER}, {@link #KEY_UNTIL},
+ * {@link #KEY_CASTER}), so a save in the middle of the 15 s cannot leave it with the puppeteer for good; this class holds
+ * the live list and hands each one back on time.
+ * <p>
+ * <b>A channel</b> (Revision 1): the puppet goes back at once when its shaman is hit (any damage that lands), stunned
+ * or frozen, more than {@link SpiritPuppet#CHANNEL_RANGE} blocks from it, dead, or gone (not loaded).
  * <p>
  * A hand-over either way is the Wraith's Possess one: the unit's orders are dropped (Unit.fullResetBehaviours), and the
  * units of its new side that were attacking it let go. The client drops it from any selection when its owner changes
@@ -34,6 +42,7 @@ public final class SpiritPuppets {
 
     public static final String KEY_OWNER = "bt_puppet_owner";
     public static final String KEY_UNTIL = "bt_puppet_until";
+    public static final String KEY_CASTER = "bt_puppet_caster";
 
     private static final List<LivingEntity> ACTIVE = new ArrayList<>();
 
@@ -46,7 +55,7 @@ public final class SpiritPuppets {
         return isPuppet(e) ? e.getPersistentData().getString(KEY_OWNER) : null;
     }
 
-    /** Whether the live list holds {@code e} (the tests: a dead puppet must be forgotten). */
+    /** Whether the live list holds {@code e} (the tests: a dead or returned puppet must be forgotten). */
     public static boolean tracks(LivingEntity e) {
         return ACTIVE.contains(e);
     }
@@ -55,13 +64,17 @@ public final class SpiritPuppets {
         return ACTIVE.size();
     }
 
-    /** Gives {@code target} to {@code newOwner} for {@code ticks}; the caller checked everything (SpiritPuppet.cast). */
-    public static void take(ServerLevel sl, LivingEntity target, String newOwner, int ticks) {
+    /**
+     * Gives {@code target} to {@code newOwner} for {@code ticks} while {@code caster} keeps the channel; the caller
+     * checked everything (SpiritPuppet.cast).
+     */
+    public static void take(ServerLevel sl, LivingEntity caster, LivingEntity target, String newOwner, int ticks) {
         if (!(target instanceof Unit unit))
             return;
         CompoundTag data = target.getPersistentData();
         data.putString(KEY_OWNER, unit.getOwnerName());
         data.putLong(KEY_UNTIL, sl.getGameTime() + ticks);
+        data.putUUID(KEY_CASTER, caster.getUUID());
         handOver(unit, newOwner);
         if (!ACTIVE.contains(target))
             ACTIVE.add(target);
@@ -87,6 +100,7 @@ public final class SpiritPuppets {
     private static void forget(LivingEntity e) {
         e.getPersistentData().remove(KEY_OWNER);
         e.getPersistentData().remove(KEY_UNTIL);
+        e.getPersistentData().remove(KEY_CASTER);
     }
 
     /** The Wraith's possession hand-over (WraithUnit.onCastPossess): new owner, no orders, its new side lets go of it. */
@@ -101,6 +115,24 @@ public final class SpiritPuppets {
                 u.getTargetGoal().setTarget(null);
     }
 
+    /** The shaman holding the channel, or null when it is dead, unloaded or the record names none. */
+    private static LivingEntity casterOf(LivingEntity puppet) {
+        CompoundTag data = puppet.getPersistentData();
+        if (!data.hasUUID(KEY_CASTER) || !(puppet.level() instanceof ServerLevel sl))
+            return null;
+        Entity e = sl.getEntity(data.getUUID(KEY_CASTER));
+        return e instanceof LivingEntity le && le.isAlive() ? le : null;
+    }
+
+    /** Whether the channel still holds: the shaman alive, not stunned or frozen, within reach of its puppet. */
+    private static boolean channelHolds(LivingEntity puppet) {
+        LivingEntity caster = casterOf(puppet);
+        if (caster == null || caster.hasEffect(MobEffectRegistrar.STUN.get()) || caster.hasEffect(MobEffectRegistrar.FREEZE.get()))
+            return false;
+        double r = SpiritPuppet.CHANNEL_RANGE;
+        return caster.distanceToSqr(puppet) <= r * r;
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || ACTIVE.isEmpty())
@@ -110,8 +142,22 @@ public final class SpiritPuppets {
                 ACTIVE.remove(e);   // dead, given back elsewhere, or unloaded (onJoin lists it again when it loads)
                 continue;
             }
-            if (e.level().getGameTime() >= e.getPersistentData().getLong(KEY_UNTIL))
+            if (e.level().getGameTime() >= e.getPersistentData().getLong(KEY_UNTIL) || !channelHolds(e))
                 giveBack(e);
+        }
+    }
+
+    /** A hit on a shaman that lands breaks every channel it holds. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onHurt(LivingHurtEvent evt) {
+        LivingEntity hurt = evt.getEntity();
+        if (ACTIVE.isEmpty() || evt.isCanceled() || evt.getAmount() <= 0 || hurt.level().isClientSide())
+            return;
+        UUID id = hurt.getUUID();
+        for (LivingEntity puppet : new ArrayList<>(ACTIVE)) {
+            CompoundTag data = puppet.getPersistentData();
+            if (data.hasUUID(KEY_CASTER) && id.equals(data.getUUID(KEY_CASTER)))
+                giveBack(puppet);
         }
     }
 

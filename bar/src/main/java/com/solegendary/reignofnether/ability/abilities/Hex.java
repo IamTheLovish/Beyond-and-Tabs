@@ -35,8 +35,13 @@ import java.util.List;
  * {@link #ESSENCE_COST} essence and a {@link #CD_SECONDS} s cooldown. The hex is two existing effects for the same time:
  * DISARM (AttackerUnit's attack cooldown never runs out, and VoodooServerEvents cancels any blow it still lands) and the
  * Ink Scribe's SEALED (every ability gate already refuses a sealed unit). Refused - nothing spent, no cooldown - on a T3
- * unit, a hero or commander, an ally, a unit out of reach or one already hexed, or when the caster is short of essence.
- * Autocast on the nearest valid enemy (ENEMY_IN_RANGE), like the other single-target strikes.
+ * unit, a hero or commander, an ally, a unit out of reach, one already hexed or one inside a Ward of its own side (as
+ * Seal is: a Ward lifts seals), or when the caster is short of essence. Autocast on the nearest valid enemy
+ * (ENEMY_IN_RANGE), like the other single-target strikes.
+ * <p>
+ * <b>Not the Ink Scribe's Seal.</b> Seal (25 energy, 20 s, reach 10) silences any enemy for 6 s, which still walks and
+ * fights; Hex (5 essence, 12 s, reach 8) stops its attacks as well, for a shorter 4 s, and only on tier 1-2 units - a
+ * cheap answer to one dangerous small unit, paid from the dead rather than the economy.
  */
 public class Hex extends Ability {
 
@@ -97,7 +102,8 @@ public class Hex extends Ability {
     /** Why {@code target} cannot be hexed by {@code owner} (a HUD message key), or null when it can. */
     static String canHex(String owner, LivingEntity target) {
         if (owner == null || target == null || !target.isAlive() || !(target instanceof Unit u)
-                || AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner) || isHexed(target))
+                || AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner) || isHexed(target)
+                || com.solegendary.reignofnether.mana.WardServerEvents.protects(target))
             return MSG_BAD_TARGET;
         if (UnitTier.of(target) > MAX_TIER)
             return MSG_TIER;

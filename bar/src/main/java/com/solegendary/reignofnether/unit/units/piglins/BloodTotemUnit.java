@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.unit.units.piglins;
 
 import com.solegendary.reignofnether.ability.abilities.BloodTotem;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.AbstractTotem;
@@ -12,12 +13,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
 /**
- * The Voodoo Shaman's <b>Blood Totem</b> ({@link BloodTotem}): a bought-totem body (AbstractTotem: 20 HP, it stands, it
- * can be killed) that lives {@link BloodTotem#DURATION_SECONDS} s. Every half second, every unit within
+ * The Voodoo Shaman's <b>Blood Totem</b> ({@link BloodTotem}): a bought-totem body (AbstractTotem: it stands, enemies
+ * target and kill it like any unit) with {@link #MAX_HEALTH} HP (Revision 1) that lives {@link BloodTotem#DURATION_SECONDS} s. Every half second, every unit within
  * {@link BloodTotem#RADIUS} of it gets a short effect: an ally BLOOD_FRENZY ({@link #ATTACK_SPEED_BONUS} faster attacks,
  * read in AttackerUnit.getAttackCooldownMultiplier), anyone else BLOOD_TOTEM_SLOW ({@link #ENEMY_SLOW} off its move
  * speed). The effects outlast one pulse by half a second, so leaving the circle (or the totem falling) ends them within
@@ -27,12 +30,21 @@ public class BloodTotemUnit extends AbstractTotem {
 
     public static final float ATTACK_SPEED_BONUS = 0.25f;
     public static final float ENEMY_SLOW = 0.15f;
+    /** Revision 1: 100 HP (the bought totems have 20) and no damage resists, so 100 is what it takes. */
+    public static final float MAX_HEALTH = 100f;
     static final int PULSE_TICKS = 10;
     static final int EFFECT_TICKS = 20;
 
     public BloodTotemUnit(EntityType<? extends Mob> entityType, Level level) {
         super(entityType, level);
         this.lifeTimeTicks = BloodTotem.DURATION_SECONDS * 20;
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return AbstractTotem.createAttributes()
+                .add(Attributes.MAX_HEALTH, MAX_HEALTH)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0);
     }
 
     @Override

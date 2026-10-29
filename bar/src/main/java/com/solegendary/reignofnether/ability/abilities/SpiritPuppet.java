@@ -33,7 +33,8 @@ import java.util.List;
  * goes back to its owner ({@link SpiritPuppets} keeps the record, the clock and the hand-back), for
  * {@link #ESSENCE_COST} essence and a {@link #CD_SECONDS} s cooldown. Refused - nothing spent, no cooldown - on a T2+
  * unit, a hero or commander, an ally, a puppet already, a unit out of reach, or when the caster is short of essence.
- * Manual: the player picks the one unit worth 20 essence.
+ * A channel (Revision 1): the puppet goes back at once if the shaman is hit, stunned or more than
+ * {@link #CHANNEL_RANGE} blocks from it. Manual: the player picks the one unit worth 20 essence.
  */
 public class SpiritPuppet extends Ability {
 
@@ -42,6 +43,8 @@ public class SpiritPuppet extends Ability {
     public static final int DURATION_SECONDS = 15;
     public static final int RANGE = 8;
     public static final int MAX_TIER = 1;
+    /** Revision 1: the channel breaks when the shaman is more than this far from its puppet. */
+    public static final int CHANNEL_RANGE = 16;
     public static final String MSG_BAD_TARGET = "hud.essence.reignofnether.puppet_bad_target";
     public static final String MSG_TIER = "hud.essence.reignofnether.puppet_tier";
 
@@ -65,6 +68,7 @@ public class SpiritPuppet extends Ability {
                 FormattedCharSequence.forward("Spirit Puppet  (" + ESSENCE_COST + " essence, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
                 FormattedCharSequence.forward("Takes control of an enemy tier 1 unit within " + RANGE + " blocks for "
                     + DURATION_SECONDS + " s, then it goes back to its owner.", Style.EMPTY),
+                FormattedCharSequence.forward("A channel: it breaks if the shaman is hit, stunned or more than " + CHANNEL_RANGE + " blocks away.", Style.EMPTY),
                 FormattedCharSequence.forward("Dance, little one.", Style.EMPTY.withItalic(true))
             ),
             this,
@@ -110,7 +114,7 @@ public class SpiritPuppet extends Ability {
                 HudClientboundPacket.showTempMessageI18n(owner, Empower.MSG_SHORT);
             return false;
         }
-        SpiritPuppets.take(sl, target, owner, DURATION_SECONDS * ResourceCost.TICKS_PER_SECOND);
+        SpiritPuppets.take(sl, caster, target, owner, DURATION_SECONDS * ResourceCost.TICKS_PER_SECOND);
         BarFx.shot(sl, caster.getEyePosition(), target.getEyePosition(), BarFx.K_MAGIC, caster);
         return true;
     }

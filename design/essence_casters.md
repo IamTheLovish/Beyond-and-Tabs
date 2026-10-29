@@ -79,12 +79,16 @@ fetish for a staff (3 damage, 0.6 hits/s).
   Ghast (50) and the Wither Skeleton (100), sturdier than the other races' casters (40-45) as Horde units are.
 - **Hex** (5, 12 s, reach 8): DISARM + SEALED for 4 s - no attacks (the attack cooldown never runs out, and
   VoodooServerEvents cancels any blow a hexed unit still lands) and no abilities (every ability gate already refuses
-  a sealed unit). Tier 1-2 only. Autocast on the nearest valid enemy.
-- **Blood Totem** (10, 25 s, planted within 8): a 20 HP totem (AbstractTotem body) for 15 s; every half second units
+  a sealed unit). Tier 1-2 only; refused inside the target's own Ward, as Seal is. Autocast on the nearest valid enemy.
+  Not Seal: the Ink Scribe's Seal (25 energy, 20 s, reach 10) silences any enemy for 6 s and it still fights; Hex
+  also stops attacks, for 4 s, on T1-T2 only, and is paid in essence.
+- **Blood Totem** (10, 25 s, planted within 8): a 100 HP totem, no resists, that enemies target like any unit
+  (AbstractTotem body; Revision 1) for 15 s; every half second units
   within 8 get a 1 s effect - allies BLOOD_FRENZY (x1.25 attacks per second, in AttackerUnit's attack cooldown like
   Bloodlust), anyone else BLOOD_TOTEM_SLOW (-15% move speed). Marked summoned. Autocast while fighting, at its feet.
-- **Spirit Puppet** (20, 60 s, reach 8): an enemy T1 unit is the caster's owner's for 15 s (`SpiritPuppets`). The
-  original owner and the hand-back tick live in the puppet's persistent data, so a save cannot keep it; each hand-over
+- **Spirit Puppet** (20, 60 s, reach 8): an enemy T1 unit is the caster's owner's for 15 s (`SpiritPuppets`). A
+  channel (Revision 1): it goes back at once if the shaman is hit, stunned or frozen, dies, or is more than 16 blocks
+  from it. The original owner, the hand-back tick and the shaman live in the puppet's persistent data, so a save cannot keep it; each hand-over
   drops its orders and makes its new side's attackers let go (the Wraith's Possess hand-over), the server refuses the
   other side's orders by owner, and the client drops it from any selection when its owner flips
   (`SelectionKeep.ownerFlipped`). Not a summon: a puppet that dies drops its wisp; its record goes with it. Manual.
