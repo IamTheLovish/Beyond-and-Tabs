@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.tide.FogBankServerEvents;
 import com.solegendary.reignofnether.tide.TidepoolServerEvents;
 import com.solegendary.reignofnether.tide.TidesServerEvents;
 import com.solegendary.reignofnether.unit.Concealment;
+import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitGrid;
 
 import net.minecraft.core.BlockPos;
@@ -106,7 +107,10 @@ public class GridGameTests {
      * The grid keeps sensing (PR 380 review r1): an enemy hidden in its Fog Bank on the owner's grid stays seen across
      * three real 1 Hz passes, so an attacker 8 blocks off keeps its target. A reveal that ran only on hidden units let
      * the cover take the enemy back every 2 s, and going under clears every attacker's target (ThicketCover.onHide,
-     * the target sync in Unit.tick). Both units have no AI, so neither walks into the other's reveal radius.
+     * the target sync in Unit.tick). Both units have no AI, so neither walks into the other's reveal radius, and both
+     * hold fire: the attacker (aggro range 10, 8 off) would otherwise pick the enemy up again as soon as the grid
+     * revealed it, and an enemy that targets the attacker is engaged and never hides - either hid the lost order, and
+     * the test passed on the r1 code (PR 380 review r2). The order is a forced one, a player's attack order.
      */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void grid_keeps_an_enemy_seen_across_passes(GameTestHelper helper) {
@@ -137,6 +141,8 @@ public class GridGameTests {
             attacker.setOwnerName(owner);
             foe.setNoAi(true);
             attacker.setNoAi(true);
+            EngagementStance.set(foe, EngagementStance.HOLD_FIRE);
+            EngagementStance.set(attacker, EngagementStance.HOLD_FIRE);
             level.addFreshEntity(foe);
             level.addFreshEntity(attacker);
             FogBankServerEvents.raise(level, foeOwner, foe.getId(), foe.getX(), foe.getY(), foe.getZ());
@@ -150,7 +156,7 @@ public class GridGameTests {
                 helper.fail("precondition: the grid did not strip the enemy's cover");
                 return;
             }
-            attacker.setUnitAttackTarget(foe);
+            attacker.setUnitAttackTargetForced(foe);
             if (attacker.getTargetGoal().getTarget() != foe) {
                 helper.fail("precondition: the attacker did not take the enemy as its target");
                 return;

@@ -555,7 +555,7 @@ public class TidepoolServerEvents {
             if (p.removed || p.level != level || (onlyOwner != null && !onlyOwner.equals(p.owner)))
                 continue;
             for (LivingEntity le : UnitGrid.near(level, p.centre.getX() + 0.5, p.centre.getZ() + 0.5, p.radius + 1, scratch)) {
-                if (!le.isAlive() || !(le instanceof Unit u))
+                if (!le.isAlive() || !(le instanceof Unit u) || !Concealment.isConcealed(le))
                     continue;
                 String o = u.getOwnerName();
                 if (o == null || o.isBlank() || o.equals(p.owner) || AlliancesServerEvents.isAllied(p.owner, o))

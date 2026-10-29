@@ -6713,9 +6713,13 @@ public class SkirmishGameTests {
         helper.runAfterDelay(5, () -> {
             try {
                 // control: before the fog the 8-block enemy can target the friend
-                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend)
-                        || com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) != friend) {
-                    helper.fail("precondition: the enemy cannot see the friend before the fog");
+                var picked = com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level);
+                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || picked != friend) {
+                    // named, so a CI failure says whether a neighbouring test's unit was closer (PR 380 green r2: 2/8)
+                    helper.fail("precondition: the enemy cannot see the friend before the fog (friend hidden "
+                        + com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) + ", concealed "
+                        + com.solegendary.reignofnether.unit.Concealment.isConcealed(friend) + ", picked " + describe(picked)
+                        + ", nearest stranger " + nearestStranger(foe, foeOwner, 10, List.of(admiral, friend, architect)) + ")");
                     return;
                 }
                 fogBank.use(level, admiral, spot.below());   // also runs a cover pass
