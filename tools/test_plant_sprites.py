@@ -89,6 +89,72 @@ def _extent(model):
     return span, pts[:, 1].max() - pts[:, 1].min()
 
 
+# the eyes RTS camera's direction (run 40812245168, 15_meadow_sampler_rts: the camera at -176, 91, 58 looks at -171, 53, 53)
+RTS_DIR = np.array([5.0, -38.0, -5.0]) / np.linalg.norm([5.0, -38.0, -5.0])
+
+
+def _rotate(el, p):
+    """Points (1/16 block) of an element turned by its rotation, as _corners turns its corners."""
+    r = el.get("rotation")
+    if not r:
+        return p
+    a = math.radians(r["angle"])
+    c, s = math.cos(a), math.sin(a)
+    rot = {"x": [[1, 0, 0], [0, c, -s], [0, s, c]], "y": [[c, 0, s], [0, 1, 0], [-s, 0, c]],
+           "z": [[c, -s, 0], [s, c, 0], [0, 0, 1]]}[r["axis"]]
+    o = np.array(r["origin"], float)
+    q = (p - o) @ np.array(rot).T
+    if r.get("rescale"):
+        k = 1 / math.cos(a)
+        q = q * {"x": [1, k, k], "y": [k, 1, k], "z": [k, k, 1]}[r["axis"]]
+    return q + o
+
+
+_TEX = {}
+
+
+def _alpha(name):
+    if name not in _TEX:
+        _TEX[name] = gen_blocks.m_plant(name, N)["alpha"] > 0.5
+    return _TEX[name]
+
+
+def _screen_cells(model, ppb=32, res=64):
+    """The opaque texels of a plant model's quads, projected along the RTS camera's direction onto a screen of ppb
+    pixels per block: {pixel: how many opaque quad texels land there}. The texture's rows run down the quad from its
+    top edge, its columns along it (a mirrored face covers the same cells)."""
+    rx = np.cross(RTS_DIR, [0, 1.0, 0])
+    rx /= np.linalg.norm(rx)
+    ry = np.cross(rx, RTS_DIR)
+    cells = collections.Counter()
+    for el in model["elements"]:
+        f, t = np.array(el["from"], float), np.array(el["to"], float)
+        for face, fd in el["faces"].items():
+            a = _alpha(model["textures"][fd["texture"][1:]].split("/")[-1])
+            g = (np.arange(res) + 0.5) / res
+            uu, vv = np.meshgrid(g, g)
+            if face in ("north", "south", "west", "east"):
+                along = 0 if f[0] != t[0] else 2
+                p = np.zeros(uu.shape + (3,))
+                p[..., along] = f[along] + uu * (t[along] - f[along])
+                p[..., 2 - along] = f[2 - along]
+                p[..., 1] = t[1] - vv * (t[1] - f[1])
+            else:
+                p = np.stack([f[0] + uu * (t[0] - f[0]), np.full_like(uu, f[1]), f[2] + vv * (t[2] - f[2])], -1)
+            keep = a[(vv * a.shape[0]).astype(int), (uu * a.shape[1]).astype(int)]
+            q = _rotate(el, p[keep]) / 16.0
+            sx = np.floor(q @ rx * ppb).astype(int)
+            sy = np.floor(-(q @ ry) * ppb).astype(int)
+            for c in set(zip(sx.tolist(), sy.tolist())):     # each quad counts once per pixel
+                cells[c] += 1
+    return cells
+
+
+def _footprint(model):
+    """sqrt of the screen area (blocks) a plant model covers from the RTS camera: its linear size there."""
+    return math.sqrt(len(_screen_cells(model)) / 32.0 ** 2)
+
+
 class PlantSprites(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -189,6 +255,16 @@ class PlantWiring(unittest.TestCase):
         want = {"minecraft:block/grass" + shape + size for shape in ("", "_b", "_c") for size in ("", "_m", "_sm")}
         self.assertEqual(set(shown), want)
         self.assertEqual(len(set(shown.values())), 1, "uneven: %s" % shown)
+
+    def test_grass_sizes_differ_twofold_from_the_rts_camera(self):
+        # r36 (critic r35b: "three sizes are not distinguishable at 30 px/block - only tuft vs slightly bigger tuft"):
+        # seen from the RTS camera the big tufts' footprint is ~2x the small ones' (linear), the middle size between
+        by_size = collections.defaultdict(list)
+        for k, (quads, shape, size) in gen_blocks.GRASS_TUFTS.items():
+            by_size[size].append(_footprint(gen_blocks.MODEL_OVERRIDES["grass" + k]))
+        big, mid, small = (float(np.mean(by_size[s])) for s in ("", "_m", "_sm"))
+        self.assertGreaterEqual(big / small, 1.9, "big %.2f / small %.2f = %.2f" % (big, small, big / small))
+        self.assertTrue(small * 1.2 < mid < big / 1.2, "sizes %.2f / %.2f / %.2f" % (small, mid, big))
 
     def test_fern_is_a_low_wide_rosette(self):
         # r35: frond cards tilted up from the crown toward all four sides, no upright quad; wider than twice its height
