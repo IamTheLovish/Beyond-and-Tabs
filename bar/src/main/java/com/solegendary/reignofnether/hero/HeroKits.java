@@ -64,7 +64,7 @@ public final class HeroKits {
     public static final HeroKit DAWN_PALADIN = new HeroKit("dawn_paladin", "Dawn Paladin", "villagers", Role.VANGUARD,
         220, 9, 4, 0.28f, 100, 8, 0.8f, HERO_COST,   // 160/7 -> 200/9 (balance-pass: a level-5 hero lost to two Iron Golems; design/balance.md "Heroes")
         new AbilitySpec("shield_charge", "hero_shield_charge", Target.GROUND, Ai.ENGAGE, cd(13, 11, 9), v(8, 10, 12), 2.5f,
-            30, 2, v(6, 9, 12), v(0.5f, 0.75f, 1.0f), HeroKits::shieldCharge),
+            30, 2, v(6, 9, 12), v(0.5f, 0.75f, 1.0f), HeroKits::shieldCharge).cc(),
         new AbilitySpec("judgement", "hero_judgement", Target.ENEMY, Ai.STRIKE, cd(11, 9, 7), v(10), 0,
             35, 6, v(10, 15, 20), v(50), HeroKits::judgement),
         new AbilitySpec("sun_banner", "hero_sun_banner", Target.SELF, Ai.FIGHT_SELF, cd(27, 23, 20), v(0), 8,
@@ -88,7 +88,7 @@ public final class HeroKits {
     public static final HeroKit HORDE_WARCHIEF = new HeroKit("horde_warchief", "Warchief", "piglins", Role.RAIDER,
         205, 9.5f, 2, 0.30f, 100, 8, 0.8f, HERO_COST,   // 150/8 -> 180/9.5 (balance-pass; at the hero test's 2.5-Tesla-Walker cap)
         new AbilitySpec("savage_leap", "hero_savage_leap", Target.GROUND, Ai.ENGAGE, cd(13, 11, 9), v(10, 12, 14), 3,
-            30, 2, v(6, 9, 12), v(2, 2, 3), HeroKits::savageLeap),
+            30, 2, v(6, 9, 12), v(2, 2, 3), HeroKits::savageLeap).cc(),
         new AbilitySpec("frenzy", "hero_frenzy", Target.SELF, Ai.FIGHT_SELF, cd(22, 18, 14), v(0), 0,
             40, 0, v(40, 50, 60), v(6, 7, 8), HeroKits::frenzy),
         new AbilitySpec("cleave", "hero_cleave", Target.SELF, Ai.FIGHT_SELF, cd(8, 7, 6), v(0), 4,
@@ -100,9 +100,9 @@ public final class HeroKits {
     public static final HeroKit THORNHEART_DRUID = new HeroKit("thornheart_druid", "Thornheart Druid", "verdant_court", Role.SUPPORT,
         180, 7, 0, 0.28f, 140, 12, 1.4f, HERO_COST,   // 120/5 -> 165/7 (balance-pass)
         new AbilitySpec("thorn_volley", "hero_thorn_volley", Target.GROUND, Ai.STRIKE, cd(9, 8, 7), v(12), 3,
-            30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley),
+            30, 6, v(5, 8, 11), v(1, 1.25f, 1.5f), HeroKits::thornVolley).cc(),
         new AbilitySpec("root_walk", "hero_root_walk", Target.GROUND, Ai.NONE, cd(16, 14, 11), v(10, 14, 18), 3,
-            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk),
+            30, 4, v(10, 14, 18), v(1), HeroKits::rootWalk).cc(),
         new AbilitySpec("rejuvenate", "hero_rejuvenate", Target.GROUND, Ai.FIGHT_GROUND, cd(18, 15, 13), v(10), 6,
             50, 6, v(8, 12, 16), v(5), HeroKits::rejuvenate),
         new AbilitySpec("grove_seed", "hero_grove_seed", Target.GROUND, Ai.FIGHT_GROUND, cd(54, 45, 36), v(10), 3,
@@ -114,9 +114,9 @@ public final class HeroKits {
         new AbilitySpec("pistol_shot", "hero_pistol_shot", Target.ENEMY, Ai.STRIKE, cd(6, 5, 4), v(12), 0,
             20, 6, v(10, 14, 18), v(0.3f, 0.4f, 0.5f), HeroKits::pistolShot),
         new AbilitySpec("grapple_hook", "hero_grapple_hook", Target.GROUND, Ai.ENGAGE, cd(13, 10, 7), v(10, 13, 16), 0,
-            25, 2, v(10, 13, 16), v(0, 1, 1.5f), HeroKits::grappleHook),
+            25, 2, v(10, 13, 16), v(0, 1, 1.5f), HeroKits::grappleHook).cc(),
         new AbilitySpec("riptide", "hero_riptide", Target.SELF, Ai.FIGHT_SELF, cd(14, 13, 11), v(0), 4,
-            40, 0, v(6, 9, 12), v(4, 5, 5), HeroKits::riptide),
+            40, 0, v(6, 9, 12), v(4, 5, 5), HeroKits::riptide).cc(),
         new AbilitySpec("tidepool", "hero_tidepool", Target.GROUND, Ai.FIGHT_GROUND, cd(54, 45, 36), v(10), 2,
             60, 8, v(30, 40, 60), v(2, 2, 3), HeroKits::tidepool));
 
@@ -128,7 +128,7 @@ public final class HeroKits {
         new AbilitySpec("cloud_ride", "hero_cloud_ride", Target.SELF, Ai.NONE, cd(8, 6, 4), v(0), 0,
             0, 0, v(8, 6, 4), v(0), HeroKits::cloudRide),
         new AbilitySpec("frost_nova", "hero_frost_nova", Target.SELF, Ai.FIGHT_SELF, cd(16, 14, 11), v(0), 4,
-            45, 0, v(5, 8, 11), v(4, 5, 6), HeroKits::frostNova),
+            45, 0, v(5, 8, 11), v(4, 5, 6), HeroKits::frostNova).cc(),
         new AbilitySpec("mana_font", "hero_mana_font", Target.SELF, Ai.FIGHT_SELF, cd(63, 54, 45), v(0), 12,
             40, 0, v(100, 175, 250), v(4, 6, 8), HeroKits::manaFont));
 

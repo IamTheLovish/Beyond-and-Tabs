@@ -261,10 +261,10 @@ jobs:
       # units' posing and drawing per frame, on the real model classes without a window - a measurement, as notices
       - name: Animation cost bench (measurement only)
         if: always()
-        # the living army's two wall-clock gates (motion-bench, motion-pass-bench) too: their margin to the budget was
+        # the living army's wall-clock gates (motion-bench, motion-pass-bench, death-fall-bench) too: their margin to the budget was
         # never visible until one failed on #146 (Oct 27), so drift now shows in every build before it trips a gate
         run: |
-          for f in anim-bench motion-bench motion-pass-bench; do
+          for f in anim-bench motion-bench motion-pass-bench death-fall-bench; do
             [ ! -f "bar/build/$f.txt" ] || while IFS= read -r line; do echo "::notice::$line"; done < "bar/build/$f.txt"
           done
       # the fast JUnit suite (bar/src/test, plan 008) ran inside the build above: one notice with the count, so a green

@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -85,7 +86,18 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
                                     int packedLight, int packedOverlay,
                                     float red, float green, float blue, float alpha) {
         float finalAlpha = ron$currentEntity != null && isTransparent(ron$currentEntity) ? alpha * ALPHA : alpha;
+        // a body that falls by itself (DeathFall) is red only while hurt, as in life - not for its whole death
+        if (ron$currentEntity != null && ron$currentEntity.deathTime > 0 && ron$currentEntity.hurtTime <= 0
+            && MotionPass.ownsDeath(ron$currentEntity, this.model) != null)
+            packedOverlay = OverlayTexture.pack(packedOverlay & 0xFFFF, OverlayTexture.v(false));
         model.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, finalAlpha);
+    }
+
+    // the death-pose contract (unit/modelling/motion/DeathFall): a body that falls by itself is not flipped as well
+    @Inject(method = "getFlipDegrees", at = @At("HEAD"), cancellable = true)
+    private void bat$deathPoseNoFlip(T entity, CallbackInfoReturnable<Float> cir) {
+        if (MotionPass.ownsDeath(entity, this.model) != null)
+            cir.setReturnValue(0f);
     }
 
 
