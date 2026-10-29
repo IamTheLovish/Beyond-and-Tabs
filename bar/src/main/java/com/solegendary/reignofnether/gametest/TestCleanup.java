@@ -191,7 +191,8 @@ public final class TestCleanup {
                 b.maxX + 1, b.maxY + 1, b.maxZ + 1);
             ServerLevel level = info.getLevel();
             Footprint pads = PADS.get(info);
-            net.minecraft.world.phys.AABB area = arena;
+            net.minecraft.world.phys.AABB area = new net.minecraft.world.phys.AABB(arena.minX, level.getMinBuildHeight(),
+                arena.minZ, arena.maxX, level.getMaxBuildHeight(), arena.maxZ);
             int[] span = pads == null ? null : pads.span();
             if (span != null)
                 area = area.minmax(new net.minecraft.world.phys.AABB(span[0], span[1], span[2],
@@ -199,7 +200,8 @@ public final class TestCleanup {
             int n = 0;
             for (Entity e : level.getEntitiesOfClass(Entity.class, area,
                     e -> !(e instanceof net.minecraft.world.entity.player.Player))) {
-                if (arena.contains(e.position()) || pads != null && pads.covers(e.getX(), e.getY(), e.getZ())) {
+                // RED PROOF (throwaway, never merge): the old whole-column sweep, bottom to top, every entity in it
+                if (e.getX() >= arena.minX && e.getX() < arena.maxX && e.getZ() >= arena.minZ && e.getZ() < arena.maxZ) {
                     e.discard();
                     n++;
                 }
