@@ -501,6 +501,14 @@ SEED_ORDER = (
     "grass_straw_c_sm",
     "fern_t",
     "fern_b_t",
+    "dandelion",              # r36: the vanilla flowers (FLOWER_TEXTURES)
+    "poppy",
+    "azure_bluet",
+    "cornflower",
+    "oxeye_daisy",
+    "allium",
+    "lily_of_the_valley",
+    "red_tulip",
 )
 
 
@@ -1102,6 +1110,14 @@ for _p in ("fern", "fern_b"):
     TARGETS[_p] = dict(TARGETS[_p], sat=0.04)
 for _p in ("fern_t", "fern_b_t"):
     TARGETS[_p] = dict(TARGETS[_p[:-2]])
+# r36 (critic r35b: "small bright lime sprites ('confetti', unlit-looking, saturated) at wall feet and on lawns in
+# every view"): the vanilla flowers the maps, the structures (Architecture.FLOWERS) and the samplers place. The pack
+# drew none, so the game's 16x flowers showed - lime stems, nearest-texel, among the 128x grass. Ours are coloured
+# sprites (plant_sprites.flower: deep green stems, a small head), untinted like vanilla's, on vanilla's own cross and
+# flower_pot_cross models with cutout_mipped (MODEL_OVERRIDES). Appended (SEED_ORDER rule); the albedo is drawn final.
+FLOWER_TEXTURES = tuple(plant_sprites.FLOWERS)
+for _p in FLOWER_TEXTURES:
+    TARGETS[_p] = dict(luma=0.40, std=0.10, sat=0.50, tilt=10.0, smooth=55, pore=140, ao=0.3)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2218,6 +2234,13 @@ def m_plant(name, n):
     return dict(H=H, alb=alb, alpha=alpha)
 
 
+def m_flower(name, n):
+    """r36: a vanilla flower (plant_sprites.flower), coloured; the colour and height under the cut-out from the nearest
+    drawn texel (MC-114265, as m_plant)."""
+    H, rgb, alpha, part = plant_sprites.flower(n, np.random.default_rng(SEEDS[name]), name)
+    return dict(H=plant_sprites.bleed(H, alpha), alb=plant_sprites.bleed(rgb, alpha), alpha=alpha)
+
+
 def m_cobweb(F, n):
     """A cobweb: eight straight spokes from a hub a little off the middle and, between them, rings of STRAIGHT chords
     (an orb web is a polygon spiral, not circles - circles read as a maze), sagging a little; pale silk, cut-out, a
@@ -2893,6 +2916,7 @@ STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
          "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b",
          *("grass_straw" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES))                    # r35
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
+CUTOUT |= set(FLOWER_TEXTURES)       # r36
 
 
 # leaning quads for a tuft seen from above (round 29c/d): (axis, angle) per quad; axis x tips the plane through the root
@@ -2905,40 +2929,57 @@ TUFTS = {
 }
 
 
-def _cross_elements(layers, lean):
+def _cross_elements(layers, lean, scale=1.0, upright=True):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
     or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
-    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
+    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes. r36: scale grows every quad
+    about the root (the block's middle column, from y 0) - the big short grass (GRASS_TUFT_SCALE); upright=False leaves
+    out the two upright quads (the short grass, r36: GRASS_UPRIGHT)."""
     def face(t, tinted):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
+
+    def c(v):                                    # across: about the middle column
+        return round(8 + (v - 8) * scale, 4)
+
+    def up(v):                                   # up: from the root
+        return round(v * scale, 4)
+
     els = []
     for t, tinted in layers:
-        els.append({"from": [0.8, 0, 8], "to": [15.2, 16.0, 8], "shade": False,
+        if not upright:
+            for axis, ang in lean:
+                els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
+            continue
+        els.append({"from": [c(0.8), 0, 8], "to": [c(15.2), up(16.0), 8], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("north", "south")}})
-        els.append({"from": [8, 0, 0.8], "to": [8, 16.0, 15.2], "shade": False,
+        els.append({"from": [8, 0, c(0.8)], "to": [8, up(16.0), c(15.2)], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
         for axis, ang in (lean or ()):
-            if axis == "x":
-                els.append({"from": [1.0, 0, 8], "to": [15.0, 14.0, 8], "shade": False,
-                            "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
-                            "faces": {f: face(t, tinted) for f in ("north", "south")}})
-            else:
-                els.append({"from": [8, 0, 1.0], "to": [8, 14.0, 15.0], "shade": False,
-                            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
-                            "faces": {f: face(t, tinted) for f in ("west", "east")}})
+            els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
     return els
 
 
-def _plant_model(p, straw, lean):
+def _lean_quad(axis, ang, fc, c, up):
+    """One TUFTS quad: hinged at the root and leaning out `ang` degrees about `axis` (c / up: _cross_elements' scale)."""
+    if axis == "x":
+        return {"from": [c(1.0), 0, 8], "to": [c(15.0), up(14.0), 8], "shade": False,
+                "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
+                "faces": {f: dict(fc) for f in ("north", "south")}}
+    return {"from": [8, 0, c(1.0)], "to": [8, up(14.0), c(15.0)], "shade": False,
+            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
+            "faces": {f: dict(fc) for f in ("west", "east")}}
+
+
+def _plant_model(p, straw, lean, scale=1.0, upright=True):
     """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
         tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
         layers.append(("#straw", False))
-    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean)}
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale, upright)}
 
 
 # r35 (critic r34: "vary scale (3 sizes)"): nine short-grass models, model suffix -> (its TUFTS set of leaning quads,
@@ -2949,6 +2990,22 @@ def _plant_model(p, straw, lean):
 GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
                "_d": ("", "_b", "_m"), "_e": ("_b", "_c", "_m"), "_f": ("_c", "", "_m"),
                "_g": ("", "_c", "_sm"), "_h": ("_b", "", "_sm"), "_i": ("_c", "_b", "_sm")}
+# r36 (critic r35b: "three sizes are not distinguishable at 30 px/block - only tuft vs slightly bigger tuft"): the big
+# size is a bigger MODEL, its quads 1.35x about the root (the full-size drawing on them), the two smaller sizes stay
+# drawn smaller on the 1.0 model. Seen from the RTS camera (test_plant_sprites._footprint: the opaque texels projected
+# along the eyes camera's direction) the sizes go from 0.70 / 0.61 / 0.45 blocks across (r35, big / small 1.54) to
+# 0.89 / 0.61 / 0.45 (1.97x). Why the model and not SIZES spread further: a smaller drawing loses blade height and width
+# with it (0.55 already keeps 4-texel blades only because the widths shrink just 0.8 + 0.2 x size), while a bigger
+# model is read a mip level UP - its blades come out bolder, not thinner.
+GRASS_TUFT_SCALE = {"": 1.35}
+# r36 (critic r35b: "the big ones read as fist-sized dark splats with a hard shadow halo (clump 10th-percentile V
+# 0.431 vs clearing 0.494), so the lawn looks spotted"): the short grass drops vanilla's two upright crossed quads and
+# keeps only its 3-4 leaning ones. Every quad carries the whole tuft, all hinged at the one root, so from the RTS camera
+# the six stacked bases were the dark core and, in the shadow map, the solid core of the shadow: 27-46% of a tuft's
+# footprint lay under >= 3 opaque quads (mean 38%), now 11-37% (mean 27%; test_plant_sprites). The upright pair was
+# edge-on from the RTS camera anyway; the 22.5-degree quads stand nearly upright for the close views. Tall grass keeps
+# its crossed quads. With the lighter, thinner base (plant_sprites BASE_SHORT / ROOT_W).
+GRASS_UPRIGHT = False
 
 
 def _fern_card(side, kind, length, half_w, y0=0.25):
@@ -3007,7 +3064,8 @@ TALL_BLOCKSTATES = {"tall_grass": {
     "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
     "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads]) for k, (quads, sh, sz) in GRASS_TUFTS.items()},
+    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads], GRASS_TUFT_SCALE.get(sz, 1.0), GRASS_UPRIGHT)
+       for k, (quads, sh, sz) in GRASS_TUFTS.items()},
     **{m: _fern_model(cards) for m, cards in FERN_ROSETTES.items()},
     **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},
     **{"tall_grass_top" + k: _plant_model("tall_grass_top" + k, True, None) for k in TALL_SHAPES},
@@ -3039,6 +3097,10 @@ MODEL_OVERRIDES = {
     # from above are edge-on dashes): short grass and ferns also get four quads LEANING OUT 45 degrees from the root,
     # so a clump opens up like a real tuft when seen from above (PLANT_MODELS)
     **PLANT_MODELS,
+    # r36: the flowers and their potted copies, vanilla's models on our textures (FLOWER_TEXTURES)
+    **{f: {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/" + f}} for f in FLOWER_TEXTURES},
+    **{"potted_" + f: {"parent": "minecraft:block/flower_pot_cross", "textures": {"plant": "minecraft:block/" + f}}
+       for f in FLOWER_TEXTURES},
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
@@ -3399,6 +3461,8 @@ def recipes():
             R[name] = _scan_grass_overlay(i)
     for p in PLANTS + STRAW:                               # round 29; r34: fitted in m_plant, over the whole plant
         R[p] = _parts(lambda F, n, p=p: m_plant(p, n), fit=False)
+    for p in FLOWER_TEXTURES:                              # r36: drawn in their final colours
+        R[p] = _parts(lambda F, n, p=p: m_flower(p, n), fit=False)
     return R
 
 

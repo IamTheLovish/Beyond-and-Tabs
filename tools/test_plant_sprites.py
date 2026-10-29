@@ -89,6 +89,72 @@ def _extent(model):
     return span, pts[:, 1].max() - pts[:, 1].min()
 
 
+# the eyes RTS camera's direction (run 40812245168, 15_meadow_sampler_rts: from -176, 91, 58 toward -171, 53, 53)
+RTS_DIR = np.array([5.0, -38.0, -5.0]) / np.linalg.norm([5.0, -38.0, -5.0])
+
+
+def _rotate(el, p):
+    """Points (1/16 block) of an element turned by its rotation, as _corners turns its corners."""
+    r = el.get("rotation")
+    if not r:
+        return p
+    a = math.radians(r["angle"])
+    c, s = math.cos(a), math.sin(a)
+    rot = {"x": [[1, 0, 0], [0, c, -s], [0, s, c]], "y": [[c, 0, s], [0, 1, 0], [-s, 0, c]],
+           "z": [[c, -s, 0], [s, c, 0], [0, 0, 1]]}[r["axis"]]
+    o = np.array(r["origin"], float)
+    q = (p - o) @ np.array(rot).T
+    if r.get("rescale"):
+        k = 1 / math.cos(a)
+        q = q * {"x": [1, k, k], "y": [k, 1, k], "z": [k, k, 1]}[r["axis"]]
+    return q + o
+
+
+_TEX = {}
+
+
+def _alpha(name):
+    if name not in _TEX:
+        _TEX[name] = gen_blocks.m_plant(name, N)["alpha"] > 0.5
+    return _TEX[name]
+
+
+def _screen_cells(model, ppb=32, res=64):
+    """The opaque texels of a plant model's quads, projected along the RTS camera's direction onto a screen of ppb
+    pixels per block: {pixel: how many opaque quad texels land there}. The texture's rows run down the quad from its
+    top edge, its columns along it (a mirrored face covers the same cells)."""
+    rx = np.cross(RTS_DIR, [0, 1.0, 0])
+    rx /= np.linalg.norm(rx)
+    ry = np.cross(rx, RTS_DIR)
+    cells = collections.Counter()
+    for el in model["elements"]:
+        f, t = np.array(el["from"], float), np.array(el["to"], float)
+        for face, fd in el["faces"].items():
+            a = _alpha(model["textures"][fd["texture"][1:]].split("/")[-1])
+            g = (np.arange(res) + 0.5) / res
+            uu, vv = np.meshgrid(g, g)
+            if face in ("north", "south", "west", "east"):
+                along = 0 if f[0] != t[0] else 2
+                p = np.zeros(uu.shape + (3,))
+                p[..., along] = f[along] + uu * (t[along] - f[along])
+                p[..., 2 - along] = f[2 - along]
+                p[..., 1] = t[1] - vv * (t[1] - f[1])
+            else:
+                p = np.stack([f[0] + uu * (t[0] - f[0]), np.full_like(uu, f[1]), f[2] + vv * (t[2] - f[2])], -1)
+            keep = a[(vv * a.shape[0]).astype(int), (uu * a.shape[1]).astype(int)]
+            q = _rotate(el, p[keep]) / 16.0
+            sx = np.floor(q @ rx * ppb).astype(int)
+            sy = np.floor(-(q @ ry) * ppb).astype(int)
+            for c in set(zip(sx.tolist(), sy.tolist())):     # each quad counts once per pixel
+                cells[c] += 1
+    return cells
+
+
+def _footprint(model):
+    """sqrt of the screen area (blocks) a plant model covers from the RTS camera: its linear size there."""
+    return math.sqrt(len(_screen_cells(model)) / 32.0 ** 2)
+
+
 class PlantSprites(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -149,6 +215,37 @@ class PlantSprites(unittest.TestCase):
                 med = float(np.median(sh[green > 0]))
                 self.assertGreaterEqual(med, 0.70, "grass_%d_%s body %.3f" % (v, size, med))
 
+    def test_short_grass_core_is_thin_from_above(self):
+        # r36 (critic r35b: the big tufts "read as fist-sized dark splats with a hard shadow halo"): every quad of a
+        # tuft carries the whole drawing from the one root, so from the RTS camera (and the sun) its bases stack into
+        # a solid core. No upright pair under the leaning quads (edge-on from the RTS camera, but six bases deep at
+        # the root), and at most ~30% of a tuft's footprint under >= 3 opaque quads (r35 with r36's sizes: 38%)
+        stacked = []
+        for k in gen_blocks.GRASS_TUFTS:
+            model = gen_blocks.MODEL_OVERRIDES["grass" + k]
+            for el in model["elements"]:
+                self.assertNotEqual(el["rotation"]["axis"], "y", "grass%s keeps an upright crossed quad" % k)
+            cells = _screen_cells(model)
+            stacked.append(sum(1 for v in cells.values() if v >= 3) / len(cells))
+        self.assertLessEqual(float(np.mean(stacked)), 0.30, "stacked %s" % np.round(stacked, 2))
+        self.assertLessEqual(max(stacked), 0.40, "stacked %s" % np.round(stacked, 2))
+
+    def test_short_grass_base_is_light_and_thin(self):
+        # r36: the lowest 15% of a tuft no darker than the drawn body less a step (r35: median 0.63-0.66 against the
+        # lawn's 0.56) and a narrower crown: fewer opaque texels there than r35's (0.25 / 0.23 / 0.26 of the band
+        # at full size)
+        r35 = {0: 0.253, 1: 0.233, 2: 0.259}
+        for v in range(3):
+            for size in ps.SIZES:
+                H, sh, green, straw = ps.grass_clump(N, np.random.default_rng(7 + v), variant=v, size=size)
+                a = np.maximum(green, straw) > 0
+                low = slice(N - int(0.15 * _height(a)), N)
+                med = float(np.median(sh[low][green[low] > 0]))
+                self.assertGreaterEqual(med, 0.68, "grass_%d_%s base %.3f" % (v, size, med))
+                if size == 1.0:
+                    fill = float(a[low].mean())
+                    self.assertLess(fill, r35[v] - 0.02, "grass_%d base fills %.3f of its band" % (v, fill))
+
     def test_fern_cards_grow_from_the_bottom_centre(self):
         # the rosette's cards are hinged at the root: a card's sprite must start at the middle of its bottom edge
         for k in range(2):
@@ -189,6 +286,16 @@ class PlantWiring(unittest.TestCase):
         want = {"minecraft:block/grass" + shape + size for shape in ("", "_b", "_c") for size in ("", "_m", "_sm")}
         self.assertEqual(set(shown), want)
         self.assertEqual(len(set(shown.values())), 1, "uneven: %s" % shown)
+
+    def test_grass_sizes_differ_twofold_from_the_rts_camera(self):
+        # r36 (critic r35b: "three sizes are not distinguishable at 30 px/block - only tuft vs slightly bigger tuft"):
+        # seen from the RTS camera the big tufts' footprint is ~2x the small ones' (linear), the middle size between
+        by_size = collections.defaultdict(list)
+        for k, (quads, shape, size) in gen_blocks.GRASS_TUFTS.items():
+            by_size[size].append(_footprint(gen_blocks.MODEL_OVERRIDES["grass" + k]))
+        big, mid, small = (float(np.mean(by_size[s])) for s in ("", "_m", "_sm"))
+        self.assertGreaterEqual(big / small, 1.9, "big %.2f / small %.2f = %.2f" % (big, small, big / small))
+        self.assertTrue(small * 1.2 < mid < big / 1.2, "sizes %.2f / %.2f / %.2f" % (small, mid, big))
 
     def test_fern_is_a_low_wide_rosette(self):
         # r35: frond cards tilted up from the crown toward all four sides, no upright quad; wider than twice its height
@@ -247,6 +354,56 @@ class PlantWiring(unittest.TestCase):
             b = gen_blocks.MODEL_OVERRIDES[lo["model"].split("/")[-1]]["textures"]["cross"]
             t = gen_blocks.MODEL_OVERRIDES[hi["model"].split("/")[-1]]["textures"]["cross"]
             self.assertEqual(b.replace("_bottom", ""), t.replace("_top", ""))
+
+
+# r36 (critic r35b: "small bright lime sprites ('confetti', unlit-looking, saturated) at wall feet and on lawns in every
+# view"): the vanilla flowers the samplers and the structures place. The pack drew none, so the game's 16x flowers
+# showed - lime stems (25, 230, 18 in the shader still), unmipped, among the 128x grass
+FLOWER_NAMES = ("dandelion", "poppy", "azure_bluet", "cornflower", "oxeye_daisy", "allium", "lily_of_the_valley",
+                "red_tulip")
+
+
+class Flowers(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.drawn = {k: ps.flower(N, np.random.default_rng(100 + i), k) for i, k in enumerate(FLOWER_NAMES)}
+
+    def test_every_flower_is_ours_appended_and_mipped(self):
+        self.assertEqual(tuple(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES):]), FLOWER_NAMES,
+                         "the flowers go at the END of SEED_ORDER (seeds follow the order)")
+        self.assertEqual(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES) - 1], "fern_b_t", "appended after r35's last")
+        for k in FLOWER_NAMES:
+            self.assertIn(k, gen_blocks.RECIPES)
+            self.assertIn(k, gen_blocks.CUTOUT)
+            # the game's own models (cross, flower_pot_cross) on our texture, so face_census --check-overrides holds;
+            # write_models adds render_type cutout_mipped
+            self.assertEqual(gen_blocks.MODEL_OVERRIDES[k],
+                             {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/" + k}})
+            pot = {"parent": "minecraft:block/flower_pot_cross", "textures": {"plant": "minecraft:block/" + k}}
+            self.assertEqual(gen_blocks.MODEL_OVERRIDES["potted_" + k], pot)
+
+    def test_stems_are_a_deep_natural_green(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            stem = rgb[part == 1]
+            self.assertGreater(len(stem), 0, k)
+            c = stem.mean(0)
+            luma = float(c @ [0.2126, 0.7152, 0.0722])
+            sat = float((c.max() - c.min()) / c.max())
+            self.assertEqual(int(c.argmax()), 1, "%s stem %s is not green" % (k, np.round(c, 2)))
+            self.assertLessEqual(luma, 0.35, "%s stem luma %.2f" % (k, luma))
+            self.assertLessEqual(sat, 0.70, "%s stem saturation %.2f (vanilla's lime: 0.92)" % (k, sat))
+
+    def test_heads_are_small_and_coloured(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            head = (part >= 2).mean()
+            self.assertTrue(0.005 <= head <= 0.04, "%s head covers %.3f of the card" % (k, head))
+            self.assertLessEqual((alpha > 0).mean(), 0.15, "%s: a flower, not a bush" % k)
+
+    def test_flowers_survive_the_rts_mip(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            full = (alpha > 0.5).mean()
+            kept = _mip_alpha(alpha > 0.5, 2).mean() / full
+            self.assertGreaterEqual(kept, 0.8, "%s keeps %.2f of its area at mip 2" % (k, kept))
 
 
 if __name__ == "__main__":
