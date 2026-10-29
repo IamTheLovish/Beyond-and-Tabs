@@ -151,6 +151,11 @@ public final class WorldLookPass {
         return shader;
     }
 
+    /** Vanilla's sky-tracking fog colour this frame (before the RTS view's map-edge override): the valley mist's light. */
+    public static float[] skyFog() {
+        return new float[] { skyR, skyG, skyB };
+    }
+
     /** Vanilla's fog colour before any override (sky, biome, time of day, weather), captured every frame. */
     static void captureSkyFog(float r, float g, float b) {
         skyR = r;
