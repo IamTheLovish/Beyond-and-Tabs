@@ -481,7 +481,7 @@ public class SiegeLobberGameTests {
         ServerLevel level = helper.getLevel();
         List<Lob> lobs = lobs();
         Pads pads = new Pads(level, 13, lobs.size() * 2);
-        int[] legs = new int[lobs.size() * 2];
+        int[] legs = new int[lobs.size() * 2], setAt = new int[lobs.size() * 2];
         fight(helper, pads, UNIT_TICKS, () -> {
             List<Sim> sims = new ArrayList<>();
             int n = 0;
@@ -516,10 +516,14 @@ public class SiegeLobberGameTests {
                     continue;
                 Mob v = s.victims.get(0);
                 BlockPos next = corner(s.cell, legs[i] + 1);
-                if (t == 1 || Math.abs(v.getX() - (next.getX() + 0.5)) + Math.abs(v.getZ() - (next.getZ() + 0.5)) < 1.2) {
+                // the next corner once it is there - or once its path ended short of it (never left standing still)
+                boolean there = Math.abs(v.getX() - (next.getX() + 0.5)) + Math.abs(v.getZ() - (next.getZ() + 0.5)) < 1.5
+                    || (t - setAt[i] > 10 && v.getNavigation().isDone());
+                if (t == 1 || there) {
                     if (t != 1)
                         legs[i]++;
                     u.getMoveGoal().setMoveTarget(corner(s.cell, legs[i] + 1));
+                    setAt[i] = t;
                 }
             }
         }, sims -> {
