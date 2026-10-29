@@ -74,3 +74,15 @@ tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` 
 - Trim (r5): pale dressings are grey cut stone (smooth stone / stone-brick shapes) - calcite and diorite read as snow
   at RTS zoom; verges are dark stone or the set's metal, never wood (dark oak bargeboards read orange). Roof SHAPES
   (hip / pyramid) are held for the Macaw's Roofs mod.
+
+## 4. Kit status (r6, Oct 29 2026: frozen at part level - the next gains come from composing parts on real buildings)
+`tools/arch_kit.py`, any set (Mats); stamp with `host.place(part, ox, oy, oz, rot)`, front south. All READY except:
+- HELD: hip / pyramid roof (`hip_roof`) - waits for Macaw's Roofs block ids.
+- Roofs: `oversail` gable 1 proud + `cresting` on the ridge; `eave` band at the wall top (weathered copper slab
+  gutter); `dormer` (3x2 light, wall-brick frame, stair gablet) up through a slope; `roof_light` tinted 2x3 panels
+  set flush in a flat/low roof; `chimney` through a slope, `stack` for a works chimney; `clerestory` between roofs.
+- Walls: `string_course` at the sill line, `cornice` under the eave, `pier` (+ lantern) on every bay line, `window` /
+  `bay` between piers, `portal` (receding orders) at the door, `corbel_stage` under an upper stage, `tone_wall` on
+  the plain runs (clean top, stain, moss foot), `half_timber` as an upper storey (posts 3 apart, jettied 1).
+- Towers / details: `spire` or `dome` on a round drum at a corner or crossing; `balustrade` on a flat roof or
+  terrace edge (posts every 4); `machinery` band + `gear` disc on a works wall.
