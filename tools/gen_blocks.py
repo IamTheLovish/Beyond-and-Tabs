@@ -2476,11 +2476,12 @@ TUFTS = {
 }
 
 
-def _cross_elements(layers, lean, scale=1.0):
+def _cross_elements(layers, lean, scale=1.0, upright=True):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
     or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
     ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes. r36: scale grows every quad
-    about the root (the block's middle column, from y 0) - the big short grass (GRASS_TUFT_SCALE)."""
+    about the root (the block's middle column, from y 0) - the big short grass (GRASS_TUFT_SCALE); upright=False leaves
+    out the two upright quads (the short grass, r36: GRASS_UPRIGHT)."""
     def face(t, tinted):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
 
@@ -2492,6 +2493,10 @@ def _cross_elements(layers, lean, scale=1.0):
 
     els = []
     for t, tinted in layers:
+        if not upright:
+            for axis, ang in lean:
+                els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
+            continue
         els.append({"from": [c(0.8), 0, 8], "to": [c(15.2), up(16.0), 8], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("north", "south")}})
@@ -2499,25 +2504,29 @@ def _cross_elements(layers, lean, scale=1.0):
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
         for axis, ang in (lean or ()):
-            if axis == "x":
-                els.append({"from": [c(1.0), 0, 8], "to": [c(15.0), up(14.0), 8], "shade": False,
-                            "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
-                            "faces": {f: face(t, tinted) for f in ("north", "south")}})
-            else:
-                els.append({"from": [8, 0, c(1.0)], "to": [8, up(14.0), c(15.0)], "shade": False,
-                            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
-                            "faces": {f: face(t, tinted) for f in ("west", "east")}})
+            els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
     return els
 
 
-def _plant_model(p, straw, lean, scale=1.0):
+def _lean_quad(axis, ang, fc, c, up):
+    """One TUFTS quad: hinged at the root and leaning out `ang` degrees about `axis` (c / up: _cross_elements' scale)."""
+    if axis == "x":
+        return {"from": [c(1.0), 0, 8], "to": [c(15.0), up(14.0), 8], "shade": False,
+                "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
+                "faces": {f: dict(fc) for f in ("north", "south")}}
+    return {"from": [8, 0, c(1.0)], "to": [8, up(14.0), c(15.0)], "shade": False,
+            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
+            "faces": {f: dict(fc) for f in ("west", "east")}}
+
+
+def _plant_model(p, straw, lean, scale=1.0, upright=True):
     """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
         tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
         layers.append(("#straw", False))
-    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale)}
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale, upright)}
 
 
 # r35 (critic r34: "vary scale (3 sizes)"): nine short-grass models, model suffix -> (its TUFTS set of leaning quads,
@@ -2536,6 +2545,14 @@ GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
 # with it (0.55 already keeps 4-texel blades only because the widths shrink just 0.8 + 0.2 x size), while a bigger
 # model is read a mip level UP - its blades come out bolder, not thinner.
 GRASS_TUFT_SCALE = {"": 1.35}
+# r36 (critic r35b: "the big ones read as fist-sized dark splats with a hard shadow halo (clump 10th-percentile V
+# 0.431 vs clearing 0.494), so the lawn looks spotted"): the short grass drops vanilla's two upright crossed quads and
+# keeps only its 3-4 leaning ones. Every quad carries the whole tuft, all hinged at the one root, so from the RTS camera
+# the six stacked bases were the dark core and, in the shadow map, the solid core of the shadow: 27-46% of a tuft's
+# footprint lay under >= 3 opaque quads (mean 38%), now 11-37% (mean 27%; test_plant_sprites). The upright pair was
+# edge-on from the RTS camera anyway; the 22.5-degree quads stand nearly upright for the close views. Tall grass keeps
+# its crossed quads. With the lighter, thinner base (plant_sprites BASE_SHORT / ROOT_W).
+GRASS_UPRIGHT = False
 
 
 def _fern_card(side, kind, length, half_w, y0=0.25):
@@ -2594,7 +2611,7 @@ TALL_BLOCKSTATES = {"tall_grass": {
     "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
     "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads], GRASS_TUFT_SCALE.get(sz, 1.0))
+    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads], GRASS_TUFT_SCALE.get(sz, 1.0), GRASS_UPRIGHT)
        for k, (quads, sh, sz) in GRASS_TUFTS.items()},
     **{m: _fern_model(cards) for m, cards in FERN_ROSETTES.items()},
     **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},

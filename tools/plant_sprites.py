@@ -41,6 +41,11 @@ BODY_SHORT = 0.71
 # smaller on the same card (not a smaller model): the blades keep their texel widths, so a small tuft's blades are as
 # bold at the RTS mip as a big one's (a 0.55 model would be read a mip level further down)
 SIZES = (1.0, 0.8, 0.55)
+# r36 (critic r35b: the big tufts "read as fist-sized dark splats with a hard shadow halo"): the short grass's base is
+# lighter (0.585 -> BASE_SHORT, the body's level less a step) and thinner - each blade starts at ROOT_W of its width
+# and reaches it by ROOT_T of its length - so fewer, lighter texels stack at the crown, where every leaning quad of a
+# tuft puts its root (gen_blocks GRASS_UPRIGHT)
+BASE_SHORT, ROOT_W, ROOT_T = 0.68, 0.5, 0.3
 
 # r34 shapes. pos: blades across the fan, left to right; `straw` = which of them is a dead blade (the untinted layer)
 GRASS = (
@@ -231,11 +236,11 @@ def _nearest_local(points, x0, x1, y0, y1, r):
     return np.sqrt(best), idx
 
 
-def _blade_shade(tone, body=BODY):
+def _blade_shade(tone, body=BODY, base=BASE):
     """Along a blade: the base a touch above the lawn, the body lighter, the top ~35% lighter still; a lighter rib;
     the blade folded along the rib, lit from the upper left (left half a touch lighter). No dark edges."""
     def fn(t, across, s):
-        v = BASE + (body - BASE) * _smooth(0.0, 0.3, t) + (TIP - body) * _smooth(0.55, 0.95, t)
+        v = base + (body - base) * _smooth(0.0, 0.3, t) + (TIP - body) * _smooth(0.55, 0.95, t)
         veins = 0.012 * np.cos(s * 2.4)          # fine parallel veins (~2.6 texels): close-ups only, gone by mip 2
         return (v + RIB * np.exp(-(across / 0.22) ** 2) - 0.025 * across + veins) * tone
     return fn
@@ -273,12 +278,14 @@ def _reach(x0, y0, top, ang, bend, w, hw, margin=2.0):
     return pts
 
 
-def _blade_hw(width):
+def _blade_hw(width, root=1.0):
     """Half width along a blade: full at the root, tapering evenly (0.67 of it half way, 0.41 at 80% - >= 4 texels
-    for a 12-texel blade) to a rounded point."""
+    for a 12-texel blade) to a rounded point. r36: root < 1 starts the blade at that fraction of its width, widening to
+    the full taper by ROOT_T of its length (the short grass's thinner base)."""
     def hw(t, s=None):
         t = np.asarray(t, float)
-        return 0.5 * width * (1 - 0.65 * t) * np.sqrt(np.clip(1 - t ** 6, 0, 1))
+        w = 0.5 * width * (1 - 0.65 * t) * np.sqrt(np.clip(1 - t ** 6, 0, 1))
+        return w if root >= 1.0 else w * (root + (1 - root) * _smooth(0.0, ROOT_T, t))
     return hw
 
 
@@ -307,15 +314,15 @@ def grass_clump(n, rng, tall=False, variant=0, size=1.0):
         bend = math.copysign(0.10 + 0.35 * abs(pos[i]), ang + 1e-3) * (1.25 if c == 1.0 else 1.0)
         if tall:
             bend *= 1.4                                               # long leaves arch over
-        hw = _blade_hw(width)
+        hw = _blade_hw(width, 1.0 if tall else ROOT_W)
         crown = size                                                   # a smaller tuft from a narrower crown
         root = n / 2 + pos[i] * 4.5 * crown + (rng.random() - 0.5) * 1.5 * crown
         pts = _reach(root, h + 1.0, top, ang, bend, n, hw)
         tone = 0.97 + 0.06 * depth[i] + 0.04 * (rng.random() - 0.5)
         blades.append((-1.0 if straw else depth[i], pts, hw, tone, width, straw))
-    body = BODY if tall else BODY_SHORT
+    body, base = (BODY, BASE) if tall else (BODY_SHORT, BASE_SHORT)
     for d, pts, hw, tone, width, straw in sorted(blades, key=lambda b: b[0]):   # back to front, the straw at the back
-        cv.ribbon(pts, hw, _blade_shade(tone, body), 0.3 + 0.7 * max(0.0, d), width / 2 + 1, layer=1 if straw else 0)
+        cv.ribbon(pts, hw, _blade_shade(tone, body, base), 0.3 + 0.7 * max(0.0, d), width / 2 + 1, layer=1 if straw else 0)
     return cv.layers()
 
 
