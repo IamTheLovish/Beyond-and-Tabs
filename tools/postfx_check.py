@@ -103,14 +103,12 @@ def run(ctx, frag, vert, col, depth, P, edge_aa=1.0, frames=1, grade=None):
     return np.frombuffer(out.read(), np.uint8).reshape(H, W, 4)[..., :3].astype(int), ms
 
 
-# each look's grade as WorldLookPass sets it (haze off: a still has no depth here)
-LOOKS = {
-    "subtle": dict(Contrast=0.10, SplitTone=0.5, Saturation=0.96, Vignette=0.05),
-    "full": dict(Contrast=0.18, SplitTone=0.9, Saturation=0.92, Vignette=0.09),
-    "enchanted": dict(Contrast=0.18, SplitTone=1.2, Saturation=1.0, Vignette=0.16, Exposure=0.86, Vibrance=0.45,
-                      Glow=0.30, GlowThreshold=0.50, GlowRadius=0.016, ShadowTint=(0.93, 0.95, 1.13),
-                      HighlightTint=(1.09, 1.0, 0.85)),
-}
+# each look's grade as WorldLookPass sets it, read from the Java (a hand copy here went stale when Enchanted changed;
+# haze is moot: a still has no depth, so the shader treats every pixel as sky)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import world_look_model  # noqa: E402
+
+LOOKS = {look: world_look_model.uniforms(look) for look in ("subtle", "full", "enchanted")}
 
 
 def grade_still(ctx, frag, vert, path, look, out):
