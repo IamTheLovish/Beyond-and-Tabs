@@ -657,19 +657,10 @@ public class ProductionPlacement extends BuildingPlacement {
                         ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));
                     success = true;
                 }
-                else {
-                    if (!prodItem.isBelowMaxPopulation(this))
-                        ResourcesClientboundPacket.warnMaxPopulation(ownerName);
-                    else if (!prodItem.canAffordPopulation(this)) {
-                        if (prodItem instanceof GraveyardUnitProductionItem && this instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0) {
-                            ResourcesClientboundPacket.warnFullGraveyard(ownerName);
-                        } else {
-                            ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                        }
-                    }
-                    else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald))
-                        // only emeralds are still paid upfront; metal and energy never block queueing
-                        ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
+                else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald)) {
+                    // only emeralds are still paid upfront; metal and energy never block queueing, and there is no
+                    // population limit (lovish, Oct 29)
+                    ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
                 }
             }
         }

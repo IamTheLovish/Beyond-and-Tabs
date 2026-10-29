@@ -455,26 +455,6 @@ public class BuildingServerEvents {
                 builderUnitIds = withRoom;
             }
 
-            // Handle special building (Iron Golem)
-            if (newBuilding.getBuilding() instanceof IronGolemBuilding) {
-                int currentPop = UnitServerEvents.getCurrentPopulation(ownerName);
-                int popSupply = BuildingServerEvents.getTotalPopulationSupply(ownerName);
-
-                boolean canAffordPop = false;
-                for (Resources resources : ResourcesServerEvents.resourcesList) {
-                    if (resources.ownerName.equals(ownerName)
-                            && (currentPop + ResourceCosts.IRON_GOLEM.population) <= popSupply) {
-                        canAffordPop = true;
-                        break;
-                    }
-                }
-                if (!canAffordPop && !fromCommand) {
-                    ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
-                    FogBuildingClientboundPacket.removeFogQueuedBuilding(ownerName, originPos);
-                    return null;
-                }
-            }
-
             // BAR flow economy: no upfront payment and no affordability check. The building is paid for while it
             // is constructed (BuildingPlacement.tickFlowConstruction) and simply stalls when resources run out.
             newBuilding.freeBuild = fromCommand;
@@ -885,20 +865,6 @@ public class BuildingServerEvents {
         building.destroy((ServerLevel) building.getLevel());
     }
 
-    public static int getTotalPopulationSupply(String ownerName) {
-        // BAR has no supply buildings - just a unit cap. Everyone gets the full cap (gamerule maxPopulation).
-        if (true) {
-            return UnitServerEvents.maxPopulation;
-        }
-
-        int totalPopulationSupply = 0;
-        for (BuildingPlacement building : buildings)
-            if (building.ownerName.equals(ownerName) && building.isBuilt) {
-                totalPopulationSupply += building.getBuilding().cost.population;
-            }
-        return Math.min(UnitServerEvents.maxPopulation, totalPopulationSupply);
-    }
-
     // similar to BuildingClientEvents getPlayerToBuildingRelationship: given a Unit and Building, what is the
     // relationship between them
     public static Relationship getUnitToBuildingRelationship(Unit unit, BuildingPlacement building) {
@@ -1098,13 +1064,9 @@ public class BuildingServerEvents {
             }
             
             for (BuildingPlacement bpl : getBuildings()) {
-                if (bpl instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0 && gy.autoRelease) {
-                    playerName = gy.ownerName;
-                    int currentPop = UnitServerEvents.getCurrentPopulation(playerName);
-                    int popSupply = BuildingServerEvents.getTotalPopulationSupply(gy.ownerName);
-                    if (popSupply > currentPop)
-                        gy.releaseNextUnit();
-                }
+                // no population cap: a banked skull (only an old save has one) walks out unless the toggle holds it
+                if (bpl instanceof GraveyardPlacement gy && gy.getUpgradeLevel() > 0 && gy.autoRelease)
+                    gy.releaseNextUnit();
             }
         }
     }

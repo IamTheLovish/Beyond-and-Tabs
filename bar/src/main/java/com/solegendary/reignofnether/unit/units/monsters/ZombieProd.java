@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.buildings.placements.CustomBuildingPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.*;
 import com.solegendary.reignofnether.hud.buttons.UnitSpawnButton;
@@ -30,21 +29,12 @@ public class ZombieProd extends GraveyardUnitProductionItem implements IUnitProd
         super(cost);
         this.onComplete = (Level level, ProductionPlacement building) -> {
             if (!level.isClientSide()) {
-                if (building instanceof GraveyardPlacement gy && banksAsSkull(building)) {
-                    if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_HUSKS))
-                        gy.createSkull(EntityRegistrar.HUSK_UNIT.get());
-                    else if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_DROWNED))
-                        gy.createSkull(EntityRegistrar.DROWNED_UNIT.get());
-                    else
-                        gy.createSkull(EntityRegistrar.ZOMBIE_UNIT.get());
-                } else {
-                    if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_HUSKS) && !(building instanceof CustomBuildingPlacement))
-                        building.produceUnit((ServerLevel) level, EntityRegistrar.HUSK_UNIT.get(), building.ownerName, true);
-                    else if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_DROWNED) && !(building instanceof CustomBuildingPlacement))
-                        building.produceUnit((ServerLevel) level, EntityRegistrar.DROWNED_UNIT.get(), building.ownerName, true);
-                    else
-                        building.produceUnit((ServerLevel) level, EntityRegistrar.ZOMBIE_UNIT.get(), building.ownerName, true);
-                }
+                if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_HUSKS) && !(building instanceof CustomBuildingPlacement))
+                    building.produceUnit((ServerLevel) level, EntityRegistrar.HUSK_UNIT.get(), building.ownerName, true);
+                else if (ResearchServerEvents.playerHasResearch(building.ownerName, ProductionItems.RESEARCH_DROWNED) && !(building instanceof CustomBuildingPlacement))
+                    building.produceUnit((ServerLevel) level, EntityRegistrar.DROWNED_UNIT.get(), building.ownerName, true);
+                else
+                    building.produceUnit((ServerLevel) level, EntityRegistrar.ZOMBIE_UNIT.get(), building.ownerName, true);
             }
         };
     }

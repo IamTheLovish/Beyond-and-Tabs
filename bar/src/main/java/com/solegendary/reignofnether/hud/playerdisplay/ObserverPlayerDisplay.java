@@ -62,11 +62,8 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
                 var synced = PlayerPanelClientEvents.entryOf(this.playerName);
                 var used = synced != null && synced.hasAllyData() ? synced.popUsed()
                     : UnitClientEvents.getCurrentPopulation(this.playerName);
-                var produced = BuildingClientEvents.getTotalPopulationSupply(this.playerName);
-                value = used + "/" + produced;
-                color = used > produced
-                        ? 0xFF0000
-                        : 0xFFFFFF;
+                value = String.valueOf(used);   // just the count: no population cap (lovish, Oct 29)
+                color = 0xFFFFFF;
             }
         }
 

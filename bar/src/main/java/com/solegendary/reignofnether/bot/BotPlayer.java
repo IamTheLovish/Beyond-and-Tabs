@@ -32,7 +32,7 @@ import java.util.Random;
 /**
  * A skirmish opponent. Each bot owns an RTSPlayer (PlayerServerEvents.startRTSBot gives it workers and resources)
  * and this brain plays the match for it: a capitol, workers, metal extractors on the map's metal patches, wind
- * generators, houses ahead of the population cap, an army building, then waves of fighters at the nearest enemy.
+ * generators, an army building, then waves of fighters at the nearest enemy (no population: nothing to wait for).
  * Decisions are re-derived from world state every second, so it recovers cleanly after a reload.
  */
 public class BotPlayer {
@@ -780,7 +780,7 @@ public class BotPlayer {
                 pp.setRepeatQueue(true);
                 queueAntiAir(pp, mine, gameTime);   // the Tidewrought's anti-air is T1 (the Court's is in its T2 lab)
                 while (pp.productionQueue.size() < tuning.queueDepth() && pp.startProductionItem(pickArmyItem(kit.army(), mine, false)))
-                    ;   // (startProductionItem false = can't afford population or the queue is full: stop)
+                    ;   // (startProductionItem false = the queue is full or an emerald cost can't be met: stop)
             }
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
@@ -2445,7 +2445,7 @@ public class BotPlayer {
     /**
      * BAR bots go experimental late: from the difficulty's t3Minute (hard 11, so the T3 lab stands by ~18; medium
      * 14) a bot researches Tier 3, has a T2 constructor build its T3 lab near home, then keeps one experimental in
-     * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
+     * production (no population to wait for: lovish, Oct 29). Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty.easyLike() || minutes < tuning.t3Minute())
@@ -2489,13 +2489,11 @@ public class BotPlayer {
         }
         if (!t3.isBuilt || !(t3 instanceof ProductionPlacement pp))
             return;
-        int pop = UnitServerEvents.getCurrentPopulation(name);
-        int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
         boolean queued = false;
         for (var item : pp.productionQueue)
             if (item.item == t3Unit())
                 queued = true;
-        if (!queued && popCap - pop >= 20)
+        if (!queued)
             pp.startProductionItem(t3Unit());
     }
 

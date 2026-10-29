@@ -105,9 +105,6 @@ public class UnitServerEvents {
     private static final int UNIT_SYNC_TICKS_MAX = 20; // how often we send out unit syncing packets
     private static int unitSyncTicks = UNIT_SYNC_TICKS_MAX;
 
-    // max possible pop you can have regardless of buildings, adjustable via /gamerule maxPopulation
-    public static int maxPopulation = ResourceCosts.DEFAULT_MAX_POPULATION;
-
     // server-side mirror of the rtsPathfinding gamerule: when true, units route through the RTS
     // grid A* pathfinder (with walkability caching + worker pool); when false they use vanilla
     // pathfinding and the caching/worker work is skipped. Kept in sync by GameruleServerEvents.
@@ -213,8 +210,8 @@ public class UnitServerEvents {
     }
 
     // Per-owner sum of unit population, memoised for the current server tick. getCurrentPopulation used to scan
-    // every unit on every call, and it's called per active production item per tick (ProductionItem
-    // .isBelowPopulationSupply), for every queue/afford check, graveyards, scoreboard, etc. Keyed by
+    // every unit on every call, and it was called per active production item per tick (the old cap check), the
+    // HUD, the scoreboard, etc. Keyed by
     // (server tick, allUnits size, allUnitsModCount) so a unit spawning/dying mid-tick is reflected immediately.
     // Only the unit part is cached: production queues are still counted live, so queuing several items in the
     // same tick is checked exactly as before. (A unit changing owner or pop cost - slime resize - is picked up

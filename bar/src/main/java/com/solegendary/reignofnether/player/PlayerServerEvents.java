@@ -194,7 +194,6 @@ public class PlayerServerEvents {
                     break;
                 }
             }
-            UnitServerEvents.maxPopulation = level.getGameRules().getInt(GameRuleRegistrar.MAX_POPULATION);
 
             level.getGameRules().getRule(RULE_DISABLE_ELYTRA_MOVEMENT_CHECK).set(true, evt.getServer());
         }
@@ -987,7 +986,6 @@ public class PlayerServerEvents {
                 playerName.equalsIgnoreCase("altsolegendary"))
             ) {
                 ResourcesServerEvents.addSubtractResources(new Resources(playerName, 99999, 99999, 99999));
-                UnitServerEvents.maxPopulation = 99999;
                 enableAllCheats(playerName);
                 evt.setCanceled(true);
                 sendMessageToAllPlayers("server.reignofnether.all_cheats", false, playerName);
