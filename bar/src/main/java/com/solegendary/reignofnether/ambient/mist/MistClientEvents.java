@@ -32,17 +32,15 @@ import java.util.Random;
  * camera looks at (or round the player in first person), scores each from a 7 x 7 height grid 2 blocks apart, and
  * spawns a wisp with that column's chance - capped by count, the cap times the hour's density, shrinking as the camera
  * zooms out and zero at strategic zoom. Client only and cheap: at most SAMPLES columns a pass, 49 height + 49 block
- * reads each, and under BASE_CAP sprites. None in rain, none outside the overworld, none on a column whose top is not
+ * reads each, and under BASE_CAP sprites (r2: 120, a pass every 4 ticks - r1's 28 every 8 barely showed). None in rain, none outside the overworld, none on a column whose top is not
  * natural ground or water (never over a building's footprint). Display setting "Valley mist" (default on).
  */
 public class MistClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
     private static final Random RANDOM = new Random();
-    static final int PERIOD = 8;          // ticks between spawn passes
-    static final int SAMPLES = 5;         // columns tried per pass
-    static final int PER_PASS = 2;        // wisps spawned per pass at most
-    static final int BASE_CAP = 28;       // alive at once at full density, close up
+    static final int PERIOD = MistMath.PERIOD, SAMPLES = MistMath.SAMPLES, PER_PASS = MistMath.PER_PASS;
+    static final int BASE_CAP = MistMath.BASE_CAP;
     /** -Dbat.eyes.mist=true: the eyes rig's mist pilot photos (eyes.yml input `mist`), read once. */
     private static final String EYES_MIST = System.getProperty("bat.eyes.mist");
     private static ClientLevel lastLevel = null;
@@ -98,7 +96,7 @@ public class MistClientEvents {
             double score = MistMath.score(h, water, level.getSeaLevel());
             if (score <= 0 || RANDOM.nextDouble() > score)
                 continue;
-            double y = top + MistMath.hover(RANDOM.nextDouble());
+            double y = top + MistMath.hover(RANDOM.nextDouble(), RANDOM.nextDouble());
             MC.particleEngine.createParticle(ParticleRegistrar.MIST.get(), x + RANDOM.nextDouble(), y,
                 z + RANDOM.nextDouble(), MistMath.peakAlpha(score, density), 0, 0);
             want--;

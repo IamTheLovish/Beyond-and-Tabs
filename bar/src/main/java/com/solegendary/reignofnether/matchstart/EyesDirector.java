@@ -1190,8 +1190,8 @@ public final class EyesDirector {
                 double mistSeconds = mistSinceNanos < 0 ? 0 : (System.nanoTime() - mistSinceNanos) / 1e9;
                 int alive = com.solegendary.reignofnether.ambient.mist.MistParticle.alive;
                 // ~8 s of drawn frames at dawn so the wisps have spawned, faded in and drifted; a slow (shader) client
-                // spawns slower - give it up to 20 s for half a dozen
-                boolean gathered = mistSeconds >= 8 && frames - mistSinceFrames >= 8 && (alive >= 6 || mistSeconds >= 20);
+                // spawns slower - give it up to 20 s for most of the r2 cap (120 at zoom 30)
+                boolean gathered = mistSeconds >= 8 && frames - mistSinceFrames >= 8 && (alive >= 80 || mistSeconds >= 20);
                 if (!(there && settled && gathered) && phaseSeconds() < 60)
                     return;
                 if (!there)
