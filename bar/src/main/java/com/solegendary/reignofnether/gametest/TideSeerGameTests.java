@@ -728,6 +728,66 @@ public class TideSeerGameTests {
     // ------------------------------------------------------------------------------------------ the bots
 
     /**
+     * A bot's Tide Seer is not an AttackerUnit, so the army list never holds it; the bot's "healers follow the army"
+     * block (BotPlayer.verdantHabits, run for every faction) orders a lagging essence caster to the army's centre, as
+     * it does the Tide Priest (shared edit, briefs/essence-caster-bot-follow-line.md). The Seer 14 blocks from the
+     * army is sent there; the one 3 blocks from it is left alone. verdantHabits is package-private and its signature is
+     * the same in every caster PR, so the test reaches it by reflection.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tide_seer_bots_send_a_lagging_seer_to_the_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "follow");
+        Mob lagging = seer(helper, me, 2, 2, 0);
+        Mob close = seer(helper, me, 10, 10, 0);
+        Mob f1 = vindicator(helper, me, 12, 12), f2 = vindicator(helper, me, 13, 12);
+        List<Entity> all = live(lagging, close, f1, f2);
+        if (all.size() != 4) {
+            cleanUp(helper, all);
+            helper.fail("could not spawn the two Tide Seers and the army");
+            return;
+        }
+        List<String> early = new ArrayList<>();
+        BlockPos[] moveTo = new BlockPos[1];
+        helper.runAfterDelay(3, () -> {
+            try {
+                var brain = new com.solegendary.reignofnether.bot.BotPlayer(me, Factions.TIDEWROUGHT,
+                    com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
+                brain.orderListener = (action, target) -> {
+                    if (action == UnitAction.MOVE)
+                        moveTo[0] = target;
+                };
+                List<net.minecraft.world.entity.LivingEntity> mine = new ArrayList<>(List.of(lagging, close, f1, f2));
+                List<net.minecraft.world.entity.LivingEntity> army = new ArrayList<>(List.of(f1, f2));
+                var habits = com.solegendary.reignofnether.bot.BotPlayer.class.getDeclaredMethod("verdantHabits",
+                    ServerLevel.class, List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                habits.invoke(brain, level, mine, army, new ArrayList<>(), new ArrayList<>(), level.getGameTime(), 0L);
+                if (moveTo[0] == null)
+                    early.add("the bot gave no move order: its lagging Tide Seer stays at the lab");
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                early.add("calling the bot's follow-the-army block threw " + ex);
+            }
+        });
+        helper.runAfterDelay(8, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (moveTo[0] != null) {
+                    BlockPos t = ((Unit) lagging).getMoveGoal() == null ? null : ((Unit) lagging).getMoveGoal().getMoveTarget();
+                    if (t == null || Math.abs(t.getX() - moveTo[0].getX()) > 1 || Math.abs(t.getZ() - moveTo[0].getZ()) > 1)
+                        problems.add("the lagging Tide Seer is headed for " + t + ", not the army's centre " + moveTo[0]);
+                    BlockPos c = ((Unit) close).getMoveGoal() == null ? null : ((Unit) close).getMoveGoal().getMoveTarget();
+                    if (c != null)
+                        problems.add("the Tide Seer 3 blocks from the army was ordered to " + c + ": only a lagging one should be");
+                }
+            } finally {
+                cleanUp(helper, all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
      * The Tidewrought bots train the Tide Seer (it is in their Drydock army) and spend its Empower (MANUAL for players)
      * through BotPlayer.tideSeers: a Seer holding Empower's 15 plus a Drowned Tithe's 10 ranks up the priciest friend in
      * reach (an Iron Golem over a vindicator) and keeps 10; one holding 24 keeps it all for its spells.
