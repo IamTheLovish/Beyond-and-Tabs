@@ -466,3 +466,12 @@ r7 sits on flat grass. Every building's plot edge gets designed ground: paving t
 in front of doors, planting beds, yard surfaces (for Brassworks: setts, rail track, coal-stained cobble, iron
 drain grates; for capitols: parterres and fountains like this). Capitol / town-centre scale belongs to the "base
 becomes a city" goal; lab scale is the apron and yard.
+
+## (v) ref62 - lovish's reference, Oct 28 22:57 (design/refs/vehicle_labs/ref62_verdigris_roof_spire_house.png)
+A steep-roofed house and spire in weathered copper (verdigris) with dark brick ribs, shaders at sunset.
+1. **A verdigris copper roof is a natural Brassworks roof:** patina greens in 2-3 tones (oxidized / weathered /
+   exposed copper) laid in courses, framed by dark brick ribs at every hip, verge and ridge. Candidate for the
+   Engine Shed's TOWER (copper spire over brick) while the halls and shed take grey slate.
+2. **Ridge cresting:** a row of small dark pinnacles/spikes along the ridge gives the roofline a fine edge.
+3. The spire is many small stepped stages, each with its own dark lip - the "ledge per tier" rule again.
+4. A gabled dormer, moss and leaves growing on the lower roof, warm lit windows in timber frames.
