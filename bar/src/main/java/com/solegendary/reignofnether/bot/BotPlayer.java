@@ -597,6 +597,13 @@ public class BotPlayer {
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
             if (!done && floatLab)
                 done = placeLab(level, armyBuildings, workers);
+            // the research's energy (resources/TierGate, ~110 energy/s) ahead of the annex: a floating easy bot laid an
+            // annex every think and no wind for six minutes, sat at 48-104 energy/s under the gate and only teched at the
+            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). The refits' energy stays below
+            float energyTarget = techEnergyTarget(tier2, buildings);
+            if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
+                    && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
             if (!done && floating()) {
                 BuildingPlacement annexLab = labWantingAnnex(buildings);
@@ -671,7 +678,6 @@ public class BotPlayer {
             // the energy a tech step needs (resources/TierGate): before the research, ~110 energy/s for its drain plus the
             // base's own spending; after it, 20 energy/s for every extractor refit or the refits run on crumbs. Winds still
             // rising count at their average, so a bot does not pile a dozen sites on one shortfall
-            float energyTarget = techEnergyTarget(tier2, buildings);
             if (!done && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
