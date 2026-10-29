@@ -645,7 +645,7 @@ public class SoulEngineerGameTests {
                     early.add("the furnace has " + f.getHealth() + "/" + f.getMaxHealth() + " HP, expected 150");
                 if (!Summons.isSummoned(f))
                     early.add("the furnace is not marked summoned");
-                if (f instanceof DeployedTurretUnit || f instanceof Machine)
+                if ((Object) f instanceof DeployedTurretUnit || (Object) f instanceof Machine)
                     early.add("the furnace is a Deploy Turret or a machine: it should be its own thing (no gun, no heat)");
                 if (Essence.get(caster) != 10)
                     early.add("the Soul Engineer holds " + Essence.get(caster) + " essence after Ghost Furnace, expected 20 - 10 = 10");
