@@ -24,6 +24,14 @@ SLATE = {
     "verge": ("dark_oak_planks", "dark_oak_stairs", "dark_oak_slab"),
     "gutter": "waxed_exposed_cut_copper_stairs",
 }
+# r9 (fresh critic on the r8 Engine Shed, Oct 29: roof median luma 61 under walls 78 - the deepslate slate read as a
+# hole, not a sky-lit plane; its fix: a mid-grey ~60 % stone over ~40 % deepslate): a weathered grey slate for a
+# building whose walls are already dark-red brick. T0 stone bricks (pack luma 0.47), T1 the wet runs deepslate tiles
+# (0.21) graded to the eaves, T2 the bleached cells andesite (0.56); SLATE's ridge, verges and gutter. SLATE stays
+# the kit's dark default (tools/arch_kit.py: a set needs a dark third tone against pale walls).
+GREY_SLATE = dict(SLATE, tones=(("stone_bricks", "stone_brick_stairs", "stone_brick_slab"),
+                                ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"),
+                                ("andesite", "andesite_stairs", "andesite_slab")))
 COPPER = {
     "tones": (("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"),
               ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab"),
