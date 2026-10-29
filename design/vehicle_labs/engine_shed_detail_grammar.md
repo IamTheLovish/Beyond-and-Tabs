@@ -368,3 +368,9 @@ Realism through RESTRAINT (small, 299 px):
 4. Real proportions: storey height ~4-5 blocks, windows ~2/3 of the bay, parapet/roof band thin.
 Lesson for us: refs 45-49 all keep walls to ONE brick + ONE stone + ONE dark trim, roofs to grey slate, and spend
 detail on structure (bays, windows, eaves, chimneys) and machinery - never on multi-colour panels or chequers.
+
+## (l) ref50 - lovish's reference, Oct 28 22:51 (design/refs/vehicle_labs/ref50_glass_dome_future_base.png)
+Not Brassworks: a futuristic white base with glass geodesic domes, a ring walkway with a timber deck, orange accent
+strips and twin white stacks. Likely for the new AI/robot faction (replaces Tidewrought) - to confirm with lovish.
+What it teaches every faction: one strong primary form (the dome) + a ring that ties the parts together, clean
+white/glass/one accent palette, layered terraces stepping down to the ground.
