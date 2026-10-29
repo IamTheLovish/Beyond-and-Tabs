@@ -49,6 +49,7 @@ public class BloodTotem extends Ability {
         super(UnitAction.BLOOD_TOTEM, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
         this.autoRule(AutoRule.SELF_IN_COMBAT);
         this.showRangeCircle = true;
+        this.autocastEssence = ESSENCE_COST;   // the AutoCaster's essence gate (essence base #363)
     }
 
     /**

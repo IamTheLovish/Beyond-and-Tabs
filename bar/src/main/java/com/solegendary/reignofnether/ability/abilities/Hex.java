@@ -58,6 +58,7 @@ public class Hex extends Ability {
         super(UnitAction.HEX, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
         this.autoRule(AutoRule.ENEMY_IN_RANGE);
         this.showRangeCircle = true;
+        this.autocastEssence = ESSENCE_COST;   // the AutoCaster's essence gate (essence base #363)
     }
 
     /**
