@@ -60,7 +60,7 @@ public class FlameSanctuary extends ProductionBuilding {
         this.productions.add(ProductionItems.ASH_SHAMAN, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.ASH_SHAMAN_REVIVE, Keybindings.abilitySlot9);
         // the essence caster (design/essence_casters.md) on P, as the Celestial Observatory's tenth button
-        // STUB (tests-first commit): this.productions.add(ProductionItems.VOODOO_SHAMAN, Keybindings.abilitySlot10);
+        this.productions.add(ProductionItems.VOODOO_SHAMAN, Keybindings.abilitySlot10);
     }
 
 

@@ -57,7 +57,6 @@ public final class SpiritPuppets {
 
     /** Gives {@code target} to {@code newOwner} for {@code ticks}; the caller checked everything (SpiritPuppet.cast). */
     public static void take(ServerLevel sl, LivingEntity target, String newOwner, int ticks) {
-        if (true) return;   // STUB (tests-first commit)
         if (!(target instanceof Unit unit))
             return;
         CompoundTag data = target.getPersistentData();

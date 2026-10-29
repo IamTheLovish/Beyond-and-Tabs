@@ -19,6 +19,6 @@ public final class SelectionKeep {
      * dropped: the old side's orders would be refused, the new side never picked it. Null = first seen, kept.
      */
     public static boolean ownerFlipped(String ownerLastTick, String ownerNow) {
-        return false;   // STUB (tests-first commit)
+        return ownerLastTick != null && !ownerLastTick.equals(ownerNow);
     }
 }

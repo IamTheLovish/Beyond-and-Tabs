@@ -69,3 +69,27 @@ damage, max rank 3).
 Storage: a carrier's essence is an int in its persistent data (`bt_essence`), like veterancy XP, so it is saved with
 the unit and needs no packet of its own; a caster PR that shows essence on the HUD adds the sync it needs. A wisp is a
 vanilla block display (like a wreck) carrying its value and birth tick in its persistent data, saved with the world.
+
+## Horde: Voodoo Shaman (caster PR, branch claude/caster-horde)
+`unit/units/piglins/VoodooShamanUnit`, trained at the Flame Sanctuary (the Horde's T2 lab, button 10 / P, as the
+Celestial Observatory's tenth). Placeholder body: the Brute's piglin plumbing with the Spear Thrower's skin and a bone
+fetish for a staff (3 damage, 0.6 hits/s).
+- **Cost and health (this PR's pick, for lovish to tune):** 175 metal / 220 energy, 3 pop, 35 s (the Bloom Priestess's
+  price: a T2 support caster sits between the Blaze, 135 / 90, and the Wither Skeleton, 245 / 160); 60 HP, between the
+  Ghast (50) and the Wither Skeleton (100), sturdier than the other races' casters (40-45) as Horde units are.
+- **Hex** (5, 12 s, reach 8): DISARM + SEALED for 4 s - no attacks (the attack cooldown never runs out, and
+  VoodooServerEvents cancels any blow a hexed unit still lands) and no abilities (every ability gate already refuses
+  a sealed unit). Tier 1-2 only. Autocast on the nearest valid enemy.
+- **Blood Totem** (10, 25 s, planted within 8): a 20 HP totem (AbstractTotem body) for 15 s; every half second units
+  within 8 get a 1 s effect - allies BLOOD_FRENZY (x1.25 attacks per second, in AttackerUnit's attack cooldown like
+  Bloodlust), anyone else BLOOD_TOTEM_SLOW (-15% move speed). Marked summoned. Autocast while fighting, at its feet.
+- **Spirit Puppet** (20, 60 s, reach 8): an enemy T1 unit is the caster's owner's for 15 s (`SpiritPuppets`). The
+  original owner and the hand-back tick live in the puppet's persistent data, so a save cannot keep it; each hand-over
+  drops its orders and makes its new side's attackers let go (the Wraith's Possess hand-over), the server refuses the
+  other side's orders by owner, and the client drops it from any selection when its owner flips
+  (`SelectionKeep.ownerFlipped`). Not a summon: a puppet that dies drops its wisp; its record goes with it. Manual.
+- **Tiers** (`unit/UnitTier`): by where a unit is trained - a T2 lab's unit is T2, the faction's T3 building's (or the
+  bot kit's T3 unit) is T3, any other trained unit T1; heroes and commanders count as T3; an untrained unit falls back
+  to its cost (BarFx.tierOf: T2 from 120 metal, T3 from 500).
+- Every refusal (bad target, wrong tier, out of reach, short of essence) spends nothing and sets no cooldown.
+- Not in this PR: the bots do not train it yet, and its essence is not on the HUD yet.

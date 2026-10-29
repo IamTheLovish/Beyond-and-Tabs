@@ -677,7 +677,7 @@ public interface AttackerUnit {
 
         MobEffectInstance bloodlust = ((LivingEntity) (this)).getEffect(MobEffectRegistrar.BLOODLUST.get());
         // the Voodoo Shaman's Blood Totem: +25% attacks per second within its circle
-        boolean frenzy = false;   // STUB (tests-first commit)
+        boolean frenzy = ((LivingEntity) (this)).hasEffect(MobEffectRegistrar.BLOOD_FRENZY.get());
 
         return (1 + (attackSlowdownAmp * 0.05f)) / (bloodlust != null ? 1.6f : 1.0f)
             / (frenzy ? 1 + com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit.ATTACK_SPEED_BONUS : 1.0f);
