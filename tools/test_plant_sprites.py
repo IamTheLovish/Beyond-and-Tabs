@@ -89,7 +89,7 @@ def _extent(model):
     return span, pts[:, 1].max() - pts[:, 1].min()
 
 
-# the eyes RTS camera's direction (run 40812245168, 15_meadow_sampler_rts: the camera at -176, 91, 58 looks at -171, 53, 53)
+# the eyes RTS camera's direction (run 40812245168, 15_meadow_sampler_rts: from -176, 91, 58 toward -171, 53, 53)
 RTS_DIR = np.array([5.0, -38.0, -5.0]) / np.linalg.norm([5.0, -38.0, -5.0])
 
 
@@ -354,6 +354,56 @@ class PlantWiring(unittest.TestCase):
             b = gen_blocks.MODEL_OVERRIDES[lo["model"].split("/")[-1]]["textures"]["cross"]
             t = gen_blocks.MODEL_OVERRIDES[hi["model"].split("/")[-1]]["textures"]["cross"]
             self.assertEqual(b.replace("_bottom", ""), t.replace("_top", ""))
+
+
+# r36 (critic r35b: "small bright lime sprites ('confetti', unlit-looking, saturated) at wall feet and on lawns in every
+# view"): the vanilla flowers the samplers and the structures place. The pack drew none, so the game's 16x flowers
+# showed - lime stems (25, 230, 18 in the shader still), unmipped, among the 128x grass
+FLOWER_NAMES = ("dandelion", "poppy", "azure_bluet", "cornflower", "oxeye_daisy", "allium", "lily_of_the_valley",
+                "red_tulip")
+
+
+class Flowers(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.drawn = {k: ps.flower(N, np.random.default_rng(100 + i), k) for i, k in enumerate(FLOWER_NAMES)}
+
+    def test_every_flower_is_ours_appended_and_mipped(self):
+        self.assertEqual(tuple(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES):]), FLOWER_NAMES,
+                         "the flowers go at the END of SEED_ORDER (seeds follow the order)")
+        self.assertEqual(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES) - 1], "fern_b_t", "appended after r35's last")
+        for k in FLOWER_NAMES:
+            self.assertIn(k, gen_blocks.RECIPES)
+            self.assertIn(k, gen_blocks.CUTOUT)
+            # the game's own models (cross, flower_pot_cross) on our texture, so face_census --check-overrides holds;
+            # write_models adds render_type cutout_mipped
+            self.assertEqual(gen_blocks.MODEL_OVERRIDES[k],
+                             {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/" + k}})
+            pot = {"parent": "minecraft:block/flower_pot_cross", "textures": {"plant": "minecraft:block/" + k}}
+            self.assertEqual(gen_blocks.MODEL_OVERRIDES["potted_" + k], pot)
+
+    def test_stems_are_a_deep_natural_green(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            stem = rgb[part == 1]
+            self.assertGreater(len(stem), 0, k)
+            c = stem.mean(0)
+            luma = float(c @ [0.2126, 0.7152, 0.0722])
+            sat = float((c.max() - c.min()) / c.max())
+            self.assertEqual(int(c.argmax()), 1, "%s stem %s is not green" % (k, np.round(c, 2)))
+            self.assertLessEqual(luma, 0.35, "%s stem luma %.2f" % (k, luma))
+            self.assertLessEqual(sat, 0.70, "%s stem saturation %.2f (vanilla's lime: 0.92)" % (k, sat))
+
+    def test_heads_are_small_and_coloured(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            head = (part >= 2).mean()
+            self.assertTrue(0.005 <= head <= 0.04, "%s head covers %.3f of the card" % (k, head))
+            self.assertLessEqual((alpha > 0).mean(), 0.15, "%s: a flower, not a bush" % k)
+
+    def test_flowers_survive_the_rts_mip(self):
+        for k, (H, rgb, alpha, part) in self.drawn.items():
+            full = (alpha > 0.5).mean()
+            kept = _mip_alpha(alpha > 0.5, 2).mean() / full
+            self.assertGreaterEqual(kept, 0.8, "%s keeps %.2f of its area at mip 2" % (k, kept))
 
 
 if __name__ == "__main__":
