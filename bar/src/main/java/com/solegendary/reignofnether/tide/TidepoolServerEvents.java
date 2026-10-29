@@ -1,10 +1,14 @@
 package com.solegendary.reignofnether.tide;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.TidepoolBlock;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.resources.MetalPatches;
+import com.solegendary.reignofnether.unit.Concealment;
+import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -164,6 +168,8 @@ public class TidepoolServerEvents {
     // reused (server thread only)
     private static final BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
     private static final BlockPos.MutableBlockPos below = new BlockPos.MutableBlockPos();
+    private static final BlockPos.MutableBlockPos feet = new BlockPos.MutableBlockPos();
+    private static final List<LivingEntity> scratch = new ArrayList<>();
 
     // ------------------------------------------------------------------ raise
 
@@ -520,17 +526,43 @@ public class TidepoolServerEvents {
             if (p.level == level && now >= p.expireTick)
                 remove(p);   // removes index i only: earlier indices are unaffected
         }
+        revealOnGrid(level, null);
     }
 
     // ------------------------------------------------------------------ the grid is a sensor (design/ai_faction.md)
 
+    /** How long a pass strips cover for: past the next 1 Hz pass, so a unit that stays on the grid stays seen. */
+    public static final int GRID_REVEAL_TICKS = 2 * EXPIRY_PASS_TICKS;
+
     /**
      * Strips cover from every enemy unit standing on a pool's cells, for every live pool in {@code level} (or only the
      * pools of {@code onlyOwner}, so parallel game tests never touch each other's units). Returns how many it lit.
-     * Red stub (slice 1a): lights nothing yet.
+     * Runs in the 1 Hz expiry pass: per pool one unit-grid query round its centre and a cell lookup per unit there -
+     * no entity search, no allocation. Allies of the owner are never touched; draining pools still sense.
      */
     public static int revealOnGrid(ServerLevel level, @Nullable String onlyOwner) {
-        return 0;
+        Long2ObjectOpenHashMap<Pool> cells = CELLS.get(level.dimension());
+        if (cells == null || cells.isEmpty())
+            return 0;
+        int lit = 0;
+        for (int i = 0, n = POOLS.size(); i < n; i++) {
+            Pool p = POOLS.get(i);
+            if (p.removed || p.level != level || (onlyOwner != null && !onlyOwner.equals(p.owner)))
+                continue;
+            for (LivingEntity le : UnitGrid.near(level, p.centre.getX() + 0.5, p.centre.getZ() + 0.5, p.radius + 1, scratch)) {
+                if (!le.isAlive() || !(le instanceof Unit u) || !Concealment.isConcealed(le))
+                    continue;
+                String o = u.getOwnerName();
+                if (o == null || o.isBlank() || o.equals(p.owner) || AlliancesServerEvents.isAllied(p.owner, o))
+                    continue;
+                feet.set(le.getX(), le.getY() + 0.1, le.getZ());
+                if (cells.get(feet.asLong()) != p)
+                    continue;
+                Concealment.revealFor(le, GRID_REVEAL_TICKS);
+                lit++;
+            }
+        }
+        return lit;
     }
 
     // ------------------------------------------------------------------ persistence (MatchStateSaveData)
