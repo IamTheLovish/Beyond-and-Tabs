@@ -216,6 +216,125 @@ class PlantCoverTest {
         assertTrue(planted > 100, "the check should meet plants, met " + planted);
     }
 
+    // ---------------------------------------------------------------- r35: no streaks, clumps that read
+
+    /** A smooth field of slot-frame (u, v). */
+    private interface Field { double at(MapLayout l, double u, double v); }
+
+    /**
+     * The shares of a field's gradient energy that point within 10 degrees of the axes and of the diagonals (the meadow
+     * sampler's measure, tools/gen_meadow_sampler.py _grad_share): central differences on a 128 x 128 block patch at a
+     * half-block step.
+     */
+    private static double[] axisAndDiagonalEnergy(MapLayout l, Field f) {
+        int n = 256;
+        double step = 0.5;
+        double[][] a = new double[n][n];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                a[i][j] = f.at(l, i * step, j * step);
+        double axis = 0, diag = 0, all = 0;
+        for (int i = 1; i < n - 1; i++)
+            for (int j = 1; j < n - 1; j++) {
+                double gu = a[i + 1][j] - a[i - 1][j], gv = a[i][j + 1] - a[i][j - 1], e = gu * gu + gv * gv;
+                double ang = ((Math.toDegrees(Math.atan2(gv, gu)) % 180) + 180) % 180;
+                all += e;
+                if (Math.min(Math.min(ang, Math.abs(ang - 90)), 180 - ang) < 10)
+                    axis += e;
+                if (Math.min(Math.abs(ang - 45), Math.abs(ang - 135)) < 10)
+                    diag += e;
+            }
+        return new double[] { axis / all, diag / all };
+    }
+
+    /**
+     * Bug hunt r34: a square value-noise lattice puts ~2x the gradient energy along its axes as along its diagonals,
+     * which the 45-degree RTS camera shows as diagonal streaks of grass (the sampler's clump field 0.333 / 0.166 on the
+     * square lattice, 0.228 / 0.219 turned 22.5 / 67.5 degrees). Both of PlantCover's fields must come out even within
+     * 1.3x - the square lattice measures ~1.8-2x here.
+     */
+    @Test
+    void theMeadowAndClumpFieldsHaveNoAxisBias() {
+        Object[][] fields = {
+            { "meadow", (Field) PlantCover::meadowNoise },
+            { "clump", (Field) PlantCover::clumpNoise },
+        };
+        MapLayout[] layouts = { anyLayout(), MapLayout.build(MapPreset.HIGHLANDS, new int[] { 0, 0, 1, 1 }, 4242424242L) };
+        for (MapLayout l : layouts)
+            for (Object[] row : fields) {
+                double[] e = axisAndDiagonalEnergy(l, (Field) row[1]);
+                assertTrue(e[0] <= e[1] * 1.3 && e[1] <= e[0] * 1.3, l.preset + " " + row[0]
+                    + " field: axis / diagonal gradient energy " + e[0] + " / " + e[1] + ", want within 1.3x of each other");
+            }
+    }
+
+    /** Lushness as kindAt reads it: where (u, v) sits between the meadow's start and its middle, [0, 1]. */
+    private static double lushness(PlantCover.Mix mix, MapLayout l, double u, double v) {
+        return Math.max(0, Math.min(1, (PlantCover.meadowNoise(l, u, v) - mix.lo()) / mix.span()));
+    }
+
+    private static boolean tuft(int kind) {
+        return kind >= 0 && kind < PlantCover.FLOWER0;
+    }
+
+    /**
+     * Critic r34 (tufts 5/10: "sparse, bare lawn between clumps... double tuft density") and r31 before it ("wallpaper
+     * scatter", every tuft its own shadow star): in a lush meadow (lushness 0.66+) the tufts grow in full clumps with a
+     * thin scatter of single tufts between them - r35's 0.97 x min(1, 0.6 + lushness) in a clump, 0.20 between. A
+     * uniform fill (the Oct 28 cover: ~0.71 in and out of a clump alike on Verdant) fails both. Highlands and
+     * Archipelago keep their thinner grass share, so their clumps are thinner, but they still are clumps.
+     */
+    @Test
+    void aLushMeadowGrowsFullClumpsWithAThinScatterBetween() {
+        Object[][] table = {
+            // preset, a clump's cover at least, the cover between clumps from .. to
+            { MapPreset.VERDANT_VALLEY, 0.88, 0.15, 0.26 },
+            { MapPreset.HIGHLANDS, 0.60, 0.12, 0.26 },
+            { MapPreset.ARCHIPELAGO, 0.60, 0.12, 0.26 },
+        };
+        MapLayout l = anyLayout();
+        for (Object[] row : table) {
+            MapPreset preset = (MapPreset) row[0];
+            PlantCover.Mix mix = PlantCover.mixFor(preset);
+            int inN = 0, inT = 0, outN = 0, outT = 0;
+            for (int u = 0; u < 300; u++)
+                for (int v = 0; v < 150; v++) {
+                    double d = lushness(mix, l, u, v);
+                    if (d < 0.66)
+                        continue;
+                    boolean clump = PlantCover.clumpNoise(l, u, v) > PlantCover.CLUMP_AT - PlantCover.CLUMP_LUSH * d;
+                    boolean t = tuft(PlantCover.kindAt(mix, l, u, v, 0));
+                    if (clump) { inN++; if (t) inT++; } else { outN++; if (t) outT++; }
+                }
+            assertTrue(inN > 2000 && outN > 300, preset + ": too few lush blocks to judge (" + inN + " in clumps, " + outN + " between)");
+            double in = inT / (double) inN, between = outT / (double) outN;
+            assertTrue(in >= (double) row[1], preset + ": a clump is only " + in + " covered, want " + row[1] + "+");
+            assertTrue(between >= (double) row[2] && between <= (double) row[3], preset + ": between the clumps "
+                + between + " is covered, want a thin scatter of " + row[2] + "-" + row[3]);
+        }
+    }
+
+    /**
+     * r35's density: the sampler's open lawn went 39% -> 72% tuft cover. On Verdant's meadows (lushness above 0) the
+     * Oct 28 cover was ~0.64; the clumps take it to the sampler's range, 0.70-0.80, with ~a quarter still open lawn.
+     */
+    @Test
+    void verdantMeadowsCarryTheSamplersTuftCover() {
+        MapLayout l = anyLayout();
+        PlantCover.Mix mix = PlantCover.mixFor(MapPreset.VERDANT_VALLEY);
+        int n = 0, t = 0;
+        for (int u = 0; u < 300; u++)
+            for (int v = 0; v < 150; v++)
+                if (lushness(mix, l, u, v) > 0) {
+                    n++;
+                    if (tuft(PlantCover.kindAt(mix, l, u, v, 0)))
+                        t++;
+                }
+        assertTrue(n > 5000, "too few meadow blocks to judge: " + n);
+        double cover = t / (double) n;
+        assertTrue(cover >= 0.70 && cover <= 0.80, "Verdant's meadows carry " + cover + " tufts, want the sampler's 0.70-0.80");
+    }
+
     // ---------------------------------------------------------------- keep-outs and the oases
 
     @Test
