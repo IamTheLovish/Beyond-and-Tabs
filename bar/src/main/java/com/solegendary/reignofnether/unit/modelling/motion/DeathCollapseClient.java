@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.hero.PossessionClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.monsters.AbstractTotem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.model.EntityModel;
@@ -27,7 +28,7 @@ import org.joml.Quaternionf;
  *
  * <ul>
  *   <li><b>When:</b> a unit's first frames of dying ({@code deathTime} at most {@link #CLAIM_TICKS}) claim a slot of the
- *   pool ({@link DeathCollapse#MAX_CONCURRENT}); past the cap, with the setting off, airborne (a flyer shot down), the
+ *   pool ({@link DeathCollapse#MAX_CONCURRENT}); past the cap, a totem (a standing structure, it does not tip), with the setting off, airborne (a flyer shot down), the
  *   possessed body seen from inside, or a unit first seen already dying, the plain vanilla death plays.</li>
  *   <li><b>Direction:</b> the killing blow's, from the living army's hit stamp ({@link AnimStates}: the damage event
  *   the server sends every client carries where the blow came from); without a fresh one, a seeded direction.</li>
@@ -79,7 +80,7 @@ public final class DeathCollapseClient {
         int id = e.getId();
         if (POOL.base(id) >= 0)
             return true;
-        if (e.deathTime > CLAIM_TICKS || !enabled() || !(e instanceof Unit) || !nearGround(e))
+        if (e.deathTime > CLAIM_TICKS || !enabled() || !(e instanceof Unit) || e instanceof AbstractTotem || !nearGround(e))
             return false;
         if (PossessionClientEvents.isPossessing() && PossessionClientEvents.getPossessedId() == id
             && Minecraft.getInstance().options.getCameraType().isFirstPerson())

@@ -423,7 +423,17 @@ public final class Dragon {
         st[4] = attackTime;
 
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,
-            perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
+            perch, age - st[3], e.hurtTime, foldTime(e), netHeadYaw, headPitch);
+    }
+
+    /**
+     * The death time the pose folds by: 0 while the death collapse (DeathCollapseClient, combat feel) is tipping this
+     * body - it lays the dead dragon down itself, and the model's own fold on top made a grounded dragon fold twice
+     * (review round 1). The plain death (over the cap, setting off, shot down mid-air) keeps the model's fold.
+     */
+    private static int foldTime(LivingEntity e) {
+        return e.deathTime > 0 && com.solegendary.reignofnether.unit.modelling.motion.DeathCollapseClient.collapsing(e)
+            ? 0 : e.deathTime;
     }
 
     /**

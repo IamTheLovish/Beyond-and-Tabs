@@ -156,7 +156,7 @@ public final class BarFxClient {
 
     public static void clear() {
         live.clear(); decals.clear(); debrisCount = 0; scorchCount = 0; craterCount = 0;
-        DomeFx.clear(); CameraShakeClient.reset(); SPARK_BUDGET.reset();
+        DomeFx.clear(); CameraShakeClient.reset(); SPARK_BUDGET.reset(); heavyShakeAt = -10f;
     }
 
     // ------------------------------------------------------------------ events from the server
@@ -314,10 +314,15 @@ public final class BarFxClient {
                 if (where == BarFx.AT_GROUND && kind == BarFx.K_BIG_FIREBALL) scorchRing(x, y, z, 1.2f * size, true);
             }
             case BarFx.K_MAGIC -> {
+                // a bolt on a unit shares the hit sparks' budget - flash, sparks and ring alike (a mage line volleying
+                // stays a handful of particles; review round 1: the flash sat outside it)
+                int n = 8;
+                if (where == BarFx.AT_UNIT) {
+                    n = SPARK_BUDGET.take((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, clock, 8);
+                    if (n <= 0) { sparkDropped++; return; }
+                    sparkHits++;
+                }
                 flash(x, y, z, .9f, .15f, tint(0xD8B8FF, faction));
-                // a bolt on a unit shares the hit sparks' budget (a mage line volleying stays a handful of sparks)
-                int n = where == BarFx.AT_UNIT
-                        ? SPARK_BUDGET.take((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, clock, 8) : 8;
                 sparks(x, y, z, n, 3.5f, tint(0xD8B8FF, faction), -dx, -dz);
                 ring(x, groundOr(x, y, z), z, 1.3f, .3f, tint(0xC8A0FF, faction));
             }
@@ -333,11 +338,17 @@ public final class BarFxClient {
             case BarFx.K_HEAVY_MELEE -> {
                 if (where == BarFx.AT_UNIT) {
                     if (!unitHit(x, y, z, dx, dz, faction, metal, true)) return;
-                    // a big body's blow kicks a little dust off the ground under it
+                    // a big body's blow kicks a little dust off the ground under it - from the same budget (one spark's
+                    // worth), so a brawl of them cannot add particles past it (review round 1)
                     float g = groundY(x, y, z);
-                    if (y - g < 2.5f) dust(x, g, z, .3f, groundColor(x, g, z));
-                    // a T3's real blow is felt - as a "minor" shake: a whole brawl of them stays a rumble
-                    if (size >= 2f) shakeMinor(.18f, x, y, z);
+                    if (y - g < 2.5f && SPARK_BUDGET.take((int) Math.floor(x) >> 4, (int) Math.floor(z) >> 4, clock, 1) > 0)
+                        dust(x, g, z, .3f, groundColor(x, g, z));
+                    // a T3's real blow is felt - as a "minor" shake, scaled by the blow's weight and rate-limited
+                    // (HEAVY_SHAKE_GAP): a mammoth cleaving all fight is a rumble every so often, not a constant shake
+                    if (size >= 2f && clock - heavyShakeAt >= HEAVY_SHAKE_GAP) {
+                        heavyShakeAt = clock;
+                        shakeMinor(.06f + .08f * Math.min(1f, size - 2f), x, y, z);
+                    }
                     return;
                 }
                 flash(x, y, z, .55f * size, .08f, tint(0xFFF0D0, faction));
@@ -371,6 +382,9 @@ public final class BarFxClient {
      */
     static final HitSparkBudget SPARK_BUDGET = new HitSparkBudget();
     static int sparkHits = 0, sparkDropped = 0;
+    /** A T3's blow shakes the camera at most once per this many seconds, whoever swung (review round 1). */
+    static final float HEAVY_SHAKE_GAP = 0.9f;
+    static float heavyShakeAt = -10f;
     static float sparkLogAt = 10;
 
     /** The size of one screen pixel in blocks in the RTS view (0 otherwise): sparks stay a pixel or two wide from above. */
