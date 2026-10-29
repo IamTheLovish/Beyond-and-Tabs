@@ -922,14 +922,18 @@ public final class EyesDirector {
         return 0;
     }
 
-    /** The tree MapBuilder planted nearest our player (the integrated server's list), or null. */
+    /**
+     * The tree MapBuilder planted nearest our player (the integrated server's list) that we can see - the first map run
+     * framed one under the fog of war, a black still - else the nearest at all, or null.
+     */
     private static BlockPos nearestPlantedTree(Minecraft mc) {
         if (mc.player == null)
             return null;
         BlockPos best = null;
         double bd = Double.MAX_VALUE;
         for (BlockPos t : com.solegendary.reignofnether.maps.MapBuilder.lastPlanted) {
-            double d = t.distToCenterSqr(mc.player.getX(), t.getY(), mc.player.getZ());
+            boolean seen = com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents.isBlockVisible(t.getX(), t.getZ());
+            double d = t.distToCenterSqr(mc.player.getX(), t.getY(), mc.player.getZ()) + (seen ? 0 : 1e9);
             if (d < bd) {
                 bd = d;
                 best = t;
