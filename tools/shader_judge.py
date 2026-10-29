@@ -6,6 +6,11 @@ like for like:
   lawn       grass pixels (hue 60-150 degrees, saturation >= 0.25): median hue, median value (V), and blue / green
              of their mean - the olive-cast check (the old pack's stills lost a third of their blue)
   shade      lawn luma p10 / p75: grass in a building's shadow against grass in the sun (visible, never black)
+  fill       the lawn's luma split in two (Otsu): mean of the darker class / mean of the lighter - grass in shadow against
+             grass in the sun - and the darker class's share of the lawn; "floor" is the lawn's luma p1 / the lighter
+             mean, the darkest shadow anywhere. Both are judged against two-sided bands per time of day (BANDS); a
+             value outside its band is marked with "!" (too dark kills the read of units in shade, too light means no
+             shadow at all)
   white      near-white pixels (saturation < 0.15, V >= 0.55): luma p95 - the capitol's walls, white but unclipped
   clipped    share of pixels with any channel at 254 or more
   detail     mean absolute difference from a 9-pixel box blur, on luma: texture and edge contrast
@@ -30,6 +35,32 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+
+# (fill low, fill high, floor low, floor high) per still suffix: shadowed / sunlit grass on screen. Noon and morning
+# keep a clear shadow with a strong fill (Erin, #386 r5: shadowed light ~35-45% of lit, i.e. ~0.62-0.70 on screen);
+# dusk and night may sit lower but never collapse to black
+BANDS = {"day": (0.55, 0.80, 0.35, 0.75), "dusk": (0.45, 0.80, 0.25, 0.75), "night": (0.45, 0.85, 0.25, 0.80)}
+
+
+def band_for(still):
+    if "_dusk" in still or "_t11800" in still:
+        return "dusk"
+    if "_t18000" in still:
+        return "night"
+    return "day"
+
+
+def otsu_split(x):
+    """The threshold that best splits x in two classes (Otsu, 256 bins)."""
+    hist, edges = np.histogram(x, bins=256, range=(0.0, 1.0))
+    p = hist.astype(np.float64) / max(hist.sum(), 1)
+    mids = (edges[:-1] + edges[1:]) * 0.5
+    w0 = np.cumsum(p)
+    m0 = np.cumsum(p * mids)
+    total = m0[-1]
+    w1 = 1.0 - w0
+    between = np.where((w0 > 0) & (w1 > 0), (total * w0 - m0) ** 2 / np.maximum(w0 * w1, 1e-12), 0.0)
+    return float(edges[int(np.argmax(between)) + 1])
 
 
 def crop(img, hud):
@@ -57,7 +88,7 @@ def measure(path, hud=False):
     luma = c @ LUMA
     h, s, v = hsv(c)
     out = {"luma": tuple(float(np.percentile(luma, q)) for q in (5, 50, 95))}
-    grass = (h >= 60) & (h <= 150) & (s >= 0.25) & (v >= 0.08)
+    grass = (h >= 60) & (h <= 150) & (s >= 0.25) & (v >= 0.02)   # dark enough to keep grass in deep shadow
     out["lawn_share"] = float(grass.mean())
     if grass.sum() >= 200:
         gl = luma[grass]
@@ -66,8 +97,17 @@ def measure(path, hud=False):
         out["lawn_v"] = float(np.median(v[grass]))
         out["lawn_bg"] = float(mean[2] / max(mean[1], 1e-6))
         out["shade"] = float(np.percentile(gl, 10) / max(np.percentile(gl, 75), 1e-6))
+        t = otsu_split(gl)
+        dark, lit = gl[gl < t], gl[gl >= t]
+        out["shadow_share"] = float(dark.size / gl.size)
+        if dark.size >= 100 and lit.size >= 100:
+            out["fill"] = float(dark.mean() / max(lit.mean(), 1e-6))
+            out["floor"] = float(np.percentile(gl, 1) / max(lit.mean(), 1e-6))
+        else:
+            out["fill"] = out["floor"] = None
     else:
-        out["lawn_hue"] = out["lawn_v"] = out["lawn_bg"] = out["shade"] = None
+        out["lawn_hue"] = out["lawn_v"] = out["lawn_bg"] = out["shade"] = out["fill"] = out["floor"] = None
+        out["shadow_share"] = None
     white = (s < 0.15) & (v >= 0.55)
     out["white_p95"] = float(np.percentile(luma[white], 95)) if white.sum() >= 200 else None
     out["clipped"] = float((c.max(-1) >= 254 / 255).mean())
@@ -80,9 +120,15 @@ def fmt(x, digits=3):
     return "-" if x is None else ("%." + str(digits) + "f") % x
 
 
+def fmt_band(x, lo, hi):
+    """x to two places, marked "!" outside [lo, hi]."""
+    return "-" if x is None else "%.2f%s" % (x, "" if lo <= x <= hi else "!")
+
+
 def table(lanes, stills, hud):
-    rows = ["| still | lane | luma p5 / p50 / p95 | lawn hue | lawn V | lawn B/G | shade | white p95 | clipped | detail |",
-            "|---|---|---|---:|---:|---:|---:|---:|---:|---:|"]
+    rows = ["| still | lane | luma p5 / p50 / p95 | lawn hue | lawn V | lawn B/G | shade | fill (share) | floor | white p95 "
+            "| clipped | detail |",
+            "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for still in stills:
         for name, folder in lanes:
             p = os.path.join(folder, still)
@@ -90,10 +136,13 @@ def table(lanes, stills, hud):
                 rows.append("| %s | %s | (missing) |||||||" % (still, name))
                 continue
             m = measure(p, hud)
-            rows.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            lo, hi, flo, fhi = BANDS[band_for(still)]
+            rows.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
                 still.replace("bat_eyes_", "").replace(".png", ""), name, " / ".join(fmt(x, 2) for x in m["luma"]),
                 fmt(m["lawn_hue"], 0), fmt(m["lawn_v"], 2), fmt(m["lawn_bg"], 2), fmt(m["shade"], 2),
-                fmt(m["white_p95"], 2), "%.2f%%" % (100 * m["clipped"]), fmt(m["detail"], 4)))
+                fmt_band(m["fill"], lo, hi) + ("" if m["shadow_share"] is None else " (%d%%)" % round(100 * m["shadow_share"])),
+                fmt_band(m["floor"], flo, fhi), fmt(m["white_p95"], 2), "%.2f%%" % (100 * m["clipped"]),
+                fmt(m["detail"], 4)))
     return "\n".join(rows)
 
 

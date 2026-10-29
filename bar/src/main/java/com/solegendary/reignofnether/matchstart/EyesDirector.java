@@ -888,6 +888,9 @@ public final class EyesDirector {
     //                       with -Dbat.eyes.times=T,... (eyes.yml input `times`): the RTS and 3/4 views again at each
     //                       day time T - the shader look's times of day (design/own_shader_pack.md: Morning 5000, Dusk
     //                       11800, Night 18000 beside the noon stills)
+    //   15_<name>_rts_army  last, back at noon: two of our militia standing still on each of the structure's four
+    //                       sides, three blocks out - whichever sides lie in its shadow show whether a unit there still
+    //                       reads from the RTS camera (#386 r5, the shader pack's shadow fill); removed afterwards
     // After the noon RTS still the camera holds while ShaderBench times BENCH_FRAMES drawn frames: one
     // "[ShaderBench] 15_<name>_rts" line per structure, the frame-cost ratio between eyes lanes.
     // Placed as plain blocks (StructureTemplate.placeInWorld), not as a building: renderer-drawn parts (sails, rigs)
@@ -909,6 +912,8 @@ public final class EyesDirector {
     private static BlockPos siteCentre = null;      // the pad's centre on the ground; every structure uses the same site
     private static int[] lastCleared = null;       // x0, z0, x1, z1, y0, y1 of the previous structure's box
     private static volatile long dayTimeBefore = -1;   // the server's time before the dusk still, restored after it
+    static final long SHADE_ARMY_TIME = 6000;          // noon: the shadow the shade-army still is judged in
+    static final String SHADE_ARMY_TAG = "bat_eyes_shade";
 
     static List<String> parseStructures(String raw) {
         List<String> out = new ArrayList<>();
@@ -1054,15 +1059,12 @@ public final class EyesDirector {
                 if (!there)
                     ReignOfNether.LOGGER.warn("[Eyes] {}_dusk: the client sky is at {} not 13000 after 40 s", label, t);
                 shot(mc, label + "_dusk");
-                var server = mc.getSingleplayerServer();
                 if (!EXTRA_TIMES.isEmpty()) {
                     timeIndex = 0;
                     startExtraTime(mc);
                     return;
                 }
-                long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
-                server.execute(() -> server.overworld().setDayTime(back));
-                nextStructure(mc);
+                startShadeArmy(mc);
             }
             case 7 -> {   // an extra day time: the RTS view once the client's sky is there
                 long want = EXTRA_TIMES.get(timeIndex);
@@ -1088,6 +1090,17 @@ public final class EyesDirector {
                     startExtraTime(mc);
                     return;
                 }
+                startShadeArmy(mc);
+            }
+            case 9 -> {   // the shade army: noon's sky back on the client and the units standing
+                long t = mc.level.getDayTime() % 24000;
+                boolean there = Math.abs(t - SHADE_ARMY_TIME) < 150;
+                if (!(there && phaseSeconds() > 5) && phaseSeconds() < 40)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_rts_army: the client sky is at {} after 40 s", label, t);
+                shot(mc, label + "_rts_army");
+                runCommand(mc, "kill @e[tag=" + SHADE_ARMY_TAG + "]");
                 var server = mc.getSingleplayerServer();
                 long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
                 server.execute(() -> server.overworld().setDayTime(back));
@@ -1095,6 +1108,32 @@ public final class EyesDirector {
             }
             default -> nextStructure(mc);
         }
+    }
+
+    /**
+     * Noon again, the RTS camera back over the structure, and two of our militia (standing still, tagged for removal)
+     * three blocks out from the middle of each side: the sides in the structure's shadow show units in shade.
+     */
+    private static void startShadeArmy(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        server.execute(() -> server.overworld().setDayTime(SHADE_ARMY_TIME));
+        String me = mc.player.getName().getString().replace("\"", "");
+        int x0 = structureOrigin.getX(), z0 = structureOrigin.getZ();
+        int x1 = x0 + structureSize.getX() - 1, z1 = z0 + structureSize.getZ() - 1;
+        int mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+        int[][] spots = { { mx - 1, z0 - 3 }, { mx + 1, z0 - 3 }, { mx - 1, z1 + 3 }, { mx + 1, z1 + 3 },
+                { x0 - 3, mz - 1 }, { x0 - 3, mz + 1 }, { x1 + 3, mz - 1 }, { x1 + 3, mz + 1 } };
+        for (int[] at : spots) {
+            Vec3 g = ground(mc, at[0], at[1], structureOrigin.getY());
+            runCommand(mc, String.format("rtsapi-summon \"%s\" %s:militia_unit %d %d %d {NoAI:1b,Tags:[\"%s\"]}", me,
+                    ReignOfNether.MOD_ID, at[0], (int) g.y, at[1], SHADE_ARMY_TAG));
+        }
+        if (!OrthoviewClientEvents.isEnabled())
+            OrthoviewClientEvents.toggleEnable();
+        mc.options.hideGui = true;
+        setZoom(ZOOM_NORMAL);
+        OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+        nextPhase(9);
     }
 
     /** The server to the next extra day time, and the RTS camera back over the structure at the default zoom. */

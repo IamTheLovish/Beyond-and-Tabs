@@ -7,7 +7,8 @@
 # Structure photos (input `structure`, Oct 20 2026): instead of the tour, stamp each named structure on a flat pad and
 # photograph it - RTS view, RTS close, a first-person 3/4 view and the 3/4 view at dusk (EyesDirector scene 15) - with
 # the real textures, the building-block mods and, with `shaders`, the shader lane. Stills land on branch
-# eyes-structures (eyes-structures-shaders with shaders on) as bat_eyes_15_<name>_{rts,rts_close,34,dusk}.png.
+# eyes-structures (eyes-structures-shaders with shaders on) as bat_eyes_15_<name>_{rts,rts_close,34,dusk,rts_army}.png (rts_army: our militia
+# round it at noon, for units in its shadow).
 # An entry is a structure name in the jar (data/reignofnether/structures/<name>.nbt) or a .nbt path in the checkout.
 # For a design that only exists on a feature branch, dispatch ON THAT BRANCH (it must contain this workflow, i.e. be
 # based on a main that has it): the run then uses the jar of that branch's newest build run (its PR build) and the

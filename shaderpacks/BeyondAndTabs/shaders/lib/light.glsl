@@ -11,19 +11,22 @@
 // fades to nothing as either body nears the horizon, so the hand-over itself shows no jump.
 // Lighting is linear: albedo is decoded from sRGB, lit, then tone-mapped and encoded again (composite.fsh). The table is
 // aimed at open ground at noon coming out at its albedo - the brightness players know - and the shade beside a
-// building keeping about a third of the light (aimed at shadow / lit luma ~0.55 on screen; the eyes stills measure it).
+// building keeping about 40% of the light (shadow / lit luma ~0.65 on screen): a unit standing in a building's shadow
+// must stay easy to read from the RTS camera (#386 r5). tools/shader_judge.py measures it on the eyes stills against
+// two-sided bands ("fill" and "floor").
 
 uniform vec3 sunPosition;
 uniform vec3 shadowLightPosition;
 uniform vec3 upPosition;
 uniform float rainStrength;
 
-// high sun: warm light, near-neutral sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix)
-const vec3 SUN_HIGH = vec3(1.00, 0.94, 0.84) * 0.80;
-const vec3 SKY_HIGH = vec3(0.92, 0.96, 1.04) * 0.30;
+// high sun: warm light, near-neutral sky fill (Oct 28: a blue fill tinted the whole lawn - #326's lawn fix). Sun 0.68 at
+// ~60 degrees up plus fill 0.41 keeps open ground at its albedo; the fill alone is 40% of that
+const vec3 SUN_HIGH = vec3(1.00, 0.94, 0.84) * 0.68;
+const vec3 SKY_HIGH = vec3(0.92, 0.96, 1.04) * 0.41;
 // low sun: golden light raking across, a dim warm-violet fill
 const vec3 SUN_LOW = vec3(1.00, 0.62, 0.34) * 1.50;
-const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.14;
+const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -31,6 +34,10 @@ const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
 const vec3 BLOCK_LIGHT = vec3(1.00, 0.70, 0.40) * 1.60;
 // so the darkest cave is never pure black
 const vec3 MIN_LIGHT = vec3(0.012);
+// the sky's fill under a sky light of 0 as a share of the open sky's: the fill falls off with the sky light linearly
+// from 1 to this, never to nothing. The light engine can leave open ground with a stale low sky light (the eyes
+// structure pads: freshly laid ground read 1/3 of its sky light), which the sun hides but a shadow showed as black
+const float SKY_FILL_FLOOR = 0.35;
 
 // sine of the sun's height above the horizon
 float sunHeight() {
@@ -70,7 +77,7 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, vec
     float sky = levels.y;
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunColour * (facing * shadow * smoothstep(0.05, 0.45, sky));
-    light += skyColour * ((0.75 + 0.25 * dot(n, up)) * sky * sky * ao);
+    light += skyColour * ((0.75 + 0.25 * dot(n, up)) * mix(SKY_FILL_FLOOR, 1.0, sky) * ao);
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
 }
