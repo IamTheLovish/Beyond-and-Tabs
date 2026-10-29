@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.AutoCaster;
+import com.solegendary.reignofnether.ability.AutocastState;
 import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
 import com.solegendary.reignofnether.ability.abilities.Empower;
 import com.solegendary.reignofnether.ability.abilities.EntanglingRoots;
@@ -11,6 +13,7 @@ import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.essence.EssenceServerEvents;
@@ -58,7 +61,8 @@ import java.util.Objects;
  * The Verdant essence caster, the Thornweaver (design/essence_casters.md; lovish approved draft 2 on Oct 29: "one
  * caster per race"). Written before the code, from his numbers:
  * <ul>
- *   <li>trained at the Circle of Elders (Verdant T2 lab) once Tier 2 is researched, for a cost; an essence carrier
+ *   <li>trained at the Circle of Elders (Verdant T2 lab) once Tier 2 is researched, for a cost, and by the Verdant bot
+ *       (lovish, Oct 29: bots build and use all seven casters); an essence carrier
  *       (gathers the wisps within 8 blocks) with three spells and the shared Empower;</li>
  *   <li>Entangling Roots: 5 essence, 12 s - enemies within 3 blocks of the aimed spot are rooted (cannot move, can
  *       still attack) for 3 s;</li>
@@ -67,7 +71,7 @@ import java.util.Objects;
  *   <li>Sprout Guardian: 20 essence, 60 s - a sapling treant fights for the owner for 25 s, then withers, marked
  *       summoned (its death drops no essence);</li>
  *   <li>every spell refuses - no essence spent, no cooldown - when it cannot act (short of essence, nothing to root),
- *       and an order during the cooldown is refused too.</li>
+ *       and an order during the cooldown is refused too; the autocast never orders a cast its spell would refuse.</li>
  * </ul>
  * Revision 1 (coordinator, Oct 29): Seed of Renewal at 3 HP/s for 10 s, its sapling a 100 HP unit that can be
  * targeted, every summon marked summoned. Every unit stands still (no AI) inside the test's own arena under owners unique to the arena. Early callbacks only
@@ -140,8 +144,14 @@ public class ThornweaverGameTests {
     }
 
     /** The live Seed of Renewal saplings within {@code r} of the cell above the ground block {@code at}. */
+    /**
+     * Saplings within {@code r} of the cell above {@code at}, over the whole height the spell may plant at (it stands
+     * the sapling up to MAX_DY from the click): sand or gravel still falling from the terrain over an arena can land in
+     * the cleared pocket and lift it (run 40828975818, 2 runners of 10: "planted 0 sapling units").
+     */
     private static List<RenewalSaplingUnit> saplingsNear(ServerLevel level, BlockPos at, double r) {
-        return level.getEntitiesOfClass(RenewalSaplingUnit.class, new AABB(at.above()).inflate(r), e -> !e.isRemoved());
+        return level.getEntitiesOfClass(RenewalSaplingUnit.class, new AABB(at.above()).inflate(r, SeedOfRenewal.MAX_DY + 1, r),
+            e -> !e.isRemoved());
     }
 
     private static List<LivingEntity> guardiansNear(ServerLevel level, BlockPos at, double r) {
@@ -466,6 +476,9 @@ public class ThornweaverGameTests {
                 near.setHealth(near.getMaxHealth() - 45);
                 far.setHealth(far.getMaxHealth() - 10);
                 enemy.setHealth(enemy.getMaxHealth() - 10);
+                // the enemy takes hits in the arena (run 40828030752 saw 65 -> 29), which hid any heal: with no damage
+                // landing, only a heal moves its health
+                enemy.setInvulnerable(true);
                 start[0] = near.getHealth();
                 start[1] = far.getHealth();
                 start[2] = enemy.getHealth();
@@ -587,7 +600,9 @@ public class ThornweaverGameTests {
                 List<RenewalSaplingUnit> planted = saplingsNear(level, richSpot, 1.5);
                 made.addAll(planted);
                 if (planted.size() != 1)
-                    early.add("the cast planted " + planted.size() + " sapling units, expected 1");
+                    early.add("the cast planted " + planted.size() + " sapling units, expected 1 (essence left " + Essence.get(rich)
+                        + ", cooldown " + ((Unit) rich).getCooldown(b) + ", standing cell " + SeedOfRenewal.standingCell(level,
+                        richSpot.getX(), richSpot.getZ(), richSpot.getY() + 1) + " for the spot " + richSpot + ")");
                 else {
                     deathAt[0] = planted.get(0).position();
                     planted.get(0).kill();
@@ -764,6 +779,165 @@ public class ThornweaverGameTests {
                 if (deathAt[0] != null)
                     clearWispsNear(deathAt[0], 3);
                 discardAll(made);
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    // ---------------------------------------------------------------------------------------------- autocast
+
+    /**
+     * The autocast never orders a spell it would refuse (PR 362 review round 1): an order resets the unit's behaviour,
+     * which clears hold position, and a refused one also shows the owner a refusal every second. A Thornweaver on hold
+     * with 30 essence, autocast on, beside three enemy flyers (Roots holds only ground units) and a hurt friendly
+     * sapling (a pulse never heals a sapling): a full AutoCaster look gives no order, so it is still on hold, still
+     * holds 30 essence, and no spell is on cooldown.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void thornweaver_autocast_skips_targets_its_spells_refuse_and_keeps_hold_position(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "auto"), foe = owner(helper, "autofoe");
+        SkirmishGameTests.openGround(helper, 2, 2, 12, 12);
+        Mob caster = weaver(helper, me, 3, 3, 30);
+        Mob sapling = still(helper, EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), me, 5, 3);
+        List<Entity> all = live(caster, sapling);
+        for (int i = 0; i < 3; i++)
+            all.add(still(helper, EntityRegistrar.OWL_WATCHER_UNIT.get(), foe, 8 + i, 8));
+        if (all.size() != 5 || all.contains(null)) {
+            discardAll(all.stream().filter(Objects::nonNull).toList());
+            helper.fail("could not spawn the Thornweaver, the sapling and the three owls");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                Unit u = (Unit) caster;
+                for (int i = 2; i < 5; i++)
+                    if (!(all.get(i) instanceof Unit owl) || !owl.isFlyingUnit())
+                        problems.add("the Owl Watcher is not a flying unit: the test lost its point");
+                sapling.setHealth(sapling.getMaxHealth() * 0.5f);
+                // a SupportUnit's brain kites it, and the AutoCaster skips a unit with a move target: stand it idle first
+                Unit.fullResetBehaviours(u);
+                u.setHoldPosition(true);
+                boolean cast = AutoCaster.look(level, caster, u);
+                if (cast)
+                    problems.add("the AutoCaster cast a spell with only flyers and a sapling around");
+                if (!u.getHoldPosition())
+                    problems.add("an autocast order cleared the Thornweaver's hold position");
+                if (Essence.get(caster) != 30)
+                    problems.add("the autocast spent essence: " + Essence.get(caster) + " left of 30");
+                for (Ability a : u.getAbilities().get())
+                    if (u.getCooldown(a) > 0)
+                        problems.add(a.getClass().getSimpleName() + " went on cooldown from the autocast");
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------- bots
+
+    /**
+     * Bots build and use the Thornweaver (lovish, Oct 29: "bots build and use all 7 casters"). It is in the Verdant
+     * kit's T2 army, its three spells autocast by default (the AutoCaster casts them for a bot as for a player), and in
+     * a bot's fight pass a Thornweaver with essence to spare (30) empowers the dearest friend in reach - the Elder Treant,
+     * not the Vindicator - while one holding 20 keeps it for its spells.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void thornweaver_verdant_bot_trains_it_and_empowers_with_spare_essence(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "bot");
+        Mob full = weaver(helper, me, 3, 3, 30);
+        Mob low = weaver(helper, me, 13, 13, 20);
+        Mob cheap = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 5, 3);     // 2 blocks from the full one
+        Mob dear = still(helper, EntityRegistrar.ELDER_TREANT_UNIT.get(), me, 3, 6);    // 3 blocks from it
+        Mob lowFriend = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 11, 13);   // 2 blocks from the low one
+        List<Entity> all = live(full, low, cheap, dear, lowFriend);
+        if (all.size() != 5) {
+            discardAll(all);
+            helper.fail("could not spawn the two Thornweavers and their friends");
+            return;
+        }
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                BotPlayer.Kit kit = BotPlayer.kitFor(Factions.VERDANT_COURT);
+                if (kit == null || !kit.t2Army().contains(ProductionItems.THORNWEAVER))
+                    problems.add("the Verdant bot's T2 army does not include the Thornweaver");
+                for (Ability a : Arrays.asList(ability(full, EntanglingRoots.class), ability(full, SeedOfRenewal.class), ability(full, SproutGuardian.class)))
+                    if (a == null || !AutocastState.isOn((Unit) full, a))
+                        problems.add((a == null ? "a spell" : a.getClass().getSimpleName()) + " is not autocast by default");
+                BotPlayer brain = new BotPlayer(me, Factions.VERDANT_COURT, BotPlayer.Difficulty.MEDIUM, helper.absolutePos(BlockPos.ZERO));
+                List<LivingEntity> mine = new ArrayList<>();
+                for (Entity e : all)
+                    mine.add((LivingEntity) e);
+                brain.castFightAbilities(level, mine);
+                if (VeterancyServerEvents.getRank(dear) != 1)
+                    problems.add("the bot's full Thornweaver did not empower the Elder Treant (rank " + VeterancyServerEvents.getRank(dear) + ")");
+                if (VeterancyServerEvents.getRank(cheap) != 0)
+                    problems.add("the bot empowered the Vindicator over the dearer Elder Treant");
+                if (Essence.get(full) != 15)
+                    problems.add("the full Thornweaver holds " + Essence.get(full) + " essence after the bot's Empower, expected 15");
+                Empower emp = ability(full, Empower.class);
+                if (emp == null || ((Unit) full).getCooldown(emp) <= 0)
+                    problems.add("the bot's Empower set no cooldown");
+                if (Essence.get(low) != 20 || VeterancyServerEvents.getRank(lowFriend) != 0)
+                    problems.add("a bot Thornweaver holding 20 essence spent it on Empower (" + Essence.get(low) + " left, friend rank "
+                        + VeterancyServerEvents.getRank(lowFriend) + "): it keeps that for its spells");
+            } catch (RuntimeException ex) {
+                problems.add("the bot pass threw " + ex);
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * A bot's Thornweaver goes with the army (PR 364 round 3 review: the bot's army list holds only attackers, so a
+     * caster idled at its lab with 0 essence). One standing 14 blocks from the bot's army is lagging: the bot's
+     * Verdant habits - the "healers follow the army" block, which now takes every EssenceCarrier - order it to the
+     * army's centre. The block is package-private bot code, so the test calls it as think() does, by reflection.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void thornweaver_bot_orders_a_lagging_thornweaver_to_the_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "follow");
+        Mob caster = weaver(helper, me, 2, 2, 0);
+        Mob a = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 12, 12);
+        Mob b = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 13, 12);
+        List<Entity> all = live(caster, a, b);
+        if (all.size() != 3) {
+            discardAll(all);
+            helper.fail("could not spawn the Thornweaver and the bot's army");
+            return;
+        }
+        List<BlockPos> moves = new ArrayList<>();
+        double cx = (a.getX() + b.getX()) / 2, cz = (a.getZ() + b.getZ()) / 2;
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                BotPlayer brain = new BotPlayer(me, Factions.VERDANT_COURT, BotPlayer.Difficulty.MEDIUM, null);
+                brain.orderListener = (action, target) -> {
+                    if (action == UnitAction.MOVE)
+                        moves.add(target);
+                };
+                List<LivingEntity> army = new ArrayList<>(List.of((LivingEntity) a, (LivingEntity) b));
+                // the Thornweaver is the only unit here the block may send: a move to the centre is its order
+                List<LivingEntity> mine = new ArrayList<>(List.of((LivingEntity) caster, (LivingEntity) a, (LivingEntity) b));
+                java.lang.reflect.Method habits = BotPlayer.class.getDeclaredMethod("verdantHabits", ServerLevel.class,
+                    List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                habits.invoke(brain, level, mine, army, new ArrayList<LivingEntity>(), new ArrayList<BuildingPlacement>(), level.getGameTime(), 0L);
+                if (moves.isEmpty())
+                    problems.add("the bot gave no move order: its Thornweaver 14 blocks from the army stays where it is");
+                else if (moves.stream().noneMatch(t -> Math.hypot(t.getX() + 0.5 - cx, t.getZ() + 0.5 - cz) <= 2))
+                    problems.add("the bot's move orders " + moves + " do not go to the army's centre (" + cx + ", " + cz + ")");
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                problems.add("the bot's Verdant habits could not be run: " + ex);
+            } finally {
                 discardAll(all);
             }
             finish(helper, problems);
