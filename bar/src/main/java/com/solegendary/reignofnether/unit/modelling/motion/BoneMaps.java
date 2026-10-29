@@ -115,6 +115,12 @@ public final class BoneMaps {
             ModelPart body = descendant(hm, "body"), head = descendant(hm, "head");
             if (body != null && !bendsAlone(body, head))
                 body = null;      // bending it would part the head from the torso, or swing the legs and feet
+            if (body == null && !keyframes) {
+                // a generated human whose body is its pelvis (the Halberdier): its chest is the torso that flinches
+                ModelPart chest = descendant(hm, "chest");
+                if (chest != null && bendsAlone(chest, head))
+                    body = chest;
+            }
             if (body == null && head == null)
                 return NONE;
             BoneMap m = new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
