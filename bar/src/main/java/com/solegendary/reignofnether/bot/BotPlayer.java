@@ -123,7 +123,9 @@ public class BotPlayer {
         // Gravity Monk and a Mirror Mage. The Thunder Sage's spells, Overcharge, Seal, Frost Field, Ward, the Geomancers'
         // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
         // Slice 4: a Seer, a Lantern Fortress and a Phoenix join the T2 mix (stormDomes keeps the Fortress's dome up in a
-        // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them)
+        // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them).
+        // The essence caster, the Spark Sage, joins the T2 mix (lovish, Oct 29: bots build and use every caster); the
+        // AutoCaster casts its spells whenever it holds the essence
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
@@ -134,7 +136,8 @@ public class BotPlayer {
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
-                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN),   // beasts-2 T2 beast
+                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN,   // beasts-2 T2 beast
+                        ProductionItems.SPARK_SAGE),   // essence caster: its spells autocast (Static Step, Captured Spark, Thunderhead)
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
@@ -153,7 +156,8 @@ public class BotPlayer {
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER,   // beasts-2 T2 beast
+                        ProductionItems.SOUL_ENGINEER),   // essence caster: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
@@ -1344,7 +1348,8 @@ public class BotPlayer {
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)

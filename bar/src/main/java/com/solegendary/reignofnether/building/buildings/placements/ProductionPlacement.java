@@ -156,7 +156,8 @@ public class ProductionPlacement extends BuildingPlacement {
 
     @Override
     public float getProductionBuildPower() {
-        return super.getProductionBuildPower() + getGuardAssistPower();
+        return (super.getProductionBuildPower() + getGuardAssistPower())
+            * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this);
     }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
