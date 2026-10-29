@@ -523,3 +523,10 @@ Faction fit: Gravebound / the dark-fantasy accent.
   diamond lattice in 2 patina tones - never a flat fill; (2) an open colonnade drum (a ring of small arches) under
   each dome makes the cap float on shadow; (3) atmospheric depth: towers further away go paler and warmer in the
   haze. Second vote (with ref62) for weathered copper as Brassworks' signature roof material on towers and spires.
+
+## Baseline measured with tools/schem_study.py (r7, design/vehicle_labs/brass_t1.nbt)
+- eave overhang: NONE ({}) - no roof cell anywhere projects past the walls below it. The refs' eaves all do.
+- palette: red_terracotta 40.9 %, deepslate_bricks 17.5 %, tuff 11.3 % - walls and roofs in the same red.
+- section z 5 (a hall): the roof is a solid filled triangle of full blocks with stair edges flush with the wall face.
+r8 gates (to beat): eave overhang >= 1 on every hall / shed / wing eave; roof material family != wall family; the
+same measures run on Itachi 3's downloaded builds give the target numbers.
