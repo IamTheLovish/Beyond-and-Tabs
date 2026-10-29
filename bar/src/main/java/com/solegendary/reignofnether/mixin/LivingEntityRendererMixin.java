@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.registrars.BlockRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.modelling.motion.Corpses;
+import com.solegendary.reignofnether.unit.modelling.motion.DeathFall;
 import com.solegendary.reignofnether.unit.modelling.motion.MotionPass;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipRenderTypes;
 import com.solegendary.reignofnether.unit.modelling.renderers.MipmappedTextures;
@@ -89,11 +90,17 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
                                     float red, float green, float blue, float alpha) {
         float finalAlpha = (ron$currentEntity != null && isTransparent(ron$currentEntity) ? alpha * ALPHA : alpha)
             * Corpses.alpha();
-        // a body that falls by itself (DeathFall) is red only while hurt, as in life - not for its whole death
-        if (ron$currentEntity != null && ron$currentEntity.deathTime > 0 && ron$currentEntity.hurtTime <= 0
-            && MotionPass.ownsDeath(ron$currentEntity, this.model) != null)
-            packedOverlay = OverlayTexture.pack(packedOverlay & 0xFFFF, OverlayTexture.v(false));
         model.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, red, green, blue, finalAlpha);
+    }
+
+    // a body that falls by itself (DeathFall) is red only while hurt, as in life - not for its whole death. Here, at
+    // vanilla's one overlay rule, so the body and every layer that asks for the overlay (team cloth, profession,
+    // armour) agree, on the dying unit and on the body Corpses holds
+    @Inject(method = "getOverlayCoords", at = @At("HEAD"), cancellable = true)
+    private static void bat$deathPoseNoRed(LivingEntity entity, float white, CallbackInfoReturnable<Integer> cir) {
+        if (entity.deathTime > 0 && MotionPass.ownsDeath(entity) != null)
+            cir.setReturnValue(OverlayTexture.pack(OverlayTexture.u(white),
+                OverlayTexture.v(DeathFall.red(entity.hurtTime, entity.deathTime, true))));
     }
 
     // the death-pose contract (unit/modelling/motion/DeathFall): a body that falls by itself is not flipped as well
