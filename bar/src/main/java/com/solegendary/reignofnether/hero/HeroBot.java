@@ -464,6 +464,10 @@ public final class HeroBot {
             // handed back by the player (possession released, the AI switched on): what they saw stands, danger included
             b.lock.acknowledge();
             b.state = HeroBrain.State.IDLE;
+            // off() forgot the last scan and the next think is up to a second away: look now, so the hero's own idle
+            // targeting knows the enemy towers from the first tick (mayAutoTarget)
+            if (mob.level() instanceof ServerLevel sl)
+                Perception.scan(sl, mob, hero.getOwnerName(), b.seen);
         } else if (fresh && bot && b.state == HeroBrain.State.FLEE) {
             // a bot's army order swept the fleeing hero along: the flight stands (D030 is the player's word, and the
             // hero's own brain knows its life better than the bot's sweep); the order waits until the run is over.

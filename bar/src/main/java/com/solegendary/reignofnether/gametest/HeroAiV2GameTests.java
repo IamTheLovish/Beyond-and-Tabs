@@ -762,7 +762,21 @@ public class HeroAiV2GameTests {
      * The framework fails a test whose runnable throws at once, and botGuard's own runnable then never runs.
      */
     static Runnable botStep(boolean[] done, List<Mob> mobs, Runnable cleanup, Runnable body) {
-        return body;
+        return () -> {
+            try {
+                body.run();
+            } catch (RuntimeException e) {
+                // finish's own fail throws too: by then done is set and the cleanup has run
+                if (!done[0]) {
+                    done[0] = true;
+                    for (Mob m : mobs)
+                        if (m != null)
+                            m.discard();
+                    cleanup.run();
+                }
+                throw e;
+            }
+        };
     }
 
     /**
