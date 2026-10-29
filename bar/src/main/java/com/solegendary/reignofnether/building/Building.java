@@ -144,8 +144,9 @@ public abstract class Building {
         this.isCapitol = isCapitol;
     }
 
+    /** What a unit's damage is multiplied by on this building: melee blows, arrows, the Warden's sonic boom (see {@link BuildingDamage}). */
     public float getMeleeDamageMult() {
-        return 0.25F; // this is 50% visually, as 1 block is 2hp by default
+        return BuildingDamage.MELEE_MULT;   // BASE_MELEE_MULT 0.25 is 50% visually, as 1 block is 2hp by default; times the global multiplier
     }
 
     public ArrayList<BuildingBlock> getRelativeBlockData(LevelAccessor level) {
