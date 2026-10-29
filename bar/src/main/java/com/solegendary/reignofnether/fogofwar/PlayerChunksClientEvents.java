@@ -34,6 +34,7 @@ public class PlayerChunksClientEvents {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
             return;
         int fp = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.WORLD_MARKERS);
+        int fpS = com.solegendary.reignofnether.perf.FrameParts.begin(com.solegendary.reignofnether.perf.FrameParts.MARKERS_CHUNKS);
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays()) return;   // shader pack shadow map: overlays cast no shadow
             if (!enabled || event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS)
@@ -55,6 +56,7 @@ public class PlayerChunksClientEvents {
                     for (ChunkPos cp :  liveChunks.get(uuid))
                         drawChunkOutline(poseStack, cp, 0.0f, 1.0f, 0.0f, 0.75f); // green
         } finally {
+            com.solegendary.reignofnether.perf.FrameParts.end(fpS);
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }

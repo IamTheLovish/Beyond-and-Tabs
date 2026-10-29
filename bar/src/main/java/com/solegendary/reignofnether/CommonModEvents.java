@@ -79,6 +79,13 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit.createAttributes().build());
         evt.put(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.ReefGuardUnit.createAttributes().build());
         evt.put(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SKULL_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BOULDER_CHUCKER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BURL_SLINGER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.POWDER_MONKEY_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THUNDERSTONE_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STEAM_LOBBER_UNIT.get(), com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit.createAttributes().build());
         evt.put(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.TidePriestUnit.createAttributes().build());
         evt.put(EntityRegistrar.HARPOONER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.HarpoonerUnit.createAttributes().build());
         evt.put(EntityRegistrar.FLAK_SWIVEL_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.FlakSwivelUnit.createAttributes().build());
@@ -268,6 +275,13 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.CUTLASS_RAIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REEF_GUARD_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BOMBARD_CREW_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SUNFIRE_MANGONEL_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SKULL_HURLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BOULDER_CHUCKER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BURL_SLINGER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.POWDER_MONKEY_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.THUNDERSTONE_MONK_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.STEAM_LOBBER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.TIDE_PRIEST_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.HARPOONER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FLAK_SWIVEL_UNIT_SPAWN_EGG);

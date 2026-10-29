@@ -361,6 +361,55 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_crew_unit").toString()));
 
+    // the Sunfire Mangonel (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> SUNFIRE_MANGONEL_UNIT = ENTITIES.register("sunfire_mangonel_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sunfire_mangonel_unit").toString()));
+
+    // the Skull Hurler (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> SKULL_HURLER_UNIT = ENTITIES.register("skull_hurler_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "skull_hurler_unit").toString()));
+
+    // the Boulder Chucker (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> BOULDER_CHUCKER_UNIT = ENTITIES.register("boulder_chucker_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "boulder_chucker_unit").toString()));
+
+    // the Burl Slinger (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> BURL_SLINGER_UNIT = ENTITIES.register("burl_slinger_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "burl_slinger_unit").toString()));
+
+    // the Powder Monkey (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> POWDER_MONKEY_UNIT = ENTITIES.register("powder_monkey_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "powder_monkey_unit").toString()));
+
+    // the Thunderstone Monk (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> THUNDERSTONE_MONK_UNIT = ENTITIES.register("thunderstone_monk_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thunderstone_monk_unit").toString()));
+
+    // the Steam Lobber (design/siege_t1.md): the shared T1 siege lobber
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit>> STEAM_LOBBER_UNIT = ENTITIES.register("steam_lobber_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "steam_lobber_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.TidePriestUnit>> TIDE_PRIEST_UNIT = ENTITIES.register("tide_priest_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.TidePriestUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.WITCH.getWidth(), EntityType.WITCH.getHeight())
@@ -1134,6 +1183,13 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd.itemName -> EntityRegistrar.CUTLASS_RAIDER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.ReefGuardProd.itemName -> EntityRegistrar.REEF_GUARD_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.BombardCrewProd.itemName -> EntityRegistrar.BOMBARD_CREW_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.SUNFIRE_MANGONEL -> EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.SKULL_HURLER -> EntityRegistrar.SKULL_HURLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.BOULDER_CHUCKER -> EntityRegistrar.BOULDER_CHUCKER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.BURL_SLINGER -> EntityRegistrar.BURL_SLINGER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.POWDER_MONKEY -> EntityRegistrar.POWDER_MONKEY_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.THUNDERSTONE_MONK -> EntityRegistrar.THUNDERSTONE_MONK_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.shared.SiegeLobberProd.STEAM_LOBBER -> EntityRegistrar.STEAM_LOBBER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.TidePriestProd.itemName -> EntityRegistrar.TIDE_PRIEST_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.HarpoonerProd.itemName -> EntityRegistrar.HARPOONER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.FlakSwivelProd.itemName -> EntityRegistrar.FLAK_SWIVEL_UNIT.get();

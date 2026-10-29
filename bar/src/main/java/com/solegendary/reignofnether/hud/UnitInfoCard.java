@@ -91,6 +91,8 @@ public final class UnitInfoCard {
         Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),
         Map.entry("TidePriestUnit", Role.SUPPORT), Map.entry("CutlassRaiderUnit", Role.RAIDER),
         Map.entry("GullSpotterUnit", Role.RAIDER),
+        // every faction's T1 siege lobber (design/siege_t1.md)
+        Map.entry("SiegeLobberUnit", Role.ARTILLERY),
         // slice 2: the Harpooner and the Flak Swivel are ranged skirmishers (the pull and the anti-air bonus are on the
         // damage line), the Mudskipper Sloop a raider
         Map.entry("HarpoonerUnit", Role.SKIRMISHER), Map.entry("FlakSwivelUnit", Role.SKIRMISHER),
