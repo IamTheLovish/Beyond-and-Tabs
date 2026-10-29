@@ -10,7 +10,8 @@ eyes-lines.txt), e.g.
     python3 tools/eyes_judge.py es-shaders --sheet-dir sheets --save round-12.json
     python3 tools/eyes_judge.py plain=es-plain shaders=es-shaders --against round-12.json
 
-1. PROOF GATE, per RTS still (`bat_eyes_<step>_<name>_rts.png` and `_rts_close.png`). EyesDirector.logAim writes, per
+1. PROOF GATE, per RTS still (`bat_eyes_<step>_<name>_rts.png` and `_rts_close.png`) and per structure close-up
+   (`bat_eyes_15_<name>_close.png`, first person among the plants: crop CLOSE_CROP, no star count). EyesDirector.logAim writes, per
    still, three lines into eyes-lines.txt:
        [Eyes] 15_meadow_sampler_rts: aimed at -271, 76, 41 - the camera at -276, 91, 46 looks at -271, 41 (28 frames ...)
        [Eyes] 15_meadow_sampler_rts: the structure's box holds 3648 non-air blocks on the client
@@ -54,13 +55,18 @@ CROPS = {                       # per still, by short name (the key without its 
     # shadow in its corner and swamps the tufts' dark share: re-measure old rounds with --crop to compare.
     "meadow_sampler_rts": (1000, 250, 1415, 383),
 }
+# 15_<name>_close stands 5 blocks from the footprint's middle, looking slightly down: the ground in front of the feet is
+# the lower middle of the 1600x900 still (the RTS default crop is the horizon there)
+CLOSE_CROP = (500, 520, 1100, 820)
 METRICS = ("hue", "sat", "luma", "dark_share", "stars")      # the compared metrics (luma01 is luma / 255)
 SHEET_MAX_W = 2500
 THUMB_W = 800
 PAD = 12
 
-STILL_RE = re.compile(r"^bat_eyes_(?P<key>.+_rts(?:_close)?)\.png$")
-KEY_RE = re.compile(r".+_rts(?:_close)?$")
+# the RTS stills, and the structure photos' first-person close still (`15_<name>_close`, #332): it logs the same proof
+# lines. The tour's own close-ups (07_army_close, 07b_paladin_close ...) log none and are not structure photos.
+STILL_RE = re.compile(r"^bat_eyes_(?P<key>.+_rts(?:_close)?|15[a-z]?_.+_close)\.png$")
+KEY_RE = re.compile(r"^(?:.+_rts(?:_close)?|15[a-z]?_.+_close)$")
 FIRST_PERSON_RE = re.compile(r"^bat_eyes_\d+[a-z]?_.+_(?:34|dusk)\.png$")     # the structure photos that log no proof
 STEP_RE = re.compile(r"^\d+[a-z]?_")
 _N = r"-?\d+"
@@ -77,6 +83,11 @@ def still_key(filename):
     """`bat_eyes_15_meadow_sampler_rts.png` -> `15_meadow_sampler_rts`; None for anything that is not an RTS still."""
     m = STILL_RE.match(os.path.basename(filename))
     return m.group("key") if m else None
+
+
+def is_first_person_close(key):
+    """`15_meadow_sampler_close` (the structure photos' first-person close-up), not `..._rts_close`."""
+    return key.endswith("_close") and not key.endswith("_rts_close")
 
 
 def short_name(key):
@@ -222,6 +233,8 @@ def crop_for(key, overrides):
         return bare[-1], "flag"
     if short_name(key) in CROPS:
         return CROPS[short_name(key)], "table"
+    if is_first_person_close(key):
+        return CLOSE_CROP, "close"
     return DEFAULT_CROP, "default"
 
 
@@ -294,6 +307,10 @@ def judge_lane(lane_dir, label, crops, min_share=MIN_CLIENT_SHARE, aim_tol=AIM_T
         if not problems and image is not None:
             try:
                 metrics = {k: round(v, 5) for k, v in measure(image, box).items()}
+                if is_first_person_close(key):
+                    # a star is a tuft's shadow at the RTS zoom (STAR_MIN..STAR_MAX px); 5 blocks away the same
+                    # tuft is many times bigger, so the count would mean nothing: no number rather than a wrong one
+                    metrics["stars"] = None
             except ValueError as e:
                 raise ValueError(f"{label}/{key}: {e}") from None
         lane["stills"][key] = {
@@ -368,7 +385,7 @@ def _font(size):
 def _numbers(st):
     m = st["metrics"]
     return (f"hue {m['hue']:.0f} deg   sat {m['sat']:.0f}   luma {m['luma']:.0f} ({m['luma01']:.2f})   "
-            f"dark share {m['dark_share']:.3f}   stars {m['stars']}")
+            f"dark share {m['dark_share']:.3f}   stars {'-' if m['stars'] is None else m['stars']}")
 
 
 def build_sheet(lane_dir, label, lane, max_width=SHEET_MAX_W):

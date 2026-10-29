@@ -285,7 +285,9 @@ class Crops(unittest.TestCase):
         box, source = ej.crop_for("15_meadow_sampler_close", [])
         self.assertEqual(box, ej.CLOSE_CROP)
         self.assertEqual(source, "close")
-        self.assertGreater(box[1], 1080 // 2)          # below the middle of a 1920x1080 still
+        self.assertGreater(box[1], 900 // 2)           # below the middle of the 1600x900 eyes still ...
+        self.assertLessEqual(box[2], 1600)             # ... and inside it (r34 stills are 1600x900)
+        self.assertLessEqual(box[3], 900)
         self.assertNotEqual(ej.crop_for("15_meadow_sampler_rts_close", [])[0], ej.CLOSE_CROP)
         # a flag still wins
         self.assertEqual(ej.crop_for("15_meadow_sampler_close", [(None, (1, 2, 3, 4))])[0], (1, 2, 3, 4))
