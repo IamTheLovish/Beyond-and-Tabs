@@ -178,7 +178,7 @@ public final class VfxClient {
         if (def == null || def.isProjectile() || MC.level == null) return;
         if (!BarFxClient.near(x, y, z, def.cullRadius * scale + 16)) return;
         if (!brightAt(x, y, z)) return;
-        if (live.size() >= MAX_INSTANCES) live.remove(0);   // the oldest makes room: a new cast matters more
+        if (live.size() >= MAX_INSTANCES) live.remove(evictionVictim());   // a new cast matters more
         Inst in = new Inst();
         in.def = def;
         in.x = x; in.y = y; in.z = z;
@@ -189,6 +189,21 @@ public final class VfxClient {
         in.burst = new boolean[def.layers.size()];
         sampleGround(in);
         live.add(in);
+    }
+
+    /**
+     * The effect that makes room when the cap is hit: the one closest to finishing (least time left), so a long
+     * standing effect such as the sun pillar is not the one dropped (review round 1, Oct 28). Ties go to the oldest.
+     */
+    static int evictionVictim() {
+        int best = 0;
+        float bestLeft = Float.MAX_VALUE;
+        for (int i = 0; i < live.size(); i++) {
+            Inst in = live.get(i);
+            float left = in.def.timeline.total() - (vclock - in.born);
+            if (left < bestLeft) { bestLeft = left; best = i; }
+        }
+        return best;
     }
 
     static boolean brightAt(float x, float y, float z) {
@@ -760,12 +775,18 @@ public final class VfxClient {
         }
     }
 
+    static final int MAX_SHAFT_SEGMENTS = 64;
+
     /** One axis-billboard shaft from y0 up h, its texture scrolling up, fading out toward the top. */
     static void shaft(float x, float z, float y0, float h, float r, float sx, float sz, float rep, float off, int c, float a) {
         int tile = VfxAtlas.BEAM;
         float u0 = VfxAtlas.u0(tile), u1 = VfxAtlas.u1(tile);
         // segments aligned to texture repeats, so v never wraps inside a quad (the atlas cannot REPEAT one tile)
         float yStart = y0 - off * rep;
+        // defence in depth (review round 1, Oct 28): never more than MAX_SHAFT_SEGMENTS quads, whatever h or rep is;
+        // a taller shaft gets longer repeats instead of more quads
+        if (Float.isNaN(h) || Float.isInfinite(h) || !(rep > 0)) return;
+        rep = Math.max(rep, h / MAX_SHAFT_SEGMENTS);
         for (float ys = yStart; ys < y0 + h; ys += rep) {
             float a0 = Math.max(ys, y0), a1 = Math.min(ys + rep, y0 + h);
             if (a1 <= a0) continue;

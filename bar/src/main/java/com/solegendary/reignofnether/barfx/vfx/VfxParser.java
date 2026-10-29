@@ -18,6 +18,9 @@ import java.util.Locale;
 public final class VfxParser {
     private VfxParser() { }
 
+    /** The tallest beam a def may ask for, in blocks: the 1.20.1 build height range (review round 1, Oct 28). */
+    public static final float MAX_BEAM_HEIGHT = 384f;
+
     public static VfxDef parse(String id, String json, List<String> errors) {
         JsonElement root;
         try {
@@ -133,6 +136,12 @@ public final class VfxParser {
                 known(o, where, errors, COMMON, "radius", "height", "scroll", "core", "core_color", "helix", "bands");
                 b.radius = pos(o, "radius", b.radius, where, errors);
                 b.height = pos(o, "height", b.height, where, errors);
+                // review round 1, Oct 28: height had no upper bound, so a typo (4800000) made the client loop for
+                // millions of segments per frame. The build height range is the longest shaft that can be seen.
+                if (b.height > MAX_BEAM_HEIGHT) {
+                    errors.add(where + ".height: " + b.height + " is taller than the world, clamped to " + (int) MAX_BEAM_HEIGHT);
+                    b.height = MAX_BEAM_HEIGHT;
+                }
                 b.scroll = f(o, "scroll", b.scroll, where, errors);
                 b.core = clamp01(f(o, "core", b.core, where, errors));
                 b.coreColor = color(o, "core_color", 0xFFFFFF, where, errors);
@@ -253,7 +262,15 @@ public final class VfxParser {
     static VfxDef.Projectile projectile(JsonObject o, String where, List<String> errors) {
         VfxDef.Projectile p = new VfxDef.Projectile();
         if (o.has("entities") && o.get("entities").isJsonArray())
-            for (JsonElement e : o.getAsJsonArray("entities")) p.entities.add(e.getAsString());
+            for (JsonElement e : o.getAsJsonArray("entities")) {
+                // review round 1, Oct 28: one bad element (a number is fine, an object or null throws) used to abort
+                // the whole file and, through the caller, every later projectile file; now it skips just itself.
+                try {
+                    p.entities.add(e.getAsString());
+                } catch (RuntimeException ex) {
+                    errors.add(where + ".entities: skipped an element that is not a string (" + e + ")");
+                }
+            }
         if (p.entities.isEmpty())
             errors.add(where + ": a projectile visual needs \"entities\": [\"namespace:entity_type\", ...]");
         p.hideModel = bool(o, "hide_model", true);

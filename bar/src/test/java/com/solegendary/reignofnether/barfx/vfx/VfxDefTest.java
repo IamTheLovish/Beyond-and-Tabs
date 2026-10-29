@@ -148,6 +148,21 @@ class VfxDefTest {
     }
 
     @Test
+    void beamHeightIsClampedAndABadEntityOnlySkipsItself() {
+        List<String> errors = new ArrayList<>();
+        VfxDef d = VfxParser.parse("tall", "{ \"layers\": [ { \"type\": \"beam\", \"height\": 4800000 } ] }", errors);
+        assertNotNull(d);
+        assertEquals(VfxParser.MAX_BEAM_HEIGHT, ((VfxDef.Beam) d.layers.get(0)).height);
+        assertTrue(String.join("\n", errors).contains("clamped"), errors.toString());
+
+        errors.clear();
+        VfxDef p = VfxParser.parse("proj", "{ \"type\": \"projectile\", \"entities\": [ {\"a\":1}, \"minecraft:arrow\" ] }", errors);
+        assertNotNull(p);
+        assertEquals(List.of("minecraft:arrow"), p.projectile.entities);
+        assertFalse(errors.isEmpty());
+    }
+
+    @Test
     void phaseNamesAndDefaultsResolve() {
         List<String> errors = new ArrayList<>();
         VfxDef d = VfxParser.parse("phases", """
