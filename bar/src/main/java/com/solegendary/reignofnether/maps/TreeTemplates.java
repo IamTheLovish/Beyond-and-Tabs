@@ -75,10 +75,44 @@ public final class TreeTemplates {
                 pos.add(new int[] { p.getInt(0), p.getInt(1), p.getInt(2) });
                 states.add(s);
             }
-            return new Template(size.getInt(0), size.getInt(2), pos, states);
+            // the trunk is the pivot: the ground-layer log nearest the centre, else the blocks' own centre. Every
+            // position is shifted so the pivot sits at (sizeX / 2, sizeZ / 2), where TreeScatter.offset turns it
+            // (review, Oct 29: the bushes' stems stand at (4, 7) of 9 x 9 and the boulders at z 5-8 - turned about
+            // the tile centre they landed 3 blocks off the column the planner cleared and measured)
+            int sx = size.getInt(0), sz = size.getInt(2);
+            int[] pivot = pivot(pos, states, sx, sz);
+            for (int[] p : pos) {
+                p[0] += sx / 2 - pivot[0];
+                p[2] += sz / 2 - pivot[1];
+            }
+            return new Template(sx, sz, pos, states);
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** {x, z} of the trunk: the ground-layer (y 0) log nearest the template's centre, else the blocks' bounding-box centre. */
+    static int[] pivot(List<int[]> pos, List<BlockState> states, int sx, int sz) {
+        int[] best = null;
+        double bd = Double.MAX_VALUE;
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        for (int i = 0; i < pos.size(); i++) {
+            int[] p = pos.get(i);
+            minX = Math.min(minX, p[0]);
+            maxX = Math.max(maxX, p[0]);
+            minZ = Math.min(minZ, p[2]);
+            maxZ = Math.max(maxZ, p[2]);
+            if (p[1] == 0 && states.get(i).is(BlockTags.LOGS)) {
+                double d = Math.hypot(p[0] - sx / 2.0, p[2] - sz / 2.0);
+                if (d < bd) {
+                    bd = d;
+                    best = new int[] { p[0], p[2] };
+                }
+            }
+        }
+        if (best != null)
+            return best;
+        return pos.isEmpty() ? new int[] { sx / 2, sz / 2 } : new int[] { (minX + maxX) / 2, (minZ + maxZ) / 2 };
     }
 
     /**
