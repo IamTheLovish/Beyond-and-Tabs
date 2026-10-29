@@ -518,3 +518,8 @@ Faction fit: Gravebound / the dark-fantasy accent.
   brackets over pale plaster and a stone ground floor; a lower wing stepping down with its own roof; balconies,
   plants and barrels at the base. Lesson: one dominant roof mass (~half the building's height) with many
   sub-roofs breaking it - from the RTS camera the roof IS the building.
+- ref70 (lovish, Oct 28 23:01): slender brick towers with verdigris-copper onion domes, sunset shaders, haze,
+  custom tall pines and rock spires. Lessons: (1) a copper dome/spire carries a PATTERN - vertical ribs plus a
+  diamond lattice in 2 patina tones - never a flat fill; (2) an open colonnade drum (a ring of small arches) under
+  each dome makes the cap float on shadow; (3) atmospheric depth: towers further away go paler and warmer in the
+  haze. Second vote (with ref62) for weathered copper as Brassworks' signature roof material on towers and spires.
