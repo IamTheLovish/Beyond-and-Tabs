@@ -2,9 +2,13 @@ package com.solegendary.reignofnether.unit.modelling.motion;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.barfx.BarFx;
+import com.solegendary.reignofnether.barfx.BarFxClient;
+import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
@@ -20,15 +24,18 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 /**
  * The bodies of the fallen, held by the client (the death-pose contract, {@link DeathFall}): the server removes a dead
  * unit 20 ticks into its death, as vanilla does; a unit whose fall was drawn ({@link AnimState#DEATH_DRAWN} - so only
- * one the camera saw die) is kept here when the client removes it, lies where it fell until
- * {@link DeathFall#HOLD_END} and sinks into the ground by {@link DeathFall#END}. Render only: the body is out of the
- * level, so nothing can select, target, count or collide with it, and no packet or server state is involved.
+ * one the camera saw die) is kept here when the client removes it and lies where it fell until its faction's finish
+ * ({@link DeathFinish}: light, crumbling, leaves, seawater...) takes it away - by default it sinks into the ground over
+ * {@link DeathFall#HOLD_END}..{@link DeathFall#END}. Render only: the body is out of the level, so nothing can select,
+ * target, count or collide with it, and no packet or server state is involved.
  *
  * Drawn through the entity dispatcher after the level's entities (its own renderer, layers, fog of war and light);
- * the health bar and the HUD skip it ({@link #drawing}). At most {@link #MAX} at once - the oldest goes first - and
- * none past {@link #MAX_DIST} or outside the view. Its clock is its deathTime, advanced here once a tick, so the
- * fall's last ticks play on if the removal came before they did. No allocation per frame or tick. An error switches
- * the hold off for the session with one WARN line; deaths then end as vanilla's do.
+ * the health bar and the HUD skip it ({@link #drawing}). Over its finish the body is moved, squashed, shrunk, faded
+ * ({@link #alpha}: mixin/LivingEntityRendererMixin draws it translucent then) or drawn full-bright, and one burst of the
+ * faction's particles goes up as the finish starts (BarFxClient.deathFinish, fewer zoomed out, none at the strategic
+ * zoom). At most {@link #MAX} at once - the oldest goes first - and none past {@link #MAX_DIST} or outside the view.
+ * Its clock is its deathTime, advanced here once a tick. No allocation per frame or tick. An error switches the hold off
+ * for the session with one WARN line; deaths then end as vanilla's do.
  */
 @OnlyIn(Dist.CLIENT)
 public final class Corpses {
@@ -39,14 +46,21 @@ public final class Corpses {
     private static final double MAX_DIST = 160;
 
     private static final LivingEntity[] HELD = new LivingEntity[MAX];
+    private static final DeathFinish.Style[] FINISH = new DeathFinish.Style[MAX];
     private static int count = 0;
     private static boolean drawing = false;
+    private static float alpha = 1f;
     private static boolean disabled = false;
     private static ClientLevel lastLevel = null;
 
     /** True while a held body is being drawn: the health bar and the HUD's per-unit hooks leave it alone. */
     public static boolean drawing() {
         return drawing;
+    }
+
+    /** The opacity of the held body being drawn (1 outside a held body's draw): under 1, it is drawn translucent. */
+    public static float alpha() {
+        return drawing ? alpha : 1f;
     }
 
     public static int count() {
@@ -84,17 +98,22 @@ public final class Corpses {
         le.swinging = false;
         le.attackAnim = le.oAttackAnim = 0f;
         le.hurtTime = 0;
+        FINISH[count] = DeathFinish.of(BarFx.factionOf(le));
         HELD[count++] = le;
     }
 
     private static void drop(int i) {
         System.arraycopy(HELD, i + 1, HELD, i, count - i - 1);
+        System.arraycopy(FINISH, i + 1, FINISH, i, count - i - 1);
         HELD[--count] = null;
+        FINISH[count] = null;
     }
 
     private static void clear() {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count; i++) {
             HELD[i] = null;
+            FINISH[i] = null;
+        }
         count = 0;
     }
 
@@ -109,13 +128,28 @@ public final class Corpses {
         }
         if (level == null || Minecraft.getInstance().isPaused())
             return;
+        boolean ortho = OrthoviewClientEvents.isEnabled();
+        float zoom = ortho ? OrthoviewClientEvents.getZoom() : 0f;
         for (int i = count - 1; i >= 0; i--) {
             LivingEntity le = HELD[i];
+            DeathFinish.Style f = FINISH[i];
             le.deathTime++;
-            if (le.deathTime >= DeathFall.END)
+            if (le.deathTime == f.start())
+                burst(le, f, DeathFinish.particles(f, zoom, ortho));
+            if (le.deathTime >= f.end())
                 drop(i);
             else
                 AnimStates.touch(le.getId());
+        }
+    }
+
+    private static void burst(LivingEntity le, DeathFinish.Style f, int n) {
+        try {
+            // lying down, the body is about as tall as it is wide: the burst comes off its middle
+            BarFxClient.deathFinish(f.style(), (float) le.getX(), (float) le.getY(), (float) le.getZ(), le.getBbWidth(),
+                le.getBbWidth() * 0.6f, f.color(), f.color2(), n);
+        } catch (RuntimeException e) {
+            ReignOfNether.LOGGER.warn("[Corpses] a death finish's burst failed: {}", String.valueOf(e));
         }
     }
 
@@ -137,13 +171,23 @@ public final class Corpses {
         try {
             for (int i = 0; i < count; i++) {
                 LivingEntity le = HELD[i];
+                DeathFinish.Style f = FINISH[i];
                 double dx = le.getX() - cam.x, dy = le.getY() - cam.y, dz = le.getZ() - cam.z;
                 if (dx * dx + dy * dy + dz * dz > MAX_DIST * MAX_DIST
                     || (frustum != null && !frustum.isVisible(le.getBoundingBoxForCulling())))
                     continue;
-                double sink = DeathFall.sinkBlocks(le.deathTime + partial);
-                dispatcher.render(le, dx, dy - sink, dz, le.getYRot(), partial, pose, buffers,
-                    dispatcher.getPackedLightCoords(le, partial));
+                float t = le.deathTime + partial;
+                float k = DeathFinish.scale(f, t);
+                alpha = DeathFinish.alpha(f, t);
+                if (k <= 0.01f || alpha <= 0.01f)
+                    continue;
+                float u = DeathFinish.progress(f, t);
+                int light = f.glow() && u > 0f ? LightTexture.FULL_BRIGHT : dispatcher.getPackedLightCoords(le, partial);
+                pose.pushPose();
+                pose.translate(dx, dy + DeathFinish.lift(f, t), dz);
+                pose.scale(k, k * DeathFinish.heightScale(f, t), k);
+                dispatcher.render(le, 0.0, 0.0, 0.0, le.getYRot(), partial, pose, buffers, light);
+                pose.popPose();
                 drew = true;
             }
             if (drew)
@@ -154,6 +198,7 @@ public final class Corpses {
             ReignOfNether.LOGGER.warn("[Corpses] disabled for the session: {}", String.valueOf(e));
         } finally {
             drawing = false;
+            alpha = 1f;
         }
     }
 }
