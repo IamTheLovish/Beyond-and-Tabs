@@ -558,104 +558,104 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry PIONEER = ResourceCostConfigEntry.Unit(150,54,44,32,2, ResourceCosts.PIONEER, "Pioneer Config");
     }
     public static class BuildingCosts implements Costs {
-        public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, 0, ResourceCosts.BEACON, "Beacon Config");
+        public static final ResourceCostConfigEntry BEACON = ResourceCostConfigEntry.Building(0,500,500, ResourceCosts.BEACON, "Beacon Config");
 
-        public static final ResourceCostConfigEntry STOCKPILE = ResourceCostConfigEntry.Building(0,75,0, 0, ResourceCosts.STOCKPILE, "Stockpile Config");
+        public static final ResourceCostConfigEntry STOCKPILE = ResourceCostConfigEntry.Building(0,75,0, ResourceCosts.STOCKPILE, "Stockpile Config");
         // BAR economy: energy (wood slot) and metal (ore slot)
-        public static final ResourceCostConfigEntry METAL_EXTRACTOR = ResourceCostConfigEntry.Building(0,60,50, 0, ResourceCosts.METAL_EXTRACTOR, "Metal Extractor Config");
-        public static final ResourceCostConfigEntry WIND_GENERATOR = ResourceCostConfigEntry.Building(0,20,45, 0, ResourceCosts.WIND_GENERATOR, "Wind Generator Config");
-        public static final ResourceCostConfigEntry ENERGY_CONVERTER = ResourceCostConfigEntry.Building(0,200,15, 0, ResourceCosts.ENERGY_CONVERTER, "Energy Converter Config");
+        public static final ResourceCostConfigEntry METAL_EXTRACTOR = ResourceCostConfigEntry.Building(0,60,50, ResourceCosts.METAL_EXTRACTOR, "Metal Extractor Config");
+        public static final ResourceCostConfigEntry WIND_GENERATOR = ResourceCostConfigEntry.Building(0,20,45, ResourceCosts.WIND_GENERATOR, "Wind Generator Config");
+        public static final ResourceCostConfigEntry ENERGY_CONVERTER = ResourceCostConfigEntry.Building(0,200,15, ResourceCosts.ENERGY_CONVERTER, "Energy Converter Config");
         // BAR storage is cheap: 60 metal / 120 energy for +2000 metal / +3000 energy storage
-        public static final ResourceCostConfigEntry STORAGE_VAULT = ResourceCostConfigEntry.Building(0,120,60, 0, ResourceCosts.STORAGE_VAULT, "Storage Vault Config");
-        public static final ResourceCostConfigEntry OAK_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, 0, ResourceCosts.OAK_BRIDGE, "Oak Bridge Config");
-        public static final ResourceCostConfigEntry SPRUCE_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, 0, ResourceCosts.SPRUCE_BRIDGE, "Spruce Bridge Config");
-        public static final ResourceCostConfigEntry BLACKSTONE_BRIDGE = ResourceCostConfigEntry.Building(0,0,100, 0, ResourceCosts.BLACKSTONE_BRIDGE, "Blackstone Bridge Config");
+        public static final ResourceCostConfigEntry STORAGE_VAULT = ResourceCostConfigEntry.Building(0,120,60, ResourceCosts.STORAGE_VAULT, "Storage Vault Config");
+        public static final ResourceCostConfigEntry OAK_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, ResourceCosts.OAK_BRIDGE, "Oak Bridge Config");
+        public static final ResourceCostConfigEntry SPRUCE_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, ResourceCosts.SPRUCE_BRIDGE, "Spruce Bridge Config");
+        public static final ResourceCostConfigEntry BLACKSTONE_BRIDGE = ResourceCostConfigEntry.Building(0,0,100, ResourceCosts.BLACKSTONE_BRIDGE, "Blackstone Bridge Config");
 
         // Monsters
-        public static final ResourceCostConfigEntry MAUSOLEUM = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.MAUSOLEUM, "Mausoleum Config");
-        public static final ResourceCostConfigEntry HAUNTED_HOUSE = ResourceCostConfigEntry.Building(0,100,0, 10, ResourceCosts.HAUNTED_HOUSE, "Haunted House Config");
-        public static final ResourceCostConfigEntry PUMPKIN_FARM = ResourceCostConfigEntry.Building(0,175,0, 0, ResourceCosts.PUMPKIN_FARM, "Pumpkin Farm Config");
-        public static final ResourceCostConfigEntry SCULK_CATALYST = ResourceCostConfigEntry.Building(0,125,0, 12, ResourceCosts.SCULK_CATALYST, "Sculk Catalyst Config");
-        public static final ResourceCostConfigEntry GRAVEYARD = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.GRAVEYARD, "Graveyard Config");
-        public static final ResourceCostConfigEntry SPIDER_LAIR = ResourceCostConfigEntry.Building(0,150,75, 0, ResourceCosts.SPIDER_LAIR, "Spider Lair Config");
-        public static final ResourceCostConfigEntry DUNGEON = ResourceCostConfigEntry.Building(0,150,75, 0, ResourceCosts.DUNGEON, "Dungeon Config");
-        public static final ResourceCostConfigEntry LABORATORY = ResourceCostConfigEntry.Building(0,250,150, 0, ResourceCosts.LABORATORY, "Laboratory Config");
-        public static final ResourceCostConfigEntry DARK_WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, 0, ResourceCosts.DARK_WATCHTOWER, "Dark Watchtower Config");
-        public static final ResourceCostConfigEntry SLIME_PIT = ResourceCostConfigEntry.Building(0,175, 125, 0, ResourceCosts.SLIME_PIT, "Slime Pit Config");
-        public static final ResourceCostConfigEntry STRONGHOLD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.STRONGHOLD, "Stronghold Config");
-        public static final ResourceCostConfigEntry ALTAR_OF_DARKNESS = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.ALTAR_OF_DARKNESS, "Altar of Darkness Config");
-        public static final ResourceCostConfigEntry MONSTER_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.MONSTER_MARKET, "Monster Market Config");
+        public static final ResourceCostConfigEntry MAUSOLEUM = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.MAUSOLEUM, "Mausoleum Config");
+        public static final ResourceCostConfigEntry HAUNTED_HOUSE = ResourceCostConfigEntry.Building(0,100,0, ResourceCosts.HAUNTED_HOUSE, "Haunted House Config");
+        public static final ResourceCostConfigEntry PUMPKIN_FARM = ResourceCostConfigEntry.Building(0,175,0, ResourceCosts.PUMPKIN_FARM, "Pumpkin Farm Config");
+        public static final ResourceCostConfigEntry SCULK_CATALYST = ResourceCostConfigEntry.Building(0,125,0, ResourceCosts.SCULK_CATALYST, "Sculk Catalyst Config");
+        public static final ResourceCostConfigEntry GRAVEYARD = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.GRAVEYARD, "Graveyard Config");
+        public static final ResourceCostConfigEntry SPIDER_LAIR = ResourceCostConfigEntry.Building(0,150,75, ResourceCosts.SPIDER_LAIR, "Spider Lair Config");
+        public static final ResourceCostConfigEntry DUNGEON = ResourceCostConfigEntry.Building(0,150,75, ResourceCosts.DUNGEON, "Dungeon Config");
+        public static final ResourceCostConfigEntry LABORATORY = ResourceCostConfigEntry.Building(0,250,150, ResourceCosts.LABORATORY, "Laboratory Config");
+        public static final ResourceCostConfigEntry DARK_WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, ResourceCosts.DARK_WATCHTOWER, "Dark Watchtower Config");
+        public static final ResourceCostConfigEntry SLIME_PIT = ResourceCostConfigEntry.Building(0,175, 125, ResourceCosts.SLIME_PIT, "Slime Pit Config");
+        public static final ResourceCostConfigEntry STRONGHOLD = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.STRONGHOLD, "Stronghold Config");
+        public static final ResourceCostConfigEntry ALTAR_OF_DARKNESS = ResourceCostConfigEntry.Building(0,125,50, ResourceCosts.ALTAR_OF_DARKNESS, "Altar of Darkness Config");
+        public static final ResourceCostConfigEntry MONSTER_MARKET = ResourceCostConfigEntry.Building(0,75,75, ResourceCosts.MONSTER_MARKET, "Monster Market Config");
 
         // VillagersFaction
-        public static final ResourceCostConfigEntry TOWN_CENTRE = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.TOWN_CENTRE, "Town Centre Config");
-        public static final ResourceCostConfigEntry HEARTWOOD_HALL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.HEARTWOOD_HALL, "Heartwood Hall Config");
-        public static final ResourceCostConfigEntry GROVE = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.GROVE, "Grove Config");
-        public static final ResourceCostConfigEntry WRECK_HARBOUR = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.WRECK_HARBOUR, "Wreck Harbour Config");
-        public static final ResourceCostConfigEntry SLIPWAY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.SLIPWAY, "Slipway Config");
+        public static final ResourceCostConfigEntry TOWN_CENTRE = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.TOWN_CENTRE, "Town Centre Config");
+        public static final ResourceCostConfigEntry HEARTWOOD_HALL = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.HEARTWOOD_HALL, "Heartwood Hall Config");
+        public static final ResourceCostConfigEntry GROVE = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.GROVE, "Grove Config");
+        public static final ResourceCostConfigEntry WRECK_HARBOUR = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.WRECK_HARBOUR, "Wreck Harbour Config");
+        public static final ResourceCostConfigEntry SLIPWAY = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.SLIPWAY, "Slipway Config");
         // the Drydock is the T2 lab price (Arcane Tower, Circle of Elders); the Lighthouse Battery a scout-and-picket
         // tower with a third of the Storm Oak's damage (6 / 2 s at 20) but 40 sight and a cloak-breaking beam
-        public static final ResourceCostConfigEntry DRYDOCK = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.DRYDOCK, "Drydock Config");
-        public static final ResourceCostConfigEntry LIGHTHOUSE_BATTERY = ResourceCostConfigEntry.Building(0,160,200, 0, ResourceCosts.LIGHTHOUSE_BATTERY, "Lighthouse Battery Config");
-        public static final ResourceCostConfigEntry ABYSSAL_SHIPYARD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.ABYSSAL_SHIPYARD, "Abyssal Shipyard Config");
+        public static final ResourceCostConfigEntry DRYDOCK = ResourceCostConfigEntry.Building(0,150,200, ResourceCosts.DRYDOCK, "Drydock Config");
+        public static final ResourceCostConfigEntry LIGHTHOUSE_BATTERY = ResourceCostConfigEntry.Building(0,160,200, ResourceCosts.LIGHTHOUSE_BATTERY, "Lighthouse Battery Config");
+        public static final ResourceCostConfigEntry ABYSSAL_SHIPYARD = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.ABYSSAL_SHIPYARD, "Abyssal Shipyard Config");
         // Stormcallers: the capitol and the T1 lab at the other factions' prices
-        public static final ResourceCostConfigEntry JADE_PAGODA = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.JADE_PAGODA, "Jade Pagoda Config");
-        public static final ResourceCostConfigEntry LOTUS_ACADEMY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.LOTUS_ACADEMY, "Lotus Academy Config");
+        public static final ResourceCostConfigEntry JADE_PAGODA = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.JADE_PAGODA, "Jade Pagoda Config");
+        public static final ResourceCostConfigEntry LOTUS_ACADEMY = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.LOTUS_ACADEMY, "Lotus Academy Config");
         // the Celestial Observatory is the T2 lab price (Arcane Tower, Circle of Elders, Drydock)
-        public static final ResourceCostConfigEntry CELESTIAL_OBSERVATORY = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CELESTIAL_OBSERVATORY, "Celestial Observatory Config");
+        public static final ResourceCostConfigEntry CELESTIAL_OBSERVATORY = ResourceCostConfigEntry.Building(0,150,200, ResourceCosts.CELESTIAL_OBSERVATORY, "Celestial Observatory Config");
         // Heaven's Gate is the T3 lab price (Heart of the Wild, Abyssal Shipyard)
-        public static final ResourceCostConfigEntry HEAVENS_GATE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEAVENS_GATE, "Heaven's Gate Config");
+        public static final ResourceCostConfigEntry HEAVENS_GATE = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.HEAVENS_GATE, "Heaven's Gate Config");
         // Brassworks: the capitol and the T1 lab at the other factions' prices
-        public static final ResourceCostConfigEntry FOUNDRY_HALL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.FOUNDRY_HALL, "Foundry Hall Config");
-        public static final ResourceCostConfigEntry MACHINE_SHOP = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.MACHINE_SHOP, "Machine Shop Config");
-        public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
-        public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
-        public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");
-        public static final ResourceCostConfigEntry BLACKSMITH = ResourceCostConfigEntry.Building(0,100,300, 0, ResourceCosts.BLACKSMITH, "Blacksmith Config");
-        public static final ResourceCostConfigEntry WITCH_HUT = ResourceCostConfigEntry.Building(0,200,50, 0, ResourceCosts.WITCH_HUT, "Witch Hut Config");
-        public static final ResourceCostConfigEntry ARCANE_TOWER = ResourceCostConfigEntry.Building(0,100,200, 0, ResourceCosts.ARCANE_TOWER, "Arcane Tower Config");
-        public static final ResourceCostConfigEntry CIRCLE_OF_ELDERS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CIRCLE_OF_ELDERS, "Circle of Elders Config");
-        public static final ResourceCostConfigEntry LIBRARY = ResourceCostConfigEntry.Building(0,300,100, 0, ResourceCosts.LIBRARY, "Library Config");
-        public static final ResourceCostConfigEntry WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, 0, ResourceCosts.WATCHTOWER, "Watchtower Config");
-        public static final ResourceCostConfigEntry CASTLE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.CASTLE, "Castle Config");
-        public static final ResourceCostConfigEntry HEART_OF_THE_WILD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEART_OF_THE_WILD, "Heart of the Wild Config");
+        public static final ResourceCostConfigEntry FOUNDRY_HALL = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.FOUNDRY_HALL, "Foundry Hall Config");
+        public static final ResourceCostConfigEntry MACHINE_SHOP = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.MACHINE_SHOP, "Machine Shop Config");
+        public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
+        public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
+        public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, ResourceCosts.BARRACKS, "Barracks Config");
+        public static final ResourceCostConfigEntry BLACKSMITH = ResourceCostConfigEntry.Building(0,100,300, ResourceCosts.BLACKSMITH, "Blacksmith Config");
+        public static final ResourceCostConfigEntry WITCH_HUT = ResourceCostConfigEntry.Building(0,200,50, ResourceCosts.WITCH_HUT, "Witch Hut Config");
+        public static final ResourceCostConfigEntry ARCANE_TOWER = ResourceCostConfigEntry.Building(0,100,200, ResourceCosts.ARCANE_TOWER, "Arcane Tower Config");
+        public static final ResourceCostConfigEntry CIRCLE_OF_ELDERS = ResourceCostConfigEntry.Building(0,150,200, ResourceCosts.CIRCLE_OF_ELDERS, "Circle of Elders Config");
+        public static final ResourceCostConfigEntry LIBRARY = ResourceCostConfigEntry.Building(0,300,100, ResourceCosts.LIBRARY, "Library Config");
+        public static final ResourceCostConfigEntry WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, ResourceCosts.WATCHTOWER, "Watchtower Config");
+        public static final ResourceCostConfigEntry CASTLE = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.CASTLE, "Castle Config");
+        public static final ResourceCostConfigEntry HEART_OF_THE_WILD = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.HEART_OF_THE_WILD, "Heart of the Wild Config");
         // T2 static defence: a Watchtower (100/75) needs three garrisoned units to fight; the Storm Oak fights alone
         // (25 dmg / 6 s at range 22, about one archer's damage, but it never misses) - priced like a small T2 army
-        public static final ResourceCostConfigEntry STORM_OAK = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.STORM_OAK, "Storm Oak Config");
-        public static final ResourceCostConfigEntry IRON_GOLEM_BUILDING = ResourceCostConfigEntry.Building(0,50,250, 0, ResourceCosts.IRON_GOLEM_BUILDING, "Iron Golem Building Config");
-        public static final ResourceCostConfigEntry SHRINE_OF_PROSPERITY = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.SHRINE_OF_PROSPERITY, "Shrine of Prosperity Config");
-        public static final ResourceCostConfigEntry VILLAGER_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.VILLAGER_MARKET, "Villager Market Config");
+        public static final ResourceCostConfigEntry STORM_OAK = ResourceCostConfigEntry.Building(0,180,260, ResourceCosts.STORM_OAK, "Storm Oak Config");
+        public static final ResourceCostConfigEntry IRON_GOLEM_BUILDING = ResourceCostConfigEntry.Building(0,50,250, ResourceCosts.IRON_GOLEM_BUILDING, "Iron Golem Building Config");
+        public static final ResourceCostConfigEntry SHRINE_OF_PROSPERITY = ResourceCostConfigEntry.Building(0,125,50, ResourceCosts.SHRINE_OF_PROSPERITY, "Shrine of Prosperity Config");
+        public static final ResourceCostConfigEntry VILLAGER_MARKET = ResourceCostConfigEntry.Building(0,75,75, ResourceCosts.VILLAGER_MARKET, "Villager Market Config");
 
         // Piglins
-        public static final ResourceCostConfigEntry CENTRAL_PORTAL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.CENTRAL_PORTAL, "Central Portal Config");
-        public static final ResourceCostConfigEntry BASIC_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, 0, ResourceCosts.BASIC_PORTAL, "Basic Portal Config");
-        public static final ResourceCostConfigEntry CIVILIAN_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, 15, ResourceCosts.CIVILIAN_PORTAL, "Civilian Portal Config");
-        public static final ResourceCostConfigEntry POCKET_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, 15, ResourceCosts.POCKET_PORTAL, "Pocket Portal Config");
-        public static final ResourceCostConfigEntry NETHERWART_FARM = ResourceCostConfigEntry.Building(0, 150, 0, 0, ResourceCosts.NETHERWART_FARM, "Netherwart Farm Config");
-        public static final ResourceCostConfigEntry BASTION = ResourceCostConfigEntry.Building(0, 175, 150, 0, ResourceCosts.BASTION, "Bastion Config");
-        public static final ResourceCostConfigEntry HOGLIN_STABLES = ResourceCostConfigEntry.Building(0, 150, 50, 0, ResourceCosts.HOGLIN_STABLES, "Hoglin Stables Config");
-        public static final ResourceCostConfigEntry FLAME_SANCTUARY = ResourceCostConfigEntry.Building(0, 150, 200, 0, ResourceCosts.FLAME_SANCTUARY, "Flame Sanctuary Config");
-        public static final ResourceCostConfigEntry WITHER_SHRINE = ResourceCostConfigEntry.Building(0, 150, 200, 0, ResourceCosts.WITHER_SHRINE, "Wither Shrine Config");
-        public static final ResourceCostConfigEntry BASALT_SPRINGS = ResourceCostConfigEntry.Building(0, 150, 200, 0, ResourceCosts.BASALT_SPRINGS, "Basalt Springs Config");
-        public static final ResourceCostConfigEntry FORTRESS = ResourceCostConfigEntry.Building(0, 400, 300, 0, ResourceCosts.FORTRESS, "Fortress Config");
-        public static final ResourceCostConfigEntry INFERNAL_PORTAL = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.INFERNAL_PORTAL, "Infernal Portal Config");
-        public static final ResourceCostConfigEntry PIGLIN_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.PIGLIN_MARKET, "Piglin Market Config");
+        public static final ResourceCostConfigEntry CENTRAL_PORTAL = ResourceCostConfigEntry.Building(0,350,250, ResourceCosts.CENTRAL_PORTAL, "Central Portal Config");
+        public static final ResourceCostConfigEntry BASIC_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, ResourceCosts.BASIC_PORTAL, "Basic Portal Config");
+        public static final ResourceCostConfigEntry CIVILIAN_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, ResourceCosts.CIVILIAN_PORTAL, "Civilian Portal Config");
+        public static final ResourceCostConfigEntry POCKET_PORTAL = ResourceCostConfigEntry.Building(0, 75, 0, ResourceCosts.POCKET_PORTAL, "Pocket Portal Config");
+        public static final ResourceCostConfigEntry NETHERWART_FARM = ResourceCostConfigEntry.Building(0, 150, 0, ResourceCosts.NETHERWART_FARM, "Netherwart Farm Config");
+        public static final ResourceCostConfigEntry BASTION = ResourceCostConfigEntry.Building(0, 175, 150, ResourceCosts.BASTION, "Bastion Config");
+        public static final ResourceCostConfigEntry HOGLIN_STABLES = ResourceCostConfigEntry.Building(0, 150, 50, ResourceCosts.HOGLIN_STABLES, "Hoglin Stables Config");
+        public static final ResourceCostConfigEntry FLAME_SANCTUARY = ResourceCostConfigEntry.Building(0, 150, 200, ResourceCosts.FLAME_SANCTUARY, "Flame Sanctuary Config");
+        public static final ResourceCostConfigEntry WITHER_SHRINE = ResourceCostConfigEntry.Building(0, 150, 200, ResourceCosts.WITHER_SHRINE, "Wither Shrine Config");
+        public static final ResourceCostConfigEntry BASALT_SPRINGS = ResourceCostConfigEntry.Building(0, 150, 200, ResourceCosts.BASALT_SPRINGS, "Basalt Springs Config");
+        public static final ResourceCostConfigEntry FORTRESS = ResourceCostConfigEntry.Building(0, 400, 300, ResourceCosts.FORTRESS, "Fortress Config");
+        public static final ResourceCostConfigEntry INFERNAL_PORTAL = ResourceCostConfigEntry.Building(0,125,50, ResourceCosts.INFERNAL_PORTAL, "Infernal Portal Config");
+        public static final ResourceCostConfigEntry PIGLIN_MARKET = ResourceCostConfigEntry.Building(0,75,75, ResourceCosts.PIGLIN_MARKET, "Piglin Market Config");
         // Brassworks slice 2: the Assembly Works is the T2 lab price (Arcane Tower, Circle of Elders, Celestial Observatory)
-        public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
+        public static final ResourceCostConfigEntry ASSEMBLY_WORKS = ResourceCostConfigEntry.Building(0,150,200, ResourceCosts.ASSEMBLY_WORKS, "Assembly Works Config");
         // slice 3: the Rail Battery is the Storm Oak's price (the other T2 defence that fights alone)
-        public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
+        public static final ResourceCostConfigEntry RAIL_BATTERY = ResourceCostConfigEntry.Building(0,180,260, ResourceCosts.RAIL_BATTERY, "Rail Battery Config");
         // slice 4: the Great Forge is the T3 lab price (Heaven's Gate, Abyssal Shipyard)
-        public static final ResourceCostConfigEntry GREAT_FORGE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.GREAT_FORGE, "Great Forge Config");
+        public static final ResourceCostConfigEntry GREAT_FORGE = ResourceCostConfigEntry.Building(0,400,300, ResourceCosts.GREAT_FORGE, "Great Forge Config");
         // big-units: a game ender is ~3x a T3 (5500M/12000E vs 1840M); its counter, the Ward Spire, ~12% of that (650M/2500E)
-        public static final ResourceCostConfigEntry SUN_SPIRE = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.SUN_SPIRE, "Sun Spire Config");
-        public static final ResourceCostConfigEntry NECROPOLIS = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.NECROPOLIS, "Necropolis Config");
-        public static final ResourceCostConfigEntry WARD_SPIRE = ResourceCostConfigEntry.Building(0,1667,150, 0, ResourceCosts.WARD_SPIRE, "Ward Spire Config");
+        public static final ResourceCostConfigEntry SUN_SPIRE = ResourceCostConfigEntry.Building(0,8000,3100, ResourceCosts.SUN_SPIRE, "Sun Spire Config");
+        public static final ResourceCostConfigEntry NECROPOLIS = ResourceCostConfigEntry.Building(0,8000,3100, ResourceCosts.NECROPOLIS, "Necropolis Config");
+        public static final ResourceCostConfigEntry WARD_SPIRE = ResourceCostConfigEntry.Building(0,1667,150, ResourceCosts.WARD_SPIRE, "Ward Spire Config");
         // beasts-2: the Sun Spire's 5500M/12000E, except the two that pay per stage - the Doom Forge burns 3 x 350 metal
         // (built for 4500M), the Heaven's Bell 3 x 400 energy (built for 10800E)
-        public static final ResourceCostConfigEntry DOOM_FORGE = ResourceCostConfigEntry.Building(0,8000,2100, 0, ResourceCosts.DOOM_FORGE, "Doom Forge Config");
-        public static final ResourceCostConfigEntry WORLD_SEED = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.WORLD_SEED, "World Seed Config");
-        public static final ResourceCostConfigEntry MAELSTROM_ENGINE = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.MAELSTROM_ENGINE, "Maelstrom Engine Config");
-        public static final ResourceCostConfigEntry HEAVENS_BELL = ResourceCostConfigEntry.Building(0,7200,3340, 0, ResourceCosts.HEAVENS_BELL, "Heaven's Bell Config");
-        public static final ResourceCostConfigEntry EARTHCRACKER = ResourceCostConfigEntry.Building(0,8000,3100, 0, ResourceCosts.EARTHCRACKER, "Earthcracker Config");
+        public static final ResourceCostConfigEntry DOOM_FORGE = ResourceCostConfigEntry.Building(0,8000,2100, ResourceCosts.DOOM_FORGE, "Doom Forge Config");
+        public static final ResourceCostConfigEntry WORLD_SEED = ResourceCostConfigEntry.Building(0,8000,3100, ResourceCosts.WORLD_SEED, "World Seed Config");
+        public static final ResourceCostConfigEntry MAELSTROM_ENGINE = ResourceCostConfigEntry.Building(0,8000,3100, ResourceCosts.MAELSTROM_ENGINE, "Maelstrom Engine Config");
+        public static final ResourceCostConfigEntry HEAVENS_BELL = ResourceCostConfigEntry.Building(0,7200,3340, ResourceCosts.HEAVENS_BELL, "Heaven's Bell Config");
+        public static final ResourceCostConfigEntry EARTHCRACKER = ResourceCostConfigEntry.Building(0,8000,3100, ResourceCosts.EARTHCRACKER, "Earthcracker Config");
     }
     public static class ResearchCosts implements Costs {
         public static final ResourceCostConfigEntry RESEARCH_GOLEM_SMITHING = ResourceCostConfigEntry.Research(0, 150,200, 90, ResourceCosts.RESEARCH_GOLEM_SMITHING, "Golem Smithing Research Config");

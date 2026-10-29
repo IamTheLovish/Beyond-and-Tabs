@@ -67,7 +67,7 @@ public class BotPlayer {
         // the Horde's army lab is a Basic Portal the bot refits to a Military Portal (think() queues the refit): the
         // old kit named the Bastion, which only researches, so a Horde bot never trained a single Brute
         if (faction.equals(Factions.PIGLINS))
-            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, null,   // no farms any more (Factions)
+            return new Kit(Buildings.CENTRAL_PORTAL, null, null,   // no house (no supply: lovish, Oct 29) or farm
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,

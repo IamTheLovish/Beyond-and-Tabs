@@ -40,7 +40,7 @@ public class LabAnnex extends Building {
 
     public final static String structureName = "lab_annex";
     /** 60 metal / 300 energy (ResourceCost.Building takes food, wood = energy, ore = metal: no RoN conversion). */
-    public final static ResourceCost cost = ResourceCost.Building(0, 300, 60, 0);
+    public final static ResourceCost cost = ResourceCost.Building(0, 300, 60);
     /** Max gap (blocks, on x and z) between an annex's footprint and its lab's. */
     public static final int ANNEX_RANGE = 4;
     public static final float ASSIST_POWER = 1.0f;

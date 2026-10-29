@@ -64,7 +64,7 @@ public class DrownedProd extends GraveyardUnitProductionItem implements IUnitPro
             List.of(
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit"), Style.EMPTY.withBold(true)),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit.tooltip1"), Style.EMPTY),
                 FormattedCharSequence.forward(LanguageUtil.getTranslation("entity.reignofnether.drowned_unit.tooltip2"), Style.EMPTY),

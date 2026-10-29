@@ -143,15 +143,14 @@ public final class EconomyBarRenderer {
             renderMarker(gg, lastBar[1], eco.converterLevel, 0xFFFFFFFF);
         }
 
-        // population block in the middle: bed icon in the player's colour, the unit count (no cap: lovish, Oct 29),
+        // unit block in the middle: bed icon in the player's colour, the unit count (no population: lovish, Oct 29),
         // worker count under it
         int px = left + panelW;
         gg.fill(px, top + 3, px + 1, top + panelH - 3, 0xFF3A3F46);
         gg.fill(px + POP_W - 1, top + 3, px + POP_W, top + panelH - 3, 0xFF3A3F46);
         ResourceLocation bed = PlayerColors.getPlayerColorBedIcon(owner);
         MyRenderer.renderIcon(gg, bed, px + 4, top + 3, 12);
-        int pop = UnitClientEvents.getCurrentPopulation(owner);
-        String popStr = String.valueOf(pop);   // just the count, like BAR
+        String popStr = String.valueOf(UnitClientEvents.getUnitCount(owner));   // just the count, like BAR
         gg.drawString(font, popStr, px + 19, top + 3, 0xFFFFFF);
         int workers = workerCount(owner);
         String wStr = workers + " workers";
@@ -319,7 +318,7 @@ public final class EconomyBarRenderer {
                 tip = lines;
             }
             else if (mouseX >= px && mouseX < px + POP_W)
-                tip = List.of(line("Units: " + popStr + "  (" + workers + " workers)"), line("No population cap."));
+                tip = List.of(line("Units: " + popStr + "  (" + workers + " workers)"));
             // deferred: HudClientEvents draws exactly one HUD tooltip per frame, and a hovered button wins
             if (tip != null)
                 HudClientEvents.deferTooltip(tip, mouseX + 6, mouseY + 12);

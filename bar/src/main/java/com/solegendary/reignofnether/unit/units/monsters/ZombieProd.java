@@ -86,7 +86,7 @@ public class ZombieProd extends GraveyardUnitProductionItem implements IUnitProd
                 List.of(
                     Component.translatable("entity.reignofnether.zombie_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(cost),
-                    ResourceCosts.getFormattedPopAndTime(cost),
+                    ResourceCosts.getFormattedTime(cost),
                     FormattedCharSequence.forward("", Style.EMPTY),
                     Component.translatable("entity.reignofnether.zombie_unit.tooltip1").getVisualOrderText(),
                     FormattedCharSequence.forward("", Style.EMPTY),

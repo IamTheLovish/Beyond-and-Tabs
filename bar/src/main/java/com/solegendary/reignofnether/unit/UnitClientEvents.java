@@ -289,30 +289,47 @@ public class UnitClientEvents {
     // unit joining/leaving mid-tick is reflected). This was recomputed per call - with a List.contains per virtual
     // unit, ie. O(units x virtualUnits) - and is called every frame by the HUD and per production item per tick.
     private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
+    // and how many units each owner has (the HUD's count: lovish, Oct 29 - no population is shown), same refresh
+    private static final HashMap<String, Integer> unitCountCache = new HashMap<>();
     private static long unitPopulationCacheTick = Long.MIN_VALUE;
     private static int unitPopulationCacheUnits = -1;
     private static int unitPopulationCacheVirtual = -1;
 
-    private static int getUnitPopulation(String playerName) {
+    private static void refreshUnitCaches() {
         long tick = MC.level != null ? MC.level.getGameTime() : Long.MIN_VALUE;
         if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheUnits ||
                 MinimapClientEvents.virtualUnits.size() != unitPopulationCacheVirtual) {
             unitPopulationCache.clear();
+            unitCountCache.clear();
             HashSet<Integer> allUnitIds = new HashSet<>(allUnits.size() * 2);
             for (LivingEntity entity : allUnits) {
                 allUnitIds.add(entity.getId());
-                if (entity instanceof Unit unit)
+                if (entity instanceof Unit unit) {
                     unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+                    unitCountCache.merge(unit.getOwnerName(), 1, Integer::sum);
+                }
             }
             for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits) {
-                if (!allUnitIds.contains(virtualUnit.id))
+                if (!allUnitIds.contains(virtualUnit.id)) {
                     unitPopulationCache.merge(virtualUnit.ownerName, virtualUnit.population, Integer::sum);
+                    unitCountCache.merge(virtualUnit.ownerName, 1, Integer::sum);
+                }
             }
             unitPopulationCacheTick = tick;
             unitPopulationCacheUnits = allUnits.size();
             unitPopulationCacheVirtual = MinimapClientEvents.virtualUnits.size();
         }
+    }
+
+    private static int getUnitPopulation(String playerName) {
+        refreshUnitCaches();
         return unitPopulationCache.getOrDefault(playerName, 0);
+    }
+
+    /** How many units {@code playerName} has as this client knows them (loaded, or seen on the minimap). */
+    public static int getUnitCount(String playerName) {
+        refreshUnitCaches();
+        return unitCountCache.getOrDefault(playerName, 0);
     }
 
     private static final QueuePopulation queuePopulation = new QueuePopulation();

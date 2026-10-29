@@ -62,7 +62,7 @@ public class BoggedProd extends GraveyardUnitProductionItem implements IUnitProd
             List.of(
                 Component.translatable("entity.reignofnether.bogged_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.bogged_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.bogged_unit.tooltip2").getVisualOrderText(),
