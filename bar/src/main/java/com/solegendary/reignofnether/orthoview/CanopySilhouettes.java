@@ -576,10 +576,18 @@ public final class CanopySilhouettes {
     private static int attachedDepth = -1, attachedFbo = -1;
 
     private static boolean prepareTarget(RenderTarget main) {
-        if (target == null)
-            target = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
-        else if (target.width != main.width || target.height != main.height)
-            target.resize(main.width, main.height, Minecraft.ON_OSX);
+        if (target == null || target.width != main.width || target.height != main.height) {
+            if (target == null)
+                target = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
+            else
+                target.resize(main.width, main.height, Minecraft.ON_OSX);
+            // a new or resized target has a fresh framebuffer with NO depth attached, but GL may hand back the same
+            // framebuffer id as the one it replaced, so the id check below would call it "still attached" and the
+            // silhouettes would be drawn against no depth (ghost leaves in a hole until the anchor drifts 2 blocks).
+            // Forget both ids so the attach (and its status check) always runs for the new framebuffer.
+            attachedFbo = -1;
+            attachedDepth = -1;
+        }
         // re-attached when it changes: the main depth texture is recreated on a resize, or by a shader pack changing
         // its format (and our target's own framebuffer is new after a resize). The status check is a driver sync, so
         // only then too.
