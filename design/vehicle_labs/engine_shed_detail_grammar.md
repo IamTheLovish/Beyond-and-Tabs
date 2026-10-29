@@ -347,3 +347,14 @@ Grammar: copper (orange, unweathered and part-weathered) + dark mud/blackstone b
 gets a darker block; small lit "gauge" details. Engine limit: the copper grate / chiseled copper / copper bulb look in
 the picture is 1.21 - on 1.20.1 use cut copper (+ stairs/slabs), iron trapdoors and iron bars for slats, lightning rods
 for claws and pipes, chains from vanilla or Decorative Blocks.
+
+## (j) ref48 - lovish's reference, Oct 28 22:51 (design/refs/vehicle_labs/ref48_isometric_old_industrial.png)
+The closest reference to our RTS camera (an isometric 3/4 from above). Small (236 px) - read for structure:
+1. **Big arched steel-framed windows** filling each bay between pilasters, a mullion grid (iron bars / Macaw's metal
+   windows), a stone arch head - the facade is mostly glazing and pier, not blank wall.
+2. **Pilaster every bay + a pediment/stepped gable** on the end walls; a plain cornice under each eave.
+3. **Several pitched roofs at different heights** meeting at right angles (main hall, side hall, lean-to), each with
+   its own ridge cap, a ridge clerestory/skylight strip, and weathering streaks running DOWN the slope.
+4. **Worn, not clean.** Patched roof cells, stained plaster/brick near the base and under eaves, debris and crates
+   at the walls' feet. Weathering density highest at eaves, valleys and the ground line.
+5. **Big service doors** (timber, planked) on the sheds - the vehicle doors ARE the facade's focus.
