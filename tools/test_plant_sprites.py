@@ -117,3 +117,16 @@ class PlantWiring(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoScipy(unittest.TestCase):
+    def test_the_sprites_build_with_numpy_and_pillow_only(self):
+        # CI installs numpy + pillow only (build.yml's ruff job, eyes.yml's block-pack step): r34's scipy import
+        # failed both eyes runs of round r34 (40788983646 / 40789031491) at "Our realistic block pack"
+        import subprocess
+        code = ("import sys; sys.modules['scipy'] = None; sys.path.insert(0, 'tools'); import plant_sprites as ps; "
+                "import numpy as np; a = np.zeros((8, 8)); a[2, 2] = 1; v = np.arange(64.0).reshape(8, 8); "
+                "assert ps.bleed(v, a)[0, 0] == v[2, 2]")
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        r = subprocess.run([sys.executable, "-c", code], cwd=root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr[-800:])
