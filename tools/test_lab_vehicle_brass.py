@@ -518,8 +518,8 @@ class EngineShedR8Gates(unittest.TestCase):
 
     # ---------------------------------------------------------------- G1
     def test_g1_eaves_and_verges_oversail_on_the_camera_faces(self):
-        """Every camera-facing eave and verge 1 proud of its wall: the hall eaves' copper gutter (x 0, y 7, R1: on
-        the pale lip) between wing and buttress, the wings' front verges (their top cell at x 0), the hall's corner
+        """Every camera-facing eave and verge 1 proud of its wall: the hall eaves' first course (x 0, y 7, over the
+        gutter) between wing and buttress, the wings' front verges (their top cell at x 0), the hall's corner
         (9, 7, 24) over the corner stepped back to z 23, the works shed's south verge (z 24) and west eave (x 11).
         Not the wings' south end: the frozen outline (z 23 tops 12, z 24 tops 14) makes it a tall gable wall whose top
         IS the ridge - it cannot oversail inside the 17 x 25 plot."""
@@ -571,28 +571,49 @@ class EngineShedR8Gates(unittest.TestCase):
             self.assertLessEqual(len(lone) / len(band), 0.10, (face, lone))
 
     # ---------------------------------------------------------------- G6
+    def courses(self, cells, along):
+        """Assert roof_kit's course rule on a set of exposed roof cells: three slate tones, T0 55-72 %, and every line
+        of cells along `along` (x or z) at one height free of chequers ('101', '202') and 4+ dark runs."""
+        tone = {q: R.family(self.n[q], R.SLATE) for q in cells}
+        tone = {q: t for q, t in tone.items() if t is not None}
+        self.assertEqual(set(tone.values()), {0, 1, 2})
+        share = sum(t == 0 for t in tone.values()) / len(tone)
+        self.assertTrue(0.55 <= share <= 0.72, share)
+        a = {"x": 0, "z": 2}[along]
+        lines = {}
+        for q in sorted(tone, key=lambda q: q[a]):
+            lines.setdefault(tuple(v for i, v in enumerate(q) if i != a), []).append(q)
+        for k, qs in lines.items():
+            run, row = [], ""
+            for q in qs:                                   # a gap in the line starts a new course
+                if run and q[a] != run[-1][a] + 1:
+                    row += "|"
+                run.append(q)
+                row += str(tone[q])
+            for bad in ("101", "202", "1111"):
+                self.assertNotIn(bad, row, (k, row))
+
     def test_g6_hall_roofs_in_slate_courses(self):
-        """The hall roofs (z 3..7, 17..21): roof_kit's three slate tones, T0 55-72 %, no chequer or 4+ dark run along
-        a course (a row of fixed x, y along z); the ridge cap on the hall ridge (x 5)."""
-        cells = [q for q in self.roofs if not in_cone(q) and q[0] <= 10 and (3 <= q[2] <= 7 or 17 <= q[2] <= 21)
-                 and R.family(self.n[q], R.SLATE) is not None]
-        tones = [R.family(self.n[q], R.SLATE) for q in cells]
-        self.assertEqual(set(tones), {0, 1, 2})
-        self.assertTrue(0.55 <= tones.count(0) / len(tones) <= 0.72, tones.count(0) / len(tones))
-        for x in range(0, 11):
-            for y in range(7, 11):
-                for zs in (range(3, 8), range(17, 22)):
-                    row = "".join(str(R.family(self.n[(x, y, z)], R.SLATE)) for z in zs if (x, y, z) in self.n
-                                  and R.family(self.n[(x, y, z)], R.SLATE) is not None)
-                    self.assertNotIn("101", row, (x, y))
-                    self.assertNotIn("1111", row, (x, y))
+        """The hall roofs where they show between wing and tower (z 5..7, 17..19): every exposed cell in roof_kit's
+        slate courses running along the ridge (z); the ridge cap on the hall ridge (x 5)."""
+        ex = set(self.exposed())
+        hall = [q for q in ex if q[0] <= 9 and q[1] >= 7 and (5 <= q[2] <= 7 or 17 <= q[2] <= 19) and not in_cone(q)]
+        self.courses(hall, "z")
         for z in (5, 6, 18, 19):
             self.assertIn(self.n[self.top(5, z)], R.SLATE["ridge"], z)
+
+    def test_g6_wing_roofs_in_slate_courses(self):
+        """The wing roofs (x 1..7 between the verges, z 1..4 / 20..23, y >= 8; the outer gable faces z 0 / 24 are
+        walls): every exposed cell in slate courses running across the slope (x) - the camera's nearest roofs."""
+        ex = set(self.exposed())
+        wing = [q for q in ex if 1 <= q[0] <= 7 and q[1] >= 8 and (1 <= q[2] <= 4 or 20 <= q[2] <= 23)]
+        self.courses(wing, "x")
 
     def test_g6_verges_ridges_and_gutters(self):
         """Dark verges on the wings' front edge (x 0; the brass finials at the ridge ends z 0 / 24 kept) and the
         shed's south end; the wings' ridges (y 14 at z 0 / 24) and the shed ridge in the ridge stone; copper gutters
-        on the hall eaves' lip and under both shed eaves, stopping at the shed's south wall (z 23)."""
+        under the hall eaves (x 0, y 6: under the oversailing eave course, as roof_kit hangs them) and both shed
+        eaves (y 4)."""
         for z in list(range(1, 5)) + list(range(20, 24)):
             self.assertIn(self.n[self.top(0, z)], R.SLATE["verge"], z)
         for x in range(1, 9):
@@ -602,7 +623,7 @@ class EngineShedR8Gates(unittest.TestCase):
             self.assertIn(self.n[self.top(x, 24)], R.SLATE["verge"], x)
         for z in range(2, 24):
             self.assertIn(self.n[self.top(13, z)], R.SLATE["ridge"], z)
-        gut = [(0, 7, z) for z in (5, 6, 18, 19)] + [(x, 4, z) for x in (11, 16) for z in range(2, 24)]
+        gut = [(0, 6, z) for z in (5, 6, 18, 19)] + [(x, 4, z) for x in (11, 16) for z in range(2, 24)]
         self.assertEqual([q for q in gut if self.n.get(q) != R.SLATE["gutter"]], [])
 
     def test_g6_cone_in_copper_courses_with_ledges(self):
