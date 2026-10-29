@@ -282,38 +282,55 @@ public class AngelCallerGameTests {
                 problems.add("the Mender Angel appeared " + a.distanceTo(caster) + " blocks from its caster");
         });
         helper.runAfterDelay(7, () -> {
-            click(level, caster, M);   // on cooldown: nothing
-            if (Essence.get(caster) != 4 || angels(caster, M).size() != 1)
-                problems.add("a Mender click on cooldown changed something: essence " + Essence.get(caster) + ", menders "
-                    + angels(caster, M).size());
-            CallAngel c = call(caster, M);
-            if (c != null)
-                c.setCooldown(0, (Unit) caster);
-            Essence.add(caster, 6);   // 10: enough, but the Mender still lives
-            click(level, caster, M);
-            if (Essence.get(caster) != 10 || cooldown(caster, M) != 0 || angels(caster, M).size() != 1)
-                problems.add("a second Mender while the first lives was not refused cleanly: essence " + Essence.get(caster)
-                    + " (expected 10), cooldown " + cooldown(caster, M) + ", menders " + angels(caster, M).size());
-            Essence.trySpend(caster, 1);   // 9: short of the Archer's 10
-            click(level, caster, A);
-            if (Essence.get(caster) != 9 || cooldown(caster, A) != 0 || !angels(caster, A).isEmpty())
-                problems.add("an Archer call with 9 essence was not refused cleanly: essence " + Essence.get(caster)
-                    + ", cooldown " + cooldown(caster, A) + ", archers " + angels(caster, A).size());
-        });
-        helper.runAfterDelay(9, () -> {
             if (mender[0] != null && mender[0].isAlive()) {
                 spots.add(mender[0].position());
                 mender[0].kill();
             }
         });
-        helper.runAfterDelay(15, () -> {
+        helper.runAfterDelay(9, () -> {
             if (mender[0] != null) {
                 if (mender[0].isAlive())
                     problems.add("the killed Mender Angel is still alive");
-                if (!spots.isEmpty() && !wispsNear(spots.get(0), 3).isEmpty())
-                    problems.add("the killed Mender Angel dropped " + wispsNear(spots.get(0), 3).size() + " wisp(s)");
+                if (!spots.isEmpty()) {
+                    Vec3 at = spots.get(0);
+                    if (!wispsNear(at, 3).isEmpty())
+                        problems.add("the killed Mender Angel dropped " + wispsNear(at, 3).size() + " wisp(s)");
+                    // summons give nothing (design Revision 1): no hero XP orb either
+                    int orbs = level.getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                        new net.minecraft.world.phys.AABB(at, at).inflate(4)).size();
+                    if (orbs > 0)
+                        problems.add("the killed Mender Angel dropped " + orbs + " XP orb(s)");
+                }
             }
-            Essence.add(caster, 21);   // 30
+            // on cooldown, with no Mender alive and essence to spare: the click alone must do nothing
+            Essence.add(caster, 6);   // 10
+            float cdBefore = cooldown(caster, M);
+            click(level, caster, M);
+            if (cdBefore <= 0)
+                problems.add("the Mender call's cooldown ran out after 4 ticks (" + cdBefore + ")");
+            else if (Essence.get(caster) != 10 || !angels(caster, M).isEmpty() || cooldown(caster, M) > cdBefore)
+                problems.add("a Mender click on cooldown did something: essence " + Essence.get(caster) + " (expected 10), menders "
+                    + angels(caster, M).size() + ", cooldown " + cdBefore + " -> " + cooldown(caster, M));
+            CallAngel c = call(caster, M);
+            if (c != null)
+                c.setCooldown(0, (Unit) caster);
+            click(level, caster, M);   // off cooldown: a new Mender, 10 -> 5
+            if (Essence.get(caster) != 5 || angels(caster, M).size() != 1)
+                problems.add("a Mender call off cooldown with 10 essence left " + Essence.get(caster) + " and "
+                    + angels(caster, M).size() + " menders, expected 5 and 1");
+            if (c != null)
+                c.setCooldown(0, (Unit) caster);
+            click(level, caster, M);   // off cooldown and enough essence, but the Mender still lives
+            if (Essence.get(caster) != 5 || cooldown(caster, M) != 0 || angels(caster, M).size() != 1)
+                problems.add("a second Mender while the first lives was not refused cleanly: essence " + Essence.get(caster)
+                    + " (expected 5), cooldown " + cooldown(caster, M) + ", menders " + angels(caster, M).size());
+            click(level, caster, A);   // 5: short of the Archer's 10
+            if (Essence.get(caster) != 5 || cooldown(caster, A) != 0 || !angels(caster, A).isEmpty())
+                problems.add("an Archer call with 5 essence was not refused cleanly: essence " + Essence.get(caster)
+                    + ", cooldown " + cooldown(caster, A) + ", archers " + angels(caster, A).size());
+        });
+        helper.runAfterDelay(15, () -> {
+            Essence.add(caster, 25);   // 30
             click(level, caster, A);
             click(level, caster, S);
             if (Essence.get(caster) != 0)

@@ -75,13 +75,17 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
     @Override
     public int flightHeight() { return FLIGHT_HEIGHT; }
 
-    // the low flyer (Unit.meleeReachableHeight): melee units take it on from the ground under it, and their reach
-    // (AbstractMeleeAttackUnitGoal: width^2 terms plus this bonus, all squared distances) grows by its height squared
+    // the low flyer (Unit.meleeReachableHeight): melee units and ground towers take it on from the ground under it, and
+    // a melee reach (AbstractMeleeAttackUnitGoal: width^2 terms plus this bonus, all squared distances) grows by its
+    // height squared plus MELEE_REACH_MARGIN, so an archer that stopped a little high (a move ends within 2 blocks of
+    // its cell) or over a 1-block rise is still in reach: a 0.6-wide melee unit reaches ~3.8 blocks up to it
+    public static final float MELEE_REACH_MARGIN = 3.0f;
+
     @Override
     public float meleeReachableHeight() { return FLIGHT_HEIGHT; }
 
     @Override
-    public float getBonusMeleeRangeForAttackers() { return 0.4f + FLIGHT_HEIGHT * FLIGHT_HEIGHT; }
+    public float getBonusMeleeRangeForAttackers() { return 0.4f + FLIGHT_HEIGHT * FLIGHT_HEIGHT + MELEE_REACH_MARGIN; }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()
