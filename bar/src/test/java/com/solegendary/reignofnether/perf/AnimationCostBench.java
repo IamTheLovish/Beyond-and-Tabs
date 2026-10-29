@@ -391,6 +391,51 @@ class AnimationCostBench {
             "restore leaves the body exactly as setupAnim left it");
     }
 
+    /**
+     * The death-pose contract's per-frame cost (DeathFall.pose + MotionPass.placeFall + restore) for {@link #UNITS}
+     * Halberdiers all falling at once, each at its own moment of the fall - far more than ever die in one frame. Gates:
+     * under {@link #MOTION_PASS_BUDGET_US_PER_UNIT} a unit and nothing allocated.
+     */
+    @Test
+    void deathFall() throws IOException {
+        HalberdierModel<Entity> hal = new HalberdierModel<>(HalberdierModel.createBodyLayer().bakeRoot());
+        var map = com.solegendary.reignofnether.unit.modelling.motion.BoneMaps.forModel(hal);
+        assertTrue(map != null && map.deathPose(), "a Halberdier falls by itself");
+        int stride = com.solegendary.reignofnether.unit.modelling.motion.AnimState.STRIDE;
+        float[] slab = new float[UNITS * stride];
+        for (int i = 0; i < UNITS; i++) {
+            int b = i * stride;
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0f, 0f, 20f, 20f, false, true);
+            com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
+            com.solegendary.reignofnether.unit.modelling.motion.DeathFall.latch(slab, b, i, 1);
+        }
+        float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.fallScratch();
+        PoseStack pose = new PoseStack();
+        BenchRounds.Result fall = BenchRounds.measure(ROUNDS, ROUND_WARMUP, FRAMES, ROUND_PAUSE_MS, (round, frame) -> {
+            long t0 = System.nanoTime();
+            for (int i = 0; i < UNITS; i++) {
+                float t = (frame * 3 + i) % 40 + 0.5f;
+                com.solegendary.reignofnether.unit.modelling.motion.DeathFall.pose(slab, i * stride, i, t, true, out);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.placeFall(map, pose);
+                com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
+                pose.setIdentity();
+            }
+            long t1 = System.nanoTime();
+            return t1 - t0;
+        });
+        double perUnitUs = fall.bestMs() * 1000.0 / UNITS;
+        String line = String.format(Locale.ROOT,
+            "[AnimBench] Death fall: %d units %.3f ms, %.2f us/unit (budget %.1f; best of %d rounds of %d frames: %s), bytes per round %s",
+            UNITS, fall.bestMs(), perUnitUs, MOTION_PASS_BUDGET_US_PER_UNIT, ROUNDS, FRAMES, fall.roundsText(),
+            fall.bytesText());
+        System.out.println(line);
+        Path out3 = Path.of("build", "death-fall-bench.txt");
+        Files.createDirectories(out3.getParent());
+        Files.write(out3, List.of(line));
+        assertTrue(perUnitUs < MOTION_PASS_BUDGET_US_PER_UNIT, line);
+        assertTrue(fall.allocationFree(), "the death fall allocates: " + line);
+    }
+
     private static long countVertices(net.minecraft.client.model.HierarchicalModel<Entity> model, PoseStack pose) {
         CountingSink sink = new CountingSink();
         model.renderToBuffer(pose, sink, LIGHT, 0, 1f, 1f, 1f, 1f);
