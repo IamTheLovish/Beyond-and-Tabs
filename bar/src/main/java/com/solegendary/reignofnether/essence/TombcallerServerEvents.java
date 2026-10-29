@@ -42,8 +42,9 @@ import java.util.UUID;
  * lovish's "tone down"; every tombstone number is on {@link TombstoneUnit}). Server side only.
  * <ul>
  *   <li><b>Tombstones</b> are watched from the moment they join (a reload included): each crumbles at its saved end
- *       tick and raises a Risen Skeleton at its saved raise tick when fewer than {@link TombstoneUnit#MAX_SKELETONS}
- *       of its own stand. A skeleton carries its crumble tick and its stone's UUID, is a summon and vanishes on time.</li>
+ *       tick and raises a Risen Skeleton (RisenSkeletonUnit: no population) at its saved raise tick, every 20 s
+ *       whatever still stands. A skeleton carries its crumble tick and its stone's UUID, is a summon and vanishes on
+ *       time.</li>
  *   <li><b>Grave creep</b> is an area, not blocks: a standing stone's disc (growing with its age) and, once the stone
  *       dies, a fading disc that shrinks to nothing over {@link TombstoneUnit#CREEP_FADE_SECONDS} s. Every
  *       {@link #EFFECT_TICKS} ticks the creep heals the Gravebound units of its owner and allies and slows every
@@ -305,9 +306,9 @@ public final class TombcallerServerEvents {
                 continue;
             }
             if (now >= s.nextRaise()) {
-                s.setNextRaise(now + TombstoneUnit.RAISE_EVERY_SECONDS * 20L);   // a beat with no room is skipped
-                if (risenOf(s).size() < TombstoneUnit.MAX_SKELETONS)
-                    raiseSkeleton(sl, s, s.getOwnerName(), TombstoneUnit.SKELETON_LIFETIME_SECONDS, now);
+                // every 20 s whatever still stands (lovish, Oct 29): a skeleton lives 30 s, so two overlap for 10 s
+                s.setNextRaise(now + TombstoneUnit.RAISE_EVERY_SECONDS * 20L);
+                raiseSkeleton(sl, s, s.getOwnerName(), TombstoneUnit.SKELETON_LIFETIME_SECONDS, now);
             }
         }
     }
@@ -317,7 +318,7 @@ public final class TombcallerServerEvents {
      * it joins, crumbling {@code lifetimeSeconds} later. Null if none could be made.
      */
     public static Mob raiseSkeleton(ServerLevel sl, Entity source, String owner, int lifetimeSeconds, long now) {
-        EntityType<? extends Mob> type = EntityRegistrar.SKELETON_UNIT.get();
+        EntityType<? extends Mob> type = EntityRegistrar.RISEN_SKELETON_UNIT.get();
         Mob m = type.create(sl);
         if (m == null)
             return null;

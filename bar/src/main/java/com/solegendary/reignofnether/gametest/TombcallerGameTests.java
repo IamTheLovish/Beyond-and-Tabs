@@ -21,8 +21,10 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.monsters.RisenSkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
@@ -244,6 +246,16 @@ public class TombcallerGameTests {
                         problems.add("Grave Tide costs " + GraveTide.ESSENCE_COST + " essence, " + GraveTide.CD_SECONDS + " s; the draft set 5, 12 s");
                     RaiseTombstone raise = ability(unit, RaiseTombstone.class);
                     GraveTide tide = ability(unit, GraveTide.class);
+                    // bots train it and it casts by itself (lovish: "bots build and use all 7 casters"): its spells
+                    // autocast by default, Empower (the player's pick of who earns a rank) does not
+                    var botKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.MONSTERS);
+                    if (botKit == null || !botKit.t2Army().contains(ProductionItems.TOMBCALLER))
+                        problems.add("the Gravebound bots do not train the Tombcaller");
+                    for (Ability a : ((Unit) unit).getAbilities().get()) {
+                        boolean on = AutocastState.isOn((Unit) unit, a);
+                        if (a instanceof Empower ? on : !on)
+                            problems.add(a.getClass().getSimpleName() + "'s autocast is " + (on ? "on" : "off") + " by default");
+                    }
                     if (raise == null || tide == null || ability(unit, Empower.class) == null)
                         problems.add("an ability is missing");
                     else if (raise.cooldownMax != 25 * 20 || tide.cooldownMax != 12 * 20)
@@ -586,12 +598,13 @@ public class TombcallerGameTests {
     }
 
     /**
-     * A stone raises a Risen Skeleton when its time comes: one, for its owner, marked summoned, crumbling 30 s later,
-     * beside the stone, and the next raise is 20 s on. With that one standing the next raise brings no second; killed,
-     * it drops no wisp, and the stone's next raise brings a new one.
+     * A stone raises a Risen Skeleton when its time comes: a RisenSkeletonUnit for its owner, marked summoned, crumbling
+     * 30 s later, beside the stone, costing no population (the owner's population stays 0), and the next raise is 20 s
+     * on. When the next raise comes with that one still standing, a second rises beside it (lovish: every 20 s,
+     * whatever still stands); one killed drops no wisp.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void tombstone_raises_one_risen_skeleton_at_a_time(GameTestHelper helper) {
+    public static void tombstone_raises_a_pop_free_skeleton_every_20_seconds(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "risen");
         TombstoneUnit s = stone(helper, null, owner, 8, 8, 0, false);
@@ -611,16 +624,20 @@ public class TombcallerGameTests {
                     early.add("the stone raised " + first.size() + " skeletons when its time came, expected 1");
                 } else {
                     Mob m = first.get(0);
-                    if (!(m instanceof SkeletonUnit) || !owner.equals(((Unit) m).getOwnerName()))
+                    if (!(m instanceof RisenSkeletonUnit) || !owner.equals(((Unit) m).getOwnerName()))
                         early.add("the risen unit is a " + m.getClass().getSimpleName() + " of " + ((Unit) m).getOwnerName());
                     if (!Essence.isSummoned(m) || !TombcallerServerEvents.isRisen(m))
                         early.add("the Risen Skeleton is not marked summoned / risen");
+                    if (((Unit) m).getCost().population != 0)
+                        early.add("the Risen Skeleton costs " + ((Unit) m).getCost().population + " population, lovish set none");
                     long left = TombcallerServerEvents.risenEnd(m) - now;
                     if (left < 30 * 20 - 4 || left > 30 * 20)
                         early.add("the Risen Skeleton crumbles in " + left + " ticks, expected 600");
                     if (m.distanceTo(s) > 3)
                         early.add("the skeleton rose " + String.format("%.1f", m.distanceTo(s)) + " blocks from the stone");
                 }
+                if (UnitServerEvents.getCurrentPopulation(owner) != 0)
+                    early.add("with a skeleton up the owner's population is " + UnitServerEvents.getCurrentPopulation(owner) + ", expected 0");
                 if (s.nextRaise() - now < 20 * 20 - 4)
                     early.add("the stone's next raise is " + (s.nextRaise() - now) + " ticks off, expected 20 s");
                 s.setNextRaise(now);   // time again, with one standing
@@ -630,8 +647,12 @@ public class TombcallerGameTests {
         });
         helper.runAfterDelay(7, () -> {
             try {
-                if (TombcallerServerEvents.risenOf(s).size() != Math.min(1, first.size()))
-                    early.add("with one standing the stone raised another (" + TombcallerServerEvents.risenOf(s).size() + " now)");
+                List<Mob> now = TombcallerServerEvents.risenOf(s);
+                if (now.size() != first.size() + 1)
+                    early.add("the next raise with one standing left " + now.size() + " skeletons, expected " + (first.size() + 1));
+                for (Mob m : now)
+                    if (!first.contains(m))
+                        first.add(m);
                 if (!first.isEmpty()) {
                     killedAt[0] = first.get(0).position();
                     first.get(0).kill();
@@ -640,15 +661,11 @@ public class TombcallerGameTests {
                 early.add("killing the skeleton threw " + ex);
             }
         });
-        helper.runAfterDelay(8, () -> s.setNextRaise(level.getGameTime()));
         helper.runAfterDelay(11, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
-                if (TombstoneUnit.RAISE_EVERY_SECONDS != 20 || TombstoneUnit.SKELETON_LIFETIME_SECONDS != 30 || TombstoneUnit.MAX_SKELETONS != 1)
-                    problems.add("lovish set a skeleton every 20 s, 30 s each, one at a time");
-                List<Mob> now = TombcallerServerEvents.risenOf(s);
-                if (now.size() != 1 || first.contains(now.get(0)))
-                    problems.add("after the first fell the stone's next raise brought " + now.size() + " new skeletons, expected 1");
+                if (TombstoneUnit.RAISE_EVERY_SECONDS != 20 || TombstoneUnit.SKELETON_LIFETIME_SECONDS != 30)
+                    problems.add("lovish set a skeleton every 20 s, 30 s each");
                 if (killedAt[0] != null && wispsNear(killedAt[0], 2) > 0)
                     problems.add("the killed Risen Skeleton dropped an essence wisp");
             } finally {

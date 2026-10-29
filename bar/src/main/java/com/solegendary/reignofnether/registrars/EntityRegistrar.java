@@ -76,6 +76,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "skeleton_unit").toString()));
 
+    // a tombstone's skeleton: a skeleton of no population (lovish, Oct 29), summoned for 30 s
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.RisenSkeletonUnit>> RISEN_SKELETON_UNIT = ENTITIES.register("risen_skeleton_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.RisenSkeletonUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.SKELETON.getWidth(), EntityType.SKELETON.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "risen_skeleton_unit").toString()));
+
     public static final RegistryObject<EntityType<StrayUnit>> STRAY_UNIT = ENTITIES.register("stray_unit",
             () -> EntityType.Builder.of(StrayUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.STRAY.getWidth(), EntityType.STRAY.getHeight())
