@@ -100,6 +100,7 @@ public final class SpiritPuppets {
      * checked everything (SpiritPuppet.cast).
      */
     public static void take(ServerLevel sl, LivingEntity caster, LivingEntity target, String newOwner, int ticks) {
+        if (true) return;   // STUB (tests-first commit)
         if (!(target instanceof Unit unit))
             return;
         CompoundTag data = target.getPersistentData();
