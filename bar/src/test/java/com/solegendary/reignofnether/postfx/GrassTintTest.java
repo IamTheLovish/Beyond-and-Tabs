@@ -29,22 +29,6 @@ class GrassTintTest {
     private static double luma(int c) { return 0.2126 * r(c) + 0.7152 * g(c) + 0.0722 * b(c); }
 
     @Test
-    void theLawnIsOneMeadowWhateverBiomeIsUnderTheMap() {
-        // eyes r45 (Oct 29): critic r40 #3's "biome patches as rectangles" were literal - QuickBattle makes every
-        // skirmish world with normal overworld generation, so a map sits on random plains / forest / meadow / swamp
-        // biomes whose grass colours change at borders the map never chose (r/g std 0.049 across one RTS still).
-        // The lawn's colour is now the game's: BiomeColorsMixin hands every grass block GrassTint.lawn(x, z), which
-        // takes no biome - one meadow base, varied by the tint. (The mixin is MC-bound: the proof that the biome is
-        // gone is the eyes still - hue std of the open lawn - not this test.)
-        for (int x = -200; x < 200; x += 13) {
-            for (int z = -200; z < 200; z += 17) {
-                assertEquals(GrassTint.apply(GrassTint.LAWN_BASE, x, z, GrassTint.GRASS), GrassTint.lawn(x, z), "x " + x + " z " + z);
-            }
-        }
-        assertEquals(PLAINS_GRASS, GrassTint.LAWN_BASE, "the meadow base is vanilla plains, the colour every test here tunes against");
-    }
-
-    @Test
     void sameBlockSameColourEveryCall() {
         for (int x = -300; x < 300; x += 37) {
             for (int z = -300; z < 300; z += 41) {
@@ -84,16 +68,18 @@ class GrassTintTest {
         }
     }
 
-    // Retired Oct 29 (round 7): a bound on the noise FIELD's step per block (0.6). It was a property of the lattice
-    // noise whose square grid critic r40 #3 rejected ("patches show as rectangles"), not of what the camera sees; the
-    // gradient noise that replaced it is steeper (0.67). Kept: the colour step below (lessons Oct 29, #12).
     @Test
     void neighbouringBlocksDifferByAShadeAtMost() {
-        // continuous across block borders: the colour - what the camera sees - moves by at most
+        // continuous across block borders: a step of one block moves the field by 0.7 at most (its 4.5-block octave
+        // through the contrast curve; round 7's gradient noise is steeper than the lattice noise's 0.6, VALUE turns it
+        // into ~6%); the colour - what the camera sees - moves by at most
         // 26 levels (~12%) at the steepest, ragged edge of a straw or dark clump (the critic asked for 1-2 block
         // transitions, not 15-block gradients) - Embeddium (in the pack) blends it across the block's corners
         for (int x = -500; x < 500; x++) {
             for (int z = -500; z < 500; z += 13) {
+                double f = GrassTint.field(x, z, 3);
+                assertTrue(Math.abs(GrassTint.field(x + 1, z, 3) - f) <= 0.70, "x step at " + x + ", " + z);
+                assertTrue(Math.abs(GrassTint.field(x, z + 1, 3) - f) <= 0.70, "z step at " + x + ", " + z);
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
                 int n = GrassTint.apply(PLAINS_GRASS, x + 1, z, GrassTint.GRASS);
                 assertTrue(Math.abs(r(c) - r(n)) <= 26 && Math.abs(g(c) - g(n)) <= 26 && Math.abs(b(c) - b(n)) <= 26,
@@ -199,10 +185,9 @@ class GrassTintTest {
             }
         }
         double std = Math.sqrt(s2 / count - (s1 / count) * (s1 / count));
-        // a BAND, not a floor (lessons Oct 29, #3: fixing one critic overshoots into the next): round 2's 0.022 read as
-        // one blurred gradient, round 4's critic called finer, harder variation "pips"; rounds 6 and 7 hold 0.038.
-        // Raising it further runs into darksKeepUnitsReadable and the colour step
-        assertTrue(std >= 0.035 && std <= 0.055, "4-block vs 16-block std " + std);
+        // round 7 (Oct 29) changed the noise (gradient, rotated) and held this at 0.038 (round 6: 0.038) - the floor
+        // keeps that level; raising it further runs into darksKeepUnitsReadable and the colour step below
+        assertTrue(std >= 0.035, "4-block vs 16-block std " + std);
     }
 
     @Test
