@@ -495,8 +495,10 @@ public class TierGateGameTests {
             if (researchStart[1] >= 0 && researchStart[2] >= 0 && researchStart[1] > researchStart[2] + 1200)
                 problems.add("the medium bot started Tier 2 (" + minutes(researchStart[1]) + ") later than the easy (" + minutes(researchStart[2]) + ")");
             for (int i = 0; i < count; i++)
-                ReignOfNether.LOGGER.info("[T2Timing] {} {} research start {} done {} lab {} fighters at start {} (game minutes, standard pace)",
-                    names[i].substring(12), levels[i], minutes(researchStart[i]), minutes(researchDone[i]), minutes(labDone[i]), fightersAtStart[i]);
+                ReignOfNether.LOGGER.info("[T2Timing] {} {} research start {} done {} lab {} fighters at start {} mex richness {} (game minutes, standard pace)",
+                    names[i].substring(12), levels[i], minutes(researchStart[i]), minutes(researchDone[i]), minutes(labDone[i]), fightersAtStart[i],
+                    // the battlefield rolls it unseeded (BattlefieldSetup, 0.6-1.6): a lean roll is the easy bot's 16 metal/s red runs
+                    String.format(java.util.Locale.ROOT, "%.2f", com.solegendary.reignofnether.startpos.StartAreaClearing.mexRichness));
             List<LivingEntity> leftovers = new ArrayList<>();
             for (LivingEntity le : UnitServerEvents.getAllUnits())
                 if (le instanceof Unit u && List.of(names).contains(u.getOwnerName()))
@@ -564,15 +566,24 @@ public class TierGateGameTests {
                     c[idx[0]]++;
             }
         }
+        // the T2 lab site, while it rises: paid progress, builders on it, and whether it is still only a blueprint - the
+        // easy bot's red runs (40638286450, 40639915026) placed it by minute 13 and never finished it with the pool at 0
+        String t2Site = "";
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
+            if (owner.equals(bp.ownerName) && bp.getBuilding() == kit.t2Lab() && !bp.isBuilt && !bp.isDestroyedServerside)
+                t2Site = String.format(java.util.Locale.ROOT, " t2site %.2f b%d", bp.buildProgress, bp.getBuilders().size());
+        for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(owner))
+            if (bp.getBuilding() == kit.t2Lab())
+                t2Site = " t2site blueprint";
         var eco = EconomyServerEvents.getEconomy(owner);
         Resources res = null;
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (owner.equals(r.ownerName))
                 res = r;
-        return String.format("[T2Snap] %s min %d fighters %d metal/s %.1f energy/s %.0f (wind x%.2f) pool %.0f/%.0f winds %d/%d lab %d/%d t1req %d/%d t2lab %d/%d mex %d/%d blk %s",
+        return String.format("[T2Snap] %s min %d fighters %d metal/s %.1f energy/s %.0f (wind x%.2f) pool %.0f/%.0f winds %d/%d lab %d/%d t1req %d/%d t2lab %d/%d%s stall %.2f mex %d/%d blk %s",
             owner.substring(12).toLowerCase(java.util.Locale.ROOT), now / 1200, fighters, eco.effectiveMetalIncome(), eco.energyIncome,
             com.solegendary.reignofnether.resources.Wind.multiplier(), res == null ? 0f : res.getMetal(), res == null ? 0f : res.getEnergy(),
-            c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9], bot == null ? "?" : bot.lastBlockedReason.substring(0, Math.min(70, bot.lastBlockedReason.length())));
+            c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], t2Site, eco.stall, c[8], c[9], bot == null ? "?" : bot.lastBlockedReason.substring(0, Math.min(70, bot.lastBlockedReason.length())));
     }
 
     private static String minutes(long ticks) {

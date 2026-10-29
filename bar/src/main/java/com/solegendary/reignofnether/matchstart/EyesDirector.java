@@ -1019,8 +1019,10 @@ public final class EyesDirector {
                 EyesPhotoBooth.setAmbientLifeOff(true);
                 ReignOfNether.LOGGER.info("[Eyes] 15 structures: ambient life off for the structure photos");
             }
-            if (siteCentre == null)
+            if (siteCentre == null) {
                 siteCentre = structureSite(mc);
+                lightTheSite(mc);   // main's #349: fog off on the server and noon, once, with the force-fog log line
+            }
             // a photo booth, not a match: the site is 45 blocks out from the capitol, beyond its vision, and fog of
             // war darkened every structure still to near black (meadow sampler run 40667744923, Oct 28)
             // ...and on the SERVER too: its fog filter never sends a fogged column's block changes, so the placed
@@ -1224,6 +1226,26 @@ public final class EyesDirector {
             (float) closeCam[4]);
         mc.player.setDeltaMovement(Vec3.ZERO);
         mc.options.hideGui = true;
+    }
+
+    /**
+     * Once, before the first structure: fog of war off and the sun at noon. Since fa069d4 (Oct 28) every new match turns
+     * fog on, and the site (45 blocks out, past the capitol's vision) then shows the pre-match fog snapshot: run
+     * 40767177721's stills of brass_t1_greybox and brass_l3_greybox show a stale wall and dark grass, no building. Noon
+     * (day time 6000) is the light building colour is judged in (design/building_tiers.md, hard rules); the dusk still
+     * still sets 13000 and puts this time back after it.
+     */
+    private static void lightTheSite(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server == null)
+            return;
+        server.execute(() -> {
+            if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled())
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false);
+            server.overworld().setDayTime(6000);
+            ReignOfNether.LOGGER.info("[Eyes] 15 structures: fog of war {}, day time 6000 (noon)",
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled() ? "STILL ON (force-fog rule)" : "off");
+        });
     }
 
     /**
