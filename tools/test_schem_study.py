@@ -207,5 +207,40 @@ class Measures(unittest.TestCase):
         self.assertEqual(rows, [".s", "#g"])                 # top row first; x left to right
 
 
+def _legacy(path):
+    """MCEdit .schematic (pre-1.13): numeric ids in Blocks, metadata in Data, index (y * Length + z) * Width + x."""
+    w, h, l = 3, 2, 2
+    ids, data = [0] * (w * h * l), [0] * (w * h * l)
+    def at(x, y, z, i, d=0):
+        k = (y * l + z) * w + x
+        ids[k], data[k] = i, d
+    at(0, 0, 0, 1, 0)        # stone
+    at(1, 0, 0, 1, 1)        # granite
+    at(2, 0, 0, 45)          # bricks
+    at(0, 0, 1, 98, 1)       # mossy stone bricks
+    at(1, 1, 0, 53, 2)       # oak stairs facing south, bottom
+    at(2, 1, 1, 44, 8 | 5)   # stone brick slab, top half
+    at(0, 1, 1, 109, 4 | 1)  # stone brick stairs facing west, upside down
+    _write(path, gs.t_compound([(TAG_SHORT, "Width", _short(w)), (TAG_SHORT, "Height", _short(h)),
+                                (TAG_SHORT, "Length", _short(l)), (TAG_STRING, "Materials", gs.t_string("Alpha")),
+                                (TAG_BYTES, "Blocks", _bytes([i & 0xFF for i in ids])),
+                                (TAG_BYTES, "Data", _bytes(data))]))
+
+
+class Legacy(unittest.TestCase):
+    def test_mcedit_schematic(self):
+        p = os.path.join(tempfile.mkdtemp(), "e.schematic")
+        _legacy(p)
+        self.assertEqual(S.load(p).blocks, {
+            (0, 0, 0): ("stone", {}), (1, 0, 0): ("granite", {}), (2, 0, 0): ("bricks", {}),
+            (0, 0, 1): ("mossy_stone_bricks", {}),
+            (1, 1, 0): ("oak_stairs", {"facing": "south", "half": "bottom"}),
+            (2, 1, 1): ("stone_brick_slab", {"type": "top"}),
+            (0, 1, 1): ("stone_brick_stairs", {"facing": "west", "half": "top"})})
+
+    def test_unknown_id_is_named_not_dropped(self):
+        self.assertEqual(S.legacy_block(250, 0), ("legacy_250", {}))
+
+
 if __name__ == "__main__":
     unittest.main()
