@@ -327,6 +327,59 @@ def load_costs():
     for m in re.finditer(r'ResourceCostConfigEntry (\w+) = ResourceCostConfigEntry\.\w+\(\s*([-\d]+)\s*,\s*([-\d]+)\s*,\s*([-\d]+)\s*,\s*([-\d]+)', cfg):
         food, wood, ore, secs = (int(x) for x in m.groups()[1:])
         out[m.group(1)] = dict(metal=to_metal(food, wood, ore), energy=to_energy(food, wood, ore), seconds=secs)
+    apply_energy_costs(out)
+    return out
+
+def _energy_table():
+    """resources/EnergyCosts.java, parsed: its constants and its cost lists (empty on a tree without it)."""
+    path = os.path.join(SRC, 'resources/EnergyCosts.java')
+    if not os.path.exists(path):
+        return {}, {}
+    src = _read(path)
+    consts = {}
+    for m in re.finditer(r'static final (?:int|float) (\w+) = ([^;]+);', src):
+        expr = m.group(2).strip()
+        for k, v in consts.items():
+            expr = re.sub(r'\b' + k + r'\b', str(v), expr)
+        try:
+            consts[m.group(1)] = float(eval(expr.replace('f', ''), {'__builtins__': {}}))   # noqa: S307 - our own constants
+        except Exception:
+            pass
+    lists = {m.group(1): re.findall(r'ResourceCosts\.(\w+)', m.group(2))
+             for m in re.finditer(r'List<ResourceCost> (\w+) = List\.of\(([^;]+)\);', src)}
+    return consts, lists
+
+def apply_energy_costs(costs):
+    """What EnergyCosts.bake() does in the game: energy by tier, and the opening's energy prices (Java Math.round)."""
+    consts, lists = _energy_table()
+    if not consts:
+        return costs
+    def set_e(key, e):
+        if key in costs:
+            costs[key]['energy'] = int(e)
+    for key in lists.get('WORKERS', []):
+        set_e(key, consts['WORKER_ENERGY'])
+    for name, ratio in (('T1_UNITS', 'T1_UNIT_ENERGY_PER_METAL'), ('T2_UNITS', 'T2_UNIT_ENERGY_PER_METAL'),
+                        ('T3_UNITS', 'T3_UNIT_ENERGY_PER_METAL')):
+        for key in lists.get(name, []):
+            if key in costs:
+                set_e(key, _round_to(costs[key]['metal'] * consts[ratio], 10))
+    for key in lists.get('T1_LABS', []):
+        set_e(key, consts['T1_LAB_ENERGY'])
+    set_e('BASIC_PORTAL', consts['HORDE_PORTAL_ENERGY'])
+    set_e('RESEARCH_MILITARY_PORTAL', consts['HORDE_MILITARY_REFIT_ENERGY'])
+    set_e('METAL_EXTRACTOR', consts['METAL_EXTRACTOR_ENERGY'])
+    set_e('WIND_GENERATOR', consts['WIND_GENERATOR_ENERGY'])
+    return costs
+
+def tier_keys():
+    """The roster's ResourceCosts keys by EnergyCosts list (worker -> WORKERS, t1 -> T1_UNITS, the T2 lab's -> T2_UNITS)."""
+    rows, _ = unit_stats()
+    want = {'worker': 'WORKERS', 't1': 'T1_UNITS', 't2': 'T2_UNITS', 'worker2': 'T2_UNITS', 'engineer': 'T2_UNITS',
+            't3': 'T3_UNITS'}
+    out = {}
+    for r in rows:
+        out.setdefault(want[r['tier']], set()).add(r['key'])
     return out
 
 def _cost_key(path):

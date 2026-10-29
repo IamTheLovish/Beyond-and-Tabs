@@ -1454,7 +1454,7 @@ public class BuildingPlacement {
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing
         int queued = blockPlaceQueue.size();
-        float maxProgress = Math.min(1f, (float) (blocksPlaced + queued + 2 * Math.max(1, blocksPerBuild)) / blocksTotal);
+        float maxProgress = FlowConstruction.maxProgress(blocksPlaced, queued, blocksPerBuild, blocksTotal);
         if (buildProgress > maxProgress)
             buildProgress = maxProgress;
 
@@ -1467,7 +1467,7 @@ public class BuildingPlacement {
                     ticksToExtinguish = 0;
                 }
             }
-            float df = Math.min(buildPower / buildTicks, maxProgress - buildProgress);
+            float df = Math.min(FlowConstruction.progressPerTick(buildPower, buildTicks), maxProgress - buildProgress);
             float granted = EconomyServerEvents.requestFlow(payerName, building.cost.metal(), building.cost.energy(), df);
             buildProgress += df * granted;
             metalSpent += building.cost.ore * df * granted;
@@ -1476,13 +1476,23 @@ public class BuildingPlacement {
                 buildProgress = 1f;
         }
 
-        // queue the next block(s) if the placed blocks are behind the paid progress
-        int targetBlocks = buildProgress >= 1f ? blocksTotal : (int) Math.ceil(buildProgress * blocksTotal - 0.0001f);
-        if (blocksPlaced + blockPlaceQueue.size() < targetBlocks) {
+        // lay the blocks the paid progress is ahead by (lovish, Oct 29: "the more workers the faster something should
+        // build"): up to FlowConstruction.MAX_BLOCKS_PER_TICK a tick, not one, so a crowded site rises with its build
+        // power. The last one is laid by the tick's own buildNextBlock pass, as before
+        int lay = FlowConstruction.blocksToLay(FlowConstruction.blocksDue(buildProgress, blocksTotal), getBlocksPlaced(),
+            blockPlaceQueue.size());
+        for (int i = 0; i < lay; i++) {
             int queuedBefore = blockPlaceQueue.size();
             queueNextBlock(serverLevel, ownerName);
-            if (blockPlaceQueue.size() > queuedBefore && !workerUnits.isEmpty())
+            if (blockPlaceQueue.size() <= queuedBefore)
+                break;
+            if (!workerUnits.isEmpty())
                 giveMasonExp(workerUnits);
+            if (i < lay - 1) {
+                buildNextBlock();
+                if (!blockPlaceQueue.isEmpty())
+                    break;   // the block could not go in (an unloaded chunk): try again next tick
+            }
         }
     }
 

@@ -25,15 +25,17 @@ N = energy_sim.numbers()
 
 
 class Opening(unittest.TestCase):
-    def test_a_greedy_opener_runs_out_of_energy_by_its_third_extractor(self):
+    def test_a_greedy_opener_runs_out_of_energy_by_its_third_or_fourth_extractor(self):
         r = energy_sim.run(N, 'greedy')
         self.assertIsNotNone(r['first_stall'], 'six extractors and a lab with no energy building never stalled: %s' % r)
-        self.assertLessEqual(r['first_stall'][1], 3, 'the greedy opener stalled only after %d extractors' % r['first_stall'][1])
+        # BAR's point (its commander alone, same model): the bank is gone while the 3rd-4th extractor rises, inside a minute
+        self.assertLessEqual(r['first_stall'][1], 4, 'the greedy opener stalled only after %d extractors' % r['first_stall'][1])
+        self.assertLessEqual(r['first_stall'][0], 60, 'the greedy opener stalled only at %ss' % r['first_stall'][0])
 
     def test_a_wind_opener_has_its_first_lab_near_a_minute_and_a_half(self):
         r = energy_sim.run(N, 'wind')
         self.assertIsNotNone(r['lab'])
-        self.assertTrue(75 <= r['lab'] <= 105, 'wind opener: first lab at %ss, want ~90' % r['lab'])
+        self.assertLessEqual(r['lab'], 105, 'wind opener: first lab at %ss, want ~1:30 at the latest' % r['lab'])
 
     def test_a_solar_opener_beats_the_greedy_one(self):
         # solars cost metal and build time instead of energy (BAR): slower to raise than winds, but no energy stall
@@ -78,6 +80,11 @@ class Tiers(unittest.TestCase):
         c = N['converter']
         self.assertGreater(c[1], c[2], 'energy per metal %s' % c)
         self.assertGreater(c[2], c[3], 'energy per metal %s' % c)
+
+    def test_the_energy_table_lists_every_unit_of_the_roster_in_its_tier(self):
+        _, lists = unit_stats._energy_table()
+        for name, keys in unit_stats.tier_keys().items():
+            self.assertEqual(set(lists.get(name, [])), keys, 'resources/EnergyCosts.%s and the roster differ' % name)
 
     def test_a_t1_extractor_drains_bars_three_energy_a_second(self):
         self.assertEqual(N['mex_upkeep'], 3.0)

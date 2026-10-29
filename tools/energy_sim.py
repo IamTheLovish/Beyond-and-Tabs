@@ -182,7 +182,7 @@ def run(n, opener, horizon=HORIZON):
                 if wprog >= 1:
                     wprog -= 1
                     workers += 1
-                    crews[1][0] += n['worker_bp'] if len(crews) < 3 else 0
+                    # a new worker joins the newest crew; every third one starts a crew of its own
                     if workers % 3 == 0:
                         crews.append([0.0, None, 0.0, 0.0])
                     crews[-1][0] += n['worker_bp']

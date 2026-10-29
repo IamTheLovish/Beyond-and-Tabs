@@ -91,9 +91,12 @@ public class TierGateGameTests {
         if (TierGate.UPGRADE_EXTRACTOR_METAL != 300 || TierGate.UPGRADE_EXTRACTOR_ENERGY != 600 || TierGate.UPGRADE_EXTRACTOR_SECONDS != 75)
             problems.add("the refit is " + TierGate.UPGRADE_EXTRACTOR_METAL + "m/" + TierGate.UPGRADE_EXTRACTOR_ENERGY + "e/"
                 + TierGate.UPGRADE_EXTRACTOR_SECONDS + "s, lovish set 300/600/75");
-        if (TierGate.T2_RESEARCH_METAL != 1000 || TierGate.T2_RESEARCH_ENERGY != 10080 || TierGate.T2_RESEARCH_SECONDS != 180)
+        // lovish, Oct 29: the research's and the T2 lab's energy trimmed by a quarter (energy is spent everywhere now)
+        if (TierGate.T2_RESEARCH_METAL != 1000 || TierGate.T2_RESEARCH_ENERGY != 7560 || TierGate.T2_RESEARCH_SECONDS != 180)
             problems.add("Tier 2 research is " + TierGate.T2_RESEARCH_METAL + "m/" + TierGate.T2_RESEARCH_ENERGY + "e/"
-                + TierGate.T2_RESEARCH_SECONDS + "s, lovish set 1000/10080/180");
+                + TierGate.T2_RESEARCH_SECONDS + "s, lovish set 1000/7560/180");
+        if (TierGate.T2_LAB_ENERGY != 4500)
+            problems.add("the T2 lab costs " + TierGate.T2_LAB_ENERGY + " energy, lovish set 4500");
         if (BotTuning.EASY.t2Minute() != 9 || BotTuning.MEDIUM.t2Minute() != 7 || BotTuning.HARD.t2Minute() != 5)
             problems.add("bots start Tier 2 at minutes " + BotTuning.EASY.t2Minute() + "/" + BotTuning.MEDIUM.t2Minute() + "/"
                 + BotTuning.HARD.t2Minute() + " (easy/medium/hard), lovish set 9/7/5");
@@ -111,9 +114,11 @@ public class TierGateGameTests {
             problems.add("the Tier 2 package is only " + seconds + " s of the opener's income");
         if (t2.metal() >= ResourceCosts.RESEARCH_TIER_3.metal())
             problems.add("Tier 2 research (" + t2.metal() + "m) is not under Tier 3's (" + ResourceCosts.RESEARCH_TIER_3.metal() + "m)");
-        // energy is a real gate: the research alone pulls more energy per second than a 4-wind base (capitol + 4 x 14) makes
+        // energy is a real gate: the research alone pulls more energy per second than a 3-wind base (capitol + 3 x 14)
+        // makes. Was "4-wind" (56/s) until lovish trimmed the research to 42/s (Oct 29): units and labs now cost energy too,
+        // so the research no longer has to be the whole gate on its own
         float researchEnergyPerSecond = TierGate.T2_RESEARCH_ENERGY / (float) TierGate.T2_RESEARCH_SECONDS;
-        if (researchEnergyPerSecond < 20f + 4 * 14f - 20f)
+        if (researchEnergyPerSecond < 3 * 14f)
             problems.add("the research drains only " + researchEnergyPerSecond + " energy/s");
         if (TierGate.T2_EXTRACTOR_ENERGY_UPKEEP <= TierGate.T1_EXTRACTOR_ENERGY_UPKEEP)
             problems.add("a T2 extractor must drain more energy than a T1 one");

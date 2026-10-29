@@ -37,7 +37,7 @@ import java.util.List;
  * Two jobs, one shared structure each, one instance per faction (a building has one faction), registered at the end of
  * Buildings so no id moves:
  * <ul>
- *   <li>{@link Kind#BASIC} - T1, any builder: 150 metal / 60 energy for 20 energy/s (BAR's ratio scaled to our wind),
+ *   <li>{@link Kind#BASIC} - T1, any builder: 150 metal / 0 energy for 20 energy/s (BAR: metal and build time, no energy - resources/EnergyCosts),
  *       HP 120, a small pop when it dies;</li>
  *   <li>{@link Kind#ADVANCED} - T2, a T2 constructor only (T2Workers.needsT2Builder, like the Geothermal Plant):
  *       300 metal / 1500 energy for 75 energy/s, HP 500, goes up hard when destroyed.</li>
@@ -51,7 +51,7 @@ public class SolarGenerator extends Building {
 
     /** The two jobs, with every number that tunes them. */
     public enum Kind {
-        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, 60, 150, 0), 20f, 120d, 0.1f, 90, false),
+        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, com.solegendary.reignofnether.resources.EnergyCosts.SOLAR_COLLECTOR_ENERGY, 150, 0), 20f, 120d, 0.1f, 90, false),
         ADVANCED("Advanced Solar", "advanced_solar", ResourceCost.Building(0, 1500, 300, 0), 75f, 500d, 0.6f, 140, true);
 
         public final String buildingName;

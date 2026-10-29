@@ -2704,7 +2704,7 @@
   "buildings.monsters.reignofnether.energy_converter_monsters": "Soul Furnace",
   "buildings.piglins.reignofnether.energy_converter_piglins": "Smelter Pit",
   "buildings.reignofnether.energy_converter": "Energy Converter",
-  "buildings.reignofnether.energy_converter.tooltip1": "A poor last resort: up to 50 energy/s into 0.5 metal/s (100 energy a metal). Build extractors first.",
+  "buildings.reignofnether.energy_converter.tooltip1": "A poor last resort: up to 50 energy/s into 0.5 metal/s (100 energy a metal; 80 at Tier 2, 65 at Tier 3). Build extractors first.",
   "buildings.reignofnether.energy_converter.tooltip2": "Only runs while energy is over half full. Fragile - keep it behind the lines.",
   "entity.reignofnether.war_mammoth_unit": "War Mammoth",
   "entity.reignofnether.war_mammoth_unit.tooltip1": "Horde experimental: a woolly titan that tramples whole lines.",
