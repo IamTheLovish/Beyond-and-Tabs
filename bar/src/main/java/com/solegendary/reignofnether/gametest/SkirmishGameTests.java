@@ -5282,6 +5282,7 @@ public class SkirmishGameTests {
         if (com.solegendary.reignofnether.bot.BotPlayer.t2TowerFor(Factions.VERDANT_COURT) != Buildings.STORM_OAK)
             helper.fail("the Verdant bot does not raise Storm Oaks");
         oak.isBuilt = true;
+        oak.onlyFoe = foeOwner;   // tickStrike's own look: never another test's units
         var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get();
         var loner = treant.create(level);
         var packA = treant.create(level);
@@ -5336,11 +5337,11 @@ public class SkirmishGameTests {
                     oak.tickStrike(level);
                 if (oak.strike(level, foeOwner) != null)
                     helper.fail("the Storm Oak struck before its cooldown ended");
-                oak.tickStrike(level);
                 for (var e : List.of(loner, packA, packB))
                     e.invulnerableTime = 0;
-                if (oak.strike(level, foeOwner) == null)
-                    helper.fail("the Storm Oak did not strike again after its cooldown");
+                oak.tickStrike(level);   // the cooldown runs out on this tick, and the bolt falls on it
+                if (oak.cooldown != com.solegendary.reignofnether.building.buildings.placements.StormOakPlacement.COOLDOWN_TICKS)
+                    helper.fail("the Storm Oak did not strike again on the tick its cooldown ended");
                 helper.succeed();
             } finally {
                 com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);

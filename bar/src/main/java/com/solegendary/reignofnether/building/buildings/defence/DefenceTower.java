@@ -206,6 +206,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         public int cooldown = 0;
         /** The enemy owner a game test limits targets to (null in play: game tests share one world). */
         @Nullable public String onlyFoe = null;
+        /** The last look found a target: the tower looks again the tick it is ready, not at the next SCAN_TICKS. */
+        private boolean engaged = false;
 
         private final List<LivingEntity> scratch = new ArrayList<>();
 
@@ -222,15 +224,19 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
                 tickWeapon(sl);
         }
 
-        /** One server tick: count the cooldown down, then look for a target every SCAN_TICKS. Public for the game test. */
+        /**
+         * One server tick: count the cooldown down and fire on the tick it reaches 0, so a tower shoots every
+         * cooldownTicks exactly. A tower still in a fight looks for its next target the tick it is ready; an idle one
+         * only every SCAN_TICKS (one grid query per shot, one per SCAN_TICKS while idle). It used to skip the ready
+         * tick and then wait for the next SCAN_TICKS even mid-fight: a 1 s tower fired every 1.5 s. Public for the
+         * game test.
+         */
         public void tickWeapon(ServerLevel sl) {
-            if (cooldown > 0) {
-                cooldown--;
+            if (cooldown > 0 && --cooldown > 0)
                 return;
-            }
-            if (tickAge % SCAN_TICKS != 0 && onlyFoe == null)
+            if (!engaged && tickAge % SCAN_TICKS != 0 && onlyFoe == null)
                 return;
-            fire(sl);
+            engaged = fire(sl) != null;
         }
 
         /** Dormant: unbuilt, destroyed, ownerless, or a flak / anti-T3 defence whose owner lacks its tier's research. */
