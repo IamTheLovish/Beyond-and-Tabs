@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Verdant essence caster, the Thornweaver
+    ENTANGLING_ROOTS,       // 5 essence: enemies within 3 blocks of the aimed spot are rooted for 3 s
+    SEED_OF_RENEWAL,        // 10 essence: a sapling heals friends within 6 blocks for 6 HP a second for 12 s
+    SPROUT_GUARDIAN         // 20 essence: a sapling treant fights for the owner for 25 s, then withers
 }

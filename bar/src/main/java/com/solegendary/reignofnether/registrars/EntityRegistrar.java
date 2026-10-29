@@ -315,6 +315,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bloom_priestess_unit").toString()));
 
+    // the Court's essence caster (design/essence_casters.md): the priestess's illager body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit>> THORNWEAVER_UNIT = ENTITIES.register("thornweaver_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornweaver_unit").toString()));
+
     // Tidewrought (design/tidewrought_plan.md, slice 1). The Gull Spotter is Alex's Mobs' seagull body (RenderSeagull),
     // a little bigger than AM's wild gull so it can be clicked from the RTS camera
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.ShipwrightUnit>> SHIPWRIGHT_UNIT = ENTITIES.register("shipwright_unit",
@@ -1114,6 +1121,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd.itemName -> EntityRegistrar.ELDER_TREANT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.WispChoirProd.itemName -> EntityRegistrar.WISP_CHOIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd.itemName -> EntityRegistrar.BLOOM_PRIESTESS_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ThornweaverProd.itemName -> EntityRegistrar.THORNWEAVER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.ShipwrightProd.itemName -> EntityRegistrar.SHIPWRIGHT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.GullSpotterProd.itemName -> EntityRegistrar.GULL_SPOTTER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd.itemName -> EntityRegistrar.CUTLASS_RAIDER_UNIT.get();
