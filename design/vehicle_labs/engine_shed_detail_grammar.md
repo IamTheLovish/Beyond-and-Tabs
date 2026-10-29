@@ -492,3 +492,11 @@ Timber-framed house on a stone base with dark slate roofs and a round turret.
 - ref65 (dark-oak manor, deepslate roofs): a run of steep cross gables with stepped verges along one long roof, a
   round stone tower with a conical cap, a projecting stone porch with its own gable, flower boxes. Lesson: break a
   long roof into a rhythm of gables/dormers - one per bay - so the roofline has incident every 3-5 blocks.
+
+## (y) ref66 - lovish's reference, Oct 28 22:58 (design/refs/vehicle_labs/ref66_stone_tower_corbelled_stages.png)
+**The direct answer to our tower.** A tall stone tower that narrows in stages - and every stage change is a
+CORBELLED GALLERY: the crown of each stage oversails on a row of stepped corbels (upside-down stairs / walls),
+crenellated on top, so each step in the outline is a deep shadow band with a lit underside, never a bare box edge.
+Between crowns: vertical pilaster strips, tall slot windows and buttresses down the corners.
+Rule for the Engine Shed's cone: at each tier change (y 11, 15, 19, 23) a 1-block corbel course + parapet that
+projects over the tier below; tier faces get strips and slots; the outline (11 15 19 23 25...) stays frozen.
