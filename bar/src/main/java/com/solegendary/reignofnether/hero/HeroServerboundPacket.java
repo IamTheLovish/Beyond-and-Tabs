@@ -25,6 +25,11 @@ public class HeroServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.HERO_AI_ON : HeroAction.HERO_AI_OFF));
     }
 
+    /** Tells the server the player selected their hero (UnitClientEvents, when a hero joins the selection). */
+    public static void sendHeroSelected(int unitId) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.HERO_SELECTED));
+    }
+
     public HeroServerboundPacket(
             int unitId,
             HeroAction heroAction
@@ -55,6 +60,17 @@ public class HeroServerboundPacket {
                 // a player's own setting, for their own heroes only (the owner name is the player's name)
                 if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_ai_switch", 10, 100))
                     HeroBot.setAiEnabled(sender.getName().getString(), heroAction == HeroAction.HERO_AI_ON);
+                success.set(true);
+                return;
+            }
+            if (heroAction == HeroAction.HERO_SELECTED) {
+                // only the sender's own hero (or one they may command): a select hands a fleeing hero back (D030)
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_select", 20, 100)
+                        && sender.serverLevel().getEntity(this.unitId) instanceof net.minecraft.world.entity.Mob mob
+                        && mob instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+                        && com.solegendary.reignofnether.unit.UnitActionItem.mayCommand(sender.serverLevel(),
+                            sender.getName().getString(), u, false))
+                    HeroBot.onPlayerSelect(mob);
                 success.set(true);
                 return;
             }

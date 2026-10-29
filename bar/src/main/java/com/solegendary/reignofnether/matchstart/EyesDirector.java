@@ -939,8 +939,10 @@ public final class EyesDirector {
         String entry = STRUCTURES.get(structureIndex);
         String label = "15_" + structureLabel(entry);
         if (ticks == 1 && structurePhase == 0) {
-            if (siteCentre == null)
+            if (siteCentre == null) {
                 siteCentre = structureSite(mc);
+                lightTheSite(mc);
+            }
             structurePlaced = false;
             structureError = null;
             OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(siteCentre));   // loads its chunks
@@ -1059,6 +1061,26 @@ public final class EyesDirector {
         mc.player.moveTo(px, py, pz, yaw, pitch);
         mc.player.setDeltaMovement(Vec3.ZERO);
         mc.options.hideGui = true;
+    }
+
+    /**
+     * Once, before the first structure: fog of war off and the sun at noon. Since fa069d4 (Oct 28) every new match turns
+     * fog on, and the site (45 blocks out, past the capitol's vision) then shows the pre-match fog snapshot: run
+     * 40767177721's stills of brass_t1_greybox and brass_l3_greybox show a stale wall and dark grass, no building. Noon
+     * (day time 6000) is the light building colour is judged in (design/building_tiers.md, hard rules); the dusk still
+     * still sets 13000 and puts this time back after it.
+     */
+    private static void lightTheSite(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server == null)
+            return;
+        server.execute(() -> {
+            if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled())
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.setEnabled(false);
+            server.overworld().setDayTime(6000);
+            ReignOfNether.LOGGER.info("[Eyes] 15 structures: fog of war {}, day time 6000 (noon)",
+                com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isEnabled() ? "STILL ON (force-fog rule)" : "off");
+        });
     }
 
     /** 45 blocks from our capitol along the first dry axis (as 07 picks its field), on the ground. */

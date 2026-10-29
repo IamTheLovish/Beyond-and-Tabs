@@ -75,11 +75,197 @@ public class ArtilleryGameTests {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
+    /**
+     * A possessed artillery click the dead zone refuses costs no cooldown (the set-up reds on main, Oct 28: one refused
+     * click right after set-up burnt the Bombard's 68-tick cooldown, so it "set up but never fired"). An enemy 3 blocks
+     * in front of the crosshair - inside the 6-block MIN_RANGE - refuses the click; once it is gone the next click fires.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_possessed_shot_refused_for_the_dead_zone_costs_no_cooldown(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_deadzone_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        VillagerUnit v = foe(helper, owner + "_foe", 4.5, 8.5);
+        if (b == null || v == null) {
+            if (b != null) b.discard();
+            if (v != null) v.discard();
+            helper.fail("could not create the units");
+            return;
+        }
+        double vx = v.getX(), vy = v.getY(), vz = v.getZ();
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            b.discard();
+            v.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                b.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the bombard: " + why);
+                return;
+            }
+            active[0] = true;
+        });
+        int clickAt = 5, clearAt = 6, deadline = 20;
+        int[] tick = { 0 };
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            tick[0]++;
+            int t = tick[0];
+            if (t < clearAt)
+                hold(v, vx, vy, vz);   // the enemy stands in front of the crosshair, inside the dead zone
+            else if (t == clearAt)
+                v.discard();           // ...and is gone: the aim is clear
+            if (t < clickAt)
+                return;
+            if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(b)) {
+                cleanUp.run();
+                throw new GameTestAssertException("the standing crew was not set up - the test proves nothing");
+            }
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, b.getId(), -90, 10);
+            if (t == clickAt && shellsOf(b) > 0) {
+                cleanUp.run();
+                throw new GameTestAssertException("fired at an enemy 3 blocks away, inside the 6-block dead zone");
+            }
+            if (t > clickAt && shellsOf(b) > 0) {
+                cleanUp.run();
+                helper.succeed();
+            } else if (t >= deadline) {
+                cleanUp.run();
+                throw new GameTestAssertException((t - clickAt) + " ticks after a click the dead zone refused, with the"
+                    + " aim clear, it still had not fired: the refused click cost its cooldown");
+            }
+        });
+    }
+
+    /**
+     * The ground-aim side of the dead-zone rule (#337 tested only an enemy in the crosshair): a click aimed at the
+     * ground 2 blocks ahead - inside the 6-block MIN_RANGE, nothing to target - fires nothing and costs no cooldown;
+     * the next click, aimed 9 blocks out, fires at once.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_possessed_ground_click_refused_for_the_dead_zone_costs_no_cooldown(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_ground_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var b = bombard(helper, owner, 1.5, 8.5);
+        if (b == null) {
+            helper.fail("could not create the bombard");
+            return;
+        }
+        possessedClicks(helper, b, owner, uuid, (t, attack) -> {
+            int clickAt = 5, deadline = 20;
+            if (t < clickAt)
+                return null;
+            if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(b))
+                return "the standing crew was not set up - the test proves nothing";
+            if (t == clickAt) {
+                attack.accept(40f);   // the ground about 2 blocks ahead
+                return shellsOf(b) > 0 ? "fired at the ground 2 blocks away, inside the 6-block dead zone" : null;
+            }
+            attack.accept(10f);       // the ground about 9 blocks ahead
+            if (shellsOf(b) > 0)
+                return "";
+            return t >= deadline ? (t - clickAt) + " ticks after a ground click the dead zone refused, aimed 9 blocks"
+                + " out, it still had not fired: the refused click cost its cooldown (cooldown left "
+                + com.solegendary.reignofnether.hero.PossessionServer.of(uuid).attackCooldownLeft() + ")" : null;
+        });
+    }
+
+    /**
+     * A possessed Mortar Crawler's click while it vents (brass/Heat: it can't fire) fires nothing and costs no cooldown:
+     * once the vent ends, the next click fires. Before the fix the venting click burnt the crawler's ~100-tick cooldown.
+     */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 200)
+    public static void a_possessed_click_while_venting_costs_no_cooldown(GameTestHelper helper) {
+        String owner = "gametest_arty_possess_vent_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        var c = EntityRegistrar.MORTAR_CRAWLER_UNIT.get().create(helper.getLevel());
+        if (c == null) {
+            helper.fail("could not create the mortar crawler");
+            return;
+        }
+        BlockPos o = helper.absolutePos(new BlockPos(0, 2, 0));
+        c.moveTo(o.getX() + 1.5, o.getY(), o.getZ() + 8.5, -90, 0);
+        c.setOwnerName(owner);
+        helper.getLevel().addFreshEntity(c);
+        c.setupEquipmentAndUpgradesServer();
+        int[] ventEnd = { -1 };
+        possessedClicks(helper, c, owner, uuid, (t, attack) -> {
+            int clickAt = 5, after = 15;
+            if (t == 1)
+                c.setVentTicks(12);   // venting until about tick 13
+            if (t < clickAt)
+                return null;
+            if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(c))
+                return "the standing crawler was not set up - the test proves nothing";
+            boolean venting = com.solegendary.reignofnether.brass.Heat.isVenting(c);
+            if (t == clickAt && !venting)
+                return "the crawler was not venting at the first click - the test proves nothing";
+            attack.accept(10f);   // the ground about 9 blocks ahead
+            if (shellsOf(c) > 0)
+                return venting ? "fired while venting" : "";
+            if (!venting && ventEnd[0] < 0)
+                ventEnd[0] = t;
+            return ventEnd[0] >= 0 && t >= ventEnd[0] + after ? (t - ventEnd[0]) + " ticks after the vent ended it still"
+                + " had not fired: a click while venting cost its cooldown (cooldown left "
+                + com.solegendary.reignofnether.hero.PossessionServer.of(uuid).attackCooldownLeft() + ")" : null;
+        });
+    }
+
+    /**
+     * Possesses {@code mob} at tick 3, then runs {@code step} every tick with the possessed tick count and a click
+     * (the pitch; yaw -90, east). {@code step} returns null to go on, "" to pass, or the failure message.
+     */
+    static void possessedClicks(GameTestHelper helper, net.minecraft.world.entity.Mob mob, String owner,
+                                java.util.UUID uuid,
+                                java.util.function.BiFunction<Integer, java.util.function.Consumer<Float>, String> step) {
+        boolean[] done = { false }, active = { false };
+        Runnable cleanUp = () -> {
+            done[0] = true;
+            com.solegendary.reignofnether.hero.PossessionServer.release(uuid, null);
+            mob.discard();
+        };
+        helper.runAfterDelay(3, () -> {
+            String why = com.solegendary.reignofnether.hero.PossessionServer.claim(helper.getLevel(), owner, uuid,
+                mob.getId(), true);
+            if (why != null) {
+                cleanUp.run();
+                helper.fail("could not possess the unit: " + why);
+                return;
+            }
+            active[0] = true;
+        });
+        int[] tick = { 0 };
+        java.util.function.Consumer<Float> attack = pitch ->
+            com.solegendary.reignofnether.hero.PossessionServer.attack(uuid, mob.getId(), -90, pitch);
+        helper.onEachTick(() -> {
+            if (done[0] || !active[0])
+                return;
+            String result = step.apply(++tick[0], attack);
+            if (result == null)
+                return;
+            cleanUp.run();
+            if (result.isEmpty())
+                helper.succeed();
+            else
+                throw new GameTestAssertException(result);
+        });
+    }
+
     /** A wall between the galley and its target: it shells over the wall from where it stands, it doesn't walk in. */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 420)
     public static void artillery_fires_over_a_wall_without_walking_in(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_arty_wall_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         for (int z = 4; z <= 12; z++)
             for (int y = 2; y <= 5; y++)
                 helper.setBlock(new BlockPos(7, y, z), Blocks.STONE);
@@ -102,7 +288,10 @@ public class ArtilleryGameTests {
                 throw new GameTestAssertException("the galley walked " + Math.round(walked[0])
                     + " blocks toward a target it can shell over the wall (now " + Math.round(flat(g, v)) + " away)");
             if (v.isAlive() && v.getHealth() >= full)
-                throw new GameTestAssertException("no shell has landed on the target yet");
+                throw new GameTestAssertException("no shell has landed on the target yet (" + String.format("%.1f",
+                    flat(g, v)) + " away, target at " + v.blockPosition().toShortString() + ", set-up left "
+                    + com.solegendary.reignofnether.unit.SetUp.ticksLeft(g) + ", shells " + shellsOf(g) + "); galley: "
+                    + state(g));
             g.discard();
             v.discard();
             for (int z = 4; z <= 12; z++)
@@ -560,6 +749,30 @@ public class ArtilleryGameTests {
         keylessHopTest(helper, "keyshop", false, true);
     }
 
+    /** Why a possessed crew's clicks fired nothing, for the failure message (CI shows only the message). */
+    static String possessedFireState(net.minecraft.world.entity.Mob b, java.util.UUID uuid, double x0, double z0) {
+        var p = com.solegendary.reignofnether.hero.PossessionServer.of(uuid);
+        StringBuilder near = new StringBuilder();
+        for (var le : b.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                b.getBoundingBox().inflate(7), e -> e != b))
+            near.append(' ').append(le.getType().toShortString()).append(String.format("@%.1f", flat(b, le)));
+        String aim = "?";
+        if (p != null) {
+            var at = p.aimPoint(b);
+            var bp = net.minecraft.core.BlockPos.containing(at.x - 0.01 * Math.signum(at.x - b.getX()), at.y - 0.01,
+                at.z);
+            aim = String.format("%.2f away, %.2f below the feet, at %s (%s), eye %.2f, pose %s, yaw %.0f, pitch %.1f, "
+                    + "ground ahead [%s ]",
+                Math.hypot(at.x - b.getX(), at.z - b.getZ()), b.getY() - at.y, bp.toShortString(),
+                b.level().getBlockState(bp).getBlock().getName().getString(), b.getEyeHeight(), b.getPose(),
+                b.getYRot(), p.aimPitch(), groundAhead(b, p));
+        }
+        return String.format("set-up left %d, cooldown %s, on ground %b, %.2f from the spot, y %.2f, nearby [%s ], "
+                + "shells %d, aim %s",
+            com.solegendary.reignofnether.unit.SetUp.ticksLeft(b), p == null ? "no possession" : p.attackCooldownLeft(),
+            b.onGround(), Math.hypot(b.getX() - x0, b.getZ() - z0), b.getY(), near, shellsOf(b), aim);
+    }
+
     /**
      * A knockback is no free reposition (the #222 follow-up, lovish's option A): while a hit carries a possessed crew
      * with its keys resting, its moves keep the set-up, so the client's claims may move it only where the knockback
@@ -745,6 +958,38 @@ public class ArtilleryGameTests {
         });
     }
 
+    /** The top block at each whole block along the look direction (1-10 out), height over the feet and its name. */
+    static String groundAhead(net.minecraft.world.entity.Mob b,
+            com.solegendary.reignofnether.hero.PossessionServer.Possession p) {
+        var dir = net.minecraft.world.phys.Vec3.directionFromRotation(0, b.getYRot());
+        StringBuilder out = new StringBuilder();
+        int feet = net.minecraft.util.Mth.floor(b.getY());
+        for (int d = 1; d <= 10; d++) {
+            int x = net.minecraft.util.Mth.floor(b.getX() + dir.x * d), z = net.minecraft.util.Mth.floor(b.getZ() + dir.z * d);
+            String top = "-";
+            for (int y = feet + 3; y >= feet - 2; y--) {
+                var st = b.level().getBlockState(new BlockPos(x, y, z));
+                if (!st.isAir()) {
+                    top = (y - feet) + st.getBlock().getName().getString().substring(0, 2);
+                    break;
+                }
+            }
+            out.append(' ').append(top);
+        }
+        return out.toString();
+    }
+
+    /** Falling blocks over the arena, each logged once: the tick, where it started and where it is (relative). */
+    static void watchFalling(GameTestHelper helper, java.util.Set<Integer> seen, StringBuilder log, int tick) {
+        var box = new net.minecraft.world.phys.AABB(helper.absolutePos(new BlockPos(-2, 0, -2)),
+            helper.absolutePos(new BlockPos(18, 40, 18)));
+        for (var f : helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, box))
+            if (seen.add(f.getId()))
+                log.append(String.format(" t%d %s from %s at %s", tick, f.getBlockState().getBlock().getName().getString(),
+                    helper.relativePos(f.getStartPos()).toShortString(),
+                    helper.relativePos(f.blockPosition()).toShortString()));
+    }
+
     static void keylessHopTest(GameTestHelper helper, String tag, boolean sprintJumpFirst, boolean keysRunFirst) {
         String owner = "gametest_arty_possess_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(owner.getBytes());
@@ -786,12 +1031,15 @@ public class ArtilleryGameTests {
         // drift, fits in what that momentum would open
         int hops = keysRunFirst ? 1 : 3, hopFrom = keysRunFirst ? 16 : 10, hopEnd = hopFrom + hops * cycle - rest;
         double pace = keysRunFirst ? 0.2 : 0.12, minMoved = keysRunFirst ? 1.5 : 2.0;
+        java.util.Set<Integer> fallSeen = new java.util.HashSet<>();
+        StringBuilder fallLog = new StringBuilder();
         int[] tick = { 0 }, seq = { 0 };
         helper.onEachTick(() -> {
             if (done[0] || !active[0])
                 return;
             tick[0]++;
             int t = tick[0];
+            watchFalling(helper, fallSeen, fallLog, t);
             if (keysRunFirst && t < hopFrom - 1) {
                 com.solegendary.reignofnether.hero.PossessionServer.applyInput(uuid, b.getId(), 1, 0, -90, 10,
                     t == hopFrom - 3, false, true);
@@ -838,8 +1086,10 @@ public class ArtilleryGameTests {
                         + " blocks with no keys: it needs " + SET_UP + " ticks to set up again");
                 helper.succeed();
             } else if (since > SET_UP + 10) {
+                String why = possessedFireState(b, uuid, base[0], base[2]);
                 cleanUp.run();
-                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops)");
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after the hops; " + why
+                    + "; falling blocks [" + fallLog + " ])");
             }
         });
     }
@@ -931,8 +1181,9 @@ public class ArtilleryGameTests {
                         + SET_UP + " ticks to set up");
                 helper.succeed();
             } else if (since > SET_UP + 10) {
+                String why = possessedFireState(b, uuid, last[0], last[1]);
                 cleanUp.run();
-                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped)");
+                throw new GameTestAssertException("set up but never fired (" + since + " ticks after it stopped; " + why + ")");
             }
         });
     }

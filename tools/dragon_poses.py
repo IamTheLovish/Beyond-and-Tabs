@@ -155,12 +155,12 @@ def bank_step(st, yaw, dt, scale=1.0):
 
 
 def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0.0, flare=0.0, takeoff=0.0,
-         attack_t=None, hurt=0, death=0, look_yaw=0.0, look_pitch=0.0):
+         attack_t=None, hurt=0, death=0, look_yaw=0.0, look_pitch=0.0, perch=0.0):
     """{bone: [x, y, z]} DSL degrees plus _move / _scale, as Dragon.pose adds them this frame.
     ph: the beat phase in beats (Dragon keeps it per entity: it advances dt / the current beat length, so a change of
     rate never jumps the wings); age: ticks (breath, sway, idle); glide 0..1 (speed), idle 0..1 (hovering), bank deg,
     tailA / tailB the tail's lagged banks, climb -1..1, flare 0..1 (braking into a hover), takeoff 0..1, attack_t the
-    ticks since the bite's swing moment (negative in the wind-up)."""
+    ticks since the bite's swing moment (negative in the wind-up), perch 0..1 (on the ground after a dive)."""
     rot, mv, sc = {}, {}, {}
     tailA = bank if tailA is None else tailA
     tailB = bank if tailB is None else tailB
@@ -189,7 +189,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         return max(rhythm(p) * cruise, gs)
 
     gw0 = gw_at(ph)
-    amp = (1 + 0.3 * max(0.0, climb)) * (1 + 0.25 * takeoff) * (1 - 0.15 * idle) * (1 - 0.35 * flare)
+    amp = (1 + 0.3 * max(0.0, climb)) * (1 + 0.25 * takeoff) * (1 - 0.15 * idle) * (1 - 0.35 * flare) * (1 - 0.85 * perch)
     s0 = shape(ph)
     bankF = min(1.0, abs(bank) / P["bankMax"])
     ripple = lambda j, k: math.sin((age + offset(ID)) / 26.0 * math.tau - 0.9 * j - 0.7 * k)   # the glide's slow billow
@@ -322,7 +322,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
     dsl("spine_2", -0.8 * shape(lag(6)) * amp * (1 - gw0), 1.4 * math.sin(t0 * 120 / 150 + math.pi + 0.2), 0)
 
     # ---- the legs: tucked in flight, trailing the heave; dangling in a hover / take-off, reaching in a flare -------
-    hang = max(idle, takeoff, flare)
+    hang = max(max(idle, takeoff, flare) * (1 - perch), 0.7 * perch)   # perched: stood on them
     d4, d7 = (shape(lag(t)) * amp * (1 - gw0) for t in (4, 7))
     swingG = 4 * wander(age, ID, 160) * gw0
     for i, leg in enumerate(("front_left", "front_right", "hind_left", "hind_right")):
@@ -336,6 +336,18 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
             dsl(leg + "_upper", -4 * d4 + 6 * gw0 + swingG + 55 * hang + 15 * flare + sway)
             dsl(leg + "_lower", 5 * d7 + 25 * hang)
             dsl(leg + "_foot", 6 * d4 + 3 * wander(age - 5 * i, ID, 90) - 55 * hang)
+
+    # ---- perched (on the ground after a dive): the wings fold along the flanks, the body levels, the neck rises ----
+    if perch > 0.01:
+        for side, s in (("left", 1), ("right", -1)):
+            dsl("wing_%s_arm" % side, 0, s * -10 * perch, s * -22 * perch)
+            dsl("wing_%s_fore" % side, 0, s * -55 * perch, s * 14 * perch)
+            dsl("wing_%s_hand" % side, 0, s * -65 * perch, 0)
+            for k in range(3):
+                dsl("wing_%s_finger_%d" % (side, k + 2), 0, s * (16 + 8 * k) * perch, 0)
+        dsl("body", -statePitch * perch, 0, 0)
+        for k in range(min(3, NECK_N)):
+            dsl("neck_%d" % (k + 1), 5 * perch, 0, 0)
 
     # ---- idle behaviours (fade with speed) --------------------------------------------------------------------------
     if idle > 0.02:
@@ -426,6 +438,7 @@ def frames():
     out["attack strike"] = pose(0.2, AGE0, idle=1.0, attack_t=3.0)
     out["takeoff"] = pose(0.30, AGE0, takeoff=1.0)
     out["flare"] = pose(0.10, AGE0, flare=1.0, idle=0.3)
+    out["perched"] = pose(0.30, AGE0, idle=1.0, perch=1.0)
     return out
 
 
