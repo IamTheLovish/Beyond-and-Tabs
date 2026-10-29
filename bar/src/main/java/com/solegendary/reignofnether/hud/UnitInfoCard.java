@@ -119,7 +119,7 @@ public final class UnitInfoCard {
         // supports; the Engineer-Captain falls to the worker rule
         Map.entry("SteamJuggernautUnit", Role.TANK), Map.entry("TeslaWalkerUnit", Role.SKIRMISHER),
         Map.entry("GyrocopterGunshipUnit", Role.SKIRMISHER), Map.entry("DrillBurrowerUnit", Role.RAIDER),
-        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
+        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("SoulEngineerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
         Map.entry("RocketBatteryUnit", Role.ARTILLERY),
@@ -127,6 +127,8 @@ public final class UnitInfoCard {
         // Gravity Monk and the Mirror Mage are controllers; the Ley Master falls to the worker rule
         Map.entry("ThunderDragonUnit", Role.SKIRMISHER), Map.entry("EarthshakerUnit", Role.TANK),
         Map.entry("GravityMonkUnit", Role.SUPPORT), Map.entry("MirrorMageUnit", Role.SUPPORT),
+        // the essence caster: a blink, chain lightning and a storm cloud, never a weapon of its own
+        Map.entry("SparkSageUnit", Role.SUPPORT),
         // slice 4: the Seer watches, the Lantern Fortress shields (both support), the Phoenix dives (a raider), the
         // Celestial Dragon is the faction's experimental
         Map.entry("SeerUnit", Role.SUPPORT), Map.entry("LanternFortressUnit", Role.SUPPORT),

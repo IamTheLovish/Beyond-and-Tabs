@@ -276,6 +276,7 @@ public class Factions {
 		registerEntity(STORMCALLERS, EntityRegistrar.EARTHSHAKER_UNIT.get(), ProductionItems.EARTHSHAKER);
 		registerEntity(STORMCALLERS, EntityRegistrar.GRAVITY_MONK_UNIT.get(), ProductionItems.GRAVITY_MONK);
 		registerEntity(STORMCALLERS, EntityRegistrar.MIRROR_MAGE_UNIT.get(), ProductionItems.MIRROR_MAGE);
+		registerEntity(STORMCALLERS, EntityRegistrar.SPARK_SAGE_UNIT.get(), ProductionItems.SPARK_SAGE);   // essence caster
 		// Stormcallers slice 4: the rest of T2 and the T3 experimental
 		registerEntity(STORMCALLERS, EntityRegistrar.SEER_UNIT.get(), ProductionItems.SEER);
 		registerEntity(STORMCALLERS, EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), ProductionItems.LANTERN_FORTRESS);
@@ -301,6 +302,7 @@ public class Factions {
 		registerEntity(BRASSWORKS, EntityRegistrar.DRILL_BURROWER_UNIT.get(), ProductionItems.DRILL_BURROWER);
 		registerEntity(BRASSWORKS, EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), ProductionItems.REPAIR_CRAWLER);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), ProductionItems.CLOCKWORK_SPIDER);
+		registerEntity(BRASSWORKS, EntityRegistrar.SOUL_ENGINEER_UNIT.get(), ProductionItems.SOUL_ENGINEER);   // essence caster
 		// slice 4: the Great Forge's experimental and the drones it launches (no production item: the engine makes them)
 		registerEntity(BRASSWORKS, EntityRegistrar.IRON_LEVIATHAN_ENGINE_UNIT.get(), ProductionItems.IRON_LEVIATHAN_ENGINE);
 		registerEntity(BRASSWORKS, EntityRegistrar.CLOCKWORK_DRONE_UNIT.get());
