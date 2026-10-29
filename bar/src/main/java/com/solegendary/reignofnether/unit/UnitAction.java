@@ -230,5 +230,6 @@ public enum UnitAction {
     THUNDERHEAD,            // 20 essence: a storm cloud for 10 s strikes the enemy nearest its centre (6 blocks) for 25 a second
     // Gravebound Tombcaller (essence caster, design/essence_casters.md "Gravebound Gravecaller" + Revision 1)
     RAISE_TOMBSTONE,        // 10 essence: a tombstone that spreads grave creep and raises a skeleton every 20 s
-    GRAVE_TIDE              // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    GRAVE_TIDE,             // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    CALL_NECROMANCER        // 20 essence: a Grave Adept that grows on the XP of enemy deaths and raises skeletons
 }

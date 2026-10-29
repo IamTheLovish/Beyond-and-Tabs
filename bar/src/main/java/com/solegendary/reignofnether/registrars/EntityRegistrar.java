@@ -119,6 +119,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tombcaller_unit").toString()));
 
+    // the Tombcaller's Call the Necromancer: a summoned unit wearing the Wraith's body for now
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.GraveAdeptUnit>> GRAVE_ADEPT_UNIT = ENTITIES.register("grave_adept_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.GraveAdeptUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.BLAZE.getWidth(), EntityType.BLAZE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "grave_adept_unit").toString()));
+
     // the Tombcaller's Raise Tombstone: a summoned, stationary unit sized and drawn like a totem for now
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit>> TOMBSTONE_UNIT = ENTITIES.register("tombstone_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit::new, MobCategory.MISC)

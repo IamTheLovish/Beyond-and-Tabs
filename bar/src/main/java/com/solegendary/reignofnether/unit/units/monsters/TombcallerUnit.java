@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.units.monsters;
 
 import com.solegendary.reignofnether.ability.Abilities;
+import com.solegendary.reignofnether.ability.abilities.CallNecromancer;
 import com.solegendary.reignofnether.ability.abilities.Empower;
 import com.solegendary.reignofnether.ability.abilities.GraveTide;
 import com.solegendary.reignofnether.ability.abilities.RaiseTombstone;
@@ -21,8 +22,8 @@ import javax.annotation.Nullable;
  * Gravebound essence caster - the <b>Tombcaller</b> (placeholder name; design/essence_casters.md "Gravebound
  * Gravecaller" and Revision 1, which renamed it: Gravecaller is the Gravebound hero). Trained at the Dungeon, the
  * Gravebound T2 lab. It gathers the essence wisps the dead leave within 8 blocks (12 on its own grave creep; holds 30)
- * and spends them: {@link RaiseTombstone} (10), {@link GraveTide} (5) and the shared {@link Empower} (15). Call the
- * Necromancer (the Grave Adept) follows in its own PR.
+ * and spends them: {@link RaiseTombstone} (10), {@link GraveTide} (5), {@link CallNecromancer} (20, the Grave Adept)
+ * and the shared {@link Empower} (15).
  * <p>
  * A Wraith underneath (placeholder look: the Wraith's body, sounds, sunburn and evasion, so it reads as Gravebound at
  * once) with its own abilities in place of Fear, Possess and Crypt Tide, its own cost and a little more health.
@@ -33,7 +34,8 @@ public class TombcallerUnit extends WraithUnit implements EssenceCarrier {
     static {
         SOUL_ABILITIES.add(new RaiseTombstone(), Keybindings.abilitySlot1);
         SOUL_ABILITIES.add(new GraveTide(), Keybindings.abilitySlot2);
-        SOUL_ABILITIES.add(new Empower(), Keybindings.abilitySlot3);
+        SOUL_ABILITIES.add(new CallNecromancer(), Keybindings.abilitySlot3);
+        SOUL_ABILITIES.add(new Empower(), Keybindings.abilitySlot4);
     }
 
     /** The Wraith's 35 and a little more: it is worth protecting (the Witch and the Evoker have 40). */
