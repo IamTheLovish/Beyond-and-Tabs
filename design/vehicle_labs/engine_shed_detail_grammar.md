@@ -320,3 +320,18 @@ What makes it read as a real building where r7 reads as a toy:
    lit (lanterns in shadow) - depth, not paint.
 6. **Function you can read.** Stairs, porch, a dormer, chimneys: every element has a job. Ornament follows structure.
 7. Background town: brick towers with dark-timber lattice tops, all brick + grey slate - a cohesive Brassworks palette.
+
+## (h) ref46 - lovish's reference, Oct 28 22:50 (design/refs/vehicle_labs/ref46_steampunk_machine_works.png)
+The Brassworks IDENTITY layer (ref45 is the building, ref46 is what makes it Brassworks):
+1. **Machinery is the ornament.** Big copper/orange gears and flywheels, bent pipe runs and elbows, pistons, valve
+   wheels, gauges - mounted ON the brick/stone body, not painted on it.
+2. **Scale ladder.** Huge (gears 5-9 wide, stacks), medium (pipe runs, boilers, cranes), small (rivets, valves, lamps,
+   crates) - all three scales on every face the camera sees.
+3. **Open structure in front of solid mass.** Iron scaffolds, gantries, catwalks, ladders, railings and cranes stand
+   proud of the walls: see-through layers that make deep shadows and real depth from above.
+4. **Palette.** Pale grey stone + orange/terracotta + copper/brass accents + dark iron; tall pale chimneys with
+   capped tops. Rust/patina gradients, not flat colour.
+5. **Stuff in the yard.** Crates, barrels, coal, carts at the base - the building is working.
+Use: T1 gets a restrained dose (one gear/flywheel hero, pipe runs between hall and shed, a gantry on the shed, yard
+props); T2-T4 escalate toward ref46's density. Keep RTS readability: the machinery sits on the roofline and the
+camera-facing (west/south) faces.
