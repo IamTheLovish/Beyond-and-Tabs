@@ -4,9 +4,10 @@ Run: python3 -m unittest discover -s tools -p 'test_*.py'
 Oct 29: Complementary's author refused us permission to ship the shader pack (it had been in the tester pack since
 Oct 22). The pack builders may not name it, may not add a shader pack or its settings, and Oculus (which only loaded
 it) went too. Our own pack (shaderpacks/BeyondAndTabs, clean-room, GPL v2 or later; design/own_shader_pack.md) takes
-its place, so Oculus and a shaderpacks/ folder are allowed again; only Complementary is banned, by name anywhere in
-what we ship, and a shaderpacks/ folder may hold nothing but ours. Fully offline: the network steps (Modrinth lookups)
-are replaced by fixed entries.
+its place, so Oculus is allowed again; Complementary stays banned by name anywhere in what we ship, and anything under
+shaderpacks/ must be a byte-for-byte copy of a file of the repo's shaderpacks/BeyondAndTabs folder (no zip, no .txt
+settings, no .pw.toml pointing at a download). Fully offline: the network steps (Modrinth lookups) are replaced by
+fixed entries.
 """
 import hashlib
 import io
@@ -24,7 +25,8 @@ import build_pack  # noqa: E402
 import build_packwiz  # noqa: E402
 
 BANNED = ("complementary",)
-OUR_PACK = "shaderpacks/BeyondAndTabs"
+OUR_PACK = "shaderpacks/BeyondAndTabs/"
+REPO = os.path.join(HERE, "..")
 H512 = "a" * 128
 
 ENTRIES = [("embeddium-0.3.31+mc1.20.1.jar", "client", "https://cdn.modrinth.com/data/x/versions/y/embeddium.jar", H512),
@@ -34,14 +36,39 @@ RP = (build_packwiz.RP_NAME, "https://example.invalid/rp.zip", H512)
 
 
 def walk(root):
-    """[(relative path, text)] of every file under root."""
+    """[(relative path, bytes)] of every file under root."""
     out = []
     for base, _, names in os.walk(root):
         for n in names:
             p = os.path.join(base, n)
-            with open(p, encoding="utf-8") as f:
+            with open(p, "rb") as f:
                 out.append((os.path.relpath(p, root).replace(os.sep, "/"), f.read()))
     return out
+
+
+def shader_problems(files):
+    """What is wrong with the shaderpacks/ part of a built pack ([(path, bytes)], paths relative to the instance):
+    every file there must be a file of our pack, byte for byte as in the repo. A loose settings .txt, a zipped pack or
+    a .pw.toml (a download, opaque to this check) is never ours, whatever it is named."""
+    problems = []
+    for rel, data in files:
+        if not rel.startswith("shaderpacks/"):
+            continue
+        low = rel.lower()
+        if low.endswith((".txt", ".pw.toml")) or ".zip" in low:
+            problems.append(rel + ": not a plain file of our pack")
+            continue
+        if not rel.startswith(OUR_PACK):
+            problems.append(rel + ": outside " + OUR_PACK)
+            continue
+        src = os.path.join(REPO, *rel.split("/"))
+        if not os.path.isfile(src):
+            problems.append(rel + ": not in the repo's pack")
+            continue
+        with open(src, "rb") as f:
+            if f.read() != data:
+                problems.append(rel + ": differs from the repo's copy")
+    return problems
 
 
 class BuilderDefinitions(unittest.TestCase):
@@ -60,6 +87,44 @@ class BuilderDefinitions(unittest.TestCase):
         for name in ("SHADER_PROJECT", "SHADER_VERSION"):
             self.assertNotIn("complementary", str(getattr(build_packwiz, name, "")).lower(), name)
 
+    def test_packwiz_builder_has_no_shader_download_code(self):
+        # Complementary was fetched from Modrinth by these; our pack ships from the repo, never resolved or downloaded
+        for name in ("resolve_shader", "shader_files"):
+            self.assertFalse(hasattr(build_packwiz, name), name)
+
+
+def our_file(rel):
+    with open(os.path.join(REPO, *rel.split("/")), "rb") as f:
+        return f.read()
+
+
+class ShaderFolderRule(unittest.TestCase):
+    """shader_problems itself: our files pass, the ways a foreign pack could slip in under our name do not."""
+    SETTINGS = b"RP_MODE=1\nTOGGLE_VL_FOG=true\nBorderFog=false\n"
+    GLSL = b"#version 120\nuniform sampler2D colortex0;\nvoid main() { gl_FragColor = vec4(1.0); }\n"
+
+    def test_a_copy_of_our_pack_passes(self):
+        rels = ["shaderpacks/BeyondAndTabs/LICENSE", "shaderpacks/BeyondAndTabs/shaders/final.fsh"]
+        self.assertEqual(shader_problems([(r, our_file(r)) for r in rels] + [("options.txt", b"x")]), [])
+
+    def test_a_settings_txt_named_like_ours_fails(self):
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs.txt", self.SETTINGS)]))
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs/x.txt", self.SETTINGS)]))
+
+    def test_a_zip_or_its_metafile_named_like_ours_fails(self):
+        meta = b'name = "x"\n[download]\nurl = "https://example.invalid/a"\n'
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs-r5.9.3.zip.pw.toml", meta)]))
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs.zip", b"PK")]))
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs/shaders/a.fsh.pw.toml", meta)]))
+
+    def test_foreign_glsl_in_our_folder_fails(self):
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs/shaders/composite1.fsh", self.GLSL)]))
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabs/shaders/final.fsh", self.GLSL)]))
+
+    def test_a_folder_next_to_ours_fails(self):
+        self.assertTrue(shader_problems([("shaderpacks/BeyondAndTabsX/shaders/final.fsh",
+                                          our_file("shaderpacks/BeyondAndTabs/shaders/final.fsh"))]))
+
 
 class PackwizPack(unittest.TestCase):
     def build(self, skip):
@@ -70,13 +135,13 @@ class PackwizPack(unittest.TestCase):
         return files
 
     def check(self, files):
-        for rel, text in files:
+        for rel, data in files:
+            text = data.decode("utf-8", "replace")
             for b in BANNED:
                 self.assertNotIn(b, rel.lower(), rel)
                 self.assertNotIn(b, text.lower(), rel)
+        self.assertEqual(shader_problems(files), [])
         paths = {rel for rel, _ in files}
-        others = [p for p in paths if p.startswith("shaderpacks/") and not p.startswith(OUR_PACK)]
-        self.assertEqual(others, [])
         self.assertIn("mods/beyondandtabs.pw.toml", paths)   # the pack is not just empty
         self.assertIn("options.txt", paths)
 
@@ -122,7 +187,14 @@ class MrpackFile(unittest.TestCase):
             with zipfile.ZipFile(os.path.join(out, "BeyondAndTabs-test.mrpack")) as z:
                 for name in z.namelist():
                     self.assertFalse(any(b in name.lower() for b in BANNED), name)
-                index = z.read("modrinth.index.json").decode().lower()
+                # overrides are copied into the instance as they are: the shaderpacks/ rule applies to them
+                overrides = [(n.split("/", 1)[1], z.read(n)) for n in z.namelist()
+                             if n.startswith(("overrides/", "client-overrides/")) and not n.endswith("/")]
+                self.assertEqual(shader_problems(overrides), [])
+                raw = z.read("modrinth.index.json").decode()
+                index = raw.lower()
+        # an index entry is a download, never a file of ours
+        self.assertEqual([f["path"] for f in json.loads(raw)["files"] if f["path"].startswith("shaderpacks/")], [])
         for b in BANNED:
             self.assertNotIn(b, index)
             self.assertFalse(any(b in r for r in requested), requested)
