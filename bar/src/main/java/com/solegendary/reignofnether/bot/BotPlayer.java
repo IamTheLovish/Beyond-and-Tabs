@@ -1345,7 +1345,8 @@ public class BotPlayer {
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
