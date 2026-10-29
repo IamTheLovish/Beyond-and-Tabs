@@ -1,8 +1,8 @@
-# Energy tiers - a fantasy Fusion / AFUS ladder per faction (proposal, Oct 29 2026)
+# Energy tiers - a fantasy Fusion / AFUS ladder per faction (design, decided by lovish Oct 29 2026)
 
 lovish, Oct 28: energy feels "stuck on windmills and energy converters"; wants BAR-style Fusion / AFUS "designed to
-fit the game's fantasy feel". A menu to pick from, not code, built ON Joisco's draft #193 (`FusionReactor` FUSION /
-ADVANCED): his mechanics, with the numbers I'd move and why. Ideas marked lovish's are his (Oct 29, 01:26-01:28).
+fit the game's fantasy feel". Design only, no code; lovish's decisions are marked. Built ON Joisco's draft #193
+(`FusionReactor` FUSION / ADVANCED): his mechanics, with the numbers moved and why. Ideas marked lovish's are his (Oct 29, 01:26-01:28).
 Rules followed: design/vehicle_labs/LESSONS.md (4 tiers, a model per tier, T1/T2 refit in place, ghost footprint)
 and design/architecture_rules.md (base-body-cap, roof as fifth facade, 3+ depth planes, life).
 
@@ -64,7 +64,8 @@ than wind); L2 and L3 fill the plot with add-ons (L3: 3 E/s per cell).
 T1 L1-L3 absorbs today's Solar Collector and Advanced Solar (same numbers) as levels of one model. Wind stays the
 cheap spread rung, Geothermal the map-control rung. T2/T3 may take two in-tier levels (+10 % output, ~15 % cost).
 
-**Where I'd change #193, and why** (his mechanics stay; only numbers in his Kinds plus one blast pass):
+**Changes to #193 - decided by lovish (Oct 29 ~02:40): BAR ratios + build times** (his mechanics stay; only
+numbers in his Kinds, storage, and one chaining blast pass):
 - Build time 220 -> 900 blocks, AFUS 320 -> 2400 (above). Fusion energy 3000 -> 9000 (BAR's is 5.4 E per metal,
   #193's 1.4): a heavier drain while it goes up. Metal 2100 -> 2400 (31 E/s per 100 M: a hair above wind's 28, as
   BAR has it level - the value is space and steadiness, not raw efficiency). HP 900 -> 1400 (2.8x the Advanced
@@ -94,13 +95,14 @@ Energy is prayer. Kit: white stone and quartz, blue-glass lancets, candles, an o
 - T2 Pilgrim Church: cruciform, a square bell tower at the crossing, a rose window on the camera face, buttresses.
 - T3 Basilica of Prayer: a ribbed dome on a blue-glass drum, two west towers, a cloister with kneeling worshippers.
 - T4 Cathedral of the Thousand Prayers (25x25, ~40 tall): twin spires and a lantern crown; a column of pale light
-  rises from the crown (the energy made visible). Utility: **Sanctuary** - friendly units within 24 blocks regenerate
-  1 % HP/s out of combat; the light column brightens when it is working.
+  rises from the crown (the energy made visible). Utility - **Blessing Shield** (decided by lovish, replaces the
+  heal): a friendly unit that has stood 3 s within 24 blocks carries a holy shield out of the area: 25 % of its max HP
+  (cap 300), lasting 25 s or until broken, absorbs damage before HP; once per unit per 60 s; never stacks with other
+  shields. Read: a thin gold shell that cracks as it drains; the light column pulses when a shield is given.
 - Life: candles in every window at dusk, a bell tolls with each energy pulse, kneeling worshippers (structure-bound
   figures, not units) bow, a slow choir loop, gold motes drifting up from the roof.
 - Failure - **the Silence**: bells crack and stop, the light collapses inward then bursts as a white-gold flare;
   T3+ leaves the ruin ringing (enemy units in the blast are blinded 3 s).
-- Option B (genuinely different, outdoor): the Sunwell - a ring of tilting gold mirrors focusing on a sun crystal.
 
 ### Gravebound (code `monsters`, HUD "Death") - lead: lovish's SOUL CAULDRON
 "A massive pit or cauldron of someone mixing souls into the ground." Kit: deepslate, blackstone, bone ribs, soul
@@ -131,15 +133,21 @@ Red brick walls, grey slate roofs, weathered green copper on towers and spires (
   the camera facade (three meshed gears, 3-5 wide).
 - T3 Power Station: a glazed barrel-roof engine hall, four stacks, a gear wall with a 7-wide wheel, coal bunkers.
 - T4 The Great Engine: six stacks in two banks, a green-copper governor tower (spinning flyballs on top), a 9-wide
-  flywheel in an open arch. Utility: **Smog** - the base within 24 blocks is hidden from enemy sight unless an enemy
-  unit is within 8 blocks of a building (a BAR jammer in steam).
+  flywheel in an open arch. Utility - **Smog** (decided by lovish: like the GLA in C&C Generals: Zero Hour):
+  friendly units within 24 blocks of the Engine are **stealthed** from enemy sight; a unit that **attacks** (fires,
+  swings, casts) is revealed for **4 s** after its last attack, so ambushes work and a firefight exposes the shooters.
+  Buildings stay visible. Counter: enemy units within 6 blocks see stealthed units, and each faction gets a detector
+  (its T2 watchtower or scout reveals stealth in r16); killing the Engine lifts the smog over 5 s.
+  Leak rule: hidden units are filtered server-side (never sent to an enemy client as visible), the smog's haze and
+  stack smoke are seeded from the BUILDING and drawn the same whether units are inside or not, and a hidden unit's
+  own client effects (footstep dust, muzzle flash, selection ring) are not shown to enemies until revealed.
 - Life: heavy constant smoke, furnace glow, pistons and connecting rods, gears turning faster at high output (and
   stalling when energy is pinned at the cap), steam bursts from safety valves.
 - Failure - **boiler explosion**: a white steam blast, the stacks topple outward as falling blocks, scalding steam
   lingers 5 s (damage over time).
 - Smoke: 1 emitter per stack, large slow puffs (campfire-signal style), rising above y+20 and leaning with `Wind`
-  so it never hides units; T4's six stacks share its 4 emitters in rotation (budget below). Smog (T4) is a faint
-  ground haze, not a wall.
+  so it never hides units by itself; T4's six stacks share its 4 emitters in rotation (budget below). The smog
+  haze is a shader-side fog tint over the r24 disc (no per-particle cost), not a particle wall.
 
 ### Verdant Court (code `verdant_court`) - lead: lovish's ROOT TREE (roots boost buildings: decided)
 Kit: mossy stone, living wood, azalea leaves, froglights. A tree whose roots visibly spread over the ground.
@@ -157,7 +165,7 @@ Kit: mossy stone, living wood, azalea leaves, froglights. A tree whose roots vis
   T4 tree 2 cells a pass (7.5 min). Cost check: each pass looks at most `EXAMINE_PER_STEP` 8 candidates per aura and
   the registry serves `AURAS_PER_PASS` 24 auras, so a tree costs what a lab's aura costs; a bigger plan only grows
   the precomputed cell list (~1800 packed ints at r24). A building is boosted once roots have reached its foot.
-  Boost (one pick): Verdant **labs** touched by roots get **+5 / +10 / +15 / +20 % production speed** (T1-T4), and
+  Boost: Verdant **labs** touched by roots get **+5 / +10 / +15 / +20 % production speed** (T1-T4), and
   every Verdant building on roots regenerates 0.5 % HP/s out of combat. Not metal income: +15 % on ten T2 extractors
   would be ~7 M/s, a free fusion. Stacking: none - a building takes the strongest tree touching it; trees do not
   boost energy buildings (no loops). Value check: 6 labs at +15 % ~ 0.9 of a lab, cheap for a T3 - fine.
@@ -168,27 +176,23 @@ Kit: mossy stone, living wood, azalea leaves, froglights. A tree whose roots vis
 - Failure - **it falls**: leaves brown, bark blackens, and the trunk falls toward the killing blow - a LINE blast
   (length = tree height) instead of a circle; roots die back outermost first.
 
-### Ashborn / Ironhide Horde (code `piglins`) - open: two options
+### Ashborn / Ironhide Horde (code `piglins`) - the Caldera (decided by lovish)
 Kit: basalt, tuff, obsidian, glowing cracks, fire bowls; the stone-giant forge.
-- **A. The Caldera**: a crater that grows into a volcano. T1 a basalt fire-pit with a crack of glow; T2 a ringed
-  crater with a lava lake; T3 a stepped cone with obsidian vents; T4 the Mountain Heart (utility: **Eruption**, an
+- **The Caldera**: a crater that grows into a volcano. T1 a basalt fire-pit with a crack of glow; T2 a ringed
+  crater with a lava lake; T3 a stepped cone with obsidian vents; T4 the Mountain Heart (utility: **Eruption**, a paid,
   player-aimed barrage: range 64 from the Heart, 12 magma bombs over 4 s into an r6 circle, 80 damage per bomb to
   units, 40 % of the converter-style building blast; costs 3000 E, 3-min cooldown; telegraph: the target circle
   glows red and the cone rumbles for 3 s, visible to the enemy). Life: heat shimmer, lava bubbling, ash fall.
   Failure: an eruption - magma bombs scatter, lava flows briefly down the cone (not into neighbours).
-- **B. The Bound Ember Giant**: a kneeling stone giant chained to obsidian pylons, his chest a molten forge. T1 an
-  ember-shard in chains; T2 the giant's head and shoulders out of the ground; T3 kneeling, both arms chained; T4 he
-  stands, chained at the wrists (utility: **Unchain** - once a match, he breaks free as a 60 s T3 unit, then
-  crumbles). Life: breathing glow in the chest cracks, chains straining. Failure: he breaks his chains and bursts.
+- The crater's lava is part of the building: a Geothermal Plant may NOT be placed on it (GeothermalPlant.isLava must
+  skip lava inside a building's footprint), or one Caldera would host a free geo. (Not chosen: the Bound Ember Giant.)
 
-### Stormcallers (code `stormcallers`) - open: two options
+### Stormcallers (code `stormcallers`) - the Storm Lotus (decided by lovish)
 Kit: jade (waxed oxidized copper), dark oak, paper lanterns, amethyst, the lotus; Overcharge and the Mana Cistern.
-- **A. Thunder Pagoda**: a pagoda that grows a storey per tier, a lightning rod on top that calls strikes every few
-  seconds (output in pulses, fitting Overcharge). T4 Eye of the Storm: a permanent cloud over the base whose strikes
-  hit enemy units under it. Failure: the rod overloads - chain lightning arcs to nearby buildings.
-- **B. Storm Lotus**: an amethyst lotus floating over a mana pool inside a slowly turning ring of cloud; petals open
-  per tier. T4 a giant lotus (utility: Overcharge costs half while it stands). Failure: the lotus shatters -
-  amethyst shrapnel.
+- **Storm Lotus**: an amethyst lotus floating over a mana pool inside a slowly turning ring of cloud; petals open
+  per tier (T1 bud, T2 half-open, T3 full bloom, T4 a giant double lotus). The petals glow while Overcharge runs.
+  T4 utility: Overcharge costs half while it stands. Failure: the lotus shatters - amethyst shrapnel.
+- (Not chosen: the Thunder Pagoda - it would duplicate the JadePagoda capitol's silhouette.)
 
 ### The AI faction (unnamed, replaces Tidewrought) - lead: lovish's literal AFUS
 "The AI faction can get AFUS-like building": the one faction where Fusion / AFUS is literal. Tron-Legacy look:
@@ -212,7 +216,8 @@ dark plating (black concrete, polished blackstone, tinted glass), cyan light lin
 - While refitting the building **keeps its old output** (a refit must beat building fresh, or nobody refits); the
   punishable window is HP and blast: it keeps its old tier's HP and blast while scaffolding covers the new ring, and
   if it dies mid-refit the spent resources are lost. The new output switches on when the refit completes.
-- T4: a new build, one per player (Q2). A fresh T2/T3 can also be built directly at the full price.
+- T4: a SEPARATE building, not a T3 upgrade (decided by lovish), one per player. A fresh T2/T3 can be built
+  directly at the full price.
 - Each model is its own structure (`<line>_t1` ... `_t4`), the level read from `currentStructureName`, as labs do.
 
 **Rigs.** Rigid `WindGenerator.MOTIONS` rotations (WHEEL / BELL / PETALS / VANES, cheap): Brassworks gears and
@@ -240,11 +245,12 @@ adding 2 fusions + 1 AFUS through converters raises it to ~85 M/s (+80 %, BAR-li
 units (~125k M) is then ~25 min of full income without losses - hard to reach, as lovish wants. If that is too
 fast, the lever is the converter ratio, not the reactors.
 
-## Questions for lovish (pick one each)
-1. #193 numbers: (A) my changes - Fusion 2400 M / 9000 E / HP 1400, AFUS 6000 M / 27000 E / HP 3000;
-   (B) Joisco's as drafted; (C) only the AFUS fix (cheaper metal, dearer energy).
-2. T4 energy: (A) a separate one-per-player experimental; (B) an in-place upgrade from T3.
-3. Ashborn: (A) the Caldera (landscape, low and wide) or (B) the Bound Ember Giant (a figure, tall, reads from far)?
-4. Stormcallers: (A) Thunder Pagoda (vertical, loud) or (B) Storm Lotus (low, glowing, calm)?
-5. Death blast: (A) one converter-style death blast (r10 / r16 / r20); (B) #193's per-block explosions only.
-6. Add a T2 converter (-400 E/s -> +5 M/s): (A) yes, every faction; (B) no, T1 converters only.
+## Decided by lovish (Oct 29 ~02:40) - the six questions, all on the recommended answer
+1. #193 numbers move to BAR ratios (AFUS better per metal than the Fusion) plus the build times in (c).
+2. T4 energy is a separate one-per-player building, not an upgrade from T3.
+3. Ashborn = the Caldera; Eruption is paid, aimed and telegraphed; no geothermal on its lava.
+4. Stormcallers = the Storm Lotus (petals glow while Overcharge runs).
+5. One death blast per reactor that chains (40 % of a neighbour's max HP, 80 % for same-line reactors).
+6. Add the T2 converter (-400 E/s -> +5 M/s) for every faction.
+Also decided: Brassworks smog = GLA-style stealth (attackers revealed 4 s); White Angel T4 = Blessing Shield, the
+Mother Tree keeps the heal; Verdant roots boost labs. Still open: none in this doc.
