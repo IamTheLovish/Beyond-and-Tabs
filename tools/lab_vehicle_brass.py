@@ -185,6 +185,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np                    # noqa: E402
 
 import gen_structures as gs           # noqa: E402
+import roof_kit as R                  # noqa: E402
 import shape_kit as sk                # noqa: E402
 
 SX, SZ, H_MAX = 17, 25, 26          # the T1 lab plot (design/building_tiers.md): x = depth, z = the front's width
@@ -357,10 +358,20 @@ FAM = {
     "brass": ("waxed_cut_copper", "waxed_cut_copper_stairs", "waxed_cut_copper_slab", None),   # BRASS <= 3 %
 }
 LIGHT, LAMP = "white_candle", "lantern"
-# THE ALLOWLIST: the checklist's palette roles and their shapes, the lights, and the lawn in front
-ALLOWED = ({n for f in FAM.values() for n in f if n} | {
-    "stripped_mangrove_log", "chiseled_polished_blackstone", "cracked_polished_blackstone_bricks", "tuff",
-    "smooth_stone_slab", "calcite", "quartz_block", "bone_block", LIGHT, LAMP, LAWN, "deepslate_tiles"})
+# r8 (lovish, Oct 28 22:59): red BRICK walls on a pale stone plinth and string course, grey SLATE roofs (roof_kit) on
+# the halls / wings / shed, weathered green COPPER (roof_kit) on the cone with dark ribs and ledges
+FAM["brick"] = ("bricks", "brick_stairs", "brick_slab", "brick_wall")
+FAM["stone"] = ("smooth_stone", "smooth_stone_slab", "smooth_stone_slab", None)
+BRICK, PLINTH, STRING = "bricks", "polished_andesite", "smooth_stone"
+BAYS = (2, 4, 6, 18, 20, 22)            # the arcade's bays in the x 1 wall plane (r7's z 0 / 24 are the verges' ends)
+PIPE = "lightning_rod"                  # a copper downpipe (vanilla 1.20.1's lightning rod does not oxidize)
+# THE ALLOWLIST: the palette roles and their shapes, roof_kit's slate and copper, the lights, the lawn in front
+ALLOWED = ({n for f in FAM.values() for n in f if n and not n.startswith("mangrove")} | {
+    n for m in (R.SLATE, R.COPPER) for k in ("tones", "ridge", "verge") for f in ((m[k],) if k != "tones" else m[k])
+    for n in f} | {R.SLATE["gutter"], R.COPPER["gutter"]} | {
+    "chiseled_polished_blackstone", "cracked_polished_blackstone_bricks", "tuff", "stone_bricks",
+    "smooth_stone_slab", "calcite", "quartz_block", "bone_block", LIGHT, LAMP, LAWN, "deepslate_tiles", "glass_pane",
+    PIPE, "blackstone", "stone_brick_stairs"})
 ROOF_NAMES = set(PAL.values())
 
 
@@ -404,137 +415,130 @@ def side_maps(s):
 
 
 def base_paint(g):
-    """The greybox's stand-in blocks to the palette: wall red terracotta, holes the darkest recess brick, the works
-    deepslate bricks, roof cells red terracotta / mangrove shapes, the foundation tuff (R1)."""
+    """The greybox's stand-in blocks to the palette: walls bricks (r8; r1-r7 red terracotta), holes the darkest
+    recess brick, the works deepslate bricks, roof cells slate tiles until a roof is laid over them, the foundation
+    tuff (R1)."""
     for q, (n, p) in list(g.b.items()):
         if n == WALL:
-            g.b[q] = (FAM["red"][0], {})
+            g.b[q] = (BRICK, {})
         elif n == HOLE:
             g.b[q] = ("cracked_polished_blackstone_bricks", {})
         elif n in ROOF_NAMES:
-            paint(g, q, "red")
+            paint(g, q, "tiles")
         elif n == GROUND:
             g.b[q] = ("tuff", {})
 
 
 def arcade(g):
-    """R1 + R2 + R3 on the west face, halls and wings (z 0..6, 18..24), in horizontal courses (round 1's
-    per-column pale / grey alternation read as a checkerboard, speckle 58 %): R1 one continuous tuff plinth at
-    y 0 (x 0, the whole front but the lane); the pier columns 1 proud at x 0 on the odd columns (brass_lab_parts
-    .pilaster: a polished andesite base at y 1, a blackstone-brick shaft, an upside-down andesite stair capital at
-    y 5 - ref39), the capitals run on over the bays as one impost course; each bay (ARCH_Z) stepped back in 3
-    planes - open at x 0..1 y 1..3, a blackstone-brick stair head at x 1 y 4 under the impost, at its back (x 2) a
-    red terracotta panel y 1..2 under a calcite eye (y 3); over it the pale cornice (upside-down quartz stairs at x 0) with one white light per bay, carried onto the
-    buttress face, and the frieze above the cornice where the wings show it."""
-    import brass_lab_parts as B
+    """R1 + R2 + R3, r8: the west wall stands in the x 1 plane under the eave (x 0 is the eave's shadow, only the
+    downpipes stand in it - grammar C3 / recipes R1). Base - body - cap (architecture_rules G7): a polished andesite
+    plinth course at y 1 the whole run (piers and bays), brick piers on the odd z, a smooth stone string course at
+    y 5 (the impost the bay heads spring from), a darker top course at y 6 (red terracotta, the wet line) under the
+    copper gutter. Each bay (BAYS) a
+    window in a reveal: open at x 1 y 2..3 under a dark upside-down stair head, an andesite sill at x 2 with the bay's
+    one candle on it, a glass pane over it, a dark interior behind (x 3) - lit windows at dusk instead of r7's candles
+    on the cornice."""
     for z in range(SZ):
         if z not in LANE_Z:
             put(g, (0, 0, z), "tuff")
-    for z in [z for z in range(SZ) if z < 7 or z > 17]:
-        if z in ARCH_Z:
-            for y in (1, 2, 3):
+    for z in [z for z in range(1, SZ - 1) if z < 7 or z > 17]:
+        put(g, (1, 1, z), PLINTH)
+        if z in BAYS:
+            for y in (2, 3):
                 g.clear(1, y, z)
-            stair(g, (1, 4, z), "dark", "east", "top")    # the head: a dark stair at x 1 y 4 stepped back under
-            put(g, (1, 5, z), FAM["dark"][0])             # the impost - the piers' capitals run on over the bays
-            stair(g, (0, 5, z), "andesite", "east", "top")    # as one andesite course at x 0 y 5
-            for y, n in ((1, "red_terracotta"), (2, "red_terracotta"), (3, "calcite"),
-                         (4, "cracked_polished_blackstone_bricks")):
-                put(g, (2, y, z), n)
-            candle(g, (0, 7, z))
+            stair(g, (1, 4, z), "dark", "east", "top")
+            put(g, (2, 1, z), PLINTH)
+            candle(g, (2, 2, z))
+            put(g, (2, 3, z), "glass_pane")
+            put(g, (2, 4, z), "cracked_polished_blackstone_bricks")
+            for y in (2, 3):
+                put(g, (3, y, z), "cracked_polished_blackstone_bricks")
         else:
-            stamp(g, B.pilaster(5), (0, 1, z), 1)
-        stair(g, (0, 6, z), "quartz", "east", "top")
-        if (z < 3 or z > SZ - 4) and (1, 7, z) in g.b and g.b[(1, 7, z)][0] == FAM["red"][0]:   # wings only
-            put(g, (1, 7, z), "chiseled_polished_blackstone" if z % 2 else "red_terracotta")
+            for y in (2, 3, 4):
+                put(g, (1, y, z), BRICK)
+        put(g, (1, 5, z), STRING)
+        put(g, (1, 6, z), "red_terracotta")    # the wall's top course the darker tone: the wet line under the eave
+        #                                        lip (recipes R15) - red terracotta only here and in the bay panels
 
 
 def gables(g):
-    """R5's gable ends (z 0 north, z 24 south - the RTS camera's side): the ground storey in plane piers (x 3 5 7 9,
-    andesite capitals) and bays recessed 1 (x 4 6 8, the arcade's red / calcite panels under dark heads) on a tuff
-    plinth, the pale lintel band, the frieze; on the roof end red courses (terracotta / mangrove planks) round the
-    pavilion emblem (a cream panel with a red cross, recessed in a blackstone frame - ref39's pediment), a dark back
-    edge."""
+    """R5's gable ends, r8: the wing and hall walls stop at z 1 / 23 so the roof's verge oversails them (z 0 / 24, the
+    RTS camera's south end). The face: a polished andesite plinth at y 1, brick piers on the odd x and bays recessed
+    one (x 2 4 6 8: a window under a dark head, a red panel and calcite eye behind - ref18's panel), the smooth stone
+    string course at y 5, brick above to the roof, the pavilion emblem in the gable (y 6..10) under the slate."""
     import brass_lab_parts as B
     for s in (0, 1):
         Z, F = side_maps(s)
-        zf, zi = Z(0), Z(1)
+        zf, zi = Z(1), Z(2)
         for x in range(1, HALL_X[1] + 1):
-            put(g, (x, 1, zf), "polished_andesite")    # the arcade's base course, round the corner (R1 under it)
-            if x >= 3 and x % 2 == 1:                   # a pier in the face plane
+            put(g, (x, 1, zf), PLINTH)
+            if x % 2 or x == 2:                         # x 2: the corner, the arcade's end bay is behind it
                 for y in (2, 3, 4):
-                    put(g, (x, y, zf), FAM["dark"][0])
-                stair(g, (x, 5, zf), "andesite", F("south"), "top")
-            elif x >= 4:                                # a bay, recessed one
-                for y in (2, 3, 4):
+                    put(g, (x, y, zf), BRICK)
+            else:
+                for y in (2, 3):
                     g.clear(x, y, zf)
-                for y, n in ((2, "red_terracotta"), (3, "calcite"), (4, "red_terracotta")):
+                stair(g, (x, 4, zf), "dark", F("south"), "top")
+                for y, n in ((1, PLINTH), (2, "red_terracotta"), (3, "calcite")):
                     put(g, (x, y, zi), n)
-                stair(g, (x, 5, zf), "dark", F("south"), "top")
-            elif x == 2:                                # the corner bay's panel, seen in plane from this side
-                put(g, (2, 5, zf), FAM["dark"][0])
-            put(g, (x, 6, zf), FAM["quartz"][0])        # the lintel band, round the corner
-            if x <= WING_X[1]:
-                put(g, (x, 7, zf), "chiseled_polished_blackstone" if x % 2 else "red_terracotta")
-        for y in range(WING_TOP + 1, 14):               # the roof end's courses
-            for x in range(1, WING_X[1] + 1):
-                q = (x, y, zf)
-                if q in g.b and shape_of(g.b[q][0]) == 0:
-                    g.b[q] = ("red_terracotta" if y % 2 == 0 else "mangrove_planks", {})
-        for x in range(1, WING_X[1] + 1):              # a smooth-stone string course under the emblem
-            put(g, (x, 8, zf), "smooth_stone_slab", type="top", waterlogged="false")
-        # the emblem flush in the gable's face (round 1's recessed panel read dark-in-dark): a 3 x 3 quartz field
-        # x 3..5, y 10..12 with a red cross, in a blackstone frame x 2..6, y 9..13
-        stamp(g, B.emblem(recess=False), (4, 11, zf), 2 if s == 0 else 0)
+            put(g, (x, 5, zf), STRING)
+            if (x, 6, zf) in g.b and x > 1:            # x 1: the west wall's wet top course turns the corner
+                put(g, (x, 6, zf), BRICK)
+        stamp(g, B.emblem(recess=False), (4, 8, zf), 2 if s == 0 else 0)
 
 
-def wing_roofs(g):
-    """R5's swept roofs (z 0..2, 22..24): red courses - mangrove shapes, a polished granite lip on the middle tier,
-    red terracotta / stripped mangrove beam courses on the front end (x 0) - a grey rib up the middle (x 4), a dark
-    back edge (x 8), the ridge along the outer gable beaded pale / red, the front rake's top cells beaded, a brass
-    finial at the ridge's front end."""
+HALL_H = (7.5, 8, 8.5, 9, 9.5, 10, 9.5, 9, 8.5, 8)   # x 0..9: the hall's slate pitch (26.5 degrees, slab pairs), the
+#   eave at x 0 oversailing the x 1 wall, the ridge cap at x 5 (y 9, FRONT_T1's 9); the back eave on the x 9 wall
+
+
+def wing_h(x, z):
+    """The wing's half-hip (z 0 = the outer gable): 1.5 up per block across x from the x 0 eave to the apex at x 4,
+    2 up per block from the hall toward the gable - tops 15 / 13 / 11 at z 0 / 1 / 2 (FRONT_T1's 14 / 12 / 10)."""
+    return 8 if x == 9 else min(9 + 1.5 * min(x, 8 - x), 15 - 2 * z)
+
+
+def slate_roofs(g):
+    """R4 + R5, r8 (lovish 22:59: grey slate on the halls and wings): roof_kit.field over the halls (z 3..7,
+    17..21) and the wings' half-hips (z 0..2, 22..24), each roof graded on its own (T0 deepslate tiles 55-72 %, wet
+    eaves, bleached ridges), the hall ridge capped in blackstone bricks, the wing gable's verge dark oak (z 0 / 24)
+    round a blackstone-brick apex. The eaves oversail the walls by one (x 0 west, z 0 / 24 the ends): waxed copper
+    gutters under them, copper downpipes at z 1 / 5 (19 / 23) to the plinth. r1-r7 laid red stair terraces flush on
+    the wall tops - no overhang, no gutter, one red lump with the walls (grammar (a) 1-2, ref45)."""
+    for q in [q for q in g.b if q[0] <= HALL_X[1] and (q[2] <= 7 or q[2] >= SZ - 8) and (
+            q[1] >= HALL_TOP + 1 or (q[2] in (0, SZ - 1) and q[1] >= 1 and q[0] >= 1))]:
+        del g.b[q]
+    H, regions, fixed = {}, [], {}
     for s in (0, 1):
-        Z, F = side_maps(s)
-        for zz in (0, 1, 2):
-            z = Z(zz)
-            tops = {x: max([y for y in range(WING_TOP + 1, H_MAX) if (x, y, z) in g.b], default=None)
-                    for x in range(0, WING_X[1] + 1)}
-            for (x, y, zq), (n, p) in list(g.b.items()):
-                if zq != z or y <= WING_TOP or x > WING_X[1] or n not in {f for v in FAM.values() for f in v}:
-                    continue
-                q, top = (x, y, z), y == tops[x]
-                if x == 0:
-                    if top:
-                        paint(g, q, ("brass", "quartz", "mangrove")[zz])
-                    elif y == 11:                       # a string course across the front end (ref44)
-                        paint(g, q, "andesite")
-                    elif shape_of(n) == 0:
-                        g.b[q] = ("red_terracotta", {}) if y % 2 == 0 else ("stripped_mangrove_log", {"axis": "z"})
-                elif x == WING_X[1]:
-                    paint(g, q, "dark")
-                elif x == 4 and top:
-                    paint(g, q, "deep")
-                elif top and zz == 0:
-                    paint(g, q, "quartz" if x % 2 else "mangrove")
-                elif top and zz == 1:
-                    paint(g, q, "granite")
-                elif shape_of(n):
-                    paint(g, q, "mangrove")
-
-
-def hall_roofs(g):
-    """R4 (z 3..7, 17..21): red courses - red terracotta tiers, mangrove stair / slab drips - a grey rib over the
-    hall pier (polished deepslate, z 5 / 19), a dark ridge course (x 5) between polished granite lips."""
-    for (x, y, z), (n, p) in list(g.b.items()):
-        if not (3 <= z <= 7 or 17 <= z <= 21) or y < HALL_TOP + 1 or x > HALL_X[1] or n not in (
-                FAM["red"][0], FAM["red"][1], FAM["red"][2]):
-            continue
-        q = (x, y, z)
-        if y == HALL_TOP + 3 and x == 5:              # the ridge course: dark, a polished granite lip either side
-            paint(g, q, "dark")
-        elif y == HALL_TOP + 3:
-            paint(g, q, "granite")
-        elif z in (5, SZ - 1 - 5):
-            paint(g, q, "deep")
+        Z, _ = side_maps(s)
+        hall = {(x, Z(z)) for x in range(HALL_X[1] + 1) for z in range(3, 8)}
+        wing = {(x, Z(z)) for x in range(HALL_X[1] + 1) for z in range(3)}
+        H.update({c: HALL_H[c[0]] for c in hall})
+        H.update({(x, Z(z)): wing_h(x, z) for x in range(HALL_X[1] + 1) for z in range(3)})
+        regions += [hall, wing]
+        fixed.update({(x, Z(0)): R.SLATE["verge"] for x in range(HALL_X[1] + 1) if x != 4})
+    cells = R.field(H, seed=8, mats=R.SLATE, fixed=fixed, regions=regions, along=lambda c: (c[0], c[1]))
+    for (x, y, z), (n, p) in list(cells.items()):   # under the dark bargeboard a PALE stone bracket line, not a wall
+        if (x, z) in fixed and n == R.SLATE["verge"][0]:     # (recipes R2; pass 2: the studied factory's pale trim line
+            cells[(x, y, z)] = ("stone_brick_stairs", dict(  # is what makes its slate read against the brick)
+                facing="south" if z == 0 else "north", half="top", shape="straight", waterlogged="false"))
+    for q, (n, p) in cells.items():
+        put(g, q, n, **p)
+    for (x, z) in H:                     # the roof's body: brick from the wall tops up to the slate, inside the walls
+        if 1 <= x <= HALL_X[1] and 0 < z < SZ - 1:
+            low = min(y for (xx, y, zz) in cells if (xx, zz) == (x, z))
+            for y in range(HALL_TOP, low):
+                if (x, y, z) not in g.b:
+                    put(g, (x, y, z), BRICK)
+    gut = dict(facing="east", half="top", shape="straight", waterlogged="false")
+    for s in (0, 1):
+        Z, _ = side_maps(s)
+        for z in range(3, 7):
+            put(g, (0, HALL_TOP, Z(z)), R.SLATE["gutter"], **gut)
+        for z in range(3):
+            put(g, (0, WING_TOP, Z(z)), R.SLATE["gutter"], **gut)
+        for z, top in ((1, WING_TOP - 1), (5, HALL_TOP - 1)):
+            for y in range(1, top + 1):
+                put(g, (0, y, Z(z)), PIPE, facing="up", powered="false", waterlogged="false")
 
 
 def cone_rows(g):
@@ -559,36 +563,54 @@ def cone_rows(g):
     return rows, arris
 
 
+TIER_TOPS = (11, 15, 19, 23)            # the cone's tier changes: each tier's top row, where the next steps in
+
+
 def tower(g):
-    """R7 + R8, re-mass r3 (lovish chose option b, Oct 28): ONE mid-red cone from the hall eave (y 7) to the point,
-    after ref18 - squinted, a dark-edged red triangle standing on the hall roof, its brightest spot at the door.
-    r2's tower read as a dark block (black jambs and buttresses up to y 12), a pale lid (a diorite course at y 13)
-    and a stepped spire; so here: the faces and flanks red (red terracotta on full rows, mangrove stairs on the
-    tiers' step rows, a polished granite tick at each step's inner corner), the arrises dark (cone_rows: blackstone
-    bricks, a 2-row run of polished blackstone in the top tier, rough blackstone at the point - ref44's texture
-    variety in one role), no full-width pale or dark course. The arrises run unbroken dark from the eave to the
-    point: r3's pale arris steps (y 11 and 13) broke the dark edge at the squint (the cone read waisted, pale
-    shoulders), and the rows above y 15 are too narrow to carry a symmetric pale pair under the 30 % row rule
-    (tools/test_lab_vehicle_brass.py). The R7 eye and the R8
-    panel grid keep their elevation cells (y, z), set into the cone's new face planes."""
+    """R7 + R8, r8 (lovish 22:59: weathered green copper on the tower; ref62 / ref66 / ref70): the frozen cone's
+    voxels laid in roof_kit COPPER courses (oxidized the base tone, weathered / exposed the wet and bleached ones,
+    wettest at the eave), framed by dark structure lines - the four arrises (cone_rows) polished blackstone bricks
+    from the eave to the top tier, the hip rolls of a pyramid roof; at each tier change (TIER_TOPS) the ring the next
+    tier doesn't cover a dark ledge course (the step reads as a shadow line, ref66), carried on a corbel table in the
+    row under it - upside-down dark stairs on every other cell of each face, the cells between cut back one (the air
+    teeth are the ornament, recipes R10). All inside the frozen outline. The R7 eye keeps its elevation cells; over the
+    top tier a copper needle ring (y 22), a dark ledge ring (y 23), the dark wall post (y 24) and the brass tip."""
+    rows, arris = cone_rows(g)
+    eye = {(1, 14, 12), (1, 15, 11), (1, 15, 13), (2, 15, 12), (2, 16, 12), (1, 15, 12)}
+    struct = set()
+    for y in (10, 14, 18):                               # the corbel tables under the ledges
+        cells = rows[y]
+        for x, z in cells:
+            col = [xx for xx, zz in cells if zz == z]
+            row = [zz for xx, zz in cells if xx == x]
+            if (x, z) in arris[y] or (x, y, z) in eye:
+                continue
+            for face, off, facing in ((x == min(col), z - int(TZ), "east"), (x == max(col), z - int(TZ), "west"),
+                                      (z == min(row), x - int(TX), "south"), (z == max(row), x - int(TX), "north")):
+                if not face:
+                    continue
+                if off % 2:
+                    stair(g, (x, y, z), "dark", facing, "top")
+                    struct.add((x, y, z))
+                elif (x, y, z) in g.b:
+                    g.clear(x, y, z)
+                break
     rows, arris = cone_rows(g)
     for y, cells in rows.items():
-        top_row = (y - 7) % 4 == 0 and y > 7                  # a tier's top (step) row: 11, 15, 19, 23
-        fx = min(x for x, _ in cells)                         # the step row's front: the next tier's foot
-        corners = {min(z for x, z in cells if x == fx), max(z for x, z in cells if x == fx)}
         for x, z in cells:
             q = (x, y, z)
-            if (x, z) in arris[y] and not 20 <= y <= 23:
-                paint(g, q, "rough" if y >= 24 else "dark")
-            elif (x, z) in arris[y]:   # r5: the top tier (3 wide) is one red field - dark arrises there made 13 of
-                # 16 cells dark, a dark cap read as a third tier (critic on r4)
-                paint(g, q, "red")
-            elif top_row and x == fx and z in corners and y < 20:   # the step's inner corner: a granite slab on
-                put(g, q, FAM["granite"][2], type="bottom", waterlogged="false")   # the tread (r7, critic in game on
-                #   r6: granite stairs here put a pink rim on every 4-row tier - the ziggurat read; a whole granite
-                #   step row read as a lid at y 11)
-            else:
-                paint(g, q, "red")
+            if q in struct or q in eye:
+                continue
+            if (x, z) in arris[y] and y <= 21:
+                paint(g, q, "dark")
+                struct.add(q)
+            elif y in TIER_TOPS and (x, z) not in rows.get(y + 1, set()):
+                paint(g, q, "dark")
+                struct.add(q)
+    face = {q: g.b[q] for y, cells in rows.items() if y <= 22 for x, z in cells
+            for q in [(x, y, z)] if q not in struct and q not in eye and q in g.b}
+    for q, blk in R.retone(face, R.COPPER, seed=8).items():
+        g.b[q] = blk
     # the door head (R6, r4: y 9 in the first tier's face, x 0): the arch's voussoirs over the 5-wide lane - granite
     # haunches (upside-down stairs, their step at the jamb side, so the opening's top corners read rounded), quartz
     # bricks either side of a brass keystone slab carrying the ONE door light (a standing lantern set into the
@@ -605,29 +627,19 @@ def tower(g):
     # the second tier's face (x 1, y 12..15) and the third's (x 2, y 16..19)
     for q in ((1, 14, 12), (1, 15, 11), (1, 15, 13)):     # r5: polished granite, +40 over the body - calcite
         put(g, q, "polished_granite")                    # stood +120 and cut the cone into two tiers (critic on r4)
-    paint(g, (2, 16, 12), "granite")
+    put(g, (2, 16, 12), "polished_granite")
     g.clear(1, 15, 12)
     put(g, (2, 15, 12), "red_nether_bricks")
-    # R8 the panel grid at its r2 elevation cells: the top tier's arrises (z 11 / 13, y 20..23) are the lattice's
-    # verticals, red panels at z 12 (y 19, 21, 22, 23) round the lit slot (y 20), the point dark (y 24) under the
-    # brass tip (y 25)
-    for y in (19, 21, 22, 23):
-        x = min(xx for xx, zz in rows[y] if zz == int(TZ))
-        if shape_of(g.b[(x, y, int(TZ))][0]) == 0:
-            put(g, (x, y, int(TZ)), "red_terracotta")
-        else:
-            paint(g, (x, y, int(TZ)), "red")
-    put(g, (3, 20, 12), "red_terracotta")               # r5: no lit slot - the top tier one red field
-    # r7 the needle (critic in game on r6: the top read as a 3 x 3 red stub under a copper block): on y 22..23 every
-    # cell but the 1-wide core (x 4, z 12) a mangrove stair, tall half toward the core, the core red terracotta; a
-    # blackstone-brick wall post at y 24 under the copper tip
-    for y in (22, 23):
+    # the needle (r7's critic in game on r6: the top read as a 3 x 3 stub under a copper block): on y 22 every cell
+    # but the 1-wide core (x 4, z 12) a copper stair, tall half toward the core; y 23 the same ring as the top
+    # ledge, dark; the core blackstone bricks under the wall post (y 24) and the brass tip (y 25)
+    for y, mat in ((22, R.COPPER["tones"][0][1]), (23, FAM["dark"][1])):
         for (x, yy, z) in [q for q in g.b if q[1] == y and 3 <= q[0] <= 5 and 11 <= q[2] <= 13]:
             if (x, z) == (4, 12):
-                put(g, (x, y, z), "red_terracotta")
+                put(g, (x, y, z), FAM["dark"][0])
                 continue
             facing = "east" if x < 4 else "west" if x > 4 else "south" if z < 12 else "north"
-            put(g, (x, y, z), "mangrove_stairs", facing=facing, half="bottom", shape="straight", waterlogged="false")
+            put(g, (x, y, z), mat, facing=facing, half="bottom", shape="straight", waterlogged="false")
     put(g, (4, 24, 12), FAM["dark"][3])
     paint(g, (4, 25, 12), "brass")
 
@@ -708,78 +720,55 @@ def door(g):
 
 
 def works(g):
-    """R9: the shed roof a shallow gable over z 2..22 (r6), its ends (z 0..1 by the stack, z 23..24) in flat bays -
-    blackstone-brick ribs every 3rd row and polished deepslate copings, the bays sunk one; the south end: dark corner
-    piers, a tuff plinth, a deepslate-brick wall with two lit slots, a polished deepslate lintel; the hall's
-    south-east corner (x 9) a dark quoin under the lintel band; the stack in deepslate bricks with a brass band and a
-    dark cap."""
+    """R9, r8: the works shed (x 11..16, z 0..24) a roof_kit slate gable at the 26.5 degree slate pitch over brick
+    walls y 1..4 - its ridge cap (y 6, x 13..14) under the hall ridge, the yard eave (x 10, y 5) oversailing the x 11
+    wall over a copper gutter, dark oak verges at the ends (z 0 / 24); r6-r7's deepslate lid with ribs had no eave
+    and read as a black box. The south end (z 24, the camera's): dark corner piers, a polished andesite plinth, brick
+    with two lit slots (x 12 / 15) under a smooth stone lintel. The stack (x 13..14, z 0..1) deepslate bricks to y 12,
+    a brass band at y 9, a dark cap."""
     x0, x1 = SHED_X
     sx0, sx1, sz0, sz1, top = STACK
-    for z in range(SZ):
-        for x in range(x0, x1 + 1):
-            if sx0 <= x <= sx1 and sz0 <= z <= sz1:
-                continue
-            if GABLE_Z[0] <= z <= GABLE_Z[1]:
-                continue
-            if x in (x0, x1):
-                put(g, (x, SHED_TOP, z), "polished_deepslate")
-            elif z % 3 == 0:                            # the ribs: upside-down blackstone-brick stairs
-                stair(g, (x, SHED_TOP, z), "dark", "south" if z < SZ // 2 else "north", "top")
-            else:
-                g.clear(x, SHED_TOP, z)
-                put(g, (x, SHED_TOP - 1, z), "deepslate_tiles" if z % 3 == 1 else "polished_blackstone")
-    # r6 (critic on r5: the shed is ~40 % of the RTS view and read as a black box, median luma 24): a shallow gable
-    # over z 2..22 - eave stairs at y 5 (x 11 / 16), the ridge at y 6 over x 13..14 (under the hall ridge, y 9) - its
-    # slopes catch the sun; deepslate tile courses with a deepslate-brick rib every 3rd row and a polished deepslate
-    # ridge (variety by texture in one role)
-    for z in range(GABLE_Z[0], GABLE_Z[1] + 1):
-        fam = "works" if z % 3 == 0 else "tiles"
-        for x in range(x0, x1 + 1):
-            put(g, (x, SHED_TOP - 1, z), "deepslate_bricks")
-        for x, y, facing in ((x0, SHED_TOP, "east"), (x0 + 1, SHED_TOP + 1, "east"),
-                             (x1, SHED_TOP, "west"), (x1 - 1, SHED_TOP + 1, "west")):
-            stair(g, (x, y, z), fam, facing)
-        for x in range(x0 + 1, x1):
-            put(g, (x, SHED_TOP, z), FAM[fam][0])
-        for x in (x0 + 2, x0 + 3):
-            put(g, (x, SHED_TOP + 1, z), FAM["deep"][2], type="bottom", waterlogged="false")
+    for q in [q for q in g.b if x0 - 1 <= q[0] <= x1 and q[1] >= 1]:
+        del g.b[q]
+    for x in range(x0, x1 + 1):
+        for z in range(SZ):
+            for y in range(1, SHED_TOP):
+                put(g, (x, y, z), FAM["works"][0] if 0 < z < SZ - 1 and x0 < x < x1 else BRICK)
+            if x0 < x < x1:
+                put(g, (x, SHED_TOP, z), FAM["works"][0])        # the roof's body under the slate
+    for (u, y, v), (n, p) in R.gable(x1 - x0 + 1, SZ - 2, axis="z", seed=9).items():
+        put(g, (x0 + u, SHED_TOP + y, 1 + v), n, **p)
     for x in range(sx0, sx1 + 1):
         for z in range(sz0, sz1 + 1):
+            for y in range(SHED_TOP, top + 1):
+                put(g, (x, y, z), FAM["works"][0])
             put(g, (x, 9, z), FAM["brass"][0])
             put(g, (x, top, z), FAM["dark"][0])
     zs, zi = SZ - 1, SZ - 2
-    for x in range(x0, x1 + 1):                         # the south end: dark corner piers, a tuff plinth, the wall
-        put(g, (x, 1, zs), "tuff")                      # deepslate bricks with TWO lit 1 x 3 slots (x 12 / 15, r6:
-        if x in (x0, x1):                               # one 4-wide recess read as part of the black box), a
-            for y in range(2, SHED_TOP + 1):            # polished deepslate lintel; no parapet (r6)
+    for x in range(x0, x1 + 1):                         # the south end
+        put(g, (x, 1, zs), PLINTH)
+        if x in (x0, x1):
+            for y in range(2, SHED_TOP):
                 put(g, (x, y, zs), FAM["dark"][0])
         else:
-            for y in (2, 3, 4):
+            for y in (2, 3):
                 if x in SHED_SLOTS:
                     g.clear(x, y, zs)
                     put(g, (x, y, zi), "deepslate_tiles")
                 else:
-                    put(g, (x, y, zs), "deepslate_bricks")
-            put(g, (x, SHED_TOP, zs), "polished_deepslate")
+                    put(g, (x, y, zs), BRICK)
+            put(g, (x, SHED_TOP - 1, zs), STRING)
     for x in SHED_SLOTS:
         put(g, (x, 2, zs), LAMP, hanging="false", waterlogged="false")
-    xc = HALL_X[1]
-    for y, n in ((1, "tuff"), (2, "polished_blackstone"), (3, "polished_blackstone"), (4, "polished_blackstone")):
-        put(g, (xc, y, zs), n)
-    stair(g, (xc, 5, zs), "andesite", "north", "top")
-    put(g, (xc, 6, zs), FAM["quartz"][0])
-    for x in range(1, SX):                              # the yard between hall and shed: tuff, dark kerbs
-        if (x, 0, 0) in g.b and g.b[(x, 0, 0)][0] == "tuff" and x == HALL_X[1] + 1:
-            for z in range(SZ):
-                put(g, (x, 0, z), "polished_deepslate" if z % 3 == 0 else "tuff")
+    for z in range(SZ):                                 # the yard between hall and shed: tuff, dark kerbs
+        put(g, (HALL_X[1] + 1, 0, z), "polished_deepslate" if z % 3 == 0 else "tuff")
 
 
 def detail():
     """The Engine Shed T1, detail round 1: the approved greybox painted and carved region by region (R1-R9)."""
     g = greybox()
     base_paint(g)
-    hall_roofs(g)
-    wing_roofs(g)
+    slate_roofs(g)
     tower(g)
     arcade(g)
     gables(g)
