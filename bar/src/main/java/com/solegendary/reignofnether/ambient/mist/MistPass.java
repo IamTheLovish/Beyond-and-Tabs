@@ -223,7 +223,9 @@ public final class MistPass {
         int nx = (int) Math.floor(f[0] / VIS_STEP) * VIS_STEP - half, nz = (int) Math.floor(f[2] / VIS_STEP) * VIS_STEP - half;
         long tick = MC.level.getGameTime();
         boolean moved = Math.abs(nx - visX) > half / 2 || Math.abs(nz - visZ) > half / 2;
-        if (!moved && tick - visTick < VIS_PERIOD && tick >= visTick)
+        // the first call always draws (review, Oct 29: tick - Long.MIN_VALUE overflowed negative, so a camera starting
+        // near 0, 0 never uploaded and the shader read an undefined texture)
+        if (visTick != Long.MIN_VALUE && !moved && tick - visTick < VIS_PERIOD && tick >= visTick)
             return;
         visTick = tick;
         visX = nx;
@@ -290,5 +292,6 @@ public final class MistPass {
         floor = Float.NaN;
         lastNanos = 0;
         drawing = false;
+        visTick = Long.MIN_VALUE;
     }
 }
