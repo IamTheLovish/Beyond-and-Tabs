@@ -110,8 +110,7 @@ public class SoulBoiler extends Ability {
      */
     public static float speedMult(BuildingPlacement bp) {
         Level l = bp.getLevel();
-        return l != null && !l.isClientSide() && l.getGameTime() < bp.boilUntilTick
-            && bp.ownerName != null && bp.ownerName.equals(bp.boilOwner) ? SPEED_MULT : 1f;
+        return l != null && !l.isClientSide() && l.getGameTime() < bp.boilUntilTick ? SPEED_MULT : 1f;   // STUB (red proof): the owner check removed
     }
 
     /** Boils {@code b} for its current owner until game tick {@code untilTick}. Public for the game test. */
