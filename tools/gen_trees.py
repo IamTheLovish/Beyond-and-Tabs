@@ -20,7 +20,9 @@ with their origin ON the surface block. bare_sampler (80 x 31 x 44) holds all 8 
 r25: dead trees are a grey acacia_wood pole on a dark oak foot (both wood for ResourceSources), one leaning
 trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks fork at the crown; no twig hooks.
 r27 (oak pilot, critic r33 trees 3/10): the oak is rebuilt as 4-6 lumpy lobes on face-joined dark oak limbs, three
-forms (spread, twin, tall; old = a 2x2 stump splitting into two leaders), three leaf tones per lobe (oak())."""
+forms (spread, twin, tall; old = a 2x2 stump splitting into two leaders), three leaf tones per lobe (oak()).
+r28 (critic r34: lime tops, the tree vanishes into the lawn): the oak crown's colour only, shapes as r27 - no azalea,
+a dark oak body, oak on the sunlit patches' cores, spruce under (oak_tones())."""
 import math
 import os
 import random
@@ -248,12 +250,19 @@ def lobe(t, c, r, up, down, rng, ragged=0.4):
                     t.leaf.add((x, y, z))
 
 
-def oak_tones(t, rng, lobes, light="azalea_leaves", body2="dark_oak_leaves", dark="spruce_leaves"):
+def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.0):
     """r27 (critic r33: flat-shaded one-tone leaf cubes; r32: "two leaf tints, a darker inner shell"): each lobe gets
-    the three values a lit leaf mass has, from vanilla leaves as our pack draws them under vanilla's tints - sunlit
-    patches on its top (azalea, the lightest green: luma 103 v oak 78), an oak body with darker dark-oak patches (71),
-    and a dark blue-green underside and inner shell (spruce, 62). Patches round a few spots per lobe, not pepper, so
-    the tones read as light on a mass."""
+    the values a lit leaf mass has - sunlit patches on its top, a body, a darker underside and inner shell (spruce).
+    Patches round a few spots per lobe, not pepper, so the tones read as light on a mass.
+    r28 (critic r34 trees 3/10: "the top has gone lime... the tree vanishes into the grass from the RTS camera"): in
+    game under the shipped shader preset the crown measured hue 92, V 0.50-0.52 against the lawn's hue 74, V 0.61, and
+    r27's azalea tops (51-62% of each template's top, seen from above) hue 80, V 0.72-0.80 - lighter than the lawn, at
+    its hue. Azalea is not biome-tinted: our pack draws it at a fixed yellow-green, luma 103 (0.40), where oak and dark
+    oak are greyscale under the foliage colour (77 and 70) and spruce under the fixed evergreen colour (62). So the
+    crown is now a darker mass: no azalea; a dark oak body; the sunlit patches oak (the lighter tinted leaf) and only
+    within `core` of a spot's centre (19-34% of the top, was 51-62% azalea); the spruce underside and shell as r27.
+    The random draws are r27's, in r27's order: the patches lie where they did and only their kinds change, and the
+    skirt drawn after them is unchanged - the before/after is the colour alone."""
     top_of = {}
     for (x, y, z) in t.leaf:
         top_of[(x, z)] = max(y, top_of.get((x, z), -1))
@@ -271,14 +280,17 @@ def oak_tones(t, rng, lobes, light="azalea_leaves", body2="dark_oak_leaves", dar
         lit, mid = spots[k]
         under = (x, y + 1, z) in t.leaf and (x, y + 2, z) in t.leaf
         bottom = (x, y - 1, z) not in t.leaf and y <= cy + 0.5
+        kinds[p] = body
         if under and rng.random() < 0.6:
             kinds[p] = dark
         elif bottom and rng.random() < 0.75:
             kinds[p] = dark
         elif top_of[(x, z)] == y and any(math.hypot(x - sx, z - sz) < 1.7 for sx, sz in lit) and rng.random() < 0.85:
-            kinds[p] = light
+            # r27's lit patch (it was all azalea): its inner cells take the lighter leaf, its rim stays body
+            if any(math.hypot(x - sx, z - sz) < core for sx, sz in lit):
+                kinds[p] = light
         elif any(math.hypot(x - sx, z - sz) < 1.5 for sx, sz in mid) and rng.random() < 0.6:
-            kinds[p] = body2
+            pass                # r27's dark-oak patches in an oak body: the body is dark oak now (kept for the draws)
     t.kinds = kinds
 
 
@@ -298,7 +310,7 @@ def oak(seed, old=False, form="spread"):
       - bark is dark oak: the measured grey-blue trunk was oak bark (sat 0.34) in the crown's shade under the
         shader's sky ambient (hue 199, sat 0.19 at noon; hue 25 at dusk); dark oak bark (sat 0.49) should keep its
         brown there - to be measured in game;
-      - three leaf tones per lobe (oak_tones).
+      - three leaf tones per lobe (oak_tones; r28: darker than the lawn, no azalea).
     form: "spread" (one heavy reaching limb, two side limbs, a raised leader), "twin" (two stems from a low fork, a
     gap of sky between the heads), "tall" (a taller trunk, lobes spiralling up it)."""
     rng = random.Random(seed)
