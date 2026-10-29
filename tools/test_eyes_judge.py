@@ -562,6 +562,67 @@ class Sheet(unittest.TestCase):
         self.assertTrue((out_dir / "a-sheet.png").exists())
 
 
+class PairSheet(unittest.TestCase):
+    """--pair: the same still from two runs side by side, its numbers and their change under it - the A/B a critic is
+    asked to judge (Oct 28: every round's A/B sheet was stitched by hand)."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = pathlib.Path(self.tmp.name)
+
+    def lanes(self, keys_a=(KEY,), keys_b=(KEY,), size=(1600, 900)):
+        a = make_lane(self.root / "a", keys=keys_a, colour=(90, 160, 60), size=size)
+        b = make_lane(self.root / "b", keys=keys_b, colour=(60, 120, 40), size=size)
+        return a, b
+
+    def test_pair_rows_hold_both_numbers_and_the_change(self):
+        ej = EJ()
+        a, b = self.lanes()
+        la, lb = ej.judge_lane(a, "A", []), ej.judge_lane(b, "B", [])
+        rows = ej.pair_rows(la, lb)
+        self.assertEqual([r["still"] for r in rows], [KEY])
+        r = rows[0]
+        self.assertLess(r["delta"]["luma"], 0)                      # B is darker
+        self.assertAlmostEqual(r["delta"]["luma"], r["b"]["luma"] - r["a"]["luma"])
+        self.assertEqual(r["note"], "")
+
+    def test_a_still_in_one_run_only_is_listed_with_a_note(self):
+        ej = EJ()
+        a, b = self.lanes(keys_a=(KEY, "15_x_rts"), keys_b=(KEY,))
+        rows = ej.pair_rows(ej.judge_lane(a, "A", [(None, (0, 0, 32, 18))]), ej.judge_lane(b, "B", [(None, (0, 0, 32, 18))]))
+        x = [r for r in rows if r["still"] == "15_x_rts"][0]
+        self.assertIn("only in A", x["note"])
+        self.assertIsNone(x["delta"])
+
+    def test_the_pair_sheet_shows_both_stills_side_by_side_under_2500_px(self):
+        ej = EJ()
+        a, b = self.lanes()
+        la, lb = ej.judge_lane(a, "A", []), ej.judge_lane(b, "B", [])
+        sheet = ej.build_pair_sheet(a, la, b, lb)
+        self.assertLessEqual(sheet.width, 2500)
+        px = sheet.convert("RGB")
+        w = sheet.width
+        # A's colour on the left half, B's on the right half, somewhere in the first still's row
+        ys = range(60, min(400, sheet.height))
+        self.assertTrue(any(px.getpixel((w // 4, y)) == (90, 160, 60) for y in ys))
+        self.assertTrue(any(px.getpixel((3 * w // 4, y)) == (60, 120, 40) for y in ys))
+
+    def test_the_cli_writes_the_pair_sheet_and_table(self):
+        a, b = self.lanes()
+        out = self.root / "sheets"
+        code, so, se = run(f"A={a}", f"B={b}", "--pair", "--sheet-dir", out)
+        self.assertEqual(code, 0, so + se)
+        self.assertTrue((out / "A-vs-B.png").is_file())
+        self.assertIn("A vs B", so)
+
+    def test_pair_needs_exactly_two_lanes(self):
+        a, b = self.lanes()
+        code, so, se = run(f"A={a}", "--pair")
+        self.assertEqual(code, 2)
+        self.assertIn("two lanes", se)
+
+
 class LaneArgs(unittest.TestCase):
     def test_label_equals_path_but_a_path_with_separators_before_the_equals_is_a_path(self):
         f = EJ().split_lane_arg
