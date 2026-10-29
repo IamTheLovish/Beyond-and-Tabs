@@ -116,7 +116,10 @@ public class BarFxServerEvents {
                 } catch (Exception ignored) { }
             }
             byte kind = BarFx.kindOf(p);
-            BarFx.impact(p.level(), pos, p.getDeltaMovement(), kind, where, 1, p);   // tinted by its owner's faction
+            // an arrowhead or bolt on armour sparks; on flesh, cloth or bark it kicks dust
+            boolean metal = where == BarFx.AT_UNIT && kind == BarFx.K_ARROW
+                && hit instanceof EntityHitResult ehr2 && ehr2.getEntity() instanceof LivingEntity v && metalBody(v);
+            BarFx.impact(p.level(), pos, p.getDeltaMovement(), kind, where, metal, 1, p);   // tinted by its owner's faction
         } catch (Exception ignored) { }
     }
 
@@ -142,8 +145,33 @@ public class BarFxServerEvents {
                 c = c.subtract(flat.normalize().scale(victim.getBbWidth() * .45));
             boolean heavy = attacker.getBbWidth() * attacker.getBbHeight() > 2.5f || evt.getAmount() >= 12;
             BarFx.impact(victim.level(), c, dir, heavy ? BarFx.K_HEAVY_MELEE : BarFx.K_MELEE, BarFx.AT_UNIT,
-                    Math.min(3, .6f + evt.getAmount() / 10f), attacker);
+                    metalWeapon(attacker) && metalBody(victim), Math.min(3, .6f + evt.getAmount() / 10f), attacker);
         } catch (Exception ignored) { }
+    }
+
+    /**
+     * Strikes with metal (combat feel, Oct 28: sparks for metal on metal): an iron-or-better blade, axe, pick or
+     * trident in hand, or a construct's own fists (golems). Wood, stone, bare hands, claws and teeth do not.
+     */
+    static boolean metalWeapon(LivingEntity e) {
+        if (e instanceof AbstractGolem)
+            return true;
+        net.minecraft.world.item.Item item = e.getMainHandItem().getItem();
+        if (item instanceof net.minecraft.world.item.TridentItem)
+            return true;
+        return item instanceof net.minecraft.world.item.TieredItem t && t.getTier() != net.minecraft.world.item.Tiers.WOOD
+            && t.getTier() != net.minecraft.world.item.Tiers.STONE;
+    }
+
+    /** Wears metal (chain, iron, gold, diamond, netherite armour - not leather or a turtle shell) or is a construct. */
+    static boolean metalBody(LivingEntity e) {
+        if (e instanceof AbstractGolem)
+            return true;
+        for (net.minecraft.world.item.ItemStack s : e.getArmorSlots())
+            if (s.getItem() instanceof net.minecraft.world.item.ArmorItem a && a.getMaterial() != net.minecraft.world.item.ArmorMaterials.LEATHER
+                && a.getMaterial() != net.minecraft.world.item.ArmorMaterials.TURTLE)
+                return true;
+        return false;
     }
 
     // ------------------------------------------------------------------ deaths

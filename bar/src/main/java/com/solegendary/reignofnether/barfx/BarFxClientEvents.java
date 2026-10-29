@@ -1,6 +1,5 @@
 package com.solegendary.reignofnether.barfx;
 
-import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -8,7 +7,7 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-/** Client hooks for the battle effects: draw every frame, shake the first-person camera, reset on logout. */
+/** Client hooks for the battle effects: draw every frame, shake the camera, reset on logout. */
 @OnlyIn(Dist.CLIENT)
 public class BarFxClientEvents {
     private static boolean failedOnce = false;
@@ -48,16 +47,10 @@ public class BarFxClientEvents {
         }
     }
 
-    /** First-person / free camera: a slight decaying jolt (the RTS camera shakes via its projection instead). */
+    /** The trauma camera shake (CameraShakeClient): yaw, pitch and roll in every view, very gentle in the RTS view. */
     @SubscribeEvent
     public static void onCameraAngles(ViewportEvent.ComputeCameraAngles evt) {
-        if (OrthoviewClientEvents.isEnabled())
-            return;
-        float sx = BarFxClient.shakeX(), sy = BarFxClient.shakeY();
-        if (sx == 0 && sy == 0)
-            return;
-        evt.setYaw(evt.getYaw() + sx * 2.5f);
-        evt.setPitch(evt.getPitch() + sy * 2.5f);
+        CameraShakeClient.onCameraAngles(evt);
     }
 
     @SubscribeEvent

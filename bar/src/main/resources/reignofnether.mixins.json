@@ -72,6 +72,7 @@
   "minVersion": "0.8",
   "client": [
     "AnimProfileRendererMixin",
+    "LivingEntityDeathPoofMixin",
     "LivingEntityDamageMotionMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",

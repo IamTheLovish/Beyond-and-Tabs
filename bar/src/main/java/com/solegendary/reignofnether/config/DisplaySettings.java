@@ -121,6 +121,24 @@ public class DisplaySettings {
         return v < 0 || v > 2 ? 1 : v;
     }
 
+    /**
+     * Camera shake (combat feel, barfx/CameraShakeClient): Off, Subtle (default) or Full - CameraShake.OFF / SUBTLE /
+     * FULL. Read every frame - a cached config value.
+     */
+    public static int cameraShake() {
+        return com.solegendary.reignofnether.barfx.CameraShake.sanitiseMode(
+            get(ReignOfNetherClientConfigs.CAMERA_SHAKE_MODE, com.solegendary.reignofnether.barfx.CameraShake.SUBTLE));
+    }
+
+    /** Death collapse (unit/modelling/motion/DeathCollapseClient): on by default; off = vanilla's tip-over. */
+    public static boolean deathCollapse() {
+        try {
+            return ReignOfNetherClientConfigs.DEATH_COLLAPSE.get();
+        } catch (IllegalStateException e) {   // config not loaded yet
+            return true;
+        }
+    }
+
     /** Whether the player has picked a building animation setting (else it follows Building ambience). */
     public static boolean buildingAnimationChosen() {
         int v = get(ReignOfNetherClientConfigs.BUILDING_ANIMATION, -1);

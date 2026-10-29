@@ -345,7 +345,9 @@ public final class Quadruped {
         }
 
         // ---- the death fall: the legs buckle, the neck drops, then the renderer's roll lays it on its side ----------
-        if (e.deathTime > 0) {
+        // (skipped while the death collapse - DeathCollapseClient, combat feel - is laying the body down itself: the
+        // model's fold on top of it made a quadruped on the collapse path fold twice, review round 1)
+        if (e.deathTime > 0 && !com.solegendary.reignofnether.unit.modelling.motion.DeathCollapseClient.collapsing(e)) {
             float d = Life.smooth(Math.min(1f, (e.deathTime + 1f) / 14f));
             move(r.body, 0, -9f * d, 0);
             for (int i = 0; i < 4; i++) {

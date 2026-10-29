@@ -111,6 +111,26 @@ public final class BarFx {
         return (flags >> SHOT_FACTION_SHIFT) & FACTION_MASK;
     }
 
+    // ---- IMPACT detail (combat feel, Oct 28): the low 2 bits are where (AT_*), bit 2 marks metal on metal - a metal
+    // weapon or arrowhead on armour or a construct: the client draws sparks; without it dust or debris. Only unit hits
+    // set it, so the readers that compare the whole detail with AT_BUILDING (SfxClient) read what they always read.
+    public static final int IMPACT_WHERE_MASK = 0x3, IMPACT_METAL = 0x4;
+
+    /** Packs an impact's flags: where (AT_*), metal on metal, and the shooter's faction (F_*). */
+    public static byte impactFlags(byte where, boolean metal, byte faction) {
+        return shotFlags((byte) ((where & IMPACT_WHERE_MASK) | (metal ? IMPACT_METAL : 0)), faction);
+    }
+
+    /** Where (AT_*) an impact landed. */
+    public static int impactWhere(byte flags) {
+        return shotDetail(flags) & IMPACT_WHERE_MASK;
+    }
+
+    /** Was it metal on metal? */
+    public static boolean impactMetal(byte flags) {
+        return (shotDetail(flags) & IMPACT_METAL) != 0;
+    }
+
     /**
      * The F_* faction of whoever fired: an RTS unit's faction (by entity type, like its death debris), a projectile's
      * owner's, else F_NONE (players, wild mobs, towers without a known owner). Works on both sides; never throws
@@ -266,13 +286,24 @@ public final class BarFx {
 
     /** Same, with the shooter's faction (F_*) spelled out; F_NONE = untinted. */
     public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, float size, byte faction) {
+        impact(level, pos, dir, kind, where, false, size, faction);
+    }
+
+    /** A hit on a unit, saying whether it was metal on metal (sparks) or not (dust): see impactFlags. */
+    public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, boolean metal, float size, Entity shooter) {
+        impact(level, pos, dir, kind, where, metal, size, factionOf(shooter));
+    }
+
+    /** Same, with the shooter's faction (F_*) spelled out. */
+    public static void impact(Level level, Vec3 pos, Vec3 dir, byte kind, byte where, boolean metal, float size, byte faction) {
         if (level == null || level.isClientSide() || pos == null) return;
         float dx = 0, dz = 0;
         if (dir != null) {
             double l = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
             if (l > 1e-4) { dx = (float) (dir.x / l); dz = (float) (dir.z / l); }
         }
-        emit(level, new Event(IMPACT, kind, shotFlags(where, faction), (float) pos.x, (float) pos.y, (float) pos.z, dx, size, dz));
+        emit(level, new Event(IMPACT, kind, impactFlags(where, metal && where == AT_UNIT, faction), (float) pos.x, (float) pos.y,
+                (float) pos.z, dx, size, dz));
         // a world that remembers (worldmemory/): a shell on open ground burns it for the match, not the client's 12 s
         if (where == AT_GROUND)
             remember(level, m -> m.groundImpact((ServerLevel) level, pos.x, pos.y, pos.z, kind, size));

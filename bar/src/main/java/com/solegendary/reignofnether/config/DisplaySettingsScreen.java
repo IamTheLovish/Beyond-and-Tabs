@@ -13,7 +13,8 @@ import net.minecraft.network.chat.Component;
 /**
  * Display settings (DisplaySettings; design/hud.md "Settings"): strategic icons (by zoom / always / never, the zoom
  * threshold, icon size), the health-bar rule, the fog of war style, the building ambience (design/lively_buildings.md),
- * the building animation (design/moving_buildings.md) and the world look (postfx/WorldLookPass). Its own page, like Camera, because the main settings screen has no
+ * the building animation (design/moving_buildings.md), the world look (postfx/WorldLookPass), the camera shake and the death
+ * collapse (combat feel). Its own page, like Camera, because the main settings screen has no
  * spare row at GUI scale 4. Every control writes the client config at once and takes effect on the next frame
  * (the fog style on the next tick, with one chunk rebuild).
  */
@@ -99,6 +100,20 @@ public class DisplaySettingsScreen extends Screen {
             v -> "Distance haze: " + v + "%").pos(right, y).size(colW, rowH))
             .setTooltip(Tooltip.create(Component.literal(
                 "How strongly far ground fades into the sky colour (100% = default, 0% = no haze, the grade stays)")));
+        y += step;
+        Button shake = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, shakeLabel(), b -> {
+            // Off -> Subtle -> Full -> Off
+            ReignOfNetherClientConfigs.CAMERA_SHAKE_MODE.set((DisplaySettings.cameraShake() + 1) % 3);
+            b.setMessage(shakeLabel());
+        }));
+        shake.setTooltip(Tooltip.create(Component.literal(
+            "The camera jolts on big blasts, heavy shells, collapsing buildings and hard landings. Subtle (default) or Full; very gentle in the RTS view, less the further you zoom out, none in the strategic view. The Camera page's shake slider scales it further.")));
+        Button collapse = addRenderableWidget(ReignOfNetherConfigScreen.button(right, y, colW, rowH, collapseLabel(), b -> {
+            ReignOfNetherClientConfigs.DEATH_COLLAPSE.set(!DisplaySettings.deathCollapse());
+            b.setMessage(collapseLabel());
+        }));
+        collapse.setTooltip(Tooltip.create(Component.literal(
+            "A dying unit's body folds and falls the way the killing blow pushed it, then sinks away. Off: the plain red tip-over.")));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(right, this.height - 29, colW, 20,
             CommonComponents.GUI_DONE, b -> this.minecraft.setScreen(this.parent)));
@@ -126,6 +141,14 @@ public class DisplaySettingsScreen extends Screen {
 
     private static Component worldLookLabel() {
         return Component.literal("World look: " + DisplaySettings.WORLD_LOOK_NAMES[DisplaySettings.worldLook()]);
+    }
+
+    private static Component shakeLabel() {
+        return Component.literal("Camera shake: " + com.solegendary.reignofnether.barfx.CameraShake.MODE_NAMES[DisplaySettings.cameraShake()]);
+    }
+
+    private static Component collapseLabel() {
+        return Component.literal("Death collapse: " + (DisplaySettings.deathCollapse() ? "On" : "Off"));
     }
 
     private static Component fogLabel() {
