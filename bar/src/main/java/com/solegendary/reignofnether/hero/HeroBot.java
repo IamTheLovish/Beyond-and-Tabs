@@ -567,9 +567,10 @@ public final class HeroBot {
 
     /**
      * v1's fight under the OrderLock: aimed casts only at what is in reach from where the hero stands (the brain never
-     * walks to cast, so it never drags the hero off an order); a gap closer only when the order lets the hero move, the
-     * fight is not lost (FightEval), it would not land under an enemy tower, and its follow-up is ready; abilities that
-     * stun, root or slow go before the rest, so the damage lands on a target that cannot answer.
+     * walks to cast, so it never drags the hero off an order); a gap closer only when the order lets the hero move (or
+     * is an attack order, and then only onto its target), the fight is not lost (FightEval), it would not land under an
+     * enemy tower, and its follow-up is ready; abilities that stun, root or slow go before the rest, so the damage lands
+     * on a target that cannot answer.
      */
     static void fightV2(ServerLevel sl, Mob mob, FactionHero hero, HeroBrain b, OrderLock.Mode mode, long now) {
         if (b.followUp != null || busy(hero.heroCore()))
