@@ -11807,8 +11807,9 @@ public class SkirmishGameTests {
             if (e != null)
                 e.discard();
         }
-        if (units != 9)
-            helper.fail("the Foundry Hall and the Machine Shop should train nine units, found " + units);
+        // nine of the faction's own plus the shared T1 siege lobber (the Steam Lobber, design/siege_t1.md; not a Machine)
+        if (units != 10)
+            helper.fail("the Foundry Hall and the Machine Shop should train ten units, found " + units);
         if (machines != 6)
             helper.fail("six of the T1 units are machines (Gyro Scout, Steam Runner, Iron Warden, Flak Cart, Mortar Crawler, Shield Projector), found " + machines);
         // the Flak Cart is wind-type anti-air; the Deployed Turret is a machine of the faction but never trained
