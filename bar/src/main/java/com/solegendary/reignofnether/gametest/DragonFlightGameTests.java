@@ -208,8 +208,13 @@ public class DragonFlightGameTests {
      * same tick's ServerTickEvent END - so the dragon's first tick already has the move. A GameTest runs in the same
      * slot (GameTestTicker, after the level ticks), so produceUnit here reproduces that order exactly. The random yaw
      * is fixed here to the way to the rally point, so the flight needs no turn and any one-tick swing is the bug.
+     * <p>
+     * Produced {@link #SETTLE} ticks in, not in the test's first tick: alone in its batch on a slow runner (stress
+     * 40825509632, 3 of 7, all on the slower east-region runners) the rally move had not reached the dragon by its first
+     * tick, so the setup check refused to judge it. The batch's first tick is the one that loads the slot's chunks;
+     * a few ticks later the world is settled, and production is still in the GameTestTicker slot after the level ticks.
      */
-    @GameTest(template = ARENA, timeoutTicks = 100)
+    @GameTest(template = ARENA, timeoutTicks = 100 + SETTLE)
     public static void bone_dragon_produced_to_a_rally_point_keeps_its_yaw(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos pad = skyPad(helper, 290);
@@ -228,44 +233,61 @@ public class DragonFlightGameTests {
             helper.fail("the Barracks refused its rally point " + rally + ": " + pp.getRallyPoints());
             return;
         }
-        Entity produced = pp.produceUnit(level, EntityRegistrar.BONE_DRAGON_UNIT.get(), owner, false);
-        if (!(produced instanceof Mob dragon) || !(produced instanceof Unit unit)) {
-            RegressionGameTests.clear(level, bp);
-            helper.fail("the Barracks produced no Bone Dragon: " + produced);
-            return;
-        }
-        final float spawnYaw = (float) Math.toDegrees(-Math.atan2(rally.getX() + 0.5 - dragon.getX(), rally.getZ() + 0.5 - dragon.getZ()));
-        dragon.setYRot(spawnYaw);
-        dragon.yBodyRot = spawnYaw;
-        // queued after the rally's own 0-tick task, so it runs right after it, still before the dragon's first tick
-        final int[] ageAtOrder = { -2 };
-        final BlockPos[] ordered = { null };
-        TaskSchedulerServerEvents.schedule(0, () -> {
-            ageAtOrder[0] = dragon.tickCount;
-            ordered[0] = unit.getMoveGoal() == null ? null : unit.getMoveGoal().getMoveTarget();
-        });
-        final double sx = dragon.getX(), sy = dragon.getY(), sz = dragon.getZ();
-        final float[] last = { spawnYaw };
-        final double[] worst = { 0 };
-        final String[] jump = { "" };
-        final List<String> trace = new ArrayList<>();
+        final Mob[] made = { null };
         boolean[] cleaned = { false };
         Runnable cleanup = () -> {
             if (cleaned[0])
                 return;
             cleaned[0] = true;
-            UnitServerEvents.clearQueuedActions(dragon.getId());
-            dragon.discard();
+            if (made[0] != null) {
+                UnitServerEvents.clearQueuedActions(made[0].getId());
+                made[0].discard();
+            }
             RegressionGameTests.clear(level, bp);
         };
         TestCleanup.atEnd(helper, cleanup);   // a fail, a throw or a timeout must not leave a registered Barracks behind
+        final float[] spawnYaw = { 0 };
+        final double[] start = new double[3];
+        final int[] ageAtOrder = { -2 };
+        final BlockPos[] ordered = { null };
+        final String[] atOrder = { "the check never ran" };
+        helper.runAfterDelay(SETTLE, () -> {
+            Entity produced = pp.produceUnit(level, EntityRegistrar.BONE_DRAGON_UNIT.get(), owner, false);
+            if (!(produced instanceof Mob dragon) || !(produced instanceof Unit unit)) {
+                helper.fail("the Barracks produced no Bone Dragon: " + produced);
+                return;
+            }
+            made[0] = dragon;
+            spawnYaw[0] = (float) Math.toDegrees(-Math.atan2(rally.getX() + 0.5 - dragon.getX(), rally.getZ() + 0.5 - dragon.getZ()));
+            dragon.setYRot(spawnYaw[0]);
+            dragon.yBodyRot = spawnYaw[0];
+            start[0] = dragon.getX();
+            start[1] = dragon.getY();
+            start[2] = dragon.getZ();
+            // queued after the rally's own 0-tick task, so it runs right after it, still before the dragon's first tick
+            TaskSchedulerServerEvents.schedule(0, () -> {
+                ageAtOrder[0] = dragon.tickCount;
+                ordered[0] = unit.getMoveGoal() == null ? null : unit.getMoveGoal().getMoveTarget();
+                // what the move saw, for a setup failure: its target block, whether the level could find the dragon
+                // (CommandQueues orders only units it finds), whether its block ticks entities
+                atOrder[0] = String.format("rally block %s, found by id %b, entity ticking %b", level.getBlockState(rally),
+                    level.getEntity(dragon.getId()) == dragon, level.isPositionEntityTicking(dragon.blockPosition()));
+            });
+        });
+        final float[] last = { Float.NaN };
+        final double[] worst = { 0 };
+        final String[] jump = { "" };
+        final List<String> trace = new ArrayList<>();
         final boolean[] done = { false };
         // judged on the dragon's own 40 ticks, not the test's (see bone_dragon_ordered_at_spawn_keeps_its_yaw)
         for (int t = 1; t <= 90; t++) {
             final int tick = t;
-            helper.runAfterDelay(t, () -> {
-                if (done[0])
+            helper.runAfterDelay(SETTLE + t, () -> {
+                Mob dragon = made[0];
+                if (done[0] || dragon == null)
                     return;
+                if (Float.isNaN(last[0]))
+                    last[0] = spawnYaw[0];
                 float yaw = dragon.getYRot();
                 trace.add(sample(tick, dragon));
                 double step = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - last[0]));
@@ -280,9 +302,10 @@ public class DragonFlightGameTests {
                     return;
                 done[0] = true;
                 try {
-                    double moved = Math.sqrt((dragon.getX() - sx) * (dragon.getX() - sx) + (dragon.getZ() - sz) * (dragon.getZ() - sz));
-                    String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s)",
-                        sx, sy, sz, spawnYaw, ageAtOrder[0], ordered[0]);
+                    double dx = dragon.getX() - start[0], dz = dragon.getZ() - start[2];
+                    double moved = Math.sqrt(dx * dx + dz * dz);
+                    String setup = String.format(" (spawned at %.1f %.1f %.1f facing %.1f; the rally move reached it at its age %d, target %s; %s)",
+                        start[0], start[1], start[2], spawnYaw[0], ageAtOrder[0], ordered[0], atOrder[0]);
                     if (ordered[0] == null || ageAtOrder[0] != 0)
                         helper.fail("setup: the rally move did not reach the dragon before its first tick, so this does not"
                             + " test production's order" + setup);
@@ -300,6 +323,9 @@ public class DragonFlightGameTests {
             });
         }
     }
+
+    /** Ticks the rally-point test waits before the Barracks produces: past the batch's first, chunk-loading tick. */
+    static final int SETTLE = 5;
 
     /** The last n samples of a trace, for a failure message. */
     private static String tail(List<String> trace, int n) {
