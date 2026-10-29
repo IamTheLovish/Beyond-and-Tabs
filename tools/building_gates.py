@@ -258,6 +258,74 @@ def roof_chequer(b):
     return len(bad) / len(g) if g else 0.0
 
 
+VIEWS = {   # the camera looking in: a picture cell of q, and its nearness to the camera (the larger, the nearer)
+    "top": (lambda q: (q[0], q[2]), lambda q: q[1]),
+    "south": (lambda q: (q[0], q[1]), lambda q: q[2]),
+    "north": (lambda q: (q[0], q[1]), lambda q: -q[2]),
+    "east": (lambda q: (q[2], q[1]), lambda q: q[0]),
+    "west": (lambda q: (q[2], q[1]), lambda q: -q[0]),
+    "34s": (lambda q: (q[0], q[1] - q[2]), lambda q: q[1] + q[2]),     # the 3/4 still: from the south, 45 deg up
+    "34w": (lambda q: (q[2], q[1] + q[0]), lambda q: q[1] - q[0]),     # the same from the west
+}
+PALE = ("quartz", "calcite", "diorite", "sandstone", "birch", "bone", "white", "end_stone", "snow", "smooth_stone",
+        "stone_brick")   # r5: grey cut stone is the pale dressing against brick, deepslate and slate
+DARK = ("deepslate", "blackstone", "dark_oak", "nether_brick", "basalt", "black", "obsidian", "coal", "gray", "iron_bars",
+        "chain")
+
+
+def camera(b, view):
+    """What a camera sees of `b` from one side, from above or from the 3/4 still: {picture cell: (q, name, props)} -
+    the FIRST non-air block met along each ray. A part's intent tests ('8 ribs', 'passes G6') can all be green while
+    the camera sees a chequer; this is the picture the critic looks at."""
+    key, near = VIEWS[view]
+    best = {}
+    for q, (n, pr) in b.blocks.items():
+        if n in S.AIR:
+            continue
+        k = key(q)
+        if k not in best or near(q) > near(best[k][0]):
+            best[k] = (q, n, pr)
+    return best
+
+
+def tone(name):
+    """A block's luminance class from its id: pale, dark, glass, light or mid."""
+    if S.glyph(name) == "g":
+        return "glass"
+    if S.glyph(name) == "*":
+        return "light"
+    if any(k in name for k in DARK):
+        return "dark"
+    if any(k in name for k in PALE):
+        return "pale"
+    return "mid"
+
+
+def alternations(grid):
+    """Cells of a picture {(u, v): shade} that sit in a CHEQUER: an a b a b a run along either axis, or a 3 x 2 block
+    a b a / b a b. One line crossing a field is a b a and two lines meeting at 45 degrees a b a b - both drawn
+    lines, not a chequer; two full alternations are."""
+    bad = set()
+    for (u, v), a in grid.items():
+        for du, dv in ((1, 0), (0, 1)):
+            run = [(u + k * du, v + k * dv) for k in range(5)]
+            t = [grid.get(c) for c in run]
+            if None not in t and t[1] != a and t[2] == t[4] == a and t[3] == t[1]:
+                bad |= set(run)
+            blk = [(u + k * du + j * dv, v + k * dv + j * du) for j in (0, 1) for k in (0, 1, 2)]
+            t = [grid.get(c) for c in blk]
+            if None not in t and t[1] != a and all(s == (a if (i % 3 + i // 3) % 2 == 0 else t[1])
+                                                   for i, s in enumerate(t)):
+                bad |= set(blk)
+    return bad
+
+
+def camera_chequer(b, views=("top", "south", "west")):
+    """{view: chequered cells} in the camera pictures, each visible cell shaded by its block id - material AND shape,
+    since a stair, a slab and a full block of one stone catch the light differently."""
+    return {view: len(alternations({k: v[1] for k, v in camera(b, view).items()})) for view in views}
+
+
 def unknown_ids(names):
     """Sorted ids (minecraft: optional) that are not vanilla 1.20.1 blocks; any other namespace is unknown here."""
     return sorted({n for n in names if (n[10:] if n.startswith("minecraft:") else n) not in VANILLA})
