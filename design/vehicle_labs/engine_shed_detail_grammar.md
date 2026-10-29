@@ -374,3 +374,12 @@ Not Brassworks: a futuristic white base with glass geodesic domes, a ring walkwa
 strips and twin white stacks. Likely for the new AI/robot faction (replaces Tidewrought) - to confirm with lovish.
 What it teaches every faction: one strong primary form (the dome) + a ring that ties the parts together, clean
 white/glass/one accent palette, layered terraces stepping down to the ground.
+
+## (m) ref51 - lovish's reference, Oct 28 22:51 (design/refs/vehicle_labs/ref51_dark_tiered_monolith_lit.png)
+A dark stepped monolith at dusk over glowing cyan water (dark-fantasy / AI-faction mood). For the Engine Shed's tower:
+1. **Each tier's ledge projects** (a cantilevered lip, 1 block) and throws a shadow on the tier below - stepped mass
+   that reads as layered slabs, not a ziggurat of boxes. Our r5-r6 critics' "stacked boxes" read is the same massing
+   WITHOUT these lips and shadows.
+2. **Lighting is the detail at dusk:** many small warm lights deep in recesses and under ledges, vertical light strips
+   up the centre axis, so the silhouette glows from inside. Our r6 had "no door glow at dusk".
+3. Mood only: the cyan pools and the all-black material belong to Gravebound / the new AI faction, not Brassworks.
