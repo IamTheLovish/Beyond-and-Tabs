@@ -209,6 +209,10 @@ public class RaidGameTests {
         BuildingPlacement target;
         Runnable order;
         int contact = -1, done = -1, nearAfter3s = -1, startBlocks = -1;
+        // What a slow fight looked like (Verdant's extractor, either tier, took 19-34 s instead of 10 / 22 s in 5 of ~190 CI
+        // runs, and no other faction's ever did): the raiders left alive, the longest stretch with no block lost, and the most
+        // fire and flowing water seen round the building. A red run names which of those it was; see compact().
+        int fewestAlive = -1, lastPlaced = -1, lastLoss = -1, longestStall = 0, fireSeen = 0, flowSeen = 0;
 
         Sim(String group, String kind, Cell cell, String atk, String foe) {
             this.group = group;
@@ -253,6 +257,45 @@ public class RaidGameTests {
         /** Order -> death in seconds, or -1. */
         float total() {
             return done < 0 ? -1f : secs(done);
+        }
+
+        /** One tick of the fight's diagnostics, after {@link #observe}: only while the building is being broken (contact -> done). */
+        void watch(int t) {
+            if (target == null || contact < 0 || done >= 0)
+                return;
+            int alive = 0;
+            for (Mob m : attackers)
+                if (m.isAlive())
+                    alive++;
+            fewestAlive = fewestAlive < 0 ? alive : Math.min(fewestAlive, alive);
+            int placed = target.getBlocksPlaced();
+            if (lastPlaced >= 0 && placed < lastPlaced)
+                lastLoss = t;
+            lastPlaced = placed;
+            longestStall = Math.max(longestStall, t - Math.max(lastLoss, contact));
+            if (t % 10 != 0)
+                return;
+            int fire = 0, flowing = 0;
+            net.minecraft.world.level.Level where = target.getLevel();
+            for (BlockPos p : BlockPos.betweenClosed(target.minCorner.offset(-1, 0, -1), target.maxCorner.offset(1, 0, 1))) {
+                BlockState bs = where.getBlockState(p);
+                if (bs.is(Blocks.FIRE))
+                    fire++;
+                else if (!bs.getFluidState().isEmpty() && !bs.getFluidState().isSource())
+                    flowing++;
+            }
+            fireSeen = Math.max(fireSeen, fire);
+            flowSeen = Math.max(flowSeen, flowing);
+        }
+
+        /**
+         * The fight in one short phrase for a red run's message and the [Raid] line: fewest raiders alive of those sent, how
+         * many stood at the building 3 s after first contact, the longest stretch without a block lost, and the most fire
+         * blocks / flowing-water cells seen in the building's box (sampled every half second).
+         */
+        String compact() {
+            return fewestAlive + "/" + attackers.size() + " alive, " + nearAfter3s + " near at 3 s, stall " + fmt(secs(longestStall))
+                + "s, fire " + fireSeen + ", flow " + flowSeen;
         }
 
         void cleanup() {
@@ -325,6 +368,7 @@ public class RaidGameTests {
             boolean over = true;
             for (Sim s : sims) {
                 s.observe(t);
+                s.watch(t);
                 if (s.done < 0 && s.errors.isEmpty())
                     over = false;
             }
@@ -446,9 +490,11 @@ public class RaidGameTests {
             for (Fac f : facs) {
                 Sim conv = find(sims, f.name(), "converter"), wind = find(sims, f.name(), "windmill"),
                     ext = find(sims, f.name(), "extractor"), ext2 = find(sims, f.name(), "extractor2");
-                ReignOfNether.LOGGER.info("[Raid] infantry {} {} x6: converter {}s windmill {}s extractor {}s extractor2 {}s (HP {}/{}/{}/{})",
+                ReignOfNether.LOGGER.info("[Raid] infantry {} {} x6: converter {}s windmill {}s extractor {}s extractor2 {}s (HP {}/{}/{}/{}); extractor: {}; extractor2: {}",
                     f.name(), f.raiderName(), fmt(conv.pure()), fmt(wind.pure()), fmt(ext.pure()), fmt(ext2.pure()),
-                    conv.target.getMaxHealth(), wind.target.getMaxHealth(), ext.target.getMaxHealth(), ext2.target.getMaxHealth());
+                    conv.target.getMaxHealth(), wind.target.getMaxHealth(), ext.target.getMaxHealth(), ext2.target.getMaxHealth(),
+                    ext.compact(), ext2.compact());
+                int problemsBefore = problems.size();
                 window(problems, f.name() + " converter", conv.pure(), CONV_MIN, CONV_MAX);
                 window(problems, f.name() + " windmill", wind.pure(), WIND_INF_MIN, WIND_INF_MAX);
                 window(problems, f.name() + " T1 extractor", ext.pure(), EXT_INF_MIN, EXT_INF_MAX);
@@ -456,6 +502,10 @@ public class RaidGameTests {
                     problems.add(f.name() + " T2 extractor " + fmt(ext2.pure()) + " s should be about twice the T1's " + fmt(ext.pure()) + " s");
                 if (ext2.target.getUpgradeLevel() != 1)
                     problems.add(f.name() + " T2 extractor placement is not read as upgrade level 1");
+                // a slow extractor is the flake to explain (CI shows Verdant's, either tier, 19-34 s against 10 / 22 s): say what
+                // each fight looked like, so the red run names the cause instead of two bare times
+                if (problems.size() > problemsBefore)
+                    problems.add(f.name() + " extractor fights - T1: " + ext.compact() + "; T2: " + ext2.compact());
             }
             if (!problems.isEmpty())
                 throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems));
@@ -517,6 +567,7 @@ public class RaidGameTests {
             List<String> problems = new ArrayList<>();
             for (Veh veh : vehs) {
                 Fac f = facs.get(veh.fac());
+                int problemsBefore = problems.size();
                 Sim wind = find(sims, veh.name(), "windmill"), ext = find(sims, veh.name(), "extractor"), ext2 = find(sims, veh.name(), "extractor2");
                 Sim iw = find(sims, f.name() + "-" + f.raiderName(), "windmill"), ie = find(sims, f.name() + "-" + f.raiderName(), "extractor");
                 ReignOfNether.LOGGER.info("[Raid] vehicles {} {} x4: windmill {}s (total {}s, {} near) extractor {}s ({}s, {}) extractor2 {}s ({}s, {}); {} x4 infantry: windmill {}s extractor {}s",
@@ -535,6 +586,9 @@ public class RaidGameTests {
                     if (!veh.name().equals("SentinelTreant") && ext.pure() > 0 && ie.pure() > 0 && ext.pure() > ie.pure() * 0.9f)
                         problems.add(veh.name() + " is not clearly faster than 4 " + f.raiderName() + " on a T1 extractor: " + fmt(ext.pure()) + " vs " + fmt(ie.pure()) + " s");
                 }
+                // as the infantry test: a slow fight says what it looked like (the Treant's Verdant extractor took 35.5 s once, 13 s usually)
+                if (problems.size() > problemsBefore)
+                    problems.add(veh.name() + " fights - windmill: " + wind.compact() + "; T1 extractor: " + ext.compact() + "; T2 extractor: " + ext2.compact());
             }
             if (!problems.isEmpty())
                 throw new net.minecraft.gametest.framework.GameTestAssertException(String.join("; ", problems));
