@@ -1,9 +1,6 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.building.BuildingClientEvents;
-import com.solegendary.reignofnether.building.Buildings;
-import com.solegendary.reignofnether.building.buildings.placements.CustomBuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItem;
 import com.solegendary.reignofnether.building.production.StopProductionButton;
@@ -71,7 +68,7 @@ public class VoodooShamanProd extends ProductionItem implements IUnitProductionI
                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/voodoo_shaman.png"),
                 hotkey,
                 () -> false,
-                () -> BuildingClientEvents.hasFinishedBuilding(Buildings.FLAME_SANCTUARY) || prodBuilding instanceof CustomBuildingPlacement,
+                () -> true,   // T1: no lab gate (lovish, Oct 29)
                 tooltipLines,
                 this
         );

@@ -69,11 +69,11 @@ public class BotPlayer {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, null,   // no farms any more (Factions)
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.PORTAL_BASIC,
-                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER,
+                            ProductionItems.VOODOO_SHAMAN),   // T1 essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
                     List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST,
-                            ProductionItems.GOREHORN_RHINO,   // big-units T2 beast
-                            ProductionItems.VOODOO_SHAMAN),   // essence caster: autocasts Hex and Blood Totem; Spirit Puppet and Empower stay manual
+                            ProductionItems.GOREHORN_RHINO),   // big-units T2 beast
                     Buildings.FORTRESS, ProductionItems.WAR_MAMMOTH, Buildings.ENERGY_CONVERTER_PIGLINS);
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, null, null,   // no house or farm any more (Factions)
