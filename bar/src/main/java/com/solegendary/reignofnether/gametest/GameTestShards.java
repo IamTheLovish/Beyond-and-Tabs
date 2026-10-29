@@ -49,7 +49,8 @@ import java.util.stream.Collectors;
  * shard that silently ran everything (or nothing) would hide tests or double the time.
  * <p>
  * It also logs every passed test's wall time ("[TestTime] name ms" - vanilla's log reporter says nothing on a pass),
- * so tools/gametest_timing.py can name the slow tests behind a slow batch; failures are reported exactly as before.
+ * so tools/gametest_timing.py can name the slow tests behind a slow batch; failures are reported exactly as before,
+ * and a failed test's leftover units in its own column are removed (TestCleanup.sweepColumn).
  */
 @Mod.EventBusSubscriber(modid = ReignOfNether.MOD_ID)
 public final class GameTestShards {
@@ -175,6 +176,7 @@ public final class GameTestShards {
         @Override
         public void onTestFailed(GameTestInfo info) {
             log.onTestFailed(info);
+            TestCleanup.sweepColumn(info);
         }
 
         @Override
