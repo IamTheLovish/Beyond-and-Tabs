@@ -161,6 +161,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GyrocopterGunshipUnit.createAttributes().build());
         evt.put(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit.createAttributes().build());
         evt.put(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.RepairCrawlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SOUL_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GHOST_FURNACE_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit.createAttributes().build());
         evt.put(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.brass.ClockworkSpiderUnit.createAttributes().build());
         // hero slice 2: the seven faction heroes (their body's attributes plus the hero set and the kit's stats)
         evt.put(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit.createAttributes().build());
@@ -315,6 +317,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.GYROCOPTER_GUNSHIP_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.DRILL_BURROWER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.REPAIR_CRAWLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SOUL_ENGINEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.CLOCKWORK_SPIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.IRON_LEVIATHAN_ENGINE_UNIT_SPAWN_EGG);
         }

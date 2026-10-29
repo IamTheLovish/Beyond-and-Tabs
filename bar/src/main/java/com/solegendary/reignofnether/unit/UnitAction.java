@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Brassworks essence caster, the Soul Engineer
+    PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
+    GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
+    SOUL_BOILER             // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
 }

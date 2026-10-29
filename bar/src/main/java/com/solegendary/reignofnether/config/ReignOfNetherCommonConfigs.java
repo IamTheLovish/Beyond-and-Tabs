@@ -114,6 +114,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.DRILL_BURROWER.define(BUILDER);
         UnitCosts.REPAIR_CRAWLER.define(BUILDER);
         UnitCosts.CLOCKWORK_SPIDER.define(BUILDER);
+        UnitCosts.SOUL_ENGINEER.define(BUILDER);
         UnitCosts.IRON_LEVIATHAN_ENGINE.define(BUILDER);
         // big-units: the T2 beasts (design/big_units.md)
         UnitCosts.ORIFLAMME_ELEPHANT.define(BUILDER);
@@ -525,6 +526,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry GYROCOPTER_GUNSHIP = ResourceCostConfigEntry.Unit(110,100,160,45,4, ResourceCosts.GYROCOPTER_GUNSHIP, "Gyrocopter Gunship Config");
         public static final ResourceCostConfigEntry DRILL_BURROWER = ResourceCostConfigEntry.Unit(110,60,120,40,3, ResourceCosts.DRILL_BURROWER, "Drill Burrower Config");
         public static final ResourceCostConfigEntry REPAIR_CRAWLER = ResourceCostConfigEntry.Unit(90,60,80,35,2, ResourceCosts.REPAIR_CRAWLER, "Repair Crawler Config");
+        // the essence caster (design/essence_casters.md): priced as the Verdant Thornweaver (100 metal, 80 energy, 3
+        // pop), above the Repair Crawler (80 / 60, 2 pop) whose job it shares, below the T2 fighters (120-170 metal)
+        public static final ResourceCostConfigEntry SOUL_ENGINEER = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.SOUL_ENGINEER, "Soul Engineer Config");
         public static final ResourceCostConfigEntry CLOCKWORK_SPIDER = ResourceCostConfigEntry.Unit(100,90,130,42,3, ResourceCosts.CLOCKWORK_SPIDER, "Clockwork Spider Config");
         // slice 4: the Iron Leviathan Engine is the standard experimental price (the World Tree Walker's / Celestial Dragon's)
         public static final ResourceCostConfigEntry IRON_LEVIATHAN_ENGINE = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.IRON_LEVIATHAN_ENGINE, "Iron Leviathan Engine Config");
