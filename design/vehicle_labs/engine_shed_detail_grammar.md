@@ -306,3 +306,17 @@ F7. **Water logic**: every gutter run ends at a downpipe column (a contiguous th
     y 1); every valley line (roof-to-tower, roof-to-wing) has T1 or a dark stair on both sides for its whole length.
 F8. **Frozen envelope**: front outline == FRONT_T1; lane and spawn column air; max y 26; the only cells outside the r7
     massing are at x 0 / x 10 / x 17 eaves and the 1-cell wing eave line - fail on any other new cell.
+
+## (g) ref45 - lovish's reference, Oct 28 22:49 (design/refs/vehicle_labs/ref45_brick_house_slate_roof_round_chimneys.png)
+What makes it read as a real building where r7 reads as a toy:
+1. **Wall / roof material split.** Warm orange-red brick walls under COOL GREY slate roofs. r7 is red wall under red
+   roof - one lump. Rule: roof value and hue differ from the wall (grey/blue-grey slate, ~2 tones), the wall stays brick.
+2. **Roof with thickness and overhang.** Continuous ~30-35 degree planes with visible horizontal course lines, a deep
+   eave that casts a shadow band on the wall, a dark bargeboard/verge edge. No stair sawtooth.
+3. **Layered roofs.** A lower pent (porch) roof wrapping the front under the main roof: two eave lines, two shadow bands.
+4. **Round fluted stone chimney stacks** with shingled domed caps rising through the roof - the silhouette's hero.
+   For us: brass-banded stone stacks / the steam stack, same idea.
+5. **Stone base, brick body.** Pale stone plinth and piers carry the brick; the arcade under the porch is deep and
+   lit (lanterns in shadow) - depth, not paint.
+6. **Function you can read.** Stairs, porch, a dormer, chimneys: every element has a job. Ornament follows structure.
+7. Background town: brick towers with dark-timber lattice tops, all brick + grey slate - a cohesive Brassworks palette.
