@@ -158,10 +158,12 @@ faction's BarFx tint. The table is the starting brief for Itachi 1.
 ## Code plan
 
 **Lobber PR** (claude/siege-t1):
-- `unit/units/shared/SiegeLobberUnit` (abstract): extends `Pillager`, implements `Unit, AttackerUnit,
-  RangedAttackerUnit, FieldArtillery` (so `IndirectFire`). Every number in one `SiegeTuning` table (like
-  `DefenceTower.Kind`); seven thin subclasses add the faction, tint and renderer; `instanceof SiegeLobberUnit` serves
-  the bot and the tests.
+- `unit/units/shared/SiegeLobberUnit`: extends `Pillager`, implements `Unit, AttackerUnit, RangedAttackerUnit,
+  FieldArtillery` (so `IndirectFire`). Every number in one `SiegeTuning` table (like `DefenceTower.Kind`). As built:
+  one class under seven entity types (`<id>_unit`), one `SiegeLobberProd` item class and one `SiegeLobberRenderer` that
+  picks the skin by entity type; `instanceof SiegeLobberUnit` serves the bot and the tests. The lobber shells the
+  nearest block of a building (`RangedAttackBuildingGoal`), so a far-side block never walks it into a tower's reach.
+  Placeholder skins: `tools/gen_siege_lobber_skins.py` recolours our Bombard Crew / Mortar Crawler skins.
 - Shell: `BombardShell` gains the shooter's `getBuildingDamageMultiplier()` (the existing artillery has bonus 0:
   unchanged), and for the lobber a splash radius, a fixed flight time and the full/half rule (full on the shared
   defence set and the garrison towers, half on everything else).

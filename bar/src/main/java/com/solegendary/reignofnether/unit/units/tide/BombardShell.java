@@ -7,6 +7,8 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.shared.SiegeLobberUnit;
+import com.solegendary.reignofnether.unit.units.shared.SiegeTuning;
 
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -53,6 +55,15 @@ public class BombardShell extends ThrowableItemProjectile {
      * Corsair's bombs keep hitting air.
      */
     private boolean hitsAir = true;
+    /**
+     * The siege lobber's shell (unit/units/shared/SiegeLobberUnit, design/siege_t1.md): its own splash, a fixed flight
+     * time, a building damage multiple that carries the lobber's building bonus, and half of it on buildings that are
+     * not defences ({@link SiegeLobberUnit#hitsAtTheFullRate}). The other artillery keeps the defaults.
+     */
+    private float splash = SPLASH_RADIUS;
+    private int fixedFlightTicks = 0;
+    private float buildingMult = BUILDING_DAMAGE_MULT;
+    private boolean halfOffDefences = false;
 
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results (server thread)
 
@@ -73,7 +84,17 @@ public class BombardShell extends ThrowableItemProjectile {
         return Items.FIRE_CHARGE;
     }
 
+    /** Makes this a siege lobber's shell: see {@link #splash}. Before {@link #aimAt}, which reads the flight time. */
+    public BombardShell asLobberShell(float splash, int flightTicks, float buildingMult) {
+        this.splash = splash;
+        this.fixedFlightTicks = flightTicks;
+        this.buildingMult = buildingMult;
+        this.halfOffDefences = true;
+        return this;
+    }
+
     public float getDamage() { return damage; }
+    public float getSplash() { return splash; }
     public String getShellOwnerName() { return ownerName; }
     public boolean hitsAir() { return hitsAir; }
 
@@ -93,7 +114,7 @@ public class BombardShell extends ThrowableItemProjectile {
     /** Sets the velocity that brings the shell from where it is now to (x, y, z) under vanilla throwable physics. */
     public void aimAt(double x, double y, double z) {
         double dx = x - getX(), dy = y - getY(), dz = z - getZ();
-        int t = flightTicks(Math.sqrt(dx * dx + dz * dz));
+        int t = fixedFlightTicks > 0 ? fixedFlightTicks : flightTicks(Math.sqrt(dx * dx + dz * dz));
         double drag = 0.99, g = getGravity();
         // sum of drag^k for k < t: how far a unit velocity carries in t ticks
         double s = (1 - Math.pow(drag, t)) / (1 - drag);
@@ -143,22 +164,23 @@ public class BombardShell extends ThrowableItemProjectile {
         double x = getX(), y = getY(), z = getZ();
         Entity shooter = getOwner();
         List<LivingEntity> hit = new ArrayList<>();
-        for (LivingEntity le : UnitGrid.near(sl, x, z, SPLASH_RADIUS + 1, scratch)) {
+        float splash = this.splash;
+        for (LivingEntity le : UnitGrid.near(sl, x, z, splash + 1, scratch)) {
             if (!le.isAlive() || !(le instanceof Unit u) || le.level() != sl || !isEnemy(u.getOwnerName()))
                 continue;
             if (!hitsAir && u.isFlyingUnit())
                 continue;   // the field artillery cannot hit air, splash included
-            if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > SPLASH_RADIUS + 1)
+            if (Math.abs(le.getY() + le.getBbHeight() / 2 - y) > splash + 1)
                 continue;
             double dx = le.getX() - x, dz = le.getZ() - z;
-            if (dx * dx + dz * dz <= SPLASH_RADIUS * SPLASH_RADIUS)
+            if (dx * dx + dz * dz <= splash * splash)
                 hit.add(le);
         }
         // an explosion source, not a mob attack: RoN rewrites mob-attack damage to the attacker's melee damage
         var src = sl.damageSources().explosion(this, shooter);
         for (LivingEntity le : hit) {
             double d = Math.sqrt((le.getX() - x) * (le.getX() - x) + (le.getZ() - z) * (le.getZ() - z));
-            float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / SPLASH_RADIUS));
+            float falloff = (float) (1.0 - 0.5 * Math.min(1.0, d / splash));
             le.hurt(src, damage * falloff);
         }
         // enemy buildings in reach take an explosion's dent (no terrain is touched)
@@ -168,14 +190,15 @@ public class BombardShell extends ThrowableItemProjectile {
                 continue;
             double cx = Math.max(b.minCorner.getX(), Math.min(x, b.maxCorner.getX() + 1));
             double cz = Math.max(b.minCorner.getZ(), Math.min(z, b.maxCorner.getZ() + 1));
-            if ((cx - x) * (cx - x) + (cz - z) * (cz - z) <= SPLASH_RADIUS * SPLASH_RADIUS
-                    && y + SPLASH_RADIUS >= b.minCorner.getY() && y - SPLASH_RADIUS <= b.maxCorner.getY() + 1)
+            if ((cx - x) * (cx - x) + (cz - z) * (cz - z) <= splash * splash
+                    && y + splash >= b.minCorner.getY() && y - splash <= b.maxCorner.getY() + 1)
                 dented.add(b);
         }
         for (BuildingPlacement b : dented)
-            b.destroyRandomBlocks(damage * BUILDING_DAMAGE_MULT, shooter);
+            b.destroyRandomBlocks(damage * buildingMult
+                * (halfOffDefences && !SiegeLobberUnit.hitsAtTheFullRate(b) ? SiegeTuning.OTHER_BUILDING_SHARE : 1f), shooter);
         sl.sendParticles(ParticleTypes.EXPLOSION, x, y + 0.3, z, 1, 0, 0, 0, 0);
-        sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, SPLASH_RADIUS * 0.4, 0.2, SPLASH_RADIUS * 0.4, 0.02);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.3, z, 6, splash * 0.4, 0.2, splash * 0.4, 0.02);
         sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.6f, 1.2f);
         discard();
         return hit.size();
@@ -188,6 +211,10 @@ public class BombardShell extends ThrowableItemProjectile {
         tag.putString("BombardOwner", ownerName);
         tag.putInt("BombardFuse", fuseTicks);
         tag.putBoolean("BombardHitsAir", hitsAir);
+        tag.putFloat("BombardSplash", splash);
+        tag.putInt("BombardFlight", fixedFlightTicks);
+        tag.putFloat("BombardBuildingMult", buildingMult);
+        tag.putBoolean("BombardHalfOffDefences", halfOffDefences);
     }
 
     @Override
@@ -197,5 +224,9 @@ public class BombardShell extends ThrowableItemProjectile {
         ownerName = tag.getString("BombardOwner");
         fuseTicks = tag.contains("BombardFuse") ? tag.getInt("BombardFuse") : 80;
         hitsAir = !tag.contains("BombardHitsAir") || tag.getBoolean("BombardHitsAir");
+        splash = tag.contains("BombardSplash") ? tag.getFloat("BombardSplash") : SPLASH_RADIUS;
+        fixedFlightTicks = tag.getInt("BombardFlight");
+        buildingMult = tag.contains("BombardBuildingMult") ? tag.getFloat("BombardBuildingMult") : BUILDING_DAMAGE_MULT;
+        halfOffDefences = tag.getBoolean("BombardHalfOffDefences");
     }
 }
