@@ -1,0 +1,161 @@
+(2529 first-launch config/mod-loading notices filtered out)
+[03:35:05] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[03:35:06] [main/WARN]: No graphics cards were found. Either you have no hardware devices supporting 3D acceleration, or something has gone terribly wrong!
+[03:35:06] [main/WARN]: Unable to determine desktop session type because the environment variable XDG_SESSION_TYPE is not set! Your user session may not be configured correctly.
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.world.sky.WorldRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.world.sky.ClientWorldMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.world.sky.BackgroundRendererMixin' as rule 'mixin.features.render.world.sky' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.gui.font.GlyphRendererMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.gui.font.FontSetMixin' as rule 'mixin.features.render.gui.font' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.shadows.EntityRenderDispatcherMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.remove_streams.HierarchicalModelMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.ModelPartMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.fast_render.CuboidMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:08] [main/WARN]: Force-disabling mixin 'features.render.entity.cull.EntityRendererMixin' as rule 'mixin.features.render.entity' (added by mods [oculus]) disables it and children
+[03:35:16] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[03:35:16] [Render thread/ERROR]: Mod mixin into Embeddium internals detected. This instance is now tainted. The Embeddium team does not provide any guarantee of support for issues encountered while such mods are installed.
+[03:35:16] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumGameOptions, which may cause instability.
+[03:35:17] [Render thread/WARN]: Found flag CUSTOM_IMAGES
+[03:35:17] [Render thread/WARN]: Found flag SSBO
+[03:35:17] [Render thread/WARN]: Found flag BLOCK_EMISSION_ATTRIBUTE
+[03:35:17] [Render thread/WARN]: Found flag ENTITY_TRANSLUCENT
+[03:35:20] [modloading-worker-0/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gui.SodiumOptionsGUI, which may cause instability.
+[03:35:25] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.VertexFormatDescriptionImpl, which may cause instability.
+[03:35:25] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.buffer.SodiumBufferBuilder, which may cause instability.
+[03:35:25] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.SodiumWorldRenderer, which may cause instability.
+[03:35:29] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[03:35:29] [Worker-ResourceReload-2/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[03:35:34] [Worker-ResourceReload-0/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[03:35:39] [Worker-ResourceReload-0/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[03:35:40] [Render thread/WARN]: Found flag CUSTOM_IMAGES
+[03:35:40] [Render thread/WARN]: Found flag SSBO
+[03:35:40] [Render thread/WARN]: Found flag BLOCK_EMISSION_ATTRIBUTE
+[03:35:40] [Render thread/WARN]: Found flag ENTITY_TRANSLUCENT
+[03:35:41] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[03:35:41] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[03:35:41] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[03:35:42] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[03:35:42] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[03:35:42] [Render thread/WARN]: Failed to resolve uniform inPaleGarden, reason: Unknown variable: BIOME_PALE_GARDEN ( = FunctionCall{smooth {[Number{55}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_PALE_GARDEN}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+[03:35:42] [Render thread/WARN]: Failed to resolve uniform inSulfurCaves, reason: Unknown variable: BIOME_SULFUR_CAVES ( = FunctionCall{smooth {[Number{56}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_SULFUR_CAVES}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+[03:35:42] [Render thread/WARN]: Failed to resolve uniform endFlashFactor0, reason: Unknown variable: endFlashIntensity ( = BinaryExpr{ {FunctionCall{min {[Id{endFlashIntensity}, Number{0.5}]} }} multiply{0} {Number{2.0}} })
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[03:35:42] [Render thread/WARN]: The following uniforms won't work, either because they are broken, or reference a broken uniform: 
+[03:35:43] [Render thread/WARN]: Shader compilation log for deferred1.fsh: 0:800(29): warning: `tracePosM' used uninitialized
+[03:35:48] [Render thread/WARN]: Error while parsing the block ID map entry for "block.10104":
+[03:35:48] [Render thread/WARN]: - The block minecraft:stone_slab has no property with the name variant, ignoring!
+[03:35:48] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.device.GLRenderDevice$ImmediateDrawCommandList, which may cause instability.
+[03:35:48] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.vertex.serializers.VertexSerializerRegistryImpl, which may cause instability.
+[03:35:49] [Render thread/WARN]: Game took 53.165 seconds to start
+[03:37:18] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.immediate.model.BakedModelEncoder, which may cause instability.
+[03:37:24] [Render thread/WARN]: Initial datapack load took 2.528 s
+[03:37:28] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[03:37:28] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[03:37:39] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[03:37:40] [Render thread/WARN]: Failed to resolve uniform inPaleGarden, reason: Unknown variable: BIOME_PALE_GARDEN ( = FunctionCall{smooth {[Number{55}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_PALE_GARDEN}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_PALE_GARDEN
+[03:37:40] [Render thread/WARN]: Failed to resolve uniform inSulfurCaves, reason: Unknown variable: BIOME_SULFUR_CAVES ( = FunctionCall{smooth {[Number{56}, FunctionCall{if {[FunctionCall{in {[Id{biome}, Id{BIOME_SULFUR_CAVES}]} }, Number{1}, Number{0}]} }, Number{15}, Number{15}]} })
+java.lang.RuntimeException: Unknown variable: BIOME_SULFUR_CAVES
+[03:37:40] [Render thread/WARN]: Failed to resolve uniform endFlashFactor0, reason: Unknown variable: endFlashIntensity ( = BinaryExpr{ {FunctionCall{min {[Id{endFlashIntensity}, Number{0.5}]} }} multiply{0} {Number{2.0}} })
+java.lang.RuntimeException: Unknown variable: endFlashIntensity
+[03:37:40] [Render thread/WARN]: The following uniforms won't work, either because they are broken, or reference a broken uniform: 
+[03:37:42] [Render thread/WARN]: Error while parsing the block ID map entry for "block.10104":
+[03:37:42] [Render thread/WARN]: - The block minecraft:stone_slab has no property with the name variant, ignoring!
+[03:37:42] [Render thread/WARN]: Mod(s) [reignofnether, oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.RenderSectionManager, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.tasks.ChunkBuilderMeshingTask, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshFormats, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.format.ChunkMeshAttribute, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexFormat$Builder, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.attribute.GlVertexAttributeFormat, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.DefaultChunkRenderer, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.ShaderChunkRenderer, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.ChunkBuildBuffers, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.vertex.builder.ChunkMeshBufferBuilder, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.buffers.BakedChunkModelBuilder, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.smooth.SmoothLightPipeline, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.model.light.flat.FlatLightPipeline, which may cause instability.
+[03:37:42] [Render thread/WARN]: Mod(s) [supplementaries] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.compile.pipeline.FluidRenderer, which may cause instability.
+[03:37:43] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.GlProgram, which may cause instability.
+[03:37:43] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.gl.shader.ShaderType, which may cause instability.
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-shadow.vsh: 0:445(15): warning: `lmCoord' used uninitialized
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.vsh: 0:457(15): warning: `lmCoord' used uninitialized
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_solid.fsh: 0:919(72): warning: `parallaxTexDepth' used uninitialized
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_cutout.fsh: 0:920(72): warning: `parallaxTexDepth' used uninitialized
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.vsh: 0:454(15): warning: `lmCoord' used uninitialized
+[03:37:43] [Render thread/WARN]: Shader compilation log for iris:sodium-terrain-gbuffer_translucent.fsh: 0:1150(72): warning: `parallaxTexDepth' used uninitialized
+[03:37:49] [Render thread/WARN]: Mod(s) [oculus] are modifying Embeddium class me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion$DeviceResources, which may cause instability.
+[03:37:55] [Finalizer/WARN]: One or more BufferBuilders have been leaked, ModernFix will attempt to correct this.
+[03:38:02] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2470ms or 49 ticks behind
+[03:38:05] [Render thread/WARN]: Time from main menu to in-game was 40.24369 seconds
+[03:38:05] [Render thread/WARN]: Total time to load game and open world was 93.40869 seconds
+[03:38:09] [Server thread/WARN]: Tried to load a DUMMY block entity @ BlockPos{x=-227, y=71, z=46} but found not block entity block Block{minecraft:air} at location
+[03:38:09] [Server thread/WARN]: Tried to load a block entity for block Block{minecraft:air} but failed at location BlockPos{x=-227, y=71, z=46}
+[03:47:17] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 96, 71, 61, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 9 ordered, nearest worker 38.7 blocks away at 126, 72, 36, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest.entities' took aprox 188.802035 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick.bat:levelRest' took aprox 229.859243 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld.tick' took aprox 230.413209 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick.levels.ServerLevel[Beyond and Tabs - Skirmish 1] minecraft:overworld' took aprox 230.446882 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick.levels' took aprox 231.263157 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 259.682181 ms
+[03:47:32] [Server thread/WARN]: Something's taking too long! 'root' took aprox 259.780034 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 112.200927 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root' took aprox 120.871515 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 253.026817 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 285.362792 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root' took aprox 285.641113 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 166.966508 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 190.24379 ms
+[03:47:33] [Server thread/WARN]: Something's taking too long! 'root' took aprox 190.514697 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 140.989652 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 168.952803 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 169.485791 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 102.823237 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 103.015386 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 128.682393 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 189.272915 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 189.567215 ms
+[03:47:34] [Server thread/WARN]: Something's taking too long! 'root' took aprox 100.005895 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 149.820911 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 188.780818 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 188.964772 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 148.1514 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 169.0617 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 169.202314 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 125.927915 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 171.929014 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 172.075719 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 133.134088 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 156.9035 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 157.066545 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 118.74449 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 118.965082 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 117.411541 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 143.040208 ms
+[03:47:35] [Server thread/WARN]: Something's taking too long! 'root' took aprox 143.239721 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 159.823456 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 199.753366 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root' took aprox 199.916411 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 110.144444 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 153.624591 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root' took aprox 153.763831 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 117.188714 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 151.088292 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root' took aprox 151.272828 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick.bat:pathfinder' took aprox 104.226753 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root.tick' took aprox 123.426253 ms
+[03:47:36] [Server thread/WARN]: Something's taking too long! 'root' took aprox 123.663356 ms
+[03:47:45] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2961ms or 59 ticks behind
+[03:48:07] [Server thread/WARN]: [Bot] Bot1 (medium) (monsters) blocked on metal_extractor_dark: no build progress for 45 s at 111, 70, 127, cancelled: blocks 0/97, paid 0.00, builders in range 0 of 7 ordered, nearest worker 24.6 blocks away at 118, 72, 105, target metal_extractor_dark, idle false; queue 0, unbuilt never-placed 97 / changed after placing 0, built false
+[03:48:34] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
