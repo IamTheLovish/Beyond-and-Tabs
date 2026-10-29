@@ -53,7 +53,8 @@ public final class TestCleanup {
     /** Runs {@code undo} once when this test ends - passed, failed or timed out. Returns it, run-once, to call early. */
     public static Runnable atEnd(GameTestHelper helper, Runnable undo) {
         GameTestInfo info = info(helper);
-        return ENDS.add(info, undo, () -> info.addListener(new GameTestListener() {
+        // RED PROOF (throwaway, never merge): the listener is never hung, so no undo step runs at the end
+        return ENDS.add(info, undo, () -> java.util.Objects.requireNonNull(new GameTestListener() {
             @Override
             public void testStructureLoaded(GameTestInfo i) { }
 
