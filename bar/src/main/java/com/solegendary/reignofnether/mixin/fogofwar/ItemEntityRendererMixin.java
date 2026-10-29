@@ -43,9 +43,21 @@ public abstract class ItemEntityRendererMixin {
         Item item = itemEntity.getItem().getItem();
         if (!OrthoviewClientEvents.isEnabled())
             return false;
+        // seeds are not a resource a unit carries: a crop BLOCK's item is its seed (Blocks.WHEAT.asItem() is wheat
+        // seeds), so getFromItem matched them, and every seed a broken grass plant dropped drew 2.25x and full-bright -
+        // the lime "confetti" on the lawns in the eyes stills (Oct 28-29: unlit bright green sprigs with a shadow)
+        if (reignofnether$isSeed(item))
+            return false;
         return ItemUtil.isEdibleFoodOrDrink(item) ||
                 ResourceSources.getFromItem(item) != null ||
                 ItemUtil.isUnitItem(itemEntity.getItem());
+    }
+
+    @Unique
+    private static boolean reignofnether$isSeed(Item item) {
+        return item == net.minecraft.world.item.Items.WHEAT_SEEDS || item == net.minecraft.world.item.Items.BEETROOT_SEEDS
+            || item == net.minecraft.world.item.Items.MELON_SEEDS || item == net.minecraft.world.item.Items.PUMPKIN_SEEDS
+            || item == net.minecraft.world.item.Items.TORCHFLOWER_SEEDS || item == net.minecraft.world.item.Items.PITCHER_POD;
     }
 
     @Inject(
