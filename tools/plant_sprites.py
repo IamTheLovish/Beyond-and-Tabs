@@ -19,6 +19,10 @@ Round 35 (critic r34: tufts 5/10 RTS, 4/10 close - "double tuft density and vary
 grass are indistinguishable"): short grass in three SIZES, the short grass's body a step lighter (BODY_SHORT), and the
 fern drawn as cards for a low rosette (FERN_CARDS).
 
+Round 36 (critic r35b): the big short grass a bigger model (gen_blocks), the short grass's base lighter and thinner
+(BASE_SHORT, ROOT_W), and the vanilla flowers drawn (FLOWERS, flower) - coloured, untinted - in place of the game's
+16x lime-stemmed ones.
+
 Each sprite is GREYSCALE with a cut-out alpha. Drawn at SS x SS sub-samples a texel and box-filtered, cut at 0.5; the
 colour under the transparent texels is the nearest blade's (bleed: MC-114265, mipmaps pull that colour into edges).
 Returns float arrays: (H height 0..1, grey shade, alpha 0/1). Two-block plants are drawn on one 2n-tall canvas and
@@ -417,3 +421,122 @@ def split2(res):
     """A 2n-tall tuple of arrays -> (top, bottom) halves."""
     n = res[0].shape[1]
     return tuple(a[:n] for a in res), tuple(a[n:] for a in res)
+
+
+# r36 (critic r35b: "small bright lime sprites - confetti - at wall feet and on lawns in every view"): the vanilla
+# flowers. The pack drew none, so the game's 16x flowers showed - saturated lime stems, nearest-texel and unmipped -
+# among the 128x grass. Our own: a few stems of a deep, natural green, a leaf or two at the root and a small head of
+# believable colour. Not tinted (vanilla's flowers are not), so the sprite carries its colour. Parts per texel:
+# 1 = stem / leaf, 2 = petals, 3 = the head's centre (or a second petal colour).
+STEM = (0.19, 0.31, 0.11)
+FLOWERS = {
+    # stems: (x offset from the card's middle, height of the head (of the card), lean in degrees); head: radius in
+    # texels, lobes (petals; 0 = a round ragged head), lobe depth; colours of the petals and the centre (radius)
+    "dandelion": dict(stems=((0, 0.50, 4),), head=(11.0, 0, 0.18), petal=(0.94, 0.74, 0.12),
+                      centre=((0.88, 0.58, 0.08), 4.0), leaves=((-1, 0.30, 62), (1, 0.26, 66), (-1, 0.20, 80))),
+    "poppy": dict(stems=((0, 0.58, -5),), head=(12.0, 4, 0.30), petal=(0.76, 0.10, 0.07),
+                  centre=((0.12, 0.10, 0.08), 3.5), leaves=((-1, 0.26, 55), (1, 0.30, 50))),
+    "azure_bluet": dict(stems=((-6, 0.44, -14), (2, 0.52, 4), (8, 0.40, 18), (-1, 0.36, -2)), head=(6.0, 4, 0.30),
+                        petal=(0.86, 0.88, 0.92), centre=((0.86, 0.74, 0.26), 2.0), leaves=((-1, 0.16, 60), (1, 0.14, 64))),
+    "cornflower": dict(stems=((0, 0.60, 3),), head=(11.0, 9, 0.38), petal=(0.24, 0.38, 0.82),
+                       centre=((0.30, 0.20, 0.52), 3.5), leaves=((-1, 0.36, 25), (1, 0.32, 28))),
+    "oxeye_daisy": dict(stems=((0, 0.60, -3),), head=(13.0, 12, 0.42), petal=(0.92, 0.92, 0.88),
+                        centre=((0.93, 0.70, 0.12), 4.5), leaves=((-1, 0.24, 58), (1, 0.22, 62))),
+    "allium": dict(stems=((0, 0.74, 2),), head=(15.0, 0, 0.10), petal=(0.60, 0.36, 0.76),
+                   centre=((0.50, 0.28, 0.66), 0.0), leaves=((-1, 0.40, 30), (1, 0.36, 34))),
+    "lily_of_the_valley": dict(stems=((2, 0.52, -26),), head=(4.5, 0, 0.05), petal=(0.93, 0.94, 0.90),
+                               centre=((0.80, 0.84, 0.70), 0.0), leaves=((-1, 0.50, 14), (1, 0.46, 18)),
+                               bells=5, leaf_w=18.0),
+    "red_tulip": dict(stems=((0, 0.56, 2),), head=(9.5, 3, 0.25), petal=(0.80, 0.16, 0.10),
+                      centre=((0.66, 0.10, 0.07), 0.0), leaves=((-1, 0.36, 20), (1, 0.32, 24)), cup=True, leaf_w=14.0),
+}
+STEM_W = 6.5          # texels (128x): >= 1.5 texels at the RTS mip, deep green so it never reads as lime
+
+
+def _disc(cv, cx, cy, r, lobes, depth, rng, part, shade=1.0, sy=1.0, cup=False):
+    """A flower head on the canvas: a disc (radius r texels, squashed by sy) whose edge has `lobes` rounded petals
+    `depth` deep (0 lobes = a round head with a ragged edge); painted over what is there, tagged `part`. A cup
+    (a tulip) is a tall head whose top edge is notched between its petals."""
+    x0, x1 = max(0, int((cx - r - 1) * SS)), min(cv.w, int((cx + r + 1) * SS) + 1)
+    y0, y1 = max(0, int((cy - r * sy - 1) * SS)), min(cv.h, int((cy + r * sy + 1) * SS) + 1)
+    if x0 >= x1 or y0 >= y1:
+        return
+    gx, gy = np.meshgrid((np.arange(x0, x1) + 0.5) / SS, (np.arange(y0, y1) + 0.5) / SS)
+    dx, dy = gx - cx, (gy - cy) / sy
+    rr, th = np.hypot(dx, dy), np.arctan2(dy, dx)
+    ph = rng.random() * 2 * np.pi
+    if lobes:
+        edge = r * (1 - depth * np.abs(np.sin(lobes * (th + ph) / 2)) ** 1.5)
+    else:
+        edge = r * (1 - depth * (0.5 + 0.5 * np.sin(7 * th + ph) * np.sin(3 * th + 2 * ph)))
+    if cup:     # notches only along the top
+        edge = np.where(dy < 0, edge, r)
+    m = rr <= edge
+    sub = (slice(y0, y1), slice(x0, x1))
+    # lit from the upper left, a touch darker toward the rim
+    v = shade * (1.0 - 0.10 * np.clip(rr / r, 0, 1) - 0.05 * np.clip((dx + dy) / r, -1, 1))
+    cv.cov[sub][m] = 1.0
+    cv.shade[sub][m] = v[m]
+    cv.height[sub][m] = 0.9 - 0.2 * np.clip(rr / r, 0, 1)[m]
+    cv.layer[sub][m] = part
+
+
+def flower(n, rng, kind):
+    """r36: a vanilla flower (FLOWERS) on a vanilla cross card: (H, rgb, alpha, part) - part 1 stem / leaf, 2 petals,
+    3 centre, 0 empty."""
+    spec = FLOWERS[kind]
+    cv = Canvas(n, n)
+    leaf_w = spec.get("leaf_w", 9.0)
+    # leaves at the root, behind the stems: (side, length of the card, angle from vertical)
+    for side, frac, ang in spec["leaves"]:
+        a = math.radians(side * (ang + 6 * (rng.random() - 0.5)))
+        pts = _reach(n / 2 + side * 1.5, n + 1.0, n + 1.0 - frac * n * math.cos(abs(a)) * 0.95, a,
+                     side * 0.5, n, _blade_hw(leaf_w), margin=3.0)
+        cv.ribbon(pts, _blade_hw(leaf_w), lambda t, ac, s: (0.92 + 0.10 * t + 0.06 * np.exp(-(ac / 0.25) ** 2)),
+                  0.2, leaf_w / 2 + 1, layer=1)
+    heads = []
+    for dx, frac, lean in spec["stems"]:
+        a = math.radians(lean + 4 * (rng.random() - 0.5))
+        top = n + 1.0 - frac * n
+        bend = 0.9 * math.copysign(1, a) if spec.get("bells") else 0.12 * math.copysign(1, a)
+        hw = (lambda t, s=None: np.full(np.shape(t), STEM_W / 2) * (1 - 0.25 * np.asarray(t, float)))
+        pts = _reach(n / 2 + dx, n + 1.0, top, a, bend, n, hw, margin=spec["head"][0] + 3)
+        cv.ribbon(pts, hw, lambda t, ac, s: 0.95 + 0.08 * t - 0.05 * ac, 0.5, STEM_W / 2 + 1, layer=1)
+        heads.append(pts)
+    r, lobes, depth = spec["head"]
+    for pts in heads:
+        if spec.get("bells"):     # lily of the valley: small bells hanging along the arch's outer half
+            k = spec["bells"]
+            for i in range(k):
+                px, py = pts[int((0.45 + 0.5 * i / (k - 1)) * (len(pts) - 1))]
+                _disc(cv, px, py + r * 0.9, r * (0.85 + 0.15 * rng.random()), 0, 0.08, rng, 2, sy=1.15)
+            continue
+        hx, hy = pts[-1]
+        rad = r * (0.9 + 0.2 * rng.random())
+        _disc(cv, hx, hy, rad, lobes, depth, rng, 2, sy=1.25 if spec.get("cup") else 0.8, cup=spec.get("cup", False))
+        crgb, cr = spec["centre"]
+        if cr:
+            _disc(cv, hx, hy - (0.0 if spec.get("cup") else 0.5), cr, 0, 0.1, rng, 3, shade=1.0, sy=0.8)
+        elif kind == "allium":    # a globe of florets: a dappled, slightly darker core
+            _disc(cv, hx, hy, rad * 0.55, 0, 0.35, rng, 3, sy=0.8)
+    cov = cv._down(cv.cov)
+    alpha = (cov >= 0.5).astype(np.float64)
+    w = np.maximum(cov, 1e-6)
+    shade = cv._down(cv.shade * cv.cov) / w
+    height = cv._down(cv.height * cv.cov) / w
+    cols = {1: None, 2: np.array(spec["petal"]), 3: np.array(spec["centre"][0])}
+    rgb = np.zeros((n, n, 3))
+    part = np.zeros((n, n), dtype=np.int64)
+    best = np.zeros((n, n))
+    for k in (1, 2, 3):
+        f = cv._down(cv.cov * (cv.layer == k))
+        if k == 1:      # stems and leaves: the stem green; leaves (a little lighter, broader) by their shade
+            c = np.array(STEM)[None, None, :] * np.ones((n, n, 1))
+        else:
+            c = cols[k][None, None, :] * np.ones((n, n, 1))
+        rgb += f[..., None] * c
+        part = np.where(f > best, k, part)
+        best = np.maximum(best, f)
+    rgb = rgb / w[..., None] * shade[..., None]
+    part = np.where(alpha > 0, part, 0)
+    return np.where(alpha > 0, height, 0.0), np.clip(rgb, 0, 1), alpha, part

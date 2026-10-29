@@ -455,6 +455,14 @@ SEED_ORDER = (
     "grass_straw_c_sm",
     "fern_t",
     "fern_b_t",
+    "dandelion",              # r36: the vanilla flowers (FLOWER_TEXTURES)
+    "poppy",
+    "azure_bluet",
+    "cornflower",
+    "oxeye_daisy",
+    "allium",
+    "lily_of_the_valley",
+    "red_tulip",
 )
 
 
@@ -1045,6 +1053,14 @@ for _p in ("fern", "fern_b"):
     TARGETS[_p] = dict(TARGETS[_p], sat=0.04)
 for _p in ("fern_t", "fern_b_t"):
     TARGETS[_p] = dict(TARGETS[_p[:-2]])
+# r36 (critic r35b: "small bright lime sprites ('confetti', unlit-looking, saturated) at wall feet and on lawns in
+# every view"): the vanilla flowers the maps, the structures (Architecture.FLOWERS) and the samplers place. The pack
+# drew none, so the game's 16x flowers showed - lime stems, nearest-texel, among the 128x grass. Ours are coloured
+# sprites (plant_sprites.flower: deep green stems, a small head), untinted like vanilla's, on vanilla's own cross and
+# flower_pot_cross models with cutout_mipped (MODEL_OVERRIDES). Appended (SEED_ORDER rule); the albedo is drawn final.
+FLOWER_TEXTURES = tuple(plant_sprites.FLOWERS)
+for _p in FLOWER_TEXTURES:
+    TARGETS[_p] = dict(luma=0.40, std=0.10, sat=0.50, tilt=10.0, smooth=55, pore=140, ao=0.3)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2161,6 +2177,13 @@ def m_plant(name, n):
     return dict(H=H, alb=alb, alpha=alpha)
 
 
+def m_flower(name, n):
+    """r36: a vanilla flower (plant_sprites.flower), coloured; the colour and height under the cut-out from the nearest
+    drawn texel (MC-114265, as m_plant)."""
+    H, rgb, alpha, part = plant_sprites.flower(n, np.random.default_rng(SEEDS[name]), name)
+    return dict(H=plant_sprites.bleed(H, alpha), alb=plant_sprites.bleed(rgb, alpha), alpha=alpha)
+
+
 def m_cobweb(F, n):
     """A cobweb: eight straight spokes from a hub a little off the middle and, between them, rings of STRAIGHT chords
     (an orb web is a polygon spiral, not circles - circles read as a maze), sagging a little; pale silk, cut-out, a
@@ -2464,6 +2487,7 @@ STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
          "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b",
          *("grass_straw" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES))                    # r35
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
+CUTOUT |= set(FLOWER_TEXTURES)       # r36
 
 
 # leaning quads for a tuft seen from above (round 29c/d): (axis, angle) per quad; axis x tips the plane through the root
@@ -2644,6 +2668,10 @@ MODEL_OVERRIDES = {
     # from above are edge-on dashes): short grass and ferns also get four quads LEANING OUT 45 degrees from the root,
     # so a clump opens up like a real tuft when seen from above (PLANT_MODELS)
     **PLANT_MODELS,
+    # r36: the flowers and their potted copies, vanilla's models on our textures (FLOWER_TEXTURES)
+    **{f: {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/" + f}} for f in FLOWER_TEXTURES},
+    **{"potted_" + f: {"parent": "minecraft:block/flower_pot_cross", "textures": {"plant": "minecraft:block/" + f}}
+       for f in FLOWER_TEXTURES},
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
@@ -2974,6 +3002,8 @@ def recipes():
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for p in PLANTS + STRAW:                               # round 29; r34: fitted in m_plant, over the whole plant
         R[p] = _parts(lambda F, n, p=p: m_plant(p, n), fit=False)
+    for p in FLOWER_TEXTURES:                              # r36: drawn in their final colours
+        R[p] = _parts(lambda F, n, p=p: m_flower(p, n), fit=False)
     return R
 
 
