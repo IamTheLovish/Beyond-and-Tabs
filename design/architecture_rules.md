@@ -71,3 +71,6 @@ tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` 
   the 3/4 stills `34s` / `34w`: the first block on each ray) and `camera_chequer` (no a-b-a-b-a run or 3 x 2
   alternation, a stair, slab and full block of one stone counting as different shades). The r2-r3 dome passed
   "8 connected ribs" and G6 while every photo showed a chequer; its camera test went red first.
+- Trim (r5): pale dressings are grey cut stone (smooth stone / stone-brick shapes) - calcite and diorite read as snow
+  at RTS zoom; verges are dark stone or the set's metal, never wood (dark oak bargeboards read orange). Roof SHAPES
+  (hip / pyramid) are held for the Macaw's Roofs mod.

@@ -290,8 +290,8 @@ class Camera(unittest.TestCase):
 
     def test_tone_classes(self):
         self.assertEqual([G.tone(n) for n in ("smooth_quartz", "polished_deepslate", "bricks", "glass_pane",
-                                              "lantern", "stripped_birch_log", "dark_oak_planks")],
-                         ["pale", "dark", "mid", "glass", "light", "pale", "dark"])
+                                              "lantern", "stripped_birch_log", "dark_oak_planks", "smooth_stone_slab")],
+                         ["pale", "dark", "mid", "glass", "light", "pale", "dark", "pale"])
 
 
 class VanillaIds(unittest.TestCase):

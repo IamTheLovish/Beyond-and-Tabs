@@ -267,7 +267,8 @@ VIEWS = {   # the camera looking in: a picture cell of q, and its nearness to th
     "34s": (lambda q: (q[0], q[1] - q[2]), lambda q: q[1] + q[2]),     # the 3/4 still: from the south, 45 deg up
     "34w": (lambda q: (q[2], q[1] + q[0]), lambda q: q[1] - q[0]),     # the same from the west
 }
-PALE = ("quartz", "calcite", "diorite", "sandstone", "birch", "bone", "white", "end_stone", "snow")
+PALE = ("quartz", "calcite", "diorite", "sandstone", "birch", "bone", "white", "end_stone", "snow", "smooth_stone",
+        "stone_brick")   # r5: grey cut stone is the pale dressing against brick, deepslate and slate
 DARK = ("deepslate", "blackstone", "dark_oak", "nether_brick", "basalt", "black", "obsidian", "coal", "gray", "iron_bars",
         "chain")
 

@@ -102,9 +102,11 @@ def _chimney_on_roof(m):
     host = mounted(m, K.oversail(m, 7, 7), 7, 7)
     x, z = 4, 1
     roof_y = max(y for (xx, y, zz) in host.b if (xx, zz) == (x, z))
-    for y in range(4, roof_y + 1):
-        host.set(x, y, z, m.wall.full)
-    for (a, y, b), v in K.roof_chimney(m).b.items():
+    stack = K.roof_chimney(m)
+    for a, b in {(q[0], q[2]) for q in stack.b}:
+        for y in range(4, roof_y + 1):
+            host.set(x + a, y, z + b, m.wall.full)
+    for (a, y, b), v in stack.b.items():
         host.b[(x + a, roof_y + 1 + y, z + b)] = v
     return host
 
@@ -159,6 +161,16 @@ R4 = {           # round 4 reshoots the parts the r4 critic named, close enough 
     "arch_kit_sunforged": SHEETS["arch_kit_sunforged"],
 }
 SHEETS.update(R4)
+
+R5 = {           # round 5 reshoots the parts the r4 critic named, plus the trim swap on the kept ones
+    "arch_kit_r5_roofs": [("brassworks", "cresting"), ("brassworks", "chimney"), ("brassworks", "dormer"),
+                          ("brassworks", "oversail")],
+    "arch_kit_r5_towers": [("brassworks", "dome"), ("brassworks", "spire")],
+    "arch_kit_r5_walls": [("brassworks", "tone_wall"), ("brassworks", "gear"), ("brassworks", "half_timber"),
+                          ("brassworks", "balustrade"), ("brassworks", "portal")],
+    "arch_kit_sunforged": SHEETS["arch_kit_sunforged"],
+}
+SHEETS.update(R5)
 
 
 def _pack(parts):
