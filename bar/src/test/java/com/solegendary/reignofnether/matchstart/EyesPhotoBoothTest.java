@@ -182,4 +182,25 @@ class EyesPhotoBoothTest {
         }
         assertFalse(EyesPhotoBooth.ambientLifeOff());
     }
+
+    // ------------------------------------------------------------------------------------------- golden hour
+
+    @Test
+    void theSunElevationFollowsMinecraftsDayClock() {
+        assertEquals(90, EyesPhotoBooth.sunElevationDeg(6000), 0.5, "noon: overhead");
+        assertEquals(-90, EyesPhotoBooth.sunElevationDeg(18000), 0.5, "midnight: straight down");
+        assertTrue(EyesPhotoBooth.sunElevationDeg(13000) < 0, "the dusk still (13000): the sun is set");
+        assertTrue(EyesPhotoBooth.sunElevationDeg(1000) > 0, "morning: up");
+        assertEquals(EyesPhotoBooth.sunElevationDeg(1000), EyesPhotoBooth.sunElevationDeg(25000), 1e-9, "a day wraps");
+    }
+
+    @Test
+    void theGoldenStillHasALowAfternoonSun() {
+        // lovish's villa reference (Oct 28): a low warm sun, long soft shadows, lit walls against dark shade. The RTS
+        // camera faces north-east, so it sees the south and west faces: an afternoon sun (in the west) lights them.
+        long t = EyesPhotoBooth.GOLDEN_TIME;
+        assertTrue(t > 6000 && t < 12000, "afternoon: after noon, before sunset");
+        double el = EyesPhotoBooth.sunElevationDeg(t);
+        assertTrue(el >= 8 && el <= 20, "low but up: " + el + " degrees");
+    }
 }
