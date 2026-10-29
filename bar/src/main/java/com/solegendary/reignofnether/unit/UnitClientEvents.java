@@ -231,6 +231,7 @@ public class UnitClientEvents {
             return;
         if (unit.isPassenger())
             return;
+        tellServerIfOwnHero(unit);
         selectedUnits.add(unit);
         BuildingClientEvents.clearSelectedBuildings();
         NonUnitClientEvents.isMoveCheckpointGreen = true;
@@ -244,6 +245,7 @@ public class UnitClientEvents {
             return;
         if (unit.isPassenger())
             return;
+        tellServerIfOwnHero(unit);
         selectedUnits.add(unit);
         selectedUnits.sort(Comparator.comparing(MiscUtil::getSimpleEntityName));
         selectedUnits.sort(Comparator.comparing(Entity::getId));
@@ -251,6 +253,17 @@ public class UnitClientEvents {
         NonUnitClientEvents.isMoveCheckpointGreen = true;
         markSelectedUnitsChanged();
     }
+    /**
+     * The server learns when the player selects their own hero (decision D030, lovish Oct 27: "once the player selects
+     * or commands it again, the player's order wins" - a select hands a hero that fled by itself back to its order).
+     * Only on joining the selection, not for a hero already in it.
+     */
+    private static void tellServerIfOwnHero(LivingEntity unit) {
+        if (unit instanceof com.solegendary.reignofnether.hero.FactionHero hero && MC.player != null
+                && !selectedUnits.contains(unit) && MC.player.getName().getString().equals(hero.getOwnerName()))
+            com.solegendary.reignofnether.hero.HeroServerboundPacket.sendHeroSelected(unit.getId());
+    }
+
     public static void clearPreselectedUnits() {
         preselectedUnits.clear();
     }
