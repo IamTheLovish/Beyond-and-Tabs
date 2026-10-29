@@ -1,18 +1,24 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.defence.DefenceCosts;
 import com.solegendary.reignofnether.building.buildings.defence.DefenceTower;
 import com.solegendary.reignofnether.building.buildings.defence.Defences;
 import com.solegendary.reignofnether.building.buildings.defence.Trap;
 import com.solegendary.reignofnether.building.buildings.defence.WallGate;
 import com.solegendary.reignofnether.building.buildings.defence.WallSegment;
+import com.solegendary.reignofnether.building.buildings.placements.RailBatteryPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.StormOakPlacement;
+import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder;
@@ -352,6 +358,177 @@ public class DefenceGameTests {
             }
             helper.succeed();
         } finally {
+            for (Mob m : spawned)
+                m.discard();
+        }
+    }
+
+    /**
+     * Every tower kind fires at its configured rate with the game's own target scan - no onlyFoe shortcut, tickAge
+     * counted up before the weapon as BuildingPlacement.tick does: against a target that stays in range the shots come
+     * exactly cooldownTicks apart. A ready tower used to wait a tick more and then for the next SCAN_TICKS boundary, so a
+     * 1 s tower fired every 1.5 s and the anti-T3 every 3.5 s instead of 3 s. The tower and its target float at y = 380,
+     * more than a tower's reach above every other test's pad (ArenaReady.pad: 301 is the highest), so a tower with no
+     * onlyFoe sees nothing but its own target; any shot that misses it is reported.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void defence_towers_fire_at_their_configured_rate(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_towerrate_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        final int y = 380, ticks = 400;
+        BlockPos at = helper.absolutePos(new BlockPos(6, 0, 6)).atY(y);
+        // one registered tower of every Kind, so a kind added later is checked too (or reported if none is registered)
+        java.util.Map<DefenceTower.Kind, DefenceTower> byKind = new java.util.EnumMap<>(DefenceTower.Kind.class);
+        for (var b : com.solegendary.reignofnether.api.ReignOfNetherRegistries.BUILDING)
+            if (b instanceof DefenceTower t)
+                byKind.putIfAbsent(t.kind, t);
+        List<String> problems = new ArrayList<>();
+        for (DefenceTower.Kind k : DefenceTower.Kind.values())
+            if (!byKind.containsKey(k))
+                problems.add("no tower of kind " + k + " is registered");
+        List<Mob> spawned = new ArrayList<>();
+        try {
+            ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_2);
+            ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_3);
+            for (DefenceTower t : byKind.values()) {
+                var bp = BuildingUtils.getNewBuildingPlacement(t, level, at, Rotation.NONE, owner, false);
+                if (!(bp instanceof DefenceTower.DefenceTowerPlacement tower)) {
+                    problems.add(t.name + " is not a DefenceTowerPlacement");
+                    continue;
+                }
+                tower.isBuilt = true;
+                Mob target = (t.kind.airOnly ? EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get() : EntityRegistrar.CUTLASS_RAIDER_UNIT.get())
+                    .create(level);
+                if (target == null) {
+                    problems.add("could not make a target for " + t.name);
+                    continue;
+                }
+                target.moveTo(tower.centrePos.getX() + 4.5, y + (t.kind.airOnly ? 6 : 0), tower.centrePos.getZ() + 0.5, 0, 0);
+                target.setNoGravity(true);
+                ((Unit) target).setOwnerName(foeOwner);
+                level.addFreshEntity(target);
+                spawned.add(target);
+                UnitGrid.invalidate();
+                List<Integer> shots = new ArrayList<>();
+                int strays = 0;
+                for (int tick = 0; tick < ticks; tick++) {
+                    target.invulnerableTime = 0;
+                    target.setHealth(target.getMaxHealth());
+                    tower.tickAge++;
+                    tower.tickWeapon(level);
+                    if (tower.cooldown == t.kind.cooldownTicks) {
+                        shots.add(tick);
+                        if (target.getHealth() >= target.getMaxHealth())
+                            strays++;
+                    }
+                }
+                target.discard();
+                int cd = t.kind.cooldownTicks;
+                if (strays > 0)
+                    problems.add(t.name + ": " + strays + " shots missed its own target (something else in reach)");
+                if (shots.size() < 3) {
+                    problems.add(t.name + " fired " + shots.size() + " shots in " + ticks / 20 + " s (set to every " + cd / 20f + " s)");
+                    continue;
+                }
+                Set<Integer> gaps = new java.util.TreeSet<>();
+                for (int i = 1; i < shots.size(); i++)
+                    gaps.add(shots.get(i) - shots.get(i - 1));
+                double mean = (double) (shots.get(shots.size() - 1) - shots.get(0)) / (shots.size() - 1);
+                ReignOfNether.LOGGER.info("[TowerRate] {} ({}) fired {} shots, every {} ticks (set to {})", t.name, t.kind,
+                    shots.size(), mean, cd);
+                if (!gaps.equals(Set.of(cd)))
+                    problems.add(String.format("%s (%s) fired every %.2f s (gaps %s ticks), set to every %.2f s: %.1f dps instead of %.1f",
+                        t.name, t.kind, mean / 20, gaps, cd / 20f, t.kind.damage * 20 / mean, t.kind.dps()));
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            ResearchServerEvents.removeAllResearchFor(owner);
+            for (Mob m : spawned)
+                m.discard();
+        }
+    }
+
+    /**
+     * The Rail Battery and the Storm Oak keep their configured rate with the game's own target scan, as the towers do
+     * (defence_towers_fire_at_their_configured_rate): against a target that stays in range the rail fires every
+     * CHARGE_TICKS + COOLDOWN_TICKS and the oak strikes every COOLDOWN_TICKS. Both used to skip the tick the cooldown
+     * ran out and then wait for the next SCAN_TICKS: 140 and 130 ticks instead of 130 and 120. A shot is read off the
+     * target's health alone; the same floating spot as the tower test (y = 380, no onlyFoe).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void defence_rail_battery_and_storm_oak_fire_at_their_configured_rate(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_weaponrate_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        final int y = 380, ticks = 800;
+        BlockPos at = helper.absolutePos(new BlockPos(6, 0, 6)).atY(y);
+        record Weapon(Building building, int period) { }
+        List<Weapon> weapons = List.of(
+            new Weapon(Buildings.RAIL_BATTERY, RailBatteryPlacement.CHARGE_TICKS + RailBatteryPlacement.COOLDOWN_TICKS),
+            new Weapon(Buildings.STORM_OAK, StormOakPlacement.COOLDOWN_TICKS));
+        List<String> problems = new ArrayList<>();
+        List<Mob> spawned = new ArrayList<>();
+        try {
+            ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_2);
+            for (Weapon w : weapons) {
+                var bp = BuildingUtils.getNewBuildingPlacement(w.building(), level, at, Rotation.NONE, owner, false);
+                Runnable tickWeapon;
+                if (bp instanceof RailBatteryPlacement rail)
+                    tickWeapon = () -> rail.tickRail(level);
+                else if (bp instanceof StormOakPlacement oak)
+                    tickWeapon = () -> oak.tickStrike(level);
+                else {
+                    problems.add(w.building().name + " has no weapon placement: " + bp);
+                    continue;
+                }
+                bp.isBuilt = true;
+                Mob target = EntityRegistrar.SENTINEL_TREANT_UNIT.get().create(level);
+                if (target == null) {
+                    problems.add("could not make a Sentinel Treant");
+                    break;
+                }
+                target.moveTo(bp.centrePos.getX() + 0.5, y, bp.centrePos.getZ() + 6.5, 0, 0);
+                target.setNoGravity(true);
+                ((Unit) target).setOwnerName(foeOwner);
+                level.addFreshEntity(target);
+                spawned.add(target);
+                UnitGrid.invalidate();
+                List<Integer> shots = new ArrayList<>();
+                for (int tick = 0; tick < ticks && target.isAlive(); tick++) {
+                    target.invulnerableTime = 0;
+                    target.setHealth(target.getMaxHealth());
+                    bp.tickAge++;
+                    tickWeapon.run();
+                    if (target.getHealth() < target.getMaxHealth())
+                        shots.add(tick);
+                }
+                boolean died = !target.isAlive();
+                target.discard();
+                if (died)
+                    problems.add(w.building().name + " killed its full-health target in one shot: pick a sturdier one");
+                if (shots.size() < 3) {
+                    problems.add(w.building().name + " hit " + shots.size() + " times in " + ticks / 20 + " s (set to every "
+                        + w.period() / 20f + " s)");
+                    continue;
+                }
+                Set<Integer> gaps = new java.util.TreeSet<>();
+                for (int i = 1; i < shots.size(); i++)
+                    gaps.add(shots.get(i) - shots.get(i - 1));
+                double mean = (double) (shots.get(shots.size() - 1) - shots.get(0)) / (shots.size() - 1);
+                ReignOfNether.LOGGER.info("[WeaponRate] {} hit {} times, every {} ticks (set to {})", w.building().name,
+                    shots.size(), mean, w.period());
+                if (!gaps.equals(Set.of(w.period())))
+                    problems.add(String.format("%s fired every %.2f s (gaps %s ticks), set to every %.2f s",
+                        w.building().name, mean / 20, gaps, w.period() / 20f));
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            ResearchServerEvents.removeAllResearchFor(owner);
             for (Mob m : spawned)
                 m.discard();
         }
