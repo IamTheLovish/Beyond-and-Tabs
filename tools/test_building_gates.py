@@ -9,6 +9,11 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import numpy  # noqa: F401
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
 import building_gates as G  # noqa: E402
 import roof_kit as R  # noqa: E402
 import schem_study as S  # noqa: E402
@@ -292,6 +297,53 @@ class Camera(unittest.TestCase):
         self.assertEqual([G.tone(n) for n in ("smooth_quartz", "polished_deepslate", "bricks", "glass_pane",
                                               "lantern", "stripped_birch_log", "dark_oak_planks", "smooth_stone_slab")],
                          ["pale", "dark", "mid", "glass", "light", "pale", "dark", "pale"])
+
+
+class Stills(unittest.TestCase):
+    """building_gates.shoot: the eyes structure stills (EyesDirector scene 15) cast into a build."""
+
+    def box(self):
+        """A 6 x 4 x 6 brick block with one glass pane on each side face, a lantern behind the west and south panes."""
+        b = {(x, y, z): ("bricks", {}) for x in range(6) for y in range(4) for z in range(6)}
+        for q in ((0, 2, 3), (5, 2, 3), (3, 2, 0), (3, 2, 5)):
+            b[q] = ("glass_pane", {})
+        b[(1, 2, 3)] = ("lantern", {})
+        b[(3, 2, 4)] = ("lantern", {})
+        return S.Build(b)
+
+    @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+    def test_every_still_sees_the_west_south_and_top_only(self):
+        """All four cameras stand to the south-west, above: they see the west (-x), south (+z) and top faces."""
+        for st in G.STILLS:
+            faces = {h[2] for h in G.shoot(self.box(), st, 8).values()}
+            self.assertEqual(faces, {"west", "south", "up"}, st)
+
+    @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+    def test_glass_shows_what_is_behind_it(self):
+        """A pane is seen AND seen through: each glass hit names the first solid block behind it - the lit room
+        through the panes, the wall beside or under it at a slant - a 1-wide pane in a solid wall shows the 3/4
+        camera only its reveal (the slanted ray leaves the pane's cell sideways before the room)."""
+        b = self.box()
+        b.blocks.update({(x, y, z): ("lantern", {}) for x in range(1, 5) for y in (1, 2) for z in range(1, 5)})
+        win = {(0, y, z) for y in (1, 2) for z in (2, 3)} | {(x, y, 5) for y in (1, 2) for x in (3, 4)}   # 2 x 2
+        b.blocks.update({q: ("glass_pane", {}) for q in win})
+        hits = G.shoot(b, "34", 2).values()
+        glass = [h for h in hits if h[1] == "glass_pane"]
+        self.assertEqual({h[0] for h in glass}, win)
+        self.assertEqual({h[3][1] for h in glass}, {"lantern", "bricks"})
+
+    @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+    def test_a_nearer_block_hides_the_one_behind(self):
+        b = self.box()
+        b.blocks.update({(-1, y, z): ("stone", {}) for y in range(4) for z in range(6)})
+        b.blocks = {(x + 1, y, z): v for (x, y, z), v in b.blocks.items()}
+        names = {h[1] for h in G.shoot(b, "rts", 8).values() if h[2] == "west"}
+        self.assertEqual(names, {"stone"})
+
+    def test_rts_tilt_follows_zoom(self):
+        self.assertEqual(G.rts_pitch(10), 55)
+        self.assertEqual(G.rts_pitch(135), 75)
+        self.assertTrue(55 < G.rts_pitch(30) < 75)
 
 
 class VanillaIds(unittest.TestCase):

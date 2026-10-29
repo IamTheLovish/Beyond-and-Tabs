@@ -136,7 +136,8 @@ class EngineShedR9(unittest.TestCase):
         self.assertGreaterEqual(zs[-1] - zs[0], 12, zs)
 
     def test_cone_ledges_weathered_copper_over_dark_treads(self):
-        """The tier feet: the front ledges (r8b: raw orange cut copper) a weathered + exposed copper mix; r8a's darker
+        """The tier feet: the front ledges (r8b: raw orange cut copper) weathered copper (r9: a weathered + exposed mix;
+        r10 drops the exposed - see the note below); r8a's darker
         tone on the rest of each tier's tread - the step row's cells the tier above leaves open, off the front face -
         a dashed darker line: >= 40 % of those cells darker than the oxidized body (weathered copper, the wet tone, or a
         dark stone). (First draft: >= 80 % dark stone - r8a's whole blackstone ring left the cone 27 % copper from
@@ -145,8 +146,10 @@ class EngineShedR9(unittest.TestCase):
             ledge = [n for (x, yy, z), n in self.n.items() if yy == y and x == fx and 9 <= z <= 15 and in_cone((x, y, z))
                      and n.endswith("_stairs") and "copper" in n]
             self.assertTrue(ledge, y)
-            self.assertEqual({("weathered" in n) or ("exposed" in n) for n in ledge}, {True}, (y, ledge))
-            self.assertTrue(any("weathered" in n for n in ledge) and any("exposed" in n for n in ledge), (y, ledge))
+            # r10: the "and an exposed cell" clause retired - the r9 critic saw ORANGE on cone tier 2 (exposed copper's
+            # texture is orange-tan), and lovish's decision is weathered GREEN copper on the tower and spires
+            # (test_engine_shed_r10.test_b2_no_exposed_copper_visible). The ledge stays a weathered copper stair line.
+            self.assertEqual({"weathered" in n for n in ledge}, {True}, (y, ledge))
             tread = [n for (x, yy, z), n in self.n.items() if yy == y and x > fx and in_cone((x, y, z))
                      and (x, y + 1, z) not in self.n]
             dark = sum(any(k in n for k in ("blackstone", "deepslate", "weathered")) for n in tread)
@@ -161,14 +164,16 @@ class EngineShedR9(unittest.TestCase):
         self.assertEqual(raw, [])
 
     def test_slate_roofs_are_mid_grey(self):
-        """r8's roofs read as a hole (roof luma 61 < walls 78): the hall, wing and shed roofs' cells seen from above
-        (every roof shape off the cone whose material the pack has measured, gen_blocks.TARGETS) average >= 0.40
-        luma (r8b's slate mix ~0.22)."""
+        """The hall, wing and shed roofs' cells seen from above (every roof shape off the cone whose material the pack
+        has measured, gen_blocks.TARGETS) average pack luma 0.28-0.36: real slate, a mid-dark grey. Both ends are
+        critics' reads - r8b at ~0.22 read as a hole (r8 critic: roof luma 61 under walls 78), r9 at ~0.45 as pale
+        striped concrete (r9 critic). r10 retired r9's ">= 0.40" floor for this band (the coordinator, Oct 29); the
+        camera's own roof pixels are held to the same band in test_engine_shed_r10."""
         up = S.Build({q: c for q, c in self.b.blocks.items() if q[1] >= 1})
         lum = [GB.TARGETS[m]["luma"] for q in S.roof_cells(up) if not in_cone(q)
                for m in [base(self.n[q])] if m in GB.TARGETS]
         self.assertGreater(len(lum), 100)
-        self.assertGreaterEqual(sum(lum) / len(lum), 0.40)
+        self.assertTrue(0.28 <= sum(lum) / len(lum) <= 0.36, sum(lum) / len(lum))
 
     # ------------------------------------------------------------------ 4. lit windows
     def test_every_camera_window_is_lit(self):

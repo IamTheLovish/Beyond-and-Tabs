@@ -288,6 +288,171 @@ def camera(b, view):
     return best
 
 
+# ---- the eyes stills (EyesDirector scene 15, bar/.../matchstart/EyesDirector.java sceneStructures) --------------
+# r10 (the r9 critic, realism 5 / detail 6: every gate green, every picture failed - "more parts, not more building"):
+# the gates measured the generator's cells, not the picture. STILLS rebuilds the four structure stills so a test can
+# ask what each one shows: the structure stamped with its origin at the pad (structure y 0 on the pad's top), the RTS
+# camera orthographic (OrthoviewClientEvents.getOrthographicProjection: the view `zoom` blocks tall at the 1600 x 900
+# aspect), its yaw CAMROTX_DEFAULT 135 (looking +x -z, from the south-west), its pitch the zoom's tilt (basePitchDeg:
+# 55 deg at zoom 10 to 75 at 135, linear in log zoom), centred on the footprint's middle at 0.3 of the height
+# (centreCameraOnPosInstant(structureMiddle(0.3))); rts at zoom 30, rts_close at min(26, max(12, 1.25 (big + 0.6 h)));
+# 34 and dusk (the same view at day time 13000) first-person from the south-west, 30 deg up, 1.5 x the largest size
+# (>= 12) from the middle at 0.4 of the height, the client's default 70 deg vertical field of view (standThreeQuarter).
+STILLS = ("rts", "rts_close", "34", "dusk")
+SCREEN = (1600, 900)
+FOV = 70.0
+FACE_NAMES = {(0, -1): "west", (0, 1): "east", (1, -1): "down", (1, 1): "up", (2, -1): "north", (2, 1): "south"}
+
+
+def rts_pitch(zoom):
+    """OrthoviewClientEvents.basePitchDeg with the default config (camera_pitch_close_v2 55, far_v2 75, ZOOM_MIN 10,
+    ZOOM_TILT_FAR 135)."""
+    import math
+    t = (math.log(max(zoom, 10)) - math.log(10)) / (math.log(135) - math.log(10))
+    return 55 + 20 * min(max(t, 0.0), 1.0)
+
+
+def still_camera(size, still):
+    """(kind, eye or centre, forward, right, up, half-width, half-height) of one still for a structure of `size`
+    (x, y, z) - in structure blocks, y 0 the structure's bottom layer."""
+    import numpy as np
+    sx, sy, sz = size
+    big = max(sx, sz)
+    if still in ("rts", "rts_close"):
+        zoom = 30.0 if still == "rts" else min(26.0, max(12.0, 1.25 * (big + 0.6 * sy)))
+        p = np.radians(rts_pitch(zoom))
+        f = np.array([np.cos(p) / np.sqrt(2), -np.sin(p), -np.cos(p) / np.sqrt(2)])
+        c = np.array([sx / 2.0, 0.3 * sy, sz / 2.0])
+        half_h = zoom / 2
+        kind = "ortho"
+    else:
+        d = max(12.0, 1.5 * max(sx, sy, sz))
+        aim = np.array([sx / 2.0, 0.4 * sy, sz / 2.0])
+        h, up = d * np.cos(np.radians(30)), d * np.sin(np.radians(30))
+        c = np.array([aim[0] - h / np.sqrt(2), max(aim[1] + up, 2.5), aim[2] + h / np.sqrt(2)])
+        f = (aim - c) / np.linalg.norm(aim - c)
+        half_h = np.tan(np.radians(FOV / 2))
+        kind = "persp"
+    r = np.cross(f, [0.0, 1.0, 0.0])
+    r /= np.linalg.norm(r)
+    u = np.cross(r, f)
+    return kind, c, f, r, u, half_h * SCREEN[0] / SCREEN[1], half_h
+
+
+def _march(grid, see_through, o, d):
+    """A voxel DDA per ray (o, d: n x 3) through grid (block ids, 0 air): (id, cell, entry axis, entry sign) of the
+    first block whose id is not see_through, id 0 where a ray leaves the grid."""
+    import numpy as np
+    size = np.array(grid.shape)
+    n = len(o)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        inv = 1.0 / d
+        t0, t1 = (0 - o) * inv, (size - o) * inv
+        tlo = np.where(np.isnan(np.minimum(t0, t1)), -np.inf, np.minimum(t0, t1))
+        thi = np.where(np.isnan(np.maximum(t0, t1)), np.inf, np.maximum(t0, t1))
+    tn = np.maximum(tlo.max(axis=1), 0)
+    tf = thi.min(axis=1)
+    alive = tf > tn
+    axis = np.argmax(tlo, axis=1)
+    vox = np.clip(np.floor(o + d * (tn[:, None] + 1e-7)).astype(int), 0, size - 1)
+    stp = np.where(d > 0, 1, -1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        tmax = np.where(d != 0, (vox + (stp > 0) - o) / d, np.inf)
+        tdel = np.where(d != 0, np.abs(1.0 / d), np.inf)
+    hit = np.zeros(n, dtype=np.int32)
+    for _ in range(int(size.sum()) + 4):
+        idx = np.nonzero(alive)[0]
+        if not len(idx):
+            break
+        bid = grid[vox[idx, 0], vox[idx, 1], vox[idx, 2]]
+        stop = (bid > 0) & ~see_through[bid]
+        hit[idx[stop]] = bid[stop]
+        alive[idx[stop]] = False
+        idx = idx[~stop]
+        ax = np.argmin(tmax[idx], axis=1)
+        vox[idx, ax] += stp[idx, ax]
+        tmax[idx, ax] += tdel[idx, ax]
+        axis[idx] = ax
+        gone = ((vox[idx] < 0) | (vox[idx] >= size)).any(axis=1)
+        alive[idx[gone]] = False
+    return hit, vox, axis, -stp[np.arange(n), axis]
+
+
+def shoot(b, still, step=4):
+    """Every `step`-th pixel of a still, cast into `b` (a voxel DDA, every non-air block a full cube but glass):
+    {(px, py): hit} with hit = (cell, name, face, behind), face the side the ray entered by (FACE_NAMES), behind
+    (cell, name) of the first non-glass block past a glass hit, else None. Glass is seen AND seen through, and a pane
+    is a thin upright plane through its cell's middle, facing the open side (x when a side along x is open, else z):
+    a ray looks on from where it crosses that plane, so a slanted view into a window sees the room, not only the
+    reveal. Pixels that miss the structure are left out."""
+    import numpy as np
+    cells = {q: n for q, (n, _) in b.blocks.items() if n not in S.AIR}
+    if not cells:
+        return {}
+    size = tuple(max(q[i] for q in cells) + 1 for i in range(3))
+    ids, names = {}, [None]
+    grid = np.zeros(size, dtype=np.int32)
+    for q, n in cells.items():
+        if n not in ids:
+            ids[n] = len(names)
+            names.append(n)
+        grid[q] = ids[n]
+    glass = np.array([False] + [S.glyph(n) == "g" for n in names[1:]])
+    kind, c, f, r, u, hw, hh = still_camera(size, still)
+    W, H = SCREEN
+    px, py = np.meshgrid(np.arange(0, W, step), np.arange(0, H, step))
+    px, py = px.ravel(), py.ravel()
+    a = ((px + 0.5) / W * 2 - 1)[:, None]
+    v = (1 - (py + 0.5) / H * 2)[:, None]
+    if kind == "ortho":
+        o = c + a * hw * r + v * hh * u - 200 * f
+        d = np.tile(f, (len(px), 1))
+    else:
+        d = f + a * hw * r + v * hh * u
+        d /= np.linalg.norm(d, axis=1)[:, None]
+        o = np.tile(c, (len(px), 1))
+    none = np.zeros(len(names), dtype=bool)
+    hit, vox, axis, sign = _march(grid, none, o, d)
+    got = np.nonzero(hit)[0]
+    gl = got[glass[hit[got]]]
+    behind = {}
+    if len(gl):
+        def open_x(q):           # a pane faces along x when a side of it along x is open (air or the plot's edge)
+            return any(not (0 <= q[0] + e < size[0]) or grid[q[0] + e, q[1], q[2]] == 0 for e in (-1, 1))
+        ax = np.array([0 if open_x(tuple(vox[i])) else 2 for i in gl])
+        with np.errstate(divide="ignore", invalid="ignore"):
+            t = (vox[gl, ax] + 0.5 - o[gl, ax]) / d[gl, ax]
+        p0 = o[gl] + d[gl] * t[:, None]
+        inside = np.all((p0 >= vox[gl] - 1e-6) & (p0 <= vox[gl] + 1 + 1e-6), axis=1) & np.isfinite(t)
+        # a ray that leaves the pane's cell before it reaches the pane misses the glass: it sees what is beyond
+        # (the sill, the reveal), glass from there on see-through
+        miss = gl[~inside]
+        if len(miss):
+            h2, v2, a2, s2 = _march(grid, glass, o[miss], d[miss])
+            hit[miss], vox[miss], axis[miss], sign[miss] = h2, v2, a2, s2
+        ok = gl[inside]
+        if len(ok):
+            h2, v2, _, _ = _march(grid, glass, p0[inside] + d[ok] * 1e-6, d[ok])
+            for i, h, v in zip(ok, h2, v2):
+                if h:
+                    behind[i] = (tuple(int(x) for x in v), names[h])
+    out = {}
+    got = np.nonzero(hit)[0]
+    for i in got:
+        q = tuple(int(x) for x in vox[i])
+        out[(int(px[i]), int(py[i]))] = (q, names[hit[i]], FACE_NAMES[(int(axis[i]), int(sign[i]))], behind.get(i))
+    return out
+
+
+def seen(b, stills=STILLS, step=4):
+    """{still: {cell: pixels}} - how many sampled pixels of each still show each cell."""
+    out = {}
+    for st in stills:
+        cnt = Counter(h[0] for h in shoot(b, st, step).values())
+        out[st] = dict(cnt)
+    return out
+
+
 def tone(name):
     """A block's luminance class from its id: pale, dark, glass, light or mid."""
     if S.glyph(name) == "g":
