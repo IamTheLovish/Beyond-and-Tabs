@@ -86,7 +86,8 @@ public class VoodooShamanGameTests {
     static final String ARENA = SkirmishGameTests.ARENA;
     static final String BATCH = "caster_horde";
 
-    // the cost and health this PR chose for a T2 support caster (the PR body says why): the Bloom Priestess's price
+    // the cost and health this PR chose (the PR body says why; kept when lovish moved the essence casters to T1, Oct 29):
+    // the Bloom Priestess's price
     static final int METAL = 175, ENERGY = 220, POP = 3;
     static final float HEALTH = 60f;
 
@@ -213,12 +214,14 @@ public class VoodooShamanGameTests {
     // ------------------------------------------------------------------------------------------------ the unit
 
     /**
-     * The shaman is trained at the Horde's T2 lab (the Flame Sanctuary): its item is on the lab, names an entity
-     * registered to the Horde, and completing it (the real onComplete -> produceUnit path) makes an owned shaman with the
-     * chosen cost and health. It is an essence carrier and carries Hex, Blood Totem, Spirit Puppet and Empower.
+     * lovish (Oct 29): "essence casters should be tier 1 like rez bots". The shaman is trained at the Horde's T1 army
+     * building, the Military Portal, not the T2 lab (the Flame Sanctuary): the portal queues it with no Tier 2 research,
+     * and it is a tier 1 unit. Its item names an entity registered to the Horde, and completing it (the real onComplete ->
+     * produceUnit path) makes an owned shaman with the chosen cost and health. It is an essence carrier and carries Hex,
+     * Blood Totem, Spirit Puppet and Empower.
      */
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
-    public static void voodoo_shaman_trains_at_the_flame_sanctuary_as_an_essence_carrier(GameTestHelper helper) {
+    public static void voodoo_shaman_trains_at_the_military_portal_at_tier_1_as_an_essence_carrier(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         List<Entity> made = new ArrayList<>();
@@ -227,8 +230,10 @@ public class VoodooShamanGameTests {
         Resources pool = new Resources(owner, 0, 0, 0);
         ResourcesServerEvents.resourcesList.add(pool);
         try {
-            if (!Buildings.FLAME_SANCTUARY.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
-                problems.add("the Flame Sanctuary does not train the Voodoo Shaman");
+            if (!Buildings.PORTAL_MILITARY.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
+                problems.add("the Military Portal (the Horde's T1 army building) does not train the Voodoo Shaman");
+            if (Buildings.FLAME_SANCTUARY.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
+                problems.add("the Flame Sanctuary (the Horde's T2 lab) still trains the Voodoo Shaman");
             if (!Factions.PIGLINS.key.equals(Factions.ENTITY_FACTION.get(EntityType.getKey(EntityRegistrar.VOODOO_SHAMAN_UNIT.get()))))
                 problems.add("the shaman's entity is not registered to the Horde");
             if (EntityRegistrar.getEntityType(ProductionItems.VOODOO_SHAMAN.getItemName()) != EntityRegistrar.VOODOO_SHAMAN_UNIT.get())
@@ -238,15 +243,15 @@ public class VoodooShamanGameTests {
                 problems.add("the shaman costs " + c.metal() + " metal / " + c.energy() + " energy / " + c.population
                     + " pop, the PR chose " + METAL + " / " + ENERGY + " / " + POP);
             BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.FLAME_SANCTUARY, level,
+            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.PORTAL_MILITARY, level,
                 new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, owner, false);
             if (!(bp instanceof ProductionPlacement pp)) {
-                problems.add("the Flame Sanctuary is not a production placement");
+                problems.add("the Military Portal is not a production placement");
             } else {
                 pp.isBuilt = true;
-                ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_2);
+                // no Tier 2 research: a T1 unit
                 if (!pp.startProductionItem(ProductionItems.VOODOO_SHAMAN))
-                    problems.add("the lab refused the shaman: " + ProductionItems.VOODOO_SHAMAN.getProduceErrorMsg(pp));
+                    problems.add("the portal refused the shaman without Tier 2: " + ProductionItems.VOODOO_SHAMAN.getProduceErrorMsg(pp));
                 pp.productionQueue.clear();
                 ProductionItems.VOODOO_SHAMAN.onComplete.accept(level, pp);
                 Mob unit = CombatEngineerGameTests.findProduced(level, pp, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), owner);
@@ -257,7 +262,9 @@ public class VoodooShamanGameTests {
                     if (!(unit instanceof VoodooShamanUnit))
                         problems.add("the produced unit is a " + unit.getClass().getSimpleName());
                     if (!(unit instanceof Unit u) || !owner.equals(u.getOwnerName()))
-                        problems.add("the produced shaman is not the lab owner's");
+                        problems.add("the produced shaman is not the portal owner's");
+                    if (UnitTier.of(unit) != 1)
+                        problems.add("the shaman is tier " + UnitTier.of(unit) + ", expected 1");
                     else if (u.getCost() != ResourceCosts.VOODOO_SHAMAN)
                         problems.add("the shaman's getCost is not ResourceCosts.VOODOO_SHAMAN");
                     if (Math.abs(unit.getMaxHealth() - HEALTH) > 0.5f)
@@ -1023,7 +1030,8 @@ public class VoodooShamanGameTests {
     }
 
     /**
-     * lovish (Oct 29): the bots build and use every caster. The Horde bot kit trains the shaman at its T2 lab; a fresh
+     * lovish (Oct 29): the bots build and use every caster. The Horde bot kit trains the shaman with its T1 army (the
+     * Military Portal), not its T2 army; a fresh
      * shaman autocasts Hex and Blood Totem (Spirit Puppet and Empower stay manual), and one AutoCaster look by a shaman
      * holding 10 essence hexes the enemy beside it. A shaman short of the essence does not try (no order, so its attack
      * target is kept) - the AutoCaster's order would reset it before the refusal.
@@ -1045,8 +1053,10 @@ public class VoodooShamanGameTests {
             List<String> problems = new ArrayList<>();
             try {
                 BotPlayer.Kit kit = BotPlayer.kitFor(Factions.PIGLINS);
-                if (kit == null || !kit.t2Army().contains(ProductionItems.VOODOO_SHAMAN))
-                    problems.add("the Horde bot kit does not train the Voodoo Shaman");
+                if (kit == null || !kit.army().contains(ProductionItems.VOODOO_SHAMAN))
+                    problems.add("the Horde bot kit does not train the Voodoo Shaman in its T1 army");
+                if (kit != null && kit.t2Army().contains(ProductionItems.VOODOO_SHAMAN))
+                    problems.add("the Horde bot kit still trains the Voodoo Shaman in its T2 army");
                 // BotPlayer.think puts every non-worker AttackerUnit in its army list: the shaman marches with the attack
                 // waves (casters that are not attackers need the "healers follow the army" line; this one does not)
                 if (!(rich instanceof AttackerUnit) || rich instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit)
