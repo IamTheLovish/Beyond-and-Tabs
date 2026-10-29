@@ -128,3 +128,36 @@ x 16   ..5559999cdefedc9999555..
 
 Stills (eyes, plain): branch eyes-structures, `bat_eyes_15_r11_{a,b,c}_{rts,rts_close,34}.png`. Not yet judged - a
 fresh critic will pick.
+
+## (c2) Locomotive works, revised - the critic's pick (Oct 29)
+A fresh critic picked (c): twin stacks lead to the door and the clerestory, and it scales to T2-T4. They rejected (a) as a
+parish-church silhouette moved sideways and (b) as a barn / chapel with a chimney. Changes, each tested first:
+- **No turret over the gate** (lovish had rejected a copper-topped block over the door). A 3 x 3 clock stands at the
+  front-south corner instead: brick to 13, a copper stage at 14-15, cap 16.
+- **Asymmetric stacks.** The landmark is 22, at the back-north corner on its plinth (24 cropped at the RTS frame top).
+  The second is 19 and rises from a low gabled boiler house (x 6..11, z 20..24, eave 6, ridge 9) mid-depth on the south
+  flank.
+- **The gate** is 7 wide x 8 tall under a segmental iron arch (crown 9, edges 8), with a glazed fan-light in the gable
+  above, so the gable is no longer a blank brick face. The nave is eave 10, ridge 15. The aisle saw teeth are 5 rows
+  (eave 5, peaks 9-10) and read as saw teeth, not lean-tos.
+
+```
+     z 0123456789012345678901234
+x  0   ........bcdefedcb....fff.      fff / g = the clock (15-16), front-south
+x  1   ........bcdefedcb....fgf.
+x  2   ........bcdefedcb....fff.
+x  3   .aaaaaaabcdefedcbaaaaaaa.      a = a saw peak (10), glass facing west
+x  4   .9999999bcdefedcb9999999.
+x  5   .8888888bcdefedcb8888888.
+x  6   .7777777bcdefedcb77778987      78987 = the boiler house
+x  7   .6666666bcdefedcb66678987
+x  8   .aaaaaaabcde.edcbaaa78jj7      jj = the boiler stack, 19
+x  9   .9999999bcdefedcb99978jj7
+x 10   .8888888bcdefedcb88878987
+x 11   .7777777bcdefedcb77778987
+x 12   .6666666bcdefedcb6666666.
+x 13   .9999aaabcdefedcbaaaaaaa.
+x 14   .9mm9999bcdefedcb9999999.      mm = the landmark stack, 22
+x 15   .9mm9888bcdefedcb8888888.
+x 16   .9999777bcdefedcb7777777.
+```

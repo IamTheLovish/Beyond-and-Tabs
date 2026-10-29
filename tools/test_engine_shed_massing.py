@@ -26,7 +26,7 @@ if HAVE_NUMPY:
 SX, SZ, H_MAX = 17, 25, 26
 LANE_X, LANE_Z, LANE_H = range(0, 9), range(10, 15), 8
 SPAWN_XZ = (8, 12)
-OPTIONS = "abc"
+OPTIONS = ("a", "b", "c", "c2")       # c2: the critic's pick (c) revised, Oct 29
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -82,7 +82,7 @@ class EngineShedMassing(unittest.TestCase):
     def test_hangar_door_on_the_lane(self):
         """A real door, not a gap: an opening >= 5 wide x 6 tall in a wall plane facing the lane, jambs both sides,
         a head over every column of it."""
-        for o in OPTIONS:
+        for o in "abc":
             n = solid(self.built[o][1])
             dx = M.OPTIONS[o]["door_x"]
             self.assertIn(dx, LANE_X, o)
@@ -141,12 +141,65 @@ class EngineShedMassing(unittest.TestCase):
                             and (i + 1 >= len(prof) or prof[i + 1] < prof[i]))
                 self.assertGreaterEqual(peaks, len(teeth), "%s: profile %s" % (o, prof))
                 self.assertEqual(lit, len(teeth))
+                if "peaks" in st:                        # c2: teeth tall enough to read as saw, not lean-tos
+                    for u in teeth:
+                        top = max(y for y in range(H_MAX) if q(u, y) in n)
+                        self.assertIn(top, range(st["peaks"][0], st["peaks"][1] + 1), "%s tooth %d top %d" % (o, u, top))
 
     def test_base_course(self):
         """Base - body - cap: no body brick touches the ground (a base course runs under every wall)."""
         for o in OPTIONS:
             n = solid(self.built[o][1])
             self.assertFalse([q for q, v in n.items() if q[1] == 1 and v == M.WALL], o)
+
+    # ---- c2 (Oct 29, fresh critic on a / b / c): keep (c), fix the turret, the stacks, the door, the teeth ----------
+    def test_c2_no_turret_over_the_door(self):
+        """lovish rejected a copper-topped block over the door: nothing of the tower over the gate gable; a clock, if
+        any, is a 3 x 3 at the front-south corner, top <= 16."""
+        n = solid(self.built["c2"][1])
+        meta = M.OPTIONS["c2"]
+        over_door = [q for q, v in n.items() if q[0] <= 3 and 8 <= q[2] <= 16 and "copper" in v]
+        self.assertFalse(over_door)
+        t = meta.get("tower")
+        if t:
+            x0, x1, z0, z1 = t["box"]
+            self.assertEqual((x1 - x0 + 1, z1 - z0 + 1), (3, 3))
+            self.assertLessEqual(x1, 4)
+            self.assertGreaterEqual(z0, 20)
+            self.assertLessEqual(max(tops(n)[c] for c in cols(t["box"])), 16)
+
+    def test_c2_asymmetric_stacks(self):
+        """22 and 19 (24 crops at the RTS frame top); the shorter one rises from a low boiler-house mass mid-depth on
+        the south flank, not from the ground."""
+        n = solid(self.built["c2"][1])
+        t = tops(n)
+        st = sorted(M.OPTIONS["c2"]["stacks"], key=lambda s: -s["top"])
+        self.assertEqual([s["top"] for s in st], [22, 19])
+        x0, x1, z0, z1 = st[1]["shaft"]
+        self.assertTrue(5 <= x0 and x1 <= 11 and z0 >= 17, st[1]["shaft"])
+        ring = {(x, z) for x in range(x0 - 1, x1 + 2) for z in range(z0 - 1, z1 + 2)} - cols(st[1]["shaft"])
+        self.assertTrue(all(6 <= t.get(c, -1) <= 10 for c in ring), {c: t.get(c) for c in ring})
+        self.assertFalse([c for c in ring if n.get((c[0], t[c], c[1])) == M.BASE], "a boiler house, not a plinth")
+
+    def test_c2_big_arched_door(self):
+        """7 wide x 8 tall, (b)'s segmental iron head: the middle columns open higher than the edges; jambs and a head;
+        the gable over it is not a blank brick face (a glazed fan-light over the arch)."""
+        n = solid(self.built["c2"][1])
+        dx = M.OPTIONS["c2"]["door_x"]
+        self.assertEqual(dx, 0)
+        door_z = range(9, 16)
+        self.assertFalse([(y, z) for y in range(1, 9) for z in door_z if (dx, y, z) in n])
+        for y in range(1, 9):
+            self.assertIn((dx, y, 8), n)
+            self.assertIn((dx, y, 16), n)
+        self.assertIn((dx, 9, 9), n)                     # the edges' head at 9 ...
+        self.assertNotIn((dx, 9, 12), n)                 # ... the crown higher: a segmental arch
+        for z in door_z:
+            head = min(y for y in range(9, H_MAX) if (dx, y, z) in n)
+            self.assertEqual(n[(dx, head, z)], M.IRON, z)
+        glass = [q for q, v in n.items() if q[0] == dx and q[1] >= 11 and q[2] in door_z and "glass" in v]
+        self.assertGreaterEqual(len(glass), 4)
+        self.assertFalse([q for q in n if q[0] < dx])
 
     def test_three_distinct_silhouettes(self):
         prof = {o: tops(solid(self.built[o][1])) for o in OPTIONS}

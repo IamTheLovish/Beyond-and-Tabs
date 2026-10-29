@@ -11,7 +11,7 @@ lights / clerestory, polished blackstone = the door's iron frame and the stacks'
 waxed oxidized copper = the one accent (clock cap, water tank), dark oak = ridge smoke louvres.
 
 Rationale, plans and heights: design/vehicle_labs/massing/r11_massing.md. Tests: tools/test_engine_shed_massing.py.
-Usage: python3 tools/engine_shed_massing.py   (writes design/vehicle_labs/massing/r11_{a,b,c}.nbt and prints plans)
+Usage: python3 tools/engine_shed_massing.py   (writes design/vehicle_labs/massing/r11_{a,b,c,c2}.nbt and prints plans)
 """
 import os
 import sys
@@ -187,7 +187,51 @@ def build_c():
     return finish(g, lane_apron(0))
 
 
-BUILDERS = {"a": build_a, "b": build_b, "c": build_c}
+# ---- (c2) the critic's pick (c), revised (Oct 29): no turret over the gate, stacks 22 / 19 (the short one rising from
+# a boiler house on the south flank), a 7 x 8 door under a segmental iron arch with a fan-light, saw peaks to 10 -----
+def build_c2():
+    g = L.G()
+    boiler = (6, 11, 20, 24)                                      # x0, x1, z0, z1: mid-depth, out on the south face
+    plinth = (13, 16, 1, 4)                                       # the landmark stack's plinth, back-north
+
+    def taken(x, z):
+        return (boiler[0] <= x <= boiler[1] and boiler[2] <= z <= boiler[3]) or \
+               (plinth[0] <= x <= plinth[1] and plinth[2] <= z <= plinth[3])
+    aisles = [(x, z) for x in range(3, SX) for z in list(range(1, 8)) + list(range(17, 24)) if not taken(x, z)]
+    for (x, z) in aisles:
+        body(g, x, x, z, z, 5)
+    saw(g, aisles, "x", (3, 8, 13), 5, -1, rise=5)               # 3 teeth each aisle, peaks 10, glass facing west
+    body(g, 0, 16, 8, 16, 10)                                     # the nave: eave 10, ridge 15
+    gable_x(g, 0, 16, 8, 16, 10)
+    for x in range(2, 16, 2):                                     # clerestory over the aisle roofs
+        for z in (8, 16):
+            g.fill(x, x, 9, 10, z, z, GLASS)
+    stack(g, 14, 2, 22, 9)                                        # the landmark, 22 (24 cropped at the RTS frame top)
+    body(g, *boiler, 6)                                           # the boiler house and its stack, 19
+    shaft = lambda x, z: 8 <= x <= 9 and 22 <= z <= 23            # noqa: E731
+    gable_x(g, *boiler, 6, skip=shaft)
+    g.fill(8, 9, 1, 17, 22, 23, STACK)
+    g.fill(8, 9, 18, 19, 22, 23, IRON)
+    body(g, 0, 2, 21, 23, 13)                                     # the clock, front-south corner: copper stage, cap 16
+    g.fill(0, 2, 14, 15, 21, 23, COPPER)
+    g.set(1, 16, 22, COPPER)
+    # the gate: 7 wide (z 9..15) x 8 tall, the crown (z 10..14) one row higher - a segmental arch - 9 deep
+    for x in range(0, 9):
+        for z in range(9, 16):
+            for y in range(1, 9 + (1 if 10 <= z <= 14 else 0)):
+                g.clear(x, y, z)
+    for y in range(1, 10):
+        g.set(0, y, 8, IRON)
+        g.set(0, y, 16, IRON)
+    for z in range(9, 16):
+        g.set(0, 10 if 10 <= z <= 14 else 9, z, IRON)
+    for y, zs in ((11, range(10, 15)), (12, range(11, 14))):     # the fan-light in the gable over the arch
+        for z in zs:
+            g.set(0, y, z, GLASS)
+    return finish(g, lane_apron(0) | {(x, z) for x in range(0, 3) for z in range(8, 17)})
+
+
+BUILDERS = {"a": build_a, "b": build_b, "c": build_c, "c2": build_c2}
 # what the tests hold each option to: the door plane, the stacks (plinth box + shaft + top), the tower (box), the
 # dominant mass's eave, and where the sawtooth is (section plane, teeth's glazed columns, facing, run)
 OPTIONS = {
@@ -205,6 +249,12 @@ OPTIONS = {
                       dict(box=(13, 16, 16, 19), shaft=(14, 15, 17, 18), top=24)],
               tower=dict(box=(0, 2, 11, 13)),
               sawtooth=[dict(axis="x", at=z, face=-1, teeth=[4, 8, 12], run=(3, 16)) for z in (4, 20)]),
+    "c2": dict(door_x=0, eave=10,
+               stacks=[dict(box=(13, 16, 1, 4), shaft=(14, 15, 2, 3), top=22),
+                       dict(box=(8, 9, 22, 23), shaft=(8, 9, 22, 23), top=19)],
+               tower=dict(box=(0, 2, 21, 23)),
+               sawtooth=[dict(axis="x", at=z, face=-1, teeth=[3, 8, 13], run=(3, 16), peaks=(9, 10))
+                         for z in (5, 18)]),
 }
 
 
@@ -227,7 +277,7 @@ def plan(g):
 
 if __name__ == "__main__":
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    for o in "abc":
+    for o in BUILDERS:
         g = build(o)
         out = os.path.join(root, OUT % o)
         rig = L.write(g, out)
