@@ -170,14 +170,83 @@ def shares(b):
 
 def depth(b, face):
     """G5 on the WALL BAND only (y 1 up to under the cap line, eave - 2): {plane: share} seen from `face`, ok when no
-    plane holds over 45 % and >= 3 planes hold >= 10 %. A roof that steps out above a blind wall earns nothing."""
+    plane holds over 45 % and >= 3 planes hold >= 10 %. A roof that steps out above a blind wall earns nothing.
+    Relief only (r10): lights (glyph *) and glass in its frame's own plane (_flush_glass) are left out - glass set
+    flush is infill, not relief: a pane set forward to the pilasters' face so the 3/4 camera sees it (r9's set-back
+    panes were invisible) added a "plane" the wall never had. A pane recessed 1 behind its frame is a real reveal
+    and still counts. window_glass_set() guards the other way: every bay's glass within 1 of its frame's plane."""
     _, _, eave = _frame(b)
-    band = S.Build({q: v for q, v in b.blocks.items() if 1 <= q[1] <= eave - 2})
+    infill = _flush_glass(b)
+    band = S.Build({q: v for q, v in b.blocks.items() if 1 <= q[1] <= eave - 2 and q not in infill
+                    and S.glyph(v[0]) != "*"})
     d = S.depth_layers(band, face)
     tot = max(1, sum(d.values()))
     planes = {k: v / tot for k, v in d.items()}
     ok = bool(planes) and max(planes.values()) <= 0.45 and sum(1 for v in planes.values() if v >= 0.10) >= 3
     return {"ok": ok, "planes": planes}
+
+
+def _flush_glass(b):
+    """Glass cells in their frame's own plane (window_glass_set's frame depth 0): {cell}."""
+    return {q for q, d in _glass_frames(b) if d == 0}
+
+
+def window_glass_set(b):
+    """[(pane, [frame depths])] for each glass pane NOT within 1 block of its frame's plane - see _glass_frames."""
+    return sorted((q, ds) for q, ds in _glass_frames(b, all_depths=True) if not any(d is not None and 0 <= d <= 1
+                                                                                for d in ds))
+
+
+def _glass_frames(b, all_depths=False):
+    """[(pane, depth)] for every glass pane in a wall (an open side - air, or a railing the eye looks through - with
+    a solid block behind it): along each such facing, the frame is the first non-glass block beside the glass run
+    either way along the wall and over / under it, and its depth how far that frame's contiguous face stands out of
+    the pane's plane. all_depths: every facing's depth (window_glass_set's list); else the smallest depth in 0..1,
+    None when there is none. window_glass_set fails a pane with no depth in 0..1: sunk 2+ in its reveal (r9's panes,
+    2-3 behind their pilasters, invisible to the 3/4 camera), proud of its frame, or frameless - so glass set
+    forward for the camera stays framed, never a flush, flat facade."""
+    cells = {q: n for q, (n, _) in b.blocks.items() if n not in S.AIR}
+
+    def solid(q):                                # a frame: not glass or a light (a wall-block pilaster is one)
+        return q in cells and S.glyph(cells[q]) not in "g*"
+    bad = []
+    for q, n in cells.items():
+        if S.glyph(n) != "g":
+            continue
+        def at(a, t):
+            return (q[0] + (t if a == 0 else 0), q[1], q[2] + (t if a == 2 else 0))
+        # a facing: an open side (air, or a railing / post the eye looks through) with masonry or a room behind
+        faces = [(a, sg) for a, sg in ((0, -1), (2, 1), (0, 1), (2, -1))      # behind it masonry or a lit room
+                 if (at(a, sg) not in cells or S.glyph(cells[at(a, sg)]) == "|") and at(a, -sg) in cells
+                 and S.glyph(cells[at(a, -sg)]) != "g"]
+        if not faces:
+            continue                             # free-standing glass, not a window in a wall
+        tried = []
+        for a, sg in faces:
+            side = 2 if a == 0 else 0
+            frames = []
+            for axis, d in ((side, -1), (side, 1), (1, 1), (1, -1)):
+                k = list(q)
+                for _ in range(4):
+                    k[axis] += d
+                    if tuple(k) not in cells or S.glyph(cells[tuple(k)]) != "g":
+                        break
+                def f(t):
+                    return solid(tuple(k[i] + (sg * t if i == a else 0) for i in range(3)))
+                start = next((t for t in range(-2, 3) if f(t)), None)    # the frame's back in the wall ...
+                if start is None:
+                    continue
+                t = start                                                  # ... and its face, contiguous with it
+                while t < 3 and f(t + 1):
+                    t += 1
+                frames.append(t)
+            tried.append(max(frames) if frames else None)
+        if all_depths:
+            bad.append((q, tried))
+        else:
+            ok = [p for p in tried if p is not None and 0 <= p <= 1]
+            bad.append((q, min(ok) if ok else None))
+    return bad
 
 
 def base_cap(b):
