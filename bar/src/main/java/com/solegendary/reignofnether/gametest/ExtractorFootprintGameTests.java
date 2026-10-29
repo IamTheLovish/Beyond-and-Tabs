@@ -158,6 +158,9 @@ public class ExtractorFootprintGameTests {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 220;
         int cx = base.getX(), cz = base.getZ();
+        // the platform, what grows on it and what the stamp cuts (above the arena) are put back when the test ends,
+        // pass or fail: the next test at this slot stands units at 228-240 (HeroGameTests' possession strips)
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 20, cz + 8));
         for (int dx = -8; dx <= 8; dx++)
             for (int dz = -8; dz <= 8; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
@@ -205,6 +208,9 @@ public class ExtractorFootprintGameTests {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 230;
         int cx = base.getX(), cz = base.getZ();
+        // the platform, what grows on it and what the stamp cuts (above the arena) are put back when the test ends,
+        // pass or fail: the next test at this slot stands units at 228-240 (HeroGameTests' possession strips)
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 8, y - 1, cz - 8), new BlockPos(cx + 8, y + 20, cz + 8));
         for (int dx = -8; dx <= 8; dx++)
             for (int dz = -8; dz <= 8; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);

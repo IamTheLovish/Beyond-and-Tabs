@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "How a fallen unit's body leaves the field, per faction (unit/modelling/motion/DeathFinish, Corpses). Client only.",
+    "The body first falls away from the killing blow (DeathFall, down by tick 18) and lies still; at 'start' (its",
+    "deathTime, ticks: 20 a second) the finish begins and lasts 'ticks'; the body is gone at start + ticks.",
+    "Over the finish: 'fade' 0..1 of its opacity goes (1 = gone; a fully faded body also shrinks away in its last",
+    "quarter, so armour drawn on it goes too), it moves 'rise' blocks (negative = sinks), loses 'squash' 0..1 of its",
+    "height (crumbling), 'flicker' 0..1 strobes it, 'glow' draws it full-bright. When it starts, one burst of",
+    "'particles' (at close zoom; fewer zoomed out, none at strategic zoom) in 'color' and 'color2', shaped by",
+    "'style': light, crumble, dust, leaves, seawater, static, gears, derez or sink (no burst).",
+    "Sunforged and Gravebound are lovish's words (Oct 29): pulverize into light; crumble. The rest are proposals.",
+    "The 'tidewrought' slot derezzes into light shards: that faction is being replaced by the AI faction (draft PR",
+    "379, glossy black with glowing light lines); move the entry to the new faction's key when it lands."
+  ],
+  "none":         {"style": "sink",     "start": 80, "ticks": 20, "fade": 0.0, "rise": -0.6,  "squash": 0.0,  "flicker": 0.0,  "glow": false, "color": "#000000", "color2": "#000000", "particles": 0},
+  "sunforged":    {"style": "light",    "start": 34, "ticks": 26, "fade": 1.0, "rise": 0.5,   "squash": 0.0,  "flicker": 0.0,  "glow": true,  "color": "#FFE9A8", "color2": "#FFFFFF", "particles": 24},
+  "gravebound":   {"style": "crumble",  "start": 40, "ticks": 22, "fade": 0.6, "rise": -0.25, "squash": 0.85, "flicker": 0.0,  "glow": false, "color": "#E8E2CC", "color2": "#5A5550", "particles": 18},
+  "horde":        {"style": "dust",     "start": 70, "ticks": 18, "fade": 0.3, "rise": -0.6,  "squash": 0.3,  "flicker": 0.0,  "glow": false, "color": "#B0442A", "color2": "#6A5040", "particles": 14},
+  "verdant":      {"style": "leaves",   "start": 44, "ticks": 30, "fade": 1.0, "rise": -0.2,  "squash": 0.4,  "flicker": 0.0,  "glow": false, "color": "#4E9A3C", "color2": "#6B4A2A", "particles": 18},
+  "tidewrought":  {"style": "derez",    "start": 36, "ticks": 14, "fade": 1.0, "rise": 0.15,  "squash": 0.0,  "flicker": 0.35, "glow": true,  "color": "#38E8FF", "color2": "#FFFFFF", "particles": 28},
+  "stormcallers": {"style": "static",   "start": 40, "ticks": 16, "fade": 1.0, "rise": 0.0,   "squash": 0.0,  "flicker": 0.75, "glow": true,  "color": "#8CF0E6", "color2": "#FFE07A", "particles": 16},
+  "brassworks":   {"style": "gears",    "start": 36, "ticks": 8,  "fade": 1.0, "rise": 0.1,   "squash": 0.2,  "flicker": 0.0,  "glow": false, "color": "#C98A2E", "color2": "#E8E6E0", "particles": 18}
+}

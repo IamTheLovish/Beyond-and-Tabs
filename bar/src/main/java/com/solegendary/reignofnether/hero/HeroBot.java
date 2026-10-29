@@ -464,6 +464,10 @@ public final class HeroBot {
             // handed back by the player (possession released, the AI switched on): what they saw stands, danger included
             b.lock.acknowledge();
             b.state = HeroBrain.State.IDLE;
+            // off() forgot the last scan and the next think is up to a second away: look now, so the hero's own idle
+            // targeting knows the enemy towers from the first tick (mayAutoTarget)
+            if (mob.level() instanceof ServerLevel sl)
+                Perception.scan(sl, mob, hero.getOwnerName(), b.seen);
         } else if (fresh && bot && b.state == HeroBrain.State.FLEE) {
             // a bot's army order swept the fleeing hero along: the flight stands (D030 is the player's word, and the
             // hero's own brain knows its life better than the bot's sweep); the order waits until the run is over.
@@ -567,9 +571,10 @@ public final class HeroBot {
 
     /**
      * v1's fight under the OrderLock: aimed casts only at what is in reach from where the hero stands (the brain never
-     * walks to cast, so it never drags the hero off an order); a gap closer only when the order lets the hero move, the
-     * fight is not lost (FightEval), it would not land under an enemy tower, and its follow-up is ready; abilities that
-     * stun, root or slow go before the rest, so the damage lands on a target that cannot answer.
+     * walks to cast, so it never drags the hero off an order); a gap closer only when the order lets the hero move (or
+     * is an attack order, and then only onto its target), the fight is not lost (FightEval), it would not land under an
+     * enemy tower, and its follow-up is ready; abilities that stun, root or slow go before the rest, so the damage lands
+     * on a target that cannot answer.
      */
     static void fightV2(ServerLevel sl, Mob mob, FactionHero hero, HeroBrain b, OrderLock.Mode mode, long now) {
         if (b.followUp != null || busy(hero.heroCore()))
@@ -627,9 +632,11 @@ public final class HeroBot {
                 return true;
             }
             case ENGAGE -> {
-                if (!mode.mayMove || !f.melee || f.hp < 0.5 || b.reading.stance() == FightEval.Stance.DISENGAGE)
+                // an attack order lets the gap closer go onto the target the player chose, and onto nothing else
+                boolean ordered = mode == OrderLock.Mode.ATTACK && focus >= 0;
+                if (!(mode.mayMove || ordered) || !f.melee || f.hp < 0.5 || b.reading.stance() == FightEval.Stance.DISENGAGE)
                     return false;
-                LivingEntity t = bestTarget(f, a.range, 0, 0, true, focus);
+                LivingEntity t = ordered ? seenWithin(f, focus, a.range) : bestTarget(f, a.range, 0, 0, true, focus);
                 if (t == null || t.distanceTo(mob) < 4)
                     return false;
                 int around = f.enemiesWithin(t.position(), 5);
@@ -661,6 +668,15 @@ public final class HeroBot {
                 return true;
             }
         }
+    }
+
+    /** The enemy with this id, if the hero's side sees it within {@code range}; else null. */
+    @Nullable
+    static LivingEntity seenWithin(Fight f, int id, double range) {
+        for (LivingEntity e : f.enemies)
+            if (e.getId() == id)
+                return e.distanceTo(f.mob) <= range ? e : null;
+        return null;
     }
 
     /**
@@ -809,13 +825,6 @@ public final class HeroBot {
         b.record(sl.getGameTime(), Why.SELECTED, -1, -1);
     }
 
-    /**
-     * Asked by MiscUtil.isIdleOrMoveAttackable for every target a hero's own targeting looks at (idle aggression, the
-     * melee retarget, Fight-move pick-ups). A hero v2 drives, with no order of the player's, does not walk under an
-     * enemy tower's guns after a target standing there, and picks no fights while it flees or rests near death (it
-     * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
-     * hero, the client side): no say.
-     */
     /** Is the v2 AI running this hero away (or resting it out of reach)? Then it does not stop to answer a blow. */
     public static boolean fleeing(Mob mob) {
         if (!(mob instanceof FactionHero hero))
@@ -824,6 +833,13 @@ public final class HeroBot {
         return b != null && b.active() && b.fleeing();
     }
 
+    /**
+     * Asked by MiscUtil.isIdleOrMoveAttackable for every target a hero's own targeting looks at (idle aggression, the
+     * melee retarget, Fight-move pick-ups). A hero v2 drives, with no order of the player's, does not walk under an
+     * enemy tower's guns after a target standing there, and picks no fights while it flees or rests near death (it
+     * still hits back: retaliation does not ask). Under a player's order the unit's own rules stand. No brain (a v1
+     * hero, the client side): no say.
+     */
     public static boolean mayAutoTarget(FactionHero hero, Mob mob, LivingEntity target) {
         HeroBrain b = hero.heroCore().brainIfAny();
         if (b == null || !b.active())

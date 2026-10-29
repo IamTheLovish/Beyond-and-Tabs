@@ -95,10 +95,12 @@ public final class UnitUnstick {
         boolean standable = mob.onGround() && isOnStandableGround(mob);
         boolean roof = mob.getPersistentData().getBoolean(KEY_ROOF_SPAWN);
         boolean stuck = roof || isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
+        // a rooted (or rooting/uprooting) Treant stands still on purpose: no pocket lift or path drop, but freed if encased
+        boolean rootedInPlace = mob instanceof com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit t && t.isImmobile();
         // following a path but not moving: pushing into something the grid thinks is open
-        boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
+        boolean pushing = !stuck && !rootedInPlace && mob.onGround() && !mob.getNavigation().isDone();
         // standing still somewhere it may not be able to leave: worth a pocket search once it has stood a check
-        boolean maybePocketed = !stuck && standable && (!unit.isIdle() || nearBuilding(feetCell(mob)));
+        boolean maybePocketed = !stuck && !rootedInPlace && standable && (!unit.isIdle() || nearBuilding(feetCell(mob)));
         if ((!stuck && !pushing && !maybePocketed) || GarrisonableBuildingAddon.getGarrison(unit) != null) {
             SUSPECTS.remove(mob);
             return;
