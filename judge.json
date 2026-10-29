@@ -1,0 +1,354 @@
+{
+ "tool": "eyes_judge",
+ "version": 1,
+ "gate": {
+  "min_client_share": 0.9,
+  "aim_tolerance": 4.0
+ },
+ "lanes": {
+  "eyes-keep-40815085922": {
+   "label": "eyes-keep-40815085922",
+   "build": "4da2a0c",
+   "built_at": "2026-10-29T04:08:25Z",
+   "problems": [],
+   "stills": {
+    "15_ground_after_close": {
+     "file": "bat_eyes_15_ground_after_close.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 35234,
+      "server": 35234,
+      "aimed_at": [
+       -177,
+       81,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      500,
+      520,
+      1100,
+      820
+     ],
+     "crop_source": "close",
+     "metrics": {
+      "hue": 37.82609,
+      "sat": 20.4878,
+      "luma": 201.891,
+      "luma01": 0.79173,
+      "dark_share": 0.1392,
+      "stars": null
+     }
+    },
+    "15_ground_after_golden_rts": {
+     "file": "bat_eyes_15_ground_after_golden_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 35234,
+      "server": 35234,
+      "aimed_at": [
+       -177,
+       81,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 81.70213,
+      "sat": 55.17241,
+      "luma": 77.733,
+      "luma01": 0.30484,
+      "dark_share": 0.09973,
+      "stars": 6
+     }
+    },
+    "15_ground_after_mist_rts": {
+     "file": "bat_eyes_15_ground_after_mist_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 35234,
+      "server": 35234,
+      "aimed_at": [
+       -177,
+       81,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 80.0,
+      "sat": 56.66667,
+      "luma": 75.619,
+      "luma01": 0.29655,
+      "dark_share": 0.10068,
+      "stars": 6
+     }
+    },
+    "15_ground_after_rts": {
+     "file": "bat_eyes_15_ground_after_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 35234,
+      "server": 35234,
+      "aimed_at": [
+       -177,
+       81,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 82.04082,
+      "sat": 54.02299,
+      "luma": 78.858,
+      "luma01": 0.30925,
+      "dark_share": 0.09859,
+      "stars": 6
+     }
+    },
+    "15_ground_after_rts_close": {
+     "file": "bat_eyes_15_ground_after_rts_close.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 35234,
+      "server": 35234,
+      "aimed_at": [
+       -177,
+       81,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 81.53846,
+      "sat": 54.44444,
+      "luma": 78.32,
+      "luma01": 0.30714,
+      "dark_share": 0.08576,
+      "stars": 7
+     }
+    },
+    "15_meadow_sampler_close": {
+     "file": "bat_eyes_15_meadow_sampler_close.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 4541,
+      "server": 4541,
+      "aimed_at": [
+       -177,
+       72,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      500,
+      520,
+      1100,
+      820
+     ],
+     "crop_source": "close",
+     "metrics": {
+      "hue": 72.17391,
+      "sat": 60.95238,
+      "luma": 74.864,
+      "luma01": 0.29358,
+      "dark_share": 0.11802,
+      "stars": null
+     }
+    },
+    "15_meadow_sampler_golden_rts": {
+     "file": "bat_eyes_15_meadow_sampler_golden_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 4541,
+      "server": 4541,
+      "aimed_at": [
+       -177,
+       76,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 83.18182,
+      "sat": 52.80899,
+      "luma": 81.619,
+      "luma01": 0.32007,
+      "dark_share": 0.12794,
+      "stars": 3
+     }
+    },
+    "15_meadow_sampler_mist_rts": {
+     "file": "bat_eyes_15_meadow_sampler_mist_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 4541,
+      "server": 4541,
+      "aimed_at": [
+       -177,
+       76,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 80.0,
+      "sat": 55.40541,
+      "luma": 77.755,
+      "luma01": 0.30492,
+      "dark_share": 0.12548,
+      "stars": 2
+     }
+    },
+    "15_meadow_sampler_rts": {
+     "file": "bat_eyes_15_meadow_sampler_rts.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 4541,
+      "server": 4541,
+      "aimed_at": [
+       -177,
+       76,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      1000,
+      250,
+      1415,
+      383
+     ],
+     "crop_source": "table",
+     "metrics": {
+      "hue": 81.81818,
+      "sat": 53.60825,
+      "luma": 81.391,
+      "luma01": 0.31918,
+      "dark_share": 0.04468,
+      "stars": 2
+     }
+    },
+    "15_meadow_sampler_rts_close": {
+     "file": "bat_eyes_15_meadow_sampler_rts_close.png",
+     "proof": {
+      "ok": true,
+      "problems": [],
+      "client": 4541,
+      "server": 4541,
+      "aimed_at": [
+       -177,
+       76,
+       52
+      ],
+      "looks_at": [
+       -177,
+       52
+      ]
+     },
+     "crop": [
+      900,
+      80,
+      1400,
+      300
+     ],
+     "crop_source": "default",
+     "metrics": {
+      "hue": 82.32558,
+      "sat": 53.19149,
+      "luma": 81.206,
+      "luma01": 0.31845,
+      "dark_share": 0.09294,
+      "stars": 3
+     }
+    }
+   },
+   "not_judged": [
+    "15_ground_after_34",
+    "15_ground_after_dusk",
+    "15_meadow_sampler_34",
+    "15_meadow_sampler_dusk"
+   ]
+  }
+ }
+}
