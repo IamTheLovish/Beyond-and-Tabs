@@ -67,25 +67,73 @@ public class TestCleanupGameTests {
     }
 
     /**
-     * The failed-test sweep (GameTestShards' reporter calls it for every failed test): a unit on a sky spot in this
-     * test's column goes, one in the gap beside the arena (no test's column; this batch has no other test) stays.
+     * The failed-test sweep (GameTestShards' reporter calls it for every failed test), run on this test as if it had
+     * failed: its units in its arena (the last x/z rows too) and on its own pad go. A unit passing high over the arena
+     * (TerrainGameTests' formation at y 280 walks over a neighbour's arena) and one in the gap beside it stay, and so
+     * does a unit on the pad of a second test that is still running, though that pad is over this arena: it goes only
+     * when its own test ends.
      */
     private static void sweep(GameTestHelper helper, List<String> problems) {
         ServerLevel level = helper.getLevel();
-        BlockPos high = helper.absolutePos(new BlockPos(8, 60, 8));
-        BlockPos beside = helper.absolutePos(new BlockPos(-3, 2, 8));
-        Mob inColumn = pig(level, high), outside = pig(level, beside);
-        if (inColumn == null || outside == null) {
+        GameTestInfo self = TestCleanup.info(helper);
+        TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
+        BlockPos padAt = helper.absolutePos(new BlockPos(8, 50, 8));
+        pad.set(padAt, Blocks.STONE.defaultBlockState());
+        // the bounds' max is the last block's corner: that block's middle is past it, as a unit on the last row is
+        net.minecraft.world.phys.AABB bounds = self.getStructureBounds();
+        BlockPos lastRow = BlockPos.containing(bounds.maxX, bounds.minY + 2, bounds.maxZ);
+        // the other test: made by hand, still running while this one is swept; its pad over this arena
+        GameTestInfo other = handMade(level, 1);
+        GameTestHelper otherHelper = new GameTestHelper(other);
+        BlockPos otherPadAt = helper.absolutePos(new BlockPos(12, 40, 12));
+        BlockState otherWas = level.getBlockState(otherPadAt);
+        TestCleanup.blocks(otherHelper).set(otherPadAt, Blocks.STONE.defaultBlockState());
+        List<Entity> othersUnits = new ArrayList<>();
+        TestCleanup.entities(otherHelper, othersUnits);
+
+        Mob inArena = pig(level, helper.absolutePos(new BlockPos(4, 2, 4)));
+        Mob onLastRow = pig(level, lastRow);
+        Mob onPad = pig(level, padAt.above());
+        Mob passingOver = pig(level, helper.absolutePos(new BlockPos(8, 70, 8)));
+        Mob beside = pig(level, helper.absolutePos(new BlockPos(-3, 2, 8)));
+        Mob othersUnit = pig(level, otherPadAt.above());
+        List<Mob> all = java.util.Arrays.asList(inArena, onLastRow, onPad, passingOver, beside, othersUnit);
+        if (all.contains(null)) {
             problems.add("sweep: could not create its pigs");
+            for (Mob m : all)
+                if (m != null)
+                    m.discard();
             return;
         }
-        TestCleanup.sweepColumn(TestCleanup.info(helper));
-        if (!inColumn.isRemoved())
-            problems.add("sweep: the unit 60 above the arena, in its column, is still alive");
-        if (outside.isRemoved())
-            problems.add("sweep: the unit beside the arena, outside its column, was removed");
-        inColumn.discard();
-        outside.discard();
+        othersUnits.add(othersUnit);
+        int removed = TestCleanup.sweep(self);
+        if (!inArena.isRemoved())
+            problems.add("sweep: the unit in the arena is still alive");
+        if (!onLastRow.isRemoved())
+            problems.add("sweep: the unit on the arena's last row is still alive (the box is one block short)");
+        if (!onPad.isRemoved())
+            problems.add("sweep: the unit on its own pad is still alive");
+        if (passingOver.isRemoved())
+            problems.add("sweep: the unit passing 70 above the arena, on no pad of it, was removed");
+        if (beside.isRemoved())
+            problems.add("sweep: the unit beside the arena was removed");
+        if (othersUnit.isRemoved())
+            problems.add("sweep: the still-running test's unit on its own pad over this arena was removed");
+        if (removed != 3)
+            problems.add("sweep: removed " + removed + " entities, want the 3 of this test");
+        // then the other test times out: its own cleanup takes its unit and its pad
+        other.tick();
+        if (!other.hasFailed())
+            problems.add("sweep: the other test did not time out");
+        if (!othersUnit.isRemoved())
+            problems.add("sweep: the other test's unit is still alive after it ended");
+        if (!level.getBlockState(otherPadAt).equals(otherWas))
+            problems.add("sweep: the other test's pad is " + level.getBlockState(otherPadAt) + " after it ended");
+        for (Mob m : all)
+            if (!m.isRemoved())
+                m.discard();
+        if (!level.getBlockState(otherPadAt).equals(otherWas))
+            level.setBlock(otherPadAt, otherWas, 3);
     }
 
     private static Mob pig(ServerLevel level, BlockPos at) {

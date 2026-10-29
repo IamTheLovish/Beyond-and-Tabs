@@ -17,9 +17,11 @@ always runs. **OPEN** is listed for a follow-up.
   for a timeout (`GameTestTimeoutException`). After that none of the test's callbacks run again.
 - In `succeedWhen` a throw means "not yet": the test only fails at its timeout. So cleanup placed after the assertion
   inside the lambda runs only on a pass.
-- Vanilla removes **no** entities when a test ends, pass or fail. It clears entities only inside the template box,
-  and only once a later batch places a structure in that slot. Blocks outside the 16x12x16 template (sky pads, far
-  floors) are never touched.
+- Vanilla removes **no** entities when a test ends, pass or fail. It clears entities only inside a template box, when
+  a structure is placed there. 1.20.1 never reuses a slot between batches: each batch is laid out on fresh ground
+  further along, so a test's leftovers stay for good. Blocks outside the 16x12x16 template (sky pads, far floors) are
+  never touched. Leftovers hurt where another test works: a wide or offset pad over a neighbour's arena, units that
+  keep fighting and pick a neighbour's units as targets, a flag every later test reads.
 
 ## The fix: `TestCleanup` (new)
 
@@ -34,19 +36,29 @@ always runs. **OPEN** is listed for a follow-up.
 - `TestCleanup.rtsPathfinding(helper)`: a counted hold on `UnitServerEvents.rtsPathfinding`. The flag goes back to
   its old value only when the last holder ends. It is given back at the end however the test ends, so it replaces the
   hand-restored `wasRts` and serves the same purpose as PR #177's `RtsPathingLease` (see OPEN 1).
-- `TestCleanup.sweepColumn(info)` is called from `GameTestShards`' reporter for **every failed test**. It discards
-  every non-player entity in the failed test's own 16x16 column, from the world's bottom to its top. That takes the
-  arena floor and the test's own sky pad (glass pads at 120-312 sit in the test's column). This one hook covers the
-  biggest class below (B, live units) for every test whose units stand in its own column.
+- `TestCleanup.sweep(info)` is called from `GameTestShards`' reporter for **every failed test**. It discards every
+  non-player entity the failed test left in its own arena (the full 16x12x16 template box) or on its own pads: the
+  columns of every block it set through `TestCleanup.blocks` (`set` or `region`), from the pad's lowest block to 4
+  above its top. That covers the arena floor and the shared sky-pad helpers (`SkirmishGameTests.skyPad`,
+  `ArenaReady.pad`, the dragon pads), so this one hook covers the biggest class below (B, live units).
+  It is deliberately not the whole column: tests still running send units over their neighbours' arenas on purpose
+  (`TerrainGameTests.formation_move_spreads_into_a_line_facing_the_move` walks 12 units to corner.x+28 at y 280 for
+  about 400 ticks; the bone dragon in `DragonFlightGameTests` flies to x-20; the Admiral in `SkirmishGameTests` is 60
+  out). A whole-column sweep after a neighbour failed would remove them and turn that test red (or green).
 
 Proof:
 - `TestCleanupGameTests.cleanup_runs_when_a_test_fails_times_out_or_passes`, in its own batch `test_cleanup`. It makes
   three tests by hand (real `GameTestInfo`s that no runner knows about) and ticks them to their end: a thrown
   assertion, a timeout and a pass. Each time it checks four things: its unit is gone, its block above the arena is put
-  back, rtsPathfinding is back, and two steps ran newest first, once each. It then checks the sweep: a unit 60 blocks
-  above the arena goes, and one in the gap beside the arena stays.
+  back, rtsPathfinding is back, and two steps ran newest first, once each. It then runs the sweep on itself: its units
+  in the arena, on the arena's last x/z row and on its own pad go. A unit 70 above the arena on no pad of its own, one
+  in the gap beside the arena, and the unit of a second, still-running hand-made test standing on that test's own pad
+  over this arena all stay. When that second test then times out, its own cleanup takes its unit and its pad.
 - `TestCleanupTest` (JUnit) covers the bookkeeping without a server: order, run-once, an early run, a throwing step
-  not skipping the rest, and a step added while ending.
+  not skipping the rest, and a step added while ending. It also covers the pad footprint the sweep reads (on the pad,
+  4 above it, not higher, not beside, a `region` box from bottom to top).
+- `BlockUndo.restore` sets blocks back with flags 2|16 (no neighbour updates), so a torch or door on a pad being taken
+  away does not pop off as an item.
 
 ## A. Global flags and shared state (HIGH: every later test in the shard sees them)
 
@@ -54,8 +66,8 @@ Proof:
 |---|---|---|---|---|
 | OrdersObeyGameTests.java:182 `a_move_into_unloaded_chunks_walks_toward_it_never_stands_busy` | `rtsPathfinding = true`, invulnerable vindicator | `ArenaReady.whenTicking(150)` throws at L212; restores only on own branches (L197/215/271) | every later test's pathing; L402 there becomes "proves nothing" | FIXED (`TestCleanup.rtsPathfinding`, `entities`) |
 | OrdersObeyGameTests.java:289 `a_unit_shifted_along_the_wall_still_gives_up...` | same | whenTicking throw at L314 | same | FIXED |
-| PathingBudgetGameTests.java:206 `vanilla_path_wall_detour_beyond_the_short_search_still_arrives` | `rtsPathfinding = false`, `VanillaPathBudget.shortRangeCapForTests = 6`, stone rim fence outside the arena (x/z -1 and 16), `sealed()` rim stone, a vindicator | whenTicking throw L245; also a timeout (500 < order + 420 if the order is late) | every later vanilla-path test, the next batch at this slot | FIXED (`restore` is an `atEnd` step) |
-| PathingBudgetGameTests.java:84 / :150 (melee chaser, shooter) | `sealed()` rim stone outside the arena, slipslopslap cheat, units | whenTicking throw L98/L161; timeout 400 < order + 300 | next batch at this slot | FIXED |
+| PathingBudgetGameTests.java:206 `vanilla_path_wall_detour_beyond_the_short_search_still_arrives` | `rtsPathfinding = false`, `VanillaPathBudget.shortRangeCapForTests = 6`, stone rim fence outside the arena (x/z -1 and 16), `sealed()` rim stone, a vindicator | whenTicking throw L245; also a timeout (500 < order + 420 if the order is late) | every later vanilla-path test | FIXED (`restore` is an `atEnd` step) |
+| PathingBudgetGameTests.java:84 / :150 (melee chaser, shooter) | `sealed()` rim stone outside the arena, slipslopslap cheat, units | whenTicking throw L98/L161; timeout 400 < order + 300 | later tests reading the cheat or crossing the rim | FIXED |
 | PerfScanGameTests.java:71 `neutral_aggro_points_a_hostile_mob_at_a_neighbour` | game rule NEUTRAL_AGGRO = true, villager plus 2 husks on pad 135 | reset sits after the assertion in `succeedWhen` (L89-92); also fail at L77 | every later test (wild mobs aggro units) | FIXED |
 | PerfProfileGameTests.java:77 `lag_capture_profiles_the_tick_and_names_the_heaviest_sections` | `Sys.force` hold (measuring forced on), 24 fighting vindicators | released only once a summary exists (L88); timeout 500 | `sections_are_inert_when_nothing_is_measuring` passes without checking; tick cost | FIXED |
 | ParadeGroundGameTests.java:35 `parade_spawns_every_unit_type_and_runs_a_loop` | static `ParadeGround.active` plus 50+ looping units | `helper.assertTrue` L37 throws after `start` | every later test; a later `start` finds one active | FIXED |
@@ -68,8 +80,10 @@ Proof:
 
 ## B. Live units left on a fail or timeout (MED: they fight or aggro neighbours ~21 blocks away)
 
-All of these are covered by `sweepColumn` when the units stand in the test's own column (arena floor or own sky pad).
-**FIXED-sweep** means they are covered that way. Units far from the column are listed separately.
+All of these are covered by `sweep` when the units stand in the test's own arena or on a pad it set through
+`TestCleanup.blocks` (`skyPad`, `ArenaReady.pad`, the dragon pads). **FIXED-sweep** means they are covered that way.
+Units that walk off the arena or the pad, and units on a pad set any other way, are not covered and are listed
+separately.
 
 **SkirmishGameTests (assert in a `runAfterDelay` callback, discard only after it; or `helper.fail` before the discard):**
 L366 war horn, L391 liveries, L722 dgun, L761 horde momentum, L800 sunforged formation, L831 raise dead, L1020
@@ -108,14 +122,14 @@ off east), L12146 deploy turret, L13356 area reclaim. FIXED-sweep. Commanders am
 - WagerBookGameTests L349/L414/L466/L515/L706.
 - BotGameTests L83.
 
-**Units OUTSIDE their test's column (not covered by the sweep):**
+**Units OUTSIDE their test's arena and pads (not covered by the sweep):**
 
 | Where | What | Path | State |
 |---|---|---|---|
 | CombatEngageGameTests.java:204-507 (6 tests) | 2-300 fighting units on glass pads 9000 W/N, FORCED chunks keep them ticking | `whenReady` throws (L147); asserts before cleanUp in `succeedWhen` | FIXED (`atEnd` cleanUp, which also releases chunks) |
 | SkirmishGameTests.java:10786 via L10950 / L11195 (production_buildings_place_every_unit_*, wide_units_walk_away) | produced units 9000+ south, FORCED tickets of held jobs | `holdAndAwaitOrFail` throws in a callback | OPEN |
 | RaidGameTests.java:1244 | 6 vindicators, worker, raider, a raid tower in `getBuildings()`, forced chunks (x about 69000) | timeout 1500 < 1300 + 420 | OPEN |
-| NewMatchCases.java:95 / :235 | vindicator at y 311 plus a registered wind generator | undo never discards them; `helper.fail` L100/113/121/239/250 | OPEN (y 311 is the arena column: unit FIXED-sweep, building OPEN) |
+| NewMatchCases.java:95 / :235 | vindicator at y 311 plus a registered wind generator | undo never discards them; `helper.fail` L100/113/121/239/250 | OPEN (the pad at 310 is not set through `TestCleanup.blocks`, so the sweep does not reach it) |
 | HeroAiGameTests / HeroGameTests / H13 / CommandQueue early "could not spawn" returns | partial spawns | create() null only | LOW, FIXED-sweep |
 
 ## C. Buildings and server registries left on a fail or timeout
@@ -137,12 +151,13 @@ off east), L12146 deploy turret, L13356 area reclaim. FIXED-sweep. Commanders am
 
 ## D. Blocks outside the arena (shared space)
 
-Vanilla resets only the 16x12x16 template. Everything here stays in the world for the next batch that gets the same
-slot, and offset ones land over other tests' arenas in the same batch.
+Vanilla resets only the 16x12x16 template, and never places a later batch's arena in an earlier one's slot. Everything
+here stays in the world for good. It hurts when it stands where another test works: offset or wide pads land over
+other tests' arenas in the same batch, and a pad at an absolute height can stand where a later test's units walk.
 
 | Where | What | When | Collides with | State |
 |---|---|---|---|---|
-| `SkirmishGameTests.skyPad` (L3313; pads at 120-312, about 15 tests) | 16x16 glass | every path | the next test at this slot at the same height | FIXED (helper restores at end) |
+| `SkirmishGameTests.skyPad` (L3313; pads at 120-312, about 15 tests) | 16x16 glass | every path | units of a test beside it at the same height | FIXED (helper restores at end) |
 | `ArenaReady.pad` (L48; about 20 callers, 130-301, plus 6 air layers) | 16x16 glass | every path | e.g. pad 135 (TerrainGameTests, PerfScan) vs the WaterPathing basin 132-141 | FIXED |
 | `DragonFlightGameTests.skyPad`, `DragonDiveGameTests.skyPad` (y 290; 11 tests) | 16x16 glass | every path | CombatEngineer pad at 290 | FIXED |
 | WaterPathingGameTests.java:69/134 | stone and water basin at abs y 132-141 | whenTicking throw (`clear` only on own branches) | `ArenaReady.pad(135)` users | FIXED |

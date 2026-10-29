@@ -67,6 +67,31 @@ class TestCleanupTest {
     }
 
     @Test
+    void aPadCoversWhatStandsOnItAndNothingBesideOrHighAbove() {
+        TestCleanup.Footprint pads = new TestCleanup.Footprint();
+        assertNull(pads.span());
+        pads.add(-5, 50, 7);
+        assertTrue(pads.covers(-4.5, 51.0, 7.5), "a unit standing on the pad");
+        assertTrue(pads.covers(-4.5, 50.0 + TestCleanup.Footprint.HEADROOM, 7.5), "one hopping on it");
+        assertFalse(pads.covers(-4.5, 51.0 + TestCleanup.Footprint.HEADROOM, 7.5), "one passing high over it");
+        assertFalse(pads.covers(-4.5, 49.0, 7.5), "one under it");
+        assertFalse(pads.covers(-3.5, 51.0, 7.5), "one in the next column");
+        assertFalse(pads.covers(-4.5, 51.0, 8.5), "one in the next row");
+        assertArrayEquals(new int[] { -5, 50, 7, -5, 50, 7 }, pads.span());
+    }
+
+    @Test
+    void aBoxCoversItsColumnsFromBottomToTop() {
+        TestCleanup.Footprint pads = new TestCleanup.Footprint();
+        pads.addBox(3, 30, -2, 1, 20, -4);
+        assertTrue(pads.covers(1.5, 20.0, -3.5));
+        assertTrue(pads.covers(3.9, 33.0, -1.1));
+        assertFalse(pads.covers(4.0, 25.0, -3.0));
+        assertFalse(pads.covers(2.0, 19.9, -3.0));
+        assertArrayEquals(new int[] { 1, 20, -4, 3, 30, -2 }, pads.span());
+    }
+
+    @Test
     void aStepAddedWhileEndingStillRuns() {
         TestCleanup.Ends<Object> ends = new TestCleanup.Ends<>();
         Object test = new Object();

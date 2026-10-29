@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
  * <p>
  * It also logs every passed test's wall time ("[TestTime] name ms" - vanilla's log reporter says nothing on a pass),
  * so tools/gametest_timing.py can name the slow tests behind a slow batch; failures are reported exactly as before,
- * and a failed test's leftover units in its own column are removed (TestCleanup.sweepColumn).
+ * and a failed test's leftover units in its arena and on its own pads are removed (TestCleanup.sweep).
  */
 @Mod.EventBusSubscriber(modid = ReignOfNether.MOD_ID)
 public final class GameTestShards {
@@ -176,7 +176,7 @@ public final class GameTestShards {
         @Override
         public void onTestFailed(GameTestInfo info) {
             log.onTestFailed(info);
-            TestCleanup.sweepColumn(info);
+            TestCleanup.sweep(info);
         }
 
         @Override
