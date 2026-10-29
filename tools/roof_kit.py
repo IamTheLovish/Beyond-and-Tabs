@@ -52,7 +52,7 @@ def _course(rng, n, p_dark, p_pale):
             gap = min(rng.randint(2, 5), n - i)  # always at least 2 base cells after a dark run: no chequer
             row += [0] * gap
             i += gap
-        elif r < p_dark / 2 + p_pale and (not row or row[-1] != 2):
+        elif r < p_dark / 2 + p_pale and 2 not in row[-2:]:   # pale cells 2+ base cells apart: no "20202"
             row.append(2)
             i += 1
         else:
@@ -68,11 +68,12 @@ def tones(courses, length, seed=0):
         g = []
         for k in range(courses):
             t = k / max(1, courses - 1)
-            g.append(_course(rng, length, 0.35 - 0.25 * t, 0.03 + 0.09 * t))
+            g.append(_course(rng, length, 1.0 - 0.9 * t, 0.05 + 0.3 * t))   # median base share ~0.68 (the old
+            #   0.35 / 0.03 gave ~0.80 and hit 55-72 % in ~3 % of tries; raising off target showed it)
         flat = [x for row in g for x in row]
         if 0.55 <= flat.count(0) / len(flat) <= 0.72:
             return g
-    return g
+    raise ValueError("no %d x %d course grid with a 55-72 %% base tone (seed %d)" % (courses, length, seed))
 
 
 def _place(out, axis, u, y, v, name, props):
@@ -93,8 +94,8 @@ def gable(span, length, axis="z", seed=0, mats=SLATE, overhang=1):
     v0, v1 = -overhang, length - 1 + overhang
     mid = (u0 + u1) / 2
     half_cells = int(mid - u0)                   # cells from the eave to the ridge on one side
-    g_front = tones(half_cells, v1 - v0 + 1, seed)
-    g_back = tones(half_cells, v1 - v0 + 1, seed + 1000)
+    g_front = tones(half_cells, v1 - v0 - 1, seed)           # the courses between the verges: graded on the
+    g_back = tones(half_cells, v1 - v0 - 1, seed + 1000)     # cells that show them (the verges are fixed)
     for u in range(u0, u1 + 1):
         d = min(u - u0, u1 - u)                  # course index from the nearer eave
         side = 1 if u < mid else -1
@@ -106,7 +107,7 @@ def gable(span, length, axis="z", seed=0, mats=SLATE, overhang=1):
             if v in (v0, v1):                    # the verge: the dark bargeboard edge at both gable ends
                 name = mats["verge"][2]
             else:
-                tone = (g_front if side == 1 else g_back)[d][v - v0]
+                tone = (g_front if side == 1 else g_back)[d][v - v0 - 1]
                 name = mats["tones"][tone][2]
             _place(out, axis, u, y, v, name, {"type": typ, "waterlogged": "false"})
         if u in (u0, u1):                        # the gutter under each eave, tall side against the wall
@@ -140,7 +141,8 @@ def _graded(groups, mats_seed, base=(0.55, 0.72)):
         three = len(keys) < 12 or set(out.values()) == {0, 1, 2}     # a roof shows all three tones
         if keys and three and base[0] <= sum(v == 0 for v in out.values()) / len(keys) <= base[1] and _wet_low(groups, out):
             return out
-    return out
+    raise ValueError("no course grading of %d cells with a %d-%d %% base tone, wet low" % (
+        len(keys), 100 * base[0], 100 * base[1]))
 
 
 def _wet_low(groups, tone):
