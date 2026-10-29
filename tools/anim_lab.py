@@ -6,6 +6,8 @@ both play, so a clip can be judged and measured offline in seconds instead of a 
     python3 tools/anim_lab.py design/anims/halberdier.json --gen-java     # writes the model's generated key table
     python3 tools/anim_lab.py design/anims/halberdier.json --check        # the table in the repo == the data? (CI)
     python3 tools/anim_lab.py design/anims/halberdier.json --motion       # numbers per clip; exit 1 on a FAIL
+    python3 tools/anim_lab.py design/anims/halberdier.json --sheet OUT_DIR [--clip thrust] [--frames 10] [--ref IMG]
+                                                                          # ONE readable png per clip (<= 2000 px)
     python3 tools/anim_lab.py design/anims/halberdier.json --play OUT_DIR # frame strips + GIFs per clip and view
     python3 tools/anim_lab.py design/anims/halberdier.json --blend OUT_DIR  # walk -> ready -> thrust -> ready as the game blends
 
@@ -263,61 +265,144 @@ def motion(data):
     return problems, report
 
 
-# ------------------------------------------------------------------ play ---------------------------------------
-def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2, frame=None):
+# ------------------------------------------------------------------ rig + play ---------------------------------
+OWNER = (0.23, 0.44, 0.82)      # the team-colour mask is empty here (no team bones), so this tints nothing; render() wants one
+CACHE_SOURCES = ("dsl_to_game.py", "materials.py", "unit_light.py", "render_concept.py", "gen_models.py",
+                 "preview_model.py")
+WEAPON_BONES = ("halberd", "greatsword", "sword", "spear", "staff", "bow", "crossbow", "axe", "mace", "hammer", "weapon")
+
+
+def cache_dir():
+    d = os.environ.get("ANIM_LAB_CACHE") or os.path.join(os.path.expanduser("~"), ".cache", "beyond-and-tabs", "anim_lab")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+class Rig:
+    """A unit's model as the game draws it, ready to pose: the generated body and painted atlas. Painting the atlas is
+    11 s of pure Python (dsl_to_game.build, 2142 faces x a PBR pass each) and does not depend on the clip, so it is
+    cached on disk keyed by the model file and the sources that paint it (ANIM_LAB_CACHE or ~/.cache/...): the first
+    sheet of a session pays it, the rest do not (Oct 22: halberdier --play took > 5 min, most of it repainting)."""
+
+    def __init__(self, model_rel):
+        here = os.path.dirname(os.path.abspath(__file__))
+        sys.path.insert(0, here)
+        import hashlib
+        import pickle
+        import render_concept
+        import dsl_to_game as d2g
+        path = os.path.join(ROOT, model_rel)
+        self.m = render_concept.load_model(path)
+        self.m["_path"] = path
+        h = hashlib.sha1()
+        with open(path, "rb") as f:
+            h.update(f.read())
+        for src in CACHE_SOURCES:
+            with open(os.path.join(here, src), "rb") as f:
+                h.update(f.read())
+        h.update(repr(d2g.DENSITY).encode())
+        cache = os.path.join(cache_dir(), "%s-%s.pkl" % (os.path.splitext(os.path.basename(path))[0], h.hexdigest()[:16]))
+        got = None
+        if os.path.exists(cache):
+            try:
+                with open(cache, "rb") as f:
+                    got = pickle.load(f)
+            except Exception as e:                       # a torn / stale file: rebuild, never fail on the cache
+                print("anim_lab: cache %s unreadable (%s), rebuilding" % (cache, e))
+        if got is None:
+            _java, imgs, info = d2g.build(self.m, "Preview", [], "preview", d2g.DENSITY)
+            got = ({k: imgs[k] for k in ("base", "team", "glow")}, info["root"])
+            tmp = cache + ".%d.tmp" % os.getpid()
+            with open(tmp, "wb") as f:
+                pickle.dump(got, f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, cache)
+        self.imgs, self.root = got
+        self.density = d2g.DENSITY
+        self.base_mc = {nm: d2g.mc_rot(r) for nm, r in self.m["pose"].items()}
+
+    def faces(self, pose, tags=None):
+        """The model's faces with a clip pose (DSL degrees ADDED to the model's own pose, moves in px) applied."""
+        import dsl_to_game as d2g
+        import game_preview as gp
+        pmc = dict(self.base_mc)
+        move = {}
+        for b, v in pose.items():
+            if b.endswith("@move"):
+                move[b[:-5]] = v
+                continue
+            cur = pmc.get(b, (0.0, 0.0, 0.0))
+            add = d2g.mc_rot(v)
+            pmc[b] = tuple(cur[j] + add[j] for j in range(3))
+        return gp.faces_of(self.root, pmc, True, False, (), move, tags=tags)
+
+    def framing(self, faces_list, view, frame=None):
+        """One framing for a whole clip in one view: the union of every pose's box (no figure shrinks or jumps between
+        frames), the band `frame` = (y0, y1) of DSL height cropping it (the Halberdier's 58 px halberd otherwise
+        shrinks him to a third of the cell)."""
+        import game_preview as gp
+        box = None
+        for fs in faces_list:
+            bb = gp.bbox(fs, gp.VIEWS[view])
+            box = bb if box is None else (min(box[0], bb[0]), max(box[1], bb[1]), min(box[2], bb[2]), max(box[3], bb[3]))
+        if frame:                                  # the view's y is DSL height (the views are level, y up); the
+            box = (box[0], box[1], max(box[2], frame[0]), min(box[3], frame[1]))   # full width: tip to butt
+        return box
+
+    def draw(self, fs, view, size, box):
+        import game_preview as gp
+        return gp.render(fs, self.imgs, self.density, gp.VIEWS[view], size, OWNER, box)[0].convert("RGB")
+
+    @staticmethod
+    def crop_of(w, h):
+        """A w x h cell is a square render of the longer side with the middle w x h cut out (the box is centred in the
+        square): (square size, left, top)."""
+        side = max(w, h)
+        return side, (side - w) // 2, (side - h) // 2
+
+    def draw_cell(self, fs, view, w, h, box):
+        side, left, top = self.crop_of(w, h)
+        return self.draw(fs, view, side, box).crop((left, top, left + w, top + h))
+
+
+def pick_clips(data, names):
+    """[(name, clip)] for the requested clip names (all when none); an unknown name is an error that lists the real ones."""
+    if not names:
+        return list(data["clips"].items())
+    out = []
+    for n in names:
+        if n not in data["clips"]:
+            raise SystemExit("anim_lab: no clip %r in %s; clips: %s" % (n, data.get("_rel", "the data"), ", ".join(data["clips"])))
+        out.append((n, data["clips"][n]))
+    return out
+
+
+def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2, frame=None, clips=None):
     """Frame strips and GIFs per clip: the model posed at every half tick through game_preview (the game's own
     generated body and painted texture), one fixed framing per view. frame = (y0, y1) crops the framing to that band
-    of DSL height (the Halberdier's 58 px halberd otherwise shrinks him to a third of the strip): the data's "frame"
-    or --frame Y0:Y1."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import render_concept
-    import dsl_to_game as d2g
-    import game_preview as gp
+    of DSL height: the data's "frame" or --frame Y0:Y1. A long clip (an 80-tick idle) is played at one frame a tick so
+    a strip stays a strip. For a picture to LOOK at use --sheet: this strip is 9000+ px wide and gets downsized."""
     from PIL import Image, ImageDraw
     os.makedirs(out_dir, exist_ok=True)
-    m = render_concept.load_model(os.path.join(ROOT, data["model"]))
-    m["_path"] = os.path.join(ROOT, data["model"])
-    _java, imgs, info = d2g.build(m, "Preview", [], "preview", d2g.DENSITY)
-    root = info["root"]
-    base_mc = {nm: d2g.mc_rot(r) for nm, r in m["pose"].items()}
+    rig = Rig(data["model"])
     written = []
     frame = frame or data.get("frame")
-    for cname, clip in data["clips"].items():
-        n = clip["ticks"] * per_tick
-        frames_faces = []
-        for i in range(n + 1):
-            pose = sample(clip, i / n)
-            pmc = dict(base_mc)
-            move = {}
-            for b, v in pose.items():
-                if b.endswith("@move"):
-                    move[b[:-5]] = v
-                    continue
-                cur = pmc.get(b, (0.0, 0.0, 0.0))
-                add = d2g.mc_rot(v)
-                pmc[b] = tuple(cur[j] + add[j] for j in range(3))
-            frames_faces.append(gp.faces_of(root, pmc, True, False, (), move))
+    for cname, clip in pick_clips(data, clips):
+        pt = per_tick if clip["ticks"] <= 30 else 1
+        n = clip["ticks"] * pt
+        frames_faces = [rig.faces(sample(clip, i / n)) for i in range(n + 1)]
         rows = []
         for vname in views:
-            box = None
-            for fs in frames_faces:
-                _, bb = gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], 64, (1, 1, 1))
-                box = bb if box is None else (min(box[0], bb[0]), max(box[1], bb[1]), min(box[2], bb[2]),
-                                              max(box[3], bb[3]))
-            if frame:                              # the view's y is DSL height (the views are level, y up); the
-                box = (box[0], box[1], max(box[2], frame[0]), min(box[3], frame[1]))   # full width: tip to butt
-            frames = [gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], size, (0.23, 0.44, 0.82), box)[0]
-                      .convert("RGB") for fs in frames_faces]
+            box = rig.framing(frames_faces, vname, frame)
+            frames = [rig.draw(fs, vname, size, box) for fs in frames_faces]
             gif = os.path.join(out_dir, "%s_%s.gif" % (cname, vname))
-            frames[0].save(gif, save_all=True, append_images=frames[1:], duration=int(1000 / 20 / per_tick * 4),
-                           loop=0)
+            frames[0].save(gif, save_all=True, append_images=frames[1:], duration=int(1000 / 20 / pt * 4), loop=0)
             written.append(gif)
             rows.append(frames)
         cols = len(rows[0])
         strip = Image.new("RGB", (cols * size, len(rows) * size + 18), (24, 26, 24))
         d = ImageDraw.Draw(strip)
-        d.text((4, 3), "%s: %d ticks, every %s tick, views %s%s" % (
-            cname, clip["ticks"], "half" if per_tick == 2 else "1/%d" % per_tick, "/".join(views),
+        d.text((4, 3), "%s: %d ticks, every %s, views %s%s" % (
+            cname, clip["ticks"], "half tick" if pt == 2 else "tick", "/".join(views),
             ("  (hit p=%.2f)" % clip["hit_p"]) if "hit_p" in clip else ""), fill=(220, 220, 210))
         for r, frames in enumerate(rows):
             for c, im in enumerate(frames):
@@ -328,15 +413,95 @@ def play(data, out_dir, views=("side", "quarter", "front"), size=260, per_tick=2
     return written
 
 
+def trail_specs(data, clip):
+    """{label: (bone, 'far'|'low')} to follow in a clip's motion trail: the data's "trail" ({label: [bone, kind]}), else
+    the weapon (the first bone of WEAPON_BONES the clip moves) and the feet (bones named *foot*)."""
+    if data.get("trail"):
+        return {k: tuple(v) for k, v in data["trail"].items()}
+    bones = bones_of(clip)
+    out = {}
+    for b in bones:
+        if b in WEAPON_BONES:
+            out[b + " tip"] = (b, "far")
+            break
+    for b in bones:
+        if "foot" in b and "@" not in b:
+            out[b.replace("_", " ")] = (b, "low")
+    return out
+
+
+def sheet(data, out_dir, clips=None, n_frames=10, views=("side", "quarter", "front"), frame=None, ref=None, trails=True):
+    """ONE png per clip, built to be READ BACK by a Claude session (see tools/anim_sheet.py): key frames of the clip
+    in a grid <= 2000 x 2000 px, one view per row, figures 240+ px, the progress and tick under every frame, an orange
+    frame on the blow, and a last row of cells with the sweep of the key frames and the paths of the weapon tip and
+    the feet. `ref` = a reference image (a frame strip from a video) shown under the grid."""
+    import anim_sheet as S
+    import game_preview as gp
+    from PIL import Image
+    os.makedirs(out_dir, exist_ok=True)
+    rig = Rig(data["model"])
+    frame = frame or data.get("frame")
+    ref_img = Image.open(ref) if ref else None
+    written = []
+    rest_tags = []
+    rest = rig.faces({}, tags=rest_tags)
+    for cname, clip in pick_clips(data, clips):
+        loop = bool(clip.get("loop"))
+        ps, hit = S.key_frames(n_frames, loop=loop, hit_p=clip.get("hit_p"))
+        specs = trail_specs(data, clip) if trails else {}
+        refs = {}
+        for label, (bone, kind) in specs.items():
+            try:
+                refs[label] = S.pick_tracked(rest, rest_tags, bone, kind)
+            except KeyError as e:
+                print("anim_lab: no trail for %s: %s" % (label, e))
+        steps = clip["ticks"] * 2                                    # every half tick: smooth paths, one framing
+        dense = [rig.faces(sample(clip, i / steps)) for i in range(steps + 1)]
+        keyed = [rig.faces(sample(clip, p)) for p in ps]
+        boxes = {v: rig.framing(dense + keyed, v, frame) for v in views}
+        # each view's cells take the shape of its figure's box (a side view of a halberdier is 2x wider than tall)
+        aspects = [min(1.25, max(0.4, (bx[3] - bx[2]) / max(1e-6, bx[1] - bx[0]))) for bx in (boxes[v] for v in views)]
+        lines = [len(ps)] * len(views) + ([len(views)] if refs else [])
+        lay = S.layout(lines, ref_lines=1 if ref_img is not None else 0,
+                       aspects=aspects + ([max(aspects)] if refs else []))
+        rows, trail_cells = [], []
+        for vi, vname in enumerate(views):
+            box = boxes[vname]
+            cells = [rig.draw_cell(fs, vname, lay.cell, lay.heights[vi], box) for fs in keyed]
+            rows.append((vname, cells))
+            if refs:
+                view = gp.VIEWS[vname]
+                th = lay.heights[len(views)]
+                side, left, top = rig.crop_of(lay.cell, th)
+
+                def px(fs, r, view=view, box=box, side=side, left=left, top=top):
+                    x, y = S.to_pixel(S.tracked_point(fs, r), view, box, side)
+                    return x - left, y - top
+                paths = {lab: [px(fs, r) for fs in dense] for lab, r in refs.items()}
+                marks = {lab: [px(fs, r) + (i + 1,) for i, fs in enumerate(keyed)] for lab, r in refs.items()}
+                tcell = S.onion(cells if th == lay.heights[vi] else
+                                [rig.draw_cell(fs, vname, lay.cell, th, box) for fs in keyed])
+                trail_cells.append(S.draw_trails(tcell, paths, marks))
+        labels = [S.frame_label(i, p, clip["ticks"], hit == i) for i, p in enumerate(ps)]
+        title = "%s / %s   %d ticks (%.2f s)%s%s   views %s   %d frames" % (
+            data.get("unit", os.path.basename(data["_rel"])), cname, clip["ticks"], clip["ticks"] / 20.0,
+            "  loop" if loop else "", ("   blow at p=%.2f" % clip["hit_p"]) if "hit_p" in clip and not loop else "",
+            "/".join(views), len(ps))
+        legend = "p = progress through the clip, t = game ticks (20 a second)." + (
+            "  Orange frame = the blow.  Last row: sweep of the frames + paths:" if refs else "")
+        sh = S.compose(title, legend, rows, lay, labels, hit_index=hit, trail_cells=trail_cells or None,
+                       trail_key=list(refs), ref=ref_img)
+        out = os.path.join(out_dir, "%s_sheet.png" % cname)
+        sh.save(out)
+        written.append(out)
+    return written
+
+
 def blend_strip(data, out_dir, views=("side", "quarter"), size=220, ticks=None):
     """The game's blend as one strip: walk (amt 1) -> fading to the idle guard over 6 ticks -> the thrust -> the idle,
     HalberdierUnitModel's own mix (idle by age, walk by the stride, the thrust over the swing), one frame a tick, so
     the hand-offs can be read for a pop. Returns the written paths; the per-tick pose jump of every bone is printed
     (a pop would show as a spike at a hand-off)."""
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import render_concept
-    import dsl_to_game as d2g
-    import game_preview as gp
     from PIL import Image, ImageDraw
     os.makedirs(out_dir, exist_ok=True)
     idle, walk, thrust = data["clips"]["idle"], data["clips"]["walk"], data["clips"]["thrust"]
@@ -376,34 +541,13 @@ def blend_strip(data, out_dir, views=("side", "quarter"), size=220, ticks=None):
         if poses[i][0] != poses[i - 1][0] or i == 1:
             print("  blend %-6s -> %-6s at tick %2d: biggest step %5.1f deg (%s)" % (
                 poses[i - 1][0], poses[i][0], i, worst[0], worst[1]))
-    m = render_concept.load_model(os.path.join(ROOT, data["model"]))
-    m["_path"] = os.path.join(ROOT, data["model"])
-    _java, imgs, info = d2g.build(m, "Preview", [], "preview", d2g.DENSITY)
-    root = info["root"]
-    base_mc = {nm: d2g.mc_rot(r) for nm, r in m["pose"].items()}
-    frames_faces = []
-    for kind, pose in poses:
-        pmc = dict(base_mc)
-        move = {}
-        for b, v in pose.items():
-            if b.endswith("@move"):
-                move[b[:-5]] = v
-                continue
-            cur = pmc.get(b, (0.0, 0.0, 0.0))
-            add = d2g.mc_rot(v)
-            pmc[b] = tuple(cur[j] + add[j] for j in range(3))
-        frames_faces.append(gp.faces_of(root, pmc, True, False, (), move))
+    rig = Rig(data["model"])
+    frames_faces = [rig.faces(pose) for kind, pose in poses]
     frame = data.get("frame")
     rows = []
     for vname in views:
-        box = None
-        for fs in frames_faces:
-            _, bb = gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], 64, (1, 1, 1))
-            box = bb if box is None else (min(box[0], bb[0]), max(box[1], bb[1]), min(box[2], bb[2]), max(box[3], bb[3]))
-        if frame and vname in ("side", "quarter", "front"):
-            box = (box[0], box[1], max(box[2], frame[0]), min(box[3], frame[1]))
-        rows.append([gp.render(fs, imgs, d2g.DENSITY, gp.VIEWS[vname], size, (0.23, 0.44, 0.82), box)[0].convert("RGB")
-                     for fs in frames_faces])
+        box = rig.framing(frames_faces, vname, frame if vname in ("side", "quarter", "front") else None)
+        rows.append([rig.draw(fs, vname, size, box) for fs in frames_faces])
     cols = len(poses)
     strip = Image.new("RGB", (cols * size, len(rows) * size + 18), (24, 26, 24))
     d = ImageDraw.Draw(strip)
@@ -428,6 +572,12 @@ def main():
     ap.add_argument("--check", action="store_true", help="exit 1 if the generated Java differs from the data")
     ap.add_argument("--motion", action="store_true")
     ap.add_argument("--play", metavar="OUT_DIR")
+    ap.add_argument("--sheet", metavar="OUT_DIR", help="ONE png per clip to look at (<= 2000 px): key frames, one view a "
+                                                       "row, the blow marked, motion trails; <clip>_sheet.png")
+    ap.add_argument("--clip", action="append", help="only this clip (repeat for several); default every clip")
+    ap.add_argument("--frames", type=int, default=10, help="key frames per view on a sheet (default 10)")
+    ap.add_argument("--ref", metavar="IMAGE", help="a reference image (a frame strip) shown under the sheet")
+    ap.add_argument("--no-trail", action="store_true", help="leave the motion-trail row off the sheet")
     ap.add_argument("--frame", metavar="Y0:Y1", help="crop the strips to this band of DSL height (default: all)")
     ap.add_argument("--blend", metavar="OUT_DIR", help="the game's walk -> ready -> thrust -> ready blend as a strip")
     ap.add_argument("--views", default="side,quarter,front", help="views for --play / --blend (game_preview.VIEWS)")
@@ -456,8 +606,13 @@ def main():
         if any(p.startswith("FAIL") for p in problems):
             rc = 1
     views = tuple(v for v in a.views.split(",") if v)
+    frame = tuple(float(v) for v in a.frame.split(":")) if a.frame else None
+    if a.sheet:
+        for p in sheet(data, a.sheet, clips=a.clip, n_frames=a.frames, views=views, frame=frame, ref=a.ref,
+                       trails=not a.no_trail):
+            print("wrote", p)
     if a.play:
-        for p in play(data, a.play, views=views, frame=tuple(float(v) for v in a.frame.split(":")) if a.frame else None):
+        for p in play(data, a.play, views=views, frame=frame, clips=a.clip):
             print("wrote", p)
     if a.blend:
         for p in blend_strip(data, a.blend, views=views):

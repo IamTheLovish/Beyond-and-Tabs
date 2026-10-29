@@ -31,6 +31,14 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# Animation photos (input `anim`, Oct 22 2026): instead of the tour, a real entity of any unit doing idle / walk / attack /
+# turn / death on a flat pad, a first-person camera locked to it (side, front, rear), a screenshot every few game ticks -
+# EyesAnimScene. The Animation sheets step (tools/anim_eyes.py --collect) makes <= 2000 px review sheets; sheets are
+# published to branch eyes-anim as folder anim-<run id>/ (newest 12 kept; also kept as artifact anim-<run id> for 7 days; one
+# job per dispatch, never queued behind another). Use the one command:
+#   python3 tools/anim_eyes.py bone_dragon_unit turn --ci
+# (it dispatches this on your branch, waits, fetches the sheets from branch eyes-anim). The branch's PR build must have kept a jar: a PR routed
+# to the org mirror (tools/ci_route.py) has none here - put the label `ci-here` on it first.
 name: eyes
 on:
   workflow_dispatch:
@@ -60,6 +68,10 @@ on:
         description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
         type: boolean
         default: false
+      anim:
+        description: "Animation photos instead of the tour: unit:clip[:views[:dist[:ticks]]],... (bone_dragon_unit:turn; clips idle walk attack turn death; views side+front+rear) - a real entity doing the clip, photographed frame by frame (EyesAnimScene), made into review sheets by tools/anim_eyes.py. Sheets land on branch eyes-anim, folder anim-<run id>; run it with `python3 tools/anim_eyes.py <unit> <clip> --ci`"
+        required: false
+        default: ''
       branch_pack:
         description: "Test the tester pack THIS branch builds (pack/build_pack.py of the checkout) instead of the published test-pack release - to prove a pack change (new mods) before it ships"
         type: boolean
@@ -102,7 +114,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.anim && format('anim-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -112,10 +124,11 @@ jobs:
       # the commit whose build this tests (a workflow_run's GITHUB_SHA is main's head, which may already be newer)
       BUILD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
       BUILD_RUN: ${{ github.event.workflow_run.id || inputs.build_run }}
-      MIN_STILLS: ${{ inputs.overlays && 3 || inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
+      MIN_STILLS: ${{ inputs.anim && 2 || inputs.overlays && 3 ||inputs.scars && 6 || inputs.fog && 3 || inputs.structure && 4 || (inputs.shaders && 8 || 30) }}
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
+      ANIM: ${{ inputs.anim || '' }}
       STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
@@ -202,7 +215,7 @@ jobs:
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
               # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
               # meant for the testers' renderer
-              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or bool(os.environ.get('ANIM'))
               # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
               # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
@@ -263,6 +276,15 @@ jobs:
       - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
         if: env.OVERLAYS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
+      - name: Animation scene only (dispatch input `anim`; EyesAnimScene, tools/anim_eyes.py)
+        if: env.ANIM != ''
+        run: |
+          set -euo pipefail
+          # the spec goes into a JVM flag: only the characters a spec is made of (tools/anim_eyes.py safe_spec)
+          printf '%s' "$ANIM" | grep -qE '^[a-z0-9_:+.,]+$' || { echo "::error::anim must be unit:clip[:views[:dist[:ticks]]],... - letters, digits and _ : + . , only"; exit 1; }
+          python3 tools/anim_eyes.py --help > /dev/null   # the same file parses the spec afterwards: fail now if it cannot run
+          echo "EYES_JVM_EXTRA=-Dbat.eyes.anim=$ANIM" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] animation photos: $ANIM"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
@@ -467,7 +489,9 @@ jobs:
           { grep -h "Eyes\|Exception" out/eyes-lines.txt 2>/dev/null || true; } | head -8 | sed 's/^/::notice::/' || true
           # R6 picture regression (tools/eyes_diff.py): this run's stills vs the last APPROVED set (branch
           # <lane>-approved, set by eyes-approve.yml) -> out/eyes-diff.md + eyes-diff.jpg. Reports, never fails the run.
-          if git fetch -q --depth=1 origin "$EYES_BRANCH-approved" 2>/dev/null; then
+          if [ -n "${ANIM:-}" ]; then
+            echo "animation run: no picture regression (its frames are not a tour)"
+          elif git fetch -q --depth=1 origin "$EYES_BRANCH-approved" 2>/dev/null; then
             mkdir -p "$RUNNER_TEMP/approved"
             git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/approved" --wildcards 'bat_eyes_*.png' 2>/dev/null || true
             python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || true
@@ -477,7 +501,11 @@ jobs:
           else
             echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
           fi
-          if [ "${OVERLAYS:-0}" = "1" ]; then
+          if [ -n "${ANIM:-}" ]; then
+            # an animation run is not diffed against the approved tour: the sheets are built in the next steps and
+            # published to branch eyes-anim (folder anim-<run id>/) for tools/anim_eyes.py --ci to read; also an artifact
+            echo "animation run: sheets go to branch eyes-anim"
+          elif [ "${OVERLAYS:-0}" = "1" ]; then
             # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder
             # <build sha>-<run id>/ to eyes-overlays instead of replacing the branch: fetch, commit, push, and on a race
             # (another run pushed first) fetch again - a force push of a snapshot lost one of six runs (39703134278)
@@ -511,6 +539,71 @@ jobs:
             git commit -q -m "Eyes: screenshots for ${BUILD_SHA::7}"
             git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$EYES_BRANCH"
           fi
+      - name: Animation sheets (dispatch input `anim`; tools/anim_eyes.py --collect)
+        id: animsheets
+        if: always() && env.ANIM != ''
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
+          mkdir -p out/anim-sheets
+          n=$(find out -maxdepth 1 -name 'bat_eyes_20_anim_*.png' | wc -l)
+          echo "::notice::[Eyes] $n animation frames captured"
+          python3 tools/anim_eyes.py --collect out --spec "$ANIM" --log out/latest.log --out out/anim-sheets
+          rc=$?
+          grep -h "anim-run \|anim-run-end\|20_anim" out/latest.log 2>/dev/null | sed 's/^.*\[Eyes\]/[Eyes]/' | head -20 | sed 's/^/::notice::/' || true
+          exit $rc
+      - name: Publish the animation sheets to branch eyes-anim (folder anim-<run id>/)
+        # a Claude session's sandbox cannot download Actions artifacts (the blob host is outside its proxy) but reads
+        # branches through the GitHub API - so tools/anim_eyes.py --ci fetches this folder. Each run ADDS its folder
+        # (fetch, commit, push, retry on a race); only the newest 12 folders are kept.
+        if: always() && env.ANIM != ''
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          dest="anim-${GITHUB_RUN_ID}"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          pushed=0
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf "$RUNNER_TEMP/pub" && mkdir -p "$RUNNER_TEMP/pub"
+            ( cd "$RUNNER_TEMP/pub" || exit 1
+              git init -q -b eyes-anim
+              git config user.name "eyes-bot"
+              git config user.email "eyes-bot@users.noreply.github.com"
+              if git fetch -q --depth=1 "$url" eyes-anim 2>/dev/null; then git checkout -q -B eyes-anim FETCH_HEAD; fi
+              mkdir -p "$dest"
+              cp -r "$GITHUB_WORKSPACE"/out/anim-sheets/. "$dest"/ 2>/dev/null || true
+              cp "$GITHUB_WORKSPACE"/out/eyes-lines.txt "$dest"/ 2>/dev/null || true
+              grep -h "\[Eyes\] 20_anim\|anim-run\|anim-beat\|anim-leg\|render hook\|Exception" "$GITHUB_WORKSPACE"/out/latest.log 2>/dev/null | head -400 > "$dest"/anim-log.txt || true
+              # the first captured frame of each take, in case the sheets could not be made
+              for f in $(ls "$GITHUB_WORKSPACE"/out/bat_eyes_20_anim_*_f000.png 2>/dev/null | head -4); do cp "$f" "$dest"/; done
+              echo "- $dest: spec $ANIM, build ${BUILD_SHA::7}, $(date -u +%FT%TZ)" >> README.md
+              ls -d anim-* 2>/dev/null | sort | head -n -12 | xargs -r git rm -rq
+              git add -A
+              git commit -q -m "Eyes anim: $dest"
+              git push -q "$url" eyes-anim ) && { pushed=1; break; }
+            sleep $((attempt * 5))
+          done
+          [ "$pushed" = 1 ] && echo "::notice::[Eyes] animation sheets published to eyes-anim/$dest" \
+            || { echo "::warning::[Eyes] eyes-anim/$dest not pushed after 6 tries"; exit 1; }
+      - name: Keep the animation sheets as an artifact (anim-<run id>)
+        if: always() && env.ANIM != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: anim-${{ github.run_id }}
+          path: |
+            out/anim-sheets/**
+            out/eyes-lines.txt
+          retention-days: 7
+      - name: Keep the raw frames when the sheets could not be made
+        if: always() && env.ANIM != '' && steps.animsheets.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: anim-raw-${{ github.run_id }}
+          path: |
+            out/bat_eyes_20_anim_*.png
+            out/latest.log
+          retention-days: 3
       - name: Keep an overlays run's stills and full log as an artifact too
         if: always() && env.OVERLAYS == '1'
         uses: actions/upload-artifact@v4
@@ -528,6 +621,13 @@ jobs:
           [ "${{ steps.tour.outcome }}" = "success" ] || { echo "::error::the client step failed or timed out"; exit 1; }
           [ "${TOUR_COMPLETE:-0}" = "1" ] || { echo "::error::no '[Eyes] tour complete' in the client log"; exit 1; }
           [ "${STILLS:-0}" -ge "$MIN_STILLS" ] || { echo "::error::only ${STILLS:-0} stills (expected >= $MIN_STILLS)"; exit 1; }
+          if [ -n "${ANIM:-}" ]; then   # an animation run: frames of scene 20 and at least one sheet
+            got=$(find out -maxdepth 1 -name 'bat_eyes_20_anim_*.png' | wc -l)
+            sheets=$(find out/anim-sheets -name '*_sheet.png' 2>/dev/null | wc -l)
+            echo "::notice::[Eyes] 20_anim: $got frames, $sheets sheet(s), tested the jar of build ${BUILD_SHA::7} (run ${BUILD_RUN:-bar-dev})"
+            [ "$got" -ge 10 ] || { echo "::error::only $got animation frames (a take is ~36)"; exit 1; }
+            [ "$sheets" -ge 1 ] || { echo "::error::no animation sheet was made - see the 'Animation sheets' step"; exit 1; }
+          fi
           if [ "${FOG:-0}" = "1" ]; then   # a fog run: the three stills of scene 17 (the A/B is in the log)
             got=$(find out -name 'bat_eyes_17_fog_*.png' | wc -l)
             ls out | grep '^bat_eyes_17_' | sed 's/^/::notice::[Eyes] still /' || true

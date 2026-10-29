@@ -24,6 +24,8 @@ run "check_sail_hubs"             python3 tools/check_sail_hubs.py
 run "check_parts"                 python3 tools/check_parts.py
 run "hud_layout"                  python3 tools/hud_layout.py
 run "animation lab data"          bash -c 'for f in design/anims/*.json; do [ -e "$f" ] || continue; python3 tools/anim_lab.py "$f" --check --motion || exit 1; done'
+run "animation sheet tests"       python3 tools/test_anim_sheet.py KeyProgress Labels ComposeLabels SelectNearest Layout Tracking
+run "animation eyes tests"       python3 tools/test_anim_eyes.py Spec Log Choosing Sheet Ci
 run "dependency pins"             python3 tools/check_dep_pins.py
 run "gametest shard lists"        python3 tools/check_shards.py
 run "bot ladder report"           python3 tools/ladder_report.py --selftest

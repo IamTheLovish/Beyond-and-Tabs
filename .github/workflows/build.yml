@@ -142,6 +142,8 @@ jobs:
           if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
+        # shared runners: the wall-clock bars in test_anim_sheet.py are skipped (the equality tests still run)
+        env: { ANIM_SKIP_TIMING: "1" }
         run: pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:

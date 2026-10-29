@@ -200,6 +200,11 @@ public final class EyesDirector {
                         ticks = 0;
                         return;
                     }
+                    if (EyesAnimScene.ANIM_ONLY) {   // an animation run (eyes.yml input `anim`): only scene 20, then the end
+                        step = STEP_ANIM;
+                        ticks = 0;
+                        return;
+                    }
                     if (!STRUCTURES.isEmpty()) {   // a structure photo run: only the structures, then the end
                         step = STEP_STRUCTURES;
                         ticks = 0;
@@ -264,6 +269,19 @@ public final class EyesDirector {
                     done = EyesOverlaysScene.tick(mc);
                 } catch (Exception e) {
                     ReignOfNether.LOGGER.error("[Eyes] 18_overlays failed at tick {}, ending the tour", ticks, e);
+                    done = true;
+                }
+                if (done) {
+                    step = 15;
+                    ticks = 0;
+                }
+            }
+            case STEP_ANIM -> {
+                boolean done;
+                try {
+                    done = EyesAnimScene.tick(mc);
+                } catch (Exception e) {
+                    ReignOfNether.LOGGER.error("[Eyes] 20_anim failed at tick {}, ending the tour", ticks, e);
                     done = true;
                 }
                 if (done) {
@@ -577,6 +595,7 @@ public final class EyesDirector {
     static final boolean FOG_ONLY = Boolean.getBoolean("bat.eyes.fog");   // eyes.yml input `fog`: 02, then 17 only
     static final int STEP_OVERLAYS = 23;          // 18_overlays, EyesOverlaysScene: its own run only (input `overlays`)
     static final boolean OVERLAYS_ONLY = Boolean.getBoolean("bat.eyes.overlays");
+    static final int STEP_ANIM = 25;              // 20_anim, EyesAnimScene: its own run only (input `anim`)
     private static final int SCARS_HALF = 16;     // the pad is 33 x 33
     private static int scarsPhase = 0;
     private static long scarsNanos = 0;

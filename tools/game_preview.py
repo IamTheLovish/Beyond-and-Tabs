@@ -15,7 +15,6 @@ Faces follow ModelPart.Cube (1.20.1): top at (u+d, v), bottom at (u+d+w, v), the
 """
 import argparse
 import json
-import math
 import os
 import sys
 
@@ -41,18 +40,32 @@ if os.environ.get("LIGHT"):
     SUN = SUN / np.linalg.norm(SUN)
 
 
-def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None, alpha=None):
+class FaceTag(tuple):
+    """Where a face came from, for motion trails (tools/anim_sheet.py): `path` = the part names from the root down to the
+    part that owns the box, `pivots` = the world pivot of every part on that path (model space, y down)."""
+    __slots__ = ()
+
+    def __new__(cls, path, pivots):
+        return tuple.__new__(cls, (path, pivots))
+
+    path = property(lambda self: self[0])
+    pivots = property(lambda self: self[1])
+
+
+def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None, alpha=None, tags=None):
     """[(4 model-space vertices in Polygon order, 4 (u, v) in model pixels)] for every visible box face. Bones named in
     hide are not drawn (with their children) - what a model subclass does with part.visible. move: {bone: [dx, dy, dz]
     DSL px} added to the part's offset (ModelPart.x/y/z += in the game, y flipped); scale: {bone: [sx, sy, sz]}
     applied after its rotation (ModelPart.xScale... - children inherit it), as ModelPart.translateAndRotate does.
     alpha: {bone name prefix: 0..1} - a part whose name starts so is drawn translucent (the Bone Dragon's sail, which
-    BoneDragonRenderer draws in its own pass at SAIL_ALPHA); its faces come back as (verts, uvs, alpha) triples."""
+    BoneDragonRenderer draws in its own pass at SAIL_ALPHA); its faces come back as (verts, uvs, alpha) triples.
+    tags: pass an empty list and it gets one FaceTag per returned face (same order) - which part drew it and where the
+    parts' pivots are, so a vertex can be followed from pose to pose (the faces' order does not depend on the pose)."""
     move, scale = move or {}, scale or {}
     out = []
     I = np.eye(3)
 
-    def walk(p, M, t, hidden, a):
+    def walk(p, M, t, hidden, a, path=(), pivots=()):
         if alpha:
             for pre, av in alpha.items():
                 if p.name.startswith(pre):
@@ -74,6 +87,7 @@ def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None, alp
         M2 = M @ np.array(d2g.mat_zyx(rot))
         if p.name in scale:
             M2 = M2 @ np.diag([float(v) for v in scale[p.name]])
+        path, pivots = path + (p.name,), pivots + (t2,)
         if not hidden:
             for (x, y, z, w, h, dd, g, (u, v)) in p.boxes:
                 x0, y0, z0, x1, y1, z1 = x - g, y - g, z - g, x + w + g, y + h + g, z + dd + g
@@ -94,76 +108,124 @@ def faces_of(root, pose_mc, detail, upgrade, hide=(), move=None, scale=None, alp
                         ((v5, v6, v7, v8), (u4, w1, u5, w2))):    # SOUTH (+z, the back)
                     uvs = [(a1, b0), (a0, b0), (a0, b1), (a1, b1)]
                     out.append((verts, uvs) if a is None else (verts, uvs, a))
+                    if tags is not None:
+                        tags.append(FaceTag(path, pivots))
         for c in p.children:
-            walk(c, M2, t2, hidden, a)
+            walk(c, M2, t2, hidden, a, path, pivots)
 
     walk(root, I, np.zeros(3), False, None)
     return out
 
 
-def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
-    base = np.asarray(imgs["base"], dtype=np.float32) / 255.0
-    team = np.asarray(imgs["team"], dtype=np.float32) / 255.0
-    glow = np.asarray(imgs["glow"], dtype=np.float32) / 255.0
-    th, tw = base.shape[:2]
+_FLIP = np.array([1.0, -1.0, 1.0])
+_LIFT = np.array([0.0, 24.0, 0.0])
+
+
+def _project(faces, view):
+    """The faces seen from `view`, back faces and degenerate ones dropped: (P (k,4,3) in view space, light (k,),
+    kept (k,) indices into faces). One numpy pass for every face - the per-face Python of the first version (a cross
+    product, an inverse and a dozen small arrays each) was 60% of a render, and the framing pass of a clip rendered
+    every pose a second time just to read its bounding box (Oct 22, tools/anim_sheet.py: a sheet must take seconds)."""
+    if not faces:
+        return np.zeros((0, 4, 3)), np.zeros(0), np.zeros(0, dtype=int)
     R = np.array(view_matrix(view[0], view[1]))
-    flip = np.diag([1.0, -1.0, 1.0])           # model space (y down) -> DSL space (y up)
-    proj = []
-    for face in faces:
-        verts, uvs = face[0], face[1]
-        fa = face[2] if len(face) > 2 else 1.0
-        P = [R @ (flip @ v + np.array([0, 24.0, 0])) for v in verts]
-        n = np.cross(P[1] - P[0], P[2] - P[0])
-        nl = np.linalg.norm(n)
-        if nl < 1e-9:
-            continue
-        n = -n / nl     # Minecraft winds its polygons for y-down space: after the flip the outward normal is -cross
-        # the viewer looks along +z
-        if n[2] > 0:
-            continue
-        nw = np.linalg.inv(R) @ n                # back to DSL space for the lights
-        if SUN is not None:
-            light = min(1.0, 0.75 * max(0.0, nw @ SUN) + 0.35 + 0.10 * max(0.0, nw[1]))
-        else:
-            light = min(1.0, 0.6 * (max(0.0, nw @ L0) + max(0.0, nw @ L1)) + 0.4)
-        proj.append((P, uvs, light, fa))
-    # the translucent faces last, far to near, over the finished opaque body (the game's own translucent pass)
-    proj.sort(key=lambda f: (f[3] < 1.0, -max(p[2] for p in f[0]) if f[3] < 1.0 else 0.0))
-    if box is None:
-        xs = [p[0] for P, _, _, _ in proj for p in P]
-        ys = [p[1] for P, _, _, _ in proj for p in P]
-        box = (min(xs), max(xs), min(ys), max(ys))
+    V = np.array([f[0] for f in faces], dtype=float)                # (n, 4, 3) model space, y down
+    P = (V * _FLIP + _LIFT) @ R.T                                   # view space: R @ (flip @ v + (0, 24, 0))
+    n = np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0])
+    nl = np.linalg.norm(n, axis=1)
+    # Minecraft winds its polygons for y-down space: after the flip the outward normal is -cross; the viewer looks
+    # along +z, so a face whose normal points away (+z) is not drawn
+    keep = (nl >= 1e-9)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        n = -n / nl[:, None]
+    keep &= ~(n[:, 2] > 0)
+    kept = np.nonzero(keep)[0]
+    n = n[kept]
+    nw = n @ np.linalg.inv(R).T                                     # back to DSL space for the lights
+    if SUN is not None:
+        light = np.minimum(1.0, 0.75 * np.maximum(0.0, nw @ SUN) + 0.35 + 0.10 * np.maximum(0.0, nw[:, 1]))
+    else:
+        light = np.minimum(1.0, 0.6 * (np.maximum(0.0, nw @ L0) + np.maximum(0.0, nw @ L1)) + 0.4)
+    return P[kept], light, kept
+
+
+def bbox(faces, view):
+    """The (min x, max x, min y, max y) render() would frame this pose with, without drawing anything."""
+    P, _, _ = _project(faces, view)
+    if not len(P):
+        return (0.0, 0.0, 0.0, 0.0)
+    return (float(P[:, :, 0].min()), float(P[:, :, 0].max()), float(P[:, :, 1].min()), float(P[:, :, 1].max()))
+
+
+def view_map(box, size):
+    """(scale, ox, oy): view-space (x, y) -> pixel (ox + x * scale, oy - y * scale) for a render framed by `box`."""
     lo_x, hi_x, lo_y, hi_y = box
     span = max(hi_x - lo_x, hi_y - lo_y) * 1.08
     sc = size / span
     ox = (size - (hi_x - lo_x) * sc) / 2 - lo_x * sc
     oy = size - ((size - (hi_y - lo_y) * sc) / 2) + lo_y * sc
+    return sc, ox, oy
+
+
+def _atlas(imgs):
+    """The three atlas layers as float arrays, converted ONCE per atlas (three 2048 x 1024 RGBA conversions were 70 ms of
+    every render's 140), and whether the team / glow layers paint anything at all (when they do not, those passes are
+    skipped - the result is the same, the arithmetic on all-transparent texels being a no-op)."""
+    got = imgs.get("_f32")
+    if got is None:
+        base = np.asarray(imgs["base"], dtype=np.float32) / 255.0
+        team = np.asarray(imgs["team"], dtype=np.float32) / 255.0
+        glow = np.asarray(imgs["glow"], dtype=np.float32) / 255.0
+        got = (base, team, glow, bool((team[..., 3] > 0.1).any()), bool((glow[..., 3] > 0).any()))
+        imgs["_f32"] = got
+    return got
+
+
+def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
+    base, team, glow, any_team, any_glow = _atlas(imgs)
+    th, tw = base.shape[:2]
+    P, light, kept = _project(faces, view)
+    fa = np.array([(faces[i][2] if len(faces[i]) > 2 else 1.0) for i in kept], dtype=float)
+    # the translucent faces last, far to near, over the finished opaque body (the game's own translucent pass)
+    order = sorted(range(len(kept)), key=lambda i: (fa[i] < 1.0, -P[i, :, 2].max() if fa[i] < 1.0 else 0.0))
+    if box is None:
+        box = ((float(P[:, :, 0].min()), float(P[:, :, 0].max()), float(P[:, :, 1].min()), float(P[:, :, 1].max()))
+               if len(P) else (0.0, 0.0, 0.0, 0.0))
+    sc, ox, oy = view_map(box, size)
     img = np.zeros((size, size, 3), dtype=np.float32)
     img[:] = (0.50, 0.62, 0.36)                 # grass-ish, so cream plate is judged on a game-like ground
     zbuf = np.full((size, size), np.inf, dtype=np.float32)
     teamhit = np.zeros((size, size), dtype=bool)              # which pixels show team colour (art-check share)
     owner = np.array(owner, dtype=np.float32)
-    for P, uvs, light, fa in proj:
-        S = [np.array([ox + p[0] * sc, oy - p[1] * sc, p[2]]) for p in P]
-        # q = S1 + a (S0 - S1) + b (S2 - S1); (u, v) = uv1 + a (uv0 - uv1) + b (uv2 - uv1)
-        e1, e2 = S[0][:2] - S[1][:2], S[2][:2] - S[1][:2]
-        det = e1[0] * e2[1] - e1[1] * e2[0]
+    # every face's screen coordinates and bounds in one go (the loop below only rasterises)
+    SX = ox + P[:, :, 0] * sc
+    SY = oy - P[:, :, 1] * sc
+    SZ = P[:, :, 2]
+    E1x, E1y = SX[:, 0] - SX[:, 1], SY[:, 0] - SY[:, 1]
+    E2x, E2y = SX[:, 2] - SX[:, 1], SY[:, 2] - SY[:, 1]
+    DET = E1x * E2y - E1y * E2x
+    X0 = np.maximum(0, np.floor(SX.min(axis=1))).astype(int)
+    X1 = np.minimum(size - 1, np.ceil(SX.max(axis=1))).astype(int)
+    Y0 = np.maximum(0, np.floor(SY.min(axis=1))).astype(int)
+    Y1 = np.minimum(size - 1, np.ceil(SY.max(axis=1))).astype(int)
+    for i in order:
+        det = DET[i]
         if abs(det) < 1e-9:
             continue
-        xs = [s[0] for s in S]
-        ys = [s[1] for s in S]
-        x0, x1 = max(0, int(math.floor(min(xs)))), min(size - 1, int(math.ceil(max(xs))))
-        y0, y1 = max(0, int(math.floor(min(ys)))), min(size - 1, int(math.ceil(max(ys))))
+        x0, x1, y0, y1 = X0[i], X1[i], Y0[i], Y1[i]
         if x1 < x0 or y1 < y0:
             continue
-        gx, gy = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
-        qx, qy = gx - S[1][0], gy - S[1][1]
-        a = (qx * e2[1] - qy * e2[0]) / det
-        b = (e1[0] * qy - e1[1] * qx) / det
+        uvs = faces[kept[i]][1]
+        # q = S1 + a (S0 - S1) + b (S2 - S1); (u, v) = uv1 + a (uv0 - uv1) + b (uv2 - uv1)
+        qx = (np.arange(x0, x1 + 1) + 0.5)[None, :] - SX[i, 1]
+        qy = (np.arange(y0, y1 + 1) + 0.5)[:, None] - SY[i, 1]
+        e1x, e1y, e2x, e2y = E1x[i], E1y[i], E2x[i], E2y[i]
+        a = (qx * e2y - qy * e2x) / det
+        b = (e1x * qy - e1y * qx) / det
         inside = (a >= 0) & (a <= 1) & (b >= 0) & (b <= 1)
         if not inside.any():
             continue
-        z = S[1][2] + a * (S[0][2] - S[1][2]) + b * (S[2][2] - S[1][2])
+        z = SZ[i, 1] + a * (SZ[i, 0] - SZ[i, 1]) + b * (SZ[i, 2] - SZ[i, 1])
         u = uvs[1][0] + a * (uvs[0][0] - uvs[1][0]) + b * (uvs[2][0] - uvs[1][0])
         v = uvs[1][1] + a * (uvs[0][1] - uvs[1][1]) + b * (uvs[2][1] - uvs[1][1])
         ti = np.clip((u * density).astype(int), 0, tw - 1)
@@ -174,19 +236,25 @@ def render(faces, imgs, density, view, size, owner, box=None, with_mask=False):
         if not ok.any():
             continue
         col = texel[..., :3].copy()
-        tm = team[tj, ti]
-        has_team = tm[..., 3] > 0.1
-        col[has_team] = tm[has_team][:, :3] * owner
-        col = col * light
-        gl = glow[tj, ti]
-        col = np.clip(col + gl[..., :3] * gl[..., 3:4] * 0.8, 0, 1)
+        has_team = None
+        if any_team:
+            tm = team[tj, ti]
+            has_team = tm[..., 3] > 0.1
+            col[has_team] = tm[has_team][:, :3] * owner
+        col = col * light[i]
+        if any_glow:
+            gl = glow[tj, ti]
+            col = np.clip(col + gl[..., :3] * gl[..., 3:4] * 0.8, 0, 1)
+        else:
+            col = np.clip(col, 0, 1)
         region = img[y0:y1 + 1, x0:x1 + 1]
-        if fa < 1.0:
-            region[ok] = region[ok] * (1.0 - fa) + col[ok] * fa
+        if fa[i] < 1.0:
+            region[ok] = region[ok] * (1.0 - fa[i]) + col[ok] * fa[i]
         else:
             region[ok] = col[ok]
         sub[ok] = z[ok]
-        teamhit[y0:y1 + 1, x0:x1 + 1][ok] = has_team[ok]
+        if has_team is not None:
+            teamhit[y0:y1 + 1, x0:x1 + 1][ok] = has_team[ok]
     if with_mask:
         return Image.fromarray((img * 255).astype(np.uint8)), box, np.isfinite(zbuf), teamhit
     return Image.fromarray((img * 255).astype(np.uint8)), box
