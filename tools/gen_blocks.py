@@ -441,6 +441,20 @@ SEED_ORDER = (
     "grass_straw_c",
     "tall_grass_straw_bottom_b",
     "tall_grass_straw_top_b",
+    "grass_m",                # r35: short grass in three sizes (PLANT_SIZES), the fern's transposed cards
+    "grass_s",
+    "grass_b_m",
+    "grass_b_s",
+    "grass_c_m",
+    "grass_c_s",
+    "grass_straw_m",
+    "grass_straw_s",
+    "grass_straw_b_m",
+    "grass_straw_b_s",
+    "grass_straw_c_m",
+    "grass_straw_c_s",
+    "fern_t",
+    "fern_b_t",
 )
 
 
@@ -1005,6 +1019,30 @@ for _v, _b in PLANT_SHAPES.items():
 for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
            "grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top", *PLANT_SHAPES):
     TARGETS[_p] = dict(TARGETS[_p], ao=0.3)
+# r35 (critic r34: tufts 5/10 RTS - "double tuft density and vary scale (3 sizes)"; "ferns and tall grass are
+# indistinguishable... give ferns a distinct silhouette/colour"):
+# - short grass in three sizes, 1.0 / 0.8 / 0.55 of the full tuft (plant_sprites.SIZES; textures _m / _s), drawn on the
+#   same card so the blades stay bold; each size a third of the grass models (GRASS_TUFTS).
+# - the short grass's body a step lighter: in game (r34 noon stills, shader preset, measured per block on the fitted
+#   ground grid: notes tufts-r35/measure) the blocks holding a tuft drew 0.958 of the lawn's luma, the lit quartile
+#   0.967. Drawn body 0.66 -> 0.71 (plant_sprites.BODY_SHORT), so the fitted mean goes 0.68 -> 0.72.
+# - ferns: a low rosette of tilted frond cards (FERN_ROSETTES). Their albedo stays at r34's 0.68 (the grass goes to
+#   0.72): the flat cards face the sun like the lawn, where the leaning grass quads get less of it, so in game they
+#   should read a touch lighter than the lawn without a value change of their own; and nearly neutral (sat 0.04: the
+#   biome tint's own green) where the grass is warm (0.12): a cooler rosette beside a yellower tuft. The _t textures
+#   are the same drawings transposed, for the cards that point along x.
+PLANT_SIZES = {"_m": plant_sprites.SIZES[1], "_s": plant_sprites.SIZES[2]}
+for _l in ("grass", "grass_straw"):
+    for _sh in ("", "_b", "_c"):
+        for _sz in PLANT_SIZES:
+            TARGETS[_l + _sh + _sz] = dict(TARGETS[_l + _sh])
+for _sh in ("", "_b", "_c"):
+    for _sz in ("", *PLANT_SIZES):
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.72)
+for _p in ("fern", "fern_b"):
+    TARGETS[_p] = dict(TARGETS[_p], sat=0.04)
+for _p in ("fern_t", "fern_b_t"):
+    TARGETS[_p] = dict(TARGETS[_p[:-2]])
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2076,23 +2114,31 @@ def m_plant(name, n):
     (plant_sprites), shapes _b / _c (PLANT_SHAPES), fitted over the whole plant (_plant_fit), and the colour and height
     under the transparent texels taken from the nearest blade (plant_sprites.bleed): mipmaps blend them into the edges
     (MC-114265; r33: 62-100% of the texels round a blade were black), and the height cliff at the cut-out's edge
-    tilted the edge texels' normals 34-40 degrees (15 inside the blade) - a rim the shader lights on one side."""
+    tilted the edge texels' normals 34-40 degrees (15 inside the blade) - a rim the shader lights on one side.
+    r35: names end in a shape (_b / _c), then a size (_m / _s, PLANT_SIZES), then _t (the drawing transposed: a fern
+    card that points along x); the fern is a rosette card (plant_sprites.fern_card)."""
     ps = plant_sprites
     straw = "straw" in name
     base = name.replace("grass_straw", "grass")
-    stem, shape = base, 0
+    transposed = base.endswith("_t")
+    if transposed:
+        base = base[:-2]
+    stem, shape, size = base, 0, 1.0
+    for suffix, sz in PLANT_SIZES.items():
+        if stem.endswith(suffix):
+            stem, size = stem[:-len(suffix)], sz
     for suffix, k in (("_b", 1), ("_c", 2)):
-        if base.endswith(suffix):
-            stem, shape = base[:-len(suffix)], k
+        if stem.endswith(suffix):
+            stem, shape = stem[:-len(suffix)], k
     rng = np.random.default_rng(SEEDS[base.replace("_top", "_bottom")])   # both halves (and layers) from one seed
     if stem == "grass":
-        full = ps.grass_clump(n, rng, variant=shape)
+        full = ps.grass_clump(n, rng, variant=shape, size=size)
     elif stem == "fern":
-        full = ps.fern(n, rng, variant=shape)
+        full = ps.fern_card(n, rng, variant=shape)
     elif stem.startswith("tall_grass"):
         full = ps.grass_clump(n, rng, tall=True, variant=shape)
     else:
-        full = ps.fern(n, rng, large=True, variant=shape)
+        full = ps.fern(n, rng, large=True)
     H, shade = full[0], full[1]
     alpha = full[3] if straw else full[2]
     if straw:   # dry straw: tan, the drawn values along the blade
@@ -2108,6 +2154,8 @@ def m_plant(name, n):
     if H.shape[0] > n:                       # a two-block plant: this texture's half
         half = slice(0, n) if stem.endswith("_top") else slice(n, 2 * n)
         H, alb, alpha = H[half], alb[half], alpha[half]
+    if transposed:
+        H, alb, alpha = H.T, alb.transpose(1, 0, 2), alpha.T
     return dict(H=H, alb=alb, alpha=alpha)
 
 
@@ -2408,9 +2456,11 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leav
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {"tinted_glass"}
 PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
-          "grass_b", "grass_c", "fern_b", "tall_grass_bottom_b", "tall_grass_top_b")   # r34: the extra shapes
+          "grass_b", "grass_c", "fern_b", "tall_grass_bottom_b", "tall_grass_top_b",   # r34: the extra shapes
+          *("grass" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES), "fern_t", "fern_b_t")   # r35
 STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
-         "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b")
+         "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b",
+         *("grass_straw" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES))                    # r35
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 
 
@@ -2422,13 +2472,9 @@ TUFTS = {
     "_b": (("x", 22.5), ("z", -45), ("x", -45)),
     "_c": (("z", 22.5), ("x", 45), ("z", -22.5), ("x", -45)),
 }
-# r31 (critic r32: "same silhouette, same size"): two smaller tufts, 0.65 of the height and reach
-TUFT_SCALE = {"_d": 0.65, "_e": 0.65}
-TUFTS["_d"] = TUFTS[""]
-TUFTS["_e"] = TUFTS["_b"]
 
 
-def _cross_elements(layers, lean, scale=1.0):
+def _cross_elements(layers, lean):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
     or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
     ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
@@ -2436,41 +2482,92 @@ def _cross_elements(layers, lean, scale=1.0):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
     els = []
     for t, tinted in layers:
-        top, reach = round(16 * scale, 3), round(7.2 * scale, 3)
-        els.append({"from": [round(8 - reach, 3), 0, 8], "to": [round(8 + reach, 3), top, 8], "shade": False,
+        els.append({"from": [0.8, 0, 8], "to": [15.2, 16.0, 8], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("north", "south")}})
-        els.append({"from": [8, 0, round(8 - reach, 3)], "to": [8, top, round(8 + reach, 3)], "shade": False,
+        els.append({"from": [8, 0, 0.8], "to": [8, 16.0, 15.2], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
         for axis, ang in (lean or ()):
             if axis == "x":
-                lo, hi, ht = round(8 - 7 * scale, 3), round(8 + 7 * scale, 3), round(14 * scale, 3)
-                els.append({"from": [lo, 0, 8], "to": [hi, ht, 8], "shade": False,
+                els.append({"from": [1.0, 0, 8], "to": [15.0, 14.0, 8], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("north", "south")}})
             else:
-                lo, hi, ht = round(8 - 7 * scale, 3), round(8 + 7 * scale, 3), round(14 * scale, 3)
-                els.append({"from": [8, 0, lo], "to": [8, ht, hi], "shade": False,
+                els.append({"from": [8, 0, 1.0], "to": [8, 14.0, 15.0], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("west", "east")}})
     return els
 
 
-def _plant_model(p, straw, lean, scale=1.0):
+def _plant_model(p, straw, lean):
     """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
         tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
         layers.append(("#straw", False))
-    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale)}
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean)}
 
 
-# r34: the sprite shape each tuft model shows - three short grasses, two ferns (tools/plant_sprites.py GRASS / FERN) -
-# so a set of planes and its 0.65 copy (_d = "", _e = _b) never show the same blades
-TUFT_SPRITES = {"grass": {"": "", "_b": "_b", "_c": "_c", "_d": "_b", "_e": "_c"},
-                "fern": {"": "", "_b": "_b", "_c": "", "_d": "_b", "_e": ""}}
+# r35 (critic r34: "vary scale (3 sizes)"): nine short-grass models, model suffix -> (its TUFTS set of leaning quads,
+# the sprite shape, the size: "" full, _m 0.8, _s 0.55 - PLANT_SIZES). Each size shows all three shapes on three
+# different quad sets, so no two models share a (quads, shape) pair, and each size is a third of the picks. r31's
+# 0.65-scaled copies (_d / _e) are gone: a smaller MODEL is read a mip level further down, its blades thinner; the
+# sizes are drawn on the card instead (plant_sprites.SIZES), the blades keeping their widths.
+GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
+               "_d": ("", "_b", "_m"), "_e": ("_b", "_c", "_m"), "_f": ("_c", "", "_m"),
+               "_g": ("", "_c", "_s"), "_h": ("_b", "", "_s"), "_i": ("_c", "_b", "_s")}
+
+
+def _fern_card(side, kind, length, half_w, y0=0.25):
+    """r35: one frond card of the fern rosette - a flat quad hinged at the crown (8, y0, 8), reaching `length` (1/16
+    block) toward side +x / -x / +z / -z and tilted up from the ground 22.5 (kind "low") or 45 ("mid") degrees.
+    plant_sprites.fern_card draws the fronds from the bottom centre of the card; a card along x shows the drawing
+    transposed (texture _t, root at u = 16) - an up face maps u to +x and v to +z, a down face u to +x and v to -z
+    (1.20.1 FaceInfo UP / DOWN), so the uv below put the root on the hinge, faces up and down (seen from either side)."""
+    tilt = 22.5 if kind == "low" else 45
+    face = {"tintindex": 0}
+    if side in ("+z", "-z"):
+        out = side == "+z"
+        z0, z1 = (8, 8 + length) if out else (8 - length, 8)
+        el = {"from": [8 - half_w, y0, z0], "to": [8 + half_w, y0, z1],
+              "rotation": {"origin": [8, y0, 8], "axis": "x", "angle": -tilt if out else tilt}}
+        tex = "#" + kind
+        up, down = ([0, 16, 16, 0], [0, 0, 16, 16]) if out else ([0, 0, 16, 16], [0, 16, 16, 0])
+    else:
+        out = side == "+x"
+        x0, x1 = (8, 8 + length) if out else (8 - length, 8)
+        el = {"from": [x0, y0, 8 - half_w], "to": [x1, y0, 8 + half_w],
+              "rotation": {"origin": [8, y0, 8], "axis": "z", "angle": tilt if out else -tilt}}
+        tex = "#" + kind + "_t"
+        up = down = [16, 0, 0, 16] if out else [0, 0, 16, 16]
+    el["shade"] = False
+    el["faces"] = {"up": dict(face, uv=up, texture=tex), "down": dict(face, uv=down, texture=tex)}
+    return el
+
+
+# r35 (critic r34: "ferns and tall grass are indistinguishable... give ferns a distinct silhouette/colour"): the fern is
+# a low, wide rosette - frond cards toward all four sides, the long LOW cards (22.5 degrees up, a long frond and two
+# short ones each) and shorter MID cards inside them (45 degrees up, a V of two): ~1.2 blocks across, ~0.4 tall, and
+# from the RTS camera its fronds face-on in a 16-armed star, where the grass is upright blades. Three asymmetric sets
+# (side, kind, length, half width), each turned at random per block by the blockstate. No straw layer.
+FERN_ROSETTES = {
+    "fern": (("+z", "low", 11.0, 6.5), ("-z", "low", 10.0, 6.5), ("+x", "low", 10.5, 6.5), ("-x", "low", 11.5, 6.5),
+             ("+z", "mid", 8.5, 6.0), ("-z", "mid", 9.0, 6.0), ("+x", "mid", 9.0, 6.0), ("-x", "mid", 8.0, 6.0)),
+    "fern_b": (("+z", "low", 12.0, 7.0), ("-z", "low", 9.5, 6.0), ("+x", "low", 10.0, 6.5), ("-x", "low", 11.0, 6.5),
+               ("+z", "mid", 8.0, 6.0), ("-z", "mid", 9.5, 6.5), ("-x", "mid", 9.0, 6.0)),
+    "fern_c": (("+z", "low", 10.5, 6.5), ("-z", "low", 11.5, 7.0), ("+x", "low", 11.0, 6.5), ("-x", "low", 9.5, 6.0),
+               ("-z", "mid", 8.5, 6.0), ("+x", "mid", 9.5, 6.5)),
+}
+
+
+def _fern_model(cards):
+    tex = {"particle": "minecraft:block/fern", "low": "minecraft:block/fern", "low_t": "minecraft:block/fern_t",
+           "mid": "minecraft:block/fern_b", "mid_t": "minecraft:block/fern_b_t"}
+    return {"ambientocclusion": False, "textures": tex, "elements": [_fern_card(*c) for c in cards]}
+
+
 # r34: two tall grasses (plant_sprites.TALL). The game picks a model from a blockstate's list by the block's seed, and
 # DoublePlantBlock.getSeed gives both halves the LOWER block's position, so index i of the lower list always stands
 # under index i of the upper one
@@ -2479,18 +2576,20 @@ TALL_BLOCKSTATES = {"tall_grass": {
     "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
     "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass" + TUFT_SPRITES["grass"][k], True, v, TUFT_SCALE.get(k, 1.0))
-       for k, v in TUFTS.items()},
-    **{"fern" + k: _plant_model("fern" + TUFT_SPRITES["fern"][k], False, v, TUFT_SCALE.get(k, 1.0))
-       for k, v in TUFTS.items()},
+    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads]) for k, (quads, sh, sz) in GRASS_TUFTS.items()},
+    **{m: _fern_model(cards) for m, cards in FERN_ROSETTES.items()},
     **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},
     **{"tall_grass_top" + k: _plant_model("tall_grass_top" + k, True, None) for k in TALL_SHAPES},
     "large_fern_bottom": _plant_model("large_fern_bottom", False, None),
     "large_fern_top": _plant_model("large_fern_top", False, None),
 }
-# short grass and ferns: one of the three tufts, turned a random quarter (12 looks), as vanilla turns nothing here
-TUFT_BLOCKSTATES = {b: [dict({"model": "minecraft:block/" + b + k}, **({"y": y} if y else {}))
-                        for k in TUFTS for y in (0, 90, 180, 270)] for b in ("grass", "fern")}
+# short grass and ferns: one of the models, turned a random quarter (36 looks of grass, 12 of fern), as vanilla turns
+# nothing here
+TUFT_BLOCKSTATES = {
+    "grass": [dict({"model": "minecraft:block/grass" + k}, **({"y": y} if y else {}))
+              for k in GRASS_TUFTS for y in (0, 90, 180, 270)],
+    "fern": [dict({"model": "minecraft:block/" + m}, **({"y": y} if y else {}))
+             for m in FERN_ROSETTES for y in (0, 90, 180, 270)]}
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its

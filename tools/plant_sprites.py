@@ -8,11 +8,16 @@ reads from a strategy camera is drawn:
 - short grass: 5-7 blades 12-16 texels wide at the base and >= 4 at 80% of their length, from one crown, so the lowest
   ~20% is one solid wedge; three height classes (~100 / 75 / 55% of the card); a 40-60 degree fan with a lean.
   22-30% of the card opaque, 60% of it in the central 60% of the width. Tall grass: 5 blades, 14-18 texels.
-- ferns: 5-6 solid fronds, the leaflets merged into scallops >= 8 texels deep, no leaflet detail.
+- ferns: 5-6 solid fronds, the leaflets merged into scallops >= 8 texels deep, no leaflet detail. r35: the one-block
+  fern is a low rosette of frond cards (FERN_CARDS, fern_card); the large fern keeps its fan (fern).
 - value, in the greyscale the biome tint multiplies (the lawn is 0.56): the body a bit lighter than the lawn, the top
   ~35% lighter still, the base no darker than the lawn - 0.06, a lighter rib along each blade; no dark outlines and no
   AO ramp (gen_blocks keeps the plants' AO light).
 - three short-grass shapes, two ferns and two tall grasses (GRASS, FERN, TALL), so neighbouring tufts differ.
+
+Round 35 (critic r34: tufts 5/10 RTS, 4/10 close - "double tuft density and vary scale (3 sizes)", "ferns and tall
+grass are indistinguishable"): short grass in three SIZES, the short grass's body a step lighter (BODY_SHORT), and the
+fern drawn as cards for a low rosette (FERN_CARDS).
 
 Each sprite is GREYSCALE with a cut-out alpha. Drawn at SS x SS sub-samples a texel and box-filtered, cut at 0.5; the
 colour under the transparent texels is the nearest blade's (bleed: MC-114265, mipmaps pull that colour into edges).
@@ -26,9 +31,16 @@ import numpy as np
 SS = 4   # sub-samples per texel side (r34: 2 -> 4)
 
 # values along a blade in the greyscale the biome colour tints; the lawn (grass_block_top) is 0.56. gen_blocks
-# (m_plant) only scales them so the plant's mean is TARGETS' luma (0.68, ~1.0x for the short grass) and sets the
+# (m_plant) only scales them so the plant's mean is TARGETS' luma (r35 short grass 0.72, ~1.0x) and sets the
 # warmth's saturation: these are the final values.
 BASE, BODY, TIP, RIB = 0.585, 0.66, 0.80, 0.045
+# r35: the short grass's body a step lighter (in game, r34 noon stills with the shipped shader preset, the blocks holding
+# a short-grass tuft drew 0.958 of the lawn's luma - blades, their gaps and their shadows; ferns 0.960)
+BODY_SHORT = 0.71
+# r35 (critic r34: "vary scale (3 sizes)"): short grass in three sizes, of the full tuft's height and reach. Drawn
+# smaller on the same card (not a smaller model): the blades keep their texel widths, so a small tuft's blades are as
+# bold at the RTS mip as a big one's (a 0.55 model would be read a mip level further down)
+SIZES = (1.0, 0.8, 0.55)
 
 # r34 shapes. pos: blades across the fan, left to right; `straw` = which of them is a dead blade (the untinted layer)
 GRASS = (
@@ -41,9 +53,15 @@ TALL = (
     dict(blades=5, fan=20, lean=-6, straw=3, width=(14, 18)),
 )
 CLASSES = (1.0, 0.75, 0.55)   # the three blade heights, of the card
-FERN = (
-    dict(fronds=6, spread=116, lean=4),
-    dict(fronds=5, spread=100, lean=-9),
+# r35 (critic r34: "ferns and tall grass are indistinguishable... give ferns a distinct silhouette"): a fern is a LOW
+# ROSETTE (gen_blocks FERN_ROSETTES): near-flat cards hinged at the crown and tilted 22.5 (LOW) or 45 (MID) degrees up
+# from the ground, one per direction, so the RTS camera sees the fronds face-on - wider than tall, where the grass is
+# upright blades. Each card carries a few fronds from its root (bottom centre): (angle from the card's axis in
+# degrees, length of the card, widest half width in texels, sideways arch). On a card tilted t, an angle a reads as
+# atan(tan a / cos t) from above: LOW's +-23 reads +-25, MID's +-35 reads +-45 - with the four directions a 16-arm star.
+FERN_CARDS = (
+    dict(fronds=((-23, 0.62, 13.0, 0.30), (23, 0.58, 13.0, 0.30), (0, 0.97, 17.0, 0.12)), period=19.0),   # LOW
+    dict(fronds=((0, 0.42, 10.0, 0.10), (-35, 0.92, 15.5, 0.30), (35, 0.88, 15.5, 0.30)), period=18.0),    # MID
 )
 LARGE_FERN = dict(fronds=6, spread=60, lean=2)
 
@@ -213,11 +231,11 @@ def _nearest_local(points, x0, x1, y0, y1, r):
     return np.sqrt(best), idx
 
 
-def _blade_shade(tone):
+def _blade_shade(tone, body=BODY):
     """Along a blade: the base a touch above the lawn, the body lighter, the top ~35% lighter still; a lighter rib;
     the blade folded along the rib, lit from the upper left (left half a touch lighter). No dark edges."""
     def fn(t, across, s):
-        v = BASE + (BODY - BASE) * _smooth(0.0, 0.3, t) + (TIP - BODY) * _smooth(0.55, 0.95, t)
+        v = BASE + (body - BASE) * _smooth(0.0, 0.3, t) + (TIP - body) * _smooth(0.55, 0.95, t)
         veins = 0.012 * np.cos(s * 2.4)          # fine parallel veins (~2.6 texels): close-ups only, gone by mip 2
         return (v + RIB * np.exp(-(across / 0.22) ** 2) - 0.025 * across + veins) * tone
     return fn
@@ -264,8 +282,10 @@ def _blade_hw(width):
     return hw
 
 
-def grass_clump(n, rng, tall=False, variant=0):
-    """Short grass (one tile) or tall grass (a 2n-tall canvas): a few bold blades from one crown (GRASS / TALL)."""
+def grass_clump(n, rng, tall=False, variant=0, size=1.0):
+    """Short grass (one tile) or tall grass (a 2n-tall canvas): a few bold blades from one crown (GRASS / TALL).
+    size (r35, short grass; SIZES): the tuft's height and reach, of the full one - the blades' tops come down and the
+    crown narrows; their widths shrink only a little (0.8 + 0.2 size), so >= 4 texels at 80% of a blade stays true."""
     spec = (TALL if tall else GRASS)[variant]
     h = 2 * n if tall else n
     cv = Canvas(n, h)
@@ -280,19 +300,22 @@ def grass_clump(n, rng, tall=False, variant=0):
         straw = i == spec["straw"]
         lo, hi = spec["width"]
         width = lo - 2.0 if straw else lo + (hi - lo) * rng.random()     # a dead blade is narrower
+        width *= 0.8 + 0.2 * size
         c = min(cls[i], 0.75) if straw else cls[i]                  # a dead blade is never the tallest
-        top = h - c * (h - 3) * (0.96 + 0.06 * rng.random())
+        top = h - size * c * (h - 3) * (0.96 + 0.06 * rng.random())
         ang = math.radians(spec["lean"] + pos[i] * spec["fan"] / 2 + 6 * (rng.random() - 0.5))
         bend = math.copysign(0.10 + 0.35 * abs(pos[i]), ang + 1e-3) * (1.25 if c == 1.0 else 1.0)
         if tall:
             bend *= 1.4                                               # long leaves arch over
         hw = _blade_hw(width)
-        root = n / 2 + pos[i] * 4.5 + (rng.random() - 0.5) * 1.5
+        crown = size                                                   # a smaller tuft from a narrower crown
+        root = n / 2 + pos[i] * 4.5 * crown + (rng.random() - 0.5) * 1.5 * crown
         pts = _reach(root, h + 1.0, top, ang, bend, n, hw)
         tone = 0.97 + 0.06 * depth[i] + 0.04 * (rng.random() - 0.5)
         blades.append((-1.0 if straw else depth[i], pts, hw, tone, width, straw))
+    body = BODY if tall else BODY_SHORT
     for d, pts, hw, tone, width, straw in sorted(blades, key=lambda b: b[0]):   # back to front, the straw at the back
-        cv.ribbon(pts, hw, _blade_shade(tone), 0.3 + 0.7 * max(0.0, d), width / 2 + 1, layer=1 if straw else 0)
+        cv.ribbon(pts, hw, _blade_shade(tone, body), 0.3 + 0.7 * max(0.0, d), width / 2 + 1, layer=1 if straw else 0)
     return cv.layers()
 
 
@@ -318,21 +341,51 @@ def _frond_shade(tone, wmax):
     return fn
 
 
-def fern(n, rng, large=False, variant=0):
-    """Fern (one tile) or large fern (2n tall): 5-6 solid fronds from one crown, arching out, the outer ones drooping."""
-    spec = LARGE_FERN if large else FERN[variant]
-    h = 2 * n if large else n
+def fern_card(n, rng, variant=0):
+    """r35: one card of the fern rosette (FERN_CARDS: 0 = LOW, 1 = MID): solid scalloped fronds from the root at the
+    bottom centre, each arching sideways away from the card's axis, drawn back to front in the listed order."""
+    spec = FERN_CARDS[variant]
+    cv = Canvas(n, n)
+    k = len(spec["fronds"])
+    for i, (deg, frac, wmax, arch) in enumerate(spec["fronds"]):
+        ang = math.radians(deg + 4 * (rng.random() - 0.5))
+        side = math.copysign(1.0, deg) if deg else (1.0 if rng.random() < 0.5 else -1.0)
+        bend = side * arch * (0.85 + 0.3 * rng.random())
+        length = frac * n * (0.94 + 0.06 * rng.random())
+        hw = _frond_hw(length, wmax, 2.5, spec["period"], rng.random())
+        root = n / 2 + 0.6 * side * (1 if deg else 0)
+        bound = (lambda t, w=wmax: w * min(1.0, 2.5 * t))
+        pts = _curve(root, n + 1.0, length, ang, bend)
+        for _ in range(24):
+            kk = len(pts)
+            if all(2 + bound(j / (kk - 1)) <= x <= n - 2 - bound(j / (kk - 1)) and y >= 2
+                   for j, (x, y) in enumerate(pts)):
+                break
+            ang *= 0.92
+            bend *= 0.9
+            length *= 0.98
+            pts = _curve(root, n + 1.0, length, ang, bend)
+        tone = 0.97 + 0.06 * (i / max(1, k - 1)) + 0.04 * (rng.random() - 0.5)
+        cv.ribbon(pts, hw, _frond_shade(tone, wmax), 0.3 + 0.7 * i / max(1, k - 1), wmax + 1)
+    return cv.result()
+
+
+def fern(n, rng, large=True):
+    """The large fern (2n tall): 6 solid fronds from one crown, arching out, the outer ones drooping. (Until r34 this
+    drew the one-block fern too, as 5-6 fronds on crossed quads; r35 draws that as rosette cards, fern_card.)"""
+    spec = LARGE_FERN
+    h = 2 * n
     cv = Canvas(n, h)
     k = spec["fronds"]
     pos = np.linspace(-1, 1, k) + (rng.random(k) - 0.5) * 0.15
     depth = rng.permutation(k) / max(1, k - 1)
-    wmax, rach, period = (14.0, 3.0, 19.0) if large else (12.0, 2.5, 15.0)
+    wmax, rach, period = 14.0, 3.0, 19.0
     fronds = []
     for i in range(k):
         ang = math.radians(spec["lean"] + pos[i] * spec["spread"] / 2 + 6 * (rng.random() - 0.5))
-        bend = math.copysign((0.35 if large else 0.30) + (0.55 if large else 0.45) * abs(pos[i]), ang + 1e-3)
+        bend = math.copysign(0.35 + 0.55 * abs(pos[i]), ang + 1e-3)
         # the central fronds long and upright, the outer ones shorter and drooping: a fan, not a V of two
-        length = (1.80 if large else 0.92) * n * (1.0 - 0.40 * abs(pos[i]) ** 1.5) * (0.92 + 0.08 * rng.random())
+        length = 1.80 * n * (1.0 - 0.40 * abs(pos[i]) ** 1.5) * (0.92 + 0.08 * rng.random())
         hw = _frond_hw(length, wmax, rach, period, rng.random())
         root = n / 2 + pos[i] * 3.0
         bound = (lambda t, w=wmax: w * min(1.0, 2.5 * t))   # the frond's reach across, for the edge check
