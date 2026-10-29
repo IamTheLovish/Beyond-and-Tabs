@@ -5,9 +5,11 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.registrars.ParticleRegistrar;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -34,8 +36,18 @@ public class AmbientLifeClientEvents {
     private static final int FIREFLY_CAP = 45;
     private static final int SAMPLES = 8;          // columns tried per pass
 
+    private static ClientLevel lastLevel;
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
+        if (evt.phase == TickEvent.Phase.END && MC.level != lastLevel) {
+            // a world or dimension change clears the particle engine without calling remove(): count again from zero,
+            // or the stale counts would hold the spawner at its caps for the rest of the session
+            lastLevel = MC.level;
+            AmbientCritterParticle.butterflies = 0;
+            AmbientCritterParticle.fireflies = 0;
+            AmbientBirdParticle.birds = 0;
+        }
         if (evt.phase != TickEvent.Phase.END || MC.level == null || MC.player == null || MC.isPaused())
             return;
         if (MC.level.getGameTime() % PERIOD != 0 || !DisplaySettings.ambientLife()
@@ -78,7 +90,7 @@ public class AmbientLifeClientEvents {
     }
 
     private static final int FLOCK_ODDS = 160;      // one pass in this many starts a flock: about one every 40 s
-    private static final int BIRD_CAP = 14;         // two flocks at most
+    private static final int BIRD_CAP = 18;         // a flock starts only while birds <= cap - 3 (15), so the most alive is 15 + 7 = 22 briefly
     private static final float FLOCK_ZOOM = 120;    // past this a bird is a pixel
 
     /**
@@ -87,7 +99,7 @@ public class AmbientLifeClientEvents {
      * 0.3-0.4 blocks a tick.
      */
     private static void maybeFlock(double[] f, double r, float zoom) {
-        if (zoom > FLOCK_ZOOM || AmbientBirdParticle.birds > BIRD_CAP - 3 || RANDOM.nextInt(FLOCK_ODDS) != 0)
+        if (zoom > FLOCK_ZOOM || MC.level.dimension() != Level.OVERWORLD || AmbientBirdParticle.birds > BIRD_CAP - 3 || RANDOM.nextInt(FLOCK_ODDS) != 0)
             return;
         flock(f, r, 0);
     }
@@ -97,7 +109,7 @@ public class AmbientLifeClientEvents {
      * still can show birds without waiting on the odds. RTS view only; does nothing at night or in rain.
      */
     public static void flockNow(double along) {
-        if (MC.level == null || MC.player == null || !OrthoviewClientEvents.isEnabled() || MC.level.isRaining()
+        if (MC.level == null || MC.player == null || !OrthoviewClientEvents.isEnabled() || MC.level.isRaining() || MC.level.dimension() != Level.OVERWORLD
             || !AmbientLifeMath.isDay(MC.level.getDayTime()))
             return;
         float zoom = OrthoviewClientEvents.getZoom();

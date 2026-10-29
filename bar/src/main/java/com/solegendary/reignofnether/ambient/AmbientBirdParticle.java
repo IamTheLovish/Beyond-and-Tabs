@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.ambient;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -10,6 +11,7 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -100,7 +102,11 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         // the bird itself, written here rather than through SingleQuadParticle.render: through that path the bird drew
         // pure black in the eyes runs (pixels 0,0,0 with any sprite colour or light - 40739251237, 40744639247; the
         // pack's particle optimiser hooks it), so its own quad, camera-facing and rolled, the same maths as vanilla
-        renderBillboard(buffer, camera, partialTicks);
+        // fog of war: the SingleQuadParticle mixin never sees this render(), so the check is here - the bird is hidden
+        // where its own column is not visible, and the shadow where the ground under IT is not (the shadow follows
+        // the live ground height, which would leak the terrain of fogged ground)
+        if (!fogged(x, y, z))
+            renderBillboard(buffer, camera, partialTicks);
         // the shadow: a flat quad on the ground under the bird, offset away from the sun, both windings (no culling
         // question from any camera angle)
         double bx = Mth.lerp(partialTicks, xo, x), by = Mth.lerp(partialTicks, yo, y), bz = Mth.lerp(partialTicks, zo, z);
@@ -108,6 +114,8 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         if (h < 1 || h > 80)
             return;
         double sx = bx + AmbientLifeMath.shadowOffsetX(h, level.getSunAngle(partialTicks));
+        if (fogged(sx, groundY, bz))
+            return;
         Vec3 cam = camera.getPosition();
         // a quarter block up: at the ground itself the short grass hid it (critic r31: "shadows invisible")
         float cx = (float) (sx - cam.x), cy = (float) (groundY + 0.25 - cam.y), cz = (float) (bz - cam.z);
@@ -118,9 +126,11 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         float rx = -fz, rz = fx;                                   // a horizontal perpendicular
         TextureAtlasSprite sh = sprites.get(3, 3);
         float u0 = sh.getU0(), u1 = sh.getU1(), v0 = sh.getV0(), v1 = sh.getV1();
-        // drawn in both windings, and where the renderer culls nothing both layers land: half the alpha each (the plain
-        // lane's shadows came out solid black at 0.9, eyes run 40760015987)
-        float a = alpha * 0.5f;
+        // one winding only: the reversed one below faces up (the corners above run clockwise seen from above, and
+        // vanilla's front face is counter-clockwise), so it shows from the RTS camera, and a shadow seen from under
+        // the ground is not wanted. Two layers at half alpha (r3) stacked to 0.75 where nothing culls; the plain lane's
+        // shadows came out solid black at 0.9 (eyes run 40760015987), so this one layer takes a lighter 0.6
+        float a = alpha * 0.6f;
         int light = SKY_LIGHT;
         // corners: head-left, head-right, tail-right, tail-left (texture top = head)
         float[][] c = {
@@ -128,8 +138,6 @@ public class AmbientBirdParticle extends TextureSheetParticle {
             { cx + (fx + rx) * s, cz + (fz + rz) * s, u1, v0 },
             { cx + (-fx + rx) * s, cz + (-fz + rz) * s, u1, v1 },
             { cx + (-fx - rx) * s, cz + (-fz - rz) * s, u0, v1 } };
-        for (int i = 0; i < 4; i++)
-            vert(buffer, c[i], cy, a, light);
         for (int i = 3; i >= 0; i--)
             vert(buffer, c[i], cy, a, light);
     }
@@ -149,6 +157,11 @@ public class AmbientBirdParticle extends TextureSheetParticle {
             org.joml.Vector3f v = new org.joml.Vector3f(c[0], c[1], 0).rotate(q).mul(size).add(px, py, pz);
             buffer.vertex(v.x(), v.y(), v.z()).uv(c[2], c[3]).color(rCol, gCol, bCol, alpha).uv2(SKY_LIGHT).endVertex();
         }
+    }
+
+    private static boolean fogged(double x, double y, double z) {
+        return FogOfWarClientEvents.isEnabled()
+            && !FogOfWarClientEvents.isInBrightChunk(new BlockPos(Mth.floor(x), Mth.floor(y), Mth.floor(z)));
     }
 
     private static void vert(VertexConsumer b, float[] c, float y, float a, int light) {

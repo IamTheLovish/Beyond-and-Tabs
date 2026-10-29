@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.ambient;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
+import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
@@ -7,9 +10,11 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -108,6 +113,34 @@ public class AmbientCritterParticle extends TextureSheetParticle {
                 butterflies = Math.max(0, butterflies - 1);
         }
         super.remove();
+    }
+
+    /**
+     * Our own quad rather than SingleQuadParticle.render (that path drew the #334 birds pure black under the pack's
+     * particle optimiser, eyes runs 40739251237 / 40744639247): camera-facing, vanilla's corner order and uv, light from
+     * getLightColor (the world's for a butterfly, full bright for a firefly). The fog-of-war mixin only covers
+     * SingleQuadParticle.render, so the check is here too.
+     */
+    @Override
+    public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
+        if (alpha <= 0.002f)
+            return;
+        if (FogOfWarClientEvents.isEnabled()
+            && !FogOfWarClientEvents.isInBrightChunk(new BlockPos(Mth.floor(x), Mth.floor(y), Mth.floor(z))))
+            return;
+        Vec3 cam = camera.getPosition();
+        float px = (float) (Mth.lerp(partialTicks, xo, x) - cam.x);
+        float py = (float) (Mth.lerp(partialTicks, yo, y) - cam.y);
+        float pz = (float) (Mth.lerp(partialTicks, zo, z) - cam.z);
+        org.joml.Quaternionf q = new org.joml.Quaternionf(camera.rotation());
+        float size = getQuadSize(partialTicks);
+        int light = getLightColor(partialTicks);
+        float u0 = getU0(), u1 = getU1(), v0 = getV0(), v1 = getV1();
+        float[][] corners = { { -1, -1, u1, v1 }, { -1, 1, u1, v0 }, { 1, 1, u0, v0 }, { 1, -1, u0, v1 } };
+        for (float[] c : corners) {
+            org.joml.Vector3f v = new org.joml.Vector3f(c[0], c[1], 0).rotate(q).mul(size).add(px, py, pz);
+            buffer.vertex(v.x(), v.y(), v.z()).uv(c[2], c[3]).color(rCol, gCol, bCol, alpha).uv2(light).endVertex();
+        }
     }
 
     @Override
