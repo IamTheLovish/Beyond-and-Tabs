@@ -281,6 +281,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GyrocopterGunshipRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.DRILL_BURROWER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DrillBurrowerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REPAIR_CRAWLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.RepairCrawlerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SOUL_ENGINEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SoulEngineerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GHOST_FURNACE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GhostFurnaceRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.CLOCKWORK_SPIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ClockworkSpiderRenderer::new);
         // hero slice 2: the seven faction heroes, each on its body's renderer in its own skin
         evt.registerEntityRenderer(EntityRegistrar.DAWN_PALADIN_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.DawnPaladinRenderer::new);   // its own human body since Oct 21
