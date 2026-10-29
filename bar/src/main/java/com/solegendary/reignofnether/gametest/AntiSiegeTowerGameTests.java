@@ -32,8 +32,9 @@ import java.util.List;
 
 /**
  * The anti-siege tower (BAR's HLT; lovish Oct 29, design/siege_t1.md "Separate step: the HLT"): every faction's heavy
- * T1-lab tower that stops the T1 siege lobber (range 15). 1000 hp, range 20, 45 damage every 1.5 s, ground only, 450
- * metal / 650 energy, 3x7x3. Its own holder (the CI guard keeps new tests out of SkirmishGameTests). The towers are looked
+ * T1-lab tower that stops the T1 siege lobber (range 15). 1000 hp, range 20, 45 damage every 2.5 s (18 a second) and
+ * double that against siege units, ground only, 450 metal / 650 energy, 3x7x3 (lovish's balance pass, Oct 29: the
+ * first 45 every 1.5 s made the enhanced anti-raid tower pointless and closed the lobber's window too early). Its own holder (the CI guard keeps new tests out of SkirmishGameTests). The towers are looked
  * up by registry id ({@link #ID_PREFIX} + the faction's defence suffix), so each test fails with a message, not a
  * compile error, while a faction has none. Placements are made with getNewBuildingPlacement and never registered in the
  * world's building list, and the weapon is ticked synchronously with i-frames cleared, as AntiAirGameTests does.
@@ -47,7 +48,7 @@ public class AntiSiegeTowerGameTests {
     static final String ID_PREFIX = "siege_guard_";
     /** The T1 siege lobber's reach (design/siege_t1.md, Rocko model): the tower must outrange it. */
     static final int LOBBER_RANGE = 15;
-    /** The lobber's health (design/siege_t1.md): two shots must kill one. */
+    /** The lobber's health (design/siege_t1.md): one doubled shot kills one. */
     static final float LOBBER_HP = 80f;
     /** The lobber's armour. */
     static final double LOBBER_ARMOUR = 2;
@@ -72,7 +73,7 @@ public class AntiSiegeTowerGameTests {
 
     /**
      * For every live faction: an anti-siege tower registered to it with the HLT's numbers - 1000 hp, range 20, 45 damage
-     * every 1.5 s (two shots kill a lobber), no light bonus, ground only, 450 metal / 650 energy, a 3x7x3 footprint,
+     * every 2.5 s, doubled against siege units (one shot kills a lobber) and only them, ground only, 450 metal / 650 energy, a 3x7x3 footprint,
      * build time x1.2 - waiting for the same T1 labs as the enhanced anti-raid tower (a T1 builder's job, not the combat
      * engineers'). It outranges the lobber (15, shooting at the tower's near face) and the enhanced anti-raid tower, and
      * is itself outranged by the long artillery (the Bombard Crew's 22): artillery is the HLT's answer, as in BAR.
@@ -82,6 +83,8 @@ public class AntiSiegeTowerGameTests {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_hlt_stats_" + helper.absolutePos(BlockPos.ZERO).asLong();
         List<String> problems = new ArrayList<>();
+        // never added to the world: only their type and health matter to the bonus
+        Mob crew = EntityRegistrar.BOMBARD_CREW_UNIT.get().create(level), raider = EntityRegistrar.CUTLASS_RAIDER_UNIT.get().create(level);
         for (var rl : Factions.PLAYABLE_FACTIONS) {
             Faction f = Factions.getFaction(rl);
             if (!Factions.isLive(f))
@@ -104,10 +107,18 @@ public class AntiSiegeTowerGameTests {
                 problems.add(t.name + " has " + t.maxHealth + " hp (want 1000)");
             if (k.range != 20)
                 problems.add(t.name + " has range " + k.range + " (want 20)");
-            if (k.damage != 45f || k.cooldownTicks != 30)
-                problems.add(t.name + " deals " + k.damage + " every " + k.cooldownTicks + " ticks (want 45 every 30)");
-            if (k.bonusMult != 1f)
-                problems.add(t.name + " should have no bonus (x" + k.bonusMult + ")");
+            if (k.damage != 45f || k.cooldownTicks != 50 || Math.round(k.dps()) != 18)
+                problems.add(t.name + " deals " + k.damage + " every " + k.cooldownTicks + " ticks (want 45 every 50, 18 a second)");
+            if (k.bonusMult != 2f)
+                problems.add(t.name + " should deal x2 to siege units (x" + k.bonusMult + ")");
+            if (crew == null || raider == null) {
+                problems.add("could not create a Bombard Crew and a Cutlass Raider");
+            } else {
+                if (!t.isBonusTarget(crew) || t.damageAgainst(crew) != 90f)
+                    problems.add(t.name + " deals " + t.damageAgainst(crew) + " to a Bombard Crew (siege: want 90)");
+                if (t.isBonusTarget(raider) || t.damageAgainst(raider) != 45f)
+                    problems.add(t.name + " deals " + t.damageAgainst(raider) + " to a Cutlass Raider (not siege: want 45)");
+            }
             if (k.hitsAir || k.airOnly || k.splash != 0f)
                 problems.add(t.name + " should shoot single ground targets only");
             if (t.cost.metal() != 450 || t.cost.energy() != 650)
@@ -121,8 +132,8 @@ public class AntiSiegeTowerGameTests {
                 problems.add(t.name + " should be a T1 builder's job");
             if (CombatEngineers.mayStart(t))
                 problems.add("combat engineers should not raise the " + t.name);
-            if (2 * k.damage * (1 - LOBBER_ARMOUR * 0.04) < LOBBER_HP)
-                problems.add(t.name + " needs more than two shots for a lobber (" + LOBBER_HP + " hp)");
+            if (k.damage * k.bonusMult * (1 - LOBBER_ARMOUR * 0.04) < LOBBER_HP)
+                problems.add(t.name + " needs more than one shot for a lobber (" + LOBBER_HP + " hp)");
             // the lobber shells the tower's nearest block: it stands its range plus half the footprint from the centre
             if (k.range < LOBBER_RANGE + 2 || k.range <= towers.raidTowerHeavy().kind.range)
                 problems.add(t.name + " (range " + k.range + ") should outrange the lobber (" + LOBBER_RANGE
@@ -146,12 +157,12 @@ public class AntiSiegeTowerGameTests {
     }
 
     /**
-     * Every faction's anti-siege tower hits an enemy standing 17 blocks from its centre - where a range-15 lobber stands
-     * to shell its near face - and two shots kill a lobber-weight target there (80 hp, armour 2), while the enhanced
-     * anti-raid tower (range 16) cannot touch it from the same spot.
+     * Every faction's anti-siege tower hits a siege unit standing 17 blocks from its centre - where a range-15 lobber
+     * stands to shell its near face - and one doubled shot kills it at a lobber's weight (a Bombard Crew at 80 hp, armour
+     * 2), while the enhanced anti-raid tower (range 16) cannot touch it from the same spot.
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void anti_siege_tower_outranges_a_range_15_attacker_and_kills_it_in_two_shots(GameTestHelper helper) {
+    public static void anti_siege_tower_outranges_a_range_15_attacker_and_kills_a_lobber_in_one_shot(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_hlt_reach_" + helper.absolutePos(BlockPos.ZERO).asLong(), foe = owner + "_foe";
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -177,9 +188,9 @@ public class AntiSiegeTowerGameTests {
                     continue;
                 }
                 double cx = p.centrePos.getX() + 0.5, cz = p.centrePos.getZ() + 0.5;
-                Mob target = EntityRegistrar.CUTLASS_RAIDER_UNIT.get().create(level);
+                Mob target = EntityRegistrar.BOMBARD_CREW_UNIT.get().create(level);
                 if (target == null) {
-                    problems.add("could not create a Cutlass Raider");
+                    problems.add("could not create a Bombard Crew");
                     break;
                 }
                 target.moveTo(cx + 12, gy, cz + 12, 0, 0);
@@ -207,8 +218,8 @@ public class AntiSiegeTowerGameTests {
                         + ") hit a target " + Math.round(dist * 10) / 10.0 + " blocks away");
                 target.setHealth(LOBBER_HP);
 
-                // the anti-siege tower: the first shot at once, the second one cooldown later, and it is dead
-                int shots = 0, ticks = 0, limit = 2 * tower.kind.cooldownTicks + 5;
+                // the anti-siege tower: the first shot at once, and it is dead (a second would come a cooldown later)
+                int shots = 0, ticks = 0, limit = tower.kind.cooldownTicks + 5;
                 float before = target.getHealth();
                 for (; ticks < limit && target.isAlive(); ticks++) {
                     target.invulnerableTime = 0;
@@ -222,12 +233,88 @@ public class AntiSiegeTowerGameTests {
                         + Math.round(target.getHealth()) + "/" + Math.round(LOBBER_HP) + " hp after " + shots + " shots in "
                         + ticks + " ticks (range " + tower.kind.range + ", " + tower.kind.damage + " a shot, armour "
                         + target.getArmorValue() + ")");
-                else if (shots > 2)
-                    problems.add(tower.name + " needed " + shots + " shots for a lobber-weight target (want 2)");
+                else if (shots > 1)
+                    problems.add(tower.name + " needed " + shots + " shots for a lobber-weight siege unit (want 1)");
                 else
-                    ReignOfNether.LOGGER.info("[AntiSiege] {} killed an 80 hp target {} blocks away in {} shots ({} ticks)",
+                    ReignOfNether.LOGGER.info("[AntiSiege] {} killed an 80 hp siege unit {} blocks away in {} shots ({} ticks)",
                         tower.name, Math.round(dist * 10) / 10.0, shots, ticks);
                 target.discard();
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            for (Mob m : spawned)
+                m.discard();
+        }
+    }
+
+    /**
+     * Every faction's anti-siege tower shoots a siege unit before a nearer raider and deals it 90 (double), then takes
+     * the raider for 45 a shot: a lobber cannot hide behind its escort, and the escort is shot at the plain rate.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void anti_siege_tower_doubles_damage_on_siege_units_and_shoots_them_first(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_hlt_bonus_" + helper.absolutePos(BlockPos.ZERO).asLong(), foe = owner + "_foe";
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        List<Mob> spawned = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        try {
+            for (Defences.Set base : Defences.sets()) {
+                DefenceTower tower = towerOf(base);
+                if (tower == null) {
+                    problems.add(base.factionName() + " has no anti-siege tower");
+                    continue;
+                }
+                var p = place(helper, tower, new BlockPos(6, 1, 6), owner, foe);
+                if (p == null) {
+                    problems.add(tower.name + " is not a DefenceTowerPlacement");
+                    continue;
+                }
+                double cx = p.centrePos.getX() + 0.5, cz = p.centrePos.getZ() + 0.5;
+                Mob crew = AntiAirGameTests.spawn(level, EntityRegistrar.BOMBARD_CREW_UNIT.get(), cx + 8, gy, cz, foe, spawned);
+                Mob raider = AntiAirGameTests.spawn(level, EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), cx - 4, gy, cz, foe, spawned);
+                if (crew == null || raider == null) {
+                    problems.add("could not make a Bombard Crew and a Cutlass Raider");
+                    break;
+                }
+                // both outlive a shot, unarmoured, so a hit reads as the tower's number
+                for (Mob m : List.of(crew, raider)) {
+                    ((Unit) m).setHoldPosition(true);
+                    var maxHp = m.getAttribute(Attributes.MAX_HEALTH);
+                    var armour = m.getAttribute(Attributes.ARMOR);
+                    if (maxHp != null)
+                        maxHp.setBaseValue(200);
+                    if (armour != null)
+                        armour.setBaseValue(0);
+                    m.setHealth(200);
+                }
+                UnitGrid.invalidate();
+                for (int t = 0; t < tower.kind.cooldownTicks + 5 && crew.getHealth() >= 200 && raider.getHealth() >= 200; t++) {
+                    crew.invulnerableTime = 0;
+                    raider.invulnerableTime = 0;
+                    p.tickWeapon(level);
+                }
+                float crewHit = 200 - crew.getHealth(), raiderHit = 200 - raider.getHealth();
+                if (raiderHit > 0)
+                    problems.add(tower.name + " shot the raider 4 blocks away before the siege unit 8 away");
+                if (Math.abs(crewHit - 90) > 1)
+                    problems.add(tower.name + " hit a siege unit for " + crewHit + " (want 90)");
+                // the siege unit gone, the next shot is the raider's, at the plain rate
+                crew.discard();
+                UnitGrid.invalidate();
+                float raiderBefore = raider.getHealth();
+                for (int t = 0; t < tower.kind.cooldownTicks + 5 && raider.getHealth() >= raiderBefore; t++) {
+                    raider.invulnerableTime = 0;
+                    p.tickWeapon(level);
+                }
+                raiderHit = raiderBefore - raider.getHealth();
+                if (Math.abs(raiderHit - 45) > 1)
+                    problems.add(tower.name + " hit a raider for " + raiderHit + " (want 45)");
+                raider.discard();
             }
             if (problems.isEmpty())
                 helper.succeed();
