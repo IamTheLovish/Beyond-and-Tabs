@@ -45,6 +45,13 @@ class Emblem(unittest.TestCase):
         self.assertEqual({q for q, (n, _) in p.b.items() if n == "air"},     # the field in front of the panel is open
                          {(x, y, 0) for x in (-1, 0, 1) for y in (-1, 0, 1)})
 
+    def test_flush_field(self):
+        """recess=False: the panel in the frame's plane (a recessed field read dark-in-dark from the camera, r1)."""
+        p = B.emblem(recess=False)
+        self.assertEqual({q[2] for q in p.b}, {0})
+        self.assertEqual(p.b[(0, 0, 0)][0], "red_terracotta")
+        self.assertEqual(p.b[(1, 1, 0)][0], "quartz_bricks")
+
 
 if __name__ == "__main__":
     unittest.main()

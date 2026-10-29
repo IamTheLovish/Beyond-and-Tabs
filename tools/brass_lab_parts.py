@@ -549,16 +549,18 @@ def pinnacle(h=3, shaft="polished_blackstone_brick_wall", tip="waxed_cut_copper_
     return p
 
 
-def emblem(frame="blackstone", field="quartz_bricks", cross="red_terracotta"):
+def emblem(frame="blackstone", field="quartz_bricks", cross="red_terracotta", recess=True):
     """The pavilion emblem (ref39's pediment panel, ref18's gable star): a 5 x 5 dark frame in the wall's face plane
-    (z 0) round a 3 x 3 panel set one back (z -1): a red cross on a cream field. The cells in front of the panel are
-    air (the recess), so placing it carves the wall it lands on."""
+    (z 0) round a 3 x 3 panel: a red cross on a cream field. recess: the panel set one back (z -1) with air in front
+    of it, so placing it carves the wall it lands on; recess=False sets it flush in the frame's plane (round 2: the
+    recessed panel read dark-in-dark from the camera)."""
     p = new()
     for x in range(-2, 3):
         for y in range(-2, 3):
             if abs(x) == 2 or abs(y) == 2:
                 p.set(x, y, 0, frame)
-            else:
+                continue
+            if recess:
                 p.set(x, y, 0, "air")
-                p.set(x, y, -1, cross if x == 0 or y == 0 else field)
+            p.set(x, y, -1 if recess else 0, cross if x == 0 or y == 0 else field)
     return p

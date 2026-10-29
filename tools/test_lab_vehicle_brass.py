@@ -142,5 +142,69 @@ class EngineShedT1Detail(unittest.TestCase):
         self.assertEqual(bad, [])
 
 
+def committed_cells(path):
+    """{(x, y, z): (name, props)} of git HEAD's copy of a design file (a regenerated file can't vouch for itself), or
+    None outside git."""
+    import subprocess
+    import preview_structure as PS
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    try:
+        data = subprocess.run(["git", "show", "HEAD:" + path], capture_output=True, check=True, cwd=root_dir).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    with tempfile.NamedTemporaryFile(suffix=".nbt") as f:
+        f.write(data)
+        f.flush()
+        root = PS.load_nbt(f.name)
+    pal = root["palette"]
+    return {tuple(b["pos"]): (str(pal[b["state"]]["Name"]).split(":")[-1],
+                              {k: str(v) for k, v in pal[b["state"]].get("Properties", {}).items()})
+            for b in root["blocks"]}
+
+
+# THE KEEPS (critic, round 1): boxes (x0, x1, y0, y1, z0, z1), inclusive, that later rounds must not change - each
+# cell's block AND state equal to the committed design/vehicle_labs/brass_t1.nbt
+KEEPS = {
+    "R4 hall roof N": (0, 10, 7, 10, 3, 7), "R4 hall roof S": (0, 10, 7, 10, 17, 21),
+    "R3 cornice + candles N": (0, 0, 6, 7, 0, 6), "R3 cornice + candles S": (0, 0, 6, 7, 18, 24),
+    "R7 eye": (2, 3, 14, 16, 11, 13),
+    "R9 shed lit slot": (11, 16, 1, 4, 23, 24),
+}
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class EngineShedT1Keeps(unittest.TestCase):
+    """Round 2 must not regress what round 1's critic kept: frozen cell for cell against git HEAD's brass_t1.nbt."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        out = os.path.join(cls.tmp.name, "brass_t1.nbt")
+        cls.got = {q: (n, {k: str(v) for k, v in p.items()}) for q, (n, p) in L.write(L.detail(), out).b.items()}
+        cls.want = committed_cells(L.OUT_T1)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def setUp(self):
+        if self.want is None:
+            self.skipTest("no committed brass_t1.nbt (not in git)")
+
+    def test_keeps_cell_for_cell(self):
+        for name, (x0, x1, y0, y1, z0, z1) in KEEPS.items():
+            box = [(x, y, z) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1) for z in range(z0, z1 + 1)]
+            diff = [q for q in box if self.got.get(q) != self.want.get(q)]
+            self.assertEqual(diff, [], name)
+
+    def test_the_eight_bay_candles(self):
+        lit = sorted(q for q, (n, _) in self.got.items() if n.endswith("candle"))
+        self.assertEqual(lit, [(0, 7, z) for z in L.ARCH_Z])
+
+    def test_every_brass_cell_kept(self):
+        brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper"))
+        self.assertTrue(brass)
+        self.assertEqual([q for q in brass if self.got.get(q) != self.want[q]], [])
+
+
 if __name__ == "__main__":
     unittest.main()

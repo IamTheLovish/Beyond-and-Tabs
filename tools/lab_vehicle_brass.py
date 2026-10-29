@@ -407,24 +407,31 @@ def base_paint(g):
 
 
 def arcade(g):
-    """R1 + R2 + R3 on the west face, halls and wings (z 0..6, 18..24): pier columns 1 proud at x 0 on the odd
-    columns (a tuff plinth, an andesite base, a blackstone-brick shaft, an andesite capital - ref39), a recessed bay
-    on every ARCH_Z column (a tuff sill, open y 2..4, its back a red terracotta panel with a calcite eye, a dark
-    stair head); over it the pale cornice (upside-down quartz stairs at x 0) with one white light per bay, and the
-    frieze above the cornice where the wings show it (red, a chiseled blackstone motif over every pier)."""
+    """R1 + R2 + R3 on the west face, halls and wings (z 0..6, 18..24), in horizontal courses (round 1's
+    per-column pale / grey alternation read as a checkerboard, speckle 58 %): R1 one continuous tuff plinth at
+    y 0 (x 0, the whole front but the lane); the pier columns 1 proud at x 0 on the odd columns (brass_lab_parts
+    .pilaster: a polished andesite base at y 1, a blackstone-brick shaft, an upside-down andesite stair capital at
+    y 5 - ref39), the capitals run on over the bays as one impost course; each bay (ARCH_Z) stepped back in 3
+    planes - open at x 0..1 y 1..3, a blackstone-brick stair head at x 1 y 4 under the impost, at its back (x 2) a
+    red terracotta panel y 1..2 under a calcite eye (y 3); over it the pale cornice (upside-down quartz stairs at x 0) with one white light per bay, carried onto the
+    buttress face, and the frieze above the cornice where the wings show it."""
     import brass_lab_parts as B
+    for z in range(SZ):
+        if z not in LANE_Z:
+            put(g, (0, 0, z), "tuff")
     for z in [z for z in range(SZ) if z < 7 or z > 17]:
         if z in ARCH_Z:
-            put(g, (1, 1, z), "polished_blackstone")      # the bay's sill: dark, the grey plinth runs under piers
-            for y in (2, 3, 4):
+            for y in (1, 2, 3):
                 g.clear(1, y, z)
-            for y, n in ((2, "red_terracotta"), (3, "calcite"), (4, "cracked_polished_blackstone_bricks")):
+            stair(g, (1, 4, z), "dark", "east", "top")    # the head: a dark stair at x 1 y 4 stepped back under
+            put(g, (1, 5, z), FAM["dark"][0])             # the impost - the piers' capitals run on over the bays
+            stair(g, (0, 5, z), "andesite", "east", "top")    # as one andesite course at x 0 y 5
+            for y, n in ((1, "red_terracotta"), (2, "red_terracotta"), (3, "calcite"),
+                         (4, "cracked_polished_blackstone_bricks")):
                 put(g, (2, y, z), n)
-            stair(g, (1, 5, z), "dark", "east", "top")
             candle(g, (0, 7, z))
         else:
             stamp(g, B.pilaster(5), (0, 1, z), 1)
-            put(g, (0, 0, z), "tuff")                   # the pier's footing; the lawn stays in front of the bays
         stair(g, (0, 6, z), "quartz", "east", "top")
         if (z < 3 or z > SZ - 4) and (1, 7, z) in g.b and g.b[(1, 7, z)][0] == FAM["red"][0]:   # wings only
             put(g, (1, 7, z), "chiseled_polished_blackstone" if z % 2 else "red_terracotta")
@@ -441,7 +448,7 @@ def gables(g):
         Z, F = side_maps(s)
         zf, zi = Z(0), Z(1)
         for x in range(1, HALL_X[1] + 1):
-            put(g, (x, 1, zf), "tuff")
+            put(g, (x, 1, zf), "polished_andesite")    # the arcade's base course, round the corner (R1 under it)
             if x >= 3 and x % 2 == 1:                   # a pier in the face plane
                 for y in (2, 3, 4):
                     put(g, (x, y, zf), FAM["dark"][0])
@@ -462,7 +469,11 @@ def gables(g):
                 q = (x, y, zf)
                 if q in g.b and shape_of(g.b[q][0]) == 0:
                     g.b[q] = ("red_terracotta" if y % 2 == 0 else "mangrove_planks", {})
-        stamp(g, B.emblem(), (4, 10, zf), 2 if s == 0 else 0)
+        for x in range(1, WING_X[1] + 1):              # a smooth-stone string course under the emblem
+            put(g, (x, 8, zf), "smooth_stone_slab", type="top", waterlogged="false")
+        # the emblem flush in the gable's face (round 1's recessed panel read dark-in-dark): a 3 x 3 quartz field
+        # x 3..5, y 10..12 with a red cross, in a blackstone frame x 2..6, y 9..13
+        stamp(g, B.emblem(recess=False), (4, 11, zf), 2 if s == 0 else 0)
 
 
 def wing_roofs(g):
@@ -548,18 +559,22 @@ def tower(g):
     paint(g, (2, 16, 12), "diorite")
     g.clear(2, 15, 12)
     put(g, (3, 15, 12), "red_nether_bricks")
-    # R8 the panel grid (front face x 3, y 19..22): a dark lattice row, a row of three red panels with the lit slot
-    # in the middle, a lattice row, two red stair panels either side of a dark mullion; the point dark, a brass tip
-    for z in (11, 12, 13):
-        put(g, (3, 19, z), "polished_blackstone")
-        paint(g, (3, 21, z), "flat")
-        paint(g, (3, 22, z), "dark" if z == 12 else "mangrove")
-    put(g, (3, 20, 11), "red_terracotta")
-    put(g, (3, 20, 13), "red_terracotta")
+    # R8 the lattice inside the frozen outline (round 1 read as stripes): two 1-wide dark verticals at z 11 / 13
+    # from y 19 to the cap on a dark sill row (y 19), red terracotta panels between them (z 12 at y 19 and y 21..22,
+    # round the lit slot at y 20), the point dark (y 24) under the brass tip. The dark role is varied by texture
+    # (ref44) so no block passes 40 %: blackstone bricks y 19..20, polished blackstone y 21..23, rough blackstone y 24
+    for z, fam in ((10, "dark"), (11, "dark"), (12, "red"), (13, "dark"), (14, "dark")):   # row 19: the sill
+        paint(g, (3, 19, z), fam)
+    put(g, (3, 19, 12), "red_terracotta")
+    for y in (20, 21, 22, 23):
+        for z in (11, 13):
+            paint(g, (3 if y < 23 else 4, y, z), "dark" if y == 20 else "flat")
+    put(g, (3, 21, 12), "red_terracotta")
+    put(g, (3, 22, 12), "red_terracotta")
     g.clear(3, 20, 12)
     put(g, (4, 20, 12), LAMP, hanging="false", waterlogged="false")
-    put(g, (4, 23, 12), "red_terracotta")
-    put(g, (4, 24, 12), "polished_blackstone")
+    put(g, (4, 23, 12), FAM["flat"][0])
+    put(g, (4, 24, 12), "blackstone")
     paint(g, (4, 25, 12), "brass")
 
 
@@ -571,12 +586,12 @@ def door(g):
     rosette, and the ONE warm light in a niche high in the door; the passage ceiling banded red / pale."""
     import brass_lab_parts as B
     for zj, zb in ((8, 7), (16, 17)):
-        put(g, (0, 1, zj), "tuff")
+        put(g, (0, 1, zj), "polished_andesite")      # R1: the base course runs on under the jambs and buttresses
         for y in range(2, 8):
             put(g, (0, y, zj), FAM["dark"][0])
         for y in (8, 9):
             paint(g, (0, y, zj), "dark")
-        put(g, (0, 1, zb), "tuff")
+        put(g, (0, 1, zb), "polished_andesite")
         put(g, (0, 5, zb), "polished_andesite")
         put(g, (0, 0, zj), "tuff")
         put(g, (0, 0, zb), "tuff")
@@ -597,16 +612,16 @@ def door(g):
                 put(g, (x, y, zj), n)
         g.clear(0, 8, zb)
         stamp(g, B.pinnacle(2), (0, 8, zb), 1)
-    for z in LANE_Z:
-        for y in range(1, LANE_H + 1):
-            if z in (LANE_Z[0], LANE_Z[-1]):
-                n = "polished_deepslate"
-            elif y == 1:
-                n = "tuff"
-            elif y == LANE_H:
+    for z in LANE_Z:        # the far wall, the gate's back: a red panel in a blackstone-brick frame between the
+        for y in range(1, LANE_H + 1):                 # polished deepslate gate channels (z 9 / 15); its field
+            if z in (LANE_Z[0], LANE_Z[-1]):           # polished granite over a red terracotta dado (y 2): terracotta
+                n = "polished_deepslate"               # 9 deep renders near-black (round 1's lane: 93 % dark)
+            elif y in (1, LANE_H):
                 n = FAM["dark"][0]
+            elif y == 2:
+                n = "red_terracotta"
             else:
-                n = "cracked_polished_blackstone_bricks" if y % 2 == 0 else "polished_blackstone"
+                n = "polished_granite"
             put(g, (HALL_X[1], y, z), n)
         for x in range(2, 8):                          # the passage ceiling: red and pale bands
             if (x, LANE_H + 1, z) in g.b:
@@ -634,8 +649,8 @@ def works(g):
                 continue
             if x in (x0, x1):
                 put(g, (x, SHED_TOP, z), "polished_deepslate")
-            elif z % 3 == 0:
-                put(g, (x, SHED_TOP, z), FAM["dark"][0])
+            elif z % 3 == 0:                            # the ribs: upside-down blackstone-brick stairs
+                stair(g, (x, SHED_TOP, z), "dark", "south" if z < SZ // 2 else "north", "top")
             else:
                 g.clear(x, SHED_TOP, z)
                 put(g, (x, SHED_TOP - 1, z), "deepslate_tiles" if z % 3 == 1 else "polished_blackstone")
@@ -655,6 +670,8 @@ def works(g):
                 put(g, (x, y, zi), "deepslate_tiles")
             put(g, (x, SHED_TOP, zs), "polished_deepslate")
     put(g, (13, 2, zi), LAMP, hanging="false", waterlogged="false")
+    for x in range(x0, x1 + 1):                         # a 1-high dark parapet along the shed's south edge
+        put(g, (x, SHED_TOP + 1, zs), FAM["dark"][3])
     xc = HALL_X[1]
     for y, n in ((1, "tuff"), (2, "polished_blackstone"), (3, "polished_blackstone"), (4, "polished_blackstone")):
         put(g, (xc, y, zs), n)
