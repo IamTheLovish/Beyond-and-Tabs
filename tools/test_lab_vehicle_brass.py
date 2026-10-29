@@ -160,7 +160,8 @@ class EngineShedT1Detail(unittest.TestCase):
         r3 left the door out of its rows; with the 5-wide lane a row beside the door then held only the 4 cone cells
         z 8 9 15 16, so the two jamb cells of any symmetric arch ring scored 50 % pale - the door is in the row."""
         hall = self.front_cell(y, 5)
-        lim = hall[0] if hall else SIZE_T1[0]
+        # from the hall's wall plane (x 1) back: r8's eave course oversails to x 0 (G1), level with the cone's foot
+        lim = max(hall[0], L.HALL_X[0]) if hall else SIZE_T1[0]
         face = {}
         for z in range(7, 18):
             c = self.front_cell(y, z)
@@ -373,7 +374,7 @@ def committed_cells(path):
             for b in root["blocks"]}
 
 
-CORBEL = "polished_blackstone_brick_stairs"            # r8: R10's corbels under each tier's ledge
+CORBEL = "deepslate_brick_stairs"     # r8: R10's corbels under each tier's ledge, a dark stone apart from the ribs
 
 
 # Re-mass r3 (lovish chose option b, Oct 28) moved keeps on purpose, each still pinned:
@@ -499,13 +500,14 @@ class EngineShedR8Gates(unittest.TestCase):
     def band(self, face):
         """The wall band between the plinth (y 1) and each run's cap, seen from a camera face: per column the front-
         most cell within 2 of the wall plane, openings (glass, lights) left out. West: the arcade z 1..6, 18..23 (cap
-        y 6; the tower base and the door, z 7..17, are their own region, R6). South: the wings x 1..8 (cap y 7), the
-        hall's corner x 9 (cap y 6), the shed end x 12..15 (cap y 4); x 10..11 is the yard."""
+        y 6; the tower base and the door, z 7..17, are their own region, R6). South: the wings x 1..8 and the hall's
+        corner x 9 (cap y 6, the west front's cap line carried round the corner), the shed end x 12..15 (cap y 4);
+        x 10..11 is the yard."""
         out = {}
         if face == "west":
             cols = [(z, 6, (0, 1, 2)) for z in list(range(1, 7)) + list(range(18, 24))]
         else:
-            cols = [(x, 7 if x <= 8 else 6 if x == 9 else 4, (24, 23, 22)) for x in list(range(1, 10)) + list(range(12, 16))]
+            cols = [(x, 6 if x <= 9 else 4, (24, 23, 22)) for x in list(range(1, 10)) + list(range(12, 16))]
         for u, cap, depths in cols:
             for y in range(2, cap):
                 for d in depths:
@@ -651,8 +653,8 @@ class EngineShedR8Gates(unittest.TestCase):
     def test_g7_base_course_and_cap_line_on_every_wall_run(self):
         """A pale base course at y 1 and a cap line on every camera-face wall run: the west arcade (x 1, z 1..6,
         18..23: base y 1, cap y 6, a gutter or a pale lip 1 proud over it at x 0); the south face - the wings (z 24,
-        x 1..8: base y 1, string course y 7), the hall's corner and the shed end, both stepped back to z 23 (x 9: cap
-        y 6; x 12..15: cap y 4)."""
+        x 1..8: base y 1, the cap line y 6 carried round the corner from the west front), the hall's corner and the
+        shed end, both stepped back to z 23 (x 9: cap y 6; x 12..15: cap y 4)."""
         bad = []
         for z in list(range(1, 7)) + list(range(18, 24)):
             for q in ((1, 1, z), (1, 6, z)):
@@ -661,7 +663,7 @@ class EngineShedR8Gates(unittest.TestCase):
             lip = self.n.get((0, 6, z), "air")
             if not (pale(lip) or lip == R.SLATE["gutter"]):
                 bad.append((0, 6, z))
-        runs = [(x, 24, 7) for x in range(1, 9)] + [(9, 23, 6)] + [(x, 23, 4) for x in range(12, 16)]
+        runs = [(x, 24, 6) for x in range(1, 9)] + [(9, 23, 6)] + [(x, 23, 4) for x in range(12, 16)]
         for x, z, cap in runs:
             for q in ((x, 1, z), (x, cap, z)):
                 if not pale(self.n.get(q, "air")):

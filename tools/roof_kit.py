@@ -131,16 +131,17 @@ def shape(name):
 _STEP = {(1, 0): "east", (-1, 0): "west", (0, 1): "south", (0, -1): "north"}
 
 
-def _graded(groups, mats_seed, base=(0.55, 0.72)):
-    """groups: [course 0 = eave / lowest .. K] lists of keys in order along the course. Returns {key: tone}, the base
-    tone 55-72 % over all keys, wet (dark) low, bleached (pale) high, no chequer and no 4+ dark run in a course."""
+def _graded(groups, mats_seed, base=(0.55, 0.72), heights=None):
+    """groups: [course 0 = eave / lowest .. K] lists of keys in order along the course; `heights` (optional, one per
+    group, 0 eave .. 1 ridge) when several groups share a height. Returns {key: tone}, the base tone 55-72 % over all
+    keys, wet (dark) low, bleached (pale) high, no chequer and no 4+ dark run in a course."""
     keys = [k for g in groups for k in g]
     K = max(1, len(groups) - 1)
     for attempt in range(400):
         rng = random.Random(mats_seed * 7919 + attempt)
         out = {}
         for i, g in enumerate(groups):
-            t = i / K
+            t = heights[i] if heights else i / K
             for k, tone in zip(g, _course(rng, len(g), *_RATES(t))):
                 out[k] = tone
         three = len(keys) < 12 or set(out.values()) == {0, 1, 2}     # a roof shows all three tones
@@ -150,21 +151,40 @@ def _graded(groups, mats_seed, base=(0.55, 0.72)):
                                                                                    100 * base[1]))
 
 
-def retone(cells, mats, seed=0):
-    """Lay courses on cells that already have their shapes (a frozen cone, a clipped gable): each row (y) is a course
-    in ring order round its centre, the full / stairs / slab cells take the tone family's same shape and keep their
-    states; walls and other shapes are left as they are."""
+def retone(cells, mats, seed=0, along=None):
+    """Lay courses on cells that already have their shapes (a frozen cone, a clipped gable): the full / stairs / slab
+    cells take the tone family's same shape and keep their states; walls and other shapes are left as they are.
+    A course is each row (y) in ring order round its centre (a cone, a pyramid) or, with along="x" / "z", each
+    unbroken line of cells along that axis at one height (a gable's courses run along its ridge)."""
     rows = {}
     for q, (n, _) in cells.items():
         if shape(n) < 3:
             rows.setdefault(q[1], []).append(q)
-    groups = []
-    for y in sorted(rows):
+    groups, heights = [], []
+    ys = sorted(rows)
+    for y in ys:
         r = rows[y]
-        cx = sum(q[0] for q in r) / len(r)
-        cz = sum(q[2] for q in r) / len(r)
-        groups.append(sorted(r, key=lambda q: (round(math.atan2(q[2] - cz, q[0] - cx), 9), q)))
-    tone = _graded(groups, seed)
+        t = (y - ys[0]) / max(1, ys[-1] - ys[0])
+        if along:
+            a = {"x": 0, "z": 2}[along]
+            b = 2 - a
+            for line in sorted({q[b] for q in r}):
+                qs = sorted((q for q in r if q[b] == line), key=lambda q: q[a])
+                run = [qs[0]]
+                for q in qs[1:]:
+                    if q[a] != run[-1][a] + 1:          # a gap ends the course
+                        groups.append(run)
+                        heights.append(t)
+                        run = []
+                    run.append(q)
+                groups.append(run)
+                heights.append(t)
+        else:
+            cx = sum(q[0] for q in r) / len(r)
+            cz = sum(q[2] for q in r) / len(r)
+            groups.append(sorted(r, key=lambda q: (round(math.atan2(q[2] - cz, q[0] - cx), 9), q)))
+            heights.append(t)
+    tone = _graded(groups, seed, heights=heights)
     out = dict(cells)
     for q, t in tone.items():
         n, p = cells[q]
