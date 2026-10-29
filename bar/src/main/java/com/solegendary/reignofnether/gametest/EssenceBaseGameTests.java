@@ -478,8 +478,9 @@ public class EssenceBaseGameTests {
             try {
                 if (AutoCaster.look(level, caster, (Unit) caster) || probe.castAt != null)
                     problems.add("it cast at a building at full health");
-                for (int i = 0; i < 400 && b.getHealth() >= b.getMaxHealth() * 0.7f && b.getHealth() > 0; i++)
-                    b.destroyRandomBlocks(1);
+                // 5% of its health a step (a big building's 1-HP steps could run out of tries)
+                for (int i = 0; i < 60 && b.getHealth() >= b.getMaxHealth() * 0.7f && b.getHealth() > 0; i++)
+                    b.destroyRandomBlocks(Math.max(1, b.getMaxHealth() * 0.05));
                 if (b.getHealth() >= b.getMaxHealth() * 0.7f || b.getHealth() <= 0)
                     problems.add("setup: could not bring the building under 70% health (" + b.getHealth() + "/" + b.getMaxHealth() + ")");
                 if (AutoCaster.look(level, caster, (Unit) caster) || probe.castAt != null || Essence.get(caster) != 14)
