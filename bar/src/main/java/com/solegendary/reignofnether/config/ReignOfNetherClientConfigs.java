@@ -86,6 +86,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HUD_PLATE_OPACITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> BUILDING_AMBIENCE;
     public static final ForgeConfigSpec.ConfigValue<Boolean> AMBIENT_LIFE;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> VALLEY_MIST;
     // the moving parts drawn on buildings (building/PartRenderClientEvents, design/moving_buildings.md): -1 = not
     // chosen yet (follows BUILDING_AMBIENCE), 0 Off, 1 Low, 2 Full
     public static final ForgeConfigSpec.ConfigValue<Integer> BUILDING_ANIMATION;
@@ -224,6 +225,8 @@ public class ReignOfNetherClientConfigs {
         BUILDING_AMBIENCE = BUILDER.define("building_ambience", true);
         BUILDER.comment("Ambient life: butterflies over grass and flowers by day, fireflies over meadows at night, round where the camera looks");
         AMBIENT_LIFE = BUILDER.define("ambient_life", true);
+        BUILDER.comment("Valley mist: soft ground mist that pools in hollows, along water and under cliffs, thick at dawn, back at dusk, drifting with the wind; none at strategic zoom");
+        VALLEY_MIST = BUILDER.define("valley_mist", true);
         BUILDER.comment("Building animation: moving parts drawn on buildings (metal extractor rigs: sheave wheel, ore skip, owner pennant). 0 Off, 1 Low (nearest 24, simplified sooner), 2 Full; -1 = not chosen yet: follows building_ambience (false = Off, true = Full)");
         BUILDING_ANIMATION = BUILDER.defineInRange("building_animation", -1, -1, 2);
         BUILDER.comment("Branch wind: tree limbs drawn swaying in the wind. 0 Off (limbs are plain blocks, no cost), 1 Near (default: limbs within 60 blocks of the camera sway, the rest are plain blocks), 2 All (every limb in view sways)");

@@ -466,6 +466,8 @@ public class ClientModEvents {
                 com.solegendary.reignofnether.ambient.AmbientCritterParticle.FireflyProvider::new);
         evt.registerSpriteSet(ParticleRegistrar.BIRD.get(),
                 com.solegendary.reignofnether.ambient.AmbientBirdParticle.Provider::new);
+        evt.registerSpriteSet(ParticleRegistrar.MIST.get(),
+                com.solegendary.reignofnether.ambient.mist.MistParticle.Provider::new);
         evt.registerSpriteSet(
                 ParticleRegistrar.BIG_ENCHANT.get(),
                 BigEnchantParticle.Provider::new

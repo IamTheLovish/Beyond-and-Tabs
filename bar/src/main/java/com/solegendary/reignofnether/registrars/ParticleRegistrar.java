@@ -74,6 +74,11 @@ public class ParticleRegistrar {
             PARTICLES.register("bird",
                     () -> new SimpleParticleType(true));
 
+    // the living valley mist (ambient/mist/MistClientEvents): soft wisps that pool in hollows at dawn and dusk
+    public static final RegistryObject<SimpleParticleType> MIST =
+            PARTICLES.register("mist",
+                    () -> new SimpleParticleType(true));
+
     public static void init(FMLJavaModLoadingContext context) {
         PARTICLES.register(context.getModEventBus());
     }

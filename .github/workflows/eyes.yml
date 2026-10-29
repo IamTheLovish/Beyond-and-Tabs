@@ -63,6 +63,10 @@ on:
         description: "Ground scars instead of the tour (a world that remembers): a pad, a scripted battle and its aftermath - RTS before / after / close / far and two first-person stills (EyesDirector scene 16). Publishes to eyes-scars (-shaders)"
         type: boolean
         default: false
+      mist:
+        description: "Valley mist pilot: lets the living ground mist (ambient/mist) into the structure photos (normally kept out with ambient life) and adds a dawn RTS still per structure, 15_<name>_mist_rts (-Dbat.eyes.mist=true). Use with `structure`"
+        type: boolean
+        default: false
       fog:
         description: "Fog of war instead of the tour: fog on, a dozen marching into the dark, the surface-band vs whole-column re-mesh A/B and the fog edge stills (EyesDirector scene 17); keeps Embeddium in the plain lane. Publishes to eyes-fog (-shaders)"
         type: boolean
@@ -125,7 +129,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.mist && 'mist-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -150,8 +154,8 @@ jobs:
       # a non-default look publishes to its own branch (eyes-look-full, ...) so the lane's latest stills and its
       # approved baseline stay at the shipped setting
       # (and a Bliss tour its own: eyes-shaders-bliss - the Complementary lane's baseline stays Complementary's)
-      # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders)
-      EYES_BRANCH: ${{ format('{0}{1}{2}{3}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '') }}
+      # (and a structure-photo run its own: eyes-structures, eyes-structures-shaders; a valley mist pilot run -mist)
+      EYES_BRANCH: ${{ format('{0}{1}{2}{3}{4}', inputs.overlays && 'eyes-overlays' || inputs.scars && (inputs.shaders && 'eyes-scars-shaders' || 'eyes-scars') || inputs.fog && (inputs.shaders && 'eyes-fog-shaders' || 'eyes-fog') || inputs.structure && (inputs.shaders && 'eyes-structures-shaders' || 'eyes-structures') || (inputs.shaders && (inputs.shader_pack == 'bliss' && 'eyes-shaders-bliss' || 'eyes-shaders') || 'eyes'), inputs.pack == 'none' && '-nopack' || '', (inputs.look && inputs.look != 'default') && format('-look-{0}', inputs.look) || '', (inputs.shaders && inputs.shader_options) && '-custom' || '', inputs.mist && '-mist' || '') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -311,6 +315,14 @@ jobs:
               env.write('STRUCTURE_STILLS=%d\n' % (5 * len(entries)))   # rts, rts_close, 34, close, dusk
           print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
           EOF
+      - name: Valley mist pilot (dispatch input `mist`; the 15_<name>_mist_rts still)
+        if: inputs.mist
+        run: |
+          # appended to whatever the scene steps above set (the structure list), not replacing it
+          echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.mist=true" >> "$GITHUB_ENV"
+          # one more still per structure
+          if [ -n "${STRUCTURE_STILLS:-}" ]; then echo "STRUCTURE_STILLS=$((STRUCTURE_STILLS + STRUCTURE_STILLS / 5))" >> "$GITHUB_ENV"; fi
+          echo "::notice::[Eyes] valley mist on (-Dbat.eyes.mist=true)"
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
         if: env.SCARS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.scars=true' >> "$GITHUB_ENV"

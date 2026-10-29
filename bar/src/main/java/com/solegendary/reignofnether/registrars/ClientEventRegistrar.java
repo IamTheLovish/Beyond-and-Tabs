@@ -195,6 +195,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeybindsClientEvents.class);   // saved keys -> new defaults, once
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ambient.AmbientLifeClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ambient.mist.MistClientEvents.class);   // valley mist
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
