@@ -115,6 +115,19 @@ public final class EyesDirector {
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
+    /**
+     * No chat in the eyes rig's frames: "Disabled fog of war for all players" sat over the RTS stills (r35b, r36) -
+     * shot() cleared the chat, but only after the frame it grabs was already drawn. A player's screen at those moments
+     * has no such line.
+     */
+    @SubscribeEvent
+    public static void onChat(net.minecraftforge.client.event.ClientChatReceivedEvent evt) {
+        if (ENABLED) {
+            ReignOfNether.LOGGER.info("[Eyes] chat kept off the frames: {}", evt.getMessage().getString());
+            evt.setCanceled(true);
+        }
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (!ENABLED || evt.phase != TickEvent.Phase.END)
