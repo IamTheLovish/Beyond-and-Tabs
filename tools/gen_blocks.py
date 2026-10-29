@@ -84,7 +84,8 @@ TARGETS = {
     # sunlit grass (self-shadowing between its sprigs), so: luma -15% and the clump spread +33% (lit sprig tops, deep
     # pockets between them - the volume reads at the RTS zoom); GrassTint.CANOPY cools the foliage colour.
     "oak_leaves":       dict(luma=0.47, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.50, std=0.115, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    # birch (critic r38: "birch vs oak identity: zero at the crown"): a lighter, airier crown than the oak's
+    "birch_leaves":     dict(luma=0.58, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "spruce_leaves":    dict(luma=0.44, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
     "acacia_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
     "jungle_leaves":    dict(luma=0.46, std=0.125, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
@@ -107,7 +108,9 @@ TARGETS = {
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
     "spruce_log":       dict(luma=0.19, std=0.052, sat=0.46, tilt=26.2, smooth=40, pore=36),
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.85, std=0.140, sat=0.06, tilt=26.0, smooth=50, pore=30),
+    # r37 (critic r38: the birch trunk "renders blue-grey ... reads as steel" under Complementary): near-white bark
+    # takes the blue sky ambient in shade almost unfiltered - a step darker and a touch warmer, a rougher surface
+    "birch_log":        dict(luma=0.74, std=0.140, sat=0.09, tilt=26.0, smooth=36, pore=30),
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
     "acacia_log":       dict(luma=0.35, std=0.063, sat=0.19, tilt=26.1, smooth=40, pore=36),
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
