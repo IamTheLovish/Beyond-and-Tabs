@@ -22,7 +22,9 @@ trunk with stubby limbs and a snag top, a mossy fallen log beside it; bare oaks 
 r27 (oak pilot, critic r33 trees 3/10): the oak is rebuilt as 4-6 lumpy lobes on face-joined dark oak limbs, three
 forms (spread, twin, tall; old = a 2x2 stump splitting into two leaders), three leaf tones per lobe (oak()).
 r28 (critic r34: lime tops, the tree vanishes into the lawn): the oak crown's colour only, shapes as r27 - no azalea,
-a dark oak body, oak on the sunlit patches' cores, spruce under (oak_tones())."""
+a dark oak body, oak on the sunlit patches' cores, spruce under (oak_tones()).
+r29 (critic r35b: black-green tops, V too low, sat too high): the crown's top skin is birch sun patches in spruce -
+the two leaves with their own greyer colours - so it is lighter AND less saturated; sides dark oak, underside spruce."""
 import math
 import os
 import random
@@ -250,7 +252,8 @@ def lobe(t, c, r, up, down, rng, ragged=0.4):
                     t.leaf.add((x, y, z))
 
 
-def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.0):
+def oak_tones(t, rng, lobes, light="birch_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.7,
+              skin="spruce_leaves", cool="birch_leaves"):
     """r27 (critic r33: flat-shaded one-tone leaf cubes; r32: "two leaf tints, a darker inner shell"): each lobe gets
     the values a lit leaf mass has - sunlit patches on its top, a body, a darker underside and inner shell (spruce).
     Patches round a few spots per lobe, not pepper, so the tones read as light on a mass.
@@ -262,7 +265,19 @@ def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="s
     crown is now a darker mass: no azalea; a dark oak body; the sunlit patches oak (the lighter tinted leaf) and only
     within `core` of a spot's centre (19-34% of the top, was 51-62% azalea); the spruce underside and shell as r27.
     The random draws are r27's, in r27's order: the patches lie where they did and only their kinds change, and the
-    skirt drawn after them is unchanged - the before/after is the colour alone."""
+    skirt drawn after them is unchanged - the before/after is the colour alone.
+    r29 (critic r35b oak 5/10: "lit crown V 0.30 (hue 93-97, sat 63-65) vs target 0.38-0.45... black-green blobs; raise
+    the lit-face value to ~0.40 by DESATURATING (65 -> ~50) rather than darkening, keep the darker undersides"; lovish's
+    villa reference: foliage hue ~99, sat ~35). Measured on that still (eyes run 40812245168, tree_sampler_a_rts, my
+    HSV): the oak tops' lit faces hue 91, sat 72, V 0.48 against the lawn's hue 80, sat 63, V 0.53-0.56 - the plains
+    foliage colour (#77AB2F, sat 0.73) tints oak and dark oak alike, so no mix of those two can desaturate. The two
+    leaves with their own, greyer colours do: birch (#80A755, sat 0.49; lit in game hue 80, sat 61, V 0.57) and spruce
+    (#619961, sat 0.37; lit hue 107, sat 51, V 0.44), whose hues straddle the target. So only the TOP skin - the faces
+    the RTS camera sees lit - changes: r27's sun patches (whole, `core` 1.7) and its old dark-oak spots become birch,
+    the rest of the top spruce; the sides stay dark oak and the underside spruce. Seen from above (240-oak sweep):
+    birch 67%, spruce 33% (r28: dark oak 63%, oak 29%, spruce 9%); the linear mix of the measured lit colours predicts
+    the tops at hue 86, sat 58, V 0.53 (r28 predicted by the same model: hue 92, sat 70, V 0.48, as measured).
+    No new random draws: positions, skirt and logs stay r28's."""
     top_of = {}
     for (x, y, z) in t.leaf:
         top_of[(x, z)] = max(y, top_of.get((x, z), -1))
@@ -286,11 +301,13 @@ def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="s
         elif bottom and rng.random() < 0.75:
             kinds[p] = dark
         elif top_of[(x, z)] == y and any(math.hypot(x - sx, z - sz) < 1.7 for sx, sz in lit) and rng.random() < 0.85:
-            # r27's lit patch (it was all azalea): its inner cells take the lighter leaf, its rim stays body
-            if any(math.hypot(x - sx, z - sz) < core for sx, sz in lit):
-                kinds[p] = light
+            # r27's lit patch (it was all azalea): its inner cells take the lighter leaf, its rim the top's skin
+            kinds[p] = light if any(math.hypot(x - sx, z - sz) < core for sx, sz in lit) else skin
         elif any(math.hypot(x - sx, z - sz) < 1.5 for sx, sz in mid) and rng.random() < 0.6:
-            pass                # r27's dark-oak patches in an oak body: the body is dark oak now (kept for the draws)
+            if top_of[(x, z)] == y:
+                kinds[p] = cool  # r29: r27's dark-oak patches, on the top: cool spruce patches in the lit skin
+        elif top_of[(x, z)] == y:
+            kinds[p] = skin     # r29: the rest of the top - the lit faces the RTS camera sees - takes the skin leaf
     t.kinds = kinds
 
 
