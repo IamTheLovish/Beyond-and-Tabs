@@ -658,6 +658,8 @@ public class ResourceCosts {
         MAELSTROM_ENGINE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.MAELSTROM_ENGINE);
         HEAVENS_BELL.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEAVENS_BELL);
         EARTHCRACKER.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.EARTHCRACKER);
+        // energy by tier and the opening's energy prices (resources/EnergyCosts): after the config, before the anti-T3 share
+        EnergyCosts.bake();
         // the anti-T3 emplacements cost a share of the priciest experimental (design/defences.md): after every T3 above
         com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.bakeAntiT3();
         // the tier gate's prices win over the config entries (resources/TierGate: Tier 2 research, the T2 labs, the extractor refit)

@@ -665,7 +665,15 @@ public class BuildingPlacement {
     // - block must be connected to something else (not air)
     // - block must be the lowest Y value possible
     public void queueNextBlock(ServerLevel level, String builderName) {
-        if (blocksPerBuild <= 0 || blockPlaceQueue.size() >= blocksPerBuild)
+        queueNextBlocks(level, builderName, blocksPerBuild);
+    }
+
+    /**
+     * Queue up to {@code count} blocks from ONE scan of the site (flow construction asks for a tick's worth at once:
+     * FlowConstruction.blocksToLay; a scan per block was a getBlockState per site block, up to 8 times a tick).
+     */
+    public void queueNextBlocks(ServerLevel level, String builderName, int count) {
+        if (count <= 0 || blockPlaceQueue.size() >= count)
             return;
 
         ArrayList<BuildingBlock> unplacedBlocks = new ArrayList<>();
@@ -730,8 +738,9 @@ public class BuildingPlacement {
                     validBlocks.sort(Comparator.comparing(bb -> bb.getBlockPos().distSqr(builderPos)));
                 }
             }
-            for (int i = 0; i < validBlocks.size() && i < blocksPerBuild; i++) {
-                addToBlockPlaceQueue(validBlocks.get(i));
+            for (int i = 0; i < validBlocks.size() && blockPlaceQueue.size() < count; i++) {
+                if (!blockPlaceQueue.contains(validBlocks.get(i)))   // queued, not laid yet: still unplaced
+                    addToBlockPlaceQueue(validBlocks.get(i));
             }
         }
         partialBlocksDestroyed = 0d;
@@ -1471,7 +1480,7 @@ public class BuildingPlacement {
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing
         int queued = blockPlaceQueue.size();
-        float maxProgress = Math.min(1f, (float) (blocksPlaced + queued + 2 * Math.max(1, blocksPerBuild)) / blocksTotal);
+        float maxProgress = FlowConstruction.maxProgress(blocksPlaced, queued, blocksPerBuild, blocksTotal);
         if (buildProgress > maxProgress)
             buildProgress = maxProgress;
 
@@ -1484,7 +1493,7 @@ public class BuildingPlacement {
                     ticksToExtinguish = 0;
                 }
             }
-            float df = Math.min(buildPower / buildTicks, maxProgress - buildProgress);
+            float df = Math.min(FlowConstruction.progressPerTick(buildPower, buildTicks), maxProgress - buildProgress);
             float granted = EconomyServerEvents.requestFlow(payerName, building.cost.metal(), building.cost.energy(), df);
             buildProgress += df * granted;
             metalSpent += building.cost.ore * df * granted;
@@ -1493,13 +1502,27 @@ public class BuildingPlacement {
                 buildProgress = 1f;
         }
 
-        // queue the next block(s) if the placed blocks are behind the paid progress
-        int targetBlocks = buildProgress >= 1f ? blocksTotal : (int) Math.ceil(buildProgress * blocksTotal - 0.0001f);
-        if (blocksPlaced + blockPlaceQueue.size() < targetBlocks) {
+        // lay the blocks the paid progress is ahead by (lovish, Oct 29: "the more workers the faster something should
+        // build"): up to FlowConstruction.MAX_BLOCKS_PER_TICK a tick, not one, so a crowded site rises with its build
+        // power. The last one is laid by the tick's own buildNextBlock pass, as before
+        // One scan queues them (queueNextBlocks), the lowest layer first as always; a block that has to wait for the one
+        // under it comes next tick. The tick's own buildNextBlock pass lays the first, this lays the rest
+        int due = FlowConstruction.blocksDue(buildProgress, blocksTotal);
+        int standing = getBlocksPlaced();
+        int toQueue = FlowConstruction.blocksToLay(due, standing, blockPlaceQueue.size());
+        if (toQueue > 0) {
             int queuedBefore = blockPlaceQueue.size();
-            queueNextBlock(serverLevel, ownerName);
+            queueNextBlocks(serverLevel, ownerName, queuedBefore + toQueue);
             if (blockPlaceQueue.size() > queuedBefore && !workerUnits.isEmpty())
                 giveMasonExp(workerUnits);
+        }
+        // and lay from the queue what the progress has paid for - the foundation layer, queued whole when the site rose,
+        // too (it went in at one a tick whatever the crew). The tick's own buildNextBlock pass lays one more
+        for (int i = FlowConstruction.layNow(due, standing); i > 0 && !blockPlaceQueue.isEmpty(); i--) {
+            int before = blockPlaceQueue.size();
+            buildNextBlock();
+            if (blockPlaceQueue.size() >= before)
+                break;   // the block could not go in (an unloaded chunk): try again next tick
         }
     }
 
@@ -1518,6 +1541,9 @@ public class BuildingPlacement {
             }
         }
     }
+
+    /** The game tick this site last played a block's place sound (one a tick, however many blocks went in). */
+    private long lastPlaceSoundTick = -1;
 
     /** A placed block's sound while a building rises (vanilla's block place is 1.0). */
     static final float CONSTRUCTION_VOLUME = 0.22f;
@@ -1572,8 +1598,13 @@ public class BuildingPlacement {
             // burst of debris (LevelEvent.PARTICLES_DESTROY_BLOCK), the steady ticking lovish heard all match (Oct 21:
             // "a constant ticking or binging ... it might be the workers building sound"); a second call passed a sound's
             // hashCode as a level event id. Quiet and slightly varied; the nano beams show the work
-            level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
-                CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            // at most one a tick per site (#388: a crowded site lays up to 8 blocks a tick - 160 place sounds a second
+            // would be the constant ticking lovish heard on Oct 21 again)
+            if (lastPlaceSoundTick != level.getGameTime()) {
+                lastPlaceSoundTick = level.getGameTime();
+                level.playSound(null, bp, bs.getSoundType().getPlaceSound(), net.minecraft.sounds.SoundSource.BLOCKS,
+                    CONSTRUCTION_VOLUME, 0.85f + level.getRandom().nextFloat() * 0.2f);
+            }
             blockPlaceQueue.removeIf(i -> i.equals(nextBlock));
             onBlockBuilt(bp, bs);
             if (this.getBlocksPlaced() > highestBlockCountReached) {

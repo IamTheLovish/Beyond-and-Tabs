@@ -69,8 +69,10 @@ public class SolarGameTests {
                 solar++;
         if (solar != 14)
             problems.add(solar + " solar buildings registered, expected 14 (7 factions x 2)");
-        // the spec's prices: 150 m / 60 e and 300 m / 1500 e (ResourceCost.Building: wood = energy, ore = metal)
-        if (Kind.BASIC.cost.ore != 150 || Kind.BASIC.cost.wood != 60)
+        // the spec's prices: 150 m / 0 e (lovish, Oct 29: like BAR's solar it costs metal and build time, not energy -
+        // resources/EnergyCosts; it was 60 e) and 300 m / 1500 e (ResourceCost.Building: wood = energy, ore = metal)
+        if (Kind.BASIC.cost.ore != 150 || Kind.BASIC.cost.wood != com.solegendary.reignofnether.resources.EnergyCosts.SOLAR_COLLECTOR_ENERGY
+                || com.solegendary.reignofnether.resources.EnergyCosts.SOLAR_COLLECTOR_ENERGY != 0)
             problems.add("Solar Collector price is " + Kind.BASIC.cost.ore + "m / " + Kind.BASIC.cost.wood + "e");
         if (Kind.ADVANCED.cost.ore != 300 || Kind.ADVANCED.cost.wood != 1500)
             problems.add("Advanced Solar price is " + Kind.ADVANCED.cost.ore + "m / " + Kind.ADVANCED.cost.wood + "e");

@@ -188,6 +188,9 @@ public abstract class ProductionItem {
         boolean hasCheat = (isClientSide && ResearchClient.hasCheat("warpten")) ||
                 (!isClientSide && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"));
         float speed = (hasCheat ? 10f : 1f) * placement.getProductionBuildPower();
+        // higher-tier labs build their units faster and so drain more energy a second (BAR; resources/TierGate)
+        if (this instanceof IUnitProductionItem)
+            speed *= com.solegendary.reignofnether.resources.TierGate.labTierBuildPower(placement.getBuilding());
         // economy pace (EconomyPace): production runs at the match's pace like income and construction; the client
         // predicts with the synced match pace
         speed *= isClientSide ? com.solegendary.reignofnether.resources.EconomyPace.clientMultiplier()

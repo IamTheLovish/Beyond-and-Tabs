@@ -33,7 +33,7 @@ import java.util.List;
  * energy and a lab spends about 2.4 metal/s on it, so a real T1 army (3-5 labs) spends 7-12 of those 16 metal/s.
  * <ul>
  *   <li><b>Tier 2 research</b> {@value #T2_RESEARCH_METAL} metal / {@value #T2_RESEARCH_ENERGY} energy over
- *       {@value #T2_RESEARCH_SECONDS} s: it drains 5.6 metal/s and 56 energy/s while it runs (a time-based job at the
+ *       {@value #T2_RESEARCH_SECONDS} s: it drains 5.6 metal/s and 42 energy/s (56 before Oct 29) while it runs (a time-based job at the
  *       capitol: a second worker cannot help, and the capitol trains no workers meanwhile - for three minutes now, not
  *       two). 5.6 metal/s is a third of a normal economy, so a player who also feeds 3+ labs runs it at a stall and it
  *       takes longer than 180 s.</li>
@@ -73,7 +73,9 @@ public final class TierGate {
 
     // ---- Tier 2 research (the capitol) ----
     public static final int T2_RESEARCH_METAL = 1000;
-    public static final int T2_RESEARCH_ENERGY = 10080;   // was 8000 (lovish, Oct 27: keep 56 energy/s at 180 s)
+    // lovish, Oct 29 (energy scaling, resources/EnergyCosts): "a bit" lower now that units and labs spend energy
+    // everywhere - 25% off the research's and the T2 lab's energy (10080 -> 7560: 42 energy/s at 180 s; 6000 -> 4500)
+    public static final int T2_RESEARCH_ENERGY = 7560;   // was 10080 (Oct 27), 8000 before
     public static final int T2_RESEARCH_SECONDS = 180;   // was 120 (lovish, Oct 24)
 
     // ---- the T2 lab (every faction's: Arcane Tower, Dungeon, Flame Sanctuary, Circle of Elders, Drydock, Celestial
@@ -81,7 +83,7 @@ public final class TierGate {
     // counts differ 6x (63-402 blocks) and buildTimeModifier was hand-tuned per faction (0.7-2.0), so builds took 130-295
     // builder-seconds depending on the faction.
     public static final int T2_LAB_METAL = 700;
-    public static final int T2_LAB_ENERGY = 6000;
+    public static final int T2_LAB_ENERGY = 4500;   // was 6000 (lovish, Oct 29: trimmed with the research)
     public static final int T2_LAB_BUILD_BLOCKS = 480;   // x Building.BUILD_TICKS_PER_BLOCK (21) = 504 builder-seconds
 
     public static final int T2_PACKAGE_METAL = T2_RESEARCH_METAL + T2_LAB_METAL;
@@ -95,22 +97,45 @@ public final class TierGate {
 
     // ---- extractors drain energy while they run (EconomyServerEvents.payExtractorUpkeep): the metal they make scales
     // with the share of the drain the player's energy can pay, so a T2 economy needs an energy economy under it ----
-    public static final float T1_EXTRACTOR_ENERGY_UPKEEP = 0f;    // energy/s each: a normal opener has no energy gate
+    public static final float T1_EXTRACTOR_ENERGY_UPKEEP = 3f;    // energy/s each, BAR's mex (was 0; lovish, Oct 29): expansion needs energy
     public static final float T2_EXTRACTOR_ENERGY_UPKEEP = 20f;   // energy/s each, for 4.5 metal/s (T1: 2)
 
     // ---- the energy converter: a last resort, not a second economy ----
     public static final float CONVERTER_ENERGY_PER_METAL = 100f;   // was 50
     public static final float CONVERTER_ENERGY_PER_SECOND = 50f;   // the most one building drains: 0.5 metal/s
+    // the converter gets better with the owner's tier (BAR: the T2 maker turns 58 energy into a metal, the T1 one 70; lovish,
+    // Oct 29): T1 stays the last resort, Tier 2 makes surplus energy worth 25% more metal, Tier 3 a little more again
+    public static final float T2_CONVERTER_ENERGY_PER_METAL = 80f;
+    public static final float T3_CONVERTER_ENERGY_PER_METAL = 65f;
+
+    /** Energy per metal of a player's converters at their tech tier (1, 2 or 3). */
+    public static float converterEnergyPerMetal(int tier) {
+        return tier >= 3 ? T3_CONVERTER_ENERGY_PER_METAL : tier == 2 ? T2_CONVERTER_ENERGY_PER_METAL : CONVERTER_ENERGY_PER_METAL;
+    }
+
+    // ---- higher-tier labs build faster (BAR: 150 / 600 / 1800 build power; lovish, Oct 29 "like BAR"), stretched for our
+    // slower pace: a T2 lab trains its units twice as fast as a T1 lab, a T3 lab four times. A unit's cost is fixed, so the
+    // lab drains that much more energy a second (with EnergyCosts' 8 / 15 / 18 energy per metal: ~24 / ~200 / ~880 energy/s
+    // for a Halberdier / Ravager / Sun Colossus queue). Applies to units only, not to a lab's researches or upgrades ----
+    public static final float T1_LAB_BUILD_POWER = 1f;
+    public static final float T2_LAB_BUILD_POWER = 2f;
+    public static final float T3_LAB_BUILD_POWER = 4f;
+
+    /** The unit build power multiplier of a lab: T3 labs, the T2 labs, everything else 1. */
+    public static float labTierBuildPower(Building b) {
+        if (com.solegendary.reignofnether.unit.T2Workers.isT3Lab(b))
+            return T3_LAB_BUILD_POWER;
+        return isT2Lab(b) ? T2_LAB_BUILD_POWER : T1_LAB_BUILD_POWER;
+    }
 
     // ---- what a bot wants before it techs (BotPlayer): the incomes above, as readiness rules ----
     /** Metal/s before researching Tier 2: the capitol + five T1 extractors. */
     public static final float BOT_MIN_METAL_INCOME = 12f;
-    /** Energy/s before researching Tier 2: the research's 56 energy/s (67 before Oct 24, 44 on Oct 24-27) and most of the base's
-     *  own spending (56 + 60 is 116: the bank and the capitol pausing workers cover the rest), with the T2 lab's pull
-     *  right after it - kept at 110, the lab needs it next. */
-    public static final float BOT_MIN_ENERGY_INCOME = 110f;
-    /** Energy/s a base spends on its own before refits: labs, units and builds. */
-    public static final float BOT_BASE_ENERGY_SPEND = 60f;
+    /** Energy/s before researching Tier 2: the research's 42 energy/s (56 on Oct 27-29) and the base's own spending (Oct 29:
+     *  units cost 8 energy per metal now, so two labs and seven extractors' upkeep are ~90). */
+    public static final float BOT_MIN_ENERGY_INCOME = 130f;
+    /** Energy/s a base spends on its own before refits: labs (~24 energy/s each on T1 units), extractor upkeep and builds. */
+    public static final float BOT_BASE_ENERGY_SPEND = 90f;
 
     /** Energy income a bot wants before refitting its {@code refitted}th extractor (counting the one about to start). */
     public static float botEnergyIncomeForRefit(int refitted) {

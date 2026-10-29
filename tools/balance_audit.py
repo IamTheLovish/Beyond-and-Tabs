@@ -30,6 +30,11 @@ for m in re.finditer(r'ResourceCostConfigEntry (\w+) = ResourceCostConfigEntry\.
     entries[name] = dict(kind=kind, food=food, wood=wood, ore=ore,
                          metal=to_metal(food, wood, ore), energy=to_energy(food, wood, ore))
 
+# the energy table baked after the config (resources/EnergyCosts.java, mirrored by tools/unit_stats.py)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import unit_stats  # noqa: E402
+unit_stats.apply_energy_costs(entries)
+
 costs_src = rd('resources/ResourceCosts.java')
 declared = set(re.findall(r'ResourceCost (\w+) = new ResourceCost\(ID, "(?:\w+)"\);', costs_src))
 baked = set(re.findall(r'(\w+)\.bakeValues\(', costs_src))

@@ -609,6 +609,17 @@ public class BotPlayer {
             // the first lab from minute 1, ahead of the economy rules: the army has to start somewhere
             if (!done && armyBuildings < 1 && minutes >= 1)
                 done = placeLab(level, 0, workers);
+            // energy before the next extractor (bot/BotEnergyRule, lovish Oct 29: BAR's 2-3 mexes then winds or solars):
+            // past the first two, a wind - or a Solar Collector when metal is plentiful (it costs metal, not energy) - goes
+            // up whenever the energy planned is short of what one more extractor and the labs want
+            if (!done && extractors < 2 + minutes && BotEnergyRule.energyBeforeNextExtractor(extractors, armyBuildings,
+                    plannedEnergyIncome(eco.energyIncome, buildings))) {
+                var solar = com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.of(faction,
+                    com.solegendary.reignofnether.building.buildings.shared.SolarGenerator.Kind.BASIC);
+                boolean useSolar = solar != null && metalFill > 0.6f && energyFill < 0.3f;
+                done = useSolar ? placeNear(level, solar, layoutSlot(Layout.WIND, winds + count(buildings, solar)), workers, 1)
+                    : placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
+            }
             // extractors: a couple plus one a minute (every free patch there is while floating - after the labs below)
             BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
             // the T2 lab first once Tier 2 is researched, after its faction's FINISHED T1 lab - the server refuses it
@@ -910,6 +921,11 @@ public class BotPlayer {
 
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
         if (techPending || workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
+            return;
+        // energy all but gone: no new worker until it is back, or the queue starves every site (bot/BotEnergyRule)
+        if (BotEnergyRule.pauseWorkerTraining(energyFill) && !pp.productionQueue.isEmpty())
+            return;
+        if (BotEnergyRule.pauseWorkerTraining(energyFill) && workerCount >= tuning.workerBase())
             return;
         // (two at a time while metal floats: more constructors is the fastest way to turn a stockpile into buildings)
         if (pp.productionQueue.size() < (floating() ? 2 : 1))

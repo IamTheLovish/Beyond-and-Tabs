@@ -10,148 +10,151 @@ Tier median over 32 combat units: DPS/100m **3.12**, HP/100m **57**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | ScoutDog | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
-| Sunforged | ScoutCat | scout | 30 | 40 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
-| Sunforged | Vindicator | line | 95 | 130 | 75 | 6 | 0.5 | 2 | 0.25 | 0.1 | 3 | 3.16 | 79 |  |
-| Sunforged | Pillager | skirmisher | 80 | 190 | 45 | 7 | 0.35 | 16 | 0.26 | - | 2.47 | 3.09 | 56 | hits-air |
-| Gravebound | Bat | scout | 30 | 40 | 15 | - | - | - | 0.28 | - | - | 0.00 | 50 | flying |
-| Gravebound | Zombie | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
-| Gravebound | Husk | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
-| Gravebound | Drowned | line | 45 | 60 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
-| Gravebound | Skeleton | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
-| Gravebound | Stray | skirmisher | 45 | 110 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
-| Gravebound | Bogged | debuffer | 45 | 110 | 30 | 2 | 0.35 | 12 | 0.26 | - | 0.7 | 1.56 | 67 | hits-air |
-| Gravebound | Spider | raider | 65 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
-| Gravebound | PoisonSpider | raider | 65 | 90 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
-| Gravebound | Slime | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
-| Horde | Strider | scout | 30 | 40 | 30 | - | - | - | 0.3 | - | - | 0.00 | 100 |  |
-| Horde | Brute | line | 75 | 100 | 55 | 5 | 0.5 | 2 | 0.25 | 0.1 | 2.5 | 3.33 | 73 |  |
-| Horde | Headhunter | skirmisher | 65 | 160 | 40 | 6 | 0.3 | 14 | 0.26 | - | 1.8 | 2.77 | 62 | hits-air |
-| Horde | Marauder | raider | 145 | 200 | 140 | 8 | 0.4 | 2 | 0.31 | - | 3.2 | 2.21 | **97** |  |
-| Horde | Hoglin | mount | 155 | 110 | 75 | 5 | 0.45 | 2 | 0.31 | - | 2.25 | 1.45 | 48 |  |
-| Verdant | FoxCourier | scout | 35 | 50 | 22 | 2 | 0.8 | 2 | 0.34 | - | 1.6 | 4.57 | 63 |  |
-| Verdant | OwlWatcher | scout | 25 | 40 | 14 | - | - | - | 0.3 | - | - | 0.00 | 56 | flying |
-| Verdant | Leafblade | raider | 80 | 100 | 50 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 62 |  |
-| Verdant | Thornbow | skirmisher | 65 | 150 | 32 | 5 | 0.35 | 13 | 0.26 | - | 1.75 | 2.69 | 49 | hits-air |
-| Verdant | SentinelTreant | tank | 170 | 90 | 140 | 10 | 0.4 | 3 | 0.2 | 0.4 | 4 | 2.35 | **82** |  |
-| Verdant | HiveKeeper | anti-swarm | 90 | 150 | 45 | 3 | 0.5 | 2 | 0.27 | - | 1.5 | 1.67 | 50 |  |
-| Verdant | MoonwellBearer | support | 100 | 150 | 36 | - | - | - | 0.27 | - | - | 0.00 | 36 | support |
-| Tidewrought | GullSpotter | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
-| Tidewrought | CutlassRaider | raider | 85 | 100 | 55 | 5 | 0.6 | 2 | 0.31 | 0.1 | 3 | 3.53 | 65 |  |
-| Tidewrought | Harpooner | skirmisher | 80 | 150 | 40 | 5 | 0.5 | 12 | 0.26 | - | 2.5 | 3.12 | 50 | hits-air |
-| Tidewrought | ReefGuard | line | 105 | 100 | 80 | 6 | 0.5 | 2 | 0.25 | 0.3 | 3 | 2.86 | 76 |  |
-| Tidewrought | BombardCrew | artillery | 125 | 200 | 35 | 9 | 0.25 | 22 | 0.22 | - | 2.25 | **1.80** | **28** | hits-air, artillery |
-| Tidewrought | FlakSwivel | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
-| Tidewrought | MudskipperSloop | raider | 95 | 100 | 50 | 5 | 0.8 | 2.5 | 0.32 | - | 4 | 4.21 | 53 |  |
-| Tidewrought | TidePriest | support | 100 | 150 | 35 | - | - | - | 0.27 | - | - | 0.00 | 35 | support |
-| Stormcallers | PaperCrane | scout | 30 | 40 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
-| Stormcallers | BladeDancer | raider | 80 | 100 | 52 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 65 |  |
-| Stormcallers | FireAdept | skirmisher | 90 | 170 | 45 | 6 | 0.5 | 16 | 0.26 | - | 3 | 3.33 | 50 | hits-air |
-| Stormcallers | JadeGuard | line | 100 | 120 | 75 | 6 | 0.5 | 2 | 0.25 | - | 3 | 3.00 | 75 |  |
-| Stormcallers | WindMonk | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.27 | - | 2.45 | 2.72 | 44 | AA |
-| Stormcallers | FrostAdept | skirmisher | 85 | 150 | 45 | 4 | 0.5 | 16 | 0.26 | - | 2 | 2.35 | 53 | hits-air |
-| Stormcallers | RocketBattery | artillery | 120 | 210 | 38 | 5 | 0.17 | 24 | 0.22 | - | 0.83 | **0.69** | **32** | hits-air, artillery |
-| Stormcallers | InkScribe | support | 85 | 90 | 36 | - | - | - | 0.26 | - | - | 0.00 | 42 | support |
-| Brassworks | GyroScout | scout | 30 | 40 | 16 | - | - | - | 0.31 | - | - | 0.00 | 53 | flying |
-| Brassworks | SteamRunner | raider | 85 | 100 | 48 | 5 | 0.7 | 2 | 0.34 | - | 3.5 | 4.12 | 56 |  |
-| Brassworks | RifleSquad | skirmisher | 75 | 80 | 40 | 6 | 0.5 | 13 | 0.26 | - | 3 | 4.00 | 53 | hits-air |
-| Brassworks | IronWarden | line | 125 | 80 | 72 | 7 | 0.6 | 2.5 | 0.23 | - | 4.2 | 3.36 | 58 |  |
-| Brassworks | FlakCart | anti-air | 90 | 150 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
-| Brassworks | MortarCrawler | artillery | 120 | 210 | 40 | 14 | 0.2 | 22 | 0.21 | - | 2.8 | 2.33 | **33** | hits-air, artillery |
-| Brassworks | ShieldProjector | support | 60 | 60 | 40 | - | - | - | 0.26 | - | - | 0.00 | 67 | support |
-| Brassworks | Sapper | support | 70 | 40 | 34 | 3 | 0.6 | 2 | 0.29 | - | 1.8 | 2.57 | 49 | support |
+| Sunforged | ScoutDog | scout | 30 | 240 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
+| Sunforged | ScoutCat | scout | 30 | 240 | 20 | - | - | - | 0.3 | - | - | 0.00 | 67 |  |
+| Sunforged | Vindicator | line | 95 | 760 | 75 | 6 | 0.5 | 2 | 0.25 | 0.1 | 3 | 3.16 | 79 |  |
+| Sunforged | Pillager | skirmisher | 80 | 640 | 45 | 7 | 0.35 | 16 | 0.26 | - | 2.47 | 3.09 | 56 | hits-air |
+| Gravebound | Bat | scout | 30 | 240 | 15 | - | - | - | 0.28 | - | - | 0.00 | 50 | flying |
+| Gravebound | Zombie | line | 45 | 360 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Husk | line | 45 | 360 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Drowned | line | 45 | 360 | 45 | 3 | 0.6 | 2 | 0.25 | 0.1 | 1.8 | 4.00 | **100** |  |
+| Gravebound | Skeleton | skirmisher | 45 | 360 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
+| Gravebound | Stray | skirmisher | 45 | 360 | 30 | 4 | 0.35 | 12 | 0.26 | - | 1.4 | 3.11 | 67 | hits-air |
+| Gravebound | Bogged | debuffer | 45 | 360 | 30 | 2 | 0.35 | 12 | 0.26 | - | 0.7 | 1.56 | 67 | hits-air |
+| Gravebound | Spider | raider | 65 | 520 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
+| Gravebound | PoisonSpider | raider | 65 | 520 | 30 | 5 | 0.6 | 2 | 0.34 | - | 3 | **4.62** | 46 |  |
+| Gravebound | Slime | merger | 75 | 600 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
+| Horde | Strider | scout | 30 | 240 | 30 | - | - | - | 0.3 | - | - | 0.00 | 100 |  |
+| Horde | Brute | line | 75 | 600 | 55 | 5 | 0.5 | 2 | 0.25 | 0.1 | 2.5 | 3.33 | 73 |  |
+| Horde | Headhunter | skirmisher | 65 | 520 | 40 | 6 | 0.3 | 14 | 0.26 | - | 1.8 | 2.77 | 62 | hits-air |
+| Horde | Marauder | raider | 145 | 1160 | 140 | 8 | 0.4 | 2 | 0.31 | - | 3.2 | 2.21 | **97** |  |
+| Horde | Hoglin | mount | 155 | 1240 | 75 | 5 | 0.45 | 2 | 0.31 | - | 2.25 | 1.45 | 48 |  |
+| Verdant | FoxCourier | scout | 35 | 280 | 22 | 2 | 0.8 | 2 | 0.34 | - | 1.6 | 4.57 | 63 |  |
+| Verdant | OwlWatcher | scout | 25 | 200 | 14 | - | - | - | 0.3 | - | - | 0.00 | 56 | flying |
+| Verdant | Leafblade | raider | 80 | 640 | 50 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 62 |  |
+| Verdant | Thornbow | skirmisher | 65 | 520 | 32 | 5 | 0.35 | 13 | 0.26 | - | 1.75 | 2.69 | 49 | hits-air |
+| Verdant | SentinelTreant | tank | 170 | 1360 | 140 | 10 | 0.4 | 3 | 0.2 | 0.4 | 4 | 2.35 | **82** |  |
+| Verdant | HiveKeeper | anti-swarm | 90 | 720 | 45 | 3 | 0.5 | 2 | 0.27 | - | 1.5 | 1.67 | 50 |  |
+| Verdant | MoonwellBearer | support | 100 | 800 | 36 | - | - | - | 0.27 | - | - | 0.00 | 36 | support |
+| Tidewrought | GullSpotter | scout | 30 | 240 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
+| Tidewrought | CutlassRaider | raider | 85 | 680 | 55 | 5 | 0.6 | 2 | 0.31 | 0.1 | 3 | 3.53 | 65 |  |
+| Tidewrought | Harpooner | skirmisher | 80 | 640 | 40 | 5 | 0.5 | 12 | 0.26 | - | 2.5 | 3.12 | 50 | hits-air |
+| Tidewrought | ReefGuard | line | 105 | 840 | 80 | 6 | 0.5 | 2 | 0.25 | 0.3 | 3 | 2.86 | 76 |  |
+| Tidewrought | BombardCrew | artillery | 125 | 1000 | 28 | 9 | 0.25 | 22 | 0.22 | - | 2.25 | **1.80** | **22** | hits-air, artillery |
+| Tidewrought | FlakSwivel | anti-air | 90 | 720 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
+| Tidewrought | MudskipperSloop | raider | 95 | 760 | 50 | 5 | 0.8 | 2.5 | 0.32 | - | 4 | 4.21 | 53 |  |
+| Tidewrought | TidePriest | support | 100 | 800 | 35 | - | - | - | 0.27 | - | - | 0.00 | 35 | support |
+| Stormcallers | PaperCrane | scout | 30 | 240 | 12 | - | - | - | 0.34 | - | - | 0.00 | 40 | flying |
+| Stormcallers | BladeDancer | raider | 80 | 640 | 52 | 5 | 0.6 | 2 | 0.32 | 0.1 | 3 | 3.75 | 65 |  |
+| Stormcallers | FireAdept | skirmisher | 90 | 720 | 45 | 6 | 0.5 | 16 | 0.26 | - | 3 | 3.33 | 50 | hits-air |
+| Stormcallers | JadeGuard | line | 100 | 800 | 75 | 6 | 0.5 | 2 | 0.25 | - | 3 | 3.00 | 75 |  |
+| Stormcallers | WindMonk | anti-air | 90 | 720 | 40 | 3.5 | 0.7 | 14 | 0.27 | - | 2.45 | 2.72 | 44 | AA |
+| Stormcallers | FrostAdept | skirmisher | 85 | 680 | 45 | 4 | 0.5 | 16 | 0.26 | - | 2 | 2.35 | 53 | hits-air |
+| Stormcallers | RocketBattery | artillery | 120 | 960 | 30 | 5 | 0.17 | 24 | 0.22 | - | 0.83 | **0.69** | **25** | hits-air, artillery |
+| Stormcallers | InkScribe | support | 85 | 680 | 36 | - | - | - | 0.26 | - | - | 0.00 | 42 | support |
+| Brassworks | GyroScout | scout | 30 | 240 | 16 | - | - | - | 0.31 | - | - | 0.00 | 53 | flying |
+| Brassworks | SteamRunner | raider | 85 | 680 | 48 | 5 | 0.7 | 2 | 0.34 | - | 3.5 | 4.12 | 56 |  |
+| Brassworks | RifleSquad | skirmisher | 75 | 600 | 40 | 6 | 0.5 | 13 | 0.26 | - | 3 | 4.00 | 53 | hits-air |
+| Brassworks | IronWarden | line | 125 | 1000 | 72 | 7 | 0.6 | 2.5 | 0.23 | - | 4.2 | 3.36 | 58 |  |
+| Brassworks | FlakCart | anti-air | 90 | 720 | 40 | 3.5 | 0.7 | 14 | 0.24 | - | 2.45 | 2.72 | 44 | AA |
+| Brassworks | MortarCrawler | artillery | 120 | 960 | 32 | 14 | 0.2 | 22 | 0.21 | - | 2.8 | 2.33 | **27** | hits-air, artillery |
+| Brassworks | ShieldProjector | support | 60 | 480 | 40 | - | - | - | 0.26 | - | - | 0.00 | 67 | support |
+| Brassworks | Sapper | support | 70 | 560 | 34 | 3 | 0.6 | 2 | 0.29 | - | 1.8 | 2.57 | 49 | support |
 
 ## T2
 
-Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
+Tier median over 18 combat units: DPS/100m **1.29**, HP/100m **36**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | Evoker | caster | 205 | 110 | 40 | - | 0.12 | - | 0.25 | - | - | 0.00 | 20 | support |
-| Sunforged | Windcaller | anti-air | 160 | 200 | 45 | 5 | 0.3 | 12 | 0.25 | - | 1.5 | 0.94 | 28 | AA, flying |
-| Sunforged | Witch | support | 170 | 210 | 40 | - | - | - | 0.25 | - | - | 0.00 | 24 | support |
-| Sunforged | IronGolem | tank | 265 | 80 | 120 | 10 | 0.4 | 3 | 0.22 | 0.4 | 4 | 1.51 | 45 |  |
-| Sunforged | Ravager | siege | 405 | 400 | 290 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **72** |  |
-| Gravebound | Creeper | suicide | 130 | 40 | 20 | 20 | 1 | 2 | 0.28 | - | 20 | 15.38 | 15 |  |
-| Gravebound | Wraith | caster | 110 | 60 | 35 | 5 | 0.5 | 2 | 0.28 | - | 2.5 | 2.27 | 32 | support |
-| Gravebound | Warden | tank | 290 | 220 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | 52 |  |
-| Horde | Blaze | anti-air | 135 | 90 | 35 | 1 | 1 | 14 | 0.25 | - | 1 | **0.74** | 26 | AA |
-| Horde | WitherSkeleton | debuffer | 245 | 160 | 100 | 3 | 0.3 | 2 | 0.28 | - | 0.9 | 0.37 | 41 |  |
-| Horde | MagmaCube | merger | 75 | 90 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
-| Horde | Ghast | artillery | 340 | 230 | 50 | 8 | 0.15 | 30 | 0.22 | - | 1.2 | **0.35** | **15** | hits-air, artillery, flying |
-| Verdant | ElderTreant | tank | 455 | 380 | 380 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **84** |  |
-| Verdant | StagLancer | cavalry | 235 | 220 | 95 | 9 | 0.6 | 2.5 | 0.36 | - | 5.4 | **2.30** | 40 |  |
-| Verdant | WispChoir | anti-air | 155 | 180 | 40 | 4 | 0.6 | 14 | 0.3 | - | 2.4 | 1.55 | 26 | AA, flying |
-| Verdant | ShadeRanger | sniper | 215 | 220 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | 1.86 | **14** | hits-air, artillery |
-| Verdant | BloomPriestess | support | 175 | 220 | 45 | - | - | - | 0.26 | - | - | 0.00 | 26 | support |
-| Stormcallers | ThunderDragon | caster | 295 | 260 | 100 | 14 | 0.33 | 10 | 0.3 | - | 4.66 | 1.58 | 34 | hits-air, support, flying |
-| Stormcallers | Earthshaker | tank | 305 | 280 | 160 | 12 | 0.4 | 3 | 0.21 | 0.3 | 4.8 | 1.57 | 52 |  |
-| Stormcallers | GravityMonk | caster | 195 | 200 | 45 | 3 | 0.5 | 10 | 0.26 | - | 1.5 | 0.77 | 23 | hits-air, support |
-| Stormcallers | MirrorMage | support | 180 | 210 | 40 | - | - | - | 0.26 | - | - | 0.00 | 22 | support |
-| Stormcallers | Seer | scout | 95 | 130 | 36 | - | - | - | 0.27 | - | - | 0.00 | 38 |  |
-| Stormcallers | LanternFortress | support | 290 | 290 | 220 | - | - | - | 0.2 | 0.2 | - | 0.00 | 76 | support |
-| Stormcallers | Phoenix | skirmisher | 265 | 240 | 80 | 6 | 0.5 | 4 | 0.34 | - | 3 | 1.13 | 30 | flying |
-| Brassworks | SteamJuggernaut | tank | 315 | 280 | 200 | 12 | 0.45 | 2.5 | 0.21 | 0.4 | 5.4 | 1.71 | **63** |  |
-| Brassworks | TeslaWalker | caster | 250 | 250 | 70 | 8 | 0.4 | 10 | 0.24 | - | 3.2 | 1.28 | 28 | hits-air, support |
-| Brassworks | GyrocopterGunship | skirmisher | 255 | 240 | 90 | 5 | 0.6 | 8 | 0.32 | - | 3 | 1.18 | 35 | hits-air, flying |
-| Brassworks | DrillBurrower | raider | 205 | 180 | 85 | 6 | 0.5 | 2 | 0.3 | - | 3 | 1.46 | 41 |  |
-| Brassworks | RepairCrawler | support | 150 | 160 | 60 | - | - | - | 0.27 | - | - | 0.00 | 40 | support |
-| Brassworks | ClockworkSpider | skirmisher | 215 | 220 | 80 | 6 | 0.5 | 12 | 0.28 | - | 3 | 1.40 | 37 | hits-air |
-| Sunforged | OriflammeElephant | beast | 780 | 730 | 520 | 9 | 0.6 | 3 | 0.2 | 0.25 | 5.4 | 0.69 | 67 |  |
-| Horde | GorehornRhino | beast | 540 | 490 | 300 | 10 | 0.6 | 2.5 | 0.24 | - | 6 | 1.11 | 56 |  |
-| Gravebound | OssuaryBehemoth | beast | 550 | 400 | 260 | 7 | 0.7 | 2.5 | 0.22 | - | 4.9 | 0.89 | 47 |  |
-| Verdant | MossbackBison | beast | 465 | 460 | 280 | 7 | 0.7 | 2.5 | 0.27 | 0.2 | 4.9 | 1.05 | 60 |  |
-| Tidewrought | ShellbackTurtle | beast | 545 | 470 | 560 | 9 | 0.6 | 3 | 0.15 | 0.2 | 5.4 | 0.99 | 103 |  |
-| Stormcallers | JadeQilin | beast | 610 | 520 | 420 | 8 | 0.7 | 2.5 | 0.3 | - | 5.6 | 0.92 | 69 |  |
-| Brassworks | SteamHauler | beast | 630 | 480 | 480 | 6 | 0.6 | 3 | 0.2 | 0.3 | 3.6 | 0.57 | 76 |  |
+| Sunforged | Evoker | caster | 205 | 3080 | 40 | - | 0.12 | - | 0.25 | - | - | 0.00 | 20 | support |
+| Sunforged | Windcaller | anti-air | 160 | 2400 | 45 | 5 | 0.3 | 12 | 0.25 | - | 1.5 | 0.94 | 28 | AA, flying |
+| Sunforged | Witch | support | 170 | 2550 | 40 | - | - | - | 0.25 | - | - | 0.00 | 24 | support |
+| Sunforged | IronGolem | tank | 265 | 3980 | 120 | 10 | 0.4 | 3 | 0.22 | 0.4 | 4 | 1.51 | 45 |  |
+| Sunforged | Ravager | siege | 405 | 6080 | 290 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **72** |  |
+| Gravebound | Creeper | suicide | 130 | 1950 | 20 | 20 | 1 | 2 | 0.28 | - | 20 | 15.38 | 15 |  |
+| Gravebound | Wraith | caster | 110 | 1650 | 35 | 5 | 0.5 | 2 | 0.28 | - | 2.5 | 2.27 | 32 | support |
+| Gravebound | Warden | tank | 290 | 4350 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | **52** |  |
+| Horde | Blaze | anti-air | 135 | 2030 | 35 | 1 | 1 | 14 | 0.25 | - | 1 | **0.74** | 26 | AA |
+| Horde | WitherSkeleton | debuffer | 245 | 3680 | 100 | 3 | 0.3 | 2 | 0.28 | - | 0.9 | 0.37 | 41 |  |
+| Horde | MagmaCube | merger | 75 | 1130 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
+| Horde | Ghast | artillery | 340 | 5100 | 50 | 8 | 0.15 | 30 | 0.22 | - | 1.2 | **0.35** | **15** | hits-air, artillery, flying |
+| Verdant | ElderTreant | tank | 455 | 6830 | 380 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **84** |  |
+| Verdant | StagLancer | cavalry | 235 | 3530 | 95 | 9 | 0.6 | 2.5 | 0.36 | - | 5.4 | **2.30** | 40 |  |
+| Verdant | WispChoir | anti-air | 155 | 2330 | 40 | 4 | 0.6 | 14 | 0.3 | - | 2.4 | 1.55 | 26 | AA, flying |
+| Verdant | ShadeRanger | sniper | 215 | 3230 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | **1.86** | **14** | hits-air, artillery |
+| Verdant | BloomPriestess | support | 175 | 2630 | 45 | - | - | - | 0.26 | - | - | 0.00 | 26 | support |
+| Stormcallers | ThunderDragon | caster | 295 | 4430 | 100 | 14 | 0.33 | 10 | 0.3 | - | 4.66 | 1.58 | 34 | hits-air, support, flying |
+| Stormcallers | Earthshaker | tank | 305 | 4580 | 160 | 12 | 0.4 | 3 | 0.21 | 0.3 | 4.8 | 1.57 | **52** |  |
+| Stormcallers | GravityMonk | caster | 195 | 2930 | 45 | 3 | 0.5 | 10 | 0.26 | - | 1.5 | 0.77 | 23 | hits-air, support |
+| Stormcallers | MirrorMage | support | 180 | 2700 | 40 | - | - | - | 0.26 | - | - | 0.00 | 22 | support |
+| Stormcallers | Seer | scout | 95 | 1430 | 36 | - | - | - | 0.27 | - | - | 0.00 | 38 |  |
+| Stormcallers | LanternFortress | support | 290 | 4350 | 220 | - | - | - | 0.2 | 0.2 | - | 0.00 | 76 | support |
+| Stormcallers | Phoenix | skirmisher | 265 | 3980 | 80 | 6 | 0.5 | 4 | 0.34 | - | 3 | 1.13 | 30 | flying |
+| Brassworks | SteamJuggernaut | tank | 315 | 4730 | 200 | 12 | 0.45 | 2.5 | 0.21 | 0.4 | 5.4 | 1.71 | **63** |  |
+| Brassworks | TeslaWalker | caster | 250 | 3750 | 70 | 8 | 0.4 | 10 | 0.24 | - | 3.2 | 1.28 | 28 | hits-air, support |
+| Brassworks | GyrocopterGunship | skirmisher | 255 | 3830 | 90 | 5 | 0.6 | 8 | 0.32 | - | 3 | 1.18 | 35 | hits-air, flying |
+| Brassworks | DrillBurrower | raider | 205 | 3080 | 85 | 6 | 0.5 | 2 | 0.3 | - | 3 | 1.46 | 41 |  |
+| Brassworks | RepairCrawler | support | 150 | 2250 | 60 | - | - | - | 0.27 | - | - | 0.00 | 40 | support |
+| Brassworks | ClockworkSpider | skirmisher | 215 | 3230 | 80 | 6 | 0.5 | 12 | 0.28 | - | 3 | 1.40 | 37 | hits-air |
+| Sunforged | OriflammeElephant | beast | 780 | 11700 | 520 | 9 | 0.6 | 3 | 0.2 | 0.25 | 5.4 | 0.69 | 67 |  |
+| Horde | GorehornRhino | beast | 540 | 8100 | 300 | 10 | 0.6 | 2.5 | 0.24 | - | 6 | 1.11 | 56 |  |
+| Gravebound | OssuaryBehemoth | beast | 550 | 8250 | 260 | 7 | 0.7 | 2.5 | 0.22 | - | 4.9 | 0.89 | 47 |  |
+| Verdant | MossbackBison | beast | 465 | 6980 | 280 | 7 | 0.7 | 2.5 | 0.27 | 0.2 | 4.9 | 1.05 | 60 |  |
+| Tidewrought | KrakenCaller | caster | 200 | 3000 | 55 | 4 | 0.5 | 10 | 0.25 | - | 2 | 1.00 | 28 | hits-air, support |
+| Tidewrought | MortarGalley | artillery | 260 | 3900 | 88 | 12 | 0.2 | 30 | 0.18 | 0.25 | 2.4 | 0.92 | 34 | hits-air, artillery |
+| Tidewrought | SkyCorsair | raider | 280 | 4200 | 70 | 10 | 0.2 | 13 | 0.26 | - | 2 | **0.71** | 25 | hits-air, flying |
+| Tidewrought | ShellbackTurtle | beast | 545 | 8180 | 560 | 9 | 0.6 | 3 | 0.15 | 0.2 | 5.4 | 0.99 | 103 |  |
+| Stormcallers | JadeQilin | beast | 610 | 9150 | 420 | 8 | 0.7 | 2.5 | 0.3 | - | 5.6 | 0.92 | 69 |  |
+| Brassworks | SteamHauler | beast | 630 | 9450 | 480 | 6 | 0.6 | 3 | 0.2 | 0.3 | 3.6 | 0.57 | 76 |  |
 
 ## T3
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | SunColossus | experimental | 1840 | 1740 | 1000 | 22 | 0.35 | 4 | 0.25 | 0.2 | 7.7 | 0.42 | 54 |  |
-| Gravebound | BoneDragon | experimental | 1840 | 1740 | 900 | 20 | 0.3 | 12 | 0.3 | - | 6 | 0.33 | 49 | hits-air |
-| Horde | WarMammoth | experimental | 1840 | 1740 | 1150 | 18 | 0.5 | 3 | 0.3 | - | 9 | 0.49 | 62 |  |
-| Verdant | WorldTreeWalker | experimental | 1840 | 1740 | 1400 | 12 | 0.3 | 4 | 0.18 | 0.3 | 3.6 | 0.20 | 76 |  |
-| Tidewrought | Leviathan | experimental | 1840 | 1740 | 1250 | 20 | 0.4 | 4 | 0.22 | 0.3 | 8 | 0.43 | 68 |  |
-| Stormcallers | CelestialDragon | experimental | 1840 | 1740 | 1050 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 57 | hits-air, flying |
-| Brassworks | IronLeviathanEngine | experimental | 1840 | 1740 | 950 | 38 | 0.25 | 32 | 0.15 | 0.2 | 9.5 | 0.52 | 52 | hits-air, artillery |
+| Sunforged | SunColossus | experimental | 1840 | 33120 | 1000 | 22 | 0.35 | 4 | 0.25 | 0.2 | 7.7 | 0.42 | 54 |  |
+| Gravebound | BoneDragon | experimental | 1840 | 33120 | 900 | 20 | 0.3 | 12 | 0.3 | - | 6 | 0.33 | 49 | hits-air |
+| Horde | WarMammoth | experimental | 1840 | 33120 | 1150 | 18 | 0.5 | 3 | 0.3 | - | 9 | 0.49 | 62 |  |
+| Verdant | WorldTreeWalker | experimental | 1840 | 33120 | 1400 | 12 | 0.3 | 4 | 0.18 | 0.3 | 3.6 | 0.20 | 76 |  |
+| Tidewrought | Leviathan | experimental | 1840 | 33120 | 1250 | 20 | 0.4 | 4 | 0.22 | 0.3 | 8 | 0.43 | 68 |  |
+| Stormcallers | CelestialDragon | experimental | 1840 | 33120 | 1050 | 20 | 0.4 | 8 | 0.28 | - | 8 | 0.43 | 57 | hits-air, flying |
+| Brassworks | IronLeviathanEngine | experimental | 1840 | 33120 | 950 | 38 | 0.25 | 32 | 0.15 | 0.2 | 9.5 | 0.52 | 52 | hits-air, artillery |
 
 ## Workers
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | Villager | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Gravebound | ZombieVillager | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Horde | Grunt | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Verdant | Seedshaper | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Tidewrought | Shipwright | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Stormcallers | Geomancer | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
-| Brassworks | Tinker | builder | 50 | 70 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Sunforged | Villager | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Gravebound | ZombieVillager | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Horde | Grunt | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Verdant | Seedshaper | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Tidewrought | Shipwright | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Stormcallers | Geomancer | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
+| Brassworks | Tinker | builder | 50 | 250 | 25 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 1.00 | 50 |  |
 
 ## T2 workers
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | RoyalArchitect | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Gravebound | Embalmer | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Horde | Bonewright | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Verdant | ElderDruid | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Tidewrought | Harbourmaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Stormcallers | LeyMaster | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
-| Brassworks | EngineerCaptain | builder | 160 | 250 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Sunforged | RoyalArchitect | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Gravebound | Embalmer | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Horde | Bonewright | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Verdant | ElderDruid | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Tidewrought | Harbourmaster | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Stormcallers | LeyMaster | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
+| Brassworks | EngineerCaptain | builder | 160 | 2400 | 50 | 1 | 0.5 | 2 | 0.25 | - | 0.5 | 0.31 | 31 |  |
 
 ## Combat engineers
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
-| Sunforged | FieldMason | builder | 145 | 210 | 110 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.69 | 76 |  |
-| Gravebound | Bonesetter | builder | 130 | 200 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.77 | 69 |  |
-| Horde | Wrecker | builder | 150 | 220 | 120 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.67 | 80 |  |
-| Verdant | Rootwarden | builder | 140 | 210 | 90 | 2 | 0.5 | 2 | 0.32 | - | 1 | 0.71 | 64 |  |
-| Tidewrought | Salvager | builder | 140 | 210 | 100 | 2 | 0.5 | 2 | 0.31 | - | 1 | 0.71 | 71 |  |
-| Stormcallers | JadeMender | builder | 135 | 230 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.74 | 67 |  |
-| Brassworks | Pioneer | builder | 150 | 200 | 120 | 2 | 0.5 | 2 | 0.28 | - | 1 | 0.67 | 80 |  |
+| Sunforged | FieldMason | builder | 145 | 2180 | 110 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.69 | 76 |  |
+| Gravebound | Bonesetter | builder | 130 | 1950 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.77 | 69 |  |
+| Horde | Wrecker | builder | 150 | 2250 | 120 | 2 | 0.5 | 2 | 0.29 | - | 1 | 0.67 | 80 |  |
+| Verdant | Rootwarden | builder | 140 | 2100 | 90 | 2 | 0.5 | 2 | 0.32 | - | 1 | 0.71 | 64 |  |
+| Tidewrought | Salvager | builder | 140 | 2100 | 100 | 2 | 0.5 | 2 | 0.31 | - | 1 | 0.71 | 71 |  |
+| Stormcallers | JadeMender | builder | 135 | 2030 | 90 | 2 | 0.5 | 2 | 0.3 | - | 1 | 0.74 | 67 |  |
+| Brassworks | Pioneer | builder | 150 | 2250 | 120 | 2 | 0.5 | 2 | 0.28 | - | 1 | 0.67 | 80 |  |
 
 ## Towers
 
@@ -168,9 +171,9 @@ Watchtowers have no weapon of their own: garrisoned units fire from them with +r
 
 | Building | M | E | HP | Metal/s | Energy/s | Payback |
 |---|--:|--:|--:|--:|--:|---|
-| MetalExtractor | 70 | 90 | 40 | 2 | - | 35 s metal |
-| WindGenerator | 50 | 30 | 30 | - | 14 | 2 s energy |
-| EnergyConverter | 75 | 300 | 30 | - | - | - |
+| MetalExtractor | 70 | 300 | 150 | 2 | - | 35 s metal |
+| WindGenerator | 50 | 150 | 110 | - | 14 | 11 s energy |
+| EnergyConverter | 75 | 300 | 50 | - | - | - |
 | StorageVault | 95 | 180 | 60 | - | - | - |
 
 ## T3 cost check
@@ -198,18 +201,22 @@ All 7 experimentals cost the same 1840M/1740E: the ratio column swings with how 
 - T1 Horde **Marauder** (raider): HP/100m 96.55 vs median 57.04 (+69%) - heavy raider: HP over damage, Bloodlust and the every-third big hit are its upside (duel-checked)
 - T1 Verdant **SentinelTreant** (tank): HP/100m 82.35 vs median 57.04 (+44%) - *role* - tank; DPS low by role, HP/100m fixed this pass
 - T1 Tidewrought **BombardCrew** (artillery): DPS/100m 1.80 vs median 3.12 (-42%) - *role* - splash shell to every enemy hit; direct DPS understates it
-- T1 Tidewrought **BombardCrew** (artillery): HP/100m 28.00 vs median 57.04 (-51%) - *role* - splash shell to every enemy hit; direct DPS understates it
+- T1 Tidewrought **BombardCrew** (artillery): HP/100m 22.40 vs median 57.04 (-61%) - *role* - splash shell to every enemy hit; direct DPS understates it
 - T1 Stormcallers **RocketBattery** (artillery): DPS/100m 0.69 vs median 3.12 (-78%) - *role*
-- T1 Stormcallers **RocketBattery** (artillery): HP/100m 31.67 vs median 57.04 (-44%) - *role*
-- T1 Brassworks **MortarCrawler** (artillery): HP/100m 33.33 vs median 57.04 (-42%) - *role*
-- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 38.82 (+84%) - *role* - siege beast, role
-- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.43 (-48%) - *role* - damage is burning only (~1/s); dedicated anti-air
-- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.43 (-75%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 38.82 (-62%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 38.82 (+115%) - *role* - super-tank, reduced this pass
-- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.43 (+61%) - cavalry burst after this pass - still flagged, intentional; watch
-- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 38.82 (-64%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
-- T2 Brassworks **SteamJuggernaut** (tank): HP/100m 63.49 vs median 38.82 (+64%) - *role*
+- T1 Stormcallers **RocketBattery** (artillery): HP/100m 25.00 vs median 57.04 (-56%) - *role*
+- T1 Brassworks **MortarCrawler** (artillery): HP/100m 26.67 vs median 57.04 (-53%) - *role*
+- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 36.25 (+98%) - *role* - siege beast, role
+- T2 Gravebound **Warden** (tank): HP/100m 51.72 vs median 36.25 (+43%) - *role* - tank, role
+- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.29 (-42%) - *role* - damage is burning only (~1/s); dedicated anti-air
+- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.29 (-73%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 36.25 (-59%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 36.25 (+130%) - *role* - super-tank, reduced this pass
+- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.29 (+79%) - cavalry burst after this pass - still flagged, intentional; watch
+- T2 Verdant **ShadeRanger** (sniper): DPS/100m 1.86 vs median 1.29 (+45%) - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 36.25 (-62%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T2 Stormcallers **Earthshaker** (tank): HP/100m 52.46 vs median 36.25 (+45%) - *role*
+- T2 Brassworks **SteamJuggernaut** (tank): HP/100m 63.49 vs median 36.25 (+75%) - *role*
+- T2 Tidewrought **SkyCorsair** (raider): DPS/100m 0.71 vs median 1.29 (-44%)
 
 ## Changes in this pass
 

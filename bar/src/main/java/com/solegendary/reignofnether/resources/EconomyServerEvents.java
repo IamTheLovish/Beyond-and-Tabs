@@ -58,8 +58,8 @@ public class EconomyServerEvents {
     // alone so the pacing stays slow. BAR starts at 1000 + the commander's 500 of each.
     public static final float CAPITOL_METAL_STORAGE = 500f;
     public static final float CAPITOL_ENERGY_STORAGE = 500f;
-    // energy converters: energy spent per metal made, and the energy fill level above which they run
-    // (a last resort since the tier gate: 100 energy per metal, see resources/TierGate)
+    // energy converters: energy spent per metal made at Tier 1, and the energy fill level above which they run
+    // (a last resort since the tier gate: 100 energy per metal; better at Tier 2/3 - PlayerEconomy.conversionRatio)
     public static final float CONVERSION_RATIO = TierGate.CONVERTER_ENERGY_PER_METAL;
     public static final float CONVERSION_THRESHOLD = 0.5f;
 
@@ -79,6 +79,8 @@ public class EconomyServerEvents {
         public float stall = 1f;
         // energy/s the player's completed converters can turn into metal
         public float conversionCapacity = 0;
+        // energy per metal at the player's tech tier (TierGate.converterEnergyPerMetal), set by the 1 s recalc
+        public float conversionRatio = CONVERSION_RATIO;
         // extractors (resources/TierGate): the metal/s they make at full output (part of metalIncome), the energy/s they
         // drain to make it, and the share of that drain energy could pay (1 = all; smoothed, for the HUD) - metalIncome
         // is the nominal figure, {@link #effectiveMetalIncome} what the starved extractors really make
@@ -192,15 +194,15 @@ public class EconomyServerEvents {
         if (eco.conversionCapacity <= 0 || ManaServerEvents.convertersPaused(res.ownerName))
             return;
         float energy = EconomyMath.energyToConvert(res.getEnergy(), eco.energyStorage, converterLevel(res.ownerName, eco),
-            eco.metalStorage - res.getMetal(), eco.conversionCapacity / TICKS_PER_SECOND, CONVERSION_RATIO);
+            eco.metalStorage - res.getMetal(), eco.conversionCapacity / TICKS_PER_SECOND, eco.conversionRatio);
         if (energy <= 0)
             return;
         res.addEnergy(-energy);
-        res.addMetal(energy / CONVERSION_RATIO);
+        res.addMetal(energy / eco.conversionRatio);
         eco.energySpentWindow += energy;           // converters show up as energy expense ...
         eco.energyConvertedWindow += energy;
-        eco.metalConvertedWindow += energy / CONVERSION_RATIO;   // ... and as metal income
-        eco.metalProducedWindow += energy / CONVERSION_RATIO;
+        eco.metalConvertedWindow += energy / eco.conversionRatio;   // ... and as metal income
+        eco.metalProducedWindow += energy / eco.conversionRatio;
     }
 
     /**
@@ -373,10 +375,20 @@ public class EconomyServerEvents {
             float energyStorage = DEFAULT_ENERGY_STORAGE + (capitol ? CAPITOL_ENERGY_STORAGE : 0) + t[3];
             setStorage(res, eco, metalStorage, energyStorage);
             eco.conversionCapacity = t[4] * pace;   // converters are income too (same metal per energy, faster)
+            eco.conversionRatio = TierGate.converterEnergyPerMetal(techTier(res.ownerName));
             // extractors' energy drain scales with the pace like every income, so the ratio holds at any pace
             eco.extractorMetal = t[5] * pace;
             eco.extractorUpkeep = t[6] * pace;
         }
+    }
+
+    /** 1, 2 or 3: the owner's researched tier (the converter ratio improves with it). */
+    public static int techTier(String owner) {
+        if (com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            return 3;
+        return com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(owner,
+            com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2) ? 2 : 1;
     }
 
     /**
