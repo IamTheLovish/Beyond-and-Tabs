@@ -786,6 +786,10 @@ public class SoulEngineerGameTests {
                 float lostA = a0 - made[0].getHealth(), lostB = b0 - made[1].getHealth();
                 if (Math.abs(lostA - 54f) > 1f)
                     problems.add("a siege shell of 4 took " + lostA + " off the furnace, expected the defence rate's 54");
+                // the lobber's own number (unit/units/shared/SiegeTuning): a re-tune shows here
+                if (Math.abs(com.solegendary.reignofnether.unit.units.shared.SiegeTuning.healthPerShell(true) - 54f) > 1e-3f)
+                    problems.add("the siege lobber's defence rate is now "
+                        + com.solegendary.reignofnether.unit.units.shared.SiegeTuning.healthPerShell(true) + ", the furnace expects 54");
                 if (Math.abs(lostB - 4f) > 0.5f)
                     problems.add("a plain shell of 4 took " + lostB + " off the furnace, expected the unit rate's 4");
             } catch (RuntimeException ex) {
