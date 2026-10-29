@@ -166,8 +166,18 @@ public class RaidGameTests {
         BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(b, level, origin, Rotation.NONE, owner, false);
         if (bp == null)
             return null;
-        if (t2 && b instanceof MetalExtractor mex)
-            bp.changeStructure(mex.getUpgradedStructureName(1));
+        if (t2 && b instanceof MetalExtractor mex) {
+            // the tower stands before the structure swap, as a refitted T1's pool does in a match: changeStructure on an
+            // empty site queued every T2 block, and buildNextBlock laid them one a tick (the pool's water with them)
+            // while a test was already breaking the building - water over a broken basin spilled onto the patch
+            // (PR #297's CI, Build run 40638083212, "ground_not_flat")
+            String t2Name = mex.getUpgradedStructureName(1);
+            for (BuildingBlock bb : BuildingUtils.getAbsoluteBlockData(
+                    com.solegendary.reignofnether.building.BuildingBlockData.getBuildingBlocksFromNbt(t2Name, level), level, origin, Rotation.NONE))
+                if (!bb.getBlockState().isAir())
+                    level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
+            bp.changeStructure(t2Name);
+        }
         for (BuildingBlock bb : bp.getBlocks())
             if (!bb.getBlockState().isAir())
                 level.setBlock(bb.getBlockPos(), bb.getBlockState(), 2);
@@ -762,6 +772,14 @@ public class RaidGameTests {
                     problems.add("could not place the " + (round == 1 ? "T2" : "T1") + " extractor");
                     continue;
                 }
+                // the extractor must be handed over standing, with nothing left to lay: a block still queued is laid one
+                // a tick by buildNextBlock while the blows below are breaking the building, with no look at its
+                // neighbours - a pool's water laid back over a broken basin spills onto the patch (PR #297's CI, Build
+                // run 40638083212: flowing water beside the T2, "ground_not_flat"). A player's extractor never has its
+                // water queued: the upgrade swaps the structure on a T1 whose pool already stands.
+                String state = cur[round].constructionState();
+                if (!state.startsWith("queue 0,"))
+                    problems.add("the " + (round == 1 ? "T2" : "T1") + " extractor was handed over with blocks still to lay: " + state);
             }
         });
         helper.onEachTick(() -> {
