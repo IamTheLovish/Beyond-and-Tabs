@@ -447,8 +447,8 @@ class EngineShedT1Keeps(unittest.TestCase):
         def role(n):
             n = n.replace("waxed_cut_copper", "waxed_exposed_cut_copper").replace("weathered", "exposed")
             return n[:-len("_stairs")] + "_stairs" if n.endswith("_stairs") else n
-        brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper")
-                       and q not in MOVED_BRASS and q[1] >= 1)
+        brass = sorted(q for q, (n, _) in self.want.items() if n in ("waxed_cut_copper", L.FAM["brass"][0])
+                       and q not in MOVED_BRASS and q[1] >= 1)    # r1-r8's raw brass blocks or r9's exposed ones
         self.assertTrue(brass)
         moved = [q for q in brass if q not in self.got or role(self.got[q][0]) != role(self.want[q][0])
                  or self.got[q][1] != self.want[q][1]]
