@@ -29,6 +29,7 @@ import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.Summons;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
@@ -986,12 +987,18 @@ public class SoulEngineerGameTests {
                 Essence.add(caster, 1);
                 if (se.autoBoil() || SoulBoiler.isBoiling(shop))
                     problems.add("the Soul Engineer boiled an idle building by itself");
-                // a unit queued with no population room (the test owner has no supply): the queue is held, no boil
+                // a unit queued with no population room (the cap lowered to 0 for this check): the queue is held, no boil
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.STEAM_RUNNER, false, me));
-                if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
-                    problems.add("setup: the test owner has population room for a Steam Runner");
-                else if (se.autoBoil() || SoulBoiler.isBoiling(shop))
-                    problems.add("the Soul Engineer boiled a queue held at the population cap by itself");
+                int maxPop = UnitServerEvents.maxPopulation;   // BAR: everyone's supply is the host's cap
+                try {
+                    UnitServerEvents.maxPopulation = 0;
+                    if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
+                        problems.add("setup: with a population cap of 0 the Steam Runner's queue is not held");
+                    else if (se.autoBoil() || SoulBoiler.isBoiling(shop))
+                        problems.add("the Soul Engineer boiled a queue held at the population cap by itself");
+                } finally {
+                    UnitServerEvents.maxPopulation = maxPop;
+                }
                 pp.productionQueue.clear();
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
                 // a friendly site nobody is building, alone in reach
@@ -1120,6 +1127,8 @@ public class SoulEngineerGameTests {
         String me = owner(helper, "patchsite");
         Mob caster = engineer(helper, me, 1, 1, 30);
         BuildingPlacement rising = site(helper, Buildings.MACHINE_SHOP, me, 4, 4, false);
+        if (rising != null)
+            BuildingServerEvents.getBuildings().remove(rising);   // a site with no block placed is dropped when ticked
         helper.runAfterDelay(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
@@ -1128,6 +1137,7 @@ public class SoulEngineerGameTests {
                     problems.add("could not set up the Soul Engineer and the site");
                     return;
                 }
+                BuildingServerEvents.getBuildings().add(rising);
                 beside(caster, rising, 3);
                 kit.use(level, (Unit) caster, rising.centrePos);
                 if (Essence.get(caster) != 30)
@@ -1154,6 +1164,8 @@ public class SoulEngineerGameTests {
         String me = owner(helper, "boilsite");
         Mob caster = engineer(helper, me, 1, 1, 20);
         BuildingPlacement rising = site(helper, Buildings.MACHINE_SHOP, me, 4, 4, false);
+        if (rising != null)
+            BuildingServerEvents.getBuildings().remove(rising);   // a site with no block placed is dropped when ticked
         helper.runAfterDelay(3, () -> {
             List<String> problems = new ArrayList<>();
             try {
@@ -1162,6 +1174,7 @@ public class SoulEngineerGameTests {
                     problems.add("could not set up the Soul Engineer and the site");
                     return;
                 }
+                BuildingServerEvents.getBuildings().add(rising);
                 beside(caster, rising, 3);
                 float p0 = rising.boostedBuildPower(1f);
                 sb.use(level, (Unit) caster, rising.centrePos);
