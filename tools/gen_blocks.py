@@ -77,12 +77,18 @@ TARGETS = {
     # leaves; reference leaves group: luma 0.60, std 0.093, tilt 18, smoothness 60, SSS on 67% of texels. pore here is
     # the _s blue CODE: 65-255 = subsurface scattering (light through the leaf under a shader pack)
     # round 18: leaves' tilt 18 -> 12 (every leaf edge drew a dark rim under shaders)
-    "oak_leaves":       dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "birch_leaves":     dict(luma=0.58, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "spruce_leaves":    dict(luma=0.48, std=0.085, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
-    "acacia_leaves":    dict(luma=0.55, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
-    "jungle_leaves":    dict(luma=0.52, std=0.095, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
-    "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
+    # round 37 (Oct 29, eyes run 40817045672, lovish: "lets keep improving textures"): the oak crowns measured the
+    # lawn's own value and hue from the RTS camera (crown V 0.33 / hue 81 against the lawn's 0.33 / 78; birch brighter
+    # than the lawn) - the canopy dissolved into the meadow. A canopy seen from above is a darker, cooler mass than
+    # sunlit grass (self-shadowing between its sprigs), so: luma -15% and the clump spread +33% (lit sprig tops, deep
+    # pockets between them - the volume reads at the RTS zoom); GrassTint.CANOPY (not in this branch) cools the foliage colour.
+    "oak_leaves":       dict(luma=0.47, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    # birch (critic r38: "birch vs oak identity: zero at the crown"): a lighter, airier crown than the oak's
+    "birch_leaves":     dict(luma=0.58, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "spruce_leaves":    dict(luma=0.44, std=0.110, sat=0.00, ao=0.35, tilt=9.0, smooth=50, pore=150),
+    "acacia_leaves":    dict(luma=0.48, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=180),
+    "jungle_leaves":    dict(luma=0.46, std=0.125, sat=0.00, ao=0.35, tilt=9.0, smooth=70, pore=170),
+    "dark_oak_leaves":  dict(luma=0.42, std=0.120, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
     "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.39, tilt=26.0, smooth=76, pore=10),
@@ -101,7 +107,9 @@ TARGETS = {
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
     "spruce_log":       dict(luma=0.19, std=0.052, sat=0.46, tilt=26.2, smooth=40, pore=36),
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.85, std=0.140, sat=0.06, tilt=26.0, smooth=50, pore=30),
+    # r37 (critic r38: the birch trunk "renders blue-grey ... reads as steel" under Complementary): near-white bark
+    # takes the blue sky ambient in shade almost unfiltered - a step darker and a touch warmer, a rougher surface
+    "birch_log":        dict(luma=0.74, std=0.140, sat=0.09, tilt=26.0, smooth=36, pore=30),
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
     "acacia_log":       dict(luma=0.35, std=0.063, sat=0.19, tilt=26.1, smooth=40, pore=36),
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
@@ -918,8 +926,9 @@ def m_leaves(F, n, count, length, width, round_tip=True, droop=0.0):
     # block at 256x, so each leaf kept its own light and the canopy read as fine noise); a leaf's own tone and its
     # curve are small touches
     soft = F.blur(np.where(leaf, lit, 0.55), n / 40)
-    shade = np.where(leaf, 0.36 + 0.62 * soft + 0.04 * (tone - 0.5) + 0.04 * dome + 0.02 * rib
-                     - 0.03 * (along + 0.5), 0.36 + 0.62 * soft - 0.06)
+    # round 37: the pockets between sprigs go deeper (0.36 -> 0.24 floor): a crown's light and shadow come in clumps
+    shade = np.where(leaf, 0.24 + 0.78 * soft + 0.04 * (tone - 0.5) + 0.04 * dome + 0.02 * rib
+                     - 0.03 * (along + 0.5), 0.24 + 0.78 * soft - 0.06)
     shade = np.where(alpha > 0, shade, 0.35)
     return H, np.clip(np.stack([shade] * 3, -1), 0, 1), alpha
 
