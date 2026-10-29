@@ -577,30 +577,32 @@ def tower(g):
         corners = {min(z for x, z in cells if x == fx), max(z for x, z in cells if x == fx)}
         for x, z in cells:
             q = (x, y, z)
-            if (x, z) in arris[y]:
-                paint(g, q, "rough" if y >= 24 else "flat" if y in (20, 21) else "dark")   # 2-row runs:
-                # one texture a row read as speckle (R8 89 %)
+            if (x, z) in arris[y] and not 20 <= y <= 23:
+                paint(g, q, "rough" if y >= 24 else "dark")
+            elif (x, z) in arris[y]:   # r5: the top tier (3 wide) is one red field - dark arrises there made 13 of
+                paint(g, q, "red")     # 16 cells dark, a dark cap read as a third tier (critic on r4)
             elif top_row and x == fx and z in corners:        # the step's inner corner: a lighter-red tick on the
                 paint(g, q, "granite")                        # arris (ref18's picked-out steps; a whole granite
             else:                                             # step row read as a lid at y 11)
                 paint(g, q, "red")
-    # the door head (R6, r4: y 9 in the first tier's face, x 0): the arch's voussoirs over the 5-wide lane - pale
-    # haunches (upside-down quartz stairs, their step at the jamb side, so the opening's top corners read rounded),
-    # polished granite top slabs, a brass keystone slab carrying the ONE door light (a standing lantern set into the
+    # the door head (R6, r4: y 9 in the first tier's face, x 0): the arch's voussoirs over the 5-wide lane - granite
+    # haunches (upside-down stairs, their step at the jamb side, so the opening's top corners read rounded), quartz
+    # bricks either side of a brass keystone slab carrying the ONE door light (a standing lantern set into the
     # face at y 10: check_support rejects hanging ones, and the lane under the head, y 1..8, stays air). Over it the
-    # face runs on red. Only 2 pale cells a row: the 30 % row rule, so the ring is pale at the jambs and haunches.
+    # face runs on red. Only 2 pale cells a row (the 30 % row rule): the door's light spot, at the head's centre.
     yh, cz = LANE_H + 1, int(TZ)
-    for z, facing in ((LANE_Z[0], "north"), (LANE_Z[-1], "south")):
-        put(g, (0, yh, z), FAM["quartz"][1], facing=facing, half="top", shape="straight", waterlogged="false")
-    for z in (cz - 1, cz + 1):
-        put(g, (0, yh, z), FAM["granite"][2], type="top", waterlogged="false")
+    for z, facing in ((LANE_Z[0], "north"), (LANE_Z[-1], "south")):     # r5: the haunches granite and the pale
+        put(g, (0, yh, z), FAM["granite"][1], facing=facing, half="top", shape="straight", waterlogged="false")
+    for z in (cz - 1, cz + 1):                       # next to the keystone - the light gathers at the head's centre
+        put(g, (0, yh, z), "quartz_bricks")          # (r4's pale haunches + jambs read as a U; top slabs here
+        #                                              showed the dark vault through their lower half)
     put(g, (0, yh, cz), FAM["brass"][2], type="top", waterlogged="false")
     put(g, (0, yh + 1, cz), LAMP, hanging="false", waterlogged="false")
-    # R7 the eye, at its r2 elevation cells (y 14..16, z 11..13): a calcite ring round a recessed deep-red heart, in
+    # R7 the eye, at its r2 elevation cells (y 14..16, z 11..13): a granite ring round a recessed deep-red heart, in
     # the second tier's face (x 1, y 12..15) and the third's (x 2, y 16..19)
-    for q in ((1, 14, 12), (1, 15, 11), (1, 15, 13)):
-        put(g, q, "calcite")
-    paint(g, (2, 16, 12), "diorite")
+    for q in ((1, 14, 12), (1, 15, 11), (1, 15, 13)):     # r5: polished granite, +40 over the body - calcite
+        put(g, q, "polished_granite")                    # stood +120 and cut the cone into two tiers (critic on r4)
+    paint(g, (2, 16, 12), "granite")
     g.clear(1, 15, 12)
     put(g, (2, 15, 12), "red_nether_bricks")
     # R8 the panel grid at its r2 elevation cells: the top tier's arrises (z 11 / 13, y 20..23) are the lattice's
@@ -612,8 +614,7 @@ def tower(g):
             put(g, (x, y, int(TZ)), "red_terracotta")
         else:
             paint(g, (x, y, int(TZ)), "red")
-    g.clear(3, 20, 12)
-    put(g, (4, 20, 12), LAMP, hanging="false", waterlogged="false")
+    put(g, (3, 20, 12), "red_terracotta")               # r5: no lit slot - the top tier one red field
     put(g, (4, 24, 12), "blackstone")
     paint(g, (4, 25, 12), "brass")
 
@@ -622,8 +623,8 @@ def door(g):
     """R6 (re-mass r3, lane 5 x 8 in r4): the door is the tower's light spot (ref18's glowing door; r2's lane was a
     dark hole in a black frame) - an arch ring at the mouth, not a pale plane (r3's all-calcite 7-wide far wall read
     as a grey slab under the cone; r4's first pass, pale only mid-wall, as a dark slot in a white frame). With the
-    lane 5 wide the cone's face and dark arrises come down to the eave beside it (z 8..9, 15..16). The ring: calcite
-    jambs (z 9 / 15, x 0) on the andesite base course up to the head, and the head's pale haunches (tower()). Beside
+    lane 5 wide the cone's face and dark arrises come down to the eave beside it (z 8..9, 15..16). The ring: polished
+    granite jambs (z 9 / 15, x 0, r5) on the andesite base course up to the head, its light at the head (tower()). Beside
     them a red bay panel (z 8 / 16, a red cell at y 6 so the lintel cornice stops a cell short of the jamb - run on,
     the two read as one white gateway) and the buttresses (z 7 / 17) like the arcade's piers (andesite base and
     capital, a blackstone-brick shaft, the quartz cornice), capped by one small dark stair AT the eave (ref40's
@@ -646,8 +647,10 @@ def door(g):
         stair(g, (0, 6, zp), "quartz", "east", "top")     # the cornice ends on the buttress, a red cell short of
         put(g, (0, 6, zb), "red_terracotta")              # the jamb (run on to the door, the lintel line and the
         #                                                   jambs read as one white gateway frame)
-        for y in range(2, LANE_H + 1):                    # the jamb: pale to the head, the arch ring's bright line
-            put(g, (0, y, zj), "calcite")
+        for y in range(2, LANE_H + 1):                    # the jamb: polished granite to the head - r4's calcite
+            put(g, (0, y, zj), "polished_granite")        # jambs read as a white U-frame round a dark mouth (critic
+        #   on r4); a calcite impost at y 8 was then the door's lightest cell (squint 135 vs the head's 99), at the
+        #   sides, so the light gathers at the head's centre instead
         for x in range(1, HALL_X[1]):                     # the reveals, seen through the door
             for y in range(1, LANE_H + 1):
                 if y == 1:
@@ -679,9 +682,9 @@ def door(g):
         for x in range(2, 8):                          # the passage ceiling: red and pale bands
             if (x, LANE_H + 1, z) in g.b:
                 put(g, (x, LANE_H + 1, z), "red_terracotta" if x % 2 else "quartz_bricks")
-        for x in LANE_X:                               # the floor: pale, flush with the lawn
-            if x in (LANE_X[0], LANE_X[-1]):
-                put(g, (x, 0, z), "polished_diorite")
+        for x in LANE_X:                               # the floor: smooth stone, flush with the lawn, on a tuff
+            if x in (LANE_X[0], LANE_X[-1]):           # threshold and gate line (r4's diorite threshold read as a
+                put(g, (x, 0, z), "tuff")              # pale strip under the door)
             else:
                 put(g, (x, 0, z), "smooth_stone_slab", type="top", waterlogged="false")
     cz = int(TZ)

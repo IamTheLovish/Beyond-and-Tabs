@@ -57,8 +57,9 @@ bricks) with a red cross / star, framed in blackstone. Target: red 79 / dark 11 
 **R6 Door and tower base (x 0..9, z 7..17, y 0..10).** The exit lane is 5 wide x 8 tall (z 10..14, y 1..8, x 0..8),
 the lane every other lab uses: **T1 Brassworks vehicles fit 5 x 8** (r4, Oct 28 - the 7 x 10 came only from the plot
 rescale and made the door the cone's whole foot; ref18's door is ~55 % of the foot's width, ~31 % of the tower's
-height). The door is the tower's light spot, an arch ring, not a pale plane: calcite jambs (z 9 / 15) to the head; the
-head at y 9 - pale quartz haunches, granite voussoirs, a brass keystone carrying ONE standing lantern (hanging lanterns
+height). The door's light is a SPOT at the head's centre, not a frame (r5: r4's calcite jambs read as a white U):
+polished granite jambs (z 9 / 15) to the head; the head at y 9 - granite haunches, quartz-brick voussoirs either side
+of a brass keystone carrying ONE standing lantern (hanging lanterns
 fail check_support); beside the jambs the cone's face and dark arrises come down to the eave. The far wall (x 9) a
 calcite field between diorite gate channels, red over the lintel line, the brass rosette where the animated gate will
 hang; the reveals quartz-brick pilasters between red fields; the lane floor smooth stone behind a diorite threshold.
@@ -69,11 +70,12 @@ Buttresses (z 7 / 17) stop under the eave like the arcade piers, capped by one s
 **R7 Tower mid (y 7..18).** ONE straight cone from the hall eave: front outline 11 15 19 23 25 (4 rows a column,
 FRONT_T1), standing ON the hall roof - the hall roofs run into its flanks. Red faces, black arrises (polished blackstone
 brick stairs / walls) as one unbroken stepped line from y 7 to the point, a granite tick at each step's inner corner;
-no full-width pale or dark course, no row of the cone's face over 30 % pale; the pale diamond "eye" (calcite ring,
+no full-width pale or dark course, no row of the cone's face over 30 % pale; the diamond "eye" (polished granite ring - r5: calcite stood +113 over the body and split the cone -
 red heart) at y 14..16, z 11..13 (kept from r5). Re-mass r3, lovish chose option b, Oct 28.
 
-**R8 Tower upper and point (y 18..25).** A red panel grid: single red terracotta panels in a dark lattice, at least 3
-panels across where the width allows; the point (y 24..25) dark with a brass tip.
+**R8 Tower upper and point (y 18..25).** At 3-5 wide "3 panels across" cannot exist: one red field (red terracotta,
+mangrove shapes) with granite ticks at the step corners; dark only as the arris below y 20 - the 3-wide top tier is all
+red (r5: its dark arrises made it a dark cap, a third tier) - and the point (y 24) dark under the brass tip (y 25).
 
 **R9 Backs and RTS-visible sides (the shed x 11..16 roof at y 5, its south end, the stack x 13..14 z 0..1, the halls'
 south end z 24).** Quieter, but never blank: every visible face has 2 materials and 2 depth planes - deepslate tiles

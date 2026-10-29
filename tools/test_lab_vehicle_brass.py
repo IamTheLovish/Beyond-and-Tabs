@@ -213,20 +213,60 @@ class EngineShedT1Detail(unittest.TestCase):
         self.assertEqual({z: n for z, n in row.items() if not any(k in n for k in red) and n != "lantern"}, {}, y)
 
     def test_door_is_the_bright_spot(self):
-        """E: the door is the front's brightest spot (ref18), not a black hole - the lane's far wall (x 9, z 9..15,
-        y 1..10) and its reveals (the lane's side walls z 8 / 16, x 0..8, y 1..10) pale-dominant, the lane floor
-        pale, ONE lantern in the door head; the lane itself air."""
+        """E: the door is the front's light spot (ref18), not a black hole - the lane's far wall (x 9) and its
+        reveals (the lane's side walls, x 1..8) pale-dominant, ONE lantern in the door head; the lane itself air."""
         far = [(L.HALL_X[1], y, z) for z in L.LANE_Z for y in range(1, L.LANE_H + 1)]
-        rev = [(x, y, z) for x in L.LANE_X for z in (L.LANE_Z[0] - 1, L.LANE_Z[-1] + 1) for y in range(1, L.LANE_H + 1)]
+        # the reveals inside the mouth (x 1..8): r5 moved the mouth's own jambs (x 0) to polished granite - the light
+        # is a spot at the head, not a frame (test_door_light_is_a_spot_not_a_frame governs x 0)
+        rev = [(x, y, z) for x in L.LANE_X[1:] for z in (L.LANE_Z[0] - 1, L.LANE_Z[-1] + 1)
+               for y in range(1, L.LANE_H + 1)]
         cells = [self.names.get(q, "air") for q in far + rev]
         pale = sum(any(k in n for k in self.PALE) for n in cells)
         self.assertGreater(pale / len(cells), 0.5, "door region pale %d of %d" % (pale, len(cells)))
         floor = {self.names.get((x, 0, z)) for x in L.LANE_X for z in L.LANE_Z}
-        # the brief: "a pale floor in the lane (smooth stone or polished diorite instead of deepslate tiles)"
-        self.assertEqual([n for n in floor if not any(k in str(n) for k in self.PALE + ("smooth_stone",))], [])
+        # r5 (critic on r4): smooth stone on a tuff threshold - r3's polished diorite threshold read as a pale strip
+        self.assertEqual(floor, {"smooth_stone_slab", "tuff"})
+        self.assertEqual({self.names.get((0, 0, z)) for z in L.LANE_Z}, {"tuff"})
         head = [q for q, n in self.names.items() if n == "lantern" and q[0] <= 1 and
                 L.LANE_H < q[1] <= L.LANE_H + 3 and q[2] in L.LANE_Z]
         self.assertEqual(len(head), 1, head)
+
+    # ---------------------------------------------------------------- r5: the fresh critic's fixes on r4 (6 / 5)
+    def test_door_light_is_a_spot_not_a_frame(self):
+        """r4's door was a white U-frame (~20 calcite cells, luma ~199, round a dark mouth); ref18's door light is a
+        spot. In the door's mouth (x 0, z 9..15, y 1..9) pale only at the head's centre (the keystone's neighbours,
+        y 9; the brief allowed the y 8 impost too, but calcite there was the door's lightest cell, at the sides); the
+        jambs polished granite; the far wall red over the lintel line (y 7..8, the rosette's brass aside)."""
+        mouth = {(y, z): self.front_cell(y, z)[1] for y in range(1, L.LANE_H + 2) for z in range(9, 16)
+                 if self.front_cell(y, z)[0] == 0}
+        self.assertEqual(sorted(q for q, n in mouth.items() if any(k in n for k in self.PALE) and q[0] < 8), [])
+        for z in (9, 15):
+            self.assertEqual({self.names[(0, y, z)] for y in range(2, 8)}, {"polished_granite"}, z)
+        head = sorted(q for q, n in mouth.items() if any(k in n for k in self.PALE))
+        self.assertEqual(head, [(L.LANE_H + 1, 11), (L.LANE_H + 1, 13)])  # the pale is the keystone's neighbours
+        far = {self.names[(L.HALL_X[1], y, z)] for y in (7, 8) for z in L.LANE_Z}
+        self.assertEqual(far - {"waxed_cut_copper"}, {"red_terracotta"})
+
+    def test_eye_is_granite_round_a_red_heart(self):
+        """r4's calcite eye stood +120 luma over the cone body and cut the cone into two tiers; target +40..50: the
+        ring polished granite, the red-nether heart kept (the elevation cells of r2's eye)."""
+        ring = [self.front_cell(y, z)[1] for y, z in ((14, 12), (15, 11), (15, 13), (16, 12))]
+        self.assertEqual(ring, ["polished_granite"] * 4)
+        self.assertEqual(self.front_cell(15, 12)[1], "red_nether_bricks")
+
+    def test_upper_spire_is_red_and_arrises_dark(self):
+        """r4's top tier was 13 of 16 cells dark - a dark cap, a third tier. The top tier (y 20..23, z 11..13) is one
+        red field; the point (y 24) dark under the brass tip (y 25); below y 20 every row's outer columns (the
+        arrises, z = 12 +- half-width) dark from the eave up."""
+        red = ("terracotta", "mangrove", "granite")
+        top = {(y, z): self.front_cell(y, z)[1] for y in range(20, 24) for z in (11, 12, 13)}
+        self.assertEqual({q: n for q, n in top.items() if not any(k in n for k in red)}, {})
+        self.assertEqual(self.front_cell(24, 12)[1], "blackstone")
+        self.assertTrue(self.front_cell(25, 12)[1].startswith("waxed_cut_copper"))
+        for y in range(7, 20):
+            w = 4 - max(0, (y - 8) // 4)                      # the cone's half-width at row y (FRONT_T1's steps)
+            for z in (12 - w, 12 + w):
+                self.assertTrue(any(k in self.front_cell(y, z)[1] for k in self.DARK), (y, z))
 
     def test_every_region_passes_the_facade_audit(self):
         import json
@@ -290,7 +330,7 @@ def eye_roles(cells):
         for z in range(EYE[2], EYE[3] + 1):
             xs = [x for x in range(SIZE_T1[0]) if (x, y, z) in cells]
             n = cells[(min(xs), y, z)][0] if xs else "air"
-            out[(y, z)] = ("pale" if any(k in n for k in ("calcite", "quartz", "diorite")) else
+            out[(y, z)] = ("ring" if any(k in n for k in ("calcite", "quartz", "diorite")) or n == "polished_granite" else
                            "heart" if n.startswith("red_nether") else
                            "red" if any(k in n for k in ("terracotta", "mangrove", "granite")) else n)
     return out
@@ -327,9 +367,10 @@ class EngineShedT1Keeps(unittest.TestCase):
             self.assertEqual(diff, [], "z %d is not the hall roof of z %d" % (z, zh))
 
     def test_the_eye_keeps_its_elevation(self):
+        """The eye's cells and heart stay where r2 put them; r5 turned its ring calcite -> polished granite (the
+        critic: +120 luma over the body split the cone) - EngineShedT1Detail.test_eye_is_granite_round_a_red_heart."""
         got = eye_roles(self.got)
-        self.assertEqual(got, eye_roles(self.want))
-        self.assertEqual(sorted(q for q, r in got.items() if r == "pale"), [(14, 12), (15, 11), (15, 13), (16, 12)])
+        self.assertEqual(sorted(q for q, r in got.items() if r == "ring"), [(14, 12), (15, 11), (15, 13), (16, 12)])
         self.assertEqual(got[(15, 12)], "heart")
 
     def test_the_eight_bay_candles(self):
