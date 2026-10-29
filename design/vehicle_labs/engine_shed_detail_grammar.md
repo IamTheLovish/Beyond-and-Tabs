@@ -358,3 +358,13 @@ The closest reference to our RTS camera (an isometric 3/4 from above). Small (23
 4. **Worn, not clean.** Patched roof cells, stained plaster/brick near the base and under eaves, debris and crates
    at the walls' feet. Weathering density highest at eaves, valleys and the ground line.
 5. **Big service doors** (timber, planked) on the sheds - the vehicle doors ARE the facade's focus.
+
+## (k) ref49 - lovish's reference, Oct 28 22:51 (design/refs/vehicle_labs/ref49_long_brick_factory_chimneys.png)
+Realism through RESTRAINT (small, 299 px):
+1. **Few materials, one rhythm.** Red brick + dark window frames + a dark roof band; the same bay repeated the whole
+   length reads as a real factory, not a collage. Ornament budget is low - the rhythm is the detail.
+2. **Long window bands,** two storeys, dark mullions, warm lit interiors at dusk - glazing carries the facade.
+3. **Tall square brick chimneys** grouped at one end as the vertical counterpoint to a long low body.
+4. Real proportions: storey height ~4-5 blocks, windows ~2/3 of the bay, parapet/roof band thin.
+Lesson for us: refs 45-49 all keep walls to ONE brick + ONE stone + ONE dark trim, roofs to grey slate, and spend
+detail on structure (bays, windows, eaves, chimneys) and machinery - never on multi-colour panels or chequers.
