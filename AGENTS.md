@@ -188,7 +188,15 @@ NOTES.md                  older session log; README.md is out of date (this file
   makes them mandatory, the tester pack ships them. Structures reference their blocks by full id - in
   `tools/gen_structures.py` palettes write `"mcwroofs:thatch_steep_roof"` (a bare name means `minecraft:`). An id no
   mod registers loads as AIR: `BuildingBlockModGameTests` fails on any structure that names one, and the CI notice
-  `[Mod blocks]` lists each mod's real ids. **Never** copy, extract, recolour or commit their textures, models or
+  `[Mod blocks]` lists each mod's real ids. **Every id with its block states** (all Macaw's, FramedBlocks, Domum
+  Ornamentum, Chipped, Decorative Blocks): `mod_block_ids.json` on branch `block-ids` (`.github/workflows/block-ids.yml`;
+  read it with `gh api 'repos/IamTheLovish/Beyond-and-Tabs/contents/mod_block_ids.json?ref=block-ids' -H 'Accept:
+  application/vnd.github.raw'`). Since Oct 29 also **FramedBlocks** (LGPL-3) and **Domum Ornamentum** (GPL-3,
+  CurseForge-only, a 1.20.1 snapshot build): their look is block-entity data in the structure's per-block `nbt` -
+  FramedBlocks `{"id": "framedblocks:framed_tile", "camo": {"type": "framedblocks:block", "state": {"Name": ...}}}`,
+  Domum `{"id": "domum_ornamentum:materially_retexturable", "textureData": {"<component>": "<block id>"}}` (shingle
+  components `minecraft:block/clay` = roof, `minecraft:block/oak_planks` = support; timber frame `minecraft:block/oak_planks`
+  = frame, `minecraft:block/dark_oak_planks` = infill); BuildingPlacement.restoreBlockEntity puts it down. **Never** copy, extract, recolour or commit their textures, models or
   other assets (Macaw's Roofs/Windows and Chipped's art are All Rights Reserved; the repo is public) - not even on a
   branch, not even for an offline preview; `structure_preview.py` draws unknown blocks as its placeholder tile.
 - The block pack (`tools/gen_blocks.py`): new textures go at the END of TARGETS and SEED_ORDER (seeds follow the

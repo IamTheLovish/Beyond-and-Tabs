@@ -54,6 +54,13 @@
   "sha512": "e48dae175eb053ce0f7035e634264f8e84e60560609a5e0391bff01c3e584e6c0fa28fd88fde852b674876b8e21f923444c9ad2726326e337da2d69af0261a70"
  },
  {
+  "file": "domum_ornamentum-1.20.1-1.0.304-snapshot-universal.jar",
+  "size": 1180558,
+  "sha1": "166c70ed9f958aa79c3f30a0bd84e3bf6fc3b47f",
+  "sha512": "a13b9ac9cdfe2cc4602e0fb224765e73aaa0fe8d664029bc3433512f3a5cafc55a1fd9783bfb610a441a9111c8165f8582bff1d388421171f90c99bf569321e1",
+  "url": "https://edge.forgecdn.net/files/8765/962/domum_ornamentum-1.20.1-1.0.304-snapshot-universal.jar"
+ },
+ {
   "file": "embeddium-0.3.31+mc1.20.1.jar",
   "size": 1320675,
   "sha1": "bb2fa8f3e493af16af9160d049f96c614a1faf2f",
