@@ -24,8 +24,11 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -412,6 +415,10 @@ public class HeroAiV2GameTests {
      * Target pick sees only what the hero's side sees: a cloaked Shade Ranger it could finish with one Judgement is not
      * there for it; Judgement goes to the enemy in plain view. Main: the brain reads every unit round the hero, hidden
      * or not, and spends Judgement on the cloaked one (the kill it can finish scores highest).
+     * It plays on a sky pad of its own (SKY_PAD_Y): on the arena floor a neighbouring test's units came within the
+     * ranger's reach, and an engaged ranger never cloaks - the intermittent "setup: the Shade Ranger did not cloak"
+     * (6 of 48 runners on the vision branch, where heroes perceive 36 blocks, not 24). The setup failure says what kept
+     * it visible.
      */
     @GameTest(template = ARENA, batch = "hero_ai_v2_target", timeoutTicks = 260)
     public static void hero_ai_v2_target_pick_skips_an_enemy_its_side_cannot_see(GameTestHelper helper) {
@@ -424,6 +431,9 @@ public class HeroAiV2GameTests {
             HeroAiGameTests.finish(helper, List.of("could not spawn the enemies"), mobs, null);
             return;
         }
+        int padY = skyPad(helper);
+        onPad(ranger, padY);
+        onPad(plain, padY);
         EngagementStance.set(ranger, EngagementStance.HOLD_FIRE);
         ((Unit) ranger).setHoldPosition(true);
         // a Shade Ranger cloaks after standing still with no target for its cloak delay; the hero comes after that.
@@ -436,7 +446,7 @@ public class HeroAiV2GameTests {
         helper.runAfterDelay(spawnAt, () -> {
             if (!ShadeRangerUnit.isCloaked(ranger)) {
                 done[0] = true;
-                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak"), mobs, null);
+                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak" + cloakDiag(ranger, them)), mobs, null);
                 return;
             }
             hero[0] = paladin(helper, me, 6, 5);
@@ -445,6 +455,7 @@ public class HeroAiV2GameTests {
                 HeroAiGameTests.finish(helper, List.of("could not spawn the hero"), mobs, null);
                 return;
             }
+            onPad(hero[0], padY);
             mobs.add(hero[0]);
             judgement[0] = HeroAiGameTests.learn(p, 1);
             ranger.setHealth(4);   // one Judgement (10) finishes it
@@ -770,5 +781,45 @@ public class HeroAiV2GameTests {
             });
         }
         botGuard(helper, 880, done, mobs, cleanup);
+    }
+
+    /** Standing height on this test's own glass pad, SKY_PAD_Y over its arena (no other test's pad is at this height). */
+    static final int SKY_PAD_Y = 210;
+
+    static int skyPad(GameTestHelper helper) {
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
+                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, SKY_PAD_Y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+        return SKY_PAD_Y + 1;
+    }
+
+    static void onPad(Mob m, int padY) {
+        m.teleportTo(m.getX(), padY, m.getZ());
+    }
+
+    /** What kept a Shade Ranger visible: still ticks, target, who hurt it, and every stranger's unit within 48. */
+    static String cloakDiag(Mob ranger, String owner) {
+        var r = (ShadeRangerUnit) ranger;
+        var goal = r.getTargetGoal();
+        StringBuilder b = new StringBuilder(" (still ticks ").append(r.getStillTicks())
+            .append(", invisible ").append(ranger.isInvisible())
+            .append(", target ").append(name(goal == null ? null : goal.getTarget()))
+            .append(", hurt by ").append(name(ranger.getLastHurtByMob()))
+            .append(", strangers:");
+        for (var e : ranger.level().getEntitiesOfClass(LivingEntity.class, ranger.getBoundingBox().inflate(48))) {
+            if (e == ranger || !(e instanceof Unit u) || owner.equals(u.getOwnerName()))
+                continue;
+            b.append(' ').append(name(e)).append(String.format("@%.1f", e.distanceTo(ranger)));
+            if (e instanceof Mob m && m.getTarget() != null)
+                b.append("->").append(name(m.getTarget()));
+        }
+        return b.append(')').toString();
+    }
+
+    static String name(Entity e) {
+        if (e == null)
+            return "none";
+        return e.getType().toShortString() + "(" + (e instanceof Unit u ? u.getOwnerName() : "wild") + ")";
     }
 }
