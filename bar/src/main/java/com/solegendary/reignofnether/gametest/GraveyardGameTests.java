@@ -41,7 +41,7 @@ import java.util.List;
 public class GraveyardGameTests {
 
     /** More than the old ten-skull limit, still under the queue's MAX_QUEUE (16). */
-    private static final int QUEUED = 12;
+    static final int QUEUED = 12;
 
     @GameTest(template = SkirmishGameTests.ARENA)
     public static void graveyard_l1_raises_every_queued_unit(GameTestHelper helper) {

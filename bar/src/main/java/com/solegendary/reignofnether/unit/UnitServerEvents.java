@@ -373,6 +373,11 @@ public class UnitServerEvents {
         }
     }
 
+    /** RED-BRANCH STUB (PR #394): the unit count is not on main. */
+    public static int getUnitCount(String owner) {
+        return 0;
+    }
+
     private static final QueuePopulation queuePopulation = new QueuePopulation();
 
     public static int getCurrentPopulation(String ownerName) {

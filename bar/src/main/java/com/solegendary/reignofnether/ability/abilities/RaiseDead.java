@@ -44,6 +44,14 @@ public class RaiseDead extends Ability {
     public static final int CD_SECONDS = 30;
     public static final double RADIUS = 10;
     public static final int MAX_RAISED = 3;
+    /** RED-BRANCH STUB (PR #394): the ghoul cap is not on main. */
+    public static final int MAX_GHOULS = 8;
+    public static final String GHOUL_TAG = "bt_ghoul";
+
+    /** RED-BRANCH STUB (PR #394). */
+    public static int liveGhouls(String owner) {
+        return 0;
+    }
 
     public RaiseDead() {
         super(UnitAction.COMMANDER_RAISE_DEAD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
