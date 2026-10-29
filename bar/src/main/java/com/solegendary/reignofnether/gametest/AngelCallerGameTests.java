@@ -354,6 +354,101 @@ public class AngelCallerGameTests {
         });
     }
 
+    /**
+     * lovish (Oct 29): "bots build and use all 7 casters" and "angels take no population". The Sunforged bot kit trains
+     * the Angel Caller at its T2 lab (the Arcane Tower); each angel costs no population, no metal and no energy.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void angel_caller_is_in_the_sunforged_bot_kit_and_its_angels_take_no_population(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> problems = new ArrayList<>();
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VILLAGERS);
+        if (kit == null || kit.t2Lab() != Buildings.ARCANE_TOWER)
+            problems.add("the Sunforged bot kit has no Arcane Tower T2 lab");
+        else if (!kit.t2Army().contains(ProductionItems.ANGEL_CALLER))
+            problems.add("the Sunforged bot kit's T2 army does not train the Angel Caller");
+        for (CallAngel.Kind k : CallAngel.Kind.values()) {
+            Entity e = k.type().create(level);
+            try {
+                if (!(e instanceof Unit u) || u.getCost() == null)
+                    problems.add("could not make a " + k.title + " with a cost");
+                else if (u.getCost().population != 0 || u.getCost().metal() != 0 || u.getCost().energy() != 0)
+                    problems.add(k.title + " costs " + u.getCost().population + " population, " + u.getCost().metal()
+                        + " metal, " + u.getCost().energy() + " energy; angels are free and take no population");
+            } finally {
+                if (e != null)
+                    e.discard();
+            }
+        }
+        finish(helper, problems);
+    }
+
+    /**
+     * Bots use their casters through the AutoCaster ("bots build and use all 7 casters ... with autocast for the
+     * summons"). An Angel Caller that does not fight itself, autocast on, beside a friend in a fight: with nobody hurt
+     * and nothing fighting it calls nothing; once the friend is hurt and fighting it calls the Mender Angel (a hurt
+     * friend) and the Seraph Archer (a fight within 12 blocks), and with essence for it the Sword Seraph - one look
+     * per cast, each angel once.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = "angel_caller_autocast")
+    public static void angel_caller_autocasts_its_angels_when_its_army_fights(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "auto"), foeOwner = owner(helper, "autofoe");
+        Mob caster = HeroGameTests.spawnUnit(helper, EntityRegistrar.ANGEL_CALLER_UNIT.get(), owner, 3, 3);
+        Mob friend = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 6, 4);
+        Mob foe = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 6, 12);
+        List<Mob> units = new ArrayList<>(java.util.Arrays.asList(friend, foe));
+        if (caster == null || friend == null || foe == null) {
+            cleanUp(caster, units, List.of());
+            helper.fail("could not spawn the caster, its friend and the foe");
+            return;
+        }
+        caster.setNoAi(true);   // stands still; its autocast stays on
+        Essence.add(caster, Essence.CAPACITY);
+        List<String> problems = new ArrayList<>();
+        CallAngel.Kind M = CallAngel.Kind.MENDER, A = CallAngel.Kind.ARCHER, S = CallAngel.Kind.SWORD;
+        helper.runAfterDelay(2, () -> {
+            com.solegendary.reignofnether.ability.AutoCaster.pass(level, -1, Long.MAX_VALUE);
+            for (CallAngel.Kind k : CallAngel.Kind.values())
+                if (!angels(caster, k).isEmpty())
+                    problems.add("the caster called a " + k.title + " with nobody hurt and nothing fighting");
+            // the friend is hit by the foe and fights back
+            friend.setHealth(friend.getMaxHealth() * 0.5f);
+            friend.setLastHurtByMob(foe);
+        });
+        helper.runAfterDelay(4, () -> com.solegendary.reignofnether.ability.AutoCaster.pass(level, -1, Long.MAX_VALUE));
+        helper.runAfterDelay(6, () -> com.solegendary.reignofnether.ability.AutoCaster.pass(level, -1, Long.MAX_VALUE));
+        helper.runAfterDelay(8, () -> {
+            if (angels(caster, M).size() != 1)
+                problems.add("with a hurt friend 3 blocks off the caster called " + angels(caster, M).size() + " Mender Angels, expected 1");
+            if (angels(caster, A).size() != 1)
+                problems.add("with a friend fighting 3 blocks off the caster called " + angels(caster, A).size() + " Seraph Archers, expected 1");
+            if (!angels(caster, S).isEmpty())
+                problems.add("the caster called a Sword Seraph with 15 essence left (it costs 20)");
+            int left = Essence.get(caster);
+            if (left != Essence.CAPACITY - M.essence - A.essence)
+                problems.add("after a Mender and an Archer the caster holds " + left + " essence, expected "
+                    + (Essence.CAPACITY - M.essence - A.essence));
+            Essence.add(caster, Essence.CAPACITY);
+            friend.setLastHurtByMob(foe);
+        });
+        helper.runAfterDelay(10, () -> com.solegendary.reignofnether.ability.AutoCaster.pass(level, -1, Long.MAX_VALUE));
+        helper.runAfterDelay(12, () -> com.solegendary.reignofnether.ability.AutoCaster.pass(level, -1, Long.MAX_VALUE));
+        helper.runAfterDelay(14, () -> {
+            try {
+                if (angels(caster, S).size() != 1)
+                    problems.add("with essence for it and a friend fighting the caster called " + angels(caster, S).size()
+                        + " Sword Seraphs, expected 1");
+                if (angels(caster, M).size() != 1 || angels(caster, A).size() != 1)
+                    problems.add("the autocast called a second Mender or Archer: " + angels(caster, M).size() + " / "
+                        + angels(caster, A).size());
+            } finally {
+                cleanUp(caster, units, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
     // ------------------------------------------------------------------------------------------------ the angels
 
     /**
