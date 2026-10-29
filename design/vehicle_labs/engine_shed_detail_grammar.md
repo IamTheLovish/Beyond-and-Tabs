@@ -335,3 +335,15 @@ The Brassworks IDENTITY layer (ref45 is the building, ref46 is what makes it Bra
 Use: T1 gets a restrained dose (one gear/flywheel hero, pipe runs between hall and shed, a gantry on the shed, yard
 props); T2-T4 escalate toward ref46's density. Keep RTS readability: the machinery sits on the roofline and the
 camera-facing (west/south) faces.
+
+## (i) ref47 - lovish's reference, Oct 28 22:50 (design/refs/vehicle_labs/ref47_industry_parts_arm_cranes.png)
+A PARTS KIT for the identity layer (build each as a tested part in tools/brass_lab_parts.py, like bridge_crane):
+1. **Robot arm** - stepped copper pedestal on a dark brick plinth, a 2-joint arm with a boxy dark head, a 4-finger claw
+   (lightning-rod fingers), a hanging chain. The hero prop by the exit lane / on the yard.
+2. **Gantry with drill** - two copper-and-brick portal legs, a beam, chains holding a drill head over a stone pad.
+   Fits over the shed's work bay or the vehicle spawn.
+3. **Jib crane** - copper column on a stone base, a short boom with a chain and hook/weight. Roofline or yard.
+Grammar: copper (orange, unweathered and part-weathered) + dark mud/blackstone brick + pale stone base; every joint
+gets a darker block; small lit "gauge" details. Engine limit: the copper grate / chiseled copper / copper bulb look in
+the picture is 1.21 - on 1.20.1 use cut copper (+ stairs/slabs), iron trapdoors and iron bars for slats, lightning rods
+for claws and pipes, chains from vanilla or Decorative Blocks.
