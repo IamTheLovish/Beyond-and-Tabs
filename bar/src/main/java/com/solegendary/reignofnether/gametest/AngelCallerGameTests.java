@@ -690,8 +690,9 @@ public class AngelCallerGameTests {
     /**
      * lovish (revision answers, Oct 29): the low Seraph Archer can be hit by "melee units and ground towers". The
      * Sunforged anti-raid tower and its enhanced twin (ground-only: they never shoot a flyer) shoot an enemy Seraph
-     * Archer hovering at its flight height 4 blocks off - and still ignore a Gyrocopter Gunship (an ordinary flyer)
-     * beside it; the Sky Watch (anti-air) still shoots the archer too. Weapons ticked synchronously, as AntiAirGameTests.
+     * Archer hovering at its flight height 4 blocks off - and still ignore a Gyrocopter Gunship (an ordinary flyer) 7
+     * blocks off on the other side (farther, so the towers that rank by distance never tie it with the archer); the Sky
+     * Watch (anti-air) still shoots the archer too. Weapons ticked synchronously, as AntiAirGameTests.
      */
     @GameTest(template = ARENA, timeoutTicks = 60, batch = "angel_caller_towers")
     public static void angel_caller_seraph_archer_is_shot_by_ground_raid_towers(GameTestHelper helper) {
@@ -713,7 +714,7 @@ public class AngelCallerGameTests {
                 }
                 double cx = p.centrePos.getX() + 0.5, cz = p.centrePos.getZ() + 0.5;
                 Mob archer = AntiAirGameTests.spawn(level, EntityRegistrar.SERAPH_ARCHER_UNIT.get(), cx + 4, gy + SeraphArcherUnit.FLIGHT_HEIGHT, cz, foe, spawned);
-                Mob high = AntiAirGameTests.spawn(level, EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), cx - 4, gy + 6, cz, foe, spawned);
+                Mob high = AntiAirGameTests.spawn(level, EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get(), cx - 7, gy + 6, cz, foe, spawned);
                 if (archer == null || high == null || !((Unit) archer).isFlyingUnit() || !((Unit) high).isFlyingUnit()) {
                     problems.add("could not make a flying Seraph Archer and a Gyrocopter Gunship");
                     break;
