@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ambient;
 
+import com.solegendary.reignofnether.matchstart.EyesPhotoBooth;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
@@ -77,7 +78,8 @@ public class AmbientCritterParticle extends TextureSheetParticle {
         xo = x;
         yo = y;
         zo = z;
-        if (age++ >= lifetime) {
+        // the eyes structure photos turn ambient life off (EyesPhotoBooth): the ones alive leave the stills at once
+        if (age++ >= lifetime || EyesPhotoBooth.ambientLifeOff()) {
             remove();
             return;
         }

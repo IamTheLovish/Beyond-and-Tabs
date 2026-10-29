@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ambient;
 
+import com.solegendary.reignofnether.matchstart.EyesPhotoBooth;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -75,7 +76,8 @@ public class AmbientBirdParticle extends TextureSheetParticle {
         yo = y;
         zo = z;
         oRoll = roll;
-        if (age++ >= lifetime) {
+        // the eyes structure photos turn ambient life off (EyesPhotoBooth): the ones alive leave the stills at once
+        if (age++ >= lifetime || EyesPhotoBooth.ambientLifeOff()) {
             remove();
             return;
         }

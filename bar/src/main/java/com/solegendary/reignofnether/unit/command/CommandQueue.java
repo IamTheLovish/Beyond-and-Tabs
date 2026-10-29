@@ -41,6 +41,11 @@ public final class CommandQueue {
         return current;
     }
 
+    /** The game tick {@link #current} was started on (a newer command has a later one): hero/ai/OrderLock reads it. */
+    public long currentStartedAt() {
+        return currentTick;
+    }
+
     /** Waiting orders (the current one not counted). */
     public int size() {
         return size;

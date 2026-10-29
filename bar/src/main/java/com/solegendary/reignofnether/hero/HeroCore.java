@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hero;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
+import com.solegendary.reignofnether.hero.ai.HeroBrain;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
@@ -72,6 +73,9 @@ public final class HeroCore {
 
     // a hero that spawns above level 1 (H13) gets its level's stats once its attributes exist (first server tick)
     boolean needsStartStats = false;
+
+    // the v2 hero AI's state (hero/ai/HeroBrain), made on first use: it lives and dies with the hero
+    @Nullable HeroBrain brain;
 
     // timed ground effects (Firewall, Lava Geyser, Ember Totem): each returns true when finished; run every server tick
     final List<java.util.function.BooleanSupplier> timers = new ArrayList<>();
@@ -145,6 +149,19 @@ public final class HeroCore {
     }
 
     public boolean inMotion() { return motionTo != null; }
+
+    /** The v2 brain's state for this hero (made on first use). */
+    public HeroBrain brain() {
+        if (brain == null)
+            brain = new HeroBrain(mob.getId());
+        return brain;
+    }
+
+    /** The brain if one was ever made (MiscUtil asks this for every target pick: never makes one). */
+    @Nullable
+    public HeroBrain brainIfAny() {
+        return brain;
+    }
 
     void addSummon(Entity e, long endTick) {
         summons.add(e);

@@ -42,6 +42,12 @@
   "sha512": "137c4af99c53d77317cbfb1cc8c49fc2761708b49d1992f51fd846960df41dde3a83519c987e081508d4ed90c603566f3d5a6cb620ad9d85b8f4de59aa9115ef"
  },
  {
+  "file": "decorative_blocks-forge-1.20.1-4.1.3.jar",
+  "size": 573928,
+  "sha1": "10263d3e99807662ff065edce0e470fe62e84b30",
+  "sha512": "e48dae175eb053ce0f7035e634264f8e84e60560609a5e0391bff01c3e584e6c0fa28fd88fde852b674876b8e21f923444c9ad2726326e337da2d69af0261a70"
+ },
+ {
   "file": "embeddium-0.3.31+mc1.20.1.jar",
   "size": 1320675,
   "sha1": "bb2fa8f3e493af16af9160d049f96c614a1faf2f",
@@ -66,10 +72,40 @@
   "sha512": "a1960a7c03dc32d4ccaccaf28afdd9b078758bbd62d15a91d4039a83fa9397a098e89b69591f6bd5190254d9ee97e502504154b9aec764adb8c65f000b75ba2c"
  },
  {
+  "file": "mcw-bridges-3.1.2-mc1.20.1forge.jar",
+  "size": 693579,
+  "sha1": "24f30313977ec61520a2adab321188b51c208d16",
+  "sha512": "931fa9077b5a7b286de7c08bf885e393c5632ebb499b0ff5a8d0dfe8b39edd42f6705f51e5755af7dc6a74eb08023ebf2001fe87d064aa9584057d52714815ce"
+ },
+ {
+  "file": "mcw-doors-1.1.5-mc1.20.1forge.jar",
+  "size": 1246753,
+  "sha1": "fe6a9eb2fbc78300a6286fd25854c9f087e689a6",
+  "sha512": "dc9180f0cfb049907be62a3d6429b7c469b4d7a44c1c5a8b9617aa673843f880c354febf22a22d4a995ea2ec9e5a75bb4628dc499bfb4a199b2b9e6a9ba39e26"
+ },
+ {
+  "file": "mcw-lights-1.1.5-mc1.20.1forge.jar",
+  "size": 547779,
+  "sha1": "76dde38745ad436f2784f71939dc0941d7d51c6e",
+  "sha512": "7da79e0c8fd7e0ac75aaf27a67b02f5d828b1d16d0c7536b65c9e0937f692b500bf90ea18ba8912d375d94fc271ba31897c0fa58e29dad4b76be67cb9a525d95"
+ },
+ {
   "file": "mcw-mcwfences-1.2.1-mc1.20.1forge.jar",
   "size": 708634,
   "sha1": "d24bc6e1ba7f04e058db019ae5ca3d10edd9510a",
   "sha512": "092afb73ed251fb4261c537bebe1a01bb3e6a96775f4a2244ec21927486955fe240e053ec23b6b575a994ef80e70a27130beb92f3de6ddf71b1d06ddeeba53ef"
+ },
+ {
+  "file": "mcw-mcwpaths-1.1.1-mc1.20.1forge.jar",
+  "size": 812573,
+  "sha1": "821e5f406afa53a5c1d3346a20efb0ec7be97997",
+  "sha512": "52c08de819b80616602df9350241ec37581ebbe323a779bb935c3167b698893a97df3c5190c249ec90a0beb68da4532745c89675dfc9857d1a18c20fb8c5c1cd"
+ },
+ {
+  "file": "mcw-mcwstairs-1.0.2-mc1.20.1forge.jar",
+  "size": 554055,
+  "sha1": "8f3a8271e43b53171c3a4d4827415bebd06775d9",
+  "sha512": "cd96b04b86e026048971174b9c9588bd9ff65e8e4411a268032cbeffd646d7ae3f9ece5ac0a6bd95eb9b12de9d413003379c63916019e6befdc2f3da05690a14"
  },
  {
   "file": "mcw-mcwwindows-2.4.2-mc1.20.1forge.jar",

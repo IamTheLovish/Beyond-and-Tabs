@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.ambient;
 
+import com.solegendary.reignofnether.matchstart.EyesPhotoBooth;
 import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
@@ -38,7 +39,8 @@ public class AmbientLifeClientEvents {
     public static void onClientTick(TickEvent.ClientTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END || MC.level == null || MC.player == null || MC.isPaused())
             return;
-        if (MC.level.getGameTime() % PERIOD != 0 || !DisplaySettings.ambientLife()
+        // none while the eyes rig photographs structures (EyesPhotoBooth.ambientLifeOff: birds swamped round r34's crops)
+        if (MC.level.getGameTime() % PERIOD != 0 || !DisplaySettings.ambientLife() || EyesPhotoBooth.ambientLifeOff()
             || StrategicViewClientEvents.isStrategicView() || MC.level.isRaining())
             return;
         long time = MC.level.getDayTime();
