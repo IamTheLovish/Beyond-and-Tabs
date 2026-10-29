@@ -14,7 +14,7 @@ final class PlantCover {
     static final int KINDS = 10;
 
     /**
-     * One map's mix. {@code grass} is the share of a meadow's densest ground that carries a plant, {@code tall} and
+     * One map's mix. {@code grass} sets how thick a meadow grows (r35: its weight against CLUMP_GRASS), {@code tall} and
      * {@code fern} the shares of those plants that are two-block grass and ferns (middles only), {@code flower} the
      * share of a flower drift's ground, {@code flowers} the PLANTS indexes the drifts draw from. {@code lo} and
      * {@code span} set where a meadow starts (noise) and how fast it thickens: a lower start is a wider meadow.
@@ -83,32 +83,79 @@ final class PlantCover {
         return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
     }
 
-    /** How much of a meadow the position is in, [0, 1]: the smooth noise, two octaves. */
+    /**
+     * The noise octaves' lattice turns, {degrees, shift u, shift v} - the meadow sampler's r35 TURNS
+     * (tools/gen_meadow_sampler.py, bug hunt r34). A square value-noise lattice puts ~2x more gradient energy along its
+     * axes than along its diagonals (the sampler's clump field: 0.333 axis / 0.166 diagonal), which the 45-degree RTS
+     * camera shows as diagonal streaks of grass. Turned 22.5 and 67.5 degrees every lattice axis sits 22.5 degrees from
+     * both the world axes and the diagonals (0.228 / 0.219). The shifts are in blocks, added after the turn and before
+     * the scale exactly as the sampler does, and differ per octave so no two octaves share a lattice corner.
+     */
+    static final double[] TURN_M11 = { 22.5, 0.0, 0.0 }, TURN_M4 = { 67.5, 7.3, 3.1 },
+        TURN_C5 = { 22.5, 1.7, 9.2 }, TURN_C2 = { 67.5, 4.4, 0.6 };
+
+    /** {@link #plantNoise} on a lattice turned and shifted by {@code turn} ({degrees, shift u, shift v}). */
+    static double plantNoise(MapLayout l, double u, double v, double scale, double salt, double[] turn) {
+        double a = Math.toRadians(turn[0]), ca = Math.cos(a), sa = Math.sin(a);
+        return plantNoise(l, u * ca - v * sa + turn[1], u * sa + v * ca + turn[2], scale, salt);
+    }
+
+    /** How much of a meadow the position is in, [0, 1]: the smooth noise, two octaves, on turned lattices. */
     static double meadowNoise(MapLayout l, double u, double v) {
-        return 0.65 * plantNoise(l, u, v, 11.0, 0) + 0.35 * plantNoise(l, u, v, 4.0, 200);
+        return 0.65 * plantNoise(l, u, v, 11.0, 0, TURN_M11) + 0.35 * plantNoise(l, u, v, 4.0, 200, TURN_M4);
     }
 
     /**
+     * Where the tufts clump, [0, 1]: a 5-block octave and a 2-block one (the sampler's clump field, r31-r35), on turned
+     * lattices. Salts 1000 / 1500 keep its lattice values apart from the meadow's (0 / 200) and the flowers' (500).
+     */
+    static double clumpNoise(MapLayout l, double u, double v) {
+        return 0.75 * plantNoise(l, u, v, 5.0, 1000, TURN_C5) + 0.25 * plantNoise(l, u, v, 2.0, 1500, TURN_C2);
+    }
+
+    /**
+     * The meadow sampler's r35 clump rule (critic r34, tufts 5/10: "sparse, bare lawn between clumps... double tuft
+     * density"; r31 before it: "wallpaper scatter", every tuft its own dark shadow star). A block is in a clump where
+     * the clump noise is over CLUMP_AT - CLUMP_LUSH x the meadow's lushness (bigger clumps where it is lush); a clump
+     * fills to CLUMP_FILL x min(1, CLUMP_BASE + lushness), and the lawn between clumps carries a BETWEEN scatter of
+     * single tufts, so it is never bare. On the sampler's patch: tuft cover 39% -> 72% of the open lawn, about a quarter
+     * left in clearings; on Verdant's meadows (Oct 28's #316 cover) 0.64 -> 0.74, PlantCoverTest.
+     */
+    static final double CLUMP_AT = 0.50, CLUMP_LUSH = 0.26, CLUMP_FILL = 0.97, CLUMP_BASE = 0.6, BETWEEN = 0.20;
+    /**
+     * The grass share at which a meadow's middle carries the full r35 clumps (Verdant's, the map the sampler stands
+     * for); a map with a thinner grass share (Highlands, Archipelago 0.44) gets them in proportion, as it did before.
+     */
+    static final double CLUMP_GRASS = 0.68;
+
+    /**
      * What grows at (u, v) in slot frame on ground with this slope: an index into MapBuilder.PLANTS, or -1 for bare
-     * grass. Inside a meadow the draw is the Oct 16 one (grass, middles with two-block grass and large ferns, ferns
-     * in the inner meadow, flower drifts); outside it, flat ground gets a low scatter of short grass - thicker round a
+     * grass. Inside a meadow the tufts grow in the r35 clumps (see CLUMP_AT): their weight rises with the meadow
+     * (lushness x (2 - lushness), the Oct 16 onset, scaled by the map's grass share) so a meadow still fades into the
+     * open; middles carry two-block grass and large ferns (inside a clump only, as in the sampler), ferns the inner
+     * meadow, flowers their own drifts. Outside it, flat ground gets the low scatter of short grass - thicker round a
      * meadow's edge, half as thick on a gentle slope, none on a steeper one (which the builder does not plant anyway).
      */
     static int kindAt(Mix mix, MapLayout l, double u, double v, int slope) {
         double meadow = meadowNoise(l, u, v);
         double dense = Math.max(0, Math.min(1, (meadow - mix.lo()) / mix.span()));
-        double inMeadow = Math.min(1 - mix.flower(), mix.grass() * dense * (2 - dense));
+        double weight = Math.min(1, mix.grass() / CLUMP_GRASS) * dense * (2 - dense);
+        boolean inClump = weight > 0 && clumpNoise(l, u, v) > CLUMP_AT - CLUMP_LUSH * dense;
+        double tuft = inClump ? CLUMP_FILL * Math.min(1, CLUMP_BASE + dense) : BETWEEN;
+        double inMeadow = Math.min(1 - mix.flower(), weight * tuft);
         double onSlope = slope <= 0 ? 1 : slope == 1 ? 0.5 : 0;
         double edge = Math.max(0, Math.min(1, meadow / 0.35));
         double scatter = mix.scatter() * onSlope * (1 + 0.5 * edge);
         double pick = l.decorHash(u + 311, v);
         if (pick < inMeadow) {
             double h = l.decorHash(u + 733, v);
-            if (meadow > CORE && h < mix.tall())
+            if (meadow > CORE && inClump && h < mix.tall())
                 return h < mix.tall() * 0.25 && mix.fern() > 0.1 ? LARGE_FERN : TALL;
             return meadow > FERN_FROM && h >= mix.tall() && h < mix.tall() + mix.fern() ? FERN : GRASS;
         }
-        if (pick < Math.min(1 - mix.flower(), inMeadow + (1 - inMeadow) * scatter))
+        // the open ground's scatter gives way to the meadow's own as the meadow thickens (r35's BETWEEN is the whole
+        // scatter between a lush meadow's clumps, not one more on top of it); weight 0 = the open ground, as before
+        if (pick < Math.min(1 - mix.flower(), inMeadow + (1 - weight) * scatter))
             return GRASS;
         if (mix.flower() > 0 && plantNoise(l, u, v, 13.0, 500) > 0.7 && pick > 1 - mix.flower())
             return mix.flowers()[(int) (l.decorHash(u + 977, v) * mix.flowers().length) % mix.flowers().length];
