@@ -186,7 +186,7 @@ class PlantWiring(unittest.TestCase):
         # r35: every (shape, size) pair, each size a third of the models (the game picks a blockstate entry evenly)
         shown = collections.Counter(gen_blocks.MODEL_OVERRIDES[v["model"].split("/")[-1]]["textures"]["cross"]
                                     for v in gen_blocks.TUFT_BLOCKSTATES["grass"])
-        want = {"minecraft:block/grass" + shape + size for shape in ("", "_b", "_c") for size in ("", "_m", "_s")}
+        want = {"minecraft:block/grass" + shape + size for shape in ("", "_b", "_c") for size in ("", "_m", "_sm")}
         self.assertEqual(set(shown), want)
         self.assertEqual(len(set(shown.values())), 1, "uneven: %s" % shown)
 

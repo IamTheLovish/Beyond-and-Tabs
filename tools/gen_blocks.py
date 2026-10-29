@@ -488,17 +488,17 @@ SEED_ORDER = (
     "tall_grass_straw_bottom_b",
     "tall_grass_straw_top_b",
     "grass_m",                # r35: short grass in three sizes (PLANT_SIZES), the fern's transposed cards
-    "grass_s",
+    "grass_sm",
     "grass_b_m",
-    "grass_b_s",
+    "grass_b_sm",
     "grass_c_m",
-    "grass_c_s",
+    "grass_c_sm",
     "grass_straw_m",
-    "grass_straw_s",
+    "grass_straw_sm",
     "grass_straw_b_m",
-    "grass_straw_b_s",
+    "grass_straw_b_sm",
     "grass_straw_c_m",
-    "grass_straw_c_s",
+    "grass_straw_c_sm",
     "fern_t",
     "fern_b_t",
 )
@@ -1078,7 +1078,7 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
     TARGETS[_p] = dict(TARGETS[_p], ao=0.3)
 # r35 (critic r34: tufts 5/10 RTS - "double tuft density and vary scale (3 sizes)"; "ferns and tall grass are
 # indistinguishable... give ferns a distinct silhouette/colour"):
-# - short grass in three sizes, 1.0 / 0.8 / 0.55 of the full tuft (plant_sprites.SIZES; textures _m / _s), drawn on the
+# - short grass in three sizes, 1.0 / 0.8 / 0.55 of the full tuft (plant_sprites.SIZES; textures _m / _sm), drawn on the
 #   same card so the blades stay bold; each size a third of the grass models (GRASS_TUFTS).
 # - the short grass's body a step lighter: in game (r34 noon stills, shader preset, measured per block on the fitted
 #   ground grid: notes tufts-r35/measure) the blocks holding a tuft drew 0.958 of the lawn's luma, the lit quartile
@@ -1088,7 +1088,9 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
 #   should read a touch lighter than the lawn without a value change of their own; and nearly neutral (sat 0.04: the
 #   biome tint's own green) where the grass is warm (0.12): a cooler rosette beside a yellower tuft. The _t textures
 #   are the same drawings transposed, for the cards that point along x.
-PLANT_SIZES = {"_m": plant_sprites.SIZES[1], "_s": plant_sprites.SIZES[2]}
+# the small size is "_sm", never "_s": <name>_s.png is the LabPBR specular map of <name> (round r35's grass_s was
+# grass's specular map - the small tufts drew magenta, eyes run 40810627885; test_gen_blocks_names.py)
+PLANT_SIZES = {"_m": plant_sprites.SIZES[1], "_sm": plant_sprites.SIZES[2]}
 for _l in ("grass", "grass_straw"):
     for _sh in ("", "_b", "_c"):
         for _sz in PLANT_SIZES:
@@ -2172,7 +2174,7 @@ def m_plant(name, n):
     under the transparent texels taken from the nearest blade (plant_sprites.bleed): mipmaps blend them into the edges
     (MC-114265; r33: 62-100% of the texels round a blade were black), and the height cliff at the cut-out's edge
     tilted the edge texels' normals 34-40 degrees (15 inside the blade) - a rim the shader lights on one side.
-    r35: names end in a shape (_b / _c), then a size (_m / _s, PLANT_SIZES), then _t (the drawing transposed: a fern
+    r35: names end in a shape (_b / _c), then a size (_m / _sm, PLANT_SIZES), then _t (the drawing transposed: a fern
     card that points along x); the fern is a rosette card (plant_sprites.fern_card)."""
     ps = plant_sprites
     straw = "straw" in name
@@ -2946,7 +2948,7 @@ def _plant_model(p, straw, lean):
 # sizes are drawn on the card instead (plant_sprites.SIZES), the blades keeping their widths.
 GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
                "_d": ("", "_b", "_m"), "_e": ("_b", "_c", "_m"), "_f": ("_c", "", "_m"),
-               "_g": ("", "_c", "_s"), "_h": ("_b", "", "_s"), "_i": ("_c", "_b", "_s")}
+               "_g": ("", "_c", "_sm"), "_h": ("_b", "", "_sm"), "_i": ("_c", "_b", "_sm")}
 
 
 def _fern_card(side, kind, length, half_w, y0=0.25):
