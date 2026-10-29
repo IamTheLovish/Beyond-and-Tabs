@@ -59,6 +59,8 @@ public class FlameSanctuary extends ProductionBuilding {
         // the T2-lab hero and its revive share a slot (H13: design/heroes-t2-lab.md); slots 1-8 were all taken
         this.productions.add(ProductionItems.ASH_SHAMAN, Keybindings.abilitySlot9);
         this.productions.add(ProductionItems.ASH_SHAMAN_REVIVE, Keybindings.abilitySlot9);
+        // the essence caster (design/essence_casters.md) on P, as the Celestial Observatory's tenth button
+        // STUB (tests-first commit): this.productions.add(ProductionItems.VOODOO_SHAMAN, Keybindings.abilitySlot10);
     }
 
 

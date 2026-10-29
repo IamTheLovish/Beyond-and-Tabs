@@ -13,4 +13,12 @@ public final class SelectionKeep {
     public static boolean shouldDrop(boolean deadOrDying, Entity.RemovalReason reason) {
         return deadOrDying || reason == Entity.RemovalReason.KILLED;
     }
+
+    /**
+     * A selected unit whose owner changed since the last tick (a Spirit Puppet taken or given back, a possession) is
+     * dropped: the old side's orders would be refused, the new side never picked it. Null = first seen, kept.
+     */
+    public static boolean ownerFlipped(String ownerLastTick, String ownerNow) {
+        return false;   // STUB (tests-first commit)
+    }
 }

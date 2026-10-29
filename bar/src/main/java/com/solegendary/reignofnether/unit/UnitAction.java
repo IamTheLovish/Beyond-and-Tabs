@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Horde's Voodoo Shaman (unit/units/piglins/VoodooShamanUnit)
+    HEX,                    // 5 essence: an enemy T1-T2 unit can neither attack nor cast for 4 s
+    BLOOD_TOTEM,            // 10 essence: a 15 s totem, allies within 8 attack 25% faster, enemies move 15% slower
+    SPIRIT_PUPPET           // 20 essence: an enemy T1 unit is the caster's owner's for 15 s
 }

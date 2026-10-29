@@ -312,6 +312,7 @@ public class Factions {
 		registerEntity(VILLAGERS, EntityRegistrar.FIELD_MASON_UNIT.get(), ProductionItems.FIELD_MASON);
 		registerEntity(MONSTERS, EntityRegistrar.BONESETTER_UNIT.get(), ProductionItems.BONESETTER);
 		registerEntity(PIGLINS, EntityRegistrar.WRECKER_UNIT.get(), ProductionItems.WRECKER);
+		registerEntity(PIGLINS, EntityRegistrar.VOODOO_SHAMAN_UNIT.get(), ProductionItems.VOODOO_SHAMAN);   // essence caster
 		registerEntity(VERDANT_COURT, EntityRegistrar.ROOTWARDEN_UNIT.get(), ProductionItems.ROOTWARDEN);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SALVAGER_UNIT.get(), ProductionItems.SALVAGER);
 		registerEntity(STORMCALLERS, EntityRegistrar.JADE_MENDER_UNIT.get(), ProductionItems.JADE_MENDER);

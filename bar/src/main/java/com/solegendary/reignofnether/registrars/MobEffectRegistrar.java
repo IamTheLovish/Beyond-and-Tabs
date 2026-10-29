@@ -118,6 +118,12 @@ public class MobEffectRegistrar {
     // and expires it, and cleanses remove it like any harmful effect; mana/SealServerEvents.isSealed is the one check
     public static final RegistryObject<MobEffect> SEALED = MOB_EFFECTS.register("sealed", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x2A2140));
 
+    // the Horde Voodoo Shaman's Blood Totem (unit/units/piglins/BloodTotemUnit): allies near it attack 25% faster (read in
+    // AttackerUnit.getAttackCooldownMultiplier, like Bloodlust), enemies near it move 15% slower
+    public static final RegistryObject<MobEffect> BLOOD_FRENZY = MOB_EFFECTS.register("blood_frenzy", () -> new InstantenousMobEffect(MobEffectCategory.BENEFICIAL, 0xA01010));
+    public static final RegistryObject<MobEffect> BLOOD_TOTEM_SLOW = MOB_EFFECTS.register("blood_totem_slow", () -> new InstantenousMobEffect(MobEffectCategory.HARMFUL, 0x5A0A0A)
+            .addAttributeModifier(Attributes.MOVEMENT_SPEED, "3d1f6a52-8c0e-4b7d-9a35-6e2f1b8c4d71", -0.15, AttributeModifier.Operation.MULTIPLY_BASE));
+
     // Verdant Rooted Treant's spike line: a stacking slow and damage over time (unit/units/verdant/RootboundEffect)
     public static final RegistryObject<MobEffect> ROOTBOUND = MOB_EFFECTS.register("rootbound", com.solegendary.reignofnether.unit.units.verdant.RootboundEffect::new);
 
