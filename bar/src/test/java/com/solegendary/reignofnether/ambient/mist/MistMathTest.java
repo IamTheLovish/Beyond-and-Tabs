@@ -10,8 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The living valley mist's rules (MistMath) without the world: where mist pools (hollows, water, the foot of a cliff,
  * thinning on hilltops and high ground), how thick it is through the day (thick at dawn, burnt off by noon, back at
  * dusk, a little at night), how many sprites the camera's zoom allows (none at strategic zoom), and the look ranges
- * (alpha 0.05-0.18, 3-8 blocks, 0.3-2.5 blocks up, 0.02-0.06 blocks a tick, never pure white). Written from the design
- * lovish approved on Oct 28 ("can we make the fog more animated and alive or rich") before the code.
+ * (alpha 0.15-0.35, 5-12 blocks, three layers 0.3-2.5 blocks up, 0.02-0.06 blocks a tick, a bright cool white-grey,
+ * never pure white). Written from the design lovish approved on Oct 28 ("can we make the fog more animated and alive
+ * or rich") before the code. Round 2 (eyes runs 40815085922 / 40815098025): r1's 21 wisps at alpha 0.05-0.18, 3-8
+ * blocks, lit by the dawn sky, were nearly invisible from the RTS camera (mean pixel change 5.7 against the plain
+ * _rts still) - more, bigger, brighter, denser, layered.
  */
 class MistMathTest {
 
@@ -109,6 +112,11 @@ class MistMathTest {
     }
 
     @Test
+    void openMeadowStillShowsSome() {
+        assertEquals(0.3, MistMath.BASE_SCORE, EPS, "r2: a flat meadow at dawn draws a visible sheet, hollows more");
+    }
+
+    @Test
     void scoreTable() {
         Object[][] rows = {
             // what, heights, water, expected
@@ -188,6 +196,17 @@ class MistMathTest {
     }
 
     @Test
+    void thickEnoughToReadFromTheRtsCamera() {
+        int close = MistMath.cap(MistMath.BASE_CAP, 30f, false);
+        assertTrue(close >= 80 && close <= 150, "80-150 wisps round the focus at the default zoom: " + close);
+        assertEquals(0, MistMath.cap(MistMath.BASE_CAP, 85f, true), "still none at strategic zoom");
+        // the spawner fills the dawn cap within the eyes still's 8 s at 20 ticks a second
+        int perEightSeconds = MistMath.PER_PASS * (160 / MistMath.PERIOD);
+        assertTrue(perEightSeconds >= MistMath.BASE_CAP, "fills in 8 s: " + perEightSeconds);
+        assertTrue(MistMath.SAMPLES >= 2 * MistMath.PER_PASS, "enough columns tried for the score to choose");
+    }
+
+    @Test
     void wantedFollowsDensityAndSpawnsAFewAtATime() {
         assertEquals(0, MistMath.wanted(24, 0.0));
         assertEquals(24, MistMath.wanted(24, 1.0));
@@ -229,8 +248,8 @@ class MistMathTest {
 
     @Test
     void peakAlphaStaysSoft() {
-        Object[][] rows = { { 0.0, 0.0, 0.05 }, { 1.0, 1.0, 0.18 }, { 0.5, 0.5, 0.0825 }, { 2.0, 3.0, 0.18 },
-            { -1.0, 1.0, 0.05 } };
+        Object[][] rows = { { 0.0, 0.0, 0.15 }, { 1.0, 1.0, 0.35 }, { 0.5, 0.5, 0.2 }, { 2.0, 3.0, 0.35 },
+            { -1.0, 1.0, 0.15 } };
         for (Object[] r : rows)
             assertEquals((double) r[2], MistMath.peakAlpha((double) r[0], (double) r[1]), 1e-9,
                 "alpha at score " + r[0] + " density " + r[1]);
@@ -264,23 +283,33 @@ class MistMathTest {
 
     @Test
     void sizesAreBigAndGrowSlowly() {
-        assertEquals(3, MistMath.startSize(0), EPS);
-        assertEquals(6.5, MistMath.startSize(1), EPS);
+        assertEquals(5, MistMath.startSize(0), EPS);
+        assertEquals(10, MistMath.startSize(1), EPS);
         assertEquals(5, MistMath.size(5, 0, 500), EPS);
         assertEquals(5.5, MistMath.size(5, 250, 500), EPS);
         assertEquals(6, MistMath.size(5, 500, 500), EPS);
         for (double r = 0; r <= 1; r += 0.05)
             for (int age = 0; age <= 700; age += 50) {
                 double s = MistMath.size(MistMath.startSize(r), age, 700);
-                assertTrue(s >= 3 && s <= 8, "3-8 blocks: " + s);
+                assertTrue(s >= 5 && s <= 12, "5-12 blocks: " + s);
             }
     }
 
     @Test
     void mistLiesLow() {
-        assertEquals(0.3, MistMath.hover(0), EPS);
-        assertEquals(2.5, MistMath.hover(1), EPS);
-        assertEquals(1.4, MistMath.hover(0.5), EPS);
+        // three layers (0.5, 1.3, 2.2) so the sheet has depth, each jittered +-0.2
+        assertEquals(0.5, MistMath.hover(0, 0.5), EPS);
+        assertEquals(1.3, MistMath.hover(0.5, 0.5), EPS);
+        assertEquals(2.2, MistMath.hover(0.99, 0.5), EPS);
+        assertEquals(0.3, MistMath.hover(0, 0), EPS);
+        assertEquals(2.4, MistMath.hover(1, 1), EPS);
+        java.util.Set<Long> bands = new java.util.HashSet<>();
+        for (double r = 0; r <= 1; r += 0.01) {
+            double h = MistMath.hover(r, 0.5);
+            assertTrue(h >= 0.3 && h <= 2.5, "low: " + h);
+            bands.add(Math.round(h * 10));
+        }
+        assertEquals(3, bands.size(), "three layers");
     }
 
     @Test
@@ -309,7 +338,14 @@ class MistMathTest {
         assertTrue(night[2] > night[0], "cool at night");
         for (long t = 0; t < 24000; t += 100)
             for (float c : MistMath.colour(t))
-                assertTrue(c >= 0.6f && c <= 0.93f, "never pure white, never dark: " + c + " at " + t);
+                assertTrue(c <= 0.97f, "never pure white: " + c + " at " + t);
+        // r2: drawn full-bright (the dawn sky's lightmap dimmed r1 to the grass's own value), so the colour carries the
+        // light: a bright white-grey wherever there is mist by day, dim at night (no glowing fog in the dark)
+        for (long t : new long[] { 0, 1000, 23000, 23500, 12000, 13000 })
+            for (float c : MistMath.colour(t))
+                assertTrue(c >= 0.8f, "bright enough to read against dark grass: " + c + " at " + t);
+        for (float c : night)
+            assertTrue(c <= 0.45f, "dim at night: " + c);
     }
 
     @Test
