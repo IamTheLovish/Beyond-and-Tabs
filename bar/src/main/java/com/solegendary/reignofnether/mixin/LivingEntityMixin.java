@@ -10,6 +10,7 @@ import com.solegendary.reignofnether.sounds.SoundAction;
 import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.KeyedSwing;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.unit.units.villagers.MilitiaUnit;
@@ -303,6 +304,24 @@ public abstract class LivingEntityMixin extends Entity {
         LivingEntity le = (LivingEntity) (Object) this;
         if (le instanceof Unit)
             cir.setReturnValue(com.solegendary.reignofnether.unit.Terrain.waterFriction(le, 0.8f));
+    }
+
+    /**
+     * A body with a keyed attack clip (KeyedSwing) swings for the clip's length, not vanilla's 6 ticks: attackTime runs
+     * 0..1 over the swing, and the Halberdier's 18-tick thrust was played in 6 (a 0.3 s flicker in every eyes clip).
+     * Both sides run this - the client counts its own swingTime from the animate packet - so the lengths agree.
+     */
+    @Inject(
+            method = "getCurrentSwingDuration",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void bt$keyedSwingDuration(CallbackInfoReturnable<Integer> cir) {
+        if ((Object) this instanceof KeyedSwing keyed) {
+            int ticks = keyed.keyedSwingTicks();
+            if (ticks > 0)
+                cir.setReturnValue(ticks);
+        }
     }
 
     @Shadow public boolean hasEffect(MobEffect pEffect) { return true; }
