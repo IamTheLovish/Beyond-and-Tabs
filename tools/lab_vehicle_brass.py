@@ -189,7 +189,10 @@ import shape_kit as sk                # noqa: E402
 
 SX, SZ, H_MAX = 17, 25, 26          # the T1 lab plot (design/building_tiers.md): x = depth, z = the front's width
 SPAWN = (8, 1, 12)
-LANE_X, LANE_Z, LANE_H = range(0, 9), range(9, 16), 10      # the great door: 7 wide, 10 tall, through the tower
+LANE_X, LANE_Z, LANE_H = range(0, 9), range(10, 15), 8      # the great door: 5 wide, 8 tall, through the tower
+# (r4, Oct 28: 5 x 8, the lane every other lab uses - T1 Brassworks vehicles fit it. The plot rescale's 7 x 10 took 7
+# of the cone's 9 foot columns, so the door was the tower's whole foot; ref18's door is ~55 % of the foot's width and
+# ~31 % of the tower's height, 5 / 9 and 8 / 25)
 OUT = "design/vehicle_labs/brass_t1_greybox.nbt"
 
 WALL, ROOF, HOLE, GROUND, LAWN = "terracotta", "red_nether_bricks", "obsidian", "stone_bricks", "grass_block"
@@ -562,10 +565,10 @@ def tower(g):
     and a stepped spire; so here: the faces and flanks red (red terracotta on full rows, mangrove stairs on the
     tiers' step rows, a polished granite tick at each step's inner corner), the arrises dark (cone_rows: blackstone
     bricks, a 2-row run of polished blackstone in the top tier, rough blackstone at the point - ref44's texture
-    variety in one role), no full-width pale or dark course. Pale only as single cells: the arch springers on the first arris step (y 11, z 9 /
-    15). A second pair on the second tier's arrises (y 13) broke the dark edge at the squint (the cone read waisted,
-    pale shoulders), and the rows above y 15 are too narrow to carry a symmetric pale pair under the 30 % row rule
-    (tools/test_lab_vehicle_brass.py), so the arrises run solid dark from y 12 to the point. The R7 eye and the R8
+    variety in one role), no full-width pale or dark course. The arrises run unbroken dark from the eave to the
+    point: r3's pale arris steps (y 11 and 13) broke the dark edge at the squint (the cone read waisted, pale
+    shoulders), and the rows above y 15 are too narrow to carry a symmetric pale pair under the 30 % row rule
+    (tools/test_lab_vehicle_brass.py). The R7 eye and the R8
     panel grid keep their elevation cells (y, z), set into the cone's new face planes."""
     rows, arris = cone_rows(g)
     for y, cells in rows.items():
@@ -581,13 +584,18 @@ def tower(g):
                 paint(g, q, "granite")                        # arris (ref18's picked-out steps; a whole granite
             else:                                             # step row read as a lid at y 11)
                 paint(g, q, "red")
-    # the door head (R6, y 11 at x 0 - the first tier's step row): pale springers on the arris step, red mangrove
-    # voussoirs, a brass keystone carrying the ONE door light (a standing lantern: check_support rejects hanging ones,
-    # and the lane under the head, y 1..10, stays air)
-    for z in (LANE_Z[0], LANE_Z[-1]):
-        paint(g, (0, LANE_H + 1, z), "quartz")
-    put(g, (0, LANE_H + 1, int(TZ)), FAM["brass"][0])
-    put(g, (0, LANE_H + 2, int(TZ)), LAMP, hanging="false", waterlogged="false")
+    # the door head (R6, r4: y 9 in the first tier's face, x 0): the arch's voussoirs over the 5-wide lane - pale
+    # haunches (upside-down quartz stairs, their step at the jamb side, so the opening's top corners read rounded),
+    # polished granite top slabs, a brass keystone slab carrying the ONE door light (a standing lantern set into the
+    # face at y 10: check_support rejects hanging ones, and the lane under the head, y 1..8, stays air). Over it the
+    # face runs on red. Only 2 pale cells a row: the 30 % row rule, so the ring is pale at the jambs and haunches.
+    yh, cz = LANE_H + 1, int(TZ)
+    for z, facing in ((LANE_Z[0], "north"), (LANE_Z[-1], "south")):
+        put(g, (0, yh, z), FAM["quartz"][1], facing=facing, half="top", shape="straight", waterlogged="false")
+    for z in (cz - 1, cz + 1):
+        put(g, (0, yh, z), FAM["granite"][2], type="top", waterlogged="false")
+    put(g, (0, yh, cz), FAM["brass"][2], type="top", waterlogged="false")
+    put(g, (0, yh + 1, cz), LAMP, hanging="false", waterlogged="false")
     # R7 the eye, at its r2 elevation cells (y 14..16, z 11..13): a calcite ring round a recessed deep-red heart, in
     # the second tier's face (x 1, y 12..15) and the third's (x 2, y 16..19)
     for q in ((1, 14, 12), (1, 15, 11), (1, 15, 13)):
@@ -611,32 +619,35 @@ def tower(g):
 
 
 def door(g):
-    """R6, re-mass r3: the door is the front's BRIGHT spot (ref18's glowing door; r2's lane was a dark hole in a
-    black frame), about the arcade's height of light, not a pale plane (a first pass with an all-calcite far wall and
-    reveals read as a grey block at the squint and a white plane from the RTS camera). The jambs (z 8 / 16, x 0)
-    quoined calcite / blackstone brick on the andesite base course under a quartz-brick impost at the lintel line
-    (y 6) - ref18's dark piers with pale quoins; from the eave up they are the cone's dark arrises. The buttresses
-    (z 7 / 17) stop under the eave like the arcade's piers (andesite base and capital, a blackstone-brick shaft, the
-    quartz cornice), capped by one small dark stair AT the eave (ref40's pinnacle, kept low: r2's pinnacles rose to
-    y 9 and read as the block's vertical sides). Inside, ref18's vault seen in perspective: the reveals (the lane's
-    side walls) pale to the lintel line - calcite fields, quartz-brick pilasters (x 1 4 7), a polished diorite string
-    - then stacked red terracotta / quartz-brick bands up to the head, deep-red panels recessed at y 2..4; the far
-    wall (x 9, the gate's back) a round-headed pale field - calcite under quartz bricks on a polished diorite
-    skirting - in a red surround (the gate channels z 9 / 15 and the arch's shoulders), the brass rosette kept. The
-    lane floor smooth stone (top slabs, flush) behind a polished diorite threshold and gate line."""
-    for zj, zb in ((8, 7), (16, 17)):
-        put(g, (0, 0, zj), "tuff")
-        put(g, (0, 0, zb), "tuff")
-        put(g, (0, 1, zj), "polished_andesite")      # R1: the base course runs on under the jambs and buttresses
-        for y in range(2, 6):
-            put(g, (0, y, zj), "calcite" if y % 2 == 0 else FAM["dark"][0])
-        put(g, (0, 6, zj), "quartz_bricks")
-        put(g, (0, 1, zb), "polished_andesite")
+    """R6 (re-mass r3, lane 5 x 8 in r4): the door is the tower's light spot (ref18's glowing door; r2's lane was a
+    dark hole in a black frame) - an arch ring at the mouth, not a pale plane (r3's all-calcite 7-wide far wall read
+    as a grey slab under the cone; r4's first pass, pale only mid-wall, as a dark slot in a white frame). With the
+    lane 5 wide the cone's face and dark arrises come down to the eave beside it (z 8..9, 15..16). The ring: calcite
+    jambs (z 9 / 15, x 0) on the andesite base course up to the head, and the head's pale haunches (tower()). Beside
+    them a red bay panel (z 8 / 16, a red cell at y 6 so the lintel cornice stops a cell short of the jamb - run on,
+    the two read as one white gateway) and the buttresses (z 7 / 17) like the arcade's piers (andesite base and
+    capital, a blackstone-brick shaft, the quartz cornice), capped by one small dark stair AT the eave (ref40's
+    pinnacle kept low: r2's rose to y 9 and read as the block's vertical sides). Inside: the reveals (the lane's side
+    walls z 9 / 15) quartz-brick pilasters (x 1 4 7) between red fields, deep-red panels recessed at y 2..4, a
+    polished diorite string at the lintel line, a quartz course under the head; the far wall (x 9, the gate's back)
+    a calcite field on a polished diorite skirting between diorite gate channels (z 10 / 14), red over the lintel
+    line, the brass rosette kept. The lane floor smooth stone (top slabs, flush) behind a polished diorite
+    threshold and gate line."""
+    for zp, zb, zj in ((7, 8, 9), (17, 16, 15)):       # buttress, bay panel, jamb (zb is also the reveal's back)
+        for z in (zp, zb, zj):
+            put(g, (0, 0, z), "tuff")
+            put(g, (0, 1, z), "polished_andesite")    # R1: the base course runs on under the jambs and buttresses
         for y in (2, 3, 4):
-            put(g, (0, y, zb), FAM["dark"][0])
-        stair(g, (0, 5, zb), "andesite", "east", "top")
-        stair(g, (0, 6, zb), "quartz", "east", "top")
-        stair(g, (0, HALL_TOP + 1, zb), "dark", "east")   # the buttress cap, at the eave
+            put(g, (0, y, zp), FAM["dark"][0])
+        stair(g, (0, 5, zp), "andesite", "east", "top")
+        stair(g, (0, HALL_TOP + 1, zp), "dark", "east")   # the buttress cap, at the eave
+        for y in range(2, 6):                             # a red bay panel between buttress and jamb, the arcade's
+            put(g, (0, y, zb), "red_terracotta")          # rhythm (a dark pier here ran the arris to the ground)
+        stair(g, (0, 6, zp), "quartz", "east", "top")     # the cornice ends on the buttress, a red cell short of
+        put(g, (0, 6, zb), "red_terracotta")              # the jamb (run on to the door, the lintel line and the
+        #                                                   jambs read as one white gateway frame)
+        for y in range(2, LANE_H + 1):                    # the jamb: pale to the head, the arch ring's bright line
+            put(g, (0, y, zj), "calcite")
         for x in range(1, HALL_X[1]):                     # the reveals, seen through the door
             for y in range(1, LANE_H + 1):
                 if y == 1:
@@ -649,23 +660,19 @@ def door(g):
                     g.clear(x, y, zj)
                     put(g, (x, y, zb), "red_nether_bricks")
                     continue
-                elif y > 6:
-                    n = "red_terracotta" if y % 2 else "quartz_bricks"
-                else:
-                    n = "calcite"
-                put(g, (x, y, zj), n)
+                else:                                     # r4: red over the panels, a quartz course under
+                    n = "quartz_bricks" if y == LANE_H else "red_terracotta"   # the head (all-calcite read as a
+                put(g, (x, y, zj), n)                     # white plane from the RTS camera)
     for z in LANE_Z:        # the far wall, the gate's back (the animated gate will hang here)
         d = abs(z - int(TZ))
         for y in range(1, LANE_H + 1):
-            # the pale field is ROUND-HEADED (ref18's arched glow): its corners red, the vault seen in perspective.
-            # A full-width pale far wall read as a grey slab under the cone at the squint (9 deep, calcite renders
-            # mid grey); red bands across it banded the door top dark (variants, Oct 28)
-            if d == 3 or (y >= 8 and d == 2) or (y >= LANE_H and d == 1):
+            # a pale field under a red head (the vault seen in perspective): r3's 7-wide all-pale wall read as a grey
+            # slab under the cone; r4's first 5-wide pass (pale only z 11..13) read as a dark slot in a white frame.
+            # Over the lintel line red - rows 7 / 8 carry the jambs' pale, the 30 % row rule
+            if y > HALL_TOP:
                 n = "red_terracotta"
-            elif y == 1:
+            elif y == 1 or d == 2:
                 n = "polished_diorite"
-            elif y > 7:
-                n = "quartz_bricks"
             else:
                 n = "calcite"
             put(g, (HALL_X[1], y, z), n)
@@ -681,7 +688,7 @@ def door(g):
     for dz, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):  # the rosette: a brass cross round a chiseled boss
         put(g, (HALL_X[1], 6 + dy, cz + dz), FAM["brass"][0])
     put(g, (HALL_X[1], 6, cz), "chiseled_polished_blackstone")
-    put(g, (HALL_X[1], 8, cz), FAM["brass"][0])
+    put(g, (HALL_X[1], LANE_H, cz), FAM["brass"][0])
 
 
 def works(g):

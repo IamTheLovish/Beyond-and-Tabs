@@ -54,21 +54,21 @@ rake beaded pale / red along the outer gable edge (solid pale read as a white co
 end. The gable ends (z 0 face, and the z 24 face the RTS camera sees) carry the pavilion emblem: a cream panel (quartz
 bricks) with a red cross / star, framed in blackstone. Target: red 79 / dark 11 / grey 8 / pale 3.
 
-**R6 Door and tower base (x 0..9, z 7..17, y 0..11).** The door is the front's BRIGHTEST spot (ref18), about the
-arcade's height of light - not a dark hole, not a pale plane. The 7 x 10 lane (z 9..15, y 1..10, x 0..8) stays clear.
-Jambs (z 8 / 16, x 0) pale quoins (calcite / blackstone brick) on the andesite base course under a quartz-brick impost
-at y 6; above the eave they are the cone's dark arrises. The head (y 11): pale springers on the first arris step, red
-voussoirs, a brass keystone carrying ONE standing lantern (hanging lanterns fail check_support; the lane stays air).
-The far wall (x 9) PALE - a round-headed calcite / quartz-brick field in a red surround (the gate channels z 9 / 15) -
-with the brass rosette where the animated gate will hang; the reveals pale (calcite, quartz-brick pilasters) with red bands over the lintel
-line; the lane floor smooth stone behind a polished diorite threshold. Buttresses (z 7 / 17) stop under the eave like
-the arcade piers, capped by one small dark stair AT the eave - nothing rises above it.
+**R6 Door and tower base (x 0..9, z 7..17, y 0..10).** The exit lane is 5 wide x 8 tall (z 10..14, y 1..8, x 0..8),
+the lane every other lab uses: **T1 Brassworks vehicles fit 5 x 8** (r4, Oct 28 - the 7 x 10 came only from the plot
+rescale and made the door the cone's whole foot; ref18's door is ~55 % of the foot's width, ~31 % of the tower's
+height). The door is the tower's light spot, an arch ring, not a pale plane: calcite jambs (z 9 / 15) to the head; the
+head at y 9 - pale quartz haunches, granite voussoirs, a brass keystone carrying ONE standing lantern (hanging lanterns
+fail check_support); beside the jambs the cone's face and dark arrises come down to the eave. The far wall (x 9) a
+calcite field between diorite gate channels, red over the lintel line, the brass rosette where the animated gate will
+hang; the reveals quartz-brick pilasters between red fields; the lane floor smooth stone behind a diorite threshold.
+Buttresses (z 7 / 17) stop under the eave like the arcade piers, capped by one small dark stair AT the eave.
 
 **R7-R8 tower target (measured above the hall): red 56 / dark 25 / grey 17 / pale 3.**
 
 **R7 Tower mid (y 7..18).** ONE straight cone from the hall eave: front outline 11 15 19 23 25 (4 rows a column,
 FRONT_T1), standing ON the hall roof - the hall roofs run into its flanks. Red faces, black arrises (polished blackstone
-brick stairs / walls) as one stepped line from y 7 to the point, a lighter granite tick at each step's inner corner;
+brick stairs / walls) as one unbroken stepped line from y 7 to the point, a granite tick at each step's inner corner;
 no full-width pale or dark course, no row of the cone's face over 30 % pale; the pale diamond "eye" (calcite ring,
 red heart) at y 14..16, z 11..13 (kept from r5). Re-mass r3, lovish chose option b, Oct 28.
 

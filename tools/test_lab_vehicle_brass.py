@@ -33,7 +33,10 @@ FRONT_T1 = [14, 12, 10,                                   # north wing: the swep
             10, 12, 14]                                   # south wing
 SIZE_T1 = [17, 26, 25]                                    # x (depth), height, z (front width)
 APEX = (4, 25, 12)                                        # the tower's point: x, y, z
-LANE = (range(0, 9), range(9, 16), 10)                    # the great door: x, z, height (y 1..10), through the tower
+LANE = (range(0, 9), range(10, 15), 8)                    # the great door: x, z, height (y 1..8), through the tower
+# (r4, Oct 28: 5 x 8, the lane every other lab uses; the T1 rescale's 7 x 10 made the door the cone's whole foot -
+# ref18's door is ~55 % of the foot's width and ~31 % of the tower's height: 5 / 9 and 8 / 25. T1 Brassworks vehicles
+# fit 5 x 8.)
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
@@ -152,13 +155,15 @@ class EngineShedT1Detail(unittest.TestCase):
     def tower_face(self, y):
         """The tower's front cells at row y >= 7, as {z: name}: the front-most cell of a column z 7..17 standing IN
         FRONT of the hall roof at that row (the hall's own front at a hall column, z 5; past its ridge the hall shows
-        nothing). The exit lane's look-through (the far wall at x 9, rows <= 10) is the door, not the tower face."""
+        nothing), and on the door's rows the door's columns as the elevation shows them (the far wall through the lane).
+        r3 left the door out of its rows; with the 5-wide lane a row beside the door then held only the 4 cone cells
+        z 8 9 15 16, so the two jamb cells of any symmetric arch ring scored 50 % pale - the door is in the row."""
         hall = self.front_cell(y, 5)
         lim = hall[0] if hall else SIZE_T1[0]
         face = {}
         for z in range(7, 18):
             c = self.front_cell(y, z)
-            if c and c[0] < lim and not (c[0] >= L.HALL_X[1] and z in L.LANE_Z and y <= L.LANE_H):
+            if c and (c[0] < lim or (z in L.LANE_Z and y <= L.LANE_H)):
                 face[z] = c[1]
         return face
 
@@ -193,6 +198,19 @@ class EngineShedT1Detail(unittest.TestCase):
             if y > L.LANE_H and len(face) >= 3:
                 dark = sum(any(k in n for k in self.DARK) for n in face.values())
                 self.assertLess(dark, len(face), "row %d is a full dark course: %s" % (y, face))
+
+    def test_cone_face_reaches_the_eave_beside_the_door(self):
+        """r4: with the 5-wide lane the cone's face and dark arrises come down to the eave on both sides of the door
+        (z 8..9 and 15..16 in the face plane x 0 from y 7), and over the door head the face runs on red - no shoulder."""
+        for y in range(L.HALL_TOP + 1, L.LANE_H + 1):
+            for z in (8, 9, 15, 16):
+                self.assertEqual(self.front_cell(y, z)[0], 0, (y, z))
+            for z in (8, 16):
+                self.assertTrue(any(k in self.front_cell(y, z)[1] for k in self.DARK), (y, z))
+        y = L.LANE_H + 2
+        red = ("terracotta", "mangrove", "granite")
+        row = {z: self.front_cell(y, z)[1] for z in range(9, 16)}
+        self.assertEqual({z: n for z, n in row.items() if not any(k in n for k in red) and n != "lantern"}, {}, y)
 
     def test_door_is_the_bright_spot(self):
         """E: the door is the front's brightest spot (ref18), not a black hole - the lane's far wall (x 9, z 9..15,
@@ -259,6 +277,9 @@ HALL_EDGE = {7: 6, 17: 18}
 BUTTRESS_CAPS = [(0, 7, 7), (0, 7, 17)]
 EYE = (14, 16, 11, 13)                                    # y0, y1, z0, z1 of the R7 eye in the west elevation
 PINNACLE_TIPS = [(0, 9, 7), (0, 9, 17)]
+# r4 (Oct 28): the lane is 5 x 8, so the door's brass keystone moved from r3's head (0, 11, 12) to the new head
+# (0, 9, 12) - test_door_is_the_bright_spot pins the lantern it carries
+MOVED_BRASS = PINNACLE_TIPS + [(0, 11, 12)]
 
 
 def eye_roles(cells):
@@ -317,7 +338,7 @@ class EngineShedT1Keeps(unittest.TestCase):
 
     def test_every_brass_cell_kept(self):
         brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper")
-                       and q not in PINNACLE_TIPS)
+                       and q not in MOVED_BRASS)
         self.assertTrue(brass)
         self.assertEqual([q for q in brass if self.got.get(q) != self.want[q]], [])
 
