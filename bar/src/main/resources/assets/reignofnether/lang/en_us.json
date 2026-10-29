@@ -3212,7 +3212,7 @@
   "buildings.stormcallers.reignofnether.heavens_gate": "Heaven's Gate",
   "item.reignofnether.seer_unit_spawn_egg": "Spawn Seer Unit",
   "entity.reignofnether.seer_unit": "Seer",
-  "entity.reignofnether.seer_unit.tooltip1": "A court astrologer with a lantern staff. Does not fight; sees 36 blocks.",
+  "entity.reignofnether.seer_unit.tooltip1": "A court astrologer with a lantern staff. Does not fight; sees 54 blocks.",
   "entity.reignofnether.seer_unit.tooltip2": "Its lantern strips the cover from cloaked and hidden enemies within 14 blocks every half second, for 3 s.",
   "entity.reignofnether.seer_unit.tooltip3": "Thickets, fog banks and a Shade Ranger's cloak all fail near it.",
   "item.reignofnether.lantern_fortress_unit_spawn_egg": "Spawn Lantern Fortress Unit",

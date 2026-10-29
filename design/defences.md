@@ -103,6 +103,10 @@ in the middle 22 blocks out toward the nearest enemy. `expansionWithoutTower`, `
   an enemy does (hurt, revealed, plate out); putting the plate back rearms; a mine is gone after one shot.
 - `defence_anti_raid_tower_out_trades_its_cost_vs_raiders` - for all seven towers, raiders worth its metal die before
   they could raze it; it never shoots a flyer.
+- `defence_towers_fire_at_their_configured_rate` - one registered tower of every Kind, with the game's own target scan (no onlyFoe), fires
+  exactly cooldownTicks apart at a target that stays in range (y = 380, out of every other test's reach).
+- `defence_rail_battery_and_storm_oak_fire_at_their_configured_rate` - the same for the Brassworks Rail Battery (every
+  charge + cooldown, 130 ticks) and the Verdant Storm Oak (every cooldown, 120 ticks), shots read off the target's health.
 - `defence_anti_t3_costs_ten_to_twenty_percent_of_a_t3` - every emplacement 10-20% of the priciest T3 (metal and
   energy), 5x5+, range <= 20, dormant without Tier 3, x3 vs experimentals; every live faction has its set.
 
