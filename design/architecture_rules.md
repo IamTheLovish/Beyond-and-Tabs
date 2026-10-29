@@ -78,6 +78,10 @@ tools/test_building_gates.py). Detail parts that pass them: `tools/arch_kit.py` 
 ## 4. Kit status (r6, Oct 29 2026: frozen at part level - the next gains come from composing parts on real buildings)
 `tools/arch_kit.py`, any set (Mats); stamp with `host.place(part, ox, oy, oz, rot)`, front south. All READY except:
 - HELD: hip / pyramid roof (`hip_roof`) - waits for Macaw's Roofs block ids.
+- DO NOT USE yet (final r6 critic, realism 5.5 / detail 6.5): `dome` ribs (read as a cabbage - plain shell or ribs
+  +1 proud in the shell block), `gear` on a dark wall (mount on brick / stone brick), `half_timber` as built (infill
+  doesn't read), `tone_wall` panel (reads as a painted patch - scatter 1-2 blocks instead), the copper `eave` gutter
+  stripe (use a pale trim lip), the 1-wide dark pinnacle posts round the dome base. Best parts: `roof_light`, `dormer`.
 - Roofs: `oversail` gable 1 proud + `cresting` on the ridge; `eave` band at the wall top (weathered copper slab
   gutter); `dormer` (3x2 light, wall-brick frame, stair gablet) up through a slope; `roof_light` tinted 2x3 panels
   set flush in a flat/low roof; `chimney` through a slope, `stack` for a works chimney; `clerestory` between roofs.
