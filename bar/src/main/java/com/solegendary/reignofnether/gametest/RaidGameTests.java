@@ -216,6 +216,10 @@ public class RaidGameTests {
         // raider-ticks in the fight (contact -> done) spent not at the building, with no building target, in water;
         // and what UnitUnstick / the move goals did to the raiders in that window (UnitUnstick.TRACE)
         int awayTicks = 0, lostTicks = 0, wetTicks = 0;
+        // the building's own bookkeeping, last sampled before it fell: blocks still counted but no longer standing
+        // ("changed after placing") and the count at that sample
+        String lastState = "";
+        int lastStatePlaced = -1;
         final java.util.TreeMap<String, Integer> events = new java.util.TreeMap<>();
 
         Sim(String group, String kind, Cell cell, String atk, String foe) {
@@ -289,6 +293,10 @@ public class RaidGameTests {
                         awayTicks++;
                 }
             }
+            if (t % 5 == 0) {
+                lastState = target.constructionState();
+                lastStatePlaced = placed;
+            }
             if (t % 10 != 0)
                 return;
             int fire = 0, flowing = 0;
@@ -312,7 +320,8 @@ public class RaidGameTests {
         String compact() {
             return fewestAlive + "/" + attackers.size() + " alive, " + nearAfter3s + " near at 3 s, stall " + fmt(secs(longestStall))
                 + "s, fire " + fireSeen + ", flow " + flowSeen + ", away " + fmt(secs(awayTicks)) + "s, lost " + fmt(secs(lostTicks))
-                + "s, wet " + fmt(secs(wetTicks)) + "s, " + events;
+                + "s, wet " + fmt(secs(wetTicks)) + "s, " + events + ", blocks " + startBlocks + "->" + lastStatePlaced + " (" + lastState
+                + "), contact at " + fmt(secs(contact)) + "s";
         }
 
         void cleanup() {
