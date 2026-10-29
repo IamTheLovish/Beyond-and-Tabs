@@ -102,7 +102,8 @@ public class BotPlayer {
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         // the Tidewrought have no farm, house or tower - every use of those checks for null. Tier 2 brings the Drydock:
         // the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets: tideKrakens) with
-        // Mortar Galleys behind and a Sky Corsair now and then; Tide Priests ride along (tideHabits). Tier 3: the
+        // Mortar Galleys behind and a Sky Corsair now and then; Tide Priests ride along (tideHabits), and Tide Seers (the
+        // essence caster) spend their spare essence on Empower (tideSeers). Tier 3: the
         // Harbourmaster lays down the Abyssal Shipyard and it raises Leviathans (tideLeviathans slams with them)
         if (faction.equals(Factions.TIDEWROUGHT))
             return new Kit(Buildings.WRECK_HARBOUR, null, null,
@@ -114,7 +115,8 @@ public class BotPlayer {
                 Buildings.DRYDOCK, ProductionItems.HARBOURMASTER,
                 List.of(ProductionItems.KRAKEN_CALLER, ProductionItems.KRAKEN_CALLER, ProductionItems.MORTAR_GALLEY,
                         ProductionItems.MORTAR_GALLEY, ProductionItems.SKY_CORSAIR,
-                        ProductionItems.SHELLBACK_TURTLE),   // beasts-2 T2 beast
+                        ProductionItems.SHELLBACK_TURTLE,   // beasts-2 T2 beast
+                        ProductionItems.TIDE_SEER),   // the essence caster: its spells autocast, tideSeers spends Empower
                 Buildings.ABYSSAL_SHIPYARD, ProductionItems.LEVIATHAN, Buildings.ENERGY_CONVERTER_TIDE);
         // the Stormcallers have no farm, house or tower - every use of those checks for null - so the bot plays an
         // economy and a T1 army (Jade Guards in front, Fire Adepts behind, Blade Dancers diving their archers, a Frost
@@ -785,6 +787,7 @@ public class BotPlayer {
         tideHabits(level, mine, army);
         tideFogBank(level, mine, army);
         tideKrakens(level, mine);
+        tideSeers(level, mine);
         tideLeviathans(level, mine);
         stormHabits(level, mine, army, gameTime);
         brassHabits(level, mine, gameTime);
@@ -1060,6 +1063,7 @@ public class BotPlayer {
         useFactionPowers(level, mine);
         useTitanAbilities(level, mine);
         tideKrakens(level, mine);
+        tideSeers(level, mine);
         tideLeviathans(level, mine);
         stormTempest(level, mine, null);
         stormDomes(level, mine, null);
@@ -2050,9 +2054,45 @@ public class BotPlayer {
     public static final int SEER_EMPOWER_RESERVE = com.solegendary.reignofnether.ability.abilities.DrownedTithe.ESSENCE_COST;
 
     /**
-     * Tide Seers (the Tidewrought essence caster), for any bot that fields them. STUB (tests first, expected red).
+     * Tide Seers (the Tidewrought essence caster), for any bot that fields them. Their three spells are the AutoCaster's
+     * (each gated on its own essence cost); Empower is MANUAL for players, so the bot spends it here: a Seer whose
+     * Empower is ready and that holds Empower's 15 plus {@link #SEER_EMPOWER_RESERVE} ranks up the priciest friendly
+     * unit in reach that Empower accepts (never a hero, commander, experimental, summon, a top-rank unit or one
+     * empowered in the last minute - Empower's own quiet refusals). One grid query per Seer that is ready and rich
+     * enough, nothing otherwise. Public for the game test.
      */
-    public void tideSeers(ServerLevel level, List<LivingEntity> mine) { }
+    public void tideSeers(ServerLevel level, List<LivingEntity> mine) {
+        int need = com.solegendary.reignofnether.ability.abilities.Empower.ESSENCE_COST + SEER_EMPOWER_RESERVE;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof com.solegendary.reignofnether.unit.units.tide.TideSeerUnit seer) || !le.isAlive() || sealed(le)
+                    || com.solegendary.reignofnether.essence.Essence.get(le) < need)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : seer.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Empower emp) || !emp.isOffCooldown(seer))
+                    continue;
+                List<LivingEntity> friends = new ArrayList<>();
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(),
+                        com.solegendary.reignofnether.ability.abilities.Empower.RANGE + 2, scan))
+                    if (other != le && other.isAlive() && other instanceof Unit ou && name.equals(ou.getOwnerName())
+                            && !com.solegendary.reignofnether.ability.abilities.Empower.isRefusedKind(other))
+                        friends.add(other);
+                friends.sort((x, y) -> Double.compare(unitValue(y), unitValue(x)));
+                for (LivingEntity f : friends)
+                    if (com.solegendary.reignofnether.ability.abilities.Empower.cast(level, le, name, f, true)) {
+                        emp.setToMaxCooldown(seer);
+                        com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), emp.action, emp.cooldownMax);
+                        break;
+                    }
+                break;
+            }
+        }
+    }
+
+    /** A unit's price in metal plus energy (0 without a cost): what a bot protects or ranks up first. */
+    static double unitValue(LivingEntity le) {
+        var cost = le instanceof Unit u ? u.getCost() : null;
+        return cost == null ? 0 : cost.metal() + cost.energy();
+    }
 
     /** Enemy units in a Leviathan's slam arc that make Tidal Slam worth its 50 s cooldown. */
     static final int LEVIATHAN_SLAM_MIN_FOES = 3;
