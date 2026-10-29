@@ -41,7 +41,6 @@ import java.util.Set;
  * ProductionPlacement.produceUnit -> setDelayedRally), as the graveyard's queue does, with the match pathfinder on,
  * and wants every one of them OUT of the graveyard's footprint and at its rally point within {@link #LIMIT} ticks:
  * <ul>
- *   <li>at each level (plain, Overflowing, L2, L3) on open ground, to the default rally point;</li>
  *   <li>with another building placed flush across half of the gate (a one-block gap left), and flush against the
  *       whole gate side - both placements a player can make (the placement check is asked first: buildings may
  *       touch), as can be:</li>
@@ -76,21 +75,14 @@ public class GraveyardExitGameTests {
     /** "At the rally point": five Zombies sent to one cell stand round it, the farthest a few blocks off. */
     static final double RALLY_NEAR = 6.0;
 
+    /** OPEN is only used by the open-ground walk-out tests (see below); they call {@link #run} from their own class. */
     enum Gate { OPEN, HALF_BLOCKED, BLOCKED, BANK }
 
     // ------------------------------------------------------------------------------------- open ground, each level
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
-    public static void graveyard_l1_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 0, Gate.OPEN); }
-
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
-    public static void overflowing_graveyard_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 1, Gate.OPEN); }
-
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
-    public static void graveyard_l2_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 2, Gate.OPEN); }
-
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
-    public static void graveyard_l3_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 3, Gate.OPEN); }
+    // The four open-ground walk-out tests (plain, Overflowing, L2, L3: run(helper, code, Gate.OPEN)) live in the PR that
+    // fixes the group stall on main's move goal: they fail ~4 in 28 runner-runs on main without this PR's code
+    // (stress 40824369634, 40824379303, 40824403225), so they cannot be a gate for this PR.
 
     // ------------------------------------------------------- a building flush across half the gate (one cell left)
 
@@ -133,7 +125,7 @@ public class GraveyardExitGameTests {
      * footprint's outside corner). Otherwise it stands against the arena's north edge with its gate (south, rotation
      * NONE) facing the obstacle, and the rally point is set on the open west side.
      */
-    private static void run(GameTestHelper helper, int code, Gate gate) {
+    static void run(GameTestHelper helper, int code, Gate gate) {
         ServerLevel level = helper.getLevel();
         Runnable giveBackPathing = RtsPathingLease.takeUntilEnd(helper);
         String owner = "gametest_gyexit_" + code + "_" + gate.name().toLowerCase(Locale.ROOT) + "_"
@@ -243,6 +235,7 @@ public class GraveyardExitGameTests {
                 if (readyAt[0] < 0) {
                     if (entitiesReady(level, chunks)) {
                         readyAt[0] = (int) tick;
+                        ReignOfNether.LOGGER.info("[GraveyardExit] {}: chunks entity-ticking at tick {} (cap {})", layout, tick, READY_CAP);
                     } else if (tick >= READY_CAP) {
                         finish.accept(layout + ": the graveyard's chunks were not entity-ticking after " + READY_CAP + " ticks");
                     }
