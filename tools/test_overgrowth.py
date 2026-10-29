@@ -166,12 +166,23 @@ class Overgrowth(unittest.TestCase):
         for x, y, z in self.g1:
             self.assertTrue(0 <= x < sx and 0 <= y < sy and 0 <= z < sz, (x, y, z))
 
+    def test_walls_on_the_box_edge_grow_nothing_outside(self):
+        """A building that fills its box (most do): a ledge at the box edge must not drape a vine past it."""
+        palette = [{"Name": "minecraft:stone_bricks"}]
+        blocks = [{"pos": [x, y, z], "state": 0} for x in range(6) for z in range(6) for y in range(6)]
+        blocks += [{"pos": [x, y, z], "state": 0} for x in (2, 3) for z in (2, 3) for y in (6, 7)]
+        root = {"size": [6, 10, 6], "palette": palette, "blocks": blocks, "entities": [], "DataVersion": 3465}
+        for seed in range(8):
+            out = OG.overgrow(root, seed=seed, density=3.0, budget=1.0)
+            for x, y, z in grid(out):
+                self.assertTrue(0 <= x < 6 and 0 <= y < 10 and 0 <= z < 6, (seed, (x, y, z)))
+
     def test_no_banned_or_unknown_blocks(self):
         for p, (n, props) in added(self.before, self.after).items():
             self.assertIn(n, VANILLA_ADDS, "added %s at %s" % (n, p))
             self.assertFalse(any(b in n for b in BANNED), n)
             if n.endswith("_leaves"):
-                self.assertEqual(props.get("persistent"), "true", "leaves must not decay: %s" % p)
+                self.assertEqual(props.get("persistent"), "true", "leaves must not decay: %s" % (p,))
         for p, ((n0, p0), (n1, p1)) in changed(self.before, self.after).items():
             self.assertIn(n1, VANILLA_ADDS, "swapped %s -> %s at %s" % (n0, n1, p))
             self.assertEqual(n1.replace("mossy_", ""), n0, "a swap is only a mossy twin: %s -> %s" % (n0, n1))
@@ -221,7 +232,7 @@ class Pilot(unittest.TestCase):
     def test_pilot_after_is_the_tool_output_of_pilot_before(self):
         """design/eyes/overgrowth_pilot_after.nbt is reproducible: the tool on the committed before at PILOT_SEED."""
         before = load_nbt(PILOT_BEFORE)
-        self.assertEqual(grid(load_nbt(PILOT_AFTER)), grid(OG.overgrow(before, seed=OG.PILOT_SEED)))
+        self.assertEqual(grid(load_nbt(PILOT_AFTER)), grid(OG.overgrow(before, seed=OG.PILOT_SEED, density=OG.PILOT_DENSITY)))
 
     def test_pilot_keeps_every_passage(self):
         before, after = load_nbt(PILOT_BEFORE), load_nbt(PILOT_AFTER)
