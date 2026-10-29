@@ -11,6 +11,7 @@ import com.solegendary.reignofnether.essence.GraveAdeptServerEvents;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hero.HeroExperienceOrb;
 import com.solegendary.reignofnether.hero.HeroKits;
+import com.solegendary.reignofnether.items.UnitInventory;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.UnitDamage;
@@ -29,7 +30,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -63,6 +67,10 @@ public class GraveAdeptGameTests {
      * the other tests' Adepts in the shared batch (PR 371 review round 1, run 40834210675).
      */
     static final String FEED_BATCH = "grave_adept_feed";
+    /** Drives the server-stop handler, which forgets every loaded Adept: alone, so it touches no other test's. */
+    static final String RESTART_BATCH = "grave_adept_restart";
+    /** Kills an enemy hero worth XP: alone, as the feed test. */
+    static final String TOTEM_BATCH = "grave_adept_totem";
 
     private static String owner(GameTestHelper helper, String what) {
         return "gametest_adept_" + what + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
@@ -306,6 +314,63 @@ public class GraveAdeptGameTests {
         });
     }
 
+    /**
+     * One Adept per Tombcaller holds through a restart: its Adept's chunk unloaded, the server stops (its stop handler
+     * runs) and the call is still refused, nothing spent; the held Adept survives its SavedData's save and load; back
+     * from its chunk, it is the caster's again (PR 371 review round 2 B1).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = RESTART_BATCH)
+    public static void grave_adept_one_per_caster_through_a_restart(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "restart");
+        Mob caller = caller(helper, owner, 3, 8, 50);
+        GraveAdeptUnit first = caller == null ? null : adept(helper, caller, owner, 5, 8, 0);
+        if (caller == null || first == null) {
+            discardAll(nonNull(caller, first));
+            helper.fail("could not spawn the Tombcaller and its Adept");
+            return;
+        }
+        List<Entity> all = new ArrayList<>(List.of(caller, first));
+        CompoundTag saved = new CompoundTag();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (!first.save(saved))
+                    early.add("setup: the Adept would not save");
+                first.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);   // as its chunk unloading does
+            } catch (RuntimeException ex) {
+                early.add("unloading threw " + ex);
+            }
+        });
+        helper.runAfterDelay(4, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                GraveAdeptServerEvents.onServerStopping(new ServerStoppingEvent(level.getServer()));   // the restart
+                CallNecromancer call = ability(caller, CallNecromancer.class);
+                if (call == null)
+                    throw new IllegalStateException("the Tombcaller has no Call the Necromancer");
+                if (call.liveSummons(level, (Unit) caller) != 1)
+                    problems.add("after a restart with its Adept unloaded the Tombcaller counts no Adept");
+                GraveAdeptUnit second = CallNecromancer.cast(level, caller, owner, true);
+                if (second != null)
+                    all.add(second);
+                if (second != null || Essence.get(caller) != 50)
+                    problems.add("after a restart with its Adept unloaded a second was called (essence " + Essence.get(caller) + ")");
+                Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
+                if (back == null || !level.addFreshEntity(back))
+                    throw new IllegalStateException("the saved Adept did not load back");
+                all.add(back);
+                if (GraveAdeptServerEvents.adeptOf(caller) != back)
+                    problems.add("the Adept back from its chunk is not its Tombcaller's");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
     // -------------------------------------------------------------------------------------------- levels and XP
 
     /**
@@ -404,6 +469,60 @@ public class GraveAdeptGameTests {
                     clearNear(level, at, 2, owner);
                 discardAll(victims);
                 a.discard();
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * A totem-saved enemy hero pays an Adept nothing; its real death pays it once, what it pays a hero in orbs (PR 371
+     * review round 2 B2: the Adept's XP ran before the Totem of Undying could cancel the death).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = TOTEM_BATCH)
+    public static void grave_adept_takes_no_xp_from_a_totem_saved_hero(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "totem"), foe = owner(helper, "totemfoe");
+        GraveAdeptUnit a = adept(helper, null, owner, 4, 4, 0);
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.CORSAIR_CAPTAIN, foe, 8, 4);
+        List<Entity> all = new ArrayList<>(nonNull(a, hero));
+        if (all.size() != 2) {
+            discardAll(all);
+            helper.fail("could not spawn the Adept and the hero");
+            return;
+        }
+        hero.setNoAi(true);
+        boolean gave = hero instanceof UnitInventory inv && inv.tryAdding(new ItemStack(Items.TOTEM_OF_UNDYING));
+        int want = GraveAdeptServerEvents.xpFor(hero);
+        Vec3 at = hero.position();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (!gave)
+                    early.add("setup: the hero took no Totem of Undying");
+                hero.kill();   // the totem saves it
+                if (!hero.isAlive())
+                    early.add("setup: the totem did not save the hero");
+                if (a.xp() != 0)
+                    early.add("a totem-saved hero paid the Adept " + a.xp() + " XP, expected none");
+                hero.removeAllEffects();   // the totem's invincibility
+                hero.invulnerableTime = 0;
+                hero.kill();   // now for real
+            } catch (RuntimeException ex) {
+                early.add("killing threw " + ex);
+            }
+        });
+        helper.runAfterDelay(4, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (want <= 0)
+                    problems.add("a hero's death is worth " + want + " XP: the test lost its point");
+                if (hero.isAlive())
+                    problems.add("setup: the hero survived its second death");
+                else if (a.xp() != want)
+                    problems.add("after the hero's real death the Adept holds " + a.xp() + " XP, expected its " + want + " once");
+            } finally {
+                clearNear(level, at, 8, owner);
+                discardAll(all);
             }
             finish(helper, problems);
         });
