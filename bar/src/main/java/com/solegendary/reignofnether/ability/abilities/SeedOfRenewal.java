@@ -69,13 +69,9 @@ public class SeedOfRenewal extends Ability {
     public SeedOfRenewal() {
         super(UnitAction.SEED_OF_RENEWAL, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, RADIUS, false, true);
         this.autoRule(AutoRule.ALLY_HURT);
+        this.autocastEssence = ESSENCE_COST;   // the autocast waits for the essence, so a dry caster never spams refusals
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
-    }
-
-    @Override
-    public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
     /**

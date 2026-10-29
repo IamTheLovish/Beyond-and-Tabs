@@ -57,12 +57,8 @@ public class SproutGuardian extends Ability {
     public SproutGuardian() {
         super(UnitAction.SPROUT_GUARDIAN, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
         this.autoRule(AutoRule.SUMMON_WHEN_FREE);
+        this.autocastEssence = ESSENCE_COST;   // the autocast waits for the essence, so a dry caster never spams refusals
         this.showRangeCircle = true;
-    }
-
-    @Override
-    public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
     /** The guardians {@code unit} raised that still stand. */
