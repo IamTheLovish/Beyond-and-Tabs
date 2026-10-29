@@ -3,7 +3,10 @@ Run: python3 -m unittest discover -s tools -p 'test_*.py'
 
 Oct 29: Complementary's author refused us permission to ship the shader pack (it had been in the tester pack since
 Oct 22). The pack builders may not name it, may not add a shader pack or its settings, and Oculus (which only loaded
-it) is gone too. Fully offline: the network steps (Modrinth lookups) are replaced by fixed entries.
+it) went too. Our own pack (shaderpacks/BeyondAndTabs, clean-room, GPL v2 or later; design/own_shader_pack.md) takes
+its place, so Oculus and a shaderpacks/ folder are allowed again; only Complementary is banned, by name anywhere in
+what we ship, and a shaderpacks/ folder may hold nothing but ours. Fully offline: the network steps (Modrinth lookups)
+are replaced by fixed entries.
 """
 import hashlib
 import io
@@ -20,7 +23,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "pack"))
 import build_pack  # noqa: E402
 import build_packwiz  # noqa: E402
 
-BANNED = ("complementary", "oculus", "shaderpacks")
+BANNED = ("complementary",)
+OUR_PACK = "shaderpacks/BeyondAndTabs"
 H512 = "a" * 128
 
 ENTRIES = [("embeddium-0.3.31+mc1.20.1.jar", "client", "https://cdn.modrinth.com/data/x/versions/y/embeddium.jar", H512),
@@ -45,16 +49,16 @@ class BuilderDefinitions(unittest.TestCase):
         names = [*build_pack.EXTRA_PROJECTS, *build_pack.PINNED_VERSIONS, *build_pack.CLIENT_ONLY_PROJECTS,
                  *build_pack.CLIENT_ONLY]
         for n in names:
-            self.assertFalse(any(b in n.lower() for b in ("complementary", "oculus", "shader")), n)
+            self.assertNotIn("complementary", n.lower())
 
     def test_instance_mods_have_none(self):
         with open(os.path.join(HERE, "..", "pack", "instance_mods.json"), encoding="utf-8") as f:
             for m in json.load(f):
-                self.assertFalse(any(b in m["file"].lower() for b in ("complementary", "oculus")), m["file"])
+                self.assertNotIn("complementary", m["file"].lower())
 
-    def test_packwiz_builder_has_no_shader_code(self):
-        for name in ("SHADER_PROJECT", "SHADER_VERSION", "resolve_shader", "shader_files"):
-            self.assertFalse(hasattr(build_packwiz, name), name)
+    def test_packwiz_builder_names_no_complementary(self):
+        for name in ("SHADER_PROJECT", "SHADER_VERSION"):
+            self.assertNotIn("complementary", str(getattr(build_packwiz, name, "")).lower(), name)
 
 
 class PackwizPack(unittest.TestCase):
@@ -71,8 +75,8 @@ class PackwizPack(unittest.TestCase):
                 self.assertNotIn(b, rel.lower(), rel)
                 self.assertNotIn(b, text.lower(), rel)
         paths = {rel for rel, _ in files}
-        self.assertFalse(any(p.startswith("shaderpacks/") for p in paths))
-        self.assertNotIn("config/oculus.properties", paths)
+        others = [p for p in paths if p.startswith("shaderpacks/") and not p.startswith(OUR_PACK)]
+        self.assertEqual(others, [])
         self.assertIn("mods/beyondandtabs.pw.toml", paths)   # the pack is not just empty
         self.assertIn("options.txt", paths)
 
