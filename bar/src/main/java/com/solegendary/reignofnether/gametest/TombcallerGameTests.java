@@ -56,7 +56,7 @@ import java.util.Objects;
  * The Gravebound essence caster, the Tombcaller (design/essence_casters.md "Gravebound Gravecaller" from lovish's idea,
  * Revision 1, and his tombstone answer on Oct 29: "tone down"). Written before the code, from those numbers:
  * <ul>
- *   <li>trained at the Dungeon (the Gravebound T2 lab) for a cost, an essence carrier that gathers the wisps near it -
+ *   <li>trained at the Graveyard (the Gravebound T1 army building) for a cost, an essence carrier that gathers the wisps near it -
  *       from 12 blocks instead of 8 when the wisp lies on its own grave creep;</li>
  *   <li>Raise Tombstone (10 essence, 25 s, at most 3 per caster): a summoned 150 HP stone within 10 blocks that takes
  *       damage at the unit rate and stands 90 s; its creep grows a block every 2 s up to 8 and fades over 10 s after
@@ -209,7 +209,8 @@ public class TombcallerGameTests {
             Building graveyard = Buildings.GRAVEYARD;
             if (!(graveyard instanceof ProductionBuilding t1) || !t1.productions.get().contains(ProductionItems.TOMBCALLER))
                 problems.add("the Graveyard (the Gravebound T1 army building) does not train the Tombcaller");
-            if (Buildings.DUNGEON instanceof ProductionBuilding lab && lab.productions.get().contains(ProductionItems.TOMBCALLER))
+            Building dungeon = Buildings.DUNGEON;
+            if (dungeon instanceof ProductionBuilding lab && lab.productions.get().contains(ProductionItems.TOMBCALLER))
                 problems.add("the Dungeon (the T2 lab) still trains the Tombcaller: it is a tier-1 unit");
             if (!Factions.MONSTERS.key.equals(Factions.ENTITY_FACTION.get(EntityType.getKey(EntityRegistrar.TOMBCALLER_UNIT.get()))))
                 problems.add("the Tombcaller is not registered to Gravebound");
@@ -348,7 +349,7 @@ public class TombcallerGameTests {
     /**
      * A bot's Tombcaller that lags behind its army is sent to it: the bot's "healers follow the army" block
      * (BotPlayer.verdantHabits, run by every faction's think) orders a lagging essence caster to the army's centre
-     * (shared edit, briefs/essence-caster-bot-follow-line.md), or a bot's caster idles at the Dungeon with no essence.
+     * (shared edit, briefs/essence-caster-bot-follow-line.md), or a bot's caster idles at the Graveyard with no essence.
      * The Tombcaller 14 blocks from the army is ordered there; the one 3 blocks from it is left alone. verdantHabits is
      * package-private and its signature is the same in every caster PR, so the test reaches it by reflection.
      */
