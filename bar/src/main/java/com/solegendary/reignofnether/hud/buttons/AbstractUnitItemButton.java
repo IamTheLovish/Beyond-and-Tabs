@@ -279,6 +279,10 @@ public abstract class AbstractUnitItemButton extends Button {
         for (Map.Entry<Attribute, AttributeModifier> entry : unitItem.attributes.entrySet()) {
             Attribute attr = entry.getKey();
             AttributeModifier modifier = entry.getValue();
+            // sight is shown as the fog it reveals: a flat bonus times the Vision multiplier (+8 base reveals +12)
+            if (attr == AttributeRegistrar.SIGHT_RANGE.get() && modifier.getOperation() == ADDITION)
+                modifier = new AttributeModifier(modifier.getId(), modifier.getName(),
+                    Math.round(modifier.getAmount() * com.solegendary.reignofnether.fogofwar.Vision.MULTIPLIER), ADDITION);
             String attrStr = MiscUtil.getAttrString(attr, modifier);
             descs.add(attrStr);
         }
