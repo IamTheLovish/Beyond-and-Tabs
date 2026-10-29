@@ -95,6 +95,7 @@ public class ResourceCosts {
     public static final ResourceCost EARTHSHAKER = new ResourceCost(ID, "EARTHSHAKER");
     public static final ResourceCost GRAVITY_MONK = new ResourceCost(ID, "GRAVITY_MONK");
     public static final ResourceCost MIRROR_MAGE = new ResourceCost(ID, "MIRROR_MAGE");
+    public static final ResourceCost SPARK_SAGE = new ResourceCost(ID, "SPARK_SAGE");
     public static final ResourceCost CELESTIAL_OBSERVATORY = new ResourceCost(ID, "CELESTIAL_OBSERVATORY");
     // Stormcallers slice 4 (the rest of T2, Heaven's Gate and the Celestial Dragon)
     public static final ResourceCost SEER = new ResourceCost(ID, "SEER");
@@ -447,6 +448,7 @@ public class ResourceCosts {
         EARTHSHAKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EARTHSHAKER);
         GRAVITY_MONK.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GRAVITY_MONK);
         MIRROR_MAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MIRROR_MAGE);
+        SPARK_SAGE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SPARK_SAGE);
         CELESTIAL_OBSERVATORY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CELESTIAL_OBSERVATORY);
         SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEER);
         LANTERN_FORTRESS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LANTERN_FORTRESS);
