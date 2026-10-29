@@ -76,6 +76,17 @@ public final class HeroKit {
         public final int channelTicks;   // wind-up once in range (targeted abilities)
         public final float[] a, b;       // per-rank values for the effect and the rank tooltip lines
         public final Effect effect;
+        /**
+         * Stuns, roots or slows what it hits: the hero AI casts it before the damage (the combo order, lovish's hero AI
+         * requirement 1: "stun/slow then damage").
+         */
+        public boolean cc = false;
+
+        /** Marks the ability as crowd control ({@link #cc}); returns it, for the kit table. */
+        public AbilitySpec cc() {
+            this.cc = true;
+            return this;
+        }
 
         public AbilitySpec(String id, String icon, Target target, Ai ai, int[] cooldownSeconds, float[] range, float radius,
                            int manaCost, int channelTicks, float[] a, float[] b, Effect effect) {

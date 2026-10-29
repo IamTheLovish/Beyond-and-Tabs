@@ -1180,6 +1180,10 @@ public class BuildingPlacement {
         isBuilt = true;
         if (!this.level.isClientSide()) {
             FrozenChunkClientboundPacket.setBuildingBuiltServerside(this.originPos);
+            // a finished site leaves its builders' queues now, not on their goal's next 5-tick turn (until then the
+            // queue still listed it as a pending order)
+            for (WorkerUnit worker : getBuilders())
+                worker.getBuildRepairGoal().queuedBuildings.remove(this);
             if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) <= 1) {
                 for (int i = 0; i < 3; i++)
                     spawnHuntableAnimalsNearby(animalSpawnBlockRange / 2);

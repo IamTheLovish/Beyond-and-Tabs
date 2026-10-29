@@ -22,7 +22,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
@@ -371,16 +374,21 @@ public final class UnitUnstick {
         return level.noCollision(mob, moved.deflate(0.01));
     }
 
-    /** Puts the unit on {@code cell} and makes every movement goal it has repath from there. */
+    /** Puts the unit on {@code cell} and makes every movement goal it has repath from there, once each. */
     public static void rescue(Mob mob, BlockPos cell) {
         mob.getNavigation().stop();
         mob.teleportTo(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
         mob.setDeltaMovement(Vec3.ZERO);
+        // once each: a forced repath is judged (it can count toward the give-up), and the plain move goal is usually
+        // both in the selector and the unit's getMoveGoal - twice made every rescue two stuck repaths
+        Set<MoveToTargetBlockGoal> goals = Collections.newSetFromMap(new IdentityHashMap<>());
         for (WrappedGoal wg : mob.goalSelector.getAvailableGoals())
             if (wg.getGoal() instanceof MoveToTargetBlockGoal g)
-                g.forceRepath();
+                goals.add(g);
         if (mob instanceof Unit u && u.getMoveGoal() != null)
-            u.getMoveGoal().forceRepath();   // not every unit registers its move goal with the selector
+            goals.add(u.getMoveGoal());   // not every unit registers its move goal with the selector
+        for (MoveToTargetBlockGoal g : goals)
+            g.forceRepath();
     }
 
     /** For tests. */
