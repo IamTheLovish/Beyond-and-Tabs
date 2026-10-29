@@ -170,6 +170,7 @@ public class ProductionItems {
     // Tidewrought slice 3: the Drydock (T2)
     public static final com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd HARBOURMASTER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "harbourmaster"), new com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd());
     public static final com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd KRAKEN_CALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "kraken_caller"), new com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.TideSeerProd TIDE_SEER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_seer"), new com.solegendary.reignofnether.unit.units.tide.TideSeerProd());
     public static final com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd MORTAR_GALLEY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mortar_galley"), new com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd());
     public static final com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd SKY_CORSAIR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sky_corsair"), new com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd());
     // Tidewrought slice 4: the Abyssal Shipyard (T3)
@@ -319,6 +320,7 @@ public class ProductionItems {
         MUDSKIPPER_SLOOP,
         HARBOURMASTER,
         KRAKEN_CALLER,
+        TIDE_SEER,
         MORTAR_GALLEY,
         SKY_CORSAIR,
         LEVIATHAN,

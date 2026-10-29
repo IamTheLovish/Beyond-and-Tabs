@@ -123,6 +123,10 @@ public class ItemRegistrar {
             ITEMS.register("kraken_caller_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.KRAKEN_CALLER_UNIT,
                     0x2A1E4A, 0x3CC8BE, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> TIDE_SEER_UNIT_SPAWN_EGG =
+            ITEMS.register("tide_seer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TIDE_SEER_UNIT,
+                    0x1F5C5A, 0x9FE3D8, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> MORTAR_GALLEY_UNIT_SPAWN_EGG =
             ITEMS.register("mortar_galley_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MORTAR_GALLEY_UNIT,
                     0x4A5A3A, 0xC9A23E, new Item.Properties()));

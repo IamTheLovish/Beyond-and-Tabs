@@ -70,6 +70,7 @@ public class ResourceCosts {
     // Tidewrought T2 (slice 3)
     public static final ResourceCost HARBOURMASTER = new ResourceCost(ID, "HARBOURMASTER");
     public static final ResourceCost KRAKEN_CALLER = new ResourceCost(ID, "KRAKEN_CALLER");
+    public static final ResourceCost TIDE_SEER = new ResourceCost(ID, "TIDE_SEER");
     public static final ResourceCost MORTAR_GALLEY = new ResourceCost(ID, "MORTAR_GALLEY");
     public static final ResourceCost SKY_CORSAIR = new ResourceCost(ID, "SKY_CORSAIR");
     public static final ResourceCost DRYDOCK = new ResourceCost(ID, "DRYDOCK");
@@ -425,6 +426,7 @@ public class ResourceCosts {
         MUDSKIPPER_SLOOP.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MUDSKIPPER_SLOOP);
         HARBOURMASTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HARBOURMASTER);
         KRAKEN_CALLER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.KRAKEN_CALLER);
+        TIDE_SEER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_SEER);
         MORTAR_GALLEY.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MORTAR_GALLEY);
         SKY_CORSAIR.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SKY_CORSAIR);
         DRYDOCK.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.DRYDOCK);

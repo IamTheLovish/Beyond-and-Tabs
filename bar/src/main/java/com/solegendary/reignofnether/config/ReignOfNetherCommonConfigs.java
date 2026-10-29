@@ -76,6 +76,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.MUDSKIPPER_SLOOP.define(BUILDER);
         UnitCosts.HARBOURMASTER.define(BUILDER);
         UnitCosts.KRAKEN_CALLER.define(BUILDER);
+        UnitCosts.TIDE_SEER.define(BUILDER);
         UnitCosts.MORTAR_GALLEY.define(BUILDER);
         UnitCosts.SKY_CORSAIR.define(BUILDER);
         UnitCosts.LEVIATHAN.define(BUILDER);
@@ -406,6 +407,10 @@ public class ReignOfNetherCommonConfigs {
         // bomber just under the Horde's Ghast (shorter reach, 3 bombs a run, has to fly over AA to use them)
         public static final ResourceCostConfigEntry HARBOURMASTER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.HARBOURMASTER, "Harbourmaster Config");
         public static final ResourceCostConfigEntry KRAKEN_CALLER = ResourceCostConfigEntry.Unit(120,60,110,38,3, ResourceCosts.KRAKEN_CALLER, "Kraken Caller Config");
+        // the essence caster (design/essence_casters.md) well above the Tide Priest (40 metal, 60 energy, 2 pop) and a
+        // little under the Kraken Caller in metal (110), more in energy: a non-fighter whose spells hit and hold a fight.
+        // The Thornweaver's price (the Verdant essence caster)
+        public static final ResourceCostConfigEntry TIDE_SEER = ResourceCostConfigEntry.Unit(120,80,100,40,3, ResourceCosts.TIDE_SEER, "Tide Seer Config");
         public static final ResourceCostConfigEntry MORTAR_GALLEY = ResourceCostConfigEntry.Unit(180,80,130,45,4, ResourceCosts.MORTAR_GALLEY, "Mortar Galley Config");
         public static final ResourceCostConfigEntry SKY_CORSAIR = ResourceCostConfigEntry.Unit(120,100,180,50,5, ResourceCosts.SKY_CORSAIR, "Sky Corsair Config");
         // Tidewrought T3: the standard experimental price (World Tree Walker, Sun Colossus), 1840 metal

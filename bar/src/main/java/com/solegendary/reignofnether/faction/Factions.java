@@ -250,6 +250,7 @@ public class Factions {
 		// Tidewrought T2 (slice 3: the Drydock)
 		registerEntity(TIDEWROUGHT, EntityRegistrar.HARBOURMASTER_UNIT.get(), ProductionItems.HARBOURMASTER);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.KRAKEN_CALLER_UNIT.get(), ProductionItems.KRAKEN_CALLER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.TIDE_SEER_UNIT.get(), ProductionItems.TIDE_SEER);   // essence caster
 		registerEntity(TIDEWROUGHT, EntityRegistrar.MORTAR_GALLEY_UNIT.get(), ProductionItems.MORTAR_GALLEY);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.SKY_CORSAIR_UNIT.get(), ProductionItems.SKY_CORSAIR);
 		registerEntity(TIDEWROUGHT, EntityRegistrar.LEVIATHAN_UNIT.get(), ProductionItems.LEVIATHAN);   // T3 (Abyssal Shipyard)

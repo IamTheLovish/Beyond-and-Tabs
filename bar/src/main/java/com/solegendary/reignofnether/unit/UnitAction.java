@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Tidewrought essence caster, the Tide Seer
+    BRINE_BOLT,             // 5 essence: 25 damage to an enemy within 10 blocks and a 3-block knockback
+    DROWNED_TITHE,          // 10 essence: a radius-5 whirlpool for 8 s, enemies in it 40% slower and 3 damage a second
+    RISING_TIDE             // 20 essence: enemies within 8 blocks pushed 6 blocks back, burning friends put out
 }

@@ -385,6 +385,12 @@ public class EntityRegistrar {
                     .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "kraken_caller_unit").toString()));
+    // the Tidewrought essence caster (design/essence_casters.md): the Tide Priest's witch body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.TideSeerUnit>> TIDE_SEER_UNIT = ENTITIES.register("tide_seer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.TideSeerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.WITCH.getWidth(), EntityType.WITCH.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_seer_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit>> MORTAR_GALLEY_UNIT = ENTITIES.register("mortar_galley_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit::new, MobCategory.CREATURE)
@@ -1125,6 +1131,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.tide.MudskipperSloopProd.itemName -> EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.HarbourmasterProd.itemName -> EntityRegistrar.HARBOURMASTER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.KrakenCallerProd.itemName -> EntityRegistrar.KRAKEN_CALLER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.TideSeerProd.itemName -> EntityRegistrar.TIDE_SEER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.MortarGalleyProd.itemName -> EntityRegistrar.MORTAR_GALLEY_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.SkyCorsairProd.itemName -> EntityRegistrar.SKY_CORSAIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.tide.LeviathanProd.itemName -> EntityRegistrar.LEVIATHAN_UNIT.get();

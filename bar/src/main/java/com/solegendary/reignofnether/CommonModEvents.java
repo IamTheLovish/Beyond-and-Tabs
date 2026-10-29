@@ -83,6 +83,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.MUDSKIPPER_SLOOP_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.MudskipperSloopUnit.createAttributes().build());
         evt.put(EntityRegistrar.HARBOURMASTER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.HarbourmasterUnit.createAttributes().build());
         evt.put(EntityRegistrar.KRAKEN_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.KrakenCallerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TIDE_SEER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.TideSeerUnit.createAttributes().build());
         evt.put(EntityRegistrar.MORTAR_GALLEY_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.MortarGalleyUnit.createAttributes().build());
         evt.put(EntityRegistrar.SKY_CORSAIR_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.SkyCorsairUnit.createAttributes().build());
         evt.put(EntityRegistrar.LEVIATHAN_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.LeviathanUnit.createAttributes().build());
@@ -271,6 +272,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.MUDSKIPPER_SLOOP_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.HARBOURMASTER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.KRAKEN_CALLER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.TIDE_SEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MORTAR_GALLEY_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SKY_CORSAIR_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LEVIATHAN_UNIT_SPAWN_EGG);
