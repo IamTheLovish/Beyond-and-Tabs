@@ -8,7 +8,7 @@
   {"name": "R5 wing gable N",      "face": "north", "box": [0, 8, 1, 14, 0, 4]},
   {"name": "R5 wing gable S",      "face": "south", "box": [0, 8, 1, 14, 20, 24]},
   {"name": "R6 door+tower base",   "face": "west",  "box": [0, 9, 1, 12, 7, 17]},
-  {"name": "R7 tower mid",         "face": "west",  "box": [0, 8, 13, 18, 8, 16]},
+  {"name": "R7 tower mid",         "face": "west",  "box": [0, 8, 7, 18, 8, 16]},
   {"name": "R8 tower upper",       "face": "west",  "box": [0, 8, 19, 25, 9, 15]},
   {"name": "R9 shed roof",         "face": "up",    "box": [10, 16, 1, 13, 0, 24]},
   {"name": "R9 shed south end",    "face": "south", "box": [9, 16, 1, 13, 17, 24]}

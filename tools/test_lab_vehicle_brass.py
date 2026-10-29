@@ -24,10 +24,11 @@ if HAVE_NUMPY:
 # the front (west) elevation: per z column, the top cell over every x - what the reference's own view sees
 FRONT_T1 = [14, 12, 10,                                   # north wing: the swept roof rising to its outer end
             9, 9, 9, 9, 9,                                # north arcade hall's ridge
-            12, 16, 19, 23, 25, 23, 19, 16, 12,           # the tower: one steep pyramid, a 1-wide point at y 25
-            # (first written 12 15 19 22 25: a floor() guess; no straight pyramid voxelizes to it - shape_kit's
-            # stair pass rounds the flanks up near the point. r3's own rule, the apex one block over the plot,
-            # gives this row: a 2-row last step, as r3's 19 / 21)
+            11, 15, 19, 23, 25, 23, 19, 15, 11,           # the tower: ONE straight cone, 4 rows a column, 1-wide point
+            # (re-mass r3, lovish chose option b, Oct 28: the old row 12 16 19 23 25 stepped 4 3 4 2 and its foot was
+            # 11 wide over a vertical base, so the tower read as a block under a spire; ref18's tower is one cone
+            # standing on the hall roof. This row is exactly what a straight pyramid voxelizes to - half-width 5.0 at
+            # y 7.5, apex y 27, the apex one block over the plot as r3's rule - so no tolerance is needed)
             9, 9, 9, 9, 9,                                # south arcade hall
             10, 12, 14]                                   # south wing
 SIZE_T1 = [17, 26, 25]                                    # x (depth), height, z (front width)
@@ -70,7 +71,11 @@ class EngineShedT1Greybox(unittest.TestCase):
     def test_tower_is_symmetric_above_the_halls(self):
         """Above the hall ridge the tower alone: mirror-symmetric about its axis in both x and z."""
         ax, _, az = APEX
-        up = {q for q in self.cells if q[1] > max(FRONT_T1[3:8]) and abs(q[2] - az) <= 4 and q[0] <= 2 * ax}
+        # the spawn column (8, *, 12) and its mirror cell (0, *, 12) are left out: re-mass r3's cone foot reaches x 8
+        # at y 11, where the spawn column (air to the sky, a hard rule) cuts the back flank and the front keeps its cell
+        sx, _, sz = L.SPAWN
+        up = {q for q in self.cells if q[1] > max(FRONT_T1[3:8]) and abs(q[2] - az) <= 4 and q[0] <= 2 * ax
+              and (q[2] != sz or q[0] not in (sx, 2 * ax - sx))}
         self.assertTrue(up)
         self.assertEqual(up, {(x, y, 2 * az - z) for x, y, z in up}, "not symmetric in z")
         self.assertEqual(up, {(2 * ax - x, y, z) for x, y, z in up}, "not symmetric in x")
@@ -131,6 +136,80 @@ class EngineShedT1Detail(unittest.TestCase):
         self.assertLessEqual(sum(n.endswith("candle") for n in v), len(L.ARCH_Z))
         self.assertLessEqual(v.count("lantern"), 3)
 
+    # ---------------------------------------------------------------- re-mass r3 (lovish chose option b, Oct 28)
+    # The art director on the r2 sheet: the tower read as "a dark rectangular block with a black door, capped by a
+    # pale band, under a stepped spire" - black buttresses / jambs rising vertically over the hall roof, a pale ledge
+    # across the tower at y 12-13, a dark door filling the base. ref18's tower is ONE mid-red cone standing on the hall
+    # roof, dark arrises, its brightest spot at the door. These pin that read in cells.
+    PALE = ("calcite", "quartz", "bone_block", "diorite")
+    DARK = ("blackstone", "deepslate")
+
+    def front_cell(self, y, z):
+        """(x, name) of the front-most block the west elevation shows at (y, z), or None."""
+        xs = [x for x in range(SIZE_T1[0]) if (x, y, z) in self.names]
+        return (min(xs), self.names[(min(xs), y, z)]) if xs else None
+
+    def tower_face(self, y):
+        """The tower's front cells at row y >= 7, as {z: name}: the front-most cell of a column z 7..17 standing IN
+        FRONT of the hall roof at that row (the hall's own front at a hall column, z 5; past its ridge the hall shows
+        nothing). The exit lane's look-through (the far wall at x 9, rows <= 10) is the door, not the tower face."""
+        hall = self.front_cell(y, 5)
+        lim = hall[0] if hall else SIZE_T1[0]
+        face = {}
+        for z in range(7, 18):
+            c = self.front_cell(y, z)
+            if c and c[0] < lim and not (c[0] >= L.HALL_X[1] and z in L.LANE_Z and y <= L.LANE_H):
+                face[z] = c[1]
+        return face
+
+    def test_tower_outline_has_no_vertical_edge_above_the_eave(self):
+        """B: above the hall eave the tower's front outline is the cone's own staircase - its half-width never grows
+        going up, is at most the cone's foot (4: z 8..16) from y 8, and holds for at most 4 rows before stepping in
+        (the cone's step). The eave row y 7 is the hall roof's first course, where the cone stands and the buttresses
+        may cap; a run is counted above it. r2's tower failed this: its dark jambs at z 8 / 16 ran y 7..12 (6 rows)."""
+        w = {}
+        for y in range(7, SIZE_T1[1]):
+            face = self.tower_face(y)
+            if face:
+                w[y] = max(abs(z - APEX[2]) for z in face)
+        ys = sorted(w)
+        self.assertEqual([w[a] >= w[b] for a, b in zip(ys, ys[1:])], [True] * (len(ys) - 1), w)
+        self.assertLessEqual(max(w[y] for y in ys if y >= 8), 4, w)
+        runs = {}
+        for y in ys:
+            if y >= 8:
+                runs[w[y]] = runs.get(w[y], 0) + 1
+        self.assertEqual({k: v for k, v in runs.items() if v > 4}, {}, w)
+
+    def test_no_pale_band_on_the_cone(self):
+        """D / C: above y 6 no row of the tower's front face is more than 30 % pale (pale is single cells and lines,
+        never a band - the r2 'lid' at y 12-13), and no full row of 3+ cells is all dark (no dark course either)."""
+        for y in range(7, SIZE_T1[1]):
+            face = self.tower_face(y)
+            if not face:
+                continue
+            pale = sum(any(k in n for k in self.PALE) for n in face.values())
+            self.assertLessEqual(pale / len(face), 0.30, "row %d: %s" % (y, face))
+            if y > L.LANE_H and len(face) >= 3:
+                dark = sum(any(k in n for k in self.DARK) for n in face.values())
+                self.assertLess(dark, len(face), "row %d is a full dark course: %s" % (y, face))
+
+    def test_door_is_the_bright_spot(self):
+        """E: the door is the front's brightest spot (ref18), not a black hole - the lane's far wall (x 9, z 9..15,
+        y 1..10) and its reveals (the lane's side walls z 8 / 16, x 0..8, y 1..10) pale-dominant, the lane floor
+        pale, ONE lantern in the door head; the lane itself air."""
+        far = [(L.HALL_X[1], y, z) for z in L.LANE_Z for y in range(1, L.LANE_H + 1)]
+        rev = [(x, y, z) for x in L.LANE_X for z in (L.LANE_Z[0] - 1, L.LANE_Z[-1] + 1) for y in range(1, L.LANE_H + 1)]
+        cells = [self.names.get(q, "air") for q in far + rev]
+        pale = sum(any(k in n for k in self.PALE) for n in cells)
+        self.assertGreater(pale / len(cells), 0.5, "door region pale %d of %d" % (pale, len(cells)))
+        floor = {self.names.get((x, 0, z)) for x in L.LANE_X for z in L.LANE_Z}
+        # the brief: "a pale floor in the lane (smooth stone or polished diorite instead of deepslate tiles)"
+        self.assertEqual([n for n in floor if not any(k in str(n) for k in self.PALE + ("smooth_stone",))], [])
+        head = [q for q, n in self.names.items() if n == "lantern" and q[0] <= 1 and
+                L.LANE_H < q[1] <= L.LANE_H + 3 and q[2] in L.LANE_Z]
+        self.assertEqual(len(head), 1, head)
+
     def test_every_region_passes_the_facade_audit(self):
         import json
         import facade_audit as FA
@@ -165,11 +244,35 @@ def committed_cells(path):
 # THE KEEPS (critic, round 1): boxes (x0, x1, y0, y1, z0, z1), inclusive, that later rounds must not change - each
 # cell's block AND state equal to the committed design/vehicle_labs/brass_t1.nbt
 KEEPS = {
-    "R4 hall roof N": (0, 10, 7, 10, 3, 7), "R4 hall roof S": (0, 10, 7, 10, 17, 21),
+    "R4 hall roof N": (0, 10, 7, 10, 3, 6), "R4 hall roof S": (0, 10, 7, 10, 18, 21),
     "R3 cornice + candles N": (0, 0, 6, 7, 0, 6), "R3 cornice + candles S": (0, 0, 6, 7, 18, 24),
-    "R7 eye": (2, 3, 14, 16, 11, 13),
     "R9 shed lit slot": (11, 16, 1, 4, 23, 24),
 }
+# Re-mass r3 (lovish chose option b, Oct 28) moved three keeps on purpose, each still pinned:
+# - the hall roofs' last columns z 7 / 17 (r2: the tower's base, its foot stairs and a buttress pinnacle to y 9) are
+#   now the hall roof running into the cone's flank (brief F): each cell equals the committed hall roof one column
+#   out (z 6 / 18), except the buttress cap AT the eave (0, 7, 7 / 17) where z 6 / 18 carry a bay candle;
+# - the R7 eye keeps its ELEVATION cells (y 14..16, z 11..13: a pale ring round a deep-red heart), set into the
+#   cone's new face planes (x 1 / 2 instead of 2 / 3);
+# - the buttress pinnacles' brass tips (0, 9, 7 / 17) are gone (brief B: nothing on the tower rises above the eave).
+HALL_EDGE = {7: 6, 17: 18}
+BUTTRESS_CAPS = [(0, 7, 7), (0, 7, 17)]
+EYE = (14, 16, 11, 13)                                    # y0, y1, z0, z1 of the R7 eye in the west elevation
+PINNACLE_TIPS = [(0, 9, 7), (0, 9, 17)]
+
+
+def eye_roles(cells):
+    """The west elevation over the R7 eye: per (y, z) the front-most cell's role - pale ring, deep-red heart, red
+    (any red-role block or shape: the cone's tier rows turned some stairs into full cells)."""
+    out = {}
+    for y in range(EYE[0], EYE[1] + 1):
+        for z in range(EYE[2], EYE[3] + 1):
+            xs = [x for x in range(SIZE_T1[0]) if (x, y, z) in cells]
+            n = cells[(min(xs), y, z)][0] if xs else "air"
+            out[(y, z)] = ("pale" if any(k in n for k in ("calcite", "quartz", "diorite")) else
+                           "heart" if n.startswith("red_nether") else
+                           "red" if any(k in n for k in ("terracotta", "mangrove", "granite")) else n)
+    return out
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
@@ -196,12 +299,25 @@ class EngineShedT1Keeps(unittest.TestCase):
             diff = [q for q in box if self.got.get(q) != self.want.get(q)]
             self.assertEqual(diff, [], name)
 
+    def test_hall_roofs_run_into_the_cone(self):
+        for z, zh in HALL_EDGE.items():
+            box = [(x, y, z) for x in range(0, 11) for y in range(7, 11) if (x, y, z) not in BUTTRESS_CAPS]
+            diff = [q for q in box if self.got.get(q) != self.want.get((q[0], q[1], zh))]
+            self.assertEqual(diff, [], "z %d is not the hall roof of z %d" % (z, zh))
+
+    def test_the_eye_keeps_its_elevation(self):
+        got = eye_roles(self.got)
+        self.assertEqual(got, eye_roles(self.want))
+        self.assertEqual(sorted(q for q, r in got.items() if r == "pale"), [(14, 12), (15, 11), (15, 13), (16, 12)])
+        self.assertEqual(got[(15, 12)], "heart")
+
     def test_the_eight_bay_candles(self):
         lit = sorted(q for q, (n, _) in self.got.items() if n.endswith("candle"))
         self.assertEqual(lit, [(0, 7, z) for z in L.ARCH_Z])
 
     def test_every_brass_cell_kept(self):
-        brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper"))
+        brass = sorted(q for q, (n, _) in self.want.items() if n.startswith("waxed_cut_copper")
+                       and q not in PINNACLE_TIPS)
         self.assertTrue(brass)
         self.assertEqual([q for q in brass if self.got.get(q) != self.want[q]], [])
 
