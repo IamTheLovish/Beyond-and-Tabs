@@ -33,10 +33,11 @@
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
 # Animation photos (input `anim`, Oct 22 2026): instead of the tour, a real entity of any unit doing idle / walk / attack /
 # turn / death on a flat pad, a first-person camera locked to it (side, front, rear), a screenshot every few game ticks -
-# EyesAnimScene. The Animation sheets step (tools/anim_eyes.py --collect) makes <= 2000 px review sheets; artifact
-# anim-<run id> (no branch is pushed; one job per dispatch, never queued behind another). Use the one command:
+# EyesAnimScene. The Animation sheets step (tools/anim_eyes.py --collect) makes <= 2000 px review sheets; sheets are
+# published to branch eyes-anim as folder anim-<run id>/ (newest 12 kept; also kept as artifact anim-<run id> for 7 days; one
+# job per dispatch, never queued behind another). Use the one command:
 #   python3 tools/anim_eyes.py bone_dragon_unit turn --ci
-# (it dispatches this on your branch, waits, downloads the sheets). The branch's PR build must have kept a jar: a PR routed
+# (it dispatches this on your branch, waits, fetches the sheets from branch eyes-anim). The branch's PR build must have kept a jar: a PR routed
 # to the org mirror (tools/ci_route.py) has none here - put the label `ci-here` on it first.
 name: eyes
 on:
@@ -68,7 +69,7 @@ on:
         type: boolean
         default: false
       anim:
-        description: "Animation photos instead of the tour: unit:clip[:views[:dist[:ticks]]],... (bone_dragon_unit:turn; clips idle walk attack turn death; views side+front+rear) - a real entity doing the clip, photographed frame by frame (EyesAnimScene), made into review sheets by tools/anim_eyes.py. Artifact anim-<run id>; run it with `python3 tools/anim_eyes.py <unit> <clip> --ci`"
+        description: "Animation photos instead of the tour: unit:clip[:views[:dist[:ticks]]],... (bone_dragon_unit:turn; clips idle walk attack turn death; views side+front+rear) - a real entity doing the clip, photographed frame by frame (EyesAnimScene), made into review sheets by tools/anim_eyes.py. Sheets land on branch eyes-anim, folder anim-<run id>; run it with `python3 tools/anim_eyes.py <unit> <clip> --ci`"
         required: false
         default: ''
       branch_pack:
@@ -501,9 +502,9 @@ jobs:
             echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
           fi
           if [ -n "${ANIM:-}" ]; then
-            # an animation run publishes no branch (its frames are many and nobody diffs them): the sheets are built in
-            # the next step and kept as artifact anim-<run id> for tools/anim_eyes.py --ci to download
-            echo "animation run: artifact only"
+            # an animation run is not diffed against the approved tour: the sheets are built in the next steps and
+            # published to branch eyes-anim (folder anim-<run id>/) for tools/anim_eyes.py --ci to read; also an artifact
+            echo "animation run: sheets go to branch eyes-anim"
           elif [ "${OVERLAYS:-0}" = "1" ]; then
             # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder
             # <build sha>-<run id>/ to eyes-overlays instead of replacing the branch: fetch, commit, push, and on a race

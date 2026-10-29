@@ -227,7 +227,7 @@ All run on GitHub Actions, never on anyone's PC:
   OFFLINE in seconds from the data (the fast loop, with the blow marked and weapon / foot trails). **`--ci`** plays the
   REAL game instead - any unit, including everything animated in Java (the dragons, `setupAnim` models): it dispatches
   eyes.yml with `anim=unit:clip` on your current (pushed, PR-built) branch, waits (~7 min, one job, no queue behind other
-  runs), downloads artifact `anim-<run id>` and prints the sheets. `matchstart/EyesAnimScene.java` summons the unit on
+  runs), fetches folder `anim-<run id>` from branch `eyes-anim` (the Actions artifact host is unreachable from a sandbox) and prints the sheets. `matchstart/EyesAnimScene.java` summons the unit on
   a flat pad, orders it (a real MOVE / ATTACK_MOVE, a dummy to hit, a kill), locks a first-person camera to it (side,
   front, rear - `--views side+rear`) and screenshots every few game ticks; the log gives each frame's exact game tick.
   Examples: `anim_eyes.py bone_dragon_unit turn --ci --views rear+side` (flight bank), `anim_eyes.py zombie_unit attack
