@@ -3,23 +3,31 @@ package com.solegendary.reignofnether.ability.abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.ability.AutoRule;
+import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.essence.SoulbinderServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.sounds.SoundAction;
+import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,6 +49,12 @@ public class SoulHarvest extends Ability {
         super(UnitAction.SOUL_HARVEST, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
         this.autoRule(AutoRule.SUMMON_WHEN_FREE);
         this.showRangeCircle = false;
+    }
+
+    /** The autocast waits for the essence: no order, so no "not enough essence" every second while it fights. */
+    @Override
+    public boolean canAutocastNow(ServerLevel level, Unit unit) {
+        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
     @Override
@@ -97,6 +111,49 @@ public class SoulHarvest extends Ability {
      * skeletons raised (empty: refused). Public for the bot and the game test (no cooldown handling here).
      */
     public static List<Mob> cast(ServerLevel sl, LivingEntity caster, String owner, boolean quiet) {
-        return List.of();
+        if (owner == null || owner.isEmpty())
+            return List.of();
+        if (Essence.get(caster) < ESSENCE_COST) {
+            if (!quiet)
+                SoulbinderServerEvents.warn(sl, owner, Empower.MSG_SHORT);
+            return List.of();
+        }
+        EntityType<? extends Mob> type = EntityRegistrar.SKELETON_UNIT.get();
+        long end = sl.getGameTime() + LIFETIME_SECONDS * ResourceCost.TICKS_PER_SECOND;
+        List<Mob> raised = new ArrayList<>();
+        for (int i = 0; i < COUNT; i++) {
+            Mob m = type.create(sl);
+            if (m == null)
+                continue;
+            m.moveTo(spot(sl, caster, type, i));
+            m.setYRot(caster.getYRot());
+            ((Unit) m).setOwnerName(owner);
+            SoulbinderServerEvents.registerSummon(m, caster, end);   // marked before it joins: its death never drops a wisp
+            raised.add(m);
+        }
+        // spend last, before anything joins the world: a refusal leaves no skeleton behind
+        if (raised.isEmpty() || !Essence.trySpend(caster, ESSENCE_COST)) {
+            raised.forEach(Mob::discard);
+            return List.of();
+        }
+        for (Mob m : raised) {
+            sl.addFreshEntity(m);
+            sl.sendParticles(ParticleTypes.SOUL, m.getX(), m.getY() + 0.5, m.getZ(), 10, 0.3, 0.3, 0.3, 0.02);
+        }
+        SoundClientboundPacket.playSoundAtPos(SoundAction.WRAITH_POSSESS_PARTIAL, caster.blockPosition());
+        return raised;
+    }
+
+    /**
+     * Where skeleton {@code i} rises: 1.5 blocks beside the caster, round it, where its body fits on the caster's
+     * level; otherwise where the caster stands (always room there).
+     */
+    private static Vec3 spot(ServerLevel sl, LivingEntity caster, EntityType<?> type, int i) {
+        double ang = Math.toRadians(caster.getYRot()) + Math.PI / 2 + i * Math.PI * 2 / COUNT;
+        Vec3 at = new Vec3(caster.getX() + Math.cos(ang) * 1.5, caster.getY(), caster.getZ() + Math.sin(ang) * 1.5);
+        BlockPos below = BlockPos.containing(at.x, at.y - 0.5, at.z);
+        boolean fits = sl.noCollision(type.getDimensions().makeBoundingBox(at))
+            && !sl.getBlockState(below).getCollisionShape(sl, below).isEmpty();
+        return fits ? at : caster.position();
     }
 }

@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.ability.abilities.Empower;
 import com.solegendary.reignofnether.ability.abilities.SoulChains;
 import com.solegendary.reignofnether.ability.abilities.SoulHarvest;
 import com.solegendary.reignofnether.ability.abilities.Wail;
+import com.solegendary.reignofnether.essence.EssenceCarrier;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
@@ -26,7 +27,7 @@ import javax.annotation.Nullable;
  * A Wraith underneath (placeholder look: the Wraith's body, sounds, sunburn and evasion, so it reads as Gravebound at
  * once) with its own abilities in place of Fear, Possess and Crypt Tide, its own cost and a little more health.
  */
-public class SoulbinderUnit extends WraithUnit {
+public class SoulbinderUnit extends WraithUnit implements EssenceCarrier {
 
     public static final Abilities SOUL_ABILITIES = new Abilities();
     static {
