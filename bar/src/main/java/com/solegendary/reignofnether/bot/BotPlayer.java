@@ -184,6 +184,9 @@ public class BotPlayer {
     // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
     long atCapSince = -1;
     static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
+    // game time since when the easy bot's T1 labs have paused to save for the T2 lab (-1 = not saving)
+    long t2SaveSince = -1;
+    static final long T2_SAVE_MAX_TICKS = 20 * 60 * 3;   // three minutes of saving at most, then the labs train again
 
     public final String name;
     public final Faction faction;
@@ -782,10 +785,18 @@ public class BotPlayer {
         // an empty pool and never raised its Dungeon in bots_reach_tier_2, Oct 28)
         // The same while the research itself runs on an empty pool (an easy bot with 177 fighters sat at 0 metal from
         // minute 13 and its research never finished, flake-stress 40806858215, Oct 29)
+        // Easy bots only (lovish's call, Oct 29), never while floating, and for T2_SAVE_MAX_TICKS at most: a lab its
+        // workers can't reach would otherwise cap the army for the rest of the game (121 fighters from minute 13 on
+        // a pool that went 933 -> 3500, flake-stress 40839167566)
         boolean researchStarved = !tier2 && metalFill < 0.1f
             && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
-        boolean savingForT2Lab = (tier2 || researchStarved) && kit.t2Lab() != null && army.size() >= tuning.t2MinArmy()
-            && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        boolean wantsT2Save = difficulty.easyLike() && !floating() && (tier2 || researchStarved) && kit.t2Lab() != null
+            && army.size() >= tuning.t2MinArmy() && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        if (!wantsT2Save)
+            t2SaveSince = -1;
+        else if (t2SaveSince < 0)
+            t2SaveSince = gameTime;
+        boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
                 if (bp.getBuilding() == Buildings.PORTAL_BASIC) {
@@ -2426,6 +2437,7 @@ public class BotPlayer {
 
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         lastSiteRejections.clear();
+        int[][] footprintCols = null;   // read once per search, on its first ground_not_flat refusal
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2436,12 +2448,19 @@ public class BotPlayer {
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
                 BlockPos site = null;
-                String error = null;
-                for (BlockPos tryAt : siteHeights(level, building, surface)) {
-                    error = BuildingValidators.getPlacementValidityError(level, building, tryAt, name, Rotation.NONE, false, false, true);
-                    if (error == null) {
-                        site = tryAt;
-                        break;
+                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
+                if (error == null)
+                    site = surface;
+                else if (error.endsWith("ground_not_flat")) {
+                    // raised origins only for rolling ground, so a search refused for other reasons costs what it did
+                    if (footprintCols == null)
+                        footprintCols = footprintColumns(level, building);
+                    for (BlockPos tryAt : raisedHeights(level, surface, footprintCols)) {
+                        error = BuildingValidators.getPlacementValidityError(level, building, tryAt, name, Rotation.NONE, false, false, true);
+                        if (error == null) {
+                            site = tryAt;
+                            break;
+                        }
                     }
                 }
                 if (site == null)
@@ -2473,22 +2492,27 @@ public class BotPlayer {
         return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
     }
 
-    /**
-     * Origins to try for one column: its ground first, then one and two higher and the highest ground under the
-     * footprint's corners and centre. The origin corner alone set the height, so on rolling ground every try of a big
-     * footprint clipped a rise (bots_reach_tier_2, Oct 28: the Horde's Hoglin Stables refused 36-65 of 65 tries as
-     * ground_not_flat); a raised origin leaves small gaps, which the validator allows and placement fills.
-     */
-    List<BlockPos> siteHeights(ServerLevel level, Building building, BlockPos surface) {
-        List<BlockPos> out = new ArrayList<>(List.of(surface, surface.above(), surface.above(2)));
+    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data. */
+    int[][] footprintColumns(ServerLevel level, Building building) {
         var blocks = building.getRelativeBlockData(level);
         if (blocks == null || blocks.isEmpty())
-            return out;
+            return new int[0][];
         BlockPos min = com.solegendary.reignofnether.building.BuildingUtils.getMinCorner(blocks);
         BlockPos max = com.solegendary.reignofnether.building.BuildingUtils.getMaxCorner(blocks);
-        int top = surface.getY();
-        int[][] cols = { { min.getX(), min.getZ() }, { max.getX(), min.getZ() }, { min.getX(), max.getZ() },
+        return new int[][] { { min.getX(), min.getZ() }, { max.getX(), min.getZ() }, { min.getX(), max.getZ() },
             { max.getX(), max.getZ() }, { (min.getX() + max.getX()) / 2, (min.getZ() + max.getZ()) / 2 } };
+    }
+
+    /**
+     * Raised origins to try for a column whose ground was refused as ground_not_flat: one and two higher, then the
+     * highest ground under the footprint's corners and centre. The origin corner alone set the height, so on rolling
+     * ground every try of a big footprint clipped a rise (bots_reach_tier_2, Oct 28: the Horde's Hoglin Stables
+     * refused 36-65 of 65 tries as ground_not_flat); a raised origin leaves small gaps, which the validator allows
+     * and placement fills.
+     */
+    List<BlockPos> raisedHeights(ServerLevel level, BlockPos surface, int[][] cols) {
+        List<BlockPos> out = new ArrayList<>(List.of(surface.above(), surface.above(2)));
+        int top = surface.getY();
         for (int[] c : cols)
             top = Math.max(top, MiscUtil.getHighestNonAirBlock(level, surface.offset(c[0], 0, c[1]).atY(0), true).getY());
         if (top > surface.getY() + 2)
