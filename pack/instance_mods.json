@@ -1,5 +1,11 @@
 [
  {
+  "file": "FramedBlocks-9.4.3.jar",
+  "size": 4251314,
+  "sha1": "740c0feaab75455f32df7e137389f77c83fb490c",
+  "sha512": "19a098bbf9ee7ee39f6b785bbce5f87b9dca58a491fa16eba2f38cfa106f37ee90c1ce56686a50adef8f5d3086e3c22a6127ed02bdf3f80d57297c8f7c1b49fc"
+ },
+ {
   "file": "ImmediatelyFast-Forge-1.5.5+1.20.4.jar",
   "size": 532063,
   "sha1": "9eacd407b7dea636d375dc47335d92f616484ea2",

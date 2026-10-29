@@ -59,7 +59,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
-                  "athena-forge-", "resourcefullib-forge-")
+                  "athena-forge-", "resourcefullib-forge-", "FramedBlocks-")
 
 
 def get_json(url):
