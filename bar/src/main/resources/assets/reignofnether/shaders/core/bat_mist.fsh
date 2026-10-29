@@ -119,9 +119,22 @@ Bank bankAt(vec3 k, float fogShare) {
     return b;
 }
 
+// r10 (r9's still, run 40834052650): the banks still read as paint - a hard rim where a bank meets bare ground, a
+// dirty dark-grey underside, and dead clear air between banks. Real valley fog from above is low-contrast and
+// continuous: banks rise out of a thin ground haze, their edges thin over several blocks, and their shaded sides are
+// a lifted blue-grey, never smoke. So: wider top and cover ramps, a haze layer under and between the banks, the deep
+// colour lifted toward the lit one, and the ground seen through mist desaturated (aerial perspective).
+const float HAZE = 0.16;            // the ground haze's share of a bank's density at the floor
+const float HAZE_HEIGHT = 1.6;      // blocks per e-fold of the haze (no growth below the floor: the r8 lesson)
+const float DEEP_LIFT = 0.45;       // how far the shaded core is lifted toward the lit colour
+
 float bankBody(Bank b, float h, float detail) {
-    float body = smoothstep(b.top + 0.5, b.top - 0.9, h);
-    return body * smoothstep(0.30, 0.58, b.cover + 0.5 * (detail - 0.5));
+    float body = smoothstep(b.top + 1.1, b.top - 1.8, h);
+    return body * smoothstep(0.24, 0.64, b.cover + 0.5 * (detail - 0.5));
+}
+
+float hazeAt(float h, float detail) {
+    return HAZE * exp(-max(h, 0.0) / HAZE_HEIGHT) * (0.6 + 0.8 * detail);
 }
 
 void main() {
@@ -158,11 +171,11 @@ void main() {
         k.xz += warp;
         float h = w.y - Floor;
         Bank b = bankAt(k, fogShare);
-        if (h > b.top + 0.6)
-            continue;                                          // clear air above this bank
+        if (h > b.top + 1.2 && h > 3.0 * HAZE_HEIGHT)
+            continue;                                          // clear air above this bank and the haze
         float detail = fbm(k * vec3(0.07, 0.3, 0.22) + vec3(0.0, Time * 0.05, 0.0));
         float body = bankBody(b, h, detail);
-        float dens = Density * sqrt(boost) * BANK_DENSITY * body;
+        float dens = Density * sqrt(boost) * (BANK_DENSITY * body + hazeAt(h, detail));
         float a = 1.0 - exp(-Sigma * dens * ds);
         // light: bright at the bank's top, cool and dim deeper in; the bank above a sample shades it
         float nearTop = clamp((h - (b.top - 2.2)) / 2.2, 0.0, 1.0);
@@ -172,12 +185,25 @@ void main() {
         float slope = b.top - bankAt(k + vec3(-1.5, 0.0, 0.8), fogShare).top;
         float lit = clamp(0.25 + 0.75 * nearTop * (1.0 - 0.6 * shade) + 0.15 * (1.0 - body) + 0.22 * slope * nearTop,
             0.0, 1.0);
-        c = mix(c, mix(DeepColor, LitColor, lit), a);
+        vec3 deep = mix(DeepColor, LitColor, DEEP_LIFT);
+        c = mix(c, mix(deep, LitColor, lit), a);
         trans *= 1.0 - a;
     }
+    // aerial perspective: what shows through the mist loses colour with the mist's cover (lit through, not tinted)
+    float seen = 1.0 - trans;
+    float luma = dot(scene.rgb, vec3(0.2126, 0.7152, 0.0722));
+    vec3 washed = mix(scene.rgb, vec3(luma), 0.6 * seen);
+    c += (washed - scene.rgb) * trans;          // back-to-front mixing leaves scene x trans in c: wash that share only
     // in sight a unit in a hollow must read: the cap is lower there; out of sight the mist may close in
-    float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare);
+    // r10b (lab A/B): a hard cap turned every deep hollow into one flat grey pond - every pixel hit the same cover.
+    // A soft knee instead, and the cap itself streaked by the wisp noise at the surface, so a full pool keeps its
+    // thicker and thinner strands.
+    vec3 ks = windFrame(surface);
+    ks.xz += warp;
+    float streak = fbm(ks * vec3(0.16, 0.3, 0.5) + vec3(0.0, Time * 0.04, 0.0));
+    float cap = mix(MaxCover * 0.82, MaxCover * 1.1, fogShare) * (0.72 + 0.5 * streak);
     float cover = 1.0 - trans;
-    float kc = cover > cap ? cap / cover : 1.0;
+    float soft = cap * (1.0 - exp(-cover / max(cap, 1e-3)));   // ~cover when thin, eases toward cap when thick
+    float kc = cover > 1e-4 ? min(soft / cover, 1.0) : 1.0;
     fragColor = vec4(mix(scene.rgb, c, kc), scene.a);
 }
