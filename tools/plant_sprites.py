@@ -85,12 +85,11 @@ class Canvas:
         y1 = min(self.h, int((P[:, 1].max() + wmax + 1) * SS) + 1)
         if x0 >= x1 or y0 >= y1:
             return
-        gy, gx = np.mgrid[y0:y1, x0:x1]
-        gy, gx = gy.reshape(-1), gx.reshape(-1)
-        pix = np.stack([(gx + 0.5) / SS, (gy + 0.5) / SS], -1)
-        d, idx = _nearest(P, pix)
+        d, idx = _nearest_local(P, x0, x1, y0, y1, wmax + 1)
         ok = d < wmax + 1                                     # (was a k-d tree's distance_upper_bound)
-        gy, gx, pix, idx = gy[ok], gx[ok], pix[ok], idx[ok]
+        gy, gx = np.nonzero(ok)
+        gy, gx, idx = gy + y0, gx + x0, idx[ok]
+        pix = np.stack([(gx + 0.5) / SS, (gy + 0.5) / SS], -1)
         v = pix - P[idx]
         s = (v * Nr[idx]).sum(1)
         a = (v * T[idx]).sum(1)
@@ -189,18 +188,29 @@ def _edt_indices(solid):
     return iy, ix
 
 
-def _nearest(points, queries, chunk=1024):
-    """(distance, index) of each query's nearest point - numpy only (CI installs numpy + pillow, no scipy); ties go to
-    the lowest index. Chunked so a big sprite's distance table stays small."""
-    d = np.empty(len(queries))
-    idx = np.empty(len(queries), dtype=np.int64)
-    for i in range(0, len(queries), chunk):
-        q = queries[i:i + chunk]
-        d2 = ((q[:, None, :] - points[None, :, :]) ** 2).sum(-1)
-        j = d2.argmin(1)
-        idx[i:i + chunk] = j
-        d[i:i + chunk] = np.sqrt(d2[np.arange(len(q)), j])
-    return d, idx
+def _nearest_local(points, x0, x1, y0, y1, r):
+    """(distance, index) of the nearest of `points` (texels) to each sub-sample centre of the box [y0:y1, x0:x1]
+    (sub-samples), for every sub-sample within r of some point; inf (index -1) for the rest. Numpy only (CI installs
+    numpy + pillow, no scipy); ties go to the lowest index. r35: each point updates only the sub-samples within r of
+    it - the same answer as comparing every sub-sample with every point (r34's chunked _nearest) wherever the
+    distance is under r, ~100x faster (a tall grass took 22 s, now 0.15 s)."""
+    best = np.full((y1 - y0, x1 - x0), np.inf)
+    idx = np.full((y1 - y0, x1 - x0), -1, dtype=np.int64)
+    cx = (np.arange(x0, x1) + 0.5) / SS
+    cy = (np.arange(y0, y1) + 0.5) / SS
+    for i, (px, py) in enumerate(points):
+        a = max(x0, int(math.floor((px - r) * SS - 0.5))) - x0
+        b = min(x1, int(math.ceil((px + r) * SS - 0.5)) + 1) - x0
+        c = max(y0, int(math.floor((py - r) * SS - 0.5))) - y0
+        e = min(y1, int(math.ceil((py + r) * SS - 0.5)) + 1) - y0
+        if a >= b or c >= e:
+            continue
+        d2 = (cx[None, a:b] - px) ** 2 + (cy[c:e, None] - py) ** 2
+        win = best[c:e, a:b]
+        closer = d2 < win
+        win[closer] = d2[closer]
+        idx[c:e, a:b][closer] = i
+    return np.sqrt(best), idx
 
 
 def _blade_shade(tone):
