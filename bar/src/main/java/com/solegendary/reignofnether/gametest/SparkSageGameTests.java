@@ -806,4 +806,57 @@ public class SparkSageGameTests {
             }
         });
     }
+
+    /**
+     * lovish (Oct 29): the bots build and use all 7 casters. The Stormcallers bot kit trains the Spark Sage at its T2 lab
+     * (the Observatory), and a Sage as the bot gets it - autocast switches untouched - casts by itself: its three spells
+     * are on (Empower stays manual), and one AutoCaster look with 10 essence and an enemy 4 blocks off sparks it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void spark_sage_bot_kit_trains_it_and_it_autocasts_by_default(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<String> problems = new ArrayList<>();
+        com.solegendary.reignofnether.bot.BotPlayer.Kit kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.STORMCALLERS);
+        if (kit == null || kit.t2Lab() != Buildings.CELESTIAL_OBSERVATORY || !kit.t2Army().contains(ProductionItems.SPARK_SAGE))
+            problems.add("the Stormcallers bot kit does not train the Spark Sage at the Celestial Observatory");
+        String me = owner(helper, "bot"), foe = owner(helper, "botfoe");
+        // as trained: no AI switch-off, no autocast switch touched (HeroGameTests.spawnUnit, not still())
+        Mob caster = HeroGameTests.spawnUnit(helper, EntityRegistrar.SPARK_SAGE_UNIT.get(), me, 4, 8);
+        Mob target = vindicator(helper, foe, 8, 8);
+        List<Entity> all = live(caster, target);
+        if (all.size() != 2) {
+            discardAll(all);
+            helper.fail("could not spawn the Spark Sage and its enemy");
+            return;
+        }
+        caster.setNoAi(true);   // stands still; AutoCaster does not read the AI flag
+        helper.runAfterDelay(2, () -> {
+            try {
+                for (Ability a : ((Unit) caster).getAbilities().get()) {
+                    boolean on = AutocastState.isOn((Unit) caster, a);
+                    if (a instanceof Empower) {
+                        if (a.getAutoRule() != AutoRule.MANUAL)
+                            problems.add("Empower is no longer manual");
+                    } else if (!on) {
+                        problems.add(a.getClass().getSimpleName() + " does not autocast by default");
+                    }
+                }
+                // the essence comes now: with essence and an enemy in reach since spawning, the world's own AutoCaster
+                // pass could have cast first
+                Essence.add(caster, 10);
+                UnitGrid.invalidate();
+                AutoCaster.look(level, caster, (Unit) caster);
+                if (Math.abs(VINDICATOR_HP - target.getHealth() - 30f) > 0.01f)
+                    problems.add("a Sage as the bot gets it did not spark the enemy 4 blocks off (it lost " + (VINDICATOR_HP - target.getHealth()) + ")");
+                if (Essence.get(caster) != 0)
+                    problems.add("the bot's autocast spark left " + Essence.get(caster) + " essence, expected 0");
+            } catch (RuntimeException ex) {
+                problems.add("the autocast threw " + ex);
+            } finally {
+                discardAll(all);
+                finish(helper, problems);
+            }
+        });
+    }
 }
