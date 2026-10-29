@@ -73,6 +73,8 @@ public final class TombcallerServerEvents {
     private static final List<TombstoneUnit> stones = new ArrayList<>();
     private static final List<Fade> fades = new ArrayList<>();
     private static final List<Mob> risen = new ArrayList<>();
+    /** Stones whose chunk unloaded, by their UUID: still the caster's until their end tick, or until they come back. */
+    private static final Map<UUID, Away> away = new HashMap<>();
     private static final Map<LivingEntity, Long> tides = new IdentityHashMap<>();
     private static final Set<LivingEntity> slowed = Collections.newSetFromMap(new IdentityHashMap<>());
     private static final Map<String, Long> lastWarn = new HashMap<>();
@@ -86,8 +88,10 @@ public final class TombcallerServerEvents {
         }
     }
 
+    private record Away(UUID caster, long end) { }
+
     static {
-        EssenceServerEvents.addReach(TombcallerServerEvents::pullReach);
+        EssenceServerEvents.addReach(TombcallerServerEvents::pullReach, TombstoneUnit.CREEP_PULL_RANGE);
     }
 
     // ------------------------------------------------------------------------------------------ the queries
@@ -100,6 +104,20 @@ public final class TombcallerServerEvents {
             if (s.isAlive() && !s.isRemoved() && id.equals(s.casterId()))
                 out.add(s);
         return out;
+    }
+
+    /**
+     * How many stones count toward {@code caster}'s cap: those standing, and those whose chunk unloaded that have not
+     * yet reached their end (PR 366 review round 1: an unloaded stone let a caster raise a fourth).
+     */
+    public static int stoneCount(LivingEntity caster) {
+        int n = stonesOf(caster).size();
+        UUID id = caster.getUUID();
+        long now = now(caster.level());
+        for (Away a : away.values())
+            if (id.equals(a.caster) && a.end > now)
+                n++;
+        return n;
     }
 
     /** The Risen Skeletons of {@code stone} still standing. */
@@ -231,8 +249,11 @@ public final class TombcallerServerEvents {
     public static void onJoin(EntityJoinLevelEvent evt) {
         if (evt.getLevel().isClientSide())
             return;
-        if (evt.getEntity() instanceof TombstoneUnit s && !stones.contains(s))
-            stones.add(s);
+        if (evt.getEntity() instanceof TombstoneUnit s) {
+            away.remove(s.getUUID());
+            if (!stones.contains(s))
+                stones.add(s);
+        }
         else if (evt.getEntity() instanceof Mob m && isRisen(m) && !risen.contains(m))
             risen.add(m);
     }
@@ -258,6 +279,7 @@ public final class TombcallerServerEvents {
         tickRisen(now);
         tickTides(now);
         fades.removeIf(f -> f.radius(now) <= 0);
+        away.values().removeIf(a -> a.end <= now);
         if (now % EFFECT_TICKS == 0)
             tickCreep(now);
     }
@@ -266,7 +288,10 @@ public final class TombcallerServerEvents {
         for (int i = stones.size() - 1; i >= 0; i--) {
             TombstoneUnit s = stones.get(i);
             if (s.isRemoved() || !s.isAlive()) {
-                stones.remove(i);   // a death left its fade in onDeath; an unload just stops watching it
+                // a death left its fade in onDeath; an unload stops watching it but it still counts toward the cap
+                if (s.isAlive() && s.getRemovalReason() != null && !s.getRemovalReason().shouldDestroy() && s.casterId() != null)
+                    away.put(s.getUUID(), new Away(s.casterId(), s.end()));
+                stones.remove(i);
                 continue;
             }
             if (!(s.level() instanceof ServerLevel sl))
@@ -411,6 +436,7 @@ public final class TombcallerServerEvents {
         stones.clear();
         fades.clear();
         risen.clear();
+        away.clear();
         tides.clear();
         slowed.clear();
         lastWarn.clear();

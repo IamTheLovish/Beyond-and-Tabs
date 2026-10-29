@@ -228,9 +228,13 @@ public class EssenceServerEvents {
     }
 
     private static final List<Reach> reaches = new ArrayList<>();
+    /** The largest reach any hook can answer: a carrier farther than this from a wisp never asks the hooks. */
+    private static double maxHookReach = 0;
 
-    public static void addReach(Reach reach) {
+    /** Adds a race's reach; {@code maxBlocks} is the most it ever answers (the scan skips it beyond that). */
+    public static void addReach(Reach reach, double maxBlocks) {
         reaches.add(reach);
+        maxHookReach = Math.max(maxHookReach, maxBlocks);
     }
 
     static double reachOf(LivingEntity carrier, Entity wisp) {
@@ -262,6 +266,8 @@ public class EssenceServerEvents {
                 if (c.level() != w.level())
                     continue;
                 double d = w.distanceToSqr(c.getX(), c.getY() + c.getBbHeight() * 0.5, c.getZ());
+                if (d > GATHER_RANGE * GATHER_RANGE && d > maxHookReach * maxHookReach)
+                    continue;   // past every reach: no hook to ask (PR 366 review: the scan runs every 5 ticks)
                 double reach = d <= GATHER_RANGE * GATHER_RANGE ? GATHER_RANGE : reachOf(c, w);
                 if (d <= reach * reach && d <= bestD) {
                     bestD = d;

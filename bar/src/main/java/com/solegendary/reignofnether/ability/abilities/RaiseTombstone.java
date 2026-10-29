@@ -46,6 +46,8 @@ public class RaiseTombstone extends Ability {
     public static final int CD_SECONDS = 25;
     public static final int RANGE = 10;
     public static final int MAX_STONES = 3;
+    /** How far above or below the Tombcaller the stone's ground may be (not in the draft: a placeholder). */
+    public static final int MAX_RISE = 6;
     public static final String MSG_NO_ROOM = "hud.essence.reignofnether.tombstone_no_room";
     public static final String MSG_TOO_FAR = "hud.essence.reignofnether.tombstone_too_far";
     public static final String MSG_MAX = "hud.essence.reignofnether.tombstone_max";
@@ -57,10 +59,14 @@ public class RaiseTombstone extends Ability {
         this.showRadiusCircle = true;
     }
 
-    /** The autocast waits for the essence: no order, so no "not enough essence" every second while it fights. */
+    /**
+     * The autocast waits for the essence and for room under the cap: no order it would refuse, so no "not enough
+     * essence" or "already keeps three tombstones" every second while it fights (PR 366 review round 1).
+     */
     @Override
     public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
+        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST
+            && TombcallerServerEvents.stoneCount(le) < MAX_STONES;
     }
 
     @Override
@@ -118,12 +124,12 @@ public class RaiseTombstone extends Ability {
         BlockPos feet = solid(sl, at) ? at.above() : at;
         Vec3 spot = Vec3.atBottomCenterOf(feet);
         double dx = spot.x - caster.getX(), dz = spot.z - caster.getZ();
-        if (dx * dx + dz * dz > (RANGE + 0.5) * (RANGE + 0.5)) {
+        if (dx * dx + dz * dz > (RANGE + 0.5) * (RANGE + 0.5) || Math.abs(spot.y - caster.getY()) > MAX_RISE) {
             if (!quiet)
                 TombcallerServerEvents.warn(sl, owner, MSG_TOO_FAR);
             return null;
         }
-        if (TombcallerServerEvents.stonesOf(caster).size() >= MAX_STONES) {
+        if (TombcallerServerEvents.stoneCount(caster) >= MAX_STONES) {
             if (!quiet)
                 TombcallerServerEvents.warn(sl, owner, MSG_MAX);
             return null;
