@@ -56,6 +56,25 @@ licences beside them in `bar/src/main/resources/assets/reignofnether/font/`: Uni
 Reserved Font Name UnifrakturCook; Peter Wiegel; unmodified) and Cinzel (The Cinzel Project Authors; a static weight-900
 instance of the variable font). Details: `design/lobby-backdrop.md`.
 
+## Block textures: photo scans (CC0)
+
+Most of the realistic block pack (`resourcepacks/BeyondAndTabs-Realistic`, built by `tools/gen_blocks.py`) is
+original and procedurally generated. Since Oct 22 2026 (lovish's decision), **stone, dirt, the grass block** (top,
+side and side overlay) **and basalt**, with their variants, are built from photo-scanned materials by **ambientCG**
+(https://ambientcg.com), released under **CC0 1.0 Universal** (public domain dedication; ambientcg.com/license):
+
+| ambientCG asset | becomes |
+|---|---|
+| Rock058 | stone |
+| Ground106 | dirt, and the soil of the grass block's side |
+| Grass004 | the grass block's top, and the blade tones of its side's turf |
+| Rock035 | basalt (side and end) |
+
+CC0 asks for no attribution; we credit the source anyway. `tools/scan_prep.py` makes 512 px copies of the colour,
+normal and displacement maps (downloaded Oct 22 2026, 1K JPG sets) in `tools/scans/`; `tools/gen_blocks.py` fits
+their colour, flattens their large patches and cuts them into the pack's textures and LabPBR maps. No texture from
+another game, mod or resource pack is used.
+
 ## Reign of Nether
 
 `bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,
