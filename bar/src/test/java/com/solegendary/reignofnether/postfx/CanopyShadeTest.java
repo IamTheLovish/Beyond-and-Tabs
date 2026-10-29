@@ -27,9 +27,9 @@ class CanopyShadeTest {
     }
 
     @Test
-    void underTheCrownIsFifteenToTwentyPercentDarker() {
+    void underTheCrownIsFifteenToTwentyFivePercentDarker() {
         double k = luma(CanopyShade.apply(GRASS, CROWN, 0, 64, 0)) / luma(GRASS);
-        assertTrue(k >= 0.79 && k <= 0.85, "under the crown " + k);
+        assertTrue(k >= 0.74 && k <= 0.85, "under the crown " + k);
     }
 
     @Test
@@ -41,7 +41,7 @@ class CanopyShadeTest {
             prev = k;
         }
         double rim = luma(CanopyShade.apply(GRASS, CROWN, 4, 64, 0)) / luma(GRASS);
-        assertTrue(rim > 0.82 && rim < 0.99, "a block outside the crown is a little dark " + rim);
+        assertTrue(rim > 0.78 && rim < 0.99, "a block outside the crown is a little dark " + rim);
         assertEquals(GRASS, CanopyShade.apply(GRASS, CROWN, 6, 64, 0), "three blocks out: open lawn");
     }
 

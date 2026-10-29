@@ -22,7 +22,9 @@ public final class CanopyShade {
         boolean over(int x, int y, int z);
     }
 
-    static final double DARK = 0.20;
+    // r3 (eyes r43, 40873305298): the round pool's visible rim beside a trunk measured 10% (r1's diamond 21%) - the
+    // full-strength centre sits under the crown, out of the RTS camera's sight. 0.25 puts the rim back near 15-20%
+    static final double DARK = 0.25;
     static final int REACH = 16;
     /**
      * r2 (eyes r42, tree_sampler_a plain: 21% darker under a crown, on target, but the 9 axis taps drew a stepped
