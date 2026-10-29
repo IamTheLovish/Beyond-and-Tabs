@@ -7,6 +7,8 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
@@ -21,9 +23,13 @@ import org.joml.Quaternionf;
  * the head, arms and legs on top. Restore puts every touched part back exactly, so nothing accumulates frame to frame
  * on parts vanilla does not reset. Render thread only; no allocation.
  *
- * Skipped: the living army off (config or the parade toggle), a unit with no slot yet, a dying unit (vanilla's death
- * fall plays alone), the possessed hero seen in first person, a model with no {@link BoneMap}. A model class that
- * throws is switched off for the session ({@link BoneMaps#disable}) and draws as before.
+ * A dying unit whose map has a death pose ({@link BoneMap#deathPose}) wears {@link DeathFall}'s fall instead - the
+ * renderer then skips vanilla's flip ({@link #ownsDeath}) - and so does the body {@link Corpses} holds after the
+ * server removed the unit; any other dying unit plays vanilla's death alone.
+ *
+ * Skipped: the living army off (config or the parade toggle), a unit with no slot yet, the possessed hero seen in
+ * first person, a model with no {@link BoneMap}. A model class that throws is switched off for the session
+ * ({@link BoneMaps#disable}) and draws as before.
  */
 @OnlyIn(Dist.CLIENT)
 public final class MotionPass {
@@ -31,14 +37,17 @@ public final class MotionPass {
     private MotionPass() {}
 
     private static final float[] OUT = new float[Motion.OUT];
+    private static final float[] DEATH_OUT = new float[DeathFall.OUT];
+    /** The offsets the placement reads: OUT, or DEATH_OUT for a fall. */
+    private static float[] cur = OUT;
     private static final float[] SLIDERS = new float[7];
     private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
     private static int slidersTick = Integer.MIN_VALUE;
 
     /** The parts touched by the last apply (bones then the hat) and their saved pose: x, y, z, xRot, yRot, zRot. */
-    private static final ModelPart[] TOUCHED = new ModelPart[Motion.BONES + BoneMap.MAX_FOLLOWERS];
-    private static final float[] SAVED = new float[(Motion.BONES + BoneMap.MAX_FOLLOWERS) * 6];
+    private static final ModelPart[] TOUCHED = new ModelPart[DeathFall.BONES + BoneMap.MAX_FOLLOWERS];
+    private static final float[] SAVED = new float[(DeathFall.BONES + BoneMap.MAX_FOLLOWERS) * 6];
     private static int touched = 0;
 
     private static void readSliders() {
@@ -63,7 +72,13 @@ public final class MotionPass {
 
     public static void apply(LivingEntity e, EntityModel<?> model, PoseStack ps, float partial) {
         restore();
-        if (!AnimStates.enabled() || e.deathTime > 0)
+        if (e.deathTime > 0) {
+            BoneMap map = ownsDeath(e, model);
+            if (map != null)
+                fall(e, model, map, ps, partial);
+            return;
+        }
+        if (!AnimStates.enabled())
             return;
         int b = AnimStates.base(e.getId());
         if (b < 0)
@@ -86,6 +101,73 @@ public final class MotionPass {
         }
     }
 
+    /**
+     * The map of a dying unit that falls by {@link DeathFall} (the renderer then skips vanilla's flip and its red
+     * overlay), or null for vanilla's death: the living army on, a slot with the death latched, a death-pose map, and
+     * not the possessed hero seen from inside.
+     */
+    public static BoneMap ownsDeath(LivingEntity e, EntityModel<?> model) {
+        if (e.deathTime <= 0 || !AnimStates.enabled())
+            return null;
+        int b = AnimStates.base(e.getId());
+        if (b < 0 || AnimStates.slab()[b + AnimState.DEATH_KIND] == DeathFall.ALIVE)
+            return null;
+        if (PossessionClientEvents.isPossessing() && PossessionClientEvents.getPossessedId() == e.getId()
+            && Minecraft.getInstance().options.getCameraType().isFirstPerson())
+            return null;
+        BoneMap map = BoneMaps.forModel(model);
+        return map != null && map.deathPose() ? map : null;
+    }
+
+    /** {@link #ownsDeath(LivingEntity, EntityModel)} for a caller with no model at hand: its own renderer's model. */
+    public static BoneMap ownsDeath(LivingEntity e) {
+        if (e.deathTime <= 0)
+            return null;
+        EntityRenderer<?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(e);
+        return renderer instanceof LivingEntityRenderer<?, ?> r ? ownsDeath(e, r.getModel()) : null;
+    }
+
+    private static void fall(LivingEntity e, EntityModel<?> model, BoneMap map, PoseStack ps, float partial) {
+        int b = AnimStates.base(e.getId());
+        float[] s = AnimStates.slab();
+        try {
+            DeathFall.pose(s, b, e.getId(), e.deathTime - 1 + partial, map.jointed, DEATH_OUT);
+            s[b + AnimState.DEATH_DRAWN] = 1f;
+            placeFall(map, ps);
+        } catch (RuntimeException ex) {
+            restore();
+            BoneMaps.disable(model.getClass(), ex);
+        }
+    }
+
+    /** The fall's offsets ({@link DeathFall#pose} writes them): for the bench and the tests, which have no entity. */
+    public static float[] fallScratch() {
+        return DEATH_OUT;
+    }
+
+    /** Puts {@link #fallScratch()}'s offsets on the map's death parts and the pose stack (undone by {@link #restore}). */
+    public static void placeFall(BoneMap map, PoseStack ps) {
+        cur = DEATH_OUT;
+        try {
+            ModelPart[] p = map.death;
+            for (int bone = 1; bone < DeathFall.BONES; bone++)
+                keep(p[bone]);
+            for (int i = 0; i < map.followerCount; i++)
+                keep(map.followers[i]);
+            tilt(ps);
+            bend(p, map.deathHierarchical, map.waistY);
+            limbs(p);
+            hanging(p[DeathFall.FORE_R], DeathFall.FORE_R);
+            hanging(p[DeathFall.FORE_L], DeathFall.FORE_L);
+            hanging(p[DeathFall.KNEE_R], DeathFall.KNEE_R);
+            hanging(p[DeathFall.KNEE_L], DeathFall.KNEE_L);
+            for (int i = 0; i < map.followerCount; i++)
+                map.followers[i].copyFrom(map.leaders[i]);
+        } finally {
+            cur = OUT;
+        }
+    }
+
     /** The offsets array {@link #place} reads ({@link Motion#pose} writes it): for the bench, which has no entity. */
     public static float[] scratch() {
         return OUT;
@@ -95,8 +177,8 @@ public final class MotionPass {
     public static void place(BoneMap map, PoseStack ps) {
         save(map);
         root(ps);
-        bend(map);
-        limbs(map);
+        bend(map.parts, map.hierarchical, map.waistY);
+        limbs(map.parts);
         for (int i = 0; i < map.followerCount; i++)
             map.followers[i].copyFrom(map.leaders[i]);
     }
@@ -138,7 +220,7 @@ public final class MotionPass {
     }
 
     private static float out(int bone, int ch) {
-        return OUT[bone * Motion.CH + ch];
+        return cur[bone * Motion.CH + ch];
     }
 
     /** The whole body about its feet. Model space here: y down, the unit faces -z, its right is -x, feet at y 1.5. */
@@ -154,13 +236,31 @@ public final class MotionPass {
         ps.translate(0f, -1.5f, 0f);
     }
 
+    /**
+     * A fall's whole body about its feet: one tilt of up to 90 degrees about a horizontal axis (two turns in a row,
+     * as {@link #root} makes them, would not lay it flat along a diagonal), then the twist about its own length.
+     */
+    private static void tilt(PoseStack ps) {
+        float rx = out(Motion.ROOT, Motion.RX), rz = out(Motion.ROOT, Motion.RZ), ry = out(Motion.ROOT, Motion.RY);
+        ps.translate(-out(Motion.ROOT, Motion.TX) / 16f, -out(Motion.ROOT, Motion.TY) / 16f,
+            -out(Motion.ROOT, Motion.TZ) / 16f);
+        float angle = Mth.sqrt(rx * rx + rz * rz);
+        if (angle < 1e-5f && ry == 0f)
+            return;
+        ps.translate(0f, 1.5f, 0f);
+        if (angle >= 1e-5f)
+            ps.mulPose(Q.rotationAxis(angle, rx / angle, 0f, -rz / angle));
+        if (ry != 0f)
+            ps.mulPose(Q.rotationY(ry));
+        ps.translate(0f, -1.5f, 0f);
+    }
+
     /** The torso bends about the waist; the head (and hat) and the arms ride on it. */
-    private static void bend(BoneMap map) {
+    private static void bend(ModelPart[] p, boolean hierarchical, float waistY) {
         float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ);
         if (ax == 0f && az == 0f)
             return;
-        ModelPart[] p = map.parts;
-        if (map.hierarchical) {           // the head and arms are its children: they follow the bend by themselves
+        if (hierarchical) {           // the head and arms are its children: they follow the bend by themselves
             if (p[Motion.BODY] != null) {
                 p[Motion.BODY].xRot += ax;
                 p[Motion.BODY].zRot += az;
@@ -168,11 +268,11 @@ public final class MotionPass {
             return;
         }
         float cx = Mth.cos(ax), sx = Mth.sin(ax), cz = Mth.cos(az), sz = Mth.sin(az);
-        ride(p[Motion.BODY], map.waistY, ax, az, cx, sx, cz, sz);
-        ride(p[Motion.HEAD], map.waistY, ax, az, cx, sx, cz, sz);
-        ride(p[Motion.ARM_R], map.waistY, ax, az, cx, sx, cz, sz);
-        ride(p[Motion.ARM_L], map.waistY, ax, az, cx, sx, cz, sz);
-        ride(p[Motion.ARMS], map.waistY, ax, az, cx, sx, cz, sz);
+        ride(p[Motion.BODY], waistY, ax, az, cx, sx, cz, sz);
+        ride(p[Motion.HEAD], waistY, ax, az, cx, sx, cz, sz);
+        ride(p[Motion.ARM_R], waistY, ax, az, cx, sx, cz, sz);
+        ride(p[Motion.ARM_L], waistY, ax, az, cx, sx, cz, sz);
+        ride(p[Motion.ARMS], waistY, ax, az, cx, sx, cz, sz);
     }
 
     private static void ride(ModelPart p, float waistY, float ax, float az, float cx, float sx, float cz, float sz) {
@@ -190,8 +290,7 @@ public final class MotionPass {
     }
 
     /** The head up from the neck; arms and legs hang: their forward swing is a negative xRot. */
-    private static void limbs(BoneMap map) {
-        ModelPart[] p = map.parts;
+    private static void limbs(ModelPart[] p) {
         upright(p[Motion.HEAD], Motion.HEAD);
         hanging(p[Motion.ARM_R], Motion.ARM_R);
         hanging(p[Motion.ARM_L], Motion.ARM_L);
