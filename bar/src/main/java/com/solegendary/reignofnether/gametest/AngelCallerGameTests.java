@@ -466,6 +466,82 @@ public class AngelCallerGameTests {
     }
 
     /**
+     * An autocast the call would refuse is never ordered (review round 3: a refused order sends its owner a HUD message
+     * and resets the caster's behaviours, in nearly every fight). A caster beside a hurt friend in a fight, autocast on:
+     * with 4 essence (every call costs 5 or more) a look orders nothing - no angel, no essence spent, no cooldown; with
+     * 30 it orders the Mender Angel; and once the Mender's cooldown is over while it still lives (12 s of its 20) a look
+     * orders nothing again, since the call would be refused as "already here".
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = "angel_caller_autocast_quiet")
+    public static void angel_caller_autocast_orders_nothing_the_call_would_refuse(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "quiet"), foeOwner = owner(helper, "quietfoe");
+        Mob caster = HeroGameTests.spawnUnit(helper, EntityRegistrar.ANGEL_CALLER_UNIT.get(), owner, 3, 3);
+        Mob friend = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, 6, 4);
+        Mob foe = still(helper, EntityRegistrar.IRON_GOLEM_UNIT.get(), foeOwner, 6, 12);
+        List<Mob> units = new ArrayList<>(java.util.Arrays.asList(friend, foe));
+        if (caster == null || friend == null || foe == null) {
+            cleanUp(caster, units, List.of());
+            helper.fail("could not spawn the caster, its friend and the foe");
+            return;
+        }
+        caster.setNoAi(true);   // stands still; its autocast stays on
+        Essence.add(caster, 4);
+        Unit unit = (Unit) caster;
+        CallAngel.Kind M = CallAngel.Kind.MENDER;
+        // only the Mender's call autocasts, so each look below can only be the Mender's
+        AutocastState.setAll(unit, false);
+        AutocastState.set(unit, M.action, true);
+        friend.setHealth(friend.getMaxHealth() * 0.5f);
+        friend.setLastHurtByMob(foe);
+        List<String> problems = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            if (com.solegendary.reignofnether.ability.AutoCaster.look(level, caster, unit))
+                problems.add("with 4 essence (the Mender costs 5) the AutoCaster still ordered a call: the caster would be refused,"
+                    + " messaged and reset");
+            for (CallAngel.Kind k : CallAngel.Kind.values()) {
+                if (!angels(caster, k).isEmpty())
+                    problems.add("a " + k.title + " came with 4 essence");
+                if (cooldown(caster, k) != 0)
+                    problems.add("the " + k.title + " call is on cooldown (" + cooldown(caster, k) + ") after a look with 4 essence");
+            }
+            if (Essence.get(caster) != 4)
+                problems.add("a look with 4 essence left the caster " + Essence.get(caster) + " essence");
+            Essence.add(caster, Essence.CAPACITY);
+        });
+        helper.runAfterDelay(4, () -> {
+            if (!com.solegendary.reignofnether.ability.AutoCaster.look(level, caster, unit))
+                problems.add("with 30 essence and a hurt friend the AutoCaster did not order the Mender Angel");
+            if (angels(caster, M).size() != 1)
+                problems.add("the autocast called " + angels(caster, M).size() + " Mender Angels, expected 1");
+            // the Mender's 12 s cooldown is over while it still lives
+            CallAngel mender = call(caster, M);
+            if (mender != null)
+                mender.setCooldown(0, unit);
+            // hurt enough that the Mender's first heal leaves the friend still hurt
+            friend.setHealth(friend.getMaxHealth() * 0.2f);
+            friend.setLastHurtByMob(foe);
+        });
+        helper.runAfterDelay(6, () -> {
+            try {
+                int before = Essence.get(caster);
+                if (angels(caster, M).size() != 1)
+                    problems.add("the Mender Angel is gone before its second look");
+                else if (com.solegendary.reignofnether.ability.AutoCaster.look(level, caster, unit))
+                    problems.add("with its Mender Angel still alive the AutoCaster ordered the call again: it is refused (\"already"
+                        + " here\"), messaged and reset every look until the angel fades");
+                if (angels(caster, M).size() != 1)
+                    problems.add("the second look left " + angels(caster, M).size() + " Mender Angels, expected 1");
+                if (Essence.get(caster) != before)
+                    problems.add("the second look spent essence: " + before + " -> " + Essence.get(caster));
+            } finally {
+                cleanUp(caster, units, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
      * A bot's Angel Caller goes with its army (review round 3: trained, it would otherwise stand at the Arcane Tower with
      * no essence - the bot's army list holds only attackers). The bot's "healers follow the army" step (in
      * BotPlayer.verdantHabits, which every faction's think runs; called here by reflection, before its 2-minute habits)
