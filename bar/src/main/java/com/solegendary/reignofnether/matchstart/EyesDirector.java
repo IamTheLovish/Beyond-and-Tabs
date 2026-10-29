@@ -888,6 +888,8 @@ public final class EyesDirector {
     //                       looking slightly down at the ground there, at noon: plants judged up close (round r34: the
     //                       _34 still is a far shot and its tufts are sub-pixel)
     //   15_<name>_dusk      the same 3/4 view at dusk (time 13000): lanterns, glow and glass against a dark sky
+    //   15_<name>_golden_rts the RTS still at golden hour (EyesPhotoBooth.GOLDEN_TIME, sun ~15 degrees up in the west):
+    //                       lovish's villa reference (Oct 28) - warm low light on the faces the RTS camera sees
     // Ambient life (birds, butterflies) is off for the whole run (EyesPhotoBooth.ambientLifeOff): it flew through the
     // measured crops and changed their numbers run to run.
     // Placed as plain blocks (StructureTemplate.placeInWorld), not as a building: renderer-drawn parts (sails, rigs)
@@ -1132,6 +1134,26 @@ public final class EyesDirector {
                 if (!there)
                     ReignOfNether.LOGGER.warn("[Eyes] {}_dusk: the client sky is at {} not 13000 after 40 s", label, t);
                 shot(mc, label + "_dusk");
+                // then the golden-hour RTS still: the low afternoon sun of lovish's villa reference (Oct 28)
+                var server = mc.getSingleplayerServer();
+                server.execute(() -> server.overworld().setDayTime(EyesPhotoBooth.GOLDEN_TIME));
+                if (!OrthoviewClientEvents.isEnabled())
+                    OrthoviewClientEvents.toggleEnable();
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                nextPhase(7);
+            }
+            case 7 -> {   // 15_<name>_golden_rts: the RTS still's framing at GOLDEN_TIME, once the client sky is there
+                long t = mc.level.getDayTime() % 24000;
+                boolean there = Math.abs(t - EyesPhotoBooth.GOLDEN_TIME) < 150;
+                boolean settled = structureSettled(mc, 5);   // called every tick: it re-aims for the first 3.5 s
+                if (!(there && settled) && phaseSeconds() < 40)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_golden_rts: the client sky is at {} not {} after 40 s", label, t,
+                        EyesPhotoBooth.GOLDEN_TIME);
+                logAim(mc, label + "_golden_rts");
+                shot(mc, label + "_golden_rts");
                 var server = mc.getSingleplayerServer();
                 long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
                 server.execute(() -> server.overworld().setDayTime(back));

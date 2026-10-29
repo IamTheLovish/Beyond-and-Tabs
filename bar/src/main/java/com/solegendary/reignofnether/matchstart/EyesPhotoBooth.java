@@ -31,6 +31,25 @@ public final class EyesPhotoBooth {
         ambientLifeOff = off;
     }
 
+    // ---- the golden-hour still ----
+
+    /**
+     * The day time of the 15_<name>_golden_rts still: a low afternoon sun, ~15 degrees up in the west (lovish's villa
+     * reference, Oct 28: warm low light, long soft shadows, lit walls against dark shade). The RTS camera faces
+     * north-east and sees the south and west faces, so a western sun lights the faces it shows. Noon (6000) judges the
+     * colours; 13000 (the dusk still) is after sunset.
+     */
+    public static final long GOLDEN_TIME = 11800;
+
+    /** The sun's height over the horizon in degrees at a day time - vanilla DimensionType.timeOfDay, unmodified. */
+    public static double sunElevationDeg(long dayTime) {
+        double d = ((dayTime % 24000 + 24000) % 24000) / 24000.0 - 0.25;
+        d -= Math.floor(d);
+        double e = 0.5 - Math.cos(d * Math.PI) / 2.0;
+        double celestial = (d * 2.0 + e) / 3.0;
+        return Math.toDegrees(Math.asin(Math.cos(celestial * 2.0 * Math.PI)));
+    }
+
     // ---- the site ----
 
     /** Blocks from the capitol's centre to the site's along x and along z (the site is on a diagonal). */
