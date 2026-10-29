@@ -144,6 +144,22 @@ public class VoodooShamanGameTests {
             helper.absolutePos(rel), BlockPos.ZERO).action(helper.getLevel());
     }
 
+    /**
+     * What a Spirit Puppet click met, for a failure message: the beaten-puppeteer test once found a take not done (green
+     * 40840131301, 1 run in 7) with no word of why.
+     */
+    private static String takeState(GameTestHelper helper, Mob caster, Mob target) {
+        ServerLevel level = helper.getLevel();
+        return "in level " + (level.getEntity(caster.getId()) == caster) + "/" + (level.getEntity(target.getId()) == target)
+            + ", alive " + caster.isAlive() + "/" + target.isAlive()
+            + ", distance " + String.format("%.2f", caster.distanceTo(target))
+            + ", essence " + Essence.get(caster) + ", cooldown " + cooldown(caster, ability(caster, SpiritPuppet.class))
+            + ", sealed " + com.solegendary.reignofnether.mana.SealServerEvents.isSealed(caster)
+            + ", stunned " + (caster.hasEffect(MobEffectRegistrar.STUN.get()) || caster.hasEffect(MobEffectRegistrar.FREEZE.get()))
+            + ", target owner " + ((Unit) target).getOwnerName() + ", may take " + SpiritPuppets.mayTake(target)
+            + ", puppet " + SpiritPuppets.isPuppet(target) + ", tier " + com.solegendary.reignofnether.unit.UnitTier.of(target);
+    }
+
     private static float cooldown(Mob caster, Ability a) {
         return a == null ? 0 : ((Unit) caster).getCooldown(a);
     }
@@ -427,6 +443,9 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
     public static void voodoo_blood_totem_speeds_allies_and_slows_enemies_within_8(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        // open ground (stone at y 1, air above): the arena's grass layer sits at helper y 2, the units' feet, so a click
+        // on y 1 would put the totem's spot inside it - green 40840131301 refused every cast (nothing spent, no totem)
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "tota"), b = owner(helper, "totb");
         Mob caster = shaman(helper, a, 2, 2, 12, made);
@@ -505,6 +524,9 @@ public class VoodooShamanGameTests {
     @GameTest(template = ARENA, timeoutTicks = 360, batch = BATCH)
     public static void voodoo_blood_totem_lasts_15_seconds_drops_no_essence_and_refuses_when_short(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        // open ground (stone at y 1, air above): the arena's grass layer sits at helper y 2, the units' feet, so a click
+        // on y 1 would put the totem's spot inside it - green 40840131301 refused every cast (nothing spent, no totem)
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         List<Entity> made = new ArrayList<>();
         String a = owner(helper, "totl");
         Mob caster = shaman(helper, a, 3, 3, 10, made);
@@ -874,16 +896,19 @@ public class VoodooShamanGameTests {
             List<String> problems = new ArrayList<>();
             try {
                 castAt(helper, beaten, UnitAction.SPIRIT_PUPPET, foe);
+                if (!a.equals(((Unit) foe).getOwnerName()))
+                    problems.add("the beaten puppeteer's take failed, the test lost its point (" + takeState(helper, beaten, foe) + ")");
                 castAt(helper, other, UnitAction.SPIRIT_PUPPET, foe2);
-                if (!a.equals(((Unit) foe).getOwnerName()) || !c.equals(((Unit) foe2).getOwnerName()))
-                    problems.add("the two puppets were not taken: the test lost its point");
+                boolean took2 = c.equals(((Unit) foe2).getOwnerName());
+                if (!took2)
+                    problems.add("the other puppeteer's take failed, the test lost its point (" + takeState(helper, other, foe2) + ")");
                 SpiritPuppets.giveBackHeldBy(a);
                 if (!b.equals(((Unit) foe).getOwnerName()) || !foe.isAlive())
                     problems.add("the beaten puppeteer's puppet is " + ((Unit) foe).getOwnerName() + "'s (alive " + foe.isAlive()
                         + "), not back with its owner");
                 if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
                     problems.add("the returned puppet still has a record");
-                if (!c.equals(((Unit) foe2).getOwnerName()) || !SpiritPuppets.isPuppet(foe2))
+                if (took2 && (!c.equals(((Unit) foe2).getOwnerName()) || !SpiritPuppets.isPuppet(foe2)))
                     problems.add("another puppeteer's puppet was given back too");
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
@@ -929,6 +954,13 @@ public class VoodooShamanGameTests {
                     early.add("the valid Spirit Puppet did not take the Vindicator");
                 spots.add(foe.position());
                 foe.kill();
+                // counted at once: the puppeteer, an essence carrier 3 blocks off with room, pulls the wisp in within a few
+                // ticks (green 40840131301 found 0 wisps at tick 8, every run)
+                List<Entity> wisps = wispsNear(spots.get(0), 1.5);
+                if (wisps.size() != 1)
+                    early.add("the dead puppet left " + wisps.size() + " wisps, expected 1");
+                else if (EssenceServerEvents.valueOf(wisps.get(0)) != want)
+                    early.add("the dead puppet's wisp is worth " + EssenceServerEvents.valueOf(wisps.get(0)) + ", expected " + want);
             } catch (RuntimeException ex) {
                 early.add("threw " + ex);
             }
@@ -936,13 +968,6 @@ public class VoodooShamanGameTests {
         helper.runAfterDelay(8, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
-                if (!spots.isEmpty()) {
-                    List<Entity> wisps = wispsNear(spots.get(0), 1.5);
-                    if (wisps.size() != 1)
-                        problems.add("the dead puppet left " + wisps.size() + " wisps, expected 1");
-                    else if (EssenceServerEvents.valueOf(wisps.get(0)) != want)
-                        problems.add("the dead puppet's wisp is worth " + EssenceServerEvents.valueOf(wisps.get(0)) + ", expected " + want);
-                }
                 if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
                     problems.add("the dead puppet is still tracked");
             } finally {
@@ -1039,10 +1064,12 @@ public class VoodooShamanGameTests {
                     if (puppet.getAutoRule() != AutoRule.MANUAL || empower.getAutoRule() != AutoRule.MANUAL)
                         problems.add("Spirit Puppet or Empower is autocast (" + puppet.getAutoRule() + ", " + empower.getAutoRule() + ")");
                     Essence.add(rich, 10);
+                    Unit.fullResetBehaviours(ru);   // AutoCaster.look skips a unit walking a move order
                     AutoCaster.look(level, rich, ru);
                     if (!Hex.isHexed(foe) || Essence.get(rich) != 5)
                         problems.add("one AutoCaster look did not hex the enemy beside the shaman (essence " + Essence.get(rich) + ")");
                     Essence.add(poor, 4);
+                    Unit.fullResetBehaviours((Unit) poor);
                     ((Unit) poor).getTargetGoal().setTarget(foe2);
                     boolean cast = AutoCaster.look(level, poor, (Unit) poor);
                     if (cast || Hex.isHexed(foe2) || Essence.get(poor) != 4)
