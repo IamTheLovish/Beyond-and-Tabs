@@ -66,7 +66,8 @@ The design review of Oct 29 (Fable, ~07:50Z) found these base-level holes; the c
   claude/essence-base-pop): `Summons.population` is 0 for a summon - the server's count, the player panel and the
   unit sync all use it, and the client counts the synced value (`PopulationTally`), since summon tags never reach it.
   Lich Regent ghouls are marked as summons too; the Bone Dragon's and Raise Dead's population-room checks are gone,
-  the 8-per-owner risen cap stays.
+  the 8-per-owner risen cap stays. Ghouls get their own cap (lovish, Oct 29): at most 8 alive per player, no lifetime;
+  a Raise Dead at the cap raises nothing, pays nothing and sets no cooldown (bots cast it on cooldown).
 - **Bots:** `Ability.autocastEssence` (the AutoCaster casts only when the caster holds it) and `AutoRule.BUILDING_HURT`
   (the most hurt friendly building under 70% health whose footprint is within reach).
 - Not in this base PR (they belong to the caster PRs): the damage and heal numbers, the renames, Spirit Puppet's
