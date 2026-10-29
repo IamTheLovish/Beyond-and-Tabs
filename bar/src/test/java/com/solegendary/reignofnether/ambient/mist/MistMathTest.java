@@ -414,4 +414,41 @@ class MistMathTest {
         long t = Math.floorMod(MistMath.EYES_DAWN_TIME, 24000L);
         assertTrue(t >= 0 && t <= 1000, "just after sunrise: " + t);
     }
+
+    // ------------------------------------------------------------------------------------------- the volume (r6)
+
+    @Test
+    void theMistIsThickerInTheFogOfWar() {
+        // lovish, Oct 29: "the fod should be thicker in fog of war compared to not fog of war"
+        assertEquals(1.0, MistMath.fogBoost(true, true, true), EPS, "in sight: the mist as it is");
+        assertEquals(1.0, MistMath.fogBoost(false, false, false), EPS, "fog of war off: nothing is hidden");
+        double explored = MistMath.fogBoost(true, false, true), unexplored = MistMath.fogBoost(true, false, false);
+        assertTrue(explored >= 2.0, "out of sight but explored: thicker " + explored);
+        assertTrue(unexplored > explored, "never explored: thickest " + unexplored);
+        assertTrue(unexplored <= 4.0, "but never a wall " + unexplored);
+    }
+
+    @Test
+    void theVolumeFadesOutAsTheCameraClimbs() {
+        // the volume pass follows the same zoom rule as the sprites: full to the default zoom, none at strategic zoom
+        assertEquals(1.0, MistMath.zoomFade(20f, false), EPS);
+        assertEquals(1.0, MistMath.zoomFade(MistMath.ZOOM_FULL, false), EPS);
+        assertEquals(0.5, MistMath.zoomFade((MistMath.ZOOM_FULL + MistMath.ZOOM_NONE) / 2, false), EPS);
+        assertEquals(0.0, MistMath.zoomFade(MistMath.ZOOM_NONE, false), EPS);
+        assertEquals(0.0, MistMath.zoomFade(20f, true), EPS);
+    }
+
+    @Test
+    void deepInTheHollowsThinOnTheRises() {
+        // the volume's own optical depth model (bat_mist.fsh): exponential height fog over the mist floor, so a hollow
+        // fills and a rise pokes out. Open ground at the floor in sight at dawn: a veil, 25-50% (units read through it)
+        double atFloor = MistMath.volumeCover(0, 1.0, 1.0), rise = MistMath.volumeCover(2.5, 1.0, 1.0);
+        double hollow = MistMath.volumeCover(-3, 1.0, 1.0);
+        assertTrue(atFloor >= 0.25 && atFloor <= 0.5, "at the floor " + atFloor);
+        assertTrue(rise < atFloor * 0.6, "a rise thins it " + rise);
+        assertTrue(hollow >= 0.7, "a hollow fills " + hollow);
+        double fogged = MistMath.volumeCover(0, 1.0, MistMath.fogBoost(true, false, false));
+        assertTrue(fogged >= 0.7, "in the fog of war, thick " + fogged);
+        assertTrue(MistMath.volumeCover(-10, 1.0, 4.0) <= MistMath.MAX_COVER + EPS, "capped " + MistMath.MAX_COVER);
+    }
 }

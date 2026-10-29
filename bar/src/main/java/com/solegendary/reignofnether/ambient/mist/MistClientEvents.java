@@ -50,11 +50,26 @@ public class MistClientEvents {
         return DisplaySettings.valleyMist() && MistMath.allowed(EyesPhotoBooth.ambientLifeOff(), EYES_MIST);
     }
 
-    /** Whether mist may show now: wisps alive leave over a second when this turns false. */
+    /**
+     * Whether the sprite wisps may show now: wisps alive leave over a second when this turns false. Not while the
+     * volume (MistPass, r6) can draw: the sprites are the stand-in for a shader pack, where our pass steps aside.
+     */
     public static boolean mayShow() {
         ClientLevel level = MC.level;
         return level != null && enabled() && level.dimension() == Level.OVERWORLD && !level.isRaining()
-            && !StrategicViewClientEvents.isStrategicView();
+            && !StrategicViewClientEvents.isStrategicView() && !MistPass.available();
+    }
+
+    // AFTER_LEVEL at LOW: after the world, just before the world look pass (LOWEST) grades the frame, mist included
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOW)
+    public static void onRenderLevel(net.minecraftforge.client.event.RenderLevelStageEvent evt) {
+        if (evt.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL)
+            MistPass.render(evt);
+    }
+
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut evt) {
+        MistPass.release();
     }
 
     @SubscribeEvent
