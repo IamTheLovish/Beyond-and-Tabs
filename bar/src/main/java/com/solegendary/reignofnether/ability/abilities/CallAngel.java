@@ -84,7 +84,6 @@ public class CallAngel extends Ability {
         // the healer comes when a friend is hurt, the fighters when the caster is in a fight (and its angel is not out)
         this.autoRule(kind == Kind.MENDER ? AutoRule.ALLY_HURT : AutoRule.SUMMON_WHEN_FREE);
         // the AutoCaster tries the call only with the essence for it (else the caster is ordered and refuses every look)
-        this.autocastEssence = kind.essence;
     }
 
     @Override
@@ -150,7 +149,7 @@ public class CallAngel extends Ability {
      */
     @Override
     public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        return super.canAutocastNow(level, unit) && liveSummons(level, unit) < summonCap();
+        return super.canAutocastNow(level, unit);
     }
 
     @Override
