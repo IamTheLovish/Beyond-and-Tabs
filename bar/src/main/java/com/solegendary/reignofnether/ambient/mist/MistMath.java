@@ -104,12 +104,14 @@ public final class MistMath {
     // ---- when ----
 
     /** Day-time keys of the density curve (ticks, 0 = sunrise) and the density there; linear between, wrapping. */
-    private static final long[] KEY_T = { 1500, 4000, 9000, 11500, 13500, 15000, 21500, 23000 };
-    private static final double[] KEY_D = { 1.0, 0.0, 0.0, 0.7, 0.7, 0.25, 0.25, 1.0 };
+    private static final long[] KEY_T = { 1500, 4000, 6000, 9000, 11500, 13500, 15000, 21500, 23000 };
+    private static final double[] KEY_D = { 1.0, 0.75, 0.5, 0.5, 0.8, 0.8, 0.5, 0.5, 1.0 };
 
     /**
-     * How thick the mist is at a day time, 0-1: thick through dawn (23000-1500), burning off to none by 4000, none
-     * until 9000, rising to 0.7 by dusk (11500-13500), settling to 0.25 for the night, thickening again before dawn.
+     * How thick the mist is at a day time, 0-1: thick through dawn (23000-1500), lingering on the river through the
+     * morning (0.75 at 4000), 0.5 from midday into the afternoon, 0.8 at dusk (11500-13500), 0.5 at night. r11 (Oct 29):
+     * skirmishes are played at 5000 with the cycle off, and the old curve (none 4000-9000) meant no mist in any match;
+     * ValleyField keeps it to the water, the low banks and hollows, so a daytime density no longer films the lawn.
      */
     public static double density(long dayTime) {
         long t = Math.floorMod(dayTime, 24000L);

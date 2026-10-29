@@ -24,6 +24,7 @@
         { "name": "VisOrigin", "type": "float", "count": 2, "values": [ 0.0, 0.0 ] },
         { "name": "VisInvSize", "type": "float", "count": 1, "values": [ 0.0 ] },
         { "name": "FogBoostMax", "type": "float", "count": 1, "values": [ 3.0 ] },
-        { "name": "MaxCover", "type": "float", "count": 1, "values": [ 0.85 ] }
+        { "name": "MaxCover", "type": "float", "count": 1, "values": [ 0.85 ] },
+        { "name": "ValleyBase", "type": "float", "count": 1, "values": [ 64.0 ] }
     ]
 }
