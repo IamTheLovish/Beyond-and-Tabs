@@ -996,4 +996,87 @@ public class SoulEngineerGameTests {
             }
         });
     }
+
+    // ------------------------------------------------------------------------------------------- the bots
+
+    /**
+     * Bots build and use every caster (lovish, Oct 29): the Brassworks bot's T2 army list, trained at its T2 lab, holds the
+     * Soul Engineer, and the spells it autocasts are gated on essence for them (the gather test checks the rules).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void soul_engineer_bots_train_it_at_their_t2_lab(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.BRASSWORKS);
+        if (kit == null)
+            problems.add("the Brassworks has no bot kit");
+        else {
+            if (kit.t2Lab() != Buildings.ASSEMBLY_WORKS)
+                problems.add("the Brassworks bot's T2 lab is " + kit.t2Lab() + ", not the Assembly Works");
+            if (!kit.t2Army().contains(ProductionItems.SOUL_ENGINEER))
+                problems.add("the Brassworks bot's T2 army list has no Soul Engineer: bots never train it");
+        }
+        finish(helper, problems);
+    }
+
+    /**
+     * A bot's Soul Engineer is not an AttackerUnit, so the army list never holds it; the bot's "healers follow the army"
+     * block (BotPlayer.verdantHabits, run for every faction) orders a lagging essence caster to the army's centre
+     * (shared edit, briefs/essence-caster-bot-follow-line.md). The Soul Engineer 14 blocks from the army is sent there;
+     * the one 3 blocks from it is left alone. verdantHabits is package-private and its signature is the same in every
+     * caster PR, so the test reaches it by reflection (as the Tide Seer's does).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void soul_engineer_bots_send_a_lagging_engineer_to_the_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "follow");
+        Mob lagging = engineer(helper, me, 2, 2, 0);
+        Mob close = engineer(helper, me, 10, 10, 0);
+        Mob f1 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 12, 12);
+        Mob f2 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 13, 12);
+        List<Entity> all = live(lagging, close, f1, f2);
+        List<String> early = new ArrayList<>();
+        BlockPos[] moveTo = new BlockPos[1];
+        helper.runAfterDelay(3, () -> {
+            if (all.size() != 4) {
+                early.add("could not spawn the two Soul Engineers and the army");
+                return;
+            }
+            try {
+                var brain = new com.solegendary.reignofnether.bot.BotPlayer(me, Factions.BRASSWORKS,
+                    com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
+                brain.orderListener = (action, target) -> {
+                    if (action == UnitAction.MOVE)
+                        moveTo[0] = target;
+                };
+                List<LivingEntity> mine = new ArrayList<>(List.of(lagging, close, f1, f2));
+                List<LivingEntity> army = new ArrayList<>(List.of(f1, f2));
+                var habits = com.solegendary.reignofnether.bot.BotPlayer.class.getDeclaredMethod("verdantHabits",
+                    ServerLevel.class, List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                habits.invoke(brain, level, mine, army, new ArrayList<>(), new ArrayList<>(), level.getGameTime(), 0L);
+                if (moveTo[0] == null)
+                    early.add("the bot gave no move order: its lagging Soul Engineer stays at the lab");
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                early.add("calling the bot's follow-the-army block threw " + ex);
+            }
+        });
+        helper.runAfterDelay(8, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (moveTo[0] != null) {
+                    BlockPos t = ((Unit) lagging).getMoveGoal() == null ? null : ((Unit) lagging).getMoveGoal().getMoveTarget();
+                    if (t == null || Math.abs(t.getX() - moveTo[0].getX()) > 1 || Math.abs(t.getZ() - moveTo[0].getZ()) > 1)
+                        problems.add("the lagging Soul Engineer is headed for " + t + ", not the army's centre " + moveTo[0]);
+                    BlockPos c = ((Unit) close).getMoveGoal() == null ? null : ((Unit) close).getMoveGoal().getMoveTarget();
+                    if (c != null)
+                        problems.add("the Soul Engineer 3 blocks from the army was ordered to " + c + ": only a lagging one should be");
+                }
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                discardAll(all);
+                finish(helper, problems);
+            }
+        });
+    }
 }
