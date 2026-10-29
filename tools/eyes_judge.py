@@ -466,6 +466,123 @@ def build_sheet(lane_dir, label, lane, max_width=SHEET_MAX_W):
     return sheet, tiles
 
 
+# ------------------------------------------------------------------------------------------------------ A/B pair
+
+def pair_rows(a, b):
+    """One row per still in either lane: both lanes' metrics and B - A per metric (hue circular). A still in one lane
+    only, or without numbers on a side, gets delta None and a note saying why."""
+    rows = []
+    for key in sorted(set(a["stills"]) | set(b["stills"]), key=natural_key):
+        sa, sb = a["stills"].get(key), b["stills"].get(key)
+        ma, mb = sa and sa["metrics"], sb and sb["metrics"]
+        note, delta = "", None
+        if sa is None or sb is None:
+            note = f"only in {a['label'] if sb is None else b['label']}"
+        elif ma is None or mb is None:
+            note = "no numbers in " + " and ".join(lb["label"] for lb, m in ((a, ma), (b, mb)) if m is None) + " (no proof)"
+        elif sa["crop"] != sb["crop"]:
+            note = f"crop differs {sa['crop']} / {sb['crop']}: not comparable"
+        else:
+            delta = {}
+            for m in METRICS + ("luma01",):
+                x, y = ma.get(m), mb.get(m)
+                if x is None or y is None:
+                    delta[m] = None
+                elif m == "hue":
+                    delta[m] = (y - x + 180) % 360 - 180
+                else:
+                    delta[m] = y - x
+        rows.append({"still": key, "a": ma, "b": mb, "delta": delta, "note": note})
+    return rows
+
+
+def _pair_text(row):
+    if row["delta"] is None:
+        return row["note"]
+    d = row["delta"]
+    parts = []
+    for m, f in (("hue", "+.0f"), ("sat", "+.0f"), ("luma", "+.0f"), ("dark_share", "+.3f"), ("stars", "+.0f")):
+        if d.get(m) is not None:
+            parts.append(f"{m} {format(d[m], f)}")
+    return "B - A:  " + "   ".join(parts)
+
+
+def build_pair_sheet(dir_a, a, dir_b, b, max_width=SHEET_MAX_W):
+    """Every still of either lane as a row: A's still on the left, B's on the right (the measured crop outlined),
+    each side's numbers above it and B - A under the row. Under max_width wide."""
+    font, small = _font(18), _font(15)
+    rows = pair_rows(a, b)
+    half = (max_width - 3 * PAD) // 2
+    head_h, strip_h, foot_h = 34, 52, 26
+    tiles = []
+    for row in rows:
+        ims = []
+        for d, lane in ((dir_a, a), (dir_b, b)):
+            st = lane["stills"].get(row["still"])
+            im = None
+            if st and st["file"]:
+                try:
+                    with Image.open(os.path.join(d, st["file"])) as f:
+                        im = f.convert("RGB")
+                except OSError:
+                    im = None
+            ims.append((st, im))
+        tw = min(half, max([im.width for _, im in ims if im] or [half]))
+        th = max([round(im.height * tw / im.width) for _, im in ims if im] or [60])
+        tiles.append((row, ims, tw, th))
+    width = max(2 * PAD + 600, max([3 * PAD + 2 * t[2] for t in tiles] or [0]))
+    height = head_h + sum(strip_h + th + foot_h + PAD for _, _, _, th in tiles) + PAD
+    sheet = Image.new("RGB", (width, height), (24, 24, 28))
+    d = ImageDraw.Draw(sheet)
+    d.rectangle((0, 0, width, head_h), fill=(40, 60, 90))
+    d.text((PAD, 7), f"A = {a['label']} (build {a['build'] or '?'})    B = {b['label']} (build {b['build'] or '?'})",
+           fill="white", font=font)
+    y = head_h
+    for row, ims, tw, th in tiles:
+        d.rectangle((0, y, width, y + strip_h - 4), fill=(36, 36, 44))
+        d.text((PAD, y + 4), row["still"], fill=(230, 230, 230), font=font)
+        for i, (st, im) in enumerate(ims):
+            x = PAD + i * (tw + PAD)
+            label = "AB"[i]
+            if st is None:
+                txt, colour = f"{label}: not in this run", (255, 190, 190)
+            elif not st["proof"]["ok"]:
+                txt, colour = f"{label}: NO PROOF - DO NOT CRITIQUE", (255, 120, 120)
+            elif st["metrics"]:
+                txt, colour = f"{label}: {_numbers(st)}", (200, 220, 200)
+            else:
+                txt, colour = f"{label}:", (200, 200, 200)
+            d.text((x, y + 28), txt[:110], fill=colour, font=small)
+            if im is not None:
+                h = round(im.height * tw / im.width)
+                thumb = im.resize((tw, h), Image.LANCZOS) if tw != im.width else im.copy()
+                if st and st["proof"]["ok"]:
+                    k = tw / im.width
+                    c = st["crop"]
+                    ImageDraw.Draw(thumb).rectangle((c[0] * k - 1, c[1] * k - 1, c[2] * k, c[3] * k),
+                                                    outline=(255, 0, 255), width=2)
+                sheet.paste(thumb, (x, y + strip_h))
+        d.text((PAD, y + strip_h + th + 4), _pair_text(row)[:200], fill=(255, 220, 140), font=small)
+        y += strip_h + th + foot_h + PAD
+    return sheet
+
+
+def pair_table(a, b, rows):
+    out = [f"### {a['label']} vs {b['label']} (B - A)", "",
+           "| still | hue A / B | sat A / B | luma A / B | dark share A / B | stars A / B | note |",
+           "|---|---:|---:|---:|---:|---:|---|"]
+
+    def ab(row, m, f):
+        x = row["a"] and row["a"].get(m)
+        y = row["b"] and row["b"].get(m)
+        return f"{_cell(x, f)} / {_cell(y, f)}"
+
+    for r in rows:
+        out.append(f"| {r['still']} | {ab(r, 'hue', '.0f')} | {ab(r, 'sat', '.0f')} | {ab(r, 'luma', '.0f')} | "
+                   f"{ab(r, 'dark_share', '.3f')} | {ab(r, 'stars', 'd')} | {r['note'] or _pair_text(r)} |")
+    return out
+
+
 # --------------------------------------------------------------------------------------------------------- output
 
 def _cell(v, fmt):
@@ -512,12 +629,17 @@ def main(argv=None):
     ap.add_argument("--save", metavar="FILE", help="write this round's numbers as JSON")
     ap.add_argument("--against", metavar="FILE", help="a JSON of an earlier round: print the change per still and metric")
     ap.add_argument("--sheet-dir", metavar="DIR", help="write one critic contact sheet PNG per lane here")
+    ap.add_argument("--pair", action="store_true",
+                    help="exactly two lanes A B: print A vs B per still and, with --sheet-dir, write <A>-vs-<B>.png "
+                         "(both stills side by side, B - A under each row)")
     ap.add_argument("--min-client-share", type=float, default=MIN_CLIENT_SHARE,
                     help="fail when the client holds less than this share of the server's blocks (default 0.9)")
     ap.add_argument("--aim-tolerance", type=float, default=AIM_TOLERANCE,
                     help="fail when the camera looks more than this many blocks from the aim point (default 4)")
     args = ap.parse_args(argv)
     try:
+        if args.pair and len(args.lanes) != 2:
+            raise ValueError(f"--pair needs exactly two lanes (A B), got {len(args.lanes)}")
         crops = []
         for c in args.crop:
             name, _, box = c.rpartition("=")
@@ -555,6 +677,10 @@ def main(argv=None):
         for label, lane in lanes.items():
             sheet, _ = build_sheet(dirs[label], label, lane)
             sheet.save(os.path.join(args.sheet_dir, f"{_safe(label)}-sheet.png"))
+        if args.pair:
+            (la, a), (lb, b) = lanes.items()
+            build_pair_sheet(dirs[la], a, dirs[lb], b).save(
+                os.path.join(args.sheet_dir, f"{_safe(la)}-vs-{_safe(lb)}.png"))
 
     out = ["## Eyes judge", ""]
     for label, lane in lanes.items():
@@ -563,6 +689,9 @@ def main(argv=None):
     for label, lane in lanes.items():
         if lane["not_judged"]:
             out += ["", f"{label}: not judged (first-person stills log no proof lines): {', '.join(lane['not_judged'])}"]
+    if args.pair:
+        (la, a), (lb, b) = lanes.items()
+        out += [""] + pair_table(a, b, pair_rows(a, b))
     if prev is not None:
         out += ["", f"### Change since {os.path.basename(args.against)}", ""]
         for label, lane in lanes.items():
