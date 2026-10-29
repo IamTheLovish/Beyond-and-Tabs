@@ -44,7 +44,8 @@ import java.util.UUID;
  * (UnitClientEvents, SelectionKeep.ownerFlipped), and the server refuses its old side's orders by owner as for any unit.
  * A puppet that dies is a normal death - it is not a summon, so it drops its essence wisp - and its record goes with it.
  * A puppet whose owner was beaten in the meantime (MatchRoster.isFinished: MatchOutcome's strip skipped it, it was the
- * puppeteer's then) is not handed to a finished side: it is stripped and killed as the strip would have done.
+ * puppeteer's then) is not handed to a finished side: it is stripped and killed as the strip would have done. A beaten
+ * puppeteer's puppets go back to their owners before its own strip ({@link #giveBackHeldBy}).
  * A puppet takes no population from the puppeteer: it counts for its original owner all along ({@link #populationOwner}).
  * Server side only.
  */
@@ -131,6 +132,18 @@ public final class SpiritPuppets {
                 sl.sendParticles(ParticleTypes.SOUL, puppet.getX(), puppet.getY() + puppet.getBbHeight() * 0.6, puppet.getZ(),
                     12, 0.3, 0.5, 0.3, 0.02);
         }
+    }
+
+    /**
+     * Gives back every puppet {@code puppeteer} holds now (MatchOutcome.defeat, before it strips a beaten side: the strip
+     * takes every unit the side owns at that moment, the puppets of other players among them).
+     */
+    public static void giveBackHeldBy(String puppeteer) {
+        if (puppeteer == null || ACTIVE.isEmpty())
+            return;
+        for (LivingEntity puppet : new ArrayList<>(ACTIVE))
+            if (puppet instanceof Unit u && puppeteer.equals(u.getOwnerName()))
+                giveBack(puppet);
     }
 
     private static void forget(LivingEntity e) {

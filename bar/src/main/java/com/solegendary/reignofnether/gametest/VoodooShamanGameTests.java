@@ -13,7 +13,6 @@ import com.solegendary.reignofnether.bot.BotPlayer;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.Buildings;
-import com.solegendary.reignofnether.building.production.ProductionBuilding;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.essence.Essence;
@@ -212,7 +211,7 @@ public class VoodooShamanGameTests {
         Resources pool = new Resources(owner, 0, 0, 0);
         ResourcesServerEvents.resourcesList.add(pool);
         try {
-            if (!(Buildings.FLAME_SANCTUARY instanceof ProductionBuilding lab) || !lab.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
+            if (!Buildings.FLAME_SANCTUARY.productions.get().contains(ProductionItems.VOODOO_SHAMAN))
                 problems.add("the Flame Sanctuary does not train the Voodoo Shaman");
             if (!Factions.PIGLINS.key.equals(Factions.ENTITY_FACTION.get(EntityType.getKey(EntityRegistrar.VOODOO_SHAMAN_UNIT.get()))))
                 problems.add("the shaman's entity is not registered to the Horde");
@@ -848,6 +847,47 @@ public class VoodooShamanGameTests {
             } finally {
                 PossessionServer.release(driver, null);
                 rider.stopRiding();
+                cleanUp(helper, made, List.of());
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Review round 2, B2: when the puppeteer's side is beaten, MatchOutcome.defeat hands its puppets back before it strips
+     * the side (the strip takes every unit the side owns at that moment). SpiritPuppets.giveBackHeldBy, the call defeat
+     * makes, returns the puppet to its owner alive, its record gone; another puppeteer's puppet is left alone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void voodoo_spirit_puppets_of_a_beaten_puppeteer_go_back_before_its_strip(GameTestHelper helper) {
+        List<Entity> made = new ArrayList<>();
+        String a = owner(helper, "puplosa"), b = owner(helper, "puplosb"), c = owner(helper, "puplosc");
+        Mob beaten = shaman(helper, a, 3, 3, 20, made);
+        Mob other = shaman(helper, c, 3, 12, 20, made);
+        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
+        Mob foe2 = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 12, made);
+        if (made.size() < 4) {
+            spawnFailed(helper, made, "the shamans and the enemies");
+            return;
+        }
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                castAt(helper, beaten, UnitAction.SPIRIT_PUPPET, foe);
+                castAt(helper, other, UnitAction.SPIRIT_PUPPET, foe2);
+                if (!a.equals(((Unit) foe).getOwnerName()) || !c.equals(((Unit) foe2).getOwnerName()))
+                    problems.add("the two puppets were not taken: the test lost its point");
+                SpiritPuppets.giveBackHeldBy(a);
+                if (!b.equals(((Unit) foe).getOwnerName()) || !foe.isAlive())
+                    problems.add("the beaten puppeteer's puppet is " + ((Unit) foe).getOwnerName() + "'s (alive " + foe.isAlive()
+                        + "), not back with its owner");
+                if (SpiritPuppets.isPuppet(foe) || SpiritPuppets.tracks(foe))
+                    problems.add("the returned puppet still has a record");
+                if (!c.equals(((Unit) foe2).getOwnerName()) || !SpiritPuppets.isPuppet(foe2))
+                    problems.add("another puppeteer's puppet was given back too");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
                 cleanUp(helper, made, List.of());
             }
             finish(helper, problems);
