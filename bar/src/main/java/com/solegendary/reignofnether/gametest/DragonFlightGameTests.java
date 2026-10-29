@@ -58,6 +58,8 @@ public class DragonFlightGameTests {
         dragon.moveTo(pad.getX() + 3.5, gy + 8, pad.getZ() + 8.5, 90, 0);    // facing -x; the point is behind it
         dragon.setOwnerName("gametest_dragon_flight");
         level.addFreshEntity(dragon);
+        // it hovers 5-10 above the pad, past the sweep's reach: gone however the test ends
+        TestCleanup.entities(helper, List.of(dragon));
         BlockPos target = new BlockPos(pad.getX() + 13, gy - 1, pad.getZ() + 8);
         double tx = target.getX() + 0.5, tz = target.getZ() + 0.5;
         final int[] ageAtOrder = { -1 };
@@ -153,6 +155,8 @@ public class DragonFlightGameTests {
             return;
         }
         level.addFreshEntity(dragon);
+        // it hovers 5-10 above the pad, past the sweep's reach: gone however the test ends
+        TestCleanup.entities(helper, List.of(dragon));
         final double startX = dragon.getX();
         final float[] last = { 90f };
         final double[] worst = { 0 };
@@ -254,7 +258,7 @@ public class DragonFlightGameTests {
             dragon.discard();
             RegressionGameTests.clear(level, bp);
         };
-        helper.runAfterDelay(95, cleanup);   // a timeout must not leave a registered Barracks behind
+        TestCleanup.atEnd(helper, cleanup);   // a fail, a throw or a timeout must not leave a registered Barracks behind
         final boolean[] done = { false };
         // judged on the dragon's own 40 ticks, not the test's (see bone_dragon_ordered_at_spawn_keeps_its_yaw)
         for (int t = 1; t <= 90; t++) {

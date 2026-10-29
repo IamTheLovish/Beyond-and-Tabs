@@ -43,8 +43,11 @@ always runs. **OPEN** is listed for a follow-up.
   `ArenaReady.pad`, the dragon pads), so this one hook covers the biggest class below (B, live units).
   It is deliberately not the whole column: tests still running send units over their neighbours' arenas on purpose
   (`TerrainGameTests.formation_move_spreads_into_a_line_facing_the_move` walks 12 units to corner.x+28 at y 280 for
-  about 400 ticks; the bone dragon in `DragonFlightGameTests` flies to x-20; the Admiral in `SkirmishGameTests` is 60
-  out). A whole-column sweep after a neighbour failed would remove them and turn that test red (or green).
+  about 400 ticks; the Admiral in `SkirmishGameTests` is 60 out). A whole-column sweep after a neighbour failed would
+  remove them and turn that test red (or green).
+  Bone dragons hover 5-10 above their pad, past the 4-block reach, so the sweep does not take them:
+  `DragonFlightGameTests` registers its dragons with `TestCleanup.entities` (and the rally test's Barracks cleanup is
+  an `atEnd` step); `DragonDiveGameTests`' dragons are OPEN.
 
 Proof:
 - `TestCleanupGameTests.cleanup_runs_when_a_test_fails_times_out_or_passes`, in its own batch `test_cleanup`. It makes
