@@ -11,6 +11,8 @@ like for like:
              mean, the darkest shadow anywhere. Both are judged against two-sided bands per time of day (BANDS); a
              value outside its band is marked with "!" (too dark kills the read of units in shade, too light means no
              shadow at all)
+  night      a night still's luma p50 against NIGHT_LUMA (two-sided): an absolute gate, since a ratio cannot tell a lit
+             night from a noon
   white      near-white pixels (saturation < 0.15, V >= 0.55): luma p95 - the capitol's walls, white but unclipped
   clipped    share of pixels with any channel at 254 or more
   detail     mean absolute difference from a 9-pixel box blur, on luma: texture and edge contrast
@@ -37,9 +39,14 @@ from PIL import Image, ImageFilter
 LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 
 # (fill low, fill high, floor low, floor high) per still suffix: shadowed / sunlit grass on screen. Noon and morning
-# keep a clear shadow with a strong fill (Erin, #386 r5: shadowed light ~35-45% of lit, i.e. ~0.62-0.70 on screen);
-# dusk and night may sit lower but never collapse to black
-BANDS = {"day": (0.55, 0.80, 0.35, 0.75), "dusk": (0.45, 0.80, 0.25, 0.75), "night": (0.45, 0.85, 0.25, 0.80)}
+# keep a clear shadow with a strong fill (Erin, #386 r5: shadowed light ~35-45% of lit, i.e. ~0.62-0.70 on screen). The
+# day fill's top edge is the design's 0.70 (design/own_shader_pack.md: shadow / lit 0.45-0.70); its low edge is r5's,
+# tighter than the design's 0.45. Dusk and night may have a deeper shadow (fill from 0.45), but the darkest shadow
+# (floor) keeps the same 0.35 at every time: units in shade must read at night too, and the old pack's floor is ~0.42.
+# How dark the night is as a whole is NIGHT_LUMA's job, not the shadow ratio's
+BANDS = {"day": (0.55, 0.70, 0.35, 0.75), "dusk": (0.45, 0.75, 0.35, 0.75), "night": (0.45, 0.80, 0.35, 0.80)}
+# luma p50 of a night still: lit enough to play (lanterns, moon), dark enough to read as night (day stills sit ~0.37)
+NIGHT_LUMA = (0.10, 0.30)
 
 
 def band_for(still):
@@ -136,9 +143,12 @@ def table(lanes, stills, hud):
                 rows.append("| %s | %s | (missing) |||||||" % (still, name))
                 continue
             m = measure(p, hud)
-            lo, hi, flo, fhi = BANDS[band_for(still)]
+            band = band_for(still)
+            lo, hi, flo, fhi = BANDS[band]
+            p5, p50, p95 = m["luma"]
+            luma = " / ".join((fmt(p5, 2), fmt_band(p50, *NIGHT_LUMA) if band == "night" else fmt(p50, 2), fmt(p95, 2)))
             rows.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-                still.replace("bat_eyes_", "").replace(".png", ""), name, " / ".join(fmt(x, 2) for x in m["luma"]),
+                still.replace("bat_eyes_", "").replace(".png", ""), name, luma,
                 fmt(m["lawn_hue"], 0), fmt(m["lawn_v"], 2), fmt(m["lawn_bg"], 2), fmt(m["shade"], 2),
                 fmt_band(m["fill"], lo, hi) + ("" if m["shadow_share"] is None else " (%d%%)" % round(100 * m["shadow_share"])),
                 fmt_band(m["floor"], flo, fhi), fmt(m["white_p95"], 2), "%.2f%%" % (100 * m["clipped"]),
