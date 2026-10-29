@@ -1,0 +1,82 @@
+# Block ids (Oct 29 2026): every block of the building-block mods - all of Macaw's (mcw*), FramedBlocks, Domum
+# Ornamentum, Chipped, Decorative Blocks, Supplementaries when loaded - with its block-state properties and their allowed
+# values, as JSON, so the structure generators (tools/gen_structures.py) can use the whole vocabulary. Before this the
+# ids only reached a CI job log (blob storage the dev sandbox cannot read), so the generators used 7 Macaw's ids.
+# The GameTests BuildingBlockModGameTests.building_block_mod* run alone on a headless server (the same gradle run as
+# build.yml's shards); building_block_mods_are_loaded_with_their_blocks writes run-gametest/mod_block_ids.json, and this
+# workflow force-pushes it to branch `block-ids` (the mechanism of eyes.yml's publish step) - even when a test fails,
+# so a red run still shows what IS registered. Read it with the REST API, which the sandbox reaches:
+#   gh api 'repos/IamTheLovish/Beyond-and-Tabs/contents/mod_block_ids.json?ref=block-ids' -H 'Accept: application/vnd.github.raw'
+# Runs on a push that changes the mod pins or the dump (any branch: a dependency PR shows its new ids before merge) and
+# by hand. Also writes dep_jars.txt: size, sha1 and sha512 of every third-party jar Gradle resolved for the run, the
+# hashes pack/instance_mods.json pins (Domum Ornamentum is CurseForge-only, the sandbox cannot hash it).
+name: block-ids
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'bar/build.gradle'
+      - 'bar/src/main/resources/META-INF/mods.toml'
+      - 'bar/src/main/java/com/solegendary/reignofnether/gametest/BuildingBlockModGameTests.java'
+      - '.github/workflows/block-ids.yml'
+permissions:
+  contents: write
+concurrency:
+  group: block-ids
+  cancel-in-progress: false
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            bar/*.gradle
+            bar/gradle.properties
+            bar/gradle/wrapper/gradle-wrapper.properties
+      - name: The development time file the jar expects (not counted here)
+        run: printf '%s' '{"hours": 0, "commits": 0, "since": 0}' > bar/src/main/resources/assets/reignofnether/devtime.json
+      - name: The building-block mod GameTests alone (they write the id dump)
+        working-directory: bar
+        env:
+          BAT_GAMETEST_ONLY: "test:building_block_mod"
+          GAMETEST_TIMEOUT: 25m
+        run: |
+          chmod +x gradlew
+          bash ../tools/ci_gametests.sh
+      - name: Publish the id dump to branch block-ids
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          f=bar/run-gametest/mod_block_ids.json
+          if [ ! -f "$f" ]; then echo "::error::the GameTest wrote no $f"; exit 1; fi
+          cp "$f" out/
+          python3 -c "
+          import json, sys
+          d = json.load(open('out/mod_block_ids.json'))
+          print('::notice::[Block ids] ' + ', '.join('%s %s: %d' % (m, v.get('version', '?'), v['count']) for m, v in d.items()))
+          "
+          # the third-party jars Gradle resolved (Modrinth maven + cursemaven): the hashes the tester pack pins
+          find ~/.gradle/caches/modules-2/files-2.1/maven.modrinth ~/.gradle/caches/modules-2/files-2.1/curse.maven \
+            -name '*.jar' ! -name '*-sources.jar' 2>/dev/null | sort | while read -r j; do
+            printf '%s size=%s sha1=%s sha512=%s\n' "$(basename "$j")" "$(stat -c %s "$j")" \
+              "$(sha1sum "$j" | cut -d' ' -f1)" "$(sha512sum "$j" | cut -d' ' -f1)"
+          done > out/dep_jars.txt || true
+          cd out
+          git init -q -b block-ids
+          git config user.name "block-ids-bot"
+          git config user.email "block-ids-bot@users.noreply.github.com"
+          echo "Block ids and block states of the building-block mods, from ${REF} ${SHA::7} at $(date -u +%FT%TZ) (.github/workflows/block-ids.yml)" > README.md
+          git add -A
+          git commit -q -m "Block ids for ${SHA::7} (${REF})"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" block-ids
+          echo "::notice::[Block ids] published to branch block-ids"
