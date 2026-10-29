@@ -17,6 +17,10 @@ package com.solegendary.reignofnether.ambient.mist;
  * Round 2 (eyes runs 40815085922 / 40815098025): r1's 21 wisps at alpha 0.05-0.18, 3-8 blocks, lit by the dawn sky,
  * changed the RTS still by a mean 5.7 per pixel - nearly invisible. r2: 120 wisps, alpha 0.15-0.35, 5-12 blocks,
  * three layers, base share 0.3, drawn full-bright with the light in the colour.
+ * Round 3 (eyes run 40817045672): r2 still changed the still by a mean 3.0 per pixel. Not the numbers: vanilla's
+ * particle shader discards fragments under alpha 0.1, and r2 drew each winding at half alpha, so almost every pixel
+ * was thrown away. r3 draws one quad through our own render type (MistParticle.MIST_SHEET: no cut, no depth write,
+ * no culling) at alpha 0.2-0.5.
  */
 public final class MistMath {
 
@@ -173,7 +177,15 @@ public final class MistMath {
 
     // ---- the look ----
 
-    public static final double ALPHA_MIN = 0.15, ALPHA_MAX = 0.35;
+    /**
+     * r3: 0.2-0.5 (r2's 0.15-0.35 never showed: see MistParticle.MIST_SHEET). With the sprite's soft falloff a wisp's
+     * mean alpha is about a fifth of this, so overlapping wisps build a sheet rather than a white blot.
+     */
+    public static final double ALPHA_MIN = 0.2, ALPHA_MAX = 0.5;
+    /** The mist sprites' own centre alpha (tools/mist_sprites.py). */
+    public static final double SPRITE_PEAK = 0.9;
+    /** Vanilla's particle shader (particle.fsh) discards every fragment under this alpha: why r1 and r2 were invisible. */
+    public static final double VANILLA_PARTICLE_CUT = 0.1;
     /** Ticks to fade in (3 s) and out (4 s): mist gathers and thins, it never pops. */
     public static final int FADE_IN = 60, FADE_OUT = 80;
 
