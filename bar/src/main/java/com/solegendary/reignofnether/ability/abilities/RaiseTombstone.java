@@ -54,6 +54,7 @@ public class RaiseTombstone extends Ability {
     public RaiseTombstone() {
         super(UnitAction.RAISE_TOMBSTONE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, TombstoneUnit.CREEP_MAX_RADIUS, false, true);
         this.autoRule(AutoRule.CROWD);
+        this.autocastEssence = ESSENCE_COST;   // the AutoCaster's essence gate (essence base Revision 1)
         this.showRangeCircle = true;
         this.showRadiusCircle = true;
     }

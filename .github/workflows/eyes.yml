@@ -31,6 +31,10 @@
 # annotations) - EyesDirector scene 18, EyesOverlaysScene. A before / after is the same dispatch with two build_run ids;
 # these runs never queue behind each other (one concurrency group per run); each adds its stills and eyes-lines.txt to
 # branch eyes-overlays as folder <build sha>-<run id>/, and keeps them with the full log as artifact eyes-overlays-<run id>.
+# keep_only (Oct 23 2026, block-pack scans): any of the above publishes to its own branch eyes-keep-<run id> instead of
+# the lane's branch, in its own concurrency group - a before / after pinned to one build_run, dispatched while another
+# session photographs the same structure, neither waits for nor replaces the other's snapshot. Delete those branches
+# when the comparison is done.
 name: eyes
 on:
   workflow_dispatch:
@@ -58,6 +62,10 @@ on:
         default: false
       overlays:
         description: "Overlay cost instead of the tour: 500 units + 1,700 buildings, stills at mid / strategic zoom, frame and per-handler ms at zoom 30 and 200 (EyesDirector scene 18). Runs side by side; each adds folder <build sha>-<run id>/ to branch eyes-overlays"
+        type: boolean
+        default: false
+      keep_only:
+        description: "Publish the stills to this run's own branch eyes-keep-<run id> instead of the lane's branch; runs side by side (its own concurrency group) - for a before / after that must not replace or wait for another session's runs"
         type: boolean
         default: false
       branch_pack:
@@ -102,7 +110,7 @@ jobs:
     # skipped runs of cancelled tools-only builds took part - one could replace a real build's queued tour (Oct 15,
     # two sessions pushing at once). A skipped job never enters the group.
     concurrency:
-      group: eyes-${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
+      group: eyes-${{ inputs.keep_only && format('keep-{0}-', github.run_id) || '' }}${{ inputs.overlays && format('overlays-{0}-', github.run_id) || '' }}${{ inputs.scars && 'scars-' || '' }}${{ inputs.fog && 'fog-' || '' }}${{ inputs.structure && 'structures-' || '' }}${{ inputs.shaders && 'shaders' || 'plain' }}-${{ inputs.shader_pack || 'complementary' }}-${{ inputs.pack || 'ours' }}-${{ inputs.look || 'default' }}-${{ inputs.shader_options && 'custom' || 'std' }}
       cancel-in-progress: false   # never cancel a tour in progress
     # pinned: ubuntu-latest moves to Ubuntu 26 from Oct 19 2026 - Xvfb, Mesa, ffmpeg and HeadlessMC are untested there
     runs-on: ${{ vars.RUNNER || 'ubuntu-24.04' }}
@@ -116,6 +124,7 @@ jobs:
       SCARS: ${{ inputs.scars && '1' || '0' }}
       FOG: ${{ inputs.fog && '1' || '0' }}
       OVERLAYS: ${{ inputs.overlays && '1' || '0' }}
+      KEEP_ONLY: ${{ inputs.keep_only && '1' || '0' }}
       STRUCTURES: ${{ inputs.structure || '' }}
       SHADERS: ${{ inputs.shaders && '1' || '0' }}
       OUR_PACK: ${{ inputs.pack == 'none' && '0' || '1' }}
@@ -202,7 +211,9 @@ jobs:
               # the shader lane: Oculus 1.8.0 mixes into BufferBuilder with Embeddium's MemoryIntrinsics and crashes at
               # RenderSystem init without it (dispatch 38710333378, Oct 15); a fog run keeps it too - its rebuild counts are
               # meant for the testers' renderer
-              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1'
+              # a structure-photo run keeps it too (Oct 22: the plain lane crashed at RenderSystem init - Oculus's
+              # BufferBuilder mixin without Embeddium, runs 39838786995 / 39840043629 - and testers run Embeddium)
+              keep_embeddium = os.environ.get('SHADERS') == '1' or os.environ.get('FOG') == '1' or bool(os.environ.get('STRUCTURES'))
               # ... and Oculus goes with Embeddium: since the tester pack ships it (#132) the plain lane loaded Oculus
               # without Embeddium and every tour died at RenderSystem init (MixinTransformerError, run 39722557903)
               skip = ('immediatelyfast', 'e4mc') if keep_embeddium else ('embeddium', 'oculus', 'immediatelyfast', 'e4mc')
@@ -236,6 +247,9 @@ jobs:
                       continue
                   dest = os.path.join(out_dir, base)
                   shutil.copyfile(f, dest)
+                  if os.path.isfile(f + '.near'):   # close-up points (EyesDirector.readNearPoints): 15_<name>_near_*
+                      shutil.copyfile(f + '.near', dest + '.near')
+                      print('near points', f + '.near')
                   entries.append(dest)
                   print('file', f, '->', dest)
               elif re.fullmatch(r'[a-z0-9_]+', e):
@@ -476,6 +490,13 @@ jobs:
             fi
           else
             echo "no $EYES_BRANCH-approved branch yet - picture regression skipped (approve a run with eyes-approve.yml)"
+          fi
+          if [ "${KEEP_ONLY:-0}" = "1" ]; then
+            # a keep_only run publishes to its OWN branch eyes-keep-<run id> (a snapshot, like the lanes'), so two
+            # sessions' A/B runs never replace each other's eyes-structures snapshot (Oct 22-23: two block-pack lanes);
+            # a branch, not an artifact - cloud sessions reach github.com but not the artifact store
+            EYES_BRANCH="eyes-keep-${GITHUB_RUN_ID}"
+            echo "::notice::[Eyes] keep_only: $n stills on branch $EYES_BRANCH"
           fi
           if [ "${OVERLAYS:-0}" = "1" ]; then
             # overlays runs go side by side (a before / after is several at once), so each ADDS its own folder

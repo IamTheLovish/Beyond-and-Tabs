@@ -166,6 +166,13 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.CutlassRaiderRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ReefGuardRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BombardCrewRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SUNFIRE_MANGONEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SKULL_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BOULDER_CHUCKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BURL_SLINGER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.POWDER_MONKEY_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.THUNDERSTONE_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.STEAM_LOBBER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SiegeLobberRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TidePriestRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.HARPOONER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HarpoonerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.FLAK_SWIVEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.FlakSwivelRenderer::new);
