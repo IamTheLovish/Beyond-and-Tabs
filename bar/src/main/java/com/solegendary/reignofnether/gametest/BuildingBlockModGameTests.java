@@ -3,11 +3,20 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingBlockData;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -49,13 +58,114 @@ public class BuildingBlockModGameTests {
         KNOWN_BLOCKS.put("mcwwindows", List.of("mcwwindows:spruce_window", "mcwwindows:blackstone_brick_gothic"));
         KNOWN_BLOCKS.put("mcwfences", List.of("mcwfences:oak_picket_fence"));
         KNOWN_BLOCKS.put("chipped", List.of());
+        // Oct 29 (lovish: buildings "look blocky and toy"): FramedBlocks' slopes and Domum Ornamentum's shingles
+        KNOWN_BLOCKS.put("framedblocks", List.of("framedblocks:framed_slope", "framedblocks:framed_cube"));
+        KNOWN_BLOCKS.put("domum_ornamentum", List.of());
         MIN_BLOCKS.put("mcwroofs", 100);
         MIN_BLOCKS.put("mcwwindows", 100);
         MIN_BLOCKS.put("mcwfences", 40);
         MIN_BLOCKS.put("chipped", 500);
+        MIN_BLOCKS.put("framedblocks", 100);
+        MIN_BLOCKS.put("domum_ornamentum", 10);
     }
-    static final List<String> REQUIRED_MODS =
-        List.of("mcwroofs", "mcwwindows", "mcwfences", "chipped", "athena", "resourcefullib");
+    static final List<String> REQUIRED_MODS = List.of("mcwroofs", "mcwwindows", "mcwfences", "chipped", "athena",
+        "resourcefullib", "framedblocks", "domum_ornamentum");
+
+    /**
+     * Namespaces whose every block goes into the id dump (run-gametest/block_ids, published to branch `block-ids` by
+     * CI job bar; tools/block_ids.py checks it): every Macaw's mod (mcw*) and these. Same list as
+     * tools/block_ids.py REQUIRED_NAMESPACES, which fails the publish if one of them dumped no blocks.
+     */
+    static final List<String> DUMP_NAMESPACES = List.of("chipped", "framedblocks", "domum_ornamentum",
+        "decorative_blocks");
+    static final String DUMP_DIR = "block_ids";
+
+    static boolean dumped(String namespace) {
+        return namespace.startsWith("mcw") || DUMP_NAMESPACES.contains(namespace);
+    }
+
+    /**
+     * Every block of the building-block mods with its blockstate properties and their allowed values, as JSON: one
+     * file per namespace plus counts.json (schema in tools/block_ids.py). Structure generators need the exact ids and
+     * states ("mcwroofs:x[facing=north,half=bottom]"); CI publishes the files to branch `block-ids`, so a building
+     * round can read them without booting the game.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void building_block_ids_dump_to_json(GameTestHelper helper) {
+        Map<String, java.util.TreeMap<String, Block>> byNs = new java.util.TreeMap<>();
+        for (Map.Entry<ResourceKey<Block>, Block> e : ForgeRegistries.BLOCKS.getEntries()) {
+            ResourceLocation key = e.getKey().location();
+            if (dumped(key.getNamespace()))
+                byNs.computeIfAbsent(key.getNamespace(), k -> new java.util.TreeMap<>()).put(key.toString(), e.getValue());
+        }
+        Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+        JsonObject counts = new JsonObject();
+        JsonObject nsCounts = new JsonObject();
+        int total = 0;
+        try {
+            Path dir = Path.of(DUMP_DIR);
+            Files.createDirectories(dir);
+            for (var ns : byNs.entrySet()) {
+                JsonObject blocks = new JsonObject();
+                for (var b : ns.getValue().entrySet())
+                    blocks.add(b.getKey(), describe(b.getValue()));
+                JsonObject doc = new JsonObject();
+                doc.addProperty("namespace", ns.getKey());
+                doc.addProperty("mod_version", ModList.get().getModContainerById(ns.getKey())
+                    .map(c -> c.getModInfo().getVersion().toString()).orElse("?"));
+                doc.addProperty("count", ns.getValue().size());
+                doc.add("blocks", blocks);
+                Files.writeString(dir.resolve(ns.getKey() + ".json"), gson.toJson(doc) + "\n");
+                nsCounts.addProperty(ns.getKey(), ns.getValue().size());
+                total += ns.getValue().size();
+            }
+            counts.addProperty("minecraft", "1.20.1");
+            counts.addProperty("total", total);
+            counts.add("namespaces", nsCounts);
+            Files.writeString(dir.resolve("counts.json"), gson.toJson(counts) + "\n");
+        } catch (Exception ex) {
+            helper.fail("could not write the block id dump: " + ex);
+            return;
+        }
+        ReignOfNether.LOGGER.info("[ModBlocks] dump: {} blocks in {} namespaces {}", total, byNs.size(), nsCounts);
+        List<String> missing = new ArrayList<>();
+        for (String ns : DUMP_NAMESPACES)
+            if (!byNs.containsKey(ns))
+                missing.add(ns);
+        if (!missing.isEmpty())
+            helper.fail("block id dump: no blocks registered by " + missing);
+        helper.succeed();
+    }
+
+    private static JsonObject describe(Block block) {
+        JsonObject props = new JsonObject();
+        JsonObject def = new JsonObject();
+        BlockState state = block.defaultBlockState();
+        for (Property<?> p : block.getStateDefinition().getProperties()) {
+            JsonArray values = new JsonArray();
+            for (Object v : p.getPossibleValues())
+                values.add(valueName(p, v));
+            props.add(p.getName(), values);
+            def.addProperty(p.getName(), valueName(p, defaultValue(state, p)));
+        }
+        JsonObject o = new JsonObject();
+        o.add("properties", props);
+        o.add("default", def);
+        o.addProperty("states", block.getStateDefinition().getPossibleStates().size());
+        o.addProperty("block_entity", block instanceof EntityBlock);
+        return o;
+    }
+
+    /** A property's own name for a value ("north", "bottom", "true") - raw types: the values come from a Property<?>. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static String valueName(Property p, Object v) {
+        return p.getName((Comparable) v);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object defaultValue(BlockState state, Property p) {
+        return state.getValue(p);
+    }
 
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void building_block_mods_are_loaded_with_their_blocks(GameTestHelper helper) {

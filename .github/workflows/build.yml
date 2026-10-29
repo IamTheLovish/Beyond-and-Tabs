@@ -279,6 +279,33 @@ jobs:
           # shard 1 skips every other shard's list (all SHARD_n variables of the env block above)
           export BAT_GAMETEST_SKIP="$(env | grep -E '^SHARD_[0-9]+=' | cut -d= -f2- | paste -sd, -)"
           bash ../tools/ci_gametests.sh
+      # every block id + blockstate of the building-block mods (gametest building_block_ids_dump_to_json, shard 1 - no
+      # SHARD_n list names it) -> branch `block-ids` (data only), so building rounds can use them without lovish's PC
+      # or a game boot. tools/block_ids.py refuses an empty or inconsistent dump, so a bad run never replaces a good one.
+      - name: Publish the building-block id dump (branch block-ids)
+        if: success()
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          python3 tools/block_ids.py bar/run-gametest/block_ids
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3 4; do
+            rm -rf "$RUNNER_TEMP/ids" && mkdir -p "$RUNNER_TEMP/ids"
+            ( cd "$RUNNER_TEMP/ids"
+              git init -q -b block-ids
+              git config user.name "block-ids-bot"
+              git config user.email "block-ids-bot@users.noreply.github.com"
+              if git fetch -q --depth=1 "$url" block-ids 2>/dev/null; then git checkout -q -B block-ids FETCH_HEAD; fi
+              git rm -q -r --ignore-unmatch . >/dev/null
+              cp "$GITHUB_WORKSPACE"/bar/run-gametest/block_ids/*.json .
+              printf '%s\n' "Building-block mod ids and blockstates (CI job bar, tools/block_ids.py schema)." \
+                "Source commit ${GITHUB_SHA::7} (${GITHUB_REF_NAME}), run ${GITHUB_RUN_ID}. Data only - no mod assets." > README.md
+              git add -A
+              git diff --cached --quiet && { echo "block-ids unchanged"; exit 0; }
+              git commit -q -m "Block ids from ${GITHUB_SHA::7}"
+              git push -q "$url" block-ids ) && break
+            [ "$attempt" = 4 ] && { echo "::warning::[Block ids] not pushed after 4 tries"; break; }
+            sleep $((attempt * 5))
+          done
       # the duel simulator (gametest/DuelGameTests) is a balance measurement: its results become a handful of notices
       # (readable through the GitHub API), and this step never fails the build - only the test itself can, on a duel
       # that could not run

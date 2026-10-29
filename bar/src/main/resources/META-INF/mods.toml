@@ -159,3 +159,18 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[4.1,)"
     ordering="AFTER"
     side="BOTH"
+# FramedBlocks (Oct 29 2026, lovish: buildings "look blocky and toy"; LGPL-3): slopes, prisms, half-pillars that take
+# any block's texture - real sloped roofs and bevels
+[[dependencies.reignofnether]]
+    modId="framedblocks"
+    mandatory=true
+    versionRange="[9.4,)"
+    ordering="AFTER"
+    side="BOTH"
+# Domum Ornamentum (Oct 29 2026, lovish: shingles and timber framing for Brassworks; GPL-3). CurseForge only
+[[dependencies.reignofnether]]
+    modId="domum_ornamentum"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

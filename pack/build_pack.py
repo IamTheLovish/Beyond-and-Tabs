@@ -59,7 +59,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
-                  "athena-forge-", "resourcefullib-forge-")
+                  "athena-forge-", "resourcefullib-forge-", "FramedBlocks-")
+# required mods that are NOT on Modrinth (Oct 29: Domum Ornamentum, shingles + timber framing; GPL-3, CurseForge only).
+# Pinned by CurseForge file id - the same id bar/build.gradle pins through cursemaven - and downloaded from
+# CurseForge's own CDN (never rehosted); the hashes come from the downloaded bytes. Only these exact URLs may leave
+# cdn.modrinth.com (allowed_download).
+CURSEFORGE_FILES = ({"project_id": 527361, "file_id": 7585567, "file": "domum_ornamentum-1.20.1-1.0.296-universal.jar"},)
+
+
+def curseforge_url(f):
+    """CurseForge's CDN path for a file id: the first four digits, then the rest without leading zeros."""
+    s = str(f["file_id"])
+    return f"https://mediafilez.forgecdn.net/files/{s[:4]}/{int(s[4:])}/{f['file']}"
+
+
+def allowed_download(url):
+    """cdn.modrinth.com, or exactly one of the pinned CURSEFORGE_FILES."""
+    return (urllib.parse.urlparse(url).hostname == "cdn.modrinth.com"
+            or url in {curseforge_url(f) for f in CURSEFORGE_FILES})
 
 
 def get_json(url):
@@ -181,16 +198,30 @@ def resolve_e4mc(out_dir, have_projects):
     return entries, records
 
 
+def resolve_curseforge(out_dir):
+    """Index entries for CURSEFORGE_FILES: downloaded from CurseForge's CDN and hashed (both sides required)."""
+    entries = []
+    for cf in CURSEFORGE_FILES:
+        url = curseforge_url(cf)
+        dest = os.path.join(out_dir, cf["file"])
+        download(url, dest)
+        sha1, sha512 = file_hashes(dest)
+        entries.append(index_entry(cf["file"], sha1, sha512, os.path.getsize(dest), url))
+        print(f"ok  {cf['file']} (CurseForge {cf['project_id']}/{cf['file_id']}) -> {url}")
+    return entries
+
+
 def main():
     our_jar, out_dir = sys.argv[1], sys.argv[2]
     os.makedirs(out_dir, exist_ok=True)
     files, projects = resolve_instance_mods()
     e4mc_entries, e4mc_records = resolve_e4mc(out_dir, projects)
     files += e4mc_entries
+    files += resolve_curseforge(out_dir)
 
-    for f in files:  # the pack must only point at Modrinth's CDN
+    for f in files:  # the pack only points at Modrinth's CDN (and the pinned CurseForge files)
         for u in f["downloads"]:
-            if urllib.parse.urlparse(u).hostname != "cdn.modrinth.com":
+            if not allowed_download(u):
                 sys.exit(f"::error::{f['path']}: download host is not cdn.modrinth.com: {u}")
 
     sha = os.environ.get("GITHUB_SHA", "local")[:7]

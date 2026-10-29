@@ -110,13 +110,14 @@ def main():
     mods, projects = build_pack.resolve_instance_mods()
     with tempfile.TemporaryDirectory() as tmp:
         e4mc, _ = build_pack.resolve_e4mc(tmp, projects)
+        cf = build_pack.resolve_curseforge(tmp)   # Domum Ornamentum: CurseForge only (build_pack.CURSEFORGE_FILES)
     entries = []
-    for e in mods + e4mc:
+    for e in mods + e4mc + cf:
         filename = os.path.basename(e["path"])
         side = "client" if e["env"]["server"] == "optional" else "both"   # build_pack.env_for decided it
         entries.append((filename, side, e["downloads"][0], e["hashes"]["sha512"]))
     for _, _, url, _ in entries:
-        if not url.startswith("https://cdn.modrinth.com/"):
+        if not build_pack.allowed_download(url):
             sys.exit(f"::error::third-party download not on cdn.modrinth.com: {url}")
 
     our = (os.path.basename(jar_url), jar_url, sha512_of(our_jar))

@@ -226,6 +226,12 @@ dependencies {
     runtimeOnly fg.deobf('maven.modrinth:macaws-lights-and-lamps:H1a9Tx4h')
     runtimeOnly fg.deobf('maven.modrinth:macaws-paths-and-pavings:yHkcTSFb')
     runtimeOnly fg.deobf('maven.modrinth:decorative-blocks:nGmyeiug')
+    // lovish, Oct 29 2026 (buildings "look blocky and toy"), same rules: required (mods.toml), never bundled, assets
+    // never copied. FramedBlocks 9.4.3 (LGPL-3; slopes and bevels that take any block's texture). Domum Ornamentum
+    // 1.20.1-1.0.296 (GPL-3; shingles, timber framing for Brassworks) is NOT on Modrinth: its CurseForge file id via
+    // cursemaven (repository above); pack/build_pack.py CURSEFORGE_FILES pins the same file for the tester packs.
+    runtimeOnly fg.deobf('maven.modrinth:framedblocks:lSiHA1qU')
+    runtimeOnly fg.deobf('curse.maven:domum-ornamentum-527361:7585567')
 }
 
 mixin {

@@ -183,7 +183,10 @@ NOTES.md                  older session log; README.md is out of date (this file
   reproduces the committed files byte for byte before changing it.
 - **Building-block mods are required dependencies** (lovish, Oct 20 2026: "increase block vocabulary, scale the
   buildings bigger"): Macaw's Roofs, Macaw's Windows, Macaw's Fences and Walls and Chipped, plus Chipped's libraries
-  Athena and Resourceful Lib. `bar/build.gradle` pins lovish's exact files (runtimeOnly, so runClient and the GameTest
+  Athena and Resourceful Lib; since Oct 29 also FramedBlocks (slopes/bevels) and Domum Ornamentum (shingles, timber
+  framing; CurseForge only - pinned by file id via cursemaven and `build_pack.CURSEFORGE_FILES`). Every block id and
+  blockstate of these mods is on branch `block-ids` (one JSON per namespace + counts.json, refreshed by CI job `bar`;
+  schema in `tools/block_ids.py`) - read it before writing a structure. `bar/build.gradle` pins lovish's exact files (runtimeOnly, so runClient and the GameTest
   server load them; `tools/check_dep_pins.py` checks the pins against `pack/instance_mods.json` in CI), `mods.toml`
   makes them mandatory, the tester pack ships them. Structures reference their blocks by full id - in
   `tools/gen_structures.py` palettes write `"mcwroofs:thatch_steep_roof"` (a bare name means `minecraft:`). An id no
