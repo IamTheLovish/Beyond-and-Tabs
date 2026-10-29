@@ -84,11 +84,10 @@ public class BotPlayer {
         if (faction.equals(Factions.VILLAGERS))
             return new Kit(Buildings.TOWN_CENTRE, null, null,   // no house or farm any more (Factions)
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
-                Buildings.WATCHTOWER, ProductionItems.VILLAGER,
-                List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER,
-                        ProductionItems.ANGEL_CALLER),   // the essence caster, tier 1 (lovish, Oct 29: bots build and use all 7)
+                Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
-                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER, ProductionItems.ORIFLAMME_ELEPHANT),
+                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER, ProductionItems.ORIFLAMME_ELEPHANT,
+                        ProductionItems.ANGEL_CALLER),   // the essence caster (lovish, Oct 29: bots build and use all 7)
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
         // the Verdant Court has no farm, house or tower yet - every use of those below checks for null; it techs to its
         // Circle of Elders and then, like the others, to the Heart of the Wild and the World Tree Walker
@@ -1350,8 +1349,7 @@ public class BotPlayer {
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
-                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)

@@ -29,7 +29,7 @@ ROSTER = [
     ('Sunforged', 't2', 'villagers/EvokerUnit', 'caster'),
     ('Sunforged', 't2', 'villagers/WindcallerUnit', 'anti-air'),
     ('Sunforged', 't2', 'villagers/WitchUnit', 'support'),
-    ('Sunforged', 't1', 'villagers/AngelCallerUnit', 'support'),   # essence caster: its angels fight
+    ('Sunforged', 't2', 'villagers/AngelCallerUnit', 'support'),   # essence caster: its angels fight
     ('Sunforged', 't2', 'villagers/IronGolemUnit', 'tank'),
     ('Sunforged', 't2', 'villagers/RavagerUnit', 'siege'),
     ('Sunforged', 't3', 'villagers/SunColossusUnit', 'experimental'),

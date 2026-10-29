@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * Sunforged essence caster - the <b>Angel Caller</b> (placeholder name; design/essence_casters.md, lovish Oct 29 2026:
  * "the angels casters can summon three different angels that help: one that heals, one that is a flying archer and
- * another that is a melee engager that can fly"). Trained at the Barracks (tier 1, like the rez bots it replaces). An essence
+ * another that is a melee engager that can fly"). Trained at the Arcane Tower (the Sunforged T2 lab). An essence
  * carrier ({@link EssenceCarrier}: it gathers the wisps of the fallen within 8 blocks and holds up to 30) that does not
  * fight itself; it spends essence on angels (CallAngel) and on the shared Empower:
  * <ul>
