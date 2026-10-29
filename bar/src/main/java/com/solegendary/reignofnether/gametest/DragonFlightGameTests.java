@@ -254,12 +254,15 @@ public class DragonFlightGameTests {
         final String[] atOrder = { "the check never ran" };
         final long[] producedAt = { -1 };
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-        List<long[]> chunks = new ArrayList<>();   // the arena, the Barracks' spawn ring round it and the rally point
-        for (int cx = (corner.getX() - 8) >> 4; cx <= (corner.getX() + 24) >> 4; cx++)
-            for (int cz = (corner.getZ() - 8) >> 4; cz <= (corner.getZ() + 24) >> 4; cz++)
+        // the arena's own chunks (the pad holds the Barracks, its spawn spot and the rally point). A wider list (corner
+        // -8..+24: 9 chunks, a 40-chunk halo reaching two chunks past the structure's FORCED 5x5, which only ticket
+        // spread loads) failed stress 40887783493 at the cap: "1 of 9 ... never had their entities loaded", halo 39 of 40
+        List<long[]> chunks = new ArrayList<>();
+        for (int cx = corner.getX() >> 4; cx <= (corner.getX() + 15) >> 4; cx++)
+            for (int cz = corner.getZ() >> 4; cz <= (corner.getZ() + 15) >> 4; cz++)
                 chunks.add(new long[] { cx, cz });
         // the sampler below is registered at the test's start, not from this callback (see BuildingDamageGameTests)
-        GameTestChunks.whenEntitiesReady(helper, level, chunks, 5, 100, CHUNK_CAP, "dragon rally arena", () -> {
+        GameTestChunks.whenEntitiesReady(helper, level, chunks, 5, 400, CHUNK_CAP, "dragon rally arena", () -> {
             Entity produced = pp.produceUnit(level, EntityRegistrar.BONE_DRAGON_UNIT.get(), owner, false);
             if (!(produced instanceof Mob dragon) || !(produced instanceof Unit unit)) {
                 helper.fail("the Barracks produced no Bone Dragon: " + produced);
@@ -333,7 +336,7 @@ public class DragonFlightGameTests {
     }
 
     /** Test ticks the rally-point test waits at most for its arena's entity sections before it fails on them. */
-    static final int CHUNK_CAP = 400;
+    static final int CHUNK_CAP = 1200;   // ready after 80-239 ticks on 7 of 8 runners (40887783493); Raid's pads cap at 1300
 
     /** The last n samples of a trace, for a failure message. */
     private static String tail(List<String> trace, int n) {
