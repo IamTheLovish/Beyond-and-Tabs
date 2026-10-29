@@ -460,6 +460,8 @@ public class ClientModEvents {
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void registerParticles(RegisterParticleProvidersEvent evt) {
+        evt.registerSpriteSet(ParticleRegistrar.MIST.get(),
+                com.solegendary.reignofnether.ambient.mist.MistParticle.Provider::new);
         evt.registerSpriteSet(
                 ParticleRegistrar.BIG_ENCHANT.get(),
                 BigEnchantParticle.Provider::new
