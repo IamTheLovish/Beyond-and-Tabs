@@ -102,6 +102,16 @@ public class SparkSageGameTests {
         return m;
     }
 
+    /**
+     * Clears any move order. The Sage is a SupportUnit: SupportBrain (every 4 ticks, phased by entity id) kites it from
+     * an enemy 4 blocks off by giving its move goal a target, a no-AI unit never walks it off, and AutoCaster leaves a
+     * unit walking a move order alone - so whether a look casts would depend on the id. In play the step ends in a second.
+     */
+    private static void standIdle(Mob... mobs) {
+        for (Mob m : mobs)
+            Unit.fullResetBehaviours((Unit) m);
+    }
+
     private static Mob vindicator(GameTestHelper helper, String owner, int x, int z) {
         return still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), owner, x, z);
     }
@@ -779,6 +789,7 @@ public class SparkSageGameTests {
                 hurt.setHealth(hurt.getMaxHealth() * 0.4f);
                 UnitGrid.invalidate();
 
+                standIdle(sparker, dry, hurt);
                 AutoCaster.look(level, sparker, (Unit) sparker);
                 if (Math.abs(VINDICATOR_HP - target.getHealth() - 30f) > 0.01f)
                     problems.add("the healthy Sage with 10 essence did not spark the enemy 4 blocks off (it lost " + (VINDICATOR_HP - target.getHealth()) + ")");
@@ -846,6 +857,7 @@ public class SparkSageGameTests {
                 // pass could have cast first
                 Essence.add(caster, 10);
                 UnitGrid.invalidate();
+                standIdle(caster);
                 AutoCaster.look(level, caster, (Unit) caster);
                 if (Math.abs(VINDICATOR_HP - target.getHealth() - 30f) > 0.01f)
                     problems.add("a Sage as the bot gets it did not spark the enemy 4 blocks off (it lost " + (VINDICATOR_HP - target.getHealth()) + ")");
