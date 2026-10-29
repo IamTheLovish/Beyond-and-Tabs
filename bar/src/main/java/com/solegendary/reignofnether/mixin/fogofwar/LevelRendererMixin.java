@@ -136,50 +136,8 @@ public abstract class LevelRendererMixin {
         }
     }
 
-    @Final @Shadow private ObjectArrayList<LevelRenderer.RenderChunkInfo> renderChunksInFrustum;
-    private List<Pair<BlockPos, Integer>> chunksToReDirty = new ArrayList<>();
-
-    @Inject(
-            method = "compileChunks(Lnet/minecraft/client/Camera;)V",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void compileChunks(Camera pCamera, CallbackInfo ci) {
-
-        // hiding leaves around cursor
-        if (OrthoviewClientEvents.hideLeavesMethod == OrthoviewClientEvents.LeafHideMethod.AROUND_UNITS_AND_CURSOR &&
-                OrthoviewClientEvents.isEnabled()) {
-            UnitClientEvents.windowUpdateTicks -= 1;
-            if (UnitClientEvents.windowUpdateTicks <= 0) {
-                UnitClientEvents.windowUpdateTicks = UnitClientEvents.WINDOW_UPDATE_TICKS_MAX;
-                for (LevelRenderer.RenderChunkInfo chunkInfo : this.renderChunksInFrustum) {
-                    BlockPos chunkCentreBp = chunkInfo.chunk.getOrigin().offset((int) 8.5d, (int) 8.5d, (int) 8.5d);
-
-                    List<Pair<BlockPos, Integer>> newChunksToReDirty = new ArrayList<>();
-
-                    // rerender each chunk a second time so we can unhide leaves as they go out of range
-                    synchronized (UnitClientEvents.windowPositions) {
-                        for (Pair<BlockPos, Integer> pair : chunksToReDirty) {
-                            int times = pair.getSecond();
-                            if (pair.getFirst().equals(chunkInfo.chunk.getOrigin())) {
-                                chunkInfo.chunk.setDirty(true);
-                                times -= 1;
-                            }
-                            if (times > 0)
-                                newChunksToReDirty.add(new Pair<>(pair.getFirst(), times));
-                        }
-                        chunksToReDirty.clear();
-                        chunksToReDirty.addAll(newChunksToReDirty);
-
-                        UnitClientEvents.windowPositions.forEach(bp -> {
-                            if (chunkCentreBp.distSqr(bp) < 625) {
-                                chunkInfo.chunk.setDirty(true);
-                                chunksToReDirty.add(new Pair<>(chunkInfo.chunk.getOrigin(), 10));
-                            }
-                        });
-                    }
-                }
-            }
-        }
-    }
+    // (Oct 22) The leaf windows' re-mesh lived here: every 5 frames, every chunk in view within 25 blocks of any unit
+    // or the cursor was marked dirty - and again for the next 10 rounds - so the glass swap kept the chunk builder
+    // busy whenever leaf hiding was on (and never ran under Embeddium, which has no compileChunks). The fade mode
+    // marks only the sections its holes touch, when a hole moves: orthoview/LeafFade.
 }

@@ -88,18 +88,24 @@ public class OrthoviewClientEvents {
 
     public static final int CHAT_Y_OFFSET = -55; // shift chat up by this much when in RTS cam to make room for the
 
+    /**
+     * The RTS view's leaf modes (HUD leaves button: NONE -> FADE -> ALL -> NONE). NONE: trees stay solid, units under
+     * them show as silhouettes (CanopySilhouettes). FADE: leaves fade softly round the cursor and your selected units
+     * under cover (LeafFade - it replaced the green-glass swap round every unit, Oct 22). ALL: every leaf hidden,
+     * trunks only.
+     */
     public enum LeafHideMethod {
-        NONE, AROUND_UNITS_AND_CURSOR, // requires threaded video option
-        ALL
+        NONE, FADE, ALL
     }
 
+    /** Leaves are see-through to the cursor's ground pick (FADE and ALL): a click under a canopy reaches the ground. */
     public static boolean shouldHideLeaves() {
         return hideLeavesMethod != LeafHideMethod.NONE;
     }
 
     // Default NONE (lovish Oct 22 17:52): the old default swapped every leaf near the cursor/units for green stained
     // glass, so trees turned see-through as the cursor moved, and each swap re-meshed the chunk. Trees stay solid;
-    // units under canopies get silhouettes instead (planned). The HUD leaves button still cycles the other modes.
+    // units under canopies get silhouettes instead. The HUD leaves button still cycles the other modes.
     public static LeafHideMethod hideLeavesMethod = LeafHideMethod.NONE;
     public static int enabledCount = 0;
     public static boolean enabled = false;
@@ -1239,7 +1245,7 @@ public class OrthoviewClientEvents {
                 14,
                 switch(hideLeavesMethod) {
                     case NONE -> ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/leaves.png");
-                    case AROUND_UNITS_AND_CURSOR -> ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/lime_stained_glass.png");
+                    case FADE -> ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/lime_stained_glass.png");
                     case ALL -> ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/glass.png");
                 },
                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png"),
@@ -1248,19 +1254,18 @@ public class OrthoviewClientEvents {
                 () -> !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || !MinimapClientEvents.isLargeMap(),
                 () -> true,
                 () -> {
+                    hideLeavesMethod = switch (hideLeavesMethod) {
+                        case NONE -> LeafHideMethod.FADE;
+                        case FADE -> LeafHideMethod.ALL;
+                        case ALL -> LeafHideMethod.NONE;
+                    };
+                    // the meshers must read the new mode before the full re-mesh below starts
+                    LeafFade.syncMode();
                     FogOfWarClientEvents.resetFogChunks();
-                    UnitClientEvents.windowUpdateTicks = 0;
-                    if (hideLeavesMethod == LeafHideMethod.NONE) {
-                        hideLeavesMethod = LeafHideMethod.AROUND_UNITS_AND_CURSOR;
-                    } else if (hideLeavesMethod == LeafHideMethod.AROUND_UNITS_AND_CURSOR) {
-                        hideLeavesMethod = LeafHideMethod.ALL;
-                    } else if (hideLeavesMethod == LeafHideMethod.ALL) {
-                        hideLeavesMethod = LeafHideMethod.NONE;
-                    }
                 },
                 null,
                 List.of(
-                        fcs(I18n.get("hud.orthoview.reignofnether.hiding_leaves_around"), hideLeavesMethod == LeafHideMethod.AROUND_UNITS_AND_CURSOR),
+                        fcs(I18n.get("hud.orthoview.reignofnether.hiding_leaves_around"), hideLeavesMethod == LeafHideMethod.FADE),
                         fcs(I18n.get("hud.orthoview.reignofnether.hiding_leaves_all"), hideLeavesMethod == LeafHideMethod.ALL),
                         fcs(I18n.get("hud.orthoview.reignofnether.disabled_hiding_leaves"), hideLeavesMethod == LeafHideMethod.NONE)
                 )

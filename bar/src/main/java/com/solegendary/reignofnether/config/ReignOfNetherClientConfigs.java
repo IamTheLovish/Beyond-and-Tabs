@@ -64,6 +64,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> HEALTH_BAR_MODE;
     // unit render level of detail (unit/modelling/renderers/UnitLod): false = the old behaviour, for A/B comparison
     public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_RENDER_LOD;
+    // units hidden by leaves or walls in the RTS view drawn as team/relationship-coloured silhouettes (orthoview/CanopySilhouettes)
+    public static final ForgeConfigSpec.ConfigValue<Boolean> UNIT_SILHOUETTES;
     public static final ForgeConfigSpec.ConfigValue<Boolean> LIVING_ARMY;
     public static final ForgeConfigSpec.IntValue MOTION_BREATH, MOTION_WEIGHT, MOTION_FIDGET, MOTION_LEAN, MOTION_ACCEL,
         MOTION_FLINCH, MOTION_SECONDARY;
@@ -239,6 +241,8 @@ public class ReignOfNetherClientConfigs {
         GROUND_SCARS = BUILDER.define("ground_scars", true);
         BUILDER.comment("Unit render level of detail: with a shader pack, units skip their team-colour / glow overlay passes in the pack's shadow map (the body already casts that shadow); outside the RTS view their small detail parts follow on-screen size instead of a fixed 40 blocks. Nothing changes up close. false = the old behaviour, for A/B comparison (the [FrameParts] line's unitBodies and unitShadow in latest.log); the file is re-read while the game runs. -Dreignofnether.unitLod=false overrides it.");
         UNIT_RENDER_LOD = BUILDER.define("unit_render_lod", true);
+        BUILDER.comment("Unit silhouettes: in the RTS view, units hidden under tree canopies or behind walls are drawn through them as a silhouette - your own in your team colour, allies cyan, enemies red (never units you cannot see). Mod Settings -> Display; works with and without shader packs.");
+        UNIT_SILHOUETTES = BUILDER.define("unit_silhouettes", true);
         BUILDER.comment("Living army (design/living_army.md): units breathe, shift their weight, fidget, lean into turns, rock on starts and stops and flinch from where a blow came from - realistic up close, a little larger from the RTS camera. false = the old motion. Client only.");
         LIVING_ARMY = BUILDER.define("living_army", true);
         BUILDER.comment("Living army: how strong each behaviour plays, in percent (100 = as designed, 0 = off, 200 = double)");

@@ -99,9 +99,20 @@ public class DisplaySettingsScreen extends Screen {
             v -> "Distance haze: " + v + "%").pos(right, y).size(colW, rowH))
             .setTooltip(Tooltip.create(Component.literal(
                 "How strongly far ground fades into the sky colour (100% = default, 0% = no haze, the grade stays)")));
+        y += step;
+        Button silhouettes = addRenderableWidget(ReignOfNetherConfigScreen.button(left, y, colW, rowH, silhouettesLabel(), b -> {
+            ReignOfNetherClientConfigs.UNIT_SILHOUETTES.set(!ReignOfNetherClientConfigs.UNIT_SILHOUETTES.get());
+            b.setMessage(silhouettesLabel());
+        }));
+        silhouettes.setTooltip(Tooltip.create(Component.literal(
+            "Units hidden under tree canopies or behind walls show through them as a silhouette: yours in your team colour, allies cyan, enemies red. Never shows a unit you cannot see. The leaves button on the minimap cycles solid / fade round the cursor / hidden leaves.")));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(right, this.height - 29, colW, 20,
             CommonComponents.GUI_DONE, b -> this.minecraft.setScreen(this.parent)));
+    }
+
+    private static Component silhouettesLabel() {
+        return Component.literal("Unit silhouettes: " + (ReignOfNetherClientConfigs.UNIT_SILHOUETTES.get() ? "On" : "Off"));
     }
 
     private static Component iconModeLabel() {

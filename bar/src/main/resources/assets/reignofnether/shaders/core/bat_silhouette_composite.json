@@ -1,0 +1,15 @@
+{
+    "vertex": "reignofnether:bat_silhouette_composite",
+    "fragment": "reignofnether:bat_silhouette_composite",
+    "attributes": [ "Position" ],
+    "samplers": [
+        { "name": "DiffuseSampler" }
+    ],
+    "uniforms": [
+        { "name": "OutSize", "type": "float", "count": 2, "values": [ 1.0, 1.0 ] },
+        { "name": "FillAlpha", "type": "float", "count": 1, "values": [ 0.42 ] },
+        { "name": "RimAlpha", "type": "float", "count": 1, "values": [ 0.95 ] },
+        { "name": "RimPx", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "Models", "type": "float", "count": 1, "values": [ 1.0 ] }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "vertex": "reignofnether:bat_silhouette_capsule",
+    "fragment": "reignofnether:bat_silhouette_capsule",
+    "attributes": [ "Position", "Color", "UV0" ],
+    "samplers": [],
+    "uniforms": [
+        { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "FillAlpha", "type": "float", "count": 1, "values": [ 0.42 ] },
+        { "name": "RimAlpha", "type": "float", "count": 1, "values": [ 0.95 ] }
+    ]
+}

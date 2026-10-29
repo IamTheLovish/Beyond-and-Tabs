@@ -146,6 +146,9 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
         // the world look: haze + grade + vignette after the world, before the hand and HUD (postfx/WorldLookPass)
         vanillaEventBus.register(com.solegendary.reignofnether.postfx.WorldLookClientEvents.class);
+        // units under canopies: silhouettes through leaves and walls, and the soft leaf fade (orthoview/)
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.CanopySilhouettes.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.LeafFade.class);
         vanillaEventBus.register(com.solegendary.reignofnether.commands.lang.CommandBarClientEvents.class);
 
         // to allow singleplayer integrated server to work
