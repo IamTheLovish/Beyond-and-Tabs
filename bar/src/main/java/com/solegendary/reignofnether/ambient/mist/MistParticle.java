@@ -60,9 +60,10 @@ public class MistParticle extends TextureSheetParticle {
         this.lifetime = MistMath.lifetime(random.nextDouble());
         this.start = MistMath.startSize(random.nextDouble());
         this.speed = MistMath.driftSpeed(random.nextDouble());
-        this.spin = (random.nextFloat() - 0.5f) * 0.004f;        // a full turn takes minutes
+        this.spin = (random.nextFloat() - 0.5f) * 0.0012f;       // r4: barely turns - it stays a band along the wind
         this.phase = random.nextFloat() * Mth.TWO_PI;
-        this.rot = this.oRot = random.nextFloat() * Mth.TWO_PI;
+        // r4: laid along the wind it drifts with (WindField.heading), give or take ~17 degrees: bands, not discs
+        this.rot = this.oRot = (float) (WindField.heading(level.getGameTime() / 20.0) + (random.nextFloat() - 0.5f) * 0.6f);
         this.alpha = 0;
         this.quadSize = (float) (start / 2);
         setSprite(sprites.get(random.nextInt(4), 3));
@@ -151,13 +152,14 @@ public class MistParticle extends TextureSheetParticle {
         float cy = (float) (Mth.lerp(partialTicks, yo, y) - cam.y);
         float cz = (float) (Mth.lerp(partialTicks, zo, z) - cam.z);
         float r = Mth.lerp(partialTicks, oRot, rot);
-        float s = quadSize;
-        float fx = Mth.cos(r) * s, fz = Mth.sin(r) * s;     // one half-axis of the quad; the other is (-fz, fx)
+        float s = quadSize, l = (float) (quadSize * MistMath.ASPECT);
+        float ax = Mth.cos(r) * l, az = Mth.sin(r) * l;     // the long half-axis, along the wind
+        float bx = -Mth.sin(r) * s, bz = Mth.cos(r) * s;    // the short one, across it
         float u0 = getU0(), u1 = getU1(), v0 = getV0(), v1 = getV1();
-        vert(buffer, cx - fx + fz, cy, cz - fz - fx, u0, v0);
-        vert(buffer, cx + fx + fz, cy, cz + fz - fx, u1, v0);
-        vert(buffer, cx + fx - fz, cy, cz + fz + fx, u1, v1);
-        vert(buffer, cx - fx - fz, cy, cz - fz + fx, u0, v1);
+        vert(buffer, cx - ax - bx, cy, cz - az - bz, u0, v0);
+        vert(buffer, cx + ax - bx, cy, cz + az - bz, u1, v0);
+        vert(buffer, cx + ax + bx, cy, cz + az + bz, u1, v1);
+        vert(buffer, cx - ax + bx, cy, cz - az + bz, u0, v1);
     }
 
     private void vert(VertexConsumer b, float x, float y, float z, float u, float v) {

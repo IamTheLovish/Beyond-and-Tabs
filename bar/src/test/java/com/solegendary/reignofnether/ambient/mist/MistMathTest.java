@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the numbers but the renderer: vanilla's particle shader discards every fragment under alpha 0.1, and r2 drew each
  * winding at half its alpha (0.075-0.175, times the sprite's own 0-0.9), so nearly every pixel of every wisp was
  * thrown away. r3 draws one quad with our own render type (no 0.1 cut, no depth write), at alpha 0.2-0.5.
+ * Round 4 (eyes run 40819635724): r3 showed, as separate round cotton balls. r4: a veil - longer, bigger, fainter
+ * wisps that overlap (expectedCover), and the dawn still just after sunrise.
  */
 class MistMathTest {
 
@@ -252,8 +254,8 @@ class MistMathTest {
 
     @Test
     void peakAlphaStaysSoft() {
-        Object[][] rows = { { 0.0, 0.0, 0.2 }, { 1.0, 1.0, 0.5 }, { 0.5, 0.5, 0.275 }, { 2.0, 3.0, 0.5 },
-            { -1.0, 1.0, 0.2 } };
+        Object[][] rows = { { 0.0, 0.0, 0.12 }, { 1.0, 1.0, 0.25 }, { 0.5, 0.5, 0.1525 }, { 2.0, 3.0, 0.25 },
+            { -1.0, 1.0, 0.12 } };
         for (Object[] r : rows)
             assertEquals((double) r[2], MistMath.peakAlpha((double) r[0], (double) r[1]), 1e-9,
                 "alpha at score " + r[0] + " density " + r[1]);
@@ -269,10 +271,16 @@ class MistMathTest {
     }
 
     @Test
-    void anOpenMeadowAtDawnStillShows() {
-        // flat open ground (BASE_SCORE) at full dawn density: a centre alpha of 0.25+ reads from the RTS camera
-        double a = MistMath.peakAlpha(MistMath.BASE_SCORE, 1.0) * MistMath.SPRITE_PEAK;
-        assertTrue(a >= 0.25, "open meadow centre alpha " + a);
+    void aDawnMeadowIsAVeilNotABlanketNorCottonBalls() {
+        // r3 (eyes run 40819635724) showed: 120 round wisps of alpha 0.2-0.5, 5-12 blocks, read as separate cotton
+        // balls - about 18% of the ground under mist, in discs. r4: bigger, longer (stretched along the wind), fainter
+        // each, so they overlap into a veil. The model: cover = 1 - exp(-wisps x quad area x mean alpha / spawn disc);
+        // a veil is 20-45% of open meadow at the default zoom (pillar 2: units still read through it)
+        double cover = MistMath.expectedCover(30f, MistMath.BASE_SCORE);
+        assertTrue(cover >= 0.2 && cover <= 0.45, "open meadow at dawn, zoom 30: " + cover);
+        // and a wisp overlaps several others: no wisp stands alone as a disc
+        assertTrue(MistMath.overlaps(30f) >= 4, "overlaps " + MistMath.overlaps(30f));
+        assertTrue(MistMath.ASPECT >= 1.5 && MistMath.ASPECT <= 2.2, "drawn longer along the wind: " + MistMath.ASPECT);
     }
 
     @Test
@@ -303,15 +311,15 @@ class MistMathTest {
 
     @Test
     void sizesAreBigAndGrowSlowly() {
-        assertEquals(5, MistMath.startSize(0), EPS);
-        assertEquals(10, MistMath.startSize(1), EPS);
+        assertEquals(8, MistMath.startSize(0), EPS);
+        assertEquals(13, MistMath.startSize(1), EPS);
         assertEquals(5, MistMath.size(5, 0, 500), EPS);
         assertEquals(5.5, MistMath.size(5, 250, 500), EPS);
         assertEquals(6, MistMath.size(5, 500, 500), EPS);
         for (double r = 0; r <= 1; r += 0.05)
             for (int age = 0; age <= 700; age += 50) {
                 double s = MistMath.size(MistMath.startSize(r), age, 700);
-                assertTrue(s >= 5 && s <= 12, "5-12 blocks: " + s);
+                assertTrue(s >= 8 && s <= 15.6, "8-15.6 blocks across (x ASPECT along the wind): " + s);
             }
     }
 
@@ -402,5 +410,8 @@ class MistMathTest {
     @Test
     void theDawnStillIsInTheThickOfIt() {
         assertEquals(1.0, MistMath.density(MistMath.EYES_DAWN_TIME), EPS);
+        // r3's 23500 was before sunrise: with shaders the still was near black. Just after sunrise, lit and thick
+        long t = Math.floorMod(MistMath.EYES_DAWN_TIME, 24000L);
+        assertTrue(t >= 0 && t <= 1000, "just after sunrise: " + t);
     }
 }
