@@ -89,7 +89,7 @@ public final class TombcallerServerEvents {
         }
     }
 
-    private record Away(UUID caster, long end) { }
+    private record Away(UUID caster, String owner, long end) { }
 
     static {
         EssenceServerEvents.addReach(TombcallerServerEvents::pullReach, TombstoneUnit.CREEP_PULL_RANGE);
@@ -97,14 +97,23 @@ public final class TombcallerServerEvents {
 
     // ------------------------------------------------------------------------------------------ the queries
 
-    /** The tombstones {@code caster} raised that still stand. */
+    /**
+     * The tombstones {@code caster} raised that still stand for its owner (one a Wraith possessed is the enemy's now:
+     * PR 371 review round 1 found the same for the Grave Adept).
+     */
     public static List<TombstoneUnit> stonesOf(LivingEntity caster) {
         List<TombstoneUnit> out = new ArrayList<>();
         UUID id = caster.getUUID();
+        String owner = ownerOf(caster);
         for (TombstoneUnit s : stones)
-            if (s.isAlive() && !s.isRemoved() && id.equals(s.casterId()))
+            if (s.isAlive() && !s.isRemoved() && id.equals(s.casterId()) && owner.equals(s.getOwnerName()))
                 out.add(s);
         return out;
+    }
+
+    private static String ownerOf(LivingEntity le) {
+        String owner = le instanceof Unit u ? u.getOwnerName() : null;
+        return owner == null ? "" : owner;
     }
 
     /**
@@ -114,9 +123,10 @@ public final class TombcallerServerEvents {
     public static int stoneCount(LivingEntity caster) {
         int n = stonesOf(caster).size();
         UUID id = caster.getUUID();
+        String owner = ownerOf(caster);
         long now = now(caster.level());
         for (Away a : away.values())
-            if (id.equals(a.caster) && a.end > now)
+            if (id.equals(a.caster) && owner.equals(a.owner) && a.end > now)
                 n++;
         return n;
     }
@@ -294,8 +304,9 @@ public final class TombcallerServerEvents {
             TombstoneUnit s = stones.get(i);
             if (s.isRemoved() || !s.isAlive()) {
                 // a death left its fade in onDeath; an unload stops watching it but it still counts toward the cap
-                if (s.isAlive() && s.getRemovalReason() != null && !s.getRemovalReason().shouldDestroy() && s.casterId() != null)
-                    away.put(s.getUUID(), new Away(s.casterId(), s.end()));
+                // (not isAlive(): a removed LivingEntity is never alive, unloaded or not - the round-1 fix never fired)
+                if (s.getHealth() > 0 && s.getRemovalReason() != null && !s.getRemovalReason().shouldDestroy() && s.casterId() != null)
+                    away.put(s.getUUID(), new Away(s.casterId(), s.getOwnerName(), s.end()));
                 stones.remove(i);
                 continue;
             }

@@ -29,6 +29,7 @@ import com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -527,6 +528,78 @@ public class TombcallerGameTests {
             } finally {
                 clearStones(level, stones.stream().filter(Objects::nonNull).toList(), owner);
                 discardAll(callers);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * The three-stone cap holds through an unload and a possession: with one of its three stones' chunk unloaded the
+     * caster still keeps three and a fourth is refused (nothing spent); back, it is counted once. A stone a Wraith
+     * possessed (its owner now an enemy's) no longer counts, and the caster may raise one again.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tombcaller_stone_cap_holds_through_unload_and_possession(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "capaway"), foe = owner(helper, "capawayfoe");
+        Mob caller = caller(helper, owner, 2, 8, 30);
+        if (caller == null) {
+            helper.fail("could not spawn the Tombcaller");
+            return;
+        }
+        List<TombstoneUnit> stones = new ArrayList<>(Arrays.asList(
+            stone(helper, caller, owner, 5, 8, 0, false), stone(helper, caller, owner, 7, 8, 0, false), stone(helper, caller, owner, 5, 10, 0, false)));
+        CompoundTag saved = new CompoundTag();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (stones.contains(null))
+                    throw new IllegalStateException("could not raise the three stones");
+                if (!stones.get(2).save(saved))
+                    early.add("setup: the stone would not save");
+                stones.get(2).setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);   // as its chunk unloading does
+            } catch (RuntimeException ex) {
+                early.add("unloading threw " + ex);
+            }
+        });
+        helper.runAfterDelay(4, () -> {
+            try {
+                if (stones.contains(null))
+                    return;
+                if (TombcallerServerEvents.stoneCount(caller) != RaiseTombstone.MAX_STONES)
+                    early.add("with one stone unloaded the caster counts " + TombcallerServerEvents.stoneCount(caller) + " stones, expected 3");
+                if (RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true) != null || Essence.get(caller) != 30)
+                    early.add("with one stone unloaded a fourth was raised (essence " + Essence.get(caller) + ")");
+                Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
+                if (back == null || !level.addFreshEntity(back))
+                    throw new IllegalStateException("the saved stone did not load back");
+                if (back instanceof TombstoneUnit b)
+                    stones.add(b);
+                if (TombcallerServerEvents.stoneCount(caller) != RaiseTombstone.MAX_STONES || TombcallerServerEvents.stonesOf(caller).size() != 3)
+                    early.add("with the stone back the caster counts " + TombcallerServerEvents.stoneCount(caller) + " stones ("
+                        + TombcallerServerEvents.stonesOf(caller).size() + " standing), expected 3 and 3");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (stones.contains(null))
+                    throw new IllegalStateException("could not raise the three stones");
+                stones.get(0).setOwnerName(foe);   // what a Wraith's full possession does (WraithUnit.onCastPossess)
+                if (TombcallerServerEvents.stoneCount(caller) != 2)
+                    problems.add("with one stone possessed the caster counts " + TombcallerServerEvents.stoneCount(caller) + ", expected 2");
+                TombstoneUnit fresh = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true);
+                if (fresh != null)
+                    stones.add(fresh);
+                if (fresh == null || Essence.get(caller) != 30 - RaiseTombstone.ESSENCE_COST)
+                    problems.add("with one stone possessed a new one was refused (" + RaiseTombstone.lastRefusal + ")");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                clearStones(level, stones.stream().filter(Objects::nonNull).toList(), owner);
+                caller.discard();
             }
             finish(helper, problems);
         });
