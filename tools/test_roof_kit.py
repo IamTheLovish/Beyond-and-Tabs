@@ -39,6 +39,20 @@ class Tones(unittest.TestCase):
                 self.assertTrue(all(n == 1 for n in runs(row, 2)), (seed, row))       # pale cells single
                 s = "".join(map(str, row))
                 self.assertNotIn("101", s, (seed, row))                               # never a chequer
+                self.assertNotIn("202", s, (seed, row))                               # nor a pale one (20202)
+
+    def test_no_pale_chequer_over_many_seeds(self):
+        """review, Oct 29: '20202' passed in 136 of 2000 seeds - pale cells stand at least 2 base cells apart."""
+        for seed in range(2000):
+            for row in R.tones(5, 20, seed=seed):
+                self.assertNotIn("202", "".join(map(str, row)), seed)
+
+    def test_impossible_target_raises(self):
+        """After its attempts tones() raised nothing and returned an off-target grid; now it says so."""
+        with self.assertRaises(ValueError):
+            R.tones(1, 2, seed=0)                  # 2 cells: a base share of 0, 50 or 100 %, never 55-72 %
+        with self.assertRaises(ValueError):
+            R.retone({(0, 0, 0): ("bricks", {})}, R.SLATE)
 
     def test_wet_eaves_bleached_ridge(self):
         dark_low = dark_high = pale_low = pale_high = 0
@@ -69,9 +83,32 @@ class Gable(unittest.TestCase):
         self.r = R.gable(self.span, self.length, seed=1)
 
     def test_eaves_overhang_one_block(self):
-        b = S.Build({**walls(self.span, self.length), **self.r})
-        hist = S.eave_overhang(b)
-        self.assertEqual(set(hist), {1})                          # every eave and verge cell is 1 block proud
+        """Every eave and verge cell is 1 block proud: the overhang count is the whole ring round the walls (two
+        eaves of length + 2, two verges of span), less the ridge cap's ends (a full block, not a roof shape). A roof
+        with its verges or one eave missing also measures {1: n} - the count is what catches it (review, Oct 29)."""
+        def over(r):
+            return S.eave_overhang(S.Build({**walls(self.span, self.length), **r}))
+        ring = 2 * (self.length + 2) + 2 * self.span - 2
+        self.assertEqual(over(self.r), {1: ring})
+        no_verges = {q: c for q, c in self.r.items() if q[2] not in (-1, self.length) or c[0] in R.SLATE["ridge"]}
+        no_eave = {q: c for q, c in self.r.items() if q[0] != -1}
+        self.assertNotEqual(over(no_verges), {1: ring})
+        self.assertNotEqual(over(no_eave), {1: ring})
+
+    def test_even_span_has_a_two_wide_ridge(self):
+        """The works shed is 6 wide (x 11..16): an even span tops in a 2-wide ridge, both slopes mirrored, and still
+        oversails 1 all round (gable(6, 10) raised IndexError: review, Oct 29)."""
+        r = R.gable(6, 10, seed=0)
+        ridge = {(u, v) for (u, y, v), (n, _) in r.items() if n in R.SLATE["ridge"]}
+        self.assertEqual({u for u, _ in ridge}, {2, 3})
+        self.assertEqual({v for _, v in ridge}, set(range(-1, 11)))
+        tops = {}
+        for (u, y, v), (n, p) in r.items():
+            if v == 4 and n != R.SLATE["gutter"]:
+                tops[u] = max(tops.get(u, -9), y + (0.5 if p.get("type") == "bottom" else 1.0))
+        self.assertEqual([tops[u] for u in range(-1, 7)], [0.5, 1.0, 1.5, 2.0, 2.0, 1.5, 1.0, 0.5])
+        hist = S.eave_overhang(S.Build({**walls(6, 10), **r}))
+        self.assertEqual(hist, {1: 2 * 12 + 2 * 6 - 4})
 
     def test_slate_pitch_rises_half_a_block_per_block(self):
         tops = {}
@@ -115,6 +152,37 @@ class Gable(unittest.TestCase):
         self.assertTrue(any("oxidized" in n for n, _ in r.values()))
         self.assertTrue(all(n.startswith("waxed_") or n in R.COPPER["ridge"] + R.COPPER["verge"]
                             + (R.COPPER["gutter"],) for n, _ in r.values()))
+
+
+class Retone(unittest.TestCase):
+    """r8: courses laid on cells that already have their shapes (the tower cone's frozen voxels, a clipped gable)."""
+    def setUp(self):
+        self.cells = {}
+        for y in range(10):                                       # a stepped face: rows of full blocks and stairs
+            for z in range(-8 + y // 2, 9 - y // 2):
+                self.cells[(y // 2, y, z)] = (("bricks", {}) if y % 2 == 0 else
+                                              ("brick_stairs", {"facing": "east", "half": "bottom"}))
+
+    def test_keeps_shapes_and_states(self):
+        r = R.retone(self.cells, R.COPPER, seed=5)
+        self.assertEqual(set(r), set(self.cells))
+        for q, (n, p) in r.items():
+            self.assertEqual(R.shape(n), R.shape(self.cells[q][0]), q)
+            self.assertEqual(p, self.cells[q][1], q)
+            self.assertIsNotNone(R.family(n, R.COPPER), n)
+
+    def test_base_tone_share_holds_on_the_cells_themselves(self):
+        for seed in range(20):
+            r = R.retone(self.cells, R.COPPER, seed=seed)
+            share = sum(R.family(n, R.COPPER) == 0 for n, _ in r.values()) / len(r)
+            self.assertTrue(0.55 <= share <= 0.72, (seed, share))
+
+    def test_no_chequer_along_a_course(self):
+        r = R.retone(self.cells, R.SLATE, seed=2)
+        for y in range(10):
+            row = "".join(str(R.family(r[q][0], R.SLATE)) for q in sorted(q for q in r if q[1] == y))
+            self.assertNotIn("101", row, y)
+            self.assertNotIn("1111", row, y)
 
 
 if __name__ == "__main__":
