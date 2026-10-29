@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """THE gates module: measures design/architecture_rules.md's gates G1-G7 (+ a light floor and a vanilla-id check) on a
 built structure, so every generator test asks the same questions the same way. Built on tools/schem_study.py; tests
-(each gate's red case first): tools/test_building_gates.py. G6 (roof tiling) stays with tools/roof_kit.py's tests.
+(each gate's red case first): tools/test_building_gates.py. G6 here is the roof chequer check; the course
+rules (T0 share, wet eaves) stay with tools/roof_kit.py's tests.
 
 Frame: y 0 is the foundation / pad, y 1 the base course. The WALL FOOTPRINT is the plan enclosed by the columns that
 carry 3 or more full, non-roof-shape, non-thin blocks above y 0, standing from y 1 or 2: a plinth, pier base, sill or
@@ -229,6 +230,26 @@ def lights(b, faces=("south", "west"), bay=4):
     return {"ok": all(v["lit"] >= v["bays"] for v in out.values()), "faces": out}
 
 
+CHEQUER_MAX = 0.2      # roof_kit's own courses reach ~0.15 at worst over 40 seeds; an alternating roof is ~1.0
+
+
+def roof_chequer(b):
+    """G6: the share of the visible roof cells (roof shapes on top of their column, at or above the eave) that sit in
+    a 2 x 2 alternation a b / b a seen from above - a chequer, or a diagonal line of single contrasting cells."""
+    _, _, eave = _frame(b)
+    top = {}
+    for (x, y, z), (n, _) in b.blocks.items():
+        if n not in S.AIR and y > top.get((x, z), (-10 ** 9, None))[0]:
+            top[(x, z)] = (y, n)
+    g = {c: n for c, (y, n) in top.items() if S.is_roof_shape(n) and y >= eave}
+    bad = set()
+    for (x, z), a in g.items():
+        c = g.get((x + 1, z))
+        if c is not None and c != a and g.get((x, z + 1)) == c and g.get((x + 1, z + 1)) == a:
+            bad |= {(x, z), (x + 1, z), (x, z + 1), (x + 1, z + 1)}
+    return len(bad) / len(g) if g else 0.0
+
+
 def unknown_ids(names):
     """Sorted ids (minecraft: optional) that are not vanilla 1.20.1 blocks; any other namespace is unknown here."""
     return sorted({n for n in names if (n[10:] if n.startswith("minecraft:") else n) not in VANILLA})
@@ -246,6 +267,7 @@ def gates(b, faces=("south", "west"), bay=4):
             "G4": {"ok": s["roof_family"] != s["wall_family"], "wall": s["wall_family"], "roof": s["roof_family"]},
             "G5": {"ok": all(v["ok"] for v in d.values()),
                    "planes": {f: {k: round(v, 2) for k, v in sorted(x["planes"].items())} for f, x in d.items()}},
+            "G6": {"ok": roof_chequer(b) <= CHEQUER_MAX, "chequer": round(roof_chequer(b), 3)},
             "G7": base_cap(b), "light": lights(b, faces, bay), "ids": {"ok": not bad, "unknown": bad}}
 
 

@@ -191,6 +191,43 @@ class LightFloor(unittest.TestCase):
         self.assertTrue(r["ok"], r)
 
 
+class G6NoChequer(unittest.TestCase):
+    def chequer_roof(self):
+        """A flat roof of two slabs alternating cell by cell - the r1-r7 fault, and what a diagonal hip line of
+        single contrasting cells reads as from above."""
+        c = box(9, 7, 5, base="polished_andesite")
+        for x in range(-1, 10):
+            for z in range(-1, 8):
+                n = "deepslate_tile_slab" if (x + z) % 2 else "dark_oak_slab"
+                c[(x, 6, z)] = (n, {"type": "bottom"})
+        return c
+
+    def test_red_alternating_roof(self):
+        r = G.roof_chequer(B(self.chequer_roof()))
+        self.assertGreater(r, 0.5)
+        self.assertFalse(G.gates(B(self.chequer_roof()))["G6"]["ok"])
+
+    def test_red_one_cell_hip_lines(self):
+        """A pyramid roof in one slate whose four hips are single wood cells down the diagonals - the r1 hip_roof the
+        critic called 'chequered wood patches'."""
+        c = box(9, 9, 5, base="polished_andesite")
+        for x in range(-1, 10):
+            for z in range(-1, 10):
+                d = min(x + 1, 9 - x, z + 1, 9 - z)
+                hip = abs(x - 4) == abs(z - 4)
+                c[(x, 6 + d // 2, z)] = ("dark_oak_slab" if hip else "deepslate_tile_slab",
+                                         {"type": "bottom" if d % 2 == 0 else "top"})
+        self.assertGreater(G.roof_chequer(B(c)), G.CHEQUER_MAX)
+
+    def test_green_roof_kit_gables(self):
+        """The roof kit's three-tone courses stay under the line for every seed (they were built never to chequer)."""
+        for seed in range(30):
+            c = box(9, 7, 5, base="polished_andesite")
+            for (x, y, z), v in R.gable(7, 9, axis="x", seed=seed).items():
+                c[(x, y + 6, z)] = v
+            self.assertLessEqual(G.roof_chequer(B(c)), G.CHEQUER_MAX, seed)
+
+
 class VanillaIds(unittest.TestCase):
     def test_red_ids_that_do_not_exist_in_1_20_1(self):
         bad = ["smooth_stone_stairs", "polished_andesite_wall", "quartz_brick_stairs", "calcite_stairs",
@@ -219,7 +256,7 @@ class VanillaIds(unittest.TestCase):
 class AllGates(unittest.TestCase):
     def test_report_names_every_gate(self):
         r = G.gates(B(gable_on(box(), 9, 7, 5)))
-        self.assertEqual(set(r), {"G1", "G2", "G3", "G4", "G5", "G7", "light", "ids"})
+        self.assertEqual(set(r), {"G1", "G2", "G3", "G4", "G5", "G6", "G7", "light", "ids"})
         self.assertFalse(r["G2"]["ok"])
         self.assertTrue(r["G1"]["ok"])
 

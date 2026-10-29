@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""The ARCHITECTURE KIT SHEET: every tools/arch_kit.py part stamped on one pad for the Eyes structure photos -
-Brassworks rows (roofs and towers at the back, openings and walls in front), one row of the same parts in the
-Sunforged set, and the demo bay (plinth, pilasters, windows, string course, cornice, eave over a slate roof) to show
-the parts compose. Wall parts stand in a short wall of their set (so reveals, sills and lips read against a wall);
-roof parts sit on a plain wall box. Fronts face south, toward the camera.
+"""The ARCHITECTURE KIT SHEETS for the Eyes structure photos: six compact pads (SHEETS, each <= 25 x 25 so every
+part fills the 3/4 and dusk stills - the r1 single 95-wide sheet put the camera too far out to read a dormer) -
+roofs, towers, walls, details in the Brassworks set, then the Sunforged and Gravebound sets - and the demo bay
+(plinth, pilasters, windows, cornice, eave over a slate roof) alone, to show the parts compose. Wall parts stand in a
+short wall of their set (reveals, sills and lips read against a wall); roof parts sit on a plain wall box. Fronts
+face south, toward the camera.
 
-    python3 tools/arch_kit_sheet.py [OUT]      -> design/arch_kit/kit_sheet.nbt (+ design/arch_kit/demo_bay.nbt)
+    python3 tools/arch_kit_sheet.py      -> design/arch_kit/arch_kit_<sheet>.nbt + design/arch_kit/demo_bay.nbt
 """
 import os
 import sys
@@ -15,9 +16,7 @@ import arch_kit as K  # noqa: E402
 import gen_structures as gs  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "design", "arch_kit", "kit_sheet.nbt")
 DEMO = os.path.join(ROOT, "design", "arch_kit", "demo_bay.nbt")   # alone: small enough for the 3/4 and dusk stills
-GAP = 3
 PAD = "stone_bricks"
 WALLED = {"eave", "cornice", "string_course", "pier", "window_tall", "window_medium", "window_small", "bay_tall",
           "machinery"}
@@ -89,54 +88,56 @@ def _barrel(m):
     return p
 
 
-ROWS = [   # back (north) to front (south)
-    ("brassworks", ["oversail", "cresting", "hip_roof", "chimney", "spire", "dome"]),
-    ("brassworks", ["dormer", "clerestory", "roof_light", "corbel_stage", "half_timber", "portal"]),
-    ("brassworks", ["eave", "cornice", "string_course", "pier", "window_tall", "window_medium", "window_small",
-                    "bay_tall"]),
-    ("brassworks", ["balustrade", "parapet", "tone_wall", "machinery", "gear"]),
-    ("sunforged", ["bay_tall", "portal", "spire", "half_timber", "chimney", "balustrade", "cornice"]),
-]
+SIZE = 25        # a compact sheet is at most 25 x 25, so every part fills the 3/4 and dusk stills
+SHEETS = {       # name -> [(set, part)], packed in shelves back (north) to front (south)
+    "arch_kit_roofs": [("brassworks", "oversail"), ("brassworks", "cresting"), ("brassworks", "hip_roof"),
+                       ("brassworks", "dormer")],
+    "arch_kit_towers": [("brassworks", "dome"), ("brassworks", "roof_light"), ("brassworks", "spire"),
+                        ("brassworks", "chimney"), ("brassworks", "corbel_stage")],
+    "arch_kit_walls": [("brassworks", "half_timber"), ("brassworks", "portal"), ("brassworks", "bay_tall"),
+                       ("brassworks", "window_medium"), ("brassworks", "window_small"), ("brassworks", "pier"),
+                       ("brassworks", "cornice"), ("brassworks", "eave")],
+    "arch_kit_details": [("brassworks", "gear"), ("brassworks", "machinery"), ("brassworks", "clerestory"),
+                         ("brassworks", "tone_wall"), ("brassworks", "balustrade"), ("brassworks", "parapet"),
+                         ("brassworks", "string_course"), ("brassworks", "window_tall")],
+    "arch_kit_sunforged": [("sunforged", "half_timber"), ("sunforged", "portal"), ("sunforged", "balustrade"),
+                           ("sunforged", "tone_wall"), ("sunforged", "bay_tall"), ("sunforged", "pier"),
+                           ("sunforged", "cornice")],
+    "arch_kit_gravebound": [("gravebound", "portal"), ("gravebound", "corbel_stage"), ("gravebound", "chimney"),
+                            ("gravebound", "spire"), ("gravebound", "bay_tall"), ("gravebound", "balustrade")],
+}
 
 
-def sheet():
+def _pack(parts):
+    """Shelf-pack normalised parts into SIZE x SIZE: (part, x, z) placements; raises if they don't fit."""
+    placed, x, z, shelf = [], 1, 1, 0
+    for p in parts:
+        _, x1, _, _, _, z1 = p.bbox()
+        w, d = x1 + 1, z1 + 1
+        if x + w > SIZE:
+            x, z, shelf = 1, z + shelf + 1, 0
+        assert x + w <= SIZE and z + d <= SIZE, "part %dx%d does not fit the sheet" % (w, d)
+        placed.append((p, x, z))
+        x += w + 1
+        shelf = max(shelf, d)
+    return placed
+
+
+def build(name):
+    """One compact sheet: its parts on a stone pad, fronts facing south."""
     sets = {m.name: m for m in K.SETS}
-    placed = []                      # (part, x, z) in sheet coords, part normalised to its own 0
-    z = 2
-    width = 0
-    for set_name, names in ROWS:
-        m = sets[set_name]
-        x = 2
-        depth = 0
-        for n in names:
-            p = K.normalised(piece(n, m))
-            x0, x1, _, _, z0, z1 = p.bbox()
-            placed.append((p, x, z))
-            x += x1 + 1 + GAP
-            depth = max(depth, z1 + 1)
-        width = max(width, x)
-        z += depth + GAP
-    demo = K.normalised(K.demo_bay(K.BRASSWORKS))
-    dx = width + 1
-    placed.append((demo, dx, 2))
-    w = dx + demo.bbox()[1] + 3
-    d = max(z, 2 + demo.bbox()[5] + 3)
     out = K.blank()
-    for x in range(w):
-        for zz in range(d):
-            out.set(x, 0, zz, PAD)
-    for p, ox, oz in placed:
-        oy = 0 if p is demo else 1
-        for (x, y, zz), v in p.b.items():
+    for x in range(SIZE):
+        for z in range(SIZE):
+            out.set(x, 0, z, PAD)
+    for p, ox, oz in _pack([K.normalised(piece(n, sets[s_])) for s_, n in SHEETS[name]]):
+        for (x, y, z), v in p.b.items():
             if v[0] not in ("air", "cave_air"):
-                out.b[(x + ox, y + oy, zz + oz)] = v
-            else:
-                out.b.pop((x + ox, y + oy, zz + oz), None)
+                out.b[(x + ox, y + 1, z + oz)] = v
     return out
 
 
-def write(out=OUT, s=None):
-    s = s or sheet()
+def write(out, s):
     x0, x1, y0, y1, z0, z1 = s.bbox()
     rig = gs._SunRig(x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1)
     for (x, y, z), (n, props) in s.b.items():
@@ -165,8 +166,9 @@ def demo():
 
 
 if __name__ == "__main__":
-    out = sys.argv[1] if len(sys.argv) > 1 else OUT
-    r = write(out)
-    print("kit sheet", r.size, len(r.b), "blocks ->", os.path.relpath(out, ROOT))
+    for name in SHEETS:
+        out = os.path.join(ROOT, "design", "arch_kit", name + ".nbt")
+        r = write(out, build(name))
+        print(name, r.size, len(r.b), "blocks ->", os.path.relpath(out, ROOT))
     r = write(DEMO, demo())
     print("demo bay", r.size, len(r.b), "blocks ->", os.path.relpath(DEMO, ROOT))
