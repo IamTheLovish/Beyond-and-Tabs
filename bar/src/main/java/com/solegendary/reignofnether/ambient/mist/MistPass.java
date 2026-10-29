@@ -24,6 +24,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RegisterShadersEvent;
@@ -154,7 +155,11 @@ public final class MistPass {
         Camera camera = evt.getCamera();
         Vec3 cam = camera.getPosition();
         invProj.set(evt.getProjectionMatrix()).invert();
-        invView.set(evt.getPoseStack().last().pose()).invert();
+        // the view rotation from the camera itself, as GameRenderer.renderLevel builds it: X by the pitch, then Y by the
+        // yaw + 180. Not the event's pose stack: in the RTS view it carries no rotation (the first in-game r6 still drew
+        // the mist as a band across the bottom of the screen - "height" was the screen's own up)
+        invView.identity().rotateX(camera.getXRot() * Mth.DEG_TO_RAD).rotateY((camera.getYRot() + 180f) * Mth.DEG_TO_RAD)
+            .invert();
         long now = System.nanoTime();
         float dt = lastNanos == 0 ? 0f : Math.min((now - lastNanos) / 1e9f, 0.25f);
         lastNanos = now;
