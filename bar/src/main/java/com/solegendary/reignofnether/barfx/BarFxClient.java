@@ -425,6 +425,90 @@ public final class BarFxClient {
         if (tier > 0 && faction != BarFx.F_NONE) factionDebris(faction, tier, x, y, cy, z, scale);
     }
 
+    /**
+     * The finish of a fallen unit's body (unit/modelling/motion/DeathFinish, Corpses): one burst as its faction's
+     * finish begins, n particles (the caller has already scaled them for the zoom) in two colours, shaped by style -
+     * light: a flash and motes of light rising off the body; crumble: bone falling in and ash; dust: a low cloud of
+     * war-paint dust; leaves: leaves and petals falling, a little stump that sprouts for a few seconds; seawater:
+     * spray, bubbles and foam; static: sparks crackling and a gust blowing smoke aside; gears: gears flung out of a
+     * puff of steam; derez: the body breaks into glowing shards of light that scatter and hang a moment before they
+     * wink out, over a flat ring of light (the AI faction, design draft PR 379). x, y, z = where the body lies (its
+     * feet), w = its width, h = its height lying down.
+     */
+    public static void deathFinish(String style, float x, float y, float z, float w, float h, int c1, int c2, int n) {
+        if (n <= 0 || MC.level == null)
+            return;
+        float scale = Math.max(.4f, Math.min(3, w));
+        float cy = y + Math.max(.2f, h);
+        float r = .5f * scale;
+        switch (style) {
+            case "light" -> {
+                flash(x, cy, z, .9f * scale, .25f, 0xFFFFFF);
+                flash(x, cy, z, 1.4f * scale, .5f, c1);
+                for (int i = 0; i < n; i++) {
+                    P f = add(FIRE, x + rnd(-r, r) * 1.6f, cy + rnd(-.1f, .2f), z + rnd(-r, r) * 1.6f, rnd(1f, 1.8f),
+                        rnd(.06f, .14f), i % 3 == 0 ? c2 : c1);
+                    f.vy = rnd(.8f, 2f); f.vx = rnd(-.15f, .15f); f.vz = rnd(-.15f, .15f); f.grow = .6f;
+                }
+                sparks(x, cy, z, n / 2, 1.5f, c1, 0, 0);
+            }
+            case "crumble" -> {
+                chunks(x, cy, z, n, 1.2f, c1, 4f);
+                for (int i = 0; i < Math.max(1, n / 4); i++)
+                    dust(x + rnd(-r, r) * 1.5f, y, z + rnd(-r, r) * 1.5f, .3f * scale, c2);
+                P p = smoke(x, y + .2f, z, .4f * scale, 2f, c2, .4f); p.vy = .15f; p.grow = 2.2f;
+            }
+            case "dust" -> {
+                for (int i = 0; i < Math.max(2, n / 3); i++)
+                    dust(x + rnd(-r, r) * 2f, y, z + rnd(-r, r) * 2f, .35f * scale, i % 2 == 0 ? c1 : c2);
+                P p = smoke(x, y + .3f, z, .5f * scale, 2.2f, c1, .35f); p.vy = .2f; p.grow = 2.4f;
+            }
+            case "leaves" -> {
+                chunks(x, cy + .3f, z, n, .5f, c1, 3f);
+                verdantPetals(2, x, cy, z, scale);
+                chunks(x, y, z, 1, 0f, c2, 4f);                       // the stump: a chunk that stays where it falls
+                emitter(x, y + .1f, z, 3f, .5f, .12f, 0x9CF07A);      // and sprouts: green wisps off it for a while
+                sparks(x, y + .2f, z, n / 3, .6f, 0x9CF07A, 0, 0);
+            }
+            case "seawater" -> {
+                tideSpray(3, x, cy, z, scale);
+                chunks(x, cy, z, n / 2, 1.5f, c1, 2f);
+                for (int i = 0; i < Math.max(2, n / 4); i++) {
+                    P p = smoke(x + rnd(-r, r) * 1.5f, y + .15f, z + rnd(-r, r) * 1.5f, .3f * scale, rnd(1f, 1.6f), c2, .5f);
+                    p.vy = .1f; p.grow = 2f;
+                }
+            }
+            case "static" -> {
+                flash(x, cy, z, .7f * scale, .12f, c1);
+                stormSparks(3, x, cy, z, scale);
+                sparks(x, cy, z, n, 3f, c2, 0, 0);
+                float gx = rnd(-1, 1), gz = rnd(-1, 1), gl = (float) Math.sqrt(gx * gx + gz * gz) + 1e-3f;
+                for (int i = 0; i < Math.max(2, n / 4); i++) {
+                    P p = smoke(x, cy, z, .25f * scale, rnd(.8f, 1.2f), 0xD8E8E4, .35f);
+                    p.vx = gx / gl * rnd(1.5f, 3f); p.vz = gz / gl * rnd(1.5f, 3f); p.vy = .2f; p.grow = 2f;
+                }
+            }
+            case "derez" -> {
+                flash(x, cy, z, .8f * scale, .15f, c2);
+                flash(x, cy, z, 1.3f * scale, .3f, c1);
+                ring(x, y + .05f, z, 1.2f * scale, .4f, c1);
+                for (int i = 0; i < n; i++) {        // shards: small, slow, mostly sideways, short-lived, no smoke
+                    P f = add(FIRE, x + rnd(-r, r) * 1.6f, cy + rnd(-.15f, .25f), z + rnd(-r, r) * 1.6f,
+                        rnd(.4f, .9f), rnd(.04f, .09f), i % 4 == 0 ? c2 : c1);
+                    f.vx = rnd(-1.2f, 1.2f); f.vz = rnd(-1.2f, 1.2f); f.vy = rnd(.1f, .6f); f.grow = .5f;
+                }
+                sparks(x, cy, z, n / 2, 2f, c1, 0, 0);
+            }
+            case "gears" -> {
+                chunks(x, cy, z, n, 3f, c1, 3f);
+                brassSteam(3, x, cy, z, scale);
+                sparks(x, cy, z, n / 2, 2.5f, 0xFF8A30, 0, 0);
+                P p = smoke(x, cy, z, .45f * scale, 1.6f, c2, .55f); p.vy = .6f; p.grow = 2.2f;
+            }
+            default -> { }
+        }
+    }
+
     /** The faction-tinted puff of a dying RTS unit (see {@link #death}). Particle counts scale with tier only. */
     static void factionDebris(int faction, int tier, float x, float y, float cy, float z, float scale) {
         int bits = tier >= 3 ? 14 : tier == 2 ? 7 : 3;          // debris chunks
