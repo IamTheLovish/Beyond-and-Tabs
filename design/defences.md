@@ -102,6 +102,8 @@ in the middle 22 blocks out toward the nearest enemy. `expansionWithoutTower`, `
   an enemy does (hurt, revealed, plate out); putting the plate back rearms; a mine is gone after one shot.
 - `defence_anti_raid_tower_out_trades_its_cost_vs_raiders` - for all seven towers, raiders worth its metal die before
   they could raze it; it never shoots a flyer.
+- `defence_towers_fire_at_their_configured_rate` - every tower kind, with the game's own target scan (no onlyFoe), fires
+  exactly cooldownTicks apart at a target that stays in range (y = 380, out of every other test's reach).
 - `defence_anti_t3_costs_ten_to_twenty_percent_of_a_t3` - every emplacement 10-20% of the priciest T3 (metal and
   energy), 5x5+, range <= 20, dormant without Tier 3, x3 vs experimentals; every live faction has its set.
 

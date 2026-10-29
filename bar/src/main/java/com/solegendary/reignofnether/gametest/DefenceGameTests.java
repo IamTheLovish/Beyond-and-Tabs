@@ -10,9 +10,11 @@ import com.solegendary.reignofnether.building.buildings.defence.Defences;
 import com.solegendary.reignofnether.building.buildings.defence.Trap;
 import com.solegendary.reignofnether.building.buildings.defence.WallGate;
 import com.solegendary.reignofnether.building.buildings.defence.WallSegment;
+import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder;
@@ -349,6 +351,90 @@ public class DefenceGameTests {
             }
             helper.succeed();
         } finally {
+            for (Mob m : spawned)
+                m.discard();
+        }
+    }
+
+    /**
+     * Every tower kind fires at its configured rate with the game's own target scan - no onlyFoe shortcut, tickAge
+     * counted up before the weapon as BuildingPlacement.tick does: against a target that stays in range the shots come
+     * exactly cooldownTicks apart. A ready tower used to wait a tick more and then for the next SCAN_TICKS boundary, so a
+     * 1 s tower fired every 1.5 s and the anti-T3 every 3.5 s instead of 3 s. The tower and its target float at y = 380,
+     * more than a tower's reach above every other test's pad (ArenaReady.pad: 301 is the highest), so a tower with no
+     * onlyFoe sees nothing but its own target; any shot that misses it is reported.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void defence_towers_fire_at_their_configured_rate(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_towerrate_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        final int y = 380, ticks = 400;
+        BlockPos at = helper.absolutePos(new BlockPos(6, 0, 6)).atY(y);
+        Defences.Set set = Defences.sets().get(0);
+        Defences.TowerSet towers = Defences.towerSets().get(0);
+        List<DefenceTower> kinds = List.of(set.raidTower(), towers.raidTowerHeavy(), towers.skyWatch(), towers.skyWatchHeavy(),
+            towers.flak(), set.antiT3());
+        List<String> problems = new ArrayList<>();
+        List<Mob> spawned = new ArrayList<>();
+        try {
+            ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_2);
+            ResearchServerEvents.addResearch(owner, ProductionItems.RESEARCH_TIER_3);
+            for (DefenceTower t : kinds) {
+                var bp = BuildingUtils.getNewBuildingPlacement(t, level, at, Rotation.NONE, owner, false);
+                if (!(bp instanceof DefenceTower.DefenceTowerPlacement tower)) {
+                    problems.add(t.name + " is not a DefenceTowerPlacement");
+                    continue;
+                }
+                tower.isBuilt = true;
+                Mob target = (t.kind.airOnly ? EntityRegistrar.GYROCOPTER_GUNSHIP_UNIT.get() : EntityRegistrar.CUTLASS_RAIDER_UNIT.get())
+                    .create(level);
+                if (target == null) {
+                    problems.add("could not make a target for " + t.name);
+                    continue;
+                }
+                target.moveTo(tower.centrePos.getX() + 4.5, y + (t.kind.airOnly ? 6 : 0), tower.centrePos.getZ() + 0.5, 0, 0);
+                target.setNoGravity(true);
+                ((Unit) target).setOwnerName(foeOwner);
+                level.addFreshEntity(target);
+                spawned.add(target);
+                UnitGrid.invalidate();
+                List<Integer> shots = new ArrayList<>();
+                int strays = 0;
+                for (int tick = 0; tick < ticks; tick++) {
+                    target.invulnerableTime = 0;
+                    target.setHealth(target.getMaxHealth());
+                    tower.tickAge++;
+                    tower.tickWeapon(level);
+                    if (tower.cooldown == t.kind.cooldownTicks) {
+                        shots.add(tick);
+                        if (target.getHealth() >= target.getMaxHealth())
+                            strays++;
+                    }
+                }
+                target.discard();
+                int cd = t.kind.cooldownTicks;
+                if (strays > 0)
+                    problems.add(t.name + ": " + strays + " shots missed its own target (something else in reach)");
+                if (shots.size() < 3) {
+                    problems.add(t.name + " fired " + shots.size() + " shots in " + ticks / 20 + " s (set to every " + cd / 20f + " s)");
+                    continue;
+                }
+                Set<Integer> gaps = new java.util.TreeSet<>();
+                for (int i = 1; i < shots.size(); i++)
+                    gaps.add(shots.get(i) - shots.get(i - 1));
+                double mean = (double) (shots.get(shots.size() - 1) - shots.get(0)) / (shots.size() - 1);
+                ReignOfNether.LOGGER.info("[TowerRate] {} ({}) fired {} shots, every {} ticks (set to {})", t.name, t.kind,
+                    shots.size(), mean, cd);
+                if (!gaps.equals(Set.of(cd)))
+                    problems.add(String.format("%s (%s) fired every %.2f s (gaps %s ticks), set to every %.2f s: %.1f dps instead of %.1f",
+                        t.name, t.kind, mean / 20, gaps, cd / 20f, t.kind.damage * 20 / mean, t.kind.dps()));
+            }
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        } finally {
+            ResearchServerEvents.removeAllResearchFor(owner);
             for (Mob m : spawned)
                 m.discard();
         }
