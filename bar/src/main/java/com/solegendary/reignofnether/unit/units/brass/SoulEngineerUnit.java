@@ -223,7 +223,9 @@ public class SoulEngineerUnit extends Vindicator implements Unit, SupportUnit, E
         if (!(level() instanceof ServerLevel sl) || !isAlive() || getOwnerName() == null || getOwnerName().isBlank())
             return false;
         // the AutoCaster's gates (AutoCaster.look): never while stunned, frozen, uncontrollable, sealed, garrisoned or
-        // mid-cast - this autocast runs outside it
+        // mid-cast - this autocast runs outside it. Left out on purpose: look's ignoreNonStopCommands, spellGoalBusy and
+        // "walking a move order / tailing a friend" tests. Those guard casts that reset the unit's behaviours; a boil
+        // does not, so a walking engineer may boil as it passes and still follows the army (BotPlayer's follow line)
         if (hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.STUN.get())
                 || hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.FREEZE.get())
                 || hasEffect(com.solegendary.reignofnether.registrars.MobEffectRegistrar.UNCONTROLLABLE.get())
