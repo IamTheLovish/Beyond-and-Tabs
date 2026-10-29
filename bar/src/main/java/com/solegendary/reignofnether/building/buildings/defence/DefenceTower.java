@@ -4,6 +4,7 @@ import static com.solegendary.reignofnether.building.BuildingUtils.getAbsoluteBl
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.blocks.BlockClientEvents;
+import com.solegendary.reignofnether.bot.BotRoles;
 import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingPlacement;
@@ -12,6 +13,7 @@ import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.Concealment;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.unit.interfaces.FieldArtillery;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.util.MiscUtil;
 
@@ -46,8 +48,10 @@ import java.util.function.Supplier;
  *       {@link Kind#splash} of the target - the answer to a clump of flyers. Tier 2 research and a T2 constructor.</li>
  *   <li>{@link Kind#SIEGE_GUARD} - the <b>anti-siege tower</b> (BAR's HLT; lovish Oct 29, design/siege_t1.md): a tall
  *       T1-lab tower whose reach (20) is past the T1 siege lobber's (15) and every T1 line unit's, with a slow, heavy
- *       shot - two kill a lobber - and the health to outlast six of them. Ground only, no light bonus: per metal the
- *       enhanced anti-raid tower stays the better raid answer, and the long artillery (22-24) still outranges it.</li>
+ *       shot (45 every 2.5 s) that hits siege units ({@link #isSiege}) {@link Kind#bonusMult} times as hard and
+ *       prefers them - one kills a lobber - and the health to outlast six lobbers. Ground only; lovish's balance pass
+ *       (Oct 29) slowed it from 1.5 s so the enhanced anti-raid tower stays the better raid answer and a lobber push
+ *       keeps its window. The long artillery (22-24) still outranges it.</li>
  *   <li>{@link Kind#ANTI_T3} - the <b>anti-experimental emplacement</b>: a 5x5 heavy weapon at the T3 lab tier, priced
  *       at DefenceCosts.ANTI_T3_SHARE of the priciest experimental. A slow, heavy shot that hits experimentals
  *       (and anything that big) {@link Kind#bonusMult} times as hard and prefers them; it reaches flyers too (two of
@@ -75,7 +79,7 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         SKY_WATCH_HEAVY( 22,   35f, 20,      1f,   true,   true,   0f,    550d, Gate.T1_LAB,  1.0f),
         FLAK(            24,   12f, 15,      1.5f, true,   true,   3f,    650d, Gate.TIER_2,  0.9f),
         ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f),
-        SIEGE_GUARD(     20,   45f, 30,      1f,   false,  false,  0f,    1000d, Gate.T1_LAB, 1.2f);
+        SIEGE_GUARD(     20,   45f, 50,      2f,   false,  false,  0f,    1000d, Gate.T1_LAB, 1.2f);
 
         public final int range;
         public final float damage;
@@ -118,6 +122,11 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         public boolean bonusVsLight() {
             return this == RAID || this == RAID_HEAVY;
         }
+
+        /** The bonus goes against siege units (the anti-siege tower). */
+        public boolean bonusVsSiege() {
+            return this == SIEGE_GUARD;
+        }
     }
 
     public final Kind kind;
@@ -148,13 +157,23 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         setActiveAddon(RangeIndicatorAddon.class, this, true);
     }
 
-    /** Whether the target counts for the bonus: light units for the anti-raid tower, experimentals for the anti-T3 one. */
+    /**
+     * Whether the target counts for the bonus: light units for the anti-raid tower, siege units for the anti-siege one,
+     * experimentals for the anti-T3 one.
+     */
     public boolean isBonusTarget(LivingEntity le) {
         if (kind.bonusMult == 1f)
             return false;
         if (kind.bonusVsLight())
             return le.getMaxHealth() <= LIGHT_HEALTH;
+        if (kind.bonusVsSiege())
+            return isSiege(le);
         return isExperimental(le);
+    }
+
+    /** A siege unit: the bot's siege role (the T1 lobbers, the wall-breakers) or the shell-lobbing field artillery. */
+    public static boolean isSiege(LivingEntity le) {
+        return le instanceof FieldArtillery || BotRoles.isSiege(le);
     }
 
     /** An experimental: priced like a T3 (WallSegment.T3_METAL) or simply that big. */
@@ -287,7 +306,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
 
         /**
          * Raid towers: the nearest enemy on the ground. Anti-air: the nearest enemy flyer. Anti-T3 and flak: the nearest
-         * experimental, else the nearest enemy they may shoot.
+         * experimental, else the nearest enemy they may shoot. Anti-siege: the nearest siege unit, else the nearest
+         * ground enemy.
          */
         @Nullable
         public LivingEntity pickTarget(ServerLevel sl) {
