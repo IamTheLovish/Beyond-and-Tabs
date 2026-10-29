@@ -41,7 +41,7 @@ import java.util.List;
 public class GraveyardGameTests {
 
     /** More than the old ten-skull limit, still under the queue's MAX_QUEUE (16). */
-    private static final int QUEUED = 12;
+    static final int QUEUED = 12;
 
     @GameTest(template = SkirmishGameTests.ARENA)
     public static void graveyard_l1_raises_every_queued_unit(GameTestHelper helper) {
@@ -169,7 +169,7 @@ public class GraveyardGameTests {
     // ------------------------------------------------------------------ helpers
 
     /** A finished graveyard at upgrade code 0-3 on a stone pad, in the server's list. Fails the test on a mismatch. */
-    private static GraveyardPlacement stampGraveyard(GameTestHelper helper, String owner, int code) {
+    static GraveyardPlacement stampGraveyard(GameTestHelper helper, String owner, int code) {
         ServerLevel level = helper.getLevel();
         BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.GRAVEYARD, level,
             helper.absolutePos(new BlockPos(4, 1, 4)), Rotation.NONE, owner, false);
@@ -198,7 +198,7 @@ public class GraveyardGameTests {
         return gy;
     }
 
-    private static int runQueue(GraveyardPlacement gy, int limit) {
+    static int runQueue(GraveyardPlacement gy, int limit) {
         int n = 0;
         while (!gy.productionQueue.isEmpty() && n++ < limit) {
             var a = gy.productionQueue.get(0);
@@ -208,14 +208,14 @@ public class GraveyardGameTests {
         return n;
     }
 
-    private static List<ZombieUnit> zombiesOf(ServerLevel level, GraveyardPlacement gy, String owner) {
+    static List<ZombieUnit> zombiesOf(ServerLevel level, GraveyardPlacement gy, String owner) {
         if (gy == null)
             return new ArrayList<>();
         return new ArrayList<>(level.getEntitiesOfClass(ZombieUnit.class, gy.getAABB().inflate(24),
             z -> owner.equals(z.getOwnerName())));
     }
 
-    private static void clear(ServerLevel level, GraveyardPlacement gy) {
+    static void clear(ServerLevel level, GraveyardPlacement gy) {
         if (gy == null)
             return;
         gy.productionQueue.clear();

@@ -44,6 +44,14 @@ public class RaiseDead extends Ability {
     public static final int CD_SECONDS = 30;
     public static final double RADIUS = 10;
     public static final int MAX_RAISED = 3;
+    /** STUB (lovish, Oct 29): at most this many ghouls alive per player; the rule lands in the next commit. */
+    public static final int MAX_GHOULS = 8;
+    public static final String GHOUL_TAG = "bt_ghoul";
+
+    /** STUB: ghouls alive for {@code owner}. */
+    public static int liveGhouls(String owner) {
+        return 0;
+    }
 
     public RaiseDead() {
         super(UnitAction.COMMANDER_RAISE_DEAD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
