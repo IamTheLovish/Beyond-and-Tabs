@@ -513,3 +513,8 @@ Faction fit: Gravebound / the dark-fantasy accent.
   heights, each with its own steep conical slate cap, inside a low curtain wall; a few lit windows and one
   purple-lit arch are the only colour. Lesson: from above, many separate roof cones of varied height read as a
   real castle; at night, a handful of lit openings carries the whole image. Faction fit: Gravebound.
+- ref69 ("Velmont Crest" by Guuisbuilds, a sold guide - ideas only; lovish, Oct 28 22:59): a manor with a big
+  steep dark-slate roof massed in overlapping hips, cross gables and turret cones; jettied timber upper storeys on
+  brackets over pale plaster and a stone ground floor; a lower wing stepping down with its own roof; balconies,
+  plants and barrels at the base. Lesson: one dominant roof mass (~half the building's height) with many
+  sub-roofs breaking it - from the RTS camera the roof IS the building.
