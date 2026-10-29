@@ -5,9 +5,10 @@
 # camera glides, animation, fights - can be studied frame by frame like a playtest clip. Nothing here touches anyone's PC.
 #
 # Structure photos (input `structure`, Oct 20 2026): instead of the tour, stamp each named structure on a flat pad and
-# photograph it - RTS view, RTS close, a first-person 3/4 view and the 3/4 view at dusk (EyesDirector scene 15) - with
-# the real textures, the building-block mods and, with `shaders`, the shader lane. Stills land on branch
-# eyes-structures (eyes-structures-shaders with shaders on) as bat_eyes_15_<name>_{rts,rts_close,34,dusk}.png.
+# photograph it - RTS view, RTS close, a first-person 3/4 view, a first-person close-up among the plants at noon and the
+# 3/4 view at dusk (EyesDirector scene 15) - with the real textures, the building-block mods and, with `shaders`, the
+# shader lane. Stills land on branch eyes-structures (eyes-structures-shaders with shaders on) as
+# bat_eyes_15_<name>_{rts,rts_close,34,close,dusk}.png.
 # An entry is a structure name in the jar (data/reignofnether/structures/<name>.nbt) or a .nbt path in the checkout.
 # For a design that only exists on a feature branch, dispatch ON THAT BRANCH (it must contain this workflow, i.e. be
 # based on a main that has it): the run then uses the jar of that branch's newest build run (its PR build) and the
@@ -251,7 +252,7 @@ jobs:
               raise SystemExit(1)
           with open(os.environ['GITHUB_ENV'], 'a') as env:
               env.write('EYES_JVM_EXTRA=-Dbat.eyes.structures=%s\n' % ','.join(entries))
-              env.write('STRUCTURE_STILLS=%d\n' % (4 * len(entries)))
+              env.write('STRUCTURE_STILLS=%d\n' % (5 * len(entries)))   # rts, rts_close, 34, close, dusk
           print('::notice::[Eyes] structure photos: ' + ', '.join(entries))
           EOF
       - name: Scars scene only (dispatch input `scars`; EyesDirector scene 16)
@@ -547,7 +548,7 @@ jobs:
             ls out | grep '^bat_eyes_16_' | sed 's/^/::notice::[Eyes] still /' || true
             [ "$got" -ge 6 ] || { echo "::error::only $got scars stills (expected 6)"; exit 1; }
           fi
-          if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: four stills per structure
+          if [ -n "${STRUCTURE_STILLS:-}" ]; then   # a structure-photo run: five stills per structure
             got=$(find out -name 'bat_eyes_15_*.png' | wc -l)
             ls out | grep '^bat_eyes_15_' | sed 's/^/::notice::[Eyes] still /' || true
             [ "$got" -ge "$STRUCTURE_STILLS" ] || { echo "::error::only $got structure stills (expected $STRUCTURE_STILLS)"; exit 1; }
