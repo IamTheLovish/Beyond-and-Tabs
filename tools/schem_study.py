@@ -313,6 +313,9 @@ def eave_cells(b):
     return out
 
 
+overhang_cells = eave_cells   # r8b name
+
+
 def depth_layers(b, face):
     """{blocks back from the face's outermost plane: cells} seen from `face` (west = looking east from -x...)."""
     axis, sign = FACES[face]

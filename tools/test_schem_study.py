@@ -176,6 +176,15 @@ class Measures(unittest.TestCase):
         self.assertEqual(S.eave_overhang(_box_with_eaves(0)), {})
         self.assertEqual(S.eave_overhang(_box_with_eaves(2)), {1: 24, 2: 32})
 
+    def test_overhang_cells_name_the_cells(self):
+        """r8 (Oct 29): the cells behind eave_overhang's histogram, so a gate can ask for one eave run cell by cell."""
+        cells = S.overhang_cells(_box_with_eaves(1))
+        self.assertEqual(len(cells), 24)
+        self.assertEqual(set(cells.values()), {1})
+        self.assertIn((0, 4, 0), cells)
+        self.assertNotIn((3, 4, 3), cells)
+        self.assertEqual(S.overhang_cells(_box_with_eaves(0)), {})
+
     def test_eave_cells_name_where_the_overhang_is(self):
         """r8 (Oct 29): the cells behind eave_overhang's histogram, so a test can ask WHICH eaves oversail."""
         e = S.eave_cells(_box_with_eaves(1))
