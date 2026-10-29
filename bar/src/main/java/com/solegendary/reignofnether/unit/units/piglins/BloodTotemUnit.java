@@ -50,6 +50,7 @@ public class BloodTotemUnit extends AbstractTotem {
     @Override
     public void tick() {
         super.tick();
+        if (true) return;   // STUB (tests-first commit): no aura yet
         if (!(level() instanceof ServerLevel sl) || !isAlive() || tickCount % PULSE_TICKS != 1)
             return;
         double r = BloodTotem.RADIUS;
