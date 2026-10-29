@@ -253,8 +253,8 @@ def lobe(t, c, r, up, down, rng, ragged=0.4):
                     t.leaf.add((x, y, z))
 
 
-def oak_tones(t, rng, lobes, light="birch_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.7,
-              skin="spruce_leaves", cool="birch_leaves"):
+def oak_tones(t, rng, lobes, light="oak_leaves", body="dark_oak_leaves", dark="spruce_leaves", core=1.7,
+              skin="spruce_leaves", cool="oak_leaves"):
     """r27 (critic r33: flat-shaded one-tone leaf cubes; r32: "two leaf tints, a darker inner shell"): each lobe gets
     the values a lit leaf mass has - sunlit patches on its top, a body, a darker underside and inner shell (spruce).
     Patches round a few spots per lobe, not pepper, so the tones read as light on a mass.
@@ -278,7 +278,11 @@ def oak_tones(t, rng, lobes, light="birch_leaves", body="dark_oak_leaves", dark=
     the rest of the top spruce; the sides stay dark oak and the underside spruce. Seen from above (240-oak sweep):
     birch 67%, spruce 33% (r28: dark oak 63%, oak 29%, spruce 9%); the linear mix of the measured lit colours predicts
     the tops at hue 86, sat 58, V 0.53 (r28 predicted by the same model: hue 92, sat 70, V 0.48, as measured).
-    No new random draws: positions, skirt and logs stay r28's."""
+    No new random draws: positions, skirt and logs stay r28's.
+    r30 (Oct 29, critic r38: "birch vs oak identity: zero at the crown" - r29's oak tops WERE birch leaves): the sun
+    patches and the cool spots back to oak leaves. The pack's r37 leaves and GrassTint's CANOPY now make the tinted
+    oak leaf the darker, cooler crown r29 reached for through birch (plain lane V ~0.26 against the lawn's 0.34), so
+    the oak reads as a dark blue-green mass and the birch as the light, yellow-green one."""
     top_of = {}
     for (x, y, z) in t.leaf:
         top_of[(x, z)] = max(y, top_of.get((x, z), -1))
