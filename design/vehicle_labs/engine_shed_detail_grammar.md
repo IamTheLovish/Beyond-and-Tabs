@@ -475,3 +475,11 @@ A steep-roofed house and spire in weathered copper (verdigris) with dark brick r
 2. **Ridge cresting:** a row of small dark pinnacles/spikes along the ridge gives the roofline a fine edge.
 3. The spire is many small stepped stages, each with its own dark lip - the "ledge per tier" rule again.
 4. A gabled dormer, moss and leaves growing on the lower roof, warm lit windows in timber frames.
+
+## (w) ref63 - lovish's reference, Oct 28 22:58 (design/refs/vehicle_labs/ref63_slate_roof_timber_house_turret.png)
+Timber-framed house on a stone base with dark slate roofs and a round turret.
+1. **Dark slate roof hierarchy:** one big main roof, cross gables, three lit dormers, a lower porch roof - each a
+   real roof with its own eave and ridge. Slate in 2 tones of deepslate with a visible course pattern.
+2. **Witch-hat turret:** a conical roof that flares out over a ring ledge, then tapers to a finial - the cone tower's
+   tiers could end the same way (a flared skirt per tier, not a step).
+3. Stone chimney stack, half-timber over a stone plinth, an outside stair. Same split: pale walls / dark roofs.
