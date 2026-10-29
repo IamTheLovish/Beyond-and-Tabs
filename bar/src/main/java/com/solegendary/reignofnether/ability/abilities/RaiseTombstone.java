@@ -50,6 +50,7 @@ public class RaiseTombstone extends Ability {
     public static final String MSG_NO_ROOM = "hud.essence.reignofnether.tombstone_no_room";
     public static final String MSG_TOO_FAR = "hud.essence.reignofnether.tombstone_too_far";
     public static final String MSG_MAX = "hud.essence.reignofnether.tombstone_max";
+    public static final String MSG_WATER = "hud.essence.reignofnether.tombstone_water";
 
     public RaiseTombstone() {
         super(UnitAction.RAISE_TOMBSTONE, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, TombstoneUnit.CREEP_MAX_RADIUS, false, true);
@@ -132,6 +133,9 @@ public class RaiseTombstone extends Ability {
         if (!solid(sl, feet.below()) || solid(sl, feet) || solid(sl, feet.above()))
             return refuse(sl, owner, MSG_NO_ROOM, quiet, "no room at " + feet.toShortString() + " (ground " + solid(sl, feet.below())
                 + ", feet " + sl.getBlockState(feet) + ", head " + sl.getBlockState(feet.above()) + ")");
+        // not in water, however shallow (Erin's revision list: a stone stood in 1-deep water)
+        if (!sl.getFluidState(feet).isEmpty() || !sl.getFluidState(feet.above()).isEmpty())
+            return refuse(sl, owner, MSG_WATER, quiet, "water at " + feet.toShortString());
         TombstoneUnit stone = EntityRegistrar.TOMBSTONE_UNIT.get().create(sl);
         if (stone == null)
             return refuse(sl, owner, null, quiet, "the stone could not be made");
