@@ -134,10 +134,11 @@ class EngineShedT1Detail(unittest.TestCase):
         self.assertFalse([n for n in L.ALLOWED if any(k in n for k in L.BANNED)])
 
     def test_light_budget(self):
-        """At most one small light per arcade bay; lanterns only at the door, the tower slot and the shed slot."""
+        """At most one small light per arcade bay; lanterns only the door's glow (r7: two, on the jamb tops - one on
+        the keystone lit nothing the camera sees at dusk) and the shed's two lit slots (r6)."""
         v = list(self.names.values())
         self.assertLessEqual(sum(n.endswith("candle") for n in v), len(L.ARCH_Z))
-        self.assertLessEqual(v.count("lantern"), 3)
+        self.assertLessEqual(v.count("lantern"), 4)
 
     # ---------------------------------------------------------------- re-mass r3 (lovish chose option b, Oct 28)
     # The art director on the r2 sheet: the tower read as "a dark rectangular block with a black door, capped by a
@@ -230,9 +231,8 @@ class EngineShedT1Detail(unittest.TestCase):
         # r5 (critic on r4): smooth stone on a tuff threshold - r3's polished diorite threshold read as a pale strip
         self.assertEqual(floor, {"smooth_stone_slab", "tuff"})
         self.assertEqual({self.names.get((0, 0, z)) for z in L.LANE_Z}, {"tuff"})
-        head = [q for q, n in self.names.items() if n == "lantern" and q[0] <= 1 and
-                L.LANE_H < q[1] <= L.LANE_H + 3 and q[2] in L.LANE_Z]
-        self.assertEqual(len(head), 1, head)
+        head = sorted(q for q, n in self.names.items() if n == "lantern" and q[0] <= 1 and q[1] > L.LANE_H)
+        self.assertEqual(head, [(0, L.LANE_H + 1, L.LANE_Z[0] - 1), (0, L.LANE_H + 1, L.LANE_Z[-1] + 1)])
 
     # ---------------------------------------------------------------- r5: the fresh critic's fixes on r4 (6 / 5)
     def test_door_light_is_a_spot_not_a_frame(self):
@@ -251,7 +251,7 @@ class EngineShedT1Detail(unittest.TestCase):
         yh = L.LANE_H + 1
         self.assertEqual([self.names[(0, yh, z)] for z in range(10, 15)],
                          ["polished_granite"] * 2 + ["quartz_block"] + ["polished_granite"] * 2)
-        self.assertEqual(self.names[(0, yh + 1, 12)], "lantern")
+        self.assertNotEqual(self.names.get((0, yh + 1, 12)), "lantern")   # r7: the lanterns stand on the jamb tops
         far = {self.names[(L.HALL_X[1], y, z)] for y in (6, 7, 8) for z in L.LANE_Z}
         self.assertEqual(far - {"waxed_cut_copper"}, {"calcite"})
 
@@ -269,15 +269,31 @@ class EngineShedT1Detail(unittest.TestCase):
                 self.assertLessEqual(faces, {inward, "east", "west"}, (y, z))
 
     def test_top_tier_matches_the_body(self):
-        """r6: the top tier (y 20..23) red terracotta with granite ticks - in r5 it rendered 43..48 against the body's
-        60, darkening upward: full cells red terracotta, the outline's stair cells polished granite (the ticks), the
-        centre's stairs mangrove (all-granite stair rows put granite over 40 % of R8)."""
-        for y in range(20, 24):
+        """r6: the top tier (y 20..21) red terracotta - in r5 it rendered 43..48 against the body's 60. r7 (critic on
+        r6, in game: the top a 3 x 3 red stub under a copper block): over it a needle - y 22..23 every cell but the
+        1-wide core (x 4, z 12) a mangrove stair, tall half toward the core; y 24 a blackstone-brick wall post; the
+        copper tip at y 25."""
+        for y in (20, 21):
             for z in (11, 12, 13):
                 x, n = self.front_cell(y, z)
-                stairs = n.endswith("_stairs")
-                want = ("red_terracotta" if not stairs else "polished_granite_stairs" if z != 12 else "mangrove_stairs")
-                self.assertEqual(n, want, (y, z))
+                self.assertEqual(n, "red_terracotta" if not n.endswith("_stairs") else "mangrove_stairs", (y, z))
+        for y in (22, 23):
+            ring = [(q, self.rig.b[q]) for q in self.rig.b if q[1] == y and q != (4, y, 12) and self.rig.b[q][0] != "air"]
+            self.assertTrue(ring)
+            for (x, _, z), (n, p) in ring:
+                self.assertEqual(n, "mangrove_stairs", (x, y, z))
+                want = {"east" if x < 4 else "west" if x > 4 else None, "south" if z < 12 else "north" if z > 12 else None}
+                self.assertIn(p["facing"], want - {None}, (x, y, z))
+        self.assertEqual(self.names[(4, 24, 12)], "polished_blackstone_brick_wall")
+
+    def test_no_granite_tick_stands_on_the_tiers(self):
+        """r7 (critic on r6, in game: the ziggurat read is NOT resolution - the granite ticks at every tier corner put
+        a pink rim on each 4-row box): on the tiers' step rows (y 11, 15, 19, 23) polished granite only as a slab on
+        the tread, never a stair or a full block; the eye's ring (frozen) aside."""
+        eye = {(1, 15, 11), (1, 15, 13)}
+        for (x, y, z), n in self.names.items():
+            if y in (11, 15, 19, 23) and x <= 8 and 8 <= z <= 16 and "granite" in n and (x, y, z) not in eye:
+                self.assertTrue(n.endswith("_slab"), ((x, y, z), n))
 
     def test_shed_is_a_shallow_gable_with_two_lit_slots(self):
         """r6 (R9; critic on r5: the shed, ~40 % of the RTS view, a black box, median luma 24): a shallow gable of
@@ -309,7 +325,7 @@ class EngineShedT1Detail(unittest.TestCase):
         red = ("terracotta", "mangrove", "granite")
         top = {(y, z): self.front_cell(y, z)[1] for y in range(20, 24) for z in (11, 12, 13)}
         self.assertEqual({q: n for q, n in top.items() if not any(k in n for k in red)}, {})
-        self.assertEqual(self.front_cell(24, 12)[1], "blackstone")
+        self.assertTrue(self.front_cell(24, 12)[1].startswith("polished_blackstone_brick"))
         self.assertTrue(self.front_cell(25, 12)[1].startswith("waxed_cut_copper"))
         for y in range(7, 20):
             w = 4 - max(0, (y - 8) // 4)                      # the cone's half-width at row y (FRONT_T1's steps)

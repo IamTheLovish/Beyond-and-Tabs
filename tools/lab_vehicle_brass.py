@@ -581,12 +581,13 @@ def tower(g):
             if (x, z) in arris[y] and not 20 <= y <= 23:
                 paint(g, q, "rough" if y >= 24 else "dark")
             elif (x, z) in arris[y]:   # r5: the top tier (3 wide) is one red field - dark arrises there made 13 of
-                # 16 cells dark, a dark cap read as a third tier (critic on r4); r6: its outline stairs granite ticks,
-                # since 3 deep the red rendered 43..48 against the body's 60 (values darkened upward)
-                paint(g, q, "granite" if shape_of(g.b[q][0]) == 1 else "red")
-            elif top_row and x == fx and z in corners:        # the step's inner corner: a lighter-red tick on the
-                paint(g, q, "granite")                        # arris (ref18's picked-out steps; a whole granite
-            else:                                             # step row read as a lid at y 11)
+                # 16 cells dark, a dark cap read as a third tier (critic on r4)
+                paint(g, q, "red")
+            elif top_row and x == fx and z in corners and y < 20:   # the step's inner corner: a granite slab on
+                put(g, q, FAM["granite"][2], type="bottom", waterlogged="false")   # the tread (r7, critic in game on
+                #   r6: granite stairs here put a pink rim on every 4-row tier - the ziggurat read; a whole granite
+                #   step row read as a lid at y 11)
+            else:
                 paint(g, q, "red")
     # the door head (R6, r4: y 9 in the first tier's face, x 0): the arch's voussoirs over the 5-wide lane - granite
     # haunches (upside-down stairs, their step at the jamb side, so the opening's top corners read rounded), quartz
@@ -597,7 +598,9 @@ def tower(g):
     for z in LANE_Z:     # r6: ONE light spot - a quartz keystone in a polished granite head (as the jambs). r4's
         put(g, (0, yh, z), "polished_granite")       # pale jambs + haunches read as a U-frame; r5's pale | brass |
     put(g, (0, yh, cz), "quartz_block")              # pale over a dark vault as an owl face (critics on r4, r5)
-    put(g, (0, yh + 1, cz), LAMP, hanging="false", waterlogged="false")
+    for z in (LANE_Z[0] - 1, LANE_Z[-1] + 1):        # r7: the door's glow - lanterns standing on the jamb tops, either
+        put(g, (0, yh, z), LAMP, hanging="false", waterlogged="false")   # side of the keystone, outside the lane: one
+    #   on the keystone lit nothing the camera sees (in game at dusk the door cell's luma median was 34, no warm pixel)
     # R7 the eye, at its r2 elevation cells (y 14..16, z 11..13): a granite ring round a recessed deep-red heart, in
     # the second tier's face (x 1, y 12..15) and the third's (x 2, y 16..19)
     for q in ((1, 14, 12), (1, 15, 11), (1, 15, 13)):     # r5: polished granite, +40 over the body - calcite
@@ -615,7 +618,17 @@ def tower(g):
         else:
             paint(g, (x, y, int(TZ)), "red")
     put(g, (3, 20, 12), "red_terracotta")               # r5: no lit slot - the top tier one red field
-    put(g, (4, 24, 12), "blackstone")
+    # r7 the needle (critic in game on r6: the top read as a 3 x 3 red stub under a copper block): on y 22..23 every
+    # cell but the 1-wide core (x 4, z 12) a mangrove stair, tall half toward the core, the core red terracotta; a
+    # blackstone-brick wall post at y 24 under the copper tip
+    for y in (22, 23):
+        for (x, yy, z) in [q for q in g.b if q[1] == y and 3 <= q[0] <= 5 and 11 <= q[2] <= 13]:
+            if (x, z) == (4, 12):
+                put(g, (x, y, z), "red_terracotta")
+                continue
+            facing = "east" if x < 4 else "west" if x > 4 else "south" if z < 12 else "north"
+            put(g, (x, y, z), "mangrove_stairs", facing=facing, half="bottom", shape="straight", waterlogged="false")
+    put(g, (4, 24, 12), FAM["dark"][3])
     paint(g, (4, 25, 12), "brass")
 
 
