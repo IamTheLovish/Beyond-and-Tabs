@@ -509,3 +509,7 @@ A gothic chapel in a misty forest, shaders with fog and volumetric light.
 2. Pale stone walls framed by dark contrasting pinnacles and buttresses - structure drawn in a darker line.
 3. Atmosphere: fog, light shafts through trees, warm lanterns against cool mist - shaders + nature again.
 Faction fit: Gravebound / the dark-fantasy accent.
+- ref68 (small, 224 px - lovish, Oct 28 22:59): a dark castle at night, isometric - a cluster of towers of different
+  heights, each with its own steep conical slate cap, inside a low curtain wall; a few lit windows and one
+  purple-lit arch are the only colour. Lesson: from above, many separate roof cones of varied height read as a
+  real castle; at night, a handful of lit openings carries the whole image. Faction fit: Gravebound.
