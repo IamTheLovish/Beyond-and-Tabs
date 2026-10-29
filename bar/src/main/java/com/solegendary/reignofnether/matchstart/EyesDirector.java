@@ -1139,6 +1139,8 @@ public final class EyesDirector {
                 server.execute(() -> server.overworld().setDayTime(EyesPhotoBooth.GOLDEN_TIME));
                 if (!OrthoviewClientEvents.isEnabled())
                     OrthoviewClientEvents.toggleEnable();
+                // turning the RTS view back on brings the HUD back (round r35's golden stills showed it, run 40810627885)
+                mc.options.hideGui = true;
                 setZoom(ZOOM_NORMAL);
                 OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
                 nextPhase(7);
@@ -1152,6 +1154,7 @@ public final class EyesDirector {
                 if (!there)
                     ReignOfNether.LOGGER.warn("[Eyes] {}_golden_rts: the client sky is at {} not {} after 40 s", label, t,
                         EyesPhotoBooth.GOLDEN_TIME);
+                mc.options.hideGui = true;
                 logAim(mc, label + "_golden_rts");
                 shot(mc, label + "_golden_rts");
                 var server = mc.getSingleplayerServer();
