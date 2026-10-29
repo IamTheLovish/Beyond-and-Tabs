@@ -310,6 +310,8 @@ class AnimationCostBench {
                 float v = walking ? 0.2f : 0f;
                 com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, v,
                     walking && (i % 3) == 0 ? 4f : 0f, 20f, 20f, (i % 11) == 0, false);
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.look(slab, b, (t + i * 13) % 360,
+                    (i % 7) * 3f, (i % 4) == 0, false);
                 if ((t + i) % 97 == 0)
                     com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, (i % 8) * 0.785f);
                 com.solegendary.reignofnether.unit.modelling.motion.Idle.step(slab, b, i, t, walking, false);
@@ -357,8 +359,13 @@ class AnimationCostBench {
                     false, false);
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.onHit(slab, b, i * 0.3f);
             com.solegendary.reignofnether.unit.modelling.motion.Kinematics.step(slab, b, 0f, 0f, 0.1f, 2f, 16f, 20f, false, false);
+            for (int t = 0; t < 10; t++)
+                com.solegendary.reignofnether.unit.modelling.motion.Kinematics.look(slab, b, i * 7f, 10f, (i % 3) == 0,
+                    t == 0);
         }
         float[] sliders = {1, 1, 1, 1, 1, 1, 1};
+        // the look solver too, as MotionPass gives it a vanilla body: the chest's share, the head's rest, the arms' aim
+        float[] look = {com.solegendary.reignofnether.unit.modelling.motion.Motion.LOOK_FULL, 0f, 20f, 10f};
         float[] out = com.solegendary.reignofnether.unit.modelling.motion.MotionPass.scratch();
         PoseStack pose = new PoseStack();
         float before = body.body.xRot + body.head.y + body.rightArm.x + body.leftArm.zRot;
@@ -367,8 +374,9 @@ class AnimationCostBench {
             float time = 1000f + round * FRAMES + frame;
             long t0 = System.nanoTime();
             for (int i = 0; i < UNITS; i++) {
+                look[1] = i * 3f;
                 com.solegendary.reignofnether.unit.modelling.motion.Motion.pose(slab, i * stride, i, time + i,
-                    0.5f, 40f, sliders, false, out);
+                    0.5f, 40f, sliders, false, look, out);
                 com.solegendary.reignofnether.unit.modelling.motion.MotionPass.place(map, pose);
                 com.solegendary.reignofnether.unit.modelling.motion.MotionPass.restore();
                 pose.setIdentity();   // the render's own push/pop is vanilla's (it allocates), not the pass's

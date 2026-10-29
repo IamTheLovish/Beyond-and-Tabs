@@ -37,6 +37,13 @@ public final class BoneMap {
     boolean deathHierarchical;
     /** The death parts include elbows and knees (a jointed rig). */
     boolean jointed;
+    /** How the look solver treats this body: {@link Motion#LOOK_NONE}, LOOK_FULL or LOOK_TWIST. */
+    float look = Motion.LOOK_NONE;
+
+    BoneMap looks(float mode) {
+        look = mode;
+        return this;
+    }
 
     BoneMap(float waistY, boolean flinchOnly) {
         this(waistY, flinchOnly, false, false);
