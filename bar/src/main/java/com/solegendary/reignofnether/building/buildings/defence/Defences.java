@@ -23,7 +23,8 @@ import java.util.function.Supplier;
  * The static defences of all seven factions (design/defences.md): per faction a wall segment, a gate, two traps, a T1
  * anti-raid tower and a T3 anti-experimental emplacement ({@link Set}, 42 buildings), then the Oct 21 towers
  * ({@link TowerSet}, 28 more: the enhanced anti-raid tower, the Sky Watch and its enhanced twin, the flak) and the
- * enhanced walls and traps ({@link FortSet}, 21 more) - registered from the end of Buildings (its last static block),
+ * enhanced walls and traps ({@link FortSet}, 21 more) and the anti-siege towers ({@link #siegeGuardOf}, 7 more) -
+ * registered from the end of Buildings (its last static block),
  * each group after the one before, so no existing building's registry id moves; handed to their factions by
  * {@link #registerWithFactions()} (called from Factions.registerBuildings, no hotkeys: every faction's build-menu keys
  * are taken). Mechanics and prices are shared; {@link DefenceStyle} carries each faction's look. Structures:
@@ -64,6 +65,7 @@ public final class Defences {
     private static final List<Set> SETS = new ArrayList<>();
     private static final List<TowerSet> TOWER_SETS = new ArrayList<>();
     private static final List<FortSet> FORT_SETS = new ArrayList<>();
+    private static final List<DefenceTower> SIEGE_GUARDS = new ArrayList<>();
 
     public static final Set VILLAGERS = add(new DefenceStyle("villagers", "villagers",
             Blocks.STONE_BRICKS, Blocks.OAK_FENCE_GATE, Blocks.CHISELED_STONE_BRICKS, Blocks.GOLD_BLOCK, Blocks.STONE_PRESSURE_PLATE,
@@ -177,6 +179,26 @@ public final class Defences {
         return set;
     }
 
+    // ---- the anti-siege towers (BAR's HLT; lovish Oct 29, design/siege_t1.md): after every FortSet, so nothing above moves.
+    // The names are placeholders, like the lobbers' they answer
+
+    public static final DefenceTower VILLAGERS_SIEGE_GUARD = addSiegeGuard(VILLAGERS_TOWERS, "Warden's Arbalest");
+    public static final DefenceTower MONSTERS_SIEGE_GUARD = addSiegeGuard(MONSTERS_TOWERS, "Bonecleaver Spire");
+    public static final DefenceTower PIGLINS_SIEGE_GUARD = addSiegeGuard(PIGLINS_TOWERS, "Skullsplitter Tower");
+    public static final DefenceTower VERDANT_SIEGE_GUARD = addSiegeGuard(VERDANT_TOWERS, "Ironbark Sentinel");
+    public static final DefenceTower TIDE_SIEGE_GUARD = addSiegeGuard(TIDE_TOWERS, "Long Nine Post");
+    public static final DefenceTower STORM_SIEGE_GUARD = addSiegeGuard(STORM_TOWERS, "Dragon-Eye Lantern");
+    public static final DefenceTower BRASS_SIEGE_GUARD = addSiegeGuard(BRASS_TOWERS, "Long Tom Post");
+
+    private static DefenceTower addSiegeGuard(TowerSet towers, String name) {
+        DefenceStyle st = towers.raidTowerHeavy().style;
+        // the enhanced towers' T1-lab gate, reused: one list of a faction's T1 labs
+        DefenceTower t = register(new DefenceTower("siege_guard_" + st.suffix(), name, st, DefenceTower.Kind.SIEGE_GUARD,
+            towers.raidTowerHeavy().requiredLabs()));
+        SIEGE_GUARDS.add(t);
+        return t;
+    }
+
     public static String enhancedTrapId(Trap.Kind kind, String suffix) {
         return "trap_" + kind.name().toLowerCase(java.util.Locale.ROOT) + "_enhanced_" + suffix;
     }
@@ -221,6 +243,18 @@ public final class Defences {
         return null;
     }
 
+    /** The faction's anti-siege tower, or null (neutral / random / none). */
+    @Nullable
+    public static DefenceTower siegeGuardOf(@Nullable Faction faction) {
+        Set base = of(faction);
+        if (base == null)
+            return null;
+        for (DefenceTower t : SIEGE_GUARDS)
+            if (t.style.factionName().equals(base.factionName()))
+                return t;
+        return null;
+    }
+
     /** The faction's Oct 21 towers, or null (neutral / random / none). */
     @Nullable
     public static TowerSet towersOf(@Nullable Faction faction) {
@@ -260,10 +294,13 @@ public final class Defences {
                 if (fort.factionName().equals(set.factionName()))
                     for (Building b : fort.all())
                         Factions.registerBuildings(f, b, com.solegendary.reignofnether.building.BuildGroup.DEFENCE);
+            for (DefenceTower t : SIEGE_GUARDS)
+                if (t.style.factionName().equals(set.factionName()))
+                    Factions.registerBuildings(f, t, com.solegendary.reignofnether.building.BuildGroup.DEFENCE);
         }
     }
 
-    /** Is this building one of the 91 static defences? */
+    /** Is this building one of the 98 static defences? */
     public static boolean isDefence(@Nullable Building b) {
         return b instanceof DefenceBuilding;
     }

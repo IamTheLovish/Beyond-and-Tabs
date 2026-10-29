@@ -28,6 +28,7 @@ structures `tools/defence_structures.py` (run by `tools/gen_structures.py`), ico
 | Fortified wall | 2x3x2 | 40 / 20 | 1100 | a T1 lab | a wall with 2.75x the health, same footprint (mixes into a Shift+drag line) |
 | Enhanced trap (each kind) | 3x1x3 | 2x its trap | 120 | a T1 lab | radius x1.4, damage / root / slow x1.5, one spare charge: the first spring keeps every block and rearms itself after 5 s |
 | Flak (T2 anti-air) | 4x6x4 | 280 / 350 | 650 | Tier 2 + T2 builder | 12 dmg / 0.75 s at 24 range, the burst hits every flyer within 3 blocks of the target, x1.5 vs experimentals; air only |
+| Anti-siege tower (BAR's HLT) | 3x7x3 | 450 / 650 | 1000 | a T1 lab | 45 dmg / 2.5 s at 20 range (past the T1 siege lobber's 15, short of the long artillery's 22-24), x2 vs siege units and shoots them first; ground only; build time x1.2 |
 
 **Oct 21 towers** (lovish 02:47: "flying units ran through everything which makes sense since they're fast... anti air
 defenses should be added"; 02:51: "tier 1 constructors can make enhanced version of tier 1 defenses - kinda like in
@@ -138,3 +139,20 @@ in the middle 22 blocks out toward the nearest enemy. `expansionWithoutTower`, `
 | Stormcallers | Dragon Jade Wall | Inferno Glyph (mine) | Heavenly Seal (snare) |
 | Brassworks | Riveted Bulkhead | Double Clockwork Mine (mine) | Steam Bear Trap (snare) |
 Tests: `gametest/EnhancedDefenceGameTests.java`.
+
+### The anti-siege tower per faction (Oct 29)
+lovish, Oct 29 (design/siege_t1.md, "Siege lobber revision 2"): an HLT-like tower so a base has an answer to massed T1
+siege lobbers - one lobber loses to it, six die before it falls, artillery (22-24) still outranges it. Kind
+`DefenceTower.Kind.SIEGE_GUARD`, price `DefenceCosts.SIEGE_GUARD`, ids `siege_guard_<suffix>`, registered after every
+FortSet (no id moves), gated by the same T1 labs as the enhanced towers. Names are placeholders: Warden's Arbalest
+(Sunforged), Bonecleaver Spire (Gravebound), Skullsplitter Tower (Horde), Ironbark Sentinel (Verdant Court), Long Nine
+Post (Tidewrought), Dragon-Eye Lantern (Stormcallers), Long Tom Post (Brassworks). Tests:
+`gametest/AntiSiegeTowerGameTests.java` (numbers, reach past a range-15 attacker, double damage on siege units and
+shooting them first, ground only; the lobber duel follows the lobber PR). Not yet: the bot raising one against lobbers
+(needs the lobber).
+
+Balance pass, lovish Oct 29: the first cut (45 every 1.5 s, 30 dps) made the enhanced anti-raid tower pointless and
+closed the lobber's window too early. Now 45 every 2.5 s (18 dps, the Beamer's rate) and x2 (90) against siege units -
+`DefenceTower.isSiege`: the bot's siege role (`BotRoles.isSiege`, which takes the lobber when it merges) or any
+`FieldArtillery` - which it shoots before nearer units. One shot still kills an 80 hp lobber; HP, range, cost, gate and
+ground-only are unchanged.
