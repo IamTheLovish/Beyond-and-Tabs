@@ -1,0 +1,30 @@
+(2527 first-launch config/mod-loading notices filtered out)
+[23:17:17] [main/ERROR]: Mixin config soundculling.mixins.json does not specify "minVersion" property
+[23:17:26] [Render thread/ERROR]: Failed to verify authentication
+	at com.mojang.authlib.exceptions.MinecraftClientHttpException.toAuthenticationException(MinecraftClientHttpException.java:56) ~[authlib-4.0.43.jar%2378!/:?]
+[23:17:39] [Worker-ResourceReload-1/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_pattern.png
+[23:17:39] [Worker-ResourceReload-1/WARN]: Missing sprite: antiquelegacy:textures/entity/bronze_republic_scutum_nopattern.png
+[23:17:44] [Worker-ResourceReload-2/WARN]: Unable to load model: 'decorative_blocks:blockstate_copy_item#inventory' referenced from: decorative_blocks:blockstate_copy_item#inventory: java.io.FileNotFoundException: decorative_blocks:models/item/blockstate_copy_item.json
+[23:17:49] [Worker-ResourceReload-2/WARN]: Missing textures in model supplementaries:confetti_popper#inventory:
+[23:17:50] [Render thread/WARN]: Missing sound for event: minecraft:item.goat_horn.play
+[23:17:50] [Render thread/WARN]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[23:17:51] [Render thread/ERROR]: Error starting SoundSystem. Turning off sounds & music
+[23:17:51] [Render thread/WARN]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find sampler named Sampler2 in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named IViewRotMat in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader moonlight:text_alpha_color could not find uniform named FogShape in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:static_noise could not find sampler named Sampler1 in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:spherify could not find sampler named Sampler1 in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseSpeed in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named NoiseScale in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named Intensity in the specified shader program.
+[23:17:52] [Render thread/WARN]: Shader supplementaries:spherify could not find uniform named CameraPos in the specified shader program.
+[23:17:54] [Render thread/WARN]: Game took 48.716 seconds to start
+[23:19:28] [Render thread/WARN]: Initial datapack load took 2.615 s
+[23:19:32] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-0 absolute]
+[23:19:32] [Worker-Main-3/WARN]: Empty height range: [0 above bottom-15 absolute]
+[23:19:42] [Render thread/WARN]: Unable to parse the boolean system property 'java.net.preferIPv6Addresses':system - using the default value: false
+[23:19:48] [Render thread/WARN]: Time from main menu to in-game was 19.353096 seconds
+[23:19:48] [Render thread/WARN]: Total time to load game and open world was 68.06909 seconds
+[23:19:50] [Server thread/WARN]: Can't keep up! Is the server overloaded? Running 2368ms or 47 ticks behind
+[23:21:04] [Render thread/WARN]: [Eyes] no generated unit texture was uploaded with mips - SimpleTextureMixin did not apply?
