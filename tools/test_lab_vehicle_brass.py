@@ -148,7 +148,8 @@ class EngineShedT1Detail(unittest.TestCase):
     # pale band, under a stepped spire" - black buttresses / jambs rising vertically over the hall roof, a pale ledge
     # across the tower at y 12-13, a dark door filling the base. ref18's tower is ONE mid-red cone standing on the hall
     # roof, dark arrises, its brightest spot at the door. These pin that read in cells.
-    PALE = ("calcite", "quartz", "bone_block", "diorite")
+    PALE = ("calcite", "quartz", "bone_block", "diorite",
+            "smooth_stone", "chiseled_stone")   # r10: arch_kit's pale (smooth / chiseled stone) replaces calcite + quartz
     DARK = ("blackstone", "deepslate")
 
     def front_cell(self, y, z):
@@ -256,11 +257,12 @@ class EngineShedT1Detail(unittest.TestCase):
         head = sorted(q for q, n in mouth.items() if any(k in n for k in self.PALE))
         self.assertEqual(head, [(L.LANE_H + 1, 12)])
         yh = L.LANE_H + 1
-        self.assertEqual([self.names[(0, yh, z)] for z in range(10, 15)],
-                         ["polished_granite"] * 2 + ["quartz_block"] + ["polished_granite"] * 2)
+        self.assertEqual([self.names[(0, yh, z)] for z in range(10, 15)],      # r10: the keystone the kit's pale
+                         ["polished_granite"] * 2 + ["chiseled_stone_bricks"] + ["polished_granite"] * 2)   # stone
         self.assertNotEqual(self.names.get((0, yh + 1, 12)), "lantern")   # r7: the lanterns stand on the jamb tops
         far = {self.names[(L.HALL_X[1], y, z)] for y in (6, 7, 8) for z in L.LANE_Z}
-        self.assertEqual(far - {L.FAM["brass"][0]}, {"calcite"})     # r9: the brass role is exposed copper
+        self.assertEqual(far - {L.FAM["brass"][0]}, {"smooth_stone"})   # r10: the light field smooth stone (r9:
+        #                                                                     calcite - snow); the brass role weathered
 
     def test_tier_corners_are_stairs_low_side_out(self):
         """r6 (critic on r5: the tiers read as stacked boxes): on each tier's top two rows (y 10-11, 14-15, 18-19,
@@ -442,13 +444,19 @@ class EngineShedT1Keeps(unittest.TestCase):
         self.assertEqual(got[(15, 12)], "heart")
 
     def test_every_brass_cell_kept(self):
-        """r9 (no unoxidised copper anywhere): a brass cell stays brass in its place and shape - the role is exposed
-        copper since r9 (r1-r8 raw waxed cut copper), the tier ledges weathered / exposed."""
+        """r9 (no unoxidised copper anywhere): a brass cell stays brass in its place and shape - the role is weathered
+        copper since r10 (r9 exposed, r1-r8 raw waxed cut copper), the tier ledges weathered."""
+        # r10 (lovish: weathered GREEN copper; the r9 critic saw the exposed brass as orange): the brass role is
+        # renamed in look, not removed - weathered copper now; r1-r8's raw and r9's exposed brass map onto it
         def role(n):
-            n = n.replace("waxed_cut_copper", "waxed_exposed_cut_copper").replace("weathered", "exposed")
+            n = n.replace("waxed_cut_copper", "waxed_weathered_cut_copper").replace("exposed", "weathered")
             return n[:-len("_stairs")] + "_stairs" if n.endswith("_stairs") else n
-        brass = sorted(q for q, (n, _) in self.want.items() if n in ("waxed_cut_copper", L.FAM["brass"][0])
-                       and q not in MOVED_BRASS and q[1] >= 1)    # r1-r8's raw brass blocks or r9's exposed ones
+        # the committed file's brass blocks, any round - but not the cone's body below its tip: r9's copper courses
+        # used exposed copper as their bleached tone (the brass block id by coincidence, not the brass role), and
+        # r10's weathered brass is also the courses' wet tone; the cone tip (4, 25, 12) stays a brass keep
+        brass = sorted(q for q, (n, _) in self.want.items() if n in ("waxed_cut_copper", "waxed_exposed_cut_copper",
+                                                                      L.FAM["brass"][0])
+                       and q not in MOVED_BRASS and q[1] >= 1 and (not in_cone(q) or q == APEX))
         self.assertTrue(brass)
         moved = [q for q in brass if q not in self.got or role(self.got[q][0]) != role(self.want[q][0])
                  or self.got[q][1] != self.want[q][1]]
@@ -533,7 +541,9 @@ class EngineShedR8Gates(unittest.TestCase):
                     if q in self.n:
                         if any(k in self.n[q] for k in ("bars", "chain", "blackstone_brick_wall")):
                             continue                  # r9: a rail / pipe in front: the wall is behind it
-                        if not any(k in self.n[q] for k in ("glass", "lantern", "candle")):
+                        # r10: an opening is glass or a light (glyph g / *) - the lit room's glow blocks behind a
+                        # pane set forward are the opening's, as the docstring's "openings (glass, lights)" says
+                        if S.glyph(self.n[q]) not in "g*":
                             out[(u, y)] = self.n[q]
                         break
         return out
@@ -658,8 +668,10 @@ class EngineShedR8Gates(unittest.TestCase):
         the step row (y 11 / 15 / 19) a brass ledge (waxed cut copper stairs) across the face, the row under it
         carrying upside-down dark corbels on every other cell (the teeth of shadow) - the eye's cells aside."""
         ex = set(self.exposed())
-        tones = [R.family(n, R.COPPER) for q, n in self.n.items() if in_cone(q) and q in ex
-                 and R.family(n, R.COPPER) is not None]
+        # r10 (lovish: weathered GREEN copper; the r9 critic saw orange - roof_kit.COPPER's T2 is exposed copper):
+        # the generator's green set L.COPPER (T2 the uncut oxidized block), the same course rule
+        tones = [R.family(n, L.COPPER) for q, n in self.n.items() if in_cone(q) and q in ex
+                 and R.family(n, L.COPPER) is not None]
         self.assertEqual(set(tones), {0, 1, 2})
         self.assertTrue(0.55 <= tones.count(0) / len(tones) <= 0.72, tones.count(0) / len(tones))
         eye = {(14, 12), (15, 11), (15, 12), (15, 13), (16, 12)}

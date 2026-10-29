@@ -188,7 +188,27 @@ import gen_structures as gs           # noqa: E402
 import roof_kit as RK                 # noqa: E402
 import shape_kit as sk                # noqa: E402
 
-SLATE = RK.GREY_SLATE   # r9: the Engine Shed's mid-grey slate (roof_kit.GREY_SLATE; r8 laid the dark SLATE)
+# r10 (the r9 critic: r9's grey slate, pack luma ~0.45, read as pale striped concrete; r8's ~0.22 as a hole; the
+# coordinator: real slate is a mid-dark grey, camera roof luma 0.28-0.36, slate family only): T0 polished deepslate
+# (0.31, a smooth dark slate), T1 the wet runs deepslate tiles (0.21), T2 the bleached courses plain stone (0.52); the
+# ridge and verges deepslate bricks (arch_kit's SLATE_VERGE - r5: dark oak verges read orange), the eave lip under
+# each eave course a pale stone stair (arch_kit status r6: the copper eave gutter stripe is out, a pale trim lip in)
+SLATE = {"tones": (("polished_deepslate", "polished_deepslate_stairs", "polished_deepslate_slab"),
+                   ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"),
+                   ("stone", "stone_stairs", "stone_slab")),
+         "ridge": ("deepslate_bricks", "deepslate_brick_stairs", "deepslate_brick_slab"),
+         "verge": ("deepslate_bricks", "deepslate_brick_stairs", "deepslate_brick_slab"),
+         "gutter": "stone_brick_stairs"}
+# r10 (lovish: weathered GREEN copper on the tower and spires; the r9 critic saw orange on cone tier 2 and the
+# finials - roof_kit.COPPER's T2 and the brass role, exposed copper, whose texture is orange-tan): green only - T0
+# oxidized cut copper, T1 weathered (the wet tone), T2 the uncut oxidized block as the bleached course (its stair and
+# slab cells keep T0's: only cut copper has shapes)
+COPPER = {"tones": (("waxed_oxidized_cut_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab"),
+                    ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs",
+                     "waxed_weathered_cut_copper_slab"),
+                    ("waxed_oxidized_copper", "waxed_oxidized_cut_copper_stairs", "waxed_oxidized_cut_copper_slab")),
+          "ridge": ("waxed_weathered_cut_copper",), "verge": ("waxed_weathered_cut_copper",),
+          "gutter": "waxed_weathered_cut_copper_stairs"}
 
 SX, SZ, H_MAX = 17, 25, 26          # the T1 lab plot (design/building_tiers.md): x = depth, z = the front's width
 SPAWN = (8, 1, 12)
@@ -355,25 +375,30 @@ FAM = {
     "deep": ("polished_deepslate", "polished_deepslate_stairs", "polished_deepslate_slab", "polished_deepslate_wall"),
     "tiles": ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab", "deepslate_tile_wall"),
     "works": ("deepslate_bricks", "deepslate_brick_stairs", "deepslate_brick_slab", "deepslate_brick_wall"),  # R9
-    "quartz": ("quartz_bricks", "quartz_stairs", "quartz_slab", None),            # PALE: lines and single cells
-    "diorite": ("polished_diorite", "polished_diorite_stairs", "polished_diorite_slab", None),
+    # PALE: lines and single cells. r10 (the r9 critic: calcite blotches, a white quartz chimney - snow; arch_kit r5:
+    # smooth stone dressings): the two pale roles are the kit's smooth stone and stone-brick shapes, no quartz or diorite
+    "quartz": ("smooth_stone", "stone_brick_stairs", "smooth_stone_slab", None),
+    "diorite": ("smooth_stone", "stone_brick_stairs", "smooth_stone_slab", None),
     # BRASS <= 3 %. r9 (critic on the r8 builds: the ledges and the gate hood read raw orange): no unoxidised
-    # copper anywhere - the brass accents exposed copper, the ledges weathered / exposed (cone_r8)
-    "brass": ("waxed_exposed_cut_copper", "waxed_exposed_cut_copper_stairs", "waxed_exposed_cut_copper_slab", None),
+    # copper; r10 (the r9 critic still saw orange - exposed copper is orange-tan; lovish: weathered green copper): the
+    # brass role is renamed in look, not removed - every brass cell stays, in weathered copper
+    "brass": ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab",
+              None),
     "weathered": ("waxed_weathered_cut_copper", "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper_slab",
                   None),
     # r8 (lovish, Oct 28 22:59): red BRICK walls, grey SLATE roofs, weathered green COPPER on the cone
     "brick": ("bricks", "brick_stairs", "brick_slab", "brick_wall"),
     "slate": SLATE["tones"][0] + (None,),
     "verge": SLATE["verge"] + (None,),
-    "copper": RK.COPPER["tones"][0] + (None,),
+    "copper": COPPER["tones"][0] + (None,),
 }
 LIGHT, LAMP = "white_candle", "lantern"
+K_RENDER = "white_terracotta"     # r10: arch_kit r6's window lights a pale room behind its glass (BRASSWORKS.render)
 # THE ALLOWLIST: the checklist's palette roles and their shapes, the lights, and the lawn in front
 ALLOWED = ({n for f in FAM.values() for n in f if n} | {
     "stripped_mangrove_log", "chiseled_polished_blackstone", "cracked_polished_blackstone_bricks", "tuff",
-    "smooth_stone_slab", "calcite", "quartz_block", "bone_block", LIGHT, LAMP, LAWN, "deepslate_tiles",
-    "smooth_stone", "glass_pane"} | {n for m in (SLATE, RK.COPPER) for t in m["tones"] for n in t}
+    "smooth_stone_slab", "chiseled_stone_bricks", "bone_block", LIGHT, LAMP, LAWN, "deepslate_tiles",
+    "smooth_stone", "glass_pane", "glass", "shroomlight", "stone_bricks", K_RENDER} | {n for m in (SLATE, COPPER) for t in m["tones"] for n in t}
     | set(SLATE["ridge"]) | {SLATE["gutter"]})
 ROOF_NAMES = set(PAL.values())
 
@@ -677,7 +702,8 @@ def tower(g):
     yh, cz = LANE_H + 1, int(TZ)
     for z in LANE_Z:     # r6: ONE light spot - a quartz keystone in a polished granite head (as the jambs). r4's
         put(g, (0, yh, z), "polished_granite")       # pale jambs + haunches read as a U-frame; r5's pale | brass |
-    put(g, (0, yh, cz), "quartz_block")              # pale over a dark vault as an owl face (critics on r4, r5)
+    put(g, (0, yh, cz), "chiseled_stone_bricks")     # pale over a dark vault as an owl face (critics on r4, r5);
+    #                                                   r10: chiseled stone, the kit's pale (quartz read as snow)
     for z in (LANE_Z[0] - 1, LANE_Z[-1] + 1):        # r7: the door's glow - lanterns standing on the jamb tops, either
         put(g, (0, yh, z), LAMP, hanging="false", waterlogged="false")   # side of the keystone, outside the lane: one
     #   on the keystone lit nothing the camera sees (in game at dusk the door cell's luma median was 34, no warm pixel)
@@ -708,6 +734,17 @@ def tower(g):
     put(g, (4, 24, 12), FAM["dark"][3])
     paint(g, (4, 25, 12), "brass")
     cone_r8(g)
+    # r10 (the r9 critic: the 1-block dark corner columns make the cone a ziggurat): every full-block arris cell a
+    # dark stair, its tall half toward the cone's axis along x - the corner reads as a thin bevelled rib, not a
+    # stack of dark cubes; the tier ledges' dark treads stay (the critic: they read)
+    rows, arris = cone_rows(g)
+    for y, cells in arris.items():
+        for x, z in cells:
+            q = (x, y, z)
+            if q in g.b and shape_of(g.b[q][0]) == 0 and "blackstone" in g.b[q][0]:
+                stair(g, q, "dark", "east" if x < TX else "west")
+    for q in ((3, 21, 11), (3, 21, 13), (3, 21, 12)):   # r10: the top tier's bleached course the uncut oxidized block
+        put(g, q, COPPER["tones"][2][0])                # (r9's exposed brass was the third material here)
 
 
 CORBEL = FAM["works"][1]          # deepslate brick: a dark stone of its own, so ribs and corbels read as two parts
@@ -741,12 +778,11 @@ def cone_r8(g):
                 #   whole blackstone ring made 72 % of the cone's top dark: the cone stays copper from above)
     ledges = {(fx, y, z) for y, fx, zs in LEDGES for z in zs}
     body = [q for q, (n, _) in g.b.items() if q[1] > HALL_TOP and 8 <= q[2] <= 16 and q[0] <= 2 * TX
-            and RK.family(n, RK.COPPER) is not None and exposed(g, q) and q not in ledges and q[1] < 22
+            and RK.family(n, COPPER) is not None and exposed(g, q) and q not in ledges and q[1] < 22
             and not (q[1] in (11, 15, 19) and (q[0], q[1] + 1, q[2]) not in g.b and (q[0] + q[2]) % 2 == 0)]
-    retone(g, body, RK.COPPER, seed=7)
-    for q in [q for q in g.b if q[1] == 23 and RK.family(g.b[q][0], RK.COPPER) is not None]:
-        paint(g, q, "weathered")                 # r9: the needle's top ring the wet tone under the post (r8b's raw
-        #                                          copper tier ledge here counted as a fourth material on the spire)
+    retone(g, body, COPPER, seed=7)
+    # r9 painted the needle's top ring (y 23) the wet tone; r10 leaves it in the body's oxidized copper - with the
+    # brass role weathered now, that ring made weathered copper 47 % of the spire's face (facade_audit's 40 %)
 
 
 def door(g):
@@ -786,15 +822,15 @@ def door(g):
                 if y == 1:
                     n = "tuff"
                 elif x % 3 == 1:
-                    n = "quartz_bricks"
+                    n = "smooth_stone"          # r10: the kit's pale stone (quartz / diorite read as snow)
                 elif y == 6:
-                    n = "polished_diorite"
+                    n = "smooth_stone"
                 elif 2 <= y <= 4:
                     g.clear(x, y, zj)
-                    put(g, (x, y, zb), "red_nether_bricks")
+                    put(g, (x, y, zb), FAM["brick"][0])     # r10: brick panels (r9: red nether brick)
                     continue
                 else:                                     # r4: red over the panels, a quartz course under
-                    n = "quartz_bricks" if y == LANE_H else "red_terracotta"   # the head (all-calcite read as a
+                    n = "chiseled_stone_bricks" if y == LANE_H else "red_terracotta"   # the head (all-calcite read as a
                 put(g, (x, y, zj), n)                     # white plane from the RTS camera)
     for z in LANE_Z:        # the far wall, the gate's back (the animated gate will hang here)
         d = abs(z - int(TZ))
@@ -803,15 +839,15 @@ def door(g):
             # slab under the cone; r4's first 5-wide pass (pale only z 11..13) read as a dark slot in a white frame.
             # Over the lintel line red - rows 7 / 8 carry the jambs' pale, the 30 % row rule
             if y >= HALL_TOP:                          # r6: the top a light field round the spot (r5's red band
-                n = "calcite"                          # here rendered luma 25 under the head: the owl's dark mask)
-            elif y == 1 or d == 2:
-                n = "polished_diorite"
+                n = "smooth_stone"                     # here rendered luma 25 under the head: the owl's dark mask)
+            elif y == 1 or d == 2:                     # r10: smooth stone / chiseled stone for calcite / diorite
+                n = "chiseled_stone_bricks"
             else:
-                n = "calcite"
+                n = "smooth_stone"
             put(g, (HALL_X[1], y, z), n)
         for x in range(2, 8):                          # the passage ceiling: red and pale bands
             if (x, LANE_H + 1, z) in g.b:
-                put(g, (x, LANE_H + 1, z), "red_terracotta" if x % 2 else "quartz_bricks")
+                put(g, (x, LANE_H + 1, z), "red_terracotta" if x % 2 else "chiseled_stone_bricks")
         for x in LANE_X:                               # the floor: smooth stone, flush with the lawn, on a tuff
             if x in (LANE_X[0], LANE_X[-1]):           # threshold and gate line (r4's diorite threshold read as a
                 put(g, (x, 0, z), "tuff")              # pale strip under the door)
@@ -939,10 +975,10 @@ def wing_roofs_r9(g):
         around.update({(x, Z(5)): HALL_H[x] for x in range(HALL_X[1] + 1)})
     cells = RK.field(H, seed=8, mats=SLATE, fixed=fixed, around=around, regions=regions,
                      along=lambda c: (c[0], c[1]))
-    for (x, y, z), (n, p) in list(cells.items()):      # under the dark bargeboard a pale stone bracket line
-        if (x, z) in fixed and n == SLATE["verge"][0]:
-            cells[(x, y, z)] = ("stone_brick_stairs", dict(facing="south" if z == 0 else "north", half="top",
-                                                           shape="straight", waterlogged="false"))
+    for (x, y, z), (n, p) in list(cells.items()):      # under the dark bargeboard a brick corbel line (r10: r9's
+        if (x, z) in fixed and n == SLATE["verge"][0]:    # pale stone brackets made the gable read stone and slate)
+            cells[(x, y, z)] = (FAM["brick"][1], dict(facing="south" if z == 0 else "north", half="top",
+                                                      shape="straight", waterlogged="false"))
     for q, (n, p) in cells.items():
         put(g, q, n, **p)
     for s in (0, 1):                                    # the brass finial moves to the half-hip's apex (r8b: x 0)
@@ -982,14 +1018,37 @@ BRICK_KIT = {BW.trim.wall: FAM["brick"][3], BW.wall2.stairs: FAM["brick"][1]}
 #   and the string course's drip
 
 
-def pier_kit(lantern=False):
+def pier_kit(lantern=False, brick_cap=False):
     """The kit pier, its body plain brick (the kit bands it in the second tone every 2nd row: on a 1-wide pier
-    between windows those granite cells stand alone - the r8 wall rule's chequer)."""
-    return K.recolour(K.pier(BW, 5, lantern=lantern), dict(BRICK_KIT, **{BW.wall2.full: FAM["brick"][0]}))
+    between windows those granite cells stand alone - the r8 wall rule's chequer). brick_cap (r10, the gable ends:
+    the r9 critic saw pale piers and no brick there; from the steep RTS camera a gable shows mostly its proud
+    pilasters): the pilaster's capital corbelled in brick stairs, the pale left to the plinth and string course."""
+    m = dict(BRICK_KIT, **{BW.wall2.full: FAM["brick"][0]})
+    if brick_cap:
+        m[BW.trim.stairs] = FAM["brick"][1]
+    p = K.recolour(K.pier(BW, 5, lantern=lantern), m)
+    if brick_cap:                                # and its pale cap block (the plinth, y 0, stays the base course)
+        for q, (n, pr) in list(p.b.items()):
+            if q[1] >= 1 and n == BW.trim.full:
+                p.set(*q, FAM["brick"][0])
+    return p
 
 
 def window_kit():
-    return K.recolour(K.window(BW, "tall"), BRICK_KIT)
+    """The kit tall window, r10: its panes moved forward to the pilasters' plane (z 1, one proud of the wall), the
+    set's glow block (shroomlight) straight behind every pane - a lit room, not the kit's one lantern for two pane
+    columns. r9's
+    panes sat one back in a 2-wide reveal: the 3/4 camera, 45 degrees round from the face, looked into the jamb -
+    its still showed no glass at all (the 2-proud eave hides the lower rows of a set-back pane). A pane is thin, so
+    the wall line (G1 / G7) stays where it was."""
+    p = K.recolour(K.window(BW, "tall"), BRICK_KIT)
+    for (x, y, z), (n, pr) in list(p.b.items()):
+        if z == -1 and n == BW.glass[0]:
+            p.set(x, y, 1, n, **pr)
+            for z in (0, -1):                    # the lit room behind the glass, 2 deep: the set's glow block
+                p.set(x, y, z, BW.light[1])      # (no air behind a pane: no pocket a unit could be built into)
+    return p
+
 
 
 WALL_X = 2                         # r9: the west arcade's wall plane (r8b: x 1) - the kit pier's pilaster stands at x 1
@@ -1043,9 +1102,9 @@ def on_face(g, part, run0, y, plane, face, width, **kw):
 def gables_r9(g):
     """The wing ends, R5 + R6 + R7 + R8 from the kit, in the plane z 1 / 23 (r8a: the half-hip's verge oversails z 0 /
     24): a pale base course, kit piers at x 2 5 8 (their pilasters 1 proud), kit tall windows at x 3-4 and 6-7 (lit),
-    the kit string course at y 6 carried round the corner from the front, brick over it to the roof, the pavilion
-    emblem in the gable under the hip. The hall's corner column (x 9) in the same plane."""
-    import brass_lab_parts as B
+    the kit string course at y 6 carried round the corner from the front, brick over it to the roof, a lit
+    quatrefoil in the gable under the hip (r10; r9: the pavilion emblem). The hall's corner column (x 9) in the
+    same plane."""
     for s in (0, 1):
         Z, F = side_maps(s)
         zf, face = Z(1), F("north")
@@ -1061,16 +1120,45 @@ def gables_r9(g):
                 put(g, (x, y, zf), FAM["brick"][0])
             put(g, (x, HALL_TOP - 1, zf), UNDER_LIP)
         for x in GABLE_PIERS_R9:
-            on_face(g, pier_kit(), x, 1, zf, face, 1)
-        for x0, _ in GABLE_WINDOWS:
-            on_face(g, window_kit(), x0, 1, zf, face, 2)
+            on_face(g, pier_kit(brick_cap=True), x, 1, zf, face, 1)
+        for x0, _ in GABLE_WINDOWS:              # r10: the kit window's lit room (arch_kit r6) stops at the arcade
+            on_face(g, window_kit(), x0, 1, zf, face, 2,        # window's glass and lantern behind the corner
+                    where=lambda q: not (q in g.b and S_GLYPH(g.b[q][0]) in "g*"))
             for x in (x0, x0 + 1):
                 put(g, (x, 1, zf), TRIM)
         on_face(g, K.string_course(BW, HALL_X[1] - 1), WALL_X, HALL_TOP, zf, face, HALL_X[1] - 1)
+        for x in range(WALL_X + 1, HALL_X[1]):   # r10: over the string course the gable's brick (the kit's pale
+            q = (x, HALL_TOP + 1, zf)            # coping row here read as a second, stone storey line)
+            if g.b.get(q, ("",))[0] == BW.trim.full:
+                put(g, q, FAM["brick"][0])
         put(g, (HALL_X[1], HALL_TOP + 1, Z(0)), FAM["verge"][2], type="bottom", waterlogged="false")   # the corner
-        roof = {q: v for q, v in g.b.items() if q[2] == zf and q[1] > WING_TOP}
-        stamp(g, B.emblem(recess=False), (4, 9, zf), 2 if s == 0 else 0)
-        g.b.update(roof)                         # the emblem stays under the roof's own surface
+        put(g, (HALL_X[1], HALL_TOP + 1, zf), FAM["verge"][0])   # r10: the corner column's top in the verge stone
+        #                                                          (the rts camera saw a brick block on the roof line)
+        # r10 (the r9 critic: r8b's brick gable with its quatrefoil window, restore it): in the gable's brick under
+        # the half-hip a quatrefoil light - four panes round a carved stone boss, the gable's lit loft (glow blocks)
+        # behind them - where r9 set the pavilion emblem
+        cx, cy, back = 5, 9, zf + (1 if s == 0 else -1)   # x 5: the gable wall's middle (x 2..8); at x 4 the
+        #                                                    verge's low side hid the near lobe from the 3/4 still
+        for x in range(cx - 2, cx + 3):         # the gable field round the light in brick (r9: slate cells there)
+            for y in range(cy - 1, cy + 2):
+                if (x, y, zf) in g.b and not S_GLYPH(g.b[(x, y, zf)][0]) in "s_":
+                    put(g, (x, y, zf), FAM["brick"][0])
+        out = zf - 1 if s == 0 else zf + 1      # the light stands in the verge's plane (z 0 / 24), one proud of
+        put(g, (cx, cy, out), "chiseled_stone_bricks")   # the gable: set back under the half-hip's oversail, the 3/4
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):  # still saw only slivers of it; the lobes clear glass
+            put(g, (cx + dx, cy + dy, out), BW.glass[1])   # blocks (a pane joined only to the wall behind it
+            #                                                renders as a stub across the gable, not a light)
+            put(g, (cx + dx, cy + dy, zf), BW.light[1])
+        put(g, (cx, cy, zf), FAM["brick"][0])
+        for x in range(cx - 2, cx + 3):         # the light's sill: the kit's pale trim (smooth stone), a short
+            if g.b.get((x, cy - 2, zf), ("",))[0] == FAM["brick"][0]:     # course under it, never a chequer
+                put(g, (x, cy - 2, zf), BW.trim.full)                     # (granite read pink)
+        for x in range(cx - 2, cx + 4):          # the lit loft behind it: every hidden cell (6 neighbours filled)
+            for y in range(cy - 2, cy + 2):      # of the plane behind, the low side wider (a 3/4 ray through a
+                q = (x, y, back)                 # 1-wide lobe slants down and away from the cameras)
+                if q in g.b and all((x + a, y + b, back + c) in g.b for a, b, c in
+                                    ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))):
+                    put(g, q, BW.light[1])
 
 
 DOOR_X = 1                         # r9: the gate's mouth plane (r8b: x 0, the plot edge - nothing could oversail it)
@@ -1196,7 +1284,7 @@ def yard(g):
         else:
             put(g, (xp, 2, z), "polished_blackstone_slab", type="top", waterlogged="false")
     put(g, (xp, 3, 16), "waxed_weathered_cut_copper_slab", type="bottom", waterlogged="false")   # the drum
-    put(g, (xp, 3, 15), "waxed_exposed_cut_copper_slab", type="bottom", waterlogged="false")
+    put(g, (xp, 3, 15), "waxed_oxidized_cut_copper_slab", type="bottom", waterlogged="false")   # r10: green
     for z in range(2, 6):                                 # the coal stage
         put(g, (xp, 1, z), "polished_andesite")
         put(g, (xp, 2, z), "coal_block")
@@ -1204,7 +1292,8 @@ def yard(g):
     for z in (1, 6):
         for y in (1, 2, 3):
             put(g, (xp, y, z), "iron_bars")
-    for z in (5, 19):                                     # two lamp posts at the apron's corners
+    for z in (0, SZ - 1):                                 # two lamp posts at the front's corners (r10: r9's at the
+        #                                                   apron's corners, z 5 / 19, stood in front of bay windows)
         for y in (1, 2):
             put(g, (0, y, z), FAM["dark"][3])
         put(g, (0, 3, z), LAMP, hanging="false", waterlogged="false")
@@ -1236,8 +1325,8 @@ def yard_walls(g):
             put(g, (xh, y, z), PANE, waterlogged="false")
             put(g, (xh - 1, y, z), FAM["flat"][0])
         put(g, (xh - 1, 2, z), LAMP, hanging="false", waterlogged="false")
-    for x, z in ((SHED_X[1], 1), (SHED_X[1], SZ - 2), (SHED_X[1], 12), (SHED_X[0], 1), (SHED_X[0], SZ - 2)):
-        for y in range(1, SHED_TOP - 1):
+    for x, z in ((SHED_X[1], 1), (SHED_X[1], 12), (SHED_X[0], 1)):      # r10: none on the south corners, where
+        for y in range(1, SHED_TOP - 1):                                     # they hid the shed's brick end
             put(g, (x, y, z), FAM["dark"][3])
 
 
@@ -1256,9 +1345,8 @@ def downpipes(g):
     """Downpipes (dark walls) from the west gutters to the plinth at the wing / hall joints (z 3, 21: x 0) and under
     the shed's east gutter (x 16) every 2 blocks (the back's pipe rack); the kit balustrade (R13, an iron-bar panel between stone newels)
     as the area railing before the wing fronts (x 0, z 1..4 / 20..23)."""
-    for z in (3, SZ - 4):
-        for y in range(1, HALL_TOP):
-            put(g, (0, y, z), FAM["dark"][3])
+    # r10: no west downpipes - they stood in front of the z 2..3 / 21..22 bay windows (the 3/4 camera saw the pipe,
+    # not the glass), and the west eave's lip is pale stone now, no copper gutter to drain (arch_kit status r6)
 
     for z in range(2, SZ - 1, 2):
         for y in range(1, SHED_TOP - 1):
@@ -1267,9 +1355,43 @@ def downpipes(g):
         for y in range(1, SHED_TOP - 1):                  # x 10 walk is clear beside it
             put(g, (SHED_X[0], y, z), FAM["dark"][3])
     for z0 in (1, SZ - 5):                                # z 1..4, 20..23 (the wing fronts; the hall bays stay open)
-        stamp_kit(g, K.balustrade(BW, 4, every=3, panel="bars"), (0, 1, z0), 1, keep=True)
+        stamp_kit(g, K.recolour(K.balustrade(BW, 4, every=3, panel="bars"), {BW.trim.full: BW.trim.wall}),
+                  (0, 1, z0), 1, keep=True)      # r10: newels as posts (the r6 kit's full stone newels stood 3 high at
+        #                                          x 0 - a wall under the wing eave, so the eave stopped oversailing, G1)
         for z in range(z0, z0 + 4):                       # on a stone kerb (grass under a block dies: bury_grass)
             put(g, (0, 0, z), "polished_andesite")
+
+
+def lit_rooms(g):
+    """r10 (dusk: r9's "tall lit windows" read as dark slots): behind every camera-face window (a pane that looks out
+    of the plot to the west or south through air at its own height) a lit room - the cells 1..2 behind its glass and
+    1 to each side, from the sill course up, that are hidden masonry (no air beside them) or the far jamb turn the
+    set's glow block.
+    A slanted 3/4 view through a 2-wide light looks into its reveals and sill, not only straight back."""
+    glow = BW.light[1]
+    for (x, y, z), (n, _) in list(g.b.items()):
+        if S_GLYPH(n) != "g" or not 1 <= y <= WING_TOP:
+            continue
+        def clear(q):                    # air, or a railing / post the eye looks through
+            return q not in g.b or S_GLYPH(g.b[q][0]) == "|"
+        west = all(clear((xx, y, z)) for xx in range(x))
+        south = all(clear((x, y, zz)) for zz in range(z + 1, SZ))
+        if not (west or south):
+            continue
+        for d in (1, 2):
+            for side in (-1, 0, 1):
+                for dy in (-1, 0):
+                    q = (x + d, y + dy, z + side) if west else (x + side, y + dy, z - d)
+                    if q not in g.b or S_GLYPH(g.b[q][0]) != "#" or q[1] < 2:     # the base course stays
+                        continue
+                    # hidden masonry, or the window's far jamb: the side away from the south-west cameras (north
+                    # of a west window, east of a south one) - the 3/4 still looks across the glass into it
+                    front = (q[0] - 1, q[1], q[2]) if west else (q[0], q[1], q[2] + 1)
+                    far = side == (-1 if west else 1) and (front not in g.b or S_GLYPH(g.b[front][0]) == "g")
+                    #   (a jamb open to the reveal - never a pier face behind its own pilaster)
+                    if far or all((q[0] + a, q[1] + b, q[2] + c) in g.b for a, b, c in
+                                  ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))):
+                        g.b[q] = (glow, {})
 
 
 def hollow(g):
@@ -1311,6 +1433,7 @@ def detail():
     yard_walls(g)
     downpipes(g)
     cresting(g)
+    lit_rooms(g)
     hollow(g)
     return g
 

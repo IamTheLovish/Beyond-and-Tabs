@@ -408,9 +408,41 @@ def still_camera(size, still):
     return kind, c, f, r, u, half_h * SCREEN[0] / SCREEN[1], half_h
 
 
-def _march(grid, see_through, o, d):
-    """A voxel DDA per ray (o, d: n x 3) through grid (block ids, 0 air): (id, cell, entry axis, entry sign) of the
-    first block whose id is not see_through, id 0 where a ray leaves the grid."""
+def box(name, props, open_x=True):
+    """The block's shape as one box in its cell, (lo, hi) in sixteenths: full cubes and stairs whole; a bottom / top
+    slab its half; a lantern, candle, chain, button, rail, carpet or campfire its small box; a wall, fence or post its
+    8-wide stem; a glass pane or iron bars a 2-thick plane facing its open side (along x when open_x); a glass block
+    a clear cube."""
+    n = name
+    if n.endswith("_slab"):
+        t = props.get("type", "bottom")
+        return ((0, 0, 0), (16, 8, 16)) if t == "bottom" else ((0, 8, 0), (16, 16, 16)) if t == "top" else \
+            ((0, 0, 0), (16, 16, 16))
+    if "lantern" in n:
+        return ((5, 0, 5), (11, 9, 11)) if props.get("hanging") != "true" else ((5, 7, 5), (11, 16, 11))
+    if n.endswith("candle"):
+        return (6, 0, 6), (10, 6, 10)
+    if n == "chain":
+        return (6, 0, 6), (10, 16, 10)
+    if n.endswith(("_button",)):
+        return (5, 0, 5), (11, 2, 11)
+    if n.endswith("rail") or n.endswith("_carpet"):
+        return (0, 0, 0), (16, 1, 16)
+    if "campfire" in n:
+        return (0, 0, 0), (16, 7, 16)
+    if n.endswith(("_wall", "_fence")) or n == "lightning_rod" or n.endswith("_rod"):
+        return (4, 0, 4), (12, 16, 12)
+    if S.glyph(n) == "g" and not n.endswith("_pane"):
+        return (0, 0, 0), (16, 16, 16)          # a glass block: a clear cube
+    if S.glyph(n) == "g" or n == "iron_bars":
+        return ((7, 0, 0), (9, 16, 16)) if open_x else ((0, 0, 7), (16, 16, 9))
+    return (0, 0, 0), (16, 16, 16)
+
+
+def _march(grid, see_through, o, d, lo, hi):
+    """A voxel DDA per ray (o, d: n x 3) through grid (block ids, 0 air), each cell's block the box lo..hi (per cell,
+    in blocks): (id, cell, entry axis, entry sign) of the first box the ray passes through, id 0 where it leaves the
+    grid. Ids flagged see_through are passed through."""
     import numpy as np
     size = np.array(grid.shape)
     n = len(o)
@@ -420,52 +452,77 @@ def _march(grid, see_through, o, d):
         tlo = np.where(np.isnan(np.minimum(t0, t1)), -np.inf, np.minimum(t0, t1))
         thi = np.where(np.isnan(np.maximum(t0, t1)), np.inf, np.maximum(t0, t1))
     tn = np.maximum(tlo.max(axis=1), 0)
-    tf = thi.min(axis=1)
-    alive = tf > tn
-    axis = np.argmax(tlo, axis=1)
+    alive = thi.min(axis=1) > tn
     vox = np.clip(np.floor(o + d * (tn[:, None] + 1e-7)).astype(int), 0, size - 1)
     stp = np.where(d > 0, 1, -1)
     with np.errstate(divide="ignore", invalid="ignore"):
         tmax = np.where(d != 0, (vox + (stp > 0) - o) / d, np.inf)
         tdel = np.where(d != 0, np.abs(1.0 / d), np.inf)
     hit = np.zeros(n, dtype=np.int32)
+    axis = np.zeros(n, dtype=int)
+    sign = np.zeros(n, dtype=int)
     for _ in range(int(size.sum()) + 4):
         idx = np.nonzero(alive)[0]
         if not len(idx):
             break
-        bid = grid[vox[idx, 0], vox[idx, 1], vox[idx, 2]]
-        stop = (bid > 0) & ~see_through[bid]
+        v = vox[idx]
+        bid = grid[v[:, 0], v[:, 1], v[:, 2]]
+        cand = np.nonzero((bid > 0) & ~see_through[bid])[0]
+        stop = np.zeros(len(idx), dtype=bool)
+        if len(cand):
+            rows = idx[cand]
+            vc = v[cand]
+            b0 = vc + lo[vc[:, 0], vc[:, 1], vc[:, 2]]
+            b1 = vc + hi[vc[:, 0], vc[:, 1], vc[:, 2]]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                ta, tb = (b0 - o[rows]) / d[rows], (b1 - o[rows]) / d[rows]
+                ta = np.where(np.isnan(ta), -np.inf, ta)
+                tb = np.where(np.isnan(tb), np.inf, tb)
+            near, far = np.minimum(ta, tb), np.maximum(ta, tb)
+            enter, leave = near.max(axis=1), far.min(axis=1)
+            ok = (enter <= leave) & (leave >= 0)
+            stop[cand[ok]] = True
+            ax = np.argmax(near, axis=1)
+            axis[rows[ok]] = ax[ok]
+            sign[rows[ok]] = -stp[rows[ok], ax[ok]]
         hit[idx[stop]] = bid[stop]
         alive[idx[stop]] = False
         idx = idx[~stop]
         ax = np.argmin(tmax[idx], axis=1)
         vox[idx, ax] += stp[idx, ax]
         tmax[idx, ax] += tdel[idx, ax]
-        axis[idx] = ax
         gone = ((vox[idx] < 0) | (vox[idx] >= size)).any(axis=1)
         alive[idx[gone]] = False
-    return hit, vox, axis, -stp[np.arange(n), axis]
+    return hit, vox, axis, sign
 
 
 def shoot(b, still, step=4):
-    """Every `step`-th pixel of a still, cast into `b` (a voxel DDA, every non-air block a full cube but glass):
-    {(px, py): hit} with hit = (cell, name, face, behind), face the side the ray entered by (FACE_NAMES), behind
-    (cell, name) of the first non-glass block past a glass hit, else None. Glass is seen AND seen through, and a pane
-    is a thin upright plane through its cell's middle, facing the open side (x when a side along x is open, else z):
-    a ray looks on from where it crosses that plane, so a slanted view into a window sees the room, not only the
-    reveal. Pixels that miss the structure are left out."""
+    """Every `step`-th pixel of a still, cast into `b` (a voxel DDA, each block its box(): slabs half, lanterns,
+    posts, chains and rails small, panes and bars thin planes): {(px, py): hit} with hit = (cell, name, face, behind),
+    face the side of the block's box the ray entered by (FACE_NAMES), behind (cell, name) of the first non-glass
+    block past a glass hit, else None - glass is seen AND seen through. Pixels that miss the structure are left out."""
     import numpy as np
-    cells = {q: n for q, (n, _) in b.blocks.items() if n not in S.AIR}
+    cells = {q: v for q, v in b.blocks.items() if v[0] not in S.AIR}
     if not cells:
         return {}
     size = tuple(max(q[i] for q in cells) + 1 for i in range(3))
     ids, names = {}, [None]
     grid = np.zeros(size, dtype=np.int32)
-    for q, n in cells.items():
+    lo = np.zeros(size + (3,))
+    hi = np.ones(size + (3,))
+    for q, (n, pr) in cells.items():
         if n not in ids:
             ids[n] = len(names)
             names.append(n)
         grid[q] = ids[n]
+        runs_x = pr.get("east") == "true" or pr.get("west") == "true"       # a pane's plane runs the way it
+        runs_z = pr.get("north") == "true" or pr.get("south") == "true"     # connects; else it faces its open side
+        if runs_x != runs_z:
+            open_x = runs_z
+        else:
+            open_x = any(not (0 <= q[0] + e < size[0]) or (q[0] + e, q[1], q[2]) not in cells for e in (-1, 1))
+        a, c = box(n, pr, open_x)
+        lo[q], hi[q] = np.array(a) / 16, np.array(c) / 16
     glass = np.array([False] + [S.glyph(n) == "g" for n in names[1:]])
     kind, c, f, r, u, hw, hh = still_camera(size, still)
     W, H = SCREEN
@@ -480,33 +537,16 @@ def shoot(b, still, step=4):
         d = f + a * hw * r + v * hh * u
         d /= np.linalg.norm(d, axis=1)[:, None]
         o = np.tile(c, (len(px), 1))
-    none = np.zeros(len(names), dtype=bool)
-    hit, vox, axis, sign = _march(grid, none, o, d)
+    hit, vox, axis, sign = _march(grid, np.zeros(len(names), dtype=bool), o, d, lo, hi)
     got = np.nonzero(hit)[0]
     gl = got[glass[hit[got]]]
     behind = {}
     if len(gl):
-        def open_x(q):           # a pane faces along x when a side of it along x is open (air or the plot's edge)
-            return any(not (0 <= q[0] + e < size[0]) or grid[q[0] + e, q[1], q[2]] == 0 for e in (-1, 1))
-        ax = np.array([0 if open_x(tuple(vox[i])) else 2 for i in gl])
-        with np.errstate(divide="ignore", invalid="ignore"):
-            t = (vox[gl, ax] + 0.5 - o[gl, ax]) / d[gl, ax]
-        p0 = o[gl] + d[gl] * t[:, None]
-        inside = np.all((p0 >= vox[gl] - 1e-6) & (p0 <= vox[gl] + 1 + 1e-6), axis=1) & np.isfinite(t)
-        # a ray that leaves the pane's cell before it reaches the pane misses the glass: it sees what is beyond
-        # (the sill, the reveal), glass from there on see-through
-        miss = gl[~inside]
-        if len(miss):
-            h2, v2, a2, s2 = _march(grid, glass, o[miss], d[miss])
-            hit[miss], vox[miss], axis[miss], sign[miss] = h2, v2, a2, s2
-        ok = gl[inside]
-        if len(ok):
-            h2, v2, _, _ = _march(grid, glass, p0[inside] + d[ok] * 1e-6, d[ok])
-            for i, h, v in zip(ok, h2, v2):
-                if h:
-                    behind[i] = (tuple(int(x) for x in v), names[h])
+        h2, v2, _, _ = _march(grid, glass, o[gl], d[gl], lo, hi)
+        for i, h, w in zip(gl, h2, v2):
+            if h:
+                behind[i] = (tuple(int(x) for x in w), names[h])
     out = {}
-    got = np.nonzero(hit)[0]
     for i in got:
         q = tuple(int(x) for x in vox[i])
         out[(int(px[i]), int(py[i]))] = (q, names[hit[i]], FACE_NAMES[(int(axis[i]), int(sign[i]))], behind.get(i))
