@@ -58,11 +58,11 @@ bricks) with a red cross / star, framed in blackstone. Target: red 79 / dark 11 
 the lane every other lab uses: **T1 Brassworks vehicles fit 5 x 8** (r4, Oct 28 - the 7 x 10 came only from the plot
 rescale and made the door the cone's whole foot; ref18's door is ~55 % of the foot's width, ~31 % of the tower's
 height). The door's light is a SPOT at the head's centre, not a frame (r5: r4's calcite jambs read as a white U):
-polished granite jambs (z 9 / 15) to the head; the head at y 9 - granite haunches, quartz-brick voussoirs either side
-of a brass keystone carrying ONE standing lantern (hanging lanterns
+polished granite jambs (z 9 / 15) to the head; the head at y 9 polished granite round ONE quartz keystone carrying ONE
+standing lantern (r6: r5's pale | brass | pale over a dark band read as an owl face) (hanging lanterns
 fail check_support); beside the jambs the cone's face and dark arrises come down to the eave. The far wall (x 9) a
-calcite field between diorite gate channels, red over the lintel line, the brass rosette where the animated gate will
-hang; the reveals quartz-brick pilasters between red fields; the lane floor smooth stone behind a diorite threshold.
+calcite field between diorite gate channels, calcite to the head (r6: a light field round the spot), the brass rosette where the animated gate will
+hang; the reveals quartz-brick pilasters between red fields; the lane floor smooth stone on a tuff threshold.
 Buttresses (z 7 / 17) stop under the eave like the arcade piers, capped by one small dark stair AT the eave.
 
 **R7-R8 tower target (measured above the hall): red 56 / dark 25 / grey 17 / pale 3.**
@@ -79,7 +79,9 @@ red (r5: its dark arrises made it a dark cap, a third tier) - and the point (y 2
 
 **R9 Backs and RTS-visible sides (the shed x 11..16 roof at y 5, its south end, the stack x 13..14 z 0..1, the halls'
 south end z 24).** Quieter, but never blank: every visible face has 2 materials and 2 depth planes - deepslate tiles
-roof with blackstone ribs, the stack in deepslate bricks with a brass band and a dark cap.
+roof with blackstone ribs, the stack in deepslate bricks with a brass band and a dark cap. r6: the shed (~40 % of the RTS view) a shallow gable over z 2..22 -
+deepslate tile courses, a deepslate-brick rib every 3rd row, eave stairs at y 5, a polished deepslate ridge at y 6 -
+and two lit 1 x 3 slots in its south wall; no parapet.
 
 ## Part references (lovish, Oct 28 16:58-17:00; ref18 stays the one primary)
 Each teaches a part, at T1 size; none replaces ref18's layout or palette.

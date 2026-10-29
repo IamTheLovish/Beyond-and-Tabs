@@ -223,6 +223,7 @@ GB_FOOT, GB_APEX = 7.5, 27.0                     # 6, 23: from the hall's eave t
 # (z 8..16) stands on the hall roof; the hall roofs (z 3..7, 17..21) run on into its flanks.
 BASE_Z = (7, 17)                                 # the base block under the eave: the door's piers and buttresses
 SHED_X, SHED_TOP = (11, 16), 5                   # (8, 12), 4: the works shed, flat roofed
+GABLE_Z, SHED_SLOTS = (2, 22), (12, 15)          # r6: its shallow gable's run, and the south wall's two lit slots
 STACK = (13, 14, 0, 1, 12)                       # (10, 11, 0, 1, 10): one smokestack behind the north wing's high end,
                                                  # its top = the wing's second column (12), so the front never sees it
 
@@ -580,7 +581,9 @@ def tower(g):
             if (x, z) in arris[y] and not 20 <= y <= 23:
                 paint(g, q, "rough" if y >= 24 else "dark")
             elif (x, z) in arris[y]:   # r5: the top tier (3 wide) is one red field - dark arrises there made 13 of
-                paint(g, q, "red")     # 16 cells dark, a dark cap read as a third tier (critic on r4)
+                # 16 cells dark, a dark cap read as a third tier (critic on r4); r6: its outline stairs granite ticks,
+                # since 3 deep the red rendered 43..48 against the body's 60 (values darkened upward)
+                paint(g, q, "granite" if shape_of(g.b[q][0]) == 1 else "red")
             elif top_row and x == fx and z in corners:        # the step's inner corner: a lighter-red tick on the
                 paint(g, q, "granite")                        # arris (ref18's picked-out steps; a whole granite
             else:                                             # step row read as a lid at y 11)
@@ -591,12 +594,9 @@ def tower(g):
     # face at y 10: check_support rejects hanging ones, and the lane under the head, y 1..8, stays air). Over it the
     # face runs on red. Only 2 pale cells a row (the 30 % row rule): the door's light spot, at the head's centre.
     yh, cz = LANE_H + 1, int(TZ)
-    for z, facing in ((LANE_Z[0], "north"), (LANE_Z[-1], "south")):     # r5: the haunches granite and the pale
-        put(g, (0, yh, z), FAM["granite"][1], facing=facing, half="top", shape="straight", waterlogged="false")
-    for z in (cz - 1, cz + 1):                       # next to the keystone - the light gathers at the head's centre
-        put(g, (0, yh, z), "quartz_bricks")          # (r4's pale haunches + jambs read as a U; top slabs here
-        #                                              showed the dark vault through their lower half)
-    put(g, (0, yh, cz), FAM["brass"][2], type="top", waterlogged="false")
+    for z in LANE_Z:     # r6: ONE light spot - a quartz keystone in a polished granite head (as the jambs). r4's
+        put(g, (0, yh, z), "polished_granite")       # pale jambs + haunches read as a U-frame; r5's pale | brass |
+    put(g, (0, yh, cz), "quartz_block")              # pale over a dark vault as an owl face (critics on r4, r5)
     put(g, (0, yh + 1, cz), LAMP, hanging="false", waterlogged="false")
     # R7 the eye, at its r2 elevation cells (y 14..16, z 11..13): a granite ring round a recessed deep-red heart, in
     # the second tier's face (x 1, y 12..15) and the third's (x 2, y 16..19)
@@ -672,8 +672,8 @@ def door(g):
             # a pale field under a red head (the vault seen in perspective): r3's 7-wide all-pale wall read as a grey
             # slab under the cone; r4's first 5-wide pass (pale only z 11..13) read as a dark slot in a white frame.
             # Over the lintel line red - rows 7 / 8 carry the jambs' pale, the 30 % row rule
-            if y > HALL_TOP:
-                n = "red_terracotta"
+            if y >= HALL_TOP:                          # r6: the top a light field round the spot (r5's red band
+                n = "calcite"                          # here rendered luma 25 under the head: the owl's dark mask)
             elif y == 1 or d == 2:
                 n = "polished_diorite"
             else:
@@ -688,22 +688,25 @@ def door(g):
             else:
                 put(g, (x, 0, z), "smooth_stone_slab", type="top", waterlogged="false")
     cz = int(TZ)
-    for dz, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):  # the rosette: a brass cross round a chiseled boss
-        put(g, (HALL_X[1], 6 + dy, cz + dz), FAM["brass"][0])
-    put(g, (HALL_X[1], 6, cz), "chiseled_polished_blackstone")
+    for dz, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):  # the rosette: a brass cross round a brass boss (r6: the
+        put(g, (HALL_X[1], 6 + dy, cz + dz), FAM["brass"][0])     # chiseled blackstone boss was the front's darkest
+    put(g, (HALL_X[1], 6, cz), FAM["brass"][0])                    # cell, luma 18)
     put(g, (HALL_X[1], LANE_H, cz), FAM["brass"][0])
 
 
 def works(g):
-    """R9: the shed roof in bays - blackstone-brick ribs every 3rd row and polished deepslate copings at the eaves
-    (y 5), the bays sunk one (y 4) in deepslate tile and polished blackstone courses; the south end: dark corner
-    piers, a tuff plinth, a recessed bay with ONE lit slot, a polished deepslate lintel; the hall's south-east corner
-    (x 9) a dark quoin under the lintel band; the stack in deepslate bricks with a brass band and a dark cap."""
+    """R9: the shed roof a shallow gable over z 2..22 (r6), its ends (z 0..1 by the stack, z 23..24) in flat bays -
+    blackstone-brick ribs every 3rd row and polished deepslate copings, the bays sunk one; the south end: dark corner
+    piers, a tuff plinth, a deepslate-brick wall with two lit slots, a polished deepslate lintel; the hall's
+    south-east corner (x 9) a dark quoin under the lintel band; the stack in deepslate bricks with a brass band and a
+    dark cap."""
     x0, x1 = SHED_X
     sx0, sx1, sz0, sz1, top = STACK
     for z in range(SZ):
         for x in range(x0, x1 + 1):
             if sx0 <= x <= sx1 and sz0 <= z <= sz1:
+                continue
+            if GABLE_Z[0] <= z <= GABLE_Z[1]:
                 continue
             if x in (x0, x1):
                 put(g, (x, SHED_TOP, z), "polished_deepslate")
@@ -712,24 +715,41 @@ def works(g):
             else:
                 g.clear(x, SHED_TOP, z)
                 put(g, (x, SHED_TOP - 1, z), "deepslate_tiles" if z % 3 == 1 else "polished_blackstone")
+    # r6 (critic on r5: the shed is ~40 % of the RTS view and read as a black box, median luma 24): a shallow gable
+    # over z 2..22 - eave stairs at y 5 (x 11 / 16), the ridge at y 6 over x 13..14 (under the hall ridge, y 9) - its
+    # slopes catch the sun; deepslate tile courses with a deepslate-brick rib every 3rd row and a polished deepslate
+    # ridge (variety by texture in one role)
+    for z in range(GABLE_Z[0], GABLE_Z[1] + 1):
+        fam = "works" if z % 3 == 0 else "tiles"
+        for x in range(x0, x1 + 1):
+            put(g, (x, SHED_TOP - 1, z), "deepslate_bricks")
+        for x, y, facing in ((x0, SHED_TOP, "east"), (x0 + 1, SHED_TOP + 1, "east"),
+                             (x1, SHED_TOP, "west"), (x1 - 1, SHED_TOP + 1, "west")):
+            stair(g, (x, y, z), fam, facing)
+        for x in range(x0 + 1, x1):
+            put(g, (x, SHED_TOP, z), FAM[fam][0])
+        for x in (x0 + 2, x0 + 3):
+            put(g, (x, SHED_TOP + 1, z), FAM["deep"][2], type="bottom", waterlogged="false")
     for x in range(sx0, sx1 + 1):
         for z in range(sz0, sz1 + 1):
             put(g, (x, 9, z), FAM["brass"][0])
             put(g, (x, top, z), FAM["dark"][0])
     zs, zi = SZ - 1, SZ - 2
-    for x in range(x0, x1 + 1):
-        put(g, (x, 1, zs), "tuff")
-        if x in (x0, x1):
-            for y in range(2, SHED_TOP + 1):
+    for x in range(x0, x1 + 1):                         # the south end: dark corner piers, a tuff plinth, the wall
+        put(g, (x, 1, zs), "tuff")                      # deepslate bricks with TWO lit 1 x 3 slots (x 12 / 15, r6:
+        if x in (x0, x1):                               # one 4-wide recess read as part of the black box), a
+            for y in range(2, SHED_TOP + 1):            # polished deepslate lintel; no parapet (r6)
                 put(g, (x, y, zs), FAM["dark"][0])
         else:
             for y in (2, 3, 4):
-                g.clear(x, y, zs)
-                put(g, (x, y, zi), "deepslate_tiles")
+                if x in SHED_SLOTS:
+                    g.clear(x, y, zs)
+                    put(g, (x, y, zi), "deepslate_tiles")
+                else:
+                    put(g, (x, y, zs), "deepslate_bricks")
             put(g, (x, SHED_TOP, zs), "polished_deepslate")
-    put(g, (13, 2, zi), LAMP, hanging="false", waterlogged="false")
-    for x in range(x0, x1 + 1):                         # a 1-high dark parapet along the shed's south edge
-        put(g, (x, SHED_TOP + 1, zs), FAM["dark"][3])
+    for x in SHED_SLOTS:
+        put(g, (x, 2, zs), LAMP, hanging="false", waterlogged="false")
     xc = HALL_X[1]
     for y, n in ((1, "tuff"), (2, "polished_blackstone"), (3, "polished_blackstone"), (4, "polished_blackstone")):
         put(g, (xc, y, zs), n)

@@ -193,7 +193,10 @@ class EngineShedT1Detail(unittest.TestCase):
             face = self.tower_face(y)
             if not face:
                 continue
-            pale = sum(any(k in n for k in self.PALE) for n in face.values())
+            # pale ON the cone: the door's look-through (the far wall, 9 deep - it renders mid grey) widens the row
+            # (r4) but is the door's light, not a band on the cone (r6 made the far wall's top calcite: critic on r5)
+            pale = sum(any(k in n for k in self.PALE) for z, n in face.items()
+                       if not (z in L.LANE_Z and y <= L.LANE_H and self.front_cell(y, z)[0] >= L.HALL_X[1]))
             self.assertLessEqual(pale / len(face), 0.30, "row %d: %s" % (y, face))
             if y > L.LANE_H and len(face) >= 3:
                 dark = sum(any(k in n for k in self.DARK) for n in face.values())
@@ -233,19 +236,64 @@ class EngineShedT1Detail(unittest.TestCase):
 
     # ---------------------------------------------------------------- r5: the fresh critic's fixes on r4 (6 / 5)
     def test_door_light_is_a_spot_not_a_frame(self):
-        """r4's door was a white U-frame (~20 calcite cells, luma ~199, round a dark mouth); ref18's door light is a
-        spot. In the door's mouth (x 0, z 9..15, y 1..9) pale only at the head's centre (the keystone's neighbours,
-        y 9; the brief allowed the y 8 impost too, but calcite there was the door's lightest cell, at the sides); the
-        jambs polished granite; the far wall red over the lintel line (y 7..8, the rosette's brass aside)."""
+        """r4's door was a white U-frame (~20 calcite cells, luma ~199, round a dark mouth); r5's two pale voussoirs
+        either side of a brass keystone read as an owl face (critic on r5). ref18's door light is ONE spot: in the
+        door's mouth (x 0, z 9..15, y 1..9) pale only the quartz keystone (y 9, z 12) carrying the lantern, the rest of
+        the head and the jambs polished granite; behind, a light field - the far wall's top (y 6..8) calcite, its
+        rosette brass (r5's chiseled boss was the front's darkest cell, luma 18)."""
         mouth = {(y, z): self.front_cell(y, z)[1] for y in range(1, L.LANE_H + 2) for z in range(9, 16)
                  if self.front_cell(y, z)[0] == 0}
         self.assertEqual(sorted(q for q, n in mouth.items() if any(k in n for k in self.PALE) and q[0] < 8), [])
         for z in (9, 15):
             self.assertEqual({self.names[(0, y, z)] for y in range(2, 8)}, {"polished_granite"}, z)
         head = sorted(q for q, n in mouth.items() if any(k in n for k in self.PALE))
-        self.assertEqual(head, [(L.LANE_H + 1, 11), (L.LANE_H + 1, 13)])  # the pale is the keystone's neighbours
-        far = {self.names[(L.HALL_X[1], y, z)] for y in (7, 8) for z in L.LANE_Z}
-        self.assertEqual(far - {"waxed_cut_copper"}, {"red_terracotta"})
+        self.assertEqual(head, [(L.LANE_H + 1, 12)])
+        yh = L.LANE_H + 1
+        self.assertEqual([self.names[(0, yh, z)] for z in range(10, 15)],
+                         ["polished_granite"] * 2 + ["quartz_block"] + ["polished_granite"] * 2)
+        self.assertEqual(self.names[(0, yh + 1, 12)], "lantern")
+        far = {self.names[(L.HALL_X[1], y, z)] for y in (6, 7, 8) for z in L.LANE_Z}
+        self.assertEqual(far - {"waxed_cut_copper"}, {"calcite"})
+
+    def test_tier_corners_are_stairs_low_side_out(self):
+        """r6 (critic on r5: the tiers read as stacked boxes): on each tier's top two rows (y 10-11, 14-15, 18-19,
+        22-23) every cell of the outline column z = 12 +- half-width is a stair, its tall half inward (or an outer
+        corner from the x run, east at the front and west at the back), so the cone's edge steps by half blocks.
+        A pin: the greybox's voxelization already gave these stairs; settle() turns the corners outer."""
+        for y in (10, 11, 14, 15, 18, 19, 22, 23):
+            w = 4 - max(0, (y - 8) // 4)
+            for z, inward in ((12 - w, "south"), (12 + w, "north")):
+                run = [(x, self.names[(x, y, z)]) for x in range(SIZE_T1[0]) if (x, y, z) in self.names]
+                self.assertTrue(run and all(n.endswith("_stairs") for _, n in run), (y, z, run))
+                faces = {self.rig.b[(x, y, z)][1].get("facing") for x, _ in run}
+                self.assertLessEqual(faces, {inward, "east", "west"}, (y, z))
+
+    def test_top_tier_matches_the_body(self):
+        """r6: the top tier (y 20..23) red terracotta with granite ticks - in r5 it rendered 43..48 against the body's
+        60, darkening upward: full cells red terracotta, the outline's stair cells polished granite (the ticks), the
+        centre's stairs mangrove (all-granite stair rows put granite over 40 % of R8)."""
+        for y in range(20, 24):
+            for z in (11, 12, 13):
+                x, n = self.front_cell(y, z)
+                stairs = n.endswith("_stairs")
+                want = ("red_terracotta" if not stairs else "polished_granite_stairs" if z != 12 else "mangrove_stairs")
+                self.assertEqual(n, want, (y, z))
+
+    def test_shed_is_a_shallow_gable_with_two_lit_slots(self):
+        """r6 (R9; critic on r5: the shed, ~40 % of the RTS view, a black box, median luma 24): a shallow gable of
+        deepslate-tile shapes over x 11..16, z 2..22 - eaves at y 5 (x 11 / 16), the ridge at y 6 over x 13..14 -
+        under the hall ridge; no parapet; two lit 1 x 3 slots in the south wall (z 24); the stack clear above."""
+        for z in range(2, 23):
+            tops = {x: max(y for y in range(SIZE_T1[1]) if (x, y, z) in self.names) for x in range(11, 17)}
+            self.assertEqual(tops, {11: 5, 12: 6, 13: 6, 14: 6, 15: 6, 16: 5}, z)
+            for x in (11, 16):
+                self.assertTrue(self.names[(x, 5, z)].endswith("_stairs"), (x, z))
+        self.assertEqual([q for q, n in self.names.items() if q[1] == 6 and q[2] == 24 and q[0] >= 11], [])
+        lit = sorted(q for q, n in self.names.items() if n == "lantern" and q[0] >= 11)
+        self.assertEqual(lit, [(12, 2, 24), (15, 2, 24)])
+        for x, _, z in lit:
+            self.assertEqual([self.names.get((x, y, z)) for y in (3, 4)], [None, None])
+        self.assertGreater(max(y for (x, y, z) in self.names if 13 <= x <= 14 and z <= 1), 6)
 
     def test_eye_is_granite_round_a_red_heart(self):
         """r4's calcite eye stood +120 luma over the cone body and cut the cone into two tiers; target +40..50: the
@@ -304,7 +352,6 @@ def committed_cells(path):
 KEEPS = {
     "R4 hall roof N": (0, 10, 7, 10, 3, 6), "R4 hall roof S": (0, 10, 7, 10, 18, 21),
     "R3 cornice + candles N": (0, 0, 6, 7, 0, 6), "R3 cornice + candles S": (0, 0, 6, 7, 18, 24),
-    "R9 shed lit slot": (11, 16, 1, 4, 23, 24),
 }
 # Re-mass r3 (lovish chose option b, Oct 28) moved three keeps on purpose, each still pinned:
 # - the hall roofs' last columns z 7 / 17 (r2: the tower's base, its foot stairs and a buttress pinnacle to y 9) are
@@ -319,7 +366,9 @@ EYE = (14, 16, 11, 13)                                    # y0, y1, z0, z1 of th
 PINNACLE_TIPS = [(0, 9, 7), (0, 9, 17)]
 # r4 (Oct 28): the lane is 5 x 8, so the door's brass keystone moved from r3's head (0, 11, 12) to the new head
 # (0, 9, 12) - test_door_is_the_bright_spot pins the lantern it carries
-MOVED_BRASS = PINNACLE_TIPS + [(0, 11, 12)]
+MOVED_BRASS = PINNACLE_TIPS + [(0, 11, 12), (0, 9, 12)]
+# (r6: the keystone is quartz - the critic on r5 read pale | brass | pale as an owl face - and the rosette's boss
+# (9, 6, 12) is brass now; the R9 shed slot keep is replaced by test_shed_is_a_shallow_gable_with_two_lit_slots)
 
 
 def eye_roles(cells):
