@@ -90,7 +90,6 @@ public class GhostFurnaceUnit extends AbstractTotem {
      * centre. Anything else hits it as a unit.
      */
     public static float siegeAmount(DamageSource src, float amount) {
-        if (true) return amount;   // STUB (red proof)
         if (src.getDirectEntity() instanceof BombardShell && src.getEntity() instanceof LivingEntity shooter) {
             AttributeInstance bonus = shooter.getAttribute(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get());
             if (bonus != null && bonus.getValue() > 0)

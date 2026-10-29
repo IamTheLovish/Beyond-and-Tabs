@@ -144,7 +144,6 @@ public class SoulBoiler extends Ability {
      * cooldown handling here).
      */
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, @Nullable BuildingPlacement b, boolean quiet) {
-        if (true) return false;   // STUB (red proof)
         if (owner == null || owner.isBlank() || !isFriendly(b, owner) || b.isDestroyedServerside) {
             refuse(owner, MSG_NO_BUILDING, quiet);
             return false;

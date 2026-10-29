@@ -109,7 +109,6 @@ public class PatchKit extends Ability {
      * most {@link #REPAIR_HP}, never past full). Returns the HP mended (0 = refused). Public for the game test.
      */
     public static float castOnMachine(ServerLevel sl, LivingEntity caster, String owner, LivingEntity target, boolean quiet) {
-        if (true) return 0;   // STUB (red proof)
         if (owner == null || owner.isBlank() || target == null || !MachineRepair.isFriendlyMachine(target, owner)) {
             refuse(owner, MSG_BAD_TARGET, quiet);
             return 0;
@@ -143,7 +142,6 @@ public class PatchKit extends Ability {
      * essence, then the blocks. Returns the health regained (0 = refused). Public for the bot and the game test.
      */
     public static int castOnBuilding(ServerLevel sl, LivingEntity caster, String owner, @Nullable BuildingPlacement b, boolean quiet) {
-        if (true) return 0;   // STUB (red proof)
         if (owner == null || owner.isBlank() || !SoulBoiler.isFriendly(b, owner) || !b.isBuilt || b.isDestroyedServerside) {
             refuse(owner, MSG_BAD_TARGET, quiet);
             return 0;

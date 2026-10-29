@@ -786,7 +786,6 @@ public class BuildingPlacement {
      * Kit (ability/abilities/PatchKit). Returns the health regained. Server only.
      */
     public int restoreHealthNow(int hp) {
-        if (true) return 0;   // STUB (red proof)
         if (level == null || level.isClientSide() || hp <= 0)
             return 0;
         int before = getHealth();

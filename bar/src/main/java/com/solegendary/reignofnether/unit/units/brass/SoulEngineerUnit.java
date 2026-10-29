@@ -64,7 +64,7 @@ import java.util.List;
  * Thornweaver's unit plumbing on the Brassworks' illager body (Vindicator, as the Tinker). Placeholder look: the
  * Engineer-Captain's coat (SoulEngineerRenderer). Its own tick casts Soul Boiler by itself ({@link #autoBoil}).
  */
-public class SoulEngineerUnit extends Vindicator implements Unit, SupportUnit {   // STUB (red proof): not a carrier
+public class SoulEngineerUnit extends Vindicator implements Unit, SupportUnit, EssenceCarrier {
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new PatchKit(), Keybindings.abilitySlot1);
@@ -219,7 +219,6 @@ public class SoulEngineerUnit extends Vindicator implements Unit, SupportUnit { 
      * up or has a queue. True when it cast. Public for the game test.
      */
     public boolean autoBoil() {
-        if (true) return false;   // STUB (red proof)
         if (!(level() instanceof ServerLevel sl) || !isAlive() || getOwnerName() == null || getOwnerName().isBlank())
             return false;
         SoulBoiler boiler = null;
