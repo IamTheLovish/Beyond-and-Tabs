@@ -89,9 +89,10 @@ public class LobbyColorsGameTests {
         helper.runAfterDelay(20, () -> {
             // dry ground for both bases, far out from the other batches' arenas
             BlockPos centre = null;
-            // three columns of six: siteOk now reads real ground (it loads the chunk), so an ocean can wet a whole column
-            for (int k = 0; k < 18 && centre == null; k++) {
-                int cx = origin.getX() - 1500 - 500 * (k / 6), cz = origin.getZ() + 1500 + 500 * (k % 6);
+            // six columns of six, 1000 apart: siteOk reads real ground (it loads the chunk), so a sea can wet three
+            // columns 500 apart (two_human_lobby_match failed so on CI 40769984539)
+            for (int k = 0; k < 36 && centre == null; k++) {
+                int cx = origin.getX() - 1500 - 1000 * (k / 6), cz = origin.getZ() + 1500 + 500 * (k % 6);
                 BlockPos c = new BlockPos(cx, MetalPatches.solidTop(level, cx, cz), cz);
                 boolean dry = true;
                 for (var p : MultiplayerLobby.startPositions(level, c, 2, 1, 0))
