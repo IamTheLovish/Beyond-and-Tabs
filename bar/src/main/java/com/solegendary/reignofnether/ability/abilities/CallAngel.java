@@ -144,6 +144,15 @@ public class CallAngel extends Ability {
         return CALL_FOR_FIGHTS_WITHIN;
     }
 
+    /**
+     * The AutoCaster leaves the call alone while its angel is out: the call would be refused ("already here" to the
+     * owner, and the caster's behaviours reset) every look from the end of the cooldown until the angel fades.
+     */
+    @Override
+    public boolean canAutocastNow(ServerLevel level, Unit unit) {
+        return super.canAutocastNow(level, unit) && liveSummons(level, unit) < summonCap();
+    }
+
     @Override
     public int liveSummons(ServerLevel level, Unit unit) {
         return unit instanceof LivingEntity le && AngelUnit.liveFor(le, kind) != null ? 1 : 0;
