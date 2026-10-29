@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * The self-firing static defences (design/defences.md), one weapon class with six tunings ({@link Kind}):
+ * The self-firing static defences (design/defences.md), one weapon class with seven tunings ({@link Kind}):
  * <ul>
  *   <li>{@link Kind#RAID} - the <b>T1 anti-raid tower</b> (BAR's LLT): a small 3x3 tower every faction can raise once
  *       its capitol stands. Short reach, a quick light shot that hits light units (max health {@link #LIGHT_HEALTH} or
@@ -44,6 +44,10 @@ import java.util.function.Supplier;
  *       bar", 02:51).</li>
  *   <li>{@link Kind#FLAK} - the <b>T2 flak</b>: air only, a burst that hits every enemy flyer within
  *       {@link Kind#splash} of the target - the answer to a clump of flyers. Tier 2 research and a T2 constructor.</li>
+ *   <li>{@link Kind#SIEGE_GUARD} - the <b>anti-siege tower</b> (BAR's HLT; lovish Oct 29, design/siege_t1.md): a tall
+ *       T1-lab tower whose reach (20) is past the T1 siege lobber's (15) and every T1 line unit's, with a slow, heavy
+ *       shot - two kill a lobber - and the health to outlast six of them. Ground only, no light bonus: per metal the
+ *       enhanced anti-raid tower stays the better raid answer, and the long artillery (22-24) still outranges it.</li>
  *   <li>{@link Kind#ANTI_T3} - the <b>anti-experimental emplacement</b>: a 5x5 heavy weapon at the T3 lab tier, priced
  *       at DefenceCosts.ANTI_T3_SHARE of the priciest experimental. A slow, heavy shot that hits experimentals
  *       (and anything that big) {@link Kind#bonusMult} times as hard and prefers them; it reaches flyers too (two of
@@ -70,7 +74,8 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
         SKY_WATCH(       20,   15f, 20,      1f,   true,   true,   0f,    280d, Gate.CAPITOL, 0.8f),
         SKY_WATCH_HEAVY( 22,   35f, 20,      1f,   true,   true,   0f,    550d, Gate.T1_LAB,  1.0f),
         FLAK(            24,   12f, 15,      1.5f, true,   true,   3f,    650d, Gate.TIER_2,  0.9f),
-        ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f);
+        ANTI_T3(         16,   25f, 60,      3f,   true,   false,  0f,    700d, Gate.TIER_3,  0.9f),
+        SIEGE_GUARD(     20,   45f, 30,      1f,   false,  false,  0f,    1000d, Gate.T1_LAB, 1.2f);
 
         public final int range;
         public final float damage;
@@ -106,7 +111,7 @@ public class DefenceTower extends DefenceBuilding implements RangeIndicatorAddon
 
         /** The big-weapon look (the anti-T3 portrait, the heavy tracer and sound). */
         public boolean heavyLook() {
-            return this == ANTI_T3 || this == FLAK;
+            return this == ANTI_T3 || this == FLAK || this == SIEGE_GUARD;
         }
 
         /** The bonus goes against light units (the raid towers) rather than experimentals (anti-T3, flak). */
