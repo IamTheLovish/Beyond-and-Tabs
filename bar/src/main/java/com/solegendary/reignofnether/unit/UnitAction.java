@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // Sunforged essence caster, the Angel Caller (ability/abilities/CallAngel): each calls one temporary flying angel
+    CALL_MENDER_ANGEL,      // 5 essence: a flying healer for 20 s
+    CALL_SERAPH_ARCHER,     // 10 essence: a flying archer for 25 s
+    CALL_SWORD_SERAPH       // 20 essence: a flying melee engager for 30 s
 }

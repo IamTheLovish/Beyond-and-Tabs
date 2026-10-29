@@ -217,6 +217,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WITCH_UNIT.get(), FieldMedicRenderer::new);
         // the Dome Cleric: the human body since Oct 21 (tools/gen_cleric.py -> tools/dsl_to_game.py)
         evt.registerEntityRenderer(EntityRegistrar.EVOKER_UNIT.get(), DomeClericRenderer::new);
+        // the Angel Caller on the Dome Cleric's body and its angels on the vex's, tinted per kind (placeholders)
+        evt.registerEntityRenderer(EntityRegistrar.ANGEL_CALLER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelCallerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.MENDER_ANGEL_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SERAPH_ARCHER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SWORD_SERAPH_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.AngelRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WARDEN_UNIT.get(), WardenRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.RAVAGER_UNIT.get(), RavagerRenderer::new);
