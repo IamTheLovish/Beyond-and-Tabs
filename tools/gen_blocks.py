@@ -2476,40 +2476,48 @@ TUFTS = {
 }
 
 
-def _cross_elements(layers, lean):
+def _cross_elements(layers, lean, scale=1.0):
     """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
     or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
-    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes."""
+    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes. r36: scale grows every quad
+    about the root (the block's middle column, from y 0) - the big short grass (GRASS_TUFT_SCALE)."""
     def face(t, tinted):
         return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
+
+    def c(v):                                    # across: about the middle column
+        return round(8 + (v - 8) * scale, 4)
+
+    def up(v):                                   # up: from the root
+        return round(v * scale, 4)
+
     els = []
     for t, tinted in layers:
-        els.append({"from": [0.8, 0, 8], "to": [15.2, 16.0, 8], "shade": False,
+        els.append({"from": [c(0.8), 0, 8], "to": [c(15.2), up(16.0), 8], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("north", "south")}})
-        els.append({"from": [8, 0, 0.8], "to": [8, 16.0, 15.2], "shade": False,
+        els.append({"from": [8, 0, c(0.8)], "to": [8, up(16.0), c(15.2)], "shade": False,
                     "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
                     "faces": {f: face(t, tinted) for f in ("west", "east")}})
         for axis, ang in (lean or ()):
             if axis == "x":
-                els.append({"from": [1.0, 0, 8], "to": [15.0, 14.0, 8], "shade": False,
+                els.append({"from": [c(1.0), 0, 8], "to": [c(15.0), up(14.0), 8], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("north", "south")}})
             else:
-                els.append({"from": [8, 0, 1.0], "to": [8, 14.0, 15.0], "shade": False,
+                els.append({"from": [8, 0, c(1.0)], "to": [8, up(14.0), c(15.0)], "shade": False,
                             "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
                             "faces": {f: face(t, tinted) for f in ("west", "east")}})
     return els
 
 
-def _plant_model(p, straw, lean):
+def _plant_model(p, straw, lean, scale=1.0):
     """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
     tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
     layers = [("#cross", True)]
     if straw:
         tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
         layers.append(("#straw", False))
-    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean)}
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale)}
 
 
 # r35 (critic r34: "vary scale (3 sizes)"): nine short-grass models, model suffix -> (its TUFTS set of leaning quads,
@@ -2520,6 +2528,14 @@ def _plant_model(p, straw, lean):
 GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
                "_d": ("", "_b", "_m"), "_e": ("_b", "_c", "_m"), "_f": ("_c", "", "_m"),
                "_g": ("", "_c", "_sm"), "_h": ("_b", "", "_sm"), "_i": ("_c", "_b", "_sm")}
+# r36 (critic r35b: "three sizes are not distinguishable at 30 px/block - only tuft vs slightly bigger tuft"): the big
+# size is a bigger MODEL, its quads 1.35x about the root (the full-size drawing on them), the two smaller sizes stay
+# drawn smaller on the 1.0 model. Seen from the RTS camera (test_plant_sprites._footprint: the opaque texels projected
+# along the eyes camera's direction) the sizes go from 0.70 / 0.61 / 0.45 blocks across (r35, big / small 1.54) to
+# 0.89 / 0.61 / 0.45 (1.97x). Why the model and not SIZES spread further: a smaller drawing loses blade height and width
+# with it (0.55 already keeps 4-texel blades only because the widths shrink just 0.8 + 0.2 x size), while a bigger
+# model is read a mip level UP - its blades come out bolder, not thinner.
+GRASS_TUFT_SCALE = {"": 1.35}
 
 
 def _fern_card(side, kind, length, half_w, y0=0.25):
@@ -2578,7 +2594,8 @@ TALL_BLOCKSTATES = {"tall_grass": {
     "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
     "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
 PLANT_MODELS = {
-    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads]) for k, (quads, sh, sz) in GRASS_TUFTS.items()},
+    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads], GRASS_TUFT_SCALE.get(sz, 1.0))
+       for k, (quads, sh, sz) in GRASS_TUFTS.items()},
     **{m: _fern_model(cards) for m, cards in FERN_ROSETTES.items()},
     **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},
     **{"tall_grass_top" + k: _plant_model("tall_grass_top" + k, True, None) for k in TALL_SHAPES},
