@@ -142,6 +142,15 @@ public class CallAngel extends Ability {
         return CALL_FOR_FIGHTS_WITHIN;
     }
 
+    /**
+     * The AutoCaster tries the call only with the essence for it: a short caster would otherwise be given the order and
+     * refuse it (a "short of essence" message to its owner) every look. Until the base's autocastEssence gate.
+     */
+    @Override
+    public boolean canAutocastNow(ServerLevel level, Unit unit) {
+        return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= kind.essence;
+    }
+
     @Override
     public int liveSummons(ServerLevel level, Unit unit) {
         return unit instanceof LivingEntity le && AngelUnit.liveFor(le, kind) != null ? 1 : 0;

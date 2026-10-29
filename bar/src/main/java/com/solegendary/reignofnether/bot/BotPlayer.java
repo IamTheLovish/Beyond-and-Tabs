@@ -1358,6 +1358,10 @@ public class BotPlayer {
 
     /** A non-fighter that goes with the army ({@link #supportFollowsArmy}). Public for the game test. */
     public static boolean followsArmy(LivingEntity le) {
+        // every essence caster, whatever its race (design/essence_casters.md): it gathers the wisps of the fallen, so it
+        // belongs where the fighting is - a fighting one is in the army list already, a worker never goes
+        if (com.solegendary.reignofnether.essence.Essence.isCarrier(le) && !(le instanceof AttackerUnit) && !(le instanceof WorkerUnit))
+            return true;
         // healers and support casters (Moonwell Bearer, Bloom Priestess, Tide Priest; the Scribe seals from the line,
         // the Seer watches from it, the Lantern Fortress shields it)
         return le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit
