@@ -164,6 +164,9 @@ public final class HeroCore {
     }
 
     void addSummon(Entity e, long endTick) {
+        // every hero summon passes here (Raise the Fallen calls it directly, Phenomena through HeroFx): its death
+        // drops no essence wisp (PR 360 review: the skeletons were free essence)
+        com.solegendary.reignofnether.essence.Essence.markSummoned(e);
         summons.add(e);
         summonEnds.add(endTick);
     }
