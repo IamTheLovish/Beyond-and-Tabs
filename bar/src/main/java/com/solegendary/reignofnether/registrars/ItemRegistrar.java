@@ -98,6 +98,34 @@ public class ItemRegistrar {
             ITEMS.register("bombard_crew_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BOMBARD_CREW_UNIT,
                     0x3A4A50, 0xC9A23E, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> SUNFIRE_MANGONEL_UNIT_SPAWN_EGG =
+            ITEMS.register("sunfire_mangonel_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SUNFIRE_MANGONEL_UNIT,
+                    0xE8E2D0, 0xD4A62A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SKULL_HURLER_UNIT_SPAWN_EGG =
+            ITEMS.register("skull_hurler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SKULL_HURLER_UNIT,
+                    0x8E9A86, 0x4FA36B, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BOULDER_CHUCKER_UNIT_SPAWN_EGG =
+            ITEMS.register("boulder_chucker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BOULDER_CHUCKER_UNIT,
+                    0x7A4A2E, 0xC2402A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BURL_SLINGER_UNIT_SPAWN_EGG =
+            ITEMS.register("burl_slinger_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BURL_SLINGER_UNIT,
+                    0x6B4A2E, 0x5E8C3A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> POWDER_MONKEY_UNIT_SPAWN_EGG =
+            ITEMS.register("powder_monkey_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.POWDER_MONKEY_UNIT,
+                    0x3A4A50, 0xD8D0B8, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> THUNDERSTONE_MONK_UNIT_SPAWN_EGG =
+            ITEMS.register("thunderstone_monk_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.THUNDERSTONE_MONK_UNIT,
+                    0x3B3A7A, 0x4FB08A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> STEAM_LOBBER_UNIT_SPAWN_EGG =
+            ITEMS.register("steam_lobber_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.STEAM_LOBBER_UNIT,
+                    0xB08A3A, 0x5A5A5A, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> TIDE_PRIEST_UNIT_SPAWN_EGG =
             ITEMS.register("tide_priest_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TIDE_PRIEST_UNIT,
                     0x2E8A6A, 0x3CC8BE, new Item.Properties()));

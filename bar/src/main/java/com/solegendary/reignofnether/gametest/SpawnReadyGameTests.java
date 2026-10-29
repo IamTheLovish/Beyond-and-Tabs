@@ -192,6 +192,12 @@ public class SpawnReadyGameTests {
             new StartPhase.Pick("gt_live_solo", false, 0, 0, 0xFF0000, null),
             new StartPhase.Pick("AI 1", true, 1, 1, 0x00FF00, null))), StartPhase.SECONDS, p -> done[0]++);
         StartPhase.resume(ph);   // live without the camera teleport or the bot re-pick (nothing outside the phase)
+        // a phase that never finished stayed the server's live one (broadcast, read by later tests) until its own
+        // 120 s ran out: ended with the test, however it ends
+        TestCleanup.atEnd(helper, () -> {
+            if (StartPhase.live() == ph)
+                StartPhase.cancel();
+        });
         if (StartPhase.live() != ph || !MapStateClientboundPacket.lastBroadcastPhase()) {
             StartPhase.cancel();
             helper.fail("the live phase did not start or its phase-on state was not sent");
