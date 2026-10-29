@@ -15,6 +15,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * or rich") before the code. Round 2 (eyes runs 40815085922 / 40815098025): r1's 21 wisps at alpha 0.05-0.18, 3-8
  * blocks, lit by the dawn sky, were nearly invisible from the RTS camera (mean pixel change 5.7 against the plain
  * _rts still) - more, bigger, brighter, denser, layered.
+ * Round 3 (eyes run 40817045672): r2 changed the still by a mean 3.0 per pixel - still invisible. The cause was not
+ * the numbers but the renderer: vanilla's particle shader discards every fragment under alpha 0.1, and r2 drew each
+ * winding at half its alpha (0.075-0.175, times the sprite's own 0-0.9), so nearly every pixel of every wisp was
+ * thrown away. r3 draws one quad with our own render type (no 0.1 cut, no depth write), at alpha 0.2-0.5.
  */
 class MistMathTest {
 
@@ -248,11 +252,27 @@ class MistMathTest {
 
     @Test
     void peakAlphaStaysSoft() {
-        Object[][] rows = { { 0.0, 0.0, 0.15 }, { 1.0, 1.0, 0.35 }, { 0.5, 0.5, 0.2 }, { 2.0, 3.0, 0.35 },
-            { -1.0, 1.0, 0.15 } };
+        Object[][] rows = { { 0.0, 0.0, 0.2 }, { 1.0, 1.0, 0.5 }, { 0.5, 0.5, 0.275 }, { 2.0, 3.0, 0.5 },
+            { -1.0, 1.0, 0.2 } };
         for (Object[] r : rows)
             assertEquals((double) r[2], MistMath.peakAlpha((double) r[0], (double) r[1]), 1e-9,
                 "alpha at score " + r[0] + " density " + r[1]);
+    }
+
+    @Test
+    void evenTheFaintestWispClearsVanillasParticleCut() {
+        // r2's lesson: a sprite's centre (texture alpha SPRITE_PEAK times the vertex alpha) must stay over the 0.1
+        // that vanilla's particle shader discards, so the mist still shows if it is ever drawn through that shader
+        assertEquals(0.1, MistMath.VANILLA_PARTICLE_CUT, EPS);
+        assertTrue(MistMath.ALPHA_MIN * MistMath.SPRITE_PEAK > MistMath.VANILLA_PARTICLE_CUT,
+            "faintest centre " + MistMath.ALPHA_MIN * MistMath.SPRITE_PEAK);
+    }
+
+    @Test
+    void anOpenMeadowAtDawnStillShows() {
+        // flat open ground (BASE_SCORE) at full dawn density: a centre alpha of 0.25+ reads from the RTS camera
+        double a = MistMath.peakAlpha(MistMath.BASE_SCORE, 1.0) * MistMath.SPRITE_PEAK;
+        assertTrue(a >= 0.25, "open meadow centre alpha " + a);
     }
 
     @Test
