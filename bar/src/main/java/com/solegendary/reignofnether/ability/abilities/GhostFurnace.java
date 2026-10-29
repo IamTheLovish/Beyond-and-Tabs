@@ -138,6 +138,7 @@ public class GhostFurnace extends Ability {
      */
     @Nullable
     public static GhostFurnaceUnit place(ServerLevel sl, LivingEntity caster, String owner, BlockPos aim, boolean quiet) {
+        if (true) return null;   // STUB (red proof)
         if (owner == null || owner.isBlank() || aim == null)
             return null;
         Vec3 at = Vec3.atBottomCenterOf(aim);
