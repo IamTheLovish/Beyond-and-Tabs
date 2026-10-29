@@ -43,6 +43,23 @@ public class Empower extends Ability {
     public static final String MSG_BAD_TARGET = "hud.essence.reignofnether.empower_bad_target";
     public static final String MSG_MAX_RANK = "hud.essence.reignofnether.empower_max_rank";
     public static final String MSG_SHORT = "hud.essence.reignofnether.empower_short";
+    /** Revision 1: a target takes at most one Empower per this many ticks (60 s). */
+    public static final int RANK_EVERY_TICKS = 60 * ResourceCost.TICKS_PER_SECOND;
+    /** The game tick a unit was last empowered (persistent data). */
+    public static final String KEY_LAST = "bt_empowered_at";
+
+    /** STUB (Revision 1): replaces the rank for one unit type. */
+    public interface TargetHook {
+        default boolean accepts(LivingEntity target) {
+            return true;
+        }
+
+        void apply(ServerLevel level, LivingEntity caster, LivingEntity target);
+    }
+
+    public static void setTargetHook(net.minecraft.world.entity.EntityType<?> type, TargetHook hook) { }
+
+    public static void clearTargetHook(net.minecraft.world.entity.EntityType<?> type) { }
 
     public Empower() {
         super(UnitAction.EMPOWER, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, true, true);
