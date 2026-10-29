@@ -294,7 +294,10 @@ class PlantWiring(unittest.TestCase):
         for k, (quads, shape, size) in gen_blocks.GRASS_TUFTS.items():
             by_size[size].append(_footprint(gen_blocks.MODEL_OVERRIDES["grass" + k]))
         big, mid, small = (float(np.mean(by_size[s])) for s in ("", "_m", "_sm"))
-        self.assertGreaterEqual(big / small, 1.9, "big %.2f / small %.2f = %.2f" % (big, small, big / small))
+        # r37 (Oct 29, eyes A/B 40833182959 vs 40833199253, Complementary preset): the 1.35x big model doubled the
+        # shader shadow spotting (meadow stars 14 -> 4, dark share 0.087 -> 0.036 at 1.1x); the sizes still read
+        # apart at 1.1x (~1.6x footprint) - a calmer lawn wins over the last 0.3 of size spread
+        self.assertGreaterEqual(big / small, 1.6, "big %.2f / small %.2f = %.2f" % (big, small, big / small))
         self.assertTrue(small * 1.2 < mid < big / 1.2, "sizes %.2f / %.2f / %.2f" % (small, mid, big))
 
     def test_fern_is_a_low_wide_rosette(self):
