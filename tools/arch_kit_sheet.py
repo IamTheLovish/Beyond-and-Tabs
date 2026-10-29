@@ -5,7 +5,7 @@ Sunforged set, and the demo bay (plinth, pilasters, windows, string course, corn
 the parts compose. Wall parts stand in a short wall of their set (so reveals, sills and lips read against a wall);
 roof parts sit on a plain wall box. Fronts face south, toward the camera.
 
-    python3 tools/arch_kit_sheet.py [OUT]      -> design/arch_kit/kit_sheet.nbt
+    python3 tools/arch_kit_sheet.py [OUT]      -> design/arch_kit/kit_sheet.nbt (+ design/arch_kit/demo_bay.nbt)
 """
 import os
 import sys
@@ -16,6 +16,7 @@ import gen_structures as gs  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "design", "arch_kit", "kit_sheet.nbt")
+DEMO = os.path.join(ROOT, "design", "arch_kit", "demo_bay.nbt")   # alone: small enough for the 3/4 and dusk stills
 GAP = 3
 PAD = "stone_bricks"
 WALLED = {"eave", "cornice", "string_course", "pier", "window_tall", "window_medium", "window_small", "bay_tall",
@@ -134,8 +135,8 @@ def sheet():
     return out
 
 
-def write(out=OUT):
-    s = sheet()
+def write(out=OUT, s=None):
+    s = s or sheet()
     x0, x1, y0, y1, z0, z1 = s.bbox()
     rig = gs._SunRig(x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1)
     for (x, y, z), (n, props) in s.b.items():
@@ -149,6 +150,23 @@ def write(out=OUT):
     return rig
 
 
+def demo():
+    """The demo bay alone on a 3-block stone apron."""
+    d = K.normalised(K.demo_bay(K.BRASSWORKS))
+    out = K.blank()
+    x1, z1 = d.bbox()[1], d.bbox()[5]
+    for x in range(x1 + 7):
+        for z in range(z1 + 7):
+            out.set(x, 0, z, PAD)
+    for (x, y, z), v in d.b.items():
+        if v[0] not in ("air", "cave_air"):
+            out.b[(x + 3, y, z + 3)] = v
+    return out
+
+
 if __name__ == "__main__":
-    r = write(sys.argv[1] if len(sys.argv) > 1 else OUT)
-    print("kit sheet", r.size, len(r.b), "blocks ->", os.path.relpath(sys.argv[1] if len(sys.argv) > 1 else OUT, ROOT))
+    out = sys.argv[1] if len(sys.argv) > 1 else OUT
+    r = write(out)
+    print("kit sheet", r.size, len(r.b), "blocks ->", os.path.relpath(out, ROOT))
+    r = write(DEMO, demo())
+    print("demo bay", r.size, len(r.b), "blocks ->", os.path.relpath(DEMO, ROOT))
