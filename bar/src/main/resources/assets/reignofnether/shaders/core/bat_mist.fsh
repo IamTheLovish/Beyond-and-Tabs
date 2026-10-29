@@ -124,7 +124,7 @@ vec2 flowAt(vec2 xz) {
 //   erosion the detail noise tears the edges into wisps and gives the inside its texture
 // Lit from above: a sample near its bank's top takes LitColor, deeper inside the cool DeepColor; the bank's own top
 // shades what lies under it (no extra noise: the same cover and top a little higher).
-const float BANK_DENSITY = 1.7;
+const float BANK_DENSITY = 2.6;     // r11b 1.7 -> 2.6: r48's banks too thin to read as mist from the RTS camera
 
 struct Bank { float cover; float top; };
 
@@ -133,7 +133,9 @@ Bank bankAt(vec3 k, float fogShare, float local) {
     // r11: the banks lie where ValleyField says (the water, the low banks, hollows); the large noise only breaks them
     // into strands and gaps, it never puts mist on open lawn. Out of sight a little more lies there (lovish, Oct 29)
     float cov = fbm(vec3(k.x * 0.022, Time * 0.004, k.z * 0.045));
-    b.cover = local * (0.35 + 0.85 * cov) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
+    // r11b (eyes r48: over the water one uniform faint sheet - 0.35 + 0.85 x cov saturated the body everywhere):
+    // the large noise now opens real gaps between strands
+    b.cover = local * (1.25 * cov - 0.1) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
     float billow = vnoise(vec3(k.x * 0.11, Time * 0.03, k.z * 0.2)) - 0.5;
     b.top = 1.0 + 3.6 * smoothstep(0.32, 0.78, b.cover) + 1.4 * billow;
     return b;

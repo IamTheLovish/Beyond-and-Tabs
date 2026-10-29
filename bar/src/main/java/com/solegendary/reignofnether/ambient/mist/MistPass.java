@@ -207,7 +207,7 @@ public final class MistPass {
             lb = Math.min(0.97f, c[2] * 0.65f + sky[2] * 0.4f);
         // r11 (the approved paintover): lit tops a warm off-white, the shaded body a cool lavender-grey - r8-r10's tops
         // took 40% of the sky's blue by day and read as a grey-blue film. The hour's colour still leads at dawn and dusk
-        float warm = 0.55f;
+        float warm = 0.75f;   // r11b 0.55 -> 0.75: r48's tops read pale blue over the water, not lit white
         lr = Math.min(0.97f, lr * (1 - warm) + 0.95f * warm);
         lg = Math.min(0.97f, lg * (1 - warm) + 0.92f * warm);
         lb = Math.min(0.97f, lb * (1 - warm) + 0.84f * warm);
@@ -273,6 +273,10 @@ public final class MistPass {
                 img.setPixelRGBA(i, j, 0xFF000000 | (b << 16) | (g << 8) | r);   // ABGR: r fog, g cover, b ground
             }
         vis.upload();
+        // r11b (eyes r48: the mist drawn as hard 2 x 2-block squares): NativeImage's upload sets the texture's filter
+        // back to nearest every time, so the linear filter set once at creation held only until the first refresh -
+        // the cover, the ground and the fog-of-war channel all read texel by texel. Set it again after each upload
+        vis.setFilter(true, false);
     }
 
     /**
