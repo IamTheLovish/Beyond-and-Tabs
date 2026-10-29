@@ -23,10 +23,13 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
+import com.solegendary.reignofnether.unit.units.shared.SiegeTuning;
+import com.solegendary.reignofnether.unit.units.tide.BombardShell;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -38,6 +41,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.gametest.GameTestHolder;
@@ -604,6 +608,90 @@ public class TombcallerGameTests {
             } finally {
                 clearStones(level, stones.stream().filter(Objects::nonNull).toList(), owner);
                 caller.discard();
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * Raise Tombstone refuses water, however shallow (Erin's revision list): a click on 1-deep water, or on the floor
+     * under it, raises nothing and spends nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tombcaller_raise_tombstone_refuses_water(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "water");
+        Mob caller = caller(helper, owner, 8, 12, 30);
+        if (caller == null) {
+            helper.fail("could not spawn the Tombcaller");
+            return;
+        }
+        BlockPos pool = new BlockPos(12, 1, 12);   // the grass cell, now 1-deep water on the stone floor
+        helper.setBlock(pool, Blocks.WATER);
+        List<TombstoneUnit> raised = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                String[] what = { "on the water", "on the floor under the water" };
+                BlockPos[] at = { helper.absolutePos(pool), helper.absolutePos(pool.below()) };
+                for (int i = 0; i < at.length; i++) {
+                    TombstoneUnit s = RaiseTombstone.cast(level, caller, owner, at[i], true);
+                    if (s != null)
+                        raised.add(s);
+                    if (s != null || Essence.get(caller) != 30)
+                        problems.add("Raise Tombstone " + what[i] + " was not refused (essence " + Essence.get(caller) + ")");
+                }
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                clearStones(level, raised, owner);
+                caller.discard();
+                helper.setBlock(pool, Blocks.GRASS_BLOCK);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * A siege lobber's shell takes a tombstone down at the defence rate (Revision 1): 54 of its 150, whatever the shell's
+     * unit damage, with no falloff.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tombstone_takes_a_lobber_shell_at_the_defence_rate(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "lobbed"), foe = owner(helper, "lobber");
+        TombstoneUnit s = stone(helper, null, owner, 8, 8, 0, false);
+        Mob lobber = still(helper, EntityRegistrar.STEAM_LOBBER_UNIT.get(), foe, 2, 2);
+        if (s == null || lobber == null) {
+            if (s != null)
+                s.discard();
+            if (lobber != null)
+                lobber.discard();
+            helper.fail("could not raise the stone and the lobber");
+            return;
+        }
+        List<Entity> shells = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (SiegeTuning.healthPerShell(true) != 54f)
+                    problems.add("Revision 1 set 54 a shell on a defence, SiegeTuning gives " + SiegeTuning.healthPerShell(true));
+                float before = s.getHealth();
+                BombardShell shell = new BombardShell(level, lobber, ((AttackerUnit) lobber).getUnitAttackDamage())
+                    .asLobberShell(SiegeTuning.SPLASH_RADIUS, SiegeTuning.FLIGHT_TICKS, BombardShell.BUILDING_DAMAGE_MULT);
+                shell.setPos(s.getX() + 1.0, s.getY() + 0.5, s.getZ());   // a block off: a unit would take falloff
+                level.addFreshEntity(shell);
+                shells.add(shell);
+                shell.burst();
+                float lost = before - s.getHealth();
+                if (Math.abs(lost - 54f) > 0.5f)
+                    problems.add("a lobber shell took " + lost + " off the tombstone, expected the defence rate's 54");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                discardAll(shells);
+                clearStones(level, List.of(s), owner);
+                lobber.discard();
             }
             finish(helper, problems);
         });
