@@ -483,3 +483,12 @@ Timber-framed house on a stone base with dark slate roofs and a round turret.
 2. **Witch-hat turret:** a conical roof that flares out over a ring ledge, then tapers to a finial - the cone tower's
    tiers could end the same way (a flared skirt per tier, not a step).
 3. Stone chimney stack, half-timber over a stone plinth, an outside stair. Same split: pale walls / dark roofs.
+
+## (x) ref64 + ref65 - lovish's references, Oct 28 22:58
+- ref64 (grey castle, red spire, sunset): **corbelled tops** - every tower's top storey oversails on a row of corbels
+  (machicolations), a deep shadow band under each crown; vertical strip pilasters on the walls; ONE colour accent
+  (the red spire) on an all-grey body; a mossy stone stair base. Lesson: a single strong roof colour against a
+  neutral body beats many colours.
+- ref65 (dark-oak manor, deepslate roofs): a run of steep cross gables with stepped verges along one long roof, a
+  round stone tower with a conical cap, a projecting stone porch with its own gable, flower boxes. Lesson: break a
+  long roof into a rhythm of gables/dormers - one per bay - so the roofline has incident every 3-5 blocks.
