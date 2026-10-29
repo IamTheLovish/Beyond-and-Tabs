@@ -192,6 +192,14 @@ jobs:
             gh release download test-pack --repo "$GITHUB_REPOSITORY" --pattern 'BeyondAndTabs-test.mrpack' --dir dl --clobber
           fi
           unzip -o -q dl/BeyondAndTabs-test.mrpack modrinth.index.json -d dl
+          # the pack's shipped configs (build_pack.PACK_CONFIGS: Immersive Weathering's no-weathering file ...) are
+          # overrides in the mrpack; the older published test-pack may have none
+          mkdir -p run/config
+          if unzip -o -q dl/BeyondAndTabs-test.mrpack 'overrides/config/*' -d dl/ovr; then
+            cp -rv dl/ovr/overrides/config/. run/config/
+          else
+            echo "the mrpack ships no configs"
+          fi
           python3 - <<'EOF'
           import json, hashlib, urllib.request, os
           idx = json.load(open('dl/modrinth.index.json'))

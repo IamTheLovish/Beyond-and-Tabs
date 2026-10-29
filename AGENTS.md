@@ -239,6 +239,7 @@ All run on GitHub Actions, never on anyone's PC:
   A pack change is proved from its branch: `modpack.yml` with `dry_run` (builds the pack and its Mac copy, publishes nothing) and
   `eyes.yml` with `branch_pack` + `shaders` (the tour runs the pack the checkout builds). Extra mods are pinned by version in
   `pack/build_pack.py` (`PINNED_VERSIONS`); the Mac strip list is `build_pack.MAC_SKIP` (one list for all three pack workflows).
+  Mod configs the pack ships (e.g. Immersive Weathering's no-weathering file) are `build_pack.PACK_CONFIGS`: packwiz "preserve" files, mrpack overrides, copied into the eyes run.
 
 ## 6. How we work together
 

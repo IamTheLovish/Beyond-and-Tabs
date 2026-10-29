@@ -113,6 +113,8 @@ def build_variant(root, entries, our, rp, version, skip, shader=None):
     # options.txt is only written when the tester has none yet (preserve): it switches our resource pack on once.
     if shader is not None and not any(k == "oculus" for k in skip):
         files += shader_files(shader)
+    # shipped mod configs (build_pack.PACK_CONFIGS): written once, a tester's own edits survive updates
+    files += [(f"config/{name}", text, False, True) for name, text in build_pack.PACK_CONFIGS.items()]
     options = (f"version:{MC_DATA_VERSION}\n"
                f"resourcePacks:[\"vanilla\",\"file/{rp[0]}\"]\n")
     files.append(("options.txt", options, False, True))

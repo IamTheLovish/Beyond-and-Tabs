@@ -34,7 +34,8 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 #   packet-fixer             MIT      fixes oversize-packet / NBT / timeout kicks in big multiplayer matches (both sides)
 #   sound-culling            MIT      rate-limits overlapping sounds: 500 units are a wall of footsteps (client)
 #   particle-core            MIT      particle culling + spawn caps, the valve for every other particle mod (client)
-#   fallingleavesforge       LGPL-3   leaves drift from canopies. NOT the `falling-leaves` project: that one is ARR
+#   fallingleavesforge       (REMOVED Oct 28: particular-reforged below makes the leaves, per leaf type; two mods
+#                            making leaves would double the particles over the RTS view)
 # (Oct 21, lovish "add what you think is useful"; research claude/mods-research-oct21b). The four are PINNED to the
 # versions that were vetted: PINNED_VERSIONS below. A newer release only gets in by editing the pin, because a
 # fresh Sound Culling (3 days old) or Particle Core could change under testers between two pack builds.
@@ -44,20 +45,118 @@ CLIENT_ONLY = ("embeddium", "entityculling", "immediatelyfast", "modernfix", "fe
 #                            graphics, everything still feels flat" - the PBR maps (_n/_s) only show under a shader
 #                            pack. Pinned to 1.8.0, Embeddium 0.3.31's pair (the eyes shader lane's exact setup).
 #                            Complementary Reimagined (the shader pack itself) is added by build_packwiz.py.
+#   The landscape mods (lovish, Oct 28; pack dependencies only, never bundled in our jar):
+#   nsHXyrFh                  MIT      This Rocks! (Forge) (slug this-rocks-forge): rocks, sticks, pinecones, seashells,
+#                            starfish, geysers. Adds blocks, so the server needs it. Listed by project id.
+#   particular-reforged       LGPL-3   hand-made ambient particles: falling leaves per leaf type, ripples, fireflies. Client.
+#   immersive-weathering      LGPL-3   moss, cracks, rust, frost, soil types, icicles. Blocks, so both sides; needs Moonlight
+#                            (already in lovish's instance). Its block-tick weathering is switched off in PACK_CONFIGS.
+#   better-biome-blend        Unlicense smooth biome colour edges (grass, water, foliage). Client, works with Embeddium.
+#   The ambient mods (lovish ~06:30 Oct 28, client only; their spawns are capped low in PACK_CONFIGS):
+#   cosy-critters             MIT      Cosy Critters & Creepy Crawlies: birds on forest leaves, moths at lights, spiders.
+#   light-dust                LGPL-3   dust floating in light beams. Spawns around the player entity only.
+#   NOT added: Flutter, Windblown and RLFoliage (Ported) are CurseForge-only (no Modrinth project, checked by
+#   slug, by author and by search), and this builder resolves from Modrinth only; no CurseForge file is hand-added.
 EXTRA_PROJECTS = ("spark", "macaws-bridges", "macaws-paths-and-pavings", "macaws-lights-and-lamps",
-                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core", "fallingleavesforge",
-                  "oculus")
+                  "sound-physics-remastered", "packet-fixer", "sound-culling", "particle-core",
+                  "oculus", "nsHXyrFh", "particular-reforged", "immersive-weathering", "better-biome-blend",
+                  "cosy-critters", "light-dust")
 # project slug -> exact Modrinth version_number; a pinned project that has no such Forge 1.20.1 version fails the build
 PINNED_VERSIONS = {"packet-fixer": "3.3.2", "sound-culling": "2.1.0", "particle-core": "0.3.3+1.20.1+forge",
-                   "fallingleavesforge": "1.20.1-2.1.2", "oculus": "1.20.1-1.8.0"}
+                   "oculus": "1.20.1-1.8.0",
+                   # Oct 28, each the newest Forge 1.20.1 release on Modrinth that day
+                   "nsHXyrFh": "1.5.1", "particular-reforged": "1.5.7", "immersive-weathering": "1.20.1-2.0.5",
+                   "better-biome-blend": "1.20.1-1.4.0-forge",
+                   "cosy-critters": "v0.3.3+1.20.1-forge", "light-dust": "2.1.3"}
 # top-level extras that only the client runs (a dedicated server may leave them out, like CLIENT_ONLY below)
-CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "fallingleavesforge", "oculus")
+CLIENT_ONLY_PROJECTS = ("sound-physics-remastered", "sound-culling", "particle-core", "oculus",
+                        "particular-reforged", "better-biome-blend", "cosy-critters", "light-dust")
 # files the Mac pack drops: Embeddium and ImmediatelyFast misbehave on macOS drivers, and an addon that needs
 # Embeddium (Embeddium Extra = rubidium-extra) would crash the Mac pack if it slipped through (research Oct 21).
 # One list for macpack.yml, build_packwiz.py and publish-pack's guard.
 # Oculus needs Embeddium, so it goes too (and with it the shader pack: build_packwiz.py)
 MAC_SKIP = ("embeddium", "immediatelyfast", "rubidium-extra", "oculus")
 HERE = os.path.dirname(os.path.abspath(__file__))
+# Config files the pack ships under config/ (file name -> text). packwiz writes them once as "preserve" files (a
+# tester's own edits survive updates), the .mrpack carries them as overrides, and the eyes workflow copies them into
+# its run. Every key below was read from the mod's own source (1.20.1 branch), not guessed.
+#
+# Immersive Weathering (AstralOrdana/Immersive-Weathering, CommonConfigs.java; Moonlight writes
+# config/immersive_weathering-common.toml): a match must not change a map or a building. Static looks stay (its blocks,
+# its world-gen moss / ivy / icicle patches); everything that changes blocks over time goes off:
+#   general.block_growths          master switch of every data-driven growth (weeds, frost, sand seeping, grass flowers,
+#                                  sapling, sandstone erosion, fire/lightning changes ...), checked in tickBlock
+#   mossy_blocks.enabled           moss spreading over mossable blocks (Mossable.shouldWeather)
+#   cracked_blocks.enabled         cracks spreading (Crackable.shouldWeather)
+#   rusting.rusting / rusting_rate the rust code reads only the rate (Rustable.tryWeather), so rate 0 is what stops it
+#   leaf_piles.spawn_entity_from_decay   decayed leaves leave a leaf pile: 0
+#   charring.fire_chars_wood       fire turning wood into charred wood: 0
+#   misc.grass_over_mycelium / mycelium_over_grass   soil swaps on random ticks
+# Not configurable in the mod (noted in the PR): snow layers melt in rain on a random tick (SnowLayerBlockMixin), and
+# an icicle removes itself by day outside icy biomes.
+# The client file: Particular makes the falling leaves, so Immersive Weathering's own leaf particles go off.
+# Ambient density for 4v4 armies (the RTS camera is the player entity, ~30 blocks up: orthoview), capped low:
+#   cosycritters.json (PigCart/cosy-critters, ConfigData.java, Gson; missing keys keep their defaults):
+#     maxBirds 50 -> 12, maxMoths 8 -> 3, maxSpiders 16 -> 3; birds spawn within 128 blocks of the player on leaves
+#   lightdust/main.toml (Swiss8191/Light-Dust 1.20.1/Forge, LightDustConfig.java, branch of Jul 24 = 2.0.x; the pinned
+#     2.1.3 may differ - Forge drops keys it does not know): [Spawning Rules] ambientBlockCap 12 -> 4, radius 10 -> 8
+#   Particular Reforged: no config shipped (its 1.5.x config could not be read from source); particle-core, already in
+#     the pack, is the valve for its particle counts.
+# This Rocks! (Mrbysco/ThisRocksForge, RocksConfig.java; config/rocks-common.toml): geysers lift players off the ground.
+PACK_CONFIGS = {
+    "immersive_weathering-common.toml": """\
+# Beyond and Tabs tester pack: the map and the buildings stay as built (no weathering on block ticks).
+# Written once; delete this file to get the mod's defaults back.
+[general]
+	block_growths = false
+
+[mossy_blocks]
+	enabled = false
+
+[cracked_blocks]
+	enabled = false
+
+[rusting]
+	rusting = false
+	rusting_rate = 0.0
+	rust_streaking = false
+
+[leaf_piles]
+	spawn_entity_from_decay = 0.0
+
+[charring]
+	fire_chars_wood = 0.0
+
+[misc]
+	grass_over_mycelium = false
+	mycelium_over_grass = false
+""",
+    "immersive_weathering-client.toml": """\
+# Beyond and Tabs tester pack: Particular Reforged makes the falling leaves.
+[general]
+	falling_leaf_particles = false
+""",
+    "cosycritters.json": """\
+{
+  "configVersion": 1,
+  "maxBirds": 12,
+  "maxMoths": 3,
+  "maxSpiders": 3
+}
+""",
+    "lightdust/main.toml": """\
+# Beyond and Tabs tester pack: fewer dust motes (a big army is a lot to look at already).
+["Spawning Rules"]
+	ambientRadius = 8
+	ambientHardCapRadius = 10
+	ambientBlockCap = 4
+""",
+    "rocks-common.toml": """\
+# Beyond and Tabs tester pack: a geyser must not lift the RTS camera or a possessed hero off the ground.
+[General]
+	geyserLevitation = false
+""",
+}
 # our mods.toml makes these mandatory (Alex's Mobs since Oct 10; the building-block mods since lovish's Oct 20
 # decision, faction structures use their blocks): a pack without one would stop at Forge's "missing mods" screen
 REQUIRED_FILES = ("alexsmobs-", "citadel-", "mcw-roofs-", "mcw-mcwwindows-", "mcw-mcwfences-", "chipped-forge-",
@@ -183,6 +282,15 @@ def resolve_e4mc(out_dir, have_projects):
     return entries, records
 
 
+def write_mrpack(path, index_text, our_jar):
+    """The .mrpack: the index, our jar and the shipped configs as overrides."""
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("modrinth.index.json", index_text)
+        z.write(our_jar, "overrides/mods/" + OUR_JAR_NAME)
+        for name, cfg in PACK_CONFIGS.items():
+            z.writestr("overrides/config/" + name, cfg)
+
+
 def main():
     our_jar, out_dir = sys.argv[1], sys.argv[2]
     os.makedirs(out_dir, exist_ok=True)
@@ -205,9 +313,7 @@ def main():
     json.loads(text)
 
     pack = os.path.join(out_dir, "BeyondAndTabs-test.mrpack")
-    with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("modrinth.index.json", text)
-        z.write(our_jar, "overrides/mods/" + OUR_JAR_NAME)
+    write_mrpack(pack, text, our_jar)
     with zipfile.ZipFile(pack) as z:
         if z.testzip() is not None:
             sys.exit("::error::mrpack failed its zip test")
