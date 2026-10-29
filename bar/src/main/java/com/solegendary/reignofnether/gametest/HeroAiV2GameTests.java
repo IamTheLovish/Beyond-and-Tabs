@@ -216,15 +216,21 @@ public class HeroAiV2GameTests {
         HeroAiGameTests.learn(p, 1);   // Judgement, the charge's follow-up
         int[] chargedAt = { -1 };
         double[] landed = { Double.MAX_VALUE, Double.MAX_VALUE };
+        // where the two stood as the charge set off: on landing it shoves the target blocks away, so the landing is
+        // judged against the spots it aimed at, not against where the target was thrown
+        double[] spots = new double[4];
         helper.runAfterDelay(2, () -> attack(helper, me, hero, target));
         for (int t = 3; t <= 160; t++) {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
-                if (chargedAt[0] < 0 && !charge.isOffCooldown(p))
+                if (chargedAt[0] < 0 && !charge.isOffCooldown(p)) {
                     chargedAt[0] = tick;
+                    spots[0] = target.getX(); spots[1] = target.getZ();
+                    spots[2] = other.getX(); spots[3] = other.getZ();
+                }
                 if (chargedAt[0] >= 0 && tick == chargedAt[0] + 20) {
-                    landed[0] = hero.distanceTo(target);
-                    landed[1] = hero.distanceTo(other);
+                    landed[0] = flat(hero, spots[0], spots[1]);
+                    landed[1] = flat(hero, spots[2], spots[3]);
                 }
                 if (tick < 160)
                     return;
@@ -233,7 +239,7 @@ public class HeroAiV2GameTests {
                     problems.add(String.format("under an attack order the hero never used Shield Charge on its target (still %.1f blocks off)",
                         hero.distanceTo(target)));
                 else if (landed[0] > 3 || landed[1] < landed[0])
-                    problems.add(String.format("the charge did not land on the ordered target (%.1f blocks from it, %.1f from the other enemy)",
+                    problems.add(String.format("the charge did not land on the ordered target (%.1f blocks from where it stood, %.1f from the other enemy)",
                         landed[0], landed[1]));
                 HeroAiGameTests.finish(helper, problems, mobs, null);
             });
