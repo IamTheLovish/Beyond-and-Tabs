@@ -48,8 +48,8 @@ public final class MapBuilder {
      */
     static final long BUDGET_NANOS = 45_000_000L;
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
-    /** Share of forest columns that grow a tree (sparse: reclaim lanes you can see through). */
-    static final double TREE_DENSITY = 0.045;
+    /** Share of forest columns that grow a tree (sparse: reclaim lanes you can see through) - TreeScatter.DENSITY (M6). */
+    static final double TREE_DENSITY = TreeScatter.DENSITY;
 
     /** The blocks one map is made of. */
     public record Palette(BlockState top, BlockState grass, BlockState sand, BlockState sub, BlockState deep,
@@ -118,6 +118,9 @@ public final class MapBuilder {
         final List<long[]> chunks = new ArrayList<>();   // {chunkX, chunkZ}
         int nextChunk = 0;
         final List<BlockPos> trees = new ArrayList<>();
+        /** Forest columns offered to TreeScatter ({dx, dz} from the centre) and each one's ground y (M6). */
+        final List<int[]> treeOffers = new ArrayList<>();
+        final java.util.Map<Long, Integer> treeGround = new java.util.HashMap<>();
         final List<BlockPos> decor = new ArrayList<>();
         /** Plant cover: the column's air block above its grass, and what grows there (an index into PLANTS). */
         final List<BlockPos> plants = new ArrayList<>();
@@ -344,8 +347,11 @@ public final class MapBuilder {
                 boolean railHere = rail != null && rail[gi][gk];
                 column(j, p, x, z, hh, surf[gi][gk], fluid[i][k], slope, railHere ? railState(rail, gi, gk) : null);
                 double u = uv[i][k * 2], v = uv[i][k * 2 + 1];
-                if (forest[i][k] && slope < 2 && j.pal.tree() != null && layout.decorHash(u, v) < TREE_DENSITY)
-                    j.trees.add(new BlockPos(x, j.baseY + hh + 1, z));
+                if (forest[i][k] && slope < 2 && j.pal.tree() != null) {
+                    // every forest column is offered; TreeScatter picks the trees once the terrain is done (M6)
+                    j.treeOffers.add(new int[] { x - j.cx, z - j.cz });
+                    j.treeGround.put(BlockPos.asLong(x, 0, z), j.baseY + hh);
+                }
                 else if (forest[i][k] && slope < 2 && !railHere && j.pal.tree() == null && layout.decorHash(u, v) < layout.groveDensity())
                     j.groves.add(new Grove(new BlockPos(x, j.baseY + hh, z), layout.preset.theme == MapPreset.Theme.END
                         ? CHORUS : layout.groveWarped(u, v) ? WARPED : CRIMSON, (int) (layout.decorHash(u + 57, v) * 1000)));
@@ -551,18 +557,29 @@ public final class MapBuilder {
     private static void decorate(Job j) {
         ServerLevel level = j.level;
         int grown = 0;
+        long t0 = System.nanoTime();
+        int blocks = 0, vanilla = 0;
         if (j.pal.tree() != null) {
+            // M6: our own templates where TreeScatter plans them - natural, roughly fair (each side its own woods,
+            // its wood within ~15% of the others'); vanilla's tree only where a template can't be read
             var holder = level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(j.pal.tree());
-            var alt = j.layout.preset == MapPreset.VERDANT_VALLEY
-                ? level.registryAccess().registryOrThrow(Registries.CONFIGURED_FEATURE).getHolder(TreeFeatures.BIRCH)
-                : holder;
-            for (int i = 0; i < j.trees.size(); i++) {
-                BlockPos t = j.trees.get(i);
-                var h = (i % 3 == 0) ? alt : holder;
-                if (h.isPresent() && h.get().value().place(level, level.getChunkSource().getGenerator(), level.getRandom(), t))
+            for (TreeScatter.Tree t : TreeScatter.plan(j.layout, j.treeOffers)) {
+                int x = j.cx + t.dx(), z = j.cz + t.dz();
+                Integer g = j.treeGround.get(BlockPos.asLong(x, 0, z));
+                if (g == null)
+                    continue;
+                int n = TreeTemplates.place(level, t, x, z, g, j.pal.sub());
+                if (n < 0 && holder.isPresent() && holder.get().value().place(level,
+                        level.getChunkSource().getGenerator(), level.getRandom(), new BlockPos(x, g + 1, z))) {
+                    vanilla++;
                     grown++;
+                } else if (n >= 0) {
+                    blocks += n;
+                    grown++;
+                }
             }
         }
+        long treeMs = (System.nanoTime() - t0) / 1_000_000;
         // desert scatter: cacti and dead bushes (StartAreaClearing clears them off the bases)
         for (int i = 0; i < j.decor.size(); i++) {
             BlockPos d = j.decor.get(i);
@@ -580,6 +597,8 @@ public final class MapBuilder {
         for (MapLayout.Spot s : j.layout.vents)
             stampVent(level, j.cx + s.dx(), j.cz + s.dz());
         int plants = plant(j);
+        ReignOfNether.LOGGER.info("[MapBuilder] trees: {} planted ({} vanilla fallbacks), {} blocks, {} ms", grown, vanilla,
+            blocks, treeMs);
         ReignOfNether.LOGGER.info("[MapBuilder] {} trees, {} groves, {} decor, {} plants, {} pillars, {} vents", grown,
             j.groves.size(), j.decor.size(), plants, j.layout.pillars.size(), j.layout.vents.size());
     }
