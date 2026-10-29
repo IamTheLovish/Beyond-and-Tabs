@@ -1,6 +1,11 @@
 package com.solegendary.reignofnether.ambient.mist;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.solegendary.reignofnether.environment.wind.WindField;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -9,7 +14,10 @@ import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -128,9 +136,11 @@ public class MistParticle extends TextureSheetParticle {
     }
 
     /**
-     * A flat quad at the wisp's height, turned by its slow spin, drawn in both windings at half the alpha each (no
-     * culling question from any camera: the ambient birds' ground shadow, #334, found the two layers both land) and
-     * written here rather than through SingleQuadParticle.render (that path drew the birds pure black in the eyes runs).
+     * A flat quad at the wisp's height, turned by its slow spin, drawn ONCE through MIST_SHEET (culling off there, so
+     * one winding shows from above and below). r2 drew both windings at half alpha through vanilla's particle shader,
+     * whose 0.1 alpha cut threw nearly every pixel away. Written here rather than through SingleQuadParticle.render
+     * (that path drew the #334 birds pure black in the eyes runs); MIST_SHEET's format has no lightmap - the colour
+     * carries the light (MistMath.colour).
      */
     @Override
     public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
@@ -144,21 +154,46 @@ public class MistParticle extends TextureSheetParticle {
         float s = quadSize;
         float fx = Mth.cos(r) * s, fz = Mth.sin(r) * s;     // one half-axis of the quad; the other is (-fz, fx)
         float u0 = getU0(), u1 = getU1(), v0 = getV0(), v1 = getV1();
-        float[][] c = {
-            { cx - fx + fz, cz - fz - fx, u0, v0 },
-            { cx + fx + fz, cz + fz - fx, u1, v0 },
-            { cx + fx - fz, cz + fz + fx, u1, v1 },
-            { cx - fx - fz, cz - fz + fx, u0, v1 } };
-        float a = alpha * 0.5f;
-        for (int i = 0; i < 4; i++)
-            vert(buffer, c[i], cy, a);
-        for (int i = 3; i >= 0; i--)
-            vert(buffer, c[i], cy, a);
+        vert(buffer, cx - fx + fz, cy, cz - fz - fx, u0, v0);
+        vert(buffer, cx + fx + fz, cy, cz + fz - fx, u1, v0);
+        vert(buffer, cx + fx - fz, cy, cz + fz + fx, u1, v1);
+        vert(buffer, cx - fx - fz, cy, cz - fz + fx, u0, v1);
     }
 
-    private void vert(VertexConsumer b, float[] c, float y, float a) {
-        b.vertex(c[0], y, c[1]).uv(c[2], c[3]).color(rCol, gCol, bCol, a).uv2(SKY_LIGHT).endVertex();
+    private void vert(VertexConsumer b, float x, float y, float z, float u, float v) {
+        b.vertex(x, y, z).uv(u, v).color(rCol, gCol, bCol, alpha).endVertex();
     }
+
+    /**
+     * The mist's own sheet: the particle atlas through position_tex_color (it discards only alpha 0, where vanilla's
+     * particle shader discards under 0.1 - MistMath.VANILLA_PARTICLE_CUT), blended, no depth write (overlapping soft
+     * wisps in three layers add up instead of cutting square holes in each other) and no culling. Forge renders custom
+     * particle render types after vanilla's (ForgeHooksClient.makeParticleRenderTypeComparator).
+     */
+    public static final ParticleRenderType MIST_SHEET = new ParticleRenderType() {
+        @Override
+        public void begin(BufferBuilder builder, TextureManager textures) {
+            RenderSystem.depthMask(false);
+            RenderSystem.disableCull();
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+            RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+            builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        }
+
+        @Override
+        public void end(Tesselator tesselator) {
+            tesselator.end();
+            RenderSystem.enableCull();
+            RenderSystem.depthMask(true);
+        }
+
+        @Override
+        public String toString() {
+            return "BAT_MIST_SHEET";
+        }
+    };
 
     /**
      * Full-bright: the colour carries the light (MistMath.colour dims it at night). r1 took the open sky's lightmap,
@@ -187,7 +222,7 @@ public class MistParticle extends TextureSheetParticle {
 
     @Override
     public ParticleRenderType getRenderType() {
-        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+        return MIST_SHEET;
     }
 
     @OnlyIn(Dist.CLIENT)
