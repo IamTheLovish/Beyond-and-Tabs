@@ -546,6 +546,12 @@ public class EntityRegistrar {
                     .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mirror_mage_unit").toString()));
+    // the Stormcallers' essence caster (design/essence_casters.md): the monks' illager body
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.SparkSageUnit>> SPARK_SAGE_UNIT = ENTITIES.register("spark_sage_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.SparkSageUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "spark_sage_unit").toString()));
 
     // Stormcallers slice 4: the rest of the Observatory's T2 (the Seer on the pillager's body, the Lantern Fortress on
     // Alex's Mobs' elephant drawn at 0.75x, the Phoenix on AM's sunbird at 0.55x) and the T3 Celestial Dragon on AM's
@@ -1212,6 +1218,7 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.storm.EarthshakerProd.itemName -> EntityRegistrar.EARTHSHAKER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.GravityMonkProd.itemName -> EntityRegistrar.GRAVITY_MONK_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.MirrorMageProd.itemName -> EntityRegistrar.MIRROR_MAGE_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.storm.SparkSageProd.itemName -> EntityRegistrar.SPARK_SAGE_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.SeerProd.itemName -> EntityRegistrar.SEER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.LanternFortressProd.itemName -> EntityRegistrar.LANTERN_FORTRESS_UNIT.get();
             case com.solegendary.reignofnether.unit.units.storm.PhoenixProd.itemName -> EntityRegistrar.PHOENIX_UNIT.get();

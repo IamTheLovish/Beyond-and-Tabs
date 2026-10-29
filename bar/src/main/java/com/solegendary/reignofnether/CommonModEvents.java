@@ -108,6 +108,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.GravityMonkUnit.createAttributes().build());
         evt.put(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.MirrorMageUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SPARK_SAGE_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SparkSageUnit.createAttributes().build());
         evt.put(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.SeerUnit.createAttributes().build());
         evt.put(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit.createAttributes().build());
         evt.put(EntityRegistrar.PHOENIX_UNIT.get(), com.solegendary.reignofnether.unit.units.storm.PhoenixUnit.createAttributes().build());
@@ -304,6 +305,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.EARTHSHAKER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.GRAVITY_MONK_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MIRROR_MAGE_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SPARK_SAGE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LANTERN_FORTRESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.PHOENIX_UNIT_SPAWN_EGG);
