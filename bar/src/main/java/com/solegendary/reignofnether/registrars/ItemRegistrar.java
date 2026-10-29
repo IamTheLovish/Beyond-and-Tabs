@@ -98,6 +98,34 @@ public class ItemRegistrar {
             ITEMS.register("bombard_crew_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BOMBARD_CREW_UNIT,
                     0x3A4A50, 0xC9A23E, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> SUNFIRE_MANGONEL_UNIT_SPAWN_EGG =
+            ITEMS.register("sunfire_mangonel_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SUNFIRE_MANGONEL_UNIT,
+                    0xE8E2D0, 0xD4A62A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SKULL_HURLER_UNIT_SPAWN_EGG =
+            ITEMS.register("skull_hurler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SKULL_HURLER_UNIT,
+                    0x8E9A86, 0x4FA36B, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BOULDER_CHUCKER_UNIT_SPAWN_EGG =
+            ITEMS.register("boulder_chucker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BOULDER_CHUCKER_UNIT,
+                    0x7A4A2E, 0xC2402A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BURL_SLINGER_UNIT_SPAWN_EGG =
+            ITEMS.register("burl_slinger_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BURL_SLINGER_UNIT,
+                    0x6B4A2E, 0x5E8C3A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> POWDER_MONKEY_UNIT_SPAWN_EGG =
+            ITEMS.register("powder_monkey_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.POWDER_MONKEY_UNIT,
+                    0x3A4A50, 0xD8D0B8, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> THUNDERSTONE_MONK_UNIT_SPAWN_EGG =
+            ITEMS.register("thunderstone_monk_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.THUNDERSTONE_MONK_UNIT,
+                    0x3B3A7A, 0x4FB08A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> STEAM_LOBBER_UNIT_SPAWN_EGG =
+            ITEMS.register("steam_lobber_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.STEAM_LOBBER_UNIT,
+                    0xB08A3A, 0x5A5A5A, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> TIDE_PRIEST_UNIT_SPAWN_EGG =
             ITEMS.register("tide_priest_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TIDE_PRIEST_UNIT,
                     0x2E8A6A, 0x3CC8BE, new Item.Properties()));
@@ -195,6 +223,10 @@ public class ItemRegistrar {
     public static final RegistryObject<ForgeSpawnEggItem> MIRROR_MAGE_UNIT_SPAWN_EGG =
             ITEMS.register("mirror_mage_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MIRROR_MAGE_UNIT,
                     0xB8BCC4, 0xA8231C, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SPARK_SAGE_UNIT_SPAWN_EGG =
+            ITEMS.register("spark_sage_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SPARK_SAGE_UNIT,
+                    0x3A4A7A, 0xF2E66B, new Item.Properties()));
 
     // Stormcallers slice 4 (the rest of the Observatory's T2 and Heaven's Gate's T3)
     public static final RegistryObject<ForgeSpawnEggItem> SEER_UNIT_SPAWN_EGG =
@@ -473,6 +505,10 @@ public class ItemRegistrar {
     public static final RegistryObject<ForgeSpawnEggItem> REPAIR_CRAWLER_UNIT_SPAWN_EGG =
             ITEMS.register("repair_crawler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.REPAIR_CRAWLER_UNIT,
                     0xC98A2E, 0x7FE07F, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SOUL_ENGINEER_UNIT_SPAWN_EGG =
+            ITEMS.register("soul_engineer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SOUL_ENGINEER_UNIT,
+                    0xC98A2E, 0x6FE3E8, new Item.Properties()));
 
     public static final RegistryObject<ForgeSpawnEggItem> CLOCKWORK_SPIDER_UNIT_SPAWN_EGG =
             ITEMS.register("clockwork_spider_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CLOCKWORK_SPIDER_UNIT,

@@ -210,8 +210,8 @@ All run on GitHub Actions, never on anyone's PC:
   plays a scripted tour (build menu, army, box select, fights at two zooms, capitol, river crossing, domes...) and
   publishes stills **and a 10-second video clip per still** to the `eyes` branch. Add a scene when a feature has no
   shot that shows it. A feature nobody has seen is not done.
-  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - the pick for lovish's
-  PC - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
+  Dispatch inputs: `shaders` (Oculus + Embeddium + a shader pack: `shader_pack` complementary - screenshots in CI only: its author refused us
+  permission to ship it (Oct 29), so no pack we publish may contain it (tools/test_pack_no_complementary.py) - or bliss, which fogs out the RTS view; `rp` labpbr / integrated; `shader_options` KEY=VALUE;... for a pack
   setting A/B), `pack` ours / none, `look` (the world look), `build_run` (a BUILD run id whose jar to test). Each
   variant publishes to its own branch; `eyes-approve.yml` copies a lane's stills to `<lane>-approved`, the baseline
   of the picture regression (tools/eyes_diff.py).
@@ -227,7 +227,7 @@ All run on GitHub Actions, never on anyone's PC:
   OFFLINE in seconds from the data (the fast loop, with the blow marked and weapon / foot trails). **`--ci`** plays the
   REAL game instead - any unit, including everything animated in Java (the dragons, `setupAnim` models): it dispatches
   eyes.yml with `anim=unit:clip` on your current (pushed, PR-built) branch, waits (~7 min, one job, no queue behind other
-  runs), downloads artifact `anim-<run id>` and prints the sheets. `matchstart/EyesAnimScene.java` summons the unit on
+  runs), fetches folder `anim-<run id>` from branch `eyes-anim` (the Actions artifact host is unreachable from a sandbox) and prints the sheets. `matchstart/EyesAnimScene.java` summons the unit on
   a flat pad, orders it (a real MOVE / ATTACK_MOVE, a dummy to hit, a kill), locks a first-person camera to it (side,
   front, rear - `--views side+rear`) and screenshots every few game ticks; the log gives each frame's exact game tick.
   Examples: `anim_eyes.py bone_dragon_unit turn --ci --views rear+side` (flight bank), `anim_eyes.py zombie_unit attack

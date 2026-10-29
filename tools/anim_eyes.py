@@ -19,7 +19,7 @@ clip   idle | walk (fly is the same) | attack | turn | death
        offline, `attack` is the data file's clip with a blow (thrust) and the clip names of the file work as they are
 
 --ci   dispatch .github/workflows/eyes.yml (input `anim`) on the current branch (--branch to change; it must be pushed
-       and its PR build must have a jar), wait, download the artifact. The client plays EyesAnimScene.java: a real
+       and its PR build must have a jar), wait, fetch the sheets from branch eyes-anim (folder anim-<run id>). The client plays EyesAnimScene.java: a real
        entity doing the clip on a flat pad, a first-person camera locked to it, a screenshot every few game ticks.
        The jar tested is the branch's PR build (artifact bar-mod), so push first.
 --views side+front+rear   which takes (rows); default all three (each is one more unit on the pad, ~1 min of CI)
@@ -516,7 +516,7 @@ def main(argv=None):
             print("note: the run ended %s (%s); the frames are real, read the annotations on the run for what failed"
                   % (info.get("conclusion"), info.get("url", "")), file=sys.stderr)
         if not found:
-            print("anim_eyes: the artifact held no sheet - see %s" % dest, file=sys.stderr)
+            print("anim_eyes: the run's eyes-anim folder held no sheet - see %s" % dest, file=sys.stderr)
             return 1
         return 0
 

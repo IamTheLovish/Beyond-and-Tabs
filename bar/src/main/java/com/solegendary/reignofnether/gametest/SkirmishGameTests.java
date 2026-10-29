@@ -833,8 +833,12 @@ public class SkirmishGameTests {
             }
             int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
             com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-            int none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+            int none;
+            try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
+                none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            } finally {
+                com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+            }
             if (none != 0)
                 helper.fail("raised a Ghoul past the unit cap");
             com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
@@ -1137,8 +1141,12 @@ public class SkirmishGameTests {
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
         int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
         com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-        var none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+        net.minecraft.world.entity.Entity none;
+        try {   // the cap is server-wide: a throw must not leave it at 0 for every later test
+            none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
+        } finally {
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+        }
         if (none != null)
             helper.fail("raised a skeleton past the unit cap");
         com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
@@ -1317,6 +1325,20 @@ public class SkirmishGameTests {
                 i == 0 ? com.solegendary.reignofnether.bot.BotPlayer.Difficulty.HARD
                        : com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
         }
+        // the bots leave the match and their armies go when the test ends, however it ends: the start check just
+        // below fails in the test method itself, where the soak's end never runs - five bots went on thinking and
+        // building for the rest of the shard (buildings stay, ownerless and far away)
+        Runnable leaveMatch = TestCleanup.atEnd(helper, () -> {
+            List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
+            for (String n : names)
+                leftovers.addAll(soakUnits(n));
+            for (String n : names) {
+                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(n, "gametest finished");
+                bots.remove(n);
+                failures.remove(n);
+            }
+            leftovers.forEach(net.minecraft.world.entity.Entity::discard);
+        });
         for (String n : names)
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
                 helper.fail("startRTSBot did not add " + n + " to the match");
@@ -1329,6 +1351,10 @@ public class SkirmishGameTests {
             teams.add(new String[] { storm, brass });
         for (String[] team : teams)
             com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(team[0], team[1]);
+        Runnable unAlly = TestCleanup.atEnd(helper, () -> {
+            for (String[] team : teams)
+                com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(team[0], team[1]);
+        });
         List<String> problemsAtStart = new ArrayList<>();
         // the Court's start through the real bot start path: Seedshapers, the first promoted to the Grove Warden
         // (checked a moment later, once the spawned entities have joined the unit lists)
@@ -1436,6 +1462,10 @@ public class SkirmishGameTests {
             false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
             false, net.minecraftforge.event.entity.EntityLeaveLevelEvent.class, onLeave);
+        Runnable unlisten = TestCleanup.atEnd(helper, () -> {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onLeave);
+        });
         Runnable sample = () -> {
             for (int i = 0; i < count; i++)
                 if (leftMatchAt[i] == 0 && !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(names.get(i)))
@@ -1541,20 +1571,10 @@ public class SkirmishGameTests {
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastPlacedAt - t0,
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).siteWatch.cancelled,
                     bots.get(names.get(i)) == null ? "?" : bots.get(names.get(i)).lastBlockedReason);
-            // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
-            List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
-            for (String n : names)
-                leftovers.addAll(soakUnits(n));
-            for (String n : names) {
-                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(n, "gametest finished");
-                bots.remove(n);
-                failures.remove(n);
-            }
-            for (String[] team : teams)
-                com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(team[0], team[1]);
-            leftovers.forEach(net.minecraft.world.entity.Entity::discard);
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onLeave);
+            // clean up: leave the match, forget the brains, drop the armies (each also runs at the test's end)
+            leaveMatch.run();
+            unAlly.run();
+            unlisten.run();
             if (!problems.isEmpty()) {
                 StringBuilder diag = new StringBuilder(" | left match at t: ");
                 for (int i = 0; i < count; i++)
@@ -1777,6 +1797,9 @@ public class SkirmishGameTests {
         int cx = base.getX() - 6, cz = base.getZ() - 6;
         final int step = 8;   // pads 7 wide, one air column between them
         Building wind = Buildings.WIND_GENERATOR_VILLAGERS;
+        // the four pads (abs y 238-247) are put back when the test ends, pass or fail: they stayed in this column's sky,
+        // where a later batch's test at this slot stands its Leviathan on glass at 240
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 2, g - 7, cz - 2), new BlockPos(cx + step + 4, g + 2, cz + step + 4));
 
         // 1) step, placed on the LOW side: columns x+1..x+2 are one block higher (inside the bottom layer)
         int ax = cx, az = cz;
@@ -3321,9 +3344,11 @@ public class SkirmishGameTests {
      */
     private static BlockPos skyPad(GameTestHelper helper, int y) {
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        // put back when the test ends, pass or fail: a pad left over another test's column is in its sky
+        TestCleanup.BlockUndo pad = TestCleanup.blocks(helper);
         for (int dx = 0; dx < 16; dx++)
             for (int dz = 0; dz < 16; dz++)
-                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+                pad.set(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState());
         return new BlockPos(corner.getX(), y + 1, corner.getZ());   // standing height at the arena's corner
     }
 
@@ -4164,21 +4189,25 @@ public class SkirmishGameTests {
         final int y = 230;
         List<com.solegendary.reignofnether.building.BuildingPlacement> built = new ArrayList<>();
         var types = List.<Building>of(Buildings.HEARTWOOD_HALL, Buildings.WIND_GENERATOR_TIDE);
+        // the two buildings and their stone floors stand 120-160 blocks off, over other tests' arenas: put back when
+        // the test ends, pass or fail (they stayed for good, a whole Heartwood Hall in a neighbour's sky)
+        TestCleanup.BlockUndo undo = TestCleanup.blocks(helper);
         for (int t = 0; t < types.size(); t++) {
             BlockPos origin = new BlockPos(base.getX() + 120 + t * 40, y, base.getZ() + 120);
             var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(types.get(t),
                 level, origin, Rotation.NONE, "gametest_settle", false);
             List<com.solegendary.reignofnether.building.BuildingBlock> blocks = new ArrayList<>();
             int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE,
-                minY = Integer.MAX_VALUE;
+                minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
             for (var b : placement.getBlocks())
                 if (!b.getBlockState().isAir()) {
                     blocks.add(b);
                     BlockPos p = b.getBlockPos();
                     minX = Math.min(minX, p.getX()); maxX = Math.max(maxX, p.getX());
                     minZ = Math.min(minZ, p.getZ()); maxZ = Math.max(maxZ, p.getZ());
-                    minY = Math.min(minY, p.getY());
+                    minY = Math.min(minY, p.getY()); maxY = Math.max(maxY, p.getY());
                 }
+            undo.region(new BlockPos(minX - 1, minY - 1, minZ - 1), new BlockPos(maxX + 1, maxY + 1, maxZ + 1));
             for (int x = minX - 1; x <= maxX + 1; x++)
                 for (int z = minZ - 1; z <= maxZ + 1; z++)
                     level.setBlock(new BlockPos(x, minY - 1, z), Blocks.STONE.defaultBlockState(), 3);
@@ -5282,6 +5311,7 @@ public class SkirmishGameTests {
         if (com.solegendary.reignofnether.bot.BotPlayer.t2TowerFor(Factions.VERDANT_COURT) != Buildings.STORM_OAK)
             helper.fail("the Verdant bot does not raise Storm Oaks");
         oak.isBuilt = true;
+        oak.onlyFoe = foeOwner;   // tickStrike's own look: never another test's units
         var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get();
         var loner = treant.create(level);
         var packA = treant.create(level);
@@ -5336,11 +5366,11 @@ public class SkirmishGameTests {
                     oak.tickStrike(level);
                 if (oak.strike(level, foeOwner) != null)
                     helper.fail("the Storm Oak struck before its cooldown ended");
-                oak.tickStrike(level);
                 for (var e : List.of(loner, packA, packB))
                     e.invulnerableTime = 0;
-                if (oak.strike(level, foeOwner) == null)
-                    helper.fail("the Storm Oak did not strike again after its cooldown");
+                oak.tickStrike(level);   // the cooldown runs out on this tick, and the bolt falls on it
+                if (oak.cooldown != com.solegendary.reignofnether.building.buildings.placements.StormOakPlacement.COOLDOWN_TICKS)
+                    helper.fail("the Storm Oak did not strike again on the tick its cooldown ended");
                 helper.succeed();
             } finally {
                 com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
@@ -5655,6 +5685,9 @@ public class SkirmishGameTests {
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 200;
         int cx = base.getX() + 60, cz = base.getZ() - 60;   // clear of the other platform tests (the Court's is at -60/+60, y 220)
+        // the pad and the Wreck Harbour on it stand over another test's arena: put back when the test ends, pass or
+        // fail (the next test at that slot read the sand at 200 as its ground)
+        TestCleanup.blocks(helper).region(new BlockPos(cx - 12, y - 1, cz - 12), new BlockPos(cx + 12, y + 30, cz + 12));
         for (int dx = -9; dx <= 9; dx++)
             for (int dz = -9; dz <= 9; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.SANDSTONE.defaultBlockState(), 3);
@@ -11816,8 +11849,9 @@ public class SkirmishGameTests {
             if (e != null)
                 e.discard();
         }
-        if (units != 9)
-            helper.fail("the Foundry Hall and the Machine Shop should train nine units, found " + units);
+        // nine of the faction's own plus the shared T1 siege lobber (the Steam Lobber, design/siege_t1.md; not a Machine)
+        if (units != 10)
+            helper.fail("the Foundry Hall and the Machine Shop should train ten units, found " + units);
         if (machines != 6)
             helper.fail("six of the T1 units are machines (Gyro Scout, Steam Runner, Iron Warden, Flak Cart, Mortar Crawler, Shield Projector), found " + machines);
         // the Flak Cart is wind-type anti-air; the Deployed Turret is a machine of the faction but never trained

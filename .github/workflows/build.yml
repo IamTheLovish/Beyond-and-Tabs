@@ -76,11 +76,6 @@ jobs:
           python3 tools/hud_layout.py
           python3 tools/ladder_report.py --selftest   # the nightly bot ladder's table (bot-ladder.yml)
           for f in design/anims/*.json; do python3 tools/anim_lab.py "$f" --check --motion; done   # animation lab: generated keys == data, no snaps / broken joints
-      - name: Animation review sheet tests (tools/test_anim_sheet.py - the sheet maths, the fast renderer == the old one)
-        run: |
-          python3 -m pip install --quiet --user --break-system-packages numpy pillow >/dev/null 2>&1 || pip install --quiet numpy pillow
-          ANIM_SKIP_TIMING=1 python3 tools/test_anim_sheet.py
-          python3 tools/test_anim_eyes.py   # the in-game animation photos: spec, log, frame choice, sheet, gh calls
       - name: Dependency pins in bar/build.gradle are lovish's files (Modrinth - only CI runners reach it)
         run: python3 tools/check_dep_pins.py
       - name: Engine benches (no Minecraft)
@@ -147,6 +142,8 @@ jobs:
           if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
+        # shared runners: the wall-clock bars in test_anim_sheet.py are skipped (the equality tests still run)
+        env: { ANIM_SKIP_TIMING: "1" }
         run: pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:

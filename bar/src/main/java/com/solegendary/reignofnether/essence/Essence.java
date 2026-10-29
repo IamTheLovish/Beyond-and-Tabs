@@ -1,12 +1,6 @@
 package com.solegendary.reignofnether.essence;
 
-import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
-import com.solegendary.reignofnether.mana.DecoyServerEvents;
-import com.solegendary.reignofnether.unit.DragonRaiseServerEvents;
-import com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit;
-import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
-import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
-import com.solegendary.reignofnether.unit.units.neutral.BeeUnit;
+import com.solegendary.reignofnether.unit.Summons;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,8 +22,6 @@ public final class Essence {
     public static final float METAL_PER_ESSENCE = 25f;
     /** Makes any unit a carrier (tags are saved with the entity). */
     public static final String CARRIER_TAG = "bt_essence_carrier";
-    /** A summon: its death drops no wisp, so summons cannot farm essence. */
-    public static final String NO_ESSENCE_TAG = "bt_no_essence";
     static final String KEY = "bt_essence";
 
     private Essence() { }
@@ -83,24 +75,13 @@ public final class Essence {
         return true;
     }
 
-    /** Marks a summon (call it on every unit a caster conjures): its death drops no wisp. */
+    /** Marks a summon (call it on every unit a caster conjures): see {@link Summons} for all it means. */
     public static void markSummoned(Entity e) {
-        e.addTag(NO_ESSENCE_TAG);
+        Summons.mark(e);
     }
 
-    /**
-     * Summoned or temporary: dies without a wisp. The marked ones (hero summons in HeroCore.addSummon, an infested
-     * building's limited-life silverfish), and the summons that existed before essence by their own markers - a Bone
-     * Dragon's risen, an awakened treant (Awaken Thicket and the World Tree Walker's grove), a Mirror Mage's decoy, a
-     * necromancer's zombie or a summoned bee - and the free machines by class: a deployed turret, an Iron Leviathan
-     * Engine's clockwork drone (replaced every wave for nothing, so it could be farmed).
-     */
+    /** Summoned or temporary ({@link Summons#isSummoned}, the one rule): its death drops no wisp. */
     public static boolean isSummoned(Entity e) {
-        if (e == null)
-            return false;
-        if (e.getTags().contains(NO_ESSENCE_TAG) || DragonRaiseServerEvents.isRisen(e) || AwakenThicket.isAwakened(e)
-                || DecoyServerEvents.isDecoy(e) || e instanceof DeployedTurretUnit || e instanceof ClockworkDroneUnit)
-            return true;
-        return (e instanceof ZombieUnit z && z.isSummoned()) || (e instanceof BeeUnit b && b.isSummoned());
+        return Summons.isSummoned(e);
     }
 }
