@@ -336,6 +336,67 @@ public class TombcallerGameTests {
         });
     }
 
+    /**
+     * A bot's Tombcaller that lags behind its army is sent to it: the bot's "healers follow the army" block
+     * (BotPlayer.verdantHabits, run by every faction's think) orders a lagging essence caster to the army's centre
+     * (shared edit, briefs/essence-caster-bot-follow-line.md), or a bot's caster idles at the Dungeon with no essence.
+     * The Tombcaller 14 blocks from the army is ordered there; the one 3 blocks from it is left alone. verdantHabits is
+     * package-private and its signature is the same in every caster PR, so the test reaches it by reflection.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void tombcaller_bots_send_a_lagging_tombcaller_to_the_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "follow");
+        Mob lagging = caller(helper, owner, 2, 2, 0);
+        Mob close = caller(helper, owner, 10, 10, 0);
+        Mob f1 = still(helper, EntityRegistrar.ZOMBIE_UNIT.get(), owner, 12, 12);
+        Mob f2 = still(helper, EntityRegistrar.ZOMBIE_UNIT.get(), owner, 13, 12);
+        List<Mob> all = new ArrayList<>(Arrays.asList(lagging, close, f1, f2));
+        if (all.contains(null)) {
+            discardAll(spawned(all));
+            helper.fail("could not spawn the two Tombcallers and the army");
+            return;
+        }
+        List<String> early = new ArrayList<>();
+        BlockPos[] moveTo = new BlockPos[1];
+        helper.runAfterDelay(3, () -> {
+            try {
+                var brain = new com.solegendary.reignofnether.bot.BotPlayer(owner, Factions.MONSTERS,
+                    com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
+                brain.orderListener = (action, target) -> {
+                    if (action == UnitAction.MOVE)
+                        moveTo[0] = target;
+                };
+                List<LivingEntity> mine = new ArrayList<>(List.of(lagging, close, f1, f2));
+                List<LivingEntity> army = new ArrayList<>(List.of(f1, f2));
+                var habits = com.solegendary.reignofnether.bot.BotPlayer.class.getDeclaredMethod("verdantHabits",
+                    ServerLevel.class, List.class, List.class, List.class, List.class, long.class, long.class);
+                habits.setAccessible(true);
+                habits.invoke(brain, level, mine, army, new ArrayList<>(), new ArrayList<>(), level.getGameTime(), 0L);
+                if (moveTo[0] == null)
+                    early.add("the bot gave no move order: its lagging Tombcaller stays at the lab");
+            } catch (ReflectiveOperationException | RuntimeException ex) {
+                early.add("calling the bot's follow-the-army block threw " + ex);
+            }
+        });
+        helper.runAfterDelay(8, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (moveTo[0] != null) {
+                    BlockPos t = ((Unit) lagging).getMoveGoal() == null ? null : ((Unit) lagging).getMoveGoal().getMoveTarget();
+                    if (t == null || Math.abs(t.getX() - moveTo[0].getX()) > 1 || Math.abs(t.getZ() - moveTo[0].getZ()) > 1)
+                        problems.add("the lagging Tombcaller is headed for " + t + ", not the army's centre " + moveTo[0]);
+                    BlockPos c = ((Unit) close).getMoveGoal() == null ? null : ((Unit) close).getMoveGoal().getMoveTarget();
+                    if (c != null)
+                        problems.add("the Tombcaller 3 blocks from the army was ordered to " + c + ": only a lagging one should be");
+                }
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
     // ------------------------------------------------------------------------------------------ Raise Tombstone
 
     /**
