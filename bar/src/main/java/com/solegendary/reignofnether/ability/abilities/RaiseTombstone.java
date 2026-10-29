@@ -4,21 +4,29 @@ import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
+import com.solegendary.reignofnether.barfx.BarFx;
 import com.solegendary.reignofnether.essence.Essence;
+import com.solegendary.reignofnether.essence.TombcallerServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.sounds.SoundAction;
+import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -104,6 +112,49 @@ public class RaiseTombstone extends Ability {
      */
     @Nullable
     public static TombstoneUnit cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos at, boolean quiet) {
-        return null;
+        if (owner == null || owner.isEmpty() || at == null)
+            return null;
+        // the clicked ground block: the stone stands on it; a click in the air over ground: it stands there
+        BlockPos feet = solid(sl, at) ? at.above() : at;
+        Vec3 spot = Vec3.atBottomCenterOf(feet);
+        double dx = spot.x - caster.getX(), dz = spot.z - caster.getZ();
+        if (dx * dx + dz * dz > (RANGE + 0.5) * (RANGE + 0.5)) {
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, MSG_TOO_FAR);
+            return null;
+        }
+        if (TombcallerServerEvents.stonesOf(caster).size() >= MAX_STONES) {
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, MSG_MAX);
+            return null;
+        }
+        EntityType<TombstoneUnit> type = EntityRegistrar.TOMBSTONE_UNIT.get();
+        if (!solid(sl, feet.below()) || !sl.noCollision(type.getDimensions().makeBoundingBox(spot))) {
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, MSG_NO_ROOM);
+            return null;
+        }
+        TombstoneUnit stone = type.create(sl);
+        if (stone == null)
+            return null;
+        if (!Essence.trySpend(caster, ESSENCE_COST)) {
+            stone.discard();
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, Empower.MSG_SHORT);
+            return null;
+        }
+        stone.moveTo(spot.x, spot.y, spot.z, caster.getYRot(), 0);
+        stone.setOwnerName(owner);
+        Essence.markSummoned(stone);   // before it joins: no essence, no XP, no veterancy for its killer
+        stone.begin(caster, sl.getGameTime());
+        sl.addFreshEntity(stone);
+        sl.sendParticles(ParticleTypes.SOUL, spot.x, spot.y + 0.6, spot.z, 16, 0.4, 0.4, 0.4, 0.03);
+        BarFx.shot(sl, caster.getEyePosition(), spot.add(0, 0.8, 0), BarFx.K_MAGIC, caster);
+        SoundClientboundPacket.playSoundAtPos(SoundAction.WRAITH_POSSESS_PARTIAL, feet);
+        return stone;
+    }
+
+    private static boolean solid(ServerLevel sl, BlockPos bp) {
+        return !sl.getBlockState(bp).getCollisionShape(sl, bp).isEmpty();
     }
 }

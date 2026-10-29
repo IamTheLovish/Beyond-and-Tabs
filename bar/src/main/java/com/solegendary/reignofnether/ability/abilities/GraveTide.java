@@ -4,21 +4,28 @@ import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.essence.Essence;
+import com.solegendary.reignofnether.essence.TombcallerServerEvents;
+import com.solegendary.reignofnether.hero.HeroFx;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.sounds.SoundAction;
+import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -98,6 +105,39 @@ public class GraveTide extends Ability {
      * units it reached (empty: refused). Public for the bot and the game test (no cooldown handling here).
      */
     public static List<LivingEntity> cast(ServerLevel sl, LivingEntity caster, String owner, boolean quiet) {
-        return List.of();
+        if (owner == null || owner.isEmpty() || !(caster instanceof Mob self))
+            return List.of();
+        // nothing else can refuse it: the Tombcaller itself is always within reach
+        if (!Essence.trySpend(caster, ESSENCE_COST)) {
+            if (!quiet)
+                TombcallerServerEvents.warn(sl, owner, Empower.MSG_SHORT);
+            return List.of();
+        }
+        List<LivingEntity> reached = new ArrayList<>();
+        for (LivingEntity le : HeroFx.friends(sl, self, caster.position(), RADIUS))
+            if (!reached.contains(le))
+                reached.add(le);
+        for (LivingEntity le : TombcallerServerEvents.unitsOnCreepOf(caster))
+            if (!reached.contains(le))
+                reached.add(le);
+        if (!reached.contains(caster))
+            reached.add(caster);
+        long now = sl.getGameTime();
+        List<LivingEntity> hastened = new ArrayList<>();
+        for (LivingEntity le : reached) {
+            if (!TombcallerServerEvents.isGraveboundFriend(le, owner))
+                continue;
+            int seconds = TombcallerServerEvents.onCreepOf(caster, le.position()) ? CREEP_DURATION_SECONDS : DURATION_SECONDS;
+            TombcallerServerEvents.hasten(le, now + seconds * 20L);
+            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, le.getX(), le.getY() + 0.3, le.getZ(), 6, 0.3, 0.1, 0.3, 0.02);
+            hastened.add(le);
+        }
+        for (int k = 0; k < 24; k++) {
+            double a = Math.PI * 2 * k / 24;
+            sl.sendParticles(ParticleTypes.SOUL, caster.getX() + Math.cos(a) * RADIUS, caster.getY() + 0.2, caster.getZ() + Math.sin(a) * RADIUS,
+                1, 0, 0.05, 0, 0.01);
+        }
+        SoundClientboundPacket.playSoundAtPos(SoundAction.WRAITH_FEAR, caster.blockPosition());
+        return hastened;
     }
 }
