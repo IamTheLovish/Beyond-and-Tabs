@@ -17,15 +17,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// fog tint at BiomeColors so grass/leaves/water stay biome-blended under vanilla and Embeddium; grass and foliage first
-// get the world-position tint noise (GrassTint, lovish Oct 22 20:23), so a field is not one flat green - the same
-// path, so it is blended the same way (Embeddium samples it per corner: a smooth gradient, no block steps)
+// fog tint at BiomeColors so leaves/water stay biome-blended under vanilla and Embeddium; foliage first gets the
+// world-position tint noise (GrassTint, lovish Oct 22 20:23), and grass is replaced by GrassTint.lawn - one meadow
+// base, varied, whatever random biome the map sits on (Oct 29). The same path, so it is blended the same way
+// (Embeddium samples it per corner: a smooth gradient, no block steps)
 @Mixin(BiomeColors.class)
 public abstract class BiomeColorsMixin {
 
     @Inject(method = "getAverageGrassColor", at = @At("RETURN"), cancellable = true)
     private static void ron_fogTintGrass(BlockAndTintGetter level, BlockPos pos, CallbackInfoReturnable<Integer> cir) {
-        vary(pos, cir, GrassTint.GRASS);
+        // the lawn is the game's colour, not the random biome's under the map (eyes r45, critic r40 #3)
+        if (pos != null) cir.setReturnValue(GrassTint.lawn(pos.getX(), pos.getZ()));
         shade(pos, cir);
         applyTint(level, pos, cir);
     }
