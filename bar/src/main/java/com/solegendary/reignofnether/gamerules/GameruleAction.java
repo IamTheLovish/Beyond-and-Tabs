@@ -3,6 +3,9 @@ package com.solegendary.reignofnether.gamerules;
 public enum GameruleAction {
     SET_LOG_FALLING,
     SET_NEUTRAL_AGGRO,
+    // was SET_MAX_POPULATION (no population - lovish, Oct 29): kept as a placeholder so every later action keeps its
+    // ordinal on the wire and a client on an older jar does not misread them. Never sent, never handled.
+    UNUSED_MAX_POPULATION,
     SET_UNIT_GRIEFING,
     SET_PLAYER_GRIEFING,
     SET_GROUND_Y_LEVEL,

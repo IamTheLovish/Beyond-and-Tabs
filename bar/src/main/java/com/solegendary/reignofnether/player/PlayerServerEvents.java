@@ -149,7 +149,7 @@ public class PlayerServerEvents {
     // modifythephasevariance - ignore building requirements
     // medievalman - get all research (cannot reverse)
     // greedisgood X - gain X of each resource
-    // foodforthought - ignore soft population caps
+    // foodforthought - kept for old scripts and tests; inert (there is no population cap - lovish, Oct 29)
     // thereisnospoon - allow changing survival wave by clicking the wave indicator and using debug commands
     // slipslopslap - monster units are unaffected by sunlight
     // wouldyoukindly - allow control of non-unit mobs in RTS mode

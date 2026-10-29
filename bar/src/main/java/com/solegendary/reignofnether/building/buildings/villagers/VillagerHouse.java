@@ -60,7 +60,7 @@ public class VillagerHouse extends Building {
                 Component.translatable("buildings.reignofnether.villager_house").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
-                Component.translatable("buildings.reignofnether.villager_house.tooltip1").getVisualOrderText()
+                Component.translatable("buildings.reignofnether.villager_house.tooltip_energy").getVisualOrderText()
             ),
             this
         );

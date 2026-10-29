@@ -4,7 +4,11 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.abilities.RaiseDead;
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
 import com.solegendary.reignofnether.building.Building;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
+import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -12,19 +16,22 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.resources.WreckServerEvents;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
 
+import com.mojang.serialization.Dynamic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -33,10 +40,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * lovish, Oct 29: "there should be no population in this game" - "like no max population". Production is never held
- * back by population: there is no cap to set (the old gamerule {@code maxPopulation} is gone), and a cap set the old
- * way (an old save's stored value, or {@code /gamerule maxPopulation}) stops nothing. Units still have a population
- * cost: it is only counted (the HUD shows the count). Written before the code.
+ * lovish, Oct 29: "there should be no population in this game" - "like no max population" - "beyond all reason
+ * doesnt use supply or unit cap". Production is never held back by population: there is no cap to set (the old
+ * gamerule {@code maxPopulation} is gone, and an old save's value is ignored) and no building provides supply. A
+ * unit's population is only an internal size weight now, never shown or paid. Written before the code.
  *
  * The one limit that stays is a summon's own: at most 8 Lich Regent ghouls alive per player (lovish, Oct 29).
  */
@@ -59,31 +66,12 @@ public class NoMaxPopulationGameTests {
         return found[0];
     }
 
-    /** The stored value of a gamerule by name, or null when there is no such rule. */
-    private static String gameruleValue(ServerLevel level, String name) {
-        String[] value = {null};
-        GameRules.visitGameRuleTypes(new GameRules.GameRuleTypeVisitor() {
-            @Override
-            public <T extends GameRules.Value<T>> void visit(GameRules.Key<T> key, GameRules.Type<T> type) {
-                if (key.getId().equals(name))
-                    value[0] = level.getGameRules().getRule(key).serialize();
-            }
-        });
-        return value[0];
-    }
-
-    /** A command as the server runs it (permission 4, no chat output); a rule that does not exist simply fails. */
-    private static void command(ServerLevel level, String cmd) {
-        MinecraftServer server = level.getServer();
-        server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), cmd);
-    }
-
     /**
-     * Production goes past any old cap while resources are there. The cap is set the way a host or an old save did,
-     * {@code /gamerule maxPopulation} at the owner's current population (no room at all under the old rule); then a
-     * plain graveyard (an ordinary lab) and an overflowing Level 2 one each take all twelve Zombies, and every one walks
-     * out - none refused, none banked as a skull. Runs in one tick (the queue is ticked by hand) and puts the rule
-     * back whatever happens, so nothing leaks into another test.
+     * Production with resources is never refused, and an old save's cap is ignored. A level.dat that stored
+     * {@code maxPopulation 0} (no room at all under the old rule) loads without the rule; then an ordinary lab - a
+     * Villager Barracks, not a graveyard (GraveyardGameTests covers those) - takes all twelve Vindicators and every one
+     * walks out. On main the rule loads back and the gamerule still exists. Runs in one tick (the queue is ticked by
+     * hand), with the barracks gone whatever happens.
      */
     @GameTest(template = ARENA)
     public static void no_max_population_production_goes_past_an_old_cap(GameTestHelper helper) {
@@ -91,55 +79,73 @@ public class NoMaxPopulationGameTests {
         List<String> problems = new ArrayList<>();
         if (gameruleExists("maxPopulation"))
             problems.add("the gamerule maxPopulation still exists (lovish: no max population)");
-        String before = gameruleValue(level, "maxPopulation");
+        CompoundTag oldSave = new CompoundTag();
+        oldSave.putString("maxPopulation", "0");
         try {
-            for (int code : new int[] {0, 2}) {
-                String owner = "gametest_nomaxpop_" + code + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
-                Resources pool = new Resources(owner, 0, 100000, 100000);
-                ResourcesServerEvents.resourcesList.add(pool);
-                GraveyardPlacement gy = null;
-                List<ZombieUnit> raised = new ArrayList<>();
-                try {
-                    gy = GraveyardGameTests.stampGraveyard(helper, owner, code);
-                    if (gy == null)
-                        return;
-                    command(level, "gamerule maxPopulation " + UnitServerEvents.getCurrentPopulation(owner));
-                    int accepted = 0;
-                    for (int i = 0; i < GraveyardGameTests.QUEUED; i++)
-                        if (gy.startProductionItem(ProductionItems.ZOMBIE))
-                            accepted++;
-                    int ticks = GraveyardGameTests.runQueue(gy, 40000);
-                    raised = GraveyardGameTests.zombiesOf(level, gy, owner);
-                    String where = (code == 0 ? "plain graveyard" : "Level 2 graveyard") + ": ";
-                    if (accepted != GraveyardGameTests.QUEUED)
-                        problems.add(where + "accepted " + accepted + " of " + GraveyardGameTests.QUEUED
-                            + " Zombies past the old cap, with resources");
-                    if (!gy.productionQueue.isEmpty())
-                        problems.add(where + "the queue stalled with " + gy.productionQueue.size() + " left after "
-                            + ticks + " ticks");
-                    if (raised.size() != accepted)
-                        problems.add(where + raised.size() + " Zombies walked out of " + accepted + " accepted");
-                    if (gy.getTotalSkulls() != 0)
-                        problems.add(where + gy.getTotalSkulls() + " Zombies were banked as skulls instead of walking out");
-                } finally {
-                    if (before != null)
-                        command(level, "gamerule maxPopulation " + before);
-                    for (ZombieUnit z : raised)
-                        z.discard();
-                    for (ZombieUnit z : GraveyardGameTests.zombiesOf(level, gy, owner))
-                        z.discard();
-                    GraveyardGameTests.clear(level, gy);
-                    ResourcesServerEvents.resourcesList.remove(pool);
-                }
+            GameRules loaded = new GameRules(new Dynamic<>(NbtOps.INSTANCE, oldSave));
+            if (loaded.createTag().contains("maxPopulation"))
+                problems.add("an old save's maxPopulation 0 loaded back as a rule");
+        } catch (RuntimeException ex) {
+            problems.add("an old save's maxPopulation threw on load: " + ex);
+        }
+        String owner = "gametest_nomaxpop_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        Resources pool = new Resources(owner, 0, 100000, 100000);
+        ResourcesServerEvents.resourcesList.add(pool);
+        ProductionPlacement lab = null;
+        try {
+            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.BARRACKS, level,
+                helper.absolutePos(new BlockPos(4, 1, 4)), Rotation.NONE, owner, false);
+            if (!(bp instanceof ProductionPlacement pp)) {
+                helper.fail("setup: the Barracks placement is " + bp);
+                return;
             }
+            lab = pp;
+            for (int x = lab.minCorner.getX() - 1; x <= lab.maxCorner.getX() + 1; x++)
+                for (int z = lab.minCorner.getZ() - 1; z <= lab.maxCorner.getZ() + 1; z++)
+                    level.setBlock(new BlockPos(x, lab.minCorner.getY() - 1, z), Blocks.STONE.defaultBlockState(), 2);
+            for (var blk : lab.getBlocks())
+                level.setBlock(blk.getBlockPos(), blk.getBlockState(), 2);
+            lab.initPlacedBlocks();
+            lab.isBuilt = true;
+            BuildingServerEvents.getBuildings().add(lab);
+            int accepted = 0;
+            for (int i = 0; i < GraveyardGameTests.QUEUED; i++)
+                if (lab.startProductionItem(ProductionItems.VINDICATOR))
+                    accepted++;
+            int ticks = 0;
+            while (!lab.productionQueue.isEmpty() && ticks++ < 40000) {
+                var a = lab.productionQueue.get(0);
+                if (a.item.tick(lab, a))
+                    lab.productionQueue.remove(0);
+            }
+            int out = ownUnits(level, lab, owner).size();
+            if (accepted != GraveyardGameTests.QUEUED)
+                problems.add("the Barracks accepted " + accepted + " of " + GraveyardGameTests.QUEUED
+                    + " Vindicators with resources");
+            if (!lab.productionQueue.isEmpty())
+                problems.add("the queue stalled with " + lab.productionQueue.size() + " left after " + ticks + " ticks");
+            if (out != accepted)
+                problems.add(out + " Vindicators walked out of " + accepted + " accepted");
         } finally {
-            if (before != null)
-                command(level, "gamerule maxPopulation " + before);
+            if (lab != null) {
+                lab.productionQueue.clear();
+                BuildingServerEvents.getBuildings().remove(lab);
+                for (LivingEntity e : ownUnits(level, lab, owner))
+                    e.discard();
+                for (var blk : lab.getBlocks())
+                    level.setBlock(blk.getBlockPos(), Blocks.AIR.defaultBlockState(), 2);
+            }
+            ResourcesServerEvents.resourcesList.remove(pool);
         }
         if (problems.isEmpty())
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    private static List<LivingEntity> ownUnits(ServerLevel level, ProductionPlacement lab, String owner) {
+        return new ArrayList<>(level.getEntitiesOfClass(LivingEntity.class, lab.getAABB().inflate(24),
+            e -> e instanceof Unit u && owner.equals(u.getOwnerName())));
     }
 
     /**

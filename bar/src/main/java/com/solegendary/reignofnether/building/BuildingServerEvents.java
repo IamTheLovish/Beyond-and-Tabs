@@ -155,7 +155,7 @@ public class BuildingServerEvents {
     private static final BuildingList buildings = new BuildingList();
     private static final BuildingGrid buildingGrid = new BuildingGrid(buildings);
     
-    public static Object2IntArrayMap<String> populations = new Object2IntArrayMap<>();
+    public static Object2IntArrayMap<String> unitCounts = new Object2IntArrayMap<>();   // the "resources.units" scoreboard
     public static final ArrayList<NetherZone> netherZones = new ArrayList<>();
 
     public static ArrayList<BuildingPlacement> getBuildings() {
@@ -1052,13 +1052,13 @@ public class BuildingServerEvents {
         String playerName;
         if (serverLevel.getServer().getTickCount() % 10 == 0) {
             for (Objective objective : serverLevel.getScoreboard().getObjectives()) {
-                if (objective.getCriteria().equals(ResourceObjectiveCriteria.POPULATION))
+                if (objective.getCriteria().equals(ResourceObjectiveCriteria.UNITS))
                     for (ServerPlayer player : serverLevel.players()) {
                         playerName = player.getName().getString();
-                        int currentPopulation = UnitServerEvents.getCurrentPopulation(playerName);
-                        if (serverLevel != null && currentPopulation != populations.getInt(playerName)) {
-                            populations.put(playerName, currentPopulation);
-	                        serverLevel.getScoreboard().forAllObjectives(ResourceObjectiveCriteria.POPULATION, playerName, (p_9178_) -> p_9178_.setScore(currentPopulation));
+                        int units = UnitServerEvents.getUnitCount(playerName);
+                        if (serverLevel != null && units != unitCounts.getInt(playerName)) {
+                            unitCounts.put(playerName, units);
+	                        serverLevel.getScoreboard().forAllObjectives(ResourceObjectiveCriteria.UNITS, playerName, (p_9178_) -> p_9178_.setScore(units));
                         }
                     }
             }

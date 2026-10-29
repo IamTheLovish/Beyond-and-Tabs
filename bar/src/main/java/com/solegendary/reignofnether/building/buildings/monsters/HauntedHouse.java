@@ -56,7 +56,7 @@ public class HauntedHouse extends Building {
                     Component.translatable("buildings.reignofnether.haunted_house").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(cost),
                     FormattedCharSequence.forward("", Style.EMPTY),
-                    Component.translatable("buildings.reignofnether.haunted_house.tooltip1").getVisualOrderText()
+                    Component.translatable("buildings.reignofnether.haunted_house.tooltip_energy").getVisualOrderText()
             ),
             this
         );

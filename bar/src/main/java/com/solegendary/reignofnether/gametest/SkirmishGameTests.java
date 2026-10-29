@@ -830,27 +830,30 @@ public class SkirmishGameTests {
         var wreck = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level, at.getX() - 1.5,
             at.getY(), at.getZ() + 0.5, 200f, com.solegendary.reignofnether.faction.Factions.MONSTERS);
         helper.runAfterDelay(3, () -> {
-            if (wreck == null || wreck.isRemoved()) {
-                helper.fail("test wreck did not spawn");
-                return;
+            List<String> problems = new ArrayList<>();
+            try {   // cleaned up whatever the verdict (PR #394 review, N5)
+                if (wreck == null || wreck.isRemoved())
+                    throw new IllegalStateException("test wreck did not spawn");
+                int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+                if (raised != 1)
+                    problems.add("expected one Ghoul from one wreck, got " + raised);
+                float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
+                if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
+                    problems.add("the Ghoul was not paid from the wreck (" + left + " left)");
+                if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
+                    problems.add("pool paid although the wreck covered the cost: " + pool.getMetal());
+            } finally {
+                for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
+                    if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
+                        e.discard();
+                if (wreck != null)
+                    wreck.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             }
-            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
-            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
-            int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
-            if (raised != 1)
-                helper.fail("expected one Ghoul from one wreck, got " + raised);
-            float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
-            if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
-                helper.fail("the Ghoul was not paid from the wreck (" + left + " left)");
-            if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
-                helper.fail("pool paid although the wreck covered the cost: " + pool.getMetal());
-            for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
-                if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
-                    e.discard();
-            wreck.discard();
-            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
-            helper.succeed();
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
         });
     }
 

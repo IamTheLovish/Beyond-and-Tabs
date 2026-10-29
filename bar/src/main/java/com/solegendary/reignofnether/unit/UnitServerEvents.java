@@ -370,6 +370,16 @@ public class UnitServerEvents {
         }
     }
 
+    /** How many live units {@code owner} has (the "resources.units" scoreboard; no population is shown). */
+    public static int getUnitCount(String owner) {
+        int n = 0;
+        for (LivingEntity le : allUnits)
+            if (le instanceof Unit u && owner.equals(u.getOwnerName()) && le.isAlive()
+                    && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))   // a decoy is no one
+                n++;
+        return n;
+    }
+
     private static final QueuePopulation queuePopulation = new QueuePopulation();
 
     public static int getCurrentPopulation(String ownerName) {

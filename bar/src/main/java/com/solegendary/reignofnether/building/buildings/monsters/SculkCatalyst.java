@@ -85,10 +85,8 @@ public class SculkCatalyst extends Building implements NightSourceAddon, RangeIn
                 ResourceCosts.getFormattedCost(cost),
                 FormattedCharSequence.EMPTY,
                 Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip1").getVisualOrderText(),
-                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip2", MIN_NIGHT_RANGE).getVisualOrderText(),
-                FormattedCharSequence.EMPTY,
-                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip3").getVisualOrderText()
-            ),
+                Component.translatable("buildings.reignofnether.sculk_catalyst.tooltip2", MIN_NIGHT_RANGE).getVisualOrderText()
+            ),   // (no "provides 12 population supply" line: no supply - lovish, Oct 29)
             this
         );
     }
