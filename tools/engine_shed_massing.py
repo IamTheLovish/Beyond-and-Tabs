@@ -231,7 +231,118 @@ def build_c2():
     return finish(g, lane_apron(0) | {(x, z) for x in range(0, 3) for z in range(8, 17)})
 
 
-BUILDERS = {"a": build_a, "b": build_b, "c": build_c, "c2": build_c2}
+# ---- r11b (lovish, Oct 29 19:33: "I cant decide by a or c can we make them better than even that?") - three revised
+# greyboxes on one builder, measured against the factory refs (tools/schem_study.py on the study builds, study only):
+# the Victorian Factory's stacks top out at 57 over a median roof of 29 (~2 x) and 1.2 x its highest hall; weaving-shed
+# north lights pitch 4-5 per tooth at ~45 deg; a works gate is about as tall as wide (Midland loco-shed door ~1 : 1).
+# Here: stacks 22 / 20 over hall ridges 12-13 (1.7-1.8 x) and a median roof of ~9 (2.3 x); teeth 4 long, rise 4;
+# gates 7 wide x 7-8 tall under a segmental iron head.
+#
+# (c3) C' - the critic's pick (c) with the critic's three required changes (fresh critic, Oct 29 ~23:15: c = factory
+# read 8, massing 7) and the two borrows: (1) the hall projects 7 in front of the wings - a long shed with the bay door
+# in its end, ridge 2 over the wings; (2) the gate tower beside the gate, 4 over the ridge, the back-left (north) wing
+# one row lower and smaller; (3) the two stacks 2 apart on one boiler house, both north of the hall; (a)'s wide bay-door
+# gable with a tall ground-level gate; (b)'s open-frame water tank, here in the back yard behind the hall.
+# (a2) A' - (a) with its faults fixed: the stacks in opposite corners fought for the landmark (now two on one boiler
+# house, back-north), the teal-topped tower was a dead cube (now a slim clock tower beside the gate, 3 over the ridge);
+# kept: the broad north-light field (teeth along z, the glass facing south to the camera) and the wide bay-door gable;
+# the erecting bay stretched into a long shed (14 x 9).
+# (ac) AC - (c)'s hierarchy (a tall central hall > sawtooth wings > gate tower) with (a)'s broad north-light spread
+# (teeth along z on both flanks, glass to the south / camera) and its bay-door end; the hall the full depth.
+def saw_cells(box, skip=lambda x, z: False):
+    x0, x1, z0, z1 = box
+    return [(x, z) for x in range(x0, x1 + 1) for z in range(z0, z1 + 1) if not skip(x, z)]
+
+
+def revised(spec):
+    g = L.G()
+    shafts = [s for s, _ in spec["shafts"]]
+    in_shaft = lambda x, z: any(a <= x <= b and d <= z <= e for a, b, d, e in shafts)   # noqa: E731
+    bx0, bx1, bz0, bz1 = spec["boiler"]
+    in_boiler = lambda x, z: bx0 <= x <= bx1 and bz0 <= z <= bz1                       # noqa: E731
+    hx0, hx1, hz0, hz1 = spec["hall"]
+    in_hall = lambda x, z: hx0 <= x <= hx1 and hz0 <= z <= hz1                         # noqa: E731
+    for w in spec["wings"]:
+        cells = saw_cells(w["box"], lambda x, z: in_boiler(x, z) or in_hall(x, z))
+        for (x, z) in cells:
+            body(g, x, x, z, z, w["eave"])
+        saw(g, cells, w["axis"], w["starts"], w["eave"], w["face"])
+    body(g, hx0, hx1, hz0, hz1, spec["hall_eave"])
+    gable_x(g, hx0, hx1, hz0, hz1, spec["hall_eave"])
+    for x in spec.get("hall_windows", ()):                        # tall windows in the hall's exposed flanks
+        for z in (hz0, hz1):
+            g.fill(x, x, 2, spec["hall_eave"] - 1, z, z, GLASS)
+    body(g, bx0, bx1, bz0, bz1, 6)                                # the boiler house and its two stacks
+    gable_x(g, bx0, bx1, bz0, bz1, 6, skip=in_shaft)
+    for (a, b, d, e), top in spec["shafts"]:
+        g.fill(a, b, 1, top - 2, d, e, STACK)
+        g.fill(a, b, top - 1, top, d, e, IRON)
+    tx0, tx1, tz0, tz1 = spec["tower"]                            # the clock tower beside the gate
+    top = spec["tower_top"]
+    body(g, tx0, tx1, tz0, tz1, top - 3)
+    g.fill(tx0, tx1, top - 2, top - 1, tz0, tz1, COPPER)
+    g.set(tx0 + (tx1 - tx0) // 2, top, tz0 + (tz1 - tz0) // 2, COPPER)
+    dz = spec["door_z"]                                           # the gate: 7 wide, 7 tall at the edges, 8 at the crown
+    for x in range(0, LANE_X[-1] + 1):
+        for z in dz:
+            for y in range(1, 9 if z in dz[1:-1] else 8):
+                g.clear(x, y, z)
+    for y in range(1, 10):
+        g.set(0, y, dz[0] - 1, IRON)
+        g.set(0, y, dz[-1] + 1, IRON)
+    for z in dz:
+        g.set(0, 9 if z in dz[1:-1] else 8, z, IRON)
+    mid = dz[3]
+    for y, zs in ((10, range(mid - 1, mid + 2)), (11, (mid,))):  # the fan-light in the gable over the gate
+        for z in zs:
+            g.set(0, y, z, GLASS)
+    if spec.get("tank"):                                          # the water tank on four legs, in the back yard
+        kx0, kx1, kz0, kz1 = spec["tank"]
+        ty = spec["tank_y"]
+        for x in (kx0, kx1):
+            for z in (kz0, kz1):
+                g.fill(x, x, 1, ty - 1, z, z, BASE)
+        g.fill(kx0, kx1, ty, ty + 2, kz0, kz1, COPPER)
+    return finish(g, lane_apron(0) | {(x, z) for x in range(0, 3) for z in range(8, 17)})
+
+
+SPECS = {
+    "c3": dict(hall=(0, 13, 8, 16), hall_eave=7, hall_windows=(4, 6),
+               wings=[dict(name="south", box=(7, 16, 17, 23), eave=6, axis="x", starts=(7, 11, 15), face=-1,
+                           sections=[(20, [7, 11, 15], (7, 16))]),
+                      dict(name="north", box=(7, 12, 1, 7), eave=5, axis="x", starts=(7, 11), face=-1,
+                           sections=[(4, [7, 11], (7, 12))])],
+               boiler=(13, 16, 0, 7), shafts=[((14, 15, 1, 2), 22), ((14, 15, 5, 6), 20)],
+               tower=(0, 2, 17, 19), tower_top=16, door_z=range(9, 16), tank=(14, 16, 10, 12), tank_y=9),
+    "a2": dict(hall=(0, 13, 8, 16), hall_eave=7, hall_windows=(3, 5),
+               wings=[dict(name="field", box=(7, 16, 0, 24), eave=6, axis="z", starts=range(1, SZ, 4), face=+1,
+                           sections=[(8, [4, 20, 24], (1, 24)), (15, [8, 12, 16, 20, 24], (5, 24))])],
+               boiler=(12, 16, 0, 7), shafts=[((13, 14, 1, 2), 22), ((13, 14, 5, 6), 20)],
+               tower=(0, 2, 17, 19), tower_top=16, door_z=range(9, 16)),
+    "ac": dict(hall=(0, 16, 8, 16), hall_eave=9, hall_windows=(2, 4),
+               wings=[dict(name="south", box=(5, 16, 17, 24), eave=4, axis="z", starts=(17, 21), face=+1,
+                           sections=[(10, [20, 24], (17, 24))]),
+                      dict(name="north", box=(5, 11, 0, 7), eave=4, axis="z", starts=(-1, 3, 7), face=+1,
+                           sections=[(8, [2, 6], (0, 7))])],
+               boiler=(12, 16, 0, 7), shafts=[((13, 14, 1, 2), 22), ((13, 14, 5, 6), 20)],
+               tower=(0, 2, 17, 19), tower_top=17, door_z=range(9, 16)),
+}
+
+
+def build_c3():
+    return revised(SPECS["c3"])
+
+
+def build_a2():
+    return revised(SPECS["a2"])
+
+
+def build_ac():
+    return revised(SPECS["ac"])
+
+
+BUILDERS = {"a": build_a, "b": build_b, "c": build_c, "c2": build_c2, "c3": build_c3, "a2": build_a2,
+            "ac": build_ac}
 # what the tests hold each option to: the door plane, the stacks (plinth box + shaft + top), the tower (box), the
 # dominant mass's eave, and where the sawtooth is (section plane, teeth's glazed columns, facing, run)
 OPTIONS = {
@@ -256,6 +367,24 @@ OPTIONS = {
                sawtooth=[dict(axis="x", at=z, face=-1, teeth=[3, 8, 13], run=(3, 16), peaks=(9, 10))
                          for z in (5, 18)]),
 }
+
+
+def revised_meta(o):
+    """What the tests hold a revised option to (derived from SPECS, the saw sections given there): door, hall (box,
+    ridge), wings, boiler, stacks, tower, tank, sawtooth sections."""
+    sp = SPECS[o]
+    hall = dict(box=sp["hall"], ridge=sp["hall_eave"] + 1 + (sp["hall"][3] - sp["hall"][2]) // 2)
+    saws = [dict(axis=w["axis"], at=at, face=w["face"], teeth=teeth, run=run, peaks=(w["eave"] + 4, w["eave"] + 4))
+            for w in sp["wings"] for at, teeth, run in w["sections"]]
+    return dict(door_x=0, door_z=sp["door_z"], eave=sp["hall_eave"], hall=hall,
+                wings=[dict(name=w["name"], box=w["box"], eave=w["eave"]) for w in sp["wings"]],
+                boiler=dict(box=sp["boiler"]), tank=dict(box=sp["tank"], y=sp["tank_y"]) if sp.get("tank") else None,
+                stacks=[dict(box=s, shaft=s, top=t) for s, t in sp["shafts"]], tower=dict(box=sp["tower"]),
+                tower_top=sp["tower_top"], sawtooth=saws)
+
+
+for _o in SPECS:
+    OPTIONS[_o] = revised_meta(_o)
 
 
 def build(o):

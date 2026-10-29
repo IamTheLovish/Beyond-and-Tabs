@@ -26,7 +26,8 @@ if HAVE_NUMPY:
 SX, SZ, H_MAX = 17, 25, 26
 LANE_X, LANE_Z, LANE_H = range(0, 9), range(10, 15), 8
 SPAWN_XZ = (8, 12)
-OPTIONS = ("a", "b", "c", "c2")       # c2: the critic's pick (c) revised, Oct 29
+OPTIONS = ("a", "b", "c", "c2", "c3", "a2", "ac")   # c2 / c3: the critic's pick (c) revised; a2 / ac: r11b, Oct 29
+REVISED = ("c3", "a2", "ac")          # r11b (lovish 19:33: "can we make them better than even that?"): C', A', AC
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -200,6 +201,148 @@ class EngineShedMassing(unittest.TestCase):
         glass = [q for q, v in n.items() if q[0] == dx and q[1] >= 11 and q[2] in door_z and "glass" in v]
         self.assertGreaterEqual(len(glass), 4)
         self.assertFalse([q for q in n if q[0] < dx])
+
+    # ---- r11b: C' (c3), A' (a2), AC (ac). c3 = the fresh critic's pick (Oct 29 ~23:15: c = factory read 8, massing
+    # 7) with its three required changes and the borrows; a2 = (a) with its faults fixed (the coordinator, 19:40: the
+    # corner stacks fight, the teal tower is a dead cube); ac = (c)'s hierarchy with (a)'s broad north lights. Each rule
+    # its own test, written before the builders -------------------------------------------------------------------------
+    def rev(self, o):
+        return solid(self.built[o][1]), M.OPTIONS[o]
+
+    def ridge_and_peaks(self, n, m):
+        t = tops(n)
+        ridge = max(t[c] for c in cols(m["hall"]["box"]) if c in t and c != SPAWN_XZ)
+        other = cols(m["hall"]["box"]) | cols(m["boiler"]["box"])
+        peaks = {w["name"]: max(t[c] for c in cols(w["box"]) - other if c in t) for w in m["wings"]}
+        return ridge, peaks
+
+    def test_r11b_long_shed_with_a_bay_door(self):
+        """C' (critic change 1) and A' (the coordinator: stretch to a long shed): the central hall stretched toward the
+        gate - its gable end >= 7 blocks in front of every wing (c: 3) so the plan reads as a long shed with the bay
+        door in its end; hall length >= 1.5 x its width; its ridge exactly 2 above the highest saw peaks. AC keeps (c)'s
+        hierarchy instead: the hall the full depth, its ridge >= 4 over the wings."""
+        for o in REVISED:
+            n, m = self.rev(o)
+            x0, x1, z0, z1 = m["hall"]["box"]
+            self.assertGreaterEqual((x1 - x0 + 1), 1.5 * (z1 - z0 + 1), o)
+            ridge, peaks = self.ridge_and_peaks(n, m)
+            self.assertEqual(ridge, m["hall"]["ridge"], o)
+            if o == "ac":
+                self.assertEqual(x1, SX - 1)
+                self.assertGreaterEqual(ridge - max(peaks.values()), 4, peaks)
+                continue
+            for w in m["wings"]:
+                self.assertGreaterEqual(w["box"][0] - x0, 7, (o, w))
+            self.assertEqual(ridge - max(peaks.values()), 2, (o, peaks))
+
+    def test_r11b_c3_one_wing_dominates(self):
+        """C' (critic change 2): the back-left (north) short sawtooth wing cut down one row - its peaks 1 lower than
+        the south wing's - and the smaller of the two in plan."""
+        n, m = self.rev("c3")
+        _, pk = self.ridge_and_peaks(n, m)
+        w = {w["name"]: w for w in m["wings"]}
+        self.assertEqual(pk["south"] - pk["north"], 1, pk)
+        self.assertLess(len(cols(w["north"]["box"])), len(cols(w["south"]["box"])))
+
+    def test_r11b_gate_tower_beside_the_gate_above_the_ridge(self):
+        """The gate tower directly beside the gate (3 x 3, touching the gate's jamb, its front <= 3 from the door
+        plane), topping the ridge by 3-4; no copper over the door itself (lovish rejected a copper-topped block over
+        the door; the coordinator: (a)'s teal-topped tower was a dead cube); both stacks taller than the tower."""
+        for o in REVISED:
+            n, m = self.rev(o)
+            t = tops(n)
+            x0, x1, z0, z1 = m["tower"]["box"]
+            self.assertEqual((x1 - x0 + 1, z1 - z0 + 1), (3, 3), o)
+            self.assertLessEqual(x0 - m["door_x"], 3, o)
+            jz = (m["door_z"][0] - 1, m["door_z"][-1] + 1)
+            self.assertTrue(z1 + 1 == jz[0] or z0 - 1 == jz[1], (o, m["tower"]["box"], jz))
+            top = max(t[c] for c in cols(m["tower"]["box"]))
+            self.assertIn(top - m["hall"]["ridge"], (3, 4), (o, top))
+            self.assertFalse([q for q, v in n.items() if q[0] <= m["door_x"] + 2 and q[2] in m["door_z"]
+                              and "copper" in v], o)
+            self.assertTrue(all(s["top"] > top for s in m["stacks"]), o)
+
+    def test_r11b_twin_stacks_grouped_on_a_boiler_house(self):
+        """C' (critic change 3) and A' (the coordinator: (a)'s corner stacks fought for the landmark): the two stacks
+        2-3 blocks apart, both on the same side of the hall, rising from one shared boiler-house block (a walled,
+        roofed mass 6-10 tall round both shafts - not two plinths). The landmark ratio, as the refs measure (the
+        Victorian Factory's stacks: 57 over a median roof of 29, ~2 x): the taller stack >= 1.5 x the hall ridge and
+        >= 2 x the median roof top."""
+        for o in REVISED:
+            n, m = self.rev(o)
+            t = tops(n)
+            st = m["stacks"]
+            self.assertEqual(len(st), 2, o)
+            hz0, hz1 = m["hall"]["box"][2:]
+            sides = {("n" if s["shaft"][3] < hz0 else "s" if s["shaft"][2] > hz1 else "?") for s in st}
+            self.assertEqual(len(sides), 1, o)
+            self.assertNotIn("?", sides, o)
+            a, b = sorted((s["shaft"] for s in st), key=lambda s: (s[2], s[0]))
+            gap = max(b[2] - a[3], b[0] - a[1]) - 1
+            self.assertIn(gap, (2, 3), (o, a, b))
+            house = cols(m["boiler"]["box"])
+            shafts = cols(a) | cols(b)
+            self.assertTrue(shafts <= house, o)
+            ring = {(x + i, z + k) for x, z in shafts for i in (-1, 0, 1) for k in (-1, 0, 1)} - shafts
+            self.assertTrue(all(6 <= t.get(c, -1) <= 10 for c in ring & house), (o, {c: t.get(c) for c in ring & house}))
+            self.assertFalse([c for c in ring & house if n.get((c[0], t[c], c[1])) == M.BASE], o)
+            self.assertTrue(all(n.get((x, 4, z)) == M.WALL for x, z in house - shafts if (x, 4, z) in n), o)
+            top = max(s["top"] for s in st)
+            roofs = sorted(h for c, h in t.items() if c not in shafts and h >= 3)
+            self.assertGreaterEqual(top, 1.5 * m["hall"]["ridge"], o)
+            self.assertGreaterEqual(top, 2 * roofs[len(roofs) // 2], (o, roofs[len(roofs) // 2]))
+
+    def test_r11b_tall_gate_in_a_wide_bay_door_gable(self):
+        """Borrowed from (a): the wide bay-door gable at the shed end and its tall ground-level gate - 7 wide, open from
+        the ground >= 7 at the edges and >= 8 at the crown (a segmental head; a works gate about as tall as wide, the
+        Midland loco-shed door), an iron head over every column, a glazed fan-light (>= 3 panes) in the gable over it."""
+        for o in REVISED:
+            n, m = self.rev(o)
+            dx, dz = m["door_x"], m["door_z"]
+            self.assertEqual(len(dz), 7, o)
+            open_h = {z: min(y for y in range(1, H_MAX) if (dx, y, z) in n) - 1 for z in dz}
+            self.assertTrue(all(open_h[z] >= 7 for z in dz), (o, open_h))
+            self.assertTrue(all(open_h[z] >= 8 for z in dz[1:-1]), (o, open_h))
+            self.assertGreater(open_h[dz[3]], open_h[dz[0]], o)
+            for z in dz:
+                self.assertEqual(n[(dx, open_h[z] + 1, z)], M.IRON, (o, z))
+            glass = [q for q, v in n.items() if q[0] == dx and q[2] in dz and q[1] > open_h[q[2]] + 1 and "glass" in v]
+            self.assertGreaterEqual(len(glass), 3, o)
+
+    def test_r11b_c3_open_frame_water_tank(self):
+        """C', borrowed from (b) only: an open-frame water tank in the yard - a tank body (>= 9 cells, y >= 7) on four
+        legs from the ground, air under it between the legs."""
+        n, m = self.rev("c3")
+        x0, x1, z0, z1 = m["tank"]["box"]
+        y0 = m["tank"]["y"]
+        self.assertGreaterEqual(y0, 7)
+        body_cells = [(x, y0, z) for x in range(x0, x1 + 1) for z in range(z0, z1 + 1) if (x, y0, z) in n]
+        self.assertGreaterEqual(len(body_cells), 9)
+        for x in (x0, x1):
+            for z in (z0, z1):
+                self.assertTrue(all((x, y, z) in n for y in range(1, y0)), (x, z))
+        under = [(x, y, z) for x in range(x0 + 1, x1) for z in range(z0 + 1, z1) for y in range(1, y0 - 1)]
+        self.assertTrue(under)
+        self.assertFalse([q for q in under if q in n])
+
+    def test_r11b_a2_and_ac_keep_the_broad_north_lights(self):
+        """A' and AC keep (a)'s strength: the north-light field spread across the plot - saw teeth whose glass faces
+        south (the camera), the sawtooth roofs >= 40 % of the roof plan; A' a field of >= 5 teeth in one section (as
+        (a)); AC >= 2 teeth on each flank of the hall (its 9-wide hall, framing the 7-wide gate, leaves 8 a side: two
+        teeth at the 4-block pitch)."""
+        for o in ("a2", "ac"):
+            n, m = self.rev(o)
+            self.assertTrue(all(st["axis"] == "z" and st["face"] == 1 for st in m["sawtooth"]), o)
+            if o == "a2":
+                self.assertGreaterEqual(max(len(st["teeth"]) for st in m["sawtooth"]), 5, o)
+            else:
+                hz0, hz1 = m["hall"]["box"][2:]
+                for side in (lambda u: u < hz0, lambda u: u > hz1):
+                    self.assertGreaterEqual(sum(side(u) for st in m["sawtooth"] for u in st["teeth"]), 2, o)
+            hall = cols(m["hall"]["box"])
+            saw = set().union(*(cols(w["box"]) for w in m["wings"])) - hall - cols(m["boiler"]["box"])
+            plan = {(x, z) for (x, y, z) in n if y >= 2}
+            self.assertGreaterEqual(len(saw & plan) / len(plan), 0.4, o)
 
     def test_three_distinct_silhouettes(self):
         prof = {o: tops(solid(self.built[o][1])) for o in OPTIONS}

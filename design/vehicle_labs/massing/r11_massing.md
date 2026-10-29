@@ -161,3 +161,19 @@ x 14   .9mm9999bcdefedcb9999999.      mm = the landmark stack, 22
 x 15   .9mm9888bcdefedcb8888888.
 x 16   .9999777bcdefedcb7777777.
 ```
+
+## r11b - C', A', AC (lovish, Oct 29 19:33: "I cant decide by a or c can we make them better than even that?")
+Three revisions on one builder (`engine_shed_massing.revised`, SPECS c3 / a2 / ac), same palette and plot, each rule
+tested first (`test_r11b_*`). Measured against the refs (tools/schem_study.py, study only): the Victorian Factory's
+stacks reach 57 over a median roof of 29 (~2 x) and its highest hall ~1.2 x; teeth 4 long at rise 4 (~45 deg); a works
+gate about as tall as it is wide. All three: a 7 x 7-8 gate under a segmental iron head with a fan-light in a wide
+gable; a slim 3 x 3 clock tower BESIDE the gate (south jamb), copper stage + cap, 3-4 over the ridge; two stacks 22 / 20,
+2 apart, on one shared boiler house (back-north, eave 6), both north of the hall.
+- **C' (c3)** - the critic's pick c with its three fixes: the hall (x 0..13, eave 7, ridge 12) projects 7 in front of
+  the wings - a long shed with the bay door in its end; the south saw wing dominates (3 teeth, peaks 10, glass west),
+  the north one cut a row (2 teeth, peaks 9); (b)'s open-frame water tank on four legs in the back yard.
+- **A' (a2)** - a with its faults fixed: the corner stacks grouped on the boiler house, the teal cube replaced by the
+  slim gate tower; the broad north-light field kept (teeth along z, glass south to the camera, peaks 10) behind a long
+  shed (x 0..13, ridge 12) with the bay-door gable.
+- **AC (ac)** - c's hierarchy with a's spread: a tall full-depth hall (eave 9, ridge 14) > low sawtooth flanks (eave
+  4, peaks 8, glass south) > the gate tower (17).
