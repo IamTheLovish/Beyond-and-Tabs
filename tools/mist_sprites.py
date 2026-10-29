@@ -73,8 +73,9 @@ def blob_alpha(k):
     bend = fractal(rng, N, 3, 2) - 0.5
     r = r * (1 + 0.36 * bend)
     # body: a broad soft falloff, zero from r 0.92 on
-    body = 1 - smoothstep(0.15, 0.92, r)
-    body = body ** 1.3
+    # r5 (eyes run 40821790726): r4's broad plateau (1 - smoothstep(0.15, 0.92)) ** 1.3 drew a faint rim round every
+    # wisp where many overlap - a gaussian has no shoulder, so a veil of them shows no outlines
+    body = np.exp(-3.4 * r * r)
     # broken up by softer fractal noise: wisps, never a hard hole
     wisp = fractal(rng, N, 4, 4)
     wisp = smoothstep(0.2, 0.8, wisp)

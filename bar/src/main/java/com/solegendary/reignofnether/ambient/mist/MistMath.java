@@ -183,7 +183,7 @@ public final class MistMath {
      */
     public static final double ALPHA_MIN = 0.12, ALPHA_MAX = 0.25;
     /** The mist sprites' own centre alpha, and their mean alpha over the whole quad (tools/mist_sprites.py). */
-    public static final double SPRITE_PEAK = 0.9, SPRITE_MEAN = 0.18;
+    public static final double SPRITE_PEAK = 0.9, SPRITE_MEAN = 0.19;
     /** r4: a wisp is drawn this many times longer along the wind than across - a band of mist, not a disc. */
     public static final double ASPECT = 1.7;
 
