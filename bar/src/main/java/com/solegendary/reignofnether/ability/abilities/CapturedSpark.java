@@ -62,15 +62,6 @@ public class CapturedSpark extends Ability {
         this.showRangeCircle = true;
     }
 
-    // RED STUB (claude/sage-kited-autocast-test, removed in the next commit): a Sage that ever took a danger step
-    // never autocasts the spark again - the gap the kited-Sage test must catch.
-    @Override
-    public boolean canAutocastNow(ServerLevel level, Unit unit) {
-        if (unit instanceof com.solegendary.reignofnether.unit.interfaces.SupportUnit su && su.getSupportState().kites > 0)
-            return false;
-        return super.canAutocastNow(level, unit);
-    }
-
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Captured Spark",
