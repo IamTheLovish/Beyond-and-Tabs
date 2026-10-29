@@ -120,10 +120,11 @@ public final class GraveAdeptServerEvents {
         return index(level.getServer());
     }
 
-    /** The Index's own save then load: what a restart reads back. For the game test. */
-    public static int awayAfterSaveAndLoad(MinecraftServer server) {
+    /** Whether the Index's own save then load (what a restart reads back) still holds {@code adept} for its caster. For the game test. */
+    public static boolean heldAfterSaveAndLoad(MinecraftServer server, UUID adept, UUID caster) {
         Index index = index(server);
-        return index == null ? 0 : Index.load(index.save(new CompoundTag())).away.size();
+        Away w = index == null ? null : Index.load(index.save(new CompoundTag())).away.get(adept);
+        return w != null && caster.equals(w.caster);
     }
 
     static {

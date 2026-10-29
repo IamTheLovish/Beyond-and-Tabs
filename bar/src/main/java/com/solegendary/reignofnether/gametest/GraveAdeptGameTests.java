@@ -474,6 +474,38 @@ public class GraveAdeptGameTests {
         });
     }
 
+    /** An Adept held while its chunk is unloaded is in its SavedData's save file, for its caster: a restart reads it back. */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = RESTART_BATCH)
+    public static void grave_adept_held_adepts_are_in_the_save_file(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "savefile");
+        Mob caller = caller(helper, owner, 10, 3, 0);
+        GraveAdeptUnit first = caller == null ? null : adept(helper, caller, owner, 12, 3, 0);
+        if (caller == null || first == null) {
+            discardAll(nonNull(caller, first));
+            helper.fail("could not spawn the Tombcaller and its Adept");
+            return;
+        }
+        helper.runAfterDelay(2, () -> first.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK));
+        helper.runAfterDelay(4, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (!GraveAdeptServerEvents.heldAfterSaveAndLoad(level.getServer(), first.getUUID(), caller.getUUID()))
+                    problems.add("the unloaded Adept is not in the save file for its Tombcaller");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                Vec3 at = caller.position();
+                caller.kill();   // a dead Tombcaller's held Adept is let go: nothing stays in the save file
+                clearNear(level, at, 4, owner);
+                discardAll(List.of(caller));
+                if (GraveAdeptServerEvents.heldAfterSaveAndLoad(level.getServer(), first.getUUID(), caller.getUUID()))
+                    problems.add("the held Adept stayed in the save file after its Tombcaller died");
+            }
+            finish(helper, problems);
+        });
+    }
+
     /**
      * A totem-saved enemy hero pays an Adept nothing; its real death pays it once, what it pays a hero in orbs (PR 371
      * review round 2 B2: the Adept's XP ran before the Totem of Undying could cancel the death).
