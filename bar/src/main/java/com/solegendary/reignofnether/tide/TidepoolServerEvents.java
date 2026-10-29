@@ -34,6 +34,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -519,6 +520,17 @@ public class TidepoolServerEvents {
             if (p.level == level && now >= p.expireTick)
                 remove(p);   // removes index i only: earlier indices are unaffected
         }
+    }
+
+    // ------------------------------------------------------------------ the grid is a sensor (design/ai_faction.md)
+
+    /**
+     * Strips cover from every enemy unit standing on a pool's cells, for every live pool in {@code level} (or only the
+     * pools of {@code onlyOwner}, so parallel game tests never touch each other's units). Returns how many it lit.
+     * Red stub (slice 1a): lights nothing yet.
+     */
+    public static int revealOnGrid(ServerLevel level, @Nullable String onlyOwner) {
+        return 0;
     }
 
     // ------------------------------------------------------------------ persistence (MatchStateSaveData)
