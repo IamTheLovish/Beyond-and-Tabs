@@ -43,7 +43,8 @@ import java.util.UUID;
  * can summon three different angels that help: one that heals, one that is a flying archer and another that is a
  * melee engager that can fly"). Written before the code:
  * <ul>
- *   <li>it is trained at the Arcane Tower (the Sunforged T2 lab) for a cost, is an essence carrier that gathers wisps,
+ *   <li>it is trained at the Barracks (the Sunforged T1 army building; lovish, Oct 29: "essence casters should be
+ *       tier 1 like rez bots") for a cost, is an essence carrier that gathers wisps,
  *       and has the three angel calls plus the shared Empower;</li>
  *   <li>Mender Angel 5 essence / 12 s cooldown / lives 20 s, Seraph Archer 10 / 25 s / 25 s, Sword Seraph 20 / 60 s /
  *       30 s; a call spends exactly its essence and sets its cooldown; short of essence, or while that angel still
@@ -178,11 +179,11 @@ public class AngelCallerGameTests {
     // ------------------------------------------------------------------------------------------------ the unit
 
     /**
-     * The Angel Caller is trained at the Arcane Tower for a real cost and is a Sunforged unit; it is an essence carrier
+     * The Angel Caller is trained at the Barracks (tier 1), not the Arcane Tower (T2), for a real cost and is a Sunforged unit; it is an essence carrier
      * that pulls a wisp 5 blocks away in; it has the three angel calls with lovish's numbers and the shared Empower.
      */
     @GameTest(template = ARENA, timeoutTicks = 100, batch = BATCH)
-    public static void angel_caller_is_trained_at_the_arcane_tower_and_gathers_essence(GameTestHelper helper) {
+    public static void angel_caller_is_trained_at_the_barracks_and_gathers_essence(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "unit");
         Mob caster = caller(helper, owner, 3, 3, 0);
@@ -199,8 +200,10 @@ public class AngelCallerGameTests {
             problems.add("spawnWisp made no wisp");
         helper.runAfterDelay(80, () -> {
             try {
-                if (!Buildings.ARCANE_TOWER.productions.get().contains(ProductionItems.ANGEL_CALLER))
-                    problems.add("the Arcane Tower does not train the Angel Caller");
+                if (!Buildings.BARRACKS.productions.get().contains(ProductionItems.ANGEL_CALLER))
+                    problems.add("the Barracks (tier 1) does not train the Angel Caller");
+                if (Buildings.ARCANE_TOWER.productions.get().contains(ProductionItems.ANGEL_CALLER))
+                    problems.add("the Arcane Tower (T2) still trains the Angel Caller; it is a tier-1 unit");
                 if (EntityRegistrar.getEntityType(AngelCallerProd.itemName) != EntityRegistrar.ANGEL_CALLER_UNIT.get())
                     problems.add("the Angel Caller's production item does not make an angel_caller_unit");
                 ResourceCost cost = AngelCallerProd.cost;
@@ -368,17 +371,21 @@ public class AngelCallerGameTests {
 
     /**
      * lovish (Oct 29): "bots build and use all 7 casters" and "angels take no population". The Sunforged bot kit trains
-     * the Angel Caller at its T2 lab (the Arcane Tower); each angel costs no population, no metal and no energy.
+     * the Angel Caller in its tier-1 army (at the Barracks), not its T2 army; each angel costs no population, no metal and no energy.
      */
     @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
     public static void angel_caller_is_in_the_sunforged_bot_kit_and_its_angels_take_no_population(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
         var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VILLAGERS);
-        if (kit == null || kit.t2Lab() != Buildings.ARCANE_TOWER)
-            problems.add("the Sunforged bot kit has no Arcane Tower T2 lab");
-        else if (!kit.t2Army().contains(ProductionItems.ANGEL_CALLER))
-            problems.add("the Sunforged bot kit's T2 army does not train the Angel Caller");
+        if (kit == null || kit.armyBuilding() != Buildings.BARRACKS)
+            problems.add("the Sunforged bot kit has no Barracks army building");
+        else {
+            if (!kit.army().contains(ProductionItems.ANGEL_CALLER))
+                problems.add("the Sunforged bot kit's tier-1 army does not train the Angel Caller");
+            if (kit.t2Army().contains(ProductionItems.ANGEL_CALLER))
+                problems.add("the Sunforged bot kit still lists the Angel Caller in its T2 army");
+        }
         for (CallAngel.Kind k : CallAngel.Kind.values()) {
             Entity e = k.type().create(level);
             try {
@@ -542,7 +549,7 @@ public class AngelCallerGameTests {
     }
 
     /**
-     * A bot's Angel Caller goes with its army (review round 3: trained, it would otherwise stand at the Arcane Tower with
+     * A bot's Angel Caller goes with its army (review round 3: trained, it would otherwise stand at the Barracks with
      * no essence - the bot's army list holds only attackers). The bot's "healers follow the army" step (in
      * BotPlayer.verdantHabits, which every faction's think runs; called here by reflection, before its 2-minute habits)
      * sends a caller 12 blocks behind three of the bot's soldiers to them, and it gets there; one already beside them
