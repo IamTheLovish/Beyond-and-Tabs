@@ -835,10 +835,14 @@ public class SkirmishGameTests {
                 return;
             }
             int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no room at all
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
             int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
-            int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
-            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+            int raised;
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
+            try {
+                raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            } finally {
+                com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;   // whatever the raise did
+            }
             int popAfter = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
             if (raised != 1)
                 helper.fail("expected one Ghoul from one wreck with the unit cap at 0 (a summon takes no population), got " + raised);
@@ -1140,9 +1144,13 @@ public class SkirmishGameTests {
         String owner = "gametest_wyrm";
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
         int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no room at all
+        net.minecraft.world.entity.Entity risen;
         com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
-        var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
-        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+        try {
+            risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
+        } finally {
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;   // whatever the raise did
+        }
         if (risen == null) {
             helper.fail("no skeleton rose with the unit cap at 0: a summon takes no population");
             return;
