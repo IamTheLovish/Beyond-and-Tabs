@@ -150,7 +150,12 @@ jobs:
           echo "RP_URL=$base/$RP_NAME" >> "$GITHUB_ENV"
 
       - name: Build the packwiz pack (Windows + Mac)
-        run: python3 pack/build_packwiz.py "up/$JAR_NAME" "up/$RP_NAME" "$JAR_URL" "$RP_URL" "$VERSION" out
+        run: |
+          python3 pack/build_packwiz.py "up/$JAR_NAME" "up/$RP_NAME" "$JAR_URL" "$RP_URL" "$VERSION" out
+          # nothing Complementary in either pack, checked before anything is pushed (author refused permission, Oct 29)
+          if find out -iname '*complementary*' | grep -q . || grep -rIqi complementary out; then
+            echo "::error::the built pack contains Complementary Reimagined"; exit 1
+          fi
 
       - name: Push the pack to the download repo (branch fast only)
         env:

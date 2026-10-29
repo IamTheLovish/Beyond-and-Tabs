@@ -18,5 +18,10 @@ public enum AutoRule {
     /** Cast while fighting and below the summon cap ({@link Ability#liveSummons}). */
     SUMMON_WHEN_FREE,
     /** Never cast by itself: hero abilities, the D-gun and game enders, toggles, orders that need a chosen spot. */
-    MANUAL
+    MANUAL,
+    /**
+     * Cast at the most hurt friendly building within range that is under 70% health (design/essence_casters.md
+     * Revision 1: building-targeted essence spells such as a repair, so bots use them too).
+     */
+    BUILDING_HURT
 }
