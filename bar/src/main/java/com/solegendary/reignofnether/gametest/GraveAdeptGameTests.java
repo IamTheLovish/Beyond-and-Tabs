@@ -265,7 +265,7 @@ public class GraveAdeptGameTests {
                 CallNecromancer call = ability(caller, CallNecromancer.class);
                 if (call == null)
                     throw new IllegalStateException("the Tombcaller has no Call the Necromancer");
-                if (!GraveAdeptServerEvents.hasAdept(caller) || call.liveSummons(level, (Unit) caller) != 1)
+                if (call.liveSummons(level, (Unit) caller) != 1)
                     early.add("with its Adept unloaded the Tombcaller counts no Adept");
                 if (CallNecromancer.cast(level, caller, owner, true) != null || Essence.get(caller) != 50)
                     early.add("with its Adept unloaded a second was called (essence " + Essence.get(caller) + ")");
@@ -286,7 +286,8 @@ public class GraveAdeptGameTests {
                 if (back == null)
                     throw new IllegalStateException("the Adept back from its chunk is gone");
                 back.setOwnerName(foe);   // what a Wraith's full possession does (WraithUnit.onCastPossess)
-                if (GraveAdeptServerEvents.adeptOf(caller) != null || GraveAdeptServerEvents.hasAdept(caller))
+                CallNecromancer call = ability(caller, CallNecromancer.class);
+                if (GraveAdeptServerEvents.adeptOf(caller) != null || (call != null && call.liveSummons(level, (Unit) caller) != 0))
                     problems.add("a possessed Adept still counts as its old Tombcaller's");
                 GraveAdeptUnit fresh = CallNecromancer.cast(level, caller, owner, true);
                 if (fresh != null)
