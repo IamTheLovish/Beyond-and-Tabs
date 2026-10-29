@@ -72,6 +72,9 @@ public final class MistPass {
     private static ValleyField.Result valley = null;
     private static int valleyBase = 64, valleyX = Integer.MIN_VALUE, valleyZ = Integer.MIN_VALUE;
     private static long valleyTick = Long.MIN_VALUE;
+    /** r11d: the one direction the strands stream in (ValleyField.flow); its sign follows the last one, never jumps. */
+    private static double flowX = 1, flowZ = 0, windX = 1, windZ = 0;
+    private static Uniform flowU;
     private static TextureTarget target = null;
     private static DynamicTexture vis = null;
     private static int visX = 0, visZ = 0;
@@ -117,6 +120,7 @@ public final class MistPass {
         fogMaxU = s.getUniform("FogBoostMax");
         maxCoverU = s.getUniform("MaxCover");
         valleyBaseU = s.getUniform("ValleyBase");
+        flowU = s.getUniform("FlowDir");
     }
 
     /** The volume can draw this frame: loaded, no shader pack, the mist allowed (setting, eyes rig), the overworld. */
@@ -184,6 +188,8 @@ public final class MistPass {
         // the wind: the strands drift and stretch the way the trees lean
         double heading = WindField.heading(seconds);
         double wx = Math.cos(heading), wz = Math.sin(heading);
+        windX = wx;
+        windZ = wz;
         offX = (offX - wx * DRIFT * dt) % 4096.0;
         offZ = (offZ - wz * DRIFT * dt) % 4096.0;
 
@@ -218,6 +224,7 @@ public final class MistPass {
         set(maxCoverU, (float) MistMath.MAX_COVER);
         updateVis(cam);
         set(valleyBaseU, (float) valleyBase);
+        if (flowU != null) flowU.set((float) flowX, (float) flowZ);
         if (visOriginU != null) visOriginU.set((float) visX, (float) visZ);
         set(visInvSizeU, 1f / (VIS_N * VIS_STEP));
     }
@@ -305,6 +312,10 @@ public final class MistPass {
                 w[i][j] = MC.level.getFluidState(p.set(x, top, z)).is(FluidTags.WATER);
             }
         valley = ValleyField.compute(h, w, VIS_STEP);
+        boolean first = flowX == 1 && flowZ == 0;
+        double[] f = ValleyField.flow(valley.cover, first ? windX : flowX, first ? windZ : flowZ);
+        flowX = f[0];
+        flowZ = f[1];
     }
 
     private static void draw(RenderTarget main) {
