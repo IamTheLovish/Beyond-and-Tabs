@@ -70,15 +70,16 @@ class GrassTintTest {
 
     @Test
     void neighbouringBlocksDifferByAShadeAtMost() {
-        // continuous across block borders: a step of one block moves the field by 0.6 at most (its 4.5-block octave
-        // through the contrast curve; VALUE turns that into ~3%); the colour moves by at most
+        // continuous across block borders: a step of one block moves the field by 0.7 at most (its 4.5-block octave
+        // through the contrast curve; round 7's gradient noise is steeper than the lattice noise's 0.6, VALUE turns it
+        // into ~6%); the colour - what the camera sees - moves by at most
         // 26 levels (~12%) at the steepest, ragged edge of a straw or dark clump (the critic asked for 1-2 block
         // transitions, not 15-block gradients) - Embeddium (in the pack) blends it across the block's corners
         for (int x = -500; x < 500; x++) {
             for (int z = -500; z < 500; z += 13) {
                 double f = GrassTint.field(x, z, 3);
-                assertTrue(Math.abs(GrassTint.field(x + 1, z, 3) - f) <= 0.60, "x step at " + x + ", " + z);
-                assertTrue(Math.abs(GrassTint.field(x, z + 1, 3) - f) <= 0.60, "z step at " + x + ", " + z);
+                assertTrue(Math.abs(GrassTint.field(x + 1, z, 3) - f) <= 0.70, "x step at " + x + ", " + z);
+                assertTrue(Math.abs(GrassTint.field(x, z + 1, 3) - f) <= 0.70, "z step at " + x + ", " + z);
                 int c = GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS);
                 int n = GrassTint.apply(PLAINS_GRASS, x + 1, z, GrassTint.GRASS);
                 assertTrue(Math.abs(r(c) - r(n)) <= 26 && Math.abs(g(c) - g(n)) <= 26 && Math.abs(b(c) - b(n)) <= 26,
@@ -184,7 +185,37 @@ class GrassTintTest {
             }
         }
         double std = Math.sqrt(s2 / count - (s1 / count) * (s1 / count));
-        assertTrue(std >= 0.03, "4-block vs 16-block std " + std);
+        // round 7 (Oct 29) changed the noise (gradient, rotated) and held this at 0.038 (round 6: 0.038) - the floor
+        // keeps that level; raising it further runs into darksKeepUnitsReadable and the colour step below
+        assertTrue(std >= 0.035, "4-block vs 16-block std " + std);
+    }
+
+    @Test
+    void noSquareGridInTheField() {
+        // critic r40 #3 (Oct 29): from the RTS camera the lawn showed a grid of squares. The lattice noise's quintic
+        // fade has zero slope on every lattice line and all octaves shared one unrotated grid, so the colour changed
+        // 1.6x faster mid-cell than on the 4-block lines. A meadow has no grid: the mean colour change between
+        // neighbours must be the same at every x phase, for each lattice period the octaves use
+        int n = 1024;
+        for (int period : new int[] {3, 4, 5, 7, 9, 14}) {
+            double[] sum = new double[period];
+            int[] cnt = new int[period];
+            for (int z = 0; z < 512; z += 3) {
+                double prev = luma(GrassTint.apply(PLAINS_GRASS, 0, z, GrassTint.GRASS));
+                for (int x = 1; x < n; x++) {
+                    double l = luma(GrassTint.apply(PLAINS_GRASS, x, z, GrassTint.GRASS));
+                    sum[x % period] += Math.abs(l - prev);
+                    cnt[x % period]++;
+                    prev = l;
+                }
+            }
+            double lo = 1e9, hi = 0;
+            for (int p = 0; p < period; p++) {
+                lo = Math.min(lo, sum[p] / cnt[p]);
+                hi = Math.max(hi, sum[p] / cnt[p]);
+            }
+            assertTrue(hi / lo <= 1.15, "period " + period + ": change by phase " + lo + " .. " + hi);
+        }
     }
 
     private static double mean(double[][] a, int x0, int z0, int size) {
