@@ -133,6 +133,7 @@ def fmt_band(x, lo, hi):
 
 
 def table(lanes, stills, hud):
+    outside = {}
     rows = ["| still | lane | luma p5 / p50 / p95 | lawn hue | lawn V | lawn B/G | shade | fill (share) | floor | white p95 "
             "| clipped | detail |",
             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
@@ -153,7 +154,9 @@ def table(lanes, stills, hud):
                 fmt_band(m["fill"], lo, hi) + ("" if m["shadow_share"] is None else " (%d%%)" % round(100 * m["shadow_share"])),
                 fmt_band(m["floor"], flo, fhi), fmt(m["white_p95"], 2), "%.2f%%" % (100 * m["clipped"]),
                 fmt(m["detail"], 4)))
-    return "\n".join(rows)
+            outside[name] = outside.get(name, 0) + rows[-1].count("!")
+    return "\n".join(rows) + "\n\nOutside their bands (marked !): " + ", ".join(
+        "%s %d" % (name, n) for name, n in outside.items())
 
 
 def fetch(branch, folder, repo="IamTheLovish/Beyond-and-Tabs"):
