@@ -46,6 +46,14 @@ class CanopyShadeTest {
     }
 
     @Test
+    void thePoolIsRoundNotADiamond() {
+        // eyes r42: the axis-only taps drew a diamond - a block on the diagonal got less shade than one as far out on
+        // an axis. Two blocks out on the diagonal (2.8) and three on the axis (3) must be within a few percent
+        double diag = luma(CanopyShade.apply(GRASS, CROWN, 2, 64, 2)), axis = luma(CanopyShade.apply(GRASS, CROWN, 3, 64, 0));
+        assertTrue(Math.abs(diag - axis) / luma(GRASS) < 0.04, "diagonal " + diag + " axis " + axis);
+    }
+
+    @Test
     void theHueIsKept() {
         int c = CanopyShade.apply(GRASS, CROWN, 0, 64, 0);
         double ratio = ((c >> 8) & 0xFF) / (double) ((c >> 16) & 0xFF);

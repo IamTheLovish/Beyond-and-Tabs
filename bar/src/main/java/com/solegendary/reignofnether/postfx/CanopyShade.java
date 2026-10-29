@@ -6,12 +6,12 @@ package com.solegendary.reignofnether.postfx;
  * colour under and round a crown is darkened by how much canopy covers it, on the same per-position colour path as
  * {@link GrassTint} (so Embeddium blends it per vertex corner: a soft edge, no block steps).
  *
- * <p>Coverage is a weighted 9-tap sample: the block itself and the blocks 1 and 2 away on each axis, each tap 1 where
- * leaves stand over that column within {@link #REACH} blocks. Full cover darkens by {@link #DARK}; the edge of a crown
+ * <p>Coverage is a Gaussian-weighted disc of 21 taps (every block within ~2 of this one), each tap 1 where leaves
+ * stand over that column within {@link #REACH} blocks. Full cover darkens by {@link #DARK}; the edge of a crown
  * fades out over the 2-block ring. Only without a shader pack - a pack draws real shadows there, and both would be
  * twice as dark (critic r40: the shader lane's contact shadows already sell the canopy).
  *
- * <p>Cost: per colour sample 9 heightmap reads and up to 9 block reads (the column's top block), only while a chunk
+ * <p>Cost: per colour sample 21 heightmap reads and up to 21 block reads (the column's top block), only while a chunk
  * section is meshed. Known limit: a crown that is cut down leaves its shade until the grass's section is meshed again.
  */
 public final class CanopyShade {
@@ -24,8 +24,32 @@ public final class CanopyShade {
 
     static final double DARK = 0.20;
     static final int REACH = 16;
-    static final int[][] TAPS = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {2, 0}, {-2, 0}, {0, 2}, {0, -2}};
-    static final double[] WEIGHTS = {0.28, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09, 0.09};
+    /**
+     * r2 (eyes r42, tree_sampler_a plain: 21% darker under a crown, on target, but the 9 axis taps drew a stepped
+     * DIAMOND round each trunk): every block within 2.24 of the centre (21 taps, a disc), Gaussian-weighted (sigma
+     * 1.3), so the pool is round and its rim fades instead of stepping.
+     */
+    static final double SIGMA = 1.3;
+    static final int[][] TAPS;
+    static final double[] WEIGHTS;
+
+    static {
+        java.util.List<int[]> taps = new java.util.ArrayList<>();
+        for (int dx = -2; dx <= 2; dx++)
+            for (int dz = -2; dz <= 2; dz++)
+                if (dx * dx + dz * dz <= 5)
+                    taps.add(new int[]{dx, dz});
+        TAPS = taps.toArray(new int[0][]);
+        WEIGHTS = new double[TAPS.length];
+        double sum = 0;
+        for (int i = 0; i < TAPS.length; i++) {
+            double d2 = TAPS[i][0] * TAPS[i][0] + TAPS[i][1] * TAPS[i][1];
+            WEIGHTS[i] = Math.exp(-d2 / (2 * SIGMA * SIGMA));
+            sum += WEIGHTS[i];
+        }
+        for (int i = 0; i < WEIGHTS.length; i++)
+            WEIGHTS[i] /= sum;
+    }
 
     private CanopyShade() {
     }
