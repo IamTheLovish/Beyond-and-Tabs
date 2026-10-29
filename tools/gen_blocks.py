@@ -3006,7 +3006,10 @@ GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
 # 0.89 / 0.61 / 0.45 (1.97x). Why the model and not SIZES spread further: a smaller drawing loses blade height and width
 # with it (0.55 already keeps 4-texel blades only because the widths shrink just 0.8 + 0.2 x size), while a bigger
 # model is read a mip level UP - its blades come out bolder, not thinner.
-GRASS_TUFT_SCALE = {"": 1.35}
+# r37 (Oct 29, critic r38 + eyes A/B 40833182959 vs 40833199253 under the Complementary preset): 1.35x doubled the
+# shader shadow spotting on the lawn (meadow stars 14 / dark share 0.087 at 1.35x, 4 / 0.036 at 1.1x); 1.1x keeps the
+# sizes apart (~1.6x footprint big / small) with a calm lawn
+GRASS_TUFT_SCALE = {"": 1.1}
 # r36 (critic r35b: "the big ones read as fist-sized dark splats with a hard shadow halo (clump 10th-percentile V
 # 0.431 vs clearing 0.494), so the lawn looks spotted"): the short grass drops vanilla's two upright crossed quads and
 # keeps only its 3-4 leaning ones. Every quad carries the whole tuft, all hinged at the one root, so from the RTS camera
