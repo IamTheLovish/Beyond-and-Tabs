@@ -9,12 +9,17 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.time.NightUtils;
 import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.unit.UnitGrid;
+import com.solegendary.reignofnether.ability.abilities.DragonDive;
 import com.solegendary.reignofnether.unit.controls.DragonMoveControl;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -28,6 +33,8 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -70,7 +77,34 @@ public class BoneDragonUnit extends GhastUnit {
     /** The breath reaches the ground from the dragon's altitude: how far below (and above) it the cone counts. */
     static final double BREATH_HEIGHT_WINDOW = 20.0;
     static final String KEY_ANNOUNCED = "bt_t3_announced";
+
+    /**
+     * The Dive (ability DragonDive, #145 - lovish: descend to the ground to fight, like BAR's land command, on a LONG
+     * cooldown so diving in is punished and is not spammed). These are PROPOSALS sent to lovish for his numbers:
+     * the cooldown (s), the farthest spot it dives to, the impact's radius and damage (ground enemies only), how long it
+     * stays down, how long before the button may take it off early, and how long a dive may take before it gives up.
+     */
+    public static final int DIVE_CD_SECONDS = 90;
+    public static final int DIVE_RANGE = 16;
+    public static final float IMPACT_RADIUS = 4.5f;
+    public static final float IMPACT_DAMAGE = 60f;
+    public static final int LAND_TICKS = 10 * 20;
+    public static final int MIN_LAND_TICKS = 4 * 20;
+    static final int DIVE_MAX_TICKS = 5 * 20;
+    public static final double IMPACT_KNOCKBACK = 0.8;
+
+    /** The game time it landed at, or -1 in the air: synced, so the button and the rig know it is down. */
+    public static final EntityDataAccessor<Integer> landedAtAccessor =
+        SynchedEntityData.defineId(BoneDragonUnit.class, EntityDataSerializers.INT);
+    private Vec3 diveTo = null;
+    private int diveTicks = 0;
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(landedAtAccessor, -1);
+    }
 
     public BoneDragonUnit(EntityType<? extends Ghast> entityType, Level level) {
         super(entityType, level);
@@ -127,12 +161,219 @@ public class BoneDragonUnit extends GhastUnit {
             return;
         if (fog == null)
             fog = new com.solegendary.reignofnether.ability.abilities.WitheringFog();
-        for (var a : getAbilities().get())
-            if (a == fog)
-                return;
-        getAbilities().add(fog);
+        if (dive == null)
+            dive = new DragonDive();
+        boolean hasFog = false, hasDive = false;
+        for (var a : getAbilities().get()) {
+            hasFog |= a == fog;
+            hasDive |= a == dive;
+        }
+        if (!hasFog)
+            getAbilities().add(fog);
+        if (!hasDive)
+            getAbilities().add(dive);
     }
     private com.solegendary.reignofnether.ability.abilities.WitheringFog fog;
+    private DragonDive dive;
+
+    // ---- the Dive -----------------------------------------------------------------------------------------------
+
+    /** Down on the ground after a dive (both sides). */
+    public boolean isLanded() {
+        return this.entityData.get(landedAtAccessor) >= 0;
+    }
+
+    /** Stooping onto its spot (server side). */
+    public boolean isDiving() {
+        return diveTo != null;
+    }
+
+    /** Where the running dive comes down (server side; null when not diving). For the game test. */
+    public Vec3 diveTarget() {
+        return diveTo;
+    }
+
+    /** Down long enough that the Dive button may take it off early (both sides: the landing time is synced). */
+    public boolean canTakeOff() {
+        int at = this.entityData.get(landedAtAccessor);
+        return at >= 0 && (int) level().getGameTime() - at >= MIN_LAND_TICKS;
+    }
+
+    /** A landed dragon is no flyer: ground melee reaches it, as the Celestial Dragon grounded by wind. */
+    @Override
+    public boolean isFlyingUnit() {
+        return !isLanded();
+    }
+
+    /**
+     * Stoop onto the ground at {@code at} (at most {@link #DIVE_RANGE} blocks away flat; farther, the spot that far
+     * toward it). False if it is already diving or down, or dead. Public for the game test; the button is DragonDive.
+     */
+    public boolean startDive(Vec3 at) {
+        if (!(level() instanceof ServerLevel sl) || !isAlive() || isLanded() || isDiving()
+                || !(this.moveControl instanceof DragonMoveControl dc))
+            return false;
+        Vec3 flat = new Vec3(at.x - getX(), 0, at.z - getZ());
+        if (flat.length() > DIVE_RANGE)
+            flat = flat.normalize().scale(DIVE_RANGE);
+        double x = getX() + flat.x, z = getZ() + flat.z;
+        // the ground under the dragon's own height at the spot: scanned down, so a roof over it (a cave, an
+        // overhang) is not taken for the ground (#300 review: r1's heightmap "landed" in mid-air under a roof)
+        Integer gy = groundBelow(sl, x, z);
+        if (gy == null)
+            return false;
+        diveTo = new Vec3(x, gy, z);
+        diveTicks = 0;
+        if (getMoveGoal() != null)
+            getMoveGoal().stopMoving();
+        dc.setDive(diveTo);
+        sl.playSound(null, blockPosition(), SoundEvents.PHANTOM_SWOOP, SoundSource.HOSTILE, 4f, 0.5f);
+        return true;
+    }
+
+    /** How far down the ground is looked for under a dive's spot (blocks below the dragon). */
+    static final int GROUND_SCAN = 64;
+
+    /**
+     * The standing height on the first solid block below the dragon's height at (x, z), or null: the spot is inside
+     * terrain at the dragon's height (a cliff beside it - #300 review round 2: r2 returned a ledge above it), the first
+     * thing below is water or lava (no ground to land on), or there is nothing within GROUND_SCAN.
+     */
+    private Integer groundBelow(ServerLevel sl, double x, double z) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(Mth.floor(x), Mth.floor(getY()), Mth.floor(z));
+        if (!open(sl, p) || !open(sl, p.above()))
+            return null;
+        for (int i = 0; i <= GROUND_SCAN && p.getY() > sl.getMinBuildHeight(); i++, p.move(0, -1, 0)) {
+            var state = sl.getBlockState(p);
+            if (!state.getFluidState().isEmpty())
+                return null;
+            if (!state.getCollisionShape(sl, p).isEmpty())
+                return p.getY() + 1;
+        }
+        return null;
+    }
+
+    private static boolean open(ServerLevel sl, BlockPos p) {
+        var state = sl.getBlockState(p);
+        return state.getFluidState().isEmpty() && state.getCollisionShape(sl, p).isEmpty();
+    }
+
+    // ---- the Dive's state across a save and load (#300 review: a reload must not hand back a fresh dive): the
+    // cooldown left, the ticks already spent on the ground, and a running dive's spot - relative, never game times
+    static final String KEY_DIVE_CD = "bt_dive_cd", KEY_LANDED_FOR = "bt_dive_landed_for", KEY_DIVE_TO = "bt_dive_to";
+    /** A cooldown restored from the save: told to the clients on the first tick (none are tracking yet at load). */
+    private boolean resendDiveCooldown = false;
+
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        if (dive != null && dive.getCooldown(this) > 0)
+            tag.putFloat(KEY_DIVE_CD, dive.getCooldown(this));
+        int at = this.entityData.get(landedAtAccessor);
+        if (at >= 0)
+            tag.putInt(KEY_LANDED_FOR, (int) Math.max(0, level().getGameTime() - at));
+        if (diveTo != null) {
+            CompoundTag t = new CompoundTag();
+            t.putDouble("x", diveTo.x);
+            t.putDouble("y", diveTo.y);
+            t.putDouble("z", diveTo.z);
+            t.putInt("ticks", diveTicks);
+            if (this.moveControl instanceof DragonMoveControl dc) {
+                t.putDouble("speed", dc.speed());
+                t.putDouble("climb", dc.climb());
+            }
+            tag.put(KEY_DIVE_TO, t);
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(@NotNull CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains(KEY_DIVE_CD) && dive != null) {
+            dive.setCooldown(tag.getFloat(KEY_DIVE_CD), false, this);
+            resendDiveCooldown = true;
+        }
+        DragonMoveControl dc = this.moveControl instanceof DragonMoveControl c ? c : null;
+        if (dc != null)
+            dc.setHeading(getYRot());
+        if (tag.contains(KEY_LANDED_FOR)) {
+            this.entityData.set(landedAtAccessor, (int) (level().getGameTime() - tag.getInt(KEY_LANDED_FOR)));
+            if (dc != null)
+                dc.setLanded(true);
+        } else if (tag.contains(KEY_DIVE_TO)) {
+            CompoundTag t = tag.getCompound(KEY_DIVE_TO);
+            diveTo = new Vec3(t.getDouble("x"), t.getDouble("y"), t.getDouble("z"));
+            diveTicks = t.getInt("ticks");
+            if (dc != null)
+                dc.restoreFlight(t.getDouble("speed"), t.getDouble("climb"));
+            if (dc != null)
+                dc.setDive(diveTo);
+        }
+    }
+
+    /** Lets it up again if it has been down {@link #MIN_LAND_TICKS}; else it stays. The Dive button on the ground. */
+    public void takeOffEarly() {
+        if (canTakeOff())
+            takeOff();
+    }
+
+    private void land(ServerLevel sl) {
+        diveTo = null;
+        this.entityData.set(landedAtAccessor, (int) sl.getGameTime());
+        if (this.moveControl instanceof DragonMoveControl dc)
+            dc.setLanded(true);
+        impact(sl);
+    }
+
+    private void takeOff() {
+        this.entityData.set(landedAtAccessor, -1);
+        if (this.moveControl instanceof DragonMoveControl dc) {
+            dc.setLanded(false);
+            // back up to its flying height over where it is, unless an order is already waiting
+            if (getMoveGoal() == null || getMoveGoal().getMoveTarget() == null)
+                dc.setWantedPosition(getX(), getY() + 10, getZ(), 1.0);
+        }
+    }
+
+    /**
+     * The landing: every ground enemy unit within {@link #IMPACT_RADIUS} (flyers are over it) takes
+     * {@link #IMPACT_DAMAGE} from the dragon and is thrown back. Returns how many it hit. Public for the game test.
+     */
+    public int impact(ServerLevel sl) {
+        String owner = getOwnerName();
+        List<LivingEntity> hit = new ArrayList<>();
+        if (owner != null && !owner.isEmpty()) {
+            for (LivingEntity le : UnitGrid.near(sl, getX(), getZ(), IMPACT_RADIUS + 3, scratch)) {
+                if (le == this || !le.isAlive() || le.level() != sl || !(le instanceof Unit u) || u.isFlyingUnit())
+                    continue;
+                String o = u.getOwnerName();
+                if (o == null || o.isEmpty() || o.equals(owner) || AlliancesServerEvents.isAllied(owner, o))
+                    continue;
+                if (Math.abs(le.getY() - getY()) > 3)
+                    continue;
+                double ex = le.getX() - getX(), ez = le.getZ() - getZ();
+                if (Math.sqrt(ex * ex + ez * ez) - le.getBbWidth() / 2 > IMPACT_RADIUS)
+                    continue;
+                hit.add(le);
+            }
+            scratch.clear();
+        }
+        for (LivingEntity le : hit) {
+            // explicit: RoN's actuallyHurt mixin turns a unit's MOB_ATTACK into its attack damage (20, x1.3 at night) -
+            // the impact is its own number (#300 CI: the foes lost 20, not 60); armour and resists still apply
+            com.solegendary.reignofnether.unit.UnitDamage.hurtExplicit(le, sl.damageSources().mobAttack(this), IMPACT_DAMAGE);
+            if (le.isAlive())
+                le.knockback(IMPACT_KNOCKBACK, getX() - le.getX(), getZ() - le.getZ());
+        }
+        sl.sendParticles(ParticleTypes.EXPLOSION, getX(), getY() + 0.3, getZ(), 6, IMPACT_RADIUS * 0.4, 0.2, IMPACT_RADIUS * 0.4, 0.0);
+        for (int i = 0; i < 16; i++) {
+            double a = i / 16.0 * Math.PI * 2;
+            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, getX() + Math.cos(a) * IMPACT_RADIUS, getY() + 0.2,
+                getZ() + Math.sin(a) * IMPACT_RADIUS, 2, 0.2, 0.1, 0.2, 0.01);
+        }
+        sl.playSound(null, blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 3f, 0.6f);
+        return hit.size();
+    }
 
     @Nullable
     @Override
@@ -239,6 +480,23 @@ public class BoneDragonUnit extends GhastUnit {
     @Override
     public void tick() {
         super.tick();
+        if (level() instanceof ServerLevel sl && isAlive()) {
+            if (resendDiveCooldown && dive != null) {
+                resendDiveCooldown = false;
+                com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(getId(), dive.action, dive.getCooldown(this));
+            }
+            if (diveTo != null) {
+                diveTicks++;
+                if (onGround() || getY() - diveTo.y < 0.4)
+                    land(sl);
+                else if (diveTicks > DIVE_MAX_TICKS && this.moveControl instanceof DragonMoveControl dc) {
+                    diveTo = null;                       // a roof in the way: give up, fly on
+                    dc.setDive(null);
+                }
+            } else if (isLanded() && sl.getGameTime() - this.entityData.get(landedAtAccessor) >= LAND_TICKS) {
+                takeOff();
+            }
+        }
         if (!level().isClientSide() && tickCount > 5 && !getPersistentData().getBoolean(KEY_ANNOUNCED)
                 && getOwnerName() != null && !getOwnerName().isEmpty()) {
             getPersistentData().putBoolean(KEY_ANNOUNCED, true);

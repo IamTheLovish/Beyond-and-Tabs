@@ -22,7 +22,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
@@ -92,10 +95,12 @@ public final class UnitUnstick {
         boolean standable = mob.onGround() && isOnStandableGround(mob);
         boolean roof = mob.getPersistentData().getBoolean(KEY_ROOF_SPAWN);
         boolean stuck = roof || isEncased(mob) || (mob.onGround() && !standable && !unit.isIdle());
+        // a rooted (or rooting/uprooting) Treant stands still on purpose: no pocket lift or path drop, but freed if encased
+        boolean rootedInPlace = mob instanceof com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit t && t.isImmobile();
         // following a path but not moving: pushing into something the grid thinks is open
-        boolean pushing = !stuck && mob.onGround() && !mob.getNavigation().isDone();
+        boolean pushing = !stuck && !rootedInPlace && mob.onGround() && !mob.getNavigation().isDone();
         // standing still somewhere it may not be able to leave: worth a pocket search once it has stood a check
-        boolean maybePocketed = !stuck && standable && (!unit.isIdle() || nearBuilding(feetCell(mob)));
+        boolean maybePocketed = !stuck && !rootedInPlace && standable && (!unit.isIdle() || nearBuilding(feetCell(mob)));
         if ((!stuck && !pushing && !maybePocketed) || GarrisonableBuildingAddon.getGarrison(unit) != null) {
             SUSPECTS.remove(mob);
             return;
@@ -369,16 +374,21 @@ public final class UnitUnstick {
         return level.noCollision(mob, moved.deflate(0.01));
     }
 
-    /** Puts the unit on {@code cell} and makes every movement goal it has repath from there. */
+    /** Puts the unit on {@code cell} and makes every movement goal it has repath from there, once each. */
     public static void rescue(Mob mob, BlockPos cell) {
         mob.getNavigation().stop();
         mob.teleportTo(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
         mob.setDeltaMovement(Vec3.ZERO);
+        // once each: a forced repath is judged (it can count toward the give-up), and the plain move goal is usually
+        // both in the selector and the unit's getMoveGoal - twice made every rescue two stuck repaths
+        Set<MoveToTargetBlockGoal> goals = Collections.newSetFromMap(new IdentityHashMap<>());
         for (WrappedGoal wg : mob.goalSelector.getAvailableGoals())
             if (wg.getGoal() instanceof MoveToTargetBlockGoal g)
-                g.forceRepath();
+                goals.add(g);
         if (mob instanceof Unit u && u.getMoveGoal() != null)
-            u.getMoveGoal().forceRepath();   // not every unit registers its move goal with the selector
+            goals.add(u.getMoveGoal());   // not every unit registers its move goal with the selector
+        for (MoveToTargetBlockGoal g : goals)
+            g.forceRepath();
     }
 
     /** For tests. */

@@ -139,8 +139,9 @@ public final class SupportOrders {
     /**
      * How far a building shoots at ground units: a defence tower's range (not the anti-air ones), the T2 faction
      * towers' (Storm Oak, Lighthouse Battery, Rail Battery), or its garrison's while someone is inside; else 0.
+     * Public for the hero AI (hero/ai/Perception): one rule for "how far does this building shoot".
      */
-    static int gunRange(BuildingPlacement b) {
+    public static int gunRange(BuildingPlacement b) {
         Building building = b.getBuilding();
         int range = 0;
         if (building instanceof DefenceTower tower && !tower.kind.airOnly)

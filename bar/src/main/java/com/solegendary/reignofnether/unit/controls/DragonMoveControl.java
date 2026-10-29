@@ -28,6 +28,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     private Vec3 lastSet = Vec3.ZERO, push = Vec3.ZERO;
     private boolean blocked = false;
     private int sweepIn = 0;
+    /** The Dive's ground spot while it stoops (BoneDragonUnit.startDive), and whether it is down on the ground. */
+    private Vec3 diveTo = null;
+    private boolean landed = false;
 
     public DragonMoveControl(Mob mob) {
         super(mob);
@@ -50,12 +53,41 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
      * not (a held position or a persistent move leaves it set): there the dragon hovers and faces its target.
      */
     public boolean isCruising() {
-        if (state.speed > 0.03)
+        if (landed)
+            return false;
+        if (diveTo != null || state.speed > 0.03)
             return true;
         if (operation != Operation.MOVE_TO)
             return false;
         double dx = wantedX - mob.getX(), dz = wantedZ - mob.getZ();
         return dx * dx + dz * dz > DragonFlight.STOP * DragonFlight.STOP;
+    }
+
+    /** The forward speed and the climb (b/t), for the dive's save; restored by {@link #restoreFlight}. */
+    public double speed() {
+        return state.speed;
+    }
+
+    public double climb() {
+        return state.vy;
+    }
+
+    /** Picks the flight up where a saved dragon left it (a reload mid-dive keeps its way on). */
+    public void restoreFlight(double speed, double climb) {
+        state.speed = speed;
+        state.vy = climb;
+    }
+
+    /** Stoop onto this ground spot (null: stop diving) - every other order waits while it dives. */
+    public void setDive(Vec3 spot) {
+        diveTo = spot;
+    }
+
+    /** On the ground (the Dive's landing): no way on, whatever the move goal wants, until it is let up again. */
+    public void setLanded(boolean landed) {
+        this.landed = landed;
+        if (landed)
+            diveTo = null;
     }
 
     @Override
@@ -67,7 +99,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         // what moved us besides the steering since last tick (a knockback, a push) rides on top and decays
         Vec3 now = mob.getDeltaMovement();
         // (in water or lava the drag is not the air's 0.91, so what is left there is no push)
-        if (mob.horizontalCollision || mob.verticalCollision || mob.isInWater() || mob.isInLava())
+        // diving or down, nothing pushes it: the stoop is aimed and a landed dragon is rooted (#300 CI: the units'
+        // separation shoved a dragon landing on a crowd 4.6 blocks off its spot)
+        if (landed || diveTo != null || mob.horizontalCollision || mob.verticalCollision || mob.isInWater() || mob.isInLava())
             push = Vec3.ZERO;
         else    // last tick's push is in there too, already through the drag
             push = now.subtract(lastSet.scale(DRAG));
@@ -77,11 +111,21 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
             push = push.normalize().scale(1.5);
 
         double[] v;
-        if (operation == Operation.MOVE_TO) {
+        if (landed) {
+            v = DragonFlight.perched(state);
+            if (mob.onGround())
+                v[1] = 0.0;
+        } else if (diveTo != null) {
+            AttributeInstance ms = mob.getAttribute(Attributes.MOVEMENT_SPEED);
+            double cruise = DragonFlight.cruiseSpeed(ms == null ? 0.0 : ms.getValue());
+            v = DragonFlight.dive(state, diveTo.x - mob.getX(), diveTo.y - mob.getY(), diveTo.z - mob.getZ(), cruise);
+        } else if (operation == Operation.MOVE_TO) {
             AttributeInstance ms = mob.getAttribute(Attributes.MOVEMENT_SPEED);
             double cruise = DragonFlight.cruiseSpeed(ms == null ? 0.0 : ms.getValue());
             double dx = wantedX - mob.getX(), dy = wantedY - mob.getY(), dz = wantedZ - mob.getZ();
             double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (dist < 1.0 && state.speed < 0.02)
+                operation = Operation.WAIT;     // there (a take-off's climb has no goal to end it): hover, face targets
             if (sweepIn-- <= 0 && dist > 1.0e-4) {
                 sweepIn = SWEEP_EVERY;
                 double r = Math.toRadians(state.heading);

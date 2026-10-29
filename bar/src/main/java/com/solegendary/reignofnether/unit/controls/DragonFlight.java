@@ -40,6 +40,8 @@ public final class DragonFlight {
     public static final class State {
         public float heading;
         public double speed, vy;
+        /** This tick's displacement, reused every tick (step / dive / brake / perched return it; no allocation). */
+        final double[] out = new double[3];
 
         public State(float heading) {
             this.heading = heading;
@@ -84,6 +86,43 @@ public final class DragonFlight {
         return along(s);
     }
 
+    /** The dive's fall cap (b/t), its change per tick, and the speed it stoops at (x cruise). */
+    public static final double DIVE_VY = 0.45, DIVE_VY_ACCEL = 0.04, DIVE_SPEED = 1.4;
+
+    /**
+     * One tick of the Dive (BoneDragonUnit.startDive) toward a ground spot (dx, dy, dz) away: the nose turns as in
+     * flight, it stoops at DIVE_SPEED x cruise easing off over the last blocks, and it comes down along the line to
+     * the spot - the fall paced to the way still to go, so it meets the ground AT the spot, not short of it - capped
+     * at DIVE_VY. Straight over the spot it drops at the cap.
+     */
+    public static double[] dive(State s, double dx, double dy, double dz, double cruise) {
+        double hd = Math.sqrt(dx * dx + dz * dz);
+        float off = hd > 0.05 ? wrap((float) Math.toDegrees(-Math.atan2(dx, dz)) - s.heading) : 0f;
+        double ratio = cruise > 0 ? Math.min(1.0, s.speed / cruise) : 0.0;
+        float maxTurn = (float) (TURN_SLOW + (TURN_CRUISE - TURN_SLOW) * ratio);
+        float turn = Math.max(-maxTurn, Math.min(maxTurn, off));
+        s.heading = wrap(s.heading + turn);
+        float left = Math.abs(off - turn);
+        double want = cruise * DIVE_SPEED * Math.min(1.0, Math.sqrt(hd / 2.0));
+        if (left > TURN_SLOWDOWN_FROM)
+            want *= Math.max(TURN_SLOWDOWN_MIN, Math.cos(Math.toRadians(Math.min(90f, left))));
+        s.speed += Math.max(-DECEL * 2, Math.min(ACCEL * 2, want - s.speed));
+        double wantVy = hd < 1.5 ? -DIVE_VY : dy * Math.max(s.speed, 0.05) / hd;
+        wantVy = Math.max(-DIVE_VY, Math.min(0.0, wantVy));
+        s.vy += Math.max(-DIVE_VY_ACCEL, Math.min(DIVE_VY_ACCEL, wantVy - s.vy));
+        return along(s);
+    }
+
+    /** One tick on the ground (the Dive's landing): no way on, settle onto the ground. */
+    public static double[] perched(State s) {
+        s.speed = 0.0;
+        s.vy = 0.0;
+        s.out[0] = 0.0;
+        s.out[1] = -0.3;
+        s.out[2] = 0.0;
+        return s.out;
+    }
+
     /** One tick with nowhere to go: brake along the nose to a hover and level off. */
     public static double[] brake(State s) {
         s.speed = Math.max(0.0, s.speed - DECEL);
@@ -93,7 +132,10 @@ public final class DragonFlight {
 
     private static double[] along(State s) {
         double r = Math.toRadians(s.heading);
-        return new double[] {-Math.sin(r) * s.speed, s.vy, Math.cos(r) * s.speed};
+        s.out[0] = -Math.sin(r) * s.speed;
+        s.out[1] = s.vy;
+        s.out[2] = Math.cos(r) * s.speed;
+        return s.out;
     }
 
     public static float wrap(float a) {

@@ -82,6 +82,13 @@ public final class AnimStates {
         return slab;
     }
 
+    /** Keeps a unit's slot from being forgotten while it is out of the level (a body {@link Corpses} holds). */
+    public static void touch(int entityId) {
+        int b = SLOT.get(entityId);
+        if (b >= 0)
+            slab[b + AnimState.SEEN_TICK] = tick;
+    }
+
     /** The client tick the slab was last stepped at. */
     public static int tick() {
         return tick;
@@ -136,7 +143,17 @@ public final class AnimStates {
         boolean fighting = le.swinging || (le instanceof Mob m && m.isAggressive());
         Kinematics.step(s, b, (float) (le.getX() - le.xo), (float) (le.getY() - le.yo), (float) (le.getZ() - le.zo),
             le.yBodyRot - le.yBodyRotO, le.getHealth(), le.getMaxHealth(), fighting, fresh);
+        if (fresh) {
+            // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
+            s[b + AnimState.TEMPO] = Desync.tempo(id);
+            s[b + AnimState.BREATH_PHASE] = s[b + AnimState.BREATH_PREV] =
+                com.solegendary.reignofnether.unit.modelling.animations.Life.advance(0f,
+                    com.solegendary.reignofnether.unit.modelling.animations.Life.offset(id) / Kinematics.breathPeriod(0f));
+        }
         s[b + AnimState.SEEN_TICK] = tick;
+        // after this tick's health: the killing blow's size class is already judged (Kinematics.step)
+        if (le.deathTime > 0 || s[b + AnimState.DEATH_KIND] != DeathFall.ALIVE)
+            DeathFall.latch(s, b, id, le.deathTime);
         boolean moving = s[b + AnimState.SPEED] >= Kinematics.STOP_SPEED;
         // the scheduler counts in the unit's own ticks: the pose reads its envelopes by the same clock (tickCount)
         if (Idle.step(s, b, id, le.tickCount, moving, fighting) == Idle.GLANCE)
