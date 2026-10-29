@@ -27,6 +27,7 @@ r29 (critic r35b: black-green tops, V too low, sat too high): the crown's top sk
 the two leaves with their own greyer colours - so it is lighter AND less saturated; sides dark oak, underside spruce."""
 import math
 import os
+import shutil
 import random
 import sys
 
@@ -1376,5 +1377,22 @@ def _write_clipped(s, tree, ox, oz):
     H = old
 
 
+# Maps spec M6: the templates the pre-made maps plant (maps/TreeScatter.Kind) ship in the jar under
+# data/reignofnether/structures/trees/; design/trees stays the art lane's working set (samplers, bare and dead trees
+# waiting for their review). test_gen_trees_shipped.py holds the two copies byte-equal.
+SHIPPED = ("oak", "birch", "spruce", "pine", "acacia", "bush", "boulder")
+SHIPPED_VARIANTS = 4
+SHIP_DIR = os.path.join(ROOT, "bar", "src", "main", "resources", "data", "reignofnether", "structures", "trees")
+
+
+def ship():
+    os.makedirs(SHIP_DIR, exist_ok=True)
+    for name in SHIPPED:
+        for v in range(1, SHIPPED_VARIANTS + 1):
+            f = "%s_%d.nbt" % (name, v)
+            shutil.copyfile(os.path.join(OUT, f), os.path.join(SHIP_DIR, f))
+
+
 if __name__ == "__main__":
     main()
+    ship()

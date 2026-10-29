@@ -67,6 +67,10 @@ on:
         description: "Valley mist pilot: lets the living ground mist (ambient/mist) into the structure photos (normally kept out with ambient life) and adds a dawn RTS still per structure, 15_<name>_mist_rts (-Dbat.eyes.mist=true). Use with `structure`"
         type: boolean
         default: false
+      map:
+        description: "Play a pre-made map instead of the world's own terrain (MapPreset name, e.g. VERDANT_VALLEY, HIGHLANDS, DESERT_MESA) - the tour adds 05m_forest_rts / 05n_forest_rts_close on the planted tree nearest our start (maps spec M6)"
+        required: false
+        default: ''
       fog:
         description: "Fog of war instead of the tour: fog on, a dozen marching into the dark, the surface-band vs whole-column re-mesh A/B and the fog edge stills (EyesDirector scene 17); keeps Embeddium in the plain lane. Publishes to eyes-fog (-shaders)"
         type: boolean
@@ -332,6 +336,14 @@ jobs:
       - name: Overlays scene only (dispatch input `overlays`; EyesDirector scene 18)
         if: env.OVERLAYS == '1'
         run: echo 'EYES_JVM_EXTRA=-Dbat.eyes.overlays=true' >> "$GITHUB_ENV"
+      - name: A pre-made map (dispatch input `map`; maps spec M6)
+        if: inputs.map != ''
+        env:
+          MAP: ${{ inputs.map }}
+        run: |
+          [[ "$MAP" =~ ^[A-Za-z_]+$ ]] || { echo "::error::map must be a MapPreset name, got '$MAP'"; exit 1; }
+          echo "EYES_JVM_EXTRA=${EYES_JVM_EXTRA:-} -Dbat.eyes.map=$MAP" >> "$GITHUB_ENV"
+          echo "::notice::[Eyes] map: $MAP"
       - name: Window size (1600x900, a common laptop size; the default 854x480 crowds the HUD)
         run: |
           mkdir -p run
