@@ -57,6 +57,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.createAttributes().build());
         evt.put(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit.createAttributes().build());
         evt.put(EntityRegistrar.THORNWEAVER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit.createAttributes().build());
+        evt.put(EntityRegistrar.RENEWAL_SAPLING_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_DOG_UNIT.get(), ScoutDogUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_CAT_UNIT.get(), ScoutCatUnit.createAttributes().build());
         evt.put(EntityRegistrar.MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());

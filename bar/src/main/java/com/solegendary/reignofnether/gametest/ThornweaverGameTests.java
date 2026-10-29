@@ -22,9 +22,12 @@ import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitActionItem;
+import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit;
 import com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit;
 import com.solegendary.reignofnether.unit.units.verdant.ThornweaverProd;
 import com.solegendary.reignofnether.unit.units.verdant.ThornweaverUnit;
@@ -59,13 +62,15 @@ import java.util.Objects;
  *       (gathers the wisps within 8 blocks) with three spells and the shared Empower;</li>
  *   <li>Entangling Roots: 5 essence, 12 s - enemies within 3 blocks of the aimed spot are rooted (cannot move, can
  *       still attack) for 3 s;</li>
- *   <li>Seed of Renewal: 10 essence, 25 s - a sapling heals allies within 6 for 6 HP/s for 12 s, marked summoned;</li>
+ *   <li>Seed of Renewal: 10 essence, 25 s - a sapling heals allies within 6 for 3 HP/s for 10 s (Revision 1, scaled to
+ *       the Bloom Priestess); the sapling is a 100 HP unit the enemy can target, marked summoned (no essence);</li>
  *   <li>Sprout Guardian: 20 essence, 60 s - a sapling treant fights for the owner for 25 s, then withers, marked
  *       summoned (its death drops no essence);</li>
  *   <li>every spell refuses - no essence spent, no cooldown - when it cannot act (short of essence, nothing to root),
  *       and an order during the cooldown is refused too.</li>
  * </ul>
- * Every unit stands still (no AI) inside the test's own arena under owners unique to the arena. Early callbacks only
+ * Revision 1 (coordinator, Oct 29): Seed of Renewal at 3 HP/s for 10 s, its sapling a 100 HP unit that can be
+ * targeted, every summon marked summoned. Every unit stands still (no AI) inside the test's own arena under owners unique to the arena. Early callbacks only
  * record, never throw; the last callback judges and always cleans up (units, saplings, guardians, wisps) whatever the
  * verdict, as EssenceGameTests do.
  */
@@ -134,13 +139,9 @@ public class ThornweaverGameTests {
         return e != null && e.getAmplifier() >= EntanglingRoots.ROOT_AMPLIFIER;
     }
 
-    private static List<Entity> saplingsNear(BlockPos at, double r) {
-        List<Entity> found = new ArrayList<>();
-        Vec3 c = Vec3.atBottomCenterOf(at.above());
-        for (Entity s : SeedOfRenewal.getSaplings())
-            if (!s.isRemoved() && s.position().distanceTo(c) <= r)
-                found.add(s);
-        return found;
+    /** The live Seed of Renewal saplings within {@code r} of the cell above the ground block {@code at}. */
+    private static List<RenewalSaplingUnit> saplingsNear(ServerLevel level, BlockPos at, double r) {
+        return level.getEntitiesOfClass(RenewalSaplingUnit.class, new AABB(at.above()).inflate(r), e -> !e.isRemoved());
     }
 
     private static List<LivingEntity> guardiansNear(ServerLevel level, BlockPos at, double r) {
@@ -426,12 +427,13 @@ public class ThornweaverGameTests {
     // ------------------------------------------------------------------------------------- Seed of Renewal
 
     /**
-     * Seed of Renewal: 10 essence, 25 s cooldown. A sapling (marked summoned) heals the hurt friend 3 blocks away 6 HP a
-     * second for 12 s - 36 by half time, 72 in all, nothing after it withers - and never the friend 9 blocks away or
-     * the enemy beside it.
+     * Seed of Renewal: 10 essence, 25 s cooldown (Revision 1: 3 HP a second for 10 s). The sapling is a 100 HP unit of
+     * the caster's owner, marked summoned, that the enemy beside it counts as hostile and can damage, and it never mends
+     * itself. It heals the hurt friend 3 blocks away 3 HP a second - 15 by 5.5 s, 30 in all, nothing after it withers
+     * - and never the friend 9.9 blocks away or the enemy beside it.
      */
-    @GameTest(template = ARENA, timeoutTicks = 320, batch = BATCH)
-    public static void thornweaver_seed_of_renewal_heals_6_a_second_within_6_for_12_seconds(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 300, batch = BATCH)
+    public static void thornweaver_seed_of_renewal_heals_3_a_second_within_6_for_10_seconds(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "seed"), foe = owner(helper, "seedfoe");
         SkirmishGameTests.openGround(helper, 2, 2, 14, 14);
@@ -447,7 +449,7 @@ public class ThornweaverGameTests {
         }
         BlockPos spot = ground(helper, 6, 6);
         float[] start = new float[3];       // near, far, enemy health right after the cast
-        float[] half = { -1 }, end = { -1 }, after = { -1 };
+        float[] half = { -1 }, end = { -1 }, after = { -1 }, saplingHalf = { -1 };
         boolean[] witheredAtEnd = { false };
         List<Entity> made = new ArrayList<>();
         List<String> early = new ArrayList<>();
@@ -455,13 +457,13 @@ public class ThornweaverGameTests {
         helper.runAfterDelay(cast, () -> {
             try {
                 if (SeedOfRenewal.ESSENCE_COST != 10 || SeedOfRenewal.CD_SECONDS != 25 || SeedOfRenewal.RADIUS != 6
-                        || SeedOfRenewal.HEAL_PER_SECOND != 6f || SeedOfRenewal.LIFETIME_TICKS != 240)
-                    early.add("lovish set 10 essence, 25 s, 6 blocks, 6 HP/s for 12 s; Seed of Renewal has " + SeedOfRenewal.ESSENCE_COST
+                        || SeedOfRenewal.HEAL_PER_SECOND != 3f || SeedOfRenewal.LIFETIME_TICKS != 200)
+                    early.add("lovish set 10 essence, 25 s, 6 blocks, 3 HP/s for 10 s; Seed of Renewal has " + SeedOfRenewal.ESSENCE_COST
                         + ", " + SeedOfRenewal.CD_SECONDS + " s, " + SeedOfRenewal.RADIUS + ", " + SeedOfRenewal.HEAL_PER_SECOND
                         + " for " + SeedOfRenewal.LIFETIME_TICKS + " ticks");
-                if (near.getMaxHealth() < 90)
-                    early.add("the Elder Treant has " + near.getMaxHealth() + " health: too little to see 72 healed");
-                near.setHealth(near.getMaxHealth() - 85);
+                if (near.getMaxHealth() < 50)
+                    early.add("the Elder Treant has " + near.getMaxHealth() + " health: too little to see 30 healed");
+                near.setHealth(near.getMaxHealth() - 45);
                 far.setHealth(far.getMaxHealth() - 10);
                 enemy.setHealth(enemy.getMaxHealth() - 10);
                 start[0] = near.getHealth();
@@ -475,12 +477,26 @@ public class ThornweaverGameTests {
                     return;
                 }
                 seed.use(level, (Unit) caster, spot);
-                List<Entity> saplings = saplingsNear(spot, 1.5);
+                List<RenewalSaplingUnit> saplings = saplingsNear(level, spot, 1.5);
                 made.addAll(saplings);
-                if (saplings.size() != 1)
-                    early.add("the cast planted " + saplings.size() + " saplings by the spot, expected 1");
-                else if (!Essence.isSummoned(saplings.get(0)))
-                    early.add("the sapling is not marked summoned");
+                if (saplings.size() != 1) {
+                    early.add("the cast planted " + saplings.size() + " sapling units by the spot, expected 1");
+                } else {
+                    RenewalSaplingUnit sapling = saplings.get(0);
+                    if (RenewalSaplingUnit.HEALTH != 100f || Math.abs(sapling.getMaxHealth() - 100f) > 0.01f)
+                        early.add("the sapling has " + sapling.getMaxHealth() + " health, Revision 1 set 100");
+                    if (!me.equals(sapling.getOwnerName()))
+                        early.add("the sapling belongs to " + sapling.getOwnerName() + ", not to the caster's owner");
+                    if (!Essence.isSummoned(sapling) || !SeedOfRenewal.isSapling(sapling))
+                        early.add("the sapling is not marked summoned: its death would drop essence");
+                    if (UnitServerEvents.getUnitToEntityRelationship((Unit) enemy, sapling) != Relationship.HOSTILE)
+                        early.add("the enemy does not see the sapling as hostile: it cannot be targeted");
+                    if (!sapling.isAttackable() || sapling.isInvulnerable())
+                        early.add("the sapling cannot be attacked");
+                    sapling.hurt(level.damageSources().generic(), 10f);
+                    if (sapling.getHealth() > 90.01f)
+                        early.add("10 damage left the sapling at " + sapling.getHealth() + " health");
+                }
                 if (Essence.get(caster) != 20)
                     early.add("the Thornweaver holds " + Essence.get(caster) + " essence after Seed of Renewal, expected 30 - 10 = 20");
                 float cd = ((Unit) caster).getCooldown(seed);
@@ -490,25 +506,30 @@ public class ThornweaverGameTests {
                 early.add("the cast threw " + ex);
             }
         });
-        // pulses fall on the sapling's seconds (cast + 20, + 40 ... + 240): sample between them
-        helper.runAfterDelay(cast + 130, () -> half[0] = near.getHealth());
-        helper.runAfterDelay(cast + 250, () -> {
-            end[0] = near.getHealth();
-            witheredAtEnd[0] = made.stream().allMatch(Entity::isRemoved) && saplingsNear(spot, 1.5).isEmpty();
+        // pulses fall on the sapling's seconds (about cast + 20, + 40 ... + 200): sample between them
+        helper.runAfterDelay(cast + 110, () -> {
+            half[0] = near.getHealth();
+            saplingHalf[0] = made.isEmpty() ? -1 : ((LivingEntity) made.get(0)).getHealth();
         });
-        helper.runAfterDelay(cast + 290, () -> {
+        helper.runAfterDelay(cast + 230, () -> {
+            end[0] = near.getHealth();
+            witheredAtEnd[0] = made.stream().allMatch(Entity::isRemoved) && saplingsNear(level, spot, 1.5).isEmpty();
+        });
+        helper.runAfterDelay(cast + 270, () -> {
             after[0] = near.getHealth();
             List<String> problems = new ArrayList<>(early);
             try {
                 if (problems.isEmpty()) {
-                    if (Math.abs(half[0] - start[0] - 36) > 0.01f)
-                        problems.add("the friend 3 blocks away gained " + (half[0] - start[0]) + " HP in 6.5 s, expected 6 pulses x 6 = 36");
-                    if (Math.abs(end[0] - start[0] - 72) > 0.01f)
-                        problems.add("the friend 3 blocks away gained " + (end[0] - start[0]) + " HP over the sapling's 12 s, expected 72");
+                    if (Math.abs(half[0] - start[0] - 15) > 0.01f)
+                        problems.add("the friend 3 blocks away gained " + (half[0] - start[0]) + " HP in 5.5 s, expected 5 pulses x 3 = 15");
+                    if (Math.abs(end[0] - start[0] - 30) > 0.01f)
+                        problems.add("the friend 3 blocks away gained " + (end[0] - start[0]) + " HP over the sapling's 10 s, expected 30");
                     if (!witheredAtEnd[0])
-                        problems.add("the sapling still stood 12.5 s after it was planted");
+                        problems.add("the sapling still stood 11.5 s after it was planted");
                     if (Math.abs(after[0] - end[0]) > 0.01f)
                         problems.add("the friend gained " + (after[0] - end[0]) + " HP after the sapling withered");
+                    if (saplingHalf[0] > 90.01f)
+                        problems.add("the sapling mended itself: " + saplingHalf[0] + " health 5.5 s after taking 10 damage");
                     if (Math.abs(far.getHealth() - start[1]) > 0.01f)
                         problems.add("the friend 9.9 blocks away was healed (" + start[1] + " -> " + far.getHealth() + ")");
                     if (Math.abs(enemy.getHealth() - start[2]) > 0.01f)
@@ -516,45 +537,79 @@ public class ThornweaverGameTests {
                 }
             } finally {
                 discardAll(made);
-                discardAll(saplingsNear(spot, 1.5));
+                discardAll(saplingsNear(level, spot, 1.5));
                 discardAll(all);
             }
             finish(helper, problems);
         });
     }
 
-    /** Seed of Renewal refuses a Thornweaver 1 essence short: no sapling, nothing spent, no cooldown. */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void thornweaver_seed_of_renewal_refuses_when_short(GameTestHelper helper) {
+    /**
+     * Seed of Renewal refuses a Thornweaver 1 essence short (no sapling, nothing spent, no cooldown); a full one plants
+     * a sapling, and the sapling cut down drops no essence wisp (a summon must not feed the caster that made it).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
+    public static void thornweaver_seed_of_renewal_refuses_when_short_and_its_sapling_drops_no_essence(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String me = owner(helper, "seedno");
-        SkirmishGameTests.openGround(helper, 2, 2, 10, 10);
+        SkirmishGameTests.openGround(helper, 2, 2, 13, 13);
         Mob poor = weaver(helper, me, 2, 2, 9);
-        if (poor == null) {
-            helper.fail("could not spawn a Thornweaver");
+        Mob rich = weaver(helper, me, 13, 2, 30);
+        List<Entity> all = live(poor, rich);
+        if (all.size() != 2) {
+            discardAll(all);
+            helper.fail("could not spawn the two Thornweavers");
             return;
         }
-        BlockPos spot = ground(helper, 6, 6);
+        BlockPos poorSpot = ground(helper, 4, 8), richSpot = ground(helper, 11, 8);
+        List<Entity> made = new ArrayList<>();
+        List<String> early = new ArrayList<>();
+        Vec3[] deathAt = { null };
         helper.runAfterDelay(3, () -> {
-            List<String> problems = new ArrayList<>();
             try {
-                SeedOfRenewal seed = ability(poor, SeedOfRenewal.class);
+                SeedOfRenewal a = ability(poor, SeedOfRenewal.class), b = ability(rich, SeedOfRenewal.class);
+                if (Essence.get(poor) != 9 || Essence.get(rich) != 30)
+                    early.add("the Thornweavers hold " + Essence.get(poor) + " and " + Essence.get(rich) + " essence, the test gave them 9 and 30");
+                if (a == null || b == null) {
+                    early.add("a Thornweaver has no Seed of Renewal");
+                    return;
+                }
+                a.use(level, (Unit) poor, poorSpot);
+                List<RenewalSaplingUnit> none = saplingsNear(level, poorSpot, 3);
+                made.addAll(none);
+                if (!none.isEmpty())
+                    early.add("a Thornweaver 1 essence short planted a sapling");
                 if (Essence.get(poor) != 9)
-                    problems.add("the Thornweaver holds " + Essence.get(poor) + " essence, the test gave it 9");
-                if (seed == null)
-                    problems.add("the Thornweaver has no Seed of Renewal");
+                    early.add("a Thornweaver 1 essence short spent essence: " + Essence.get(poor) + " left of 9");
+                if (((Unit) poor).getCooldown(a) > 0)
+                    early.add("a Thornweaver 1 essence short got a cooldown");
+                b.use(level, (Unit) rich, richSpot);
+                List<RenewalSaplingUnit> planted = saplingsNear(level, richSpot, 1.5);
+                made.addAll(planted);
+                if (planted.size() != 1)
+                    early.add("the cast planted " + planted.size() + " sapling units, expected 1");
                 else {
-                    seed.use(level, (Unit) poor, spot);
-                    if (!saplingsNear(spot, 1.5).isEmpty())
-                        problems.add("a Thornweaver 1 essence short planted a sapling");
-                    if (Essence.get(poor) != 9)
-                        problems.add("a Thornweaver 1 essence short spent essence: " + Essence.get(poor) + " left of 9");
-                    if (((Unit) poor).getCooldown(seed) > 0)
-                        problems.add("a Thornweaver 1 essence short got a cooldown");
+                    deathAt[0] = planted.get(0).position();
+                    planted.get(0).kill();
+                }
+            } catch (RuntimeException ex) {
+                early.add("the cast threw " + ex);
+            }
+        });
+        helper.runAfterDelay(15, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                if (problems.isEmpty() && deathAt[0] != null) {
+                    long wisps = EssenceServerEvents.getWisps().stream()
+                        .filter(w -> !w.isRemoved() && w.position().distanceTo(deathAt[0]) <= 3).count();
+                    if (wisps > 0)
+                        problems.add("the cut-down sapling left " + wisps + " essence wisps: summons must drop none");
                 }
             } finally {
-                discardAll(saplingsNear(spot, 1.5));
-                poor.discard();
+                if (deathAt[0] != null)
+                    clearWispsNear(deathAt[0], 3);
+                discardAll(made);
+                discardAll(all);
             }
             finish(helper, problems);
         });

@@ -228,7 +228,7 @@ public class SeedOfRenewal extends Ability {
      * One pulse: {@code amount} HP to every friendly unit (the owner's or an ally's, never a foe) within {@link #RADIUS}
      * of the sapling that is not at full health. Returns how many it healed.
      */
-    static int pulse(ServerLevel sl, Entity sapling, String owner, float amount) {
+    public static int pulse(ServerLevel sl, Entity sapling, String owner, float amount) {   // public for RenewalSaplingUnit (Revision 1, next commit)
         int n = 0;
         double r2 = (double) RADIUS * RADIUS;
         for (LivingEntity le : UnitGrid.near(sl, sapling.getX(), sapling.getZ(), RADIUS, scratch)) {

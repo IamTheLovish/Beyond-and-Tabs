@@ -321,6 +321,13 @@ public class EntityRegistrar {
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornweaver_unit").toString()));
+    // its Seed of Renewal sapling: a still, targetable unit on a totem's plumbing (Revision 1: 100 HP)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit>> RENEWAL_SAPLING_UNIT = ENTITIES.register("renewal_sapling_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.RenewalSaplingUnit::new, MobCategory.MISC)
+                    .sized(0.75f, 1.0f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "renewal_sapling_unit").toString()));
 
     // Tidewrought (design/tidewrought_plan.md, slice 1). The Gull Spotter is Alex's Mobs' seagull body (RenderSeagull),
     // a little bigger than AM's wild gull so it can be clicked from the RTS camera
