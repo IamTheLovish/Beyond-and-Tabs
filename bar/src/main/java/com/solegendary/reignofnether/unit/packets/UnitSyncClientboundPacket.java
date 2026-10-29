@@ -88,7 +88,7 @@ public class UnitSyncClientboundPacket {
                                 entity.getHealth(),
                                 entity.getAbsorptionAmount(),
                                 entity.getX(), entity.getY(), entity.getZ(),
-                                0,0,0,0, entity instanceof Unit unit ? unit.getCost().population : 0, owner)
+                                0,0,0,0, com.solegendary.reignofnether.unit.Summons.population(entity), owner)
                 );
             }
         }

@@ -62,6 +62,11 @@ The design review of Oct 29 (Fable, ~07:50Z) found these base-level holes; the c
   hero, commander, experimental (`DefenceTower.isExperimental`) or summon. `Empower.setTargetHook(type, hook)` replaces
   the rank for one unit type and its own `accepts` replaces those refusals - the Grave Adept's 120 XP in its PR.
 - **A dead carrier drops what it held** as a second wisp (a summoned carrier drops nothing).
+- **Summons take no population** (lovish, Oct 29: "ALL summons take no population"; PR stacked on this one, branch
+  claude/essence-base-pop): `Summons.population` is 0 for a summon - the server's count, the player panel and the
+  unit sync all use it, and the client counts the synced value (`PopulationTally`), since summon tags never reach it.
+  Lich Regent ghouls are marked as summons too; the Bone Dragon's and Raise Dead's population-room checks are gone,
+  the 8-per-owner risen cap stays.
 - **Bots:** `Ability.autocastEssence` (the AutoCaster casts only when the caster holds it) and `AutoRule.BUILDING_HURT`
   (the most hurt friendly building under 70% health whose footprint is within reach).
 - Not in this base PR (they belong to the caster PRs): the damage and heal numbers, the renames, Spirit Puppet's

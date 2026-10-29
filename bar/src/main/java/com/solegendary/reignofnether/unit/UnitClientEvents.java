@@ -293,6 +293,15 @@ public class UnitClientEvents {
     private static int unitPopulationCacheUnits = -1;
     private static int unitPopulationCacheVirtual = -1;
 
+    // the population the server last synced per unit id (Summons.population: 0 for a summon, whose tag never reaches
+    // the client); read through PopulationTally
+    private static final it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap syncedPopulation = new it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap();
+
+    /** What {@code le} adds to its owner's population on this client (0 for a summon once synced). */
+    public static int populationOf(LivingEntity le) {
+        return PopulationTally.populationOf(le, syncedPopulation);
+    }
+
     private static int getUnitPopulation(String playerName) {
         long tick = MC.level != null ? MC.level.getGameTime() : Long.MIN_VALUE;
         if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheUnits ||
@@ -302,7 +311,7 @@ public class UnitClientEvents {
             for (LivingEntity entity : allUnits) {
                 allUnitIds.add(entity.getId());
                 if (entity instanceof Unit unit)
-                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+                    unitPopulationCache.merge(unit.getOwnerName(), PopulationTally.populationOf(entity, syncedPopulation), Integer::sum);
             }
             for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits) {
                 if (!allUnitIds.contains(virtualUnit.id))
@@ -606,6 +615,7 @@ public class UnitClientEvents {
     private static void applyUnitStats(@Nullable LivingEntity trackedEntity, int entityId, float health, float absorb, Vec3 pos, String ownerName, int population) {
         if (MC.level == null)
             return;
+        syncedPopulation.put(entityId, population);
         boolean isLoadedClientside = MC.level.getEntity(entityId) != null;
 
         if (trackedEntity != null) {
@@ -805,6 +815,7 @@ public class UnitClientEvents {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut evt) {
         com.solegendary.reignofnether.unit.goals.ExploreBuildLocationGoal.forgetAllGhosts();
+        syncedPopulation.clear();   // and so must the synced population per unit id
     }
 
     @SubscribeEvent
@@ -814,6 +825,11 @@ public class UnitClientEvents {
                 idleWorkerIds.removeIf(id -> id == evt.getEntity().getId());
                 idleT2BuilderIds.removeIf(id -> id == evt.getEntity().getId());
             }
+            // a unit gone from the client may still be counted through its minimap VirtualUnit (its own synced
+            // population), so only a removed (dead or discarded) one forgets its entry
+            if (evt.getEntity().isRemoved() && evt.getEntity().getRemovalReason() != null
+                    && evt.getEntity().getRemovalReason().shouldDestroy())
+                syncedPopulation.remove(evt.getEntity().getId());
         } catch (Exception e) {
             ReignOfNether.LOGGER.warn("Error while trying to remove an idleWorkerId");
         }

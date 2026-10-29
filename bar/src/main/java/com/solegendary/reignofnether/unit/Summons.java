@@ -2,19 +2,25 @@ package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.ability.abilities.AwakenThicket;
 import com.solegendary.reignofnether.mana.DecoyServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.brass.ClockworkDroneUnit;
 import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
 import com.solegendary.reignofnether.unit.units.monsters.ZombieUnit;
 import com.solegendary.reignofnether.unit.units.neutral.BeeUnit;
 
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 /**
  * The one "summoned" rule (design/essence_casters.md Revision 1, Oct 29: summons must not feed their own side's loops).
  * A summoned or temporary unit's death drops no essence wisp (EssenceServerEvents), sends no hero XP orbs
- * (HeroServerEvents) and gives its killer no veterancy experience (VeterancyServerEvents), and Empower refuses it.
+ * (HeroServerEvents) and gives its killer no veterancy experience (VeterancyServerEvents), Empower refuses it, and it
+ * takes no population ({@link #population}; lovish, Oct 29: "ALL summons take no population"). The tags stay on the
+ * server: clients learn a summon's 0 through the population the unit sync sends (UnitSyncBatcher, PopulationTally).
  * <p>
- * New summons call {@link #mark} (a saved entity tag). The summons that existed before keep their own markers and are
+ * New summons call {@link #mark} (a saved entity tag): hero summons (HeroCore.addSummon), an infested building's
+ * limited-life silverfish, a Lich Regent's ghouls (RaiseDead), every essence caster summon. The summons that existed
+ * before keep their own markers and are
  * read here, so nothing about them changes elsewhere: a Bone Dragon's or Necropolis' risen ({@code bt_risen}, which also
  * means no wreck and the 8-per-owner cap - not every summon should carry that), an awakened treant, a Mirror Mage's
  * decoy, a necromancer's zombie or a summoned bee, and by class the free machines (a deployed turret, an Iron Leviathan
@@ -29,6 +35,13 @@ public final class Summons {
     /** Marks a summon for its lifetime (saved with it). */
     public static void mark(Entity e) {
         e.addTag(TAG);
+    }
+
+    /** The population a unit takes: its cost's, or 0 for a summon. The server's count and the unit sync both use it. */
+    public static int population(LivingEntity le) {
+        if (!(le instanceof Unit u) || u.getCost() == null || isSummoned(le))
+            return 0;
+        return u.getCost().population;
     }
 
     public static boolean isSummoned(Entity e) {

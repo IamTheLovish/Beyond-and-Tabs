@@ -3,7 +3,6 @@ package com.solegendary.reignofnether.ability.abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
-import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -36,8 +35,9 @@ import java.util.List;
 /**
  * Gravebound Lich Regent: <b>Raise Dead</b> (design-factions.md, "every wreck is an army"). Up to {@link #MAX_RAISED}
  * wrecks within {@link #RADIUS} blocks rise as Ghouls (zombie units) under the commander's owner. Never free: each
- * Ghoul costs its normal metal, paid from the wreck first and the pool for any remainder, and it still needs
- * population room. Wreck metal beyond a Ghoul's cost stays on the wreck. 30 s cooldown, instant cast.
+ * Ghoul costs its normal metal, paid from the wreck first and the pool for any remainder. A Ghoul is a summon
+ * (unit/Summons): it takes no population (lovish, Oct 29). Wreck metal beyond a Ghoul's cost stays on the wreck.
+ * 30 s cooldown, instant cast.
  */
 public class RaiseDead extends Ability {
 
@@ -86,7 +86,6 @@ public class RaiseDead extends Ability {
     /** Raises what it can and returns how many rose. Public for the game test. */
     public static int raise(ServerLevel level, LivingEntity self, String owner) {
         float cost = ResourceCosts.ZOMBIE.metal();
-        int popEach = Math.max(1, ResourceCosts.ZOMBIE.population);
         Resources pool = null;
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (r.ownerName.equals(owner))
@@ -100,10 +99,6 @@ public class RaiseDead extends Ability {
         for (Entity w : near) {
             if (raised >= MAX_RAISED)
                 break;
-            int pop = UnitServerEvents.getCurrentPopulation(owner);
-            int cap = BuildingServerEvents.getTotalPopulationSupply(owner);
-            if (pop + popEach > cap)
-                break;
             float fromWreck = Math.min(WreckServerEvents.metalOf(w), cost);
             float fromPool = cost - fromWreck;
             if (fromPool > 0 && (pool == null || pool.getMetal() < fromPool))
@@ -113,6 +108,7 @@ public class RaiseDead extends Ability {
             WreckServerEvents.drain(level, w, fromWreck);
             Entity ghoul = UnitServerEvents.spawnMob(EntityRegistrar.ZOMBIE_UNIT.get(), level, w.blockPosition().below(), owner);   // spawnMob adds one block
             if (ghoul != null) {
+                com.solegendary.reignofnether.unit.Summons.mark(ghoul);   // a summon: no population (lovish, Oct 29) and no loop pay-outs
                 raised++;
                 level.sendParticles(ParticleTypes.SOUL, w.getX(), w.getY() + 0.5, w.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
             }

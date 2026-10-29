@@ -119,10 +119,11 @@ public class ObserverPlayerDisplay extends AbstractPlayerDisplay {
                     continue;
                 }
 
+                int pop = UnitClientEvents.populationOf(entities);   // summons take none (the synced population)
                 if (unit instanceof WorkerUnit) {
-                    civilianSupply += unit.getCost().population;
+                    civilianSupply += pop;
                 } else {
-                    militarySupply += unit.getCost().population;
+                    militarySupply += pop;
                 }
             }
         }

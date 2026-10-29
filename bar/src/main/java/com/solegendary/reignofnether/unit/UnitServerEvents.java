@@ -230,8 +230,8 @@ public class UnitServerEvents {
                 allUnitsModCount != unitPopulationCacheModCount || serverLevel == null) {
             unitPopulationCache.clear();
             for (LivingEntity entity : allUnits)
-                if (entity instanceof Unit unit && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(entity))   // a Mirror Mage's decoy is no one
-                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+                if (entity instanceof Unit unit)   // a summon (a decoy too) takes none: Summons.population
+                    unitPopulationCache.merge(unit.getOwnerName(), Summons.population(entity), Integer::sum);
             unitPopulationCacheTick = tick;
             unitPopulationCacheSize = allUnits.size();
             unitPopulationCacheModCount = allUnitsModCount;

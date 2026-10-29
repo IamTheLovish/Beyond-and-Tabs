@@ -212,7 +212,7 @@ public class PlayerPanelServerEvents {
             if (u.getCost() != null) {
                 if (!worker)
                     a[0] += u.getCost().metal();
-                a[worker ? 3 : 4] += u.getCost().population;
+                a[worker ? 3 : 4] += com.solegendary.reignofnether.unit.Summons.population(le);   // summons take none
             }
             // Abilities.get() builds a list, so only units that can carry a power look: commanders (their powers are
             // added at runtime) and unit types that were seen with one

@@ -232,7 +232,7 @@ public final class UnitSyncBatcher {
         e.x = le.getX();
         e.y = le.getY();
         e.z = le.getZ();
-        e.population = unit.getCost().population;
+        e.population = Summons.population(le);   // a summon's 0: its tag never reaches the client (PopulationTally)
         e.ownerName = unit.getOwnerName();
         // SYNC_RESOURCES
         Resources res = Resources.getTotalResourcesFromItems(unit.getItems());
