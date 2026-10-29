@@ -7,6 +7,8 @@ import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.api.distmarker.Dist;
@@ -123,6 +125,14 @@ public final class MotionPass {
             return null;
         BoneMap map = BoneMaps.forModel(model);
         return map != null && map.deathPose() ? map : null;
+    }
+
+    /** {@link #ownsDeath(LivingEntity, EntityModel)} for a caller with no model at hand: its own renderer's model. */
+    public static BoneMap ownsDeath(LivingEntity e) {
+        if (e.deathTime <= 0)
+            return null;
+        EntityRenderer<?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(e);
+        return renderer instanceof LivingEntityRenderer<?, ?> r ? ownsDeath(e, r.getModel()) : null;
     }
 
     private static void fall(LivingEntity e, EntityModel<?> model, BoneMap map, PoseStack ps, float partial) {

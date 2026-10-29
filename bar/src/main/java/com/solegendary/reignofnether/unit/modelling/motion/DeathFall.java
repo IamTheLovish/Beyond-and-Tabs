@@ -116,6 +116,15 @@ public final class DeathFall {
         return FALL_DEG - bounce;
     }
 
+    /**
+     * Whether a unit is drawn with the red hurt overlay. Vanilla: while hurt or dying. A body that falls by itself
+     * (owned by DeathFall) is red only while hurt, as in life: the hurt flash of the killing blow, then its own colours
+     * for the fall and the hold - on the body and on every layer (team cloth) alike.
+     */
+    public static boolean red(int hurtTime, int deathTime, boolean owned) {
+        return hurtTime > 0 || (deathTime > 0 && !owned);
+    }
+
     /** How far the body has sunk at deathTime t, blocks: 0 until HOLD_END, then down to SINK_BLOCKS at END. */
     public static float sinkBlocks(float t) {
         if (!(t > HOLD_END))

@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -47,6 +48,9 @@ public final class Corpses {
 
     private static final LivingEntity[] HELD = new LivingEntity[MAX];
     private static final DeathFinish.Style[] FINISH = new DeathFinish.Style[MAX];
+    // each body's culling box, made once when it is kept (it no longer moves): the upright box grown by its height,
+    // as the body lies up to its height along the fall
+    private static final AABB[] BOX = new AABB[MAX];
     private static int count = 0;
     private static boolean drawing = false;
     private static float alpha = 1f;
@@ -99,12 +103,15 @@ public final class Corpses {
         le.attackAnim = le.oAttackAnim = 0f;
         le.hurtTime = 0;
         FINISH[count] = DeathFinish.of(BarFx.factionOf(le));
+        BOX[count] = le.getBoundingBoxForCulling().inflate(le.getBbHeight());
         HELD[count++] = le;
     }
 
     private static void drop(int i) {
         System.arraycopy(HELD, i + 1, HELD, i, count - i - 1);
         System.arraycopy(FINISH, i + 1, FINISH, i, count - i - 1);
+        System.arraycopy(BOX, i + 1, BOX, i, count - i - 1);
+        BOX[count - 1] = null;
         HELD[--count] = null;
         FINISH[count] = null;
     }
@@ -113,6 +120,7 @@ public final class Corpses {
         for (int i = 0; i < count; i++) {
             HELD[i] = null;
             FINISH[i] = null;
+            BOX[i] = null;
         }
         count = 0;
     }
@@ -158,7 +166,7 @@ public final class Corpses {
         if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES || count == 0 || disabled)
             return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null)
+        if (mc.level == null || mc.level != lastLevel)     // a new level: its first frame may come before the tick
             return;
         Vec3 cam = evt.getCamera().getPosition();
         Frustum frustum = evt.getFrustum();
@@ -174,7 +182,7 @@ public final class Corpses {
                 DeathFinish.Style f = FINISH[i];
                 double dx = le.getX() - cam.x, dy = le.getY() - cam.y, dz = le.getZ() - cam.z;
                 if (dx * dx + dy * dy + dz * dz > MAX_DIST * MAX_DIST
-                    || (frustum != null && !frustum.isVisible(le.getBoundingBoxForCulling())))
+                    || (frustum != null && !frustum.isVisible(BOX[i])))
                     continue;
                 float t = le.deathTime + partial;
                 float k = DeathFinish.scale(f, t);

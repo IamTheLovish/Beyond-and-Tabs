@@ -253,4 +253,16 @@ class DeathFallTest {
                 assertEquals(before[i * 6 + 2], map.death[i].y, 0f);
             }
     }
+
+    @Test
+    void aBodyThatFallsByItselfIsRedOnlyWhileHurt() {
+        // vanilla: red while hurt or dying, on the body and every layer (LivingEntityRenderer.getOverlayCoords)
+        assertTrue(DeathFall.red(0, 5, false), "vanilla's death: red throughout");
+        assertTrue(DeathFall.red(4, 0, true), "the hurt flash of a living unit");
+        assertTrue(DeathFall.red(6, 2, true), "the hurt flash of the killing blow");
+        // the team cloth asked for the overlay on the falling Halberdier and on the body Corpses held: red to tick 100
+        for (int t = 1; t < DeathFall.END; t++)
+            assertFalse(DeathFall.red(0, t, true), "its own colours once the flash is over, tick " + t);
+        assertFalse(DeathFall.red(0, 0, false), "alive and unhurt");
+    }
 }
