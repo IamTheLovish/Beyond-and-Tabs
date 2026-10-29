@@ -4,7 +4,9 @@ lovish, Oct 28: "think more like an architecture professional and study how they
 realistic enough", 23:44 "become a master architect". This is the rulebook every building generator and art round is
 held to. Part 1 is architecture (why buildings look the way they do). Part 2 is measured: 26 downloaded builds
 (Itachi 3's planetminecraft set, study only - never committed, never copied) run through `tools/schem_study.py`, next to
-our Engine Shed r7. Part 3 is the gates a generator test checks. Refs: design/refs/vehicle_labs/ref45-70 and the notes in
+our Engine Shed r7. Part 3 is the gates a generator test checks. Block-by-block
+recipes for each element: design/vehicle_labs/studies/detail_recipes.md; what the best RTS games do (Frostpunk, Anno
+1800): design/research/rts-buildings-frostpunk-anno-2026-10-29.md. Refs: design/refs/vehicle_labs/ref45-70 and the notes in
 design/vehicle_labs/engine_shed_detail_grammar.md.
 
 ## 1. Principles (the architect's view)
@@ -53,7 +55,10 @@ houses (2012-13, still good) = cross-gabled roofs with 1-block eaves, half-timbe
 fence balustrades, a stone plinth.
 
 ## 3. Gates (a generator test checks these on the built structure, with tools/schem_study.py)
-- G1 eaves: every camera-facing eave and verge oversails its wall by >= 1 block (`eave_overhang`).
+- G1 eaves: every camera-facing eave and verge oversails its wall by >= 1 block (`eave_overhang`). The oversailing
+  piece may be the roof itself OR a pale trim lip / cornice course under it (the recipe study re-measured the
+  factory: 136 of its ~148 overhang cells are pale trim slabs and stairs, only 6 are copper roof) - what matters is the
+  shadow line at the eave.
 - G2 detail density: thin / detail blocks >= 8 % of the building's blocks (glyphs `| = * g`).
 - G3 no single block over 25 % of the building's (non-ground) blocks.
 - G4 wall / roof contrast: roof cells' main family differs from the wall's main family.
