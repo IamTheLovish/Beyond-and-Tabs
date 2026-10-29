@@ -642,6 +642,10 @@ public final class PossessionServer {
         // field artillery still setting up holds the shot, and the click costs no cooldown (SetUp, lovish Oct 24)
         if (!com.solegendary.reignofnether.unit.SetUp.isSetUp(mob))
             return true;
+        // a venting machine can't fire (brass/Heat): hold the shot the same way, the click costs no cooldown
+        if (mob instanceof com.solegendary.reignofnether.brass.Machine machine
+                && !com.solegendary.reignofnether.brass.Heat.canFire(machine))
+            return true;
         boolean ranged = mob instanceof RangedAttackerUnit;
         float range = attacker.getAttackRange();
         double reach = ranged ? Math.max(range, 4) : Math.max(range, 1.5f) + mob.getBbWidth() * 0.5 + 1.0;
