@@ -65,6 +65,14 @@ public class GraveyardExitGameTests {
     static final int SETTLE = 20;
     /** Ticks after the last unit for every one to be out of the graveyard and at its rally point. */
     static final int LIMIT = 400;
+    /**
+     * Ticks the graveyard's chunks get to become entity-ticking before the first unit is raised. A unit made in a chunk
+     * whose entities are not accessible yet is in the world but invisible to getEntitiesOfClass, which is how the test
+     * finds what the graveyard made: the Overflowing graveyard, standing in the farthest chunk of the batch's row of
+     * arenas, "raised" its first units into nothing (stress 40769583532: 2 of 8 shards, "unit 0 was not raised").
+     */
+    static final int READY_CAP = 300;
+    static final int TIMEOUT = READY_CAP + SETTLE + UNITS * SPACING + LIMIT + 100;
     /** "At the rally point": five Zombies sent to one cell stand round it, the farthest a few blocks off. */
     static final double RALLY_NEAR = 6.0;
 
@@ -72,49 +80,49 @@ public class GraveyardExitGameTests {
 
     // ------------------------------------------------------------------------------------- open ground, each level
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l1_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 0, Gate.OPEN); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void overflowing_graveyard_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 1, Gate.OPEN); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l2_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 2, Gate.OPEN); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l3_units_walk_out_to_the_rally(GameTestHelper helper) { run(helper, 3, Gate.OPEN); }
 
     // ------------------------------------------------------- a building flush across half the gate (one cell left)
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l1_units_get_out_past_a_building_across_half_the_gate(GameTestHelper helper) { run(helper, 0, Gate.HALF_BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void overflowing_graveyard_units_get_out_past_a_building_across_half_the_gate(GameTestHelper helper) { run(helper, 1, Gate.HALF_BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l2_units_get_out_past_a_building_across_half_the_gate(GameTestHelper helper) { run(helper, 2, Gate.HALF_BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l3_units_get_out_past_a_building_across_half_the_gate(GameTestHelper helper) { run(helper, 3, Gate.HALF_BLOCKED); }
 
     // ------------------------------------------------------------------ a building flush against the whole gate side
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l1_units_get_out_with_a_building_against_the_gate(GameTestHelper helper) { run(helper, 0, Gate.BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void overflowing_graveyard_units_get_out_with_a_building_against_the_gate(GameTestHelper helper) { run(helper, 1, Gate.BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l2_units_get_out_with_a_building_against_the_gate(GameTestHelper helper) { run(helper, 2, Gate.BLOCKED); }
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l3_units_get_out_with_a_building_against_the_gate(GameTestHelper helper) { run(helper, 3, Gate.BLOCKED); }
 
     // -------------------------------------------------------------------------------- the gate facing a steep bank
 
-    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 600)
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = TIMEOUT)
     public static void graveyard_l2_units_get_out_with_the_gate_facing_a_bank(GameTestHelper helper) { run(helper, 2, Gate.BANK); }
 
     // ------------------------------------------------------------------------------------------------- the run
@@ -127,7 +135,7 @@ public class GraveyardExitGameTests {
      */
     private static void run(GameTestHelper helper, int code, Gate gate) {
         ServerLevel level = helper.getLevel();
-        RtsPathingLease.take();
+        Runnable giveBackPathing = RtsPathingLease.takeUntilEnd(helper);
         String owner = "gametest_gyexit_" + code + "_" + gate.name().toLowerCase(Locale.ROOT) + "_"
             + helper.absolutePos(BlockPos.ZERO).asLong();
         List<GraveyardPlacement> stamped = new ArrayList<>();
@@ -144,7 +152,7 @@ public class GraveyardExitGameTests {
                     z.discard();
             for (GraveyardPlacement p : stamped)
                 clear(level, p);
-            RtsPathingLease.release();
+            giveBackPathing.run();
             if (failure == null)
                 helper.succeed();
             else
@@ -222,12 +230,28 @@ public class GraveyardExitGameTests {
         Set<Integer> known = new HashSet<>();
         int[] firstOut = new int[UNITS];
         java.util.Arrays.fill(firstOut, -1);
-        for (int i = 0; i < UNITS; i++) {
-            final int n = i;
-            helper.runAfterDelay(SETTLE + i * SPACING, () -> {
-                if (finished[0])
+        boolean[] madeUnit = new boolean[UNITS];
+        List<long[]> chunks = chunksAround(gy, rally);
+        int[] readyAt = { -1 };
+        // one callback, a state machine on the tick (DragonDiveGameTests: vanilla iterates its tick-time map while it
+        // runs the callbacks, so nothing is scheduled from inside one): wait for the chunks, raise the units, then watch
+        helper.onEachTick(() -> {
+            if (finished[0])
+                return;
+            try {
+                long tick = helper.getTick();
+                if (readyAt[0] < 0) {
+                    if (entitiesReady(level, chunks)) {
+                        readyAt[0] = (int) tick;
+                    } else if (tick >= READY_CAP) {
+                        finish.accept(layout + ": the graveyard's chunks were not entity-ticking after " + READY_CAP + " ticks");
+                    }
                     return;
-                try {
+                }
+                for (int n = 0; n < UNITS; n++) {
+                    if (madeUnit[n] || tick < readyAt[0] + SETTLE + n * SPACING)
+                        continue;
+                    madeUnit[n] = true;
                     for (ZombieUnit z : zombiesOf(level, gy, owner))
                         known.add(z.getId());
                     // the real path: GraveyardUnitProductionItem -> ZombieProd.onComplete -> ProductionPlacement.produceUnit
@@ -237,26 +261,18 @@ public class GraveyardExitGameTests {
                         if (known.add(z.getId()))
                             made = z;
                     if (made == null) {
-                        problems.add("unit " + n + " was not raised (skulls " + gy.getTotalSkulls() + ")");
-                        return;
+                        problems.add("unit " + n + " was not raised (skulls " + gy.getTotalSkulls() + ", chunks entity-ticking "
+                            + entitiesReady(level, chunks) + ")");
+                        continue;
                     }
                     // it must walk out, not pick a fight with a neighbouring arena's units on the way
                     EngagementStance.set(made, EngagementStance.HOLD_FIRE);
                     made.setInvulnerable(true);
                     raised.add(made);
-                } catch (GameTestAssertException e) {
-                    throw e;   // helper.fail's own way of failing the test
-                } catch (Throwable t) {
-                    finish.accept("raising unit " + n + ": " + t);
                 }
-            });
-        }
-        final int lastAt = SETTLE + (UNITS - 1) * SPACING;
-        helper.onEachTick(() -> {
-            if (finished[0] || helper.getTick() < lastAt + 1)
-                return;
-            try {
-                long tick = helper.getTick();
+                final int lastAt = readyAt[0] + SETTLE + (UNITS - 1) * SPACING;
+                if (tick < lastAt + 1)
+                    return;
                 boolean all = raised.size() == UNITS && problems.isEmpty();
                 for (int i = 0; i < raised.size(); i++) {
                     ZombieUnit z = raised.get(i);
@@ -267,7 +283,7 @@ public class GraveyardExitGameTests {
                 }
                 if (all) {
                     ReignOfNether.LOGGER.info("[GraveyardExit] {}: {} of {} out and at the rally by tick {} (out at {})",
-                        layout, raised.size(), UNITS, tick, java.util.Arrays.toString(firstOut));
+                        layout, raised.size(), UNITS, tick - readyAt[0], java.util.Arrays.toString(firstOut));
                     finish.accept(null);
                     return;
                 }
@@ -284,9 +300,32 @@ public class GraveyardExitGameTests {
             } catch (GameTestAssertException e) {
                 throw e;   // helper.fail's own way of failing the test
             } catch (Throwable t) {
-                finish.accept("checking: " + t);
+                finish.accept("running: " + t);
             }
         });
+    }
+
+    /** The chunks the graveyard, its walk to the rally point and the margin it must leave by stand in: [chunkX, chunkZ]. */
+    private static List<long[]> chunksAround(BuildingPlacement gy, BlockPos rally) {
+        int pad = UnitUnstick.LEAVE_MARGIN + 2;
+        int x0 = Math.min(gy.minCorner.getX(), rally.getX()) - pad, x1 = Math.max(gy.maxCorner.getX(), rally.getX()) + pad;
+        int z0 = Math.min(gy.minCorner.getZ(), rally.getZ()) - pad, z1 = Math.max(gy.maxCorner.getZ(), rally.getZ()) + pad;
+        List<long[]> out = new ArrayList<>();
+        for (int cx = x0 >> 4; cx <= x1 >> 4; cx++)
+            for (int cz = z0 >> 4; cz <= z1 >> 4; cz++)
+                out.add(new long[] { cx, cz });
+        return out;
+    }
+
+    /** Every chunk has its entities loaded and is entity-ticking (an entity made in one that is not cannot be found yet). */
+    private static boolean entitiesReady(ServerLevel level, List<long[]> chunks) {
+        for (long[] c : chunks) {
+            int cx = (int) c[0], cz = (int) c[1];
+            if (!level.areEntitiesLoaded(net.minecraft.world.level.ChunkPos.asLong(cx, cz))
+                    || !level.isPositionEntityTicking(new BlockPos((cx << 4) + 8, 64, (cz << 4) + 8)))
+                return false;
+        }
+        return true;
     }
 
     // ---------------------------------------------------------------------------------------------------- helpers

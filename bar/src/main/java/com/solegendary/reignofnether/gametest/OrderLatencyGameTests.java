@@ -152,8 +152,7 @@ public class OrderLatencyGameTests {
                             int count, UnitAction action, int targetX) {
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
-        if (rts)
-            RtsPathingLease.take();
+        Runnable giveBackPathing = rts ? RtsPathingLease.takeUntilEnd(helper) : () -> { };
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String tag = name.replaceAll("[^a-z]", "");
         String mine = "gt_lat_" + tag + "_" + Long.toHexString(helper.absolutePos(BlockPos.ZERO).asLong());
@@ -168,8 +167,7 @@ public class OrderLatencyGameTests {
                 return;
             finished[0] = true;
             TerrainGameTests.cleanUp(made);
-            if (rts)
-                RtsPathingLease.release();
+            giveBackPathing.run();
             if (failure == null)
                 helper.succeed();
             else
