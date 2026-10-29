@@ -3245,6 +3245,8 @@
   "hud.essence.reignofnether.tombstone_no_room": "No room for a tombstone there",
   "hud.essence.reignofnether.tombstone_too_far": "Too far away to raise a tombstone",
   "hud.essence.reignofnether.tombstone_max": "This Tombcaller already keeps three tombstones",
+  "hud.essence.reignofnether.empower_recent": "That unit was empowered less than a minute ago",
+  "hud.essence.reignofnether.empower_not_this": "Empower cannot target heroes, commanders, experimentals or summons",
   "hud.actionbuttons.reignofnether.attack.tooltip": "Attack / attack-move: click a target or ground (drag for a line)",
   "hud.actionbuttons.reignofnether.move.tooltip": "Click the ground to move there; drag for a line formation",
   "key.reignofnether.last_alert": "Look at Last Alert",
