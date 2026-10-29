@@ -115,6 +115,7 @@ public class MoveToTargetBlockGoal extends Goal {
      * teleporting it out of a block), so it doesn't sit out up to 10 s of stuck-backoff earned while trapped.
      */
     public void forceRepath() {
+        com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "force" + (moveTarget != null && isRunning ? "" : "-idle"));
         resetRecalcBackoff();
         recalcCooldown = 0;
         if (moveTarget != null && isRunning && !this.mob.level().isClientSide())
@@ -382,6 +383,7 @@ public class MoveToTargetBlockGoal extends Goal {
         // and retry after a short cooldown - do NOT stop() or back off. Stopping here is exactly what made
         // units shuffle back and forth: they'd stop, re-submit next tick, get dropped again, repeat.
         if (busy) {
+            com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "busy");
             if (pendingRepath)
                 repathWalkCarried = repathWalked;
             pendingRepath = false;
@@ -412,6 +414,7 @@ public class MoveToTargetBlockGoal extends Goal {
             return;
         }
         if (path == null) {
+            com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "nopath");
             this.mob.getNavigation().stop();
             if (wasRepath) {
                 onStuckRepath();

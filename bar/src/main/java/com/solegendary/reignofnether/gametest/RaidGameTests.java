@@ -213,6 +213,10 @@ public class RaidGameTests {
         // runs, and no other faction's ever did): the raiders left alive, the longest stretch with no block lost, and the most
         // fire and flowing water seen round the building. A red run names which of those it was; see compact().
         int fewestAlive = -1, lastPlaced = -1, lastLoss = -1, longestStall = 0, fireSeen = 0, flowSeen = 0;
+        // raider-ticks in the fight (contact -> done) spent not at the building, with no building target, in water;
+        // and what UnitUnstick / the move goals did to the raiders in that window (UnitUnstick.TRACE)
+        int awayTicks = 0, lostTicks = 0, wetTicks = 0;
+        final java.util.TreeMap<String, Integer> events = new java.util.TreeMap<>();
 
         Sim(String group, String kind, Cell cell, String atk, String foe) {
             this.group = group;
@@ -273,6 +277,18 @@ public class RaidGameTests {
                 lastLoss = t;
             lastPlaced = placed;
             longestStall = Math.max(longestStall, t - Math.max(lastLoss, contact));
+            for (Mob m : attackers) {
+                if (!m.isAlive())
+                    continue;
+                if (m.isInWater())
+                    wetTicks++;
+                if (m instanceof AttackerUnit au && au.getAttackBuildingGoal() instanceof com.solegendary.reignofnether.unit.goals.MeleeAttackBuildingGoal g) {
+                    if (g.getBuildingTarget() == null)
+                        lostTicks++;
+                    else if (!g.isAttacking())
+                        awayTicks++;
+                }
+            }
             if (t % 10 != 0)
                 return;
             int fire = 0, flowing = 0;
@@ -295,12 +311,15 @@ public class RaidGameTests {
          */
         String compact() {
             return fewestAlive + "/" + attackers.size() + " alive, " + nearAfter3s + " near at 3 s, stall " + fmt(secs(longestStall))
-                + "s, fire " + fireSeen + ", flow " + flowSeen;
+                + "s, fire " + fireSeen + ", flow " + flowSeen + ", away " + fmt(secs(awayTicks)) + "s, lost " + fmt(secs(lostTicks))
+                + "s, wet " + fmt(secs(wetTicks)) + "s, " + events;
         }
 
         void cleanup() {
-            for (Mob m : attackers)
+            for (Mob m : attackers) {
+                TRACED.remove(m);
                 m.discard();
+            }
             for (Mob m : victims)
                 m.discard();
             if (target != null)
@@ -341,6 +360,14 @@ public class RaidGameTests {
      * watches every sim until all are over or {@code maxSim} ticks have passed; then releases the pads, cleans up and
      * hands the sims to the verdict (which fails the test or not; setup errors fail first).
      */
+    /** Every raid test's raiders, for UnitUnstick.TRACE: an event counts for its sim while the fight is on (contact -> done). */
+    static final java.util.Map<Mob, Sim> TRACED = java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+    static void traceInto(Mob m, String what) {
+        Sim s = TRACED.get(m);
+        if (s != null && s.contact >= 0 && s.done < 0)
+            s.events.merge(what, 1, Integer::sum);
+    }
+
     static void drive(GameTestHelper helper, Pads pads, int maxSim, Supplier<List<Sim>> setup, Consumer<List<Sim>> verdict) {
         ServerLevel level = helper.getLevel();
         List<Sim> sims = new ArrayList<>();
@@ -357,9 +384,13 @@ public class RaidGameTests {
             if (phase[0] == 1) {
                 if (now - phase[1] < 3)
                     return;   // let the units join the unit lists
-                for (Sim s : sims)
+                com.solegendary.reignofnether.unit.UnitUnstick.TRACE = RaidGameTests::traceInto;
+                for (Sim s : sims) {
+                    for (Mob m : s.attackers)
+                        TRACED.put(m, s);
                     if (s.order != null)
                         s.order.run();
+                }
                 phase[0] = 2;
                 phase[2] = now;
                 return;

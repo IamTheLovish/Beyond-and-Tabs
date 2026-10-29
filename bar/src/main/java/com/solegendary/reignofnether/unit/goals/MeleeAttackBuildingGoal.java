@@ -93,6 +93,7 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
                     meleeRecalcCooldown -= 1;
                 } else {
                     BlockPos oldFinalNode = getFinalNodePos();
+                    com.solegendary.reignofnether.unit.UnitUnstick.trace(this.mob, "mrepath");
                     this.start();
                     BlockPos newFinalNode = getFinalNodePos();
                     if (oldFinalNode != null && oldFinalNode.equals(newFinalNode)) {
