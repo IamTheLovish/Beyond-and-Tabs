@@ -890,8 +890,12 @@ public final class EyesDirector {
     //   15_<name>_dusk      the same 3/4 view at dusk (time 13000): lanterns, glow and glass against a dark sky
     //   15_<name>_golden_rts the RTS still at golden hour (EyesPhotoBooth.GOLDEN_TIME, sun ~15 degrees up in the west):
     //                       lovish's villa reference (Oct 28) - warm low light on the faces the RTS camera sees
+    //   15_<name>_mist_rts  only with -Dbat.eyes.mist=true (eyes.yml input `mist`): the RTS still's framing at dawn
+    //                       (MistMath.EYES_DAWN_TIME), once the valley mist has gathered and drifted ~8 s - the mist
+    //                       pilot (lovish Oct 28: "can we make the fog more animated and alive or rich")
     // Ambient life (birds, butterflies) is off for the whole run (EyesPhotoBooth.ambientLifeOff): it flew through the
-    // measured crops and changed their numbers run to run.
+    // measured crops and changed their numbers run to run. The valley mist obeys it too, unless the run asked for it
+    // (MistMath.allowed): then it shows in every still whose hour has mist (dusk, golden hour, the dawn still).
     // Placed as plain blocks (StructureTemplate.placeInWorld), not as a building: renderer-drawn parts (sails, rigs)
     // and the building's HP bar are not in these stills. The timeline is wall-clock seconds, not ticks: the shader
     // lane's client runs 4-6 ticks a second (see CUES).
@@ -907,6 +911,10 @@ public final class EyesDirector {
     private static BlockPos siteCentre = null;      // the pad's centre on the ground; every structure uses the same site
     private static int[] lastCleared = null;       // x0, z0, x1, z1, y0, y1 of the previous structure's box
     private static volatile long dayTimeBefore = -1;   // the server's time before the dusk still, restored after it
+    /** -Dbat.eyes.mist=true: one more still per structure, 15_<name>_mist_rts at dawn (EyesDirector phase 8). */
+    static final boolean MIST_STILL = Boolean.getBoolean("bat.eyes.mist");
+    private static long mistSinceNanos = -1;   // when the client sky reached dawn in phase 8
+    private static int mistSinceFrames = 0;
 
     static List<String> parseStructures(String raw) {
         List<String> out = new ArrayList<>();
@@ -1158,12 +1166,55 @@ public final class EyesDirector {
                 logAim(mc, label + "_golden_rts");
                 shot(mc, label + "_golden_rts");
                 var server = mc.getSingleplayerServer();
-                long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
-                server.execute(() -> server.overworld().setDayTime(back));
+                if (MIST_STILL) {
+                    // then the mist pilot's still: the same RTS framing in the thick of dawn
+                    server.execute(() -> server.overworld().setDayTime(
+                        com.solegendary.reignofnether.ambient.mist.MistMath.EYES_DAWN_TIME));
+                    mistSinceNanos = -1;
+                    OrthoviewClientEvents.centreCameraOnPosInstant(structureMiddle(0.3));
+                    nextPhase(8);
+                    return;
+                }
+                restoreDayTime(mc);
+                nextStructure(mc);
+            }
+            case 8 -> {   // 15_<name>_mist_rts: dawn, once the client sky is there and the mist has had ~8 s to gather
+                long t = mc.level.getDayTime() % 24000;
+                long dawn = com.solegendary.reignofnether.ambient.mist.MistMath.EYES_DAWN_TIME;
+                boolean there = Math.abs(t - dawn) < 150;
+                boolean settled = structureSettled(mc, 5);   // called every tick: it re-aims for the first 3.5 s
+                if (there && mistSinceNanos < 0) {
+                    mistSinceNanos = System.nanoTime();
+                    mistSinceFrames = frames;
+                }
+                double mistSeconds = mistSinceNanos < 0 ? 0 : (System.nanoTime() - mistSinceNanos) / 1e9;
+                int alive = com.solegendary.reignofnether.ambient.mist.MistParticle.alive;
+                // ~8 s of drawn frames at dawn so the wisps have spawned, faded in and drifted; a slow (shader) client
+                // spawns slower - give it up to 20 s for half a dozen
+                boolean gathered = mistSeconds >= 8 && frames - mistSinceFrames >= 8 && (alive >= 6 || mistSeconds >= 20);
+                if (!(there && settled && gathered) && phaseSeconds() < 60)
+                    return;
+                if (!there)
+                    ReignOfNether.LOGGER.warn("[Eyes] {}_mist_rts: the client sky is at {} not {} after 60 s", label, t, dawn);
+                mc.options.hideGui = true;
+                logAim(mc, label + "_mist_rts");
+                ReignOfNether.LOGGER.info("[Eyes] {}_mist_rts: {} mist wisps alive, {} s at dawn, density {}, mist {}",
+                    label, alive, String.format("%.1f", mistSeconds),
+                    com.solegendary.reignofnether.ambient.mist.MistMath.density(t),
+                    com.solegendary.reignofnether.ambient.mist.MistClientEvents.mayShow() ? "showing" : "NOT showing");
+                shot(mc, label + "_mist_rts");
+                restoreDayTime(mc);
                 nextStructure(mc);
             }
             default -> nextStructure(mc);
         }
+    }
+
+    /** Back to the server's time before the dusk still (or early morning if it was never read). */
+    private static void restoreDayTime(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        long back = dayTimeBefore < 0 ? 1000 : dayTimeBefore;
+        server.execute(() -> server.overworld().setDayTime(back));
     }
 
     private static void nextStructure(Minecraft mc) {
