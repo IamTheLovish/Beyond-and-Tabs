@@ -499,6 +499,7 @@ jobs:
                 echo "::notice::[Eyes] shader pack $SHADER_PACK drew the frames"
               else
                 echo "::error::[Eyes] shader lane, but no shader pack drew the frames (no 'World look: a shader pack is on' line)"
+                echo "NO_PACK_DREW=1" >> "$GITHUB_ENV"   # the run fails after the stills are published (last step)
               fi
               grep -iE "(shader|program).*(error|fail|could not|unable)|(error|fail).*(shader|program|glsl)" "$log" | grep -viE "OpenAL|Narrator" | head -10 | sed 's/^/::warning::/' || true
             fi
@@ -590,6 +591,8 @@ jobs:
           [ "${{ steps.tour.outcome }}" = "success" ] || { echo "::error::the client step failed or timed out"; exit 1; }
           [ "${TOUR_COMPLETE:-0}" = "1" ] || { echo "::error::no '[Eyes] tour complete' in the client log"; exit 1; }
           [ "${STILLS:-0}" -ge "$MIN_STILLS" ] || { echo "::error::only ${STILLS:-0} stills (expected >= $MIN_STILLS)"; exit 1; }
+          # a shader lane whose stills no shader pack drew (a pack that did not compile): published, but not green
+          if [ "${NO_PACK_DREW:-0}" = "1" ]; then echo "::error::shader lane: no shader pack drew the frames"; exit 1; fi
           if [ "${FOG:-0}" = "1" ]; then   # a fog run: the three stills of scene 17 (the A/B is in the log)
             got=$(find out -name 'bat_eyes_17_fog_*.png' | wc -l)
             ls out | grep '^bat_eyes_17_' | sed 's/^/::notice::[Eyes] still /' || true

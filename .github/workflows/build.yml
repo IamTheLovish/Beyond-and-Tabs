@@ -144,7 +144,7 @@ jobs:
       - if: steps.scope.outputs.run == 'true'
         # glslang: tools/test_shader_pack.py compiles every program of our shader pack (shaderpacks/BeyondAndTabs)
         run: |
-          sudo apt-get install -y -q glslang-tools > /dev/null
+          sudo apt-get update -q > /dev/null && sudo apt-get install -y -q glslang-tools > /dev/null
           pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:

@@ -2,12 +2,16 @@
 // any other shader pack.
 //
 // The light of the moment: sun (or moon) colour, sky ambient and torch light, from one table keyed by the sun's
-// height. The lobby's four times (match/TimeOfDay.java) land on its rows: Morning 5000 and Noon 6000 on the high sun
-// (with the 30 degree tilt both are 55-60 degrees up), Dusk 11800 on the low sun (about 3 degrees up), Night 18000 on
-// the moon. A day cycle slides between the rows.
+// height. The lobby's four times (match/TimeOfDay.java) with the 30 degree tilt: Morning 5000 (~58 degrees up) and
+// Noon 6000 (~60) sit on the high-sun row; Dusk 11800 (~13 degrees up) is mostly the golden low-sun row; Night 18000 is
+// the moon (~60 up). A day cycle slides between them.
+// Which body lights the scene follows the loader: shadowLightPosition is the sun while it is above the horizon and the
+// moon from the moment it sets. The colour follows the same switch - the sun's colour is never put on the moon's
+// direction (that flipped golden light from the west walls to the east ones at sunset) - and the directional light
+// fades to nothing as either body nears the horizon, so the hand-over itself shows no jump.
 // Lighting is linear: albedo is decoded from sRGB, lit, then tone-mapped and encoded again (composite.fsh). The table is
-// calibrated so open ground at noon comes out at its albedo - the brightness players know - while the shade beside a
-// building keeps about a third of the light (shadow / lit luma about 0.55 on screen: visible, never black).
+// aimed at open ground at noon coming out at its albedo - the brightness players know - and the shade beside a
+// building keeping about a third of the light (aimed at shadow / lit luma ~0.55 on screen; the eyes stills measure it).
 
 uniform vec3 sunPosition;
 uniform vec3 shadowLightPosition;
@@ -36,10 +40,13 @@ float sunHeight() {
 // the colours for this frame: the shadow light (sun by day, moon by night) and the sky's fill
 void lightColours(out vec3 sunColour, out vec3 skyColour) {
     float h = sunHeight();
-    float high = smoothstep(0.03, 0.45, h);   // low sun -> high sun
-    float day = smoothstep(-0.08, 0.02, h);   // night -> low sun (the shadow light changes over here)
-    sunColour = mix(MOON, mix(SUN_LOW, SUN_HIGH, high), day);
-    skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), day);
+    float high = smoothstep(0.10, 0.55, h);    // low sun -> high sun (Dusk 11800, h ~0.23, stays mostly golden)
+    // the directional light: the sun's colour only while the sun is the light, the moon's after it sets; zero at the
+    // horizon, where the loader swaps one body for the other
+    sunColour = h > 0.0 ? mix(SUN_LOW, SUN_HIGH, high) : MOON;
+    sunColour *= smoothstep(0.0, 0.05, abs(h));
+    // the sky's fill has no direction: it may glow on through twilight
+    skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
     skyColour *= 1.0 - 0.30 * rainStrength;
 }

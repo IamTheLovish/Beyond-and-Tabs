@@ -87,6 +87,36 @@ def header_problems():
     return problems
 
 
+# final.fsh constant -> WorldLookPass.java array, for the grade's one-table check (test_shader_pack.py)
+GRADE_TABLE = {"CONTRAST": "CONTRAST", "SPLIT_TONE": "SPLIT_TONE", "SATURATION": "SATURATION", "VIGNETTE": "VIGNETTE",
+               "EXPOSURE": "EXPOSURE", "VIBRANCE": "VIBRANCE", "GLOW": "GLOW", "GLOW_THRESHOLD": "GLOW_THRESHOLD",
+               "GLOW_RADIUS": "GLOW_RADIUS", "SHADOW_TINT": "SHADOW_TINT", "HIGHLIGHT_TINT": "HIGHLIGHT_TINT"}
+
+
+def _numbers(text):
+    return [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", text)]
+
+
+def enchanted_pairs(java, fsh):
+    """[(name, WorldLookPass's Enchanted value, final.fsh's value)] per number, or None when the Java table has no
+    Enchanted column (a third entry per array) yet."""
+    pairs = []
+    for const, arr in GRADE_TABLE.items():
+        m = re.search(r"\[\]\s+%s\s*=\s*\{(.*?)\};" % arr, java, re.S)
+        f = re.search(r"const (?:float|vec3) %s = ([^;]*);" % const, fsh)
+        if not m or not f:
+            return None
+        rows = re.findall(r"\{([^{}]*)\}", m.group(1) + "}")   # a table of rows: { { r, g, b }, ... }
+        columns = [_numbers(r) for r in rows] if rows else [[x] for x in _numbers(m.group(1))]
+        if len(columns) < 3:
+            return None
+        want, got = columns[2], _numbers(f.group(1).replace("vec3", ""))
+        if len(got) != len(want):
+            return None
+        pairs += [("%s[%d]" % (const, i), w, g) for i, (w, g) in enumerate(zip(want, got))]
+    return pairs
+
+
 def find_glslang(given=None):
     return given or shutil.which("glslang") or shutil.which("glslangValidator")
 

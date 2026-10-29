@@ -97,7 +97,7 @@ fills them with its own paper colours, creases and seal marks. No Alex's Mobs pi
 
 ## Our shader pack (`shaderpacks/BeyondAndTabs`)
 
-The shader pack the tester pack ships for Oculus is our own: every file is original work, written clean-room from the
+Our shader pack for Oculus (not shipped to testers yet; it is meant to replace the old third-party one) is our own: every file is original work, written clean-room from the
 public documentation of the OptiFine / Iris shader-pack format, general graphics knowledge and this repository's own
 code (its grade and edge smoothing are ported from our `bat_postfx.fsh`). It is not derived from any other shader pack,
 and no other pack's source, settings or shader files were read to write it (design/own_shader_pack.md). It is released

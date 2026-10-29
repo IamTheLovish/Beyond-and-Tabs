@@ -2,8 +2,8 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack.
 //
-// The lit world (linear light, colortex0) onto the screen: the tone curve, then the air. The distance haze follows
-// the mod's own world look (postfx/WorldLookPass, bat_postfx.fsh) so the pack and the no-pack look agree: in the RTS
+// The lit world (linear light, colortex0) onto the screen: the tone curve, then the air. The distance haze takes the
+// mod's own world look's distance rule (postfx/WorldLookPass, bat_postfx.fsh), aiming for the same air: in the RTS
 // view distance is measured along the view from the ground at the screen's bottom edge (an ortho image has no eye),
 // one e-fold per 56 blocks; in first person from the eye, clear for the first 12 blocks, one e-fold per 180. The haze
 // never covers more than 30% (Enchanted), so far overlays stay legible, and dark ground keeps less of it (the fog of
@@ -74,7 +74,8 @@ void main() {
         float scale = ortho ? RTS_HAZE_SCALE : FP_HAZE_SCALE;
         float h = min(HAZE_MAX * HAZE_STRENGTH, HAZE_MAX_LIMIT) * (1.0 - exp(-max(dist - start, 0.0) / scale));
         h *= mix(0.4, 1.0, smoothstep(0.05, 0.4, dot(c, LUMA)));
-        // toward the sky's colour: in the RTS view the fog colour is the map edge's tone, not air
+        // toward the sky's colour lightened toward the horizon's: in the RTS view the fog colour is the map edge's tone,
+        // not air, and the vanilla horizon colour WorldLookPass uses is not handed to packs (eyes measures the gap)
         vec3 air = ortho ? mix(skyColor, vec3(1.0), 0.25) : fogColor;
         c = mix(c, vec3(dot(c, LUMA)), h * 0.5);
         c *= mix(vec3(1.0), DISTANCE_COOL, h);

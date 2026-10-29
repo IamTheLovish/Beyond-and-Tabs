@@ -25,7 +25,9 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float asDrawn;
 
+/* DRAWBUFFERS:0 */
 void main() {
     vec4 tex = texture2D(texture, texcoord);
     vec3 albedo = tex.rgb * glcolor.rgb;
@@ -35,6 +37,14 @@ void main() {
 #else
     float ao = 1.0;
     float alpha = tex.a * glcolor.a;
+#endif
+#ifdef LIT_ENTITY
+    if (asDrawn > 0.5) {               // an overlay box (lit.vsh): as drawn, fading all the way out
+        if (alpha < 0.004)
+            discard;
+        gl_FragData[0] = vec4(toLinear(albedo), alpha);
+        return;
+    }
 #endif
 #ifndef LIT_WATER
     if (alpha < 0.1)
@@ -46,7 +56,8 @@ void main() {
 
     // grass, flowers and crops are crossed planes whose normals point sideways: lit as the ground they stand on, so a
     // tuft reads as part of the lawn (no dark patches on the planes turned from the sun)
-    vec3 n = foliage > 0.5 ? normalize(upPosition) : normalize(viewNormal);
+    // a draw with no normal (all zero) would light as NaN, and the glow and edge smoothing would spread it: up instead
+    vec3 n = foliage > 0.5 || dot(viewNormal, viewNormal) < 1e-6 ? normalize(upPosition) : normalize(viewNormal);
     float facing = sunFacing(n, normalize(shadowLightPosition));
     float shadow = 0.0;
     if (facing > 0.0) {
@@ -58,6 +69,5 @@ void main() {
     lightColours(sunColour, skyColour);
     vec3 c = toLinear(albedo) * surfaceLight(n, facing, shadow, lightLevels(lmcoord), ao, sunColour, skyColour);
 
-/* DRAWBUFFERS:0 */
     gl_FragData[0] = vec4(c, alpha);
 }

@@ -9,11 +9,12 @@
 // RTS camera can see. lovish, Oct 29: the clear tilt, about 30 degrees
 const float sunPathRotation = 30.0; // [0.0 15.0 30.0 45.0]
 
-// the shadow map. The RTS view fits it to what is on screen (lib/shadowfit.glsl), so 2048 is sharp at every zoom
+// the shadow map. The RTS view fits it to what is on screen (lib/shadowfit.glsl): ~25 texels per block at the default
+// zoom by the arithmetic, falling to the loader's whole box (~6 per block) when zoomed fully out
 const int shadowMapResolution = 2048; // [1024 2048 3072 4096]
 // half the side of the box the loader draws shadow casters in (blocks), centred on the camera. The RTS fit picks the
-// part of it on screen; first person uses all of it
-const float shadowDistance = 160.0;
+// part of it on screen; first person uses all of it. Smaller: fewer casters drawn each frame, shadows end nearer
+const float shadowDistance = 160.0; // [96.0 128.0 160.0 224.0]
 // draw casters in that box, not out to the render distance (the fit never looks past the box)
 const float shadowDistanceRenderMul = 1.0;
 const bool shadowHardwareFiltering = false;

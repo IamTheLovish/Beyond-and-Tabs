@@ -19,7 +19,8 @@ import java.util.Locale;
  * Two ways in: the eyes tour holds a fixed camera and calls {@link #start} (CI: a ratio between lanes - the runner
  * draws in software, so its milliseconds mean nothing for a real GPU), and {@code /rts-shaderbench [frames]}, which a
  * player runs standing still, once with the pack on and once with it off (Oculus's K): the two lines are the pack's
- * cost on that PC. Counted by drawn frames (RenderTickEvent), never wall-clock seconds.
+ * cost on that PC. Counted by drawn frames (RenderTickEvent), never wall-clock seconds. A frame cap or vsync hides the
+ * cost (at 240 Hz both runs sit at 4.17 ms), so the line says which were on and the command asks for them off.
  */
 public final class ShaderBench {
 
@@ -65,9 +66,11 @@ public final class ShaderBench {
         double mean = Arrays.stream(sorted).average().orElse(0) / 1e6;
         Minecraft mc = Minecraft.getInstance();
         String line = String.format(Locale.ROOT, "[ShaderBench] %s: %d frames, p50 %.2f ms, p95 %.2f ms, mean %.2f ms; "
-                + "shader pack %s; %dx%d", label, sorted.length, sorted[sorted.length / 2] / 1e6,
+                + "shader pack %s; %dx%d; fps cap %s, vsync %s", label, sorted.length, sorted[sorted.length / 2] / 1e6,
             sorted[(int) Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] / 1e6, mean,
-            ShaderPacks.inUse() ? "on" : "off", mc.getWindow().getWidth(), mc.getWindow().getHeight());
+            ShaderPacks.inUse() ? "on" : "off", mc.getWindow().getWidth(), mc.getWindow().getHeight(),
+            mc.options.framerateLimit().get() >= 260 ? "none" : mc.options.framerateLimit().get(),
+            mc.options.enableVsync().get() ? "on" : "off");
         ReignOfNether.LOGGER.info(line);
         lastLine = line;
         label = null;
@@ -88,7 +91,9 @@ public final class ShaderBench {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null)
             mc.player.displayClientMessage(Component.literal("Shader bench: hold still for " + frames
-                + " frames, the result goes to the chat and the log"), false);
+                + " frames, the result goes to the chat and the log. For a true number set Max Framerate to "
+                + "Unlimited and VSync off first (Video Settings): a cap hides the pack's cost. Run it once with the "
+                + "shader pack on and once off (K), from the same spot."), false);
         return Command.SINGLE_SUCCESS;
     }
 }

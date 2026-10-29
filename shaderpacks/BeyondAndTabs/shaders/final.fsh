@@ -2,6 +2,7 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack. The edge smoothing and the grade are ported from our own world look (bat_postfx.fsh, the
 // mod's no-pack pass, with the Enchanted values of #326), so players with and without the pack see the same mood.
+// tools/test_shader_pack.py fails if these constants drift from WorldLookPass's Enchanted column once #326 is in.
 //
 // The "camera" after the air: edge smoothing on geometry edges, Enchanted's soft glow of the bright areas, the film
 // grade (exposure, an S on luma, a warm split tone, vibrance for dull colours only) and a vignette.

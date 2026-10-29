@@ -28,6 +28,19 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
 
+    def test_grade_matches_the_mods_enchanted_look(self):
+        # one table for both looks (design: players with and without the pack see the same mood). The pack's
+        # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third
+        # column to compare and the test skips
+        java = open(os.path.join(spc.ROOT, "..", "..", "bar", "src", "main", "java", "com", "solegendary",
+                                 "reignofnether", "postfx", "WorldLookPass.java"), encoding="utf-8").read()
+        fsh = open(os.path.join(spc.SHADERS, "final.fsh"), encoding="utf-8").read()
+        pairs = spc.enchanted_pairs(java, fsh)
+        if pairs is None:
+            self.skipTest("WorldLookPass has no Enchanted column yet (#326)")
+        for name, want, got in pairs:
+            self.assertAlmostEqual(want, got, places=4, msg=name)
+
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
         self.assertEqual(spc.check(spc.find_glslang()), [])

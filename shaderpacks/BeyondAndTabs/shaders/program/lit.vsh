@@ -16,15 +16,24 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float asDrawn;
 
 void main() {
     gl_Position = ftransform();
     viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz;
-    viewNormal = normalize(gl_NormalMatrix * gl_Normal);
+    viewNormal = gl_NormalMatrix * gl_Normal;   // normalised in lit.fsh, after its zero-normal guard
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
     glcolor = gl_Color;
     fit = shadowFit();
+    // our overlay boxes (MyRenderer.drawSolidBox: selection, checkpoints, building placement) come as translucent
+    // entities with a packed block light of 255, which real lighting never produces (vanilla's brightest is 240):
+    // they are drawn as drawn, not lit
+#ifdef LIT_ENTITY
+    asDrawn = gl_MultiTexCoord1.x > 248.0 && gl_MultiTexCoord1.y < 8.0 ? 1.0 : 0.0;
+#else
+    asDrawn = 0.0;
+#endif
 #ifdef LIT_TERRAIN
     foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? 1.0 : 0.0;
 #else
