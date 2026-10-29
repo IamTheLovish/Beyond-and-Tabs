@@ -69,6 +69,13 @@ def write(root, rel, text):
 # reads our _n / _s maps; Complementary's own default (RP_MODE 1) ignores them. The two settings files are "preserve":
 # written once, then a player's own choices (K toggles shaders, O opens their menu) survive every update.
 SHADER_PROJECT, SHADER_VERSION = "complementary-reimagined", "r5.9.3"
+# The Enchanted look for shader players (lovish Oct 28: "dim it down a bit ... more saturated and whimsy ... fantasy
+# esque"; our WorldLookPass steps aside under a shader pack, so Complementary gets the same intent through its own
+# options - names and allowed steps read from its shaders/lib/common.glsl): a little darker, more colour in dull
+# tones (vibrance), a touch more contrast and bloom, a warmer noon sun. Exposure 0.65: lovish's pick from an eyes A/B
+# (Oct 28; 0.90 barely moved the lawn - luma 0.54 vs the real-grass reference 0.40; 0.65 gives 0.47).
+ENCHANTED_COMPLEMENTARY = ("TM_EXPOSURE=0.65\nTM_CONTRAST=1.10\nT_SATURATION=1.05\nT_VIBRANCE=1.25\n"
+                           "BLOOM_STRENGTH=0.18\nLIGHT_NOON_B=0.95\n")
 
 
 def resolve_shader(tmp):
@@ -94,7 +101,7 @@ def shader_files(shader):
     props = (f"enableShaders=true\nshaderPack={name}\ndisableUpdateMessage=true\nmaxShadowRenderDistance=12\n")
     return [
         (f"shaderpacks/{slug(name)}.pw.toml", metafile("Complementary Reimagined", name, "client", url, sha), True, False),
-        (f"shaderpacks/{name}.txt", "RP_MODE=3\n", False, True),
+        (f"shaderpacks/{name}.txt", "RP_MODE=3\n" + ENCHANTED_COMPLEMENTARY, False, True),
         ("config/oculus.properties", props, False, True),
     ]
 
