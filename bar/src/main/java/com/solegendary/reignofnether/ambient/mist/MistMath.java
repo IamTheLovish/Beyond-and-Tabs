@@ -299,6 +299,52 @@ public final class MistMath {
         return new double[] { dx / d * k, dz / d * k };
     }
 
+    // ---- the volume (r6: MistPass, shaders/core/bat_mist.fsh) ----
+    // lovish, Oct 29, on r4's sprites: "the fog needs alot of work ... it needs to be deep and rich and look like its
+    // wisping around not just white blotches", and "the fod should be thicker in fog of war compared to not fog of war".
+    // Sprites lie on the ground as flat stamps; the volume is height fog ray-marched through the depth buffer: thicker
+    // the more of it a pixel looks through (hollows fill, rises and walls poke out), shaped by a domain-warped noise
+    // that drifts and curls along the wind, lit on top and cool in the core. These are the numbers the shader uses.
+
+    /** Blocks per e-fold of the mist's thinning above its floor (exponential height fog). */
+    public static final double HEIGHT = 2.2;
+    /** Extinction per block at the floor, at full density, for the noise's mean shape. */
+    public static final double SIGMA = 0.22;
+    /** The noise shape's mean (0.25 + 1.6 x the wisp mask's ~0.5): the shader's base veil plus its wisps. */
+    public static final double SHAPE_MEAN = 1.05;
+    /** sin of the RTS camera's default pitch (64.8 degrees): a ray through the layer is 1 / this longer than its depth. */
+    static final double RTS_SIN = Math.sin(Math.toRadians(64.8));
+    /** The volume never covers more than this: a unit in a hollow still reads (pillar 2). */
+    public static final double MAX_COVER = 0.85;
+    /** How much thicker the mist lies out of sight: over explored ground, and over ground never explored. */
+    public static final double FOG_EXPLORED = 2.2, FOG_UNEXPLORED = 3.0;
+
+    /** The density multiplier over a column: 1 in sight (or with the fog of war off), thicker out of sight. */
+    public static double fogBoost(boolean fogOn, boolean visible, boolean explored) {
+        if (!fogOn || visible)
+            return 1.0;
+        return explored ? FOG_EXPLORED : FOG_UNEXPLORED;
+    }
+
+    /** The volume's strength at a zoom: 1 up to ZOOM_FULL, 0 from ZOOM_NONE or at strategic zoom, linear between. */
+    public static double zoomFade(float zoom, boolean strategic) {
+        if (strategic || zoom >= ZOOM_NONE)
+            return 0;
+        if (zoom <= ZOOM_FULL)
+            return 1;
+        return (ZOOM_NONE - zoom) / (ZOOM_NONE - ZOOM_FULL);
+    }
+
+    /**
+     * The share of a surface {@code h} blocks above the mist floor that the volume covers from the default RTS camera:
+     * the optical depth of exponential height fog from the surface up, SIGMA x density x boost x SHAPE_MEAN x HEIGHT x
+     * e^(-h / HEIGHT) / RTS_SIN (h no lower than -6: the shader's clamp), as cover 1 - e^-depth, at most MAX_COVER.
+     */
+    public static double volumeCover(double h, double density, double boost) {
+        double depth = SIGMA * density * boost * SHAPE_MEAN * HEIGHT * Math.exp(-Math.max(h, -6) / HEIGHT) / RTS_SIN;
+        return Math.min(MAX_COVER, 1 - Math.exp(-depth));
+    }
+
     // ---- the eyes rig ----
 
     /** The day time of the 15_<name>_mist_rts still: the thick of dawn. */

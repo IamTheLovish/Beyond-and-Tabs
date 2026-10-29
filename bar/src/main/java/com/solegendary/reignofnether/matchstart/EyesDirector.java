@@ -1201,7 +1201,8 @@ public final class EyesDirector {
                 ReignOfNether.LOGGER.info("[Eyes] {}_mist_rts: {} mist wisps alive, {} s at dawn, density {}, mist {}",
                     label, alive, String.format("%.1f", mistSeconds),
                     com.solegendary.reignofnether.ambient.mist.MistMath.density(t),
-                    com.solegendary.reignofnether.ambient.mist.MistClientEvents.mayShow() ? "showing" : "NOT showing");
+                    com.solegendary.reignofnether.ambient.mist.MistPass.drawing() ? "drawn as a volume"
+                        : com.solegendary.reignofnether.ambient.mist.MistClientEvents.mayShow() ? "showing as sprites" : "NOT showing");
                 shot(mc, label + "_mist_rts");
                 restoreDayTime(mc);
                 nextStructure(mc);
