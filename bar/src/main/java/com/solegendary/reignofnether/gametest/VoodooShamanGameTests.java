@@ -263,10 +263,10 @@ public class VoodooShamanGameTests {
                         problems.add("the produced unit is a " + unit.getClass().getSimpleName());
                     if (!(unit instanceof Unit u) || !owner.equals(u.getOwnerName()))
                         problems.add("the produced shaman is not the portal owner's");
-                    if (UnitTier.of(unit) != 1)
-                        problems.add("the shaman is tier " + UnitTier.of(unit) + ", expected 1");
                     else if (u.getCost() != ResourceCosts.VOODOO_SHAMAN)
                         problems.add("the shaman's getCost is not ResourceCosts.VOODOO_SHAMAN");
+                    if (UnitTier.of(unit) != 1)
+                        problems.add("the shaman is tier " + UnitTier.of(unit) + ", expected 1");
                     if (Math.abs(unit.getMaxHealth() - HEALTH) > 0.5f)
                         problems.add("the shaman has " + unit.getMaxHealth() + " max health, the PR chose " + HEALTH);
                     if (!Essence.isCarrier(unit))
