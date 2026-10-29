@@ -140,6 +140,7 @@ public final class MatchOutcome {
         com.solegendary.reignofnether.mana.DecoyServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.LanternDomeServerEvents.clearOwner(playerName);
         com.solegendary.reignofnether.mana.TempestServerEvents.clearOwner(playerName);
+        com.solegendary.reignofnether.ability.abilities.Thunderhead.clearOwner(playerName);
     }
 
     /**

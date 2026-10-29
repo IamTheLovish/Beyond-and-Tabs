@@ -195,6 +195,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.EARTHSHAKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.EarthshakerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRAVITY_MONK_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.GravityMonkRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MIRROR_MAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MirrorMageRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.SPARK_SAGE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SparkSageRenderer::new);
         // slice 4: the Seer on the illager body, AM's elephant and sunbird under our skins, the T3 serpent on AM's spectre at 2x
         evt.registerEntityRenderer(EntityRegistrar.SEER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.LANTERN_FORTRESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LanternFortressRenderer::new);
