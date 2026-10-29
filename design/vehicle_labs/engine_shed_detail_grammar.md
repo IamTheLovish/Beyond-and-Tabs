@@ -406,3 +406,14 @@ A stacked fantasy tower: the best answer yet to our tower's "stacked boxes" prob
 3. **Varied scale:** drums of different diameters and heights, small turrets beside the big one, an arched bridge
    with diagonal struts flying out - asymmetry and a silhouette with incident.
 4. Two materials do it all: warm timber/sandstone walls + blue slate roofs (the same wall/roof split as ref45).
+
+## (p) ref56 - lovish's reference, Oct 28 22:52 (design/refs/vehicle_labs/ref56_mosscrest_mill_fantasy_windmill.png)
+"Mosscrest Mill" by Graysun (a sold schematic - ideas only, never copy it block for block). Also the bar for the
+game's windmills (energy buildings).
+1. **Roofs with a weathering gradient:** moss green heaviest at the eaves fading to clean slate up the slope; the
+   course lines stay visible through it. This is the "cool roof tiling" target in one image.
+2. **Bell-cast (flared) eaves** - the slope kicks out flatter at the bottom, held on timber brackets.
+3. **Jettied storeys:** each floor oversails the one below on beam ends; dark timber frame over pale plaster panels;
+   a stone ground storey. Every floor change is a shadow line.
+4. **Life details:** flower boxes, a hanging lantern on an outrigger, a balcony, stone stairs, plants at the base.
+5. Silhouette: a tall main body, a smaller tower on top, lean-to roofs either side stepping down to the ground.
