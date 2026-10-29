@@ -14,6 +14,10 @@ import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.GraveAdeptUnit;
 
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -23,10 +27,13 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import javax.annotation.Nullable;
@@ -67,13 +74,57 @@ public final class GraveAdeptServerEvents {
     static final int BOLT_LOOK_TICKS = 10;
 
     private static final List<GraveAdeptUnit> adepts = new ArrayList<>();
-    /**
-     * Adepts whose chunk unloaded, by their UUID: still their caster's until they come back or die (PR 371 review round
-     * 1: an unloaded Adept let its Tombcaller call a second; the tombstones keep the same map).
-     */
-    private static final Map<UUID, Away> away = new HashMap<>();
+    /** The overworld SavedData holding {@link Index}. */
+    static final String DATA_NAME = "bt_grave_adepts";
 
     private record Away(UUID caster, String owner) { }
+
+    /**
+     * Adepts whose chunk unloaded, by their UUID: still their caster's until they come back or die (PR 371 review round
+     * 1: an unloaded Adept let its Tombcaller call a second). Kept in the overworld's SavedData, and a server stop adds
+     * every Adept still loaded (each is saved with its chunk), so a restart keeps the rule too (round 2 B1).
+     */
+    static final class Index extends SavedData {
+        final Map<UUID, Away> away = new HashMap<>();
+
+        static Index load(CompoundTag tag) {
+            Index index = new Index();
+            for (Tag t : tag.getList("away", Tag.TAG_COMPOUND))
+                if (t instanceof CompoundTag c && c.hasUUID("adept") && c.hasUUID("caster"))
+                    index.away.put(c.getUUID("adept"), new Away(c.getUUID("caster"), c.getString("owner")));
+            return index;
+        }
+
+        @Override
+        public CompoundTag save(CompoundTag tag) {
+            ListTag list = new ListTag();
+            away.forEach((adept, w) -> {
+                CompoundTag c = new CompoundTag();
+                c.putUUID("adept", adept);
+                c.putUUID("caster", w.caster);
+                c.putString("owner", w.owner);
+                list.add(c);
+            });
+            tag.put("away", list);
+            return tag;
+        }
+    }
+
+    @Nullable
+    private static Index index(@Nullable MinecraftServer server) {
+        return server == null ? null : server.overworld().getDataStorage().computeIfAbsent(Index::load, Index::new, DATA_NAME);
+    }
+
+    @Nullable
+    private static Index index(Level level) {
+        return index(level.getServer());
+    }
+
+    /** The Index's own save then load: what a restart reads back. For the game test. */
+    public static int awayAfterSaveAndLoad(MinecraftServer server) {
+        Index index = index(server);
+        return index == null ? 0 : Index.load(index.save(new CompoundTag())).away.size();
+    }
 
     static {
         Empower.setTargetHook(EntityRegistrar.GRAVE_ADEPT_UNIT.get(), new Empower.TargetHook() {
@@ -121,9 +172,12 @@ public final class GraveAdeptServerEvents {
     public static boolean hasAdept(LivingEntity caster) {
         if (adeptOf(caster) != null)
             return true;
+        Index index = index(caster.level());
+        if (index == null)
+            return false;
         UUID id = caster.getUUID();
         String owner = ownerOf(caster);
-        for (Away w : away.values())
+        for (Away w : index.away.values())
             if (id.equals(w.caster) && owner.equals(w.owner))
                 return true;
         return false;
@@ -174,12 +228,16 @@ public final class GraveAdeptServerEvents {
     public static void onJoin(EntityJoinLevelEvent evt) {
         if (evt.getLevel().isClientSide() || !(evt.getEntity() instanceof GraveAdeptUnit a))
             return;
-        away.remove(a.getUUID());
+        Index index = index(evt.getLevel().getServer());
+        if (index != null && index.away.remove(a.getUUID()) != null)
+            index.setDirty();
         if (!adepts.contains(a))
             adepts.add(a);
     }
 
-    @SubscribeEvent
+    // LOW: after HeroServerEvents' Totem of Undying has had its say - a hero it saves is not dead, and pays nothing
+    // (round 2 B2; EssenceServerEvents.onDeath does the same)
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onDeath(LivingDeathEvent evt) {
         LivingEntity dead = evt.getEntity();
         if (!(dead.level() instanceof ServerLevel sl))
@@ -187,12 +245,16 @@ public final class GraveAdeptServerEvents {
         if (dead instanceof GraveAdeptUnit adept) {
             burst(sl, adept, evt.getSource().getEntity());
             adepts.remove(adept);
-            away.remove(adept.getUUID());
+            Index index = index(sl);
+            if (index != null && index.away.remove(adept.getUUID()) != null)
+                index.setDirty();
             return;
         }
-        if (!away.isEmpty()) {
+        Index index = index(sl);
+        if (index != null && !index.away.isEmpty()) {
             UUID id = dead.getUUID();   // a dead Tombcaller calls no more: its unloaded Adept need not be held for it
-            away.values().removeIf(w -> id.equals(w.caster));
+            if (index.away.values().removeIf(w -> id.equals(w.caster)))
+                index.setDirty();
         }
         if (adepts.isEmpty() || !(dead instanceof Unit du) || Summons.isSummoned(dead))
             return;
@@ -242,8 +304,8 @@ public final class GraveAdeptServerEvents {
             if (a.isRemoved() || !a.isAlive()) {
                 // a death paid out in onDeath; an unload stops watching it but it is still its caster's
                 // (not isAlive(): a removed LivingEntity is never alive, unloaded or not)
-                if (a.getHealth() > 0 && a.getRemovalReason() != null && !a.getRemovalReason().shouldDestroy() && a.casterId() != null)
-                    away.put(a.getUUID(), new Away(a.casterId(), a.getOwnerName()));
+                if (a.getHealth() > 0 && a.getRemovalReason() != null && !a.getRemovalReason().shouldDestroy())
+                    hold(index(evt.getServer()), a);
                 adepts.remove(i);
                 continue;
             }
@@ -292,9 +354,21 @@ public final class GraveAdeptServerEvents {
         BarFx.shot(sl, a.getEyePosition(), target.getEyePosition(), BarFx.K_MAGIC, a);
     }
 
+    /** {@code a} leaves the world but not the game: its caster keeps it. */
+    private static void hold(@Nullable Index index, GraveAdeptUnit a) {
+        if (index == null || a.casterId() == null)
+            return;
+        index.away.put(a.getUUID(), new Away(a.casterId(), a.getOwnerName()));
+        index.setDirty();
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
+        // the levels and their SavedData are written after this event: every Adept still loaded is saved with its chunk
+        Index index = index(evt.getServer());
+        for (GraveAdeptUnit a : adepts)
+            if (a.isAlive() && !a.isRemoved())
+                hold(index, a);
         adepts.clear();
-        away.clear();
     }
 }
