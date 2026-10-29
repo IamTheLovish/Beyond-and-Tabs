@@ -438,6 +438,7 @@ public class AngelCallerGameTests {
         Vec3[] last = { null };
         float[] foeHp = { foe.getHealth() };
         double[] nearestHit = { Double.MAX_VALUE };
+        double[] height = { Double.MAX_VALUE, -Double.MAX_VALUE };   // lowest, highest over the ground
         int[] grounded = { 0 }, seen = { 0 }, hits = { 0 };
         boolean[] aliveLate = { false }, goneAfter = { false };
         helper.runAfterDelay(cast, () -> {
@@ -457,6 +458,8 @@ public class AngelCallerGameTests {
                     seen[0]++;
                     if (!airborne(a, groundY))
                         grounded[0]++;
+                    height[0] = Math.min(height[0], a.getY() - groundY);
+                    height[1] = Math.max(height[1], a.getY() - groundY);
                     if (foe.isAlive() && foe.getHealth() < foeHp[0]) {
                         hits[0]++;
                         nearestHit[0] = Math.min(nearestHit[0], a.distanceTo(foe));
@@ -477,6 +480,9 @@ public class AngelCallerGameTests {
                 else {
                     if (seen[0] == 0 || grounded[0] > 0)
                         problems.add("the Seraph Archer was on the ground in " + grounded[0] + " of " + seen[0] + " looks; it should fly");
+                    else if (height[0] < SeraphArcherUnit.FLIGHT_HEIGHT - 1 || height[1] > SeraphArcherUnit.FLIGHT_HEIGHT + 1)
+                        problems.add("the Seraph Archer flew " + String.format("%.1f", height[0]) + " to " + String.format("%.1f", height[1])
+                            + " blocks up; lovish: it flies low, about " + SeraphArcherUnit.FLIGHT_HEIGHT + " blocks up");
                     if (hits[0] < 2)
                         problems.add("the enemy 9 blocks off was hurt in " + hits[0] + " looks while the Seraph Archer lived; it should shoot it");
                     else if (nearestHit[0] < 4.0)
@@ -490,6 +496,80 @@ public class AngelCallerGameTests {
                 }
             } finally {
                 cleanUp(caster, units, last[0] == null ? List.of() : List.of(last[0]));
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * lovish (revision answers, Oct 29): the Seraph Archer "flies low (3 blocks up) so melee and ground towers can hit
+     * it". A melee enemy (a Vindicator, AI on) beside a Seraph Archer hovering at its flight height - nothing else of
+     * the caster's side near it - takes it on and hurts it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 280, batch = "angel_caller_archer_melee")
+    public static void angel_caller_seraph_archer_flies_low_enough_for_melee_to_hit_it(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "archermelee"), foeOwner = owner(helper, "archermeleefoe");
+        Mob caster = caller(helper, owner, 3, 3, CallAngel.Kind.ARCHER.essence);
+        List<Mob> units = new ArrayList<>();
+        if (caster == null) {
+            helper.fail("could not spawn the caster");
+            return;
+        }
+        int cast = 2;
+        AngelUnit[] angel = { null };
+        Mob[] melee = { null };
+        Vec3[] last = { null };
+        float[] archerHp = { 0 };
+        int[] meleeHits = { 0 };
+        helper.runAfterDelay(cast, () -> {
+            click(level, caster, CallAngel.Kind.ARCHER);
+            List<AngelUnit> as = angels(caster, CallAngel.Kind.ARCHER);
+            angel[0] = as.isEmpty() ? null : as.get(0);
+            if (angel[0] != null)
+                archerHp[0] = angel[0].getHealth();
+        });
+        // the caster goes (the archer stays: it is bound to nothing but its time) so the Vindicator has one target
+        helper.runAfterDelay(cast + 2, () -> {
+            if (angel[0] != null)
+                angel[0].setPos(caster.getX(), caster.getY() + SeraphArcherUnit.FLIGHT_HEIGHT, caster.getZ());
+            caster.discard();
+            Mob v = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), foeOwner, 3, 8);
+            if (v != null) {
+                AutocastState.setAll((Unit) v, false);
+                units.add(v);
+                melee[0] = v;
+            }
+        });
+        for (int t = cast + 5; t <= 250; t += 5) {
+            helper.runAfterDelay(t, () -> {
+                AngelUnit a = angel[0];
+                Mob v = melee[0];
+                if (a == null || v == null)
+                    return;
+                if (a.isAlive() && !a.isRemoved())
+                    last[0] = a.position();
+                if (a.getHealth() < archerHp[0] && a.getLastHurtByMob() == v)
+                    meleeHits[0]++;
+                archerHp[0] = a.getHealth();
+            });
+        }
+        helper.runAfterDelay(255, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                if (angel[0] == null)
+                    problems.add("the Archer call made no Seraph Archer");
+                else if (melee[0] == null)
+                    problems.add("could not spawn the Vindicator");
+                else if (meleeHits[0] == 0)
+                    problems.add("a Vindicator 5 blocks from a Seraph Archer hovering " + SeraphArcherUnit.FLIGHT_HEIGHT
+                        + " blocks up never hurt it in 12 s; lovish: melee can hit it");
+            } finally {
+                cleanUp(null, units, last[0] == null ? List.of() : List.of(last[0]));
+                if (angel[0] != null && !angel[0].isRemoved())
+                    angel[0].discard();
+                if (!caster.isRemoved())
+                    caster.discard();
             }
             finish(helper, problems);
         });

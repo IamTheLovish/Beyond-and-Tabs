@@ -44,6 +44,12 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
     final static public boolean willRetaliate = true;
     final static public boolean aggressiveWhenIdle = true;
 
+    /**
+     * lovish (revision answers, Oct 29): it "flies low (3 blocks up) so melee and ground towers can hit it" - its height
+     * over the ground, here and nowhere else.
+     */
+    public static final int FLIGHT_HEIGHT = 3;
+
     final static public float maxHealth = 40.0f;
     final static public float armorValue = 0.0f;
     final static public float movementSpeed = 0.30f;
