@@ -119,7 +119,7 @@ public final class UnitInfoCard {
         // supports; the Engineer-Captain falls to the worker rule
         Map.entry("SteamJuggernautUnit", Role.TANK), Map.entry("TeslaWalkerUnit", Role.SKIRMISHER),
         Map.entry("GyrocopterGunshipUnit", Role.SKIRMISHER), Map.entry("DrillBurrowerUnit", Role.RAIDER),
-        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
+        Map.entry("RepairCrawlerUnit", Role.SUPPORT), Map.entry("SoulEngineerUnit", Role.SUPPORT), Map.entry("ClockworkSpiderUnit", Role.SKIRMISHER),
         // slice 2: the Ink Scribe is a controller (its Seal), the Frost Adept a skirmisher, the Rocket Battery artillery
         Map.entry("InkScribeUnit", Role.SUPPORT), Map.entry("FrostAdeptUnit", Role.SKIRMISHER),
         Map.entry("RocketBatteryUnit", Role.ARTILLERY),

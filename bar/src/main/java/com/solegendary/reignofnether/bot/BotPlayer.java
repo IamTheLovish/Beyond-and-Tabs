@@ -157,7 +157,8 @@ public class BotPlayer {
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER,   // beasts-2 T2 beast
+                        ProductionItems.SOUL_ENGINEER),   // essence caster: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }

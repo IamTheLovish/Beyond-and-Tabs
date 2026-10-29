@@ -510,6 +510,10 @@ public class ItemRegistrar {
             ITEMS.register("repair_crawler_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.REPAIR_CRAWLER_UNIT,
                     0xC98A2E, 0x7FE07F, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> SOUL_ENGINEER_UNIT_SPAWN_EGG =
+            ITEMS.register("soul_engineer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SOUL_ENGINEER_UNIT,
+                    0xC98A2E, 0x6FE3E8, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> CLOCKWORK_SPIDER_UNIT_SPAWN_EGG =
             ITEMS.register("clockwork_spider_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CLOCKWORK_SPIDER_UNIT,
                     0xC98A2E, 0xFF7A20, new Item.Properties()));

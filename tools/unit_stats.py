@@ -137,6 +137,7 @@ ROSTER = [
     ('Brassworks', 't2', 'brass/DrillBurrowerUnit', 'raider'),
     ('Brassworks', 't2', 'brass/RepairCrawlerUnit', 'support'),
     ('Brassworks', 't2', 'brass/ClockworkSpiderUnit', 'skirmisher'),
+    ('Brassworks', 't2', 'brass/SoulEngineerUnit', 'support'),
     # slice 4: the Great Forge's experimental (Heat vents its cannon; the drones it launches are free and not listed)
     ('Brassworks', 't3', 'brass/IronLeviathanEngineUnit', 'experimental'),
     # big-units (design/big_units.md): the T2 beasts - each pays for a signature the per-target columns can't see (an
