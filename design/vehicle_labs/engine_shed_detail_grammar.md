@@ -447,3 +447,13 @@ A vertical city of stacked timber-and-plaster buildings hanging off a giant ston
 4. **Scattered warm lights** (red lanterns, lit windows) and a moving element (the cable car) bring it alive.
 Faction fit: the East-Asian look suits the Lotus faction's buildings (tools/lab_lotus_academy.py). For Brassworks,
 take the method: tiers as clusters of small complete volumes, roofs at every level, plain piers vs busy infill.
+
+## (t) ref60 - lovish's reference, Oct 28 22:55 (design/refs/vehicle_labs/ref60_crafting_table_workshop.png)
+A workshop built as a giant crafting table, isometric view - the clearest "reads as its function from above" ref.
+1. **The roof IS the icon:** the crafting grid on top is legible from the RTS camera. For the Engine Shed: the big
+   shed roof (40 % of the view) carries the Brassworks mark - e.g. a gear / turntable motif in roof-light glazing
+   and slate tones, or an iron roof-light grid - so a player knows the building at a glance.
+2. **Corner posts become towers** with copper spires, lanterns hanging on iron arms at each corner.
+3. **Open, lit interior** visible through big openings: barrels, crates, a workbench, tools - the building works.
+4. **Clear emblem panels** (white field, one dark tool icon) instead of busy ornament - readable at ~36 px/block.
+5. A rough stone base with stairs and grass/stone scatter seats it into the ground.
