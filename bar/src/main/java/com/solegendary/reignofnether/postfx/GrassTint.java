@@ -58,13 +58,13 @@ public final class GrassTint {
     static final double[] CELLS = {48.0, 14.0, 4.5};
     static final double[] WEIGHTS = {1.0, 0.8, 0.6};
     static final double CONTRAST = 2.6;
-    static final double VALUE = 0.045;   // round 4: the blob octaves halved (critic: camouflage, blur)
+    static final double VALUE = 0.085;   // round 4 0.045 (critic: camouflage, blur); round 7 0.085 inside the soft limit
 
     // review round 1 (Oct 28): no octave finer than 3 blocks - under Embeddium the colour blends across each block's
     // corners, so a 2-block cell reads as single-block pips, the "rule 3+" of round 4
-    static final double[] MOTTLE_CELLS = {4.0, 3.0};
-    static final double[] MOTTLE_WEIGHTS = {1.0, 0.35};
-    static final double MOTTLE = 0.06;    // light side; the dark side is 1.6x (critic: the range sat too mid)
+    static final double[] MOTTLE_CELLS = {5.0, 3.5};
+    static final double[] MOTTLE_WEIGHTS = {1.0, 0.25};
+    static final double MOTTLE = 0.085;   // light side; the dark side is 1.6x (critic: the range sat too mid); round 7 0.06 -> 0.085
     static final double HUE_MOTTLE = 0.06;
 
     static final double[] DRY_CELLS = {56.0, 16.0};
@@ -74,15 +74,33 @@ public final class GrassTint {
     static final double[] STRAW_CELLS = {6.0, 3.0};
     static final double[] STRAW_WEIGHTS = {1.0, 0.35};
     static final double STRAW_AT = -0.25;
-    static final double STRAW_SOFT = 1.4;
+    static final double STRAW_SOFT = 1.7;    // round 7 1.4 -> 1.7: gradient noise is steeper at its edges
     static final double STRAW_GATE = -0.15;   // straw only where dryness is above this (fully 0.4 above it)
 
     static final double[] CLUMP_CELLS = {7.0, 3.5};
     static final double[] CLUMP_WEIGHTS = {1.0, 0.4};
     static final double CLUMP_AT = 0.05;
-    static final double CLUMP_SOFT = 0.70;
+    static final double CLUMP_SOFT = 0.9;     // round 7 0.70 -> 0.9, as STRAW_SOFT
     static final double CLUMP_GATE = 0.0;     // dark clumps only where dryness is below this (fully 0.4 below it)
     static final double CLUMP_DARK = 0.14;
+
+    /**
+     * Round 7 (Oct 29, critic r40 #3: "one flat olive; patches show as rectangles"): the noise. The lattice (value)
+     * noise of rounds 1-6 had zero slope on every lattice line - its quintic fade - and every octave sat on one
+     * unrotated grid, so from the RTS camera the lawn read as a grid of squares (eyes r42: the colour changed 1.6x
+     * faster mid-cell than on the 4-block lines; 20% more variation along the world axes than the diagonals). Now
+     * gradient noise, each octave on a lattice turned by its seed x the golden angle, so no two octaves share lines.
+     * NOISE_NORM scales it to the value noise's spread (std 0.452 vs 0.216), so the tuned ranges above keep meaning.
+     */
+    static final double GOLDEN_ANGLE = 2.399963229728653;
+    static final double NOISE_NORM = 2.1;
+    /**
+     * Round 7: the brightness multiplier is soft-limited (tanh) to +20% / -22%, so the wider VALUE and MOTTLE ranges
+     * spread the middle of the meadow without pushing its rare extremes past the readability floor
+     * (darksKeepUnitsReadable) or the meadow's range.
+     */
+    static final double SOFT_LIGHT = 0.20;
+    static final double SOFT_DARK = 0.22;
 
     private GrassTint() {
     }
@@ -119,6 +137,7 @@ public final class GrassTint {
         double hm = HUE_MOTTLE * octaves(x + 999, z + 333, salt * 8 + 60, MOTTLE_CELLS, MOTTLE_WEIGHTS);
         double v = (1 + VALUE * f) * (1 - CLUMP_DARK * m) * (1 + 0.10 * s)
                 * (1 + MOTTLE * (mottle > 0 ? mottle : 1.6 * mottle));
+        v = v > 1 ? 1 + SOFT_LIGHT * Math.tanh((v - 1) / SOFT_LIGHT) : 1 - SOFT_DARK * Math.tanh((1 - v) / SOFT_DARK);
         double dp = Math.max(dry, 0), dn = Math.min(dry, 0);
         double[] o = salt == GRASS ? OLIVE_GRASS : CANOPY;
         double r = ((rgb >> 16) & 0xFF) * o[0] * v * (1 + 0.6 * hm) * (1 + 0.04 * dp + 0.06 * dn) * (1 + 0.10 * s)
@@ -131,7 +150,7 @@ public final class GrassTint {
     private static double octaves(int x, int z, int seed, double[] cells, double[] weights) {
         double s = 0, w = 0;
         for (int i = 0; i < cells.length; i++) {
-            s += weights[i] * valueNoise(x / cells[i], z / cells[i], seed + i);
+            s += weights[i] * gradientNoise(x / cells[i], z / cells[i], seed + i);
             w += weights[i];
         }
         return s / w;
@@ -153,16 +172,26 @@ public final class GrassTint {
         return (int) Math.max(0, Math.min(255, Math.round(c)));
     }
 
-    private static double valueNoise(double x, double z, int seed) {
+    /** Gradient noise in [-1, 1] on a lattice turned by seed x the golden angle (round 7: no shared square grid). */
+    private static double gradientNoise(double x0, double z0, int seed) {
+        double rot = seed * GOLDEN_ANGLE, cos = Math.cos(rot), sin = Math.sin(rot);
+        double x = cos * x0 - sin * z0, z = sin * x0 + cos * z0;
         int ix = (int) Math.floor(x);
         int iz = (int) Math.floor(z);
-        double u = fade(x - ix);
-        double v = fade(z - iz);
-        double a = lattice(ix, iz, seed);
-        double b = lattice(ix + 1, iz, seed);
-        double c = lattice(ix, iz + 1, seed);
-        double d = lattice(ix + 1, iz + 1, seed);
-        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+        double fx = x - ix, fz = z - iz;
+        double u = fade(fx);
+        double v = fade(fz);
+        double a = grad(ix, iz, seed, fx, fz);
+        double b = grad(ix + 1, iz, seed, fx - 1, fz);
+        double c = grad(ix, iz + 1, seed, fx, fz - 1);
+        double d = grad(ix + 1, iz + 1, seed, fx - 1, fz - 1);
+        return Math.max(-1, Math.min(1, NOISE_NORM * (a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v)));
+    }
+
+    /** A lattice point's unit gradient (angle from its hash) dotted with the offset (dx, dz) to it. */
+    private static double grad(int ix, int iz, int seed, double dx, double dz) {
+        double angle = Math.PI * (lattice(ix, iz, seed) + 1);
+        return Math.cos(angle) * dx + Math.sin(angle) * dz;
     }
 
     private static double fade(double t) {
