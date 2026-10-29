@@ -431,7 +431,12 @@ public class TombcallerGameTests {
                 if (Essence.get(rich) != 30 || ((Unit) rich).getCooldown(raise) > 0 || TombcallerServerEvents.stonesOf(rich).size() != 3)
                     problems.add("a fourth stone was not refused cleanly (essence " + Essence.get(rich) + ", stones "
                         + TombcallerServerEvents.stonesOf(rich).size() + ")");
+                // the autocast does not even try at the cap (no "already keeps three" every second), and does again below it
+                if (raise.canAutocastNow(level, (Unit) rich))
+                    problems.add("the autocast would order a fourth stone at the cap");
                 stones.get(2).discard();
+                if (!raise.canAutocastNow(level, (Unit) rich))
+                    problems.add("with two stones and 30 essence the autocast would not cast");
                 String[] what = { "12 blocks off", "in mid-air" };
                 BlockPos[] at = { helper.absolutePos(new BlockPos(14, 1, 13)), helper.absolutePos(new BlockPos(4, 8, 9)) };
                 for (int i = 0; i < at.length; i++) {

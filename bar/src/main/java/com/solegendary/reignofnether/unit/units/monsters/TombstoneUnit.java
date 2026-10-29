@@ -71,8 +71,10 @@ public class TombstoneUnit extends AbstractTotem {
         getPersistentData().putLong(KEY_BORN, now);
         getPersistentData().putLong(KEY_END, now + LIFETIME_SECONDS * 20L);
         getPersistentData().putLong(KEY_NEXT_RAISE, now + RAISE_EVERY_SECONDS * 20L);
-        if (caster != null)
+        if (caster != null) {
             getPersistentData().putUUID(KEY_CASTER, caster.getUUID());
+            casterId = caster.getUUID();
+        }
     }
 
     public long born() {
@@ -94,8 +96,14 @@ public class TombstoneUnit extends AbstractTotem {
 
     @Nullable
     public UUID casterId() {
-        return getPersistentData().hasUUID(KEY_CASTER) ? getPersistentData().getUUID(KEY_CASTER) : null;
+        // read once: the wisp scan asks every stone for it (PR 366 review round 1)
+        if (casterId == null && getPersistentData().hasUUID(KEY_CASTER))
+            casterId = getPersistentData().getUUID(KEY_CASTER);
+        return casterId;
     }
+
+    @Nullable
+    private UUID casterId = null;
 
     /** Makes the stone {@code ticks} older (its birth, end and next raise all move back): game tests. */
     public void backdate(long ticks) {
