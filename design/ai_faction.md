@@ -196,10 +196,8 @@ happen.
 **Art:** one rig. The stages are ModelPart groups shown by a synced stage byte, so there are five looks without five
 models. Evolve and Last Stand get a "lines draw / parts fall" effect from `BarFx`.
 
-**Open taste calls for lovish** (defaults above stand if he doesn't care):
-- Should Last Stand cost a stage, or only its HP?
-- Is one Final Form per player the right cap?
-- Should hunt points come from kills, or from essence alone?
+**lovish (Oct 29): keep the defaults.** Last Stand costs a stage, one Final Form per player, and hunt points come from
+kills and assists.
 
 ---
 
@@ -213,12 +211,13 @@ the cleanup slice, so open branches that touch `tide/` don't conflict on every s
 | **1a Grid core** (section 6) | grid rules + tile look on the existing pool system | Tides core |
 | 1b Identity + T1 core | Lumen name/lang, `FactionTraits` (black/glow palette, derez FX in the `F_TIDE` slot), commander Derez Beam / Grid Pulse, Core Ring + Compiler + `"_grid"` economy structures, Builder Drone, Seeker Drone, Light Blade, Bulwark Frame, Grid Weaver bodies; bot kit renamed. Concept sheets first (CI `concepts.yml`, 3 models a run). | Admiral, Shipwright, Gull Spotter, Cutlass, Reef Guard, Tide Priest, Wreck Harbour, Slipway, eco set |
 | 2 Rest of T1 | Pulse Gunner (new), Grav Tether, Flak Drone, Arc Mortar, Hover Skiff, Cloak Field; `BombardShell` to a shared package first | Harpooner, Flak Swivel, Bombard Crew, Mudskipper, Fog Bank |
-| 3 T2 | Foundry Matrix, Architect, Gravity Lancer, Rail Lancer, Glider Bomber, Bastion Walker, Beam Walker, Scanner Spire, **Hunter Frame**, building grid | Drydock, Harbourmaster, Kraken, Mortar Galley, Sky Corsair, Shellback, Lighthouse, PR 368 |
+| **1c Hunter Frame** (lovish: right after 1b) | the evolving essence caster in the Drydock's caster slot, its 3 abilities, stages and bot habits | Tide Seer (PR 368 closes) |
+| 3 T2 | Foundry Matrix, Architect, Gravity Lancer, Rail Lancer, Glider Bomber, Bastion Walker, Beam Walker, Scanner Spire, building grid | Drydock, Harbourmaster, Kraken, Mortar Galley, Sky Corsair, Shellback, Lighthouse |
 | 4 T3 + enders | Titan Gate, Titan Frame, Mainframe Upload, Ward Spire variant, Blade Master hero, Patch Drone | Abyssal Shipyard, Leviathan, Deep Dive, Maelstrom, Salvager |
 | 5 Cleanup | delete sea assets/tools/lang/music, rename `tide` -> `lumen` (classes, tests, habits), registry path `tidewrought` -> `lumen` with an alias in `SkirmishServerboundPacket.CODE_PATHS` and the faction lookup for old lobby settings and `MatchStateSaveData`; Forge missing-mapping handling for removed entities and blocks; `MobilityClass.TIDAL` -> `HOVER` or gone | everything left |
 
-The Corsair Captain's move to the neutral pool is its own small PR, at any time. The Hunter Frame can come forward to
-just after 1b if lovish wants the caster sooner. It only needs the T2 lab slot, which the Drydock already has.
+The Corsair Captain's move to the neutral pool is its own small PR, at any time. The Hunter Frame comes right after 1b
+(lovish, Oct 29). It only needs the T2 lab's caster slot, which the Drydock already has.
 
 **Tests per slice:** keep each test where its mechanic stays and change bodies and numbers only. Renames wait for
 slice 5. Delete only the water-only checks (the never-drown half of
@@ -290,9 +289,12 @@ plus lang and one block model/texture. Size S. One builder session.
 
 ---
 
-## 8. Asked of lovish now
+## 8. lovish's answers on revision 2 (Oct 29, via Command Center Rust)
 
-1. **OK to build slice 1a** (section 6) as written?
-2. The Hunter Frame defaults (section 4): Last Stand costs a stage, one Final Form per player, and hunt points from
-   kills. Keep or change?
-3. Hunter Frame timing: with the rest of T2 (slice 3), or right after 1b?
+1. **Slice 1a: yes**, as section 6 says. It is PR 380 (`claude/ai-grid-core`), test-first, red on 3 runners and
+   green on 8.
+2. **Hunter Frame defaults kept** (section 4).
+3. **Hunter Frame right after 1b** (slice 1c in section 5).
+
+Slice 1a as built differs from section 6 in one way: Deep Dive (the Leviathan's) still starts from real water or a
+pool. The Leviathan checks water itself, and slice 4 replaces it with Phase Shift.
