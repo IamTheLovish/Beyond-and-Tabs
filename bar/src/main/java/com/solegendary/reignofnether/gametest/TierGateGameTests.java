@@ -114,12 +114,15 @@ public class TierGateGameTests {
             problems.add("the Tier 2 package is only " + seconds + " s of the opener's income");
         if (t2.metal() >= ResourceCosts.RESEARCH_TIER_3.metal())
             problems.add("Tier 2 research (" + t2.metal() + "m) is not under Tier 3's (" + ResourceCosts.RESEARCH_TIER_3.metal() + "m)");
-        // energy is a real gate: the research alone pulls more energy per second than a 3-wind base (capitol + 3 x 14)
-        // makes. Was "4-wind" (56/s) until lovish trimmed the research to 42/s (Oct 29): units and labs now cost energy too,
-        // so the research no longer has to be the whole gate on its own
+        // energy is a real gate: the research alone pulls more than the capitol and one wind make (20 + 14 = 34 at the mean
+        // wind: it needs a second wind under it), and less than the capitol and three (62: Tier 2 stays reachable on a T1
+        // field). Was "more than a 4-wind base" (56/s) until lovish trimmed it a quarter to 42/s (Oct 29: units and labs
+        // cost energy now, so the research is no longer the whole gate)
         float researchEnergyPerSecond = TierGate.T2_RESEARCH_ENERGY / (float) TierGate.T2_RESEARCH_SECONDS;
-        if (researchEnergyPerSecond < 3 * 14f)
-            problems.add("the research drains only " + researchEnergyPerSecond + " energy/s");
+        float capitol = EconomyServerEvents.BASE_ENERGY_INCOME, wind = com.solegendary.reignofnether.resources.Wind.MEAN;
+        if (researchEnergyPerSecond <= capitol + wind || researchEnergyPerSecond >= capitol + 3 * wind)
+            problems.add("the research drains " + researchEnergyPerSecond + " energy/s, want between a one-wind base's "
+                + (capitol + wind) + " and a three-wind base's " + (capitol + 3 * wind));
         if (TierGate.T2_EXTRACTOR_ENERGY_UPKEEP <= TierGate.T1_EXTRACTOR_ENERGY_UPKEEP)
             problems.add("a T2 extractor must drain more energy than a T1 one");
         // assisting speeds the lab up (BAR): builder-seconds are fixed, so twice the build power is half the time

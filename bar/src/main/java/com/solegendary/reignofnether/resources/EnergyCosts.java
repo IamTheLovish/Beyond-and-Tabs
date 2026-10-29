@@ -11,6 +11,8 @@ import java.util.List;
  * energy of every cost listed below after the config bake (ResourceCosts.deferredLoadResourceCosts), so the config's
  * wood/food no longer decide energy for them. Metal and build times stay the config's.
  * <ul>
+ *   <li><b>The anti-T3 emplacement</b> (DefenceCosts.bakeAntiT3, after this bake) is 15% of the priciest experimental, so
+ *       it is energy-heavy too: 275 metal / 4970 energy (was ~260 energy), like BAR's heavy defences.</li>
  *   <li><b>Units, by the lab that trains them</b> (lovish: "in between" 5/10/15 and BAR's 10/20/20): T1 x{@value
  *       #T1_UNIT_ENERGY_PER_METAL}, T2 x{@value #T2_UNIT_ENERGY_PER_METAL} (T2 constructors and combat engineers come
  *       out of the T2 lab too), T3 x{@value #T3_UNIT_ENERGY_PER_METAL} their metal, rounded to 10.</li>
@@ -67,14 +69,23 @@ public final class EnergyCosts {
         ResourceCosts.DRILL_BURROWER, ResourceCosts.REPAIR_CRAWLER, ResourceCosts.CLOCKWORK_SPIDER,
         ResourceCosts.ORIFLAMME_ELEPHANT, ResourceCosts.GOREHORN_RHINO, ResourceCosts.OSSUARY_BEHEMOTH,
         ResourceCosts.MOSSBACK_BISON, ResourceCosts.SHELLBACK_TURTLE, ResourceCosts.JADE_QILIN, ResourceCosts.STEAM_HAULER,
+        ResourceCosts.KRAKEN_CALLER, ResourceCosts.MORTAR_GALLEY, ResourceCosts.SKY_CORSAIR,
         ResourceCosts.ROYAL_ARCHITECT, ResourceCosts.EMBALMER, ResourceCosts.BONEWRIGHT, ResourceCosts.ELDER_DRUID,
         ResourceCosts.HARBOURMASTER, ResourceCosts.LEY_MASTER, ResourceCosts.ENGINEER_CAPTAIN,
         ResourceCosts.FIELD_MASON, ResourceCosts.BONESETTER, ResourceCosts.WRECKER, ResourceCosts.ROOTWARDEN,
         ResourceCosts.SALVAGER, ResourceCosts.JADE_MENDER, ResourceCosts.PIONEER);
 
-    public static final List<ResourceCost> T3_UNITS = List.of(ResourceCosts.SUN_COLOSSUS, ResourceCosts.BONE_DRAGON,
-        ResourceCosts.WAR_MAMMOTH, ResourceCosts.WORLD_TREE_WALKER, ResourceCosts.LEVIATHAN, ResourceCosts.CELESTIAL_DRAGON,
-        ResourceCosts.IRON_LEVIATHAN_ENGINE);
+    /** The experimentals: the same list the anti-T3 emplacement is priced from (one list, not two). */
+    public static final List<ResourceCost> T3_UNITS = com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.T3_UNITS;
+
+    /**
+     * Everything else a player can train or capture: the neutral units the capturable buildings make (End Portal's Enderman,
+     * the animal pens), the Gravebound's converted Zombie Piglin and Zoglin, the Militia and the Bee - priced as T1 units
+     * (8 energy per metal). tools/test_energy_scaling.py fails when a priced unit/units/**Prod.java is in no list.
+     */
+    public static final List<ResourceCost> NEUTRAL_UNITS = List.of(ResourceCosts.ENDERMAN, ResourceCosts.GRIZZLY_BEAR,
+        ResourceCosts.POLAR_BEAR, ResourceCosts.PANDA, ResourceCosts.WOLF, ResourceCosts.LLAMA, ResourceCosts.ZOMBIE_PIGLIN,
+        ResourceCosts.ZOGLIN, ResourceCosts.MILITIA, ResourceCosts.BEE);
 
     /** Every faction's T1 army lab (the Horde's is the Basic Portal + its Military refit, below). */
     public static final List<ResourceCost> T1_LABS = List.of(ResourceCosts.BARRACKS, ResourceCosts.GRAVEYARD,
@@ -91,6 +102,8 @@ public final class EnergyCosts {
         for (ResourceCost c : WORKERS)
             c.wood = WORKER_ENERGY;
         for (ResourceCost c : T1_UNITS)
+            c.wood = energyFor(c.ore, T1_UNIT_ENERGY_PER_METAL);
+        for (ResourceCost c : NEUTRAL_UNITS)
             c.wood = energyFor(c.ore, T1_UNIT_ENERGY_PER_METAL);
         for (ResourceCost c : T2_UNITS)
             c.wood = energyFor(c.ore, T2_UNIT_ENERGY_PER_METAL);

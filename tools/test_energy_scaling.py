@@ -86,6 +86,28 @@ class Tiers(unittest.TestCase):
         for name, keys in unit_stats.tier_keys().items():
             self.assertEqual(set(lists.get(name, [])), keys, 'resources/EnergyCosts.%s and the roster differ' % name)
 
+    def test_every_trainable_unit_is_priced_by_the_energy_table(self):
+        # from the source, not from the roster (review of #388: the Tidewrought's three T2 units and the End Portal's
+        # Enderman were in no list and kept Reign of Nether's old energy): every unit/units/**/*Prod.java whose cost
+        # entry is not free must sit in one of EnergyCosts' unit lists
+        _, lists = unit_stats._energy_table()
+        listed = set()
+        for name in ('WORKERS', 'T1_UNITS', 'T2_UNITS', 'T3_UNITS', 'NEUTRAL_UNITS'):
+            listed |= set(lists.get(name, []))
+        missing = sorted(set(unit_stats.priced_prod_keys()) - listed)
+        self.assertEqual(missing, [], 'units priced by the old conversion, not resources/EnergyCosts: %s' % missing)
+
+    def test_the_anti_t3_emplacement_is_priced_off_the_table_t3s(self):
+        # DefenceCosts.bakeAntiT3 runs after EnergyCosts.bake: 15% of the priciest experimental, so like BAR's heavy
+        # defences it is energy-heavy now (review of #388: ~260 -> ~4970 energy). Pinned so the jump is a decision
+        costs = unit_stats.load_costs()
+        _, lists = unit_stats._energy_table()
+        t3 = max(costs[k]['metal'] for k in lists['T3_UNITS'])
+        t3e = max(costs[k]['energy'] for k in lists['T3_UNITS'])
+        self.assertEqual(t3e, 33120)
+        self.assertEqual(unit_stats._round_to(t3e * 0.15, 10), 4970)
+        self.assertEqual(unit_stats._round_to(t3 * 0.15, 5), 275)
+
     def test_a_t1_extractor_drains_bars_three_energy_a_second(self):
         self.assertEqual(N['mex_upkeep'], 3.0)
 

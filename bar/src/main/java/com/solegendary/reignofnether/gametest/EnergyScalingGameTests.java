@@ -146,6 +146,67 @@ public class EnergyScalingGameTests {
     /** Energy the starved crew starts with and never gets more of: a few ticks of five workers' drain on an extractor. */
     static final int POOR_ENERGY = 20;
 
+    /**
+     * The more workers, the faster (lovish, Oct 29): twelve workers on a Brassworks extractor (113 blocks of art over a
+     * 40-block build time) have about twice the blocks standing after two seconds as six. On main blocks went in at one a
+     * tick behind a two-block window, so twelve stood ~1.2x six's: the paid progress was there, the blocks were not.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200, batch = BATCH)
+    public static void twelve_builders_lay_twice_the_blocks_of_six_on_a_brassworks_extractor(GameTestHelper helper) {
+        Crew six = new Crew(helper, "six", 0, 6, 50000, Buildings.METAL_EXTRACTOR_BRASS);
+        Crew twelve = new Crew(helper, "twelve", 1, 12, 50000, Buildings.METAL_EXTRACTOR_BRASS);
+        if (!six.ok() || !twelve.ok()) {
+            six.undo();
+            twelve.undo();
+            helper.fail("(setup) could not raise the two sites: " + six.why + " / " + twelve.why);
+            return;
+        }
+        int[] start = { -1, -1 };
+        // count from the tick both crews are on their sites (the foundation layer is queued when a site rises)
+        BlueprintGameTests.poll(helper, 0, 60,
+            () -> six.site.getBuilders().size() == 6 && twelve.site.getBuilders().size() == 12,
+            () -> {
+                start[0] = six.site.getBlocksPlaced();
+                start[1] = twelve.site.getBlocksPlaced();
+                helper.runAfterDelay(40, () -> {
+                    List<String> problems = new ArrayList<>();
+                    try {
+                        int a = six.site.getBlocksPlaced() - start[0], b = twelve.site.getBlocksPlaced() - start[1];
+                        if (six.site.isBuilt || twelve.site.isBuilt)
+                            problems.add("(setup) a site finished inside the window: six " + six.site.isBuilt + ", twelve " + twelve.site.isBuilt);
+                        else if (a <= 0 || (float) b / a < 1.7f)
+                            problems.add("in 40 ticks twelve builders laid " + b + " blocks, six " + a + " (want ~2x)");
+                    } finally {
+                        six.undo();
+                        twelve.undo();
+                    }
+                    finish(helper, problems);
+                });
+            },
+            () -> {
+                List<String> problems = new ArrayList<>(List.of("(setup) the crews never all reached their sites: "
+                    + six.site.getBuilders().size() + " / " + twelve.site.getBuilders().size()));
+                six.undo();
+                twelve.undo();
+                finish(helper, problems);
+            });
+    }
+
+    /**
+     * The anti-T3 emplacement is priced off the table's experimentals (DefenceCosts.bakeAntiT3 runs after EnergyCosts.bake):
+     * 15% of a 1840 metal / 33120 energy experimental = 275 metal / 4970 energy (was ~260 energy). An energy-heavy
+     * defence like BAR's; pinned so the price is a decision, not a side effect (review of #388).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
+    public static void anti_t3_emplacement_costs_its_share_of_the_table_priced_experimental(GameTestHelper helper) {
+        var anti = com.solegendary.reignofnether.building.buildings.defence.DefenceCosts.ANTI_T3;
+        if (anti.metal() != 275 || anti.energy() != 4970)
+            helper.fail("the anti-T3 emplacement costs " + anti.metal() + "m / " + anti.energy() + "e, want 275 / 4970 (15% of "
+                + ResourceCosts.SUN_COLOSSUS.metal() + "m / " + ResourceCosts.SUN_COLOSSUS.energy() + "e)");
+        else
+            helper.succeed();
+    }
+
     /** One owner's site on its own pad high over the arena ({@code slot} 0 or 1 side by side), built by {@code n} workers. */
     static final class Crew {
         final ServerLevel level;
@@ -157,6 +218,10 @@ public class EnergyScalingGameTests {
         String why = "";
 
         Crew(GameTestHelper helper, String tag, int slot, int n, int energy) {
+            this(helper, tag, slot, n, energy, Buildings.METAL_EXTRACTOR_VILLAGERS);
+        }
+
+        Crew(GameTestHelper helper, String tag, int slot, int n, int energy, com.solegendary.reignofnether.building.Building building) {
             level = helper.getLevel();
             owner = "gametest_escale_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
             BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
@@ -166,7 +231,7 @@ public class EnergyScalingGameTests {
             pool = new Resources(owner, 0, energy, 50000);
             ResourcesServerEvents.resourcesList.add(pool);
             CombatEngineerGameTests.skyPad(level, cx, y, cz, 6, 14, false);
-            site = BuildingServerEvents.placeBuilding(Buildings.METAL_EXTRACTOR_VILLAGERS, new BlockPos(cx - 1, y + 1, cz - 1),
+            site = BuildingServerEvents.placeBuilding(building, new BlockPos(cx - 1, y + 1, cz - 1),
                 Rotation.NONE, owner, new int[0], false, false, true, true);
             if (site == null) {
                 why = "placement refused";
@@ -175,8 +240,12 @@ public class EnergyScalingGameTests {
             site.freeBuild = false;   // command-placed for the test, paid for by flow like a player's site
             // the workers stand on the pad beside the footprint, in build range, and are told to build it
             for (int i = 0; i < n; i++) {
+                // round the footprint's edge, all within build range (12 fit round a 5x5 extractor)
+                int side = i % 4, along = i / 4;
+                int bx = side == 0 ? site.minCorner.getX() - 1 : side == 1 ? site.maxCorner.getX() + 1 : site.minCorner.getX() + along;
+                int bz = side == 2 ? site.minCorner.getZ() - 1 : side == 3 ? site.maxCorner.getZ() + 1 : site.minCorner.getZ() + along;
                 Mob m = CombatEngineerGameTests.spawn(level, EntityRegistrar.VILLAGER_UNIT.get(), owner,
-                    new BlockPos(site.minCorner.getX() - 1, y + 1, site.minCorner.getZ() + i), made);
+                    new BlockPos(bx, y + 1, bz), made);
                 if (!(m instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit w) || w.getBuildRepairGoal() == null) {
                     why = "no worker";
                     return;

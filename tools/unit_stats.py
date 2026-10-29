@@ -145,6 +145,9 @@ ROSTER = [
     ('Gravebound', 't2', 'monsters/OssuaryBehemothUnit', 'beast'),
     ('Verdant', 't2', 'verdant/MossbackBisonUnit', 'beast'),
     # beasts-2: a mooring fort with a deck battery, a walking Mana Well, a mobile machine foundry
+    ('Tidewrought', 't2', 'tide/KrakenCallerUnit', 'caster'),
+    ('Tidewrought', 't2', 'tide/MortarGalleyUnit', 'artillery'),
+    ('Tidewrought', 't2', 'tide/SkyCorsairUnit', 'raider'),
     ('Tidewrought', 't2', 'tide/ShellbackTurtleUnit', 'beast'),
     ('Stormcallers', 't2', 'storm/JadeQilinUnit', 'beast'),
     ('Brassworks', 't2', 'brass/SteamHaulerUnit', 'beast'),
@@ -347,6 +350,10 @@ def _energy_table():
             pass
     lists = {m.group(1): re.findall(r'ResourceCosts\.(\w+)', m.group(2))
              for m in re.finditer(r'List<ResourceCost> (\w+) = List\.of\(([^;]+)\);', src)}
+    if 'T3_UNITS' not in lists and re.search(r'T3_UNITS = [\w.]*DefenceCosts\.T3_UNITS;', src):
+        dsrc = _read(os.path.join(SRC, 'building/buildings/defence/DefenceCosts.java'))
+        m = re.search(r'List<ResourceCost> T3_UNITS = List\.of\(([^;]+)\);', dsrc)
+        lists['T3_UNITS'] = re.findall(r'ResourceCosts\.(\w+)', m.group(1))
     return consts, lists
 
 def apply_energy_costs(costs):
@@ -364,6 +371,9 @@ def apply_energy_costs(costs):
         for key in lists.get(name, []):
             if key in costs:
                 set_e(key, _round_to(costs[key]['metal'] * consts[ratio], 10))
+    for key in lists.get('NEUTRAL_UNITS', []):
+        if key in costs:
+            set_e(key, _round_to(costs[key]['metal'] * consts['T1_UNIT_ENERGY_PER_METAL'], 10))
     for key in lists.get('T1_LABS', []):
         set_e(key, consts['T1_LAB_ENERGY'])
     set_e('BASIC_PORTAL', consts['HORDE_PORTAL_ENERGY'])
@@ -371,6 +381,18 @@ def apply_energy_costs(costs):
     set_e('METAL_EXTRACTOR', consts['METAL_EXTRACTOR_ENERGY'])
     set_e('WIND_GENERATOR', consts['WIND_GENERATOR_ENERGY'])
     return costs
+
+def priced_prod_keys():
+    """ResourceCosts keys of every unit/units/**/*Prod.java whose config cost is not free (metal or energy)."""
+    import glob
+    costs = load_costs()
+    out = set()
+    for path in glob.glob(os.path.join(SRC, 'unit/units', '**', '*Prod.java'), recursive=True):
+        key = _cost_key(path)
+        c = costs.get(key) if key else None
+        if c and (c['metal'] or c['energy']):
+            out.add(key)
+    return out
 
 def tier_keys():
     """The roster's ResourceCosts keys by EnergyCosts list (worker -> WORKERS, t1 -> T1_UNITS, the T2 lab's -> T2_UNITS)."""

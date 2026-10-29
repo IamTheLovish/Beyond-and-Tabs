@@ -63,7 +63,7 @@ Tier median over 32 combat units: DPS/100m **3.12**, HP/100m **57**.
 
 ## T2
 
-Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
+Tier median over 18 combat units: DPS/100m **1.29**, HP/100m **36**.
 
 | Faction | Unit | Role | M | E | HP | Dmg | APS | Rng | Spd | RRes | DPS | DPS/100m | HP/100m | Flags |
 |---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|
@@ -74,7 +74,7 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 | Sunforged | Ravager | siege | 405 | 6080 | 290 | 7 | 0.6 | 2 | 0.25 | - | 4.2 | 1.04 | **72** |  |
 | Gravebound | Creeper | suicide | 130 | 1950 | 20 | 20 | 1 | 2 | 0.28 | - | 20 | 15.38 | 15 |  |
 | Gravebound | Wraith | caster | 110 | 1650 | 35 | 5 | 0.5 | 2 | 0.28 | - | 2.5 | 2.27 | 32 | support |
-| Gravebound | Warden | tank | 290 | 4350 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | 52 |  |
+| Gravebound | Warden | tank | 290 | 4350 | 150 | 8 | 0.6 | 2 | 0.28 | - | 4.8 | 1.66 | **52** |  |
 | Horde | Blaze | anti-air | 135 | 2030 | 35 | 1 | 1 | 14 | 0.25 | - | 1 | **0.74** | 26 | AA |
 | Horde | WitherSkeleton | debuffer | 245 | 3680 | 100 | 3 | 0.3 | 2 | 0.28 | - | 0.9 | 0.37 | 41 |  |
 | Horde | MagmaCube | merger | 75 | 1130 | 50 | 4 | 0.5 | 2 | 0.25 | - | 2 | 2.67 | 67 |  |
@@ -82,10 +82,10 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 | Verdant | ElderTreant | tank | 455 | 6830 | 380 | 14 | 0.35 | 3 | 0.16 | 0.5 | 4.9 | 1.08 | **84** |  |
 | Verdant | StagLancer | cavalry | 235 | 3530 | 95 | 9 | 0.6 | 2.5 | 0.36 | - | 5.4 | **2.30** | 40 |  |
 | Verdant | WispChoir | anti-air | 155 | 2330 | 40 | 4 | 0.6 | 14 | 0.3 | - | 2.4 | 1.55 | 26 | AA, flying |
-| Verdant | ShadeRanger | sniper | 215 | 3230 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | 1.86 | **14** | hits-air, artillery |
+| Verdant | ShadeRanger | sniper | 215 | 3230 | 30 | 16 | 0.25 | 24 | 0.25 | - | 4 | **1.86** | **14** | hits-air, artillery |
 | Verdant | BloomPriestess | support | 175 | 2630 | 45 | - | - | - | 0.26 | - | - | 0.00 | 26 | support |
 | Stormcallers | ThunderDragon | caster | 295 | 4430 | 100 | 14 | 0.33 | 10 | 0.3 | - | 4.66 | 1.58 | 34 | hits-air, support, flying |
-| Stormcallers | Earthshaker | tank | 305 | 4580 | 160 | 12 | 0.4 | 3 | 0.21 | 0.3 | 4.8 | 1.57 | 52 |  |
+| Stormcallers | Earthshaker | tank | 305 | 4580 | 160 | 12 | 0.4 | 3 | 0.21 | 0.3 | 4.8 | 1.57 | **52** |  |
 | Stormcallers | GravityMonk | caster | 195 | 2930 | 45 | 3 | 0.5 | 10 | 0.26 | - | 1.5 | 0.77 | 23 | hits-air, support |
 | Stormcallers | MirrorMage | support | 180 | 2700 | 40 | - | - | - | 0.26 | - | - | 0.00 | 22 | support |
 | Stormcallers | Seer | scout | 95 | 1430 | 36 | - | - | - | 0.27 | - | - | 0.00 | 38 |  |
@@ -101,6 +101,9 @@ Tier median over 16 combat units: DPS/100m **1.43**, HP/100m **39**.
 | Horde | GorehornRhino | beast | 540 | 8100 | 300 | 10 | 0.6 | 2.5 | 0.24 | - | 6 | 1.11 | 56 |  |
 | Gravebound | OssuaryBehemoth | beast | 550 | 8250 | 260 | 7 | 0.7 | 2.5 | 0.22 | - | 4.9 | 0.89 | 47 |  |
 | Verdant | MossbackBison | beast | 465 | 6980 | 280 | 7 | 0.7 | 2.5 | 0.27 | 0.2 | 4.9 | 1.05 | 60 |  |
+| Tidewrought | KrakenCaller | caster | 200 | 3000 | 55 | 4 | 0.5 | 10 | 0.25 | - | 2 | 1.00 | 28 | hits-air, support |
+| Tidewrought | MortarGalley | artillery | 260 | 3900 | 88 | 12 | 0.2 | 30 | 0.18 | 0.25 | 2.4 | 0.92 | 34 | hits-air, artillery |
+| Tidewrought | SkyCorsair | raider | 280 | 4200 | 70 | 10 | 0.2 | 13 | 0.26 | - | 2 | **0.71** | 25 | hits-air, flying |
 | Tidewrought | ShellbackTurtle | beast | 545 | 8180 | 560 | 9 | 0.6 | 3 | 0.15 | 0.2 | 5.4 | 0.99 | 103 |  |
 | Stormcallers | JadeQilin | beast | 610 | 9150 | 420 | 8 | 0.7 | 2.5 | 0.3 | - | 5.6 | 0.92 | 69 |  |
 | Brassworks | SteamHauler | beast | 630 | 9450 | 480 | 6 | 0.6 | 3 | 0.2 | 0.3 | 3.6 | 0.57 | 76 |  |
@@ -202,14 +205,18 @@ All 7 experimentals cost the same 1840M/1740E: the ratio column swings with how 
 - T1 Stormcallers **RocketBattery** (artillery): DPS/100m 0.69 vs median 3.12 (-78%) - *role*
 - T1 Stormcallers **RocketBattery** (artillery): HP/100m 25.00 vs median 57.04 (-56%) - *role*
 - T1 Brassworks **MortarCrawler** (artillery): HP/100m 26.67 vs median 57.04 (-53%) - *role*
-- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 38.82 (+84%) - *role* - siege beast, role
-- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.43 (-48%) - *role* - damage is burning only (~1/s); dedicated anti-air
-- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.43 (-75%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 38.82 (-62%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
-- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 38.82 (+115%) - *role* - super-tank, reduced this pass
-- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.43 (+61%) - cavalry burst after this pass - still flagged, intentional; watch
-- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 38.82 (-64%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
-- T2 Brassworks **SteamJuggernaut** (tank): HP/100m 63.49 vs median 38.82 (+64%) - *role*
+- T2 Sunforged **Ravager** (siege): HP/100m 71.60 vs median 36.25 (+98%) - *role* - siege beast, role
+- T2 Gravebound **Warden** (tank): HP/100m 51.72 vs median 36.25 (+43%) - *role* - tank, role
+- T2 Horde **Blaze** (anti-air): DPS/100m 0.74 vs median 1.29 (-42%) - *role* - damage is burning only (~1/s); dedicated anti-air
+- T2 Horde **Ghast** (artillery): DPS/100m 0.35 vs median 1.29 (-73%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Horde **Ghast** (artillery): HP/100m 14.71 vs median 36.25 (-59%) - *role* - fireball splash + 30 range + flying; direct DPS understates it
+- T2 Verdant **ElderTreant** (tank): HP/100m 83.52 vs median 36.25 (+130%) - *role* - super-tank, reduced this pass
+- T2 Verdant **StagLancer** (cavalry): DPS/100m 2.30 vs median 1.29 (+79%) - cavalry burst after this pass - still flagged, intentional; watch
+- T2 Verdant **ShadeRanger** (sniper): DPS/100m 1.86 vs median 1.29 (+45%) - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T2 Verdant **ShadeRanger** (sniper): HP/100m 13.95 vs median 36.25 (-62%) - *role* - cloaked 24-range sniper: 16-damage shots, glass by design (14 HP/100m) - its DPS buys no durability
+- T2 Stormcallers **Earthshaker** (tank): HP/100m 52.46 vs median 36.25 (+45%) - *role*
+- T2 Brassworks **SteamJuggernaut** (tank): HP/100m 63.49 vs median 36.25 (+75%) - *role*
+- T2 Tidewrought **SkyCorsair** (raider): DPS/100m 0.71 vs median 1.29 (-44%)
 
 ## Changes in this pass
 
