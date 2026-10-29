@@ -278,7 +278,7 @@ public class HeroAiV2GameTests {
         helper.runAfterDelay(spawnAt, () -> {
             if (!ShadeRangerUnit.isCloaked(ranger)) {
                 done[0] = true;
-                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak"), mobs, null);
+                HeroAiGameTests.finish(helper, List.of("setup: the Shade Ranger did not cloak" + cloakDiag(ranger, them)), mobs, null);
                 return;
             }
             hero[0] = paladin(helper, me, 6, 5);
@@ -594,5 +594,33 @@ public class HeroAiV2GameTests {
                 }
             });
         }
+    }
+
+    /** Throwaway diagnostic: what kept the ranger visible (target, hurt-by, still ticks, strangers within 48). */
+    static String cloakDiag(Mob ranger, String owner) {
+        StringBuilder b = new StringBuilder(" (");
+        var r = (ShadeRangerUnit) ranger;
+        var goal = r.getTargetGoal();
+        b.append("still ").append(r.getStillTicks()).append(", invisible ").append(ranger.isInvisible())
+         .append(", target ").append(diagName(goal == null ? null : goal.getTarget()))
+         .append(", hurt by ").append(diagName(ranger.getLastHurtByMob()))
+         .append(", lastHurtByMobTimestamp ").append(ranger.getLastHurtByMobTimestamp()).append(" now ").append(ranger.tickCount)
+         .append(", hp ").append(ranger.getHealth())
+         .append(", strangers:");
+        for (var e : ranger.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, ranger.getBoundingBox().inflate(48))) {
+            if (e == ranger || !(e instanceof Unit u) || owner.equals(u.getOwnerName()))
+                continue;
+            b.append(" ").append(diagName(e)).append(String.format("@%.1f", e.distanceTo(ranger)));
+            if (e instanceof Mob m && m.getTarget() != null)
+                b.append("->").append(diagName(m.getTarget()));
+        }
+        return b.append(")").toString();
+    }
+
+    static String diagName(net.minecraft.world.entity.Entity e) {
+        if (e == null)
+            return "none";
+        String o = e instanceof Unit u ? u.getOwnerName() : "?";
+        return e.getType().toShortString() + "[" + o + "]";
     }
 }
