@@ -21,6 +21,7 @@ import com.solegendary.reignofnether.unit.units.monsters.SkeletonUnit;
 import com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -217,6 +218,80 @@ public class GraveAdeptGameTests {
                 for (GraveAdeptUnit extra : level.getEntitiesOfClass(GraveAdeptUnit.class, caller.getBoundingBox().inflate(6)))
                     if (!all.contains(extra))
                         all.add(extra);
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                discardAll(all);
+            }
+            finish(helper, problems);
+        });
+    }
+
+    /**
+     * One Adept per Tombcaller holds through an unload and a possession: with its Adept's chunk unloaded the call is
+     * refused (nothing spent) and the Adept is still counted; back, it is the caster's again. Possessed (its owner now an
+     * enemy's), it no longer counts, and the call raises a new one for 20 essence.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void grave_adept_one_per_caster_through_unload_and_possession(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = owner(helper, "away"), foe = owner(helper, "awayfoe");
+        Mob caller = caller(helper, owner, 3, 12, 50);
+        GraveAdeptUnit first = caller == null ? null : adept(helper, caller, owner, 5, 12, 0);
+        if (caller == null || first == null) {
+            discardAll(nonNull(caller, first));
+            helper.fail("could not spawn the Tombcaller and its Adept");
+            return;
+        }
+        List<Entity> all = new ArrayList<>(List.of(caller, first));
+        CompoundTag saved = new CompoundTag();
+        List<String> early = new ArrayList<>();
+        helper.runAfterDelay(2, () -> {
+            try {
+                if (!first.save(saved))
+                    early.add("setup: the Adept would not save");
+                first.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);   // as its chunk unloading does
+            } catch (RuntimeException ex) {
+                early.add("unloading threw " + ex);
+            }
+        });
+        helper.runAfterDelay(4, () -> {
+            try {
+                CallNecromancer call = ability(caller, CallNecromancer.class);
+                if (call == null)
+                    throw new IllegalStateException("the Tombcaller has no Call the Necromancer");
+                if (call.liveSummons(level, (Unit) caller) != 1)
+                    early.add("with its Adept unloaded the Tombcaller counts no Adept");
+                GraveAdeptUnit second = CallNecromancer.cast(level, caller, owner, true);
+                if (second != null)
+                    all.add(second);
+                if (second != null || Essence.get(caller) != 50)
+                    early.add("with its Adept unloaded a second was called (essence " + Essence.get(caller) + ")");
+                Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
+                if (back == null || !level.addFreshEntity(back))
+                    throw new IllegalStateException("the saved Adept did not load back");
+                all.add(back);
+                if (!(back instanceof GraveAdeptUnit b) || GraveAdeptServerEvents.adeptOf(caller) != b)
+                    early.add("the Adept back from its chunk is not its Tombcaller's");
+            } catch (RuntimeException ex) {
+                early.add("threw " + ex);
+            }
+        });
+        helper.runAfterDelay(6, () -> {
+            List<String> problems = new ArrayList<>(early);
+            try {
+                GraveAdeptUnit back = GraveAdeptServerEvents.adeptOf(caller);
+                if (back == null)
+                    throw new IllegalStateException("the Adept back from its chunk is gone");
+                back.setOwnerName(foe);   // what a Wraith's full possession does (WraithUnit.onCastPossess)
+                CallNecromancer call = ability(caller, CallNecromancer.class);
+                if (GraveAdeptServerEvents.adeptOf(caller) != null || (call != null && call.liveSummons(level, (Unit) caller) != 0))
+                    problems.add("a possessed Adept still counts as its old Tombcaller's");
+                GraveAdeptUnit fresh = CallNecromancer.cast(level, caller, owner, true);
+                if (fresh != null)
+                    all.add(fresh);
+                if (fresh == null || Essence.get(caller) != 30 || !owner.equals(fresh.getOwnerName()))
+                    problems.add("with its Adept possessed the Tombcaller could not call a new one (essence " + Essence.get(caller) + ")");
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
