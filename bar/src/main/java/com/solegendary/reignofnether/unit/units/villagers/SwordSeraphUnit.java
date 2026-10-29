@@ -39,6 +39,9 @@ public class SwordSeraphUnit extends AngelUnit implements AttackerUnit {
     final static public boolean willRetaliate = true;
     final static public boolean aggressiveWhenIdle = true;
 
+    /** lovish (Oct 29): only the Sword Seraph dives from higher - it waits up here and stoops onto its target. */
+    public static final int FLIGHT_HEIGHT = 8;
+
     final static public float maxHealth = 70.0f;
     final static public float armorValue = 2.0f;
     final static public float movementSpeed = 0.34f;
@@ -53,6 +56,9 @@ public class SwordSeraphUnit extends AngelUnit implements AttackerUnit {
 
     @Override
     public CallAngel.Kind kind() { return CallAngel.Kind.SWORD; }
+
+    @Override
+    public int flightHeight() { return FLIGHT_HEIGHT; }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()

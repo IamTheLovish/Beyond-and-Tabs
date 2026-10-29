@@ -36,6 +36,9 @@ public class MenderAngelUnit extends AngelUnit implements SupportUnit {
     final static public float movementSpeed = 0.30f;
     final static public int sightRange = 16;
 
+    /** Over the fight, out of melee: it heals from the air (its reach is measured flat). */
+    public static final int FLIGHT_HEIGHT = 6;
+
     public static final float HEAL = 5.0f;
     public static final int HEAL_INTERVAL_TICKS = 40;
     public static final double HEAL_RANGE = 8.0;
@@ -52,6 +55,9 @@ public class MenderAngelUnit extends AngelUnit implements SupportUnit {
 
     @Override
     public CallAngel.Kind kind() { return CallAngel.Kind.MENDER; }
+
+    @Override
+    public int flightHeight() { return FLIGHT_HEIGHT; }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()

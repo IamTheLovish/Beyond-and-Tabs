@@ -27,7 +27,8 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 
 /**
- * The <b>Seraph Archer</b> (CallAngel, mid tier: 10 essence, 25 s cooldown, lives 25 s): a flying archer. It shoots
+ * The <b>Seraph Archer</b> (CallAngel, mid tier: 10 essence, 25 s cooldown, lives 25 s): a flying archer that flies
+ * low, {@link #FLIGHT_HEIGHT} blocks up, so melee units and ground towers can hit it (lovish, Oct 29). It shoots
  * from the air on the Wisp Choir's plumbing (UnitRangedAttackGoal; a flyer closes range through its flying move goal,
  * so it shoots from above): each shot is a hit-scan bolt of light, a projectile hit for {@link #attackDamage} (ranged
  * armour applies), with a light trace (BarFx.shot). It cannot hurt buildings.
@@ -70,6 +71,17 @@ public class SeraphArcherUnit extends AngelUnit implements AttackerUnit, RangedA
 
     @Override
     public CallAngel.Kind kind() { return CallAngel.Kind.ARCHER; }
+
+    @Override
+    public int flightHeight() { return FLIGHT_HEIGHT; }
+
+    // the low flyer (Unit.meleeReachableHeight): melee units take it on from the ground under it, and their reach
+    // (AbstractMeleeAttackUnitGoal: width^2 terms plus this bonus, all squared distances) grows by its height squared
+    @Override
+    public float meleeReachableHeight() { return FLIGHT_HEIGHT; }
+
+    @Override
+    public float getBonusMeleeRangeForAttackers() { return 0.4f + FLIGHT_HEIGHT * FLIGHT_HEIGHT; }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Unit.createDefaultAttributes()

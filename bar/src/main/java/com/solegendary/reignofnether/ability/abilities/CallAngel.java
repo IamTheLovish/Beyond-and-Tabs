@@ -73,8 +73,6 @@ public class CallAngel extends Ability {
         }
     }
 
-    /** The angel appears this high over the caster's feet: it comes down from the sky and stays aloft. */
-    public static final double SPAWN_HEIGHT = 3.0;
     public static final String MSG_SHORT = "hud.essence.reignofnether.angel_short";
     public static final String MSG_ALIVE = "hud.essence.reignofnether.angel_alive";
 
@@ -172,7 +170,7 @@ public class CallAngel extends Ability {
             return null;
         }
         double side = (kind.ordinal() - 1) * 1.2;   // the three angels never stack on one spot
-        angel.moveTo(caster.getX() + side, caster.getY() + SPAWN_HEIGHT, caster.getZ() + 0.8, caster.getYRot(), 0);
+        angel.moveTo(caster.getX() + side, caster.getY() + angel.flightHeight(), caster.getZ() + 0.8, caster.getYRot(), 0);
         angel.bind(caster, kind.lifeSeconds * ResourceCost.TICKS_PER_SECOND);
         sl.sendParticles(ParticleTypes.END_ROD, angel.getX(), angel.getY() + 0.5, angel.getZ(), 14, 0.3, 0.6, 0.3, 0.04);
         sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, caster.getX(), caster.getY() + 1.2, caster.getZ(), 6, 0.2, 0.3, 0.2, 0.02);

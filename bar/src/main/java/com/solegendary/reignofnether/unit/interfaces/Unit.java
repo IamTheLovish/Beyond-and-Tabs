@@ -1100,6 +1100,21 @@ public interface Unit {
         return 0.4f;
     }
 
+    /**
+     * A flyer that hovers this many blocks over the ground, low enough to be fought from it: melee units target it,
+     * retaliate on it and take it like a walker (MiscUtil, AttackerUnit), chase it to the ground under it (Engage.melee)
+     * and reach up to it (the flyer adds the height to getBonusMeleeRangeForAttackers). 0 - every other unit - for
+     * none. lovish (Oct 29): the Seraph Archer "flies low (3 blocks up) so melee and ground towers can hit it".
+     */
+    default float meleeReachableHeight() {
+        return 0;
+    }
+
+    /** In the air and out of melee's reach: a flying unit that is not a low flyer ({@link #meleeReachableHeight}). */
+    default boolean isFlyingOutOfMelee() {
+        return isFlyingUnit() && meleeReachableHeight() <= 0;
+    }
+
     default boolean hasAnyEnchants() {
         return !(((LivingEntity) this).getMainHandItem().getAllEnchantments().isEmpty()) ||
                !(((LivingEntity) this).getItemBySlot(EquipmentSlot.CHEST).getAllEnchantments().isEmpty());

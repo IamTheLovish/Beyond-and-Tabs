@@ -48,7 +48,7 @@ import java.util.UUID;
  * and its rules:
  * <ul>
  *   <li>it flies on the bee's flight plumbing (FlyingMoveToTargetGoal, FlyingUnitMoveControl, no gravity: it hovers
- *       where it stops) and is a flyer to every anti-air unit;</li>
+ *       where it stops) {@link #flightHeight} blocks up, and is a flyer to every anti-air unit;</li>
  *   <li>it fights under its caster's owner and takes orders like any unit; idle and more than {@link #LEASH} blocks from
  *       its caster it flies back to it;</li>
  *   <li>it lives {@link #ticksLeft} ticks and then fades (a discard: no death, no wreck, no kill credit, no wisp); it is
@@ -155,6 +155,9 @@ public abstract class AngelUnit extends PathfinderMob implements Unit {
 
     /** Which of the three it is. */
     public abstract CallAngel.Kind kind();
+
+    /** How high over the ground it flies: where CallAngel puts it and where its move orders take it. */
+    public abstract int flightHeight();
 
     /** Ties it to the caster that called it, for {@code ticks} ticks. */
     public void bind(LivingEntity caster, int ticks) {
@@ -278,7 +281,7 @@ public abstract class AngelUnit extends PathfinderMob implements Unit {
     /** The shared goals; a kind adds its attack goal (or none) in {@link #registerGoals}. */
     public void initialiseGoals() {
         this.usePortalGoal = new FlyingUsePortalGoal(this);
-        this.moveGoal = new FlyingMoveToTargetGoal(this, 0);
+        this.moveGoal = new FlyingMoveToTargetGoal(this, 0, flightHeight());
         this.targetGoal = new SelectedTargetGoal<>(this, true, true);
     }
 
