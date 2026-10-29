@@ -105,6 +105,7 @@ public class BloodTotem extends Ability {
      * totem stands in it). The totem, or null when refused; no cooldown handling here (the bot and the tests).
      */
     public static BloodTotemUnit cast(ServerLevel sl, LivingEntity caster, String owner, BlockPos clicked, boolean quiet) {
+        if (true) return null;   // STUB (tests-first commit): the real rule lands with the implementation
         if (owner == null || owner.isBlank())
             return null;
         BlockPos at = sl.getBlockState(clicked).isAir() ? clicked : clicked.above();

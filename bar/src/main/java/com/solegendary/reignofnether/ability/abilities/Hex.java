@@ -131,6 +131,7 @@ public class Hex extends Ability {
      * hexes - so a refusal never costs essence. True when cast; no cooldown handling here (the bot and the tests).
      */
     public static boolean cast(ServerLevel sl, LivingEntity caster, String owner, LivingEntity target, boolean quiet) {
+        if (true) return false;   // STUB (tests-first commit): the real rule lands with the implementation
         String why = canHex(owner, target);
         if (why != null) {
             if (!quiet && owner != null)
