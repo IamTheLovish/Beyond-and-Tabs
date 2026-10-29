@@ -61,7 +61,7 @@ import java.util.Objects;
  * The Verdant essence caster, the Thornweaver (design/essence_casters.md; lovish approved draft 2 on Oct 29: "one
  * caster per race"). Written before the code, from his numbers:
  * <ul>
- *   <li>trained at the Circle of Elders (Verdant T2 lab) once Tier 2 is researched, for a cost, and by the Verdant bot
+ *   <li>trained at the Grove (Verdant Tier 1 army building; lovish, Oct 29: casters are tier 1), for a cost, and by the Verdant bot
  *       (lovish, Oct 29: bots build and use all seven casters); an essence carrier
  *       (gathers the wisps within 8 blocks) with three spells and the shared Empower;</li>
  *   <li>Entangling Roots: 5 essence, 12 s - enemies within 3 blocks of the aimed spot are rooted (cannot move, can
@@ -167,16 +167,19 @@ public class ThornweaverGameTests {
     // ------------------------------------------------------------------------------------------- the unit
 
     /**
-     * The Circle of Elders trains the Thornweaver (its own slot), for a real cost (metal, energy, population), behind
-     * the Tier 2 gate like the rest of the lab; the item makes a Thornweaver, a Verdant Court unit whose cost is the
-     * item's.
+     * The Grove, the Court's Tier 1 army building, trains the Thornweaver (lovish, Oct 29: "essence casters should be
+     * tier 1"); the Circle of Elders, the T2 lab, no longer does. It costs something real (metal, energy, population),
+     * a built Grove queues it with no research at all, and the item makes a Thornweaver, a Verdant Court unit whose
+     * cost is the item's.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void thornweaver_trains_at_the_circle_of_elders_for_a_cost(GameTestHelper helper) {
+    public static void thornweaver_trains_at_the_grove_from_tier_1_for_a_cost(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
-        if (!Buildings.CIRCLE_OF_ELDERS.productions.get().contains(ProductionItems.THORNWEAVER))
-            problems.add("the Circle of Elders does not offer the Thornweaver");
+        if (!Buildings.GROVE.productions.get().contains(ProductionItems.THORNWEAVER))
+            problems.add("the Grove (Tier 1) does not offer the Thornweaver");
+        if (Buildings.CIRCLE_OF_ELDERS.productions.get().contains(ProductionItems.THORNWEAVER))
+            problems.add("the Circle of Elders (the T2 lab) still offers the Thornweaver");
         ResourceCost cost = ResourceCosts.THORNWEAVER;
         if (cost.metal() <= 0 || cost.energy() <= 0 || cost.population <= 0 || cost.ticks <= 0)
             problems.add("the Thornweaver costs " + cost.metal() + " metal, " + cost.energy() + " energy, " + cost.population
@@ -188,22 +191,19 @@ public class ThornweaverGameTests {
 
         String me = owner(helper, "train");
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.CIRCLE_OF_ELDERS, level,
+        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.GROVE, level,
             new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, me, false);
         Resources pool = new Resources(me, 0, 0, 0);
         ResourcesServerEvents.resourcesList.add(pool);
         Mob made = null;
         try {
             if (!(bp instanceof ProductionPlacement pp)) {
-                problems.add("no Circle of Elders placement: " + bp);
+                problems.add("no Grove placement: " + bp);
             } else {
                 pp.isBuilt = true;
-                if (ProductionItems.THORNWEAVER.getProduceErrorMsg(pp) == null)
-                    problems.add("the Thornweaver was offered without Tier 2");
-                ResearchServerEvents.addResearch(me, ProductionItems.RESEARCH_TIER_2);
-                String err = ProductionItems.THORNWEAVER.getProduceErrorMsg(pp);
+                String err = ProductionItems.THORNWEAVER.getProduceErrorMsg(pp);   // no research: Tier 1
                 if (err != null)
-                    problems.add("with Tier 2 the Thornweaver is refused: " + err);
+                    problems.add("a built Grove without Tier 2 refuses the Thornweaver: " + err);
                 else if (!pp.startProductionItem(ProductionItems.THORNWEAVER))
                     problems.add("the server refused to queue the Thornweaver");
                 pp.productionQueue.clear();
@@ -841,7 +841,7 @@ public class ThornweaverGameTests {
 
     /**
      * Bots build and use the Thornweaver (lovish, Oct 29: "bots build and use all 7 casters"). It is in the Verdant
-     * kit's T2 army, its three spells autocast by default (the AutoCaster casts them for a bot as for a player), and in
+     * kit's Tier 1 army, its three spells autocast by default (the AutoCaster casts them for a bot as for a player), and in
      * a bot's fight pass a Thornweaver with essence to spare (30) empowers the dearest friend in reach - the Elder Treant,
      * not the Vindicator - while one holding 20 keeps it for its spells.
      */
@@ -864,8 +864,8 @@ public class ThornweaverGameTests {
             List<String> problems = new ArrayList<>();
             try {
                 BotPlayer.Kit kit = BotPlayer.kitFor(Factions.VERDANT_COURT);
-                if (kit == null || !kit.t2Army().contains(ProductionItems.THORNWEAVER))
-                    problems.add("the Verdant bot's T2 army does not include the Thornweaver");
+                if (kit == null || !kit.army().contains(ProductionItems.THORNWEAVER) || kit.t2Army().contains(ProductionItems.THORNWEAVER))
+                    problems.add("the Verdant bot does not train the Thornweaver from its Tier 1 army list (it is a T1 unit now)");
                 for (Ability a : Arrays.asList(ability(full, EntanglingRoots.class), ability(full, SeedOfRenewal.class), ability(full, SproutGuardian.class)))
                     if (a == null || !AutocastState.isOn((Unit) full, a))
                         problems.add((a == null ? "a spell" : a.getClass().getSimpleName()) + " is not autocast by default");
