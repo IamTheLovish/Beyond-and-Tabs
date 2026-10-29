@@ -136,6 +136,16 @@ public class CallAngel extends Ability {
         }
     }
 
+    /** Test hook: told of every refused call (the caster, the refusal's message key); null in play. */
+    public static java.util.function.BiConsumer<LivingEntity, String> refusalListener;
+
+    private static void refused(LivingEntity caster, String owner, String msg, boolean quiet) {
+        if (!quiet)
+            HudClientboundPacket.showTempMessageI18n(owner, msg);
+        if (refusalListener != null)
+            refusalListener.accept(caster, msg);
+    }
+
     /** The caster stays behind its army: its fighters come when a friend within this many blocks is in a fight. */
     public static final double CALL_FOR_FIGHTS_WITHIN = 12;
 
@@ -168,13 +178,11 @@ public class CallAngel extends Ability {
         if (owner == null || owner.isEmpty() || caster == null || !caster.isAlive())
             return null;
         if (AngelUnit.liveFor(caster, kind) != null) {
-            if (!quiet)
-                HudClientboundPacket.showTempMessageI18n(owner, MSG_ALIVE);
+            refused(caster, owner, MSG_ALIVE, quiet);
             return null;
         }
         if (Essence.get(caster) < kind.essence) {
-            if (!quiet)
-                HudClientboundPacket.showTempMessageI18n(owner, MSG_SHORT);
+            refused(caster, owner, MSG_SHORT, quiet);
             return null;
         }
         Entity e = UnitServerEvents.spawnMob(kind.type(), sl, caster.blockPosition(), owner);
