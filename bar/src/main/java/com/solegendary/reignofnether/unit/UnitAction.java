@@ -226,5 +226,6 @@ public enum UnitAction {
     EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
     // Gravebound Tombcaller (essence caster, design/essence_casters.md "Gravebound Gravecaller" + Revision 1)
     RAISE_TOMBSTONE,        // 10 essence: a tombstone that spreads grave creep and raises a skeleton every 20 s
-    GRAVE_TIDE              // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    GRAVE_TIDE,             // 5 essence: Gravebound friends near it or on its creep run 30% faster and regenerate
+    CALL_NECROMANCER        // 20 essence: a Grave Adept that grows on the XP of enemy deaths and raises skeletons
 }

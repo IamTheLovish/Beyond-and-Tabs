@@ -233,7 +233,8 @@ public class TombcallerGameTests {
                     List<UnitAction> actions = new ArrayList<>();
                     for (Ability a : ((Unit) unit).getAbilities().get())
                         actions.add(a.action);
-                    List<UnitAction> want = List.of(UnitAction.RAISE_TOMBSTONE, UnitAction.GRAVE_TIDE, UnitAction.EMPOWER);
+                    List<UnitAction> want = List.of(UnitAction.RAISE_TOMBSTONE, UnitAction.GRAVE_TIDE, UnitAction.CALL_NECROMANCER,
+                        UnitAction.EMPOWER);
                     if (!actions.equals(want))
                         problems.add("its abilities are " + actions + ", expected " + want);
                     if (RaiseTombstone.ESSENCE_COST != 10 || RaiseTombstone.CD_SECONDS != 25 || RaiseTombstone.MAX_STONES != 3)

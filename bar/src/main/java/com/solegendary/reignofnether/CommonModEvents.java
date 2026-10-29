@@ -49,6 +49,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WRAITH_UNIT.get(), WraithUnit.createAttributes().build());
         evt.put(EntityRegistrar.TOMBCALLER_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.TombcallerUnit.createAttributes().build());
         evt.put(EntityRegistrar.TOMBSTONE_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.TombstoneUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GRAVE_ADEPT_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.GraveAdeptUnit.createAttributes().build());
         evt.put(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit.createAttributes().build());
         // Verdant Court T2
