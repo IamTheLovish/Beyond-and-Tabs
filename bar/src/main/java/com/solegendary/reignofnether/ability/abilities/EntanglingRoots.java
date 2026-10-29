@@ -70,6 +70,15 @@ public class EntanglingRoots extends Ability {
         return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
+    /**
+     * Only a target the spell can hold: an enemy ground unit (ThicketBlock.isEnemyOf, the cast's own test). A cluster
+     * of flyers would otherwise be ordered every second and refused, each order clearing hold position (PR 362 review).
+     */
+    @Override
+    public boolean autocastTargetOk(Unit caster, LivingEntity target) {
+        return ThicketBlock.isEnemyOf(caster.getOwnerName(), target);
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Entangling Roots",

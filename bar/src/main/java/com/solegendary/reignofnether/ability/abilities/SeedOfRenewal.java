@@ -78,6 +78,19 @@ public class SeedOfRenewal extends Ability {
         return super.canAutocastNow(level, unit) && unit instanceof LivingEntity le && Essence.get(le) >= ESSENCE_COST;
     }
 
+    /**
+     * Only a friend the sapling can help: never a sapling or a totem (a pulse never heals one), and only where a sapling
+     * can grow by its feet (the cast's own standingCell, at the cell AutoCaster aims at), so an ally wading in water is
+     * not ordered every second and refused (PR 362 review).
+     */
+    @Override
+    public boolean autocastTargetOk(Unit caster, LivingEntity target) {
+        if (target instanceof AbstractTotem || !(target.level() instanceof ServerLevel sl))
+            return false;
+        BlockPos feet = target.blockPosition();
+        return standingCell(sl, feet.getX(), feet.getZ(), feet.getY() + 1) != null;
+    }
+
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
         return new AbilityButton("Seed of Renewal",

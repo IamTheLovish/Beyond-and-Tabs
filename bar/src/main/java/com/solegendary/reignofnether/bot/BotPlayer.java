@@ -98,7 +98,8 @@ public class BotPlayer {
                         ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
-                        ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON),   // the Wisp Choir is queued only against flyers (queueAntiAir)
+                        ProductionItems.BLOOM_PRIESTESS, ProductionItems.MOSSBACK_BISON,   // the Wisp Choir is queued only against flyers (queueAntiAir)
+                        ProductionItems.THORNWEAVER),   // the essence caster (lovish, Oct 29: bots build and use all seven casters)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         // the Tidewrought have no farm, house or tower - every use of those checks for null. Tier 2 brings the Drydock:
         // the Harbourmaster and a T2 army that leans on the Kraken Caller (it grabs priority targets: tideKrakens) with
@@ -756,6 +757,7 @@ public class BotPlayer {
         // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
         useCommanderAbility(level, mine);
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
 
         // 4d) level the labs up instead of building a third (design/building_upgrades.md)
@@ -1058,6 +1060,7 @@ public class BotPlayer {
      */
     public void castFightAbilities(ServerLevel level, List<LivingEntity> mine) {
         useFactionPowers(level, mine);
+        useEmpower(level, mine);
         useTitanAbilities(level, mine);
         tideKrakens(level, mine);
         tideLeviathans(level, mine);
@@ -1344,7 +1347,8 @@ public class BotPlayer {
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -2191,6 +2195,47 @@ public class BotPlayer {
     }
 
     /** A sealed unit (Stormcallers Seal) can't use abilities: the bot doesn't try, exactly as a player's order is refused. */
+    /** A carrier empowers only when it holds this much: within 5 of full, where more wisps would go to waste. */
+    static final int EMPOWER_SPARE = com.solegendary.reignofnether.essence.Essence.CAPACITY - 5;
+
+    /**
+     * Empower for the essence casters (design/essence_casters.md; lovish, Oct 29: bots build and use all seven). Their
+     * spells are autocast (AutoCaster, each gated on the caster's essence), but Empower is manual: a player picks who
+     * earns a rank. A bot empowers only with essence to spare ({@link #EMPOWER_SPARE}), so its big spell is never
+     * starved, and picks the dearest friendly unit in reach first. Every attempt is Empower's own quiet rule, so a
+     * target it refuses (top rank, a summon, a hero, a recent rank) costs nothing and the next one is tried. Shared by
+     * every caster that carries Empower.
+     */
+    void useEmpower(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof Unit u) || !le.isAlive() || u.getAbilities() == null || sealed(le)
+                    || com.solegendary.reignofnether.essence.Essence.get(le) < EMPOWER_SPARE)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Empower) || !a.isOffCooldown(u))
+                    continue;
+                double r = com.solegendary.reignofnether.ability.abilities.Empower.RANGE;
+                List<LivingEntity> friends = new ArrayList<>();
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
+                    if (other != le && other.isAlive() && other instanceof Unit ou && other.distanceToSqr(le) <= r * r
+                            && AlliancesServerEvents.isAlliedOrOwned(name, ou.getOwnerName()))
+                        friends.add(other);
+                friends.sort((x, y) -> Integer.compare(metalOf(y), metalOf(x)));
+                for (LivingEntity f : friends)
+                    if (com.solegendary.reignofnether.ability.abilities.Empower.cast(level, le, name, f, true)) {
+                        a.setToMaxCooldown(u);
+                        com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), a.action, a.cooldownMax);
+                        break;
+                    }
+                break;
+            }
+        }
+    }
+
+    private static int metalOf(LivingEntity le) {
+        return le instanceof Unit u && u.getCost() != null ? u.getCost().metal() : 0;
+    }
+
     static boolean sealed(LivingEntity le) {
         return com.solegendary.reignofnether.mana.SealServerEvents.isSealed(le);
     }

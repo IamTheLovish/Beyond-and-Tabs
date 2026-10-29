@@ -150,6 +150,7 @@ public class SproutGuardian extends Ability {
             AwakenThicket.dismiss(treant);
             return null;
         }
+        GUARDIANS.removeIf(e -> e.isRemoved() || !e.isAlive());   // liveSummons prunes too, but only while autocasting
         GUARDIANS.add(treant);
         return treant;
     }
