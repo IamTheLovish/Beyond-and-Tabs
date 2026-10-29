@@ -72,8 +72,9 @@ SHADER_PROJECT, SHADER_VERSION = "complementary-reimagined", "r5.9.3"
 # The Enchanted look for shader players (lovish Oct 28: "dim it down a bit ... more saturated and whimsy ... fantasy
 # esque"; our WorldLookPass steps aside under a shader pack, so Complementary gets the same intent through its own
 # options - names and allowed steps read from its shaders/lib/common.glsl): a little darker, more colour in dull
-# tones (vibrance), a touch more contrast and bloom, a warmer noon sun.
-ENCHANTED_COMPLEMENTARY = ("TM_EXPOSURE=0.90\nTM_CONTRAST=1.10\nT_SATURATION=1.05\nT_VIBRANCE=1.25\n"
+# tones (vibrance), a touch more contrast and bloom, a warmer noon sun. Exposure 0.65: lovish's pick from an eyes A/B
+# (Oct 28; 0.90 barely moved the lawn - luma 0.54 vs the real-grass reference 0.40; 0.65 gives 0.47).
+ENCHANTED_COMPLEMENTARY = ("TM_EXPOSURE=0.65\nTM_CONTRAST=1.10\nT_SATURATION=1.05\nT_VIBRANCE=1.25\n"
                            "BLOOM_STRENGTH=0.18\nLIGHT_NOON_B=0.95\n")
 
 
