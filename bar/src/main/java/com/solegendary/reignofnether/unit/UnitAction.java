@@ -223,5 +223,9 @@ public enum UnitAction {
     TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
     DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
     // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
-    EMPOWER                 // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // Gravebound Soulbinder (essence caster, design/essence_casters.md)
+    WAIL,                   // 5 essence: enemies in a cone in front of it flee for 2 s
+    SOUL_HARVEST,           // 10 essence: two spectral skeletons fight for 20 s
+    SOUL_CHAINS             // 20 essence: up to 4 enemies linked for 10 s share half the damage one of them takes
 }
