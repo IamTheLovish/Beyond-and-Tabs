@@ -1358,4 +1358,126 @@ public class RaidGameTests {
         else
             helper.succeed();
     }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // 9. Hits leave an extractor's pool till last
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Every faction's extractor, T1 and T2 (Verdant's eight times each: its pool sits a block up on the building's south
+     * edge, walled by stairs, mangrove roots and bricks), hit one block at a time every 4 ticks - about the rate of six
+     * infantry raiders - until it falls. No hit may break a block of its pool while it stands, and no water may get out
+     * of its footprint. Blocks next to water are never picked, but the pool's own water was: once a hit broke it, the
+     * wall beside the gap had no water next to it for the ~5 ticks the pool took to flow back, the next hits could break
+     * the wall, and the pool poured onto the raiders round the building. They floated off it (CI trace: 8-21 raider
+     * seconds in water, 13 repaths), and Verdant's extractor fights took 15-28 s instead of 10 / 22 s - the
+     * raid_infantry_party_times_against_eco_buildings flake, ~1 run in 26 (flake-stress 40819473983).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 1500)
+    public static void raid_hits_leave_an_extractors_pool_till_last(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> names = new ArrayList<>();
+        List<Building> kinds = new ArrayList<>();
+        List<Boolean> tiers = new ArrayList<>();
+        for (Fac f : facs())
+            for (int t2 = 0; t2 < 2; t2++)
+                for (int k = 0; k < (f.name().equals("Verdant") ? 8 : 1); k++) {
+                    names.add(f.name() + (t2 == 1 ? " T2" : " T1") + " #" + (k + 1));
+                    kinds.add(f.ext());
+                    tiers.add(t2 == 1);
+                }
+        Pads pads = new Pads(level, 10, names.size());
+        // per extractor: its placement, its pool's cells, and [pool cells a hit broke, most water cells seen outside the
+        // footprint, hits]
+        List<BuildingPlacement> placements = new ArrayList<>();
+        List<String> placed = new ArrayList<>();
+        List<List<BlockPos>> pools = new ArrayList<>();
+        List<int[]> counts = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        for (int i = 0; i < names.size(); i++) {
+            Cell c = pads.cells.get(i);
+            BuildingPlacement bp = build(level, kinds.get(i), new BlockPos(c.x0() + 13, PAD_Y + 1, c.z0() + 5), "gametest_raid_pool_" + i, tiers.get(i));
+            if (bp == null) {
+                problems.add("could not place " + names.get(i));
+                continue;
+            }
+            List<BlockPos> pool = new ArrayList<>();
+            for (BuildingBlock bb : bp.getBlocks())
+                if (!bb.getBlockState().getFluidState().isEmpty())
+                    pool.add(bb.getBlockPos());
+            placements.add(bp);
+            placed.add(names.get(i));
+            pools.add(pool);
+            counts.add(new int[3]);
+        }
+        Runnable cleanup = () -> {
+            for (BuildingPlacement bp : placements)
+                BuildingServerEvents.getBuildings().remove(bp);
+            pads.release();
+        };
+        if (!problems.isEmpty()) {
+            cleanup.run();
+            helper.fail(String.join("; ", problems));
+            return;
+        }
+        int[] tick = { 0 };
+        boolean[] over = { false };
+        helper.onEachTick(() -> {
+            if (over[0] || ++tick[0] % 4 != 0)
+                return;
+            boolean standing = false;
+            for (int i = 0; i < placements.size(); i++) {
+                BuildingPlacement bp = placements.get(i);
+                if (bp.shouldBeDestroyed() || !BuildingServerEvents.getBuildings().contains(bp))
+                    continue;
+                standing = true;
+                List<BlockPos> pool = pools.get(i);
+                int[] n = counts.get(i);
+                boolean[] wet = new boolean[pool.size()];
+                for (int k = 0; k < pool.size(); k++)
+                    wet[k] = !level.getFluidState(pool.get(k)).isEmpty();
+                bp.destroyRandomBlocks(bp.getHealthPerBlock() / 2);   // one block
+                n[2]++;
+                for (int k = 0; k < pool.size(); k++)
+                    if (wet[k] && level.getFluidState(pool.get(k)).isEmpty())
+                        n[0]++;
+                int outside = 0;
+                for (BlockPos p : BlockPos.betweenClosed(bp.minCorner.getX() - 4, PAD_Y + 1, bp.minCorner.getZ() - 4,
+                        bp.maxCorner.getX() + 4, PAD_Y + 2, bp.maxCorner.getZ() + 4)) {
+                    boolean inside = p.getX() >= bp.minCorner.getX() && p.getX() <= bp.maxCorner.getX()
+                        && p.getZ() >= bp.minCorner.getZ() && p.getZ() <= bp.maxCorner.getZ();
+                    if (!inside && !level.getFluidState(p).isEmpty())
+                        outside++;
+                }
+                n[1] = Math.max(n[1], outside);
+            }
+            if (standing && tick[0] < 1200)
+                return;
+            over[0] = true;
+            try {
+                int broken = 0, spilled = 0;
+                for (int i = 0; i < placements.size(); i++) {
+                    int[] n = counts.get(i);
+                    if (n[0] > 0 || n[1] > 0)
+                        problems.add(placed.get(i) + ": " + n[0] + " pool cell(s) broken by hits, " + n[1] + " water cell(s) outside its footprint ("
+                            + n[2] + " hits)");
+                    if (n[0] > 0)
+                        broken++;
+                    if (n[1] > 0)
+                        spilled++;
+                    BuildingPlacement bp = placements.get(i);
+                    if (!bp.shouldBeDestroyed() && BuildingServerEvents.getBuildings().contains(bp))
+                        problems.add(placed.get(i) + " still stands after " + n[2] + " one-block hits");
+                }
+                ReignOfNether.LOGGER.info("[Raid] other pools: {} extractors hit to the ground, {} had their pool broken by a hit, {} spilled water outside",
+                    placements.size(), broken, spilled);
+                if (!problems.isEmpty())
+                    helper.fail(String.join("; ", problems));
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
 }
