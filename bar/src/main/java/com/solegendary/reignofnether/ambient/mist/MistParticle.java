@@ -23,7 +23,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * One wisp of the living valley mist (MistClientEvents): a big soft blob (tools/mist_sprites.py, mist_0..3) lying FLAT
  * a little over the ground, drifting slowly along the shared wind (WindField.heading - the way the tree limbs lean),
  * turning and growing slowly, fading in and out over seconds, tinted by the hour (MistMath.colour). Flat rather than
- * camera-facing: a 3-8 block billboard 0.3-2.5 blocks over the ground cuts into the terrain with a hard line, and from
+ * camera-facing: a 5-12 block billboard 0.3-2.5 blocks over the ground cuts into the terrain with a hard line, and from
  * the RTS camera's pitch a flat layer reads as mist lying in the valley. A unit running through it pushes it aside a
  * little (MistMath.push). Over a building it thins away (never over a footprint), and it leaves when the mist may not
  * show (rain, strategic zoom, the setting, the eyes rig's measured stills).
@@ -160,8 +160,11 @@ public class MistParticle extends TextureSheetParticle {
         b.vertex(c[0], y, c[1]).uv(c[2], c[3]).color(rCol, gCol, bCol, a).uv2(SKY_LIGHT).endVertex();
     }
 
-    /** Open sky, no block light: the mist dims with the day through the lightmap, never glows at night. */
-    private static final int SKY_LIGHT = LightTexture.pack(0, 15);
+    /**
+     * Full-bright: the colour carries the light (MistMath.colour dims it at night). r1 took the open sky's lightmap,
+     * and at dawn that made the mist the grass's own value - invisible from the RTS camera (eyes run 40815085922).
+     */
+    private static final int SKY_LIGHT = LightTexture.FULL_BRIGHT;
 
     @Override
     public int getLightColor(float partialTick) {
@@ -179,7 +182,7 @@ public class MistParticle extends TextureSheetParticle {
 
     @Override
     public boolean shouldCull() {
-        return false;                       // a 3-8 block quad round a point-sized box: never pop at the screen edge
+        return false;                       // a 5-12 block quad round a point-sized box: never pop at the screen edge
     }
 
     @Override

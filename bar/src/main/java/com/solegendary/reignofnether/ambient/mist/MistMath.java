@@ -10,10 +10,13 @@ package com.solegendary.reignofnether.ambient.mist;
  *   <li>when: thick at dawn, burnt off from late morning to mid afternoon, rising again at dusk, a little at night;</li>
  *   <li>how much: a sprite cap that shrinks as the RTS camera zooms out, zero at strategic zoom (pillar 2, readable
  *       at every zoom: the icons are all a player should see there);</li>
- *   <li>the look: soft alpha (0.05-0.18), big (3-8 blocks) and slowly growing, low (0.3-2.5 blocks up), slow drift
- *       along the shared wind (0.02-0.06 blocks a tick), cool grey by day and a little warm at dusk, never pure
- *       white; a unit running through it pushes it aside a little.</li>
+ *   <li>the look: soft alpha (0.15-0.35), big (5-12 blocks) and slowly growing, in three low layers (0.3-2.5 blocks
+ *       up), slow drift along the shared wind (0.02-0.06 blocks a tick), a bright cool white-grey by day, a little
+ *       warm at dusk, dim at night, never pure white; a unit running through it pushes it aside a little.</li>
  * </ul>
+ * Round 2 (eyes runs 40815085922 / 40815098025): r1's 21 wisps at alpha 0.05-0.18, 3-8 blocks, lit by the dawn sky,
+ * changed the RTS still by a mean 5.7 per pixel - nearly invisible. r2: 120 wisps, alpha 0.15-0.35, 5-12 blocks,
+ * three layers, base share 0.3, drawn full-bright with the light in the colour.
  */
 public final class MistMath {
 
@@ -27,7 +30,7 @@ public final class MistMath {
     public static final int GRID_R = 3;
     public static final int GRID_N = 2 * GRID_R + 1;
     /** Open flat low ground still gets a little mist at dawn: a meadow is not bare. */
-    public static final double BASE_SCORE = 0.15;
+    public static final double BASE_SCORE = 0.3;
     /** A hollow this deep (mean of the others above the centre, blocks) scores its full share. */
     static final double HOLLOW_FULL = 3, HOLLOW_SHARE = 0.6;
     static final double WATER_SHARE = 0.45;
@@ -120,6 +123,11 @@ public final class MistMath {
 
     // ---- how much ----
 
+    /** Wisps alive at once at full density, close up: 80-150 is what reads as a sheet from the RTS camera (r2). */
+    public static final int BASE_CAP = 120;
+    /** Ticks between spawn passes, wisps spawned per pass at most, columns tried per pass: the cap fills in ~6 s. */
+    public static final int PERIOD = 4, PER_PASS = 6, SAMPLES = 16;
+
     /** Full cap to the default RTS zoom, none from the strategic zoom (StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER). */
     public static final float ZOOM_FULL = 30, ZOOM_NONE = 70;
 
@@ -165,7 +173,7 @@ public final class MistMath {
 
     // ---- the look ----
 
-    public static final double ALPHA_MIN = 0.05, ALPHA_MAX = 0.18;
+    public static final double ALPHA_MIN = 0.15, ALPHA_MAX = 0.35;
     /** Ticks to fade in (3 s) and out (4 s): mist gathers and thins, it never pops. */
     public static final int FADE_IN = 60, FADE_OUT = 80;
 
@@ -185,19 +193,23 @@ public final class MistMath {
         return 400 + (int) Math.round(300 * clamp01(r));
     }
 
-    /** Width in blocks at birth (the quad's side; its soft edge fades to nothing), from a random 0-1: 3-6.5. */
+    /** Width in blocks at birth (the quad's side; its soft edge fades to nothing), from a random 0-1: 5-10. */
     public static double startSize(double r) {
-        return 3 + 3.5 * clamp01(r);
+        return 5 + 5 * clamp01(r);
     }
 
-    /** It grows slowly: 1.2x by the end of its life (so 3-7.8 blocks, within the 3-8 of the design). */
+    /** It grows slowly: 1.2x by the end of its life (so 5-12 blocks). */
     public static double size(double start, int age, int lifetime) {
         return start * (1 + 0.2 * clamp01(age / (double) Math.max(1, lifetime)));
     }
 
-    /** Blocks above the ground the sprite lies, from a random 0-1: 0.3-2.5. */
-    public static double hover(double r) {
-        return 0.3 + 2.2 * clamp01(r);
+    /** The three layers (blocks above the ground) the sheets lie in: depth where they overlap. */
+    private static final double[] LAYERS = { 0.5, 1.3, 2.2 };
+
+    /** Blocks above the ground the sprite lies: a layer from one random 0-1, jittered +-0.2 by another (0.3-2.4). */
+    public static double hover(double layerR, double jitterR) {
+        int i = Math.min(LAYERS.length - 1, (int) (clamp01(layerR) * LAYERS.length));
+        return LAYERS[i] + 0.4 * (clamp01(jitterR) - 0.5);
     }
 
     /** Blocks a tick it drifts, from a random 0-1: 0.02-0.06. */
@@ -210,16 +222,25 @@ public final class MistMath {
         return new double[] { Math.cos(heading) * speed, Math.sin(heading) * speed };
     }
 
-    private static final float[] COOL = { 0.80f, 0.84f, 0.88f };   // a slightly cool white-grey
-    private static final float[] WARM = { 0.90f, 0.82f, 0.74f };   // a dusk mist catching the low sun
+    private static final float[] COOL = { 0.88f, 0.92f, 0.96f };   // a bright, slightly cool white-grey
+    private static final float[] WARM = { 0.96f, 0.89f, 0.82f };   // a dusk mist catching the low sun
+    private static final double NIGHT = 0.4;                        // brightness through the night
 
-    /** The sprite tint: cool grey, warming toward 12500 (the middle of dusk) and back. Every channel 0.74-0.90. */
+    /**
+     * The sprite colour, light included (r2 draws it full-bright: through the dawn sky's lightmap r1 came out the
+     * grass's own value): cool white-grey, warming toward 12500 (the middle of dusk), dimming to NIGHT from 13500 to
+     * 15000 and back up from 21000 to 22500. Never above 0.96.
+     */
     public static float[] colour(long dayTime) {
         long t = Math.floorMod(dayTime, 24000L);
         double w = clamp01(1 - Math.abs(t - 12500) / 1500.0);
+        double light = t < 13500 || t >= 22500 ? 1
+            : t < 15000 ? 1 - (1 - NIGHT) * (t - 13500) / 1500.0
+            : t < 21000 ? NIGHT
+            : NIGHT + (1 - NIGHT) * (t - 21000) / 1500.0;
         float[] c = new float[3];
         for (int i = 0; i < 3; i++)
-            c[i] = (float) (COOL[i] + (WARM[i] - COOL[i]) * w);
+            c[i] = (float) ((COOL[i] + (WARM[i] - COOL[i]) * w) * light);
         return c;
     }
 
