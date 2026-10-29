@@ -319,7 +319,8 @@ public final class TombcallerServerEvents {
             if (now >= s.nextRaise()) {
                 // every 20 s whatever still stands (lovish, Oct 29): a skeleton lives 30 s, so two overlap for 10 s
                 s.setNextRaise(now + TombstoneUnit.RAISE_EVERY_SECONDS * 20L);
-                raise(sl, s, now);
+                if (risenOf(s).isEmpty())   // RED PROOF: the old skip-if-standing rule
+                    raise(sl, s, now);
             }
         }
     }
