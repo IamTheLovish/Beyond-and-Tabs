@@ -324,8 +324,11 @@ void main() {
     float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, sunH);
     // the low sun's shoulder (light pass 4): white tops under a raking sun stay under ~0.90
     float low = sunH > 0.0 ? 1.0 - smoothstep(0.10, 0.55, sunH) : 0.0;
-    float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);
-    float top = mix(DISPLAY_WHITE, DISPLAY_WHITE_LOW, low);
+    // light pass 13: the shoulder by the low sun in full from t11800's height (LOW_SUN_FULL_*): the table's low row left
+    // t11800 at 0.80 of it, the whites' roll-off stopping at ~0.86 (tops measured 0.87 under DISPLAY_WHITE_LOW 0.86)
+    float lowFull = sunH > 0.0 ? 1.0 - smoothstep(LOW_SUN_FULL_LO, LOW_SUN_FULL_HI, sunH) : 0.0;
+    float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, lowFull);
+    float top = mix(DISPLAY_WHITE, DISPLAY_WHITE_LOW, lowFull);
     // a perspective view keeps (nearly) the low sun's stronger curve at every hour (PERSPECTIVE_CURVE, light pass 7:
     // the day's gentle one flattened the 3/4 views, p5 0.22 -> 0.28, mean 0.50 -> 0.57)
     float curveLow = perspectiveGeometry ? max(low, PERSPECTIVE_CURVE) : low;

@@ -133,13 +133,19 @@ class ShaderPack(unittest.TestCase):
         ndl = math.sin(math.radians(90.0 - _const("sunPathRotation")))
         self.assertAlmostEqual((ndl + math.sqrt(ndl)) / 2.0, _const("NOON_SUN_FACING", light), places=3)
         share, total = _const("SHADOW_FILL_SHARE"), _const("LIGHT_OPEN_GROUND")
-        self.assertGreaterEqual(share, 0.62)                   # the coordinator's floor: shadow >= 0.62 of lit
+        # Retired pin (light pass 13): "SHADOW_FILL_SHARE >= 0.62" (option B's floor, shadows lifted to ~0.78 of the lawn on
+        # screen). The critic on pass 11 (5.5/10 against Complementary's 7.0): cast shadows 0.31 on a 0.40 lawn, target
+        # 0.22-0.25 under a 0.43-0.46 lawn (>= 1.8:1). By the model of the chain (scratch, calibrated on the pass-11
+        # stills) 0.34 gives ~0.242 / ~0.442; the sky a third of the light, as the benchmark's ambient. A cast shadow
+        # still keeps >= 0.30 of the light (Erin, #386 r5: shadowed light ~35-45% of lit)
+        self.assertTrue(0.30 <= share <= 0.40, share)
         # Retired pin (light pass 5): "1.2 <= LIGHT_OPEN_GROUND <= 1.4" - it was set for a lawn ~0.42-0.43 on screen, but
         # with the S-curve, the meadow and pass 4 on top the pass-4 noon stills measured the lit lawn at 0.45-0.47. The
         # target is the lawn, so the band follows it: 1.05-1.20 (1.12 takes 0.46 back to ~0.42 through the curve)
         # light pass 10: up to 1.30 (the 5000 lawn read 0.40 at 1.20; 1.26 now)
         # light pass 12: up to 1.50 (measured: the clear 5000 lawn 0.40 at 1.30; 1.45 now)
-        self.assertTrue(1.05 <= total <= 1.50, total)
+        # light pass 13: up to 1.60 (1.52 with the fill share 0.34: the lawn ~0.44 by the model)
+        self.assertTrue(1.05 <= total <= 1.60, total)
         self.assertIn("SUN_TINT_HIGH\n    * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND", light)
         self.assertIn("SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND", light)
         # the shadow light is cooler than the lit light (the sky's tint against the sun's): blue over green
@@ -156,12 +162,17 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("float skySeen = 0.5 + 0.5 * dot(n, up);", light)
         share, ga = _const("SHADOW_FILL_SHARE"), _const("GROUND_ALBEDO")
         wall = 0.5 * share + 0.5 * ga                          # of the sunlit top's light (sun + sky = 1)
+        # light pass 12 put walls at WALL_FILL of the fill (lib/light.glsl fillDirection): the fill a wall gets
+        wall *= _const("WALL_FILL")
         # Retired pin (light pass 9): "0.43-0.55 of a sunlit top" - with the fill's direction (pass 5) a wall turned
         # from the sun took ~0.36 of it and the pedestals' shaded sides read black (0.28, top / side 3.3 against the
         # benchmark's 1.9). Now 0.55-0.65 before the direction, ~0.5 after it for a wall turned away
         # Retired again (light pass 10): "0.55-0.65" - with the sun now on one visible face, pass 9's bounce had lifted
         # every side alike (quartz's sides 0.59 / 0.60, paper cut-outs). 0.48-0.55 now, the direction carrying the rest
-        self.assertTrue(0.48 <= wall <= 0.55, wall)
+        # Retired again (light pass 13): "0.48-0.55" before WALL_FILL - with the fill share 0.34 (deeper cast shadows) and
+        # WALL_FILL 0.42 a wall turned from the sun keeps 0.12-0.20 of a sunlit top's light: quartz's shaded side ~0.62
+        # on screen by the model (target 0.52, the benchmark 0.65), a stone pedestal's ~0.22
+        self.assertTrue(0.12 <= wall <= 0.20, wall)
         # light pass 11: a wall turned fully from the sun keeps >= 0.12 of a sunlit top's light (its fill alone)
         self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.12)
         self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
@@ -217,7 +228,7 @@ class ShaderPack(unittest.TestCase):
         self.assertEqual(_const("CONTACT_SUN_SHARE"), 0.0)
         self.assertTrue(0.70 <= _const("CONTACT_FLOOR") <= 0.80)
         self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.2)
-        self.assertIn("lin *= contactOcclusion(texcoord, texture2D(depthtex1, texcoord).r);", _read("composite.fsh"))
+        self.assertIn("lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);", _read("composite.fsh"))
         self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
 
@@ -237,7 +248,9 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual(_const("WHITE_GUARD_LUMA"), 0.85)
         final = _read("final.fsh")
         self.assertIn("perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start", final)
-        self.assertIn("float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);", final)
+        # light pass 13: the shoulder by the low sun in full from t11800's height (its whites stopped at ~0.86)
+        self.assertIn("float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, lowFull);", final)
+        self.assertTrue(math.sin(math.radians(13.4)) <= _const("LOW_SUN_FULL_LO") <= 0.30)
         self.assertIn("whiteDesaturate * smoothstep(WHITE_GUARD_LUMA", final)
         self.assertIn("perspectiveGeometry ? WHITE_DESATURATE_PERSPECTIVE : WHITE_DESATURATE", final)
 
@@ -333,7 +346,7 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("c = mix(c, skyWithLights(dir), skyOwn());", _read("program", "sky.fsh"))
         # light pass 6: composite paints the sky over every undrawn pixel of a perspective view (the clear colour showed
         # where the sky programs' dome does not reach), so the look never depends on which sky programs run
-        self.assertIn("c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());",
+        self.assertIn("c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(uv, 1.0))))), skyOwn());",
                       _read("composite.fsh"))
         self.assertIn("mix(fogColor, skyAir(), skyOwn())", _read("composite.fsh"))
 
@@ -359,7 +372,11 @@ class ShaderPack(unittest.TestCase):
         # saturation guard stays, the foot gentler. Particles take the sun's shadow (a green one in a building's
         # shadow drew full-bright), and plants show no sun glint (the far tufts' white "snow" in the 34 views)
         self.assertLessEqual(_const("FOLIAGE_MAX_SAT"), 0.45)
-        self.assertNotIn("FOLIAGE_MAX_LUMA", _read("lib", "settings.glsl"))
+        # Retired pin (light pass 13): "no FOLIAGE_MAX_LUMA" - with the texture side's brighter tips the pass-11 stills
+        # had 673 neon tuft pixels at 1.8x the lit lawn. The cap is back as a soft one, at ~1.15x the lawn's albedo
+        # (~0.355), never under it: a tuft is never dimmed below the lawn (pass 2's grey smudges)
+        self.assertTrue(0.38 <= _const("FOLIAGE_MAX_LUMA") <= 0.45)
+        self.assertGreaterEqual(_const("FOLIAGE_LUMA_KNEE") * _const("FOLIAGE_MAX_LUMA"), 0.32)
         self.assertTrue(0.80 <= _const("FOLIAGE_BASE_AO") <= 0.95)
         lit = _read("program", "lit.fsh")
         self.assertIn("ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);", lit)
@@ -475,7 +492,7 @@ class ShaderPack(unittest.TestCase):
         sky = _read("program", "sky.fsh")
         self.assertIn("/* DRAWBUFFERS:01 */", sky)
         self.assertIn("gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);", sky)
-        self.assertIn("if (texture2D(colortex1, texcoord).g < 0.5)", _read("composite.fsh"))
+        self.assertIn("if (texture2D(colortex1, uv).g < 0.5)", _read("composite.fsh"))
         for name in ("gbuffers_textured", "gbuffers_basic"):
             for ext in ("vsh", "fsh"):
                 self.assertIn("#define UNLIT_SKYCATCH", _read("%s.%s" % (name, ext)))
@@ -539,6 +556,18 @@ class ShaderPack(unittest.TestCase):
         # plain N.L
         self.assertIn("vec2 turned = across * (end * length(o) * PLANT_SHADOW_SHRINK);", _read("shadow.vsh"))
         self.assertIn("mix(ndl, sqrt(ndl), 0.5 * clamp(dot(n, normalize(upPosition)), 0.0, 1.0))", _read("lib", "light.glsl"))
+        # light pass 13: walls take SIDE_SUN of a high sun (quartz's lit side fused with its top in the shoulder), all of
+        # it again for the low sun; the dusk's sun fades from ~8 degrees, still full by t11800's height (~0.232); the
+        # RTS view's mesh holes are filled from their sides (composite.fsh seamSource), never the map's edge
+        light = _read("lib", "light.glsl")
+        self.assertIn("(facing * sideKey(n) * mix(1.0, texAo, 0.5))", light)
+        self.assertIn("return mix(mix(SIDE_SUN, 1.0, up), 1.0, lowSunFull());", light)
+        self.assertTrue(0.35 <= _const("SIDE_SUN") <= 0.75)
+        self.assertLess(_const("SUN_FADE_LO"), _const("SUN_FADE_HI"))
+        self.assertLessEqual(_const("SKY_TWILIGHT_HI"), math.sin(math.radians(13.4)))
+        comp = _read("composite.fsh")
+        self.assertIn("if (depth >= 1.0 && orthoView()) {", comp)
+        self.assertLessEqual(_const("SEAM_SPAN_PX", comp), 48.0)
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted

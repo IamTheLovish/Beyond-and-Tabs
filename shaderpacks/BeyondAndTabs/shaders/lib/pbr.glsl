@@ -112,7 +112,13 @@ vec3 sunSpecular(Material m, vec3 v, vec3 l) {
 }
 
 // the sky seen in a reflection along r (view space), from this frame's sky fill
+// the reflected sky keeps pass 12's brightness under a high sun (light pass 13): the fill's share fell 0.62 -> 0.34 for
+// deeper shadows, which is how much of the sky a diffuse surface gathers, not how bright the sky is - a metal or the
+// water would have lost ~45% of its reflection with it (light pass 1: iron read near black)
+const float REFLECTED_SKY_GAIN = 0.62 / SHADOW_FILL_SHARE;
+
 vec3 skyInDirection(vec3 r, vec3 skyColour, vec3 sunColour) {
+    skyColour *= mix(1.0, REFLECTED_SKY_GAIN, smoothstep(0.10, 0.55, sunHeight()));
     float u = dot(r, normalize(upPosition));
     vec3 horizon = skyColour * HORIZON_TINT + sunColour * 0.08;
     vec3 zenith = skyColour * ZENITH_TINT;

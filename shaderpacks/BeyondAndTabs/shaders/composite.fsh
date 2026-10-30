@@ -141,9 +141,9 @@ float rtsHazeStart() {
 
 // the blurred occlusion back at full resolution: of the four half-resolution neighbours, bilinear weights times how
 // near each one's depth is to this pixel's, so the value never crosses a silhouette (a unit's edge keeps its own)
-float occlusionAt(float viewDepth) {
+float occlusionAt(vec2 fragXY, float viewDepth) {
     vec2 viewSize = vec2(viewWidth, viewHeight);
-    vec2 h = gl_FragCoord.xy * AO_SCALE - 0.5;
+    vec2 h = fragXY * AO_SCALE - 0.5;
     vec2 base = floor(h) + 0.5;
     vec2 f = fract(h);
     float tolerance = 0.25 + 0.02 * viewDepth;
@@ -207,25 +207,76 @@ float contactOcclusion(vec2 uv, float depth) {
     return max(1.0 - CONTACT_GAIN * occ / 9.0, CONTACT_FLOOR);
 }
 
+// Seams in the RTS view (light pass 13). The critic's "hard straight dark bands" across the open lawn of the pass-11
+// stills (9-12 px, RGB ~(37, 42, 26), parallel to a world axis) are no shadow: their pixels hold no geometry at all
+// (depth 1), and the colour is the mod's map-edge tone (fogColor, (35, 41, 25) in the same still's void past the map),
+// shown where a strip of terrain mesh is missing - the eyes pad's edge, where the lawn steps, its vertical face not
+// drawn. The world's mesh is the mod's to fix; here a hole no wider than SEAM_SPAN_PX with geometry on both sides along
+// one of four screen axes is filled from the nearer side, mirrored about the hole's edge (the lawn's texture runs on
+// instead of a smear), and lit, hazed and graded as that pixel is. The real map edge is never that thin
+const float SEAM_STEP_PX = 2.0;
+const int SEAM_STEPS = 12;                     // a 24 px reach each way
+const float SEAM_SPAN_PX = 36.0;
+
+bool seamHit(vec2 uv) {
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
+        return false;
+    return texture2D(depthtex0, uv).r < 1.0;
+}
+
+vec2 seamSource(vec2 uv) {
+    vec2 px = 1.0 / vec2(viewWidth, viewHeight);
+    float bestSpan = SEAM_SPAN_PX;
+    vec2 src = uv;
+    for (int a = 0; a < 4; a++) {
+        vec2 dir = a == 0 ? vec2(1.0, 0.0) : (a == 1 ? vec2(0.0, 1.0) : (a == 2 ? vec2(1.0, 1.0) : vec2(1.0, -1.0)));
+        vec2 e = dir * px * SEAM_STEP_PX;
+        float kp = 0.0, kn = 0.0;
+        for (int i = 1; i <= SEAM_STEPS; i++) {
+            float k = float(i);
+            if (kp == 0.0 && seamHit(uv + e * k))
+                kp = k;
+            if (kn == 0.0 && seamHit(uv - e * k))
+                kn = k;
+            if (kp > 0.0 && kn > 0.0)
+                break;
+        }
+        float span = (kp + kn) * SEAM_STEP_PX * length(dir);
+        if (kp > 0.0 && kn > 0.0 && span <= bestSpan) {
+            bestSpan = span;
+            // the nearer side, mirrored about the hole's edge; the edge pixel itself if the mirror falls off it
+            vec2 toward = kp <= kn ? e : -e;
+            float k = min(kp, kn);
+            src = seamHit(uv + toward * (2.0 * k)) ? uv + toward * (2.0 * k) : uv + toward * k;
+        }
+    }
+    return src;
+}
+
 void main() {
-    vec3 lin = texture2D(colortex0, texcoord).rgb;
-    float depth = texture2D(depthtex0, texcoord).r;
+    vec2 uv = texcoord;
+    float depth = texture2D(depthtex0, uv).r;
+    if (depth >= 1.0 && orthoView()) {
+        uv = seamSource(uv);
+        depth = texture2D(depthtex0, uv).r;
+    }
+    vec3 lin = texture2D(colortex0, uv).rgb;
 #if AO == 1
     if (depth < 1.0) {
-        float skyShare = texture2D(colortex1, texcoord).r;
+        float skyShare = texture2D(colortex1, uv).r;
         // depthtex1: the depth without water, the one the occlusion was found at
         if (skyShare > 0.0) {
             // the sky's share fully, CONTACT_SUN_SHARE of the rest
             lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare))
-                * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
+                * (1.0 - occlusionAt(uv * vec2(viewWidth, viewHeight), -viewPosAt(uv, texture2D(depthtex1, uv).r).z));
             // and the short contact term at full resolution, on all the light (light pass 9)
-            lin *= contactOcclusion(texcoord, texture2D(depthtex1, texcoord).r);
+            lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);
         }
     }
 #endif
     bool ortho = orthoView();
 #if WATER_REALISM == 1 && (CAUSTICS == 1 || SSR == 1)
-    vec4 water = texture2D(colortex5, texcoord);
+    vec4 water = texture2D(colortex5, uv);
 #endif
 #if WATER_REALISM == 1 && CAUSTICS == 1
     // the caustics the water pass worked out for the bed under it: a share more (or less) of the light seen through
@@ -235,7 +286,7 @@ void main() {
 #if WATER_REALISM == 1 && SSR == 1
     if (water.r > 0.5 && water.b > 0.0 && depth < 1.0 && isEyeInWater == 0) {
         // the same ripple normal and Fresnel the water pass used, from the surface's position
-        vec3 pos = viewPosAt(texcoord, depth);
+        vec3 pos = viewPosAt(uv, depth);
         vec3 player = (gbufferModelViewInverse * vec4(pos, 1.0)).xyz;
         vec3 n = mat3(gbufferModelView) * waterNormal(player.xz + cameraPosition.xz, frameTimeCounter);
         vec3 v = ortho ? vec3(0.0, 0.0, 1.0) : normalize(-pos);
@@ -275,11 +326,11 @@ void main() {
             // colours and the sun disc never showed, and vanilla's sun square stayed. Vanilla's colours by night
             // light pass 7: only where gbuffers_skybasic did not draw (it runs under Oculus - the SKY_PROBE run - and
             // marks its pixels in colortex1's green); the loader's clear colour elsewhere
-            if (texture2D(colortex1, texcoord).g < 0.5)
-                c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());
+            if (texture2D(colortex1, uv).g < 0.5)
+                c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(uv, 1.0))))), skyOwn());
 #endif
     } else if (isEyeInWater == 0) {
-        vec3 pos = viewPosAt(texcoord, depth);
+        vec3 pos = viewPosAt(uv, depth);
         float dist = ortho ? -pos.z : length(pos);
         // a perspective view (first person, the 3/4 camera) gets aerial perspective: sky-tinted air from
         // AERIAL_START blocks, ~27% at 150 (lib/settings.glsl, the light pass; it had 12 blocks and 180 per e-fold,

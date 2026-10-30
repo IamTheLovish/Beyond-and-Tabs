@@ -146,6 +146,14 @@ void main() {
         float l = dot(albedo, LUMA);
         // HSV saturation scales with the distance from the grey of the same luma (for a fixed brightest channel)
         vec3 held = mix(vec3(l), albedo, min(1.0, FOLIAGE_MAX_SAT / max(sat, 1e-4)));
+        // and its brightness under FOLIAGE_MAX_LUMA, eased in from FOLIAGE_LUMA_KNEE of it, hue and saturation kept
+        // (light pass 13: the pass-11 stills had 673 neon lime tuft pixels, median (102, 222, 62), luma 0.72 = 1.8x the
+        // lit lawn; the cap holds a sunlit tuft at <= ~1.15x the lawn beside it)
+        float hl = dot(held, LUMA);
+        float knee = FOLIAGE_LUMA_KNEE * FOLIAGE_MAX_LUMA;
+        float room = FOLIAGE_MAX_LUMA - knee;
+        float capped = hl <= knee ? hl : knee + room * (1.0 - exp(-(hl - knee) / room));
+        held *= capped / max(hl, 1e-4);
         albedo = mix(albedo, held, tinted);
         // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
         ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);

@@ -60,6 +60,8 @@ vec3 skyGradient(vec3 dir) {
     vec3 c = mix(skyHorizon(toward), zenith, sqrt(clamp(u / span, 0.0, 1.0)));
     // below the horizon (the void past the map's edge, seen from a 3/4 view): the horizon's colour turning a deeper
     // blue-grey further down (SKY_BELOW_TINT) - never the clear colour (light pass 6), never a flat cream (pass 7)
+    // the whole sky dims through twilight (SKY_TWILIGHT_SKY, light pass 13: the dusk still's sky read 0.75, target < 0.6)
+    c *= mix(SKY_TWILIGHT_SKY, 1.0, smoothstep(SKY_TWILIGHT_LO, SKY_TWILIGHT_HI, sunHeight()));
     return c * mix(vec3(1.0), SKY_BELOW_TINT, smoothstep(0.0, 0.4, -u));
 }
 

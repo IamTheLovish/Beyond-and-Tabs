@@ -61,7 +61,10 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 # lit lawn 0.36-0.40, shadowed 0.12-0.14, a ratio of 2.8:1 or more. By the model of the new low-sun row (lib/light.glsl
 # SUN_LOW, LOW_SUN_RAKE) and the S-curve taken whole at that height: shadow / lit ~0.34. The band moves there at a
 # similar width: fill 0.28-0.42, floor 0.18-0.42 (a crease in a long shadow ~0.08 against a ~0.38 lit lawn)
-BANDS = {"day": (0.60, 0.74, 0.25, 0.45), "dusk": (0.28, 0.42, 0.18, 0.42), "night": (0.45, 0.80, 0.35, 0.80)}
+# Retired day band (0.60, 0.74, 0.25, 0.45), Oct 30, light pass 13: the critic on pass 11 (5.5/10 against Complementary's
+# 7.0) wants cast shadows 0.22-0.25 under a 0.43-0.46 lawn (>= 1.8:1); SHADOW_FILL_SHARE 0.62 -> 0.34 puts a cast shadow
+# at ~0.55 of the lit lawn by the model, inside the design's 0.45-0.70. Fill 0.48-0.64, the floor unchanged
+BANDS = {"day": (0.48, 0.64, 0.25, 0.45), "dusk": (0.28, 0.42, 0.18, 0.42), "night": (0.45, 0.80, 0.35, 0.80)}
 # luma p50 of a night still: lit enough to play (lanterns, moon), dark enough to read as night (day stills sit ~0.37)
 NIGHT_LUMA = (0.10, 0.30)
 

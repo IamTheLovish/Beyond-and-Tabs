@@ -10,8 +10,8 @@
 // direction (that flipped golden light from the west walls to the east ones at sunset) - and the directional light
 // fades to nothing as either body nears the horizon, so the hand-over itself shows no jump.
 // Lighting is linear: albedo is decoded from sRGB, lit, then tone-mapped and encoded again (composite.fsh). The table is
-// aimed at open ground at noon coming out at LIGHT_OPEN_GROUND x its albedo (lib/settings.glsl, the light pass: 1.3)
-// and the shade beside a building keeping SHADOW_FILL_SHARE of the light (0.62; ~0.78 on screen): a unit standing in a
+// aimed at open ground at noon coming out at LIGHT_OPEN_GROUND x its albedo (lib/settings.glsl, light pass 13: 1.52)
+// and the shade beside a building keeping SHADOW_FILL_SHARE of the light (0.34; ~0.55 on screen): a unit standing in a
 // building's shadow must stay easy to read from the RTS camera (#386 r5). tools/shader_judge.py measures it on the
 // eyes stills against two-sided bands ("fill" and "floor").
 
@@ -45,7 +45,9 @@ const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 // Light pass 10: olive-gold and more of it ((0.82, 0.74, 0.70) x 0.24 before): t11800's shadow / lit ~0.6 on screen
 // Light pass 11: t11800's shadows measured (34, 50, 23), target ~(45, 55, 30): redder and ~1.4x of it
 // light pass 12: redder (1.00, 0.80, 0.45) -> (1.00, 0.75, 0.40) and x0.50 -> x0.55, toward the olive ~(45, 55, 30)
-const vec3 SKY_LOW = vec3(1.00, 0.75, 0.40) * 0.55;
+// light pass 13: x0.55 -> x0.62 - t11800 takes ~0.2 of the high row, whose sky fell with SHADOW_FILL_SHARE 0.62 -> 0.34:
+// its fill would have dropped ~15% (shadows ~(38, 54, 24) -> ~(35, 50, 22), target ~(45, 55, 30)); now ~-7%
+const vec3 SKY_LOW = vec3(1.00, 0.75, 0.40) * 0.62;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -86,7 +88,8 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
     // the sky's fill has no direction: it may glow on through twilight
     skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
     // twilight (light pass 11): the day's fill dims as the sun sinks under ~11 degrees; the night's own fill untouched
-    skyColour *= mix(mix(SKY_TWILIGHT_DIM, 1.0, smoothstep(0.05, 0.20, h)), 1.0, 1.0 - smoothstep(-0.08, 0.02, h));
+    skyColour *= mix(mix(SKY_TWILIGHT_DIM, 1.0, smoothstep(SKY_TWILIGHT_LO, SKY_TWILIGHT_HI, h)), 1.0,
+                     1.0 - smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
     skyColour *= 1.0 - 0.30 * rainStrength;
 }
@@ -113,6 +116,20 @@ float sunFacing(vec3 n, vec3 l) {
 float lowSun() {
     float h = sunHeight();
     return h > 0.0 ? 1.0 - smoothstep(0.10, 0.55, h) : 0.0;
+}
+
+// 0..1: the low sun in full from t11800's height down (LOW_SUN_FULL_*, light pass 13); 0 by night
+float lowSunFull() {
+    float h = sunHeight();
+    return h > 0.0 ? 1.0 - smoothstep(LOW_SUN_FULL_LO, LOW_SUN_FULL_HI, h) : 0.0;
+}
+
+// the share of the sun's term a face takes by how far it looks up (SIDE_SUN, light pass 13): tops all of it, walls
+// SIDE_SUN under a high sun, so a sun-lit side parts from its top instead of both sitting in the display's shoulder.
+// A low sun keeps its whole light on the walls it rakes (t11800's golden faces)
+float sideKey(vec3 n) {
+    float up = clamp(dot(n, normalize(upPosition)), 0.0, 1.0);
+    return mix(mix(SIDE_SUN, 1.0, up), 1.0, lowSunFull());
 }
 
 // the grass's facing (light pass 4: biome-tinted terrain only, lit.fsh): eased further toward a square root as the sun
@@ -183,7 +200,7 @@ float fillDirection(vec3 n) {
 vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, float texAo, vec3 sunColour,
                   vec3 skyColour) {
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
-    vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
+    vec3 light = sunArriving(shadow, levels, sunColour) * (facing * sideKey(n) * mix(1.0, texAo, 0.5));
     float direction = fillDirection(n);
     light += skyFill(n, levels, ao, texAo, sunColour, skyColour) * direction;
     // the sky's part of the fill, cooled where no sun arrives (shadeTint); the ground's bounce keeps its warmth
