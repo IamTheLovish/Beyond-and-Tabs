@@ -802,8 +802,9 @@ public final class BarFxClient {
      */
     static void nano(int tint, int lifeTicks, float x, float y, float z, float x2, float y2, float z2, boolean busy) {
         // a White Angel site draws its own construction work (ConstructionFx: tools, beams from the build front); the
-        // builders' fan of beams onto it is dropped (round 13 critic: 7-9 hard warm lines converging below the ground)
-        if (ConstructionFx.absorbsNano(x2, y2, z2)) return;
+        // builders' fan of beams onto it is dropped (round 13 critic: 7-9 hard warm lines converging below the ground);
+        // the worker's hands (x, y, z) are kept instead, so the site's tools are held by the builders at work (round 14)
+        if (ConstructionFx.absorbsNano(x, y, z, x2, y2, z2)) return;
         int c = switch (tint) {
             case BarFx.N_GRAVEBOUND -> 0x5FE6F0;   // soul-cyan
             case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange

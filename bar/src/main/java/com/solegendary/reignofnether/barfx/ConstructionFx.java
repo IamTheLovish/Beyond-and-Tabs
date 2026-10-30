@@ -1,13 +1,19 @@
 package com.solegendary.reignofnether.barfx;
 
-import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingBlock;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.ConstructionCrew;
 import com.solegendary.reignofnether.building.ConstructionGrid;
 import com.solegendary.reignofnether.building.ConstructionShape;
 import com.solegendary.reignofnether.faction.FactionTraits;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import org.joml.Matrix4f;
 
@@ -20,14 +26,13 @@ import java.util.WeakHashMap;
  * Each faction builds its own way (claude/faction-construction-oct29.md; lovish, Oct 29: "Building looks fake, each
  * race could get their own method of building"). The White Angel pilot, approved from a paintover ("i loveeee"):
  * <ul>
- *   <li>a cool slate GHOST over every block still missing - and nothing else (ConstructionGrid) - one volume blended
- *   once a pixel, its next course a step brighter, a dark 1 px outline on its silhouette: cool "not yet" against the
- *   warm white "done" (round 12 critic: separate them by hue; round 13: one volume, not a lattice);</li>
- *   <li>ONE build front: an amber band along the whole course being built on, over everything;</li>
- *   <li>three thin beams rising from that course, slow gold motes;</li>
- *   <li>up to three small golden tools striking built faces under the front, each blow a flash and sparks;</li>
- *   <li>done: a cloud halo swells and fades, a flash on the top, a light ring runs out over the ground, the tools fly
- *   up.</li>
+ *   <li>a cool slate-blue GHOST over every block still missing - and nothing else (ConstructionGrid) - one volume,
+ *   one colour, blended once a screen pixel, a dark 1 px outline on its silhouette: cool "not yet" against the warm
+ *   white "done" (round 12 critic: separate them by hue; rounds 13-14: one volume, not a lattice);</li>
+ *   <li>ONE build front a wall face: an amber band along the course being laid there, over everything;</li>
+ *   <li>three thin beams rising from the front row, slow gold motes;</li>
+ *   <li>a small tool in the hands of each builder at work (up to three), each blow a 2-frame flash and sparks;</li>
+ *   <li>done: a cloud halo swells and fades, a flash on the top, a light ring runs out over the ground.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
  * rendering through BarFxClient's passes; thinner when zoomed out; nothing allocated per frame once a site is cached.
@@ -47,21 +52,23 @@ final class ConstructionFx {
     /** The cool accent, alpha-blended (see the class note for the pixel arithmetic): the halo's inner band and the
      *  pool where the light lands. */
     private static final int COOL = 0xB9CBEE;   // round 11 critic: desaturated (a periwinkle kerb at #8FB0F0, 0.7)
-    /** The build front (round 13 critic): one #FFB347 band at 0.9, normal-blended; its beads' glow and warm core. */
-    private static final int FRONT = 0xFFB347, BEAD_GLOW = 0xFFD66B, BEAD_CORE = 0xFFC060;
-    /** The ghost (round 13 critic): one slate volume #5B74A0 at 0.35, the next course #6F86A8 at 0.55, a dark 1 px
-     *  outline #3A5070 (never the selection box's pale 2 px). */
-    private static final int GHOST_FILL = 0x5B74A0, GHOST_NEXT = 0x6F86A8, GHOST_EDGE = 0x3A5070;
-    private static final float GHOST_A = 0.35f, GHOST_NEXT_A = 0.55f;
+    /** The build front (round 14 critic): one #FFB347 band, opaque, normal-blended, on one course a wall face. */
+    private static final int FRONT = 0xFFB347;
+    /** The ghost (round 14 critic: #5B74A0 at 0.35 measured B - R ~ -4 over turf, a grey-green hue ~130): one volume
+     *  #4C6BA8 at 0.45 - over grass B - R >= +3, saturation ~0.25 - and ONE colour throughout (the brighter next course
+     *  read as a second, nested layer and a false "partly built" cue); a dark 1 px outline #3A5070 (never the
+     *  selection box's pale 2 px). */
+    private static final int GHOST_FILL = 0x4C6BA8, GHOST_EDGE = 0x3A5070;
+    private static final float GHOST_A = 0.45f;
     /** The beams: #FFE2A0, 0.45 at most, normal-blended (round 13 critic: peak L <= 200). */
     private static final int BEAM = 0xFFE2A0;
     private static final float BEAM_A = 0.45f;
-    /** Sparks; the blow's white flash and the struck face's warm afterglow; dust. */
-    private static final int SPARK = 0xF2DFAE, STRUCK_FACE = 0xF2DC96, DUST = 0xD9D3C6, BLOW_FLASH = 0xFFF4D0;
+    /** Sparks and the blow's white flash, at the worker's hands. */
+    private static final int SPARK = 0xF2DFAE, BLOW_FLASH = 0xFFF4D0;
     /** The tools, normal-blended and SHADED (round 10 critic: the flat sprite with a dark outline read as a loot icon):
      *  each part a dark side and a lit side, a metallic highlight on the head. */
     private static final int GOLD_DARK = 0xC9A24A, IRON_DARK = 0x8A8A8A;
-    /** Seconds the completion beat lasts (the halo's 0.6 s swell is the longest part, the tools' flight 0.6 s). */
+    /** Seconds the completion beat lasts (the halo's 0.6 s swell is the longest part). */
     private static final float DONE_SECONDS = 0.8f;
     /** Past this RTS zoom (strategic) the ghost loses its lines, the tools become glints and the light stops. */
     private static final float FAR_ZOOM = 70;
@@ -84,12 +91,10 @@ final class ConstructionFx {
         final float[] course = new float[4];           // ... inset half a block: the motes' area
         final float[] ring = { Float.NaN, 0, 0, 0 };   // the halo's footprint, easing toward the course's
         final float[] tmp = new float[4];
-        final float[] pt = new float[4];               // ringPoint results {x, z, nx, nz}
-        final float[] tool = new float[8];             // a tool's struck point {x, y, z}, face normal {nx, nz}, block {x, y, z}
+        final float[] pt = new float[5];               // ringPoint results {x, z, nx, nz}; a crew anchor {x, y, z, dx, dz}
+        final float[] tool = new float[5];             // a tool's working end {x, y, z}, its normal {nx, nz} (toward the worker)
         final float[] beat = new float[4];             // a tool's strikeBeat
-        final float[] heads = new float[3 * TOOLS];    // each tool's working end this frame {x, y, z} (for its glint)
-        final int[] facesA = new int[ConstructionGrid.MAX_EDGES], facesB = new int[ConstructionGrid.MAX_EDGES];
-        int nA, nB;                                    // this frame's camera-facing faces for tool 0 / tool 1
+        final ConstructionCrew crew = new ConstructionCrew();   // the builders at work: they hold the tools (round 14)
         float countedAt = -1;
         float shown = Float.NaN;
         float doneAt = -1;
@@ -97,13 +102,13 @@ final class ConstructionFx {
         final float[] quad = new float[12];            // a ghost face's corners (ConstructionGrid.ghostQuad)
         Site(ConstructionShape s, ConstructionGrid g) {
             shape = s; grid = g; standing = new int[s.layers()];
-            java.util.Arrays.fill(heads, Float.NaN);   // no glint before a tool has been drawn (the glints run first)
         }
     }
     private static final Map<BuildingPlacement, Site> SITES = new WeakHashMap<>();
     /** The bounds of the rising White Angel sites drawn last frame {x0, x1, y0, y1, z0, z1} (absorbsNano). */
     private static final int MAX_ACTIVE = 32;
     private static final float[] ACTIVE = new float[6 * MAX_ACTIVE];
+    private static final Site[] ACTIVE_SITE = new Site[MAX_ACTIVE];
     private static int activeN;
 
     /**
@@ -113,18 +118,21 @@ final class ConstructionFx {
      * builders' nanolathe beams (BuildingPlacement's build tick -> BarFx.nano, golden for the Sunforged), one per
      * worker, every ~8 ticks. On an Angel site the construction effect already shows the work (tools, beams from the
      * front), so the fan is dropped there; every other faction, and repair / reclaim off an Angel site, keep it.
+     * <p>Round 14 critic: a hammer floated over the roof with nobody under it. The beam says who is building and where
+     * their hands are ({@code hx, hy, hz}, BarFx.nano): it is reported to the site's crew, whose workers hold the tools.
      */
-    static boolean absorbsNano(float x, float y, float z) {
+    static boolean absorbsNano(float hx, float hy, float hz, float x, float y, float z) {
         for (int i = 0; i < activeN; i++) {
             int a = i * 6;
             if (x >= ACTIVE[a] && x <= ACTIVE[a + 1] && y >= ACTIVE[a + 2] && y <= ACTIVE[a + 3] && z >= ACTIVE[a + 4]
-                    && z <= ACTIVE[a + 5])
+                    && z <= ACTIVE[a + 5]) {
+                ACTIVE_SITE[i].crew.report(hx, hy, hz, x, y, z, BarFxClient.clock);
                 return true;
+            }
         }
         return false;
     }
     private static final List<BuildingPlacement> scratch = new ArrayList<>();
-    private static boolean warnedTool;
 
     static boolean isAngel(BuildingPlacement p) {
         return FactionTraits.of(p.getFaction()) == FactionTraits.SUNFORGED;
@@ -199,12 +207,12 @@ final class ConstructionFx {
         pxBlocks = ConstructionShape.pxToBlocks(1, BarFxClient.ortho, BarFxClient.zoom,
                 net.minecraft.client.Minecraft.getInstance().getWindow().getHeight());
 
-        // Pass order (round 13 critic). 1 normal-blended: the halo (done), the pool, the beams, the struck faces, dust -
-        // all before the ghost, which then lies over whatever is inside its volume. 2 additive: motes, tool glints and
-        // sparks, the completion flash. 3 the ghost's depth prepass, then 4 its colour (blended exactly once a pixel)
-        // and outline, and the tools in front of it. 5 the build front, polygon-offset, over everything of the site.
-        // The ghost's depth stays in the buffer for the rest of the frame: later particles behind a ghost are hidden
-        // as if it were glass that writes depth - a few blocks of a rising site, accepted.
+        // Pass order (round 13 critic). 1 normal-blended: the halo (done), the beams - before the ghost, which then lies
+        // over whatever is inside its volume. 2 additive: motes, the workers' sparks, the completion flash. 3 the ghost:
+        // its depth prepass, then its colour once a pixel (drawn straight away, in order - ghostPass). 4 its outline and
+        // the tools in the workers' hands. 5 the build front, polygon-offset, over everything of the site. The ghost's
+        // depth stays in the buffer for the rest of the frame: later particles behind a ghost are hidden as if it were
+        // glass that writes depth - a few blocks of a rising site, accepted.
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch) {
             Site s = siteOf(p);
@@ -224,6 +232,7 @@ final class ConstructionFx {
                 recount(s, p);
             }
             if (activeN < MAX_ACTIVE) {   // this site's bounds, for absorbsNano
+                ACTIVE_SITE[activeN] = s;
                 int a = activeN++ * 6;
                 ACTIVE[a] = s.grid.minX() - 0.5f; ACTIVE[a + 1] = s.grid.maxX() + 0.5f;
                 ACTIVE[a + 2] = s.shape.minY() - 0.5f; ACTIVE[a + 3] = s.shape.minY() + s.shape.layers() + 0.5f;
@@ -244,20 +253,14 @@ final class ConstructionFx {
                 s.ring[i] = Float.isNaN(s.ring[i]) || ease >= 1 ? s.cut[i] : s.ring[i] + (s.cut[i] - s.ring[i]) * ease;
             // (no halo while it rises - round 12 critic: it lay as a white ground haze at the walls' foot; the completion
             // beat still swells it once)
-            if (!far) {
-                drawPool(s, clock);
+            // (no pool of light under the ghost - round 14 critic: anything under the ghost reads as a second layer -
+            // and no struck face or dust: the tools are in the workers' hands, not on the wall)
+            if (!far)
                 drawLight(s, clock);
-                toolFaces(s);
-                for (int i = 0; i < TOOLS; i++) {
-                    float t = clock + i * 0.37f;
-                    drawStruck(s, i, t);
-                    drawDust(s, i, t);
-                }
-            }
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
-        // additive, small and capped: the motes, the tools' glints and sparks, the completion flash and ring
+        // additive, small and capped: the motes, the workers' flashes and sparks, the completion flash and ring
         BarFxClient.begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
@@ -269,41 +272,26 @@ final class ConstructionFx {
             }
             float front = s.lastFront;
             if (far) {
-                drawGlints(s, front, clock);
+                drawGlints(s, clock);
                 continue;
             }
             drawMotes(s, front, clock);
             for (int i = 0; i < TOOLS; i++)
-                drawToolLight(s, i, clock + i * 0.37f);
+                drawToolLight(s, i, clock + i * 0.37f, clock);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
 
         // the ghost: its nearest surface into depth, then its colour once a pixel
-        BarFxClient.begin(buffers, BarFxRenderTypes.DEPTH_ONLY, mat);
-        for (BuildingPlacement p : scratch)
-            if (!p.isBuilt)
-                ghostFaces(SITES.get(p));
-        buffers.endBatch(BarFxRenderTypes.DEPTH_ONLY);
+        ghostPass(buffers, BarFxRenderTypes.DEPTH_ONLY, mat);
+        ghostPass(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         BarFxClient.begin(buffers, BarFxRenderTypes.TRANSLUCENT, mat);
         for (BuildingPlacement p : scratch) {
             Site s = SITES.get(p);
-            if (s == null)
+            if (s == null || p.isBuilt || far)   // done: the workers walk off, their tools with them
                 continue;
-            if (p.isBuilt) {   // done: the tools fly up and vanish (0.6 s)
-                float k = clock - s.doneAt;
-                if (!far && k < 0.6f) {
-                    toolFaces(s);
-                    for (int i = 0; i < TOOLS; i++)
-                        drawTool(s, i, s.doneAt + i * 0.37f, 1 - k / 0.6f, 4 * k * k / 0.36f, true);
-                }
-                continue;
-            }
-            ghostFaces(s);
-            if (!far) {
-                ghostOutline(s);
-                for (int i = 0; i < TOOLS; i++)
-                    drawTool(s, i, clock + i * 0.37f, 1f, 0, true);
-            }
+            ghostOutline(s);
+            for (int i = 0; i < TOOLS; i++)
+                drawTool(s, i, clock + i * 0.37f, clock);
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
@@ -313,6 +301,40 @@ final class ConstructionFx {
             if (!p.isBuilt)
                 drawFront(SITES.get(p), clock, far);
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT_OFFSET);
+        BarFxClient.vc = null;
+    }
+
+    /**
+     * One pass of the ghost (round 14 critic: still blended more than once where its faces overlap on screen - nested
+     * faces at the stepped roof wing and a lower corner, luma 142 against 90 for one layer). The prepass and the colour
+     * pass are drawn straight away through the Tesselator, in this order, not left in the shared buffer source: a
+     * shader pack's buffer source (Oculus) holds every batch to the end of the level and groups them by render type,
+     * so the colour could land before the depth it is tested against, and every face of a non-convex hull blended.
+     * Both passes send the very same quads (ghostFaces) through the same shader, so their depths match exactly; the
+     * colour pass (TRANSLUCENT: LEQUAL, no depth write) passes only where its depth equals the nearest ghost depth -
+     * each pixel takes the ghost once, at its nearest face - and the laid blocks in front (in the depth buffer before
+     * the prepass) still hide it. LEQUAL rather than EQUAL: the same answer, with no risk of a pack's program rounding
+     * the two passes a hair apart. If the Tesselator is busy (never seen), the buffer source is used.
+     */
+    private static void ghostPass(MultiBufferSource.BufferSource buffers, RenderType type, Matrix4f mat) {
+        BufferBuilder bb = Tesselator.getInstance().getBuilder();
+        if (bb.building()) {
+            BarFxClient.begin(buffers, type, mat);
+            for (BuildingPlacement p : scratch)
+                if (!p.isBuilt)
+                    ghostFaces(SITES.get(p));
+            buffers.endBatch(type);
+            return;
+        }
+        bb.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BarFxClient.vc = bb;
+        BarFxClient.mat = mat;
+        for (BuildingPlacement p : scratch)
+            if (!p.isBuilt)
+                ghostFaces(SITES.get(p));
+        type.setupRenderState();
+        BufferUploader.drawWithShader(bb.end());
+        type.clearRenderState();
         BarFxClient.vc = null;
     }
 
@@ -432,10 +454,9 @@ final class ConstructionFx {
      *   <li>only the hull's faces (ConstructionGrid.ghostFace: the block beyond is not part of the site), the ones turned
      *   to the camera, each spanning its whole cell in its plane (ghostQuad: edge to edge, no seam) and GHOST_INSET
      *   inside it (never on a standing block's plane);</li>
-     *   <li>drawn twice: a depth-only prepass, then the colour with LEQUAL - each pixel blended once, at its nearest
-     *   ghost surface;</li>
-     *   <li>one colour, #5B74A0 at 0.35 (~L100 over grass); the NEXT course (the missing blocks on the front row) at
-     *   #6F86A8, 0.55, so it reads as next.</li>
+     *   <li>drawn twice, in order (ghostPass): a depth-only prepass, then the colour with LEQUAL and no depth write -
+     *   each pixel blended once, at its nearest ghost surface;</li>
+     *   <li>one colour throughout, #4C6BA8 at 0.45 (round 14 critic: no brighter next course - it nested).</li>
      * </ul>
      * Called for both passes with the same quads (the prepass ignores the colour), so their depths match exactly.
      */
@@ -448,16 +469,13 @@ final class ConstructionFx {
         float[] q = s.quad;
         for (int i = 0, n = g.volumeCount(); i < n; i++) {
             int x = g.volumeX(i), y = g.volumeY(i), z = g.volumeZ(i);
-            boolean next = g.isNextRow(x, y, z);
-            int c = next ? GHOST_NEXT : GHOST_FILL;
-            float a = next ? GHOST_NEXT_A : GHOST_A;
             for (int k = 0; k < 3; k++) {
                 int dir = k == 0 ? dy : k == 1 ? dx : dz;
                 if (!g.ghostFace(x, y, z, dir))
                     continue;
                 ConstructionGrid.ghostQuad(x, y, z, dir, GHOST_INSET, q);
                 for (int j = 0; j < 12; j += 3)
-                    BarFxClient.v(q[j], q[j + 1], q[j + 2], c, a);
+                    BarFxClient.v(q[j], q[j + 1], q[j + 2], GHOST_FILL, GHOST_A);
             }
         }
     }
@@ -523,104 +541,40 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the build front
 
     /** The front's on-screen width (px) close and from the strategic zoom; how far it is pulled toward the camera. */
-    private static final float FRONT_PX = 2, FRONT_PX_FAR = 3, FRONT_NUDGE = 0.3f;
+    private static final float FRONT_PX = 3, FRONT_PX_FAR = 4, FRONT_NUDGE = 0.3f;
 
     /**
-     * ONE build front (round 13 critic: it washed to white over the laid wall mid-span - rgb 244,240,234 - and was only
-     * a short orange tick at the RTS zoom). Now one consistent band whatever lies under it:
+     * ONE build front a wall face (round 14 critic: a 3-5 px orange edge on scattered block tops at many heights read as
+     * "orange-trimmed blocks", not "the row being laid"). Now:
      * <ul>
-     *   <li>the whole front: every rim edge on the front row (the course most of the wall is at) or standing above it
-     *   (ConstructionGrid.isFront) - no longer only the highest few blocks begun on the next course;</li>
-     *   <li>#FFB347 at 0.9, NORMAL-blended (additive vanishes on a white wall): ~R-B 160 over quartz, 145 over grass,
-     *   R-B >= 90 all along it;</li>
-     *   <li>2 px on screen close, 3 px from the strategic zoom (sized in pixels, so never a hairline zoomed out);</li>
-     *   <li>drawn last of the site, polygon-offset and pulled FRONT_NUDGE toward the camera: nothing - the ghost, its own
-     *   wall's top, the beams - covers it; the beams' additive white no longer lands on it (they are normal-blended now
-     *   and drawn before it).</li>
+     *   <li>per wall face turned to the camera, the course being laid there (ConstructionGrid.courseFront: the highest
+     *   course partly laid on that face, else the lowest still missing) - one height a face, so its pixels lie in one
+     *   band a block high on screen at most;</li>
+     *   <li>along that course's whole OUTER edge at its bed (laid and missing cells alike - one continuous line, never
+     *   a run of block tops), and nothing orange on any other block: no beads, no rim elsewhere;</li>
+     *   <li>#FFB347 at 1.0, NORMAL-blended (round 13: additive vanished on a white wall), 3 px on screen close and
+     *   4 px from the strategic zoom (sized in pixels, so never a hairline zoomed out);</li>
+     *   <li>drawn last of the site, polygon-offset and pulled FRONT_NUDGE toward the camera: nothing of the site - the
+     *   ghost, its own wall, the beams - covers it.</li>
      * </ul>
-     * The cool strip under it is gone (it measured warm); the next ghost course carries the "next" instead. Beads (one per
-     * 6 edges) run along it at 1.5 blocks a second, a warmer core, never white.
      */
     static void drawFront(Site s, float clock, boolean far) {
         if (s == null)
             return;
         ConstructionGrid g = s.grid;
-        int n = g.rimCount();
         float w = (far ? FRONT_PX_FAR : FRONT_PX) * pxBlocks;
-        float ox = -BarFxClient.lookX * FRONT_NUDGE, oy = -BarFxClient.lookY * FRONT_NUDGE, oz = -BarFxClient.lookZ * FRONT_NUDGE;
-        int rowN = 0;
-        for (int i = 0; i < n; i++) {
-            if (!g.isFront(i))
+        float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
+        float ox = -lx * FRONT_NUDGE, oy = -BarFxClient.lookY * FRONT_NUDGE, oz = -lz * FRONT_NUDGE;
+        for (int i = 0, n = g.courseEdgeCount(); i < n; i++) {
+            int side = g.courseSide(i);
+            if (sideNx(side) * lx + sideNz(side) * lz > -0.05f)   // a face turned away: hidden behind the building
                 continue;
-            rowN++;
-            int side = g.faceSide(i);
-            float ix = -sideNx(side) * RIM_INSET + ox, iz = -sideNz(side) * RIM_INSET + oz, y = g.rimY(i) + 0.02f + oy;
-            line(g.rimX0(i) + ix, y, g.rimZ0(i) + iz, g.rimX1(i) + ix, y, g.rimZ1(i) + iz, w, FRONT, 0.9f);
-        }
-        if (rowN == 0)
-            return;
-        int beads = Math.max(1, Math.round(rowN / 6f));
-        float r = far ? 0.25f : 0.15f;
-        for (int k = 0; k < beads; k++) {
-            float at = clock * 1.5f + k * 6f;
-            at -= (float) Math.floor(at / rowN) * rowN;
-            int want = Math.min(rowN - 1, (int) at), seen = 0, i = 0;
-            for (; i < n; i++)
-                if (g.isFront(i) && seen++ == want)
-                    break;
-            if (i >= n)
-                continue;
-            float f = at - want;
-            int side = g.faceSide(i);
-            float ix = -sideNx(side) * RIM_INSET + ox, iz = -sideNz(side) * RIM_INSET + oz, y = g.rimY(i) + 0.05f + oy;
-            float x = g.rimX0(i) + (g.rimX1(i) - g.rimX0(i)) * f + ix, z = g.rimZ0(i) + (g.rimZ1(i) - g.rimZ0(i)) * f + iz;
-            BarFxClient.softDisc(x, y, z, r, BEAD_GLOW, 0.8f, BEAD_GLOW, 0.35f, 12, 0, 0);
-            BarFxClient.softDisc(x, y, z, r * 0.45f, BEAD_CORE, 1f, BEAD_CORE, 0.9f, 8, 0, 0);
+            float ix = -sideNx(side) * RIM_INSET + ox, iz = -sideNz(side) * RIM_INSET + oz, y = g.courseY(i) + oy;
+            line(g.courseX0(i) + ix, y, g.courseZ0(i) + iz, g.courseX1(i) + ix, y, g.courseZ1(i) + iz, w, FRONT, 1f);
         }
     }
 
     // ------------------------------------------------------------------ light from above
-
-    /**
-     * Where the light lands into {@code s.pt}: drifting slowly over the course's footprint, kept 1.5 blocks or more
-     * from the mean target of the live builder beams aimed into it (BarFxClient.live, read only) so the cone never
-     * merges with their fan.
-     */
-    private static void landing(Site s, float clock) {
-        float mx = (s.cut[0] + s.cut[1]) * 0.5f, mz = (s.cut[2] + s.cut[3]) * 0.5f;
-        float hx = Math.max(0, (s.cut[1] - s.cut[0]) * 0.5f - 1.5f), hz = Math.max(0, (s.cut[3] - s.cut[2]) * 0.5f - 1.5f);
-        float x = mx + hx * 0.4f * (float) Math.sin(clock * 0.07f), z = mz + hz * 0.4f * (float) Math.cos(clock * 0.05f);
-        float bx = 0, bz = 0;
-        int nb = 0;
-        List<BarFxClient.P> live = BarFxClient.live;
-        for (int i = 0, m = live.size(); i < m; i++) {
-            BarFxClient.P q = live.get(i);
-            if (q.kind != BarFxClient.BEAM || q.x2 < s.cut[0] - 1 || q.x2 > s.cut[1] + 1 || q.z2 < s.cut[2] - 1
-                    || q.z2 > s.cut[3] + 1)
-                continue;
-            bx += q.x2; bz += q.z2; nb++;
-        }
-        if (nb > 0) {
-            bx /= nb; bz /= nb;
-            float dx = x - bx, dz = z - bz, d = (float) Math.sqrt(dx * dx + dz * dz);
-            if (d < 1.5f) {
-                if (d < 1e-3f) { dx = 1; dz = 0; d = 1; }
-                x = Math.max(s.cut[0] + 0.5f, Math.min(s.cut[1] - 0.5f, bx + dx / d * 1.5f));
-                z = Math.max(s.cut[2] + 0.5f, Math.min(s.cut[3] - 0.5f, bz + dz / d * 1.5f));
-            }
-        }
-        s.pt[0] = x; s.pt[1] = z;
-        // the surface it lands on: the top of the highest standing block in that column
-        s.pt[2] = s.grid.columnTop((int) Math.floor(x), (int) Math.floor(z));
-    }
-
-    /** A soft cool pool on the standing surface inside the footprint (the accent colour at 0.5, radius 1.5). */
-    static void drawPool(Site s, float clock) {
-        landing(s, clock);
-        if (Float.isNaN(s.pt[2]))
-            return;
-        flatDisc(s.pt[0], s.pt[2] + 0.03f, s.pt[1], 1.5f, COOL, 0.5f, 18);
-    }
 
     /** The beams: their on-screen width (px), their height (blocks), the share of it at the top they fade out over. */
     private static final float BEAM_PX = 2, BEAM_H = 4, BEAM_FADE = 0.3f;
@@ -678,98 +632,53 @@ final class ConstructionFx {
 
     // ------------------------------------------------------------------ the tools
 
-    /** Tools working at once (round 10 critic: 3-4 cycling): two hammers and a chisel, on the sides turned to us. */
-    private static final int TOOLS = 3;
+    /** Tools at once: one per builder at work (ConstructionCrew.SLOTS) - two hammers and a chisel. */
+    private static final int TOOLS = ConstructionCrew.SLOTS;
     /** Hammer / chisel parts (blocks): ~0.5 block in all (round 12 critic); the handle's length is the pivot's
-     *  distance from the struck point. */
+     *  distance from the working end. */
     private static final float HANDLE_W = 0.07f, HEAD_L = 0.28f, HEAD_W = 0.13f, CHISEL_GRIP_W = 0.09f;
     /** The anticipation before a blow (~2 frames, seconds). */
     private static final float ANTICIPATION = 0.035f;
-    /** The pivot stands this far out along the face's normal and this far above the struck point: the haft near
-     *  square to the wall, the head ON it at the blow; the swing is a 40-degree arc. */
+    /** The pivot (the grip) stands this far back toward the worker and this far above the working end: with the end
+     *  ConstructionCrew.REACH (0.3) in front of the hands, the grip is in them; the swing is a 40-degree arc. */
     private static final float PIVOT_OUT = 0.36f, PIVOT_UP = 0.12f, ARC = 0.7f;
-    /** The struck point: on its face, just clear of the plane (round 13 critic: snap to the face at 0 offset; this is
-     *  only enough to keep the head's face from z-fighting the wall's). */
-    private static final float FACE_GAP = 0.004f;
-    /** The tools are pulled this far toward the camera so the block they strike never hides their heads. */
-    private static final float NUDGE = 0.6f;
+    /** The blow's flash lasts this long: ~2 frames (round 14 critic: a soft orb that stayed read as an object). */
+    private static final float FLASH_S = 0.035f;
 
     /**
-     * This frame's faces the tools may strike (ConstructionGrid: a standing block with a missing block on it, its open
-     * side) that are turned to the camera, in two lists: tool 0 the side most turned to it, tool 1 the next (either
-     * side of the near corner from the RTS diagonal); if one list is empty it shares the other.
+     * Tool {@code i}'s working end at {@code now} into {@code s.tool}: {x, y, z} REACH in front of its worker's hands at
+     * hand height, {nx, nz} pointing back at the worker. False when no worker is building in that slot - then there is
+     * no tool, no spark, nothing (round 14 critic: a hammer floated over the roof with nobody under it).
      */
-    private static void toolFaces(Site s) {
-        ConstructionGrid g = s.grid;
-        float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
-        int best = 0, next = 1;
-        float db = 9, dn = 9;
-        for (int side = 0; side < 4; side++) {
-            float d = sideNx(side) * lx + sideNz(side) * lz;
-            if (d < db) { dn = db; next = best; db = d; best = side; } else if (d < dn) { dn = d; next = side; }
-        }
-        s.nA = 0; s.nB = 0;
-        for (int i = 0, n = g.faceCount(); i < n; i++) {
-            int side = g.faceSide(i);
-            if (side == best && db < -0.05f) s.facesA[s.nA++] = i;
-            else if (side == next && dn < -0.05f) s.facesB[s.nB++] = i;
-        }
-    }
-
-    /**
-     * The face tool {@code i} strikes in strike cycle {@code cycle} into {@code s.tool}: {x, y, z} the face's centre,
-     * {nx, nz} its normal, {bx, by, bz} the block. A face is re-checked against the grid before use (a standing block,
-     * its side still open - the list is from the last recount), else the tool skips that blow. Returns false for no
-     * face (no standing face turned to the camera: no tool).
-     */
-    private static boolean toolFace(Site s, int i, int cycle) {
-        boolean a = (i & 1) == 0;
-        int[] list = a ? s.facesA : s.facesB;
-        int n = a ? s.nA : s.nB;
-        if (n == 0) { list = a ? s.facesB : s.facesA; n = a ? s.nB : s.nA; }
-        if (n == 0)
+    private static boolean toolAt(Site s, int i, float now) {
+        if (!s.crew.anchor(i, now, s.pt))
             return false;
-        ConstructionGrid g = s.grid;
-        // two tools on one side keep apart: the second starts half the list away
-        int f = list[((int) (hash(cycle * 31 + i * 977) * n) + (i / 2) * (n / 2)) % n];
-        int x = g.faceX(f), y = g.faceY(f), z = g.faceZ(f), side = g.faceSide(f);
-        float nx = sideNx(side), nz = sideNz(side);
-        if (!g.isStanding(x, y, z) || g.isStructure(x + (int) nx, y, z + (int) nz))
-            return false;
-        s.tool[0] = x + 0.5f + nx * (0.5f + FACE_GAP); s.tool[1] = y + 0.5f; s.tool[2] = z + 0.5f + nz * (0.5f + FACE_GAP);
-        s.tool[3] = nx; s.tool[4] = nz;
-        s.tool[5] = x; s.tool[6] = y; s.tool[7] = z;
+        float[] tl = s.tool;
+        tl[0] = s.pt[0]; tl[1] = s.pt[1]; tl[2] = s.pt[2];
+        tl[3] = -s.pt[3]; tl[4] = -s.pt[4];
         return true;
     }
 
     /**
-     * One tool at time {@code t}, built in the WORLD round its struck face, then drawn as a hard-edged silhouette in
-     * the screen plane. Round 9 critic: the hammer hung over the lawn 0.5-1 block outside the wall. Root cause: the
-     * tool was laid out on SCREEN from the struck point - its grip a whole tool length out along the face's normal as
-     * the screen shows it - so for every side face seen from the 65-degree camera the handle, and with the wind-up
-     * and the hop the head too, lay over the ground beside the wall; and it hopped between two random blocks of a side
-     * while the last blow's flash stayed on the old one (the flash "3 blocks away"). Now the pivot is the face centre
-     * + 0.3 along its normal + 0.3 up (round 10: ~45 degrees into the face, ~0.6 block), the head swings a 40-degree
-     * arc onto the face, the tool stays on one face per blow (a blow every 0.9 s), and a check confirms the struck head
-     * is within 0.4 of its block. Shaded (a lit and a dark side, a highlight), a gold head on an iron haft, a 1 px dark
-     * outline, ~0.8 block (round 11 critic); its head's striking face on the struck point; ~2 frames of anticipation.
-     * {@code full}: the shaded tool; else its base only, faint (a trail copy). {@code fly}: blocks risen (done).
+     * One tool at beat time {@code t}, held by its worker (round 14 critic: an opaque hammer floated horizontally in
+     * mid-air above the roof, no worker under it; the tools were laid out on the WALL, any standing face under a missing
+     * block). Now each is parented to a builder at work (ConstructionCrew, from the builders' own nanolathe reports):
+     * the grip in the hands, the head swinging a 40-degree arc onto a point REACH in front of them toward the block the
+     * worker builds, ~2 frames of anticipation, a small recoil. Only while that worker is building; gone as it stops.
+     * A small shaded 3D model (a gold head on an iron haft, a chisel's gold grip and iron blade), depth-tested.
      */
-    static void drawTool(Site s, int i, float t, float alpha, float fly, boolean full) {
-        if (alpha <= 0.01f)
+    static void drawTool(Site s, int i, float t, float now) {
+        if (!toolAt(s, i, now))
             return;
         ConstructionShape.strikeBeat(t, s.beat);
-        if (!toolFace(s, i, (int) s.beat[0]))
-            return;
         boolean chisel = i == 1;
         float[] b = s.beat, tl = s.tool;
-        float nx = tl[3], nz = tl[4];
-        // the pivot, in the world
-        float gx = tl[0] + nx * PIVOT_OUT, gy = tl[1] + PIVOT_UP + fly, gz = tl[2] + nz * PIVOT_OUT;
-        // the head: struck at the face centre; wound back, swung ARC out round the pivot (in the plane of the normal
-        // and up). Arriving at this face (the cycle's first 0.2 s) it lifts half back, winds the rest of the way
-        // (0.3 s), strikes (0.1 s) and recoils; it fades in on arrival, so the hop from the last face is not a jump.
-        float va = -PIVOT_OUT, vb = -PIVOT_UP;                              // pivot -> struck head (normal, up)
+        float nx = tl[3], nz = tl[4], alpha = 1f;
+        // the pivot (the grip), in the world
+        float gx = tl[0] + nx * PIVOT_OUT, gy = tl[1] + PIVOT_UP, gz = tl[2] + nz * PIVOT_OUT;
+        // the head: on the working end at the blow; lifted, wound back and swung ARC round the pivot (in the plane of
+        // the worker's facing and up), struck, recoiled
+        float va = -PIVOT_OUT, vb = -PIVOT_UP;                              // pivot -> working end (normal, up)
         float k = t - b[0] * ConstructionShape.BEAT_CYCLE;
         float windEnd = ConstructionShape.BEAT_MOVE + ConstructionShape.BEAT_WIND;
         float wind = k < ConstructionShape.BEAT_MOVE ? 0.5f * Math.min(1, 3 * k / ConstructionShape.BEAT_MOVE)
@@ -777,25 +686,12 @@ final class ConstructionFx {
                 : k < windEnd ? 1.15f                                       // the anticipation: ~2 frames further back
                 : b[2];
         wind *= chisel ? 0.6f : 1f;
-        alpha *= Math.min(1, k / 0.08f);
         float since = b[3];
         if (since >= 0 && since < 0.15f && b[1] >= 1)
             wind = Math.max(wind, 0.15f * (float) Math.sin(Math.PI * since / 0.15f));   // the recoil
         float phi = ARC * wind, cs = (float) Math.cos(phi), sn = (float) Math.sin(phi);
-        float ha = va * cs - vb * sn, hb = va * sn + vb * cs;              // rotated toward +normal (out)
+        float ha = va * cs - vb * sn, hb = va * sn + vb * cs;              // rotated toward +normal (back, up)
         float hx = gx + nx * ha, hy = gy + hb, hz = gz + nz * ha;
-        if (wind == 0 && full && fly == 0) {
-            // the debug check (round 9): the struck head must lie within its block grown by 0.4
-            float bx = tl[5], by = tl[6], bz = tl[7];
-            if (hx < bx - 0.4f || hx > bx + 1.4f || hy < by - 0.4f || hy > by + 1.4f || hz < bz - 0.4f || hz > bz + 1.4f) {
-                if (!warnedTool) {
-                    warnedTool = true;
-                    ReignOfNether.LOGGER.warn("ConstructionFx: a tool's head {} {} {} missed its block {} {} {}", hx, hy,
-                            hz, bx, by, bz);
-                }
-                return;
-            }
-        }
         // a small 3D model in the world (round 13 critic: the flat sprites read as items floating off the wall): boxes
         // along d (pivot -> head), t (along the face) and u (d x t), lit from above, depth-tested against the wall
         float dx = hx - gx, dy = hy - gy, dz = hz - gz, len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
@@ -821,93 +717,30 @@ final class ConstructionFx {
             box(hx - dx * hd, hy - dy * hd, hz - dz * hd, dx, dy, dz, hd, tx, 0, tz, HEAD_L * 0.5f, ux, uy, uz, hd,
                     GOLD_DARK, alpha);
         }
-        if (full && fly == 0) {   // remember the working end for the light pass's glint
-            s.heads[i * 3] = hx; s.heads[i * 3 + 1] = hy; s.heads[i * 3 + 2] = hz;
-        }
     }
 
     /**
-     * Tool {@code i}'s blow {@code back} cycles ago (0: the latest that has landed) into {@code s.tool}; returns how
-     * long ago it landed (seconds), or -1 for none.
+     * A tool's light: at each blow a ~2-frame flash and 4 small 2 px gold sparks (0.15 s) at the working end, in its
+     * worker's hands only (round 14 critic: the soft orb on the head - a glint - sat on a ghost face like an object;
+     * it is gone).
      */
-    private static float blow(Site s, int i, float t, int back) {
-        ConstructionShape.strikeBeat(t, s.beat);
-        float since = s.beat[3], c = s.beat[0];
-        if (since < 0)
-            return -1;
-        float hit = ConstructionShape.BEAT_MOVE + ConstructionShape.BEAT_WIND + ConstructionShape.BEAT_STRIKE;
-        int sc = (int) (t - c * ConstructionShape.BEAT_CYCLE >= hit ? c : c - 1) - back;
-        if (sc < 0 || !toolFace(s, i, sc))
-            return -1;
-        s.beat[0] = sc;
-        return since + back * ConstructionShape.BEAT_CYCLE;
-    }
-
-    /**
-     * A blow's consequence on the struck face (round 11 critic: the old 0.8 / 0.6 fades read as solid gold blocks):
-     * the ONE struck face, #F2DC96 at 0.35 at the blow fading linearly to 0 over 0.5 s, no outline; only tools 0 and 1
-     * leave one, so at most 2 are live per building (a blow every 0.9 s each); and a 6 px #FFF4D0 flash for 120 ms at
-     * the contact. The decay runs off the beat's time since the blow, recomputed from the clock every frame.
-     */
-    static void drawStruck(Site s, int i, float t) {
-        float since = blow(s, i, t, 0);
-        if (since < 0 || since >= 0.5f)
+    static void drawToolLight(Site s, int i, float t, float now) {
+        if (!toolAt(s, i, now))
             return;
-        float[] tl = s.tool;
-        if (i < 2) {
-            float a = 0.35f * (1 - since / 0.5f);
-            float nx = tl[3], nz = tl[4], tx = -nz * 0.5f, tz = nx * 0.5f;
-            float fx = tl[0] + nx * 0.01f, fz = tl[2] + nz * 0.01f, y0 = tl[6], y1 = y0 + 1;
-            BarFxClient.v(fx - tx, y0, fz - tz, STRUCK_FACE, a);
-            BarFxClient.v(fx + tx, y0, fz + tz, STRUCK_FACE, a);
-            BarFxClient.v(fx + tx, y1, fz + tz, STRUCK_FACE, a);
-            BarFxClient.v(fx - tx, y1, fz - tz, STRUCK_FACE, a);
-        }
-        if (since < 0.12f) {
-            float x = tl[0] - BarFxClient.lookX * NUDGE, y = tl[1] - BarFxClient.lookY * NUDGE;
-            float z = tl[2] - BarFxClient.lookZ * NUDGE;
-            BarFxClient.softDisc(x, y, z, 0.1f, BLOW_FLASH, 0.9f, BLOW_FLASH, 0.6f, 10, 0, 0);
-        }
-    }
-
-    /** A blow's dust: three small soft puffs of stone dust swelling and drifting off the struck face (0.5 s). */
-    static void drawDust(Site s, int i, float t) {
-        float since = blow(s, i, t, 0);
-        if (since < 0 || since >= 0.5f)
+        ConstructionShape.strikeBeat(t, s.beat);
+        float since = s.beat[3];
+        if (since < 0 || since >= 0.15f)
             return;
         int sc = (int) s.beat[0];
         float[] tl = s.tool;
-        float e = since / 0.5f;
-        for (int j = 0; j < 3; j++) {
-            float ang = (float) (hash(sc * 41 + i * 7 + j * 3) * 2 * Math.PI);
-            float d = 0.1f + 0.2f * e;
-            BarFxClient.softDisc(tl[0] + tl[3] * 0.3f * e + (float) Math.cos(ang) * d, tl[1] + 0.3f * e,
-                    tl[2] + tl[4] * 0.3f * e + (float) Math.sin(ang) * d, 0.14f + 0.18f * e, DUST, 0.35f * (1 - e), DUST,
-                    0, 8, j, 0.15f);
-        }
-    }
-
-    /** A tool's light: a small glint on its head and, after each blow, 4 small 2 px gold sparks off the face (0.3 s). */
-    static void drawToolLight(Site s, int i, float t) {
-        ConstructionShape.strikeBeat(t, s.beat);
-        if (!toolFace(s, i, (int) s.beat[0]))
-            return;
-        float tw = 0.75f + 0.25f * (float) Math.sin(t * 5 + i * 2.1f);
-        if (!Float.isNaN(s.heads[i * 3]))
-            BarFxClient.softDisc(s.heads[i * 3], s.heads[i * 3 + 1], s.heads[i * 3 + 2], 0.1f, LIGHT, 0.25f * tw, GOLD, 0,
-                8, 0, 0);
-        float since = blow(s, i, t, 0);
-        if (since < 0 || since >= 0.3f)
-            return;
-        int sc = (int) s.beat[0];
-        float[] tl = s.tool;
-        float x = tl[0] - BarFxClient.lookX * NUDGE, y = tl[1] - BarFxClient.lookY * NUDGE;
-        float z = tl[2] - BarFxClient.lookZ * NUDGE;
-        float f = 1 - since / 0.3f;
+        float x = tl[0], y = tl[1], z = tl[2];
+        if (since < FLASH_S)
+            BarFxClient.softDisc(x, y, z, 0.06f, BLOW_FLASH, 0.9f, BLOW_FLASH, 0.4f, 8, 0, 0);
+        float f = 1 - since / 0.15f;
         for (int j = 0; j < 4; j++) {   // round 10 critic: 3-5 small sparks
             float ang = (float) (hash(sc * 131 + i * 17 + j * 7) * 2 * Math.PI);
             float sp = 1.2f + 1.3f * hash(sc * 57 + j * 29 + i);
-            float vx = (float) Math.cos(ang) * sp + tl[3] * 1.5f, vz = (float) Math.sin(ang) * sp + tl[4] * 1.5f;
+            float vx = (float) Math.cos(ang) * sp - tl[3] * 1.5f, vz = (float) Math.sin(ang) * sp - tl[4] * 1.5f;
             float vy = 2f + 1.5f * hash(sc * 23 + j * 3 + i * 5);
             float sx = x + vx * since, sy = y + vy * since - 6 * since * since, sz = z + vz * since;
             float vyNow = vy - 12 * since, l = 0.06f;
@@ -915,18 +748,17 @@ final class ConstructionFx {
         }
     }
 
-    /** Strategic zoom: the tools shrink to golden glints walking the course. */
-    static void drawGlints(Site s, float front, float clock) {
-        for (int i = 0; i < 2; i++) {
-            ConstructionShape.perimeterPoint(s.cut, i / 2f + clock * 0.05f, s.pt);
-            BarFxClient.softDisc(s.pt[0], front + 0.6f, s.pt[1], 0.32f, LIGHT, 0.8f, GOLD, 0.2f, 10, 0, 0);
-        }
+    /** Strategic zoom: each tool shrinks to a small golden glint at its worker's hands (never a free-floating one). */
+    static void drawGlints(Site s, float clock) {
+        for (int i = 0; i < TOOLS; i++)
+            if (toolAt(s, i, clock))
+                BarFxClient.softDisc(s.tool[0], s.tool[1], s.tool[2], 0.2f, LIGHT, 0.8f, GOLD, 0.2f, 10, 0, 0);
     }
 
     // ------------------------------------------------------------------ the completion beat
 
     /**
-     * Done (the additive half; the halo's swell and the tools' flight are drawn in the normal-blended pass): a flash
+     * Done (the additive half; the halo's swell is drawn in the normal-blended pass): a flash
      * on the building's top (0.3 s) and one ground-plane light ring radiating out and fading (0.5 s) - a flash, never
      * persistent.
      */
