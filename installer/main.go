@@ -6,9 +6,9 @@
 //  3. Reads the live modpack (the packwiz pack the game's builds publish) for its Minecraft and Forge versions
 //  4. Creates a Prism instance that updates itself from that pack before every launch (packwiz), so a tester always
 //     runs the same build as the host's server - the mods are fetched on the first launch
-//  5. Puts a "lovish" shortcut (his cat as the icon) on the Desktop and in the Start Menu
-//  6. Sets up the cat bubble: a round, always-on-top bubble that starts the game when clicked (bubble/bubble.ps1),
-//     with a "Beyond and Tabs bubble" Desktop shortcut to bring it back
+//  5. Puts a "lovish" shortcut (his cat as the icon) in the Start Menu, opening the launcher
+//  6. Sets up the cat bubble: a round, always-on-top bubble that opens the launcher when clicked (bubble/bubble.ps1);
+//     the one Desktop icon, "lovish", brings it back (lovish, Oct 28)
 //  7. Opens Prism Launcher so you can sign in with your Microsoft account and play
 //
 // Re-running it is safe: anything already in place is kept, anything missing is fetched.

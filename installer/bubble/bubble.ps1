@@ -60,7 +60,7 @@ function Start-Game {
   $launcher = Join-Path (Split-Path -Parent $dir) 'launcher.exe'
   if (Test-Path -LiteralPath $launcher) {
     $script:lastLaunch = [datetime]::Now
-    Start-Process -FilePath $launcher -ArgumentList '--launch' -WorkingDirectory (Split-Path -Parent $launcher)
+    Start-Process -FilePath $launcher -ArgumentList '--launch' -WorkingDirectory (Split-Path -Parent $launcher) -WindowStyle Minimized
     $tip.Show('Starting Beyond and Tabs...', $form, 0, -28, 4000)
     return
   }
