@@ -29,6 +29,7 @@ class DragonFlightFeelTest {
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 0.5f) < level, "half a climb beats faster too");
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 0.5f) > Dragon.beatTicks(P, 0f, 0f, 1f), "and less than a full climb");
         assertEquals(level, Dragon.beatTicks(P, 0f, 0f, -1f), 1e-3f, "a dive does not beat faster (it stoops)");
+        assertTrue(Dragon.beatTicks(P, 0f, 0f, 1f) >= 0.6f * level, "but not frantically: at most 40% quicker");
     }
 
     @Test
@@ -115,5 +116,78 @@ class DragonFlightFeelTest {
                 Dragon.bankStep(fl, P, yaw, 1f / 3f, 1f, 0.167f);
             }
         assertTrue(fl[Dragon.ST_BANK] >= 18f, "a cruise turn at 4 deg/tick banks (" + fl[Dragon.ST_BANK] + ")");
+    }
+
+    // ---- review r1 of #440: the rest of the drivers through the same smoothed path --------------------------------
+
+    /** A cruise at speed (b/t) read off a client tracked every 3rd tick, each tick sampled at 3 frames; returns the
+     *  largest flare and the largest head nod after a 60-tick warm-up. */
+    private static float[] jitteredCruise(float speed) {
+        float[] st = Dragon.newState(0f);
+        st[Dragon.ST_SPEED] = speed;
+        float[] mult = { 1f, 1f, 1f, 0f, 2f, 1f, 1f };
+        float flare = 0f, nod = 0f;
+        for (int t = 0; t < 300; t++) {
+            for (int f = 0; f < 3; f++)
+                Dragon.drivers(st, P, speed * mult[t % mult.length], 0f, 1f / 3f);
+            if (t > 60) {
+                flare = Math.max(flare, st[Dragon.ST_FLARE]);
+                nod = Math.max(nod, Dragon.brakeNod(P, st[Dragon.ST_BRAKE]));
+            }
+        }
+        return new float[] { flare, nod };
+    }
+
+    @Test
+    void aSlowCruiseThatStuttersNeitherFlaresNorBobsTheHead() {
+        for (float speed : new float[] { 0.11f, 0.12f, 0.13f, 0.14f, 0.17f }) {
+            float[] r = jitteredCruise(speed);
+            assertTrue(r[0] <= 0.1f, "a stuttering cruise at " + speed + " b/t flared to " + r[0]);
+            assertTrue(r[1] <= 0.5f, "a stuttering cruise at " + speed + " b/t nodded the head " + r[1] + " deg");
+        }
+    }
+
+    /** Brakes from cruise at decel b/t a tick; returns {the tick the flare passes 0.5, the speed then, the largest nod}. */
+    private static float[] brakeFrom(float decel) {
+        float[] st = Dragon.newState(0f);
+        for (int t = 0; t < 60; t++)
+            Dragon.drivers(st, P, 0.17f, 0f, 1f);
+        float start = -1f, at = -1f, nod = 0f;
+        for (int t = 0; t < 120; t++) {
+            float speed = Math.max(0f, 0.17f - decel * t);
+            Dragon.drivers(st, P, speed, 0f, 1f);
+            nod = Math.max(nod, Dragon.brakeNod(P, st[Dragon.ST_BRAKE]));
+            if (start < 0f && st[Dragon.ST_FLARE] > 0.5f) {
+                start = t;
+                at = speed;
+            }
+        }
+        return new float[] { start, at, nod };
+    }
+
+    @Test
+    void theFlareComesWhileItBrakesNotOnlyOnceItHasStopped() {
+        float[] hard = brakeFrom(0.012f);
+        assertTrue(hard[0] >= 0f && hard[0] <= 12f && hard[1] > 0.02f,
+            "a hard brake (0.012 a tick) flares while still moving, by tick 12: tick " + hard[0] + " at " + hard[1]);
+        assertTrue(hard[2] >= 4f, "a hard brake nods the head (" + hard[2] + " deg)");
+        float[] easy = brakeFrom(0.0028f);
+        assertTrue(easy[0] >= 0f && easy[0] <= 30f && easy[1] > 0.05f,
+            "a normal approach (0.0028 a tick) flares on the way in, by tick 30: tick " + easy[0] + " at " + easy[1]);
+    }
+
+    @Test
+    void aDragonThatFliesIntoViewDoesNotPlayTheTakeOff() {
+        float[] st = Dragon.newState(0f);
+        st[Dragon.ST_SPEED] = 0.17f;
+        st[Dragon.ST_HOVER] = 0f;
+        float[] mult = { 1f, 1f, 1f, 0f, 2f, 1f, 1f };
+        float worst = 0f;
+        for (int t = 0; t < 90; t++) {
+            for (int f = 0; f < 3; f++)
+                Dragon.drivers(st, P, 0.17f * mult[t % mult.length], 0f, 1f / 3f, t);
+            worst = Math.max(worst, st[Dragon.ST_TAKEOFF]);
+        }
+        assertTrue(worst <= 0.1f, "a dragon cruising into view (stuttering) played the take-off at " + worst);
     }
 }

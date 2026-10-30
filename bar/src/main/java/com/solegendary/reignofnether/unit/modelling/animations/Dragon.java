@@ -346,6 +346,13 @@ public final class Dragon {
         st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
     }
 
+    /** STUB (red proof): drivers plus the take-off weight as animate computes it today (the raw speed and climb). */
+    public static void drivers(float[] st, Params P, float speed, float vy, float dt, int tickCount) {
+        drivers(st, P, speed, vy, dt);
+        float wantTakeoff = wantsTakeoff(P, tickCount, speed, Mth.clamp(vy / P.climbSpeed, -1f, 1f)) ? 1f : 0f;
+        st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
+    }
+
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
         st[2] = age;
