@@ -771,8 +771,12 @@ def m_gravel_r25(F, n):
     dome = np.clip(1 - (2 * a1 / np.maximum(a1 + a2, 1e-6)) ** 2, 0, 1)
     tone = rng.random(k + gk)
     kind = rng.random(k + gk)
-    base = np.where(kind[pid][..., None] < 0.6, np.array([0.50, 0.49, 0.48]),
-                    np.where(kind[pid][..., None] < 0.85, np.array([0.52, 0.48, 0.44]), np.array([0.40, 0.39, 0.39])))
+    # r32 (critic: gravel "brown - shift toward cool grey with mixed stones"; its luma stays, it sits on the
+    # environment palette): most pebbles a cool grey, some blue-grey slate, a few warm tan, the rest dark
+    kk = kind[pid][..., None]
+    base = np.where(kk < 0.50, np.array([0.48, 0.49, 0.50]),
+                    np.where(kk < 0.66, np.array([0.45, 0.47, 0.51]),
+                             np.where(kk < 0.80, np.array([0.55, 0.50, 0.43]), np.array([0.36, 0.36, 0.38]))))
     H = 0.3 + 0.5 * np.sqrt(dome) + 0.015 * F.noise(16, 48, 0.2)
     shade = (0.85 + 0.25 * tone[pid]) * (0.72 + 0.28 * np.sqrt(dome))
     return H, np.clip(base * shade[..., None], 0, 1)
