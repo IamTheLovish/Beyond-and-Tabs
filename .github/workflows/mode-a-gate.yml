@@ -1,0 +1,83 @@
+# mode-a-gate.yml - required check "mode-a" (lovish Oct 27 03:20: "make the gate better so it doesnt slip"; D040).
+# A PR cannot merge (with branch protection requiring the "mode-a" status) until a reviewer comment says
+#   VERDICT: PASS
+#   REVIEWER: <name> [id:xxxx]
+#   SHA: <the PR's current head sha, at least 7 chars>
+# (the same reviews\pr-N-modeA.md file that cc.ps1 gate done reads)
+# from someone with write access. Every new push resets it to pending, so a review always covers the latest code.
+# The status is RECOMPUTED on every run from the comments of the PR: the NEWEST verdict comment (by creation time) that
+# names the current head decides. Comments that were edited after posting (updated_at != created_at) are ignored, and
+# the "edited" event is not a trigger, so editing an old PASS can never flip the status. A comment that names another
+# sha is ignored entirely: it can neither downgrade an existing success nor grant one.
+# If a needed API call fails (for example 403 on the permission lookup) the job FAILS loudly instead of ignoring verdicts.
+# Comment text is handled as data: only read through jq and matched with a regex, never executed.
+# Limits (review round 1): GitHub cannot tell builder from reviewer (all sessions post as one account); that check stays
+# in cc.ps1 gate done. Branch protection should require mode-a from the GitHub Actions app so a token can't set it.
+name: mode-a-gate
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  statuses: write
+concurrency:
+  group: mode-a-gate-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  mode-a:
+    if: github.event_name == 'pull_request_target' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recompute mode-a from the newest verdict on the current head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::mode-a-gate: $*"; exit 1; }
+          set_status() { gh api "repos/$REPO/statuses/$HEAD" -f state="$1" -f context=mode-a -f description="$2" >/dev/null; }
+
+          HEAD=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha) || fail "cannot read PR $PR head"
+          [ -n "$HEAD" ] || fail "empty head sha for PR $PR"
+
+          # all PR comments, oldest first (paginated); a failure here must not look like "no verdicts"
+          gh api --paginate "repos/$REPO/issues/$PR/comments?per_page=100" \
+            --jq '.[] | {u: .user.login, a: .author_association, c: .created_at, e: .updated_at, b: .body} | @base64' \
+            > comments.b64 || fail "cannot list comments of PR $PR"
+
+          RESULT=""      # "PASS <login>" or "BLOCK <login>" of the newest verdict for HEAD
+          declare -A PERMS
+          while IFS= read -r ROW; do
+            [ -n "$ROW" ] || continue
+            J=$(printf '%s' "$ROW" | base64 -d)
+            AUTHOR=$(printf '%s' "$J" | jq -r .u)
+            ASSOC=$(printf '%s' "$J" | jq -r .a)
+            [ "$(printf '%s' "$J" | jq -r .c)" = "$(printf '%s' "$J" | jq -r .e)" ] || continue   # edited: ignore
+            case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) continue;; esac
+            BODY=$(printf '%s' "$J" | jq -r .b)
+            V=$(printf '%s' "$BODY" | grep -m1 -oE '^VERDICT: (PASS|BLOCK)' | cut -d' ' -f2 || true)
+            [ -n "$V" ] || continue
+            printf '%s' "$BODY" | grep -qE '^REVIEWER: ' || continue
+            SHA=$(printf '%s' "$BODY" | grep -oE '^SHA: [0-9a-f]{7,40}' | head -1 | cut -d' ' -f2 || true)
+            [ -n "$SHA" ] || continue
+            [ "${HEAD#"$SHA"}" != "$HEAD" ] || continue    # not a prefix of the current head: ignore
+            if [ -z "${PERMS[$AUTHOR]+x}" ]; then
+              PERMS[$AUTHOR]=$(gh api "repos/$REPO/collaborators/$AUTHOR/permission" --jq .permission) \
+                || fail "permission lookup for $AUTHOR failed (token needs repo read access); verdicts would be ignored"
+              [ -n "${PERMS[$AUTHOR]}" ] || fail "empty permission for $AUTHOR"
+            fi
+            case "${PERMS[$AUTHOR]}" in admin|maintain|write) ;; *) echo "ignored: $AUTHOR has ${PERMS[$AUTHOR]}, not write"; continue;; esac
+            RESULT="$V $AUTHOR"      # later rows are newer, so the last valid one wins
+          done < comments.b64
+
+          case "$RESULT" in
+            "PASS "*)  set_status success "Mode A PASS by ${RESULT#PASS } for ${HEAD:0:8}";;
+            "BLOCK "*) set_status failure "Mode A BLOCK by ${RESULT#BLOCK } for ${HEAD:0:8}";;
+            *)         set_status pending "Needs a Mode A review comment for ${HEAD:0:8}";;
+          esac
+          echo "mode-a for ${HEAD:0:8}: ${RESULT:-none (pending)}"
