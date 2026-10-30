@@ -119,8 +119,8 @@ fetish for a staff (3 damage, 0.6 hits/s).
   to its cost (BarFx.tierOf: T2 from 120 metal, T3 from 500).
 - Every refusal (bad target, wrong tier, out of reach, short of essence) spends nothing and sets no cooldown. Hex and
   Blood Totem autocast only with the essence to pay (canAutocastNow; the base's autocastEssence gate will do the same).
-- **Population** (lovish, Oct 29): a puppet takes no population from the Shaman's owner; it counts for its original
-  owner the whole time (SpiritPuppets.populationOwner in UnitServerEvents.getUnitPopulation).
+- **Population**: none to take - lovish, Oct 29: "no max population" (#394), so the puppet population rule and its test
+  retired with it.
 - **Bots** (lovish, Oct 29): the Horde bot kit trains it with its T1 army at the Military Portal (one of its three T1 picks). Hex and Blood
   Totem autocast (only with the essence to pay); Spirit Puppet and Empower stay manual for bots and players.
 - Not in this PR: its essence is not on the HUD yet.

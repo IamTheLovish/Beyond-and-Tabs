@@ -9,7 +9,6 @@ public class GameRuleRegistrar {
 
     public static GameRules.Key<GameRules.BooleanValue> LOG_FALLING;
     public static GameRules.Key<GameRules.BooleanValue> NEUTRAL_AGGRO;
-    public static GameRules.Key<GameRules.IntegerValue> MAX_POPULATION;
     public static GameRules.Key<GameRules.BooleanValue> DO_UNIT_GRIEFING;
     public static GameRules.Key<GameRules.BooleanValue> DO_PLAYER_GRIEFING;
     public static GameRules.Key<GameRules.IntegerValue> GROUND_Y_LEVEL;
@@ -47,10 +46,8 @@ public class GameRuleRegistrar {
         NEUTRAL_AGGRO = GameRules.register("neutralAggro", GameRules.Category.MOBS,
                 GameRules.BooleanValue.create(true)
         );
-        // set hard cap on population (max even with infinite houses)
-        MAX_POPULATION = GameRules.register("maxPopulation", GameRules.Category.MISC,
-                GameRules.IntegerValue.create(ResourceCosts.DEFAULT_MAX_POPULATION)
-        );
+        // (no maxPopulation: lovish, Oct 29 "there should be no population in this game" - an old save's stored value
+        // is simply ignored, as vanilla does for any rule it does not know)
         // allow units to damage blocks (separate from doMobGriefing which is only for vanilla mobs)
         DO_UNIT_GRIEFING = GameRules.register("doUnitGriefing", GameRules.Category.MOBS,
                 GameRules.BooleanValue.create(false)

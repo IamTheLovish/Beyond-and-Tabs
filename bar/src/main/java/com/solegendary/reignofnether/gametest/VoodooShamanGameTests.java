@@ -33,7 +33,6 @@ import com.solegendary.reignofnether.resources.WreckServerEvents;
 import com.solegendary.reignofnether.unit.SelectionKeep;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitActionItem;
-import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.UnitTier;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -982,51 +981,6 @@ public class VoodooShamanGameTests {
                     problems.add("the dead puppet is still tracked");
             } finally {
                 cleanUp(helper, made, spots);
-            }
-            finish(helper, problems);
-        });
-    }
-
-    /**
-     * lovish (Oct 29): a Spirit Puppet steal takes no population from the Shaman's owner - no cap check, no change. The
-     * puppet keeps counting for its original owner (who cannot queue into the room it left), the puppeteer's count stays
-     * where it was.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void voodoo_spirit_puppet_takes_no_population(GameTestHelper helper) {
-        List<Entity> made = new ArrayList<>();
-        String a = owner(helper, "puppopa"), b = owner(helper, "puppopb");
-        Mob caster = shaman(helper, a, 3, 3, 20, made);
-        Mob foe = still(helper, EntityRegistrar.VINDICATOR_UNIT.get(), b, 7, 3, made);
-        if (made.size() < 2) {
-            spawnFailed(helper, made, "the shaman and the enemy");
-            return;
-        }
-        int[] before = new int[2];
-        List<String> early = new ArrayList<>();
-        helper.runAfterDelay(2, () -> {
-            try {
-                before[0] = UnitServerEvents.getCurrentPopulation(a);
-                before[1] = UnitServerEvents.getCurrentPopulation(b);
-                castAt(helper, caster, UnitAction.SPIRIT_PUPPET, foe);
-                if (!a.equals(((Unit) foe).getOwnerName()))
-                    early.add("Spirit Puppet did not take the Vindicator: the test lost its point");
-            } catch (RuntimeException ex) {
-                early.add("threw " + ex);
-            }
-        });
-        helper.runAfterDelay(5, () -> {
-            List<String> problems = new ArrayList<>(early);
-            try {
-                int popA = UnitServerEvents.getCurrentPopulation(a), popB = UnitServerEvents.getCurrentPopulation(b);
-                if (before[1] < ((Unit) foe).getCost().population)
-                    problems.add("the owner's population did not count the Vindicator before the steal (" + before[1] + ")");
-                if (popA != before[0])
-                    problems.add("the puppeteer's population went " + before[0] + " -> " + popA + " with the puppet");
-                if (popB != before[1])
-                    problems.add("the owner's population went " + before[1] + " -> " + popB + " while its unit is a puppet");
-            } finally {
-                cleanUp(helper, made, List.of());
             }
             finish(helper, problems);
         });

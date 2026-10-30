@@ -61,7 +61,7 @@ public class WarMammothProd extends ProductionItem implements IUnitProductionIte
             List.of(
                 Component.translatable("entity.reignofnether.war_mammoth_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.war_mammoth_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.war_mammoth_unit.tooltip2").getVisualOrderText()

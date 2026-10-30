@@ -13,7 +13,6 @@ import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
 import com.solegendary.reignofnether.building.production.ProductionItems;
-import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.entities.BlazeUnitFireball;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.entities.WindcallerProjectile;
@@ -104,9 +103,6 @@ public class UnitServerEvents {
 
     private static final int UNIT_SYNC_TICKS_MAX = 20; // how often we send out unit syncing packets
     private static int unitSyncTicks = UNIT_SYNC_TICKS_MAX;
-
-    // max possible pop you can have regardless of buildings, adjustable via /gamerule maxPopulation
-    public static int maxPopulation = ResourceCosts.DEFAULT_MAX_POPULATION;
 
     // server-side mirror of the rtsPathfinding gamerule: when true, units route through the RTS
     // grid A* pathfinder (with walkability caching + worker pool); when false they use vanilla
@@ -210,35 +206,6 @@ public class UnitServerEvents {
     /** Bumped whenever a unit joins or leaves allUnits: lets per-tick caches (UnitGrid, BuilderIndex) stay exact. */
     public static int getAllUnitsModCount() {
         return allUnitsModCount;
-    }
-
-    // Per-owner sum of unit population, memoised for the current server tick. getCurrentPopulation used to scan
-    // every unit on every call, and it's called per active production item per tick (ProductionItem
-    // .isBelowPopulationSupply), for every queue/afford check, graveyards, scoreboard, etc. Keyed by
-    // (server tick, allUnits size, allUnitsModCount) so a unit spawning/dying mid-tick is reflected immediately.
-    // Only the unit part is cached: production queues are still counted live, so queuing several items in the
-    // same tick is checked exactly as before. (A unit changing owner or pop cost - slime resize - is picked up
-    // on the next tick at the latest.) A Voodoo Shaman's Spirit Puppet counts for its original owner the whole time
-    // (lovish, Oct 29: a steal takes no population from the Shaman's owner, and frees none for its own).
-    private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
-    private static long unitPopulationCacheTick = Long.MIN_VALUE;
-    private static int unitPopulationCacheSize = -1;
-    private static int unitPopulationCacheModCount = -1;
-
-    private static int getUnitPopulation(String ownerName) {
-        long tick = serverLevel != null ? serverLevel.getGameTime() : Long.MIN_VALUE + 1;
-        if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheSize ||
-                allUnitsModCount != unitPopulationCacheModCount || serverLevel == null) {
-            unitPopulationCache.clear();
-            for (LivingEntity entity : allUnits)
-                if (entity instanceof Unit unit && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(entity))   // a Mirror Mage's decoy is no one
-                    unitPopulationCache.merge(com.solegendary.reignofnether.unit.units.piglins.SpiritPuppets.populationOwner(entity, unit),
-                        unit.getCost().population, Integer::sum);
-            unitPopulationCacheTick = tick;
-            unitPopulationCacheSize = allUnits.size();
-            unitPopulationCacheModCount = allUnitsModCount;
-        }
-        return unitPopulationCache.getOrDefault(ownerName, 0);
     }
 
     public static final ArrayList<TargetResourcesSave> savedTargetResources = new ArrayList<>();
@@ -375,12 +342,14 @@ public class UnitServerEvents {
         }
     }
 
-    private static final QueuePopulation queuePopulation = new QueuePopulation();
-
-    public static int getCurrentPopulation(String ownerName) {
-        // the queue part is memoised per owner per tick too (QueuePopulation: any queue change recounts at once)
-        return getUnitPopulation(ownerName) + queuePopulation.of(ownerName, BuildingServerEvents.getBuildings(), false,
-            serverLevel != null ? serverLevel.getGameTime() : 0, serverLevel != null);
+    /** How many live units {@code owner} has (the "resources.units" scoreboard; no population is shown). */
+    public static int getUnitCount(String owner) {
+        int n = 0;
+        for (LivingEntity le : allUnits)
+            if (le instanceof Unit u && owner.equals(u.getOwnerName()) && le.isAlive()
+                    && !com.solegendary.reignofnether.mana.DecoyServerEvents.isDecoy(le))   // a decoy is no one
+                n++;
+        return n;
     }
 
     // manually provide all the variables required to do unit actions
