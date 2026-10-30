@@ -1,0 +1,51 @@
+{
+ "title": "vindicator_unit / death   real game client   window 100 ticks (5.0 s)   views side/front   10 frames",
+ "views": [
+  "side",
+  "front"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.61s  (tick 12)",
+  "3  +1.03s  (tick 21)",
+  "4  +1.58s  (tick 32)",
+  "5  +2.26s  (tick 45)",
+  "6  +2.80s  (tick 56)",
+  "7  +3.14s  (tick 63)",
+  "8  +3.90s  (tick 78)",
+  "9  +4.40s  (tick 88)",
+  "10  +4.92s  (tick 98)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.61s  (tick 12)",
+   "3  +1.03s  (tick 21)",
+   "4  +1.58s  (tick 32)",
+   "5  +2.26s  (tick 45)",
+   "6  +2.80s  (tick 56)",
+   "7  +3.14s  (tick 63)",
+   "8  +3.90s  (tick 78)",
+   "9  +4.40s  (tick 88)",
+   "10  +4.92s  (tick 98)"
+  ],
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.58s  (tick 12)",
+   "3  +1.10s  (tick 22)",
+   "4  +1.61s  (tick 32)",
+   "5  +2.21s  (tick 44)",
+   "6  +2.60s  (tick 52)",
+   "7  +3.13s  (tick 63)",
+   "8  +3.76s  (tick 75)",
+   "9  +4.29s  (tick 86)",
+   "10  +4.77s  (tick 95)"
+  ]
+ ],
+ "size": [
+  1999,
+  1712
+ ],
+ "warnings": []
+}

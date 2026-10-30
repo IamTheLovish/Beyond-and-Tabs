@@ -1,0 +1,38 @@
+{
+ "title": "pillager_unit / death   real game client   window 100 ticks (5.0 s)   views side   10 frames",
+ "views": [
+  "side"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +0.57s  (tick 11)",
+  "3  +1.08s  (tick 22)",
+  "4  +1.55s  (tick 31)",
+  "5  +2.09s  (tick 42)",
+  "6  +2.70s  (tick 54)",
+  "7  +3.16s  (tick 63)",
+  "8  +3.74s  (tick 75)",
+  "9  +4.22s  (tick 84)",
+  "10  +4.78s  (tick 96)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +0.57s  (tick 11)",
+   "3  +1.08s  (tick 22)",
+   "4  +1.55s  (tick 31)",
+   "5  +2.09s  (tick 42)",
+   "6  +2.70s  (tick 54)",
+   "7  +3.16s  (tick 63)",
+   "8  +3.74s  (tick 75)",
+   "9  +4.22s  (tick 84)",
+   "10  +4.78s  (tick 96)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}

@@ -3,3 +3,4 @@
 - anim-40846821209: spec bone_dragon_unit:turn:side+front+rear:0:0, build b73a8f9, 2026-10-29T09:45:01Z
 - anim-40874612621: spec vindicator_unit:death:side+front:0:100,zombie_unit:death:side:0:100,grunt_unit:death:side:0:100,leafblade_unit:death:side:0:100,cutlass_raider_unit:death:side:0:100,blade_dancer_unit:death:side:0:100,rifle_squad_unit:death:side:0:100,vindicator_unit:attack:side,pillager_unit:attack:side, build d267838, 2026-10-29T13:42:23Z
 - anim-40978023283: spec vindicator_unit:death:side+front:0:100,zombie_unit:death:side:0:100,grunt_unit:death:side:0:100,leafblade_unit:death:side:0:100,cutlass_raider_unit:death:side:0:100,blade_dancer_unit:death:side:0:100,rifle_squad_unit:death:side:0:100,pillager_unit:death:side:0:100, build 8ed189a, 2026-10-30T00:19:55Z
+- anim-40991970032: spec pillager_unit:death:side:0:100,witch_unit:death:side:0:100,vindicator_unit:death:side+front:0:100, build aa95ea8, 2026-10-30T02:36:27Z

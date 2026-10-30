@@ -1,0 +1,14 @@
+20_anim: 4 run(s) on a pad at [-151, 72, 2]: pillager_unit:death:side:0:100,witch_unit:death:side:0:100,vindicator_unit:death:side+front:0:100
+20_anim: run 0 - pillager_unit / death / side summoned at [-151, 72, 2]
+20_anim: run 0 - pillager_unit is PillagerUnit (id 93), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 0 28 frames in 100 ticks (5 s wall)
+20_anim: run 1 - witch_unit / death / side summoned at [-151, 72, 2]
+20_anim: run 1 - witch_unit is WitchUnit (id 124), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 1 24 frames in 100 ticks (5 s wall)
+20_anim: run 2 - vindicator_unit / death / side summoned at [-151, 72, 2]
+20_anim: run 2 - vindicator_unit is VindicatorUnit (id 130), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 2 25 frames in 100 ticks (5 s wall)
+20_anim: run 3 - vindicator_unit / death / front summoned at [-151, 72, 2]
+20_anim: run 3 - vindicator_unit is VindicatorUnit (id 136), hitbox 0.60 x 1.95 blocks, camera 5.0 blocks away
+anim-run-end 3 25 frames in 100 ticks (5 s wall)
+20_anim: done, 0 of 4 runs failed
