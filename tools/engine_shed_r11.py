@@ -88,6 +88,7 @@ def window(g, face, plane, us, y0, y1, barred=True, recess=0):
     def lit(q):
         if not (q[0] in LANE_X and q[2] in LANE_Z and 1 <= q[1] <= LANE_H):
             g.set(*q, GLOW)
+            LIT.add(q)
     for u in us:
         for y in range(y0, y1 + 1):
             if recess:
@@ -109,6 +110,23 @@ def window(g, face, plane, us, y0, y1, barred=True, recess=0):
     for y in range(y0, y1 + 1):                        # the far jamb lit: in the reveal (recess) and behind it
         for d in range(1 if recess else 2, recess + 3):
             lit(in_of(face, at(face, plane, jamb, y), d))
+
+
+LIT = set()
+
+
+def seal_lights(g):
+    """A glow block is a lit room seen THROUGH glass, never bare (round-1 critic: "orange fire-looking blocks" where
+    the hollow shell left a lit cell open to the sky): any glow cell with an air side gets a dark backing over that
+    side - brick if it is a wall face, the roof bed (slate) if it is open above."""
+    for q in sorted(LIT):
+        if g.b.get(q, ("",))[0] != GLOW:
+            continue
+        for d in ((0, 1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)):
+            r = (q[0] + d[0], q[1] + d[1], q[2] + d[2])
+            if r not in g.b and not (r[0] in LANE_X and r[2] in LANE_Z and 1 <= r[1] <= LANE_H) and \
+                    0 <= r[0] < SX and 0 <= r[2] < SZ and r != (SPAWN[0], r[1], SPAWN[2]):
+                g.set(*r, BRICK if d[1] == 0 and r[1] <= 6 else "polished_deepslate")
 
 
 def blind(g, face, plane, us, y0, y1):
@@ -164,9 +182,14 @@ def walls(g):
 def gate(g):
     """a's gate (lane z 10..14, 8 tall, the iron frame at x 0): dark riveted jambs, a stepped head with a keystone,
     a stone string course over it, a glazed lunette in the gable, a louvred vent at the apex."""
-    for y in range(1, 10):
-        for z in (9, 15):
-            g.set(0, y, z, IRON if y % 3 else KEY)
+    for y in range(1, 10):                                 # the jambs: riveted iron, every third course a
+        for z, f in ((9, "north"), (15, "south")):         # banded stair (the frame's bolted joints)
+            if y % 3 == 0:
+                g.set(0, y, z, KEY)
+            elif y % 3 == 1:
+                stair(g, (0, y, z), IRON_ST, f, "top")
+            else:
+                g.set(0, y, z, IRON)
     for z, n in ((10, "st"), (11, "full"), (12, "key"), (13, "full"), (14, "st")):
         q = (0, 9, z)
         if n == "st":
@@ -189,6 +212,18 @@ def gate(g):
               powered="false")
 
 
+def gate_interior(g):
+    """Round-1 critic: the gate "a flat black void". The lane's side walls (z 9 / 15) carry lantern niches every 3
+    blocks at y 2 - a lantern standing in a recess of the wall, open to the lane - so the floor and rails inside the
+    gate read lit."""
+    for x in (1, 3, 6):                                    # (x 1: the niche just inside the jambs lights the
+        for z in (LANE_Z[0] - 1, LANE_Z[-1] + 1):          # mouth's floor, all the 3/4 camera sees of the inside)
+            if g.b.get((x, 1, z), ("",))[0] in (BRICK, PLINTH, PLINTH_ST, BRICK_ST):
+                g.set(x, 1, z, BRICK)
+                g.set(x, 2, z, "lantern", hanging="false", **DRY)
+                stair(g, (x, 3, z), BRICK_ST, "north" if z < 12 else "south", "top")
+
+
 # ---------------------------------------------------------------------------------------------------- the roofs
 ROOF = L.SLATE
 
@@ -204,42 +239,20 @@ def roofs(g):
             g.set(*q, IRON_W if q[0] % 3 == 0 else ROOF_PANE, **DRY)
             if cap in cells and cells[cap][0] == "deepslate_tiles":
                 cells[cap] = ("deepslate_tile_slab", {"type": "bottom", "waterlogged": "false"})
-    regions = {}
-    for q in cells:                                        # one region per roof: the bay, each tooth, each boiler
-        x, y, z = q
-        if 0 <= x <= 9 and 8 <= z <= 16:
-            key = "bay"
-        elif any(b[0] <= x <= b[1] and b[2] <= z <= b[3] for b in M.AF["boilers"]):
-            key = "boiler%d" % (z > 12)
-        else:
-            key = "tooth%d" % ((z - 1) // 4)
-        regions.setdefault(key, {})[q] = cells[q]
-    for i, (key, reg) in enumerate(sorted(regions.items())):
-        along = (lambda q: (q[2], q[0])) if key == "bay" or key.startswith("boiler") else (lambda q: (q[0], q[2]))
-        out = RK.retone(reg, ROOF, seed=11 + i, along=along)
-        g.b.update(out)
+    rows = {}                                              # courses as whole bands (round-1 critic: "random 1-3
+    for q, (n, p) in cells.items():                        # block patches ... use long continuous ridge / eave
+        rows.setdefault(q[1], []).append(q)                # bands"): per height one tone across every roof - the
+    ys = sorted(rows)                                      # lowest course wet (darker tiles), a bleached band at
+    for y in ys:                                           # 12, the base slate between
+        t = 2 if y == 12 else 0
+        fam = (ROOF["tones"][0], ("deepslate_tiles", "deepslate_tile_stairs", "deepslate_tile_slab"),
+               ("stone", "stone_stairs", "stone_slab"))[t]
+        for q in rows[y]:
+            n, p = cells[q]
+            g.b[q] = (fam[RK.shape(n)], p)
     for (x, y, z), (n, _) in list(g.b.items()):            # a coping on bare wall tops at the eave (the shop's
         if n == BRICK and y == 6 and (x, y + 1, z) not in g.b:   # north wall under the first tooth)
             slab(g, (x, y + 1, z), "deepslate_brick_slab")
-    tone = {}
-    for t, fam in enumerate(ROOF["tones"]):
-        for n in fam:
-            tone[n] = t
-    for _ in range(6):                                     # break any a-b-a-b-a run across courses: the cell to T0
-        top = {}
-        for (x, y, z), (n, _) in g.b.items():
-            if n in tone and y > top.get((x, z), (-1,))[0]:
-                top[(x, z)] = (y, n)
-        grid = {c: tone[v[1]] for c, v in top.items()}
-        import building_gates as GT
-        bad = GT.alternations(grid)
-        if not bad:
-            break
-        for c in sorted(bad):
-            y, n = top[c]
-            if tone[n] != 0:
-                q = (c[0], y, c[1])
-                g.b[q] = (ROOF["tones"][0][RK.shape(n)], g.b[q][1])
     for (x, y, z), (n, p) in list(g.b.items()):            # the ridges: deepslate brick
         if 0 <= x <= 9 and z == 12 and y == 14 and n in {t[0] for t in ROOF["tones"]}:
             g.set(x, y, z, ROOF["ridge"][0])
@@ -276,8 +289,8 @@ def stacks(g):
         for y in range(12, top - 1):
             for x in range(sx0, sx1 + 1):
                 for z in range(sz0, sz1 + 1):
-                    if y == soot:                          # the soot course, set back
-                        stair(g, (x, y, z), IRON_ST, "east" if x == sx0 else "west", "top")
+                    if y == soot:                          # the soot-stained course, set back
+                        stair(g, (x, y, z), "red_nether_brick_stairs", "east" if x == sx0 else "west", "top")
                     elif y in bands:                       # under each band the shaft course is set back (a reveal)
                         stair(g, (x, y, z), BRICK_ST, "east" if x == sx0 else "west", "top")
                     else:
@@ -287,15 +300,14 @@ def stacks(g):
                 for z in range(z0, z1 + 1):
                     if sx0 <= x <= sx1 and sz0 <= z <= sz1:
                         continue
-                    if y == top - 1:
-                        f = "east" if x == x0 else "west" if x == x1 else "south" if z == z0 else "north"
-                        stair(g, (x, y, z), BRICK_ST, f, "top")
-                    else:
-                        slab(g, (x, y, z), IRON_SL, "top")
+                    if (x in (x0, x1)) and (z in (z0, z1)):
+                        continue                           # no corners: the bands and crown read round, not boxed
+                    f = "east" if x == x0 else "west" if x == x1 else "south" if z == z0 else "north"
+                    stair(g, (x, y, z), BRICK_ST, f, "top")
         for x in range(sx0, sx1 + 1):
             for z in range(sz0, sz1 + 1):
                 g.set(x, top - 1, z, BRICK)
-                slab(g, (x, top, z), IRON_SL)
+                slab(g, (x, top, z), "brick_slab")
         g.set(sx0, top - 1, sz0, "campfire", lit="true", facing="south", signal_fire="false", waterlogged="false")
 
 
@@ -323,7 +335,7 @@ def tower(g):
             stair(g, (x, 12, z), STONE_ST, f, "top")       # the corbel course: the clock stage starts pale
             for y in (13, 14):
                 g.set(x, y, z, PALE)
-            g.set(x, 16, z, PALE)
+            g.set(x, 16, z, "polished_deepslate")          # the roof's bed (hidden)
             del face
     for y in (7, 8):                                       # the slit light, west
         g.set(x0, y, cz, PANE, **DRY)
@@ -337,18 +349,19 @@ def tower(g):
                 continue
             f = "east" if x < x0 else "west" if x > x1 else "south" if z < z0 else "north"
             stair(g, (x, CORNICE_Y, z), STONE_ST, f, "top")
-            corner = x in (x0 - 1, x1 + 1) and z in (z0 - 1, z1 + 1)
-            stair(g, (x, 16, z), LEAD_ST if corner else COP_ST, f)
+            hip = x in (x0 - 1, x1 + 1) and z in (z0 - 1, z1 + 1)
+            drip = (x in (x0 - 1, x1 + 1) and z == z0) or (z in (z0 - 1, z1 + 1) and x == x1)
+            stair(g, (x, 16, z), LEAD_ST if hip or drip else COP_ST, f)   # the eave course: copper, dark lead at
+            #     the hips and a drip streak beside each (weathering down the faces) - camera sat 0.24-0.27
     for x in range(x0, x1 + 1):
         for z in range(z0, z1 + 1):
             if (x, z) == (cx, cz):
                 g.set(x, 17, z, COP)
                 continue
             f = "east" if x < cx else "west" if x > cx else "south" if z < cz else "north"
-            corner = x != cx and z != cz
-            stair(g, (x, 17, z), LEAD_ST if corner else COP_ST, f)
-    stair(g, (cx, 18, cz), COP_ST, "north")
-    g.set(cx, 19, cz, IRON_W, **DRY)
+            stair(g, (x, 17, z), COP_ST, f)
+    slab(g, (cx, 18, cz), "waxed_weathered_cut_copper_slab")
+    g.set(cx, 19, cz, "chain", axis="y", **DRY)            # the finial: a thin iron rod
 
 
 # ---------------------------------------------------------------------------------------------------- the yard
@@ -362,7 +375,7 @@ def yard(g):
             if g.b.get((x, 0, z), ("",))[0] in (M.YARD, M.GROUND):
                 g.set(x, 0, z, PLINTH if x == 0 else STONE)
     for z in (11, 13):
-        for x in LANE_X:
+        for x in range(0, 9):
             g.set(x, 0, z, "rail", shape="east_west", **DRY)
     for z in range(17, SZ):                                # one line under the chassis, out to the plot edge
         g.set(1, 0, z, "rail", shape="north_south", **DRY)
@@ -419,7 +432,7 @@ def life(g):
         if (0, y, 17) not in g.b and (0, y, 16) in g.b:
             g.set(0, y, 17, "vine", north="true", east="false", south="false", west="false", up="false")
 
-    for x in (2, 5):                                       # the lane's walls: a recessed panel every 3
+    for x in (4, 7):                                       # the lane's walls: a recessed panel every 3
         for z, f in ((9, "north"), (15, "south")):
             for y in range(1, 8):
                 n = g.b.get((x, y, z), ("",))[0]
@@ -467,7 +480,9 @@ def detail():
     tower(g)
     yard(g)
     life(g)
+    gate_interior(g)
     bevel(g)
+    seal_lights(g)
     for y in range(1, L.H_MAX):                            # the spawn column / smoke-vent shaft
         g.clear(SPAWN[0], y, SPAWN[2])
     return g
