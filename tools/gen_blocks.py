@@ -1236,6 +1236,51 @@ PROC_VARIANT_BLOCKS["bricks"] = ("cube_all", {"all": "bricks"})
 for _k in range(2, PROC_VARIANTS + 1):
     PROC_VARIANT_OF["bricks_v%d" % _k] = "bricks"
     TARGETS["bricks_v%d" % _k] = dict(TARGETS["bricks"])
+# round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
+# terracotta keep their r31-r33 entries above (the family's anchors)
+DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
+    "white":      ((0.91, 0.91, 0.90), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),
+    "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
+    "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
+    "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
+    "brown":      ((0.45, 0.29, 0.17), (0.38, 0.24, 0.13), (0.31, 0.21, 0.14)),
+    "red":        ((0.64, 0.17, 0.15), (0.57, 0.14, 0.13), (0.57, 0.25, 0.19)),
+    "orange":     ((0.94, 0.48, 0.10), (0.88, 0.40, 0.03), (0.64, 0.34, 0.15)),
+    "yellow":     ((0.96, 0.78, 0.18), (0.94, 0.70, 0.10), (0.73, 0.53, 0.15)),
+    "lime":       ((0.48, 0.76, 0.14), (0.40, 0.68, 0.11), (0.42, 0.47, 0.20)),
+    "green":      ((0.33, 0.44, 0.12), (0.29, 0.37, 0.14), (0.30, 0.33, 0.17)),
+    "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
+    "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
+    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.30, 0.36, 0.52)),
+    "purple":     ((0.55, 0.28, 0.76), (0.43, 0.14, 0.64), (0.47, 0.28, 0.35)),
+    "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
+    "pink":       ((0.93, 0.56, 0.68), (0.85, 0.40, 0.56), (0.63, 0.31, 0.31)),
+}
+
+
+def colour_targets(rgb, std, **kw):
+    """TARGETS entry for a painted colour: its own luma and saturation (the fit keeps the hue), the given spread."""
+    rgb = np.asarray(rgb, dtype=np.float64)
+    L = float(rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722)
+    sat = float((rgb.max() - rgb.min()) / max(rgb.max(), 1e-6))
+    return dict(luma=L, std=std, sat=sat, **kw)
+
+
+R36_FAMILY = []
+for _c, (_w, _k, _t) in DYES.items():
+    TARGETS[_c + "_wool"] = colour_targets(_w, 0.030, tilt=6.0, smooth=8, pore=48)
+    R36_FAMILY.append(_c + "_wool")
+for _c, (_w, _k, _t) in DYES.items():
+    if _c + "_concrete" not in TARGETS:              # white_concrete keeps its r33 entry (m_clayish, neutral)
+        TARGETS[_c + "_concrete"] = colour_targets(_k, 0.018, tilt=3.0, smooth=64, pore=10)
+        R36_FAMILY.append(_c + "_concrete")
+for _c, (_w, _k, _t) in DYES.items():
+    if _c + "_terracotta" not in TARGETS:
+        TARGETS[_c + "_terracotta"] = colour_targets(_t, 0.022, tilt=3.5, smooth=36, pore=30, soften=1.0)
+        R36_FAMILY.append(_c + "_terracotta")
+TARGETS["bookshelf"] = dict(luma=0.36, std=0.090, sat=0.42, tilt=14.0, smooth=40, pore=24)
+R36_FAMILY.append("bookshelf")
+SEED_ORDER = SEED_ORDER + tuple(R36_FAMILY)       # (the order check in build(): appended last)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2497,6 +2542,91 @@ def m_clay_bricks(F, n):
     mortar = np.array([0.66, 0.62, 0.55]) * (0.80 + 0.06 * grain)[..., None]
     alb = alb * face[..., None] + mortar * (1 - face[..., None])
     return H, np.clip(alb, 0, 1)
+
+
+# ------------------------------------------------------------------ round 36: the dyed families -------------------
+# The build census's most-used blocks still vanilla's: wool, concrete and the coloured terracottas, 16 colours each -
+# ONE recipe per family, the colour from a table (our own hues, kept natural: lime a clean lime, purple a lavender-
+# purple, cyan mid-bright, orange clean), the values stepped so neighbours separate at 32 px. The targets are the
+# table colour's own luma and saturation (colour_targets), so the fit keeps the hue and sets only the spread.
+def m_wool(F, n, rgb):
+    """Wool: a woven fibre - a fine weave of two crossing yarn directions (~22 yarns per block each way, the over-
+    and-under of a plain weave), soft fuzz over it, a slow drift of tone; soft and matte (the smoothness and tilt
+    from TARGETS: no specular)."""
+    yarns = 22
+    wu = np.sin(2 * math.pi * (F.u * yarns + 0.04 * F.noise(2, 6, 0.5)))
+    wv = np.sin(2 * math.pi * (F.v * yarns + 0.04 * F.noise(2, 6, 0.5)))
+    over = np.sign(np.sin(2 * math.pi * F.u * yarns) * np.sin(2 * math.pi * F.v * yarns))   # the plain weave
+    weave = 0.5 * (wu * (over > 0) + wv * (over <= 0)) + 0.5
+    fuzz = F.noise(24, 70, 0.3)
+    drift = F.fbm(2, 3, 0.5)
+    H = 0.5 + 0.10 * weave + 0.03 * fuzz + 0.03 * drift
+    shade = 0.90 + 0.10 * weave + 0.03 * fuzz + 0.05 * drift
+    return H, tint(rgb, shade)
+
+
+def m_concrete(F, n, rgb):
+    """Concrete: a smooth cast face - faint form marks (a few broad straight bands where the shuttering boards met),
+    a soft cloud of tone, sparse small air pores; slightly satin (TARGETS)."""
+    boards = np.floor(F.v * 3 + 0.3).astype(int)
+    mark = 1 - smoothstep(0.0, 0.012, np.abs(((F.v * 3 + 0.3) % 1.0) - 0.5) / 3)     # a hairline where boards met
+    btone = (F.rng.random(4) - 0.5)[boards % 4] * 0.03
+    cloud = F.fbm(2, 3, 0.55)
+    pores = smoothstep(0.90, 1.0, norm01(F.noise(14, 36, 0.3))) * smoothstep(0.3, 0.7, norm01(F.noise(1, 4, 0.5)))
+    fine = F.noise(20, 60, 0.3)
+    H = 0.6 + 0.02 * cloud + 0.006 * fine - 0.06 * pores - 0.015 * mark
+    shade = 0.94 + 0.05 * cloud + btone + 0.004 * fine - 0.12 * pores - 0.04 * mark
+    return H, tint(rgb, shade)
+
+
+def m_bookshelf(F, n):
+    """Bookshelf (the side): three shelves of books in an oak frame - spines of varied width, colour and height,
+    some leaning, a pale title band on each, the shelf and the books' tops in real depth (the books recessed from
+    the frame, AO in the gaps, the gap between two books a shadow, never a black hole)."""
+    rng = F.rng
+    plank = tint((0.66, 0.51, 0.31), 0.9 + 0.08 * F.noise(2, 40, 0.8, sx=10.0, sy=1.0))
+    H = np.full((n, n), 0.85)
+    alb = plank.copy()
+    shelves = [(0.06, 0.34), (0.39, 0.66), (0.71, 0.95)]       # (top, bottom) of each books row, v
+    side = 0.04                                                 # the frame's uprights
+    palette = [(0.55, 0.18, 0.16), (0.20, 0.30, 0.55), (0.25, 0.42, 0.25), (0.48, 0.32, 0.18), (0.72, 0.62, 0.42),
+               (0.30, 0.22, 0.40), (0.62, 0.45, 0.20), (0.18, 0.18, 0.20), (0.60, 0.30, 0.35), (0.35, 0.50, 0.55)]
+    for top, bot in shelves:
+        u = side
+        while u < 1 - side - 0.02:
+            w = 0.035 + 0.06 * rng.random()
+            w = min(w, 1 - side - u)
+            if w < 0.02:
+                break
+            col = np.array(palette[rng.integers(len(palette))]) * (0.85 + 0.3 * rng.random())
+            h = 0.72 + 0.28 * rng.random()                      # the book's height: a share of the shelf
+            lean = (rng.random() - 0.5) * 0.02 * (rng.random() < 0.3)
+            bt = bot - h * (bot - top)
+            depth = 0.55 + 0.15 * rng.random()                  # how far back the spine sits
+            uu = F.u - lean * (F.v - bot) / (bot - top)
+            inb = (uu >= u) & (uu < u + w - 0.006) & (F.v >= bt) & (F.v < bot)
+            # the spine: rounded across its width, a pale title band near the top, bands at the head and tail
+            x = (uu - u) / max(w - 0.006, 1e-6)
+            round_ = np.sqrt(np.clip(1 - (2 * x - 1) ** 2, 0, 1))
+            band = smoothstep(0.0, 0.03, (F.v - bt) / (bot - bt) - 0.12) * (1 - smoothstep(0.0, 0.03, (F.v - bt) / (bot - bt) - 0.22))
+            sp = col * (0.75 + 0.35 * round_)[..., None] * (1 + 0.5 * band[..., None] * np.array([1.1, 1.0, 0.8]))
+            alb = np.where(inb[..., None], np.clip(sp, 0, 1), alb)
+            H = np.where(inb, depth + 0.10 * round_, H)
+            # the gap beside it: the shelf back in shadow
+            gap = (uu >= u + w - 0.006) & (uu < u + w) & (F.v >= top) & (F.v < bot)
+            alb = np.where(gap[..., None], np.array([0.12, 0.09, 0.06]), alb)
+            H = np.where(gap, 0.25, H)
+            # above a short book: the shelf back (dark wood) above it
+            above = (uu >= u) & (uu < u + w - 0.006) & (F.v >= top) & (F.v < bt)
+            alb = np.where(above[..., None], plank * 0.35, alb)
+            H = np.where(above, 0.25, H)
+            u += w
+        # the shelf board's front edge under the books
+        lip = (F.v >= bot) & (F.v < bot + 0.05)
+        alb = np.where(lip[..., None], plank * 1.05, alb)
+        H = np.where(lip, 0.9, H)
+    grain = F.noise(20, 60, 0.3)
+    return H + 0.01 * grain, np.clip(alb, 0, 1)
 
 
 # ------------------------------------------------------------------ round 34: the glowing blocks -----------------
@@ -4465,6 +4595,13 @@ def recipes():
     R["shroomlight"] = _parts(m_shroomlight, fit=False)
     R["sea_lantern"] = _parts(m_sea_lantern, fit=False)
     R["bricks"] = _plain(m_clay_bricks)                        # round 35
+    for colour, (w_rgb, k_rgb, t_rgb) in DYES.items():         # round 36: the dyed families
+        R[colour + "_wool"] = _plain(lambda F, n, c=w_rgb: m_wool(F, n, c))
+        if colour + "_concrete" not in R:
+            R[colour + "_concrete"] = _plain(lambda F, n, c=k_rgb: m_concrete(F, n, c))
+        if colour + "_terracotta" not in R:
+            R[colour + "_terracotta"] = _plain(lambda F, n, c=t_rgb: m_terracotta(F, n, c))
+    R["bookshelf"] = _plain(m_bookshelf)
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
