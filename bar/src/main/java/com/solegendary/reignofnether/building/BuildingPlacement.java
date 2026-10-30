@@ -219,6 +219,8 @@ public class BuildingPlacement {
      * only, not saved: a 20 s thing.
      */
     public long boilUntilTick = 0;
+    /** The owner the boil was cast for (SoulBoiler.startBoil): it ends if the building changes hands. */
+    public String boilOwner = "";
 
     protected List<AbilityButton> abilityButtons = new ArrayList<>();
     protected List<Ability> abilities = new ArrayList<>();

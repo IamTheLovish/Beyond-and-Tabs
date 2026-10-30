@@ -2,11 +2,14 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.AutocastState;
+import com.solegendary.reignofnether.ability.abilities.CapturedSpark;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.essence.Essence;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
 import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
@@ -611,6 +614,93 @@ public class SupportAiGameTests {
             helper.succeed();
         else
             helper.fail(String.join("; ", problems));
+    }
+
+    // ------------------------------------------------------------------ cast before kiting
+
+    /**
+     * Cast before kiting (lovish, Oct 29): a support caster an enemy comes for gets one autocast look before its danger
+     * step - the step is a move order, and the AutoCaster leaves a unit on a move order alone until it ends. A Spark
+     * Sage with 10 essence, an enemy put 2 blocks off and coming for it: it sparks the enemy (30) before it has moved a
+     * block, then still steps away. The enemy comes 3 ticks after the Sage's AutoCaster slot, so the once-a-second
+     * look is 17 ticks off and the Sage's next think (at most 4 ticks) decides.
+     */
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 240)
+    public static void chased_spark_sage_casts_before_its_danger_step(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        List<Entity> made = new ArrayList<>();
+        String mine = owner(helper, "chased"), theirs = mine + "_foe";
+        Mob sage = HeroGameTests.spawnUnit(helper, EntityRegistrar.SPARK_SAGE_UNIT.get(), mine, 10, 8);
+        Mob foe = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, 1, 1);   // 11.4 off: no danger yet
+        for (Mob m : new Mob[] { sage, foe })
+            if (m != null)
+                made.add(m);
+        if (made.size() != 2) {
+            cleanUp(made);
+            helper.fail("could not spawn the Spark Sage and the vindicator");
+            return;
+        }
+        foe.setNoAi(true);
+        AutocastState.setAll((Unit) foe, false);
+        int[] came = { -1 }, sparkAt = { -1 };
+        double[] spot = new double[2];
+        double[] movedAtSpark = { -1 };
+        float[] hp0 = { 0 };
+        boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0])
+                return;
+            int t = (int) helper.getTick();
+            if (came[0] < 0) {
+                boolean ticking = sage.tickCount >= ArenaReady.TICKS && foe.tickCount >= ArenaReady.TICKS;
+                if (!ticking || Math.floorMod(level.getGameTime() - sage.getId(), 20) != 3) {
+                    if (t < 120)
+                        return;
+                    done[0] = true;
+                    try {
+                        helper.fail("the units were not ready after " + t + " ticks: " + ArenaReady.describe(level, made));
+                    } finally {
+                        cleanUp(made);
+                    }
+                    return;
+                }
+                foe.teleportTo(sage.getX() - 2, sage.getY(), sage.getZ());
+                ReactionGameTests.aim(foe, sage);
+                Essence.add(sage, CapturedSpark.ESSENCE_COST);
+                UnitGrid.invalidate();
+                spot[0] = sage.getX();
+                spot[1] = sage.getZ();
+                hp0[0] = foe.getHealth();
+                came[0] = t;
+                return;
+            }
+            if (sparkAt[0] < 0 && hp0[0] - foe.getHealth() > 1f) {
+                sparkAt[0] = t;
+                movedAtSpark[0] = flat(sage, spot[0], spot[1]);
+            }
+            if ((sparkAt[0] < 0 || state(sage).kites < 1) && t < came[0] + 60)
+                return;
+            done[0] = true;
+            try {
+                List<String> problems = new ArrayList<>();
+                if (sparkAt[0] < 0)
+                    problems.add("the chased Sage never sparked the enemy (" + state(sage).kites + " danger steps)");
+                else if (sparkAt[0] - came[0] > 8 || movedAtSpark[0] > 1.0)
+                    problems.add("the Sage sparked only after its step: " + (sparkAt[0] - came[0]) + " ticks after the enemy came, "
+                        + String.format("%.2f", movedAtSpark[0]) + " blocks from its spot");
+                else if (Math.abs(hp0[0] - foe.getHealth() - CapturedSpark.DAMAGE) > 0.01f)
+                    problems.add("the spark took " + (hp0[0] - foe.getHealth()) + ", expected " + CapturedSpark.DAMAGE);
+                if (state(sage).kites < 1)
+                    problems.add("the Sage did not step away after its cast");
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            } finally {
+                cleanUp(made);
+            }
+        });
     }
 
 }
