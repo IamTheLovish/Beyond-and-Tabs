@@ -127,8 +127,8 @@ public class HudClientEvents {
     // the control-group buttons among renderedButtons: mouse only, their number keys act on the press (ControlGroup)
     private static final Set<Button> controlGroupButtons = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
     // the selected unit's / building's own card (orders, abilities, build menu, production): its hotkeys win over
-    // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler on ".", the last-alert
-    // jump on Space) - BAR's bound-key rule, generalised from the idle-worker case
+    // any HUD-wide button on the same key (the minimap toggle on M, the idle-worker cycler, the last-alert
+    // jump on F5) - BAR's bound-key rule, generalised from the idle-worker case
     private static final ArrayList<Button> cardButtons = new ArrayList<>();
     // every build button on the card this frame, all tabs (BAR's Z / X / C / V build-category keys pick from it)
     private static final ArrayList<Button> allBuildButtons = new ArrayList<>();
@@ -2343,22 +2343,19 @@ public class HudClientEvents {
             return;
         if (evt.getKeyCode() == GLFW.GLFW_KEY_F3)
             showPreselectedBlockInfo = !showPreselectedBlockInfo;
-        // the idle-worker key ("." by default) is also a build-menu slot on some factions (hotkey8, the storage
-        // vault): with a worker selected the card's button wins and the cycler stays quiet, as BAR's does for a
-        // bound key; F10 is the alias that always cycles (HelperButtons.cycleIdleWorker)
         int key = evt.getKeyCode();
         // Z / Space held over a drag box were its Smart Select filters (same type / idle only), not the ability
-        // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
+        // slot or the shop they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
-        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W same type, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
+        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W same type, Ctrl+C commander, Ctrl+Tab / Ctrl+Shift+Tab idle builders,
         // Ctrl+E all units) win over every button on the letter
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
         // BAR's Tab: select the commander and centre on it, even while the commander button is hidden. Plain press only:
-        // Ctrl+Tab cycles the selection and Shift+Tab is the camera overview (OrthoviewClientEvents). Decided at the press
+        // Ctrl+Tab is the idle builder and Shift+Tab the camera overview (OrthoviewClientEvents). Decided at the press
         // (onInput latches it): a modifier let go before Tab must not turn the release into a plain Tab
         if (Keybindings.selectCommander.matches(key) && OrthoviewClientEvents.isEnabled()) {
             if (selectCommanderPress.release())
@@ -2397,7 +2394,7 @@ public class HudClientEvents {
                 button.checkPressed(key);
         if (key == Keybindings.getFnum(10).getKey() && OrthoviewClientEvents.isEnabled())
             HelperButtons.cycleIdleWorker(false);
-        // BAR: Space looks at the last "under attack" alert, unless the card uses the key (the item shop's Space)
+        // BAR: F5 looks at the last "under attack" alert, unless the card uses the key
         if (!cardKey && Keybindings.lastAlert.matches(key) && OrthoviewClientEvents.isEnabled())
             com.solegendary.reignofnether.attackwarnings.AttackWarningClientEvents.jumpToLastAlert();
     }
@@ -2635,16 +2632,15 @@ public class HudClientEvents {
             evt.setCanceled(true);
         }
 
-        // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is select commander, Shift+Tab the overview
-        if (evt.getKeyCode() == Keybindings.tab.getKey()
-                && ((evt.getKeyCode() != Keybindings.overview.getKey() && evt.getKeyCode() != Keybindings.selectCommander.getKey())
-                    || Keybindings.ctrlMod.isDown())) {
-            cycleUnitSubgroups();
-            cycleBuildingSubgroups();
+        // BAR's cycleselected: "." cycles the selected unit types forward, "," backward
+        boolean next = Keybindings.tab.matches(evt.getKeyCode());
+        if (next || Keybindings.cyclePrev.matches(evt.getKeyCode())) {
+            cycleUnitSubgroups(!next);
+            cycleBuildingSubgroups(!next);
         }
     }
 
-    private static void cycleUnitSubgroups() {
+    private static void cycleUnitSubgroups(boolean reversed) {
         List<LivingEntity> selUnits = UnitClientEvents.getSortedSelectedUnits();
         var unitNameSet = new LinkedHashSet<String>();
         Set<String> uniqueValues = new HashSet<>();
@@ -2659,7 +2655,6 @@ public class HudClientEvents {
         if (unitNames.size() <= 1 || hudSelectedEntity == null)
             return;
 
-        boolean reversed = Keybindings.shiftMod.isDown();
         String selUnitName = getModifiedEntityName(hudSelectedEntity);
         if (reversed)
             Collections.reverse(unitNames);
@@ -2692,7 +2687,7 @@ public class HudClientEvents {
         }
     }
 
-    private static void cycleBuildingSubgroups() {
+    private static void cycleBuildingSubgroups(boolean reversed) {
         List<BuildingPlacement> selBuildings = BuildingClientEvents.getSelectedBuildings();
         List<String> buildingNames = selBuildings
                 .stream().map(b -> {
@@ -2707,7 +2702,6 @@ public class HudClientEvents {
         if (buildingNames.size() <= 1 || hudSelectedPlacement == null)
             return;
 
-        boolean reversed = Keybindings.shiftMod.isDown();
         String selBuildingName = ReignOfNetherRegistries.BUILDING.getKey(hudSelectedPlacement.getBuilding()).toString();
 
         if (reversed)

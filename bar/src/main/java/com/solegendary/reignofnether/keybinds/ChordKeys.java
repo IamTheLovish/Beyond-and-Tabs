@@ -9,10 +9,10 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * BAR's Ctrl selection keys (BarGridDefaults; Ctrl+C and Ctrl+B are BAR Legacy's): Ctrl+E every unit, Ctrl+W every unit of
- * the selected types, Ctrl+C commander (selectcomm focus), Ctrl+B next idle builder. Ctrl+Shift+B is ours: the next
+ * BAR's Ctrl selection keys (BarGridDefaults; Ctrl+C is BAR Legacy's): Ctrl+E every unit, Ctrl+W every unit of
+ * the selected types, Ctrl+C commander (selectcomm focus), Ctrl+Tab next idle builder. Ctrl+Shift+Tab is ours: the next
  * idle T2 builder. Fixed chords, not rebindable; HudClientEvents.onKeyRelease runs them
- * before anything else on the key, so the order, ability, build-tab and build-slot buttons on E / W / C / B stay
+ * before anything else on the key, so the order, ability, build-tab and build-slot buttons on E / W / C stay
  * quiet while Ctrl is held. Ctrl + a digit stays the control groups (no digit here). No Minecraft types:
  * IntuitiveKeysGameTests and ChordKeysTest check the table and the selection rule headless.
  */
@@ -27,8 +27,8 @@ public final class ChordKeys {
 
     public static final List<Def> ALL = List.of(
         new Def(Chord.SELECT_COMMANDER, GLFW.GLFW_KEY_C, null,          "Ctrl + C"),
-        new Def(Chord.IDLE_BUILDER,     GLFW.GLFW_KEY_B, Boolean.FALSE, "Ctrl + B"),
-        new Def(Chord.IDLE_T2_BUILDER,  GLFW.GLFW_KEY_B, Boolean.TRUE,  "Ctrl + Shift + B"),
+        new Def(Chord.IDLE_BUILDER,     GLFW.GLFW_KEY_TAB, Boolean.FALSE, "Ctrl + Tab"),
+        new Def(Chord.IDLE_T2_BUILDER,  GLFW.GLFW_KEY_TAB, Boolean.TRUE,  "Ctrl + Shift + Tab"),
         new Def(Chord.SELECT_ALL_UNITS, GLFW.GLFW_KEY_E, null,          "Ctrl + E"),
         new Def(Chord.SELECT_SAME_TYPE, GLFW.GLFW_KEY_W, null,          "Ctrl + W")
     );
@@ -51,11 +51,12 @@ public final class ChordKeys {
         return "";
     }
 
-    /** The short label for a 3-character button corner: "^C", "^SB". */
+    /** The short label for a 3-character button corner: "^C", "^T", "^ST". */
     public static String shortLabel(Chord chord) {
         for (Def d : ALL)
             if (d.chord() == chord)
-                return "^" + (Boolean.TRUE.equals(d.shift()) ? "S" : "") + (char) d.key();
+                return "^" + (Boolean.TRUE.equals(d.shift()) ? "S" : "")
+                    + (d.key() == GLFW.GLFW_KEY_TAB ? 'T' : (char) d.key());
         return "";
     }
 

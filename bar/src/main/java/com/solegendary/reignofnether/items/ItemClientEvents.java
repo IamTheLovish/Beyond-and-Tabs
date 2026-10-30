@@ -282,7 +282,7 @@ public class ItemClientEvents {
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
         if (!shouldRenderUnitInventory(HudClientEvents.hudSelectedEntity))
             return;
-        // a Ctrl chord (keybinds/ChordKeys: Ctrl+C commander, Ctrl+B idle builder...) is not item slot 5 / 6 (C / B)
+        // a Ctrl chord (keybinds/ChordKeys: Ctrl+C commander, Ctrl+Tab idle builder...) is not item slot 5 / 6 (C / B)
         if (com.solegendary.reignofnether.keybinds.ChordKeys.of(evt.getKeyCode(), Keybindings.ctrlMod.isDown(),
                 net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())
                 != com.solegendary.reignofnether.keybinds.ChordKeys.Chord.NONE)

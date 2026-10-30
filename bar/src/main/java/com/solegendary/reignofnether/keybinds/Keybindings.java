@@ -9,7 +9,7 @@ import java.util.List;
 // Beyond and Tabs default rebinds (all still rebindable in Controls): the orders and selection keys are BAR's "Grid"
 // profile (BarGridDefaults, BAC-007b), the camera pans on the arrow keys only (WASD pan is gone, so A S D are free for
 // Attack and the build grid). The RoN defaults that sat on W/A/S/D moved earlier: ability slot 2 W->Z, open shop S->Space,
-// return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
+// return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8, now hotkey 12) Z->.->', Mass Burial (hotkey 9, now 11) X->,->[ ("." and "," are BAR's selection cycle)
 // A changed default does NOT reach an install that already saved the old one (Minecraft keeps every mapping in
 // options.txt): add the old key to KeybindMigration.STALE and bump its LAYOUT_VERSION whenever a default moves.
 public class Keybindings {
@@ -43,7 +43,7 @@ public class Keybindings {
     public static final Keybinding reset     = new Keybinding("key.reignofnether.reset",       GLFW.GLFW_KEY_RIGHT_CONTROL, CATEGORY_CAMERA, "RC");
     // BAR's overview: zoom out to the whole map; again, a left click or releasing the held key flies back in at the
     // cursor. Shift + this key (a Keybinding holds no modifier default): plain Tab is BAR's select commander. Own conflict
-    // context: Ctrl+Tab still cycles the selection (tab, below) on the same key.
+    // context: it shares Tab with select commander and, while possessing, the hop (possessHop).
     public static final Keybinding overview  = new Keybinding("key.reignofnether.overview",    GLFW.GLFW_KEY_TAB,         CATEGORY_CAMERA, RtsConflictContext.OVERVIEW, "Tab");
     // BAR camera anchors: press to fly back, Ctrl+press to store. BAR's widget puts them on F1-F4, which here are
     // hide-HUD / player panel / debug and missing on a 60% board, so they start unbound (Controls to set).
@@ -103,19 +103,20 @@ public class Keybindings {
     public static final Keybinding hotkey5        = new Keybinding("key.reignofnether.hotkey_5",        GLFW.GLFW_KEY_SEMICOLON,     CATEGORY_RTS, ";");
     public static final Keybinding hotkey6        = new Keybinding("key.reignofnether.hotkey_6",        GLFW.GLFW_KEY_J,             CATEGORY_RTS, "J");
     public static final Keybinding hotkey7        = new Keybinding("key.reignofnether.hotkey_7",        GLFW.GLFW_KEY_K,             CATEGORY_RTS, "K");
-    public static final Keybinding hotkey8        = new Keybinding("key.reignofnether.hotkey_8",        GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
-    public static final Keybinding hotkey9        = new Keybinding("key.reignofnether.hotkey_9",        GLFW.GLFW_KEY_COMMA,         CATEGORY_RTS, ",");
+    public static final Keybinding hotkey8        = new Keybinding("key.reignofnether.hotkey_8",        GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, "");
+    public static final Keybinding hotkey9        = new Keybinding("key.reignofnether.hotkey_9",        GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, "");
     public static final Keybinding hotkey10       = new Keybinding("key.reignofnether.hotkey_10",       GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
-    // BAR's idle-constructor cycle. "." is on a 60% board and free of the orders card except the storage vault's
-    // build slot (hotkey8): with a worker selected that button wins (HudClientEvents.onKeyRelease); F10 always cycles.
-    public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    // BAR's idle-constructor cycle runs on the fixed chord Ctrl+Tab (ChordKeys, BAR: Ctrl+tab select ..._Builder_Idle);
+    // "." / "," are BAR's selection cycle now, so the rebindable key starts unbound (Controls to add one; F10 also
+    // cycles). hotkey8 / hotkey9 (observer toggle, Mass Burial) started on "." / ",": they moved to hotkey12 / hotkey11.
+    public static final Keybinding idleWorker     = new Keybinding("key.reignofnether.idle_worker",     GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, "").withChord(ChordKeys.Chord.IDLE_BUILDER);
     // The idle T2 builder and commander buttons beside it run on fixed Ctrl chords (ChordKeys, BAR's Legacy profile):
-    // Ctrl+C selects the commander and centres on it (selectcomm focus), Ctrl+Shift+B cycles the idle T2 builders
-    // (Ctrl+B, BAR's idle builder, is the idle-worker cycle). They used to sit on Home / End, which the production
+    // Ctrl+C selects the commander and centres on it (selectcomm focus), Ctrl+Shift+Tab cycles the idle T2 builders
+    // (Ctrl+Tab, BAR's idle builder, is the idle-worker cycle; BAR has no Ctrl+Shift+Tab, it is our extra). They used to sit on Home / End, which the production
     // monitor (Home) and pause unit production (End, #228) took, so their own keys start unbound (Controls to add one;
     // KeybindMigration layout 2 frees a saved Home / End). The button corner shows the chord while unbound.
     public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "").withChord(ChordKeys.Chord.IDLE_T2_BUILDER);
-    // BAR's Tab (selectcomm focus); the Ctrl+C chord stays beside it. Plain Tab only: Ctrl+Tab cycles, Shift+Tab is the overview.
+    // BAR's Tab (selectcomm focus); the Ctrl+C chord stays beside it. Plain Tab only: Ctrl+Tab is the idle builder, Shift+Tab the overview, and while possessing Tab hops (possessHop).
     public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_TAB, CATEGORY_RTS, RtsConflictContext.SELECT_COMMANDER, "Tab").withChord(ChordKeys.Chord.SELECT_COMMANDER);
     // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
@@ -128,7 +129,7 @@ public class Keybindings {
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
     // BAR Grid's order keys on the command card (BarGridDefaults, BAC-007b; user 10-29 "copy bars hotkeys"): A attack,
     // F fight, G stop, H patrol, O guard, ; hold (BAR's movestate 2), L fire state. BAR has no move key. Installs that
-    // saved the old keys were moved once (KeybindMigration, layout 3). Space jumps to the last alert (lastAlert), as in BAR.
+    // saved the old keys were moved once (KeybindMigration, layout 3). F5 jumps to the last alert (lastAlert), as in BAR.
     public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
@@ -145,7 +146,8 @@ public class Keybindings {
     public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_O,             CATEGORY_RTS, RtsConflictContext.COMMAND, "O");
     public static final Keybinding garrison    = new Keybinding("key.reignofnether.garrison",     GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     // BAR: jump the camera to the last "under attack" alert (AttackWarningClientEvents.jumpToLastAlert)
-    public static final Keybinding lastAlert   = new Keybinding("key.reignofnether.last_alert",   GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
+    // (BAR lastmsgpos on F5, layout 4; Space is the queue-insert modifier and the item shop)
+    public static final Keybinding lastAlert   = new Keybinding("key.reignofnether.last_alert",   GLFW.GLFW_KEY_F5,            CATEGORY_RTS, "F5");
     // a build-menu slot clear of every order key: the Library / Laboratory used P (abilitySlot10)
     public static final Keybinding hotkey11    = new Keybinding("key.reignofnether.hotkey_11",    GLFW.GLFW_KEY_LEFT_BRACKET,  CATEGORY_RTS, "[");
     // and one for the Royal Architect's Holy Bell, whose default slot (Z) is the Kingdom's Oak Stockpile
@@ -155,8 +157,13 @@ public class Keybindings {
     // with ">" is an order in the command language, parsed and executed on the client, never sent as chat
     public static final Keybinding commandBar  = new Keybinding("key.reignofnether.command_bar",  GLFW.GLFW_KEY_SLASH,         CATEGORY_RTS, "/");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
-    // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is select commander, Shift+Tab the overview
-    public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
+    // BAR's cycleselected: "." cycles the selection's unit types forward, "," backward (cyclePrev). Tab is select commander,
+    // Shift+Tab the overview, Ctrl+Tab the idle builder. No card button is on "." or "," (SkirmishGameTests).
+    public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    public static final Keybinding cyclePrev   = new Keybinding("key.reignofnether.cycle_prev",   GLFW.GLFW_KEY_COMMA,         CATEGORY_RTS, ",");
+    // Hero possession (hero/PossessionClientEvents): Tab hops to the next unit. Own conflict context: Tab is also select
+    // commander, the overview and the idle builder in the RTS view, which a possession screen never shows.
+    public static final Keybinding possessHop  = new Keybinding("key.reignofnether.possess_hop",  GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, RtsConflictContext.POSSESSION, "Tab");
     // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
     // near the left hand is taken by abilities, hotkeys and the BAR order keys
     public static final Keybinding overcharge  = new Keybinding("key.reignofnether.overcharge",   GLFW.GLFW_KEY_BACKSLASH,     CATEGORY_RTS, "\\");
@@ -191,7 +198,7 @@ public class Keybindings {
 
     // BAR queue editing (unit/command/QueueEditKeys, Legacy layout): N skips the current order (Ctrl+N cancels the
     // last one); N stays the card's Garrison while nothing selected has an order waiting. Space held while giving an
-    // order inserts it at the front of the queue; a plain Space tap keeps lastAlert / openShop.
+    // order inserts it at the front of the queue; a plain Space tap keeps openShop.
     public static final Keybinding queueSkip   = new Keybinding("key.reignofnether.queue_skip",   GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     public static final Keybinding queueInsert = new Keybinding("key.reignofnether.queue_insert", GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
 
@@ -215,7 +222,7 @@ public class Keybindings {
         new Keybinding("key.reignofnether.fn_2",  GLFW.GLFW_KEY_F2,  CATEGORY_RTS, "F2"),
         new Keybinding("key.reignofnether.fn_3",  GLFW.GLFW_KEY_F3,  CATEGORY_RTS, "F3"),
         new Keybinding("key.reignofnether.fn_4",  GLFW.GLFW_KEY_F4,  CATEGORY_RTS, "F4"),
-        new Keybinding("key.reignofnether.fn_5",  GLFW.GLFW_KEY_F5,  CATEGORY_RTS, "F5"),
+        new Keybinding("key.reignofnether.fn_5",  GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "F5"),
         new Keybinding("key.reignofnether.fn_6",  GLFW.GLFW_KEY_F6,  CATEGORY_RTS, "F6"),
         new Keybinding("key.reignofnether.fn_7",  GLFW.GLFW_KEY_F7,  CATEGORY_RTS, "F7"),
         new Keybinding("key.reignofnether.fn_8",  GLFW.GLFW_KEY_F8,  CATEGORY_RTS, "F8"),
@@ -239,7 +246,7 @@ public class Keybindings {
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
-            attack, fight, stop, move, hold, fireState, patrol, guard, lastAlert, hotkey11, hotkey12,
+            attack, fight, stop, move, hold, fireState, patrol, guard, lastAlert, hotkey11, hotkey12, cyclePrev, possessHop,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,

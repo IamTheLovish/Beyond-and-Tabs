@@ -1142,7 +1142,7 @@ public class OrthoviewClientEvents {
                 return;
             }
             // Tab while possessing: hop to the next unit (PossessionClientEvents); the RTS view's Tab is untouched
-            if (key == Keybindings.tab.getKey() && !typing
+            if (Keybindings.possessHop.matches(key) && !typing
                     && com.solegendary.reignofnether.hero.PossessionClientEvents.onHopKey())
                 return;
             if (!enabled || !(MC.screen instanceof TopdownGui) || typing || key == GLFW.GLFW_KEY_UNKNOWN)
@@ -1151,7 +1151,7 @@ public class OrthoviewClientEvents {
                 reset();
             } else if (key == Keybindings.overview.getKey() && !isCtrlDown() && isShiftDown() && !isCameraLocked()) {
                 // Shift + the overview key (a Keybinding holds no modifier default); plain Tab is select commander and
-                // Ctrl+Tab is selection cycling (HudClientEvents)
+                // Ctrl+Tab is the idle builder (HudClientEvents)
                 if (overviewActive)
                     exitOverview();
                 else

@@ -85,7 +85,7 @@ public class ControlsReferenceScreen extends Screen {
         header("h_essentials");
         bind("possess", Keybindings.toggleCamera);
         mouse("possess_hover", t("ctrl") + " + " + k(Keybindings.toggleCamera));
-        mouse("possess_hop", k(Keybindings.tab) + " " + t("while_possessing"));
+        mouse("possess_hop", k(Keybindings.possessHop) + " " + t("while_possessing"));
         bind("stats", Keybindings.statsTable);
         bind("clean", Keybindings.cleanView);
         bind("hide_hud", Keybindings.getFnum(1));
@@ -93,8 +93,8 @@ public class ControlsReferenceScreen extends Screen {
         mouse("overview", t("shift") + " + " + k(Keybindings.overview));   // OrthoviewClientEvents: Tab is select commander
         bind("idle_worker", Keybindings.idleWorker);
         // keybinds/ChordKeys: BAR's fixed Ctrl chords (HudClientEvents.onKeyRelease)
-        mouse("idle_builder_ctrl_b", t("ctrl") + " + B");
-        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + B");
+        mouse("idle_builder_ctrl_tab", t("ctrl") + " + Tab");
+        mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + Tab");
         mouse("select_commander_ctrl_c", k(Keybindings.selectCommander) + "  /  " + t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
         mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
@@ -126,7 +126,7 @@ public class ControlsReferenceScreen extends Screen {
         mouse("select_same_type_ctrl_w", t("ctrl") + " + W");
         mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
-        bind("cycle", Keybindings.tab);
+        mouse("cycle", k(Keybindings.tab) + "  /  " + k(Keybindings.cyclePrev));   // next / previous unit type
         mouse("groups", t("ctrl") + " + 0-9  /  0-9");
 
         header("h_orders");

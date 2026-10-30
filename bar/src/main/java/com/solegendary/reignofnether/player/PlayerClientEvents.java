@@ -380,9 +380,10 @@ public class PlayerClientEvents {
     // allow tab player list menu on the orthoview screen
     @SubscribeEvent
     public static void onScreenRender(ScreenEvent.Render evt) {
-        // Tab is the camera overview in the RTS view; the vanilla player list stays on Ctrl+Tab there
-        boolean listKey = Keybindings.tab.isDown()
-            && (Keybindings.tab.getKey() != Keybindings.overview.getKey() || Keybindings.ctrlMod.isDown());
+        // Ctrl+Tab, as before BAC-007b 2a moved the rebindable "tab" binding (now the selection cycle) to "." - pending the
+        // user's call (BAC-007b plan 2a, player list). Ctrl+Tab is also the idle builder chord (ChordKeys).
+        boolean listKey = Keybindings.ctrlMod.isDown() && com.mojang.blaze3d.platform.InputConstants.isKeyDown(
+            MC.getWindow().getWindow(), org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
         if (OrthoviewClientEvents.isEnabled() && listKey && MC.level != null) {
             if (!MC.isLocalServer()) {
                 MC.gui.getTabList().setVisible(true);

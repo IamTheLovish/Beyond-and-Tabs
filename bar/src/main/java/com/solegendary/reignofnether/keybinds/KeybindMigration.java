@@ -29,7 +29,7 @@ import java.util.function.ToIntFunction;
 public final class KeybindMigration {
 
     /** The key layout the saved bindings are moved to; stored in the client config as keybind_layout. */
-    public static final int LAYOUT_VERSION = 3;
+    public static final int LAYOUT_VERSION = 4;
 
     /** What {@code savedKey} returns for a binding that must not move: a modifier combo, a mouse button, not found. */
     public static final int CUSTOM = Integer.MIN_VALUE;
@@ -45,9 +45,9 @@ public final class KeybindMigration {
 
     static final List<Stale> STALE = List.of(
         // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
-        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
+        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+Tab (ChordKeys; Ctrl+Shift+B before layout 4).
         new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
-        new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+B"),
+        new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+Tab"),
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
         // BAR's S / P / G and the gather toggle gave G up, but an install of those days keeps the old keys.
         new Stale(1, "key.reignofnether.stop", GLFW.GLFW_KEY_SPACE, "Stop Space -> BAR's key"),
@@ -70,7 +70,15 @@ public final class KeybindMigration {
         new Stale(3, "key.reignofnether.guard", GLFW.GLFW_KEY_G, "Guard G -> O (BAR Grid)"),
         new Stale(3, "key.reignofnether.hold", GLFW.GLFW_KEY_H, "Hold H -> ; (BAR movestate 2)"),
         new Stale(3, "key.reignofnether.move", GLFW.GLFW_KEY_M, "Move M -> unbound (BAR has no move key)"),
-        new Stale(3, "key.reignofnether.select_commander", -1, "Select commander unbound -> Tab (BAR selectcomm)")
+        new Stale(3, "key.reignofnether.select_commander", -1, "Select commander unbound -> Tab (BAR selectcomm)"),
+        // Layout 4 (BAC-007b 2a): BAR's F5 last alert and "." / "," selection cycle. The keys they take are freed: the idle
+        // worker button, the observer toggle (hotkey 8) and Mass Burial (hotkey 9) start unbound, F5 is no function slot.
+        new Stale(4, "key.reignofnether.last_alert", GLFW.GLFW_KEY_SPACE, "Last alert Space -> F5 (BAR lastmsgpos)"),
+        new Stale(4, "key.reignofnether.fn_5", GLFW.GLFW_KEY_F5, "Function slot F5 -> unbound (F5 is the last alert)"),
+        new Stale(4, "key.reignofnether.idle_worker", GLFW.GLFW_KEY_PERIOD, "Idle worker . -> Ctrl+Tab (. is the selection cycle)"),
+        new Stale(4, "key.reignofnether.hotkey_8", GLFW.GLFW_KEY_PERIOD, "Build slot 8 . -> unbound (. is the selection cycle)"),
+        new Stale(4, "key.reignofnether.hotkey_9", GLFW.GLFW_KEY_COMMA, "Build slot 9 , -> unbound (, is the backwards selection cycle)"),
+        new Stale(4, "key.reignofnether.tab", GLFW.GLFW_KEY_TAB, "Selection cycle Tab -> . (BAR cycleselected)")
     );
 
     private KeybindMigration() { }

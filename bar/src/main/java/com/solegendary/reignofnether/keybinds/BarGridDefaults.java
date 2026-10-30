@@ -149,7 +149,7 @@ public final class BarGridDefaults {
         Map.entry("key.reignofnether.minimap_toggle", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.move", "BAR has no move key"),
         Map.entry("key.reignofnether.open_shop", "shares: Space, never shown together with or live over the BAR order on the key (see class comment)"),
-        Map.entry("key.reignofnether.possess_hop", "BAT hero, Tab in possession only"),
+        Map.entry("key.reignofnether.possess_hop", "shares: Tab, BAT hero, Tab in possession only (the RTS view is not shown then)"),
         Map.entry("key.reignofnether.overcharge", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.overview", "shares: Tab (with Shift), never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.pan_minus_x", "BAT camera"),
