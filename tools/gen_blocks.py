@@ -183,7 +183,9 @@ TARGETS = {
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
     # r41 (eyes 41053751822: a saturated neon cube, 0.468 on screen beside the lawn's 0.437, sat 0.59, hue 83 vs the
     # lawn's 92): luma 0.40 -> 0.37, sat 0.60 -> 0.48, the hue toward the lawn's (MOSS_RGB), matte (smooth 41 -> 24)
-    "moss_block":                 dict(luma=0.37, std=0.060, sat=0.48, tilt=14.0, smooth=24, pore=60),
+    # r42 (eyes 41058728743: it merged into the lawn): its own identity - a deeper cushion green, hue ~106 (MOSS_RGB),
+    # luma 0.37 -> 0.33 (the lawn reads 0.44), cushion relief (std 0.06 -> 0.075, tilt 14 -> 18, m_moss tufts deeper)
+    "moss_block":                 dict(luma=0.33, std=0.075, sat=0.50, tilt=18.0, smooth=24, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
     "mossy_stone_bricks":         dict(luma=0.41, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
@@ -1285,7 +1287,7 @@ DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
     "green":      ((0.33, 0.44, 0.12), (0.29, 0.37, 0.14), (0.30, 0.33, 0.17)),
     "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
     "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
-    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.38, 0.28, 0.46)),   # r41: the clay a dusky violet
+    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.33, 0.29, 0.44)),   # r41 / r42: the clay a dusky violet
     # r39: redder - hue 274 -> 283 (it read steel blue in game; 293 sat too close to magenta's 303)
     "purple":     ((0.60, 0.27, 0.74), (0.48, 0.13, 0.62), (0.49, 0.27, 0.36)),
     "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
@@ -1393,7 +1395,9 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
 # round 29b: dead blades, dry stalks and seed heads in their own colour - a tinted greyscale sprite can only be green,
 # so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
-    TARGETS[_p] = dict(luma=0.50, std=0.110, sat=0.36, tilt=12.0, smooth=50, pore=120)
+    # r42 (eyes 41058728743: far tufts read as a tan speckle at the 34 view): the straw closer to the lawn's screen
+    # value and duller - luma 0.50 -> 0.42, sat 0.36 -> 0.24 - so it melts in with distance
+    TARGETS[_p] = dict(luma=0.42, std=0.110, sat=0.24, tilt=12.0, smooth=50, pore=120)
 # r34 (tufts round 34; critic r33: tufts 4/10 default, 6/10 preset): bold-blade sprites (tools/plant_sprites.py) and
 # more shapes - three short grasses, two ferns, two tall grasses - so neighbouring tufts differ. Each extra shape
 # takes its first shape's targets; appended (SEED_ORDER rule). m_plant fits only their luma MEAN and saturation, over
@@ -1656,7 +1660,7 @@ def m_facets(F, n, rgb, cells, edge=0.010, rim=True):
     return H, tint(rgb, shade)
 
 
-def m_gem(F, n, body, top, inclusions=0.0, edge_glow=0.12):
+def m_gem(F, n, body, top, inclusions=0.0, edge_glow=0.12, cells=4):
     """Round 31 (art director, sampler 3: the gems "read as blobs / cabbage - 3-5 large hard facets per face, deep
     body colour with bright facet tops, low roughness, emerald darker with inclusion streaks"): four Voronoi cells
     per face (jittered: 3-5 visible facets), each a FLAT plane at its own tilt (m_facets' pyramids rounded into
@@ -1664,7 +1668,7 @@ def m_gem(F, n, body, top, inclusions=0.0, edge_glow=0.12):
     its plane faces the key light, so some facets blaze and some lie dark. inclusions: thin dark streaks along one
     direction inside the facets (emerald's jardin)."""
     rng = F.rng
-    f1, f2, idx, k = F.voronoi(4, 0.8)
+    f1, f2, idx, k = F.voronoi(cells, 0.8)
     ang = 2 * math.pi
     cx = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.u).ravel(), k),
                     np.bincount(idx.ravel(), np.cos(ang * F.u).ravel(), k)) / ang
@@ -2216,8 +2220,8 @@ def m_moss(F, n):
     tufts = F.noise(6, 18, 0.5)
     fine = F.noise(18, 50, 0.1)
     hollow = smoothstep(0.6, 0.95, F.noise(3, 8, 0.5))
-    H = 0.5 + 0.2 * tufts + 0.05 * fine - 0.15 * hollow
-    shade = 0.85 + 0.15 * norm01(tufts) + 0.05 * fine - 0.15 * hollow
+    H = 0.5 + 0.30 * tufts + 0.05 * fine - 0.20 * hollow                    # r42: deeper cushions
+    shade = 0.82 + 0.22 * norm01(tufts) + 0.05 * fine - 0.18 * hollow
     return H, tint(MOSS_RGB, shade)
 
 
@@ -3493,7 +3497,7 @@ def m_podzol_side(F, n):
 # Round 34: ONE moss material for every mossy block (the builds' weathering run moss_block -> mossy_cobblestone ->
 # mossy_stone_bricks -> stone_bricks; the family sheet showed moss_block a yellow-olive and mossy_stone_bricks' moss
 # a brighter lime). moss_block's hue; the blocks differ in coverage only.
-MOSS_RGB = (0.33, 0.47, 0.19)   # r41: a step toward the lawn's hue
+MOSS_RGB = (0.26, 0.44, 0.20)   # r42: a deeper cushion green (hue ~106), apart from the lawn
 
 
 def moss_cushions(F, seed, strength, cells=300):
@@ -5623,10 +5627,10 @@ def recipes():
         "smooth_basalt": lambda F, n: m_polished(F, n, (0.28, 0.28, 0.30), 0.06, 0.03, rim=None, calm=True),
         "soul_sand": m_soul_sand,
         # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
-        "diamond_block": lambda F, n: m_gem(F, n, (0.40, 0.72, 0.82), (0.90, 0.98, 1.0)),   # r33: brighter body
+        "diamond_block": lambda F, n: m_gem(F, n, (0.22, 0.58, 0.70), (0.72, 0.92, 0.96), edge_glow=0.08),   # r42: deeper
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
-        "emerald_block": lambda F, n: m_gem(F, n, (0.09, 0.42, 0.20), (0.42, 0.82, 0.48), inclusions=0.5, edge_glow=0.12),   # r41: opaque
+        "emerald_block": lambda F, n: m_gem(F, n, (0.10, 0.40, 0.22), (0.36, 0.72, 0.44), inclusions=0.5, edge_glow=0.08, cells=2),   # r41 / r42
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
@@ -5634,7 +5638,7 @@ def recipes():
         "white_concrete": lambda F, n: m_clayish(F, n, (0.88, 0.88, 0.88), pits=0.01, mottle=0.04),   # r33: neutral
         # r31b (eyes: "reads as violet dyed wool"): a dusty slate-blue, chroma pulled toward grey
         # r33 (critic: "crushed"): a clearer dusty blue, the hue toward blue rather than violet
-        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.38, 0.28, 0.46), flash=(0.96, 0.94, 0.99)),   # r41: violet
+        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.33, 0.29, 0.44), flash=(0.95, 0.94, 0.99)),   # r41; r42: dusky
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
         "blackstone_top": lambda F, n: m_igneous(F, n, (0.16, 0.145, 0.13), (0.20, 0.185, 0.17), 0.65, (8, 20)),
