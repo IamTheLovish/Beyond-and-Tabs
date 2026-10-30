@@ -28,6 +28,23 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
 
+    def test_ambient_occlusion_takes_only_the_sky_share(self):
+        # slice 3 (lib/ao.glsl): every program that writes colour also writes colortex1, the sky's share of the light,
+        # so composite.fsh darkens creases in the fill alone; overlays and water write 0 (an unlit program left out
+        # would take the ground's occlusion onto a selection ring)
+        for name in spc.programs():
+            if not name.startswith("gbuffers_") or not name.endswith(".fsh"):
+                continue
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            if "orthoView())\n        discard;" in src and "SKY" in src:
+                continue                    # the sky: nothing drawn in the RTS view, depth 1 elsewhere
+            self.assertIn("/* DRAWBUFFERS:01 */", src, name)
+            self.assertIn("gl_FragData[1]", src, name)
+        props = open(os.path.join(spc.SHADERS, "shaders.properties"), encoding="utf-8").read()
+        self.assertIn("scale.deferred=0.5", props)
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third

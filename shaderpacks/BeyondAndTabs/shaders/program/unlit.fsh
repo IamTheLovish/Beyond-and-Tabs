@@ -46,6 +46,13 @@ void main() {
     lin *= 1.5;                        // emissive: a little above white, so the tone curve's shoulder keeps it bright
 #endif
 
-/* DRAWBUFFERS:0 */
+/* DRAWBUFFERS:01 */
     gl_FragData[0] = vec4(lin, c.a);
+    // colortex1: no ambient occlusion on what is drawn as is (overlays, particles, glows): 0 blended in by the alpha.
+    // The cracks multiply what is under them (twice the product), so 0.5 leaves the block's own value unchanged
+#ifdef UNLIT_CRACKS
+    gl_FragData[1] = vec4(0.5);
+#else
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, c.a);
+#endif
 }

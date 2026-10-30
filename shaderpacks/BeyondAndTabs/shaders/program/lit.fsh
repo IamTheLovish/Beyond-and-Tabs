@@ -39,7 +39,7 @@ varying vec3 vT;
 varying vec3 vB;
 #endif
 
-/* DRAWBUFFERS:0 */
+/* DRAWBUFFERS:01 */
 void main() {
     vec4 tex = texture2D(texture, texcoord);
     vec3 albedo = tex.rgb * glcolor.rgb;
@@ -55,6 +55,7 @@ void main() {
         if (alpha < 0.004)
             discard;
         gl_FragData[0] = vec4(toLinear(albedo), alpha);
+        gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);   // no ambient occlusion on a selection or placement box
         return;
     }
 #endif
@@ -101,6 +102,9 @@ void main() {
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
     vec3 c = lin * surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+    // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the fill,
+    // and below a metal's or a gem's sky reflection
+    vec3 ambient = lin * skyFill(n, levels, ao, texAo, skyColour);
 #ifdef LIT_PBR
     // the RTS camera is orthographic: every pixel looks along the same direction, the view's -z, so the direction to
     // the eye is +z everywhere (-viewPos would point at an eye that does not exist). First person keeps the real eye
@@ -108,16 +112,27 @@ void main() {
     // a metal's light is its reflection: little diffuse. A dielectric gives up what it reflects (F0, 4% for most of
     // ours), so the lawn's sheen does not lift the lawn off its noon value target (design, slice 1 bands)
     c *= mix(1.0 - mat.f0.g, METAL_DIFFUSE, mat.metal);
+    ambient *= mix(1.0 - mat.f0.g, METAL_DIFFUSE, mat.metal);
     // the fog of war and a dark vertex colour dim the reflections as they dim the albedo (no light in the fog); the
     // brightest channel, so a biome's green tint does not count as darkening. A metal's F0 is its albedo, already tinted
     float tint = mix(max(glcolor.r, max(glcolor.g, glcolor.b)), 1.0, mat.metal);
     vec3 reflected = min(sunSpecular(mat, v, l) * sunArriving(shadow, levels, sunColour) * terminator,
                          vec3(SPEC_MAX));
-    reflected += skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
+    vec3 sheen = skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
+    reflected += sheen;
     c += reflected * tint;
+    ambient += sheen * tint;
     // emission: the texture glows with its own colour, unlit (lanterns, spell glass, the Bone Dragon's thread)
     c += lin * mat.emission;
 #endif
 
     gl_FragData[0] = vec4(c, alpha);
+    // colortex1 R: the sky's share of this pixel's light. Water stays 0: its surface was not in the depth the
+    // occlusion was found from, and blending its 0 in by its alpha fades the bed's occlusion under it
+#ifdef LIT_WATER
+    float skyShare = 0.0;
+#else
+    float skyShare = clamp(dot(ambient, LUMA) / max(dot(c, LUMA), 1e-5), 0.0, 1.0);
+#endif
+    gl_FragData[1] = vec4(skyShare, 0.0, 0.0, alpha);
 }

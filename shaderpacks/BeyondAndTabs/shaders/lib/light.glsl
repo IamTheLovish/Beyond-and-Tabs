@@ -101,3 +101,9 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
 vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, vec3 sunColour, vec3 skyColour) {
     return surfaceLight(n, facing, shadow, levels, ao, 1.0, sunColour, skyColour);
 }
+
+// the sky's fill alone, exactly as surfaceLight adds it: the part of a surface's light that ambient occlusion takes
+// (slice 3; lit.fsh records its share, composite.fsh applies the occlusion to that share only)
+vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 skyColour) {
+    return skyColour * ((0.75 + 0.25 * dot(n, normalize(upPosition))) * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo);
+}
