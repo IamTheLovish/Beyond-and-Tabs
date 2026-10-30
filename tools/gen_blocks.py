@@ -263,7 +263,9 @@ TARGETS = {
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     "lapis_block": dict(luma=0.30, std=0.050, sat=0.72, tilt=7.6, smooth=60, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
-    "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
+    # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
+    # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
+    "white_concrete": dict(luma=0.87, std=0.012, sat=0.0, tilt=2.0, smooth=86, pore=10),
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
     "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
@@ -3724,7 +3726,7 @@ def recipes():
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
         "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
-        "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
+        "white_concrete": lambda F, n: m_clayish(F, n, (0.88, 0.88, 0.88), pits=0.01, mottle=0.04),   # r33: neutral
         # r31b (eyes: "reads as violet dyed wool"): a dusty slate-blue, chroma pulled toward grey
         # r33 (critic: "crushed"): a clearer dusty blue, the hue toward blue rather than violet
         "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.36, 0.52), flash=(0.94, 0.95, 0.99)),
