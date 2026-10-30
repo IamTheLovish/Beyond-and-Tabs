@@ -187,6 +187,31 @@ class MistMathTest {
     }
 
     @Test
+    void theMistLeavesTheGradeTheColourItMeant() {
+        // r11g (eyes r55: the strands still read yellow-green, hue 56): r11f divided each channel by the grade's
+        // highlight tint and CLAMPED it at 0.97 - blue / 0.85 hit the clamp, so the grade still warmed the white.
+        // preGrade divides, then scales all three together: after the grade the hue is exactly the one asked for
+        float[] tint = { 1.09f, 1.0f, 0.85f };          // Enchanted's highlight tint (#326)
+        for (float[] want : new float[][] { { 0.94f, 0.94f, 0.91f }, { 0.95f, 0.95f, 0.95f }, { 0.6f, 0.65f, 0.75f } }) {
+            float[] pre = MistMath.preGrade(want, tint);
+            float[] out = new float[3];
+            for (int i = 0; i < 3; i++) {
+                assertTrue(pre[i] >= 0 && pre[i] <= 0.97f + 1e-6, "channel " + i + ": " + pre[i]);
+                out[i] = pre[i] * tint[i];
+            }
+            // the same hue: out is want scaled by one factor
+            double k = out[1] / want[1];
+            assertEquals(want[0] * k, out[0], 1e-4, "red");
+            assertEquals(want[2] * k, out[2], 1e-4, "blue");
+            assertTrue(k > 0.85, "not dimmed more than it must be: " + k);
+        }
+        // no grade: unchanged
+        float[] same = MistMath.preGrade(new float[] { 0.8f, 0.82f, 0.85f }, new float[] { 1, 1, 1 });
+        assertEquals(0.8f, same[0], 1e-6);
+        assertEquals(0.85f, same[2], 1e-6);
+    }
+
+    @Test
     void densityNeverLeavesZeroToOne() {
         for (long t = -24000; t < 48000; t += 37) {
             double d = MistMath.density(t);
