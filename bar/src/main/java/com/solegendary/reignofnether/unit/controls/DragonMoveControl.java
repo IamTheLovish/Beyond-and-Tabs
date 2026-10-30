@@ -229,10 +229,18 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 bypassTicks = 0;
                 // side-stepping out from under what shut it in: level, along the detour, then back on the route -
                 // not while something still covers its back (a porch roof: back on the route it would only climb
-                // into it again): another side-step, its way picked afresh (the last one may have run into a
-                // corner), up to DETOUR_MAX ticks under cover in all
-                if (--detourTicks == 0 && underCover() && detourTotal < DETOUR_MAX)
-                    startCoverDetour(dx, dz);
+                // into it again): another side-step - on the same way while that is still open (a fresh pick each
+                // time turned it round and stalled it, the roof test's CI on 88363368), a fresh pick once it has run
+                // into a corner - up to DETOUR_MAX ticks under cover in all
+                if (--detourTicks == 0 && underCover() && detourTotal < DETOUR_MAX) {
+                    double r = Math.toRadians(detourYaw);
+                    if (canReach(new Vec3(-Math.sin(r), 0, Math.cos(r)), 4)) {
+                        detourTicks = DETOUR_TICKS;
+                        detourTotal += DETOUR_TICKS;
+                    } else {
+                        startCoverDetour(dx, dz);
+                    }
+                }
                 if (detourTicks == 0) {
                     sweepIn = 0;                      // look again at once, before it steers back into what shut it in
                     routeIn = 0;
