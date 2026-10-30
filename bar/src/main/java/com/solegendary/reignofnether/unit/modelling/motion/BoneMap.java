@@ -20,6 +20,13 @@ public final class BoneMap {
     final ModelPart[] followers = new ModelPart[MAX_FOLLOWERS], leaders = new ModelPart[MAX_FOLLOWERS];
     int followerCount = 0;
     static final int MAX_FOLLOWERS = 6;
+    /**
+     * Weapons held on a grip beside the hand rather than in it (the grip also carries the arm): in the death they slip
+     * back to their planted rest along the body ({@link MotionPass#placeFall}). One in the hand rides the arm.
+     */
+    final ModelPart[] dropped = new ModelPart[MAX_DROPPED];
+    int droppedCount = 0;
+    static final int MAX_DROPPED = 2;
     /** The waist, model px (y down, from the model origin): the torso bends about it. */
     final float waistY;
     /** A keyframe-clip body or a custom rig: breath and flinch only. */
@@ -37,6 +44,13 @@ public final class BoneMap {
     boolean deathHierarchical;
     /** The death parts include elbows and knees (a jointed rig). */
     boolean jointed;
+    /** How the look solver treats this body: {@link Motion#LOOK_NONE}, LOOK_FULL or LOOK_TWIST. */
+    float look = Motion.LOOK_NONE;
+
+    BoneMap looks(float mode) {
+        look = mode;
+        return this;
+    }
 
     BoneMap(float waistY, boolean flinchOnly) {
         this(waistY, flinchOnly, false, false);
@@ -74,6 +88,12 @@ public final class BoneMap {
     /** True when the body falls by {@link DeathFall} rather than vanilla's flip. */
     public boolean deathPose() {
         return death != null;
+    }
+
+    BoneMap drops(ModelPart weapon) {
+        if (weapon != null && droppedCount < MAX_DROPPED)
+            dropped[droppedCount++] = weapon;
+        return this;
     }
 
     BoneMap follow(ModelPart follower, ModelPart leader) {

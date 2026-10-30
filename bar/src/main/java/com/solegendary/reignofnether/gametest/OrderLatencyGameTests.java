@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.EngagementStance;
 import com.solegendary.reignofnether.unit.UnitAction;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
+import com.solegendary.reignofnether.unit.pathfinding.PathfinderWorkerPool;
 import com.solegendary.reignofnether.unit.command.CommandQueues;
 import com.solegendary.reignofnether.unit.command.QueueMode;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -151,7 +152,8 @@ public class OrderLatencyGameTests {
             String nav = path == null ? "nopath" : (path.isDone() ? "done" : "node" + path.getNextNodeIndex() + "/" + path.getNodeCount());
             var goal = ((Unit) mob).getMoveGoal();
             return (UnitServerEvents.rtsPathfinding ? "rts " : "vanilla ") + (goal.isPathPending() ? "pending " : "")
-                + (goal.isGoalRunning() ? "goal " : "nogoal ") + nav + (mob.onGround() ? "" : " AIR");
+                + (goal.isGoalRunning() ? "goal " : "nogoal ") + nav + (mob.onGround() ? "" : " AIR")
+                + (goal.isPathPending() ? " (" + PathfinderWorkerPool.debugState() + ")" : "");
         }
 
         int moveLatency() { return firstMove < 0 ? -1 : firstMove - orderTick; }

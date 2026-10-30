@@ -77,7 +77,7 @@ public final class BoneMaps {
                     .follow(pl.rightPants, pl.rightLeg).follow(pl.leftPants, pl.leftLeg);
             if (model instanceof VillagerUnitModel<?> v)
                 m.set(Motion.ARMS, v.crossedArms);
-            return m.fallsAsIs();
+            return m.fallsAsIs().looks(Motion.LOOK_FULL);
         }
         if (model instanceof IllagerModel<?> il) {
             ModelPart root = il.root();
@@ -86,14 +86,15 @@ public final class BoneMaps {
                 .set(Motion.ARMS, child(root, "arms"))
                 .set(Motion.ARM_R, child(root, "right_arm")).set(Motion.ARM_L, child(root, "left_arm"))
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
-            return m.fallsAsIs();   // the illager's hat is the head's child: it follows the head by itself
+            return m.fallsAsIs().looks(Motion.LOOK_FULL);   // the illager's hat is the head's child: it follows the head
         }
         if (model instanceof IronGolemModel<?> g) {
             ModelPart root = g.root();
             return new BoneMap(3f, false)
                 .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
                 .set(Motion.ARM_R, child(root, "right_arm")).set(Motion.ARM_L, child(root, "left_arm"))
-                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"));
+                .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"))
+                .looks(Motion.LOOK_FULL);
         }
         if (model instanceof VillagerModel<?> v) {
             ModelPart root = v.root();
@@ -101,7 +102,7 @@ public final class BoneMaps {
                 .set(Motion.BODY, child(root, "body")).set(Motion.HEAD, child(root, "head"))
                 .set(Motion.ARMS, child(root, "arms"))
                 .set(Motion.LEG_R, child(root, "right_leg")).set(Motion.LEG_L, child(root, "left_leg"))
-                .fallsAsIs();
+                .fallsAsIs().looks(Motion.LOOK_FULL);
         }
         if (model instanceof SpiderModel<?> sp) {
             ModelPart root = sp.root();
@@ -115,12 +116,24 @@ public final class BoneMaps {
             ModelPart body = descendant(hm, "body"), head = descendant(hm, "head");
             if (body != null && !bendsAlone(body, head))
                 body = null;      // bending it would part the head from the torso, or swing the legs and feet
+            if (body == null && !keyframes) {
+                // a generated human whose body is its pelvis (the Halberdier): its chest is the torso that flinches
+                ModelPart chest = descendant(hm, "chest");
+                if (chest != null && bendsAlone(chest, head))
+                    body = chest;
+            }
             if (body == null && head == null)
                 return NONE;
             BoneMap m = new BoneMap(body == null ? 0f : body.y, true, true, !keyframes)
                 .set(Motion.BODY, body).set(Motion.HEAD, head);
             ModelPart[] fall = keyframes ? null : humanRig(hm, head);
-            return fall == null ? m : m.fallsJointed(fall);
+            if (fall == null)
+                return m;
+            // a generated human aims its own head (its setupAnim): its torso turns with an aim only
+            m.fallsJointed(fall).looks(m.parts[Motion.BODY] != null ? Motion.LOOK_TWIST : Motion.LOOK_NONE);
+            for (String weapon : GRIP_WEAPONS)
+                m.drops(gripWeapon(hm, weapon));
+            return m;
         }
         return NONE;
     }
@@ -154,6 +167,19 @@ public final class BoneMaps {
             if (p[bone] == null)
                 return null;
         return p;
+    }
+
+    /**
+     * The weapons a generated rig plants upright at rest (tools/gen_halberdier.py, the Field Medic's staff): laid back
+     * to that rest, they lie along a fallen body. The Levy's crossbow rests held forwards, so it is not one.
+     */
+    private static final String[] GRIP_WEAPONS = {"halberd", "staff"};
+
+    /** A weapon on a grip bone beside the hand (the grip also carries an arm), else null: one in a hand rides it. */
+    static ModelPart gripWeapon(HierarchicalModel<?> hm, String name) {
+        return hm.root().getAllParts()
+            .filter(p -> p.hasChild(name) && (p.hasChild("right_arm") || p.hasChild("left_arm")))
+            .findFirst().map(p -> p.getChild(name)).orElse(null);
     }
 
     /** Every leg, thigh and foot name our rigs and keyframe models use (bone names are not readable from a part). */

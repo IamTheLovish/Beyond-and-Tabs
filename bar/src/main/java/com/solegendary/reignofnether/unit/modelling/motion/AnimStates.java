@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
+import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -143,6 +144,8 @@ public final class AnimStates {
         boolean fighting = le.swinging || (le instanceof Mob m && m.isAggressive());
         Kinematics.step(s, b, (float) (le.getX() - le.xo), (float) (le.getY() - le.yo), (float) (le.getZ() - le.zo),
             le.yBodyRot - le.yBodyRotO, le.getHealth(), le.getMaxHealth(), fighting, fresh);
+        Kinematics.look(s, b, le.yHeadRot, le.getXRot(),
+            le instanceof RangedAttackerUnit && le instanceof Mob m2 && m2.isAggressive(), fresh);
         if (fresh) {
             // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
             s[b + AnimState.TEMPO] = Desync.tempo(id);
@@ -171,10 +174,22 @@ public final class AnimStates {
         }
     }
 
-    /** A damage event reached the client for `le`: stamp the hit's direction (mixin/LivingEntityDamageMotionMixin). */
+    /**
+     * A damage event reached the client for `le`: stamp the hit's direction (mixin/LivingEntityDamageMotionMixin) and,
+     * when a unit struck it by hand (the direct source is the attacker itself, not an arrow or a spell), that unit's
+     * contact recoil - in the same call, so the target flinches and the attacker jolts on the same frame.
+     */
     public static void onDamage(LivingEntity le, DamageSource src) {
+        if (src == null)
+            return;
+        Entity direct = src.getDirectEntity();
+        if (direct instanceof LivingEntity && direct instanceof Unit && direct != le && direct == src.getEntity()) {
+            int ab = SLOT.get(direct.getId());
+            if (ab >= 0)
+                Kinematics.onContact(slab, ab);
+        }
         int b = SLOT.get(le.getId());
-        if (b < 0 || src == null)
+        if (b < 0)
             return;
         Vec3 p = src.getSourcePosition();
         if (p == null && src.getEntity() != null)
