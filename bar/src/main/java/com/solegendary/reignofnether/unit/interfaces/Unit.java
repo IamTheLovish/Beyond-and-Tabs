@@ -385,7 +385,9 @@ public interface Unit {
                 // an enemy that went under cover can't be tailed: stop where we were heading (last seen position)
                 if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(unit.getFollowTarget(), unit.getOwnerName()))
                     unit.setFollowTarget(null);
-                else
+                // a support unit holding its standoff behind a fight stays there (SupportBrain.idleBehind): the walk to
+                // its leader's block took it into the fight
+                else if (!(unit instanceof SupportUnit su && su.getSupportState().holdsBehind(unitMob.level().getGameTime())))
                     unit.setMoveTarget(unit.getFollowTarget().blockPosition());
             }
         }
