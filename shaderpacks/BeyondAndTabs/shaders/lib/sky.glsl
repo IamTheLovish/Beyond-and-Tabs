@@ -13,7 +13,9 @@
 
 // 0..1: how much our gradient draws the sky (vanilla's colours carry the night)
 float skyOwn() {
-    return smoothstep(-0.10, 0.02, sunHeight());
+    // light pass 5: through the afterglow too (the dusk still, 13000, sits about at the horizon: pass 4's -0.10..0.02
+    // left half of it to vanilla's peach fog colour)
+    return smoothstep(-0.25, -0.05, sunHeight());
 }
 
 // 0..1: how far into sunset the sky is (1 from SKY_SUNSET_HIGH down to the horizon), and 0..1 golden (1) to deep (0)

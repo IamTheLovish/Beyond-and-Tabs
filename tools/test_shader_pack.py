@@ -126,7 +126,10 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual((ndl + math.sqrt(ndl)) / 2.0, _const("NOON_SUN_FACING", light), places=3)
         share, total = _const("SHADOW_FILL_SHARE"), _const("LIGHT_OPEN_GROUND")
         self.assertGreaterEqual(share, 0.62)                   # the coordinator's floor: shadow >= 0.62 of lit
-        self.assertTrue(1.2 <= total <= 1.4, total)            # lawn ~0.42-0.43 on screen, the band's top (0.36-0.43)
+        # Retired pin (light pass 5): "1.2 <= LIGHT_OPEN_GROUND <= 1.4" - it was set for a lawn ~0.42-0.43 on screen, but
+        # with the S-curve, the meadow and pass 4 on top the pass-4 noon stills measured the lit lawn at 0.45-0.47. The
+        # target is the lawn, so the band follows it: 1.05-1.20 (1.12 takes 0.46 back to ~0.42 through the curve)
+        self.assertTrue(1.05 <= total <= 1.20, total)
         self.assertIn("SUN_TINT_HIGH\n    * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND", light)
         self.assertIn("SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND", light)
         # the shadow light is cooler than the lit light (the sky's tint against the sun's): blue over green
@@ -253,8 +256,18 @@ class ShaderPack(unittest.TestCase):
         hg, sg, _ = colorsys.rgb_to_hsv(*gold)
         hd, sd, _ = colorsys.rgb_to_hsv(*deep)
         self.assertTrue(25 <= hg * 360 <= 40 and sg >= 0.3, (hg * 360, sg))
-        self.assertGreaterEqual((hg - hd) * 360, 15)
-        self.assertGreaterEqual(sum(a * b for a, b in zip(gold, luma)) - sum(a * b for a, b in zip(deep, luma)), 0.08)
+        # Retired pin (light pass 5): "gold and deep >= 15 degrees and >= 0.08 luma apart" - it made the dusk horizon a
+        # dark red-orange band (0.55 luma, hue 15) that read as a flat peach wash with the haze. The critic's dusk target
+        # replaces it: a horizon band ~0.80 luma at hue 20-30 under a zenith <= 0.66 at hue 210-220, >= 0.12 luma apart
+        zd = vec("SKY_ZENITH_DUSK")
+        self.assertTrue(20 <= hd * 360 <= 30, hd * 360)
+        self.assertTrue(0.74 <= sum(a * b for a, b in zip(deep, luma)) <= 0.84)
+        hz, sz, _ = colorsys.rgb_to_hsv(*zd)
+        self.assertTrue(205 <= hz * 360 <= 220 and 0.2 <= sz <= 0.32, (hz * 360, sz))
+        self.assertLessEqual(sum(a * b for a, b in zip(zd, luma)), 0.66)
+        self.assertGreaterEqual(sum(a * b for a, b in zip(deep, luma)) - sum(a * b for a, b in zip(zd, luma)), 0.12)
+        clouds = _read("program", "clouds.fsh")
+        self.assertIn("skyGradient(normalize(viewPos)) * CLOUD_SKY", clouds)
         self.assertIn("c = mix(c, skyGradient(dir), skyOwn());", _read("program", "sky.fsh"))
         self.assertIn("mix(fogColor, skyAir(), skyOwn())", _read("composite.fsh"))
 
@@ -335,9 +348,20 @@ class ShaderPack(unittest.TestCase):
         # light pass 4: the pass-3 tint (blue 1.14 of the luma) did not read - the noon shadow stayed hue 97, blue 0.46 of
         # green. Now blue >= 2x red-weighted (in game the shadow's blue needs ~1.6x on screen for blue >= 0.75 green),
         # on the sky's part of the fill only
-        self.assertGreater(tint[2] / tint[1], 2.0)
+        # Retired pin (light pass 5): "blue > 2x green" - pass 4's indigo turned every shaded wall violet (H 231-251,
+        # saturation up to 0.26). Now a sky blue, 1.2-1.5x green on faces looking up, a third of that on walls
+        self.assertTrue(1.2 <= tint[2] / tint[1] <= 1.5, tint)
+        self.assertTrue(0.25 <= _const("SHADE_TINT_WALL") <= 0.5)
+        self.assertGreater(tint[2], tint[1])
+        self.assertGreater(tint[1], tint[0])                  # blue-cyan, never violet (red above green)
         light = _read("lib", "light.glsl")
-        self.assertIn("light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0)) - 1.0);", light)
+        self.assertIn("light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0), upness) - 1.0);", light)
+        # light pass 5: the fill has a direction (the castle's walls at noon 0.68 / 0.67): a face toward the sun's
+        # azimuth against one turned away >= 1.5x of fill, tops untouched
+        d = _const("FILL_DIRECTION")
+        self.assertGreaterEqual((1.0 + d) / (1.0 - d), 1.5)
+        self.assertLessEqual(d, 0.4)
+        self.assertIn("* fillDirection(n);", _read("program", "lit.fsh"))
 
     def test_perspective_whites_keep_their_lines(self):
         # Retired pin (light pass 4): "a lit white wall lands 0.74-0.78" by a roll-off from 0.64 - in game it flattened

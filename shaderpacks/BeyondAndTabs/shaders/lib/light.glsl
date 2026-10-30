@@ -51,7 +51,10 @@ const vec3 MIN_LIGHT = vec3(0.012);
 // the sky's fill under a sky light of 0 as a share of the open sky's: the fill falls off with the sky light linearly
 // from 1 to this, never to nothing. The light engine can leave open ground with a stale low sky light (the eyes
 // structure pads: freshly laid ground read 1/3 of its sky light), which the sun hides but a shadow showed as black
-const float SKY_FILL_FLOOR = 0.35;
+// Light pass 5: 0.35 -> 0.55. The pass-4 noon stills put the lawn's darkest shadow at luma ~0.11 (target 0.17-0.20),
+// half of what the light table gives a cast shadow on open ground: consistent with the eyes pads' stale low sky light
+// on freshly laid ground (above), which the floor is for
+const float SKY_FILL_FLOOR = 0.55;
 
 // sine of the sun's height above the horizon
 float sunHeight() {
@@ -123,8 +126,21 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // blue sky's: SHADE_TINT (light pass 3, luma 1) cools it there, so a shadow is the lit ground's colour shifted toward
 // blue, not the same hue darker. sunLit: the sun's share arriving, 0..1. Where the sun reaches, the fill keeps the
 // light table's mild tint (a strongly blue fill tinted the whole lawn: #326)
-vec3 shadeTint(float sunLit) {
-    return mix(SHADE_TINT, vec3(1.0), clamp(sunLit, 0.0, 1.0));
+vec3 shadeTint(float sunLit, float upness) {
+    vec3 tint = mix(vec3(1.0), SHADE_TINT, mix(SHADE_TINT_WALL, 1.0, clamp(upness, 0.0, 1.0)));
+    return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
+}
+
+// the fill's direction (FILL_DIRECTION, light pass 5): brighter on faces turned toward the sun's azimuth, by the
+// horizontal part of the normal along the horizontal direction to the light; 1 for tops, bottoms and a sun overhead
+float fillDirection(vec3 n) {
+    vec3 up = normalize(upPosition);
+    vec3 l = normalize(shadowLightPosition);
+    vec3 lh = l - up * dot(l, up);
+    if (dot(lh, lh) < 1e-6)
+        return 1.0;
+    vec3 nh = n - up * dot(n, up);
+    return 1.0 + FILL_DIRECTION * dot(nh, normalize(lh));
 }
 
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,
@@ -134,11 +150,13 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
                   vec3 skyColour) {
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
-    light += skyFill(n, levels, ao, texAo, sunColour, skyColour);
+    float direction = fillDirection(n);
+    light += skyFill(n, levels, ao, texAo, sunColour, skyColour) * direction;
     // the sky's part of the fill, cooled where no sun arrives (shadeTint); the ground's bounce keeps its warmth
-    float skySeen = 0.5 + 0.5 * dot(n, normalize(upPosition));
-    vec3 skyPart = skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo);
-    light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0)) - 1.0);
+    float upness = dot(n, normalize(upPosition));
+    float skySeen = 0.5 + 0.5 * upness;
+    vec3 skyPart = skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo * direction);
+    light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0), upness) - 1.0);
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
 }

@@ -70,7 +70,10 @@ const float ambientOcclusionLevel = 1.0;
 // open ground under the high sun, lit to this multiple of its albedo in linear light (was 1.0: "open ground at its
 // albedo"). With the grade on top, a noon lawn reads ~0.42-0.43 luma on screen, the top of the palette's 0.36-0.43
 // lawn band (it read ~0.37)
-const float LIGHT_OPEN_GROUND = 1.30;
+// Light pass 5: 1.30 -> 1.12. The pass-4 stills measured the noon lit lawn at 0.45-0.47 (median 0.46, green pixels;
+// pass 2 0.43, pass 3 ~0.40), over lovish's band; at 1.12 the lawn's pre-curve luma falls by (1.12 / 1.30)^(1/2.2),
+// ~0.934, the S-curve's pivot slope of 1.32 around 0.42 taking 0.46 back to ~0.42. The low sun has its own row
+const float LIGHT_OPEN_GROUND = 1.12;
 // the sky's share of that light: a cast shadow on open ground keeps this much of the sunlit ground's light (was ~0.41,
 // on screen ~0.65 of the lit lawn; now ~0.78 on screen). Shadows lift without the sun losing its direction
 const float SHADOW_FILL_SHARE = 0.62;
@@ -151,9 +154,15 @@ const float SKY_GRADIENT_SPAN = 0.60;
 // Display colours before the grade. At the horizon dusk and t11800 differ by ~0.18 luma and ~18 degrees of hue
 const float SKY_SUNSET_HIGH = 0.25;
 const vec3 SKY_SUNSET_GOLD = vec3(0.95, 0.75, 0.50);
-const vec3 SKY_SUNSET_DEEP = vec3(0.85, 0.45, 0.32);
+// light pass 5 (critic: the dusk sky a flat peach wash, zenith to horizon 0.05 luma): the horizon band lighter and
+// less red, ~0.78 luma at hue ~23 (was 0.55 at 15), under a cooler, darker zenith
+const vec3 SKY_SUNSET_DEEP = vec3(0.97, 0.74, 0.60);
 const float SKY_SUNSET_AWAY = 0.35;
-const vec3 SKY_ZENITH_DUSK = vec3(0.36, 0.50, 0.75);
+const vec3 SKY_ZENITH_DUSK = vec3(0.50, 0.58, 0.68);          // ~0.57 luma, hue ~213, saturation ~0.26
+// clouds (gbuffers_clouds, light pass 5): lit by the sky's ramp in their own direction (CLOUD_SKY of it) plus
+// CLOUD_SUN of the sun, so a dusk cloud takes the dusk colours instead of vanilla's grey-white slab
+const float CLOUD_SKY = 1.15;
+const float CLOUD_SUN = 0.18;
 // the sun's disc in the sky (program/sky.fsh, light pass 3; vanilla's square sprite is not drawn): SUN_DISC_RADIUS
 // (radians, ~2x the real disc so it reads at 1080p) with a soft rim, slightly warm, ~2x white in linear light so it
 // blooms; a halo of SUN_HALO round it. The moon keeps vanilla's sprite with a soft MOON_GLOW round it at dusk and night
@@ -168,7 +177,18 @@ const float MOON_GLOW = 0.18;
 // Light pass 4 (the critic: the noon shadow interior still rgb(0.106, 0.158, 0.073), hue 97, a dead green-black; target
 // hue 130-170, blue >= 0.75 of green): much bluer, and on the sky's part of the fill only (the ground's bounce stays
 // warm). Model of a noon cast shadow on the lawn: hue ~160, blue ~0.85 of green, its luma unchanged
-const vec3 SHADE_TINT = vec3(0.78, 0.95, 2.10);
+// Light pass 5 (critic 7.2/10: pass 4's (0.78, 0.95, 2.10) was indigo - every shaded vertical face went violet, H
+// 231-251, saturation 0.12-0.26, the castle lavender - while the ground's shadow stayed green-black): a sky blue
+// ((0.84, 0.95, 1.28) at luma 1), full on faces looking up, SHADE_TINT_WALL of it on walls, where the warm ground
+// bounce meets it (the violet mix). Model: a shaded white wall ~hue 210 at saturation ~0.03-0.05, the ground's shadow
+// hue ~120 in the model (pass 3's tint modelled 113 and measured 97: ~105-115 in game)
+const vec3 SHADE_TINT = vec3(0.884, 1.000, 1.347);
+const float SHADE_TINT_WALL = 0.35;
+// the fill's direction (lib/light.glsl, light pass 5: the castle at noon had no form, its two visible walls 0.68 and
+// 0.67): the sky is brighter toward the sun and the sunlit ground bounces from that side, so a face turned toward the
+// sun's azimuth takes up to 1 + FILL_DIRECTION of the fill, one turned away 1 - FILL_DIRECTION; tops and the lawn none.
+// A wall facing the sun's azimuth against one facing away: fill ratio 1.86, ~1.2-1.3x on screen with the sun on it
+const float FILL_DIRECTION = 0.30;
 // how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square
 // root grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Light pass 4: grass and plants
 // only (biome-tinted terrain; pass 3 raked every top, so white block tops outshone the lawn at t11800) and all the way

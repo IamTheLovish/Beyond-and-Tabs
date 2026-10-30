@@ -1,0 +1,35 @@
+// Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
+// any other shader pack.
+//
+// Vanilla's clouds (light pass 5). They fell back to gbuffers_textured and were drawn as vanilla colours them: a
+// grey-white slab against the dusk sky (critic, 2_dusk). From dawn to dusk they are lit by the sky's own ramp in their
+// direction (lib/sky.glsl: CLOUD_SKY of it) plus CLOUD_SUN of the sun, keeping vanilla's face shading (tops lighter
+// than undersides) as a relative brightness; by night vanilla's colours as drawn. No ambient occlusion (colortex1 0).
+
+#include "/lib/settings.glsl"
+#include "/lib/color.glsl"
+#include "/lib/shadowfit.glsl"
+#include "/lib/light.glsl"
+#include "/lib/sky.glsl"
+
+uniform sampler2D texture;
+
+varying vec2 texcoord;
+varying vec4 glcolor;
+varying vec3 viewPos;
+
+/* DRAWBUFFERS:01 */
+void main() {
+    vec4 c = texture2D(texture, texcoord) * glcolor;
+    if (c.a < 0.004)
+        discard;
+    vec3 asDrawn = toLinear(c.rgb);
+    vec3 sunColour, skyColour;
+    lightColours(sunColour, skyColour);
+    // vanilla shades a cloud's faces (and dims them all at night): that shading, relative to its brightest face
+    float shade = clamp(dot(c.rgb, LUMA) / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3), 0.5, 1.0);
+    vec3 lit = (skyGradient(normalize(viewPos)) * CLOUD_SKY + sunColour * CLOUD_SUN) * shade;
+    // the RTS camera is orthographic (no view direction to read the ramp along): its clouds stay as drawn
+    gl_FragData[0] = vec4(orthoView() ? asDrawn : mix(asDrawn, lit, skyOwn()), c.a);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, c.a);
+}

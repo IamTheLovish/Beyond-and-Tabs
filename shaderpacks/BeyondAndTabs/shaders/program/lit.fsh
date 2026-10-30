@@ -196,7 +196,7 @@ void main() {
     vec3 c = lin * light;
     // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the
     // fill, and below a metal's or a gem's sky reflection
-    vec3 ambient = lin * skyFill(n, levels, ao, texAo, sunColour, skyColour);
+    vec3 ambient = lin * skyFill(n, levels, ao, texAo, sunColour, skyColour) * fillDirection(n);
 #ifdef LIT_PBR
     // the RTS camera is orthographic: every pixel looks along the same direction, the view's -z, so the direction to
     // the eye is +z everywhere (-viewPos would point at an eye that does not exist). First person keeps the real eye
