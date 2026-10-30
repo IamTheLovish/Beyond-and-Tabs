@@ -172,7 +172,12 @@ public class HeroXpGameTests {
         }
     }
 
-    /** The orbs still fly to the hero (the look of the XP), but landing pays nothing more than the kill already did. */
+    /**
+     * The orbs still fly to the hero (the look of the XP), but landing pays nothing more than the kill already did. Some
+     * must land; not every one has to: an orb's flight (unchanged, HeroExperienceOrb.tick) can settle beside the hero or
+     * catch on a block - that is how kill XP used to get lost, and since the kill pays it costs nothing (green
+     * 41098302242 runner 4: "4 orbs never reached the hero in 10 s", the XP exact).
+     */
     @GameTest(template = ARENA, batch = "hero_xp_orbs_still_fly_and_pay_nothing_more", timeoutTicks = 260)
     public static void hero_xp_orbs_still_fly_and_pay_nothing_more(GameTestHelper helper) {
         String me = HeroGameTests.owner(helper, "xp_orbs"), them = HeroGameTests.owner(helper, "xp_orbs_victim");
@@ -192,15 +197,17 @@ public class HeroXpGameTests {
             com.solegendary.reignofnether.hero.HeroExperienceOrb.class, hero.getBoundingBox().inflate(12)).size());
         helper.runAfterDelay(200, () -> {
             int got = ((HeroUnit) hero).getExperience();
-            int left = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
-                hero.getBoundingBox().inflate(12)).size();
+            var stray = helper.getLevel().getEntitiesOfClass(com.solegendary.reignofnether.hero.HeroExperienceOrb.class,
+                hero.getBoundingBox().inflate(12));
+            int left = stray.size();
+            stray.forEach(net.minecraft.world.entity.Entity::discard);   // none left to drift into a later test's arena
             discard(mobs);
             if (orbs[0] == 0)
                 helper.fail("the kill sent no XP orbs to the hero");
+            else if (left >= orbs[0])
+                helper.fail("none of the " + orbs[0] + " orbs reached the hero in 10 s (nothing landed to pay)");
             else if (got != want)
-                helper.fail("after the orbs landed the hero has " + got + " XP, not the kill's " + want);
-            else if (left > 0)
-                helper.fail(left + " orbs never reached the hero in 10 s");
+                helper.fail("after " + (orbs[0] - left) + " orbs landed the hero has " + got + " XP, not the kill's " + want);
             else
                 helper.succeed();
         });
