@@ -1,0 +1,38 @@
+{
+ "title": "blade_dancer_unit / turn   real game client   window 240 ticks (12.0 s)   views rts   10 frames",
+ "views": [
+  "rts"
+ ],
+ "frames": 10,
+ "labels": [
+  "1  +0.00s  (tick 0)",
+  "2  +1.46s  (tick 29)",
+  "3  +2.58s  (tick 52)",
+  "4  +4.05s  (tick 81)",
+  "5  +5.21s  (tick 104)",
+  "6  +6.61s  (tick 132)",
+  "7  +8.17s  (tick 163)",
+  "8  +9.31s  (tick 186)",
+  "9  +10.48s  (tick 210)",
+  "10  +11.99s  (tick 240)"
+ ],
+ "labels_by_row": [
+  [
+   "1  +0.00s  (tick 0)",
+   "2  +1.46s  (tick 29)",
+   "3  +2.58s  (tick 52)",
+   "4  +4.05s  (tick 81)",
+   "5  +5.21s  (tick 104)",
+   "6  +6.61s  (tick 132)",
+   "7  +8.17s  (tick 163)",
+   "8  +9.31s  (tick 186)",
+   "9  +10.48s  (tick 210)",
+   "10  +11.99s  (tick 240)"
+  ]
+ ],
+ "size": [
+  1999,
+  878
+ ],
+ "warnings": []
+}
