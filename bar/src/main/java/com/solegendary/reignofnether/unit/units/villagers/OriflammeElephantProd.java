@@ -62,7 +62,7 @@ public class OriflammeElephantProd extends ProductionItem implements IUnitProduc
             List.of(
                 Component.translatable("entity.reignofnether.oriflamme_elephant_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.oriflamme_elephant_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.oriflamme_elephant_unit.tooltip2").getVisualOrderText()

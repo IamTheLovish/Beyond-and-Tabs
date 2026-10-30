@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=east,shape=inner": {
+      "model": "reignofnether:block/cornice_stone_inner",
+      "y": 90
+    },
+    "facing=east,shape=outer": {
+      "model": "reignofnether:block/cornice_stone_outer",
+      "y": 90
+    },
+    "facing=east,shape=straight": {
+      "model": "reignofnether:block/cornice_stone_straight",
+      "y": 90
+    },
+    "facing=north,shape=inner": {
+      "model": "reignofnether:block/cornice_stone_inner"
+    },
+    "facing=north,shape=outer": {
+      "model": "reignofnether:block/cornice_stone_outer"
+    },
+    "facing=north,shape=straight": {
+      "model": "reignofnether:block/cornice_stone_straight"
+    },
+    "facing=south,shape=inner": {
+      "model": "reignofnether:block/cornice_stone_inner",
+      "y": 180
+    },
+    "facing=south,shape=outer": {
+      "model": "reignofnether:block/cornice_stone_outer",
+      "y": 180
+    },
+    "facing=south,shape=straight": {
+      "model": "reignofnether:block/cornice_stone_straight",
+      "y": 180
+    },
+    "facing=west,shape=inner": {
+      "model": "reignofnether:block/cornice_stone_inner",
+      "y": 270
+    },
+    "facing=west,shape=outer": {
+      "model": "reignofnether:block/cornice_stone_outer",
+      "y": 270
+    },
+    "facing=west,shape=straight": {
+      "model": "reignofnether:block/cornice_stone_straight",
+      "y": 270
+    }
+  }
+}

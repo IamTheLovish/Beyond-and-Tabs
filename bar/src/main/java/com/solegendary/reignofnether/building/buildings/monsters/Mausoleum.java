@@ -75,7 +75,6 @@ public class Mausoleum extends ProductionBuilding implements NightSourceAddon, R
             () -> true,
             List.of(Component.translatable("buildings.reignofnether.mausoleum").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPop(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("buildings.reignofnether.mausoleum.tooltip1").getVisualOrderText(),
                 FormattedCharSequence.forward("", Style.EMPTY),

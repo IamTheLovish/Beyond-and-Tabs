@@ -4,6 +4,8 @@ import com.solegendary.reignofnether.worldborder.WorldBorderClientEvents;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,6 +15,20 @@ public class FogTintingBlockColor implements BlockColor {
 
     // tint index FogTintingBakedModel assigns to originally-untinted quads: fog only, never the block's own colour
     public static final int FOG_ONLY_TINT_INDEX = 1000;
+
+    /**
+     * The biome-tinted blocks: only their untinted quads are fogged here (BiomeColorsMixin fogs the biome colour). The
+     * same list as Embeddium 0.3.31's per-vertex biome blending (ColorProviderRegistry.installOverrides): wrapping them
+     * made Embeddium treat them as mod-overridden and colour every block flat - the lawn a mosaic of one-block cells
+     * (eyes r47b, Oct 29). EmbeddiumBlendFogWrappedMixin gives them their blending back.
+     */
+    public static final java.util.Set<Block> BIOME_TINTED = java.util.Set.of(
+            Blocks.GRASS_BLOCK, Blocks.FERN, Blocks.GRASS, Blocks.POTTED_FERN,
+            Blocks.PINK_PETALS, Blocks.SUGAR_CANE, Blocks.LARGE_FERN, Blocks.TALL_GRASS,
+            Blocks.OAK_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.ACACIA_LEAVES,
+            Blocks.DARK_OAK_LEAVES, Blocks.VINE, Blocks.MANGROVE_LEAVES,
+            Blocks.WATER, Blocks.BUBBLE_COLUMN
+    );
 
     @Nullable private final BlockColor delegate;
     private final boolean biomeTinted;
@@ -27,23 +43,10 @@ public class FogTintingBlockColor implements BlockColor {
         boolean fogOnly = tintIndex == FOG_ONLY_TINT_INDEX;
         int base = (delegate != null && !fogOnly) ? delegate.getColor(state, level, pos, tintIndex) : -1;
         if (pos == null || level == null) return base;
-        if (biomeTinted && !fogOnly) {
-            // BiomeColorsMixin already applied the explored tint; never-explored ground goes on to the darker one
-            if (base != -1 && !WorldBorderClientEvents.isOutsideWorldBorder(pos) && FogOfWarClientEvents.isEnabled()
-                    && !FogOfWarClientEvents.isBlockVisible(pos)
-                    && !FogExploration.isExplored(pos.getX() >> 4, pos.getZ() >> 4))
-                return FogExploration.dimToUnexplored(base, FogOfWarClientEvents.FOG_TINT_RGB,
-                        FogOfWarClientEvents.FOG_TINT_UNEXPLORED);
-            return base;
-        }
+        if (biomeTinted && !fogOnly)
+            return base;   // BiomeColorsMixin fogs it, never-explored dimming included (Oct 29: one place for both renderers)
 
-        int tint = 0;
-        if (WorldBorderClientEvents.isOutsideWorldBorder(pos)) {
-            tint = WorldBorderClientEvents.OUTSIDE_WORLD_BORDER_TINT;
-        }
-        else if (FogOfWarClientEvents.isEnabled()) {
-            tint = FogOfWarClientEvents.fogTintAt(pos.getX(), pos.getZ());
-        }
+        int tint = fogTint(pos);
         if (tint == 0) return base;
 
         int original = (base == -1) ? 0xFFFFFF : base;
@@ -51,5 +54,20 @@ public class FogTintingBlockColor implements BlockColor {
         int g = (((original >> 8)  & 0xFF) * ((tint >> 8)  & 0xFF)) / 255;
         int b = (( original        & 0xFF) * ( tint        & 0xFF)) / 255;
         return (r << 16) | (g << 8) | b;
+    }
+
+    /** The fog (or outside-the-border) tint at a block, 0 for none. */
+    private static int fogTint(BlockPos pos) {
+        if (WorldBorderClientEvents.isOutsideWorldBorder(pos))
+            return WorldBorderClientEvents.OUTSIDE_WORLD_BORDER_TINT;
+        if (FogOfWarClientEvents.isEnabled())
+            return FogOfWarClientEvents.fogTintAt(pos.getX(), pos.getZ());
+        return 0;
+    }
+
+    /** An untinted quad's colour under the fog (FOG_ONLY_TINT_INDEX): the tint, or white where none - one per block. */
+    public static int fogOnlyColor(BlockPos pos) {
+        int tint = fogTint(pos);
+        return tint == 0 ? 0xFFFFFF : tint;
     }
 }

@@ -2,7 +2,6 @@ package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
-import com.solegendary.reignofnether.building.production.PopulationRules;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit;
@@ -22,7 +21,8 @@ import java.util.List;
 
 /**
  * Bone Dragon (design-factions.md): units it kills rise as skeletons under its owner for {@link #LIFETIME_TICKS},
- * then crumble. Risen skeletons leave no wreck (no free metal), need population room, and at most
+ * then crumble. Risen skeletons leave no wreck (no free metal), there is no population cap to wait for (lovish,
+ * Oct 29), and at most
  * {@link #MAX_RISEN} stand at once per owner so a dragon over a big fight can't snowball.
  */
 public class DragonRaiseServerEvents {
@@ -63,9 +63,6 @@ public class DragonRaiseServerEvents {
         risen.removeIf(Entity::isRemoved);
         long mine = risen.stream().filter(e -> e instanceof Unit u && owner.equals(u.getOwnerName())).count();
         if (mine >= MAX_RISEN)
-            return null;
-        if (!PopulationRules.hasRoom(UnitServerEvents.getCurrentPopulation(owner),
-                BuildingServerEvents.getTotalPopulationSupply(owner), 1))
             return null;
         Entity e = UnitServerEvents.spawnMob(EntityRegistrar.SKELETON_UNIT.get(), level, at.below(), owner);
         if (e == null)
