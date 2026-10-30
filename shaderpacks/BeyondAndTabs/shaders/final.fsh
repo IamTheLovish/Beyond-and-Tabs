@@ -25,7 +25,10 @@ const float CONTRAST = 0.18;
 const float SPLIT_TONE = 1.2;
 const float SATURATION = 1.0;
 const float VIGNETTE = 0.16;
-const float EXPOSURE = 0.95;
+// 0.95 -> 1.05 (Oct 30): with slice 2's materials on, the noon lawn read 0.315 on the block stills, under the doc's
+// 0.36-0.43 band, and the critic called the whole scene a stop under the benchmark. Exposure scales lit and shade
+// alike, so the judged shadow / lit ratios hold
+const float EXPOSURE = 1.05;
 const float VIBRANCE = 0.45;
 const float GLOW = 0.30;
 const float GLOW_THRESHOLD = 0.50;
