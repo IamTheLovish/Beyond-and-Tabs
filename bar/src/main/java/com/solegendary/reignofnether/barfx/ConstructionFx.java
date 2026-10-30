@@ -60,8 +60,7 @@ final class ConstructionFx {
     private static final int SPARK = 0xF2DFAE, STRUCK_FACE = 0xF2DC96, DUST = 0xD9D3C6, BLOW_FLASH = 0xFFF4D0;
     /** The tools, normal-blended and SHADED (round 10 critic: the flat sprite with a dark outline read as a loot icon):
      *  each part a dark side and a lit side, a metallic highlight on the head. */
-    private static final int GOLD_DARK = 0xC9A24A, GOLD_LIT = 0xEDD07E, IRON_DARK = 0x8A8A8A, IRON_LIT = 0xB4B4B4,
-            TOOL_OUTLINE = 0x2A2418;
+    private static final int GOLD_DARK = 0xC9A24A, IRON_DARK = 0x8A8A8A;
     /** Seconds the completion beat lasts (the halo's 0.6 s swell is the longest part, the tools' flight 0.6 s). */
     private static final float DONE_SECONDS = 0.8f;
     /** Past this RTS zoom (strategic) the ghost loses its lines, the tools become glints and the light stops. */
@@ -89,19 +88,41 @@ final class ConstructionFx {
         final float[] tool = new float[8];             // a tool's struck point {x, y, z}, face normal {nx, nz}, block {x, y, z}
         final float[] beat = new float[4];             // a tool's strikeBeat
         final float[] heads = new float[3 * TOOLS];    // each tool's working end this frame {x, y, z} (for its glint)
-        final float[] quad = new float[12];            // a ghost face's corners (ConstructionGrid.ghostQuad)
         final int[] facesA = new int[ConstructionGrid.MAX_EDGES], facesB = new int[ConstructionGrid.MAX_EDGES];
         int nA, nB;                                    // this frame's camera-facing faces for tool 0 / tool 1
         float countedAt = -1;
         float shown = Float.NaN;
         float doneAt = -1;
         float lastFront;
+        final float[] quad = new float[12];            // a ghost face's corners (ConstructionGrid.ghostQuad)
         Site(ConstructionShape s, ConstructionGrid g) {
             shape = s; grid = g; standing = new int[s.layers()];
             java.util.Arrays.fill(heads, Float.NaN);   // no glint before a tool has been drawn (the glints run first)
         }
     }
     private static final Map<BuildingPlacement, Site> SITES = new WeakHashMap<>();
+    /** The bounds of the rising White Angel sites drawn last frame {x0, x1, y0, y1, z0, z1} (absorbsNano). */
+    private static final int MAX_ACTIVE = 32;
+    private static final float[] ACTIVE = new float[6 * MAX_ACTIVE];
+    private static int activeN;
+
+    /**
+     * Whether a worker's nano beam aimed at (x, y, z) lands on a rising White Angel site - BarFxClient.nano then draws
+     * no beam. Round 13 critic: a fan of 7-9 hard warm lines from one point under the HUD, converging below the
+     * ground, read as clutter over the site in every round since 11. That fan is not ConstructionFx's: it is the
+     * builders' nanolathe beams (BuildingPlacement's build tick -> BarFx.nano, golden for the Sunforged), one per
+     * worker, every ~8 ticks. On an Angel site the construction effect already shows the work (tools, beams from the
+     * front), so the fan is dropped there; every other faction, and repair / reclaim off an Angel site, keep it.
+     */
+    static boolean absorbsNano(float x, float y, float z) {
+        for (int i = 0; i < activeN; i++) {
+            int a = i * 6;
+            if (x >= ACTIVE[a] && x <= ACTIVE[a + 1] && y >= ACTIVE[a + 2] && y <= ACTIVE[a + 3] && z >= ACTIVE[a + 4]
+                    && z <= ACTIVE[a + 5])
+                return true;
+        }
+        return false;
+    }
     private static final List<BuildingPlacement> scratch = new ArrayList<>();
     private static boolean warnedTool;
 
@@ -145,6 +166,7 @@ final class ConstructionFx {
                 s.standing[s.shape.layerOf(bp.getY())]++;
         }
         s.grid.finish();
+        // the build front: ConstructionGrid.frontRow (the rim height with the most edges, ties to the higher)
     }
 
     /**
@@ -154,6 +176,7 @@ final class ConstructionFx {
      * frame of it without touching that shared class; a site never seen rising (loaded in finished) gets no beat.
      */
     static void render(MultiBufferSource.BufferSource buffers, Matrix4f mat, float clock, float dt) {
+        activeN = 0;
         List<BuildingPlacement> all = BuildingClientEvents.getBuildings();
         if (all == null || all.isEmpty())
             return;
@@ -199,6 +222,12 @@ final class ConstructionFx {
             if (s.countedAt < 0 || clock - s.countedAt > RECOUNT) {
                 s.countedAt = clock;
                 recount(s, p);
+            }
+            if (activeN < MAX_ACTIVE) {   // this site's bounds, for absorbsNano
+                int a = activeN++ * 6;
+                ACTIVE[a] = s.grid.minX() - 0.5f; ACTIVE[a + 1] = s.grid.maxX() + 0.5f;
+                ACTIVE[a + 2] = s.shape.minY() - 0.5f; ACTIVE[a + 3] = s.shape.minY() + s.shape.layers() + 0.5f;
+                ACTIVE[a + 4] = s.grid.minZ() - 0.5f; ACTIVE[a + 5] = s.grid.maxZ() + 0.5f;
             }
             // the height the halo follows: the rim's mean (each column's own build front), else the layered front
             float target = s.grid.meanRimY();
@@ -272,14 +301,8 @@ final class ConstructionFx {
             ghostFaces(s);
             if (!far) {
                 ghostOutline(s);
-                for (int i = 0; i < TOOLS; i++) {
-                    float t = clock + i * 0.37f;
-                    // a faint trail: three fading copies a moment behind (they coincide when the tool is still)
-                    drawTool(s, i, t - 0.12f, 0.1f, 0, false);
-                    drawTool(s, i, t - 0.08f, 0.18f, 0, false);
-                    drawTool(s, i, t - 0.04f, 0.3f, 0, false);
-                    drawTool(s, i, t, 1f, 0, true);
-                }
+                for (int i = 0; i < TOOLS; i++)
+                    drawTool(s, i, clock + i * 0.37f, 1f, 0, true);
             }
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
@@ -400,7 +423,8 @@ final class ConstructionFx {
     // ------------------------------------------------------------------ the part still to come
 
     /**
-     * The ghost: ONE volume over the blocks still MISSING and nothing else (ConstructionGrid). Round 13 critic: a lattice
+     * The ghost: ONE volume over the blocks still MISSING and nothing else - ConstructionGrid's volume, the missing
+     * blocks and the room they will enclose (a hollow hall ghosts as one solid hull). Round 13 critic: a lattice
      * of translucent cubes - where a pixel saw two ghost faces (a ring's near wall over its far wall's inner face) the
      * alpha doubled (~0.45 over grass, not 0.28), the old inset on every side of every cell left a seam between each two,
      * and the slate read teal-grey (hue 139, sat 0.14). Now:
@@ -422,8 +446,8 @@ final class ConstructionFx {
         float lx = BarFxClient.lookX, lz = BarFxClient.lookZ;
         int dx = lx > 0 ? 3 : 1, dz = lz > 0 ? 0 : 2, dy = BarFxClient.lookY <= 0 ? 4 : 5;   // the sides turned to us
         float[] q = s.quad;
-        for (int i = 0, n = g.missingCount(); i < n; i++) {
-            int x = g.missingX(i), y = g.missingY(i), z = g.missingZ(i);
+        for (int i = 0, n = g.volumeCount(); i < n; i++) {
+            int x = g.volumeX(i), y = g.volumeY(i), z = g.volumeZ(i);
             boolean next = g.isNextRow(x, y, z);
             int c = next ? GHOST_NEXT : GHOST_FILL;
             float a = next ? GHOST_NEXT_A : GHOST_A;
@@ -443,8 +467,8 @@ final class ConstructionFx {
         ConstructionGrid g = s.grid;
         int sx = BarFxClient.lookX > 0 ? -1 : 1, sz = BarFxClient.lookZ > 0 ? -1 : 1;
         int drawn = 0;
-        for (int i = 0, n = g.missingCount(); i < n && drawn < EDGE_CAP; i++)
-            drawn += ghostEdges(g, g.missingX(i), g.missingY(i), g.missingZ(i), sx, sz, EDGE_CAP - drawn);
+        for (int i = 0, n = g.volumeCount(); i < n && drawn < EDGE_CAP; i++)
+            drawn += ghostEdges(g, g.volumeX(i), g.volumeY(i), g.volumeZ(i), sx, sz, EDGE_CAP - drawn);
     }
 
     /** The most ghost edges one building draws; how far the ghost sits inside its cells. */
@@ -463,22 +487,27 @@ final class ConstructionFx {
     private static int ghostEdges(ConstructionGrid g, int x, int y, int z, int sx, int sz, int room) {
         int drawn = 0;
         float e = GHOST_INSET;
-        boolean top = !g.isStructure(x, y + 1, z), xf = !g.isStructure(x + sx, y, z), zf = !g.isStructure(x, y, z + sz);
+        boolean top = open(g, x, y + 1, z), xf = open(g, x + sx, y, z), zf = open(g, x, y, z + sz);
         float x0 = x + e, x1 = x + 1 - e, z0 = z + e, z1 = z + 1 - e, y0 = y + e, y1 = y + 1 - e;
         float fx = sx > 0 ? x1 : x0, fz = sz > 0 ? z1 : z0, bx = sx > 0 ? x0 : x1, bz = sz > 0 ? z0 : z1;
         if (top) {   // the top's far edges: toward -sx and -sz
-            if (drawn < room && !g.isMissing(x - sx, y, z)) drawn += edge(bx, y1, z0, bx, y1, z1);
-            if (drawn < room && !g.isMissing(x, y, z - sz)) drawn += edge(x0, y1, bz, x1, y1, bz);
+            if (drawn < room && !g.isVolume(x - sx, y, z)) drawn += edge(bx, y1, z0, bx, y1, z1);
+            if (drawn < room && !g.isVolume(x, y, z - sz)) drawn += edge(x0, y1, bz, x1, y1, bz);
         }
         if (xf) {    // the x face: its bottom and its far (-sz) side
-            if (drawn < room && !g.isMissing(x, y - 1, z)) drawn += edge(fx, y0, z0, fx, y0, z1);
-            if (drawn < room && !g.isMissing(x, y, z - sz)) drawn += edge(fx, y0, bz, fx, y1, bz);
+            if (drawn < room && !g.isVolume(x, y - 1, z)) drawn += edge(fx, y0, z0, fx, y0, z1);
+            if (drawn < room && !g.isVolume(x, y, z - sz)) drawn += edge(fx, y0, bz, fx, y1, bz);
         }
         if (zf) {    // the z face: its bottom and its far (-sx) side
-            if (drawn < room && !g.isMissing(x, y - 1, z)) drawn += edge(x0, y0, fz, x1, y0, fz);
-            if (drawn < room && !g.isMissing(x - sx, y, z)) drawn += edge(bx, y0, fz, bx, y1, fz);
+            if (drawn < room && !g.isVolume(x, y - 1, z)) drawn += edge(x0, y0, fz, x1, y0, fz);
+            if (drawn < room && !g.isVolume(x - sx, y, z)) drawn += edge(bx, y0, fz, bx, y1, fz);
         }
         return drawn;
+    }
+
+    /** A cell the ghost's surface faces: neither ghost volume nor a block of the site (air outside, or the outside). */
+    private static boolean open(ConstructionGrid g, int x, int y, int z) {
+        return !g.isVolume(x, y, z) && !g.isStructure(x, y, z);
     }
 
     /**
@@ -653,14 +682,15 @@ final class ConstructionFx {
     private static final int TOOLS = 3;
     /** Hammer / chisel parts (blocks): ~0.5 block in all (round 12 critic); the handle's length is the pivot's
      *  distance from the struck point. */
-    private static final float HANDLE_W = 0.08f, HEAD_L = 0.28f, HEAD_W = 0.14f, CHISEL_GRIP_W = 0.11f;
-    /** The tools' 1 px dark outline (blocks); the anticipation before a blow (~2 frames, seconds). */
-    private static final float TOOL_LINE = 0.035f, ANTICIPATION = 0.035f;
-    /** The pivot stands this far out along the face's normal and this far above the struck point: the tool hangs close
-     *  along its face (round 12 critic: two props floated 0.4 off the wall); the swing is a 40-degree arc. */
-    private static final float PIVOT_OUT = 0.12f, PIVOT_UP = 0.34f, ARC = 0.7f;
-    /** The struck point stands this far off its face (round 12 critic: props anchored 0.02 off a built face). */
-    private static final float FACE_GAP = 0.02f;
+    private static final float HANDLE_W = 0.07f, HEAD_L = 0.28f, HEAD_W = 0.13f, CHISEL_GRIP_W = 0.09f;
+    /** The anticipation before a blow (~2 frames, seconds). */
+    private static final float ANTICIPATION = 0.035f;
+    /** The pivot stands this far out along the face's normal and this far above the struck point: the haft near
+     *  square to the wall, the head ON it at the blow; the swing is a 40-degree arc. */
+    private static final float PIVOT_OUT = 0.36f, PIVOT_UP = 0.12f, ARC = 0.7f;
+    /** The struck point: on its face, just clear of the plane (round 13 critic: snap to the face at 0 offset; this is
+     *  only enough to keep the head's face from z-fighting the wall's). */
+    private static final float FACE_GAP = 0.004f;
     /** The tools are pulled this far toward the camera so the block they strike never hides their heads. */
     private static final float NUDGE = 0.6f;
 
@@ -766,64 +796,30 @@ final class ConstructionFx {
                 return;
             }
         }
-        // to the screen: the pivot and head pulled toward the camera together (ortho: no shift on screen)
-        float ox = -BarFxClient.lookX * NUDGE, oy = -BarFxClient.lookY * NUDGE, oz = -BarFxClient.lookZ * NUDGE;
-        gx += ox; gy += oy; gz += oz; hx += ox; hy += oy; hz += oz;
-        float ex = hx - gx, ey = hy - gy, ez = hz - gz;
-        float du = ex * BarFxClient.upX + ey * BarFxClient.upY + ez * BarFxClient.upZ;
-        float dl = ex * BarFxClient.leftX + ey * BarFxClient.leftY + ez * BarFxClient.leftZ;
-        float len = (float) Math.sqrt(du * du + dl * dl);
+        // a small 3D model in the world (round 13 critic: the flat sprites read as items floating off the wall): boxes
+        // along d (pivot -> head), t (along the face) and u (d x t), lit from above, depth-tested against the wall
+        float dx = hx - gx, dy = hy - gy, dz = hz - gz, len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 1e-3f)
             return;
-        du /= len; dl /= len;
-        // the head's striking face touches the struck point (round 11 critic: no gap): its centre sits half its depth
-        // back along the handle
-        float hdx = du * BarFxClient.upX + dl * BarFxClient.leftX, hdy = du * BarFxClient.upY + dl * BarFxClient.leftY;
-        float hdz = du * BarFxClient.upZ + dl * BarFxClient.leftZ;
-        float back = chisel ? 0 : HEAD_W * 0.5f;
-        float cx = hx - hdx * back, cy = hy - hdy * back, cz = hz - hdz * back, shaft = len - back;
-        // the light comes from the screen's upper left: the side of each part facing it is lit
-        float pu = -dl, pl = du;                                            // the screen perpendicular
-        float lit = pu * 0.7f + pl * 0.7f >= 0 ? 1 : -1;
-        float ox2 = (pu * BarFxClient.upX + pl * BarFxClient.leftX) * lit, oy2 = (pu * BarFxClient.upY + pl * BarFxClient.leftY) * lit;
-        float oz2 = (pu * BarFxClient.upZ + pl * BarFxClient.leftZ) * lit;
-        float e = TOOL_LINE;
+        dx /= len; dy /= len; dz /= len;
+        float tx = -nz, tz = nx;                                            // along the face (horizontal)
+        float ux = dy * tz, uy = dz * tx - dx * tz, uz = -dy * tx;          // d x t
         if (chisel) {
-            float grip = len * 0.45f;
-            if (full) {   // the 1 px dark outline (round 11 critic: it reads better than none at this size)
-                bar(gx, gy, gz, du, dl, -e, grip + e, CHISEL_GRIP_W + 2 * e, CHISEL_GRIP_W + 2 * e, TOOL_OUTLINE, alpha);
-                bar(gx, gy, gz, du, dl, grip, len - grip + 0.08f + e, 0.1f + 2 * e, 0.035f + 2 * e, TOOL_OUTLINE, alpha);
-            }
-            bar(gx, gy, gz, du, dl, 0, grip, CHISEL_GRIP_W, CHISEL_GRIP_W, GOLD_DARK, alpha);
-            bar(gx, gy, gz, du, dl, grip, len - grip + 0.08f, 0.1f, 0.035f, IRON_DARK, alpha);
-            if (full) {
-                float q = CHISEL_GRIP_W * 0.25f;
-                bar(gx + ox2 * q, gy + oy2 * q, gz + oz2 * q, du, dl, 0, grip, CHISEL_GRIP_W * 0.5f, CHISEL_GRIP_W * 0.5f,
-                        GOLD_LIT, alpha);
-                bar(gx + ox2 * 0.025f, gy + oy2 * 0.025f, gz + oz2 * 0.025f, du, dl, grip, len - grip + 0.06f, 0.05f, 0.015f,
-                        IRON_LIT, alpha);
-            }
+            // a gold grip and an iron blade whose edge is the struck point
+            float grip = len * 0.5f, gh = CHISEL_GRIP_W * 0.5f;
+            box(gx + dx * grip * 0.5f, gy + dy * grip * 0.5f, gz + dz * grip * 0.5f, dx, dy, dz, grip * 0.5f, tx, 0, tz, gh,
+                    ux, uy, uz, gh, GOLD_DARK, alpha);
+            float bl = len - grip, bc = grip + bl * 0.5f;
+            box(gx + dx * bc, gy + dy * bc, gz + dz * bc, dx, dy, dz, bl * 0.5f, tx, 0, tz, 0.045f, ux, uy, uz, 0.02f,
+                    IRON_DARK, alpha);
         } else {
-            if (full) {
-                bar(gx, gy, gz, du, dl, -e, shaft + e, HANDLE_W + 2 * e, HANDLE_W + 2 * e, TOOL_OUTLINE, alpha);
-                bar(cx, cy, cz, -dl, du, -HEAD_L / 2 - e, HEAD_L + 2 * e, HEAD_W + 2 * e, HEAD_W + 2 * e, TOOL_OUTLINE,
-                        alpha);
-            }
-            bar(gx, gy, gz, du, dl, 0, shaft, HANDLE_W, HANDLE_W, IRON_DARK, alpha);         // the iron haft
-            bar(cx, cy, cz, -dl, du, -HEAD_L / 2, HEAD_L, HEAD_W, HEAD_W, GOLD_DARK, alpha);  // the gold head
-            if (full) {
-                float q = HANDLE_W * 0.25f;
-                bar(gx + ox2 * q, gy + oy2 * q, gz + oz2 * q, du, dl, 0, shaft - HEAD_W * 0.5f, HANDLE_W * 0.5f,
-                        HANDLE_W * 0.5f, IRON_LIT, alpha);
-                // the head's lit half: toward the light along the handle's line (the head's top face)
-                float hq = HEAD_W * 0.25f, sgn = du * 0.7f + dl * 0.7f >= 0 ? 1 : -1;
-                float tx = hdx * sgn * hq, ty = hdy * sgn * hq, tz = hdz * sgn * hq;
-                bar(cx + tx, cy + ty, cz + tz, -dl, du, -HEAD_L / 2, HEAD_L, HEAD_W * 0.5f, HEAD_W * 0.5f, GOLD_LIT, alpha);
-                // the metallic highlight: a small white spot on the lit corner
-                float hl = HEAD_L * 0.3f * lit;
-                BarFxClient.softDisc(cx + tx * 1.4f + ox2 * hl, cy + ty * 1.4f + oy2 * hl, cz + tz * 1.4f + oz2 * hl, 0.035f,
-                        0xFFFFFF, alpha, 0xFFFFFF, alpha * 0.8f, 8, 0, 0);
-            }
+            // an iron haft to the head; the gold head's striking face ON the struck point (its centre half its depth
+            // back along d)
+            float hd = HEAD_W * 0.5f, shaft = len - HEAD_W;
+            box(gx + dx * shaft * 0.5f, gy + dy * shaft * 0.5f, gz + dz * shaft * 0.5f, dx, dy, dz, shaft * 0.5f, tx, 0, tz,
+                    HANDLE_W * 0.5f, ux, uy, uz, HANDLE_W * 0.5f, IRON_DARK, alpha);
+            box(hx - dx * hd, hy - dy * hd, hz - dz * hd, dx, dy, dz, hd, tx, 0, tz, HEAD_L * 0.5f, ux, uy, uz, hd,
+                    GOLD_DARK, alpha);
         }
         if (full && fly == 0) {   // remember the working end for the light pass's glint
             s.heads[i * 3] = hx; s.heads[i * 3 + 1] = hy; s.heads[i * 3 + 2] = hz;
@@ -973,6 +969,43 @@ final class ConstructionFx {
         BarFxClient.v(bx - nx * h1, by - ny * h1, bz - nz * h1, c, a);
         BarFxClient.v(bx + nx * h1, by + ny * h1, bz + nz * h1, c, a);
         BarFxClient.v(ax + nx * h0, ay + ny * h0, az + nz * h0, c, a);
+    }
+
+    /** The light the tools' boxes are shaded by (from above, a little toward the camera's left). */
+    private static final float LIGHT_X = -0.33f, LIGHT_Y = 0.84f, LIGHT_Z = -0.43f;
+
+    /**
+     * A small shaded box (a tool's part): centre c, unit axes a / b / u with half-extents ha / hb / hu. Only the faces
+     * turned to the camera are drawn, each its colour times 0.6 + 0.4 x its light. Depth-tested like the world.
+     */
+    private static void box(float cx, float cy, float cz, float ax, float ay, float az, float ha, float bx, float by,
+                            float bz, float hb, float ux, float uy, float uz, float hu, int c, float alpha) {
+        for (int f = 0; f < 6; f++) {
+            float sg = (f & 1) == 0 ? 1 : -1;
+            int axis = f >> 1;
+            // n: this face's normal axis; p / q: the other two
+            float nx = axis == 0 ? ax : axis == 1 ? bx : ux, ny = axis == 0 ? ay : axis == 1 ? by : uy;
+            float nz = axis == 0 ? az : axis == 1 ? bz : uz, hn = axis == 0 ? ha : axis == 1 ? hb : hu;
+            float px = axis == 0 ? bx : ax, py = axis == 0 ? by : ay, pz = axis == 0 ? bz : az, hp = axis == 0 ? hb : ha;
+            float qx = axis == 2 ? bx : ux, qy = axis == 2 ? by : uy, qz = axis == 2 ? bz : uz, hq = axis == 2 ? hb : hu;
+            nx *= sg; ny *= sg; nz *= sg;
+            if (nx * BarFxClient.lookX + ny * BarFxClient.lookY + nz * BarFxClient.lookZ >= 0)
+                continue;
+            float lit = Math.max(0, nx * LIGHT_X + ny * LIGHT_Y + nz * LIGHT_Z);
+            int col = shade(c, 0.6f + 0.4f * lit);
+            float fx = cx + nx * hn, fy = cy + ny * hn, fz = cz + nz * hn;
+            px *= hp; py *= hp; pz *= hp; qx *= hq; qy *= hq; qz *= hq;
+            BarFxClient.v(fx - px - qx, fy - py - qy, fz - pz - qz, col, alpha);
+            BarFxClient.v(fx + px - qx, fy + py - qy, fz + pz - qz, col, alpha);
+            BarFxClient.v(fx + px + qx, fy + py + qy, fz + pz + qz, col, alpha);
+            BarFxClient.v(fx - px + qx, fy - py + qy, fz - pz + qz, col, alpha);
+        }
+    }
+
+    private static int shade(int c, float f) {
+        int r = Math.min(255, Math.round(((c >> 16) & 255) * f)), g = Math.min(255, Math.round(((c >> 8) & 255) * f));
+        int b = Math.min(255, Math.round((c & 255) * f));
+        return (r << 16) | (g << 8) | b;
     }
 
     /** A hard-edged camera-facing line between two world points, {@code w} wide, one alpha throughout. */
