@@ -1100,6 +1100,10 @@ public final class BarFxClient {
         // barriers (DomeFx) are drawn first: the light below sits on top of them
         if (!DomeFx.isEmpty())
             DomeFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, partialTick);
+        // each faction's way of building (the White Angel cloud ring first) - a site can rise with no other effect alive
+        try {
+            ConstructionFx.render(MC.renderBuffers().bufferSource(), poseStack.last().pose(), clock, dt);
+        } catch (RuntimeException ignored) { }   // a construction effect must never stop the battle effects
         if (live.isEmpty() && decals.isEmpty()) return;
 
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
