@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * hills or mountains"): each sample ahead is measured against the lowest ground within {@link #HILL_SPAN} blocks of it
  * along the way, so a slope it can climb along is flown over however high it goes, and only what stands more than the
  * ceiling over its own surroundings (a tower, a keep, a cliff) is gone round. The route is read every
- * {@link #ROUTE_EVERY} ticks (~95 heightmap reads, ~24 a tick; a search for a way round reads ~380 more, at most every
+ * {@link #ROUTE_EVERY} ticks (~165 heightmap reads, ~41 a tick; a search for a way round reads ~680 more, at most every
  * {@link #ROUTE_EVERY} ticks while one is needed and every {@link #NO_WAY_TICKS} once none was found); between reads the climb it needs is worked out again each tick from the stored samples. Boxed
  * in with no way up, it side-steps ({@link #DETOUR_TICKS}) instead of waiting.
  *
@@ -58,8 +58,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     /** The held route height sinks this much a tick once what was ahead is behind it (it does not dip between roofs),
      *  and is dropped this close to the point (blocks, flat): it comes down onto its point. */
     static final double FLOOR_DECAY = 0.06, HOLD_UNTIL = 12.0;
-    /** A side-step's length (ticks) when the way ahead and the way up are both shut. */
-    static final int DETOUR_TICKS = 24;
+    /** A side-step's length (ticks) when the way ahead and the way up are both shut, and the most it is drawn out
+     *  while something still covers its back. */
+    static final int DETOUR_TICKS = 24, DETOUR_MAX = 160;
     /** How high over the ground right under it (its column's MOTION_BLOCKING height) it may fly to cross something;
      *  taller, it flies round. */
     public static final double ROUTE_CEILING = 16.0;
@@ -85,7 +86,7 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     private int samples = 0, groundUnder = 0;
     private double scanX, scanZ, scanUx, scanUz, maxFeet = Double.POSITIVE_INFINITY;
     private float detourYaw = 0f;
-    private int detourTicks = 0, detourSide = 1;
+    private int detourTicks = 0, detourSide = 1, detourTotal = 0;
     /** The Dive's ground spot while it stoops (BoneDragonUnit.startDive), and whether it is down on the ground. */
     private Vec3 diveTo = null;
     private boolean landed = false;
@@ -214,9 +215,24 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 heldTop = Double.NEGATIVE_INFINITY;
             } else if (detourTicks > 0) {
                 bypassTicks = 0;
-                // side-stepping out from under what shut it in: level, along the detour, then back on the route
-                if (--detourTicks == 0)
+                // side-stepping out from under what shut it in: level, along the detour, then back on the route -
+                // not while something still covers its back (a porch roof: back on the route it would only climb
+                // into it again), up to DETOUR_MAX ticks in all
+                if (--detourTicks == 0 && underCover() && (detourTotal += DETOUR_TICKS) < DETOUR_MAX)
+                    detourTicks = DETOUR_TICKS;
+                if (detourTicks == 0) {
                     sweepIn = 0;                      // look again at once, before it steers back into what shut it in
+                    routeIn = 0;
+                    detourTotal = 0;
+                }
+                double r = Math.toRadians(detourYaw);
+                dx = -Math.sin(r) * 8.0;
+                dz = Math.cos(r) * 8.0;
+                dy = 0.0;
+                blocked = false;
+            } else if (underCover() && startDetour((float) Math.toDegrees(-Math.atan2(dx, dz)))) {
+                // something over its back (a roof): no route reads here - the ground under it is the roof - out first
+                bypassTicks = 0;
                 double r = Math.toRadians(detourYaw);
                 dx = -Math.sin(r) * 8.0;
                 dz = Math.cos(r) * 8.0;
@@ -253,7 +269,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                     Vec3 ahead = new Vec3(-Math.sin(r), rise, Math.cos(r)).normalize();
                     int steps = Math.min(MAX_SWEEP, Mth.ceil(dist));
                     blocked = !canReach(ahead, steps);
-                    if (blocked && !canReach(new Vec3(0, 1, 0), 2)) {
+                    // shut ahead and no way up - blocks over it, or held at its ceiling (the hard stop below): it
+                    // would only press on at the blocked crawl, so it side-steps and reads the route again after
+                    if (blocked && (!canReach(new Vec3(0, 1, 0), 2) || mob.getY() + 0.05 >= climbCap)) {
                         blocked = false;
                         hover = !startDetour((float) Math.toDegrees(-Math.atan2(dx, dz)));
                     }
@@ -335,17 +353,20 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         scanZ = mob.getZ();
         scanUx = ux;
         scanUz = uz;
-        double half = mob.getBbWidth() * 0.5;
+        double half = mob.getBbWidth() * 0.5, side = half + 1.0;
         reach = Math.min(ROUTE_LOOK, reach);
         int n = 0;
-        for (double d = half + 1.0; d <= reach && n < readTop.length; d += step) {
+        // from beside the body (its flanks pass whatever is there) out; across the body and a block to spare each side
+        for (double d = 0.0; d <= reach && n < readTop.length; d += step) {
             int top = Integer.MIN_VALUE;
-            for (int k = -1; k <= 1; k++) {
-                double x = scanX + ux * d - uz * half * k, z = scanZ + uz * d + ux * half * k;
+            for (int k = -2; k <= 2; k++) {
+                if (d < half + 1.0 && k == 0)
+                    continue;                       // the column under its own middle is the ground it flies over
+                double x = scanX + ux * d - uz * side * k * 0.5, z = scanZ + uz * d + ux * side * k * 0.5;
                 top = Math.max(top, mob.level().getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)));
             }
             readTop[n] = top;
-            readDist[n++] = d;
+            readDist[n++] = Math.max(d, half + 0.5);   // beside it: a top there needs the climb at once
         }
         boolean fits = true;
         for (int i = 0; i < n; i++) {
@@ -395,6 +416,12 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 }
             }
         return false;
+    }
+
+    /** Something stands over its back: its column's top is above its head (a roof, an overhang, a bridge). */
+    private boolean underCover() {
+        int top = mob.level().getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(mob.getX()), Mth.floor(mob.getZ()));
+        return top > mob.getY() + mob.getBbHeight();
     }
 
     /**
