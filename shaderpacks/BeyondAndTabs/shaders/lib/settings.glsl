@@ -90,7 +90,10 @@ const float GRASS_SHARPNESS_SHARE = 0.4;
 // Light pass 11: 1.26 -> 1.30. Measured on the pass-10 stills: the 5000 lawn fell 0.413 -> 0.355 against pass 9, the
 // drop uniform across the frame and in the warm channels only (top 30%: (90, 129, 55) -> (79, 123, 59)) - a cloud
 // shadow over the frame, cooled by the shade tint (now off the cloud). Clear sky at 1.30: ~0.43
-const float LIGHT_OPEN_GROUND = 1.30;
+// Light pass 12: 1.30 -> 1.45. Measured on the pass-11 stills (meas.py's lawn boxes, a clear frame): 0.415 / 0.391 /
+// 0.396 at 1.30; 1.45 is x1.05 on screen, ~0.42. The rest of the target's 0.44 is the albedo's (the tinted lawn albedo
+// ~0.37): ~+5% there, for the texture side
+const float LIGHT_OPEN_GROUND = 1.45;
 // the sky's share of that light: a cast shadow on open ground keeps this much of the sunlit ground's light (was ~0.41,
 // on screen ~0.65 of the lit lawn; now ~0.78 on screen). Shadows lift without the sun losing its direction
 const float SHADOW_FILL_SHARE = 0.62;
@@ -117,8 +120,10 @@ const float GROUND_ALBEDO = 0.35;              // light pass 11: 0.40 -> 0.35 (w
 // texels (lib/shadow.glsl), so the 12 jittered taps always span more than a texel. A 2-3 block caster's edge
 // ~3.4 px at rts_close, a 5-block one's ~5.4 px; t11800's long shadows (a 3-block caster's tip ~13 blocks along the
 // light) ~0.18 block: ~6 px at the default zoom, ~12 at rts_close
-const float SUN_SPREAD = 0.014;
-const float PENUMBRA_MIN_BLOCKS = 0.05;
+// Light pass 12 (critic: edges at 5000 hardened to ~3-6 px; target 8-10 at the default zoom, ~33 px a block): the
+// spread 0.014 -> 0.05 (a 5-block wall's edge ~0.25-0.3 block, ~8-10 px) and the floor 0.05 -> 0.10 block (~3 px)
+const float SUN_SPREAD = 0.05;
+const float PENUMBRA_MIN_BLOCKS = 0.10;
 // the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
 // never to a black crease (lib/ao.glsl)
 // Light pass 8 (the critic: the benchmark's one real advantage on the pad is the contact darkening at block feet;
@@ -150,7 +155,9 @@ const float S_CURVE_PIVOT = 0.42;
 const float S_CURVE_SLOPE = 0.08;
 const float S_CURVE_TOE = 0.0;
 const float S_CURVE_SLOPE_LOW = 0.32;
-const float S_CURVE_TOE_LOW = 0.36;
+// light pass 12: 0.36 -> 0.15 - t11800's shadows still measured (38, 54, 27) after pass 11's lift of SKY_LOW: the toe
+// crushed them back; target ~(45, 55, 30)
+const float S_CURVE_TOE_LOW = 0.15;
 // a perspective view's share of the low sun's curve at every hour (final.fsh, light pass 7)
 const float PERSPECTIVE_CURVE = 0.8;
 const float S_CURVE_LIFT_SPAN = 0.30;
@@ -179,7 +186,7 @@ const float DISPLAY_WHITE_PERSPECTIVE = 0.94;
 // (the light table's low row) the shoulder moves to DISPLAY_SHOULDER_LOW / DISPLAY_WHITE_LOW. A white top ~0.89
 // light pass 11: 0.80 / 0.925 -> 0.70 / 0.86 - quartz tops at t11800 0.92 against a 0.35 lawn read pasted on; ~0.82
 const float DISPLAY_SHOULDER_LOW = 0.70;
-const float DISPLAY_WHITE_LOW = 0.86;
+const float DISPLAY_WHITE_LOW = 0.83;          // light pass 12: 0.86 -> 0.83 (quartz top 0.867 -> ~0.82)
 const float WHITE_DESATURATE_PERSPECTIVE = 0.10;
 // Enchanted's glow (final.fsh) is a screen blend: it lifted every pixel near a white block by the same amount, so a
 // dark face beside a white top gained ~+0.09 - an albedo-independent floor on the darks (light pass 2). Its lift now
@@ -299,7 +306,9 @@ const float SHADE_TINT_LOW_CUT = 0.85;
 const float SKY_TWILIGHT_DIM = 0.45;
 // the sun's spread under a low sun, scaled up to 1 + this (lib/shadow.glsl gShadowSpread, light pass 9): t11800's
 // long shadows ~6 -> ~10 px at the tip at the default zoom
-const float LOW_SUN_SPREAD = 0.4;             // light pass 10: 0.8 -> 0.4 (target 6-8 px at the long tips)
+// light pass 12: 0.4 -> -0.5 - with SUN_SPREAD 0.05 for the day, the low sun's long shadows take half of it (a 3-block
+// caster's tip, 13 blocks along the light, ~11 px)
+const float LOW_SUN_SPREAD = -0.5;
 // the moon's light fades in between these depths of the sun under the horizon (sine), lib/light.glsl
 const float MOON_FADE_LO = 0.05;
 const float MOON_FADE_HI = 0.30;
@@ -322,7 +331,11 @@ const float SKY_LIGHT_FULL = 0.8;
 // light pass 11: 0.30 -> 0.70 (quartz at 5000: lit side 0.66-0.72, shaded 0.56-0.59; target 0.80 / 0.52, >= 1.5x).
 // Anchored on those stills: shaded ~0.53, lit ~0.76, ~1.45x - the sky toward the sun and the sunlit ground's bounce
 // carry the side split
-const float FILL_DIRECTION = 0.70;
+// Light pass 12: 0.70 -> 0.10, with WALL_FILL 0.40 and plain N.L on walls (lib/light.glsl). Measured on the pass-11
+// stills at 5000 (meas.py's boxes; the sun-lit south face is the right one): quartz top 0.955, south 0.845, west 0.686.
+// Scaled from those: west (fill only) ~0.53, south (N.L 0.49 of the sun + its fill) ~0.78, the top unchanged
+const float FILL_DIRECTION = 0.10;
+const float WALL_FILL = 0.40;
 // the share of the occlusion (vertex and material AO) the ground's bounce takes (lib/light.glsl skyFill, light pass 7)
 const float BOUNCE_AO = 0.35;
 // how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square

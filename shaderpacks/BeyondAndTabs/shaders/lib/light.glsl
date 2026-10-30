@@ -44,7 +44,8 @@ const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 // ((0.74, 0.70, 0.80) x 0.17 before). Model at t11800: a cast shadow ~0.13 -> ~0.16, the ratio ~2.9 -> ~2.4:1
 // Light pass 10: olive-gold and more of it ((0.82, 0.74, 0.70) x 0.24 before): t11800's shadow / lit ~0.6 on screen
 // Light pass 11: t11800's shadows measured (34, 50, 23), target ~(45, 55, 30): redder and ~1.4x of it
-const vec3 SKY_LOW = vec3(1.00, 0.80, 0.45) * 0.50;
+// light pass 12: redder (1.00, 0.80, 0.45) -> (1.00, 0.75, 0.40) and x0.50 -> x0.55, toward the olive ~(45, 55, 30)
+const vec3 SKY_LOW = vec3(1.00, 0.75, 0.40) * 0.55;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -103,7 +104,9 @@ vec2 lightLevels(vec2 lm) {
 // as nothing), and the terminator on round shapes is softer. The grass rakes harder as the sun sinks: sunFacingRaked
 float sunFacing(vec3 n, vec3 l) {
     float ndl = max(dot(n, l), 0.0);
-    return mix(ndl, sqrt(ndl), 0.5);
+    // light pass 12: the easing is for faces looking up (and round shapes); a wall takes plain N.L, so a side the sun
+    // grazes reads as grazed, not half lit
+    return mix(ndl, sqrt(ndl), 0.5 * clamp(dot(n, normalize(upPosition)), 0.0, 1.0));
 }
 
 // 0..1: how low the sun is (the light table's low row; 0 by night)
@@ -163,12 +166,15 @@ vec3 shadeTint(float sunLit, float upness) {
 // horizontal part of the normal along the horizontal direction to the light; 1 for tops, bottoms and a sun overhead
 float fillDirection(vec3 n) {
     vec3 up = normalize(upPosition);
+    // and the walls' share of the fill (WALL_FILL, light pass 12): pass 11's 0.70 lean took both of quartz's sides into
+    // the shoulder (0.85 / 0.69 against a 0.95 top); faces looking sideways or down get WALL_FILL of the fill
+    float wall = mix(WALL_FILL, 1.0, clamp(dot(n, up), 0.0, 1.0));
     vec3 l = normalize(shadowLightPosition);
     vec3 lh = l - up * dot(l, up);
     if (dot(lh, lh) < 1e-6)
-        return 1.0;
+        return wall;
     vec3 nh = n - up * dot(n, up);
-    return 1.0 + FILL_DIRECTION * dot(nh, normalize(lh));
+    return wall * (1.0 + FILL_DIRECTION * dot(nh, normalize(lh)));
 }
 
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,

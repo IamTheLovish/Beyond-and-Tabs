@@ -43,10 +43,18 @@ void main() {
 #endif
         if (lower || upper) {
             // light pass 9: a plant's shadow caster is drawn smaller than the plant (PLANT_SHADOW_SHRINK across, toward
-            // its block's centre; PLANT_SHADOW_HEIGHT of its height): pass 7's full sprite threw a splat as big as the
-            // tuft, pass 8's thinning removed it altogether. A solid, smaller shadow, offset in the sun's direction
+            // its block's centre; PLANT_SHADOW_HEIGHT of its height). Light pass 12: and turned to face the light - the
+            // shadow probe showed each tuft casting a thin X, its two crossed quads seen edge-on from the sun. Both
+            // quads become one card square to the light's horizontal direction, so the sprite's whole silhouette casts
             vec2 centre = floor(world.xz) + 0.5;
-            offset.xz += (centre - world.xz) * (1.0 - PLANT_SHADOW_SHRINK);
+            vec2 o = world.xz - centre;
+            vec3 lightDir = mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0);
+            vec2 lh = lightDir.xz;
+            vec2 across = dot(lh, lh) > 1e-6 ? normalize(vec2(-lh.y, lh.x)) : vec2(1.0, 0.0);
+            // which end of its quad a vertex is: crossed quads run along the two diagonals
+            float end = abs(o.x + o.y) > abs(o.x - o.y) ? sign(o.x + o.y) : sign(o.x - o.y);
+            vec2 turned = across * (end * length(o) * PLANT_SHADOW_SHRINK);
+            offset.xz += centre + turned - world.xz;
             float foot = floor(world.y + 0.01);
             offset.y += (foot - world.y) * (lower ? 1.0 - PLANT_SHADOW_HEIGHT : 0.0);
         }

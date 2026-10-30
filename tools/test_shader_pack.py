@@ -138,7 +138,8 @@ class ShaderPack(unittest.TestCase):
         # with the S-curve, the meadow and pass 4 on top the pass-4 noon stills measured the lit lawn at 0.45-0.47. The
         # target is the lawn, so the band follows it: 1.05-1.20 (1.12 takes 0.46 back to ~0.42 through the curve)
         # light pass 10: up to 1.30 (the 5000 lawn read 0.40 at 1.20; 1.26 now)
-        self.assertTrue(1.05 <= total <= 1.30, total)
+        # light pass 12: up to 1.50 (measured: the clear 5000 lawn 0.40 at 1.30; 1.45 now)
+        self.assertTrue(1.05 <= total <= 1.50, total)
         self.assertIn("SUN_TINT_HIGH\n    * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND", light)
         self.assertIn("SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND", light)
         # the shadow light is cooler than the lit light (the sky's tint against the sun's): blue over green
@@ -175,25 +176,25 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 3): "the contact 1-2.5 px at rts_close" (PENUMBRA_MIN_BLOCKS 0.03). In game that edge
         # was ~0 px, a razor that showed the shadow map's texels as stair-steps (critic 6.5/10, N_s2_blob); the target
         # is now 2-4 px at the contact too, and never under 1.5 shadow texels of filter radius (no stair-steps)
-        close = 67.0
-        along = 1.0 / math.sin(math.radians(60.0))            # blocks along the light per block of caster height
-        contact = _const("PENUMBRA_MIN_BLOCKS") * close
-        self.assertTrue(2.0 <= contact <= 4.0, contact)
-        # Retired pin (light pass 7): ">= 1.5 shadow texels" - with the map at 4096 one texel is ~1 px at the default
-        # zoom: the RTS filter's floor is 1 texel (an edge <= 2 px), a perspective view's 2 (its coarse near texels)
+        # Retired pins (light pass 12): "the contact 2-4 px at rts_close", "2-3 block casters 2-4 px at rts_close", "a
+        # 5-block caster <= 7 px", "t11800's 3-block tip 6-10 px with the day's spread". The critic measured the 5000
+        # edges at ~3-6 px against the benchmark's ~8 and asked for 8-10 px at the default zoom (~33 px a block); the low
+        # sun's long shadows take half the spread (LOW_SUN_SPREAD -0.5)
+        px = 33.0
+        along = 1.0 / math.sin(math.radians(58.0))            # day time 5000
+        contact = _const("PENUMBRA_MIN_BLOCKS") * px
+        self.assertTrue(2.5 <= contact <= 4.5, contact)
         shadow_src = _read("lib", "shadow.glsl")
         self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS", shadow_src), 1.0)
         self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS_PERSPECTIVE", shadow_src), 2.0)
-        # t11800's long shadows (sun ~13 degrees up): a 3-block caster's tip, 6-10 px at the default zoom (~33 px)
-        tip = 3.0 / math.sin(math.radians(13.0)) * _const("SUN_SPREAD") * 33.0
-        self.assertTrue(6.0 <= tip <= 10.0, tip)
 
-        def edge(height):
-            return max(height * along * _const("SUN_SPREAD"), _const("PENUMBRA_MIN_BLOCKS")) * close
+        def edge(height, spread=1.0):
+            return max(height * along * _const("SUN_SPREAD") * spread, _const("PENUMBRA_MIN_BLOCKS")) * px
 
-        self.assertTrue(2.0 <= edge(2.0) <= 4.0, edge(2.0))
-        self.assertTrue(2.0 <= edge(3.0) <= 4.0, edge(3.0))
-        self.assertTrue(edge(5.0) <= 7.0, edge(5.0))
+        self.assertTrue(7.0 <= edge(5.0) <= 11.0, edge(5.0))  # a 5-block wall at 5000
+        low = 1.0 + _const("LOW_SUN_SPREAD")
+        tip = 3.0 / math.sin(math.radians(13.0)) * _const("SUN_SPREAD") * low * px
+        self.assertTrue(8.0 <= tip <= 14.0, tip)
         self.assertLess(edge(2.0), edge(5.0))                  # widening with the blocker's distance
         shadow = _read("lib", "shadow.glsl")
         self.assertEqual(shadow.count("shortfall * length(o)"), 2)
@@ -253,7 +254,8 @@ class ShaderPack(unittest.TestCase):
             self.assertAlmostEqual(_s_curve(pivot, low=low), pivot, places=6)
         # the low sun: pass 2's pins
         self.assertTrue(0.70 <= _s_curve(0.33, low=1.0) / pivot <= 0.75, _s_curve(0.33, low=1.0))
-        self.assertLessEqual(_s_curve(0.27, low=1.0), 0.23)
+        # light pass 12: the low sun's toe 0.36 -> 0.15 (its shadows were crushed back): <= 0.24
+        self.assertLessEqual(_s_curve(0.27, low=1.0), 0.24)
         # the day: black concrete (~0.16 before the curve) ~0.15, darks barely moved, the lawn's grain at most +10%
         self.assertTrue(0.145 <= _s_curve(0.16) <= 0.16, _s_curve(0.16))
         self.assertGreaterEqual(_s_curve(0.30), 0.285)
@@ -433,7 +435,10 @@ class ShaderPack(unittest.TestCase):
         # azimuth against one turned away >= 1.5x of fill, tops untouched
         d = _const("FILL_DIRECTION")
         # light pass 9: 0.30 -> 0.20 (with a stronger ground bounce: the shaded sides read black), still >= 1.45x
-        self.assertGreaterEqual((1.0 + d) / (1.0 - d), 1.45)
+        # Retired pin (light pass 12): ">= 1.45x" - pass 11's 0.70 lean took both of quartz's sides into the shoulder;
+        # the sides now part by plain N.L, the walls' fill at WALL_FILL; the lean only a hint (1.1-1.5x)
+        self.assertTrue(1.1 <= (1.0 + d) / (1.0 - d) <= 1.5)
+        self.assertTrue(0.3 <= _const("WALL_FILL") <= 0.6)
         # Retired pin (light pass 11): "FILL_DIRECTION <= 0.4" - with the sun on one visible face the side split stayed
         # 0.66-0.72 against 0.56-0.59 on quartz (target 0.80 / 0.52); the fill's direction carries most of it now
         self.assertLessEqual(d, 0.8)
@@ -530,6 +535,10 @@ class ShaderPack(unittest.TestCase):
         self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define SHADOW_PROBE 0 // \[0 1\]")
         self.assertIn("plantCaster > 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(1.0)", _read("shadow.fsh"))
         self.assertGreaterEqual(_const("CLOUD_DARKEST", _read("lib", "clouds.glsl")), 0.8)
+        # light pass 12: plant casters turned square to the light (the probe: each tuft cast a thin X), walls lit by
+        # plain N.L
+        self.assertIn("vec2 turned = across * (end * length(o) * PLANT_SHADOW_SHRINK);", _read("shadow.vsh"))
+        self.assertIn("mix(ndl, sqrt(ndl), 0.5 * clamp(dot(n, normalize(upPosition)), 0.0, 1.0))", _read("lib", "light.glsl"))
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted
