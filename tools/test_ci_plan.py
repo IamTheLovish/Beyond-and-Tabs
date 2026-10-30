@@ -10,6 +10,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(__file__))
 import ci_plan  # noqa: E402
 
+NL = chr(10)
+
 
 class SkipsGameTests(unittest.TestCase):
     def test_docs_still_skip(self):
@@ -26,6 +28,22 @@ class SkipsGameTests(unittest.TestCase):
                   ".github/workflows/build.yml", "design/units.json", "pack/INSTALL-for-testers.txt",
                   "installers/x.go", "src/installer/x.java"]:
             self.assertFalse(ci_plan.is_doc(p), p)
+
+
+class CompileOnly(unittest.TestCase):
+    """[compile-only] on a tests-only head: jar + JUnit, no GameTests (the red flake-stress run proves the tests)."""
+    def test_tag_on_a_pull_request_head(self):
+        self.assertTrue(ci_plan.compile_only("pull_request", "Hero marker: GameTest first [compile-only]" + NL + NL + "body"))
+        self.assertTrue(ci_plan.compile_only("pull_request", "Tests first" + NL + NL + "[compile-only]" + NL + "Co-Authored-By: x"))
+
+    def test_no_tag_runs_everything(self):
+        for m in ["Hero marker: the fix", "", None, "compile-only without brackets", "[compile only]"]:
+            self.assertFalse(ci_plan.compile_only("pull_request", m), m)
+
+    def test_never_on_main_or_by_hand(self):
+        # a squash message on main can quote a PR's tagged commit; main and manual runs always run the suite
+        for ev in ["push", "workflow_dispatch", "", None]:
+            self.assertFalse(ci_plan.compile_only(ev, "Squash of #400" + NL + NL + "* Tests first [compile-only]"), ev)
 
 
 if __name__ == "__main__":

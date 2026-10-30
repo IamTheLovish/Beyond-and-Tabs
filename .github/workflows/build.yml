@@ -127,6 +127,8 @@ jobs:
   # What this run needs to test (tools/ci_plan.py): `code` = anything outside docs changed, so the GameTests (jobs bar and
   # bar-tests) run; a docs-only change skips them (skipped counts as passing for ci_wait; nothing new to publish). The
   # fast `build` checks always run. `matrix` = the shard numbers from the SHARD_n lines above. Unsure -> code.
+  # `code` = compile: a PR head commit tagged [compile-only] (a tests-only head before its red run): job bar builds the jar
+  # and runs JUnit, no GameTest runs, and job compile-only fails on purpose - such a head is never mergeable.
   # Ruff on the Python tools (bug-finding rules only, ruff.toml): seconds, so a script bug never costs a build.
   # On a PR it only does work when tools/ or ruff.toml changed; pushes to main always lint.
   ruff:
@@ -277,6 +279,7 @@ jobs:
           path: bar/build/libs/*.jar
           retention-days: 3
       - name: Headless smoke tests on a real server, shard 1 of ${{ needs.changes.outputs.shards }} (everything the SHARD_n lists do not name)
+        if: needs.changes.outputs.code != 'compile'   # a [compile-only] head: the jar and JUnit above are all it runs
         working-directory: bar
         run: |
           # shard 1 skips every other shard's list (all SHARD_n variables of the env block above)
@@ -354,6 +357,19 @@ jobs:
           path: shard-report.txt
           retention-days: 3
           if-no-files-found: warn
+
+  # a [compile-only] head (tools/ci_plan.py): bar compiled the jar and ran JUnit, bar-tests and bar's GameTest step were
+  # skipped - and skipped counts as green for ci_wait, merge_pr and the Command Center merger. This job fails on purpose
+  # so the head reads red to all of them: it proves the tests compile, never that anything passes. Push again (the
+  # fix, a main merge, or an empty commit without the tag) for the full suite.
+  compile-only:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code == 'compile' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::[compile-only] head: GameTests not run - not mergeable. Job bar shows whether it compiles; the full suite runs on the next push without the tag."
+          exit 1
 
   # every test ran exactly once: the shards' test lists, side by side (tools/gametest_audit.py). Cheap (seconds).
   bar-audit:
