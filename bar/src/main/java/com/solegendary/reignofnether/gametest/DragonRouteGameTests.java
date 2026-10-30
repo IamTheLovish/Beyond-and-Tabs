@@ -13,6 +13,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
@@ -26,9 +27,9 @@ import java.util.List;
  * (stop-go), and with the way up shut too (an overhang) it waited, the move goal re-issued the order next tick and it
  * pressed into the wall again - for good.
  *
- * lovish (Oct 30) on how: "increase max flying high by a bit then go around if it cant fly over that new max". A
- * dragon cruises {@code 10} over the ground at its point and may climb at most {@link #HEADROOM} more to cross what
- * is in its way; anything taller it flies round.
+ * lovish (Oct 30) on how: "increase max flying high by a bit then go around if it cant fly over that new max", and
+ * then "Ground under the dragon": a dragon may climb to {@link #CEILING} over whatever is below it right now (it climbs
+ * over hills and towers on the way) and flies round only what stands taller than that.
  *
  * Each test flies one dragon down a 56 x 24 glass course far from the grid (its chunks held): sent over a wall under
  * that ceiling it must arrive in time, never touch it, keep its way on (no stop-go) and never rise past the ceiling;
@@ -46,9 +47,22 @@ public class DragonRouteGameTests {
     /** The wall's top surface above the floor (the dragon starts at its hover height, ten over the floor): its feet
      *  must rise 5 blocks to cross it, under the ceiling. */
     static final int WALL_TOP = 14;
-    /** How far above its flight height (10 over the ground at its point) a dragon may climb to cross something; the
-     *  tests allow a block over it for the ease out of the climb. */
-    static final double HEADROOM = 6.0;
+    /** How high over the ground right under it (the MOTION_BLOCKING heightmap of its column) a dragon may fly. */
+    static final double CEILING = 16.0;
+    /** How far past its ceiling a sample may read (float noise only: the climb must stop AT it, not a block over). */
+    static final double OVERSHOOT = 0.25;
+
+    /**
+     * How far the dragon's feet are over its ceiling right now while it CLIMBS (negative: under it, or not climbing: a
+     * dragon that flies off a cliff is over its new ceiling without having climbed past it).
+     */
+    static double overCeiling(Mob dragon) {
+        if (dragon.getDeltaMovement().y <= 0.005)
+            return -1e9;
+        int ground = dragon.level().getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(dragon.getX()),
+            (int) Math.floor(dragon.getZ()));
+        return dragon.getY() - (ground + CEILING);
+    }
     /** The tower's top surface above the floor: far over the ceiling (it must go round). */
     static final int TOWER_TOP = 40;
     /** Ticks after the order by which a dragon flown over the wall must be over its point (open air: ~260). */
@@ -153,7 +167,7 @@ public class DragonRouteGameTests {
                     if (touched[0]++ == 0)
                         touchedAt[0] = trace.get(trace.size() - 1);
                 }
-                highest[0] = Math.max(highest[0], dragon.getY() - PAD_Y);
+                highest[0] = Math.max(highest[0], overCeiling(dragon));
                 if (!Double.isNaN(last[0])) {
                     double speed = Math.hypot(x - last[0], z - last[1]);
                     if (speed >= 0.8 * cruise)
@@ -176,8 +190,9 @@ public class DragonRouteGameTests {
                     problems.add("not over its point " + ARRIVE_BY + " ticks after the order (" + tail(trace) + ")");
                 if (touched[0] > 0)
                     problems.add(touched[0] + " ticks against the wall, first " + touchedAt[0]);
-                if (highest[0] > 10.5 + HEADROOM + 1.0)
-                    problems.add(String.format("climbed to %.1f over the floor (ceiling %.1f)", highest[0], 10.5 + HEADROOM));
+                if (highest[0] > OVERSHOOT)
+                    problems.add(String.format("climbed %.2f blocks past its ceiling (%.0f over the ground under it)",
+                        highest[0], CEILING));
                 if (upToSpeed[0] == 0)
                     problems.add(String.format("never reached 0.8 x cruise (%.3f b/t)", cruise));
                 else if (slowest[0] < 0.6 * cruise)
@@ -222,7 +237,7 @@ public class DragonRouteGameTests {
                     if (touched[0]++ == 0)
                         touchedAt[0] = String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0());
                 }
-                highest[0] = Math.max(highest[0], dragon.getY() - PAD_Y);
+                highest[0] = Math.max(highest[0], overCeiling(dragon));
                 if (arrived[0] < 0 && Math.hypot(tx - x, tz - z) < 3.0)
                     arrived[0] = tick;
             });
@@ -234,9 +249,81 @@ public class DragonRouteGameTests {
                     problems.add("not over its point " + (ARRIVE_BY + 80) + " ticks after the order (" + tail(trace) + ")");
                 if (touched[0] > 0)
                     problems.add(touched[0] + " ticks against the tower, first " + touchedAt[0]);
-                if (highest[0] > 10.5 + HEADROOM + 1.0)
-                    problems.add(String.format("climbed to %.1f over the floor (ceiling %.1f) instead of going round",
-                        highest[0], 10.5 + HEADROOM));
+                if (highest[0] > OVERSHOOT)
+                    problems.add(String.format("climbed %.2f blocks past its ceiling (%.0f over the ground under it) "
+                        + "instead of going round", highest[0], CEILING));
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            } finally {
+                dragon.discard();
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------ from high ground
+
+    /**
+     * lovish's rule is the ground UNDER the dragon, not at its point: from a plateau 6 blocks over its point's ground, a
+     * tower 12 over the plateau (19 over the point's ground: past a ceiling counted from the point) is under its
+     * ceiling, so the Bone Dragon climbs over it in its stride - no detour (never 1.5 blocks off the line), never
+     * touching it, never under 0.6 x cruise once up to speed, never past its ceiling - and is over its point in time.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + ARRIVE_BY + 20, batch = BATCH)
+    public static void bone_dragon_climbs_a_tower_under_its_ceiling_from_high_ground(GameTestHelper helper) {
+        Course c = course(helper, 5);
+        stone(helper, c, 0, 1, 0, 39, 6, D - 1);              // the plateau: its top surface 7 over the floor
+        stone(helper, c, 24, 7, 9, 29, 18, 15);              // the tower on it: its top 12 over the plateau
+        Mob dragon = spawn(helper, EntityRegistrar.BONE_DRAGON_UNIT.get(), c.x0() + 6.5, PAD_Y + 17.5, c.z0() + 12.5, -90f);
+        BlockPos target = c.at(48, 0, 12);
+        double tx = target.getX() + 0.5, tz = target.getZ() + 0.5, lineZ = c.z0() + 12.5;
+        var ms = dragon.getAttribute(Attributes.MOVEMENT_SPEED);
+        double cruise = DragonFlight.cruiseSpeed(ms == null ? 0.0 : ms.getValue());
+        helper.runAfterDelay(SETUP, () -> ((Unit) dragon).getMoveGoal().setMoveTarget(target));
+        final double[] last = { Double.NaN, Double.NaN }, worst = { Double.MAX_VALUE, 0, -1e9 };   // slowest, off, over
+        final int[] arrived = { -1 }, touched = { 0 }, upToSpeed = { 0 };
+        final List<String> trace = new ArrayList<>();
+        for (int t = SETUP + 1; t <= SETUP + ARRIVE_BY; t++) {
+            final int tick = t - SETUP;
+            helper.runAfterDelay(t, () -> {
+                double x = dragon.getX(), z = dragon.getZ();
+                double flat = Math.hypot(tx - x, tz - z);
+                if (tick % 10 == 0)
+                    trace.add(String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0()));
+                if (dragon.horizontalCollision || (dragon.verticalCollision && !dragon.onGround()))
+                    touched[0]++;
+                worst[1] = Math.max(worst[1], Math.abs(z - lineZ));
+                worst[2] = Math.max(worst[2], overCeiling(dragon));
+                if (!Double.isNaN(last[0])) {
+                    double speed = Math.hypot(x - last[0], z - last[1]);
+                    if (speed >= 0.8 * cruise)
+                        upToSpeed[0] = 1;
+                    if (upToSpeed[0] == 1 && flat > 10)
+                        worst[0] = Math.min(worst[0], speed);
+                }
+                last[0] = x;
+                last[1] = z;
+                if (arrived[0] < 0 && flat < 3.0)
+                    arrived[0] = tick;
+            });
+        }
+        helper.runAfterDelay(SETUP + ARRIVE_BY + 2, () -> {
+            try {
+                List<String> problems = new ArrayList<>();
+                if (arrived[0] < 0)
+                    problems.add("not over its point " + ARRIVE_BY + " ticks after the order (" + tail(trace) + ")");
+                if (touched[0] > 0)
+                    problems.add(touched[0] + " ticks against the plateau or the tower");
+                if (worst[1] > 1.5)
+                    problems.add(String.format("went %.1f blocks off the line: a detour round a tower under its ceiling (%s)",
+                        worst[1], tail(trace)));
+                if (upToSpeed[0] == 0)
+                    problems.add(String.format("never reached 0.8 x cruise (%.3f b/t)", cruise));
+                else if (worst[0] < 0.6 * cruise)
+                    problems.add(String.format("slowed to %.3f b/t on the way (under 0.6 x cruise %.3f)", worst[0], cruise));
+                if (worst[2] > OVERSHOOT)
+                    problems.add(String.format("climbed %.2f blocks past its ceiling", worst[2]));
                 if (problems.isEmpty())
                     helper.succeed();
                 else
