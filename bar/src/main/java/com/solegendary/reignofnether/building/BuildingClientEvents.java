@@ -78,22 +78,6 @@ public class BuildingClientEvents {
 
     static final Minecraft MC = Minecraft.getInstance();
 
-    public static int getTotalPopulationSupply(String playerName) {
-        // BAR has no supply buildings - just a unit cap (lovish, Oct 10: "I'd rather there be no supply").
-        // Everyone gets the full cap (gamerule maxPopulation) from the start; houses only add energy now.
-        if (true) {
-            return GameruleClient.maxPopulation;
-        }
-
-        int totalPopulationSupply = 0;
-        for (BuildingPlacement building : buildings)
-            if (building.ownerName.equals(playerName) && building.isBuilt) {
-                totalPopulationSupply += building.getBuilding().cost.population;
-            }
-
-        return Math.min(GameruleClient.maxPopulation, totalPopulationSupply);
-    }
-
     // clientside buildings used for tracking position (for cursor selection); a BuildingList so its BuildingGrid
     // sees every change
     private static final BuildingList buildings = new BuildingList();

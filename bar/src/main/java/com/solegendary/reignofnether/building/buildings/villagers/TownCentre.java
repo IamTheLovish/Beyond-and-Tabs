@@ -92,7 +92,6 @@ public class TownCentre extends ProductionBuilding implements RangeIndicatorAddo
                 List.of(
                         Component.translatable("buildings.reignofnether.town_centre").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPop(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
                         Component.translatable("buildings.reignofnether.town_centre.tooltip1").getVisualOrderText()
                 ),

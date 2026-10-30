@@ -59,7 +59,7 @@ public class ZoglinProd extends ProductionItem implements IUnitProductionItem {
                 List.of(
                         Component.translatable("entity.reignofnether.zoglin_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPopAndTime(cost),
+                        ResourceCosts.getFormattedTime(cost),
                         fcs(""),
                         Component.translatable("entity.reignofnether.zoglin_unit.tooltip1").getVisualOrderText(),
                         Component.translatable("entity.reignofnether.zoglin_unit.tooltip2").getVisualOrderText()
