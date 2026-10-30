@@ -886,6 +886,9 @@ public class VoodooShamanGameTests {
      * Review round 2, B2: when the puppeteer's side is beaten, MatchOutcome.defeat hands its puppets back before it strips
      * the side (the strip takes every unit the side owns at that moment). SpiritPuppets.giveBackHeldBy, the call defeat
      * makes, returns the puppet to its owner alive, its record gone; another puppeteer's puppet is left alone.
+     * The takes go through the rule (SpiritPuppet.cast), not a click: an order finds its target by id (level.getEntity),
+     * and on a loaded runner the Vindicators' chunk is not always entity-ticking at tick 2 - green 40840131301 and
+     * 40952359012 each lost both takes once in 7-8 runs ("in level true/false"), the test's own setup, not its point.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
     public static void voodoo_spirit_puppets_of_a_beaten_puppeteer_go_back_before_its_strip(GameTestHelper helper) {
@@ -902,10 +905,10 @@ public class VoodooShamanGameTests {
         helper.runAfterDelay(2, () -> {
             List<String> problems = new ArrayList<>();
             try {
-                castAt(helper, beaten, UnitAction.SPIRIT_PUPPET, foe);
+                SpiritPuppet.cast(helper.getLevel(), beaten, a, foe, true);
                 if (!a.equals(((Unit) foe).getOwnerName()))
                     problems.add("the beaten puppeteer's take failed, the test lost its point (" + takeState(helper, beaten, foe) + ")");
-                castAt(helper, other, UnitAction.SPIRIT_PUPPET, foe2);
+                SpiritPuppet.cast(helper.getLevel(), other, c, foe2, true);
                 boolean took2 = c.equals(((Unit) foe2).getOwnerName());
                 if (!took2)
                     problems.add("the other puppeteer's take failed, the test lost its point (" + takeState(helper, other, foe2) + ")");
