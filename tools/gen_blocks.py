@@ -750,8 +750,9 @@ def m_gravel_r25(F, n):
     rounded pebbles, ~2-4 cm: two sizes of soft-domed stones packed together, each its own grey (a few warm, a few
     dark), shaded rounder than outlined - the gaps between them a soft shadow, not a black grid."""
     rng = F.rng
-    f1, f2, idx, k = F.voronoi(260, 1.0)                 # ~8 texels: the larger pebbles
-    g1, g2, gidx, gk = F.voronoi(700, 1.0)               # ~5 texels: the small ones
+    # r31 (art director: the speckle too fine - 2-3 px features at the RTS camera are fine): larger pebbles
+    f1, f2, idx, k = F.voronoi(180, 1.0)                 # ~9.5 texels: the larger pebbles
+    g1, g2, gidx, gk = F.voronoi(420, 1.0)               # ~6 texels: the small ones
     big = (rng.random(k) < 0.5)[idx]
     a1, a2 = np.where(big, f1, g1), np.where(big, f2, g2)
     pid = np.where(big, idx, gidx + k)
@@ -760,13 +761,13 @@ def m_gravel_r25(F, n):
     kind = rng.random(k + gk)
     base = np.where(kind[pid][..., None] < 0.6, np.array([0.50, 0.49, 0.48]),
                     np.where(kind[pid][..., None] < 0.85, np.array([0.52, 0.48, 0.44]), np.array([0.40, 0.39, 0.39])))
-    H = 0.3 + 0.5 * np.sqrt(dome) + 0.02 * F.noise(24, 64, 0.2)
+    H = 0.3 + 0.5 * np.sqrt(dome) + 0.015 * F.noise(16, 48, 0.2)
     shade = (0.85 + 0.25 * tone[pid]) * (0.72 + 0.28 * np.sqrt(dome))
     return H, np.clip(base * shade[..., None], 0, 1)
 
 
 def m_sand(F, n, base=(0.86, 0.78, 0.58)):
-    grains = F.noise(16, 40, 0.0)
+    grains = F.noise(10, 28, 0.0)                        # r31: coarser (the speckle was too fine at RTS zoom)
     ripple_ph = F.v * 2 * math.pi * 5 + 1.2 * F.noise(1, 3, 0.5)
     ripples = np.sin(ripple_ph)
     H = 0.6 + 0.06 * ripples + 0.08 * grains + 0.05 * F.fbm(3, 3)
@@ -2249,7 +2250,7 @@ def m_smooth_stone(F, n):
     # from grain at 1/20-1/6 block and a few pores, the clouding stays in the colour
     cloud = F.fbm(2, 4, 0.6)
     grain = F.noise(6, 20, 0.4)                          # 1/20-1/6 block: survives the mipmaps (finer read as pitting)
-    pores = smoothstep(1.4, 2.4, F.noise(16, 48, 0.0))
+    pores = smoothstep(1.4, 2.4, F.noise(10, 30, 0.0))   # r31: larger pores (the speckle was too fine at RTS zoom)
     bev = frame(F, 0.04, 0.010)
     H = 0.4 + 0.45 * bev + 0.01 * cloud + 0.03 * grain - 0.03 * pores
     # r21: under the low warm sun 0.63 grey read as cream next to quartz - darker, a cool cast, the clouding carries the
