@@ -57,6 +57,8 @@ public final class HeroBrain {
     public long followUpUntil;
     /** The hero's cast goal was busy last tick (HeroBot.everyTick: the order's walk resumes the tick a cast is done). */
     public boolean wasCasting;
+    /** The cast goal's cast the brain started itself (HeroCore's cast count then); a player's cast is never its own. */
+    public int aiCastSeq = -1;
     /** Where the current flight runs to (a bot's order that sweeps the hero along mid-flight is turned back to it). */
     @Nullable public net.minecraft.core.BlockPos fleeTo;
     /** The game tick the hero went to REST (a bot's hero goes back to its order after HeroBot.BOT_REST_TICKS). */

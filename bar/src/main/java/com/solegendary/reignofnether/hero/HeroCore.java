@@ -59,6 +59,8 @@ public final class HeroCore {
     // the one aimed cast in flight (FactionHeroAbility.use -> startCast)
     GenericTargetedSpellGoal castGoal;
     @Nullable FactionHeroAbility castGoalAbility;
+    /** Casts handed to the cast goal so far: the v2 brain notes the ones it started (HeroBot.everyTick). */
+    int castSeq = 0;
     int castChannel = 0;
 
     // timed effects
@@ -120,6 +122,7 @@ public final class HeroCore {
         GenericTargetedSpellGoal g = castGoal();
         g.stopExceptAnimations();
         castGoalAbility = ability;
+        castSeq++;
         castChannel = ability.spec.channelTicks;
         g.range = Math.max(1.5f, ability.range);
         g.setAbility(null);   // FactionHeroAbility.castNow pays the cooldown/mana, and only when the effect worked
