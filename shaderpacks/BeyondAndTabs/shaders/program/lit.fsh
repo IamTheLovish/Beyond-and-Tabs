@@ -179,6 +179,23 @@ void main() {
         }
         // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
         ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);
+    } else if (tinted < 0.5) {
+        // light pass 17: a cutout sprite no plant id names (lp16's neon sprites, green 236-252): its sprite's coverage
+        // from the mip-4 alpha; under PLANT_CUTOUT_COVER the plants' green saturation cap and luma cap
+        float cover = texture2D(texture, texcoord, lodBias + 4.0).a;
+        float cutout = (1.0 - smoothstep(PLANT_CUTOUT_COVER - 0.05, PLANT_CUTOUT_COVER, cover)) * (1.0 - tinted);
+        if (cutout > 0.0) {
+            float ptop = max(albedo.r, max(albedo.g, albedo.b));
+            float psat = (ptop - min(albedo.r, min(albedo.g, albedo.b))) / max(ptop, 1e-4);
+            float green = albedo.g >= ptop - 1e-4 ? 1.0 : 0.0;
+            vec3 calmed = mix(vec3(dot(albedo, LUMA)), albedo, min(1.0, PLANT_MAX_SAT / max(psat, 1e-4)));
+            albedo = mix(albedo, calmed, green * cutout);
+            float pl = plantLuma(albedo);
+            float pk = PLANT_LUMA_KNEE * PLANT_MAX_LUMA;
+            float pr = PLANT_MAX_LUMA - pk;
+            float pc = pl <= pk ? pl : pk + pr * (1.0 - exp(-(pl - pk) / pr));
+            albedo *= mix(1.0, pc / max(pl, 1e-4), cutout * green);   // green texels only: a torch's flame keeps its light
+        }
     }
 #endif
 
@@ -253,7 +270,19 @@ void main() {
     lightColours(sunColour, skyColour);
     sunColour *= cloud;
     gShadeGround = groundMaterial;
+    // light pass 19: on a top no sun reaches, the vertex AO stops at VERTEX_AO_SHADOW_FLOOR (the pad's grass between the
+    // cubes: a 0.78 shadow times the corner AO beside a block column read 0.61 of lit; plants keep their base AO)
+    {
+        float sunHere = clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0);
+        float upw = smoothstep(0.5, 0.9, dot(geomN, normalize(upPosition))) * (1.0 - foliage);
+        ao = mix(ao, max(ao, VERTEX_AO_SHADOW_FLOOR), (1.0 - sunHere) * upw);
+    }
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+#ifdef LIT_TERRAIN
+    // light pass 19: the biome-tinted ground (grass, tufts, leaves) under the low sun takes LOW_SUN_GRASS of its light,
+    // full from t11800's height (lowSunFull), nothing at 5000: lawn L1's brighter albedo put t11800's lawn at 0.334
+    light *= mix(1.0, LOW_SUN_GRASS, lowSunFull() * tinted);
+#endif
     // near-white faces turned from up lose the light's colour (WHITE_WALL_NEUTRAL, light pass 3): white sides read
     // white, not cream, while the ground keeps the warm sun
     {
@@ -268,8 +297,21 @@ void main() {
         light = mix(light, vec3(dot(light, LUMA)), neutral * whiteness);
         // light pass 16: on a side the sun does not reach, a near-white albedo loses WHITE_SHADE_NEUTRAL of its own cast
         // under a high sun, so the shade of every white wall is the sky's cool (cream and blue-white quartz alike)
-        float shadeSide = side * (1.0 - clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0)) * highSunTint();
+        // light pass 18: the sun's share read by WHITE_SHADE_SUN_* (a grazing morning sun no longer makes it a lit side)
+        float sunOnSide = clamp(shadow * smoothstep(WHITE_SHADE_SUN_LO, WHITE_SHADE_SUN_HI, facing), 0.0, 1.0);
+        float shadeSide = side * (1.0 - sunOnSide) * highSunTint();
         lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
+        // light pass 17: and its light to the same cool on every block (the warm bounce's share varies with the AO)
+        light = mix(light, WHITE_SHADE_COOL * dot(light, LUMA), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
+#if SHADE_PROBE_WHITE == 1
+        if (WHITE_SHADE_NEUTRAL * whiteness * shadeSide > 0.5) {
+            lin = vec3(1.0, 0.0, 1.0);
+            light = vec3(1.0);
+        } else if (whiteness > 0.5 && side > 0.5) {
+            lin = vec3(1.0, 1.0, 0.0);
+            light = vec3(1.0);
+        }
+#endif
     }
     vec3 c = lin * light;
 #ifdef LIT_TERRAIN

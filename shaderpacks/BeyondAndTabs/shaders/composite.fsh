@@ -273,8 +273,11 @@ void main() {
         // depthtex1: the depth without water, the one the occlusion was found at
         if (skyShare > 0.0) {
             // the sky's share fully, CONTACT_SUN_SHARE of the rest
-            lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare))
-                * (1.0 - occlusionAt(uv * vec2(viewWidth, viewHeight), -viewPosAt(uv, texture2D(depthtex1, uv).r).z));
+            float occ = occlusionAt(uv * vec2(viewWidth, viewHeight), -viewPosAt(uv, texture2D(depthtex1, uv).r).z);
+            // light pass 18: no deeper than AO_SHADOW_FLOOR where no sun arrives (the sky's share past ~0.8), so a sun
+            // shadow beside a block is not darkened twice
+            occ = mix(occ, max(occ, AO_SHADOW_FLOOR), smoothstep(0.70, 0.85, skyShare));
+            lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare)) * (1.0 - occ);
             // and the short contact term at full resolution, on all the light (light pass 9)
             lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);
         }

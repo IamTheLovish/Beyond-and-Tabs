@@ -397,6 +397,10 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("float hl = plantLuma(held);", lit)
         self.assertIn("float pl = plantLuma(albedo);", lit)
         self.assertTrue(0.45 <= _const("PLANT_MAX_SAT") <= 0.6)
+        # light pass 17: any other cutout sprite (no plant id, no biome tint) by its mip-4 alpha gets the same caps on
+        # its green texels (lp16's neon sprites at green 236-252); solid blocks keep theirs
+        self.assertIn("float cover = texture2D(texture, texcoord, lodBias + 4.0).a;", lit)
+        self.assertTrue(0.8 <= _const("PLANT_CUTOUT_COVER") <= 0.95)
         particles = spc.expand(os.path.join(spc.SHADERS, "gbuffers_textured_lit.fsh"))
         self.assertIn("float shadow = sunShadow(playerPos", particles)
 
@@ -466,7 +470,10 @@ class ShaderPack(unittest.TestCase):
         # light pass 16: under a high sun the ground keeps only a little of SHADE_TINT (lp15's 5000 shadows on the lawn
         # read teal, hue 114-125, blue 61-67; target hue 85-95, blue <= 58), faded in above t11800's sine (0.232), so
         # the low sun's tint is untouched
-        self.assertTrue(0.0 <= _const("SHADE_TINT_GROUND_HIGH") <= 0.2)
+        # Retired pin (light pass 17): "SHADE_TINT_GROUND_HIGH 0-0.2" - at 0.10 lp16's shadows took exactly the lit
+        # grass's hue and saturation (76, 0.58; Complementary's shadow sat 0.46 against 0.57). Cooler and less
+        # saturated than lit, never teal: 0.25-0.55
+        self.assertTrue(0.25 <= _const("SHADE_TINT_GROUND_HIGH") <= 0.55)
         self.assertGreater(_const("SHADE_TINT_HIGH_LO"), math.sin(math.radians(13.4)))
         self.assertLess(_const("SHADE_TINT_HIGH_HI"), 0.84)
         self.assertIn("mix(vec3(1.0), SHADE_TINT, SHADE_TINT_GROUND_HIGH), highSunTint());", _read("lib", "light.glsl"))
@@ -639,6 +646,31 @@ class ShaderPack(unittest.TestCase):
         # by texture; target +15..+25 on every block)
         self.assertTrue(0.5 <= _const("WHITE_SHADE_NEUTRAL") <= 1.0)
         self.assertIn("lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);", lit)
+        # light pass 17: and the light there goes to one cool (lp16: b-r +6..+9 on 4 of 5 white sides - quartz's albedo
+        # is already neutral, the cast was the light's), luma 1, blue over green over red
+        settings = _read("lib", "settings.glsl")
+        cool = [float(x) for x in re.search(r"const vec3 WHITE_SHADE_COOL = vec3\(([^)]*)\);", settings).group(1).split(",")]
+        self.assertAlmostEqual(sum(a * b for a, b in zip(cool, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)
+        self.assertTrue(cool[2] > cool[1] > cool[0], cool)
+        self.assertIn("light = mix(light, WHITE_SHADE_COOL * dot(light, LUMA), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);", lit)
+        # light pass 18: the shade side read from the sun's facing over WHITE_SHADE_SUN_* (the cubes' east face, grazed at
+        # N.L ~0.26 by the 5000 sun, counted as fully sunlit under min(facing * 4, 1) and never took the cool); the probe
+        # ships off
+        self.assertIn("smoothstep(WHITE_SHADE_SUN_LO, WHITE_SHADE_SUN_HI, facing)", lit)
+        self.assertTrue(0.26 < _const("WHITE_SHADE_SUN_HI") <= 0.48)
+        self.assertLess(_const("WHITE_SHADE_SUN_LO"), 0.26)
+        self.assertIn("#define SHADE_PROBE_WHITE 0", settings)
+        # light pass 18: the broad AO stops at AO_SHADOW_FLOOR where no sun arrives (lp17's cube shadows on the pad 0.55-
+        # 0.62 of lit against 0.78 on open lawn); the contact crease stays
+        self.assertTrue(0.88 <= _const("AO_SHADOW_FLOOR") <= 0.97)
+        self.assertGreater(_const("AO_SHADOW_FLOOR"), _const("CONTACT_AO_FLOOR"))
+        self.assertIn("occ = mix(occ, max(occ, AO_SHADOW_FLOOR), smoothstep(0.70, 0.85, skyShare));", _read("composite.fsh"))
+        # light pass 19: the pad's shadow darkness was the vertex AO (AO_SHADOW_FLOOR a no-op in lp18): on a top no sun
+        # reaches it stops at VERTEX_AO_SHADOW_FLOOR; the biome-tinted ground takes LOW_SUN_GRASS under the low sun only
+        self.assertIn("ao = mix(ao, max(ao, VERTEX_AO_SHADOW_FLOOR), (1.0 - sunHere) * upw);", lit)
+        self.assertTrue(0.9 <= _const("VERTEX_AO_SHADOW_FLOOR") <= 1.0)
+        self.assertIn("light *= mix(1.0, LOW_SUN_GRASS, lowSunFull() * tinted);", lit)
+        self.assertTrue(0.7 <= _const("LOW_SUN_GRASS") <= 0.95)
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):

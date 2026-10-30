@@ -150,6 +150,18 @@ const float PENUMBRA_MIN_BLOCKS = 0.18;
 // top / side ratio of 3.3; the benchmark 1.9). The block feet's crease is the short contact term's job now
 // (composite.fsh contactOcclusion: CONTACT_RADIUS blocks, CONTACT_GAIN, never below CONTACT_FLOOR)
 const float CONTACT_AO_FLOOR = 0.85;
+// light pass 18: where no sun arrives (the sky's share of the light past ~0.8) the broad occlusion stops at this
+// instead: lp17's cube shadows on the pad read 0.55-0.62 of the lit lawn against 0.78 for a shadow on open lawn - a
+// sun shadow next to a block took the 1.5-block AO (to 0.85) and the contact crease (to 0.75) on top of the shadow.
+// 0.78 x 0.93 = 0.73 of lit away from the foot; the contact crease (CONTACT_FLOOR) is kept at the foot
+const float AO_SHADOW_FLOOR = 0.93;
+// light pass 19: AO_SHADOW_FLOOR measured as a no-op (lp18 pad shadows 0.30 in both builds): the darkening is the
+// VERTEX AO (separateAo, glcolor.a), which takes the fill and so all of a shadow's light - the pad's grass between the
+// 2-high cube columns sits in their corner AO. On a top no sun reaches it stops here (lit.fsh)
+const float VERTEX_AO_SHADOW_FLOOR = 0.95;
+// light pass 19: the biome-tinted ground's light under the low sun (lit.fsh, by lowSunFull: 1 at t11800, 0 at 5000).
+// lawn L1 measured t11800's lawn 0.334 (LP17 0.300, Complementary 0.275); (0.30 / 0.334)^2.2 = 0.79
+const float LOW_SUN_GRASS = 0.80;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
 // light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
@@ -332,7 +344,11 @@ const float SHADE_TINT_LOW_CUT = 0.65;
 // shadows (casters off screen; the cube shadows on the pad measure the same, (48, 81, 48) hue 120): with the fill at
 // 0.62 of the light, the full tint turned every shadow on the lawn teal, (63, 108, 67) hue 114-125, blue 61-67 (the
 // chain model gives (63, 108, 68) for it). Model at 0.10: hue ~97 -> ~92-95 on screen, blue ~48-52, sat ~0.53
-const float SHADE_TINT_GROUND_HIGH = 0.10;
+// light pass 17: 0.10 -> 0.40 - lp16's real shadows (the cube slivers on the pad) took exactly the lit grass's hue and
+// saturation (76, 0.58), Complementary's shadow sat 0.46 against 0.57 lit. On screen the hue moves ~0.56x the model's
+// (lp15 at 1.0: model +57, measured +32; lp16 at 0.10: model +5, measured ~0). Model at 0.40 on lp16's lawn
+// (103, 128, 52): shadow hue +16, sat 0.47 -> on screen ~+9 (lit 80 -> ~89), sat ~0.48-0.50, never teal
+const float SHADE_TINT_GROUND_HIGH = 0.40;
 const float SHADE_TINT_HIGH_LO = 0.30;
 const float SHADE_TINT_HIGH_HI = 0.55;
 // the sky's fill dims toward this share as the sun sinks from 0.20 to 0.05 of its sine (lib/light.glsl, light pass 11):
@@ -396,7 +412,9 @@ const float WALL_FILL = 0.31;
 // light pass 16: 0.75 -> 1.20 - lp15 measured the white cubes' sun-lit sides 0.63-0.67 (lp14o 0.71-0.75, Complementary
 // 0.76), b-r -8..-14: the chain model puts that at ~2/3 of the sun the table gives a south wall (0.71 at 0.75). Model
 // 0.80 at 1.20, ~0.73-0.76 on screen with lp15's shortfall; tops, shaded sides and t11800 (lowSunFull) untouched
-const float SIDE_SUN = 1.20;
+// light pass 17: 1.20 -> 0.95 - lp16 measured the white sides 0.82-0.86 (model 0.80 at 1.20: lp15's shortfall was not
+// the pack's). Model 0.75 at 0.95, ~0.78-0.79 on screen with lp16's +0.04
+const float SIDE_SUN = 0.95;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
 // LOW_SUN_FULL_HI (light pass 13). SIDE_SUN's fade and the low shoulder (final.fsh) read it: the light table's own low
 // row (0.10-0.55) left t11800 only 0.80 low, so its whites' shoulder stopped at 0.86 (tops measured 0.87, target ~0.80)
@@ -441,7 +459,12 @@ const float FOLIAGE_LUMA_KNEE = 0.80;
 // And no plant's green texel past PLANT_MAX_SAT (flowers keep their petals: green hues only)
 const float PLANT_MAX_LUMA = 0.47;
 const float PLANT_LUMA_KNEE = 0.80;
-const float PLANT_MAX_SAT = 0.52;
+const float PLANT_MAX_SAT = 0.48;   // light pass 18: 0.52 -> 0.48 (lp17's untagged sprites sat p50 0.61, p90 0.63)
+// light pass 17: the same caps on any other cutout terrain sprite (lit.fsh: its mip-4 alpha under PLANT_CUTOUT_COVER,
+// not a plant id, not biome-tinted). lp16's neon sprites (green 236-252, luma 0.78-0.90, sat ~0.6) are no 10001
+// plant: the foliage path cannot pass ~0.66 display green after the caps; they are drawn with a sideways normal and
+// pulled down by nothing. Solid blocks (mip alpha 1) are untouched
+const float PLANT_CUTOUT_COVER = 0.90;
 // the grass's own texture in shade (lit.fsh, light pass 15): light multiplies the albedo, so a shadow keeps the lawn's
 // relative contrast and loses its absolute grain with its level (lp14o: high-pass sd 0.007 in shadow, 0.0175 lit; the
 // target >= 0.018 at 0.28-0.32). Where no sun arrives the grass's texel luma against its 8 x 8 neighbourhood (the
@@ -497,7 +520,31 @@ const float WHITE_WALL_NEUTRAL = 0.50;
 // light pass 16: and a near-white ALBEDO on a side the sun does not reach loses this share of its own cast under a high
 // sun (lit.fsh), so every white wall's shade is the sky's cool: lp15's quartz shade faces read b-r +22 on a blue-white
 // texture, +6..+8 on the creamy ones (the model: +19 / +5 at SHADE_TINT_WALL). Model at 0.8: +16..+21
-const float WHITE_SHADE_NEUTRAL = 0.80;
+// light pass 18: 0.80 -> 0.90, with the side's shade read from the sun's facing (WHITE_SHADE_SUN_*)
+const float WHITE_SHADE_NEUTRAL = 0.90;
+// light pass 18: how much sun a white side may take and still count as the shade side (lit.fsh). Pass 16-17's test was
+// the shade tint's min(facing * 4, 1): any face past N.L 0.25 counted as fully sunlit. The cubes' screen-left face is
+// the EAST face (it is the dark one at t11800, sun in the west; the screen-right one, south, is lit at both times), and
+// at 5000 the morning sun grazes it at N.L ~0.26: the cool never applied and WHITE_WALL_NEUTRAL greyed its light
+// instead (lp16 / lp17 b-r +6..+9, unchanged by either pass). Now the sun counts from 0.20 to 0.45 of N.L: the east
+// face (0.26) is ~0.86 shade, the south face (0.48) none
+const float WHITE_SHADE_SUN_LO = 0.20;
+const float WHITE_SHADE_SUN_HI = 0.45;
+// SHADE_PROBE_WHITE 1: magenta where a white side takes the cool (weight > 0.5), yellow where a white side (whiteness
+// and side > 0.5) does not - what the cubes' shade faces show answers whether the path runs
+#define SHADE_PROBE_WHITE 0 // [0 1]
+// light pass 17: and the LIGHT on such a side goes the same share to WHITE_SHADE_COOL at its own luma. lp16 kept b-r
+// +6..+9 on 4 of 5 white sides, +16 on one: the albedo neutral had nothing to take (gen_blocks paints quartz at sat
+// 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
+// ground bounce only BOUNCE_AO of it, so it varies by block. Model: +20.5 at a neutral 0.86 white, ~+18-20 with the
+// residual 0.2 of today's cast
+// light pass 19: (0.92, 1.005, 1.19) -> (0.90, 1.0025, 1.27). The probe (run 41143450711) showed the cool applied on
+// the right faces; it is spent after lit.fsh. A model of the whole chain for the east face (lp19/chain.py, east.py):
+// lit.fsh out b-r +12.4 at the old cool; the final glow from the white tops and lit sides beside it (GLOW 0.30, ~14 px)
+// adds near-neutral light, which drops the pixel under the grade's grey gate (GREY_GATE 0.03-0.10: no saturation or
+// vibrance) while the split tone's HIGHLIGHT_TINT (1.03, 1, 0.96) still warms it - +12.4 -> +9 at ~0.35 of the
+// glow estimate, the measured +9. Model with this cool: +16..+20 over glow 0.3-0.5
+const vec3 WHITE_SHADE_COOL = vec3(0.90, 1.0025, 1.27);
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;
