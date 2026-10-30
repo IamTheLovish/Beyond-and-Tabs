@@ -211,8 +211,9 @@ PILASTER = {   # plinth 6 proud x 0-16, torus 5, shaft 4 x 2-14, astragal 5, nec
                (0, 13, 10, 16, 16, 16)],
 }
 # (y0, y1, x0, x1, proud): a console that steps out AND widens to the top, its foot 6 px above the cell's bottom
-# (round-1 critic: four equal-width steps on the lintel's top read as timber knee braces between two beams)
-CORBEL_STEPS = [(6, 10, 5, 11, 4), (10, 13, 4, 12, 8), (13, 16, 3, 13, 12)]
+# (round-1 critic: four equal-width steps on the lintel's top read as timber knee braces between two beams; round 2:
+# steps 4 / 8 / 12 proud left the shaded side face slanting like a strut, so the foot is deep)
+CORBEL_STEPS = [(6, 10, 5, 11, 8), (10, 13, 4, 12, 10), (13, 16, 3, 13, 12)]
 COURSE = [(0, 4, 2), (4, 8, 4), (8, 12, 6)]          # the crown's brick steps
 COPING = [(12, 16, 8), (16, 18, 8)]                  # its coping; the rim above the cell stands over the shaft's top
 
@@ -229,8 +230,9 @@ def quoin(long_side):
 
 
 def corbel():
-    """A console: three steps out (4 / 8 / 12 proud) that widen as they rise (6 / 8 / 10 px), so it reads as a corbel
-    front-on too (an inverted stepped wedge), its foot clear of the row below; then up into the cornice's cell to the
+    """A console: three steps out (8 / 10 / 12 proud) that widen as they rise (6 / 8 / 10 px), so it reads as a corbel
+    front-on too (an inverted stepped wedge) and its shaded side stays a near-vertical edge (a carried mass, not a
+    strut), its foot clear of the row below; then up into the cornice's cell to the
     corona's soffit, 1 px behind its face: no free top under the cornice (a lone top read as loose debris in slice 1)."""
     corona = max(CORNICE, key=lambda layer: layer[2])
     boxes = [("all", (x0, y0, 16 - d, x1, y1, 16)) for y0, y1, x0, x1, d in CORBEL_STEPS]

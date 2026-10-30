@@ -343,16 +343,18 @@ class Quoin(unittest.TestCase):
 
 
 class Corbel(unittest.TestCase):
-    """The eave bracket: a console of three steps 4 / 8 / 12 proud that widen as they rise (6 / 8 / 10 px), its foot
+    """The eave bracket: a console of three steps 8 / 10 / 12 proud that widen as they rise (6 / 8 / 10 px), its foot
     6 px clear of the row below, then up into the cornice's cell to the corona's soffit, 1 px behind the corona's face
     - it carries the cornice, no free top to read as a loose block. (Round-1 critic, run 41039900270: the first
     profile - four equal 8 px steps from the cell's bottom - read front-on as timber knee braces standing on the
-    lintels; a front-on corbel reads by its widening, its foot clear of the lintel.)"""
+    lintels; a front-on corbel reads by its widening, its foot clear of the lintel. Round 2, eyes run 41050002570:
+    with steps 4 / 8 / 12 the shaded side face (luma 0.20-0.25 against the 0.40 stone) still slanted into a strut;
+    a deep foot keeps that edge near-vertical, a carried mass.)"""
 
     def test_a_console_that_widens_as_it_steps_out(self):
         p = profile("corbel_stone")
         self.assertNotIn(5, p)                                     # the foot clears the row below by 6 px
-        self.assertEqual([p[y][2] for y in range(6, 16)], [4] * 4 + [8] * 3 + [12] * 3)
+        self.assertEqual([p[y][2] for y in range(6, 16)], [8] * 4 + [10] * 3 + [12] * 3)
         self.assertEqual([p[y][1] - p[y][0] for y in (6, 10, 13)], [6, 8, 10])
         for y in range(6, 16):
             self.assertEqual(p[y][0] + p[y][1], 16, y)             # centred
