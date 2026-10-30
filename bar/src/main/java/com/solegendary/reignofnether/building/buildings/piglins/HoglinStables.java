@@ -37,7 +37,6 @@ public class HoglinStables extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.NETHER_BRICK_FENCE);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.RESEARCH_HOGLIN_CAVALRY, Keybindings.abilitySlot1);

@@ -46,7 +46,6 @@ public class Bastion extends ProductionBuilding implements GarrisonableBuildingA
         this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE_BRICKS);
         this.startingBlockTypes.add(Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 320d;
 
         this.productions.add(ProductionItems.RESEARCH_BRUTE_SHIELDS, Keybindings.abilitySlot1);

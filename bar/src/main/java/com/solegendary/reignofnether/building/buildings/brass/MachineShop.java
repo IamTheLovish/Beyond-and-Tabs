@@ -44,7 +44,6 @@ public class MachineShop extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE);
         this.startingBlockTypes.add(Blocks.DEEPSLATE_BRICKS);
 
-        this.explodeChance = 0.2f;
         this.buildTimeBlocks = 216;   // the shipped 216-block shop's build time; the art (tools/lab_machine_shop.py) has 417
         this.maxHealth = 150d;
 

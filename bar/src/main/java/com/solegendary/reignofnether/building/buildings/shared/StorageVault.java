@@ -65,7 +65,6 @@ public class StorageVault extends Building {
         this.energyStorage = energyStorage;
 
         // sturdier than a converter (30) but well short of a stockpile (95): raids that reach it should hurt
-        this.explodeChance = 0.4f;
         this.maxHealth = 60d;
         this.buildTimeBlocks = 31;   // the original 31-block strongroom's build time, for every faction's take
     }

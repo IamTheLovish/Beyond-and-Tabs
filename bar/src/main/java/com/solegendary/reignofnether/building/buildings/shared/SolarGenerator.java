@@ -51,26 +51,24 @@ public class SolarGenerator extends Building {
 
     /** The two jobs, with every number that tunes them. */
     public enum Kind {
-        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, 60, 150, 0), 20f, 120d, 0.1f, 90, false),
-        ADVANCED("Advanced Solar", "advanced_solar", ResourceCost.Building(0, 1500, 300, 0), 75f, 500d, 0.6f, 140, true);
+        BASIC("Solar Collector", "solar_collector", ResourceCost.Building(0, 60, 150, 0), 20f, 120d, 90, false),
+        ADVANCED("Advanced Solar", "advanced_solar", ResourceCost.Building(0, 1500, 300, 0), 75f, 500d, 140, true);
 
         public final String buildingName;
         public final String structureName;
         public final ResourceCost cost;
         public final float energyPerSecond;
         public final double maxHealth;
-        public final float explodeChance;
         public final int buildTimeBlocks;
         public final boolean needsT2Builder;
 
         Kind(String buildingName, String structureName, ResourceCost cost, float energyPerSecond, double maxHealth,
-             float explodeChance, int buildTimeBlocks, boolean needsT2Builder) {
+             int buildTimeBlocks, boolean needsT2Builder) {
             this.buildingName = buildingName;
             this.structureName = structureName;
             this.cost = cost;
             this.energyPerSecond = energyPerSecond;
             this.maxHealth = maxHealth;
-            this.explodeChance = explodeChance;
             this.buildTimeBlocks = buildTimeBlocks;
             this.needsT2Builder = needsT2Builder;
         }
@@ -97,7 +95,6 @@ public class SolarGenerator extends Building {
             "textures/icons/buildings/" + kind.structureName + ".png");
         this.energyIncome = kind.energyPerSecond;
         this.maxHealth = kind.maxHealth;
-        this.explodeChance = kind.explodeChance;
         this.buildTimeBlocks = kind.buildTimeBlocks;
     }
 

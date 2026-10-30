@@ -97,7 +97,6 @@ public class Library extends ProductionBuilding implements RangeIndicatorAddon {
         this.startingBlockTypes.add(Blocks.OAK_LOG);
         this.startingBlockTypes.add(Blocks.SPRUCE_STAIRS);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 125d;
         this.maxHealthBonusPerUpgradeLevel = 25d;
 

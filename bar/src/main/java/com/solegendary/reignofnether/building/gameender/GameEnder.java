@@ -46,7 +46,6 @@ public abstract class GameEnder extends Building {
         this.t3Lab = t3Lab;
         this.buildTimeBlocks = BUILD_TIME_BLOCKS;
         this.maxHealth = MAX_HEALTH;
-        this.explodeChance = 0.1f;   // a big target: chip damage, not chain explosions
     }
 
     /** Two lines of tooltip that say what the strike does. */

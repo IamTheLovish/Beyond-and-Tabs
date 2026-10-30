@@ -73,7 +73,6 @@ public class Beacon extends ProductionBuilding {
 
         this.startingBlockTypes.add(Blocks.CHISELED_STONE_BRICKS);
 
-        this.explodeChance = 0.2f;
         this.maxHealth = 500d;
         this.maxHealthBonusPerUpgradeLevel = 100d;
 

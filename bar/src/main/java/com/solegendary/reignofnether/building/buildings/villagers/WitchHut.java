@@ -40,7 +40,6 @@ public class WitchHut extends ProductionBuilding {
         this.startingBlockTypes.add(Blocks.STRIPPED_SPRUCE_WOOD);
 
         this.buildTimeModifier = 0.7f;
-        this.explodeChance = 0.2f;
         this.maxHealth = 250d;
 
         // (the Witch is a T2 unit now - trained at the Arcane Tower, the Sunforged T2 lab)
