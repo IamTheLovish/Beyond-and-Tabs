@@ -32,11 +32,13 @@ import com.solegendary.reignofnether.unit.UnitActionItem;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.VeterancyServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.SupportUnit;
 import com.solegendary.reignofnether.unit.units.brass.DeployedTurretUnit;
 import com.solegendary.reignofnether.unit.units.brass.GhostFurnaceUnit;
 import com.solegendary.reignofnether.unit.units.brass.SoulEngineerProd;
 import com.solegendary.reignofnether.unit.units.brass.SoulEngineerUnit;
 import com.solegendary.reignofnether.unit.units.tide.BombardShell;
+import com.solegendary.reignofnether.unit.support.SupportState;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
@@ -1076,7 +1078,9 @@ public class SoulEngineerGameTests {
     /**
      * A bot's Soul Engineer is not an AttackerUnit, so the army list never holds it; the bot's "healers follow the army"
      * block (BotPlayer.verdantHabits, run for every faction) orders a lagging essence caster to the army's centre
-     * (shared edit, briefs/essence-caster-bot-follow-line.md). The Soul Engineer 14 blocks from the army is sent there;
+     * (shared edit, briefs/essence-caster-bot-follow-line.md). The Soul Engineer 14 blocks from the army is sent there by
+     * a Fight, not a Move (lovish, Oct 30: "stay behind units" - a Move ends a support unit's support order, a Fight
+     * keeps it behind the army's front), so it heads for its rear-rank spot, at most 6.5 blocks short of the centre;
      * the one 3 blocks from it is left alone. verdantHabits is package-private and its signature is the same in every
      * caster PR, so the test reaches it by reflection (as the Tide Seer's does).
      */
@@ -1091,6 +1095,7 @@ public class SoulEngineerGameTests {
         List<Entity> all = live(lagging, close, f1, f2);
         List<String> early = new ArrayList<>();
         BlockPos[] moveTo = new BlockPos[1];
+        int[] moves = { 0 };
         helper.runAfterDelay(3, () -> {
             if (all.size() != 4) {
                 early.add("could not spawn the two Soul Engineers and the army");
@@ -1100,8 +1105,10 @@ public class SoulEngineerGameTests {
                 var brain = new com.solegendary.reignofnether.bot.BotPlayer(me, Factions.BRASSWORKS,
                     com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, helper.absolutePos(new BlockPos(1, 2, 1)));
                 brain.orderListener = (action, target) -> {
-                    if (action == UnitAction.MOVE)
+                    if (action == UnitAction.ATTACK_MOVE)
                         moveTo[0] = target;
+                    else if (action == UnitAction.MOVE)
+                        moves[0]++;
                 };
                 List<LivingEntity> mine = new ArrayList<>(List.of(lagging, close, f1, f2));
                 List<LivingEntity> army = new ArrayList<>(List.of(f1, f2));
@@ -1110,7 +1117,9 @@ public class SoulEngineerGameTests {
                 habits.setAccessible(true);
                 habits.invoke(brain, level, mine, army, new ArrayList<>(), new ArrayList<>(), level.getGameTime(), 0L);
                 if (moveTo[0] == null)
-                    early.add("the bot gave no move order: its lagging Soul Engineer stays at the lab");
+                    early.add("the bot gave no Fight order: its lagging Soul Engineer stays at the lab");
+                if (moves[0] > 0)
+                    early.add("the bot gave " + moves[0] + " Move orders: a Move ends a support unit's support order");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 early.add("calling the bot's follow-the-army block threw " + ex);
             }
@@ -1119,9 +1128,12 @@ public class SoulEngineerGameTests {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (moveTo[0] != null) {
-                    BlockPos t = ((Unit) lagging).getMoveGoal() == null ? null : ((Unit) lagging).getMoveGoal().getMoveTarget();
-                    if (t == null || Math.abs(t.getX() - moveTo[0].getX()) > 1 || Math.abs(t.getZ() - moveTo[0].getZ()) > 1)
-                        problems.add("the lagging Soul Engineer is headed for " + t + ", not the army's centre " + moveTo[0]);
+                    SupportState ls = ((SupportUnit) lagging).getSupportState();
+                    BlockPos d = ls.mode() == SupportState.Mode.SUPPORT_MOVE ? ls.destination() : null;
+                    // the rear-rank spot: the standoff (reach - 1.5, at most 6.5) short of the centre, spread across
+                    if (d == null || Math.hypot(d.getX() - moveTo[0].getX(), d.getZ() - moveTo[0].getZ()) > 7.5)
+                        problems.add("the lagging Soul Engineer is on " + ls.mode() + " to " + d + ", not a Fight to the army's centre "
+                            + moveTo[0]);
                     BlockPos c = ((Unit) close).getMoveGoal() == null ? null : ((Unit) close).getMoveGoal().getMoveTarget();
                     if (c != null)
                         problems.add("the Soul Engineer 3 blocks from the army was ordered to " + c + ": only a lagging one should be");
