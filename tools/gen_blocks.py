@@ -202,22 +202,26 @@ TARGETS = {
     # r33 (critic: "4 bullseyes"): the spread in the slow mottle and the rim only (std 0.05 -> 0.035), flatter
     "polished_basalt_top": dict(luma=0.38, std=0.035, sat=0.02, tilt=6.0, smooth=90, pore=8),
     # r32 (critic: "ivory not cream"): sat 0.12 -> 0.07; the top's spread in the pores, matte bone (smooth 80 -> 50)
-    "bone_block_side": dict(luma=0.84, std=0.060, sat=0.07, tilt=16.0, smooth=50, pore=24),
+    "bone_block_side": dict(luma=0.74, std=0.060, sat=0.09, tilt=16.0, smooth=44, pore=24),   # r42: the white ladder
     # r33 (critic: "marshmallows / knuckles"): one flat sawn surface - the spread in fine pores (std 0.08 -> 0.055),
     # flatter (tilt 18 -> 11)
-    "bone_block_top": dict(luma=0.82, std=0.040, sat=0.07, tilt=7.0, smooth=44, pore=30, soften=1.0),
+    "bone_block_top": dict(luma=0.73, std=0.045, sat=0.09, tilt=7.0, smooth=40, pore=30, soften=1.0),   # r42: warm, its rings
     # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
     # r33 (critic: "corrugation"): three broad flutes, softer (std 0.04 -> 0.03, tilt 16 -> 10)
-    "quartz_pillar": dict(luma=0.92, std=0.030, sat=0.05, tilt=8.0, smooth=138, pore=4),
-    "quartz_pillar_top": dict(luma=0.90, std=0.050, sat=0.0, tilt=13.4, smooth=104, pore=4),   # r35: neutral white
-    "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.05, tilt=10.4, smooth=129, pore=4),
-    "quartz_block_bottom": dict(luma=0.91, std=0.012, sat=0.03, tilt=2.5, smooth=145, pore=4),   # r32: seamless, no veins
+    "quartz_pillar": dict(luma=0.84, std=0.030, sat=0.04, tilt=8.0, smooth=138, pore=4),   # r42: the white ladder
+    "quartz_pillar_top": dict(luma=0.83, std=0.050, sat=0.0, tilt=13.4, smooth=104, pore=4),   # r35: neutral; r42
+    "quartz_bricks": dict(luma=0.81, std=0.032, sat=0.04, tilt=10.4, smooth=129, pore=4),   # r42
+    "quartz_block_bottom": dict(luma=0.83, std=0.012, sat=0.03, tilt=2.5, smooth=145, pore=4),   # r32: seamless; r42
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.48, std=0.050, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),   # r35: a step under stone
     "granite": dict(luma=0.47, std=0.048, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
     "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
-    "snow": dict(luma=0.94, std=0.019, sat=0.08, tilt=5.9, smooth=92, pore=0),   # r35: bluish-white
+    # r42 (eyes 41058728743: the whole white family landed at 0.93-0.96 on screen - the shader lifts a 0.75 albedo to
+    # 0.93 and rolls off at 0.96): a LADDER in albedo wide enough to survive the roll-off - snow 0.94 (soft, bluish) /
+    # quartz 0.83 (cool, smooth) / white wool 0.79 (felt) / white concrete 0.76 (satin) / bone 0.73 (warm, rings) /
+    # calcite 0.69 (textured) / polished diorite 0.64; no two within 0.03
+    "snow": dict(luma=0.94, std=0.019, sat=0.08, tilt=5.9, smooth=60, pore=0),   # r35: bluish-white; r42: softer
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
@@ -226,7 +230,7 @@ TARGETS = {
     "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
     # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
-    "calcite": dict(luma=0.88, std=0.035, sat=0.01, tilt=8.0, smooth=70, pore=10),
+    "calcite": dict(luma=0.69, std=0.050, sat=0.02, tilt=10.0, smooth=40, pore=10),   # r42: the textured foot of the ladder
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
     "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
@@ -250,8 +254,10 @@ TARGETS = {
     # r31 (art director: "dull red-brown"): pinkish salmon, lighter (0.44 -> 0.52), the spread in the crystals
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
-    "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.14, std=0.035, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: black again, warm (0.25 / 0.17)
+    "polished_diorite": dict(luma=0.64, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),   # r42: under calcite
+    # r42 (eyes 41058728743: the dark family overshot into one charcoal mass): a ladder - black concrete 0.07, coal 0.12
+    # (new), blackstone 0.16 warm, deepslate 0.20 cool; the polished blackstone family a step over its rough stone
+    "blackstone": dict(luma=0.16, std=0.035, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: warm black; r42: 0.16
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
@@ -294,11 +300,13 @@ TARGETS = {
     # r31: hard facets - more spread (bright tops, dark body) and tilt; emerald darker (0.42 -> 0.36), glossier
     # r33 (critic, eyes 41029731853: the gems need "brighter albedo bodies and smoother faces" so the shader's sky
     # reflection makes them glassy): diamond 0.70 -> 0.78, emerald 0.50 -> 0.58, both glass-smooth (253)
-    "diamond_block": dict(luma=0.78, std=0.110, sat=0.35, tilt=14.0, smooth=253, pore=0, f0=44),
+    # r42 (eyes 41058728743: blew to near-white cyan beside the whites): a deeper cyan with real facets - luma 0.78 ->
+    # 0.68, smoothness 253 -> 170, the body colour deeper (m_gem)
+    "diamond_block": dict(luma=0.68, std=0.100, sat=0.38, tilt=14.0, smooth=170, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
     # r41 (eyes 41053751822: "translucent green jelly"): an opaque cut-gem block - smoothness 253 -> 150, f0 15 -> 10,
     # darker body (0.58 -> 0.46) with a crystalline facet pattern, the facet-edge glow cut (m_gem edge_glow 0.35 -> 0.12)
-    "emerald_block": dict(luma=0.46, std=0.085, sat=0.66, tilt=14.0, smooth=150, pore=0),
+    "emerald_block": dict(luma=0.44, std=0.070, sat=0.50, tilt=12.0, smooth=120, pore=0),   # r42: sat -25%, half the facets
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
@@ -307,12 +315,14 @@ TARGETS = {
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
-    "white_concrete": dict(luma=0.87, std=0.012, sat=0.0, tilt=2.0, smooth=86, pore=10),
+    "white_concrete": dict(luma=0.76, std=0.012, sat=0.0, tilt=2.0, smooth=70, pore=10),   # r42: neutral satin
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
     # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
     # hue ~270) - the base hue 218 -> 274 (m_terracotta base), sat 0.42 -> 0.40
-    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.40, tilt=3.5, smooth=36, pore=30, soften=1.0),
+    # r42 (eyes 41058728743: candy violet, sat 0.41 on screen): a DUSKY slate-violet - luma 0.37 -> 0.29 (the shader
+    # lifts the mid-tones x1.23 to ~0.35), sat 0.40 -> 0.28, hue 274 -> 255
+    "blue_terracotta": dict(luma=0.29, std=0.018, sat=0.28, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -325,11 +335,11 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.13, std=0.033, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41: black again, warm
+    "blackstone_top": dict(luma=0.15, std=0.033, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r42: 0.15
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
-    "quartz_block_top": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
-    "quartz_block_side": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
+    "quartz_block_top": dict(luma=0.83, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),   # r42: the white ladder
+    "quartz_block_side": dict(luma=0.83, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
     "farmland": dict(luma=0.38, std=0.080, sat=0.38, tilt=20.0, smooth=22, pore=56, soften=0.8),     # r31: rows
     "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=18.0, smooth=60, pore=64, soften=0.8),
     # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
@@ -1263,7 +1273,7 @@ for _k in range(2, PROC_VARIANTS + 1):
 # round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
 # terracotta keep their r31-r33 entries above (the family's anchors)
 DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
-    "white":      ((0.91, 0.91, 0.91), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),   # r41: the wool exactly neutral
+    "white":      ((0.79, 0.79, 0.79), (0.76, 0.76, 0.76), (0.82, 0.70, 0.63)),   # r41: neutral; r42: the white ladder
     "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
     "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
     "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
@@ -1323,8 +1333,8 @@ for _c, (_w, _k, _t) in DYES.items():
     TARGETS[_c + "_stained_glass"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=235, pore=0, hspan=0.05))
     TARGETS[_c + "_stained_glass_pane_top"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=200, pore=0))
     R37 += [_c + "_stained_glass", _c + "_stained_glass_pane_top"]
-TARGETS["chiseled_quartz_block"] = dict(luma=0.90, std=0.030, sat=0.0, tilt=10.0, smooth=140, pore=4)
-TARGETS["chiseled_quartz_block_top"] = dict(luma=0.90, std=0.025, sat=0.0, tilt=6.0, smooth=140, pore=4)
+TARGETS["chiseled_quartz_block"] = dict(luma=0.83, std=0.030, sat=0.0, tilt=10.0, smooth=140, pore=4)   # r42: with quartz
+TARGETS["chiseled_quartz_block_top"] = dict(luma=0.83, std=0.025, sat=0.0, tilt=6.0, smooth=140, pore=4)
 TARGETS["chiseled_bookshelf_top"] = dict(luma=0.50, std=0.055, sat=0.40, tilt=8.0, smooth=45, pore=24)
 TARGETS["chiseled_bookshelf_side"] = dict(luma=0.46, std=0.070, sat=0.40, tilt=12.0, smooth=45, pore=24)
 TARGETS["chiseled_bookshelf_empty"] = dict(luma=0.36, std=0.090, sat=0.40, tilt=14.0, smooth=40, pore=24)
@@ -3374,8 +3384,10 @@ def m_sea_lantern(F, n):
     seam = 1 - smoothstep(0.0, 0.015, f2 - f1)                  # crystal seams, the thinnest glass: brightest
     grain = F.noise(8, 24, 0.4)
     H = np.where(core > 0.5, 0.80 + 0.02 * grain - 0.03 * seam, 0.55 + 0.25 * bevel + 0.02 * grain)
-    stone = tint((0.58, 0.68, 0.62), 0.9 + 0.15 * bevel + 0.04 * grain)
-    glass = np.stack([0.70 + 0.28 * centre + 0.1 * seam, 0.88 + 0.12 * centre, 0.90 + 0.10 * centre], -1)
+    # r42 (eyes 41058728743: it blew to near-white cyan and fought the whites): the body darker and blue-green, the
+    # glow kept in the emission
+    stone = tint((0.40, 0.52, 0.48), 0.9 + 0.15 * bevel + 0.04 * grain)
+    glass = np.stack([0.30 + 0.30 * centre + 0.1 * seam, 0.60 + 0.22 * centre, 0.64 + 0.20 * centre], -1)
     alb = stone * (1 - core[..., None]) + np.clip(glass, 0, 1) * core[..., None]
     glow = core * np.clip(0.45 + 0.45 * centre + 0.4 * seam, 0, 1)
     emit = glow_falloff(glow)
