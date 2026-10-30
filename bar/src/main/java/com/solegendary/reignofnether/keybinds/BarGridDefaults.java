@@ -122,7 +122,6 @@ public final class BarGridDefaults {
         Map.entry("key.reignofnether.garrison", "shares: N, never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.gather", "BAT extra, no BAR default in increment 1"),
         Map.entry("key.reignofnether.hotkey_1", "build menu slot"),
-        Map.entry("key.reignofnether.hotkey_10", "shares: H, never shown together with or live over the BAR order on the key (see class comment)"),
         Map.entry("key.reignofnether.hotkey_11", "build menu slot"),
         Map.entry("key.reignofnether.hotkey_12", "build menu slot"),
         Map.entry("key.reignofnether.hotkey_2", "shares: L, never shown together with or live over the BAR order on the key (see class comment)"),

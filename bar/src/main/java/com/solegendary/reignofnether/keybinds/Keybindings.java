@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-// Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
-// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (Stop is back on S as a tap, see
-// the order keys below; Attack moved to X on Oct 21),
+// Beyond and Tabs default rebinds (all still rebindable in Controls): the orders and selection keys are BAR's "Grid"
+// profile (BarGridDefaults, BAC-007b), the camera pans on the arrow keys only (WASD pan is gone, so A S D are free for
+// Attack and the build grid). The RoN defaults that sat on W/A/S/D moved earlier: ability slot 2 W->Z, open shop S->Space,
 // return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
 // A changed default does NOT reach an install that already saved the old one (Minecraft keeps every mapping in
 // options.txt): add the old key to KeybindMigration.STALE and bump its LAYOUT_VERSION whenever a default moves.
@@ -35,18 +35,15 @@ public class Keybindings {
     public static final Keybinding panMinusX = new Keybinding("key.reignofnether.pan_minus_x", GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.PAN,    "X-");
     public static final Keybinding panPlusZ  = new Keybinding("key.reignofnether.pan_plus_z",  GLFW.GLFW_KEY_UP,          CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z+");
     public static final Keybinding panMinusZ = new Keybinding("key.reignofnether.pan_minus_z", GLFW.GLFW_KEY_DOWN,        CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z-");
-    // WASD panning (60% boards have no arrows). Alt + a pan key rotates / tilts (Spring's "movetilt" modifier).
-    public static final Keybinding panUp     = new Keybinding("key.reignofnether.pan_up",      GLFW.GLFW_KEY_W,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "W");
-    public static final Keybinding panLeft   = new Keybinding("key.reignofnether.pan_left",    GLFW.GLFW_KEY_A,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "A");
-    public static final Keybinding panDown   = new Keybinding("key.reignofnether.pan_down",    GLFW.GLFW_KEY_S,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "S");
-    public static final Keybinding panRight  = new Keybinding("key.reignofnether.pan_right",   GLFW.GLFW_KEY_D,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "D");
+    // Alt + an arrow rotates / tilts (Spring's "movetilt" modifier).
     // 90-degree snaps (the minimap's rotate buttons)
     public static final Keybinding rotCW     = new Keybinding("key.reignofnether.rot_cw",      GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
     public static final Keybinding rotCCW    = new Keybinding("key.reignofnether.rot_ccw",     GLFW.GLFW_KEY_LEFT,        CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
     // back to the default angle (the diagonal the diamond minimap is drawn for), default zoom and tilt
     public static final Keybinding reset     = new Keybinding("key.reignofnether.reset",       GLFW.GLFW_KEY_RIGHT_CONTROL, CATEGORY_CAMERA, "RC");
-    // BAR's Tab overview: zoom out to the whole map; Tab again, a left click or releasing a held Tab flies back in at
-    // the cursor. Own conflict context: Ctrl+Tab still cycles the selection (tab, below) on the same key.
+    // BAR's overview: zoom out to the whole map; again, a left click or releasing the held key flies back in at the
+    // cursor. Shift + this key (a Keybinding holds no modifier default): plain Tab is BAR's select commander. Own conflict
+    // context: Ctrl+Tab still cycles the selection (tab, below) on the same key.
     public static final Keybinding overview  = new Keybinding("key.reignofnether.overview",    GLFW.GLFW_KEY_TAB,         CATEGORY_CAMERA, RtsConflictContext.OVERVIEW, "Tab");
     // BAR camera anchors: press to fly back, Ctrl+press to store. BAR's widget puts them on F1-F4, which here are
     // hide-HUD / player panel / debug and missing on a 60% board, so they start unbound (Controls to set).
@@ -118,7 +115,8 @@ public class Keybindings {
     // monitor (Home) and pause unit production (End, #228) took, so their own keys start unbound (Controls to add one;
     // KeybindMigration layout 2 frees a saved Home / End). The button corner shows the chord while unbound.
     public static final Keybinding idleT2Builder   = new Keybinding("key.reignofnether.idle_t2_builder",   GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "").withChord(ChordKeys.Chord.IDLE_T2_BUILDER);
-    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_UNKNOWN, CATEGORY_RTS, "").withChord(ChordKeys.Chord.SELECT_COMMANDER);
+    // BAR's Tab (selectcomm focus); the Ctrl+C chord stays beside it. Plain Tab only: Ctrl+Tab cycles, Shift+Tab is the overview.
+    public static final Keybinding selectCommander = new Keybinding("key.reignofnether.select_commander", GLFW.GLFW_KEY_TAB, CATEGORY_RTS, RtsConflictContext.SELECT_COMMANDER, "Tab").withChord(ChordKeys.Chord.SELECT_COMMANDER);
     // "Select all military units" had build slot 7 (K) as its key, so K both picked a building and selected the army
     // (Lane C tester, Oct 21: "k is for a building and for selecting all combat units"). Its own key now; every letter
     // is already a default, so "-" beside the control-group numbers. KeybindGameTests keeps it off the card slots.
@@ -128,31 +126,27 @@ public class Keybindings {
     // letter, the punctuation slots and the abilities are used), and while a building ghost is out "]" rotates it
     // (BuildingClientEvents) before the HUD sees the key. ReturnResourcesKeyGameTests checks this key against each faction's worker.
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
-    // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
-    // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
-    // (KeybindMigration, layout 1). Oct 26: kept on X (BAR Legacy has A, but #39 took it off A on purpose: a hold of A
-    // waited before panning).
-    // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
-    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, S stop, M move, H hold,
-    // P patrol, G guard (BAR's Attack is A, which is camera pan-left here). S is also WASD panning: a TAP
-    // (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card has one on that key, a hold pans (KeyTaps,
-    // OrthoviewClientEvents). Space jumps to the last alert (lastAlert), as in BAR.
-    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, RtsConflictContext.COMMAND, "X");
+    // BAR Grid's order keys on the command card (BarGridDefaults, BAC-007b; user 10-29 "copy bars hotkeys"): A attack,
+    // F fight, G stop, H patrol, O guard, ; hold (BAR's movestate 2), L fire state. BAR has no move key. Installs that
+    // saved the old keys were moved once (KeybindMigration, layout 3). Space jumps to the last alert (lastAlert), as in BAR.
+    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, RtsConflictContext.COMMAND, "A");
     // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
     // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
     public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
-    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, RtsConflictContext.COMMAND, "S");
-    public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_M,             CATEGORY_RTS, RtsConflictContext.COMMAND, "M");
-    public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, RtsConflictContext.COMMAND, "H");
+    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_G,             CATEGORY_RTS, RtsConflictContext.COMMAND, "G");
+    public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, RtsConflictContext.COMMAND, "");
+    public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_SEMICOLON,     CATEGORY_RTS, RtsConflictContext.COMMAND, ";");
+    // BAR's firestate: a press cycles the stance like a click on the stance button (StanceButton)
+    public static final Keybinding fireState   = new Keybinding("key.reignofnether.fire_state",   GLFW.GLFW_KEY_L,             CATEGORY_RTS, RtsConflictContext.COMMAND, "L");
     public static final Keybinding build       = new Keybinding("key.reignofnether.build",        GLFW.GLFW_KEY_B,             CATEGORY_RTS, "B");
-    // the gather-target toggle lost its key to Guard (G, BAR): it is a click toggle in a metal/energy economy
+    // the gather-target toggle lost its key to Guard (BAR): it is a click toggle in a metal/energy economy
     public static final Keybinding gather      = new Keybinding("key.reignofnether.gather",       GLFW.GLFW_KEY_UNKNOWN,       CATEGORY_RTS, "");
-    public static final Keybinding patrol      = new Keybinding("key.reignofnether.patrol",       GLFW.GLFW_KEY_P,             CATEGORY_RTS, RtsConflictContext.COMMAND, "P");
-    public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_G,             CATEGORY_RTS, RtsConflictContext.COMMAND, "G");
+    public static final Keybinding patrol      = new Keybinding("key.reignofnether.patrol",       GLFW.GLFW_KEY_H,             CATEGORY_RTS, RtsConflictContext.COMMAND, "H");
+    public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_O,             CATEGORY_RTS, RtsConflictContext.COMMAND, "O");
     public static final Keybinding garrison    = new Keybinding("key.reignofnether.garrison",     GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     // BAR: jump the camera to the last "under attack" alert (AttackWarningClientEvents.jumpToLastAlert)
     public static final Keybinding lastAlert   = new Keybinding("key.reignofnether.last_alert",   GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "Spc");
-    // a build-menu slot clear of every order key: the Library / Laboratory used P (abilitySlot10), now Patrol's
+    // a build-menu slot clear of every order key: the Library / Laboratory used P (abilitySlot10)
     public static final Keybinding hotkey11    = new Keybinding("key.reignofnether.hotkey_11",    GLFW.GLFW_KEY_LEFT_BRACKET,  CATEGORY_RTS, "[");
     // and one for the Royal Architect's Holy Bell, whose default slot (Z) is the Kingdom's Oak Stockpile
     public static final Keybinding hotkey12    = new Keybinding("key.reignofnether.hotkey_12",    GLFW.GLFW_KEY_APOSTROPHE,    CATEGORY_RTS, "'");
@@ -161,7 +155,7 @@ public class Keybindings {
     // with ">" is an order in the command language, parsed and executed on the client, never sent as chat
     public static final Keybinding commandBar  = new Keybinding("key.reignofnether.command_bar",  GLFW.GLFW_KEY_SLASH,         CATEGORY_RTS, "/");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
-    // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is BAR's overview (overview, above)
+    // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is select commander, Shift+Tab the overview
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
     // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
     // near the left hand is taken by abilities, hotkeys and WASD panning
@@ -237,7 +231,6 @@ public class Keybindings {
             pause, shiftMod, ctrlMod, altMod,
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
-            panUp, panLeft, panDown, panRight,
             rotCW, rotCCW, reset, toggleCamera, toggleFreeFly, overview,
             cameraAnchors[0], cameraAnchors[1], cameraAnchors[2], cameraAnchors[3],
             rotateBuildingCCW, rotateBuildingCW,
@@ -246,7 +239,7 @@ public class Keybindings {
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
-            attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
+            attack, fight, stop, move, hold, fireState, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,

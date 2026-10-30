@@ -90,22 +90,20 @@ public class ControlsReferenceScreen extends Screen {
         bind("clean", Keybindings.cleanView);
         bind("hide_hud", Keybindings.getFnum(1));
         bind("last_alert", Keybindings.lastAlert);
-        bind("overview", Keybindings.overview);
+        mouse("overview", t("shift") + " + " + k(Keybindings.overview));   // OrthoviewClientEvents: Tab is select commander
         bind("idle_worker", Keybindings.idleWorker);
-        // keybinds/ChordKeys: BAR Legacy's fixed Ctrl chords (HudClientEvents.onKeyRelease)
+        // keybinds/ChordKeys: BAR's fixed Ctrl chords (HudClientEvents.onKeyRelease)
         mouse("idle_builder_ctrl_b", t("ctrl") + " + B");
         mouse("idle_t2_builder_chord", t("ctrl") + " + " + t("shift") + " + B");
-        mouse("select_commander_ctrl_c", t("ctrl") + " + C");
+        mouse("select_commander_ctrl_c", k(Keybindings.selectCommander) + "  /  " + t("ctrl") + " + C");
         bind("select_army", Keybindings.selectArmy);
-        mouse("select_army_ctrl_w", t("ctrl") + " + W");
         mouse("factory_guard_ctrl_g", t("ctrl") + " + G");   // HudClientEvents: hardcoded Ctrl+G, BAR's factoryguard
         bind("return_resources", Keybindings.returnResources);
 
         header("h_camera");
         mouse("zoom", t("wheel") + "  /  " + k(Keybindings.zoomIn) + " " + k(Keybindings.zoomOut));
-        mouse("pan", t("middle_drag") + "  /  " + k(Keybindings.panUp) + k(Keybindings.panLeft) + k(Keybindings.panDown)
-            + k(Keybindings.panRight) + "  /  " + t("edges"));
-        mouse("rotate", alt + " + " + t("middle_drag") + "  /  " + alt + " + " + k(Keybindings.panLeft) + k(Keybindings.panRight));
+        mouse("pan", t("middle_drag") + "  /  " + t("arrow_keys") + "  /  " + t("edges"));
+        mouse("rotate", alt + " + " + t("middle_drag") + "  /  " + alt + " + " + t("arrow_keys"));
         mouse("tilt", t("ctrl") + " + " + t("wheel"));
         bind("reset", Keybindings.reset);
         bind("toggle_camera", Keybindings.toggleCamera);
@@ -124,8 +122,8 @@ public class ControlsReferenceScreen extends Screen {
         mouse("double", t("double_click"));
         mouse("add", t("shift") + " + " + t("left_click"));
         mouse("remove", t("ctrl") + " + " + t("left_click"));
-        mouse("select_all_units_ctrl_a", t("ctrl") + " + A");
-        mouse("select_same_type_ctrl_z", t("ctrl") + " + Z");
+        mouse("select_all_units_ctrl_e", t("ctrl") + " + E");
+        mouse("select_same_type_ctrl_w", t("ctrl") + " + W");
         mouse("esc_cancel", "Esc");
         bind("deselect", Keybindings.deselect);
         bind("cycle", Keybindings.tab);

@@ -12,6 +12,8 @@ public enum RtsConflictContext implements IKeyConflictContext {
     COMMAND,
     // BAR overview on Tab, sharing the key with Ctrl+Tab selection cycling
     OVERVIEW,
+    // BAR's Tab (select commander), sharing the key with Ctrl+Tab selection cycling and Shift+Tab overview
+    SELECT_COMMANDER,
     // building-ghost rotation on [ / ], sharing "[" with a build-menu slot
     BUILD_GHOST,
     // HUD panel toggles that share a key with a command-card slot (the stats table on I, ability slot 8): the card's

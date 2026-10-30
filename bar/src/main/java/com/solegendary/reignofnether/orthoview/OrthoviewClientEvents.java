@@ -16,7 +16,6 @@ import com.solegendary.reignofnether.hud.HintBar;
 import com.solegendary.reignofnether.onboarding.OnboardingTips;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.hud.TextInputClientEvents;
-import com.solegendary.reignofnether.keybinds.KeyTaps;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
@@ -639,6 +638,10 @@ public class OrthoviewClientEvents {
         return Keybindings.ctrlMod.isDown() || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_CONTROL);
     }
 
+    private static boolean isShiftDown() {
+        return isRawKeyDown(GLFW.GLFW_KEY_LEFT_SHIFT) || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_SHIFT);
+    }
+
     private static boolean isAltDown() {
         return Keybindings.altMod.isDown() || isRawKeyDown(GLFW.GLFW_KEY_RIGHT_ALT);
     }
@@ -666,21 +669,6 @@ public class OrthoviewClientEvents {
         updateCamera(dt);
     }
 
-    private static boolean panKeyDown(Keybinding pan) {
-        if (!pan.isDown())
-            return false;
-        int key = pan.getKey();
-        if (!HudClientEvents.isCardKey(key))
-            return true;
-        // a WASD key that is also an order on the selected card (S stop, or one the player moved onto W/A/S/D) waits
-        // out a tap before it pans; once it pans, that press is a hold and fires no order (KeyTaps.isHold), however
-        // short lag made it measure
-        if (KeyTaps.inTapWindow(key))
-            return false;
-        KeyTaps.markPan(key);
-        return true;
-    }
-
     private static void updateCamera(float dt) {
         Player player = MC.player;
         if (player == null)
@@ -703,10 +691,10 @@ public class OrthoviewClientEvents {
         float desiredRight = 0;
         float desiredFwd = 0;
         if (keysActive && !ctrl) {
-            boolean up = panKeyDown(Keybindings.panUp) || Keybindings.panPlusZ.isDown();
-            boolean down = panKeyDown(Keybindings.panDown) || Keybindings.panMinusZ.isDown();
-            boolean left = panKeyDown(Keybindings.panLeft) || Keybindings.panPlusX.isDown();
-            boolean right = panKeyDown(Keybindings.panRight) || Keybindings.panMinusX.isDown();
+            boolean up = Keybindings.panPlusZ.isDown();
+            boolean down = Keybindings.panMinusZ.isDown();
+            boolean left = Keybindings.panPlusX.isDown();
+            boolean right = Keybindings.panMinusX.isDown();
             if (left || right || up || down)
                 cameraMoved();   // pan, or with Alt rotate / tilt
             if (alt) {
@@ -1161,7 +1149,8 @@ public class OrthoviewClientEvents {
                 return;
             if (key == Keybindings.reset.getKey()) {
                 reset();
-            } else if (key == Keybindings.overview.getKey() && !isCtrlDown() && !isCameraLocked()) {
+            } else if (key == Keybindings.overview.getKey() && !isCtrlDown() && isShiftDown() && !isCameraLocked()) {
+                // Shift + the overview key (a Keybinding holds no modifier default); plain Tab is select commander and
                 // Ctrl+Tab is selection cycling (HudClientEvents)
                 if (overviewActive)
                     exitOverview();

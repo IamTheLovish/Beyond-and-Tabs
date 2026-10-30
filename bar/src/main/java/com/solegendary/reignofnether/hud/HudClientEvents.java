@@ -2329,18 +2329,20 @@ public class HudClientEvents {
         // slot, the shop or "jump to the last alert" they also are (CursorClientEvents)
         if (com.solegendary.reignofnether.cursor.CursorClientEvents.consumeBoxModifierRelease(key))
             return;
-        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W army, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
-        // Ctrl+A all units, Ctrl+Z same type) win over every button on the letter. Before the tap/hold rule: with Ctrl
-        // held the camera never pans (OrthoviewClientEvents), so a slow Ctrl+A is still the chord
+        // BAR's Ctrl chords (keybinds/ChordKeys: Ctrl+W same type, Ctrl+C commander, Ctrl+B / Ctrl+Shift+B idle builders,
+        // Ctrl+E all units) win over every button on the letter
         if (OrthoviewClientEvents.isEnabled() && com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                 com.solegendary.reignofnether.keybinds.ChordKeys.of(key, Keybindings.ctrlMod.isDown(),
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
-        // S is WASD panning as well as Stop (and so is any order a player puts on W/A/S/D): a press
-        // the camera panned for, or one held past a tap once frame lag is allowed for, was a pan, not an order
-        // (keybinds/KeyTapTracker)
-        if (isPanKey(key) && com.solegendary.reignofnether.keybinds.KeyTaps.isHold(key))
+        // BAR's Tab: select the commander and centre on it, even while the commander button is hidden. Plain press only:
+        // Ctrl+Tab cycles the selection and Shift+Tab is the camera overview (OrthoviewClientEvents)
+        if (Keybindings.selectCommander.matches(key) && OrthoviewClientEvents.isEnabled()) {
+            if (!Keybindings.ctrlMod.isDown() && !net.minecraft.client.gui.screens.Screen.hasShiftDown() && !Keybindings.altMod.isDown())
+                com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
+                    com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_COMMANDER);
             return;
+        }
         // BAR queue edits: N / Ctrl+N skip / cancel-last, and a Space that inserted an order (QueueEditKeys)
         if (com.solegendary.reignofnether.unit.QueueEditClientEvents.onKeyRelease(key))
             return;
@@ -2499,11 +2501,6 @@ public class HudClientEvents {
         return false;
     }
 
-    private static boolean isPanKey(int key) {
-        return key == Keybindings.panUp.getKey() || key == Keybindings.panLeft.getKey()
-            || key == Keybindings.panDown.getKey() || key == Keybindings.panRight.getKey();
-    }
-
     // BAR's gui_unit_group_number: the group's digit beside every grouped unit drawn this frame
     @SubscribeEvent
     public static void onRenderLevelGroupNumbers(net.minecraftforge.client.event.RenderLevelStageEvent evt) {
@@ -2615,9 +2612,10 @@ public class HudClientEvents {
             evt.setCanceled(true);
         }
 
-        // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is BAR's camera overview
+        // Cycle through selected units: Ctrl+Tab (Ctrl+Shift+Tab backwards) - plain Tab is select commander, Shift+Tab the overview
         if (evt.getKeyCode() == Keybindings.tab.getKey()
-                && (evt.getKeyCode() != Keybindings.overview.getKey() || Keybindings.ctrlMod.isDown())) {
+                && ((evt.getKeyCode() != Keybindings.overview.getKey() && evt.getKeyCode() != Keybindings.selectCommander.getKey())
+                    || Keybindings.ctrlMod.isDown())) {
             cycleUnitSubgroups();
             cycleBuildingSubgroups();
         }
