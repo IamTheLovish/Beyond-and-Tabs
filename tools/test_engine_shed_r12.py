@@ -39,7 +39,8 @@ ROOM_LIT = 10          # block light on a surface seen through a window: a lit r
 GLOW_SEEN = 0.10       # at most this share of a window's glass pixels show a light block straight behind the pane
 ROOM_SEEN = 0.50       # at least this share show a lit room surface
 FRAME_VAL = (0.27, 0.50)   # the gate frame's camera value: mid stone - not black (blackstone 0.13-0.22), not snow
-WARM_SURFACES = ("acacia_planks", "acacia_slab", "acacia_stairs")   # round 4: birch read cream (critics r3)
+WARM_SURFACES = ("birch_planks", "birch_slab", "birch_stairs", "stripped_birch_wood")   # final: birch (round 3;
+#     round 4's acacia - pack sat 0.62 - scored dusk 5 / 5 against round 3's 5.5 / 5.5)
 SOOT_DARK = 0.80       # a soot cell reads at most 0.8 x the value of brick on the same face, and grey (sat <= 0.15)
 
 
@@ -146,6 +147,31 @@ class EngineShedR12(EngineShedR11):
             self.assertGreaterEqual(len({f for f, k in runs if k >= 2}), 3, (still, runs))
             self.assertTrue([q for q in cells if q[1] == self.m["cornice"] and not self.in_tower(q, 0)],
                             (still, "cornice oversail"))
+
+    def test_copper_roof_reads_weathered_on_camera(self):
+        """r11's copper test on r12, every band unchanged - hue 130-185, lovish's saturation 0.16-0.30, <= 5 % blotch,
+        >= 95 % of the pixels photographed - except its STREAK band (15-45 % of the pixels >= 20 % darker than the
+        median), retired on r12's evidence: no verdigris block gives a smooth spire both lovish's band and r11's
+        streaking without a second material, and both tries read as patterns the critics scored down - round 2's
+        clustered grey ("a mint arrow on dark grey", towers held at 6) and round 4's fine grain ("a dark V", towers 7 ->
+        6.5 / 6) - while the uniform spire scored best (round 3: towers 7 / 7). r11's file keeps the band for r11's
+        build (decided overnight; lovish: "just decide the best option")."""
+        import colorsys
+        import numpy as np
+        from test_engine_shed_r11 import BLOTCH, COPPER_HUE, COPPER_SAT, KNOWN
+        for still in ("rts_close", "34"):
+            hits = [h for h in self.p.hits[still].values() if self.in_tower(h[0]) and h[0][1] > self.m["cornice"]]
+            self.assertGreater(len(hits), 100, (still, "tower-roof pixels"))
+            px = [CC.lookup(self.table, h[1], h[2]) for h in hits]
+            self.assertGreaterEqual(sum(1 for q in px if q) / len(px), KNOWN, still)
+            hsv = np.array([q for q in px if q])
+            rgb = np.array([CC.lookup_rgb(self.table, h[1], h[2]) or colorsys.hsv_to_rgb(q[0] / 360.0, q[1], q[2])
+                            for h, q in zip(hits, px) if q]).mean(0)
+            hue, sat, _ = colorsys.rgb_to_hsv(*rgb)
+            self.assertTrue(COPPER_HUE[0] <= hue * 360 <= COPPER_HUE[1], (still, round(hue * 360)))
+            self.assertTrue(COPPER_SAT[0] <= sat <= COPPER_SAT[1], (still, "sat", round(sat, 3)))
+            med = float(np.median(hsv[:, 2]))
+            self.assertLessEqual(float(np.mean(hsv[:, 2] < 0.45 * med)), BLOTCH, still)
 
     def test_build_is_sound(self):
         L.check(self.rig, self.out)
@@ -512,11 +538,8 @@ class EngineShedR12(EngineShedR11):
     # critics (RTS 6.5 / 6.5, towers 6 / 6, gate 4 / 4, weathering 4 / 3, dusk 4 / 4 - no gain), the round-3 designer
     # (itachi2-api run 20261030-043958-r12-round3-designer) and lovish's answers (Oct 30: the obsidian lump is the coal
     # stage; a straight slim shaft; a lantern inside a room, seen through the glass, is OK)
-    @unittest.skip("re-scoped round 4: fine-grain streaks of the same hue family - test_r4_spire_streaks_fine_grain")
     def test_r3_spire_one_material(self):
-        """RE-SCOPED round 4: r11's streak band (15-45 % darker pixels) measured 0.046 on the one-material spire
-        (round 3); the round-4 designer adds fine-grain darker verdigris (no group over 2 cells) - the round-2 fault was
-        CLUSTERED grey, kept out by test_r4_spire_streaks_fine_grain.
+        """(Final: in force again - round 4's fine-grain second material read as "a dark V" to both critics.)
 
         Critics r2: the grey drips "a mint arrow on dark grey". Of the tower roof's pixels in rts_close and 34, at most
         5 % are a second material (anything but prismarine)."""
@@ -680,8 +703,12 @@ class EngineShedR12(EngineShedR11):
                 if all((q[0] + k * a, q[1] + k * b, q[2] + k * c) in dark for k in (1, 2))]   # 3 in a row / column
         self.assertEqual(sorted(runs), [])
 
+    @unittest.skip("retired final: both round-4 critics read the fine-grain streaks as 'a dark V' at RTS")
     def test_r4_spire_streaks_fine_grain(self):
-        """r11's streak band wants a weathered roof (15-45 % of its pixels >= 20 % darker), round 2's clustered grey drips
+        """RETIRED (final): round 4 built it; both round-4 critics (towers 7 -> 6.5 / 6): the cells "merge into a dark
+        V / arrow at RTS". The final spire is round 3's one material (test_r3_spire_one_material).
+
+        r11's streak band wants a weathered roof (15-45 % of its pixels >= 20 % darker), round 2's clustered grey drips
         read as "a mint arrow". The designer: fine grain - the spire's second-material cells are the same hue family
         (dark prismarine), 15-30 % of the spire's roof cells, in groups of at most 2 (a fall-line pair), and at least one
         face of the upper ring has none (no arrow)."""

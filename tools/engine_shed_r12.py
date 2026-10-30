@@ -33,14 +33,15 @@ SX, SZ = R.SX, R.SZ
 TOWER = R.TOWER
 META = dict(R.META)
 WARM = "shroomlight"
-WARM_SURFACE = "acacia_planks"   # round 4: birch read cream (critics r3); acacia pack luma 0.41, sat 0.62
+WARM_SURFACE = "birch_planks"    # final: birch (round 3). Round 4's acacia: dusk 5.5 -> 5 / 5 (both critics)
 SPIRE = "mcwroofs:prismarine_brick"
 DRIP = "mcwroofs:dark_prismarine"   # round 4: fine-grain weathering in the same hue family (round 2's grey = arrow)
 # the drip cells per ring (eave ring 16-17 over x 0-4 z 4-8, upper ring 18-19 over x 1-3 z 5-7): two-cell clusters on
 # each face of the eave ring, one cell on each face of the upper ring above one of them - runs down the slope
 # round 4 (the designer): fine grain - 4 of the eave ring's 16 cells and 2 of the upper ring's 8, each upper one over a
 # lower one (a 2-cell fall line, the largest group), the north face of the upper ring clear (no arrow), no a-b-a-b-a
-DRIPS = ({(0, 6), (3, 8), (4, 5), (1, 4)}, {(1, 6), (3, 7)})
+DRIPS = (set(), set())   # final: none. Round 4's fine grain ({(0, 6), (3, 8), (4, 5), (1, 4)}, {(1, 6), (3, 7)}) read
+#     as "a dark V" at RTS (both round-4 critics: towers 7 -> 6.5 / 6), round 2's clusters as "a mint arrow"
 ROOF = "spire"           # round 3 builds both: "spire" (rounds 1-2's shape, the control) and "cupola" (the designer's B)
 OUT_SPIRE = "design/vehicle_labs/brass_t1_r12_r3a.nbt"
 SOOT, SOOT_SL, STREAK = "polished_blackstone_bricks", "polished_blackstone_brick_slab", "deepslate_bricks"
@@ -229,8 +230,8 @@ def warm_surfaces(g):
                 continue
             if S.glyph(n) == "#":
                 g.set(*q, WARM_SURFACE)
-            elif n.endswith("_stairs") and not n.startswith("acacia"):         # an inner head or reveal stair
-                g.set(*q, "acacia_stairs", **g.b[q][1])
+            elif n.endswith("_stairs") and not n.startswith("birch"):          # an inner head or reveal stair
+                g.set(*q, "birch_stairs", **g.b[q][1])
 
 
 # ---------------------------------------------------------------------------------------------------- 3. the spire
