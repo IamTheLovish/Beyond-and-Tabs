@@ -210,7 +210,9 @@ PILASTER = {   # plinth 6 proud x 0-16, torus 5, shaft 4 x 2-14, astragal 5, nec
     "single": [(0, 0, 10, 16, 4, 16), (1, 4, 11, 15, 6, 16), (2, 6, 12, 14, 11, 16), (1, 11, 11, 15, 13, 16),
                (0, 13, 10, 16, 16, 16)],
 }
-CORBEL_STEPS = [(0, 4, 3), (4, 8, 6), (8, 12, 9), (12, 16, 12)]
+# (y0, y1, x0, x1, proud): a console that steps out AND widens to the top, its foot 6 px above the cell's bottom
+# (round-1 critic: four equal-width steps on the lintel's top read as timber knee braces between two beams)
+CORBEL_STEPS = [(6, 10, 5, 11, 4), (10, 13, 4, 12, 8), (13, 16, 3, 13, 12)]
 COURSE = [(0, 4, 2), (4, 8, 4), (8, 12, 6)]          # the crown's brick steps
 COPING = [(12, 16, 8), (16, 18, 8)]                  # its coping; the rim above the cell stands over the shaft's top
 
@@ -227,11 +229,13 @@ def quoin(long_side):
 
 
 def corbel():
-    """Four steps 3 px out each, 8 px wide, then up into the cornice's cell to the corona's soffit, 1 px behind its
-    face: no free top under the cornice (a lone top read as loose debris in slice 1, r3)."""
+    """A console: three steps out (4 / 8 / 12 proud) that widen as they rise (6 / 8 / 10 px), so it reads as a corbel
+    front-on too (an inverted stepped wedge), its foot clear of the row below; then up into the cornice's cell to the
+    corona's soffit, 1 px behind its face: no free top under the cornice (a lone top read as loose debris in slice 1)."""
     corona = max(CORNICE, key=lambda layer: layer[2])
-    boxes = [("all", (4, y0, 16 - d, 12, y1, 16)) for y0, y1, d in CORBEL_STEPS]
-    return boxes + [("all", (4, 16, 16 - (corona[2] - 1), 12, 16 + corona[0], 16))]
+    boxes = [("all", (x0, y0, 16 - d, x1, y1, 16)) for y0, y1, x0, x1, d in CORBEL_STEPS]
+    y0, y1, x0, x1, d = CORBEL_STEPS[-1]
+    return boxes + [("all", (x0, 16, 16 - (corona[2] - 1), x1, 16 + corona[0], 16))]
 
 
 def corbel_course(shape):
@@ -664,6 +668,14 @@ def _pane(x, lo, hi, **kw):
     return dict(north="false", south="false", east=str(x < hi).lower(), west=str(x > lo).lower(), waterlogged="false")
 
 
+def flue(put, x0, y, z0):
+    """A 2x2 shaft's top row inside its crown left open, soot on its floor: a dark flue in a pale rim from above
+    (round-1 critic: a filled top read as a pedestal or planter from the RTS camera)."""
+    for x in (x0, x0 + 1):
+        for z in (z0, z0 + 1):
+            put(x, y, z, "black_carpet")
+
+
 def facade2():
     """A 21 x 8 brick facade, 7 deep, its face to the south (front wall z 6, mouldings at z 7), for a FRONT-on still:
     quoins up both corners (long on the facade in the odd courses, so the plinth's string course dies against the
@@ -732,12 +744,14 @@ def facade2():
         for z in range(2, Z - 1):
             put(x, T + 2, z, "deepslate_tile_slab", type="bottom", waterlogged="false")
     cx, cz = CHIMNEY
-    for y in range(T + 1, CHIMNEY_TOP + 1):
+    for y in range(T + 1, CHIMNEY_TOP):                           # the top row stays open: the flue (round-1 critic:
+                                                                  # a filled top read as a pedestal from above)
         for x in (cx, cx + 1):
             for z in (cz, cz + 1):
                 put(x, y, z, "bricks")
     for (x, z), (facing, shape) in crown_cells(cx - 1, cz - 1).items():
         put(x, CHIMNEY_TOP, z, "reignofnether:corbel_course_brick", facing=facing, shape=shape)
+    flue(put, cx, CHIMNEY_TOP, cz)
     return S.Build(b)
 
 
@@ -764,12 +778,13 @@ def sampler2():
     for x in range(9):
         put(x, 5, 3, "reignofnether:cornice_brick", facing="south", shape="straight")
     for x0, shaft, mat in ((10, "bricks", "brick"), (15, "stone_bricks", "stone"), (20, "deepslate_bricks", "slate")):
-        for y in range(1, 6):
+        for y in range(1, 5):                                     # the top row open inside the crown: the flue
             for x in (x0 + 1, x0 + 2):
                 for z in (1, 2):
                     put(x, y, z, shaft)
         for (x, z), (facing, shape) in crown_cells(x0, 0).items():
             put(x, 5, z, "reignofnether:corbel_course_" + mat, facing=facing, shape=shape)
+        flue(put, x0 + 1, 5, 1)
     return S.Build(b)
 
 

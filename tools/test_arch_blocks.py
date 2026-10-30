@@ -343,13 +343,19 @@ class Quoin(unittest.TestCase):
 
 
 class Corbel(unittest.TestCase):
-    """The eave bracket: 8 px wide, four 4 px steps 3 px out each, then up into the cornice's cell to the corona's
-    soffit, 1 px behind the corona's face - it carries the cornice, no free top to read as a loose block."""
+    """The eave bracket: a console of three steps 4 / 8 / 12 proud that widen as they rise (6 / 8 / 10 px), its foot
+    6 px clear of the row below, then up into the cornice's cell to the corona's soffit, 1 px behind the corona's face
+    - it carries the cornice, no free top to read as a loose block. (Round-1 critic, run 41039900270: the first
+    profile - four equal 8 px steps from the cell's bottom - read front-on as timber knee braces standing on the
+    lintels; a front-on corbel reads by its widening, its foot clear of the lintel.)"""
 
-    def test_four_steps(self):
-        self.assertEqual(proud_rows("corbel_stone"), [3] * 4 + [6] * 4 + [9] * 4 + [12] * 4)
-        for _, b in geo("corbel_stone"):
-            self.assertEqual((b[0], b[3]), (4, 12))
+    def test_a_console_that_widens_as_it_steps_out(self):
+        p = profile("corbel_stone")
+        self.assertNotIn(5, p)                                     # the foot clears the row below by 6 px
+        self.assertEqual([p[y][2] for y in range(6, 16)], [4] * 4 + [8] * 3 + [12] * 3)
+        self.assertEqual([p[y][1] - p[y][0] for y in (6, 10, 13)], [6, 8, 10])
+        for y in range(6, 16):
+            self.assertEqual(p[y][0] + p[y][1], 16, y)             # centred
 
     def test_it_rises_to_the_corona_soffit(self):
         corona = max(A.CORNICE, key=lambda layer: layer[2])
@@ -470,10 +476,16 @@ class Demo2(unittest.TestCase):
                 self.assertEqual(p["part"], "capital")
             self.assertTrue(b[(x, A.FACADE_TOP, front)][0].startswith("reignofnether:cornice_"))
 
-    def test_the_chimney_wears_the_crown(self):
+    def test_the_chimney_wears_the_crown_round_an_open_flue(self):
         b = A.facade2().blocks
         crown = [q for q, (n, _) in b.items() if n.startswith("reignofnether:corbel_course_")]
         self.assertEqual(len(crown), 12)
+        y = crown[0][1]
+        cx, cz = A.CHIMNEY
+        for x in (cx, cx + 1):          # round-1 critic: the shaft's top inside the crown is open, soot on its floor
+            for z in (cz, cz + 1):
+                self.assertEqual(b[(x, y, z)][0], "black_carpet")
+                self.assertEqual(b[(x, y - 1, z)][0], "bricks")
         roof = max(q[1] for q, (n, _) in b.items() if "deepslate_tile" in n)
         self.assertGreaterEqual(max(q[1] for q in crown) - roof, 2)      # the stack stands clear of the ridge
 
