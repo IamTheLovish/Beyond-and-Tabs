@@ -68,7 +68,10 @@ FIELD_VAL = (0.45, 0.68)        # round 2: the wall FIELD (the commonest wall bl
 #                                 (Art method: lights 0.50+ belong to buildings) and under the snow cut, both edges
 TRIM_GAP = 0.10                 # the dressings (quoins, strings, cornices) read >= 0.10 darker than the field: zones
 TRIM = ("stone_brick", "reignofnether:")    # the dressings: stone-brick quoins / strings / heads, our mouldings
-GOLD_MAX = 0.015                # gold (the one accent) <= 1.5 % of the building's pixels in the rts still
+GOLD_MAX = 0.015
+SPIRE_VAL = (0.30, 0.45)        # round 3: the spire a mid tone - round 1's granite 0.55 read "salmon", round 2's
+SPIRE_SAT = (0.10, 0.35)        #   deepslate 0.17-0.20 "an overshoot into the environment darks" (critics); muted
+LADDER = 3                      # round 3: no wall column flips field / dressing 3+ times in 4 courses (round 2's zebra)                # gold (the one accent) <= 1.5 % of the building's pixels in the rts still
 
 
 def sub_block(n):
@@ -250,6 +253,37 @@ class SunwainCourt(unittest.TestCase):
         hits = [h for h in self.hits["rts"].values() if h[0][1] >= 1]
         gold = sum(1 for h in hits if any(k in h[1] for k in GOLD)) / len(hits)
         self.assertLessEqual(gold, GOLD_MAX, round(gold, 4))
+
+    def test_r3_spire_a_muted_mid_tone(self):
+        """Round 2's critics (runs 20261030-195225 / -195226): the dark slate spire (0.17-0.20) "overshoots into the
+        environment's dark band", round 1's granite (0.55, sat 0.37) was "salmon, a second saturated accent". The spire
+        (the roof-mod pieces above the landmark's shaft, y >= 17) averages value 0.30-0.45 and saturation 0.10-0.35 on
+        camera (rts_close, 34) - both edges."""
+        for st in ("rts_close", "34"):
+            hits = [h for h in self.hits[st].values() if h[0][1] >= 17 and h[1].startswith("mcwroofs:")]
+            self.assertGreater(len(hits), 100, st)
+            known, rgb = self.colour(hits)
+            self.assertGreaterEqual(known, KNOWN, (st, "not photographed yet", Counter(h[1] for h in hits).most_common(3)))
+            _, sat, val = colorsys.rgb_to_hsv(*rgb)
+            self.assertTrue(SPIRE_VAL[0] <= val <= SPIRE_VAL[1], (st, "value", round(val, 3)))
+            self.assertTrue(SPIRE_SAT[0] <= sat <= SPIRE_SAT[1], (st, "sat", round(sat, 3)))
+
+    def test_r3_no_ladder_stripes(self):
+        """Round 2's critics: "ladder / zebra stripes on all towers" - the long-and-short quoins flipped field stone /
+        stone brick every course. No seen wall column (west / south faces, 34 and rts_close) flips between the field
+        block and a dressing 3 or more times within 4 consecutive courses."""
+        bad = []
+        for st in ("rts_close", "34"):
+            hits = self.wall_hits(st)
+            field = Counter(h[1] for h in hits if full(h[1]) and not h[1].startswith(TRIM)).most_common(1)[0][0]
+            cells = {h[0]: ("f" if h[1] == field else "t" if h[1].startswith(TRIM) else "o") for h in hits}
+            for (x, y, z), k in cells.items():
+                run = [cells.get((x, y + i, z)) for i in range(4)]
+                if None in run or "o" in run:
+                    continue
+                if sum(run[i] != run[i + 1] for i in range(3)) >= LADDER:
+                    bad.append((st, (x, y, z)))
+        self.assertEqual(sorted(bad)[:10], [], len(bad))
 
     def test_palette_by_look_no_snow_no_loud_colour(self):
         """By how the blocks LOOK on camera: <= 5 % of the building's pixels read as snow (value >= 0.70, sat <=
