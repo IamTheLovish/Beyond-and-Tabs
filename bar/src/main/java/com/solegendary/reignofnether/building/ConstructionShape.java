@@ -15,6 +15,8 @@ public final class ConstructionShape {
 
     /** The smallest ring (blocks): a spire's ring must still read as a ring. */
     public static final float MIN_RING = 1.6f;
+    /** The most outline boxes a building draws (12 streaks each; ~20 sites rise at once in a 4v4). */
+    public static final int MAX_OUTLINE_BOXES = 8;
     /**
      * How far the ring stands off the layer's own footprint (x its half-diagonal). 1.18 -> 1.10 after the first stills
      * (eyes 41003840710): a fresh critic read the wider ring as a halo round the site, not a band at the build height.
@@ -74,24 +76,47 @@ public final class ConstructionShape {
             float dz = Math.max(Math.abs(lz0[l] - cz), Math.abs(lz1[l] + 1 - cz));
             reach[l] = (float) Math.sqrt(dx * dx + dz * dz) * 0.92f;   // the corners are a block's diagonal past the walls
         }
-        // the outline: consecutive layers with the same footprint box merge into one box (a 9x9 base 3 high is one box,
-        // not three), so a stepped building reads as its steps; empty layers (a gap in a reworked design) end a run
+        // the outline: a layer within a block of the current box on every side joins it and the box grows to cover it
+        // (code review Oct 30: identical-only merging gave a pyramid or a round tower one box per layer - ~3k vertices
+        // a site and a staircase of lines); empty layers (a gap in a reworked design) end a run
         float[] runs = new float[6 * layers];
         int nRuns = 0;
         for (int l = 0; l < layers; l++) {
             if (count[l] == 0)
                 continue;
-            int prev = nRuns - 1;
-            boolean extends_ = prev >= 0 && runs[prev * 6 + 5] == minY + l
-                    && runs[prev * 6] == lx0[l] && runs[prev * 6 + 1] == lx1[l] + 1
-                    && runs[prev * 6 + 2] == lz0[l] && runs[prev * 6 + 3] == lz1[l] + 1;
-            if (extends_) {
-                runs[prev * 6 + 5] = minY + l + 1;
+            int o = (nRuns - 1) * 6;
+            boolean joins = nRuns > 0 && runs[o + 5] == minY + l
+                    && Math.abs(runs[o] - lx0[l]) <= 1 && Math.abs(runs[o + 1] - (lx1[l] + 1)) <= 1
+                    && Math.abs(runs[o + 2] - lz0[l]) <= 1 && Math.abs(runs[o + 3] - (lz1[l] + 1)) <= 1;
+            if (joins) {
+                runs[o] = Math.min(runs[o], lx0[l]); runs[o + 1] = Math.max(runs[o + 1], lx1[l] + 1);
+                runs[o + 2] = Math.min(runs[o + 2], lz0[l]); runs[o + 3] = Math.max(runs[o + 3], lz1[l] + 1);
+                runs[o + 5] = minY + l + 1;
                 continue;
             }
-            int o = nRuns++ * 6;
+            o = nRuns++ * 6;
             runs[o] = lx0[l]; runs[o + 1] = lx1[l] + 1; runs[o + 2] = lz0[l]; runs[o + 3] = lz1[l] + 1;
             runs[o + 4] = minY + l; runs[o + 5] = minY + l + 1;
+        }
+        // the cap: merge the touching neighbour pair with the least combined height until few enough remain
+        while (nRuns > MAX_OUTLINE_BOXES) {
+            int best = -1;
+            float bestH = Float.MAX_VALUE;
+            for (int i = 0; i + 1 < nRuns; i++) {
+                int a = i * 6, b = a + 6;
+                if (runs[a + 5] != runs[b + 4])
+                    continue;   // a gap between them: never bridge it
+                float h = runs[b + 5] - runs[a + 4];
+                if (h < bestH) { bestH = h; best = i; }
+            }
+            if (best < 0)
+                break;
+            int a = best * 6, b = a + 6;
+            runs[a] = Math.min(runs[a], runs[b]); runs[a + 1] = Math.max(runs[a + 1], runs[b + 1]);
+            runs[a + 2] = Math.min(runs[a + 2], runs[b + 2]); runs[a + 3] = Math.max(runs[a + 3], runs[b + 3]);
+            runs[a + 5] = runs[b + 5];
+            System.arraycopy(runs, b + 6, runs, b, (nRuns - best - 2) * 6);
+            nRuns--;
         }
         return new ConstructionShape(minY, count, reach, blocks.size(), cx, cz, java.util.Arrays.copyOf(runs, 6 * nRuns));
     }

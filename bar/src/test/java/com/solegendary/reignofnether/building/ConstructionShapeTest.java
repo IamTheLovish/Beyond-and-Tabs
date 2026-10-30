@@ -79,6 +79,38 @@ class ConstructionShapeTest {
         assertEquals(0, ConstructionShape.of(List.of()).outline(0, new float[0]));
     }
 
+    /**
+     * Code review (Oct 30): merging only identical footprints gave a pyramid or a round tower one box per layer - ~3k
+     * vertices a site and a staircase of lines. Layers within a block of the run's box on every side join it (the box
+     * grows to cover them), and a building never draws more than MAX_OUTLINE_BOXES boxes.
+     */
+    @Test
+    void aPyramidMergesNearLayersAndATallOddBuildingIsCapped() {
+        List<int[]> b = new ArrayList<>();
+        for (int y = 0; y < 5; y++) for (int x = y; x < 9 - y; x++) for (int z = y; z < 9 - y; z++) b.add(new int[] { x, y, z });
+        ConstructionShape pyramid = ConstructionShape.of(b);
+        float[] out = new float[6 * pyramid.maxOutlineBoxes()];
+        assertEquals(3, pyramid.outline(0, out), "9,7 | 5,3 | 1 - every other layer starts a box");
+        assertBox(out, 0, 0, 9, 0, 9, 0, 2);
+        assertBox(out, 1, 2, 7, 2, 7, 2, 4);
+        assertBox(out, 2, 4, 5, 4, 5, 4, 5);
+
+        b.clear();
+        for (int y = 0; y < 30; y++) {
+            int in = (y % 2 == 0) ? 0 : 2;   // alternating 9x9 / 5x5: no two neighbours merge
+            for (int x = in; x < 9 - in; x++) for (int z = in; z < 9 - in; z++) b.add(new int[] { x, y, z });
+        }
+        ConstructionShape tall = ConstructionShape.of(b);
+        out = new float[6 * tall.maxOutlineBoxes()];
+        int n = tall.outline(0, out);
+        assertTrue(n <= ConstructionShape.MAX_OUTLINE_BOXES, "capped: " + n);
+        assertEquals(0f, out[4], 1e-4, "the boxes still start at the bottom");
+        assertEquals(30f, out[(n - 1) * 6 + 5], 1e-4, "and reach the top");
+        for (int i = 1; i < n; i++)
+            assertEquals(out[(i - 1) * 6 + 5], out[i * 6 + 4], 1e-4, "no gap between box " + (i - 1) + " and " + i);
+        assertEquals(0f, out[0], 1e-4, "a merged box covers the widest layer it holds");
+    }
+
     private static void assertBox(float[] o, int i, float x0, float x1, float z0, float z1, float y0, float y1) {
         float[] want = { x0, x1, z0, z1, y0, y1 };
         for (int k = 0; k < 6; k++)
