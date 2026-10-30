@@ -11,7 +11,6 @@ import java.nio.charset.StandardCharsets;
  * version mismatch was invisible or an anonymous channel-list screen (user request, Oct 23).
  */
 public final class BuildId {
-    public static final String PREFIX = "Beyond and Tabs ";
     private static String cached;
 
     private BuildId() { }
@@ -37,16 +36,45 @@ public final class BuildId {
         return t.isEmpty() ? "dev" : t;
     }
 
-    /** The network channel version: Forge matches it exactly and prints it, so it reads as words. */
-    public static String channelVersion(String buildId) {
-        return PREFIX + clean(buildId);
+    /** Marks the build id inside the network protocol string; it ends at the next '+' (ids never contain one). */
+    public static final String BUILD_TAG = "+build.";
+
+    /**
+     * The mod version with the build id appended, e.g. {@code 1.5.0-beta-4+build.2026.10.23-0443-911d903}; PacketHandler
+     * then adds {@code +packets.<table hash>}. The id is for the words players see, never for the handshake decision.
+     */
+    public static String withBuild(String version, String buildId) {
+        return version + BUILD_TAG + clean(buildId).replace('+', '-');
     }
 
-    /** Back from a channel version to the bare build id (anything without our prefix comes back cleaned). */
-    public static String parse(String channelVersion) {
-        if (channelVersion == null) return "dev";
-        String t = channelVersion.trim();
-        return clean(t.startsWith(PREFIX) ? t.substring(PREFIX.length()) : t);
+    /** The build id inside a protocol string, or null when it carries none (a server from before build ids). */
+    public static String buildOf(String protocol) {
+        if (protocol == null) return null;
+        int at = protocol.indexOf(BUILD_TAG);
+        if (at < 0) return null;
+        int from = at + BUILD_TAG.length();
+        int to = protocol.indexOf('+', from);
+        String id = (to < 0 ? protocol.substring(from) : protocol.substring(from, to)).trim();
+        return id.isEmpty() ? null : id;
+    }
+
+    /** The protocol string without its build id: what the handshake actually compares. */
+    public static String withoutBuild(String protocol) {
+        if (protocol == null) return "";
+        String t = protocol.trim();
+        int at = t.indexOf(BUILD_TAG);
+        if (at < 0) return t;
+        int to = t.indexOf('+', at + BUILD_TAG.length());
+        return t.substring(0, at) + (to < 0 ? "" : t.substring(to));
+    }
+
+    /**
+     * The handshake rule: equal after dropping the build ids, so two commits with the same packet table connect (the
+     * packet-table hash from security audit F3 decides) and only the message to a refused player names the builds.
+     */
+    public static boolean sameProtocol(String mine, String theirs) {
+        if (mine == null || theirs == null) return false;
+        return withoutBuild(mine).equals(withoutBuild(theirs));
     }
 
     /** Same build exactly; ids are compared as written, no "newer" rule. */
@@ -63,7 +91,7 @@ public final class BuildId {
     private static volatile String lastServerChannelVersion;
 
     /**
-     * Called by our channel's client-side version check with the server's channel string. Forge's mismatch screen
+     * Called by our channel's client-side version check with the server's protocol string. Forge's mismatch screen
      * keeps only MOD versions (constant 1.5.0-beta-4 on every build), never the channel string, so this is the one
      * place the server's build id is visible. Recorded on every check, accepted or not, so the latest join attempt wins.
      */
@@ -76,15 +104,16 @@ public final class BuildId {
     }
 
     /**
-     * What the join-failure screen says. serverChannelVersion is the server's channel string, or null/blank when not
-     * known (registry mismatch, server without the mod); a value equal to ours cannot explain the failure, so it also
-     * counts as unknown.
+     * What the join-failure screen says. mine is this jar's build id, myProtocol its handshake string, serverProtocol
+     * the server's (null/blank when not known: registry mismatch, server without the mod). A server string the
+     * handshake would accept cannot explain the failure, so it also counts as unknown. The server's need is its build
+     * id, or its whole protocol string when it carries none.
      */
-    public static Parts joinFailureParts(String mine, String serverChannelVersion) {
-        if (serverChannelVersion == null || serverChannelVersion.isBlank()
-                || matches(mine, parse(serverChannelVersion)))
+    public static Parts joinFailureParts(String mine, String myProtocol, String serverProtocol) {
+        if (serverProtocol == null || serverProtocol.isBlank() || sameProtocol(myProtocol, serverProtocol))
             return new Parts(KEY_MISMATCH_UNKNOWN, clean(mine));
-        return new Parts(KEY_MISMATCH, clean(mine), parse(serverChannelVersion));
+        String theirs = buildOf(serverProtocol);
+        return new Parts(KEY_MISMATCH, clean(mine), theirs != null ? theirs : serverProtocol.trim());
     }
 
     public static Component toComponent(Parts p) {

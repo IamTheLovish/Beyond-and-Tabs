@@ -7,7 +7,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
 
-/** The version-mismatch rules: build ids compare exactly, the channel string round-trips, the message names both. */
+/** The version-mismatch rules: build ids compare exactly, ride in the protocol string uncompared, the message names both. */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
 public class BuildIdGameTests {
@@ -26,33 +26,43 @@ public class BuildIdGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 20)
-    public static void buildid_channel_version_round_trips(GameTestHelper helper) {
+    public static void buildid_rides_in_the_protocol_but_is_not_compared(GameTestHelper helper) {
         String id = "2026.10.23-0443-911d903";
-        String ch = BuildId.channelVersion(id);
-        if (!ch.equals("Beyond and Tabs " + id))
-            helper.fail("channel version should read as words, got " + ch);
-        else if (!BuildId.parse(ch).equals(id))
-            helper.fail("parse must give the bare id back, got " + BuildId.parse(ch));
-        else if (!BuildId.parse("1.5.0-beta-4").equals("1.5.0-beta-4"))
-            helper.fail("a string without our prefix comes back as it is");
+        String mine = BuildId.withBuild("1.5.0-beta-4", id) + "+packets.3f9c01a2b4de";
+        String otherCommit = BuildId.withBuild("1.5.0-beta-4", "2026.10.22-1210-abc1234") + "+packets.3f9c01a2b4de";
+        String otherTable = BuildId.withBuild("1.5.0-beta-4", "2026.10.22-1210-abc1234") + "+packets.000000000000";
+        if (!mine.equals("1.5.0-beta-4+build." + id + "+packets.3f9c01a2b4de"))
+            helper.fail("protocol string should carry the build id before the table hash, got " + mine);
+        else if (!id.equals(BuildId.buildOf(mine)) || BuildId.buildOf("1.5.0-beta-4+packets.3f9c01a2b4de") != null)
+            helper.fail("buildOf must give the bare id back, or null without one: " + BuildId.buildOf(mine));
+        else if (!BuildId.withoutBuild(mine).equals("1.5.0-beta-4+packets.3f9c01a2b4de"))
+            helper.fail("withoutBuild must drop only the build id: " + BuildId.withoutBuild(mine));
+        else if (!BuildId.sameProtocol(mine, otherCommit) || !BuildId.sameProtocol(mine, "1.5.0-beta-4+packets.3f9c01a2b4de"))
+            helper.fail("the same packet table must connect whatever the build ids");
+        else if (BuildId.sameProtocol(mine, otherTable) || BuildId.sameProtocol(mine, null))
+            helper.fail("a different packet table (or no version) must be refused");
         else
             helper.succeed();
     }
 
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void buildid_join_failure_parts_use_server_id_or_fall_back(GameTestHelper helper) {
-        BuildId.Parts known = BuildId.joinFailureParts("A-1", "Beyond and Tabs B-2");
-        BuildId.Parts unknown = BuildId.joinFailureParts("A-1", null);
-        BuildId.Parts same = BuildId.joinFailureParts("A-1", "Beyond and Tabs A-1");
-        BuildId.Parts blank = BuildId.joinFailureParts("A-1", "  ");
+        String mineProto = "1.5.0-beta-4+build.A-1+packets.aaaaaaaaaaaa";
+        BuildId.Parts known = BuildId.joinFailureParts("A-1", mineProto, "1.5.0-beta-4+build.B-2+packets.bbbbbbbbbbbb");
+        BuildId.Parts noId = BuildId.joinFailureParts("A-1", mineProto, "1.5.0-beta-4+packets.bbbbbbbbbbbb");
+        BuildId.Parts unknown = BuildId.joinFailureParts("A-1", mineProto, null);
+        BuildId.Parts same = BuildId.joinFailureParts("A-1", mineProto, "1.5.0-beta-4+build.Z-9+packets.aaaaaaaaaaaa");
+        BuildId.Parts blank = BuildId.joinFailureParts("A-1", mineProto, "  ");
         if (!known.key().equals(BuildId.KEY_MISMATCH) || known.args().length != 2
                 || !known.args()[0].equals("A-1") || !known.args()[1].equals("B-2"))
             helper.fail("known server id must give (have, need) = (A-1, B-2): " + known);
+        else if (!noId.key().equals(BuildId.KEY_MISMATCH) || !noId.args()[1].equals("1.5.0-beta-4+packets.bbbbbbbbbbbb"))
+            helper.fail("a server string without a build id is shown whole: " + noId);
         else if (!unknown.key().equals(BuildId.KEY_MISMATCH_UNKNOWN) || unknown.args().length != 1
                 || !unknown.args()[0].equals("A-1"))
             helper.fail("unknown server id fallback wrong: " + unknown);
         else if (!same.key().equals(unknown.key()) || !blank.key().equals(unknown.key()))
-            helper.fail("a server id equal to ours or blank is no explanation");
+            helper.fail("a server string the handshake accepts, or a blank one, is no explanation");
         else
             helper.succeed();
     }

@@ -18,7 +18,7 @@ import java.util.List;
  * screen lists mod versions (a constant here) and not what to do; the registry-mismatch DisconnectedScreen shows
  * nothing about versions. No mixin: a ScreenEvent.Render.Post draws the translated line over the screen.
  * The server's build id comes from BuildId.lastServerChannelVersion(), recorded by our channel's client check:
- * ModMismatchDisconnectedScreen's own data holds mod versions, never the channel string (ConnectionData.java:131-143).
+ * ModMismatchDisconnectedScreen's own data holds mod versions, never the channel string (which carries the build id) (ConnectionData.java:131-143).
  */
 @Mod.EventBusSubscriber(modid = ReignOfNether.MOD_ID, value = Dist.CLIENT)
 public final class JoinMismatchClientEvents {
@@ -32,6 +32,7 @@ public final class JoinMismatchClientEvents {
         // a plain disconnect for any other reason (kick, timeout) must not claim a version problem
         if (!forge && !isRegistryMismatch((DisconnectedScreen) s)) return;
         Component line = BuildId.toComponent(BuildId.joinFailureParts(BuildId.current(),
+                com.solegendary.reignofnether.registrars.PacketHandler.protocolVersion(),
                 BuildId.lastServerChannelVersion()));
         var font = s.getMinecraft().font;
         List<FormattedCharSequence> rows = font.split(line, Math.max(100, s.width - 40));

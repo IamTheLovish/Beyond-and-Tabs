@@ -139,7 +139,7 @@ public final class PacketHandler {
         }
     }
 
-    /** What this jar sends and accepts at the handshake: mod version + hash of the packet table. */
+    /** What this jar sends at the handshake: mod version + build id + hash of the packet table (the build id is not compared). */
     public static String protocolVersion() {
         return protocolVersion;
     }
@@ -716,17 +716,22 @@ public final class PacketHandler {
             throw new IllegalStateException("PacketHandler: " + index + " packets registered but " + TABLE.size()
                 + " in the protocol table and " + PENDING.size() + " completed with add()"
                 + " - register every packet with register(...)...add(), not INSTANCE.messageBuilder");
-        protocolVersion = PacketTableHash.protocolVersion(MOD_VERSION, TABLE);
+        // The build id rides along in the advertised string (e.g. 1.5.0-beta-4+build.2026.10.23-0443-911d903+packets.
+        // 3f9c01a2b4de) only so a refused player is told which build the server runs (JoinMismatchClientEvents): the
+        // accept predicates drop it (BuildId.sameProtocol), so identical tables from different commits still connect.
+        protocolVersion = PacketTableHash.protocolVersion(
+                com.solegendary.reignofnether.BuildId.withBuild(MOD_VERSION, com.solegendary.reignofnether.BuildId.current()), TABLE);
 
         // only now: Forge captures the version string when the channel is created
         SimpleChannel channel = NetworkRegistry.newSimpleChannel(
                 ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "main"), PacketHandler::protocolVersion,
                 serverVersion -> {
-                    // client side, with the server's string: Forge's mismatch screen keeps only mod versions
+                    // client side, with the server's string: Forge's mismatch screen keeps only mod versions, so this
+                    // is the one place the server's build is visible (recorded whether accepted or not)
                     com.solegendary.reignofnether.BuildId.noteServerChannelVersion(serverVersion);
-                    return protocolVersion.equals(serverVersion);
+                    return com.solegendary.reignofnether.BuildId.sameProtocol(protocolVersion, serverVersion);
                 },
-                v -> protocolVersion.equals(v));
+                clientVersion -> com.solegendary.reignofnether.BuildId.sameProtocol(protocolVersion, clientVersion));
         for (Pending<?> p : PENDING)
             p.registerOn(channel);
         PENDING.clear();
