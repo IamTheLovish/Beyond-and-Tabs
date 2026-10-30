@@ -127,20 +127,20 @@ public class BotPlayer {
         // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
         // Slice 4: a Seer, a Lantern Fortress and a Phoenix join the T2 mix (stormDomes keeps the Fortress's dome up in a
         // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them).
-        // The essence caster, the Spark Sage, joins the T2 mix (lovish, Oct 29: bots build and use every caster); the
-        // AutoCaster casts its spells whenever it holds the essence
+        // The essence caster, the Spark Sage, joins the T1 mix (lovish, Oct 29: bots build and use every caster, and
+        // casters are tier 1); the AutoCaster casts its spells whenever it holds the essence
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
                 null, ProductionItems.GEOMANCER,
                 List.of(ProductionItems.JADE_GUARD, ProductionItems.JADE_GUARD, ProductionItems.FIRE_ADEPT,
                         ProductionItems.FIRE_ADEPT, ProductionItems.BLADE_DANCER, ProductionItems.FROST_ADEPT,
-                        ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE),   // the Wind Monk only against flyers (queueAntiAir)
+                        ProductionItems.ROCKET_BATTERY, ProductionItems.INK_SCRIBE,   // the Wind Monk only against flyers (queueAntiAir)
+                        ProductionItems.SPARK_SAGE),   // essence caster, tier 1: its spells autocast (Static Step, Captured Spark, Thunderhead)
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
-                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN,   // beasts-2 T2 beast
-                        ProductionItems.SPARK_SAGE),   // essence caster: its spells autocast (Static Step, Captured Spark, Thunderhead)
+                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN),   // beasts-2 T2 beast
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
@@ -155,12 +155,12 @@ public class BotPlayer {
                 null, ProductionItems.TINKER,
                 List.of(ProductionItems.IRON_WARDEN, ProductionItems.IRON_WARDEN, ProductionItems.RIFLE_SQUAD,
                         ProductionItems.RIFLE_SQUAD, ProductionItems.STEAM_RUNNER, ProductionItems.MORTAR_CRAWLER,
-                        ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER),   // the Flak Cart only against flyers (queueAntiAir)
+                        ProductionItems.SHIELD_PROJECTOR, ProductionItems.SAPPER,   // the Flak Cart only against flyers (queueAntiAir)
+                        ProductionItems.SOUL_ENGINEER),   // essence caster, tier 1: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER,   // beasts-2 T2 beast
-                        ProductionItems.SOUL_ENGINEER),   // essence caster: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
