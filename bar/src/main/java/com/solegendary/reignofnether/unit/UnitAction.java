@@ -227,5 +227,9 @@ public enum UnitAction {
     // the Stormcallers essence caster, the Spark Sage
     STATIC_STEP,            // 5 essence: blink up to 8 blocks to a standable spot in sight
     CAPTURED_SPARK,         // 10 essence: chain lightning, 30 damage a strike, 4 strikes, 6-block jumps
-    THUNDERHEAD             // 20 essence: a storm cloud for 10 s strikes the enemy nearest its centre (6 blocks) for 25 a second
+    THUNDERHEAD,            // 20 essence: a storm cloud for 10 s strikes the enemy nearest its centre (6 blocks) for 25 a second
+    // the Brassworks essence caster, the Soul Engineer
+    PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
+    GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
+    SOUL_BOILER             // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
 }

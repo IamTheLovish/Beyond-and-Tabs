@@ -213,6 +213,12 @@ public class BuildingPlacement {
     public String payerName; // who pays for construction (bridges lose their ownerName after placement)
     public boolean freeBuild = false; // placed by a command: built the old way without any cost
     public float buildSpeedMult = 1f; // eg. 2 for a player's first capitol
+    /**
+     * The Soul Engineer's Soul Boiler (ability/abilities/SoulBoiler): until this game tick the building builds and
+     * produces {@link com.solegendary.reignofnether.ability.abilities.SoulBoiler#SPEED_MULT} times as fast. Server
+     * only, not saved: a 20 s thing.
+     */
+    public long boilUntilTick = 0;
 
     protected List<AbilityButton> abilityButtons = new ArrayList<>();
     protected List<Ability> abilities = new ArrayList<>();
@@ -778,6 +784,43 @@ public class BuildingPlacement {
         }
         return sb.append(", unbuilt never-placed ").append(never).append(" / changed after placing ").append(drifted)
                  .append(", built ").append(isBuilt).toString();
+    }
+
+    /**
+     * The site's own multipliers on its builders' power: the first-capitol bonus ({@link #buildSpeedMult}), the Soul
+     * Boiler (SoulBoiler.speedMult) and the economy pace (EconomyPace: construction speeds up / slows down with income,
+     * so a paced match keeps the same build-time-to-income ratio; cost per building is unchanged - only how fast it
+     * flows). Public for the game test.
+     */
+    public float boostedBuildPower(float buildPower) {
+        return buildPower * buildSpeedMult * com.solegendary.reignofnether.ability.abilities.SoulBoiler.speedMult(this)
+            * com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+    }
+
+    /**
+     * Puts missing blocks straight back - no builder, no wood, lowest first, dry before wet - until the building has
+     * regained {@code hp} health (it may overshoot by under one block's share) or is whole. The Soul Engineer's Patch
+     * Kit (ability/abilities/PatchKit). Returns the health regained. Server only.
+     */
+    public int restoreHealthNow(int hp) {
+        if (level == null || level.isClientSide() || hp <= 0)
+            return 0;
+        int before = getHealth();
+        partialBlocksDestroyed = 0d;   // a dent smaller than a block is mended first, as a builder's repair does
+        ArrayList<BuildingBlock> missing = new ArrayList<>();
+        for (BuildingBlock block : blocks)
+            if (!block.getBlockState().isAir() && !block.isPlaced(level) && level.isLoaded(block.getBlockPos()))
+                missing.add(block);
+        missing.sort(Comparator.comparingInt(b -> b.getBlockPos().getY()));
+        missing = waterLast(neverPlacedFirst(missing, placedBlockPosSet));
+        for (BuildingBlock block : missing) {
+            if (getHealth() - before >= hp || getHealth() >= getMaxHealth())
+                break;
+            blockPlaceQueue.add(0, block);
+            buildNextBlock();
+            blockPlaceQueue.remove(block);   // still there only when it could not be placed
+        }
+        return getHealth() - before;
     }
 
     public static ArrayList<BuildingBlock> neverPlacedFirst(ArrayList<BuildingBlock> unplaced, Set<BlockPos> placed) {
@@ -1463,10 +1506,7 @@ public class BuildingPlacement {
         // still rises, slowly
         if (assistUntilTick > serverLevel.getGameTime())
             buildPower += assistPower;
-        buildPower *= buildSpeedMult;
-        // economy pace (EconomyPace): construction speeds up / slows down with income, so a paced match keeps the
-        // same build-time-to-income ratio. Cost per building is unchanged - only how fast it flows
-        buildPower *= com.solegendary.reignofnether.resources.EconomyPace.of(payerName);
+        buildPower = boostedBuildPower(buildPower);
 
         // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
         // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing
