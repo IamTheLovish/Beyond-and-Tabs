@@ -35,6 +35,9 @@ public final class ConstructionGrid {
     private final int[] face = new int[MAX_EDGES * 4];
     private int rimN;
     private float rimSum;
+    private final float[] front = new float[MAX_EDGES * 3];
+    private final int[] frontSide = new int[MAX_EDGES];
+    private int frontN;
 
     private ConstructionGrid(int x0, int y0, int z0, int w, int h, int d) {
         this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
@@ -98,6 +101,34 @@ public final class ConstructionGrid {
                         rimN++;
                     }
                 }
+        fronts();
+    }
+
+    /** The vertical fronts: each standing block's open faces, against a missing neighbour along the face. */
+    private void fronts() {
+        frontN = 0;
+        for (int y = y0; y < y0 + h; y++)
+            for (int z = z0; z < z0 + d; z++)
+                for (int x = x0; x < x0 + w; x++) {
+                    if (cell(x, y, z) != STANDING)
+                        continue;
+                    for (int side = 0; side < 4; side++) {
+                        int nx = side == 1 ? 1 : side == 3 ? -1 : 0, nz = side == 2 ? 1 : side == 0 ? -1 : 0;
+                        if (cell(x + nx, y, z + nz) != EMPTY)
+                            continue;
+                        for (int t = -1; t <= 1 && frontN < MAX_EDGES; t += 2) {
+                            int tx = nz != 0 ? t : 0, tz = nx != 0 ? t : 0;     // along the face
+                            int lx = x + tx, lz = z + tz;
+                            if (cell(lx, y, lz) != MISSING || cell(lx + nx, y, lz + nz) != EMPTY)
+                                continue;
+                            // the corner on the face's plane, on the side toward the missing block
+                            float cx = nx > 0 ? x + 1 : nx < 0 ? x : (tx > 0 ? x + 1 : x);
+                            float cz = nz > 0 ? z + 1 : nz < 0 ? z : (tz > 0 ? z + 1 : z);
+                            front[frontN * 3] = cx; front[frontN * 3 + 1] = cz; front[frontN * 3 + 2] = y;
+                            frontSide[frontN++] = side;
+                        }
+                    }
+                }
     }
 
     private void set(int r, float ax, float az, float bx, float bz, float y) {
@@ -143,6 +174,17 @@ public final class ConstructionGrid {
     public int faceY(int i) { return face[i * 4 + 1]; }
     public int faceZ(int i) { return face[i * 4 + 2]; }
     public int faceSide(int i) { return face[i * 4 + 3]; }
+
+    /**
+     * The vertical build fronts (round 11 critic: run the rim up them too): where a standing block's open face meets
+     * the coplanar open face of a missing block beside it, the vertical edge between them, a block high from its foot
+     * {@link #frontY}, at (x, z) on the face's plane, with the face's side.
+     */
+    public int frontCount() { return frontN; }
+    public float frontX(int i) { return front[i * 3]; }
+    public float frontZ(int i) { return front[i * 3 + 1]; }
+    public int frontY(int i) { return (int) front[i * 3 + 2]; }
+    public int frontSide(int i) { return frontSide[i]; }
 
     /** The top of the highest standing block in column (x, z) (NaN for none, or outside). */
     public float columnTop(int x, int z) {

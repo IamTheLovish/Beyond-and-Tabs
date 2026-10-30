@@ -100,6 +100,25 @@ class ConstructionGridTest {
         }
     }
 
+    /**
+     * Round 11 critic: run the rim up VERTICAL build fronts too - where a standing block's open face meets a missing
+     * block's coplanar face beside it, the vertical edge between them. The site's missing corner (12, 65, 22) has two:
+     * beside (11, 65, 22) on the +z face (x = 12, z = 23) and beside (12, 65, 21) on the +x face (x = 13, z = 22).
+     */
+    @Test
+    void verticalFrontsRunWhereAStandingFaceMeetsAMissingOne() {
+        ConstructionGrid g = site();
+        assertEquals(2, g.frontCount());
+        boolean a = false, b = false;
+        for (int i = 0; i < g.frontCount(); i++) {
+            assertEquals(65, g.frontY(i), "from the block's foot, a block high");
+            if (g.frontX(i) == 12f && g.frontZ(i) == 23f && g.frontSide(i) == 2) a = true;
+            if (g.frontX(i) == 13f && g.frontZ(i) == 22f && g.frontSide(i) == 1) b = true;
+        }
+        assertTrue(a, "the +z face's front at x 12");
+        assertTrue(b, "the +x face's front at z 22");
+    }
+
     @Test
     void aColumnsTopIsItsHighestStandingBlock() {
         ConstructionGrid g = site();
