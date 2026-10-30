@@ -46,30 +46,23 @@ void main() {
         discard;
     vec3 lin = toLinear(c.rgb);
 #ifdef UNLIT_SKYCATCH
-    // the sky's strays (light pass 7). The SKY_PROBE run (eyes 41078134357) showed gbuffers_skybasic runs, while
-    // gbuffers_clouds never does under Oculus: vanilla's clouds come through here (gbuffers_textured / gbuffers_basic),
-    // drawn as is - a flat white slab in the dusk sky, and the layer's far rim the dotted ellipse. A cloud is found by its
-    // world height (CLOUD_Y_*): lit by the sky's ramp in its direction and from the sun's side, softened
-    // (CLOUD_OPACITY) and faded out toward the layer's rim. Vanilla's sun sprite, should it come through here too, is
-    // dropped by direction (our disc is drawn with the sky, lib/sky.glsl)
+    // the sky's strays (light passes 7-8). The SKY_PROBE run (eyes 41078134357) showed gbuffers_skybasic runs, while
+    // gbuffers_clouds never does under Oculus: vanilla's clouds come through here (gbuffers_textured / gbuffers_basic).
+    // Pass 7 lit and faded them; their alpha-tested texels survived the fade (the dotted ring, a white slab), so in a
+    // perspective view they are now dropped outright: a fragment at the cloud layer's height (CLOUD_Y_*), anything
+    // drawn past SKYCATCH_FAR of the render distance (where no terrain is), and vanilla's sun and moon sprites (by
+    // direction; ours are drawn with the sky, lib/sky.glsl)
     if (!orthoView()) {
         vec3 dir = normalize(viewPos);
         vec3 sunDir = normalize(sunPosition);
-        if (dot(dir, sunDir) > SUN_SPRITE_COS && abs(length(viewPos) - 100.0) < 20.0)
+        if (abs(dot(dir, sunDir)) > SUN_SPRITE_COS && abs(length(viewPos) - 100.0) < 20.0)
             discard;
         vec3 player = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         float y = player.y + cameraPosition.y;
-        if (y > CLOUD_Y_MIN && y < CLOUD_Y_MAX && length(viewPos) > 24.0) {
-            vec3 sunColour, skyColour;
-            lightColours(sunColour, skyColour);
-            float sunSide = 0.5 + 0.5 * dot(dir, sunDir);
-            float shade = clamp(dot(c.rgb, LUMA) / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3), 0.5, 1.0);
-            vec3 lit = (skyGradient(dir) * CLOUD_SKY + sunColour * (CLOUD_SUN * 2.0 * sunSide)) * shade;
-            lin = mix(lin, lit, skyOwn());
-            c.a *= CLOUD_OPACITY * (1.0 - smoothstep(CLOUD_RIM_START, CLOUD_RIM_END, length(player.xz) / max(far, 16.0)));
-            if (c.a < 0.004)
-                discard;
-        }
+        if (y > CLOUD_Y_MIN && y < CLOUD_Y_MAX && length(viewPos) > 24.0)
+            discard;
+        if (length(viewPos) > SKYCATCH_FAR * max(far, 16.0) && abs(length(viewPos) - 100.0) > 20.0)
+            discard;
     }
 #endif
 #ifdef UNLIT_LIGHTMAP

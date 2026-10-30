@@ -105,7 +105,11 @@ const float SUN_SPREAD = 0.014;
 const float PENUMBRA_MIN_BLOCKS = 0.05;
 // the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
 // never to a black crease (lib/ao.glsl)
-const float CONTACT_AO_FLOOR = 0.85;
+// Light pass 8 (the critic: the benchmark's one real advantage on the pad is the contact darkening at block feet;
+// ours, floored at 0.85 of the sky's share, measured ~0.02): 0.85 -> 0.65, and the occlusion takes CONTACT_SUN_SHARE
+// of the rest of the light too. Half a block from a wall's foot on the lit lawn: ~-0.06-0.08 luma
+const float CONTACT_AO_FLOOR = 0.65;
+const float CONTACT_SUN_SHARE = 0.5;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
 // pivot a toe takes the darks down in proportion to how far below the lawn they sit - x (1 - SLOPE u - TOE u^2),
@@ -167,18 +171,31 @@ const float GLOW_DARK_GUARD = 2.0;
 // horizon, so the 0.60 span never left the horizon's colour): the gradient spans SKY_GRADIENT_SPAN 0.10 of the view's
 // sine, a deeper zenith, a paler, faintly warm horizon. Model on screen: zenith ~0.64 (hue ~215), the frame's top
 // edge ~0.66, the horizon ~0.86
-const vec3 SKY_ZENITH_DAY = vec3(0.44, 0.60, 0.84);
+// Light pass 8 (critic: pass 7's sky a hard two-band, saturated blue for ~60 px then a flat cream; the benchmark one
+// soft blue-grey ramp): solved through the model of the grade for a zenith ~(150, 180, 220), a neutral blue-grey
+// horizon ~(190, 197, 208) at ~0.77 luma and the void below it ~(174, 184, 198); a square-root ramp over 0.60 of the
+// view's sine
+const vec3 SKY_ZENITH_DAY = vec3(0.55, 0.634, 0.754);
 // light pass 3: the horizon a little bluer (0.61, 0.65, 0.70 before), on screen ~(0.70, 0.76, 0.84), luma ~0.75
-const vec3 SKY_HORIZON_DAY = vec3(0.80, 0.80, 0.78);
+const vec3 SKY_HORIZON_DAY = vec3(0.66, 0.70, 0.755);
+// the void below the horizon (linear factor on the horizon's colour, reached 0.4 of the sine down)
+const vec3 SKY_BELOW_TINT = vec3(0.84, 0.85, 0.875);
+// the brightening within ~30 degrees of the sun (lib/sky.glsl)
+const float SKY_SUN_GLOW = 0.25;
+// the horizon away from the sun once it has set (light pass 8: the dusk still at 13000 read mid-afternoon, its sky
+// 0.76; the benchmark's 0.46): a dim blue-grey
+const vec3 SKY_HORIZON_DUSK = vec3(0.42, 0.44, 0.55);
+// our own moon (vanilla's square sprite dropped): radius (radians), colour in linear light
+const float MOON_DISC_RADIUS = 0.022;
+const vec3 MOON_DISC_COLOUR = vec3(0.80, 0.84, 0.92);
 // the aerial perspective's air by day (lib/sky.glsl skyAir): pass 4's horizon, kept for the haze
 const vec3 SKY_AIR_DAY = vec3(0.60, 0.65, 0.72);
 // below the horizon (the void past the map's edge in a 3/4 view) the horizon's colour, down to this share of it
-const float SKY_BELOW_HORIZON = 0.97;          // light pass 7: 0.85 -> 0.97 (the horizon band reads lightest)
 // a probe for which sky programs the loader runs (light pass 6): 1 paints gbuffers_skybasic magenta,
 // gbuffers_skytextured green and gbuffers_clouds cyan, and composite.fsh leaves the sky as those programs drew it.
 // Run eyes once with it on; off for play
 #define SKY_PROBE 0 // [0 1]
-const float SKY_GRADIENT_SPAN = 0.10;
+const float SKY_GRADIENT_SPAN = 0.60;
 // the low sun's sky (lib/sky.glsl, light pass 4): below SKY_SUNSET_HIGH of the sun's sine the horizon warms toward the
 // sun - SKY_SUNSET_GOLD (hue ~33, t11800) turning SKY_SUNSET_DEEP (hue ~15, darker: the dusk still) as the sun reaches
 // the horizon - with SKY_SUNSET_AWAY of it on the side away from the sun, and the zenith deepens to SKY_ZENITH_DUSK.
@@ -187,9 +204,11 @@ const float SKY_SUNSET_HIGH = 0.25;
 const vec3 SKY_SUNSET_GOLD = vec3(0.95, 0.75, 0.50);
 // light pass 5 (critic: the dusk sky a flat peach wash, zenith to horizon 0.05 luma): the horizon band lighter and
 // less red, ~0.78 luma at hue ~23 (was 0.55 at 15), under a cooler, darker zenith
-const vec3 SKY_SUNSET_DEEP = vec3(0.97, 0.74, 0.60);
+// light pass 8: (0.97, 0.74, 0.60) -> (0.80, 0.55, 0.42): toward the set sun ~0.58 luma at hue ~20 (target ~0.55)
+const vec3 SKY_SUNSET_DEEP = vec3(0.80, 0.55, 0.42);
 const float SKY_SUNSET_AWAY = 0.35;
-const vec3 SKY_ZENITH_DUSK = vec3(0.50, 0.58, 0.68);          // ~0.57 luma, hue ~213, saturation ~0.26
+// light pass 8: (0.50, 0.58, 0.68) -> a deep blue-violet, ~0.37 luma at hue ~240 (target ~0.35)
+const vec3 SKY_ZENITH_DUSK = vec3(0.36, 0.36, 0.55);
 // clouds (gbuffers_clouds, light pass 5): lit by the sky's ramp in their own direction (CLOUD_SKY of it) plus
 // CLOUD_SUN of the sun, so a dusk cloud takes the dusk colours instead of vanilla's grey-white slab
 const float CLOUD_SKY = 1.15;
@@ -198,7 +217,10 @@ const float CLOUD_SUN = 0.18;
 // found there by world height (the layer is at y 192 in 1.20), softened to CLOUD_OPACITY of vanilla's alpha
 const float CLOUD_Y_MIN = 170.0;
 const float CLOUD_Y_MAX = 215.0;
-const float CLOUD_OPACITY = 0.55;
+const float CLOUD_OPACITY = 0.55;            // (unused since light pass 8: the caught clouds are dropped)
+// the unlit programs drop what they draw past this share of the render distance in a perspective view (light pass 8:
+// the dotted ring beyond the map's edge)
+const float SKYCATCH_FAR = 0.85;
 const float CLOUD_RIM_START = 0.45;            // of the render distance (far), across the ground: the clouds fade out
 const float CLOUD_RIM_END = 0.80;              // between these, before the layer's rim
 // the sun's disc in the sky (program/sky.fsh, light pass 3; vanilla's square sprite is not drawn): SUN_DISC_RADIUS
@@ -232,6 +254,13 @@ const vec3 SHADE_TINT_WALL = vec3(0.93, 1.00, 1.21);
 // the low sun's shadows take the tint harder by this share (light pass 6: the t11800 ground shadow read yellow-green,
 // hue 70-95 at saturation 0.53-0.58; target ~105-120, <= 0.40)
 const float SHADE_TINT_LOW_BOOST = 0.6;
+// the moon's light fades in between these depths of the sun under the horizon (sine), lib/light.glsl
+const float MOON_FADE_LO = 0.05;
+const float MOON_FADE_HI = 0.30;
+// a sky light at or above this share of 15 counts as open sky (lib/light.glsl lightLevels, light pass 8)
+const float SKY_LIGHT_FULL = 0.8;
+// the material class of the ground's shade tint (light pass 8)
+#define ID_GROUND 10005.0
 // the fill's direction (lib/light.glsl, light pass 5: the castle at noon had no form, its two visible walls 0.68 and
 // 0.67): the sky is brighter toward the sun and the sunlit ground bounces from that side, so a face turned toward the
 // sun's azimuth takes up to 1 + FILL_DIRECTION of the fill, one turned away 1 - FILL_DIRECTION; tops and the lawn none.
@@ -262,6 +291,7 @@ const float FOLIAGE_BASE_AO = 0.85;
 // when hard shadows read as dark stars; the penumbra is soft now). A plant looks its own shadow up FOLIAGE_SHADOW_LIFT
 // blocks toward the light, so it is never shadowed by itself or the tufts round its foot
 const float FOLIAGE_SHADOW_LIFT = 1.0;
+const float PLANT_SHADOW_ALPHA = 0.5;      // shadow.fsh: plants' texels below this alpha cast nothing
 // the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
 // across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->
@@ -271,9 +301,11 @@ const float FOLIAGE_SHADOW_LIFT = 1.0;
 // 0.80 of the field), value 0.40 -> 0.55 (macro std ~0.06 on screen, p5-p95 ~0.32-0.52, lawn std ~0.07 in all) and
 // hue 0.11 / 0.15 -> 0.17 / 0.23 (~+-3.5 degrees typical, ~+-8-10 at the extremes); the mean unchanged
 const float MEADOW_CELL = 17.3;
-const float MEADOW_VALUE = 0.55;
-const float MEADOW_HUE_RED = 0.17;
-const float MEADOW_HUE_BLUE = 0.23;
+// light pass 8 (the critic: the lawn should read "full", not brighter): value 0.55 -> 0.70 (macro std ~0.075), hue
+// 0.17 / 0.23 -> 0.22 / 0.30 (~+-4.5 degrees typical, ~+-10-12 at the extremes); the mean unchanged
+const float MEADOW_VALUE = 0.70;
+const float MEADOW_HUE_RED = 0.22;
+const float MEADOW_HUE_BLUE = 0.30;
 // near-white faces turned from the up direction lose the light's colour (light pass 3: white wool and white blocks'
 // sides read cream, H 40, S 0.07, under the warm sun while their tops stayed neutral): the light on a face of albedo
 // luma past ~0.7 and saturation under ~0.12 is pulled toward its own grey by WHITE_WALL_NEUTRAL x (1 - up). The ground

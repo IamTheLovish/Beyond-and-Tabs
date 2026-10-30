@@ -174,7 +174,9 @@ void main() {
         float skyShare = texture2D(colortex1, texcoord).r;
         // depthtex1: the depth without water, the one the occlusion was found at
         if (skyShare > 0.0)
-            lin *= 1.0 - skyShare * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
+            // the sky's share fully, CONTACT_SUN_SHARE of the rest (light pass 8: contact darkening at block feet)
+            lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare))
+                * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
     }
 #endif
     bool ortho = orthoView();

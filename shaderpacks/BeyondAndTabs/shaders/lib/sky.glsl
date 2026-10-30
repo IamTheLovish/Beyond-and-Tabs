@@ -33,7 +33,9 @@ float skyGolden() {
 vec3 skyHorizonFrom(vec3 day, float toward) {
     vec3 warm = mix(toLinear(SKY_SUNSET_DEEP), toLinear(SKY_SUNSET_GOLD), skyGolden());
     float share = skySunset() * mix(SKY_SUNSET_AWAY, 1.0, toward * toward);
-    return mix(toLinear(day), warm, share);
+    // the horizon away from the sun dims to a blue-grey as the sun sets (light pass 8: the dusk still read mid-afternoon)
+    vec3 base = mix(toLinear(day), toLinear(SKY_HORIZON_DUSK), skySunset() * (1.0 - skyGolden()));
+    return mix(base, warm, share);
 }
 
 vec3 skyHorizon(float toward) {
@@ -51,10 +53,12 @@ vec3 skyGradient(vec3 dir) {
     vec3 zenith = mix(toLinear(SKY_ZENITH_DAY), toLinear(SKY_ZENITH_DUSK), skySunset() * (1.0 - 0.5 * skyGolden()));
     // the warm band climbs higher on the sun's side
     float span = SKY_GRADIENT_SPAN * (1.0 + 0.4 * skySunset() * toward);
-    vec3 c = mix(skyHorizon(toward), zenith, smoothstep(0.0, span, u));
-    // below the horizon (the void past the map's edge, seen from a 3/4 view): the horizon's colour, a little darker
-    // further down - never the clear colour, which read as a sky darker toward the horizon (light pass 6)
-    return c * mix(SKY_BELOW_HORIZON, 1.0, smoothstep(-0.4, 0.0, u));
+    // one soft ramp (light pass 8: pass 7's 0.10 span read as a hard two-band sky): a square root, so the 3/4 frame's
+    // top edge (~5 degrees up) is already ~0.4 of the way to the zenith
+    vec3 c = mix(skyHorizon(toward), zenith, sqrt(clamp(u / span, 0.0, 1.0)));
+    // below the horizon (the void past the map's edge, seen from a 3/4 view): the horizon's colour turning a deeper
+    // blue-grey further down (SKY_BELOW_TINT) - never the clear colour (light pass 6), never a flat cream (pass 7)
+    return c * mix(vec3(1.0), SKY_BELOW_TINT, smoothstep(0.0, 0.4, -u));
 }
 
 // the sky with the sun's disc and halo and a glow round the moon (light passes 3-6), linear. Painted over every pixel
@@ -65,9 +69,11 @@ vec3 skyWithLights(vec3 dir) {
     float h = sunHeight();
     float u = dot(dir, normalize(upPosition));
     float toSun = max(dot(dir, sun), 0.0);
-    // a warm glow round the sun, strongest when it is low
-    c += vec3(1.0, 0.72, 0.45) * (pow(toSun, 6.0) * 0.25 * smoothstep(-0.12, 0.05, h) * (1.0 - 0.6 * smoothstep(0.1, 0.6, h)));
     float angle = acos(clamp(dot(dir, sun), -1.0, 1.0));
+    // the sky brightens toward the sun within ~30 degrees of it (SKY_SUN_GLOW, light pass 8; pass 3's glow spread ~60),
+    // warmer as it sinks
+    c += mix(vec3(1.0, 0.96, 0.90), vec3(1.0, 0.72, 0.45), lowSun()) * (SKY_SUN_GLOW * exp(-angle / 0.25)
+        * smoothstep(-0.12, 0.05, h));
     float disc = 1.0 - smoothstep(SUN_DISC_RADIUS * 0.75, SUN_DISC_RADIUS * 1.25, angle);
     float halo = SUN_HALO * exp(-angle / (SUN_DISC_RADIUS * 4.0));
     vec3 discColour = mix(SUN_DISC_COLOUR, SUN_DISC_LOW, lowSun());
@@ -75,6 +81,10 @@ vec3 skyWithLights(vec3 dir) {
     float toMoon = max(dot(dir, -sun), 0.0);
     float moonUp = smoothstep(-0.05, 0.10, -h);
     c += vec3(0.62, 0.70, 0.90) * (MOON_GLOW * moonUp * (pow(toMoon, 400.0) + 0.3 * pow(toMoon, 40.0)));
+    // our own moon disc (light pass 8): vanilla's square moon sprite is dropped wherever it is drawn
+    float moonAngle = acos(clamp(dot(dir, -sun), -1.0, 1.0));
+    float moonDisc = 1.0 - smoothstep(MOON_DISC_RADIUS * 0.8, MOON_DISC_RADIUS * 1.2, moonAngle);
+    c += MOON_DISC_COLOUR * (moonDisc * moonUp * smoothstep(-0.02, 0.02, u));
     return c;
 }
 

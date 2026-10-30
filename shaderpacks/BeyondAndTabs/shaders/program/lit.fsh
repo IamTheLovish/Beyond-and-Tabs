@@ -59,6 +59,7 @@ varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
 varying float plantUp;
+varying float groundMaterial;
 varying float asDrawn;
 varying float waterBody;
 #ifdef LIT_PBR
@@ -191,6 +192,7 @@ void main() {
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
+    gShadeGround = groundMaterial;
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
     // near-white faces turned from up lose the light's colour (WHITE_WALL_NEUTRAL, light pass 3): white sides read
     // white, not cream, while the ground keeps the warm sun

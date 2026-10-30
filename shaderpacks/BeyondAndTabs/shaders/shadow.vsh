@@ -18,8 +18,10 @@ attribute vec4 mc_Entity;
 attribute vec2 mc_midTexCoord;         // the centre of this quad's sprite (a plant's foot stays put in the wind)
 
 varying vec2 texcoord;
+varying float plantCaster;             // 1 for plants: shadow.fsh thins their shadow (light pass 8)
 
 void main() {
+    plantCaster = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 ? 1.0 : 0.0;
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     // light pass 7: plants cast shadows again (the benchmark's tufts do; dropped since #350, when hard shadows read as
     // dark stars - the penumbra is soft now), and sway here exactly as lit.vsh sways them (the same windShare rule)

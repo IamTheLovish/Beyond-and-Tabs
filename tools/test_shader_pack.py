@@ -78,7 +78,8 @@ class ShaderPack(unittest.TestCase):
         props = open(os.path.join(spc.SHADERS, "shaders.properties"), encoding="utf-8").read()
         self.assertIn("scale.deferred=0.5", props)
         comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
-        self.assertIn("lin *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+        # light pass 8: the sky's share fully, CONTACT_SUN_SHARE of the rest (contact darkening at block feet)
+        self.assertIn("lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare))", comp)
 
     def test_buffers_agree_across_programs(self):
         # the loader gathers every colortexN format and clear directive from all programs into one table, the last one
@@ -193,7 +194,10 @@ class ShaderPack(unittest.TestCase):
     def test_contact_ao_never_crushes(self):
         # Retired pin: slice 3's AO_FLOOR 0.55 (picked for the judged floor at 0.35 of the lawn); with the vertex AO
         # under it, block-block contacts and wall feet went near black on the stills. The floor is now >= 0.85
-        self.assertGreaterEqual(_const("CONTACT_AO_FLOOR"), 0.85)
+        # Retired pin (light pass 8): ">= 0.85" - it left the block feet's contact darkening at ~0.02 luma, the
+        # benchmark's one real advantage on the pad (critic); 0.6-0.75 now, taking part of the sun's light too
+        self.assertTrue(0.6 <= _const("CONTACT_AO_FLOOR") <= 0.75)
+        self.assertTrue(0.3 <= _const("CONTACT_SUN_SHARE") <= 0.6)
         self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
 
@@ -271,7 +275,12 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 6): "the zenith >= 0.08 luma over the horizon" - every frame's sky read darker toward
         # the horizon, the inverse of a real sky (critic); now the horizon is >= 0.08 over the zenith, still bluer up
         zen, hor = vec("SKY_ZENITH_DAY"), vec("SKY_HORIZON_DAY")
-        self.assertGreaterEqual(sum(a * b for a, b in zip(hor, luma)) - sum(a * b for a, b in zip(zen, luma)), 0.08)
+        # Retired again (light pass 8): ">= 0.08 over the zenith" before the grade - pass 7's 0.80 beige horizon read as
+        # a hard two-band sky. The target is one soft blue-grey ramp: a neutral horizon <= 0.78, a little over the zenith
+        hl, zl = sum(a * b for a, b in zip(hor, luma)), sum(a * b for a, b in zip(zen, luma))
+        self.assertTrue(0.04 <= hl - zl <= 0.12 and hl <= 0.78, (hl, zl))
+        self.assertLessEqual(colorsys.rgb_to_hsv(*hor)[1], 0.15)              # neutral blue-grey, not beige
+        self.assertGreater(hor[2], hor[0])
         self.assertGreater(zen[2] / zen[0], hor[2] / hor[0])   # bluer at the zenith
         gold, deep = vec("SKY_SUNSET_GOLD"), vec("SKY_SUNSET_DEEP")
         hg, sg, _ = colorsys.rgb_to_hsv(*gold)
@@ -281,11 +290,16 @@ class ShaderPack(unittest.TestCase):
         # dark red-orange band (0.55 luma, hue 15) that read as a flat peach wash with the haze. The critic's dusk target
         # replaces it: a horizon band ~0.80 luma at hue 20-30 under a zenith <= 0.66 at hue 210-220, >= 0.12 luma apart
         zd = vec("SKY_ZENITH_DUSK")
-        self.assertTrue(20 <= hd * 360 <= 30, hd * 360)
-        self.assertTrue(0.74 <= sum(a * b for a, b in zip(deep, luma)) <= 0.84)
+        # Retired again (light pass 8): "the horizon band 0.74-0.84, the zenith hue 205-220" - the dusk still (13000)
+        # read mid-afternoon (sky 0.76 against the benchmark's 0.46 mauve). Now toward the set sun ~0.55-0.62 at hue
+        # 18-30, a deep blue-violet zenith ~0.3-0.4 at hue 225-250, and a dim blue-grey horizon away from the sun
+        self.assertTrue(18 <= hd * 360 <= 30, hd * 360)
+        self.assertTrue(0.52 <= sum(a * b for a, b in zip(deep, luma)) <= 0.62)
         hz, sz, _ = colorsys.rgb_to_hsv(*zd)
-        self.assertTrue(205 <= hz * 360 <= 220 and 0.2 <= sz <= 0.32, (hz * 360, sz))
-        self.assertLessEqual(sum(a * b for a, b in zip(zd, luma)), 0.66)
+        self.assertTrue(225 <= hz * 360 <= 250 and 0.25 <= sz <= 0.45, (hz * 360, sz))
+        self.assertTrue(0.30 <= sum(a * b for a, b in zip(zd, luma)) <= 0.40)
+        hd_away = vec("SKY_HORIZON_DUSK")
+        self.assertLess(sum(a * b for a, b in zip(hd_away, luma)), 0.5)
         self.assertGreaterEqual(sum(a * b for a, b in zip(deep, luma)) - sum(a * b for a, b in zip(zd, luma)), 0.12)
         clouds = _read("program", "clouds.fsh")
         self.assertIn("skyGradient(dir) * CLOUD_SKY", clouds)
@@ -434,12 +448,15 @@ class ShaderPack(unittest.TestCase):
             for ext in ("vsh", "fsh"):
                 self.assertIn("#define UNLIT_SKYCATCH", _read("%s.%s" % (name, ext)))
         unlit = _read("program", "unlit.fsh")
-        self.assertIn("if (y > CLOUD_Y_MIN && y < CLOUD_Y_MAX", unlit)
+        # light pass 8: caught clouds are dropped outright (fading left their alpha-tested texels: the dotted ring), and
+        # so is anything past SKYCATCH_FAR of the render distance; vanilla's sun and moon sprites by direction
+        self.assertIn("if (y > CLOUD_Y_MIN && y < CLOUD_Y_MAX && length(viewPos) > 24.0)\n            discard;", unlit)
         self.assertTrue(_const("CLOUD_Y_MIN") < 192.0 < _const("CLOUD_Y_MAX"))
-        self.assertLessEqual(_const("CLOUD_OPACITY"), 0.7)
-        self.assertIn("dot(dir, sunDir) > SUN_SPRITE_COS", unlit)
-        # the day sky's gradient reads within a 3/4 frame (its top edge ~5 degrees up)
-        self.assertLessEqual(_const("SKY_GRADIENT_SPAN"), 0.2)
+        self.assertIn("abs(dot(dir, sunDir)) > SUN_SPRITE_COS", unlit)
+        self.assertTrue(0.7 <= _const("SKYCATCH_FAR") <= 0.95)
+        # Retired pin (light pass 8): "SKY_GRADIENT_SPAN <= 0.2" - the 0.10 span read as a hard two-band sky; one
+        # soft square-root ramp over 0.6 now
+        self.assertIn("sqrt(clamp(u / span, 0.0, 1.0))", _read("lib", "sky.glsl"))
 
     def test_plants_cast_soft_shadows_and_perspective_keeps_contrast(self):
         # light pass 7: plants are in the shadow pass again, swaying as lit.vsh sways them, and look their own shadow up
@@ -454,6 +471,18 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.5 <= _const("PERSPECTIVE_CURVE") <= 1.0)
         self.assertIn("mix(1.0, ao * texAo, BOUNCE_AO)", _read("lib", "light.glsl"))
         self.assertLess(_const("BOUNCE_AO"), 1.0)
+        # light pass 8: plants' shadows thinned to their solid texels on every other map texel (~half a shadow); the
+        # ground's shade tint by material (block.properties 10005), not by the normal; the moon fades in after
+        # sunset; sky light from SKY_LIGHT_FULL counts as open sky (the chunk-border light step)
+        self.assertIn("plantCaster > 0.5 && (a < PLANT_SHADOW_ALPHA", _read("shadow.fsh"))
+        props = open(os.path.join(spc.SHADERS, "block.properties"), encoding="utf-8").read()
+        self.assertRegex(props, r"(?m)^block\.10005=grass_block dirt ")
+        self.assertIn("#define ID_GROUND 10005.0", _read("lib", "settings.glsl"))
+        light = _read("lib", "light.glsl")
+        self.assertIn("clamp(upness, 0.0, 1.0) * gShadeGround", light)
+        self.assertIn("gShadeGround = groundMaterial;", _read("program", "lit.fsh"))
+        self.assertIn("sunColour *= smoothstep(MOON_FADE_LO, MOON_FADE_HI, -h);", light)
+        self.assertTrue(0.7 <= _const("SKY_LIGHT_FULL") <= 0.9)
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted
@@ -463,7 +492,8 @@ class ShaderPack(unittest.TestCase):
         # Retired pins (light pass 4): MEADOW_CELL 8-16 and MEADOW_VALUE 0.30-0.45 - the patches were imperceptible from
         # the RTS height (critic 7.0/10). Larger, softer cells and a value swing of ~0.06 luma std on screen
         self.assertTrue(14.0 <= _const("MEADOW_CELL") <= 22.0)
-        self.assertTrue(0.50 <= _const("MEADOW_VALUE") <= 0.65)
+        # light pass 8: 0.55 -> 0.70 (the lawn to read "full" without more exposure)
+        self.assertTrue(0.60 <= _const("MEADOW_VALUE") <= 0.80)
         meadow = _read("lib", "meadow.glsl")
         self.assertIn("- 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45)", meadow)
         lit = _read("program", "lit.fsh")
@@ -486,7 +516,8 @@ class ShaderPack(unittest.TestCase):
         # in gbuffers_skytextured and dropped; our soft disc (warmer as the sun sinks) is drawn with the dome, which the
         # terrain covers. A glow round the moon
         sky = _read("program", "sky.fsh")
-        self.assertIn("normalize(sunPosition)) > SUN_SPRITE_COS)\n        discard;", sky)
+        self.assertIn("normalize(sunPosition))) > SUN_SPRITE_COS)\n        discard;", sky)
+        self.assertIn("MOON_DISC_COLOUR * (moonDisc", _read("lib", "sky.glsl"))
         self.assertNotIn("MC_RENDER_STAGE_SUN", sky)
         self.assertIn("discColour * ((disc + halo)", _read("lib", "sky.glsl"))
         self.assertIn("MOON_GLOW * moonUp", _read("lib", "sky.glsl"))

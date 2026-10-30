@@ -35,7 +35,8 @@ void main() {
     // pass 3's check never ran and vanilla's square showed as a pale rectangle). The sprite is found by direction:
     // vanilla's sun quad spans ~0.3 rad from its centre (0.42 to a corner), the moon sits opposite
     vec4 sv = gbufferProjectionInverse * vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight) * 2.0 - 1.0, 1.0, 1.0);
-    if (dot(normalize(sv.xyz / sv.w), normalize(sunPosition)) > SUN_SPRITE_COS)
+    // light pass 8: the moon's square sprite too (our disc is drawn with the dome); stars and anything else stay
+    if (abs(dot(normalize(sv.xyz / sv.w), normalize(sunPosition))) > SUN_SPRITE_COS)
         discard;
     vec4 t = texture2D(texture, texcoord) * glcolor;
 #if SKY_PROBE == 1

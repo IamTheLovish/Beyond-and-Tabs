@@ -69,6 +69,10 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
     // horizon, where the loader swaps one body for the other
     sunColour = h > 0.0 ? mix(SUN_LOW, SUN_HIGH, high) : MOON;
     sunColour *= smoothstep(0.0, 0.05, abs(h));
+    // the moon takes over slowly (light pass 8): just after sunset it barely lights - the dusk still (13000, the sun ~3
+    // degrees under) read mid-afternoon in its light, lawn 0.18 against the benchmark's 0.07 - and is full by night
+    if (h <= 0.0)
+        sunColour *= smoothstep(MOON_FADE_LO, MOON_FADE_HI, -h);
     // the sky's fill has no direction: it may glow on through twilight
     skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
@@ -77,7 +81,11 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
 
 // lightmap coordinates (block light, sky light) to 0..1: the loader hands them over as texel centres of the 16x16 map
 vec2 lightLevels(vec2 lm) {
-    return clamp((lm - 1.0 / 32.0) * (16.0 / 15.0), 0.0, 1.0);
+    vec2 levels = clamp((lm - 1.0 / 32.0) * (16.0 / 15.0), 0.0, 1.0);
+    // open sky from SKY_LIGHT_FULL up (light pass 8): a sky light of 14 against 15 across a chunk border of the eyes
+    // pads' freshly laid ground drew a faint straight light step over the empty lawn
+    levels.y = clamp(levels.y / SKY_LIGHT_FULL, 0.0, 1.0);
+    return levels;
 }
 
 // Lambert, eased toward a square root: a low sun still rakes the open ground (Dusk's long shadows read as shade, not
@@ -128,8 +136,13 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // blue sky's: SHADE_TINT (light pass 3, luma 1) cools it there, so a shadow is the lit ground's colour shifted toward
 // blue, not the same hue darker. sunLit: the sun's share arriving, 0..1. Where the sun reaches, the fill keeps the
 // light table's mild tint (a strongly blue fill tinted the whole lawn: #326)
+// the ground's tint goes to the ground's materials only (light pass 8: a shaded stone walkway went cobalt like water):
+// lit.fsh sets this per draw from the block id - 1 grass, dirt and the like (block.properties 10005), 0.5 plants, 0
+// everything else, which takes the walls' tint whichever way it faces
+float gShadeGround = 0.0;
+
 vec3 shadeTint(float sunLit, float upness) {
-    vec3 full = mix(SHADE_TINT_WALL, SHADE_TINT, clamp(upness, 0.0, 1.0));
+    vec3 full = mix(SHADE_TINT_WALL, SHADE_TINT, clamp(upness, 0.0, 1.0) * gShadeGround);
     vec3 tint = max(mix(vec3(1.0), full, 1.0 + SHADE_TINT_LOW_BOOST * lowSun()), vec3(0.0));
     return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
 }
