@@ -221,6 +221,7 @@ class ConstructionShapeTest {
         float m = ConstructionShape.BEAT_MOVE, w = ConstructionShape.BEAT_WIND, st = ConstructionShape.BEAT_STRIKE;
         float cyc = ConstructionShape.BEAT_CYCLE;
         assertTrue(m <= 0.5f, "never idle more than ~0.5 s");
+        assertEquals(0.8f, cyc, 1e-4, "a blow every 0.8 s (round 9 critic)");
         assertEquals(0.3f, w, 1e-4);
         assertEquals(0.1f, st, 1e-4);
 
