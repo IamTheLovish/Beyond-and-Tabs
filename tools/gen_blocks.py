@@ -1488,14 +1488,16 @@ for _p in FLOWER_TEXTURES:
 # r48 (eyes 41098466051, with the shader's side lighting fixed: the tufts should sit 0.03-0.06 UNDER the lawn in the
 # tinted result, within 5 degrees of its hue): short grass 0.745 -> 0.60 (tinted 0.405 vs the lawn's 0.436), ferns
 # 0.57, tall grass and large fern 0.58; sat 0.12 -> 0.20 (the yellow bias, m_plant)
+# r49 (eyes lp10, with light pass 10: no silhouette at the RTS zoom): blade TIPS >= 0.50 tinted (albedo ~0.88 at a
+# 0.68 mean: plant_sprites TIP / BASE), a dark base (~0.33 tinted), the hue ~10 degrees toward yellow (m_plant)
 for _sh in ("", "_b", "_c"):
     for _sz in ("", *PLANT_SIZES):
-        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.60, sat=0.20)
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.68, sat=0.26)
 for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.57, sat=0.14)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.64, sat=0.18)
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.58, sat=0.20)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.66, sat=0.26)
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
@@ -4306,7 +4308,9 @@ def m_plant(name, n):
         # r48 (eyes 41098466051: the tufts read blue-grey, ~15 degrees cooler than the lawn - the sky on the leaning
         # quads): a YELLOW bias (hue 57 in albedo -> ~78 tinted, the lawn's 79) with more of it (sat 0.20), so the
         # sky shifts the hue less
-        rgb = np.stack([shade * 1.06, shade * 1.04, shade * 0.72], -1)
+        # r49 (eyes lp10: no silhouette - the tufts matched the lawn in hue and luma): the bias 10 degrees further
+        # toward yellow (hue 60 in albedo -> ~70 tinted vs the lawn's 79), sat 0.26
+        rgb = np.stack([shade * 1.14, shade * 1.02, shade * 0.55], -1)
     t = TARGETS[name]
     alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
     H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)

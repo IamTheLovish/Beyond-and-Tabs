@@ -230,10 +230,10 @@ class PlantSprites(unittest.TestCase):
         self.assertLessEqual(float(np.mean(stacked)), 0.30, "stacked %s" % np.round(stacked, 2))
         self.assertLessEqual(max(stacked), 0.40, "stacked %s" % np.round(stacked, 2))
 
-    def test_short_grass_base_is_light_and_thin(self):
-        # r36: the lowest 15% of a tuft no darker than the drawn body less a step (r35: median 0.63-0.66 against the
-        # lawn's 0.56) and a narrower crown: fewer opaque texels there than r35's (0.25 / 0.23 / 0.26 of the band
-        # at full size)
+    def test_short_grass_base_is_dark_and_thin(self):
+        # r36: a narrower crown - fewer opaque texels in the lowest 15% of a tuft than r35's (0.25 / 0.23 / 0.26 of
+        # the band at full size). r49 (eyes lp10: no silhouette at the RTS zoom): the base is DARK under bright tips -
+        # the lowest band's median sits at the drawn BASE_SHORT (within a step) and under the body
         r35 = {0: 0.253, 1: 0.233, 2: 0.259}
         for v in range(3):
             for size in ps.SIZES:
@@ -241,7 +241,8 @@ class PlantSprites(unittest.TestCase):
                 a = np.maximum(green, straw) > 0
                 low = slice(N - int(0.15 * _height(a)), N)
                 med = float(np.median(sh[low][green[low] > 0]))
-                self.assertGreaterEqual(med, 0.68, "grass_%d_%s base %.3f" % (v, size, med))
+                self.assertGreaterEqual(med, ps.BASE_SHORT - 0.03, "grass_%d_%s base %.3f" % (v, size, med))
+                self.assertLessEqual(med, ps.BODY_SHORT, "grass_%d_%s base %.3f not under the body" % (v, size, med))
                 if size == 1.0:
                     fill = float(a[low].mean())
                     self.assertLess(fill, r35[v] - 0.02, "grass_%d base fills %.3f of its band" % (v, fill))

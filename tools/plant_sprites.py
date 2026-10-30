@@ -37,7 +37,9 @@ SS = 4   # sub-samples per texel side (r34: 2 -> 4)
 # values along a blade in the greyscale the biome colour tints; the lawn (grass_block_top) is 0.56. gen_blocks
 # (m_plant) only scales them so the plant's mean is TARGETS' luma (r35 short grass 0.72, ~1.0x) and sets the
 # warmth's saturation: these are the final values.
-BASE, BODY, TIP, RIB = 0.585, 0.66, 0.80, 0.045
+# r49 (eyes lp10: the tufts had no silhouette at the RTS zoom): a dark BASE and bright TIPS - each tuft a small 3-D
+# clump (the fit sets the mean; the base / tip ratio is what survives it)
+BASE, BODY, TIP, RIB = 0.48, 0.66, 0.92, 0.045
 # r35: the short grass's body a step lighter (in game, r34 noon stills with the shipped shader preset, the blocks holding
 # a short-grass tuft drew 0.958 of the lawn's luma - blades, their gaps and their shadows; ferns 0.960)
 BODY_SHORT = 0.71
@@ -49,7 +51,7 @@ SIZES = (1.0, 0.8, 0.55)
 # lighter (0.585 -> BASE_SHORT, the body's level less a step) and thinner - each blade starts at ROOT_W of its width
 # and reaches it by ROOT_T of its length - so fewer, lighter texels stack at the crown, where every leaning quad of a
 # tuft puts its root (gen_blocks GRASS_UPRIGHT)
-BASE_SHORT, ROOT_W, ROOT_T = 0.68, 0.5, 0.3
+BASE_SHORT, ROOT_W, ROOT_T = 0.50, 0.5, 0.3   # r49: 0.68 -> 0.50, a dark base under bright tips
 
 # r34 shapes. pos: blades across the fan, left to right; `straw` = which of them is a dead blade (the untinted layer)
 GRASS = (
