@@ -36,6 +36,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import materials  # noqa: E402  - the ONE LabPBR encoder, shared with the units (tools/dsl_to_game.py)
+import plant_sprites  # noqa: E402  - round 29: the grass plants' blade sprites
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACK_DIR = os.path.join(ROOT, "resourcepacks", "BeyondAndTabs-Realistic")
@@ -156,8 +157,11 @@ TARGETS = {
     # 0.32 -> 0.38, cobbled 0.27 -> 0.32 - the family keeps its order (deepslate under stone_bricks at 0.44)
     # r39: the whole blackstone family a violet-black (sat 0.10 -> 0.13, the base hue aligned with blackstone's), so
     # the wall's body and its weathered blocks read as one stone, apart from blue deepslate and warm basalt
-    "polished_blackstone":        dict(luma=0.27, std=0.030, sat=0.13, tilt=12.0, smooth=60, pore=4),
-    "polished_blackstone_bricks": dict(luma=0.29, std=0.055, sat=0.13, tilt=18.0, smooth=40, pore=8),
+    # r41 (eyes 41053751822, the shader's new S-curve has room for real blacks: the family sat at 0.25-0.35 on screen
+    # where the benchmark sits at 0.10-0.15): back down to black - luma 0.27 / 0.29 / 0.26 / 0.27 -> 0.15 / 0.17 /
+    # 0.14 / 0.16 - the hue separation through a subtle WARM chroma (sat 0.13 -> 0.06), not lightness
+    "polished_blackstone":        dict(luma=0.15, std=0.030, sat=0.06, tilt=12.0, smooth=60, pore=4),
+    "polished_blackstone_bricks": dict(luma=0.17, std=0.050, sat=0.06, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.38, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
     "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
@@ -177,7 +181,9 @@ TARGETS = {
     "nether_bricks":              dict(luma=0.15, std=0.050, sat=0.35, tilt=18.0, smooth=50, pore=12),
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
-    "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
+    # r41 (eyes 41053751822: a saturated neon cube, 0.468 on screen beside the lawn's 0.437, sat 0.59, hue 83 vs the
+    # lawn's 92): luma 0.40 -> 0.37, sat 0.60 -> 0.48, the hue toward the lawn's (MOSS_RGB), matte (smooth 41 -> 24)
+    "moss_block":                 dict(luma=0.37, std=0.060, sat=0.48, tilt=14.0, smooth=24, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
     "mossy_stone_bricks":         dict(luma=0.41, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
@@ -245,13 +251,17 @@ TARGETS = {
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.25, std=0.035, sat=0.17, tilt=24.0, smooth=12, pore=12),   # r35: lifted; r39: violet-black
+    "blackstone": dict(luma=0.14, std=0.035, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: black again, warm (0.25 / 0.17)
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
     # r31b: brighter, more numerous glints (eyes 41018675091: the benchmark's top face glitters) - std 0.075 -> 0.09
-    "obsidian": dict(luma=0.16, std=0.090, sat=0.20, tilt=10.0, smooth=228, pore=0),   # r31c: chroma cut (0.30 -> 0.20)
-    "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
+    # r41 (eyes 41053751822: it read as a pale lavender speckle with black flecks at ~0.24 on screen where the
+    # benchmark sits at 0.16): luma 0.16 -> 0.11, std 0.09 -> 0.05 (the sheen glints no longer blaze), sat 0.20 -> 0.10
+    "obsidian": dict(luma=0.11, std=0.050, sat=0.10, tilt=10.0, smooth=228, pore=0),
+    # r41 (eyes 41053751822: near-white highlight pixels on the pattern lines strobe at the RTS zoom): the albedo's
+    # shoulder at base + 0.15 (tone_limits, now applied by _plain), the bevels flatter (tilt 15 / 22 -> 10 / 12), duller
+    "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=10.0, smooth=22, pore=12, shoulder=0.26),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     # r34: cracked dry earth (m_cracked_path) - the spread is the cracks' (std 0.05 -> 0.065), the value stays on
     # the palette band
@@ -262,9 +272,9 @@ TARGETS = {
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
     "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
     "cracked_deepslate_bricks": dict(luma=0.36, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35: with the family
-    "cracked_polished_blackstone_bricks": dict(luma=0.26, std=0.057, sat=0.13, tilt=22.0, smooth=19, pore=8),
-    "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
-    "chiseled_polished_blackstone": dict(luma=0.27, std=0.058, sat=0.14, tilt=22.0, smooth=30, pore=8),   # r35; r39
+    "cracked_polished_blackstone_bricks": dict(luma=0.14, std=0.050, sat=0.06, tilt=22.0, smooth=19, pore=8),
+    "chiseled_nether_bricks": dict(luma=0.15, std=0.055, sat=0.30, tilt=12.0, smooth=30, pore=12, shoulder=0.30),
+    "chiseled_polished_blackstone": dict(luma=0.16, std=0.050, sat=0.06, tilt=22.0, smooth=30, pore=8),   # r35; r39; r41
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
@@ -286,7 +296,9 @@ TARGETS = {
     # reflection makes them glassy): diamond 0.70 -> 0.78, emerald 0.50 -> 0.58, both glass-smooth (253)
     "diamond_block": dict(luma=0.78, std=0.110, sat=0.35, tilt=14.0, smooth=253, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
-    "emerald_block": dict(luma=0.58, std=0.100, sat=0.72, tilt=14.0, smooth=253, pore=0, f0=15),
+    # r41 (eyes 41053751822: "translucent green jelly"): an opaque cut-gem block - smoothness 253 -> 150, f0 15 -> 10,
+    # darker body (0.58 -> 0.46) with a crystalline facet pattern, the facet-edge glow cut (m_gem edge_glow 0.35 -> 0.12)
+    "emerald_block": dict(luma=0.46, std=0.085, sat=0.66, tilt=14.0, smooth=150, pore=0),
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
@@ -298,7 +310,9 @@ TARGETS = {
     "white_concrete": dict(luma=0.87, std=0.012, sat=0.0, tilt=2.0, smooth=86, pore=10),
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
-    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
+    # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
+    # hue ~270) - the base hue 218 -> 274 (m_terracotta base), sat 0.42 -> 0.40
+    "blue_terracotta": dict(luma=0.37, std=0.018, sat=0.40, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -311,7 +325,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.24, std=0.033, sat=0.17, tilt=20.0, smooth=14, pore=12),   # r35; r39: violet-black
+    "blackstone_top": dict(luma=0.13, std=0.033, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41: black again, warm
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
     "quartz_block_top": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
@@ -1249,7 +1263,7 @@ for _k in range(2, PROC_VARIANTS + 1):
 # round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
 # terracotta keep their r31-r33 entries above (the family's anchors)
 DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
-    "white":      ((0.91, 0.91, 0.90), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),
+    "white":      ((0.91, 0.91, 0.91), (0.82, 0.84, 0.84), (0.82, 0.70, 0.63)),   # r41: the wool exactly neutral
     "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
     "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
     "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
@@ -1261,7 +1275,7 @@ DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
     "green":      ((0.33, 0.44, 0.12), (0.29, 0.37, 0.14), (0.30, 0.33, 0.17)),
     "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
     "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
-    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.30, 0.36, 0.52)),
+    "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.38, 0.28, 0.46)),   # r41: the clay a dusky violet
     # r39: redder - hue 274 -> 283 (it read steel blue in game; 293 sat too close to magenta's 303)
     "purple":     ((0.60, 0.27, 0.74), (0.48, 0.13, 0.62), (0.49, 0.27, 0.36)),
     "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
@@ -1352,6 +1366,141 @@ SEED_ORDER = SEED_ORDER + tuple(R38)
 TARGETS["mud_bricks"] = dict(luma=0.45, std=0.055, sat=0.42, tilt=10.0, smooth=20, pore=50, soften=0.6)
 TARGETS["packed_mud"] = dict(luma=0.46, std=0.040, sat=0.42, tilt=8.0, smooth=18, pore=56, soften=0.8)
 SEED_ORDER = SEED_ORDER + ("mud_bricks", "packed_mud")
+# round 40: the grass plants of PR #314 (claude/grass-plants, rounds 29-37) ported onto this branch - their targets
+# below, their names appended to SEED_ORDER LAST (after r39's mud): the plants re-roll, nothing else does
+# Round 29 (lovish Oct 28 "we might need more grass or more realistic grass to match"; his "yes" at 03:35): the grass
+# plants - short grass, tall grass, fern, large fern - were vanilla's 16x pixel tufts beside a 128x lawn. Now tapered
+# blade strokes (tools/plant_sprites.py), greyscale (the biome grass colour tints them, so GrassTint's dry / lush
+# patches carry onto the plants), cut-out. Luma a touch above the lawn's (blades catch more light than the turf under
+# them), SSS like the leaves (thin blades glow when the sun is behind them under labPBR).
+for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top"):
+    # r30: 0.48 -> 0.62. In game, at noon, the tufts drew at 0.64-0.73 of the lawn's luma (eyes runs
+    # 40725608295 plain / 40725612987 shaders): a leaning quad gets less sun than the top face under it, so the
+    # plants read as dark stamps (critic r30, fault 2). The r29b "lime" note was from offline renders, unlit
+    TARGETS[_p] = dict(luma=0.62, std=0.125, sat=0.00, tilt=12.0, smooth=45, pore=160)
+    # r31: luma 0.68 and a little warm saturation (m_plant): a lighter, yellower tuft over its own shadow
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.68, sat=0.12)
+# round 29b: dead blades, dry stalks and seed heads in their own colour - a tinted greyscale sprite can only be green,
+# so they are a second, untinted layer of the same crossed quads (its texels never overlap the green layer's)
+for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
+    TARGETS[_p] = dict(luma=0.50, std=0.110, sat=0.36, tilt=12.0, smooth=50, pore=120)
+# r34 (tufts round 34; critic r33: tufts 4/10 default, 6/10 preset): bold-blade sprites (tools/plant_sprites.py) and
+# more shapes - three short grasses, two ferns, two tall grasses - so neighbouring tufts differ. Each extra shape
+# takes its first shape's targets; appended (SEED_ORDER rule). m_plant fits only their luma MEAN and saturation, over
+# the whole plant (std is not used for the plants any more): the drawn values are already the final ones.
+# ao 0.3 (like the leaves' 0.35): a blade behind another one is not a cavity - r33's grass AO went down to 0.55
+# (claude/research-grass-rts-zoom-oct28.md: no dark outlines, no heavy AO ramp); now >= 0.86.
+PLANT_SHAPES = {"grass_b": "grass", "grass_c": "grass", "fern_b": "fern", "tall_grass_bottom_b": "tall_grass_bottom",
+                "tall_grass_top_b": "tall_grass_top", "grass_straw_b": "grass_straw", "grass_straw_c": "grass_straw",
+                "tall_grass_straw_bottom_b": "tall_grass_straw_bottom", "tall_grass_straw_top_b": "tall_grass_straw_top"}
+for _v, _b in PLANT_SHAPES.items():
+    TARGETS[_v] = dict(TARGETS[_b])
+for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
+           "grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top", *PLANT_SHAPES):
+    TARGETS[_p] = dict(TARGETS[_p], ao=0.3)
+# r35 (critic r34: tufts 5/10 RTS - "double tuft density and vary scale (3 sizes)"; "ferns and tall grass are
+# indistinguishable... give ferns a distinct silhouette/colour"):
+# - short grass in three sizes, 1.0 / 0.8 / 0.55 of the full tuft (plant_sprites.SIZES; textures _m / _sm), drawn on the
+#   same card so the blades stay bold; each size a third of the grass models (GRASS_TUFTS).
+# - the short grass's body a step lighter: in game (r34 noon stills, shader preset, measured per block on the fitted
+#   ground grid: notes tufts-r35/measure) the blocks holding a tuft drew 0.958 of the lawn's luma, the lit quartile
+#   0.967. Drawn body 0.66 -> 0.71 (plant_sprites.BODY_SHORT), so the fitted mean goes 0.68 -> 0.72.
+# - ferns: a low rosette of tilted frond cards (FERN_ROSETTES). Their albedo stays at r34's 0.68 (the grass goes to
+#   0.72): the flat cards face the sun like the lawn, where the leaning grass quads get less of it, so in game they
+#   should read a touch lighter than the lawn without a value change of their own; and nearly neutral (sat 0.04: the
+#   biome tint's own green) where the grass is warm (0.12): a cooler rosette beside a yellower tuft. The _t textures
+#   are the same drawings transposed, for the cards that point along x.
+# the small size is "_sm", never "_s": <name>_s.png is the LabPBR specular map of <name> (round r35's grass_s was
+# grass's specular map - the small tufts drew magenta, eyes run 40810627885; test_gen_blocks_names.py)
+PLANT_SIZES = {"_m": plant_sprites.SIZES[1], "_sm": plant_sprites.SIZES[2]}
+for _l in ("grass", "grass_straw"):
+    for _sh in ("", "_b", "_c"):
+        for _sz in PLANT_SIZES:
+            TARGETS[_l + _sh + _sz] = dict(TARGETS[_l + _sh])
+for _sh in ("", "_b", "_c"):
+    for _sz in ("", *PLANT_SIZES):
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.72)
+for _p in ("fern", "fern_b"):
+    TARGETS[_p] = dict(TARGETS[_p], sat=0.04)
+for _p in ("fern_t", "fern_b_t"):
+    TARGETS[_p] = dict(TARGETS[_p[:-2]])
+# r36 (critic r35b: "small bright lime sprites ('confetti', unlit-looking, saturated) at wall feet and on lawns in
+# every view"): the vanilla flowers the maps, the structures (Architecture.FLOWERS) and the samplers place. The pack
+# drew none, so the game's 16x flowers showed - lime stems, nearest-texel, among the 128x grass. Ours are coloured
+# sprites (plant_sprites.flower: deep green stems, a small head), untinted like vanilla's, on vanilla's own cross and
+# flower_pot_cross models with cutout_mipped (MODEL_OVERRIDES). Appended (SEED_ORDER rule); the albedo is drawn final.
+FLOWER_TEXTURES = tuple(plant_sprites.FLOWERS)
+for _p in FLOWER_TEXTURES:
+    TARGETS[_p] = dict(luma=0.40, std=0.10, sat=0.50, tilt=10.0, smooth=55, pore=140, ao=0.3)
+# r40 (the port onto claude/obsidian-glass): the plants were tuned against the r29-r37 lawn (luma 0.56: the tufts drew
+# 0.96x of the lawn in game at 1.29x in albedo); this branch's clover lawn is 0.645 (r39), so at 0.72 they would fall
+# back to dark stamps. Lifted to the +0.1 band over the lawn (eyes 41044148818 brief: within 0.1 of the lawn, sat
+# <= 0.6 after the tint): short grass 0.72 -> 0.745, ferns 0.68 -> 0.71, tall grass and large fern 0.68 -> 0.73.
+for _sh in ("", "_b", "_c"):
+    for _sz in ("", *PLANT_SIZES):
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.745)
+for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.71)
+for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
+           "tall_grass_top_b"):
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.73)
+PLANT_SEEDS = (
+    "grass",
+    "tall_grass_bottom",
+    "tall_grass_top",
+    "fern",
+    "large_fern_bottom",
+    "large_fern_top",
+    "grass_straw",
+    "tall_grass_straw_bottom",
+    "tall_grass_straw_top",
+    "grass_b",
+    "grass_c",
+    "fern_b",
+    "tall_grass_bottom_b",
+    "tall_grass_top_b",
+    "grass_straw_b",
+    "grass_straw_c",
+    "tall_grass_straw_bottom_b",
+    "tall_grass_straw_top_b",
+    "grass_m",
+    "grass_sm",
+    "grass_b_m",
+    "grass_b_sm",
+    "grass_c_m",
+    "grass_c_sm",
+    "grass_straw_m",
+    "grass_straw_sm",
+    "grass_straw_b_m",
+    "grass_straw_b_sm",
+    "grass_straw_c_m",
+    "grass_straw_c_sm",
+    "fern_t",
+    "fern_b_t",
+    "dandelion",
+    "poppy",
+    "azure_bluet",
+    "cornflower",
+    "oxeye_daisy",
+    "allium",
+    "lily_of_the_valley",
+    "red_tulip",
+)
+SEED_ORDER = SEED_ORDER + PLANT_SEEDS
+# round 40: the builds' leftovers - the cartography table (dark oak with a parchment chart), the hopper (cast iron,
+# f0 230 like the iron block, dark and dull) and hanging roots (a cut-out cross sprite) - appended last
+for _f in ("top", "side1", "side2", "side3"):
+    TARGETS["cartography_table_" + _f] = dict(luma=0.38 if _f != "top" else 0.52, std=0.070, sat=0.48,
+                                              tilt=8.0, smooth=50, pore=24)
+TARGETS["hopper_outside"] = dict(luma=0.30, std=0.050, sat=0.02, tilt=10.0, smooth=110, pore=0, f0=230)
+TARGETS["hopper_top"] = dict(luma=0.28, std=0.060, sat=0.02, tilt=12.0, smooth=110, pore=0, f0=230)
+TARGETS["hopper_inside"] = dict(luma=0.20, std=0.060, sat=0.02, tilt=10.0, smooth=90, pore=0, f0=230)
+TARGETS["hanging_roots"] = dict(luma=0.42, std=0.070, sat=0.36, tilt=18.0, smooth=30, pore=40, ao=0.3)
+SEED_ORDER = SEED_ORDER + ("cartography_table_top", "cartography_table_side1", "cartography_table_side2",
+                           "cartography_table_side3", "hopper_outside", "hopper_top", "hopper_inside", "hanging_roots")
+# round 41: crying obsidian (new; the albedo is drawn final - the tears glow through the emission map)
+TARGETS["crying_obsidian"] = dict(luma=0.14, std=0.080, sat=0.30, tilt=10.0, smooth=228, pore=0)
+SEED_ORDER = SEED_ORDER + ("crying_obsidian",)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1642,6 +1791,23 @@ def m_obsidian_glass(F, n, cells=4):
     alb = alb * (1 - core[..., None]) + core[..., None] * np.array([0.60, 0.55, 0.76])     # the glints, cool
     smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen + 5 * core    # the bands and cores glint
     return dict(H=H, alb=alb, smooth=smooth)
+
+
+def m_crying_obsidian(F, n):
+    """Crying obsidian (round 41, new): the obsidian glass with ~12% of its face glowing - purple "tears", drops and
+    short trickles of them seeping from the fractures, lit from within (emission in the specular alpha)."""
+    d = m_obsidian_glass(F, n)
+    drops = smoothstep(0.70, 0.84, norm01(F.warp(F.noise(5, 14, 0.5, sx=1.0, sy=2.5), 0.02 * F.noise(3, 8),
+                                                  0.02 * F.noise(3, 8))))
+    trickle = (1 - smoothstep(0.0, 0.07, np.abs(F.noise(3, 9, 0.5, sx=1.0, sy=5.0)))) * \
+        smoothstep(0.4, 0.75, norm01(F.noise(2, 5, 0.5)))
+    tear = np.clip(drops + 0.8 * trickle, 0, 1)
+    glow = np.array([0.62, 0.22, 0.92])
+    alb = d["alb"] * (1 - tear[..., None]) + glow * (0.8 + 0.2 * tear)[..., None] * tear[..., None]
+    H = d["H"] + 0.04 * tear
+    smooth = np.where(tear > 0.3, 200.0, d["smooth"])
+    emit = glow_falloff(tear, peak=200.0)
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth, emit=emit)
 
 
 def m_lapis(F, n):
@@ -3297,7 +3463,7 @@ def m_podzol_side(F, n):
 # Round 34: ONE moss material for every mossy block (the builds' weathering run moss_block -> mossy_cobblestone ->
 # mossy_stone_bricks -> stone_bricks; the family sheet showed moss_block a yellow-olive and mossy_stone_bricks' moss
 # a brighter lime). moss_block's hue; the blocks differ in coverage only.
-MOSS_RGB = (0.36, 0.48, 0.18)
+MOSS_RGB = (0.33, 0.47, 0.19)   # r41: a step toward the lawn's hue
 
 
 def moss_cushions(F, seed, strength, cells=300):
@@ -3650,6 +3816,112 @@ def periodic_path(F, along, count=3, amp=0.06):
     return off
 
 
+def m_cartography_table(F, n, face):
+    """Cartography table (round 40): a dark oak box. 'top': the worked top under a sheet of parchment - a drawn chart
+    (a wandering coastline, hatched sea, a few inked marks) with a brass compass at a corner; 'side1': the planks
+    with a parchment sheet pinned up; 'side2': the planks with a brass compass dial; 'side3': the planks with a
+    shelf rail."""
+    H, alb = m_planks(F, n, (0.34, 0.22, 0.12), 0.006)
+    H = H * 0.6 + 0.2
+    paper = np.array([0.82, 0.74, 0.56])
+    grain = 0.9 + 0.1 * norm01(F.noise(8, 30, 0.4))
+    ink = np.array([0.30, 0.22, 0.14])
+    if face == "top":
+        e = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+        sheet = smoothstep(0.06, 0.075, e)                   # the parchment, a border of table round it
+        coast = F.warp(F.noise(2, 5, 0.6), 0.04 * F.noise(3, 8), 0.04 * F.noise(3, 8))
+        land = smoothstep(-0.1, 0.1, coast)
+        line = 1 - smoothstep(0.0, 0.05, np.abs(coast))     # the inked coastline
+        hatch = (((F.u + F.v) * 40) % 1.0 < 0.35) * (1 - land) * smoothstep(0.05, 0.25, np.abs(coast))
+        mark = smoothstep(0.92, 0.98, norm01(F.noise(8, 20, 0.3))) * land
+        cr = np.sqrt((F.u - 0.80) ** 2 + (F.v - 0.80) ** 2)
+        dial = 1 - smoothstep(0.07, 0.085, cr)
+        needle = dial * (1 - smoothstep(0.0, 0.012, np.abs(F.u - F.v - 0.0))) * (cr < 0.06)
+        face_rgb = paper * grain[..., None] * (1 - 0.12 * (1 - land))[..., None]
+        face_rgb = face_rgb * (1 - 0.55 * line - 0.25 * hatch - 0.5 * mark)[..., None]
+        face_rgb = np.where(dial[..., None] > 0.5, np.array([0.66, 0.52, 0.22]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None], face_rgb)
+        face_rgb = np.where(needle[..., None] > 0.5, ink, face_rgb)
+        alb = alb * (1 - sheet[..., None]) + face_rgb * sheet[..., None]
+        H = H * (1 - sheet) + sheet * (0.62 + 0.01 * F.noise(6, 20, 0.4) - 0.02 * line + 0.05 * dial)
+        return H, np.clip(alb, 0, 1)
+    if face == "side1":
+        sheet = ((F.u > 0.14) & (F.u < 0.86) & (F.v > 0.12) & (F.v < 0.78)).astype(np.float64)
+        line = 1 - smoothstep(0.0, 0.05, np.abs(F.warp(F.noise(2, 5, 0.6), 0.04 * F.noise(3, 8), 0.04 * F.noise(3, 8))))
+        pin = np.minimum(np.sqrt((F.u - 0.18) ** 2 + (F.v - 0.16) ** 2), np.sqrt((F.u - 0.82) ** 2 + (F.v - 0.16) ** 2))
+        pin = 1 - smoothstep(0.018, 0.028, pin)
+        face_rgb = paper * grain[..., None] * (1 - 0.5 * line)[..., None]
+        alb = alb * (1 - sheet[..., None]) + face_rgb * sheet[..., None]
+        alb = np.where(pin[..., None] > 0.5, np.array([0.55, 0.55, 0.58]), alb)
+        H = H + 0.06 * sheet + 0.10 * pin
+        return H, np.clip(alb, 0, 1)
+    if face == "side2":
+        cr = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.45) ** 2)
+        dial = 1 - smoothstep(0.17, 0.185, cr)
+        ring = 1 - smoothstep(0.0, 0.015, np.abs(cr - 0.175))
+        ang = np.arctan2(F.v - 0.45, F.u - 0.5)
+        ticks = dial * (cr > 0.13) * ((np.abs(((ang / (2 * math.pi) * 8) % 1.0) - 0.5) < 0.04))
+        needle = dial * (cr < 0.14) * (1 - smoothstep(0.0, 0.012, np.abs((F.u - 0.5) * 0.7 - (F.v - 0.45) * 0.7)))
+        brass = np.array([0.66, 0.52, 0.22]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None]
+        alb = np.where(dial[..., None] > 0.5, paper * 0.95, alb)
+        alb = np.where((ring + ticks)[..., None] > 0.5, brass, alb)
+        alb = np.where(needle[..., None] > 0.5, ink, alb)
+        H = H + 0.08 * dial + 0.04 * ring
+        return H, np.clip(alb, 0, 1)
+    rail = ((F.v > 0.30) & (F.v < 0.36)).astype(np.float64)       # side3: a shelf rail across the planks
+    alb = alb * (1 + 0.10 * rail)[..., None]
+    H = H + 0.10 * rail
+    return H, np.clip(alb, 0, 1)
+
+
+def m_hopper(F, n, face):
+    """Hopper (round 40): cast iron - a dark, dull plate (m_metal_plate's bevel and dents, the brushing faint, the
+    smoothness low). 'outside': the plate with a rivet at each corner; 'top': the rim's top face with the bevel;
+    'inside': the funnel's floor, darker toward the centre hole."""
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.06, groove=0.010, dent=0.015, brush=0.4, smooth_base=105,
+                                   smooth_var=18, coarse=True)
+    alb = alb * 0.42
+    if face == "outside":
+        cx = np.array([0.12, 0.88])
+        d = np.sqrt(np.min(np.abs(F.u[..., None] - cx), -1) ** 2 + np.min(np.abs(F.v[..., None] - cx), -1) ** 2)
+        dome = np.clip(1 - (d / 0.035) ** 2, 0, 1)
+        H = np.where(dome > 0, H + 0.10 * np.sqrt(dome), H)
+        alb = np.where(dome[..., None] > 0, alb * (0.95 + 0.15 * np.sqrt(dome))[..., None], alb)
+    elif face == "inside":
+        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+        funnel = smoothstep(0.12, 0.50, r)                     # 0 at the centre hole, 1 at the rim
+        hole = 1 - smoothstep(0.10, 0.13, r)
+        H = H * funnel + 0.05 * (1 - funnel)
+        alb = alb * (0.55 + 0.45 * funnel)[..., None]
+        alb = np.where(hole[..., None] > 0.5, np.array([0.03, 0.03, 0.03]), alb)
+        smooth = np.where(hole > 0.5, 40, smooth)
+    return H, np.clip(alb, 0, 1), smooth
+
+
+def m_hanging_roots(F, n):
+    """Hanging roots (round 40): a cut-out cross sprite - fibrous roots hanging from the top edge, wavy, tapering,
+    of several lengths, a few forking; pale earthy brown, darker toward the ceiling."""
+    depth = np.full((n, n), -1.0)
+    across, length = np.zeros((n, n)), np.zeros((n, n))
+    for _ in range(14):
+        x0 = F.rng.random()
+        ln = 0.35 + 0.65 * F.rng.random()                     # how far down it hangs
+        path = x0 + periodic_path(F, F.v, 3, 0.03) * 2
+        w0 = 0.010 + 0.012 * F.rng.random()
+        w = w0 * (1 - 0.8 * np.clip(F.v / ln, 0, 1))          # tapers toward the tip
+        d = (F.u - path + 0.5) % 1.0 - 0.5
+        dd = F.rng.random()
+        inside = (np.abs(d) < w) & (F.v < ln) & (dd > depth)
+        depth = np.where(inside, dd, depth)
+        across = np.where(inside, d / np.maximum(w, 1e-6), across)
+        length = np.where(inside, ln, length)
+    alpha = (depth >= 0).astype(np.float64)
+    dome = 1 - across ** 2
+    fibre = F.noise(8, 40, 0.5)
+    H = np.where(alpha > 0, 0.3 + 0.3 * depth + 0.3 * dome + 0.03 * fibre, 0.0)
+    shade = np.where(alpha > 0, (0.55 + 0.2 * depth + 0.15 * dome + 0.04 * fibre) * (0.8 + 0.3 * F.v), 0.3)
+    return dict(H=H, alb=tint((0.58, 0.46, 0.34), shade), alpha=alpha)
+
+
 def m_roots(F, n, top):
     """Mangrove roots: a tangle of woody roots with gaps (cut-out). The side (two crossed planes in the model) shows
     them running mostly down, the top a mat in both directions. Each root is a wavy strand with a round section and
@@ -3815,6 +4087,85 @@ def m_lantern(F, n, glow):
     H = np.where(chain, 0.7, H)
     alpha = (side | cap | knob | chain).astype(np.float64)
     return dict(H=H, alb=np.clip(alb, 0, 1), alpha=alpha, f0=f0, smooth=smooth, emit=emit)
+
+
+LUMA_W = np.array([0.2126, 0.7152, 0.0722])
+
+
+def _plant_fit(alb, m, luma, sat):
+    """r34: fit_albedo's saturation and luma-mean steps over the WHOLE plant (both halves of a two-block one at once),
+    without its spread step. Fitted half by half, the r33 tall grass stepped 0.11 in luma where its halves meet (0.66
+    above the seam, 0.77 below, from the same drawn value); and the spread step stretched the drawn values ~1.4x,
+    measured against edge texels that the black under the cut-out darkened at mip 2. plant_sprites draws its values in
+    final units (BASE / BODY / TIP against the lawn's 0.56), so only the mean and the warmth's saturation are set."""
+    if not m.any():
+        return alb
+    L = alb @ LUMA_W
+    grey = L[..., None]
+    mx, mn = alb.max(-1), alb.min(-1)
+    s0 = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)[m].mean()
+    if s0 > 1e-6:
+        alb = np.clip(grey + (alb - grey) * (sat / s0), 0, 1)
+    return np.clip(alb * (luma / max((alb @ LUMA_W)[m].mean(), 1e-6)), 0, 1)
+
+
+def m_plant(name, n):
+    """Round 29: a grass plant sprite (tools/plant_sprites.py). Two-block plants are drawn once on a 2n-tall canvas
+    from one seed and split, so the blades run on from the bottom texture into the top one. Round 29b: the grass
+    plants' straw layer (dead blades) is drawn with them and split out by texel, in colour. r34: a few bold blades
+    (plant_sprites), shapes _b / _c (PLANT_SHAPES), fitted over the whole plant (_plant_fit), and the colour and height
+    under the transparent texels taken from the nearest blade (plant_sprites.bleed): mipmaps blend them into the edges
+    (MC-114265; r33: 62-100% of the texels round a blade were black), and the height cliff at the cut-out's edge
+    tilted the edge texels' normals 34-40 degrees (15 inside the blade) - a rim the shader lights on one side.
+    r35: names end in a shape (_b / _c), then a size (_m / _sm, PLANT_SIZES), then _t (the drawing transposed: a fern
+    card that points along x); the fern is a rosette card (plant_sprites.fern_card)."""
+    ps = plant_sprites
+    straw = "straw" in name
+    base = name.replace("grass_straw", "grass")
+    transposed = base.endswith("_t")
+    if transposed:
+        base = base[:-2]
+    stem, shape, size = base, 0, 1.0
+    for suffix, sz in PLANT_SIZES.items():
+        if stem.endswith(suffix):
+            stem, size = stem[:-len(suffix)], sz
+    for suffix, k in (("_b", 1), ("_c", 2)):
+        if stem.endswith(suffix):
+            stem, shape = stem[:-len(suffix)], k
+    rng = np.random.default_rng(SEEDS[base.replace("_top", "_bottom")])   # both halves (and layers) from one seed
+    if stem == "grass":
+        full = ps.grass_clump(n, rng, variant=shape, size=size)
+    elif stem == "fern":
+        full = ps.fern_card(n, rng, variant=shape)
+    elif stem.startswith("tall_grass"):
+        full = ps.grass_clump(n, rng, tall=True, variant=shape)
+    else:
+        full = ps.fern(n, rng, large=True)
+    H, shade = full[0], full[1]
+    alpha = full[3] if straw else full[2]
+    if straw:   # dry straw: tan, the drawn values along the blade
+        rgb = np.array([0.80, 0.70, 0.46])[None, None, :] * shade[..., None]
+    else:
+        # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
+        # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
+        # under the biome tint a tuft reads yellower and lighter than the turf it stands on, its shadow beneath it
+        rgb = np.stack([shade * 1.08, shade, shade * 0.80], -1)
+    t = TARGETS[name]
+    alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
+    H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
+    if H.shape[0] > n:                       # a two-block plant: this texture's half
+        half = slice(0, n) if stem.endswith("_top") else slice(n, 2 * n)
+        H, alb, alpha = H[half], alb[half], alpha[half]
+    if transposed:
+        H, alb, alpha = H.T, alb.transpose(1, 0, 2), alpha.T
+    return dict(H=H, alb=alb, alpha=alpha)
+
+
+def m_flower(name, n):
+    """r36: a vanilla flower (plant_sprites.flower), coloured; the colour and height under the cut-out from the nearest
+    drawn texel (MC-114265, as m_plant)."""
+    H, rgb, alpha, part = plant_sprites.flower(n, np.random.default_rng(SEEDS[name]), name)
+    return dict(H=plant_sprites.bleed(H, alpha), alb=plant_sprites.bleed(rgb, alpha), alpha=alpha)
 
 
 def m_cobweb(F, n):
@@ -4705,6 +5056,180 @@ CUTOUT = set(LEAVES) | {"azalea_leaves", "flowering_azalea_leaves", "cherry_leav
 # round 16: textures with holes or see-through parts (previewed over a dark backdrop, like the leaves)
 CUTOUT |= {"mangrove_roots_side", "mangrove_roots_top", "ladder", "iron_bars", "lantern", "soul_lantern", "cobweb",
            "glass"} | {c + "_stained_glass" for c in STAINED} | {c + "_stained_glass" for c in DYES} | {"tinted_glass"}
+PLANTS = ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_bottom", "large_fern_top",
+          "grass_b", "grass_c", "fern_b", "tall_grass_bottom_b", "tall_grass_top_b",   # r34: the extra shapes
+          *("grass" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES), "fern_t", "fern_b_t")   # r35
+STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
+         "grass_straw_b", "grass_straw_c", "tall_grass_straw_bottom_b", "tall_grass_straw_top_b",
+         *("grass_straw" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES))                    # r35
+CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
+CUTOUT |= set(FLOWER_TEXTURES)       # r36
+CUTOUT.add("hanging_roots")          # round 40
+
+
+# leaning quads for a tuft seen from above (round 29c/d): (axis, angle) per quad; axis x tips the plane through the root
+# toward +z (angle > 0) or -z, axis z toward -x / +x. Round 29c's even four-way star read as rows of identical "x"
+# marks from the RTS camera (run 40691285711): three lopsided sets, each turned at random per block by the blockstate
+TUFTS = {
+    "": (("x", 45), ("x", -22.5), ("z", 45), ("z", -45)),
+    "_b": (("x", 22.5), ("z", -45), ("x", -45)),
+    "_c": (("z", 22.5), ("x", 45), ("z", -22.5), ("x", -45)),
+}
+
+
+def _cross_elements(layers, lean, scale=1.0, upright=True):
+    """Block-model elements for a plant: vanilla's two upright crossed quads for each layer (texture variable, tinted
+    or not), plus - with lean, a TUFTS set - quads hinged at the root and leaning out 22.5-45 degrees, their tops
+    ~10/16 up and ~10/16 out: seen from the RTS camera a tuft, not two edge-on dashes. r36: scale grows every quad
+    about the root (the block's middle column, from y 0) - the big short grass (GRASS_TUFT_SCALE); upright=False leaves
+    out the two upright quads (the short grass, r36: GRASS_UPRIGHT)."""
+    def face(t, tinted):
+        return dict({"uv": [0, 0, 16, 16], "texture": t}, **({"tintindex": 0} if tinted else {}))
+
+    def c(v):                                    # across: about the middle column
+        return round(8 + (v - 8) * scale, 4)
+
+    def up(v):                                   # up: from the root
+        return round(v * scale, 4)
+
+    els = []
+    for t, tinted in layers:
+        if not upright:
+            for axis, ang in lean:
+                els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
+            continue
+        els.append({"from": [c(0.8), 0, 8], "to": [c(15.2), up(16.0), 8], "shade": False,
+                    "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                    "faces": {f: face(t, tinted) for f in ("north", "south")}})
+        els.append({"from": [8, 0, c(0.8)], "to": [8, up(16.0), c(15.2)], "shade": False,
+                    "rotation": {"origin": [8, 8, 8], "axis": "y", "angle": 45, "rescale": True},
+                    "faces": {f: face(t, tinted) for f in ("west", "east")}})
+        for axis, ang in (lean or ()):
+            els.append(_lean_quad(axis, ang, face(t, tinted), c, up))
+    return els
+
+
+def _lean_quad(axis, ang, fc, c, up):
+    """One TUFTS quad: hinged at the root and leaning out `ang` degrees about `axis` (c / up: _cross_elements' scale)."""
+    if axis == "x":
+        return {"from": [c(1.0), 0, 8], "to": [c(15.0), up(14.0), 8], "shade": False,
+                "rotation": {"origin": [8, 0, 8], "axis": "x", "angle": ang},
+                "faces": {f: dict(fc) for f in ("north", "south")}}
+    return {"from": [8, 0, c(1.0)], "to": [8, up(14.0), c(15.0)], "shade": False,
+            "rotation": {"origin": [8, 0, 8], "axis": "z", "angle": ang},
+            "faces": {f: dict(fc) for f in ("west", "east")}}
+
+
+def _plant_model(p, straw, lean, scale=1.0, upright=True):
+    """A plant's model: p = its texture (the sprite shape it shows), straw = it has the untinted straw layer."""
+    tex = {"particle": "minecraft:block/" + p, "cross": "minecraft:block/" + p}
+    layers = [("#cross", True)]
+    if straw:
+        tex["straw"] = "minecraft:block/" + p.replace("grass", "grass_straw")
+        layers.append(("#straw", False))
+    return {"ambientocclusion": False, "textures": tex, "elements": _cross_elements(layers, lean, scale, upright)}
+
+
+# r35 (critic r34: "vary scale (3 sizes)"): nine short-grass models, model suffix -> (its TUFTS set of leaning quads,
+# the sprite shape, the size: "" full, _m 0.8, _s 0.55 - PLANT_SIZES). Each size shows all three shapes on three
+# different quad sets, so no two models share a (quads, shape) pair, and each size is a third of the picks. r31's
+# 0.65-scaled copies (_d / _e) are gone: a smaller MODEL is read a mip level further down, its blades thinner; the
+# sizes are drawn on the card instead (plant_sprites.SIZES), the blades keeping their widths.
+GRASS_TUFTS = {"": ("", "", ""), "_b": ("_b", "_b", ""), "_c": ("_c", "_c", ""),
+               "_d": ("", "_b", "_m"), "_e": ("_b", "_c", "_m"), "_f": ("_c", "", "_m"),
+               "_g": ("", "_c", "_sm"), "_h": ("_b", "", "_sm"), "_i": ("_c", "_b", "_sm")}
+# r36 (critic r35b: "three sizes are not distinguishable at 30 px/block - only tuft vs slightly bigger tuft"): the big
+# size is a bigger MODEL, its quads 1.35x about the root (the full-size drawing on them), the two smaller sizes stay
+# drawn smaller on the 1.0 model. Seen from the RTS camera (test_plant_sprites._footprint: the opaque texels projected
+# along the eyes camera's direction) the sizes go from 0.70 / 0.61 / 0.45 blocks across (r35, big / small 1.54) to
+# 0.89 / 0.61 / 0.45 (1.97x). Why the model and not SIZES spread further: a smaller drawing loses blade height and width
+# with it (0.55 already keeps 4-texel blades only because the widths shrink just 0.8 + 0.2 x size), while a bigger
+# model is read a mip level UP - its blades come out bolder, not thinner.
+# r37 (Oct 29, critic r38 + eyes A/B 40833182959 vs 40833199253 under the Complementary preset): 1.35x doubled the
+# shader shadow spotting on the lawn (meadow stars 14 / dark share 0.087 at 1.35x, 4 / 0.036 at 1.1x); 1.1x keeps the
+# sizes apart (~1.6x footprint big / small) with a calm lawn
+GRASS_TUFT_SCALE = {"": 1.1}
+# r36 (critic r35b: "the big ones read as fist-sized dark splats with a hard shadow halo (clump 10th-percentile V
+# 0.431 vs clearing 0.494), so the lawn looks spotted"): the short grass drops vanilla's two upright crossed quads and
+# keeps only its 3-4 leaning ones. Every quad carries the whole tuft, all hinged at the one root, so from the RTS camera
+# the six stacked bases were the dark core and, in the shadow map, the solid core of the shadow: 27-46% of a tuft's
+# footprint lay under >= 3 opaque quads (mean 38%), now 11-37% (mean 27%; test_plant_sprites). The upright pair was
+# edge-on from the RTS camera anyway; the 22.5-degree quads stand nearly upright for the close views. Tall grass keeps
+# its crossed quads. With the lighter, thinner base (plant_sprites BASE_SHORT / ROOT_W).
+GRASS_UPRIGHT = False
+
+
+def _fern_card(side, kind, length, half_w, y0=0.25):
+    """r35: one frond card of the fern rosette - a flat quad hinged at the crown (8, y0, 8), reaching `length` (1/16
+    block) toward side +x / -x / +z / -z and tilted up from the ground 22.5 (kind "low") or 45 ("mid") degrees.
+    plant_sprites.fern_card draws the fronds from the bottom centre of the card; a card along x shows the drawing
+    transposed (texture _t, root at u = 16) - an up face maps u to +x and v to +z, a down face u to +x and v to -z
+    (1.20.1 FaceInfo UP / DOWN), so the uv below put the root on the hinge, faces up and down (seen from either side)."""
+    tilt = 22.5 if kind == "low" else 45
+    face = {"tintindex": 0}
+    if side in ("+z", "-z"):
+        out = side == "+z"
+        z0, z1 = (8, 8 + length) if out else (8 - length, 8)
+        el = {"from": [8 - half_w, y0, z0], "to": [8 + half_w, y0, z1],
+              "rotation": {"origin": [8, y0, 8], "axis": "x", "angle": -tilt if out else tilt}}
+        tex = "#" + kind
+        up, down = ([0, 16, 16, 0], [0, 0, 16, 16]) if out else ([0, 0, 16, 16], [0, 16, 16, 0])
+    else:
+        out = side == "+x"
+        x0, x1 = (8, 8 + length) if out else (8 - length, 8)
+        el = {"from": [x0, y0, 8 - half_w], "to": [x1, y0, 8 + half_w],
+              "rotation": {"origin": [8, y0, 8], "axis": "z", "angle": tilt if out else -tilt}}
+        tex = "#" + kind + "_t"
+        up = down = [16, 0, 0, 16] if out else [0, 0, 16, 16]
+    el["shade"] = False
+    el["faces"] = {"up": dict(face, uv=up, texture=tex), "down": dict(face, uv=down, texture=tex)}
+    return el
+
+
+# r35 (critic r34: "ferns and tall grass are indistinguishable... give ferns a distinct silhouette/colour"): the fern is
+# a low, wide rosette - frond cards toward all four sides, the long LOW cards (22.5 degrees up, a long frond and two
+# short ones each) and shorter MID cards inside them (45 degrees up, a V of two): ~1.2 blocks across, ~0.4 tall, and
+# from the RTS camera its fronds face-on in a 16-armed star, where the grass is upright blades. Three asymmetric sets
+# (side, kind, length, half width), each turned at random per block by the blockstate. No straw layer.
+FERN_ROSETTES = {
+    "fern": (("+z", "low", 11.0, 6.5), ("-z", "low", 10.0, 6.5), ("+x", "low", 10.5, 6.5), ("-x", "low", 11.5, 6.5),
+             ("+z", "mid", 8.5, 6.0), ("-z", "mid", 9.0, 6.0), ("+x", "mid", 9.0, 6.0), ("-x", "mid", 8.0, 6.0)),
+    "fern_b": (("+z", "low", 12.0, 7.0), ("-z", "low", 9.5, 6.0), ("+x", "low", 10.0, 6.5), ("-x", "low", 11.0, 6.5),
+               ("+z", "mid", 8.0, 6.0), ("-z", "mid", 9.5, 6.5), ("-x", "mid", 9.0, 6.0)),
+    "fern_c": (("+z", "low", 10.5, 6.5), ("-z", "low", 11.5, 7.0), ("+x", "low", 11.0, 6.5), ("-x", "low", 9.5, 6.0),
+               ("-z", "mid", 8.5, 6.0), ("+x", "mid", 9.5, 6.5)),
+}
+
+
+def _fern_model(cards):
+    tex = {"particle": "minecraft:block/fern", "low": "minecraft:block/fern", "low_t": "minecraft:block/fern_t",
+           "mid": "minecraft:block/fern_b", "mid_t": "minecraft:block/fern_b_t"}
+    return {"ambientocclusion": False, "textures": tex, "elements": [_fern_card(*c) for c in cards]}
+
+
+# r34: two tall grasses (plant_sprites.TALL). The game picks a model from a blockstate's list by the block's seed, and
+# DoublePlantBlock.getSeed gives both halves the LOWER block's position, so index i of the lower list always stands
+# under index i of the upper one
+TALL_SHAPES = ("", "_b")
+TALL_BLOCKSTATES = {"tall_grass": {
+    "half=lower": [{"model": "minecraft:block/tall_grass_bottom" + k} for k in TALL_SHAPES],
+    "half=upper": [{"model": "minecraft:block/tall_grass_top" + k} for k in TALL_SHAPES]}}
+PLANT_MODELS = {
+    **{"grass" + k: _plant_model("grass" + sh + sz, True, TUFTS[quads], GRASS_TUFT_SCALE.get(sz, 1.0), GRASS_UPRIGHT)
+       for k, (quads, sh, sz) in GRASS_TUFTS.items()},
+    **{m: _fern_model(cards) for m, cards in FERN_ROSETTES.items()},
+    **{"tall_grass_bottom" + k: _plant_model("tall_grass_bottom" + k, True, None) for k in TALL_SHAPES},
+    **{"tall_grass_top" + k: _plant_model("tall_grass_top" + k, True, None) for k in TALL_SHAPES},
+    "large_fern_bottom": _plant_model("large_fern_bottom", False, None),
+    "large_fern_top": _plant_model("large_fern_top", False, None),
+}
+# short grass and ferns: one of the models, turned a random quarter (36 looks of grass, 12 of fern), as vanilla turns
+# nothing here
+TUFT_BLOCKSTATES = {
+    "grass": [dict({"model": "minecraft:block/grass" + k}, **({"y": y} if y else {}))
+              for k in GRASS_TUFTS for y in (0, 90, 180, 270)],
+    "fern": [dict({"model": "minecraft:block/" + m}, **({"y": y} if y else {}))
+             for m in FERN_ROSETTES for y in (0, 90, 180, 270)]}
 
 
 # Vanilla draws these blocks CUT-OUT WITHOUT MIPMAPS (RenderType.cutout binds the atlas with mipmap off): fine for its
@@ -4716,6 +5241,18 @@ _MIPPED = "minecraft:cutout_mipped"
 MODEL_OVERRIDES = {
     "glass": {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/glass"}},
     "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
+    "hanging_roots": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/hanging_roots"}},
+    # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
+    # breaks into flickering dashes from the RTS camera)
+    # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer;
+    # round 29c (the meadow sampler's RTS stills, run 40679410746: the plants were near invisible - upright quads seen
+    # from above are edge-on dashes): short grass and ferns also get four quads LEANING OUT 45 degrees from the root,
+    # so a clump opens up like a real tuft when seen from above (PLANT_MODELS)
+    **PLANT_MODELS,
+    # r36: the flowers and their potted copies, vanilla's models on our textures (FLOWER_TEXTURES)
+    **{f: {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/" + f}} for f in FLOWER_TEXTURES},
+    **{"potted_" + f: {"parent": "minecraft:block/flower_pot_cross", "textures": {"plant": "minecraft:block/" + f}}
+       for f in FLOWER_TEXTURES},
     "lantern": {"parent": "minecraft:block/template_lantern", "textures": {"lantern": "minecraft:block/lantern"}},
     "lantern_hanging": {"parent": "minecraft:block/template_hanging_lantern",
                         "textures": {"lantern": "minecraft:block/lantern"}},
@@ -4820,6 +5357,12 @@ def write_models():
         with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
             json.dump({"athena:loader": "athena:giant", "width": blocks, "height": blocks, "ctm_textures": ctm,
                        "variants": {"": {"model": "minecraft:block/" + name}}}, f, indent=1)
+    for name, variants in TUFT_BLOCKSTATES.items():   # round 29d
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"variants": {"": variants}}, f, indent=1)
+    for name, halves in TALL_BLOCKSTATES.items():     # r34: two tall grass shapes
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"variants": halves}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -4866,7 +5409,7 @@ def soften(F, alb, t):
 def _plain(fn):
     def r(F, n, t):
         H, alb = fn(F, n)
-        return dict(H=H, alb=soften(F, fit_albedo(alb, t), t))
+        return dict(H=H, alb=tone_limits(soften(F, fit_albedo(alb, t), t), t))   # r41: `shoulder` / `toe` cap the extremes
     return r
 
 
@@ -4956,8 +5499,8 @@ def recipes():
         R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): m_leaves(F, n, *a))
     plain = {
         # round 11: the other factions' buildings
-        "polished_blackstone": lambda F, n: m_polished(F, n, (0.21, 0.18, 0.23), 0.08, 0.06),   # r39: violet
-        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23)),
+        "polished_blackstone": lambda F, n: m_polished(F, n, (0.17, 0.155, 0.14), 0.08, 0.06),   # r41: warm black
+        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
         # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
         # r33 (critic: "micro-mesh" - 4 x 4 with wide dark joints): 3 x 3 larger tiles in a running bond, the joints
@@ -5027,7 +5570,7 @@ def recipes():
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
-        "blackstone": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.6, (8, 20)),   # r39: violet-black
+        "blackstone": lambda F, n: m_igneous(F, n, (0.16, 0.145, 0.13), (0.20, 0.185, 0.17), 0.6, (8, 20)),   # r41: warm black
         # r22 (shader review: "purple cobble-cell pattern, no glassy darkness"): volcanic glass is near black with only
         # a faint violet depth - mottle 0.20 -> 0.06
         # r22b (eyes: a flat dark-brown cake, the flecks invisible): 3-5 large conchoidal planes of cool black glass,
@@ -5039,9 +5582,9 @@ def recipes():
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
-        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23), cracks=1.0),
+        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14), cracks=1.0),
         "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
-        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.18, 0.23)),
+        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.17, 0.155, 0.14)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
         # r32 (critic: smooth basalt vs basalt identical): a cut, calm face with a faint 2x2 seam, a hair of rim
@@ -5053,7 +5596,7 @@ def recipes():
         "diamond_block": lambda F, n: m_gem(F, n, (0.40, 0.72, 0.82), (0.90, 0.98, 1.0)),   # r33: brighter body
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
-        "emerald_block": lambda F, n: m_gem(F, n, (0.14, 0.60, 0.30), (0.62, 0.97, 0.66), inclusions=0.4, edge_glow=0.35),
+        "emerald_block": lambda F, n: m_gem(F, n, (0.09, 0.42, 0.20), (0.42, 0.82, 0.48), inclusions=0.5, edge_glow=0.12),   # r41: opaque
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
@@ -5061,10 +5604,10 @@ def recipes():
         "white_concrete": lambda F, n: m_clayish(F, n, (0.88, 0.88, 0.88), pits=0.01, mottle=0.04),   # r33: neutral
         # r31b (eyes: "reads as violet dyed wool"): a dusty slate-blue, chroma pulled toward grey
         # r33 (critic: "crushed"): a clearer dusty blue, the hue toward blue rather than violet
-        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.36, 0.52), flash=(0.94, 0.95, 0.99)),
+        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.38, 0.28, 0.46), flash=(0.96, 0.94, 0.99)),   # r41: violet
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
-        "blackstone_top": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.65, (8, 20)),
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.16, 0.145, 0.13), (0.20, 0.185, 0.17), 0.65, (8, 20)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
         "crimson_stem": lambda F, n: m_stem(F, n, (0.36, 0.12, 0.18), (0.72, 0.22, 0.24)),
@@ -5159,6 +5702,16 @@ def recipes():
             R[name] = _scan_grass_overlay(i)
     for name, base in PROC_VARIANT_OF.items():        # round 33: variant k is index k - 1 (its own seed)
         R[name] = proc_variant(base, int(name.rsplit("_v", 1)[1]) - 1)
+    for p in PLANTS + STRAW:                               # round 29; r34: fitted in m_plant, over the whole plant
+        R[p] = _parts(lambda F, n, p=p: m_plant(p, n), fit=False)
+    for p in FLOWER_TEXTURES:                              # r36: drawn in their final colours
+        R[p] = _parts(lambda F, n, p=p: m_flower(p, n), fit=False)
+    for f in ("top", "side1", "side2", "side3"):           # round 40: the leftovers
+        R["cartography_table_" + f] = _plain(lambda F, n, ff=f: m_cartography_table(F, n, ff))
+    for f in ("outside", "top", "inside"):
+        R["hopper_" + f] = _parts(lambda F, n, ff=f: _d3(m_hopper(F, n, ff)))
+    R["hanging_roots"] = _parts(m_hanging_roots)
+    R["crying_obsidian"] = _parts(m_crying_obsidian, fit=False)   # round 41
     return R
 
 
@@ -5230,7 +5783,7 @@ def make(name, res, preview_dir):
     nyy = (n_img[..., 1].astype(np.float64) / 127.5 - 1)
     vis = None if alpha is None else alpha > 0.5
     overlays = ("grass_block_side_overlay",) + tuple(v for v in SCAN_VARIANT_OF if v.startswith("grass_block_side_ov"))
-    tint = PLAINS_TINT if name in GRASS_TOPS + overlays else \
+    tint = PLAINS_TINT if name in GRASS_TOPS + overlays + PLANTS else \
         FOLIAGE_TINT if name in LEAVES else None
     seen = alb if alpha is None or name not in CUTOUT else alb * alpha[..., None] + 0.08 * (1 - alpha[..., None])
     rts_img, rts_std = rts_view(seen, tint=tint, rotate=name in ROTATED)
@@ -5239,7 +5792,7 @@ def make(name, res, preview_dir):
               "rts_luma_std": round(rts_std, 3)}
     if preview_dir:
         shown = alb
-        if name in GRASS_TOPS + overlays:
+        if name in GRASS_TOPS + overlays + PLANTS:
             shown = np.clip(alb * np.array([0.57, 0.74, 0.35]) / 0.62, 0, 1)   # a plains-like biome tint
         if name in LEAVES:
             shown = np.clip(alb * np.array(FOLIAGE_TINT) / 0.55, 0, 1)
