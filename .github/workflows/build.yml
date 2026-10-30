@@ -135,16 +135,19 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - id: scope
-        name: Did tools/ or ruff.toml change?
+        name: Did tools/, ruff.toml or our shader pack change?
         env: { EVENT: "${{ github.event_name }}", BASE: "${{ github.event.pull_request.base.sha }}", HEAD: "${{ github.event.pull_request.head.sha }}" }
         run: |
           run=true
-          if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml; then run=false; fi
+          if [ "$EVENT" = pull_request ] && git diff --quiet "$BASE...$HEAD" -- tools ruff.toml shaderpacks; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
       - if: steps.scope.outputs.run == 'true'
+        # glslang: tools/test_shader_pack.py compiles every program of our shader pack (shaderpacks/BeyondAndTabs)
         # shared runners: the wall-clock bars in test_anim_sheet.py are skipped (the equality tests still run)
         env: { ANIM_SKIP_TIMING: "1" }
-        run: pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
+        run: |
+          sudo apt-get update -q > /dev/null && sudo apt-get install -y -q glslang-tools > /dev/null
+          pip install -q ruff==0.16.9 numpy pillow && ruff check tools && python3 -m unittest discover -s tools -p 'test_*.py'
 
   changes:
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
