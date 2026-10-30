@@ -24,7 +24,7 @@ import java.util.Map;
  * its worker on its own whenever the player holds fewer workers than the tier's quota - workers alive plus workers
  * already in training anywhere - and that capitol's queue is empty, so it never competes with what the player queued
  * there. One worker per capitol per second at most; a capitol with its Steward paused (HUD toggle) is skipped. Checks
- * are done quietly: no "not enough population" warnings every second when the cap is reached.
+ * are done quietly: no warning every second when a capitol cannot take another worker.
  */
 public class StewardServerEvents {
 
