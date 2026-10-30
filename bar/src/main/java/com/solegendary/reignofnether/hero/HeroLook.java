@@ -23,6 +23,16 @@ public final class HeroLook {
     }
 
     /**
+     * Is a hero cloaked from the viewer: its body is invisible (a Verdant thicket's cover, a cloak spell) and the viewer
+     * neither owns it nor is allied to its owner. Asked of what the client knows rather than of isInvisibleTo: the RTS
+     * viewer is a spectator, whom vanilla lets see invisible bodies, so UnitClientEvents.isHiddenFromLocalPlayer is false
+     * for an enemy hero hidden in its thicket (eyes run 41097850239 on PR 443) and the marker would show where it hides.
+     */
+    public static boolean cloakedFromViewer(boolean invisible, boolean friendly) {
+        return invisible && !friendly;
+    }
+
+    /**
      * The "+" badge beside the crest: the viewer's own hero holding unspent ability points (design draft #1's badge,
      * so a point waiting for the player - or for auto-learn's 20 s, PR 415 - shows without selecting the hero).
      */

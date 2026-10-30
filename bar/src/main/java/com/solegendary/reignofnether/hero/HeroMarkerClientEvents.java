@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.hero;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.barfx.BarFxRenderTypes;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
@@ -78,15 +79,18 @@ public final class HeroMarkerClientEvents {
         float pulse = 0.65f + 0.35f * (float) Math.sin(System.currentTimeMillis() / 160.0);
         for (LivingEntity e : UnitClientEvents.getAllUnits()) {
             // heroes first: the fog and cloak lookups run for the handful of heroes, not every unit each frame
-            if (!(e instanceof HeroUnit) || !(e instanceof Unit u) || !e.isAlive() || !HeroLook.showMarker(true, rtsView,
-                    FogOfWarClientEvents.isInBrightChunk(e), UnitClientEvents.isHiddenFromLocalPlayer(e)))
+            if (!(e instanceof HeroUnit) || !(e instanceof Unit u) || !e.isAlive())
+                continue;
+            String owner = u.getOwnerName();
+            boolean friendly = me != null && owner != null && !owner.isBlank() && AlliancesClient.isAlliedOrOwned(owner, me);
+            if (!HeroLook.showMarker(true, rtsView, FogOfWarClientEvents.isInBrightChunk(e),
+                    HeroLook.cloakedFromViewer(e.isInvisible(), friendly)))
                 continue;
             if (!begun) {
                 vc = buffers.getBuffer(BarFxRenderTypes.TRANSLUCENT);
                 mat = pose.last().pose();
                 begun = true;
             }
-            String owner = u.getOwnerName();
             int colour = owner == null || owner.isBlank() ? 0xFFFFFF : PlayerColors.getPlayerDisplayColorHex(owner) & 0xFFFFFF;
             float x = (float) Mth.lerp(pt, e.xo, e.getX());
             float y = (float) Mth.lerp(pt, e.yo, e.getY());
