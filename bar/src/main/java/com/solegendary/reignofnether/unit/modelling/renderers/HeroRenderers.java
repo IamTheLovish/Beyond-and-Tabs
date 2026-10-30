@@ -74,9 +74,12 @@ public final class HeroRenderers {
         }
     }
 
-    /** Horde T2-lab hero: PLACEHOLDER body - the Warchief's piglin model and skin (real Ash Shaman body comes later). */
+    /**
+     * Horde T2-lab hero: the Warchief's piglin body (PLACEHOLDER - the real Ash Shaman body comes later) in a skin of its
+     * own, ash grey and ember (tools/gen_hero_skins.py), so the Horde's two heroes are told apart.
+     */
     public static class AshShaman extends PiglinUnitRenderer {
-        private static final ResourceLocation TEXTURE = tex("horde_warchief");   // placeholder skin
+        private static final ResourceLocation TEXTURE = tex("ash_shaman");
         public AshShaman(EntityRendererProvider.Context context) { super(context); }
         @Override public ResourceLocation getTextureLocation(Mob entity) { return TEXTURE; }
         @Override protected void scale(Mob entity, PoseStack pose, float partialTicks) {
