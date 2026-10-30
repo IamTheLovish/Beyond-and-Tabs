@@ -626,8 +626,9 @@ public class AngelCallerGameTests {
                 if (near.position().distanceTo(nearAt) > 2)
                     problems.add("the Angel Caller already with the army was moved " + String.format("%.1f", near.position().distanceTo(nearAt)) + " blocks");
                 // review r5: the worker (no AI, never ordered: checked at tick 4) was seen moved over 0.5 blocks by
-                // tick 180; logged, not failed, until the cause is known
-                ReignOfNether.LOGGER.info("[angel_caller_bot] worker moved {} (from {} to {}), onGround {}, noAi {}, hurt by {}",
+                // tick 180; logged, not failed, until the cause is known ("gametest" in the line: ci_gametests.sh only
+                // prints console lines matching GameTest|gametest|fail|error)
+                ReignOfNether.LOGGER.info("[gametest angel_caller_bot] worker moved {} (from {} to {}), onGround {}, noAi {}, hurt by {}",
                     String.format("%.2f", worker.position().distanceTo(workerAt)), workerAt, worker.position(), worker.onGround(),
                     worker.isNoAi(), worker.getLastHurtByMob() == null ? "nobody" : worker.getLastHurtByMob().getType().toShortString());
             } finally {
@@ -994,8 +995,13 @@ public class AngelCallerGameTests {
                         nearestHit[0] = Math.min(nearestHit[0], a.distanceTo(f));
                     }
                 }
-                if (foe[0] != null)
+                // review r7: the foe kept whole, so it never dies and drops its own wisp beside the Seraph (1 in 8 its
+                // death wisp lay outside the caster's gather range and was read as one the faded Seraph left)
+                if (foe[0] != null) {
+                    if (foe[0].isAlive())
+                        foe[0].setHealth(foe[0].getMaxHealth());
                     foeHp[0] = foe[0].getHealth();
+                }
                 if (tick >= cast + life - 20 && tick < cast + life - 10 && alive)
                     aliveLate[0] = true;
                 if (tick >= cast + life + 20 && !alive)
@@ -1005,6 +1011,8 @@ public class AngelCallerGameTests {
         helper.runAfterDelay(cast + life + 40, () -> {
             List<String> problems = new ArrayList<>();
             try {
+                if (foe[0] != null && !foe[0].isAlive())
+                    problems.add("the enemy died, though it is healed every look");
                 if (angel[0] == null)
                     problems.add("the Sword call made no Sword Seraph");
                 else {
@@ -1022,8 +1030,13 @@ public class AngelCallerGameTests {
                         problems.add("the Sword Seraph did not last its " + CallAngel.Kind.SWORD.lifeSeconds + " s");
                     if (!goneAfter[0])
                         problems.add("the Sword Seraph was still there 1 s after its " + CallAngel.Kind.SWORD.lifeSeconds + " s");
-                    if (last[0] != null && !wispsNear(last[0], 3).isEmpty())
-                        problems.add("the faded Sword Seraph left a wisp");
+                    if (last[0] != null && !wispsNear(last[0], 3).isEmpty()) {
+                        StringBuilder w = new StringBuilder();
+                        for (Entity e : wispsNear(last[0], 3))
+                            w.append(' ').append(EssenceServerEvents.valueOf(e)).append(" at ").append(e.position().toString());
+                        problems.add("the faded Sword Seraph left a wisp (last seen at " + last[0] + "; wisps:" + w + "; enemy at "
+                            + (foe[0] == null ? "none" : foe[0].position() + (foe[0].isAlive() ? ", alive" : ", dead")) + ")");
+                    }
                 }
             } finally {
                 cleanUp(caster, units, last[0] == null ? List.of() : List.of(last[0]));
