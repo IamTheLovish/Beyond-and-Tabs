@@ -49,7 +49,7 @@ public final class SfxClient {
     private static final Sfx[] ALL = Sfx.values();
     private static final Sfx.Category[] CATS = Sfx.Category.values();
 
-    // per-sound: game tick of the last play
+    // per-sound: tick (SoundTicks) of the last play
     private static final long[] lastPlay = new long[ALL.length];
     // per-category: sounds played this tick, sounds asked for this tick, and a smoothed "asked per tick"
     private static final int[] playedThisTick = new int[CATS.length];
