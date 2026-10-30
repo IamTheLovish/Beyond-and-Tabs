@@ -8,8 +8,8 @@ Profiles (measured from the reference builds, design/arch_blocks/profiles.md):
   cornice_*        a full cornice in one course: fillet, ovolo, dentils, corona (the drip that throws the shadow),
                    cyma and a weathered top; 13 px proud. shape straight / outer / inner (mitred corners).
   string_course_*  a storey band: drip band 5 px proud, 7 px tall; shape straight / outer / inner.
-  sill_*           a window sill under the opening: sloped top, 7 px proud, a drip groove under the lip.
-  lintel_*         a flat lintel over the opening, 4 px proud with a chamfered soffit; keystone=true adds a tapered
+  sill_*           a window sill under the opening: sloped top, 5 px proud, a drip groove under the lip.
+  lintel_*         a flat lintel over the opening, 3 px proud with a chamfered soffit; keystone=true adds a tapered
                    keystone 6 px proud.
   arch_ring_*      a segmental arch over a 3-wide opening (rise 10 px, ring 6 px, 3 proud, keystone 5 proud): pieces
                    left_springer, left_haunch, crown, right_haunch, right_springer (left / right as you face the wall).
@@ -107,15 +107,15 @@ def _profile(layers, shape):
 
 
 def sill():
-    return [("all", (0, 9, 9, 16, 10, 10)),            # the drip lip (a groove behind it)
-            ("all", (0, 10, 9, 16, 14, 16)),           # the sill body, 7 px proud
-            ("all", (0, 14, 10, 16, 15, 16)),          # the weathered top steps back up to the wall
-            ("all", (0, 15, 12, 16, 16, 16))]
+    return [("all", (0, 10, 11, 16, 11, 12)),          # the drip lip (a groove behind it)
+            ("all", (0, 11, 11, 16, 14, 16)),          # the sill body, 5 px proud (r2 critic: deeper read as shelves)
+            ("all", (0, 14, 12, 16, 15, 16)),          # the weathered top steps back up to the wall
+            ("all", (0, 15, 14, 16, 16, 16))]
 
 
 def lintel(key):
-    boxes = [("all", (0, 0, 13, 16, 2, 16)),           # chamfered soffit
-             ("all", (0, 2, 12, 16, 15, 16)),          # the face, 4 px proud
+    boxes = [("all", (0, 0, 14, 16, 2, 16)),           # chamfered soffit
+             ("all", (0, 2, 13, 16, 15, 16)),          # the face, 3 px proud
              ("all", (0, 15, 14, 16, 16, 16))]
     if key:
         boxes += [("key", (6, 0, 10, 10, 5, 13)), ("key", (5, 5, 10, 11, 11, 13)), ("key", (4, 11, 10, 12, 16, 13)),
@@ -488,9 +488,9 @@ def bay(kind):
     Z = 7
     if kind == "ours":
         for x in (0, 1, 2, 6, 7, 8):
-            put(x, 1, Z, "reignofnether:string_course_stone", facing="south", shape="straight")
+            put(x, 1, Z, "reignofnether:string_course_slate", facing="south", shape="straight")   # dark base
         for x in (0, 2, 6, 8):
-            put(x, 4, Z, "reignofnether:string_course_stone", facing="south", shape="straight")
+            put(x, 4, Z, "reignofnether:string_course_brick", facing="south", shape="straight")   # quiet impost
         for x in (0, 1, 2, 6, 7, 8):                              # sills run onto the jambs (r1: floating chips)
             put(x, 2, Z, "reignofnether:sill_stone", facing="south")
         for x, key in ((0, "false"), (1, "true"), (7, "true"), (8, "false")):   # lintels bear on the jambs too

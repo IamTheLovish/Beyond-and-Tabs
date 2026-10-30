@@ -39,8 +39,8 @@ exactly what lesson 6 calls "blocky / toy" at RTS distance.
 |---|---|---|---|---|
 | `cornice_*` (stone, brick, slate, copper) | fillet 2, ovolo 3-5, dentils (2 px teeth, 2 px gaps) 8, corona (the drip) 13, cyma 12, top 10 / 7 | 13 | 16 (one course) | the gare's 2-block-proud stair cornice and the factory's 3-course stepped eave folded into ONE course at 1-3 px steps; the corona's shadow line is the point (G1) |
 | `string_course_*` (stone, brick, slate) | fillet 2, bead 3, band 5, drip 4, fillet 2 | 5 | 7 (y 4-11) | the gare's 1-proud andesite course at a third of the projection: a storey line, not a ledge |
-| `sill_*` (stone, brick, slate) | drip lip 1 px with a groove behind, body, weathered top stepping back | 7 | 7 (top of the cell) | the factory's 1-proud stair sill at half the projection, with a real drip |
-| `lintel_*` (stone, brick, slate) | chamfered soffit, face 4 proud; keystone 4-8 px wide tapering up, 6 proud with a fillet | 4 / 6 | 16 | the station's flat heads; the keystone is new (none in the refs at block scale) |
+| `sill_*` (stone, brick, slate) | drip lip 1 px with a groove behind, body, weathered top stepping back | 5 | 6 (top of the cell) | the factory's 1-proud stair sill at under a third of the projection (r2 critic: 7 px read as shelves), with a real drip |
+| `lintel_*` (stone, brick, slate) | chamfered soffit, face 3 proud; keystone 4-8 px wide tapering up, 6 proud with a fillet | 3 / 6 | 16 | the station's flat heads; the keystone is new (none in the refs at block scale) |
 | `arch_ring_*` (stone, brick) | segmental: span 48 (3 blocks), rise 10 (0.21, the station's ratio), ring 6, 3 proud; keystone 6 wide, 5 proud | 3 / 5 | 16 | the 1890 station's span-3 heads without the stair steps; haunches and crown sit IN the wall row (the soffit shows), springers hang on the piers |
 
 Corners: cornice and string course have `shape` straight / outer / inner (mitred, one-handed models: the mirrored
