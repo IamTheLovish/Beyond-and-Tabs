@@ -232,6 +232,10 @@ public enum UnitAction {
     PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
     GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
     SOUL_BOILER,            // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
+    // Sunforged essence caster, the Angel Caller (ability/abilities/CallAngel): each calls one temporary flying angel
+    CALL_MENDER_ANGEL,      // 5 essence: a flying healer for 20 s
+    CALL_SERAPH_ARCHER,     // 10 essence: a flying archer for 25 s
+    CALL_SWORD_SERAPH,      // 20 essence: a flying melee engager for 30 s
     // the Verdant essence caster, the Thornweaver
     ENTANGLING_ROOTS,       // 5 essence: enemies within 3 blocks of the aimed spot are rooted for 3 s
     SEED_OF_RENEWAL,        // 10 essence: a 100 HP sapling heals friends within 6 blocks for 3 HP a second for 10 s
