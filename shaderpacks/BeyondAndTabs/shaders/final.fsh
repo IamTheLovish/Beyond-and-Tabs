@@ -42,7 +42,10 @@ const float VIBRANCE = 0.60;
 const float GLOW = 0.30;
 const float GLOW_THRESHOLD = 0.50;
 const float GLOW_RADIUS = 0.016;
-const vec3 SHADOW_TINT = vec3(1.06, 1.00, 0.90);
+// light pass 3 (scratch, lovish decides): (1.06, 1.00, 0.90) -> (1.03, 1.00, 0.95). The warm push in the shadow bell
+// fought the cool shadow interior the coordinator asked for (lib/light.glsl shadeTint): it took a shaded lawn back to
+// the lit lawn's hue. #326's WorldLookPass Enchanted column carries the old value; the parity test skips until it lands
+const vec3 SHADOW_TINT = vec3(1.03, 1.00, 0.95);
 // highlights near neutral (lovish, Oct 30: "more white then cream sounds fine"): the old (1.09, 1.00, 0.85) turned
 // white quartz, iron and the capitol cream and grey stone brown (block critic vs the Complementary benchmark). The warm
 // Enchanted mood stays in the shadows' tint and the light table; whites read white. #326's WorldLookPass Enchanted
@@ -215,7 +218,7 @@ vec3 bloomAt(vec2 uv) {
     return toDisplay(b) * BLOOM_STRENGTH;
 }
 
-vec3 grade(vec3 c) {
+vec3 grade(vec3 c, float whiteDesaturate) {
     // filmic S on luma (slope 1 at black and white, 1 + CONTRAST through the midtones), as a ratio so saturation holds
     c *= EXPOSURE;
     float l = dot(c, LUMA);
@@ -244,7 +247,7 @@ vec3 grade(vec3 c) {
     // whites read white, not cream (the light pass, lib/settings.glsl): past WHITE_GUARD_LUMA the boosts above and the
     // light's warmth are taken back by WHITE_DESATURATE
     float lw = dot(c, LUMA);
-    return mix(c, vec3(lw), WHITE_DESATURATE * smoothstep(WHITE_GUARD_LUMA - 0.05, WHITE_GUARD_LUMA + 0.05, lw));
+    return mix(c, vec3(lw), whiteDesaturate * smoothstep(WHITE_GUARD_LUMA - 0.05, WHITE_GUARD_LUMA + 0.05, lw));
 }
 
 // the display's S-curve round the lit lawn (light pass 2, lib/settings.glsl S_CURVE_*), on luma as a ratio so a hue
@@ -260,20 +263,22 @@ float sCurve(float l, float day) {
 }
 
 // the curve, then the display's shoulder (light pass 1, raised in pass 2): luma past DISPLAY_SHOULDER eases toward
-// DISPLAY_WHITE and never reaches it; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey
-vec3 displayShoulder(vec3 c, float day) {
+// DISPLAY_WHITE and never reaches it; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey.
+// start / top: the shoulder's (DISPLAY_* in the RTS view and the sky, DISPLAY_*_PERSPECTIVE on a perspective view's
+// geometry, light pass 3)
+vec3 displayShoulder(vec3 c, float day, float start, float top) {
     float l0 = dot(c, LUMA);
     float l = sCurve(l0, day);
     c *= l / max(l0, 1e-5);
-    if (l > DISPLAY_SHOULDER) {
-        float r = DISPLAY_WHITE - DISPLAY_SHOULDER;
-        float t = DISPLAY_SHOULDER + r * (1.0 - exp(-(l - DISPLAY_SHOULDER) / r));
+    if (l > start) {
+        float r = top - start;
+        float t = start + r * (1.0 - exp(-(l - start) / r));
         c *= t / l;
         l = t;
     }
-    float top = max(c.r, max(c.g, c.b));
-    if (top > DISPLAY_WHITE)
-        c = mix(vec3(l), c, (DISPLAY_WHITE - l) / max(top - l, 1e-4));
+    float brightest = max(c.r, max(c.g, c.b));
+    if (brightest > top)
+        c = mix(vec3(l), c, (top - l) / max(brightest - l, 1e-4));
     return c;
 }
 
@@ -281,8 +286,10 @@ void main() {
     vec2 px = 1.0 / vec2(viewWidth, viewHeight);
     float aspect = viewWidth / viewHeight;
     vec3 c = colourAt(texcoord);
-#if EDGE_AA == 1
     float depth = depthAt(texcoord);
+    // a perspective view's geometry takes the lower shoulder (light pass 3); the sky and the RTS view keep theirs
+    bool perspectiveGeometry = !orthoView() && depth < 1.0;
+#if EDGE_AA == 1
     if (depth < 1.0 && geometryEdge(texcoord, px, depth, orthoView()))
         c = fxaa(texcoord, px, c);
 #endif
@@ -292,7 +299,7 @@ void main() {
 #if GRADE == 1
     // the perspective views' sky (nothing drawn: depth 1) takes the grade but not the local contrast or the glow, which
     // took it to a flat near-white (light pass 2; program/sky.fsh draws its gradient for the grade it gets)
-    bool sky = texture2D(depthtex0, texcoord).r >= 1.0;
+    bool sky = depth >= 1.0;
     if (!sky) {
         c = localContrast(c, texcoord, px);
         // the glow's lift scales with the pixel's own luma (GLOW_DARK_GUARD): a screen blend alone lifted darks near
@@ -300,13 +307,14 @@ void main() {
         float guard = pow(clamp(dot(c, LUMA) / GLOW_THRESHOLD, 0.0, 1.0), GLOW_DARK_GUARD);
         c += (1.0 - c) * (GLOW * guard * glowAt(texcoord, aspect));
     }
-    c = grade(c);
+    c = grade(c, perspectiveGeometry ? WHITE_DESATURATE_PERSPECTIVE : WHITE_DESATURATE);
     vec2 d = (texcoord - 0.5) * vec2(aspect, 1.0);
     float r2 = dot(d, d) / (0.25 * (aspect * aspect + 1.0));
     c *= 1.0 - VIGNETTE * r2 * r2;
 #endif
     float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, dot(normalize(sunPosition), normalize(upPosition)));
-    c = displayShoulder(c, day);
+    c = displayShoulder(c, day, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : DISPLAY_SHOULDER,
+                        perspectiveGeometry ? DISPLAY_WHITE_PERSPECTIVE : DISPLAY_WHITE);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)
     c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) * (DITHER_LSB / 255.0);
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);

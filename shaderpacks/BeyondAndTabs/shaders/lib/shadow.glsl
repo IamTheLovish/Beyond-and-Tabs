@@ -28,8 +28,9 @@ const float SHADOW_DEPTH_BIAS = 1.0;
 // in lib/settings.glsl (the light pass: slice 3's 0.012 drew a 4-block wall's tip ~2 px soft, still a razor edge)
 // the farthest caster the blocker search looks for (blocks along the light): its penumbra is the widest drawn
 const float SHADOW_SEARCH_BLOCKS = 32.0;
-// the narrowest filter, in shadow texels: an edge right at its caster stays as crisp as slice 1's, never stair-stepped
-const float PENUMBRA_MIN_TEXELS = 0.75;
+// the narrowest filter, in shadow texels (radius): light pass 3 0.75 -> 1.5 - at 0.75 with the floor at 0.03 block the
+// edge was a razor that showed the shadow map's texels as stair-steps (critic, N_s2_blob)
+const float PENUMBRA_MIN_TEXELS = 1.5;
 // the steepest a receiver's plane may tilt in the light's view (depth per block across): past this the surface is
 // edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster. What the
 // cap cuts off is added back as a bias that grows with the tap's distance in every direction (shortfall), so a tap

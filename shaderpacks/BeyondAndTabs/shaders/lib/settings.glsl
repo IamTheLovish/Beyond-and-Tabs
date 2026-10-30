@@ -85,8 +85,13 @@ const float GROUND_ALBEDO = 0.45;
 // or two across never reached its full depth. Now the contact is crisp (0.03 block: ~1 px at the default zoom, ~2 px
 // at rts_close) and the edge widens with the blocker's distance: a 2-block caster's tip ~2.5 px at rts_close, a
 // 5-block one's ~6 px
-const float SUN_SPREAD = 0.016;
-const float PENUMBRA_MIN_BLOCKS = 0.03;
+// Light pass 3 (critic 6.5/10: the edge now ~0 px, a razor with stair-steps - the shadow texel showing through a
+// filter narrower than it): the floor 0.05 block (~3.4 px at rts_close) and never under PENUMBRA_MIN_TEXELS shadow
+// texels (lib/shadow.glsl), so the 12 jittered taps always span more than a texel. A 2-3 block caster's edge
+// ~3.4 px at rts_close, a 5-block one's ~5.4 px; t11800's long shadows (a 3-block caster's tip ~13 blocks along the
+// light) ~0.18 block: ~6 px at the default zoom, ~12 at rts_close
+const float SUN_SPREAD = 0.014;
+const float PENUMBRA_MIN_BLOCKS = 0.05;
 // the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
 // never to a black crease (lib/ao.glsl)
 const float CONTACT_AO_FLOOR = 0.85;
@@ -103,11 +108,21 @@ const float S_CURVE_SLOPE = 0.32;
 const float S_CURVE_TOE = 0.36;
 const float S_CURVE_LIFT_SPAN = 0.30;
 const float S_CURVE_DAY_LO = 0.05;            // sine of the sun's height: no curve at or below
-const float S_CURVE_DAY_HI = 0.35;            // the whole curve from here (Noon and Morning are ~0.86)
+// the whole curve from here (Noon and Morning are ~0.86). Light pass 3: 0.35 -> 0.20, so the low sun (t11800, ~0.23)
+// takes all of it: at 0.6 of the curve its shadows kept the flat 1.5:1 of a dim room
+const float S_CURVE_DAY_HI = 0.20;
 // the display's white: past DISPLAY_SHOULDER the curve rolls highlights off toward DISPLAY_WHITE and never reaches it,
 // so white blocks land ~0.95-0.97 (light pass 1's 0.80 / 0.96 held them at ~0.92) and nothing clips
 const float DISPLAY_SHOULDER = 0.85;
 const float DISPLAY_WHITE = 0.985;
+// a perspective view (first person, the 3/4 camera) looks at walls square on, often straight into the sun: white
+// buildings there read blown out (light pass 3: the castle at luma 0.82, saturation 0.05 in the 34 / dusk / t11800
+// stills). Its geometry rolls off from DISPLAY_SHOULDER_PERSPECTIVE toward DISPLAY_WHITE_PERSPECTIVE instead, so a lit
+// white wall lands ~0.76-0.78 with its brick lines; the white guard takes less of its colour there
+// (WHITE_DESATURATE_PERSPECTIVE). The sky keeps the RTS shoulder (its zenith sits ~0.88)
+const float DISPLAY_SHOULDER_PERSPECTIVE = 0.64;
+const float DISPLAY_WHITE_PERSPECTIVE = 0.785;
+const float WHITE_DESATURATE_PERSPECTIVE = 0.10;
 // Enchanted's glow (final.fsh) is a screen blend: it lifted every pixel near a white block by the same amount, so a
 // dark face beside a white top gained ~+0.09 - an albedo-independent floor on the darks (light pass 2). Its lift now
 // scales with the pixel's own luma, (luma / GLOW_THRESHOLD)^GLOW_DARK_GUARD: the lawn keeps ~0.7 of it, darks little
@@ -118,8 +133,23 @@ const float GLOW_DARK_GUARD = 2.0;
 // luma, bluer (0.78, 0.90, 0.98), and a paler horizon ~0.75 (0.72, 0.76, 0.80). It had vanilla's colours, which the
 // glow and the white guard took to a flat near-white (critic, light pass 1's 34 / dusk stills)
 const vec3 SKY_ZENITH_DAY = vec3(0.58, 0.81, 1.00);
-const vec3 SKY_HORIZON_DAY = vec3(0.61, 0.65, 0.70);
+// light pass 3: the horizon a little bluer (0.61, 0.65, 0.70 before), on screen ~(0.70, 0.76, 0.84), luma ~0.75
+const vec3 SKY_HORIZON_DAY = vec3(0.60, 0.65, 0.72);
 const float SKY_GRADIENT_SPAN = 0.60;
+// the sun's disc in the sky (program/sky.fsh, light pass 3; vanilla's square sprite is not drawn): SUN_DISC_RADIUS
+// (radians, ~2x the real disc so it reads at 1080p) with a soft rim, slightly warm, ~2x white in linear light so it
+// blooms; a halo of SUN_HALO round it. The moon keeps vanilla's sprite with a soft MOON_GLOW round it at dusk and night
+const float SUN_DISC_RADIUS = 0.018;
+const vec3 SUN_DISC_COLOUR = vec3(1.00, 0.93, 0.80) * 2.2;
+const float SUN_HALO = 0.35;
+const float MOON_GLOW = 0.18;
+// the fill where no sun arrives (lib/light.glsl shadeTint, light pass 3): the sky's blue, luma 1. A cast shadow on the
+// noon lawn reads ~+10 degrees of hue toward blue against the lit lawn, by the model (it was the same hue, darker)
+const vec3 SHADE_TINT = vec3(0.934, 1.006, 1.138);
+// how much harder a sinking sun rakes the ground (lib/light.glsl sunFacing): the facing's easing toward a square root
+// grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Open ground under a 13-degree sun
+// 0.35 -> 0.45 of the sun; walls facing it unchanged
+const float LOW_SUN_RAKE = 0.5;
 // metals' reflections (lib/pbr.glsl): the sky above the horizon, the ground below it as the fill sees it (GROUND_ALBEDO
 // of the sun and sky falling on the ground), never dimmed below SKY_FILL_FLOOR by a low sky light - the fill's own
 // floor. Light pass 1's iron_block side reflected ~nothing and read near black (RGB ~0.24) beside its white mortar.
@@ -128,22 +158,26 @@ const float SKY_GRADIENT_SPAN = 0.60;
 // mipmap's blend of a metal texel and a dielectric one (an iron hoop on a barrel, rust on iron), read as that share
 // of metal - not as a dielectric with an F0 up to 0.9, a white mirror sheen on wood or rust
 const float DIELECTRIC_F0_MAX_CODE = 64.0;
-// biome-tinted plants (grass, ferns; lit.fsh): their albedo held to the lawn's band, so a tuft reads as part of the
-// lawn, not neon lime (light pass 1's tufts: luma ~0.62 on a 0.42 lawn, saturation ~0.8). HSV saturation of the
-// albedo at most FOLIAGE_MAX_SAT (the lawn's own is ~0.36; the grade lifts both ~1.5x on screen), its luma at most
-// FOLIAGE_MAX_LUMA (the lawn's ~0.37), and the foot of the plant shaded to FOLIAGE_BASE_AO (the blades crowd there)
+// biome-tinted plants (grass, ferns; lit.fsh): their albedo's HSV saturation held to FOLIAGE_MAX_SAT (the lawn's own is
+// ~0.36; the grade lifts both ~1.5x on screen), so a tuft is not neon lime (light pass 1: saturation ~0.8). Light pass
+// 3: no luma cap any more (pass 2's 0.42 with a 0.70 foot made dark grey smudges of the tufts; the texture side is
+// lightening their albedo), and a gentler foot, FOLIAGE_BASE_AO
 const float FOLIAGE_MAX_SAT = 0.40;
-const float FOLIAGE_MAX_LUMA = 0.42;
-const float FOLIAGE_BASE_AO = 0.70;
+const float FOLIAGE_BASE_AO = 0.85;
 // whites read white, not cream: from WHITE_GUARD_LUMA up the grade's colour is taken back by WHITE_DESATURATE
 const float WHITE_GUARD_LUMA = 0.85;
 const float WHITE_DESATURATE = 0.30;
 // aerial perspective in a perspective view (first person, the 3/4 camera; never the orthographic RTS camera, which
 // keeps composite's own RTS haze): sky-tinted air from AERIAL_START blocks, AERIAL_MAX x (1 - e^-(d - start)/scale),
 // ~27% at 150 blocks (x HAZE_STRENGTH)
-const float AERIAL_START = 40.0;
-const float AERIAL_SCALE = 100.0;
-const float AERIAL_MAX = 0.40;
+// Light pass 3 (the critic: the far lawn muddy grey, H 102, S 0.28, luma 0.43, where the benchmark goes airy blue-white):
+// denser, from 30 blocks, ~41% at 100 blocks, ~54% at 150, ~62% at 200, toward the sky gradient's bluer horizon, and
+// the air takes the colour it veils fully (AERIAL_DESAT; the RTS haze keeps its half). By the model, far lawn at
+// 150-200 blocks: H ~165-185, S ~0.18-0.20, luma ~0.58-0.61 on screen (was ~27% at 150, the 0.40 / 100 / 40 of pass 1)
+const float AERIAL_START = 30.0;
+const float AERIAL_SCALE = 80.0;
+const float AERIAL_MAX = 0.70;
+const float AERIAL_DESAT = 1.0;
 // final.fsh's dither, in 8-bit steps (0: none). It read as film grain over the lawn at the RTS zoom; the 16-bit
 // buffers and the shoulder leave no banding a camera this close to the ground shows
 const float DITHER_LSB = 0.0;

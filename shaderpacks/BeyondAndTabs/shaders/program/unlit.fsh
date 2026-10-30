@@ -12,7 +12,11 @@
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
 #ifdef UNLIT_LIGHTMAP
+#include "/lib/shadowfit.glsl"
+#include "/lib/shadow.glsl"
 #include "/lib/light.glsl"
+varying vec3 viewPos;
+varying vec3 fit;
 #endif
 
 #ifndef UNLIT_BASIC
@@ -33,11 +37,15 @@ void main() {
         discard;
     vec3 lin = toLinear(c.rgb);
 #ifdef UNLIT_LIGHTMAP
-    // particles and rain: no shadow lookup (they are tiny and many), lit as an upward face in the open would be
+    // particles and rain: lit as an upward face would be at their position, the sun's shadow included. Light pass 3:
+    // they were always lit as in the open, so a green particle in a building's shadow drew full-bright, a neon "tuft"
+    // in the shade (critic, 1_rts_close). One lookup per fragment of something tiny
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
     vec3 up = normalize(upPosition);
-    lin *= surfaceLight(up, 0.6, 1.0, lightLevels(lmcoord), 1.0, sunColour, skyColour);
+    vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+    float shadow = sunShadow(playerPos, mat3(gbufferModelViewInverse) * up, fit);
+    lin *= surfaceLight(up, 0.6, shadow, lightLevels(lmcoord), 1.0, sunColour, skyColour);
 #endif
 #ifdef UNLIT_CRACKS
     lin = 0.5 * toLinear(min(2.0 * c.rgb, vec3(1.0)));

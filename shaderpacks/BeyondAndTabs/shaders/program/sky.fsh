@@ -17,7 +17,7 @@ uniform float viewHeight;
 #ifdef SKY_TEXTURED
 uniform sampler2D texture;
 #endif
-#if defined SKY_BASIC && defined MC_RENDER_STAGE_STARS
+#if (defined SKY_BASIC && defined MC_RENDER_STAGE_STARS) || (defined SKY_TEXTURED && defined MC_RENDER_STAGE_SUN)
 uniform int renderStage;
 #endif
 
@@ -29,6 +29,11 @@ void main() {
     if (orthoView())
         discard;
 #ifdef SKY_TEXTURED
+#ifdef MC_RENDER_STAGE_SUN
+    // the sun is our own disc, drawn with the dome below (light pass 3); vanilla's square sprite is not
+    if (renderStage == MC_RENDER_STAGE_SUN)
+        discard;
+#endif
     vec4 t = texture2D(texture, texcoord) * glcolor;
     gl_FragData[0] = vec4(toLinear(t.rgb) * 2.0, t.a);   // the sun's disc a little above white
 #else
@@ -52,6 +57,20 @@ void main() {
     float h = sunHeight();
     c += vec3(1.0, 0.72, 0.45) * (pow(toSun, 6.0) * 0.25 * smoothstep(-0.12, 0.05, h) * (1.0 - 0.6 * smoothstep(0.1, 0.6, h)));
     c *= mix(0.6, 1.0, smoothstep(-0.3, 0.0, up));          // the ground side of the dome darker
+#ifdef MC_RENDER_STAGE_SUN
+    // the sun's disc (light pass 3, lib/settings.glsl SUN_DISC_*): a soft-rimmed warm disc ~2x white in linear light,
+    // so it blooms, and a halo round it; it sets below the horizon with the dome. Only where the loader names the sun's
+    // stage, so vanilla's sprite (dropped above) is never lost without a replacement
+    float angle = acos(clamp(toSun, -1.0, 1.0));
+    float above = smoothstep(-0.02, 0.01, dot(normalize(sunPosition), normalize(upPosition)));
+    float disc = 1.0 - smoothstep(SUN_DISC_RADIUS * 0.75, SUN_DISC_RADIUS * 1.25, angle);
+    float halo = SUN_HALO * exp(-angle / (SUN_DISC_RADIUS * 4.0));
+    c += SUN_DISC_COLOUR * ((disc + halo) * above * smoothstep(-0.02, 0.02, up));
+#endif
+    // a soft glow round the moon (vanilla's sprite draws the moon itself), while it is up
+    float toMoon = max(dot(dir, -normalize(sunPosition)), 0.0);
+    float moonUp = smoothstep(-0.05, 0.10, -h);
+    c += vec3(0.62, 0.70, 0.90) * (MOON_GLOW * moonUp * (pow(toMoon, 400.0) + 0.3 * pow(toMoon, 40.0)));
     gl_FragData[0] = vec4(c, 1.0);
 #endif
 }

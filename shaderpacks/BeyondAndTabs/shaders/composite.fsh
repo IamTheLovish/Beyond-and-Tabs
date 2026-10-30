@@ -236,7 +236,8 @@ void main() {
         // A perspective view's air by day is the sky gradient's horizon (light pass 2, program/sky.fsh), so far ground
         // fades into the sky drawn behind it
         vec3 air = ortho ? mix(skyColor, vec3(1.0), 0.25) : mix(fogColor, SKY_HORIZON_DAY, skyDay());
-        c = mix(c, vec3(dot(c, LUMA)), h * 0.5);
+        // the air takes the colour it veils: half in the RTS haze, all of it in aerial perspective (AERIAL_DESAT)
+        c = mix(c, vec3(dot(c, LUMA)), min(h * (ortho ? 0.5 : AERIAL_DESAT), 1.0));
         c *= mix(vec3(1.0), DISTANCE_COOL, h);
         c = mix(c, air, h);
         if (!ortho)                    // the render distance's edge fades into the same air (vanilla's fog there)

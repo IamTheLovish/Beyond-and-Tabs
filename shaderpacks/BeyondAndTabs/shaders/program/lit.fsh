@@ -108,8 +108,8 @@ void main() {
 #endif
 #ifdef LIT_TERRAIN
     if (foliage > 0.5) {
-        // a biome-tinted plant (grass, fern: a coloured vertex tint; a flower's is white) keeps its albedo inside the
-        // lawn's band, so a tuft reads as part of the lawn rather than neon lime (light pass 2, lib/settings.glsl); the
+        // a biome-tinted plant (grass, fern: a coloured vertex tint; a flower's is white) keeps its albedo's saturation
+        // inside the lawn's band, so a tuft is not neon lime (light passes 2-3, lib/settings.glsl); the
         // fog of war's tint is grey and passes through. Flowers keep their petals' colour
         float tintChroma = max(glcolor.r, max(glcolor.g, glcolor.b)) - min(glcolor.r, min(glcolor.g, glcolor.b));
         float tinted = smoothstep(0.05, 0.15, tintChroma / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3));
@@ -118,7 +118,6 @@ void main() {
         float l = dot(albedo, LUMA);
         // HSV saturation scales with the distance from the grey of the same luma (for a fixed brightest channel)
         vec3 held = mix(vec3(l), albedo, min(1.0, FOLIAGE_MAX_SAT / max(sat, 1e-4)));
-        held *= min(1.0, FOLIAGE_MAX_LUMA / max(dot(held, LUMA), 1e-4));
         albedo = mix(albedo, held, tinted);
         // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
         ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);
@@ -187,6 +186,11 @@ void main() {
     float tint = mix(max(glcolor.r, max(glcolor.g, glcolor.b)), 1.0, mat.metal);
     vec3 reflected = min(sunSpecular(mat, v, l) * sunArriving(shadow, levels, sunColour) * terminator,
                          vec3(SPEC_MAX));
+#ifdef LIT_TERRAIN
+    // a plant's crossed planes lit as ground have no map: GGX at roughness 1 with Schlick's grazing Fresnel put a white
+    // glint on every far tuft in a perspective view, the haze's "snow" (light pass 3). Plants show no sun glint
+    reflected *= 1.0 - foliage;
+#endif
     vec3 sheen = skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
     reflected += sheen;
     c += reflected * tint;

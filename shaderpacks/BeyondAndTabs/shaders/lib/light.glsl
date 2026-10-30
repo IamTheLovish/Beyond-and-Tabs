@@ -33,8 +33,11 @@ const float NOON_SUN_FACING = 0.8983;          // sunFacing() of open ground wit
 const vec3 SUN_HIGH = SUN_TINT_HIGH
     * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND / (SUN_TINT_HIGH_LUMA * NOON_SUN_FACING));
 const vec3 SKY_HIGH = SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND / SKY_TINT_HIGH_LUMA);
-// low sun: golden light raking across, a dim warm-violet fill
-const vec3 SUN_LOW = vec3(1.00, 0.62, 0.34) * 1.50;
+// low sun: golden light raking across, a dim warm-violet fill. Light pass 3 (critic 6.5/10: t11800 "a dim room" - lit
+// lawn 0.22-0.24, shadow 0.15, sun / shadow 1.5:1, the lawn olive at hue 75-80): the sun is brighter and more orange
+// ((1.00, 0.62, 0.34) x 1.50 before; luma 2.34 now) and rakes the ground harder (LOW_SUN_RAKE), the fill unchanged.
+// By the model at t11800 (sun ~13 degrees up): lit lawn ~0.38 at hue ~68, a cast shadow ~0.13, ratio ~2.9:1
+const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.90;
 const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
@@ -79,10 +82,15 @@ vec2 lightLevels(vec2 lm) {
 }
 
 // Lambert, eased toward a square root: a low sun still rakes the open ground (Dusk's long shadows read as shade, not
-// as nothing), and the terminator on round shapes is softer
+// as nothing), and the terminator on round shapes is softer. As the sun sinks the easing grows by LOW_SUN_RAKE (light
+// pass 3): open ground under a 13-degree sun takes 0.45 of the sun's light instead of 0.35, while a wall facing it
+// (Lambert near 1, where the square root changes nothing) stays as it was - warm light raking across the grass. The
+// high sun (Morning, Noon) is untouched: NOON_SUN_FACING holds
 float sunFacing(vec3 n, vec3 l) {
     float ndl = max(dot(n, l), 0.0);
-    return mix(ndl, sqrt(ndl), 0.5);
+    float h = sunHeight();
+    float low = h > 0.0 ? 1.0 - smoothstep(0.10, 0.55, h) : 0.0;
+    return mix(ndl, sqrt(ndl), 0.5 + LOW_SUN_RAKE * low);
 }
 
 // the sun's light reaching a surface before its facing: the colour, the shadow, and the fade where the sky light says
@@ -107,6 +115,14 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
             + ground * ((1.0 - skySeen) * levels.y)) * (ao * texAo);
 }
 
+// where no sun arrives (a cast shadow, a face turned from the light) the fill is all the light there is, and it is the
+// blue sky's: SHADE_TINT (light pass 3, luma 1) cools it there, so a shadow is the lit ground's colour shifted toward
+// blue, not the same hue darker. sunLit: the sun's share arriving, 0..1. Where the sun reaches, the fill keeps the
+// light table's mild tint (a strongly blue fill tinted the whole lawn: #326)
+vec3 shadeTint(float sunLit) {
+    return mix(SHADE_TINT, vec3(1.0), clamp(sunLit, 0.0, 1.0));
+}
+
 // the light falling on a surface with view-space normal n: shadow (0..1) from lib/shadow.glsl, levels from lightLevels,
 // ao the vertex ambient occlusion (1 = open), texAo the material's own (the _n map's blue, slice 2; 1 = open): it
 // darkens the fill fully and the sun at half strength - a crevice still catches some of a direct sun
@@ -114,7 +130,7 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
                   vec3 skyColour) {
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
-    light += skyFill(n, levels, ao, texAo, sunColour, skyColour);
+    light += skyFill(n, levels, ao, texAo, sunColour, skyColour) * shadeTint(shadow * min(facing * 4.0, 1.0));
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
 }
