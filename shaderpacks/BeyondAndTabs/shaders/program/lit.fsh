@@ -45,7 +45,17 @@ varying vec3 vB;
 
 /* DRAWBUFFERS:0 */
 void main() {
-    vec4 tex = texture2D(texture, texcoord);
+    // sharper texture detail under the RTS camera ("better resolution", lovish Oct 30): it is orthographic at ~30-36
+    // screen pixels a block, so a 128 px block texture is drawn from the atlas's mip 2 (~4 texels to a pixel) and
+    // reads soft. A negative bias moves the read toward mip 1 - the atlas blends between levels, so a half step is
+    // half way - for albedo, relief and material alike (a sharper albedo over blurred relief would look painted on).
+    // First person and everything but terrain keep the hardware's choice. The README has the shimmer trade-off
+#ifdef LIT_TERRAIN
+    float lodBias = orthoView() ? -TEXTURE_SHARPNESS : 0.0;
+#else
+    float lodBias = 0.0;
+#endif
+    vec4 tex = texture2D(texture, texcoord, lodBias);
     vec3 albedo = tex.rgb * glcolor.rgb;
 #if defined LIT_TERRAIN || defined LIT_WATER
     float ao = glcolor.a;              // separateAo: the vertex AO, not an alpha
@@ -82,8 +92,8 @@ void main() {
     vec2 levels = lightLevels(lmcoord);
 #ifdef LIT_PBR
     // the plants keep their up normal: their maps would tilt it back toward the planes' sideways look
-    Material mat = readMaterial(texture2D(normals, texcoord), texture2D(specular, texcoord), lin, geomN, vT, vB,
-                                !plane);
+    Material mat = readMaterial(texture2D(normals, texcoord, lodBias), texture2D(specular, texcoord, lodBias), lin,
+                                geomN, vT, vB, !plane);
     vec3 n = mat.normal;
     float texAo = mat.ao;
 #else

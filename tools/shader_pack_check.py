@@ -135,8 +135,7 @@ def option_variants(source):
         if len(re.findall(r"\b%s\b" % name, source)) < 2:
             continue                    # declared but not read by this program
         for v in sorted({values[0], values[-1]} - {default}):
-            line = m.group(0).replace(default, v, 1)
-            out.append(("%s=%s" % (name, v), source.replace(m.group(0), line, 1)))
+            out.append(("%s=%s" % (name, v), source[:m.start(2)] + v + source[m.end(2):]))
     return out
 
 
