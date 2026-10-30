@@ -133,7 +133,7 @@ public class BlowTimingGameTests {
                     if (attacker.tickCount < ArenaReady.TICKS || target.tickCount < ArenaReady.TICKS)
                         return;
                     start[0] = attacker.tickCount;
-                    attacker.setTarget(target);
+                    aim(attacker, target);
                     health[0] = target.getMaxHealth();
                     target.setHealth(health[0]);
                 }
@@ -184,6 +184,16 @@ public class BlowTimingGameTests {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /**
+     * Gives the attacker its target as an order does: through its SelectedTargetGoal as well as vanilla's field, since
+     * many units (piglins among them) answer getTarget() from that goal, and the held blow's order check asks it.
+     */
+    static void aim(Mob attacker, net.minecraft.world.entity.LivingEntity target) {
+        attacker.setTarget(target);
+        if (attacker instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit && unit.getTargetGoal() != null)
+            unit.getTargetGoal().setTarget(target);
+    }
 
     /**
      * The attacker (of {@code type}) and a still zombie target of another owner, touching at arm's length on the east
@@ -244,7 +254,7 @@ public class BlowTimingGameTests {
                     if (attacker.tickCount < ArenaReady.TICKS || target.tickCount < ArenaReady.TICKS)
                         return;
                     health[0] = target.getHealth();
-                    attacker.setTarget(target);
+                    aim(attacker, target);
                     swingTick[0] = attacker.tickCount;
                     goal.checkAndPerformAttackIgnoreDist(target);
                     if (!attacker.swinging && attacker.attackAnim <= 0)
@@ -347,7 +357,7 @@ public class BlowTimingGameTests {
                     health[0] = target.getHealth();
                     cooldownField.setInt(goal, 0);
                     goal.resetWindup();
-                    attacker.setTarget(target);
+                    aim(attacker, target);
                     armed[0] = true;
                     return;
                 }
