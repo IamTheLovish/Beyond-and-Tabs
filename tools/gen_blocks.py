@@ -2721,23 +2721,40 @@ def m_farmland(F, n, moist):
     """Farmland (r31, art director: "furrows not a dotted grid, darker moist troughs"): tilled soil in four rows
     across the block - continuous ridges and troughs (no pebbles: m_dirt's stones drew a dotted grid), the crumbs
     elongated along the rows, the troughs darker (and in the moist field wet-dark and smoother), the dry field's
-    ridges paler with hairline cracks."""
-    ph = (F.v * 4 + 0.04 * F.noise(1, 3, 0.5, sx=3.0, sy=1.0)) % 1.0     # the rows wander a little along u
+    ridges paler with hairline cracks.
+    Round 34 (lovish: "wet, glossy tilled furrows"): the ridge a crisper crest of broken clods, the furrow floor a
+    smooth trodden channel; the MOIST field paints its own smoothness - the wet floor and the clods' wet faces glossy
+    (so a shader's sun glint runs along the furrows), the dry field matte with a pale dusty crust on the crests."""
+    ph = (F.v * 4 + 0.05 * F.noise(1, 3, 0.5, sx=3.0, sy=1.0)) % 1.0     # the rows wander a little along u
     ridge = np.sin(math.pi * ph) ** 2                    # 0 in a furrow, 1 on a ridge
+    crest = ridge ** 2.2                                 # the crest narrower than the flank
     clumps = F.fbm(3, 3, 0.55, sx=2.0, sy=1.0)           # soil clods, a little longer along the rows
+    # clods: broken lumps along the ridges (Voronoi cells, each a small dome) - the tilled look
+    f1, f2, idx, k = F.voronoi(200, 1.0, aniso=(0.75, 1.0))
+    g1, g2, gidx, gk = F.voronoi(500, 1.0, aniso=(0.75, 1.0))
+    big = (F.rng.random(k) < 0.55)[idx]                  # clods of two sizes
+    f1 = np.where(big, f1, g1)
+    cell = np.where(big, 1.0 / math.sqrt(200), 1.0 / math.sqrt(500))
+    size = np.where(big, (0.6 + 0.4 * F.rng.random(k))[idx], 0.7 * (0.6 + 0.4 * F.rng.random(gk))[gidx])
+    clod = np.clip(1 - (f1 / (0.80 * cell)) ** 2, 0, 1) * size
     crumbs = F.noise(10, 32, 0.3, sx=2.5, sy=1.0)
-    H = 0.25 + 0.45 * ridge + 0.12 * clumps * (0.5 + 0.5 * ridge) + 0.04 * crumbs
+    floor = 1 - smoothstep(0.0, 0.30, ridge)             # the furrow's trodden floor
+    H = 0.22 + 0.36 * ridge + 0.26 * clod * ridge ** 1.2 + 0.05 * clumps * ridge + 0.02 * crumbs * (1 - floor)
     hue = F.noise(2, 6, 0.5)
     jit = np.stack([0.05 * hue, 0.02 * hue, -0.04 * hue], -1)
-    trough = 0.62 if moist else 0.74
-    shade = trough + (1.0 - trough) * ridge + 0.08 * clumps + 0.03 * crumbs
-    alb = tint((0.46, 0.33, 0.22), shade, jit)
+    trough = 0.58 if moist else 0.74
+    shade = trough + (1.0 - trough) * ridge + 0.06 * clumps + 0.03 * crumbs + (0.34 * clod - 0.17) * ridge ** 1.5
+    alb = tint((0.44, 0.31, 0.20) if moist else (0.46, 0.33, 0.22), shade, jit)
     if not moist:
         crack = 1 - smoothstep(0.0, 0.02, np.abs(F.warp(F.noise(3, 9, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10))))
         crack *= smoothstep(0.3, 0.8, F.noise(2, 5, 0.5)) * ridge
         H = H - 0.12 * crack
-        alb = alb * (1 - 0.25 * crack)[..., None]
-    return H, np.clip(alb, 0, 1)
+        alb = alb * (1 - 0.25 * crack)[..., None] * (1 + 0.10 * crest)[..., None]   # a pale dusty crust
+        return dict(H=H, alb=np.clip(alb, 0, 1))
+    # wet: the furrow floor glossy (standing damp), the clods' faces damp-shiny, the crests drying first
+    wetness = np.clip(floor * 1.0 + 0.55 * (1 - crest) * smoothstep(0.2, 0.8, clod) + 0.25 * (1 - ridge), 0, 1)
+    smooth = 40 + 150 * wetness
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth)
 
 
 def m_grass_snow_side(F, n):
@@ -3980,8 +3997,6 @@ def recipes():
         "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
-        "farmland": lambda F, n: m_farmland(F, n, False),
-        "farmland_moist": lambda F, n: m_farmland(F, n, True),
         "crimson_stem": lambda F, n: m_stem(F, n, (0.36, 0.12, 0.18), (0.72, 0.22, 0.24)),
         "crimson_stem_top": lambda F, n: m_log_top(F, n, (0.62, 0.20, 0.24), (0.36, 0.12, 0.18)),
         "warped_stem": lambda F, n: m_stem(F, n, (0.20, 0.22, 0.30), (0.16, 0.62, 0.58)),
@@ -3996,6 +4011,8 @@ def recipes():
     # with ripple rings, smoky thin aretes, glass-smooth faces (m_obsidian_glass paints its own smoothness)
     R["obsidian"] = _parts(m_obsidian_glass)
     R["mud"] = _parts(m_mud)                   # r31: drying mud flat, wet / dry in the smoothness
+    R["farmland"] = _parts(lambda F, n: m_farmland(F, n, False))            # r34: clods and crisp furrows
+    R["farmland_moist"] = _parts(lambda F, n: m_farmland(F, n, True))       # r34: wet glossy furrows (own smoothness)
     R["iron_block"] = _parts(lambda F, n: _d3(m_iron(F, n)))                       # round 23: brushed, riveted
     R["netherite_block"] = _parts(lambda F, n: _d3(m_netherite(F, n)))   # r31: bolted bosses
     R["grass_block_snow"] = _grass_snow_side
