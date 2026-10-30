@@ -189,7 +189,7 @@ TARGETS = {
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
-    "obsidian": dict(luma=0.06, std=0.025, sat=0.25, tilt=10.0, smooth=228, pore=0),   # r30: m_obsidian_glass paints its own smoothness (faces 228)
+    "obsidian": dict(luma=0.085, std=0.05, sat=0.24, tilt=10.0, smooth=228, pore=0),   # r30: m_obsidian_glass paints its own smoothness (faces 228)
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -1173,14 +1173,30 @@ def m_obsidian_glass(F, n, cells=4):
     H = H + 0.02 * ripple
     arete = 1 - smoothstep(0.0, 0.012, f2 - f1)
     H = H + 0.18 * arete
-    lit = lit_edge[idx, idx2] * (0.5 + 0.5 * norm01(F.noise(2, 6, 0.5)))   # a smoky edge that comes and goes
+    lit = lit_edge[idx, idx2] * (0.5 + 0.5 * norm01(F.noise(2, 6, 0.5)))   # a lighter edge that comes and goes
     # flow banding: slow and faint - the bands repeat every block, and strong ones striped a wall (v2 sheet)
     flow = norm01(F.warp(F.noise(1, 2, 0.5, sx=5.0, sy=1.0), 0.0, 0.03 * F.noise(2, 6, 0.5)))
     shade = tone[idx] * (0.965 + 0.07 * flow)
     alb = tint((0.075, 0.07, 0.095), shade)
-    a = (0.45 * arete * lit)[..., None]
-    alb = alb * (1 - a) + np.array([0.22, 0.19, 0.17]) * a
-    smooth = 228 - 95 * arete - 4 * np.abs(ripple)
+    # r30b (eyes 41012344723 beside the Complementary benchmark 41012313108): the brown "smoky" aretes read as a web
+    # of cracks in tar, and the block had no sparkle - the benchmark's obsidian owes its look to lavender glints
+    # (hue ~265, luma ~0.32, about a quarter of the top face). Real obsidian has that too: SHEEN obsidian, violet
+    # lenses of aligned micro-inclusions laid along the flow. So: the edges only a touch lighter and neutral, and
+    # violet sheen lenses (3-12 texels, stretched along the flow, ~18% of the face) that are also glossier, so a
+    # shader's sun makes them glint - an original pattern, not specks.
+    a = (0.18 * arete * lit)[..., None]
+    alb = alb * (1 - a) + np.array([0.20, 0.20, 0.22]) * a
+    # v3 sheet: discrete lenses read as scattered fish - real sheen is a soft band whose strength depends on how the
+    # FRACTURE FACE meets the banding, so it is broad and continuous, strong on some faces and absent on others
+    band = F.warp(F.noise(2, 7, 0.8, sx=3.0, sy=1.0), 0.02 * F.noise(3, 8, 0.5), 0.0)
+    streak = 0.75 + 0.25 * norm01(F.noise(10, 30, 0.3, sx=4.0, sy=1.0))   # fine streaks inside the band
+    face_catch = rng.uniform(0.25, 1.0, m)[idx]                            # how strongly each face shows it
+    # broad and capped (v4 sheet: a narrow threshold put the whole spread into ONE bright blob a block - a sticker
+    # repeating on every block): most of the face carries some sheen, none of it blows out
+    raw = smoothstep(-0.6, 1.4, band) * streak * face_catch * (1 - arete)
+    sheen = 0.5 * np.tanh(1.8 * raw)                                          # a soft knee: no peak blob (v5 sheet)
+    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.34, 0.27, 0.46])
+    smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 20 * sheen
     return dict(H=H, alb=alb, smooth=smooth)
 
 
