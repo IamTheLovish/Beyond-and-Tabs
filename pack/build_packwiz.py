@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import tempfile
+import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -116,8 +117,8 @@ def main():
         side = "client" if e["env"]["server"] == "optional" else "both"   # build_pack.env_for decided it
         entries.append((filename, side, e["downloads"][0], e["hashes"]["sha512"]))
     for _, _, url, _ in entries:
-        if not url.startswith("https://cdn.modrinth.com/"):
-            sys.exit(f"::error::third-party download not on cdn.modrinth.com: {url}")
+        if not url.startswith("https://") or urllib.parse.urlparse(url).hostname not in build_pack.DOWNLOAD_HOSTS:
+            sys.exit(f"::error::third-party download not on {build_pack.DOWNLOAD_HOSTS}: {url}")
 
     our = (os.path.basename(jar_url), jar_url, sha512_of(our_jar))
     rp = (RP_NAME, rp_url, sha512_of(rp_zip))
