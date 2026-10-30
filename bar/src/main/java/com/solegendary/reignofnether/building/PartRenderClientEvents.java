@@ -164,6 +164,10 @@ public class PartRenderClientEvents {
     private static int pickedLightCount = 0;
     private static boolean firstLightLogged = false;
     private static long refreshedAt = Long.MIN_VALUE;
+    // client ticks since the game started: the refresh and the window light run on this, not on the level's game time,
+    // which this mod's client holds equal to the day time (ClientLevelMixin.tickTime) - it stands still whenever the day
+    // time does (eyes run 41123019484: the windows never refreshed at a fixed noon and stayed half-lit at dusk)
+    private static long clientTicks = 0;
     private static int refreshedCount = -1;
     private static final BlockPos.MutableBlockPos MUT = new BlockPos.MutableBlockPos();
 
@@ -235,11 +239,12 @@ public class PartRenderClientEvents {
             refreshedAt = Long.MIN_VALUE;
             return;
         }
+        clientTicks++;
         if (disabled)
             return;
         try {
             watchFrameRate();
-            long now = MC.level.getGameTime();
+            long now = clientTicks;
             List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
             if (now - refreshedAt < REFRESH_TICKS && now >= refreshedAt && buildings.size() == refreshedCount)
                 return;
@@ -522,8 +527,7 @@ public class PartRenderClientEvents {
         renderer = MC.getBlockRenderer();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
         consumer = buffers.getBuffer(Sheets.cutoutBlockSheet());   // a fixed buffer: no allocation
-        long gameTime = MC.level.getGameTime();
-        long clock = gameTime % CLOCK_WRAP;
+        long clock = MC.level.getGameTime() % CLOCK_WRAP;
         float now = clock + evt.getPartialTick();
         try {
             for (int i = 0; i < pickedCount; i++) {
@@ -533,7 +537,7 @@ public class PartRenderClientEvents {
                     drawRig(s, now, cam, px < lodPx, full);
             }
             if (pickedLightCount > 0)
-                windows(cam, evt.getCamera().getLookVector(), gameTime, ortho, orthoPx, screenH);
+                windows(cam, evt.getCamera().getLookVector(), clientTicks, ortho, orthoPx, screenH);
         } finally {
             for (int i = 0; i < pickedCount; i++)
                 picked[i] = null;
@@ -610,7 +614,7 @@ public class PartRenderClientEvents {
      * Each picked lab's standing glass faces that turn toward the camera, as one fullbright warm face each: white
      * concrete's face quad in that direction, just outside the glass (a pane: on its middle plane).
      */
-    private static void windows(Vec3 cam, Vector3f look, long gameTime, boolean ortho, float orthoPx, float screenH) {
+    private static void windows(Vec3 cam, Vector3f look, long ticks, boolean ortho, float orthoPx, float screenH) {
         BakedModel model = renderer.getBlockModel(WINDOW);
         int was = light;
         light = FULLBRIGHT;
@@ -618,7 +622,7 @@ public class PartRenderClientEvents {
             for (int i = 0; i < pickedLightCount; i++) {
                 Lights l = pickedLights[i];
                 float px = ortho ? orthoPx : screenH / (1.4f * (float) Math.sqrt(pickedLightDist[i]));
-                float level = l.clock.windowLevel(gameTime);
+                float level = l.clock.windowLevel(ticks);
                 if (px < NONE_PX || level <= 0f)
                     continue;
                 red = BuildingWork.WARM_R * level;

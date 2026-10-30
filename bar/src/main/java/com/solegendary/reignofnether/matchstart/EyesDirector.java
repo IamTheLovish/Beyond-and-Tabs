@@ -1485,6 +1485,7 @@ public final class EyesDirector {
                     return;
                 if (!there)
                     ReignOfNether.LOGGER.warn("[Eyes] {}_work_dusk: the client sky is at {} not 13000 after 40 s", label, t);
+                mc.gui.getChat().clearMessages(false);   // "Night falls..." would sit over the building (run 41123019484)
                 shot(mc, label + "_work_dusk");
                 queueWork(mc, false);
                 nextPhase(26);
