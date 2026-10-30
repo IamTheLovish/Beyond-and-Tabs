@@ -216,6 +216,23 @@ public final class WalkabilityGrid {
         synchronized (DIRTY_LOCK) { DIRTY_GRIDS.clear(); }
     }
 
+    /**
+     * For tests and logs: what the cache holds for the cell (wx, y, wz): its kind (WalkabilityBuilder.KIND_*), or why
+     * there is none (the chunk is not cached, the cell is outside its Y band), and whether the chunk is waiting for a
+     * reclassify. Reads only: builds nothing.
+     */
+    public String peek(int wx, int y, int wz) {
+        long key = ChunkPos.asLong(wx >> 4, wz >> 4);
+        WalkabilityGridChunk c;
+        synchronized (chunks) { c = chunks.get(key); }
+        if (c == null)
+            return "chunk not cached";
+        boolean dirty;
+        synchronized (DIRTY_LOCK) { dirty = dirtyChunks.containsKey(key); }
+        return (y < c.minY() || y >= c.maxY() ? "outside the band " + c.minY() + ".." + c.maxY() : "kind " + c.kindAt(wx, y, wz))
+            + (dirty ? " (dirty)" : "");
+    }
+
     // snapshot of currently-cached chunk keys, for the debug overlay
     public long[] builtChunkKeys() {
         synchronized (chunks) { return chunks.keySet().toLongArray(); }
