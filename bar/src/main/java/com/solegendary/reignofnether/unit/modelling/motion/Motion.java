@@ -27,6 +27,20 @@ public final class Motion {
     public static final int ROOT = 0, BODY = 1, HEAD = 2, ARM_R = 3, ARM_L = 4, LEG_R = 5, LEG_L = 6, ARMS = 7;
     public static final int BONES = 8, CH = 6, OUT = BONES * CH;
     public static final int RX = 0, RY = 1, RZ = 2, TX = 3, TY = 4, TZ = 5;
+    /**
+     * The look's frame input ({@link #pose}'s {@code look}, filled by MotionPass): how this body looks
+     * ({@link #LOOK_NONE}, {@link #LOOK_FULL} - a vanilla body whose model put the whole head yaw and pitch on the head -
+     * or {@link #LOOK_TWIST} - a rig that aims its own head, whose chest turns only with an aim), the body's yaw, the
+     * head yaw relative to the body as the model already put it on, and the pitch, degrees.
+     */
+    public static final int LOOK_MODE = 0, LOOK_BODY_YAW = 1, LOOK_NET_YAW = 2, LOOK_PITCH = 3, LOOK_LEN = 4;
+    public static final float LOOK_NONE = 0f, LOOK_FULL = 1f, LOOK_TWIST = 2f;
+    /** The chest's share of a look at rest and when aiming (a ranged unit drawing on its target), and its limits. */
+    static final float CHEST_YAW_SHARE = 0.15f, CHEST_YAW_SHARE_AIM = 0.45f, CHEST_PITCH_SHARE = 0.1f,
+        CHEST_PITCH_SHARE_AIM = 0.3f, CHEST_YAW_LIMIT = 25f, CHEST_PITCH_LIMIT = 15f, HEAD_YAW_LOOK = 85f,
+        HEAD_PITCH_LOOK = 40f;
+    private static final float[] SHARES = new float[2], LIMITS = new float[2], CHAIN = new float[2];
+
     /** Slider indices (the config's motion_* percentages / 100). */
     public static final int BREATH = 0, WEIGHT = 1, FIDGET = 2, LEAN = 3, ACCEL = 4, FLINCH = 5, SECONDARY = 6;
 
@@ -60,6 +74,18 @@ public final class Motion {
      */
     public static void pose(float[] s, int b, int id, float ageF, float partial, float zoom, float[] sliders,
                             boolean flinchOnly, float[] out) {
+        pose(s, b, id, ageF, partial, zoom, sliders, flinchOnly, null, out);
+    }
+
+    /**
+     * {@link #pose} with the look: {@code look} is the frame's {@link #LOOK_LEN} floats (null or LOOK_NONE: no look).
+     * The look solver ({@link Life#look}) splits where the head looks - its spring, {@link AnimState#SP_LOOK_YAW} -
+     * between the chest and the head: the chest turns its share (more when aiming), the head the rest, so the head
+     * still ends on the target and arrives there late. On a vanilla body the arms keep the aim the model gave them.
+     * Never scaled by the zoom or the unit's amplitude: it points at a real thing.
+     */
+    public static void pose(float[] s, int b, int id, float ageF, float partial, float zoom, float[] sliders,
+                            boolean flinchOnly, float[] look, float[] out) {
         for (int i = 0; i < OUT; i++)
             out[i] = 0f;
         float amp = Desync.amp(id);   // the tempo is in the slot: the breath phase turns at it (Kinematics.step)
@@ -108,6 +134,9 @@ public final class Motion {
             add(out, BODY, RX, -rc * 0.45f * D);
             add(out, HEAD, RX, -rc * 0.3f * D);
         }
+
+        if (look != null && look[LOOK_MODE] != LOOK_NONE)
+            look(s, b, partial, look, out);
 
         if (!flinchOnly) {
             float standing = Life.smooth(1f - s[b + SPEED] / 0.05f);
@@ -166,6 +195,40 @@ public final class Motion {
             }
         }
 
+        clamp(out);
+    }
+
+    private static void look(float[] s, int b, float partial, float[] look, float[] out) {
+        boolean full = look[LOOK_MODE] == LOOK_FULL;
+        float aim = Mth.clamp(s[b + AIM], 0f, 1f);
+        float ly = Mth.clamp(Mth.wrapDegrees(Life.springAt(s, b + SP_LOOK_YAW, partial) - look[LOOK_BODY_YAW]),
+            -HEAD_YAW_LOOK, HEAD_YAW_LOOK);
+        float lp = Mth.clamp(Life.springAt(s, b + SP_LOOK_PITCH, partial), -HEAD_PITCH_LOOK, HEAD_PITCH_LOOK);
+        SHARES[0] = full ? Mth.lerp(aim, CHEST_YAW_SHARE, CHEST_YAW_SHARE_AIM) : aim * CHEST_YAW_SHARE_AIM;
+        LIMITS[0] = CHEST_YAW_LIMIT;
+        LIMITS[1] = HEAD_YAW_LOOK;
+        Life.look(ly, SHARES, LIMITS, 2, CHAIN);
+        float cy = CHAIN[0], hy = CHAIN[1];
+        SHARES[0] = full ? Mth.lerp(aim, CHEST_PITCH_SHARE, CHEST_PITCH_SHARE_AIM) : aim * CHEST_PITCH_SHARE_AIM;
+        LIMITS[0] = CHEST_PITCH_LIMIT;
+        LIMITS[1] = HEAD_PITCH_LOOK;
+        Life.look(lp, SHARES, LIMITS, 2, CHAIN);
+        float cp = CHAIN[0], hp = CHAIN[1];
+        add(out, BODY, RY, cy * D);
+        add(out, BODY, RX, cp * D);
+        if (!full)
+            return;
+        // the model put the whole look on the head and the head rides the chest's turn: leave it its own share
+        add(out, HEAD, RY, (hy - look[LOOK_NET_YAW]) * D);
+        add(out, HEAD, RX, (hp - look[LOOK_PITCH]) * D);
+        // arms the model aimed from the head (a bow, a crossbow) keep that aim: take the chest's turn back off them
+        add(out, ARM_R, RY, -cy * aim * D);
+        add(out, ARM_L, RY, -cy * aim * D);
+        add(out, ARM_R, RX, cp * aim * D);
+        add(out, ARM_L, RX, cp * aim * D);
+    }
+
+    private static void clamp(float[] out) {
         for (int bone = 0; bone < BONES; bone++)
             for (int ch = 0; ch < CH; ch++) {
                 int i = bone * CH + ch;

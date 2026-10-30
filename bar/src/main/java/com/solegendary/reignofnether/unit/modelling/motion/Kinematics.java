@@ -123,6 +123,43 @@ public final class Kinematics {
         s[b + SP_FLINCH_Z + 1] -= Mth.sin(dirRad) * FLINCH_KICK;   // from the right: bent to the left
     }
 
+    /** The look's spring (arrives late, settles without a wobble) and how fast a ranged unit's aim eases in / out. */
+    public static final float LOOK_OMEGA = 0.45f, LOOK_ZETA = 0.8f, AIM_RATE = 0.2f;
+
+    /**
+     * One tick of the look (the shared look solver's input, {@link Life#look}): the head's world yaw and its pitch, as
+     * the server's LookControl turned them, into springs - the head arrives late and settles - and the aim blend.
+     * The yaw spring follows the angle the short way round and is kept within a turn of zero.
+     *
+     * @param headYawDeg the head's world yaw (yHeadRot), pitchDeg its pitch (xRot, + = down)
+     * @param aiming     a ranged unit drawing on a target (aggressive)
+     * @param fresh      the slot's first tick: start on the head, no swing in from zero
+     */
+    public static void look(float[] s, int b, float headYawDeg, float pitchDeg, boolean aiming, boolean fresh) {
+        if (!Float.isFinite(headYawDeg))
+            headYawDeg = s[b + SP_LOOK_YAW];
+        if (!Float.isFinite(pitchDeg))
+            pitchDeg = 0f;
+        int y = b + SP_LOOK_YAW, p = b + SP_LOOK_PITCH;
+        if (fresh) {
+            s[y] = s[y + 2] = Mth.wrapDegrees(headYawDeg);
+            s[p] = s[p + 2] = pitchDeg;
+            s[y + 1] = s[p + 1] = 0f;
+            s[b + AIM] = aiming ? 1f : 0f;
+            return;
+        }
+        float cur = s[y];
+        Life.spring(s, y, cur + Mth.wrapDegrees(headYawDeg - cur), LOOK_OMEGA, LOOK_ZETA, 1f);
+        if (Math.abs(s[y]) > 360f) {      // back within a turn: the value and the previous step together
+            float turn = 360f * Math.signum(s[y]);
+            s[y] -= turn;
+            s[y + 2] -= turn;
+        }
+        Life.spring(s, p, Mth.clamp(pitchDeg, -90f, 90f), LOOK_OMEGA, LOOK_ZETA, 1f);
+        float a = s[b + AIM];
+        s[b + AIM] = a + ((aiming ? 1f : 0f) - a) * AIM_RATE;
+    }
+
     /**
      * The contact event, attacker side: this unit's blow landed (the client's damage event names it as the direct
      * source - for a keyed swing that is HeldBlow's hit key, the frame the blade arrives). The weapon stops on the

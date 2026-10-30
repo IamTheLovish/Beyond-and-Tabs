@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.support;
 
+import com.solegendary.reignofnether.ability.AutoCaster;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.hero.PossessionServer;
@@ -51,7 +52,8 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  *   <li>steps out of danger: a melee enemy within {@link #DANGER_RADIUS} blocks, or an enemy within
  *       {@link #AIMED_RADIUS} that has it as its target, sends it {@link #KITE_STEP} blocks away from them and toward
  *       its own army (at most once per {@link #KITE_COOLDOWN} ticks; never on hold position, garrisoned, riding, or
- *       off a plain move the player gave - a player's move is the player's);</li>
+ *       off a plain move the player gave - a player's move is the player's), after one autocast look (a caster
+ *       spends its spell before it walks off);</li>
  *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at cast range from the
  *       unit it was told to attack, behind the front of a Fight, or outside an attacked building's guns - remembering
  *       the spot, so after a cast pulled it forward it goes back;</li>
@@ -456,6 +458,11 @@ public final class SupportBrain {
             s.lastKite = now - KITE_COOLDOWN + CORNERED_RETRY;   // cornered: stand, look again shortly
             return false;
         }
+        // lovish, Oct 29 ("Cast before kiting"): one autocast look before the step - the step is a move order, and the
+        // AutoCaster leaves a unit on a move order alone until it ends. A cast ends this think; the next one steps from
+        // wherever the cast left it (a blink moves it). A unit with nothing to autocast finds nothing here.
+        if (AutoCaster.look(level, mob, unit))
+            return false;
         unit.cancelSupportCast();
         unit.getMoveGoal().setMoveTarget(cell);
         s.lastIssued = cell;
