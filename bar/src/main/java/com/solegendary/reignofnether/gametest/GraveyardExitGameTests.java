@@ -289,7 +289,8 @@ public class GraveyardExitGameTests {
                 ReignOfNether.LOGGER.info("[GraveyardExit] {}: {} of {} NOT out and at the rally after {} ticks",
                     layout, stuck.size(), UNITS, LIMIT);
                 finish.accept(layout + ": " + stuck.size() + " of " + UNITS + " Zombies not out of the graveyard and at "
-                    + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck));
+                    + "the rally " + LIMIT + " ticks after the last was raised: " + String.join("; ", stuck)
+                    + " | the pathfinder's grid (live kind / cached): " + gridView(level, gy, rally));
             } catch (GameTestAssertException e) {
                 throw e;   // helper.fail's own way of failing the test
             } catch (Throwable t) {
@@ -375,6 +376,27 @@ public class GraveyardExitGameTests {
     static double horizontal(net.minecraft.world.entity.Entity e, BlockPos bp) {
         double dx = e.getX() - (bp.getX() + 0.5), dz = e.getZ() - (bp.getZ() + 0.5);
         return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** What the walkability cache says about the cells that decide the walk out: the gate, three cells outside it, the rally. */
+    private static String gridView(ServerLevel level, GraveyardPlacement gy, BlockPos rally) {
+        com.solegendary.reignofnether.unit.pathfinding.WalkabilityGrid grid =
+            com.solegendary.reignofnether.unit.pathfinding.WalkabilityGrid.get(level);
+        List<String> out = new ArrayList<>();
+        for (BlockPos e : exitCells(level, gy)) {
+            out.add(cellView(level, grid, "gate", e));
+            for (int k = 1; k <= 3; k++)
+                out.add(cellView(level, grid, "gate+" + k + "south", e.south(k)));
+        }
+        out.add(cellView(level, grid, "rally", rally));
+        return String.join("; ", out) + "; cached chunks " + grid.builtChunkKeys().length;
+    }
+
+    private static String cellView(ServerLevel level, com.solegendary.reignofnether.unit.pathfinding.WalkabilityGrid grid,
+                                   String what, BlockPos p) {
+        return what + " " + p.toShortString() + " live "
+            + com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, p.getX(), p.getY(), p.getZ())
+            + " / " + grid.peek(p.getX(), p.getY(), p.getZ());
     }
 
     private static String pathStatsOf(List<ZombieUnit> units) {
