@@ -233,8 +233,9 @@ TARGETS = {
     # r31 (sampler 3: metals "painted stone"): chamfer + brushing in the relief (tilt 10 -> 13), smoother (147 -> 178)
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=13.0, smooth=178, pore=0, f0=230),
     "netherite_block": dict(luma=0.30, std=0.065, sat=0.12, tilt=13.0, smooth=205, pore=0, f0=255),
-    "diamond_block": dict(luma=0.72, std=0.090, sat=0.30, tilt=12.0, smooth=250, pore=0, f0=44),
-    "emerald_block": dict(luma=0.42, std=0.080, sat=0.50, tilt=12.0, smooth=200, pore=0, f0=15),
+    # r31: hard facets - more spread (bright tops, dark body) and tilt; emerald darker (0.42 -> 0.36), glossier
+    "diamond_block": dict(luma=0.70, std=0.120, sat=0.35, tilt=16.0, smooth=250, pore=0, f0=44),
+    "emerald_block": dict(luma=0.36, std=0.110, sat=0.60, tilt=16.0, smooth=235, pore=0, f0=15),
     "lapis_block": dict(luma=0.22, std=0.050, sat=0.55, tilt=7.6, smooth=60, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
@@ -1197,6 +1198,43 @@ def m_facets(F, n, rgb, cells, edge=0.010, rim=True):
         H = H * b
         shade = shade * (0.8 + 0.2 * b)
     return H, tint(rgb, shade)
+
+
+def m_gem(F, n, body, top, inclusions=0.0):
+    """Round 31 (art director, sampler 3: the gems "read as blobs / cabbage - 3-5 large hard facets per face, deep
+    body colour with bright facet tops, low roughness, emerald darker with inclusion streaks"): four Voronoi cells
+    per face (jittered: 3-5 visible facets), each a FLAT plane at its own tilt (m_facets' pyramids rounded into
+    cabbage), meeting at hard steps; a facet's colour runs from the deep body colour to the bright top colour by how
+    its plane faces the key light, so some facets blaze and some lie dark. inclusions: thin dark streaks along one
+    direction inside the facets (emerald's jardin)."""
+    rng = F.rng
+    f1, f2, idx, k = F.voronoi(4, 0.8)
+    ang = 2 * math.pi
+    cx = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.u).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.u).ravel(), k)) / ang
+    cy = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.v).ravel(), k),
+                    np.bincount(idx.ravel(), np.cos(ang * F.v).ravel(), k)) / ang
+    dx = (F.u - cx[idx] + 0.5) % 1.0 - 0.5
+    dy = (F.v - cy[idx] + 0.5) % 1.0 - 0.5
+    gx, gy = rng.uniform(-1, 1, k), rng.uniform(-1, 1, k)
+    lvl = rng.uniform(-0.08, 0.08, k)
+    plane = lvl[idx] + 0.45 * (gx[idx] * dx + gy[idx] * dy)
+    H = 0.6 + plane
+    edge = 1 - smoothstep(0.0, 0.006, f2 - f1)
+    # the key light from the top left: a facet's plane normal ~ (-gx, -gy, 1)
+    lx, ly, lz = -0.45, -0.55, 0.70
+    nl = (-gx * lx - gy * ly + lz) / np.sqrt(gx * gx + gy * gy + 1) / math.sqrt(lx * lx + ly * ly + lz * lz)
+    catch = np.clip((nl[idx] - 0.45) / 0.55, 0, 1) ** 1.3                   # a soft ramp: not one lit facet a block
+    alb = np.asarray(body)[None, None, :] * (1 - catch[..., None]) + np.asarray(top)[None, None, :] * catch[..., None]
+    alb = alb * (1 + 0.12 * edge)[..., None]                       # a bright line where two facets meet
+    if inclusions > 0:
+        line = np.abs(F.noise(8, 24, 0.5, sx=1.0, sy=6.0))
+        inc = (1 - smoothstep(0.0, 0.05, line)) * smoothstep(0.4, 0.8, norm01(F.noise(2, 5, 0.5))) * inclusions
+        alb = alb * (1 - 0.45 * inc)[..., None]
+        H = H - 0.01 * inc
+    bev = frame(F, 0.05, 0.010)
+    H = H * (0.85 + 0.15 * bev)
+    return H, np.clip(alb * (0.8 + 0.2 * bev)[..., None], 0, 1)
 
 
 def m_obsidian_glass(F, n, cells=4):
@@ -3487,8 +3525,9 @@ def recipes():
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
         "smooth_basalt": lambda F, n: m_clayish(F, n, (0.28, 0.28, 0.30)),
         "soul_sand": m_soul_sand,
-        "diamond_block": lambda F, n: m_facets(F, n, (0.62, 0.86, 0.88), 18),       # r22b: cut facets, not a plate
-        "emerald_block": lambda F, n: m_facets(F, n, (0.22, 0.62, 0.36), 16),
+        # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
+        "diamond_block": lambda F, n: m_gem(F, n, (0.28, 0.60, 0.72), (0.86, 0.97, 1.0)),
+        "emerald_block": lambda F, n: m_gem(F, n, (0.06, 0.32, 0.16), (0.40, 0.82, 0.50), inclusions=1.0),
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
