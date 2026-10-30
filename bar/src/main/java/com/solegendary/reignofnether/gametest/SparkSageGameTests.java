@@ -886,7 +886,9 @@ public class SparkSageGameTests {
     /**
      * A bot's Spark Sage is not an attacker, so the bot's army list never holds it: the "healers follow the army" habit
      * (BotPlayer.verdantHabits, run for every faction's bot) must walk it to the army's centre, or it idles at its lab
-     * with no essence (PR 364 round 3 review). A Sage 17 blocks from the army is ordered to MOVE to the army's centre.
+     * with no essence (PR 364 round 3 review). A Sage 17 blocks from the army is ordered to the army's centre - by a
+     * Fight (ATTACK_MOVE), not a Move, since lovish's "stay behind units" (Oct 30): a Move ends a support unit's support
+     * order, a Fight keeps it behind the army's front.
      * The habit is package-private and the edit to BotPlayer is shared word for word by every caster PR, so the test
      * reaches it by reflection and reads the bot's orderListener hook.
      */
@@ -917,18 +919,21 @@ public class SparkSageGameTests {
                 List<net.minecraft.world.entity.LivingEntity> army = new ArrayList<>(List.of(fighter));
                 // minute 0, no home: only the follow-the-army part runs, not the choke picket
                 habits.invoke(bot, level, mine, army, new ArrayList<>(), new ArrayList<>(), 0L, 0L);
-                int moves = 0;
+                int fights = 0, moves = 0;
                 for (int i = 0; i < actions.size(); i++) {
-                    if (actions.get(i) != UnitAction.MOVE)
+                    if (actions.get(i) == UnitAction.MOVE)
+                        moves++;
+                    if (actions.get(i) != UnitAction.ATTACK_MOVE)
                         continue;
-                    moves++;
+                    fights++;
                     BlockPos t = targets.get(i);
                     if (Math.abs(t.getX() - fighter.getBlockX()) > 1 || Math.abs(t.getZ() - fighter.getBlockZ()) > 1)
                         problems.add("the bot sent its Sage to " + t.getX() + "," + t.getZ() + ", not to the army at "
                             + fighter.getBlockX() + "," + fighter.getBlockZ());
                 }
-                if (moves != 1)
-                    problems.add("the bot gave " + moves + " move orders for its Sage 15.6 blocks from the army, expected 1 (to the army's centre)");
+                if (fights != 1 || moves != 0)
+                    problems.add("the bot gave " + fights + " Fight and " + moves + " Move orders for its Sage 15.6 blocks"
+                        + " from the army, expected 1 Fight (to the army's centre) and no Move");
             } catch (ReflectiveOperationException | RuntimeException ex) {
                 problems.add("the bot's habits threw " + ex);
             } finally {
