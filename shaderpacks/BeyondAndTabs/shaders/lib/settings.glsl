@@ -11,7 +11,9 @@ const float sunPathRotation = 30.0; // [0.0 15.0 30.0 45.0]
 
 // the shadow map. The RTS view fits it to what is on screen (lib/shadowfit.glsl): ~25 texels per block at the default
 // zoom by the arithmetic, falling to the loader's whole box (~6 per block) when zoomed fully out
-const int shadowMapResolution = 2048; // [1024 2048 3072 4096]
+// light pass 7: 2048 -> 4096 by default - the RTS fit at 2048 drew ~2 px texels at the default zoom, and its edges
+// either stair-stepped (a narrow filter) or blurred into wavy bands (a wide one)
+const int shadowMapResolution = 4096; // [1024 2048 3072 4096]
 // half the side of the box the loader draws shadow casters in (blocks), centred on the camera. The RTS fit picks the
 // part of it on screen; first person uses all of it. Smaller: fewer casters drawn each frame, shadows end nearer
 const float shadowDistance = 160.0; // [96.0 128.0 160.0 224.0]
@@ -122,6 +124,8 @@ const float S_CURVE_SLOPE = 0.08;
 const float S_CURVE_TOE = 0.0;
 const float S_CURVE_SLOPE_LOW = 0.32;
 const float S_CURVE_TOE_LOW = 0.36;
+// a perspective view's share of the low sun's curve at every hour (final.fsh, light pass 7)
+const float PERSPECTIVE_CURVE = 0.8;
 const float S_CURVE_LIFT_SPAN = 0.30;
 const float S_CURVE_DAY_LO = 0.05;            // sine of the sun's height: no curve at or below
 // the whole curve from here (Noon and Morning are ~0.86). Light pass 3: 0.35 -> 0.20, so the low sun (t11800, ~0.23)
@@ -159,18 +163,22 @@ const float GLOW_DARK_GUARD = 2.0;
 // glow and the white guard took to a flat near-white (critic, light pass 1's 34 / dusk stills)
 // Light pass 6 (critic: every frame's sky darker toward the horizon, noon 0.73 -> 0.60, the inverse of a real sky): a
 // deeper zenith (0.58, 0.81, 1.00 before) over a lighter horizon (0.60, 0.65, 0.72 before), ~0.64 -> ~0.80 luma
-const vec3 SKY_ZENITH_DAY = vec3(0.50, 0.66, 0.86);
+// Light pass 7 (critic: the painted sky read overcast - in a 3/4 frame the top edge is only ~5 degrees above the
+// horizon, so the 0.60 span never left the horizon's colour): the gradient spans SKY_GRADIENT_SPAN 0.10 of the view's
+// sine, a deeper zenith, a paler, faintly warm horizon. Model on screen: zenith ~0.64 (hue ~215), the frame's top
+// edge ~0.66, the horizon ~0.86
+const vec3 SKY_ZENITH_DAY = vec3(0.44, 0.60, 0.84);
 // light pass 3: the horizon a little bluer (0.61, 0.65, 0.70 before), on screen ~(0.70, 0.76, 0.84), luma ~0.75
-const vec3 SKY_HORIZON_DAY = vec3(0.75, 0.81, 0.87);
+const vec3 SKY_HORIZON_DAY = vec3(0.80, 0.80, 0.78);
 // the aerial perspective's air by day (lib/sky.glsl skyAir): pass 4's horizon, kept for the haze
 const vec3 SKY_AIR_DAY = vec3(0.60, 0.65, 0.72);
 // below the horizon (the void past the map's edge in a 3/4 view) the horizon's colour, down to this share of it
-const float SKY_BELOW_HORIZON = 0.85;
+const float SKY_BELOW_HORIZON = 0.97;          // light pass 7: 0.85 -> 0.97 (the horizon band reads lightest)
 // a probe for which sky programs the loader runs (light pass 6): 1 paints gbuffers_skybasic magenta,
 // gbuffers_skytextured green and gbuffers_clouds cyan, and composite.fsh leaves the sky as those programs drew it.
 // Run eyes once with it on; off for play
 #define SKY_PROBE 0 // [0 1]
-const float SKY_GRADIENT_SPAN = 0.60;
+const float SKY_GRADIENT_SPAN = 0.10;
 // the low sun's sky (lib/sky.glsl, light pass 4): below SKY_SUNSET_HIGH of the sun's sine the horizon warms toward the
 // sun - SKY_SUNSET_GOLD (hue ~33, t11800) turning SKY_SUNSET_DEEP (hue ~15, darker: the dusk still) as the sun reaches
 // the horizon - with SKY_SUNSET_AWAY of it on the side away from the sun, and the zenith deepens to SKY_ZENITH_DUSK.
@@ -186,6 +194,11 @@ const vec3 SKY_ZENITH_DUSK = vec3(0.50, 0.58, 0.68);          // ~0.57 luma, hue
 // CLOUD_SUN of the sun, so a dusk cloud takes the dusk colours instead of vanilla's grey-white slab
 const float CLOUD_SKY = 1.15;
 const float CLOUD_SUN = 0.18;
+// vanilla's clouds come through gbuffers_textured / gbuffers_basic under Oculus (light pass 7, the SKY_PROBE run):
+// found there by world height (the layer is at y 192 in 1.20), softened to CLOUD_OPACITY of vanilla's alpha
+const float CLOUD_Y_MIN = 170.0;
+const float CLOUD_Y_MAX = 215.0;
+const float CLOUD_OPACITY = 0.55;
 const float CLOUD_RIM_START = 0.45;            // of the render distance (far), across the ground: the clouds fade out
 const float CLOUD_RIM_END = 0.80;              // between these, before the layer's rim
 // the sun's disc in the sky (program/sky.fsh, light pass 3; vanilla's square sprite is not drawn): SUN_DISC_RADIUS
@@ -207,10 +220,15 @@ const float MOON_GLOW = 0.18;
 // ((0.84, 0.95, 1.28) at luma 1), full on faces looking up, SHADE_TINT_WALL of it on walls, where the warm ground
 // bounce meets it (the violet mix). Model: a shaded white wall ~hue 210 at saturation ~0.03-0.05, the ground's shadow
 // hue ~120 in the model (pass 3's tint modelled 113 and measured 97: ~105-115 in game)
-const vec3 SHADE_TINT = vec3(0.884, 1.000, 1.347);
+// Light pass 7: separate tints for the ground and for walls. The ground's (faces looking up) bluer: at 5000 the lawn's
+// shadow read rgb 52/76/39, "a dimmer lawn without sky" (blue 0.51 of green); target ~48/74/52 (>= 0.65). By the
+// model x1.22 on its blue / green on screen -> ~0.62-0.65. A white top in shade reads blue ~1.5x red, as snow does
+const vec3 SHADE_TINT = vec3(0.763, 0.966, 2.035);
+// walls (faces looking sideways; pass 6's 0.60 share of the old tint, now its own colour): hue ~205-215, saturation
+// ~0.06-0.10 on shaded stone
+const vec3 SHADE_TINT_WALL = vec3(0.93, 1.00, 1.21);
 // Light pass 6 (critic: shaded stone walls now dead grey, saturation 0.01-0.02; target hue 200-215 at 0.06-0.10,
-// half pass 4's violet): 0.35 -> 0.60 of the tint on walls
-const float SHADE_TINT_WALL = 0.60;
+// half pass 4's violet): 0.35 -> 0.60 of the tint on walls (light pass 7: SHADE_TINT_WALL above, its own colour)
 // the low sun's shadows take the tint harder by this share (light pass 6: the t11800 ground shadow read yellow-green,
 // hue 70-95 at saturation 0.53-0.58; target ~105-120, <= 0.40)
 const float SHADE_TINT_LOW_BOOST = 0.6;
@@ -219,6 +237,8 @@ const float SHADE_TINT_LOW_BOOST = 0.6;
 // sun's azimuth takes up to 1 + FILL_DIRECTION of the fill, one turned away 1 - FILL_DIRECTION; tops and the lawn none.
 // A wall facing the sun's azimuth against one facing away: fill ratio 1.86, ~1.2-1.3x on screen with the sun on it
 const float FILL_DIRECTION = 0.30;
+// the share of the occlusion (vertex and material AO) the ground's bounce takes (lib/light.glsl skyFill, light pass 7)
+const float BOUNCE_AO = 0.35;
 // how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square
 // root grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Light pass 4: grass and plants
 // only (biome-tinted terrain; pass 3 raked every top, so white block tops outshone the lawn at t11800) and all the way
@@ -238,6 +258,10 @@ const float DIELECTRIC_F0_MAX_CODE = 64.0;
 // lightening their albedo), and a gentler foot, FOLIAGE_BASE_AO
 const float FOLIAGE_MAX_SAT = 0.40;
 const float FOLIAGE_BASE_AO = 0.85;
+// plants cast sun shadows (light pass 7: the benchmark's tufts do, ours were dropped from the shadow pass since #350,
+// when hard shadows read as dark stars; the penumbra is soft now). A plant looks its own shadow up FOLIAGE_SHADOW_LIFT
+// blocks toward the light, so it is never shadowed by itself or the tufts round its foot
+const float FOLIAGE_SHADOW_LIFT = 1.0;
 // the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
 // across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->
@@ -257,6 +281,9 @@ const float MEADOW_HUE_BLUE = 0.23;
 // Light pass 4: 0.85 -> 0.50 - fully neutral, the perspective views' sunlit white walls lost their warmth (the castle
 // read hue-less); half keeps a lit white wall at a warm hue ~35-45 with a low saturation (cream was ~0.07)
 const float WHITE_WALL_NEUTRAL = 0.50;
+// and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
+// 22 spread; target <= 12 while the lawn keeps the warm light)
+const float WHITE_LOW_NEUTRAL = 0.55;
 // a rough dielectric's sun glint never passes this share of SPEC_MAX (light pass 3: nether bricks strobed white on
 // their bevels' normals at smoothness ~0.1-0.2): the cap rises to the full SPEC_MAX from smoothness 0.2 to 0.6. Metals
 // keep the full cap. Also every glint fades out where the mapped normal turns from the eye (n.v under 0.2)

@@ -181,7 +181,9 @@ void main() {
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
-        shadow = sunShadow(playerPos, worldNormal, fit);
+        // a plant looks its shadow up a block toward the light: plants cast shadows now (FOLIAGE_SHADOW_LIFT)
+        vec3 lookup = playerPos + (mat3(gbufferModelViewInverse) * l) * (FOLIAGE_SHADOW_LIFT * foliage);
+        shadow = sunShadow(lookup, worldNormal, fit);
 #if CLOUD_SHADOWS == 1
         // a passing cloud takes some of the sun (and its glints, which read the same term), never the sky's fill
         shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
@@ -197,7 +199,8 @@ void main() {
         float whiteSat = (top - min(albedo.r, min(albedo.g, albedo.b))) / max(top, 1e-4);
         float whiteness = smoothstep(0.62, 0.75, dot(albedo, LUMA)) * (1.0 - smoothstep(0.06, 0.14, whiteSat));
         float side = 1.0 - clamp(dot(geomN, normalize(upPosition)), 0.0, 1.0);
-        light = mix(light, vec3(dot(light, LUMA)), WHITE_WALL_NEUTRAL * whiteness * side);
+        float neutral = max(WHITE_WALL_NEUTRAL * side, WHITE_LOW_NEUTRAL * lowSun());
+        light = mix(light, vec3(dot(light, LUMA)), neutral * whiteness);
     }
     vec3 c = lin * light;
     // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the

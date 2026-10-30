@@ -326,7 +326,10 @@ void main() {
     float low = sunH > 0.0 ? 1.0 - smoothstep(0.10, 0.55, sunH) : 0.0;
     float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);
     float top = mix(DISPLAY_WHITE, DISPLAY_WHITE_LOW, low);
-    c = displayShoulder(c, day, low, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start,
+    // a perspective view keeps (nearly) the low sun's stronger curve at every hour (PERSPECTIVE_CURVE, light pass 7:
+    // the day's gentle one flattened the 3/4 views, p5 0.22 -> 0.28, mean 0.50 -> 0.57)
+    float curveLow = perspectiveGeometry ? max(low, PERSPECTIVE_CURVE) : low;
+    c = displayShoulder(c, day, curveLow, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start,
                         perspectiveGeometry ? DISPLAY_WHITE_PERSPECTIVE : top,
                         perspectiveGeometry ? PERSPECTIVE_HIGHLIGHT : 1.0);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)

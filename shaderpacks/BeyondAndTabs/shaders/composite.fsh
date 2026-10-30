@@ -227,7 +227,10 @@ void main() {
             // "sky" was mostly the loader's clear colour (vanilla's fog colour) - the sky programs' dome only covers
             // the view above ~2 degrees and these cameras look 30 degrees down - so pass 4-5's gradient, the dusk
             // colours and the sun disc never showed, and vanilla's sun square stayed. Vanilla's colours by night
-            c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());
+            // light pass 7: only where gbuffers_skybasic did not draw (it runs under Oculus - the SKY_PROBE run - and
+            // marks its pixels in colortex1's green); the loader's clear colour elsewhere
+            if (texture2D(colortex1, texcoord).g < 0.5)
+                c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());
 #endif
     } else if (isEyeInWater == 0) {
         vec3 pos = viewPosAt(texcoord, depth);

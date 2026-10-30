@@ -30,7 +30,11 @@ const float SHADOW_DEPTH_BIAS = 1.0;
 const float SHADOW_SEARCH_BLOCKS = 32.0;
 // the narrowest filter, in shadow texels (radius): light pass 3 0.75 -> 1.5 - at 0.75 with the floor at 0.03 block the
 // edge was a razor that showed the shadow map's texels as stair-steps (critic, N_s2_blob)
-const float PENUMBRA_MIN_TEXELS = 1.5;
+// Light pass 7: 1.0 in the RTS view (the fitted map at 4096 texels: ~1 px a texel at the default zoom, so an edge
+// is <= 2 px and straight - pass 6's 1.5 texels of a 2048 map drew a ~10 px wavy band), 2.0 in a perspective view
+// (the loader's whole box: coarse texels near the camera, which a narrower filter showed as stair-steps)
+const float PENUMBRA_MIN_TEXELS = 1.0;
+const float PENUMBRA_MIN_TEXELS_PERSPECTIVE = 2.0;
 // the steepest a receiver's plane may tilt in the light's view (depth per block across): past this the surface is
 // edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster. What the
 // cap cuts off is added back as a bias that grows with the tap's distance in every direction (shortfall), so a tap
@@ -84,7 +88,8 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     if (blockers < 0.5)
         return 1.0;
     float gap = max(s.z - blockerDepth / blockers, 0.0) / depthPerBlock;          // blocks from caster to receiver
-    float radiusUv = max(0.5 * max(gap * SUN_SPREAD, PENUMBRA_MIN_BLOCKS) / blocksPerUv, PENUMBRA_MIN_TEXELS * texel);
+    float minTexels = orthoView() ? PENUMBRA_MIN_TEXELS : PENUMBRA_MIN_TEXELS_PERSPECTIVE;
+    float radiusUv = max(0.5 * max(gap * SUN_SPREAD, PENUMBRA_MIN_BLOCKS) / blocksPerUv, minTexels * texel);
     // every search tap blocked and the penumbra inside the searched disc: deep inside the shadow
     if (blockers > 7.5 && radiusUv < searchUv * 0.5)
         return 0.0;

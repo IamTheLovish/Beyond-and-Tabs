@@ -118,8 +118,10 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
     vec3 up = normalize(upPosition);
     float skySeen = 0.5 + 0.5 * dot(n, up);
     vec3 ground = GROUND_ALBEDO * (sunColour * sunFacing(up, normalize(shadowLightPosition)) + skyColour);
-    return (skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y))
-            + ground * ((1.0 - skySeen) * levels.y)) * (ao * texAo);
+    // the ground's bounce takes only BOUNCE_AO of the occlusion (light pass 7): it comes from the ground right at a
+    // wall's foot, the occluded corner itself, so a shaded wall brightens toward its base instead of going near black
+    return skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo)
+           + ground * ((1.0 - skySeen) * levels.y * mix(1.0, ao * texAo, BOUNCE_AO));
 }
 
 // where no sun arrives (a cast shadow, a face turned from the light) the fill is all the light there is, and it is the
@@ -127,8 +129,8 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // blue, not the same hue darker. sunLit: the sun's share arriving, 0..1. Where the sun reaches, the fill keeps the
 // light table's mild tint (a strongly blue fill tinted the whole lawn: #326)
 vec3 shadeTint(float sunLit, float upness) {
-    float strength = mix(SHADE_TINT_WALL, 1.0, clamp(upness, 0.0, 1.0)) * (1.0 + SHADE_TINT_LOW_BOOST * lowSun());
-    vec3 tint = max(mix(vec3(1.0), SHADE_TINT, strength), vec3(0.0));
+    vec3 full = mix(SHADE_TINT_WALL, SHADE_TINT, clamp(upness, 0.0, 1.0));
+    vec3 tint = max(mix(vec3(1.0), full, 1.0 + SHADE_TINT_LOW_BOOST * lowSun()), vec3(0.0));
     return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
 }
 

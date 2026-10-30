@@ -25,7 +25,8 @@ uniform int renderStage;
 varying vec2 texcoord;
 varying vec4 glcolor;
 
-/* DRAWBUFFERS:0 */
+// colortex1 green 1: this pixel's sky was drawn here, so composite.fsh's fallback paint leaves it (light pass 7)
+/* DRAWBUFFERS:01 */
 void main() {
     if (orthoView())
         discard;
@@ -39,13 +40,16 @@ void main() {
     vec4 t = texture2D(texture, texcoord) * glcolor;
 #if SKY_PROBE == 1
     gl_FragData[0] = vec4(0.0, 1.0, 0.0, t.a);
+    gl_FragData[1] = vec4(0.0, 1.0, 0.0, t.a);
     return;
 #endif
     gl_FragData[0] = vec4(toLinear(t.rgb) * 2.0, t.a);   // the moon (and the sun, were it not dropped above)
+    gl_FragData[1] = vec4(0.0, 1.0, 0.0, t.a);
 #else
 #ifdef MC_RENDER_STAGE_STARS
     if (renderStage == MC_RENDER_STAGE_STARS) {
         gl_FragData[0] = vec4(toLinear(glcolor.rgb) * 1.5, glcolor.a);
+        gl_FragData[1] = vec4(0.0, 1.0, 0.0, glcolor.a);
         return;
     }
 #endif
@@ -60,5 +64,6 @@ void main() {
     c = vec3(1.0, 0.0, 1.0);
 #endif
     gl_FragData[0] = vec4(c, 1.0);
+    gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);
 #endif
 }

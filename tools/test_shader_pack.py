@@ -59,7 +59,9 @@ class ShaderPack(unittest.TestCase):
         # the sun tilt lovish picked (Oct 29) and the shadow map's size, where every program sees them
         src = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
         self.assertIn("const float sunPathRotation = 30.0;", src)
-        self.assertIn("const int shadowMapResolution = 2048;", src)
+        # Retired pin (light pass 7): "shadowMapResolution = 2048" - at 2048 the RTS fit drew ~2 px texels, so edges
+        # stair-stepped or blurred into wavy bands (critic: the pad's shadow scalloped); 4096 by default now
+        self.assertIn("const int shadowMapResolution = 4096;", src)
 
     def test_ambient_occlusion_takes_only_the_sky_share(self):
         # slice 3 (lib/ao.glsl): every program that writes colour also writes colortex1, the sky's share of the light,
@@ -166,7 +168,11 @@ class ShaderPack(unittest.TestCase):
         along = 1.0 / math.sin(math.radians(60.0))            # blocks along the light per block of caster height
         contact = _const("PENUMBRA_MIN_BLOCKS") * close
         self.assertTrue(2.0 <= contact <= 4.0, contact)
-        self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS", _read("lib", "shadow.glsl")), 1.5)
+        # Retired pin (light pass 7): ">= 1.5 shadow texels" - with the map at 4096 one texel is ~1 px at the default
+        # zoom: the RTS filter's floor is 1 texel (an edge <= 2 px), a perspective view's 2 (its coarse near texels)
+        shadow_src = _read("lib", "shadow.glsl")
+        self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS", shadow_src), 1.0)
+        self.assertGreaterEqual(_const("PENUMBRA_MIN_TEXELS_PERSPECTIVE", shadow_src), 2.0)
         # t11800's long shadows (sun ~13 degrees up): a 3-block caster's tip, 6-10 px at the default zoom (~33 px)
         tip = 3.0 / math.sin(math.radians(13.0)) * _const("SUN_SPREAD") * 33.0
         self.assertTrue(6.0 <= tip <= 10.0, tip)
@@ -372,12 +378,17 @@ class ShaderPack(unittest.TestCase):
         # on the sky's part of the fill only
         # Retired pin (light pass 5): "blue > 2x green" - pass 4's indigo turned every shaded wall violet (H 231-251,
         # saturation up to 0.26). Now a sky blue, 1.2-1.5x green on faces looking up, a third of that on walls
-        self.assertTrue(1.2 <= tint[2] / tint[1] <= 1.5, tint)
-        # light pass 6: walls 0.35 -> 0.60 of it (pass 5's shaded stone read dead grey); the low sun's shadows boosted
-        self.assertTrue(0.5 <= _const("SHADE_TINT_WALL") <= 0.7)
+        # Retired pin (light pass 7): "blue 1.2-1.5x green" and "SHADE_TINT_WALL a 0.5-0.7 share" - the ground's
+        # shadow at 5000 stayed a dimmer lawn (blue 0.51 of green, target >= 0.65) while walls need far less. The
+        # ground's tint and the walls' are separate colours now: the ground's blue 1.8-2.3x green, the walls' 1.1-1.3x
+        self.assertTrue(1.8 <= tint[2] / tint[1] <= 2.3, tint)
+        wall = [float(x) for x in re.search(r"const vec3 SHADE_TINT_WALL = vec3\(([^)]*)\);", settings).group(1).split(",")]
+        self.assertTrue(1.1 <= wall[2] / wall[1] <= 1.3, wall)
+        self.assertAlmostEqual(sum(a * b for a, b in zip(wall, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)
         self.assertTrue(0.3 <= _const("SHADE_TINT_LOW_BOOST") <= 1.0)
-        self.assertGreater(tint[2], tint[1])
-        self.assertGreater(tint[1], tint[0])                  # blue-cyan, never violet (red above green)
+        for t in (tint, wall):
+            self.assertGreater(t[2], t[1])
+            self.assertGreater(t[1], t[0])                    # blue-cyan, never violet (red above green)
         light = _read("lib", "light.glsl")
         self.assertIn("light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0), upness) - 1.0);", light)
         # light pass 5: the fill has a direction (the castle's walls at noon 0.68 / 0.67): a face toward the sun's
@@ -410,6 +421,40 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual(persp(0.42), 0.42, places=6)
         self.assertLess(_const("WHITE_DESATURATE_PERSPECTIVE"), _const("WHITE_DESATURATE"))
 
+    def test_the_sky_and_its_strays_light_pass_7(self):
+        # the SKY_PROBE run (eyes 41078134357): gbuffers_skybasic runs under Oculus, gbuffers_clouds never does - the
+        # clouds come through gbuffers_textured / gbuffers_basic. The sky is drawn by skybasic, which marks its pixels
+        # (colortex1 green) so composite's paint is a fallback only; clouds are caught by world height in the unlit
+        # programs (lit by the sky's ramp, softened, faded at the rim) and a stray sun sprite dropped by direction
+        sky = _read("program", "sky.fsh")
+        self.assertIn("/* DRAWBUFFERS:01 */", sky)
+        self.assertIn("gl_FragData[1] = vec4(0.0, 1.0, 0.0, 1.0);", sky)
+        self.assertIn("if (texture2D(colortex1, texcoord).g < 0.5)", _read("composite.fsh"))
+        for name in ("gbuffers_textured", "gbuffers_basic"):
+            for ext in ("vsh", "fsh"):
+                self.assertIn("#define UNLIT_SKYCATCH", _read("%s.%s" % (name, ext)))
+        unlit = _read("program", "unlit.fsh")
+        self.assertIn("if (y > CLOUD_Y_MIN && y < CLOUD_Y_MAX", unlit)
+        self.assertTrue(_const("CLOUD_Y_MIN") < 192.0 < _const("CLOUD_Y_MAX"))
+        self.assertLessEqual(_const("CLOUD_OPACITY"), 0.7)
+        self.assertIn("dot(dir, sunDir) > SUN_SPRITE_COS", unlit)
+        # the day sky's gradient reads within a 3/4 frame (its top edge ~5 degrees up)
+        self.assertLessEqual(_const("SKY_GRADIENT_SPAN"), 0.2)
+
+    def test_plants_cast_soft_shadows_and_perspective_keeps_contrast(self):
+        # light pass 7: plants are in the shadow pass again, swaying as lit.vsh sways them, and look their own shadow up
+        # a block toward the light; perspective views keep most of the low sun's curve; the ground's bounce takes only
+        # part of a wall foot's occlusion
+        shadow_vsh = _read("shadow.vsh")
+        self.assertNotIn("vec4(2.0, 2.0, 2.0, 1.0)", shadow_vsh)
+        self.assertIn("float plant = lower ? top : (upper ? 1.0 + 0.7 * top : 0.0);", shadow_vsh)
+        self.assertIn("(FOLIAGE_SHADOW_LIFT * foliage)", _read("program", "lit.fsh"))
+        self.assertTrue(0.5 <= _const("FOLIAGE_SHADOW_LIFT") <= 1.5)
+        self.assertIn("float curveLow = perspectiveGeometry ? max(low, PERSPECTIVE_CURVE) : low;", _read("final.fsh"))
+        self.assertTrue(0.5 <= _const("PERSPECTIVE_CURVE") <= 1.0)
+        self.assertIn("mix(1.0, ao * texAo, BOUNCE_AO)", _read("lib", "light.glsl"))
+        self.assertLess(_const("BOUNCE_AO"), 1.0)
+
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted
         # terrain. Patches ~8-16 blocks (the noise cell), a value swing that adds ~0.04 of macro std on screen (numpy
@@ -432,7 +477,8 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.4 <= _const("WHITE_WALL_NEUTRAL") <= 0.6)
         self.assertLessEqual(_const("ROUGH_GLINT_CAP"), 0.2)
         lit = _read("program", "lit.fsh")
-        self.assertIn("WHITE_WALL_NEUTRAL * whiteness * side", lit)
+        self.assertIn("float neutral = max(WHITE_WALL_NEUTRAL * side, WHITE_LOW_NEUTRAL * lowSun());", lit)
+        self.assertTrue(0.4 <= _const("WHITE_LOW_NEUTRAL") <= 0.7)
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):
