@@ -64,6 +64,11 @@ GROUND_MAIN = 0.70              # the paving's commonest material covers >= 70 %
 ROOF_CLEAN = 0.90               # >= 90 % of the seen roof-top pixels are roof / terrace / parapet stone ("debris")
 DEBRIS = ("wool", "_log", "_wood", "chain", "planks", "fence", "_carpet", "hay", "barrel")
 GOLD = ("gold", "honey")
+FIELD_VAL = (0.45, 0.68)        # round 2: the wall FIELD (the commonest wall block) reads light - above the ground mids
+#                                 (Art method: lights 0.50+ belong to buildings) and under the snow cut, both edges
+TRIM_GAP = 0.10                 # the dressings (quoins, strings, cornices) read >= 0.10 darker than the field: zones
+TRIM = ("stone_brick", "reignofnether:")    # the dressings: stone-brick quoins / strings / heads, our mouldings
+GOLD_MAX = 0.015                # gold (the one accent) <= 1.5 % of the building's pixels in the rts still
 
 
 def sub_block(n):
@@ -221,6 +226,30 @@ class SunwainCourt(unittest.TestCase):
                 (h[1], h[2]) for h in self.roof_hits(st) if not CC.lookup(self.table, h[1], h[2])).most_common(6)))
             v = max(rgb)
             self.assertTrue(ROOF_VAL[0] <= v <= ROOF_VAL[1], (st, round(v, 3)))
+
+    def test_r2_wall_field_light_and_trim_darker(self):
+        """Round 1's two fresh critics (runs 20261030-185320 / -185323, both 5/10): the walls (andesite, 0.29 / 0.38)
+        sit in the ground's mid band, "the building no longer owns the lights", and "andesite field and stone-brick
+        trim are near one value", so the trim is lost. The field (the commonest full block of the west and south wall
+        hits that is not a dressing)
+        averages value 0.45-0.68 on camera (rts_close, 34) and the dressings (stone bricks, string courses, cornices)
+        average >= 0.10 darker."""
+        for st in ("rts_close", "34"):
+            hits = self.wall_hits(st)
+            field = Counter(h[1] for h in hits if full(h[1]) and not h[1].startswith(TRIM)).most_common(1)[0][0]
+            fk, frgb = self.colour([h for h in hits if h[1] == field])
+            trim = [h for h in hits if h[1].startswith(TRIM)]
+            tk, trgb = self.colour(trim)
+            self.assertGreaterEqual(min(fk, tk), KNOWN, (st, field, "not photographed yet"))
+            self.assertTrue(FIELD_VAL[0] <= max(frgb) <= FIELD_VAL[1], (st, field, round(max(frgb), 3)))
+            self.assertGreaterEqual(max(frgb) - max(trgb), TRIM_GAP, (st, round(max(frgb), 3), round(max(trgb), 3)))
+
+    def test_r2_one_gold_accent(self):
+        """Round 1's critics: the 3 x 3 gold halo ring on the terrace "is the first thing seen" from the RTS camera,
+        "a square donut, not a halo". Gold is the one small accent: <= 1.5 % of the building's pixels in rts."""
+        hits = [h for h in self.hits["rts"].values() if h[0][1] >= 1]
+        gold = sum(1 for h in hits if any(k in h[1] for k in GOLD)) / len(hits)
+        self.assertLessEqual(gold, GOLD_MAX, round(gold, 4))
 
     def test_palette_by_look_no_snow_no_loud_colour(self):
         """By how the blocks LOOK on camera: <= 5 % of the building's pixels read as snow (value >= 0.70, sat <=
