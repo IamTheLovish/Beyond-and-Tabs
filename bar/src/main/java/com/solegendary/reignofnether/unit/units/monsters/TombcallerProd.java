@@ -63,7 +63,7 @@ public class TombcallerProd extends ProductionItem implements IUnitProductionIte
             List.of(
                 Component.translatable("entity.reignofnether.tombcaller_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.tombcaller_unit.tooltip1").getVisualOrderText(),
                 Component.translatable("entity.reignofnether.tombcaller_unit.tooltip2").getVisualOrderText(),
