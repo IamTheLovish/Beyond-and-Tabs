@@ -9,7 +9,7 @@ name: mod-textures
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']   # a branch that changes the census shows its result before merge
     paths:
       - 'bar/build.gradle'
       - 'tools/mod_texture_census.py'
