@@ -388,8 +388,34 @@ public class GraveyardExitGameTests {
             for (int k = 1; k <= 3; k++)
                 out.add(cellView(level, grid, "gate+" + k + "south", e.south(k)));
         }
-        out.add(cellView(level, grid, "rally", rally));
+        out.add(cellView(level, grid, "rally(floor+1)", rally.above()));
+        out.add(staleCells(level, grid, rally, exitCells(level, gy)));
         return String.join("; ", out) + "; cached chunks " + grid.builtChunkKeys().length;
+    }
+
+    /** Every cell at the gate's height in the box round the gate and the rally (6 cells margin) whose cached kind differs from the live one. */
+    private static String staleCells(ServerLevel level, com.solegendary.reignofnether.unit.pathfinding.WalkabilityGrid grid,
+                                     BlockPos rally, List<BlockPos> gates) {
+        if (gates.isEmpty()) return "no gate cells";
+        int y = gates.get(0).getY();
+        int minX = rally.getX(), maxX = rally.getX(), minZ = rally.getZ(), maxZ = rally.getZ();
+        for (BlockPos g : gates) {
+            minX = Math.min(minX, g.getX()); maxX = Math.max(maxX, g.getX());
+            minZ = Math.min(minZ, g.getZ()); maxZ = Math.max(maxZ, g.getZ());
+        }
+        int checked = 0, stale = 0;
+        List<String> first = new ArrayList<>();
+        for (int x = minX - 6; x <= maxX + 6; x++)
+            for (int z = minZ - 6; z <= maxZ + 6; z++) {
+                checked++;
+                String cached = grid.peek(x, y, z);
+                int live = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, x, y, z);
+                if (cached.startsWith("kind " + live)) continue;
+                stale++;
+                if (first.size() < 8) first.add(x + "," + z + " live " + live + " / " + cached);
+            }
+        return "cells differing from the cache at y " + y + " in the box round gate and rally: " + stale + " of " + checked
+            + (first.isEmpty() ? "" : " (" + String.join(", ", first) + ")");
     }
 
     private static String cellView(ServerLevel level, com.solegendary.reignofnether.unit.pathfinding.WalkabilityGrid grid,
