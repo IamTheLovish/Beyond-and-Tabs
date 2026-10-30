@@ -103,7 +103,14 @@ const float LIGHT_OPEN_GROUND = 1.52;
 // Light pass 13: 0.62 -> 0.34 (above): the sky a third of the light, as the benchmark's (its ambient ~1/3 of the sun's
 // luminance); on screen a cast shadow ~0.55 of the lit lawn, Erin's #386 r5 "shadowed light ~35-45% of lit" in linear
 // light. This takes back option B's lifted shadows (lovish's pick, Oct 30): his call on the stills
-const float SHADOW_FILL_SHARE = 0.34;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.34 -> 0.62.
+// Measured at 5000: shadowed lawn 0.22 under a 0.49 lawn (0.44 of it on screen, rgb (44, 62, 26)), Complementary ~0.38-0.40
+// (0.78). On screen the shadow keeps only ~half the share the table gives it in linear light (0.44^2.2 = 0.17 for 0.34):
+// the sky light's floor on the laid pads, the broad occlusion and the grade's contrast (final.fsh CONTRAST, now lower)
+// take the rest. Target 0.28-0.32, 0.6-0.65 of the lawn: x1.31 on screen ~ x1.8 in light. The lawn itself keeps its
+// level (the sun's share falls by as much). Option B's value again - lovish took B back in pass 13; the coordinator's
+// pass-15 targets ask for it
+const float SHADOW_FILL_SHARE = 0.62;
 // the hemisphere fill: a face sees the sky by (1 + up) / 2 of its directions and the ground by the rest; the ground
 // returns this share of the light falling on it (sun and sky; generous for grass, as it stands in for the bounce off
 // everything near). One term for what GROUND_BOUNCE did on its own: by the light table an unlit wall face gets ~0.53 of
@@ -129,8 +136,11 @@ const float GROUND_ALBEDO = 0.35;              // light pass 11: 0.40 -> 0.35 (w
 // light) ~0.18 block: ~6 px at the default zoom, ~12 at rts_close
 // Light pass 12 (critic: edges at 5000 hardened to ~3-6 px; target 8-10 at the default zoom, ~33 px a block): the
 // spread 0.014 -> 0.05 (a 5-block wall's edge ~0.25-0.3 block, ~8-10 px) and the floor 0.05 -> 0.10 block (~3 px)
-const float SUN_SPREAD = 0.05;
-const float PENUMBRA_MIN_BLOCKS = 0.10;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): edges measured 6-9 px, target 10-14; the
+// crease at a pillar's foot jumps 0.21 -> 0.49 in 2-3 px (the shadow's edge at its caster, held at the floor: ~3 px),
+// Complementary grades it over ~12, target 4-8 px. Spread 0.05 -> 0.07 (x1.4), the floor 0.10 -> 0.18 block (~6 px)
+const float SUN_SPREAD = 0.07;
+const float PENUMBRA_MIN_BLOCKS = 0.18;
 // the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
 // never to a black crease (lib/ao.glsl)
 // Light pass 8 (the critic: the benchmark's one real advantage on the pad is the contact darkening at block feet;
@@ -298,7 +308,10 @@ const float MOON_GLOW = 0.18;
 // Light pass 7: separate tints for the ground and for walls. The ground's (faces looking up) bluer: at 5000 the lawn's
 // shadow read rgb 52/76/39, "a dimmer lawn without sky" (blue 0.51 of green); target ~48/74/52 (>= 0.65). By the
 // model x1.22 on its blue / green on screen -> ~0.62-0.65. A white top in shade reads blue ~1.5x red, as snow does
-const vec3 SHADE_TINT = vec3(0.763, 0.966, 2.035);
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): blue 2.1 -> 2.8x green (luma 1 kept):
+// the 5000 shadow (44, 62, 26) against a target ~(55, 78, 50). The lawn has little blue to tint (its albedo's blue ~0.12 of
+// its green in light), so with the fill's lift this reaches blue ~38-40, not 50
+const vec3 SHADE_TINT = vec3(0.725, 0.922, 2.60);
 // walls (faces looking sideways; pass 6's 0.60 share of the old tint, now its own colour): hue ~205-215, saturation
 // ~0.06-0.10 on shaded stone
 const vec3 SHADE_TINT_WALL = vec3(0.93, 1.00, 1.21);
@@ -310,7 +323,9 @@ const vec3 SHADE_TINT_WALL = vec3(0.93, 1.00, 1.21);
 const float SHADE_TINT_LOW_BOOST = 0.0;
 // and the ground's cool tint is cut by this share under a low sun (light pass 10: t11800's shadows read cool green,
 // (29, 49, 29); target olive ~(45, 55, 30))
-const float SHADE_TINT_LOW_CUT = 0.85;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.85 -> 0.65: t11800's shadows
+// (44, 56, 22), blue to >= 30 - the low sun keeps more of the sky's cool in its shade
+const float SHADE_TINT_LOW_CUT = 0.65;
 // the sky's fill dims toward this share as the sun sinks from 0.20 to 0.05 of its sine (lib/light.glsl, light pass 11):
 // twilight, while SKY_LOW (t11800, ~0.23) is lifted for its olive shadows
 // light pass 13: 0.45 -> 0.30 and the dimming from 0.12-0.23 of the sine (was 0.05-0.20): the dusk still (shot with the
@@ -326,7 +341,9 @@ const float SKY_TWILIGHT_SKY = 0.45;
 // long shadows ~6 -> ~10 px at the tip at the default zoom
 // light pass 12: 0.4 -> -0.5 - with SUN_SPREAD 0.05 for the day, the low sun's long shadows take half of it (a 3-block
 // caster's tip, 13 blocks along the light, ~11 px)
-const float LOW_SUN_SPREAD = -0.5;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): -0.5 -> -0.6 with the day's wider spread, so
+// t11800's long tips stay ~12 px
+const float LOW_SUN_SPREAD = -0.6;
 // the moon's light fades in between these depths of the sun under the horizon (sine), lib/light.glsl
 const float MOON_FADE_LO = 0.05;
 const float MOON_FADE_HI = 0.30;
@@ -355,14 +372,19 @@ const float SKY_LIGHT_FULL = 0.8;
 // Scaled from those: west (fill only) ~0.53, south (N.L 0.49 of the sun + its fill) ~0.78, the top unchanged
 const float FILL_DIRECTION = 0.10;
 // light pass 13: 0.40 -> 0.42 (with the fill share 0.34: a wall's fill falls with it)
-const float WALL_FILL = 0.42;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.42 -> 0.31 with the fill share x1.82: quartz's
+// shaded side 0.452 -> ~0.52 (x1.36 of its light), the target; its cool from SHADE_TINT_WALL now reaches white walls too
+// (lit.fsh: WHITE_WALL_NEUTRAL takes only the sun's part)
+const float WALL_FILL = 0.31;
 // the sun's term on a face looking sideways under a high sun (lib/light.glsl sideKey, light pass 13): the critic on
 // pass 11 - quartz's sun-lit side 0.953 fused with its top 0.955 in the shoulder, its shaded side 0.79 (target 0.95 /
 // 0.80 / 0.52, top / shade >= 1.5; Complementary 0.94 / 0.77 / 0.65). A white side under the sun at plain N.L (0.49 at
 // 5000) still sits in the shoulder with its top (pass 12 by the model: 0.956 / 0.875 / 0.687). Walls take SIDE_SUN of
 // the sun, tops all of it, the key on the tops as the benchmark draws it; full again for a low sun (t11800's golden
 // walls). Model at 5000: quartz 0.957 / 0.822 / 0.619 (1.55:1), a stone pedestal 0.636 / 0.337 / 0.215
-const float SIDE_SUN = 0.45;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.45 -> 0.75: the sun's share fell to
+// 0.38 / 0.66 of the light; quartz's lit side 0.738 -> ~0.76 (target 0.76-0.78)
+const float SIDE_SUN = 0.75;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
 // LOW_SUN_FULL_HI (light pass 13). SIDE_SUN's fade and the low shoulder (final.fsh) read it: the light table's own low
 // row (0.10-0.55) left t11800 only 0.80 low, so its whites' shoulder stopped at 0.86 (tops measured 0.87, target ~0.80)
@@ -374,7 +396,10 @@ const float BOUNCE_AO = 0.35;
 // root grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Light pass 4: grass and plants
 // only (biome-tinted terrain; pass 3 raked every top, so white block tops outshone the lawn at t11800) and all the way
 // to the square root: the lawn under a 13-degree sun takes 0.47 of the sun, block tops 0.35
-const float LOW_SUN_RAKE = 1.0;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 1.0 -> 0.0: the grass takes the tops' facing (no
+// extra rake). t11800's lawn 0.43 against Complementary's 0.35 (target ~0.36) - with SUN_LOW x3.70 -> x2.94 its sun part
+// falls to ~0.6, the tops' to ~0.77 (quartz top 0.80 -> ~0.77)
+const float LOW_SUN_RAKE = 0.0;
 // metals' reflections (lib/pbr.glsl): the sky above the horizon, the ground below it as the fill sees it (GROUND_ALBEDO
 // of the sun and sky falling on the ground), never dimmed below SKY_FILL_FLOOR by a low sky light - the fill's own
 // floor. Light pass 1's iron_block side reflected ~nothing and read near black (RGB ~0.24) beside its white mortar.
@@ -394,6 +419,17 @@ const float FOLIAGE_BASE_AO = 0.85;
 // the grade); 0.41 is ~1.15x it, on screen a sunlit tuft at most ~1.15x the lit lawn (critic: neon tufts at 1.8x)
 const float FOLIAGE_MAX_LUMA = 0.41;
 const float FOLIAGE_LUMA_KNEE = 0.80;
+// light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): plants without a biome tint
+// (flowers, saplings, crops; lp14o 5000 sprites up to luma 0.90, brighter than quartz's lit side - Complementary 0.75)
+// ease off from PLANT_LUMA_KNEE of PLANT_MAX_LUMA toward it, hue and saturation kept: lit <= ~0.65 by the lawn's ratio
+// (albedo 0.355 -> 0.49 on screen)
+const float PLANT_MAX_LUMA = 0.47;
+const float PLANT_LUMA_KNEE = 0.80;
+// the grass's own texture in shade (lit.fsh, light pass 15): light multiplies the albedo, so a shadow keeps the lawn's
+// relative contrast and loses its absolute grain with its level (lp14o: high-pass sd 0.007 in shadow, 0.0175 lit; the
+// target >= 0.018 at 0.28-0.32). Where no sun arrives the grass's texel luma against its 8 x 8 neighbourhood (the
+// sprite's mip 3) is taken to this power more - the grain the sun's relief gives the lit lawn
+const float SHADE_DETAIL = 0.8;
 // plants cast sun shadows (light pass 7: the benchmark's tufts do, ours were dropped from the shadow pass since #350,
 // when hard shadows read as dark stars; the penumbra is soft now). A plant looks its own shadow up FOLIAGE_SHADOW_LIFT
 // blocks toward the light, so it is never shadowed by itself or the tufts round its foot
@@ -415,7 +451,8 @@ const float PLANT_SHADOW_HEIGHT = 0.9;
 // (meant for 13000, the sun ~3 degrees under, where the pack gives no direct light at all) is lit like t11800 at ~0.8
 // with its shadows pointing the same way (the sun's, not the moon's): the frame was not drawn at 13000. Read it
 // (green < 0.5: the sun is under) and turn it off once the dusk time is settled
-#define TIME_STAMP 1 // [0 1]
+// light pass 15: read (the dusk still drew at worldTime ~12047, the sun ~10 degrees up; the harness is being fixed): off
+#define TIME_STAMP 0 // [0 1]
 // the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
 // across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->
