@@ -208,7 +208,7 @@ public class HeroAiV2RolloutGameTests {
      * walks until the corner is in range: about half a block (the first red, 41034472996, saw 1.1 once in three under a
      * 1-block tolerance). Their tests stand the enemy so and allow 0.3 blocks; the others keep the Paladin test's 1.
      */
-    static void keepsHold(GameTestHelper helper, HeroKit kit, int hx, int hz, int fx, int fz, double tolerance, String tag) {
+    static void keepsHold(GameTestHelper helper, HeroKit kit, int hx, int hz, int fx, int fz, double tolerance, int castSlot, String tag) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2r_hold_" + tag), them = me + "_foe";
         Mob h = hero(helper, kit, me, hx, hz);
@@ -219,8 +219,10 @@ public class HeroAiV2RolloutGameTests {
             return;
         }
         learnThree(fh);
+        FactionHeroAbility mustCast = castSlot < 0 ? null : HeroKits.ability(fh, castSlot);
         double[] spot = new double[2];
         double[] worst = { 0 };
+        boolean[] cast = { false };
         helper.runAfterDelay(2, () -> {
             spot[0] = h.getX();
             spot[1] = h.getZ();
@@ -230,9 +232,13 @@ public class HeroAiV2RolloutGameTests {
             final int tick = t;
             helper.runAfterDelay(t, () -> {
                 worst[0] = Math.max(worst[0], HeroAiV2GameTests.flat(h, spot[0], spot[1]));
+                cast[0] |= mustCast != null && !mustCast.isOffCooldown(fh);
                 if (tick < 160)
                     return;
                 List<String> problems = new ArrayList<>();
+                // a hero that never casts on Hold never moves either: the cast must have happened (review r2)
+                if (mustCast != null && !cast[0])
+                    problems.add(String.format("%s never cast %s from its hold spot", kit.itemName, mustCast.spec.id));
                 if (worst[0] > tolerance)
                     problems.add(String.format("%s left its hold spot by %.2f blocks (allowed %.1f; an enemy %.1f blocks off)", kit.itemName,
                         worst[0], tolerance, Math.hypot(fx - hx, fz - hz)));
@@ -329,19 +335,19 @@ public class HeroAiV2RolloutGameTests {
 
     // hold: every hero; the two with a forward ground cast face an enemy at that cast's full range
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_gravecaller", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_gravecaller_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.GRAVECALLER, 13, 13, 6, 6, 0.3, "grave"); }
+    public static void hero_ai_v2_rollout_gravecaller_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.GRAVECALLER, 13, 13, 6, 6, 0.3, 2, "grave"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_engineer", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_arch_engineer_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ARCH_ENGINEER, 13, 13, 8, 7, 0.3, "engineer"); }
+    public static void hero_ai_v2_rollout_arch_engineer_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ARCH_ENGINEER, 13, 13, 8, 7, 0.3, 2, "engineer"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_druid", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_druid_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.THORNHEART_DRUID, 4, 2, 4, 8, 1.0, "druid"); }
+    public static void hero_ai_v2_rollout_druid_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.THORNHEART_DRUID, 4, 2, 4, 8, 1.0, -1, "druid"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_corsair", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_corsair_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.CORSAIR_CAPTAIN, 4, 2, 4, 8, 1.0, "corsair"); }
+    public static void hero_ai_v2_rollout_corsair_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.CORSAIR_CAPTAIN, 4, 2, 4, 8, 1.0, -1, "corsair"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_witch", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_storm_witch_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.STORM_WITCH, 4, 2, 4, 8, 1.0, "witch"); }
+    public static void hero_ai_v2_rollout_storm_witch_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.STORM_WITCH, 4, 2, 4, 8, 1.0, -1, "witch"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_warchief", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_warchief_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.HORDE_WARCHIEF, 4, 2, 4, 8, 1.0, "warchief"); }
+    public static void hero_ai_v2_rollout_warchief_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.HORDE_WARCHIEF, 4, 2, 4, 8, 1.0, -1, "warchief"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_shaman", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_ash_shaman_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ASH_SHAMAN, 4, 2, 4, 8, 1.0, "shaman"); }
+    public static void hero_ai_v2_rollout_ash_shaman_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ASH_SHAMAN, 4, 2, 4, 8, 1.0, -1, "shaman"); }
 
     // move: every hero but the Warchief (its own test above, with the leap check)
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_move_gravecaller", timeoutTicks = 300)
@@ -370,4 +376,66 @@ public class HeroAiV2RolloutGameTests {
     public static void hero_ai_v2_rollout_storm_witch_never_goes_under_an_enemy_tower(GameTestHelper helper) { staysOutOfTower(helper, HeroKits.STORM_WITCH, "witch"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_tower_warchief", timeoutTicks = 240)
     public static void hero_ai_v2_rollout_warchief_never_goes_under_an_enemy_tower(GameTestHelper helper) { staysOutOfTower(helper, HeroKits.HORDE_WARCHIEF, "warchief"); }
+
+    /**
+     * Hold truly holds for a strike and a ground heal (review r2 on PR 416, lovish: "Hold truly holds"). The hero holds
+     * at block (13, 13); its target stands at exactly (6.8, 6.8): 9.48 blocks from the hero's centre, inside a range-10
+     * strike or heal by the AI's own measure (range - 0.5), but GenericTargetedSpellGoal.isInRange measures to the target
+     * block's lowest corner, (6, 6), 10.6 away - so the cast goal walks a held hero ~0.6 blocks. The hero must cast its
+     * ability ({@code slot}) and move at most 0.3. {@code healFriend}: the target is a hurt friend of the hero (a
+     * Rejuvenate), else an enemy dummy (a strike).
+     */
+    static void castsFromItsHoldSpot(GameTestHelper helper, HeroKit kit, int slot, boolean healFriend, String tag) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2r_holdcast_" + tag), them = me + "_foe";
+        Mob h = hero(helper, kit, me, 13, 13);
+        Mob target = healFriend ? HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 6, 6)
+            : HeroAiV2GameTests.dummy(helper, them, 6, 6);
+        List<Mob> mobs = HeroAiV2GameTests.mobs(h, target);
+        if (!(h instanceof FactionHero fh) || target == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        target.setNoAi(true);
+        target.teleportTo(o.getX() + 6.8, target.getY(), o.getZ() + 6.8);
+        if (healFriend)
+            target.setHealth(target.getMaxHealth() * 0.4f);
+        FactionHeroAbility ability = HeroAiGameTests.learn(fh, slot);
+        double[] spot = new double[2];
+        double[] worst = { 0 };
+        boolean[] cast = { false };
+        helper.runAfterDelay(2, () -> {
+            spot[0] = h.getX();
+            spot[1] = h.getZ();
+            HeroAiV2GameTests.order(helper, me, h, UnitAction.HOLD, BlockPos.ZERO);
+        });
+        for (int t = 3; t <= 160; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                worst[0] = Math.max(worst[0], HeroAiV2GameTests.flat(h, spot[0], spot[1]));
+                cast[0] |= !ability.isOffCooldown(fh);
+                if (tick < 160)
+                    return;
+                List<String> problems = new ArrayList<>();
+                if (!cast[0])
+                    problems.add(String.format("%s never cast %s at the %s 9.5 blocks off", kit.itemName, ability.spec.id,
+                        healFriend ? "hurt friend" : "enemy"));
+                if (worst[0] > 0.3)
+                    problems.add(String.format("%s left its hold spot by %.2f blocks to cast %s (allowed 0.3)", kit.itemName,
+                        worst[0], ability.spec.id));
+                HeroAiGameTests.finish(helper, problems, mobs, null);
+            });
+        }
+    }
+
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_engineer", timeoutTicks = 220)
+    public static void hero_ai_v2_rollout_arch_engineer_strikes_from_its_hold_spot(GameTestHelper helper) {
+        castsFromItsHoldSpot(helper, HeroKits.ARCH_ENGINEER, 0, false, "engineer");   // Rivet Burst, range 10
+    }
+
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_druid", timeoutTicks = 220)
+    public static void hero_ai_v2_rollout_druid_heals_from_its_hold_spot(GameTestHelper helper) {
+        castsFromItsHoldSpot(helper, HeroKits.THORNHEART_DRUID, 2, true, "druid");    // Rejuvenate, range 10
+    }
 }
