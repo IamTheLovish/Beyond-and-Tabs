@@ -1,12 +1,14 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.pathfinding.LineOfWalk;
 import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
 import com.solegendary.reignofnether.unit.pathfinding.VanillaPathBudget;
 import com.solegendary.reignofnether.unit.units.monsters.SpiderUnit;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
@@ -149,5 +151,33 @@ public abstract class PathNavigationMixin {
         double reach = mob.getBbWidth() / 2.0 + 1.0;
         if (dx * dx + dz * dz <= reach * reach)
             p.advance();
+    }
+
+    // Straight lines (LineOfWalk; troop animation gain 2, lovish Oct 30 "Smooth the real path"): after vanilla's own
+    // step, a ground unit aims at the farthest of the next few nodes its whole body can walk to in a straight line, so
+    // it walks an off-axis route straight instead of zig-zagging node to node (and its body stops rocking). Judged
+    // when the path's next node changes and every LineOfWalk.REAIM_TICKS ticks on the way (from where it is then, so a
+    // long route is aimed further along it), not every tick.
+    @Unique private Path reignofnether$linedPath = null;
+    @Unique private int reignofnether$linedTo = -1;
+    @Unique private long reignofnether$linedAt = 0;
+
+    @Inject(method = "followThePath", at = @At("TAIL"))
+    private void reignofnether$walkTheLine(CallbackInfo ci) {
+        Path p = this.path;
+        if (p == null || p.isDone() || !(mob instanceof Unit) || !((Object) this instanceof GroundPathNavigation)
+                || reignofnether$isClimbingSpider() || !mob.onGround() || mob.isInWater())
+            return;
+        int next = p.getNextNodeIndex();
+        long now = mob.level().getGameTime();
+        if (p == reignofnether$linedPath && next <= reignofnether$linedTo
+                && now - reignofnether$linedAt < LineOfWalk.REAIM_TICKS)
+            return;
+        int to = LineOfWalk.farthest(mob, p);
+        reignofnether$linedPath = p;
+        reignofnether$linedTo = to;
+        reignofnether$linedAt = now;
+        if (to > next)
+            p.setNextNodeIndex(to);
     }
 }
