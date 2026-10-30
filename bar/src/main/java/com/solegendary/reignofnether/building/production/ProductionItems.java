@@ -445,7 +445,15 @@ public class ProductionItems {
         ROOTWARDEN,
         SALVAGER,
         JADE_MENDER,
-        PIONEER
+        PIONEER,
+        // the second T3 per faction (unit/T3Cap): trainable, so getProductionItem finds them
+        SUN_T3B,
+        GRAVE_T3B,
+        HORDE_T3B,
+        VERDANT_T3B,
+        TIDE_T3B,
+        STORM_T3B,
+        BRASS_T3B
     );
 
     @Nullable
