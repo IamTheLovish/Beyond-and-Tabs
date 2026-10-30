@@ -46,47 +46,66 @@ public class BlowTimingGameTests {
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void zombie_blow_lands_on_its_arm_swing(GameTestHelper helper) {
-        blowTest(helper, "zombie", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, false);
+        blowTest(helper, "zombie", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, Upset.NONE);
     }
 
     /** A villager-model body on the Vindicator base class (not a VindicatorUnit). */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void militia_blow_lands_on_its_swing(GameTestHelper helper) {
-        blowTest(helper, "militia", EntityRegistrar.MILITIA_UNIT.get(), SWING_HIT, false);
+        blowTest(helper, "militia", EntityRegistrar.MILITIA_UNIT.get(), SWING_HIT, Upset.NONE);
     }
 
     /** A VindicatorUnit subclass with no keyed thrust: it holds its blow on the Halberdier's own HeldBlow. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void cutlass_raider_blow_lands_on_its_swing(GameTestHelper helper) {
-        blowTest(helper, "raider", EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), SWING_HIT, false);
+        blowTest(helper, "raider", EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), SWING_HIT, Upset.NONE);
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void piglin_grunt_blow_lands_on_its_swing(GameTestHelper helper) {
-        blowTest(helper, "grunt", EntityRegistrar.GRUNT_UNIT.get(), SWING_HIT, false);
+        blowTest(helper, "grunt", EntityRegistrar.GRUNT_UNIT.get(), SWING_HIT, Upset.NONE);
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void dawn_paladin_blow_lands_on_its_chop(GameTestHelper helper) {
-        blowTest(helper, "paladin", EntityRegistrar.DAWN_PALADIN_UNIT.get(), CHOP_HIT, false);
+        blowTest(helper, "paladin", EntityRegistrar.DAWN_PALADIN_UNIT.get(), CHOP_HIT, Upset.NONE);
     }
 
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void mossback_bison_blow_lands_on_its_horn_drive(GameTestHelper helper) {
-        blowTest(helper, "bison", EntityRegistrar.MOSSBACK_BISON_UNIT.get(), BISON_HIT, false);
+        blowTest(helper, "bison", EntityRegistrar.MOSSBACK_BISON_UNIT.get(), BISON_HIT, Upset.NONE);
     }
 
     /** The iron golem's swing starts on the damage event (entity event 4): its blow must not be held as well. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void iron_golem_blow_still_lands_with_its_swing(GameTestHelper helper) {
-        blowTest(helper, "golem", EntityRegistrar.IRON_GOLEM_UNIT.get(), 0, false);
+        blowTest(helper, "golem", EntityRegistrar.IRON_GOLEM_UNIT.get(), 0, Upset.NONE);
     }
 
     /** A target that steps well out of reach before the downstroke is not struck. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void zombie_blow_is_dropped_when_the_target_steps_out_of_reach(GameTestHelper helper) {
-        blowTest(helper, "away", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, true);
+        blowTest(helper, "away", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, Upset.STEPS_AWAY);
     }
+
+    /**
+     * An attacker removed without dying while its blow is held (discarded, a Temporary Militia's end, a chunk
+     * unloading) lands no blow, and HeldBlow keeps nothing of it: the held blow's order check reaches the attacker, so
+     * an entry left behind would pin the unit, its target and its level.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void zombie_discarded_mid_blow_leaves_nothing_held(GameTestHelper helper) {
+        blowTest(helper, "discard", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, Upset.DISCARDED);
+    }
+
+    /** A stun stops the swing as it stops any attack: the held blow is dropped, not landed a few ticks into it. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void zombie_blow_is_dropped_when_the_attacker_is_stunned(GameTestHelper helper) {
+        blowTest(helper, "stun", EntityRegistrar.ZOMBIE_UNIT.get(), SWING_HIT, Upset.STUNNED);
+    }
+
+    /** What happens one tick into the swing, before the hit key. */
+    enum Upset { NONE, STEPS_AWAY, DISCARDED, STUNNED }
 
     /**
      * Holding the blow does not slow the attack: over 4 attack intervals of the goal's own attacks (attempted every
@@ -193,10 +212,11 @@ public class BlowTimingGameTests {
 
     /**
      * Once both have ticked, the attacker's melee goal attacks the target; the blow must land exactly {@code hit} ticks
-     * after the swing (0: in the swing's own tick). With {@code stepAway} the target is moved 4 blocks away one tick
-     * into the swing, and no blow may land. Ticks are counted on the attacker's own tickCount from the swing.
+     * after the swing (0: in the swing's own tick). With an {@code upset} one tick into the swing (the target moved 4
+     * blocks away, the attacker discarded or stunned) no blow may land. Ticks are counted from the swing on the
+     * attacker's own tickCount, or on the test's own count once the attacker is gone.
      */
-    static void blowTest(GameTestHelper helper, String tag, EntityType<? extends Mob> type, int hit, boolean stepAway) {
+    static void blowTest(GameTestHelper helper, String tag, EntityType<? extends Mob> type, int hit, Upset upset) {
         String base = "gametest_blowtime_" + tag + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
         Mob[] pair = pair(helper, base, type);
         if (pair == null)
@@ -208,7 +228,7 @@ public class BlowTimingGameTests {
             helper.fail(type + " has no melee attack goal");
             return;
         }
-        int[] swingTick = { -1 };
+        int[] swingTick = { -1 }, since = { 0 };
         boolean[] done = { false };
         float[] health = { 0 };
         Runnable cleanUp = () -> {
@@ -230,17 +250,32 @@ public class BlowTimingGameTests {
                     if (!attacker.swinging && attacker.attackAnim <= 0)
                         throw new GameTestAssertException(type + "'s attack did not swing");
                 }
-                int ticksIn = attacker.tickCount - swingTick[0];
+                else
+                    since[0]++;
+                int ticksIn = upset == Upset.DISCARDED ? since[0] : attacker.tickCount - swingTick[0];
                 boolean hurt = target.getHealth() < health[0];
-                if (stepAway) {
-                    if (hurt)
+                if (upset != Upset.NONE) {
+                    if (hurt) {
+                        String why = upset == Upset.STEPS_AWAY ? "the target had stepped 4 blocks out of reach"
+                            : upset == Upset.DISCARDED ? "the attacker had been discarded" : "the attacker had been stunned";
                         throw new GameTestAssertException("the blow landed " + ticksIn + " ticks after the swing "
-                            + "although the target had stepped 4 blocks out of reach at tick 1 (target health "
-                            + target.getHealth() + " of " + health[0] + ")");
-                    if (ticksIn == 1)
-                        target.teleportTo(target.getX() + 4, target.getY(), target.getZ());
+                            + "although " + why + " at tick 1 (target health " + target.getHealth() + " of "
+                            + health[0] + ")");
+                    }
+                    if (ticksIn == 1) {
+                        switch (upset) {
+                            case STEPS_AWAY -> target.teleportTo(target.getX() + 4, target.getY(), target.getZ());
+                            case DISCARDED -> attacker.discard();
+                            default -> attacker.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                                com.solegendary.reignofnether.registrars.MobEffectRegistrar.STUN.get(), 60));
+                        }
+                    }
                     if (ticksIn >= hit + 3) {
+                        boolean held = com.solegendary.reignofnether.unit.HeldBlow.holds(attacker);
                         cleanUp.run();
+                        if (upset == Upset.DISCARDED && held)
+                            throw new GameTestAssertException("HeldBlow still held a blow for the discarded attacker "
+                                + (hit + 2) + " ticks after it left the level");
                         helper.succeed();
                     }
                     return;

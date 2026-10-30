@@ -1,7 +1,9 @@
 package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.unit.interfaces.KeyframeAnimated;
+import com.solegendary.reignofnether.unit.units.engineers.FieldMasonUnit;
 import com.solegendary.reignofnether.unit.units.heroes.DawnPaladinUnit;
+import com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit;
 import com.solegendary.reignofnether.unit.units.verdant.MossbackBisonUnit;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.AbstractIllager;
@@ -21,7 +23,8 @@ import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
  * <ul>
  *   <li>vanilla's 6-tick arm swing - humanoid (zombies, piglins, wither skeletons, the enderman), illager and the
  *   villager-model bodies on the Vindicator base: the downstroke peaks at attackTime 0.5, tick 3;</li>
- *   <li>the generated chop (HumanActs.chop, the Dawn Paladin): the axe passes the downstroke near t 0.6, tick 4;</li>
+ *   <li>the generated chop (HumanActs.chop: the Dawn Paladin, the Field Mason, the Royal Architect): the weapon
+ *   passes the downstroke near t 0.6, tick 4;</li>
  *   <li>the Mossback Bison's horn toss (animations/Quadruped): the drive key at P 0.55 of its 16-tick clip, tick 9;</li>
  *   <li>0 for everything else: bodies whose attack clip starts on the damage event itself (the iron golem, ravager,
  *   hoglin, zoglin and warden play entity event 4 from doHurtTarget, so holding the damage would hold the clip too),
@@ -42,7 +45,8 @@ public final class BlowTiming {
             return 0;
         if (attacker instanceof MossbackBisonUnit)
             return BISON;
-        if (attacker instanceof DawnPaladinUnit)
+        if (attacker instanceof DawnPaladinUnit || attacker instanceof FieldMasonUnit
+            || attacker instanceof RoyalArchitectUnit)
             return CHOP;
         if (attacker instanceof AbstractIllager || attacker instanceof Zombie || attacker instanceof AbstractPiglin
             || attacker instanceof AbstractSkeleton || attacker instanceof EnderMan)

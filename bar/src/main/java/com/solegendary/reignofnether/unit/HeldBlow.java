@@ -1,12 +1,14 @@
 package com.solegendary.reignofnether.unit;
 
+import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.KeyedSwing;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -17,8 +19,8 @@ import java.util.function.BooleanSupplier;
  * is unchanged. The attacker ticks it (server side), so the blow lands exactly keyedHitTicks ticks after the swing.
  * Every other melee body holds its blow the same way to the frame its weapon strikes (BlowTiming; lovish, Oct 30:
  * "hit on the strike"), on a HeldBlow kept here and ticked from AttackerUnit's tick. The blow is dropped if the
- * attacker or the target dies, the attack loses its order, or the target steps more than {@link #REACH_TOLERANCE}
- * past the reach it was struck at.
+ * attacker or the target dies, the attacker is stunned or frozen, the attack loses its order, or the target steps
+ * more than {@link #REACH_TOLERANCE} past the reach it was struck at.
  */
 public final class HeldBlow {
 
@@ -51,14 +53,37 @@ public final class HeldBlow {
             attacker.doHurtTarget(target);
     }
 
-    /** The blows of attackers with no HeldBlow of their own (not a KeyedSwing): one each, kept while it lives. */
-    private static final Map<Mob, HeldBlow> HELD = new WeakHashMap<>();
+    /**
+     * The blows held for attackers with no HeldBlow of their own (not a KeyedSwing), only while one is held: an entry
+     * leaves when its blow lands or is dropped, when the attacker leaves the level ({@link #forget}: discarded, a
+     * Temporary Militia's end, a chunk unloading) and when the server stops. The held blow's order check reaches its
+     * goal and so its attacker, so a weak key alone would never let a removed attacker go.
+     */
+    private static final Map<Mob, HeldBlow> HELD = new HashMap<>();
 
     /** Ticks {@code attacker}'s blow held by {@link #strike}, if any (AttackerUnit's tick, server side). */
     public static void tickHeld(Mob attacker) {
         HeldBlow blow = HELD.get(attacker);
-        if (blow != null)
-            blow.tick(attacker);
+        if (blow == null)
+            return;
+        blow.tick(attacker);
+        if (blow.target == null)
+            HELD.remove(attacker);
+    }
+
+    /** The attacker left the level (UnitServerEvents.onEntityLeave): its held blow, if any, is dropped with it. */
+    public static void forget(Entity attacker) {
+        HELD.remove(attacker);
+    }
+
+    /** The server stops: no held blow outlives its level. */
+    public static void clearAll() {
+        HELD.clear();
+    }
+
+    /** Whether a blow is held for this attacker in {@link #HELD} (GameTests: nothing is left behind). */
+    public static boolean holds(Entity attacker) {
+        return HELD.containsKey(attacker);
     }
 
     /** Holds a blow for {@code ticks}; one still held lands first if it still may (no swing loses its damage). */
@@ -94,7 +119,11 @@ public final class HeldBlow {
     }
 
     private boolean stands(Mob attacker) {
-        return target != null && attacker.isAlive() && target.isAlive() && !target.isRemoved()
+        // a stun or a freeze stops the swing, as it stops every other attack (AttackerUnit's tick resets the unit's
+        // behaviours on its next 4-tick check): the blow is dropped at once rather than landing up to 3 ticks into it
+        return target != null && attacker.isAlive() && !attacker.isRemoved() && target.isAlive() && !target.isRemoved()
+            && attacker.getEffect(MobEffectRegistrar.STUN.get()) == null
+            && attacker.getEffect(MobEffectRegistrar.FREEZE.get()) == null
             && target.level() == attacker.level() && ordered.getAsBoolean()
             && attacker.distanceToSqr(target) <= maxDist * maxDist;
     }
