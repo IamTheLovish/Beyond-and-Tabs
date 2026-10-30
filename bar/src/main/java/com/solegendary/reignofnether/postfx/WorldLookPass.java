@@ -261,6 +261,7 @@ public final class WorldLookPass {
         set(glowRadiusU, GLOW_RADIUS[m]);
         if (shadowTintU != null) shadowTintU.set(SHADOW_TINT[m][0], SHADOW_TINT[m][1], SHADOW_TINT[m][2]);
         if (highlightTintU != null) highlightTintU.set(HIGHLIGHT_TINT[m][0], HIGHLIGHT_TINT[m][1], HIGHLIGHT_TINT[m][2]);
+        highlight = HIGHLIGHT_TINT[m];   // the valley mist pre-divides its light by it (highlightTint)
     }
 
     private static void set(Uniform u, float v) {
