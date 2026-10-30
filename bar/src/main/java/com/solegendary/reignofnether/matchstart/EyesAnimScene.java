@@ -524,6 +524,33 @@ public final class EyesAnimScene {
         }
     }
 
+    /**
+     * A turn clip's per-tick trace, at the START of each client tick (before the entities tick): the fields every frame
+     * of the last tick interpolated - yBodyRotO, yBodyRot - and the turn spring's previous and current value and
+     * velocity (AnimState.SP_TURN), with the slab's own tick count. It shows whether the spring took the same yBodyRot
+     * the frames lerp to (and once a tick), which the per-frame log at ~10 fps cannot settle (#412 review).
+     */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent evt) {
+        if (!ANIM_ONLY || !recording || evt.phase != TickEvent.Phase.START)
+            return;
+        Minecraft mc = Minecraft.getInstance();
+        try {
+            if (mc.level == null || !current().clip().equals("turn") || !(mc.level.getEntity(camId) instanceof LivingEntity le))
+                return;
+            int b = com.solegendary.reignofnether.unit.modelling.motion.AnimStates.base(le.getId());
+            float[] s = com.solegendary.reignofnether.unit.modelling.motion.AnimStates.slab();
+            int y = b + com.solegendary.reignofnether.unit.modelling.motion.AnimState.SP_TURN;
+            ReignOfNether.LOGGER.info("[Eyes] anim-tick {} k={} anim={} bodyO={} body={} turnPrev={} turn={} turnV={}", runNo,
+                    sceneClock, com.solegendary.reignofnether.unit.modelling.motion.AnimStates.tick(),
+                    String.format("%.2f", le.yBodyRotO), String.format("%.2f", le.yBodyRot),
+                    b < 0 ? "-" : String.format("%.2f", s[y + 2]), b < 0 ? "-" : String.format("%.2f", s[y]),
+                    b < 0 ? "-" : String.format("%.3f", s[y + 1]));
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[Eyes] 20_anim: tick trace failed", e);
+        }
+    }
+
     /** Heading of the body in degrees (MC: 0 = south, 90 = west), interpolated like the model's own. */
     private static float bodyYaw(Entity e, float partial) {
         return e instanceof LivingEntity le ? Mth.rotLerp(partial, le.yBodyRotO, le.yBodyRot) : e.getYRot();
