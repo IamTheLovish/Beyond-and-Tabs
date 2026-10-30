@@ -596,12 +596,19 @@ class EngineShedR11(unittest.TestCase):
     # fable, before / after round 2: RTS 5 / close 4 / towers 4 - the roofs better, the south stack worse)
     def test_r3_stack_bands_spaced(self):
         """Critic r2: the right chimney "a brick column with a corbel ring every two blocks ... a stacked pagoda". A
-        stack's projecting courses (bands and crown) stand >= 3 courses apart."""
+        stack's projecting courses (bands and crown) above its step-in stand >= 3 courses apart. (As first written the
+        count began inside the foot, whose solid courses read as rings 1 apart - fixed before it was ever green; the
+        3-course rule unchanged.)"""
         p = self.p
         for s in self.m["stacks"]:
             sx0, sx1, sz0, sz1 = s["shaft"]
+
+            def ring_n(y):
+                return sum((x, y, z) in p.n for x in range(sx0 - 1, sx1 + 2) for z in range(sz0 - 1, sz1 + 2)
+                           if not (sx0 <= x <= sx1 and sz0 <= z <= sz1))
+            step = next(y for y in range(self.m["stack_from"], s["top"]) if ring_n(y) == 0)
             rings = []
-            for y in range(self.m["stack_from"] + 2, s["top"] + 1):
+            for y in range(step, s["top"] + 1):
                 ring = [(x, y, z) for x in range(sx0 - 1, sx1 + 2) for z in range(sz0 - 1, sz1 + 2)
                         if not (sx0 <= x <= sx1 and sz0 <= z <= sz1)]
                 if sum(q in p.n for q in ring) >= 6:

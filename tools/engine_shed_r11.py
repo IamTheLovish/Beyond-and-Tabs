@@ -48,7 +48,7 @@ IRON, IRON_ST, IRON_SL, IRON_W = ("polished_blackstone_bricks", "polished_blacks
                                   "polished_blackstone_brick_slab", "polished_blackstone_brick_wall")
 KEY = "chiseled_polished_blackstone"
 PANE, ROOF_PANE = "glass_pane", "light_gray_stained_glass_pane"
-GLOW = "shroomlight"
+GLOW = "pearlescent_froglight"    # r11 round 3: shroomlight read as orange sparks
 COP_ST, COP = "waxed_weathered_cut_copper_stairs", "waxed_weathered_cut_copper"
 LEAD_ST = "deepslate_tile_stairs"   # lead hip rolls: the darker streaks down the copper (slate family)
 DRY = {"waterlogged": "false"}
@@ -253,6 +253,9 @@ def roofs(g):
     for (x, y, z), (n, _) in list(g.b.items()):            # a coping on bare wall tops at the eave (the shop's
         if n == BRICK and y == 6 and (x, y + 1, z) not in g.b:   # north wall under the first tooth)
             slab(g, (x, y + 1, z), "deepslate_brick_slab")
+    sx, _, sz = SPAWN                                      # the smoke-vent where the spawn shaft leaves the ridge:
+    for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1)):        # an iron louvre ring (round-2 critic: "a dark square ...
+        g.set(sx + a, 15, sz + c, IRON_W, **DRY)           # reads as a missing block")
     for (x, y, z), (n, p) in list(g.b.items()):            # the ridges: deepslate brick
         if 0 <= x <= 9 and z == 12 and y == 14 and n in {t[0] for t in ROOF["tones"]}:
             g.set(x, y, z, ROOF["ridge"][0])
@@ -263,7 +266,9 @@ def stacks(g):
     """towers.md: the foot (pale stone, 4 x 4, its arrises chamfered with walls, a recessed course at 10) to 11, a
     stair weathering at 12, a red brick shaft 2 x 2, projecting blue-brick bands, a flush soot course, a corbelled
     brick crown (top - 1) under a dark slab cap with the fire sealed in the flue (smoke only)."""
-    for s, bands, soot in zip(M.AF["stacks"], ((15, 19), (14, 16)), (22, 19)):
+    # (foot top, bands): projecting courses >= 3 apart and >= 4 under the crown (round-2 critic: "a corbel ring every
+    # two blocks ... a stacked pagoda"); the south foot one lower, its weathering just over its boiler ridge (10)
+    for s, (foot, bands) in zip(M.AF["stacks"], ((11, (15, 19)), (10, (13, 16)))):
         x0, x1, z0, z1 = s["base"]
         sx0, sx1, sz0, sz1 = s["shaft"]
         top = s["top"]
@@ -273,7 +278,7 @@ def stacks(g):
         for x in range(x0, x1 + 1):
             for z in range(z0, z1 + 1):
                 corner = x in (x0, x1) and z in (z0, z1)
-                for y in range(2, 12):
+                for y in range(2, foot + 1):
                     if corner:
                         g.set(x, y, z, STONE_W, **DRY)
                     elif y in (4, 7, 10) and not (sx0 <= x <= sx1 and sz0 <= z <= sz1):    # rusticated courses
@@ -285,13 +290,12 @@ def stacks(g):
                     f = "east" if x == x0 else "west" if x == x1 else "south" if z == z0 else "north"
                     if corner:
                         f = ("east" if x == x0 else "west")
-                    stair(g, (x, 12, z), STONE_ST, f)
-        for y in range(12, top - 1):
+                    stair(g, (x, foot + 1, z), STONE_ST, f)
+        for y in range(foot + 1, top - 1):
             for x in range(sx0, sx1 + 1):
                 for z in range(sz0, sz1 + 1):
-                    if y == soot:                          # the soot-stained course, set back
-                        stair(g, (x, y, z), "red_nether_brick_stairs", "east" if x == sx0 else "west", "top")
-                    elif y in bands:                       # under each band the shaft course is set back (a reveal)
+                    if y in bands or y == top - 3:       # under each band, and two under the crown, the shaft
+                        #                                       course is set back (a reveal - relief every 3)
                         stair(g, (x, y, z), BRICK_ST, "east" if x == sx0 else "west", "top")
                     else:
                         g.set(x, y, z, BRICK)
@@ -309,6 +313,7 @@ def stacks(g):
                 g.set(x, top - 1, z, BRICK)
                 slab(g, (x, top, z), "brick_slab")
         g.set(sx0, top - 1, sz0, "campfire", lit="true", facing="south", signal_fire="false", waterlogged="false")
+        #     the fire sealed inside the crown course (the ring round it, the cap over it): smoke, no flame seen
 
 
 # ---------------------------------------------------------------------------------------------------- the tower
@@ -351,15 +356,16 @@ def tower(g):
             stair(g, (x, CORNICE_Y, z), STONE_ST, f, "top")
             hip = x in (x0 - 1, x1 + 1) and z in (z0 - 1, z1 + 1)
             drip = (x in (x0 - 1, x1 + 1) and z == z0) or (z in (z0 - 1, z1 + 1) and x == x1)
-            stair(g, (x, 16, z), LEAD_ST if hip or drip else COP_ST, f)   # the eave course: copper, dark lead at
-            #     the hips and a drip streak beside each (weathering down the faces) - camera sat 0.24-0.27
+            stair(g, (x, 16, z), STONE_ST if hip else LEAD_ST if drip else COP_ST, f)   # the eave course: copper,
+            #     pale stone hip stones at the corners (round-2 critic: "a stray black corner block"), dark drip
+            #     streaks beside them and down two faces' upper course (camera sat 0.20-0.22, streak 0.24-0.28)
     for x in range(x0, x1 + 1):
         for z in range(z0, z1 + 1):
             if (x, z) == (cx, cz):
                 g.set(x, 17, z, COP)
                 continue
             f = "east" if x < cx else "west" if x > cx else "south" if z < cz else "north"
-            stair(g, (x, 17, z), COP_ST, f)
+            stair(g, (x, 17, z), LEAD_ST if (x, z) in ((x0, z0), (x1, z1)) else COP_ST, f)
     slab(g, (cx, 18, cz), "waxed_weathered_cut_copper_slab")
     g.set(cx, 19, cz, "chain", axis="y", **DRY)            # the finial: a thin iron rod
 
