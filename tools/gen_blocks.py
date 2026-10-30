@@ -170,7 +170,9 @@ TARGETS = {
     "polished_basalt_top": dict(luma=0.38, std=0.050, sat=0.02, tilt=8.0, smooth=90, pore=8),
     # r32 (critic: "ivory not cream"): sat 0.12 -> 0.07; the top's spread in the pores, matte bone (smooth 80 -> 50)
     "bone_block_side": dict(luma=0.84, std=0.060, sat=0.07, tilt=16.0, smooth=50, pore=24),
-    "bone_block_top": dict(luma=0.80, std=0.080, sat=0.07, tilt=18.0, smooth=44, pore=30),
+    # r33 (critic: "marshmallows / knuckles"): one flat sawn surface - the spread in fine pores (std 0.08 -> 0.055),
+    # flatter (tilt 18 -> 11)
+    "bone_block_top": dict(luma=0.82, std=0.040, sat=0.07, tilt=7.0, smooth=44, pore=30, soften=1.0),
     # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.05, tilt=16.0, smooth=138, pore=4),
     "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.05, tilt=13.4, smooth=104, pore=4),
@@ -1939,25 +1941,25 @@ def m_bone(F, n, top):
     Voronoi's cell boundaries), the gap outside the rim in shadow; the sides' fibres are long, wavy and clearly
     drawn (the cylinder shading pulled back so the shafts are not three tiles)."""
     if top:
-        x, y = F.u - 0.5, F.v - 0.5
-        r = (np.abs(x) ** 3 + np.abs(y) ** 3) ** (1 / 3)                 # a rounded square: the bone's outline
-        r = r + 0.005 * F.noise(2, 6, 0.5)
-        core = 1 - smoothstep(0.35, 0.39, r)                              # the cancellous core
-        rim = smoothstep(0.35, 0.39, r) * (1 - smoothstep(0.455, 0.49, r))   # the dense cortical rim
-        gap = smoothstep(0.455, 0.49, r)                                   # outside the bone: a shadowed gap
-        f1, f2, idx, k = F.voronoi(500, 1.0)                               # pores ~5.7 texels
-        wu, wv = 0.006 * F.noise(4, 12, 0.5), 0.006 * F.noise(4, 12, 0.5)
+        # r33 (critic, eyes 41029731853: "4 fat rounded ends read as marshmallows / knuckles" - the r32 rounded-square
+        # outline with its shadowed gap drew one domed lump per block): ONE sawn bone surface per face, no outline, no
+        # gap, no dome - a flat cut through cancellous bone: a foam of fine pores 3-5 texels across (shallow, with
+        # thin pale trabecular walls), denser and more open in slow patches (the marrow's cavities), a few solid
+        # cortical patches where the saw cut through the compact bone, a faint sawn grain. Ivory.
+        f1, f2, idx, k = F.voronoi(900, 1.0)                               # pores ~4.3 texels
+        wu, wv = 0.004 * F.noise(4, 12, 0.5), 0.004 * F.noise(4, 12, 0.5)
         f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
-        wall = 1 - smoothstep(0.0, 0.012, f2 - f1)                         # the thin trabecular walls
-        cell = 1.0 / math.sqrt(500)
-        pore = smoothstep(0.25, 0.7, f1 / cell) * (1 - wall)              # deep in the middle of a cell
-        open_ = (F.rng.random(k) < 0.7)[idx]                               # some cells sealed (a solid patch)
-        pore = pore * open_
-        grain = F.noise(10, 30, 0.3)
-        dome = np.clip(1 - (r / 0.47) ** 2, 0, 1)
-        H = 0.25 + 0.55 * (1 - gap) + 0.08 * dome * rim - 0.22 * pore * core + 0.03 * wall * core + 0.01 * grain
-        shade = (0.95 + 0.03 * grain) * (1 - 0.45 * pore * core) * (1 + 0.05 * wall * core) * (1 - 0.35 * gap) \
-            * (1 + 0.04 * rim)
+        wall = 1 - smoothstep(0.0, 0.009, f2 - f1)                         # the thin trabecular walls
+        cell = 1.0 / math.sqrt(900)
+        pore = smoothstep(0.2, 0.65, f1 / cell) * (1 - wall)              # deep in the middle of a cell
+        density = norm01(F.fbm(2, 3, 0.55))                                # slow: open marrow vs compact bone
+        compact = smoothstep(0.72, 0.9, density)                           # solid cortical patches (no pores)
+        open_ = (F.rng.random(k) < 0.85)[idx] * (1 - compact)
+        pore = pore * open_ * (0.55 + 0.45 * (1 - density))
+        grain = F.noise(10, 30, 0.3, sx=4.0, sy=1.0)                        # the saw's marks, faint, along u
+        H = 0.70 - 0.10 * pore + 0.015 * wall * (1 - compact) + 0.008 * grain + 0.015 * compact + 0.02 * density
+        shade = (0.94 + 0.02 * grain + 0.03 * compact + 0.05 * density) * (1 - 0.18 * pore) \
+            * (1 + 0.03 * wall * (1 - compact))
         return H, tint((0.92, 0.89, 0.81), shade)
     else:
         x = (F.u * 3) % 1.0                              # across one shaft
