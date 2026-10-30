@@ -158,7 +158,7 @@ public class Keybindings {
     // Ctrl+Tab cycles the selection's unit types (Shift reverses): plain Tab is select commander, Shift+Tab the overview
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
     // Stormcallers Overcharge toggle (ManaClientEvents; ignored for every other faction). Backslash: every letter
-    // near the left hand is taken by abilities, hotkeys and WASD panning
+    // near the left hand is taken by abilities, hotkeys and the BAR order keys
     public static final Keybinding overcharge  = new Keybinding("key.reignofnether.overcharge",   GLFW.GLFW_KEY_BACKSLASH,     CATEGORY_RTS, "\\");
     // HUD declutter (design/hud.md): I opens / closes the tabbed stats table that replaced the always-on player list
     // (ZeroSpace's "INCOME [I]"; F4 stays as a legacy alias for anyone with an F-row). I is ability slot 8 too: a
@@ -170,7 +170,7 @@ public class Keybindings {
     public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
     // RTS camera <-> Minecraft POV toggle. RoN hard-wired this to F12, which a 60% keyboard doesn't have (lovish's
     // clip: "minecraft pov doesn't work on my 60 keyboard"). Backspace is on every board, unused by vanilla and by
-    // every hotkey above (every letter is taken by abilities, hotkeys and WASD panning). F12 still works as a legacy
+    // every hotkey above (every letter is taken by abilities, hotkeys and the BAR order keys). F12 still works as a legacy
     // alias (OrthoviewClientEvents.onInput) so nobody's muscle memory breaks.
     public static final Keybinding toggleCamera = new Keybinding("key.reignofnether.toggle_camera", GLFW.GLFW_KEY_BACKSPACE, CATEGORY_CAMERA, "BSP");
 

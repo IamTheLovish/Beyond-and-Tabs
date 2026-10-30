@@ -69,7 +69,7 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
  *   <li><b>Tilt follows zoom</b>: angled close up, near top-down zoomed out (camera_pitch_close / _far); Ctrl+wheel,
  *       Alt+middle-drag and Alt+pan keys add a tilt offset on top.</li>
  *   <li><b>Middle-drag</b> grabs the map; <b>Alt+middle-drag</b> rotates (yaw) and tilts around the screen centre.</li>
- *   <li>Keyboard pan (WASD / arrows), screen-edge pan with a short acceleration; pan speed scales with zoom.</li>
+ *   <li>Keyboard pan (arrows), screen-edge pan with a short acceleration; pan speed scales with zoom.</li>
  *   <li><b>Tab</b> overview, camera anchors, and every "look at" (Space alert, portraits, control groups) glide.</li>
  *   <li><b>Shift never moves the camera</b> - in BAR it only queues orders. It used to tilt / swing the view, and a
  *       Shift+drag building line that reached a screen edge swung the camera side to side.</li>

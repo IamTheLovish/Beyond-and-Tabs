@@ -21,7 +21,7 @@ import java.util.List;
  * The controls reference (design/onboarding.md): every control on one scrolling sheet, with the player's ACTUAL keys -
  * read from keybinds/Keybindings each time the sheet opens, so a rebind shows here (marked "changed") and "Change
  * keys..." goes straight to the vanilla Controls page to rebind. Mouse controls that have no binding are listed too,
- * with the alternatives a Mac mouse or a trackpad needs (no middle button: WASD / edges pan, Alt + WASD rotates).
+ * with the alternatives a Mac mouse or a trackpad needs (no middle button: arrows / edges pan, Alt + arrows rotates).
  *
  * Reachable from the title screen (the "?" beside Skirmish), the First Battle screen and the Match Menu (Controls).
  * Also carries the first-time tips switch.
