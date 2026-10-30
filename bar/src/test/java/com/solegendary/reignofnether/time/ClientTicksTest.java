@@ -25,6 +25,8 @@ class ClientTicksTest {
     void anAnimationNeverRunsBack() {
         // a frame's time is now + partial: across a tick it goes on from where the last frame left it, where
         // gameTime + partial at the default day speed fell back by up to a tick at two ticks in every three
+        while (ClientTicks.now() % ClientTicks.WRAP > ClientTicks.WRAP - 100)   // clear of the hourly wrap
+            ClientTicks.step(true);
         float last = ClientTicks.at(0f);
         for (int tick = 0; tick < 30; tick++) {
             for (float p = 0f; p < 1f; p += 0.2f) {
@@ -34,6 +36,16 @@ class ClientTicksTest {
             }
             ClientTicks.step(true);
         }
+    }
+
+    @Test
+    void anAnimationsTimeKeepsItsFractionAfterHours() {
+        // unwrapped, a float of the count kept no fraction after ~15 hours in a level (lovish keeps the game open)
+        for (long i = 0; i < 20 * 3600 * 20 + 7; i++)
+            ClientTicks.step(true);
+        float t = ClientTicks.at(0.25f);
+        assertTrue(t >= 0f && t < ClientTicks.WRAP + 1, "wrapped to the hour: " + t);
+        assertEquals(0.25f, t - (float) Math.floor(t), 1e-3f, "the frame's fraction survives");
     }
 
     @Test

@@ -37,9 +37,16 @@ public final class ClientTicks {
         return ticks;
     }
 
-    /** {@link #now} plus a frame's partial tick: the time an animation draws at. */
+    /** {@link #at} wraps every this many ticks (an hour): a float of an unbounded count loses its fractions. */
+    public static final long WRAP = 72_000L;
+
+    /**
+     * {@link #now} plus a frame's partial tick: the time an animation draws at. Wrapped to an hour, so a float keeps
+     * the frame's fraction however long the game stays open (unwrapped it lost it after about 15 hours); an animation
+     * sees one jump an hour, as the statues' and parts' own clocks already did.
+     */
     public static float at(float partialTick) {
-        return ticks + partialTick;
+        return (ticks % WRAP) + partialTick;
     }
 
     /** One client tick: counts when a level is running (loaded and not paused). */

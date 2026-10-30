@@ -142,7 +142,9 @@ public class ScaffoldRenderClientEvents {
                 if (pickedCount == MAX_SCAFFOLDS && d2 >= pickedDist[MAX_SCAFFOLDS - 1])
                     continue;
                 // a scaffold gives away construction progress, so only draw sites in sight (cached per site)
-                if (now - s.visCheckedAt >= VIS_RECHECK_TICKS || now < s.visCheckedAt) {
+                // MIN_VALUE = never checked (now - MIN_VALUE overflowed negative: the check never ran, no scaffold drew)
+                if (s.visCheckedAt == Long.MIN_VALUE || now - s.visCheckedAt >= VIS_RECHECK_TICKS
+                    || now < s.visCheckedAt) {
                     s.visible = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
                     s.visCheckedAt = now;
                 }
