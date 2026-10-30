@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.controls;
 
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
@@ -24,9 +25,16 @@ import net.minecraft.world.phys.Vec3;
  * re-issued the move next tick and it pressed into the wall again, for good. Now it reads the ROUTE ahead
  * ({@link #scanRoute}: the heightmap across its width out to {@link #ROUTE_LOOK} blocks) and climbs early, at the pace
  * that clears each thing in time (DragonFlight's route climb), holds that height over a town, and comes down past it.
- * It climbs at most {@link #ROUTE_HEADROOM} over its flight height (lovish: "increase max flying high by a bit then go
- * around if it cant fly over that new max"): what stands taller it flies round ({@link #findBypass}). Boxed in with no
- * way up, it side-steps ({@link #DETOUR_TICKS}) instead of waiting.
+ * It climbs at most {@link #ROUTE_CEILING} over the ground right under it (lovish: "increase max flying high by a bit
+ * then go around if it cant fly over that new max", then "Ground under the dragon"), never past the flyingMaxYLevel
+ * rule: what stands taller it flies round ({@link #findBypass}), and only with no way round does it go over (still under
+ * the rule). The ground rising - a hill, a mountain - is not "taller" (lovish: "can be higher if it needs to fly over
+ * hills or mountains"): each sample ahead is measured against the lowest ground within {@link #HILL_SPAN} blocks of it
+ * along the way, so a slope it can climb along is flown over however high it goes, and only what stands more than the
+ * ceiling over its own surroundings (a tower, a keep, a cliff) is gone round. The route is read every
+ * {@link #ROUTE_EVERY} ticks (~95 heightmap reads, ~24 a tick; a search for a way round reads ~380 more, at most every
+ * {@link #ROUTE_EVERY} ticks while one is needed and every {@link #NO_WAY_TICKS} once none was found); between reads the climb it needs is worked out again each tick from the stored samples. Boxed
+ * in with no way up, it side-steps ({@link #DETOUR_TICKS}) instead of waiting.
  *
  * The flight owns the velocity, but a push from outside (knockback, a separation nudge) is kept and decays in the air
  * as it did before: whatever the velocity holds beyond what this control set last tick (after the 0.91 drag) is
@@ -44,24 +52,38 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     private Vec3 lastSet = Vec3.ZERO, push = Vec3.ZERO;
     private boolean blocked = false;
     private int sweepIn = 0;
-    /** The route ahead: how far ahead it reads (blocks) and the spacing of its samples along the way. */
-    static final double ROUTE_LOOK = 32.0, ROUTE_STEP = 2.0;
+    /** The route ahead: how far ahead it reads (blocks) and the spacing of its samples along the way - every block on
+     *  the way it flies (a one-block wall is not stepped over), every other on a way round it only weighs. */
+    static final double ROUTE_LOOK = 32.0, ROUTE_STEP = 1.0, SEARCH_STEP = 2.0;
     /** The held route height sinks this much a tick once what was ahead is behind it (it does not dip between roofs),
      *  and is dropped this close to the point (blocks, flat): it comes down onto its point. */
     static final double FLOOR_DECAY = 0.06, HOLD_UNTIL = 12.0;
     /** A side-step's length (ticks) when the way ahead and the way up are both shut. */
     static final int DETOUR_TICKS = 24;
-    /** How far over its flight height (the move goal's: 10 over the ground at the point) it may climb to cross
-     *  something; taller, it flies round. */
-    public static final double ROUTE_HEADROOM = 6.0;
+    /** How high over the ground right under it (its column's MOTION_BLOCKING height) it may fly to cross something;
+     *  taller, it flies round. */
+    public static final double ROUTE_CEILING = 16.0;
+    /** Ticks between reads of the route, and how long it goes over (not round) once no way round was found. */
+    static final int ROUTE_EVERY = 4, NO_WAY_TICKS = 16;
+    /** How far along the way (blocks, either side) a sample's own ground is looked for: the lowest top that close. */
+    static final double HILL_SPAN = 8.0;
     /** A way round: how long one is flown before the straight line is tried again (ticks), how far off the line it
      *  may turn (degrees, in steps of BYPASS_STEP), and how far along it it aims (blocks). */
     static final int BYPASS_TICKS = 8;
     static final float BYPASS_STEP = 20f, BYPASS_MAX = 80f;
     static final double BYPASS_AIM = 16.0;
-    private double routeTop = Double.NEGATIVE_INFINITY, routeNeed = 0.0, heldTop = Double.NEGATIVE_INFINITY;
+    private double routeTop = Double.NEGATIVE_INFINITY, heldTop = Double.NEGATIVE_INFINITY;
+    /** The height the feet may climb to now: the ceiling, or the rule's cap with no way round. */
+    private double climbCap = Double.POSITIVE_INFINITY;
     private float bypassYaw = 0f;
-    private int bypassTicks = 0, bypassSide = 1;
+    private int bypassTicks = 0, bypassSide = 1, routeIn = 0, noWayTicks = 0;
+    /** The last read's samples (their clearing heights and their distances along the read from where it was made). */
+    private final double[] sampleClear = new double[(int) (ROUTE_LOOK / ROUTE_STEP) + 2];
+    private final double[] sampleDist = new double[sampleClear.length];
+    private final int[] readTop = new int[sampleClear.length];
+    private final double[] readDist = new double[sampleClear.length];
+    private int samples = 0, groundUnder = 0;
+    private double scanX, scanZ, scanUx, scanUz, maxFeet = Double.POSITIVE_INFINITY;
     private float detourYaw = 0f;
     private int detourTicks = 0, detourSide = 1;
     /** The Dive's ground spot while it stoops (BoneDragonUnit.startDive), and whether it is down on the ground. */
@@ -202,27 +224,24 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
                 blocked = false;
             } else {
                 double hd = Math.sqrt(dx * dx + dz * dz);
-                double ceiling = wantedY + ROUTE_HEADROOM;
-                routeTop = Double.NEGATIVE_INFINITY;
-                routeNeed = 0.0;
-                boolean fits = bypassTicks > 0 || hd < 1.0e-3 || scanRoute(dx / hd, dz / hd, hd, ceiling);
-                if (!fits) {
-                    // something on the line stands over the ceiling: fly round it, or - no way round - over it
-                    if (!findBypass((float) Math.toDegrees(-Math.atan2(dx, dz)), hd, ceiling))
-                        scanRoute(dx / hd, dz / hd, hd, Double.POSITIVE_INFINITY);
+                if (noWayTicks > 0)
+                    noWayTicks--;
+                if (routeIn-- <= 0) {
+                    routeIn = ROUTE_EVERY - 1;
+                    planRoute(dx, dz, hd);
                 }
                 if (bypassTicks > 0) {
-                    // on the way round: aim along it, read the route along it
+                    // on the way round: aim along it
                     bypassTicks--;
                     double r = Math.toRadians(bypassYaw), aim = Math.min(hd, BYPASS_AIM);
                     dx = -Math.sin(r) * aim;
                     dz = Math.cos(r) * aim;
-                    scanRoute(-Math.sin(r), Math.cos(r), aim, ceiling);
                 }
-                heldTop = hd > HOLD_UNTIL ? Math.max(routeTop, heldTop - FLOOR_DECAY) : routeTop;
+                double top = Math.min(routeTop, climbCap);
+                heldTop = Math.min(climbCap, hd > HOLD_UNTIL ? Math.max(top, heldTop - FLOOR_DECAY) : top);
                 if (heldTop - mob.getY() > dy)
                     dy = heldTop - mob.getY();        // climb to / hold the height that clears the way
-                need = routeNeed;
+                need = routeNeedNow();
                 if (sweepIn-- <= 0 && dist > 1.0e-4) {
                     sweepIn = SWEEP_EVERY;
                     double r = Math.toRadians(state.heading);
@@ -243,6 +262,11 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
             v = operation == Operation.MOVE_TO && !hover
                 ? DragonFlight.step(state, dx, dy, dz, cruise, blocked, need)
                 : DragonFlight.brake(state);
+            if (!walking && v[1] > 0.0 && mob.getY() + v[1] > climbCap) {
+                // never past the ceiling (DragonFlight's climb already eases out under it; this is the hard stop)
+                v[1] = Math.max(0.0, climbCap - mob.getY());
+                state.vy = v[1];
+            }
         } else {
             v = DragonFlight.brake(state);
             blocked = false;
@@ -257,33 +281,100 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     }
 
     /**
-     * Reads the way along (ux, uz) out to {@code reach} blocks flat for what stands on it: the MOTION_BLOCKING
-     * heightmap every {@link #ROUTE_STEP} blocks from the nose out to {@link #ROUTE_LOOK} (or reach), across the body's
-     * width. Sets routeTop, the feet height that clears all of it up to the ceiling, and routeNeed, the climb (b/t)
-     * that clears each such sample in time at the speed it has now (0: nothing on the way is above it). False when a
-     * sample stands over the ceiling (it is not counted). An unloaded column reads as the world's floor.
+     * Reads the route (every ROUTE_EVERY ticks): the ceiling - ROUTE_CEILING over the ground right under it, at least
+     * its flight point's height, never past the flyingMaxYLevel rule - then the way to the point (or along the way round
+     * it is flying); a way over the ceiling is gone round ({@link #findBypass}) or, with none, flown over under the rule.
      */
-    private boolean scanRoute(double ux, double uz, double reach, double ceiling) {
+    private void planRoute(double dx, double dz, double hd) {
+        maxFeet = mob.level().getGameRules().getRule(GameRuleRegistrar.FLYING_MAX_Y_LEVEL).get();
+        groundUnder = mob.level().getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(mob.getX()), Mth.floor(mob.getZ()));
+        double ceiling = Math.min(maxFeet, Math.max(groundUnder + ROUTE_CEILING, wantedY));
+        climbCap = ceiling;
+        if (hd < 1.0e-3) {
+            samples = 0;
+            routeTop = Double.NEGATIVE_INFINITY;
+            bypassTicks = 0;
+            return;
+        }
+        if (bypassTicks > 0) {
+            double r = Math.toRadians(bypassYaw);
+            if (scanRoute(-Math.sin(r), Math.cos(r), Math.min(hd, BYPASS_AIM), ceiling, ROUTE_STEP)) {
+                climbCap = Math.min(maxFeet, Math.max(ceiling, routeTop));
+                return;
+            }
+            bypassTicks = 0;                          // the way round shut: read the line again
+        }
+        if (scanRoute(dx / hd, dz / hd, hd, ceiling, ROUTE_STEP)) {
+            climbCap = Math.min(maxFeet, Math.max(ceiling, routeTop));    // over a hill: as high as it needs
+            return;
+        }
+        // something on the line stands over the ceiling: fly round it, or - no way round - over it, under the rule
+        if (noWayTicks <= 0 && findBypass((float) Math.toDegrees(-Math.atan2(dx, dz)), hd, ceiling)) {
+            climbCap = Math.min(maxFeet, Math.max(ceiling, routeTop));
+            return;
+        }
+        if (noWayTicks <= 0)
+            noWayTicks = NO_WAY_TICKS;
+        scanRoute(dx / hd, dz / hd, hd, maxFeet, ROUTE_STEP);
+        climbCap = maxFeet;
+    }
+
+    /**
+     * Reads the way along (ux, uz) out to {@code reach} blocks flat for what stands on it: the MOTION_BLOCKING
+     * heightmap every {@code step} blocks from the nose out to {@link #ROUTE_LOOK} (or reach), across the body's
+     * width. A sample fits when its clearing height is under the rule's cap and under the ceiling - the one over the
+     * ground under the dragon, or ROUTE_CEILING over the sample's own ground (the lowest top within HILL_SPAN of it
+     * along the way, the ground under the dragon too): a hill is climbed over, a tower is not. Keeps each sample that
+     * fits for {@link #routeNeedNow} and sets routeTop, the feet height that clears them all; false when one does not
+     * fit. An unloaded column reads as the world's floor.
+     */
+    private boolean scanRoute(double ux, double uz, double reach, double ceiling, double step) {
         routeTop = Double.NEGATIVE_INFINITY;
-        routeNeed = 0.0;
-        boolean fits = true;
-        double half = mob.getBbWidth() * 0.5, y = mob.getY();
+        samples = 0;
+        scanX = mob.getX();
+        scanZ = mob.getZ();
+        scanUx = ux;
+        scanUz = uz;
+        double half = mob.getBbWidth() * 0.5;
         reach = Math.min(ROUTE_LOOK, reach);
-        for (double d = half + 1.0; d <= reach; d += ROUTE_STEP) {
+        int n = 0;
+        for (double d = half + 1.0; d <= reach && n < readTop.length; d += step) {
             int top = Integer.MIN_VALUE;
             for (int k = -1; k <= 1; k++) {
-                double x = mob.getX() + ux * d - uz * half * k, z = mob.getZ() + uz * d + ux * half * k;
+                double x = scanX + ux * d - uz * half * k, z = scanZ + uz * d + ux * half * k;
                 top = Math.max(top, mob.level().getHeight(Heightmap.Types.MOTION_BLOCKING, Mth.floor(x), Mth.floor(z)));
             }
-            double clear = top + DragonFlight.ROUTE_CLEAR;
-            if (clear > ceiling) {
+            readTop[n] = top;
+            readDist[n++] = d;
+        }
+        boolean fits = true;
+        for (int i = 0; i < n; i++) {
+            int ground = readDist[i] <= HILL_SPAN ? groundUnder : Integer.MAX_VALUE;
+            for (int j = 0; j < n; j++)
+                if (Math.abs(readDist[j] - readDist[i]) <= HILL_SPAN)
+                    ground = Math.min(ground, readTop[j]);
+            double clear = readTop[i] + DragonFlight.ROUTE_CLEAR;
+            if (clear > maxFeet || clear > Math.max(ceiling, ground + ROUTE_CEILING)) {
                 fits = false;
                 continue;
             }
             routeTop = Math.max(routeTop, clear);
-            routeNeed = Math.max(routeNeed, DragonFlight.climbNeed(clear - y, d - half, state.speed));
+            sampleClear[samples] = clear;
+            sampleDist[samples++] = readDist[i];
         }
         return fits;
+    }
+
+    /** The climb (b/t) the stored samples need now, from where it is and the speed it has (0: none above it). */
+    private double routeNeedNow() {
+        double progress = (mob.getX() - scanX) * scanUx + (mob.getZ() - scanZ) * scanUz;
+        double half = mob.getBbWidth() * 0.5, y = mob.getY(), need = 0.0;
+        for (int i = 0; i < samples; i++) {
+            double d = sampleDist[i] - progress;
+            if (d > half)                           // still ahead of the nose
+                need = Math.max(need, DragonFlight.climbNeed(sampleClear[i] - y, d - half, state.speed));
+        }
+        return need;
     }
 
     /**
@@ -296,7 +387,7 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
             for (int side : new int[] { bypassSide, -bypassSide }) {
                 float yaw = Mth.wrapDegrees(wantYaw + side * off);
                 double r = Math.toRadians(yaw);
-                if (scanRoute(-Math.sin(r), Math.cos(r), Math.max(hd, BYPASS_AIM), ceiling)) {
+                if (scanRoute(-Math.sin(r), Math.cos(r), Math.max(hd, BYPASS_AIM), ceiling, SEARCH_STEP)) {
                     bypassYaw = yaw;
                     bypassSide = side;
                     bypassTicks = BYPASS_TICKS;

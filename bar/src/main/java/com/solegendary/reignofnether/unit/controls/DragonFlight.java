@@ -109,6 +109,9 @@ public final class DragonFlight {
             if (need > ROUTE_CLIMB_MAX)
                 want = Math.min(want, s.speed * ROUTE_CLIMB_MAX / need);
         }
+        // eased out in time to stop AT the height it wants (a ceiling), not a block or two past it
+        if (dy > 0.0)
+            wantVy = Math.min(wantVy, Math.sqrt(2.0 * climbAccel * dy));
         if (blocked) {
             want = Math.min(want, cruise * TURN_SLOWDOWN_MIN);
             wantVy = Math.max(wantVy, CLIMB_MAX);
