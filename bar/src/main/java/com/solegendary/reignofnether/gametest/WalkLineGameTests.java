@@ -28,9 +28,10 @@ import java.util.Locale;
  * and the diagonal every few blocks - drawn, the body rocks from side to side all the way. On an open glass pad far from
  * the test grid one unit is ordered 32 blocks east and 7 south (12 degrees off the axis). Over the walk - from 10 ticks
  * after the order (the first turn is #412's) until 4 blocks short of the goal - its body yaw (what every frame draws)
- * may turn the net way it has to, plus at most {@link #MAX_ROCK} degrees: the excess of all its turning over the net turn
- * is the rocking (a clean corner adds nothing to it, a swing out and back adds both halves). Logs a "[Walk]" line with
- * the measured rocking, the largest swing off the bearing and the yaw every 4 ticks.
+ * must stay within {@link #MAX_OFF} of the bearing to the goal, and may turn the net way it has to plus at most
+ * {@link #MAX_ROCK} degrees: the excess of all its turning over the net turn is the rocking (a clean corner adds nothing
+ * to it, a swing out and back adds both halves; the bearing bound catches a path that bunches its diagonal steps into one
+ * corner). Logs a "[Walk]" line with both and the yaw every 4 ticks.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -41,6 +42,8 @@ public class WalkLineGameTests {
     static final int SETUP = 20;   // ticks between laying the pad and spawning (chunk sends, entity sections)
     /** Degrees of turning the body may do over the walk beyond the net turn (side-to-side rocking). */
     static final float MAX_ROCK = 10f;
+    /** Degrees the body may face away from the straight bearing to the goal while walking. */
+    static final float MAX_OFF = 8f;
     static final int W = 40, D = 16;
 
     @GameTest(template = ARENA, timeoutTicks = SETUP + 400, batch = "walk_line")
@@ -145,13 +148,15 @@ public class WalkLineGameTests {
             float net = Float.isNaN(turn[1]) ? 0f : Math.abs(turn[2] - turn[1]);
             float rock = turn[0] - net;
             String line = String.format(Locale.ROOT, "[Walk] off-axis line, Vindicator: arrived in %d ticks, turned %.1f"
-                + " degrees for a net %.1f - rocking %.1f (bound %.0f); largest swing off the bearing %.1f (t%d);"
-                + " yaw/bearing:%s", t, turn[0], net, rock, MAX_ROCK, turn[3], worstTick[0], trace);
+                + " degrees for a net %.1f - rocking %.1f (bound %.0f); largest swing off the bearing %.1f (t%d; bound %.0f);"
+                + " yaw/bearing:%s", t, turn[0], net, rock, MAX_ROCK, turn[3], worstTick[0], MAX_OFF, trace);
             ReignOfNether.LOGGER.info(line);
             if (Float.isNaN(turn[1]))
                 throw new GameTestAssertException("the walk was too short to judge: " + line);
             if (rock > MAX_ROCK)
                 throw new GameTestAssertException("the body rocks from side to side on a straight line: " + line);
+            if (turn[3] > MAX_OFF)
+                throw new GameTestAssertException("the body faces off the straight line to the goal: " + line);
             helper.succeed();
         });
     }
