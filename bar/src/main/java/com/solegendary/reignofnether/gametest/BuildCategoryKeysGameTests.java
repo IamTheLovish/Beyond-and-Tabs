@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.BuildGroup;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys.Action;
 import com.solegendary.reignofnether.keybinds.BuildCategoryKeys.Press;
@@ -109,6 +110,31 @@ public class BuildCategoryKeysGameTests {
         boolean[] u = BuildCategoryKeys.usableCells(12, tabCells, usable);
         if (u[0] || !u[1] || !u[4] || u[2])
             problems.add("usable cells wrong");
+        verdict(helper, problems);
+    }
+
+    /** BAR's grid row 1 is the bottom row Z X C V (gui_gridmenu.lua:869-872): the first buildings fill it, then A S D F, then Q W E R. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void build_grid_fills_the_bottom_row_first(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        int[] fill = { GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_V,
+            GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_F,
+            GLFW.GLFW_KEY_Q, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_E, GLFW.GLFW_KEY_R };
+        for (int slot = 0; slot < fill.length; slot++)
+            if (BuildGroup.slotKey(slot).getDefaultKey() != fill[slot])
+                problems.add("slot " + slot + " defaults to " + BuildGroup.slotKey(slot).buttonLabel);
+        if (BuildGroup.slotKey(12) != null) problems.add("slot 12 must be click only");
+        verdict(helper, problems);
+    }
+
+    /** The grid is drawn anchored at the bottom: slot 0 on the last row, the 13th slot on the row above the top key row. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void build_grid_is_drawn_from_the_bottom_row_up(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        if (BuildGroup.gridRow(0, 1) != 0 || BuildGroup.gridRow(3, 1) != 0) problems.add("one row: cells 0-3 on row 0");
+        if (BuildGroup.gridRow(0, 2) != 1 || BuildGroup.gridRow(4, 2) != 0) problems.add("two rows: slot 0 bottom, slot 4 above");
+        if (BuildGroup.gridRow(0, 3) != 2 || BuildGroup.gridRow(8, 3) != 0) problems.add("three rows: slot 0 bottom, slot 8 top");
+        if (BuildGroup.gridRow(5, 4) != 2 || BuildGroup.gridRow(12, 4) != 0) problems.add("four rows: slot 5 on row 2, slot 12 on top");
         verdict(helper, problems);
     }
 

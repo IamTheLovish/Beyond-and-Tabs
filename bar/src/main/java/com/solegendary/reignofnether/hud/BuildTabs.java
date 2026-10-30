@@ -143,6 +143,7 @@ public final class BuildTabs {
         BuildTabs.stripW = perRow * frame;
         renderStrip(g, mouseX, mouseY);
         int[] cells = cells(tabButtons);
+        int rows = rows(tabButtons);
         drawn = new ArrayList<>(tabButtons);
         drawnCells = cells;
         drawnSet.clear();
@@ -154,7 +155,7 @@ public final class BuildTabs {
             b.hotkey = open ? BuildGroup.slotKey(cells[i]) : null;
             try {
                 b.render(g, (cells[i] % BuildGroup.COLS) * frame,
-                    stripY + STRIP_H + (cells[i] / BuildGroup.COLS) * frame, mouseX, mouseY);
+                    stripY + STRIP_H + BuildGroup.gridRow(cells[i], rows) * frame, mouseX, mouseY);
             } finally {
                 b.hotkey = own;
             }

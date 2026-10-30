@@ -33,6 +33,11 @@ public enum BuildGroup {
      */
     public static final List<Keybinding> SLOT_KEYS = List.of(Keybindings.buildGrid);
 
+    /** Row (0 = top) the cell is drawn on in a grid of the given rows. */
+    public static int gridRow(int cell, int rows) {
+        return cell / COLS;
+    }
+
     public final String id;
 
     BuildGroup(String id) {
