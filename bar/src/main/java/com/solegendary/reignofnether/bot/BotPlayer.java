@@ -190,6 +190,9 @@ public class BotPlayer {
     // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
     long atCapSince = -1;
     static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
+    // game time since when the easy bot's T1 labs have paused to save for the T2 lab (-1 = not saving)
+    long t2SaveSince = -1;
+    static final long T2_SAVE_MAX_TICKS = 20 * 60 * 3;   // three minutes of saving at most, then the labs train again
 
     public final String name;
     public final Faction faction;
@@ -603,12 +606,13 @@ public class BotPlayer {
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
             if (!done && floatLab)
                 done = placeLab(level, armyBuildings, workers);
-            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
-            if (!done && floating()) {
-                BuildingPlacement annexLab = labWantingAnnex(buildings);
-                if (annexLab != null)
-                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
-            }
+            // the research's energy (resources/TierGate, ~110 energy/s) ahead of the annex: a floating easy bot laid an
+            // annex every think and no wind for six minutes, sat at 48-104 energy/s under the gate and only teched at the
+            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). The refits' energy stays below
+            float energyTarget = techEnergyTarget(tier2, buildings);
+            if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
+                    && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // energy starved (under 30% with metal to spare): wind first, or every lab stalls
             if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -628,6 +632,14 @@ public class BotPlayer {
             if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
                     && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
                 done = placeTechBuilding(level, kit.t2Lab(), armyBuildings + 2, workers, 3);   // 3 builders: the lab is 504 builder-seconds
+            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction). Behind the tech buildings:
+            // ahead of them, a floating easy bot whose Dungeon was cancelled once laid annexes every think and never
+            // re-laid it (bots_reach_tier_2, flake-stress 40806850709 / 40806858215, Oct 29)
+            if (!done && floating()) {
+                BuildingPlacement annexLab = labWantingAnnex(buildings);
+                if (annexLab != null)
+                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
+            }
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
@@ -677,7 +689,6 @@ public class BotPlayer {
             // the energy a tech step needs (resources/TierGate): before the research, ~110 energy/s for its drain plus the
             // base's own spending; after it, 20 energy/s for every extractor refit or the refits run on crumbs. Winds still
             // rising count at their average, so a bot does not pile a dozen sites on one shortfall
-            float energyTarget = techEnergyTarget(tier2, buildings);
             if (!done && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -737,6 +748,9 @@ public class BotPlayer {
             && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
+            averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
+            capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
         if (tier2) {
             boolean upgrading = false;
             for (BuildingPlacement bp : buildings)
@@ -771,13 +785,34 @@ public class BotPlayer {
         economy.decommissionObsolete(gameTime, minutes, tier2, buildings);
 
         // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
-        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen
+        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen.
+        // Tier 2 researched and its lab not standing yet, with the tier gate's army out: the T1 labs finish what they
+        // hold and queue no more, so the lab's metal is not eaten by repeat queues (the easy bot fielded 225 fighters on
+        // an empty pool and never raised its Dungeon in bots_reach_tier_2, Oct 28)
+        // The same while the research itself runs on an empty pool (an easy bot with 177 fighters sat at 0 metal from
+        // minute 13 and its research never finished, flake-stress 40806858215, Oct 29)
+        // Easy bots only (lovish's call, Oct 29), never while floating, and for T2_SAVE_MAX_TICKS at most: a lab its
+        // workers can't reach would otherwise cap the army for the rest of the game (121 fighters from minute 13 on
+        // a pool that went 933 -> 3500, flake-stress 40839167566)
+        boolean researchStarved = !tier2 && metalFill < 0.1f
+            && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
+        boolean wantsT2Save = difficulty.easyLike() && !floating() && (tier2 || researchStarved) && kit.t2Lab() != null
+            && army.size() >= tuning.t2MinArmy() && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        if (!wantsT2Save)
+            t2SaveSince = -1;
+        else if (t2SaveSince < 0)
+            t2SaveSince = gameTime;
+        boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
                 if (bp.getBuilding() == Buildings.PORTAL_BASIC) {
                     // the Horde: a Basic Portal trains nothing until it is refitted to a Military Portal
                     if (pp.productionQueue.isEmpty())
                         pp.startProductionItem(ProductionItems.RESEARCH_PORTAL_FOR_MILITARY);
+                    continue;
+                }
+                if (savingForT2Lab) {
+                    pp.setRepeatQueue(false);
                     continue;
                 }
                 pp.setRepeatQueue(true);
@@ -1000,7 +1035,8 @@ public class BotPlayer {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
                 if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
                     continue;
-                workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(origin), v.blockPosition().distSqr(origin)));
+                workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, kit.extractor()) ? 1 : 0)
+                    .thenComparingDouble(u -> u.blockPosition().distSqr(origin)));   // tech builders last (placeNearImpl)
                 return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
                         new int[] { workers.get(0).getId() }, false, false, false, true) != null;
             }
@@ -2287,6 +2323,10 @@ public class BotPlayer {
         lastPlacedAt = gameTime;
     }
 
+    /** The tech gate's inputs at the last think and the last building placed, for TierGateGameTests' [T2Snap] line. */
+    public String techDiag = "-";
+    String lastPlacedName = "-";
+
     /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
     void placeFailed(long gameTime, Building building, String reason) {
         lastFailed = building;
@@ -2324,9 +2364,36 @@ public class BotPlayer {
      */
     boolean placeTechBuilding(ServerLevel level, Building building, int index, List<LivingEntity> workers, int builders) {
         boolean ok = placeNear(level, building, layoutSlot(Layout.ARMY, index + techSlotShift), workers, builders);
+        if (!ok && building.getFaction().equals(Factions.PIGLINS))
+            ok = placeOnOwnNether(level, building, workers, builders);
         if (!ok)
             techSlotShift = (techSlotShift + 1) % 8;
         return ok;
+    }
+
+    /**
+     * A Horde building that must stand on netherrack, tried round each of the bot's own nether zones (its portals'
+     * spread) once the layout slot had none: in bots_reach_tier_2 the medium Horde's Hoglin Stables and Flame Sanctuary
+     * sat at "no valid site" for minutes, a third of the tries refused as must_be_nether (Oct 28).
+     */
+    boolean placeOnOwnNether(ServerLevel level, Building building, List<LivingEntity> workers, int builders) {
+        List<BlockPos> zones = new ArrayList<>();
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
+            if (name.equals(bp.ownerName) && bp.isBuilt
+                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.addon.NetherConvertingAddon nca
+                    && nca.getNetherZone(bp) != null)
+                zones.add(nca.getNetherZone(bp).getOrigin());
+        zones.sort((a, b) -> Double.compare(a.distSqr(home), b.distSqr(home)));
+        for (BlockPos zone : zones)
+            if (placeNearImpl(level, building, zone, workers, builders)) {
+                placed(level.getGameTime());
+                lastPlacedName = building.structureName;
+                return true;
+            }
+        if (!zones.isEmpty())
+            placeFailed(level.getGameTime(), building, "no valid site round " + zones.size() + " own nether zones, last "
+                + zones.get(zones.size() - 1).toShortString() + siteRejections());
+        return false;
     }
 
     /** A site the watch gave up on: remembered so the next placement goes elsewhere; a lab's slot moves on too. */
@@ -2352,15 +2419,32 @@ public class BotPlayer {
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         boolean ok = placeNearImpl(level, building, want, workers, builders);
-        if (ok)
+        if (ok) {
             placed(level.getGameTime());
-        else
+            lastPlacedName = building.structureName;
+        } else
             placeFailed(level.getGameTime(), building, "no valid site within 32 blocks of " + want.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : ""));
+                + (workers.isEmpty() ? " (no workers)" : "") + siteRejections());
         return ok;
     }
 
+    /** Why the last placeNear's tries were refused (validator key -> tries), for the blocked reason: a site search that
+     *  finds nothing says whether the ground, the nether, the neighbours or the fog stopped it. */
+    final java.util.Map<String, Integer> lastSiteRejections = new java.util.TreeMap<>();
+
+    private String siteRejections() {
+        if (lastSiteRejections.isEmpty())
+            return "";
+        StringBuilder sb = new StringBuilder(" [");
+        lastSiteRejections.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> sb.append(sb.length() > 2 ? ", " : "").append(e.getKey().replace("building.reignofnether.", "")).append(' ').append(e.getValue()));
+        return sb.append(']').toString();
+    }
+
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
+        lastSiteRejections.clear();
+        int[][] footprintCols = null;   // read once per search, on its first ground_not_flat refusal
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2370,17 +2454,77 @@ public class BotPlayer {
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);   // the ground block (leaves skipped, as the player's placement grid does: a bot site on a canopy sat 5 blocks over its builders, soak stalls Oct 21-22); structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
-                if (BuildingValidators.isPlacementValid(level, building, surface, name, Rotation.NONE, false, false, true)) {
-                    workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surface), v.blockPosition().distSqr(surface)));
+                BlockPos site = null;
+                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
+                if (error == null)
+                    site = surface;
+                else if (error.endsWith("ground_not_flat")) {
+                    // raised origins only for rolling ground, so a search refused for other reasons costs what it did
+                    if (footprintCols == null)
+                        footprintCols = footprintColumns(level, building);
+                    for (BlockPos tryAt : raisedHeights(level, surface, footprintCols)) {
+                        error = BuildingValidators.getPlacementValidityError(level, building, tryAt, name, Rotation.NONE, false, false, true);
+                        if (error == null) {
+                            site = tryAt;
+                            break;
+                        }
+                    }
+                }
+                if (site == null)
+                    lastSiteRejections.merge(error, 1, Integer::sum);
+                else {
+                    final BlockPos surfaceSite = site;
+                    // nearest first, but the builders of an unfinished tech building (T1 requirement, T2 lab) last: the
+                    // next site took the Dungeon's builders and the watch cancelled it at 20 of 63 blocks
+                    // (bots_reach_tier_2, flake-stress 40817960311, Oct 29)
+                    workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, building) ? 1 : 0)
+                        .thenComparingDouble(u -> u.blockPosition().distSqr(surfaceSite)));
                     int take = Math.min(builders, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
                         ids[i] = workers.get(i).getId();
-                    return BuildingServerEvents.placeBuilding(building, surface, Rotation.NONE, name, ids, false, false, false, true) != null;
+                    return BuildingServerEvents.placeBuilding(building, surfaceSite, Rotation.NONE, name, ids, false, false, false, true) != null;
                 }
             }
         }
         return false;
+    }
+
+    /** The worker is building an unfinished T1 requirement or T2 lab of this bot's, and {@code next} is something else. */
+    boolean buildsTech(LivingEntity worker, Building next) {
+        BuildingPlacement target = BotSiteWatch.targetOf(worker);
+        if (target == null || target.isBuilt || kit.t2Lab() == null || target.getBuilding() == next)
+            return false;
+        Building b = target.getBuilding();
+        return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
+    }
+
+    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data. */
+    int[][] footprintColumns(ServerLevel level, Building building) {
+        var blocks = building.getRelativeBlockData(level);
+        if (blocks == null || blocks.isEmpty())
+            return new int[0][];
+        BlockPos min = com.solegendary.reignofnether.building.BuildingUtils.getMinCorner(blocks);
+        BlockPos max = com.solegendary.reignofnether.building.BuildingUtils.getMaxCorner(blocks);
+        return new int[][] { { min.getX(), min.getZ() }, { max.getX(), min.getZ() }, { min.getX(), max.getZ() },
+            { max.getX(), max.getZ() }, { (min.getX() + max.getX()) / 2, (min.getZ() + max.getZ()) / 2 } };
+    }
+
+    /**
+     * Raised origins to try for a column whose ground was refused as ground_not_flat: one and two higher, then the
+     * highest ground under the footprint's corners and centre. The origin corner alone set the height, so on rolling
+     * ground every try of a big footprint clipped a rise (bots_reach_tier_2, Oct 28: the Horde's Hoglin Stables
+     * refused 36-65 of 65 tries as ground_not_flat); a raised origin leaves small gaps, which the validator allows
+     * and placement fills.
+     */
+    List<BlockPos> raisedHeights(ServerLevel level, BlockPos surface, int[][] cols) {
+        List<BlockPos> out = new ArrayList<>(List.of(surface.above(), surface.above(2)));
+        int top = surface.getY();
+        for (int[] c : cols)
+            top = Math.max(top, MiscUtil.getHighestNonAirBlock(level, surface.offset(c[0], 0, c[1]).atY(0), true).getY());
+        if (top > surface.getY() + 2)
+            out.add(surface.atY(top));
+        return out;
     }
 
     int count(List<BuildingPlacement> buildings, Building b) {
