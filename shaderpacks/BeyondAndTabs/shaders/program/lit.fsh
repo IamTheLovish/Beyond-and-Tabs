@@ -13,6 +13,10 @@
 #include "/lib/shadow.glsl"
 #include "/lib/light.glsl"
 #include "/lib/pbrswitch.glsl"
+#if CLOUD_SHADOWS == 1
+#include "/lib/wind.glsl"
+#include "/lib/clouds.glsl"
+#endif
 #ifdef LIT_PBR
 #include "/lib/pbr.glsl"
 #endif
@@ -97,6 +101,10 @@ void main() {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;
         shadow = sunShadow(playerPos, worldNormal, fit);
+#if CLOUD_SHADOWS == 1
+        // a passing cloud takes some of the sun (and its glints, which read the same term), never the sky's fill
+        shadow *= cloudShade(playerPos + cameraPosition, normalize(mat3(gbufferModelViewInverse) * l));
+#endif
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);

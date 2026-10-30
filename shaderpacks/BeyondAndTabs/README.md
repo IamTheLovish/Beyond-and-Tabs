@@ -17,3 +17,9 @@ one the tree limbs move in): two gust waves travel across the map along a slowly
 camera the wind is seen rolling over the grass. Amplitudes are in blocks (a tuft's top ~0.12 at a full gust, a leaf
 ~0.035). The shadow pass moves leaves by the same function, so their shadows stay attached; plants cast no shadow.
 Options: `WIND` (on), `WIND_STRENGTH` (1.0).
+
+## Cloud shadows
+
+Soft patches (median ~31 blocks across, about a quarter of the ground) drift downwind at 2 blocks/s. They multiply
+the sun term only, down to 0.70 of it at the thickest; the sky's fill is untouched, so a unit under a cloud is a
+little dimmer, never harder to read. Computed in ALU (a two-octave value noise), no texture. Option: `CLOUD_SHADOWS` (on).

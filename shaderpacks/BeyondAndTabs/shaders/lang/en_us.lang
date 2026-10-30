@@ -24,3 +24,7 @@ value.WIND.0=Off
 value.WIND.1=On
 option.WIND_STRENGTH=Wind strength
 option.WIND_STRENGTH.comment=How far plants and leaves move (1 = a grass tuft's top about an eighth of a block at a full gust).
+option.CLOUD_SHADOWS=Cloud shadows
+option.CLOUD_SHADOWS.comment=Soft cloud shadows drift over the field with the wind. They dim the sun by at most 30%, so units stay easy to read.
+value.CLOUD_SHADOWS.0=Off
+value.CLOUD_SHADOWS.1=On
