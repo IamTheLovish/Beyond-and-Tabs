@@ -378,29 +378,35 @@ public class HeroAiV2RolloutGameTests {
     public static void hero_ai_v2_rollout_warchief_never_goes_under_an_enemy_tower(GameTestHelper helper) { staysOutOfTower(helper, HeroKits.HORDE_WARCHIEF, "warchief"); }
 
     /**
-     * Hold truly holds for a strike and a ground heal (review r2 on PR 416, lovish: "Hold truly holds"). The hero holds
-     * at block (13, 13); its target stands at exactly (6.8, 6.8): 9.48 blocks from the hero's centre, inside a range-10
-     * strike or heal by the AI's own measure (range - 0.5), but GenericTargetedSpellGoal.isInRange measures to the target
-     * block's lowest corner, (6, 6), 10.6 away - so the cast goal walks a held hero ~0.6 blocks. The hero must cast its
-     * ability ({@code slot}) and move at most 0.3. {@code healFriend}: the target is a hurt friend of the hero (a
-     * Rejuvenate), else an enemy dummy (a strike).
+     * Hold truly holds for a ground cast whose target stands where the cast goal can't aim at its block (review r2 and r3
+     * on PR 416, lovish: "Hold truly holds"). GenericTargetedSpellGoal.isInRange measures flat from the hero to the aimed
+     * block's lowest corner, so a target inside the AI's reach by its centre (range - 0.5) can have its block out of the
+     * goal's: aimed at it, the goal walks a held hero there. The hero holds at ({@code hx}, {@code hz}) exactly, the
+     * target stands at ({@code tx}, {@code tz}) exactly - in the AI's reach by its centre, its block's corner past the
+     * ability's range. The hero must cast ability {@code slot} where its effect still reaches the target (an area within
+     * its radius, a line through it) - the strike must hurt the enemy, the heal must mend the friend - and move at most
+     * 0.3. {@code healFriend}: the target is a hurt friend of the hero, else an enemy dummy.
      */
-    static void castsFromItsHoldSpot(GameTestHelper helper, HeroKit kit, int slot, boolean healFriend, String tag) {
+    static void castsFromItsHoldSpot(GameTestHelper helper, HeroKit kit, int slot, boolean healFriend, double hx, double hz,
+                                     double tx, double tz, String tag) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2r_holdcast_" + tag), them = me + "_foe";
-        Mob h = hero(helper, kit, me, 13, 13);
-        Mob target = healFriend ? HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, 6, 6)
-            : HeroAiV2GameTests.dummy(helper, them, 6, 6);
+        Mob h = hero(helper, kit, me, (int) hx, (int) hz);
+        Mob target = healFriend ? HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, (int) tx, (int) tz)
+            : HeroAiV2GameTests.dummy(helper, them, (int) tx, (int) tz);
         List<Mob> mobs = HeroAiV2GameTests.mobs(h, target);
         if (!(h instanceof FactionHero fh) || target == null) {
             HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
             return;
         }
         BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        h.teleportTo(o.getX() + hx, h.getY(), o.getZ() + hz);
         target.setNoAi(true);
-        target.teleportTo(o.getX() + 6.8, target.getY(), o.getZ() + 6.8);
+        target.teleportTo(o.getX() + tx, target.getY(), o.getZ() + tz);
         if (healFriend)
             target.setHealth(target.getMaxHealth() * 0.4f);
+        float health = target.getHealth();
+        double centre = Math.hypot(hx - tx, hz - tz), corner = Math.hypot(hx - Math.floor(tx), hz - Math.floor(tz));
         FactionHeroAbility ability = HeroAiGameTests.learn(fh, slot);
         double[] spot = new double[2];
         double[] worst = { 0 };
@@ -418,9 +424,12 @@ public class HeroAiV2RolloutGameTests {
                 if (tick < 160)
                     return;
                 List<String> problems = new ArrayList<>();
+                String what = String.format("the %s %.2f blocks off (its block's corner %.2f, range %.0f)",
+                    healFriend ? "hurt friend" : "enemy", centre, corner, ability.range);
                 if (!cast[0])
-                    problems.add(String.format("%s never cast %s at the %s 9.5 blocks off", kit.itemName, ability.spec.id,
-                        healFriend ? "hurt friend" : "enemy"));
+                    problems.add(String.format("%s never cast %s at %s", kit.itemName, ability.spec.id, what));
+                else if (healFriend ? target.getHealth() <= health : target.getHealth() >= health)
+                    problems.add(String.format("%s cast %s but it missed %s", kit.itemName, ability.spec.id, what));
                 if (worst[0] > 0.3)
                     problems.add(String.format("%s left its hold spot by %.2f blocks to cast %s (allowed 0.3)", kit.itemName,
                         worst[0], ability.spec.id));
@@ -429,13 +438,84 @@ public class HeroAiV2RolloutGameTests {
         }
     }
 
-    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_engineer", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_arch_engineer_strikes_from_its_hold_spot(GameTestHelper helper) {
-        castsFromItsHoldSpot(helper, HeroKits.ARCH_ENGINEER, 0, false, "engineer");   // Rivet Burst, range 10
-    }
-
+    // the hero 9.48 blocks from the friend's centre, 10.6 from its block's corner (Rejuvenate: range 10, radius 6)
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_druid", timeoutTicks = 220)
     public static void hero_ai_v2_rollout_druid_heals_from_its_hold_spot(GameTestHelper helper) {
-        castsFromItsHoldSpot(helper, HeroKits.THORNHEART_DRUID, 2, true, "druid");    // Rejuvenate, range 10
+        castsFromItsHoldSpot(helper, HeroKits.THORNHEART_DRUID, 2, true, 13.5, 13.5, 6.8, 6.8, "druid");
+    }
+
+    // 11.17 from the enemy's centre, 12.52 from its block's corner (Thorn Volley: range 12, radius 3)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_druid_volley", timeoutTicks = 220)
+    public static void hero_ai_v2_rollout_druid_volleys_from_its_hold_spot(GameTestHelper helper) {
+        castsFromItsHoldSpot(helper, HeroKits.THORNHEART_DRUID, 0, false, 13.85, 13.85, 5.95, 5.95, "volley");
+    }
+
+    // 13.15 from the enemy's centre, 14.50 from its block's corner (Bone Spear: range 14, a line)
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_gravecaller_spear", timeoutTicks = 220)
+    public static void hero_ai_v2_rollout_gravecaller_spears_from_its_hold_spot(GameTestHelper helper) {
+        castsFromItsHoldSpot(helper, HeroKits.GRAVECALLER, 0, false, 15.25, 15.25, 5.95, 5.95, "spear");
+    }
+
+    /** The entity the hero's cast goal is aimed at, if any (HeroCore.castGoal, read by name: the tests come first). */
+    @javax.annotation.Nullable
+    static net.minecraft.world.entity.LivingEntity castGoalTarget(FactionHero fh) {
+        try {
+            java.lang.reflect.Field f = fh.heroCore().getClass().getDeclaredField("castGoal");
+            f.setAccessible(true);
+            return f.get(fh.heroCore()) instanceof com.solegendary.reignofnether.unit.goals.GenericTargetedSpellGoal g
+                ? g.getTargetEntity() : null;
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Hold truly holds when the target walks off (review r3 on PR 416): GenericTargetedSpellGoal follows an entity
+     * target, re-aiming at its block every tick and walking after it once it is out of range, so a held hero striking an
+     * enemy that steps away followed it. The Arch-Engineer holds at block (13, 13) with an enemy dummy 5.5 blocks off;
+     * the moment its Rivet Burst is aimed at the dummy (before it lands), the dummy is moved 18 blocks away, out of reach.
+     * The hero must let the strike go and move at most 0.3.
+     */
+    @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_holdcast_engineer_walks_off", timeoutTicks = 220)
+    public static void hero_ai_v2_rollout_arch_engineer_drops_a_strike_whose_target_walks_off(GameTestHelper helper) {
+        SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
+        String me = HeroGameTests.owner(helper, "v2r_walkoff"), them = me + "_foe";
+        Mob h = hero(helper, HeroKits.ARCH_ENGINEER, me, 13, 13);
+        Mob target = HeroAiV2GameTests.dummy(helper, them, 8, 13);
+        List<Mob> mobs = HeroAiV2GameTests.mobs(h, target);
+        if (!(h instanceof FactionHero fh) || target == null) {
+            HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
+            return;
+        }
+        BlockPos o = helper.absolutePos(BlockPos.ZERO);
+        target.setNoAi(true);
+        FactionHeroAbility ability = HeroAiGameTests.learn(fh, 0);   // Rivet Burst, range 10
+        double[] spot = new double[2];
+        double[] worst = { 0 };
+        int[] aimedAt = { -1 };
+        helper.runAfterDelay(2, () -> {
+            spot[0] = h.getX();
+            spot[1] = h.getZ();
+            HeroAiV2GameTests.order(helper, me, h, UnitAction.HOLD, BlockPos.ZERO);
+        });
+        for (int t = 3; t <= 160; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                worst[0] = Math.max(worst[0], HeroAiV2GameTests.flat(h, spot[0], spot[1]));
+                if (aimedAt[0] < 0 && castGoalTarget(fh) == target && ability.isOffCooldown(fh)) {
+                    aimedAt[0] = tick;
+                    target.teleportTo(o.getX() + 0.5, target.getY(), o.getZ() + 0.5);   // 18.4 blocks off: out of reach
+                }
+                if (tick < 160)
+                    return;
+                List<String> problems = new ArrayList<>();
+                if (aimedAt[0] < 0)
+                    problems.add("the Arch-Engineer never aimed Rivet Burst at the enemy 5.5 blocks off");
+                if (worst[0] > 0.3)
+                    problems.add(String.format("the Arch-Engineer left its hold spot by %.2f blocks after the enemy it "
+                        + "aimed Rivet Burst at walked off (allowed 0.3)", worst[0]));
+                HeroAiGameTests.finish(helper, problems, mobs, null);
+            });
+        }
     }
 }
