@@ -56,7 +56,10 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  *       spends its spell before it walks off);</li>
  *   <li>carries out its support order (SupportOrders gave it): behind the fighter it escorts, at cast range from the
  *       unit it was told to attack, behind the front of a Fight, or outside an attacked building's guns - remembering
- *       the spot, so after a cast pulled it forward it goes back;</li>
+ *       the spot, so after a cast pulled it forward it goes back. On the way it never leads (lovish, Oct 30: "stay
+ *       behind units"): a Fight or an escort keeps its standoff behind our fighter nearest a seen enemy, and a Fight's
+ *       march no further on than its head less the standoff. Idle, it holds the standoff behind our front whenever
+ *       that front fights within its look (never off a player's move, a follow, hold position or a garrison);</li>
  *   <li>picks its next support cast on the same look - an attack order's harm when no friend is near the target, else
  *       an area heal on a cluster, a single heal, a cleanse, and an area harm only where no friend is - and asks the
  *       unit to deliver it (SupportUnit.castSupport; the Field Medic throws a potion today, PotionDelivery).</li>
@@ -153,6 +156,8 @@ public final class SupportBrain {
                     steer(level, mob, unit, s, now, reach);
                 else if (s.homing)
                     home(level, mob, unit, s, now);
+                else if (mayStepBehind(mob, unit, s))
+                    idleBehind(level, mob, unit, s, now, reach);
             }
             cast(level, mob, unit, s, now);
         } finally {
@@ -318,6 +323,8 @@ public final class SupportBrain {
             SupportMath.behind(ax, az, ex, ez, standoff(reach), mob.getX(), mob.getZ(), P);
             return stand(mob, s);
         }
+        if (dontLead(mob, reach))
+            return true;
         double dx = mob.getX() - ax, dz = mob.getZ() - az, d = Math.sqrt(dx * dx + dz * dz);
         if (d <= TRAIL + ARRIVE)
             return false;
@@ -343,7 +350,12 @@ public final class SupportBrain {
         return true;
     }
 
-    /** Behind our front while it fights; else on to the rear-rank spot - where the Fight order ends. */
+    /**
+     * Behind our front while it fights; else never ahead of the army - behind our fighter nearest a seen enemy
+     * ({@link #dontLead}), and on the march no further on than its head less the standoff (the old march walked
+     * straight to the rear-rank spot by the click, ahead of a slower army and into the enemy); else on to the rear-rank
+     * spot - where the Fight order ends.
+     */
     static boolean fightSpot(Mob mob, SupportState s, double reach) {
         if (behindFront(mob, s, reach))
             return stand(mob, s);
@@ -352,14 +364,56 @@ public final class SupportBrain {
             s.endOrder();
             return false;
         }
-        double dx = d.getX() + 0.5 - mob.getX(), dz = d.getZ() + 0.5 - mob.getZ();
-        if (dx * dx + dz * dz <= (ARRIVE + 1) * (ARRIVE + 1)) {
+        if (dontLead(mob, reach))
+            return stand(mob, s);
+        double dx = d.getX() + 0.5 - mob.getX(), dz = d.getZ() + 0.5 - mob.getZ(), dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist <= ARRIVE + 1) {
             s.endOrder();   // arrived with no fight round it: the order is done, the unit is idle again
             return false;
+        }
+        double ux = dx / dist, uz = dz / dist;
+        // the march's head: our fighter furthest along the way; the unit waits (it never walks back) until the head is
+        // its standoff further on
+        double go = dist;
+        int head = SupportMath.furthestAlong(FIELD, F_FRIEND | F_ATTACKER, F_SUPPORT | F_SELF,
+            mob.getX(), mob.getZ(), ux, uz);
+        if (head >= 0)
+            go = Math.min(go, SupportMath.along(FIELD, head, mob.getX(), mob.getZ(), ux, uz) - standoff(reach));
+        if (go < dist) {
+            if (go <= ARRIVE)
+                return false;
+            P[0] = mob.getX() + ux * go;
+            P[1] = mob.getZ() + uz * go;
+            P[2] = mob.getY();
+            return true;
         }
         P[0] = d.getX() + 0.5;
         P[1] = d.getZ() + 0.5;
         P[2] = d.getY();
+        return true;
+    }
+
+    /**
+     * Never ahead of our front (lovish, Oct 30: "stay behind units"): the nearest enemy the look sees and our fighter
+     * nearest it - the front. A unit not its standoff further from that enemy than the front gets the spot that far
+     * behind the front (SupportMath.behind) in P: true. False with no enemy or no fighter in the look, or when it is
+     * behind already.
+     */
+    static boolean dontLead(Mob mob, double reach) {
+        double sx = mob.getX(), sz = mob.getZ();
+        if (SupportMath.nearest(FIELD, F_ENEMY | F_ATTACKER, 0, sx, sz, 1e4, 0f) == 0)
+            return false;
+        int e = FIELD.cand[0];
+        double ex = FIELD.x[e], ez = FIELD.z[e];
+        if (SupportMath.nearest(FIELD, F_FRIEND | F_ATTACKER, F_SUPPORT | F_SELF, ex, ez, 1e4, 0f) == 0)
+            return false;
+        int fr = FIELD.cand[0];
+        double want = standoff(reach);
+        double dFront = Math.hypot(FIELD.x[fr] - ex, FIELD.z[fr] - ez), dMe = Math.hypot(sx - ex, sz - ez);
+        if (dMe >= dFront + want - ARRIVE)
+            return false;
+        SupportMath.behind(FIELD.x[fr], FIELD.z[fr], ex, ez, want, sx, sz, P);
+        P[2] = ((Entity) FIELD.ref[fr]).getY();
         return true;
     }
 
@@ -428,6 +482,34 @@ public final class SupportBrain {
         s.lastIssueTick = now;
     }
 
+    /**
+     * May an idle unit take its standoff behind a fight by itself? Not on hold position, garrisoned, riding, following,
+     * patrolling or guarding, nor while it walks a player's move (a player's move is the player's: Unit.isIdle is false
+     * until it ends) - only its own last step, which it may re-aim.
+     */
+    static boolean mayStepBehind(Mob mob, SupportUnit unit, SupportState s) {
+        if (unit.getHoldPosition() || unit.isGarrisoned() || mob.isPassenger() || unit.getFollowTarget() != null)
+            return false;
+        if (PatrolServerEvents.isPatrolling(mob.getId()) || GuardServerEvents.isGuarding(mob.getId()))
+            return false;
+        MoveToTargetBlockGoal goal = unit.getMoveGoal();
+        if (goal == null)
+            return false;
+        BlockPos current = goal.getMoveTarget();
+        return current != null ? current.equals(s.lastIssued) : unit.isIdle();
+    }
+
+    /** An idle unit whose front fights within its look holds the standoff behind it, clear of enemy melee. */
+    static void idleBehind(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now, double reach) {
+        if (!behindFront(mob, s, reach))
+            return;
+        double dx = P[0] - mob.getX(), dz = P[1] - mob.getZ();
+        if (dx * dx + dz * dz <= ARRIVE * ARRIVE)
+            return;
+        SupportMath.keepClear(FIELD, CLEAR_OF_MELEE, P);
+        goTo(level, mob, unit, s, now, P[0], P[2], P[1]);
+    }
+
     /** The walk back to its post after a throw pulled an idle medic away (standoff memory for an idle unit). */
     static void home(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now) {
         double dx = s.homeX - mob.getX(), dz = s.homeZ - mob.getZ();
@@ -446,9 +528,11 @@ public final class SupportBrain {
             return false;
         if (unit.getHoldPosition() || mob.isPassenger() || unit.isGarrisoned())
             return false;
-        // the player's own move order (no support order, not following, patrolling or guarding) is left alone
+        // the player's own move order (no support order, not following, patrolling or guarding) is left alone; the
+        // brain's own idle step (its last issued move) is not one
         if (s.mode == Mode.NONE && !s.homing && unit.getFollowTarget() == null && unit.getMoveGoal() != null
                 && unit.getMoveGoal().getMoveTarget() != null
+                && !unit.getMoveGoal().getMoveTarget().equals(s.lastIssued)
                 && !PatrolServerEvents.isPatrolling(mob.getId()) && !GuardServerEvents.isGuarding(mob.getId()))
             return false;
         if (!SupportMath.fleeDirection(FIELD, mob.getX(), mob.getZ(), DANGER_RADIUS, AIMED_RADIUS, Q))

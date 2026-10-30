@@ -122,6 +122,40 @@ class SupportMathTest {
     }
 
     @Test
+    void healTakesTheLowestOnHealthNotTheCostliest() {
+        // lovish, Oct 30: "heal low hp units". A golem at 80% (24 of 120 missing, value 2) and a vindicator at 60% (30
+        // of 75, value 1): the old missing x value score (48 to 30) sent the heal to the golem
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        int golem = f.add(null, 4, 0, 0, 0, 96f, 120f, 2f, FRIEND);
+        int vindicator = f.add(null, -4, 0, 0, 0, 45f, 75f, 1f, FRIEND);
+        assertEquals(vindicator, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+        assertNotEquals(-1, golem);
+    }
+
+    @Test
+    void healSkipsAFriendAboveNinetyPercent() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        f.add(null, 4, 0, 0, 0, 110f, 120f, 5f, FRIEND);   // 10 missing, but 92% of its health left
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+        SupportMath.Aim aim = new SupportMath.Aim();
+        f.add(null, 4, 1, 0, 0, 110f, 120f, 5f, FRIEND);
+        assertFalse(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "two at 92% are not hurt");
+    }
+
+    @Test
+    void healValueOnlyBreaksANearTie() {
+        SupportField f = field();
+        add(f, 0, 0, ME);
+        int cheap = f.add(null, 4, 0, 0, 0, 10f, 20f, 1f, FRIEND);      // 50%
+        int costly = f.add(null, -4, 0, 0, 0, 10.5f, 20f, 5f, FRIEND);  // 52.5%, the most valuable
+        assertEquals(costly, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "2.5 points apart: value decides");
+        f.health[cheap] = 9f;   // 45%: 7.5 points apart, more than the tie-break
+        assertEquals(cheap, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+    }
+
+    @Test
     void healIgnoresScratchesAndFriendsOutOfReach() {
         SupportField f = field();
         add(f, 0, 0, ME);
