@@ -179,6 +179,23 @@ void main() {
         }
         // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
         ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);
+    } else if (tinted < 0.5) {
+        // light pass 17: a cutout sprite no plant id names (lp16's neon sprites, green 236-252): its sprite's coverage
+        // from the mip-4 alpha; under PLANT_CUTOUT_COVER the plants' green saturation cap and luma cap
+        float cover = texture2D(texture, texcoord, lodBias + 4.0).a;
+        float cutout = (1.0 - smoothstep(PLANT_CUTOUT_COVER - 0.05, PLANT_CUTOUT_COVER, cover)) * (1.0 - tinted);
+        if (cutout > 0.0) {
+            float ptop = max(albedo.r, max(albedo.g, albedo.b));
+            float psat = (ptop - min(albedo.r, min(albedo.g, albedo.b))) / max(ptop, 1e-4);
+            float green = albedo.g >= ptop - 1e-4 ? 1.0 : 0.0;
+            vec3 calmed = mix(vec3(dot(albedo, LUMA)), albedo, min(1.0, PLANT_MAX_SAT / max(psat, 1e-4)));
+            albedo = mix(albedo, calmed, green * cutout);
+            float pl = plantLuma(albedo);
+            float pk = PLANT_LUMA_KNEE * PLANT_MAX_LUMA;
+            float pr = PLANT_MAX_LUMA - pk;
+            float pc = pl <= pk ? pl : pk + pr * (1.0 - exp(-(pl - pk) / pr));
+            albedo *= mix(1.0, pc / max(pl, 1e-4), cutout * green);   // green texels only: a torch's flame keeps its light
+        }
     }
 #endif
 
@@ -270,6 +287,8 @@ void main() {
         // under a high sun, so the shade of every white wall is the sky's cool (cream and blue-white quartz alike)
         float shadeSide = side * (1.0 - clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0)) * highSunTint();
         lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
+        // light pass 17: and its light to the same cool on every block (the warm bounce's share varies with the AO)
+        light = mix(light, WHITE_SHADE_COOL * dot(light, LUMA), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
     }
     vec3 c = lin * light;
 #ifdef LIT_TERRAIN
