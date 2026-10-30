@@ -14,3 +14,7 @@ option.EDGE_AA=Edge smoothing
 option.EDGE_AA.comment=Smooths unit and building edges without softening textures.
 value.EDGE_AA.0=Off
 value.EDGE_AA.1=On
+option.MATERIALS=Material maps
+option.MATERIALS.comment=Reads our blocks' and units' surface maps: relief, metal and gem highlights, glowing parts. Off: flat surfaces, as before.
+value.MATERIALS.0=Off
+value.MATERIALS.1=On
