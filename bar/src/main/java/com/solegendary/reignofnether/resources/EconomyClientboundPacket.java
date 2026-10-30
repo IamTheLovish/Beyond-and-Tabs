@@ -49,7 +49,7 @@ public class EconomyClientboundPacket {
         EconomyClientboundPacket packet = new EconomyClientboundPacket(EconomyAction.SYNC,
             res.ownerName, res.ore, res.wood,
             eco.metalStorage, eco.energyStorage,
-            eco.metalIncome + eco.metalConverted, eco.energyIncome,
+            eco.effectiveMetalIncome() + eco.metalConverted, eco.energyIncome,
             eco.metalExpense, eco.energyExpense,
             eco.stall, eco.energyConverted, eco.metalConverted, eco.conversionCapacity
         );

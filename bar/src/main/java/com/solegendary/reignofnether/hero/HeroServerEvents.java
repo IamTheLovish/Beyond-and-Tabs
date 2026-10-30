@@ -52,8 +52,13 @@ public class HeroServerEvents {
             }
         }
 
+        // a commander or a hero fell (no totem saved it): a one-time XP burst for the enemy heroes near it
+        HeroProgression.onDecisiveKill(evt.getEntity());
+
         Level level = evt.getEntity().level();
-        if (evt.getEntity() instanceof Unit deadUnit) {
+        // a summon's death pays no XP orbs (design/essence_casters.md Revision 1: a side must not feed its own free
+        // units to its own heroes); a fallen summoned hero still gives the decisive-kill burst above
+        if (evt.getEntity() instanceof Unit deadUnit && !com.solegendary.reignofnether.unit.Summons.isSummoned(evt.getEntity())) {
             int popCost = deadUnit.getCost().population;
             if (popCost > 0) {
                 for (LivingEntity unit : UnitServerEvents.getAllUnits()) {
@@ -110,7 +115,7 @@ public class HeroServerEvents {
             );
             fallenHeroes.add(fallenHero);
             FallenHeroClientboundPacket.addFallenHero(fallenHero);
-            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level(), false);   // marked dirty, no disk write mid-fight
+            UnitServerEvents.saveFallenHeroUnits((ServerLevel) evt.getEntity().level());   // marked dirty, no disk write mid-fight
 
             for (RTSPlayer rtsPlayer : PlayerServerEvents.rtsPlayers) {
                 if (rtsPlayer.name.equals(heroUnit.getOwnerName()) ||

@@ -282,6 +282,8 @@ public class BuildingClientEvents {
 
     /** A metal patch is taken when a live building covers its centre (the snap, the area mex and the patch glow). */
     public static boolean isPatchTaken(BlockPos c) {
+        if (BlueprintClientEvents.covers(c))
+            return true;   // a queued extractor (a ghost) holds the patch too
         for (BuildingPlacement bp : buildings)
             if (!bp.isDestroyedServerside && bp.minCorner != null && bp.maxCorner != null
                     && bp.minCorner.getX() <= c.getX() && bp.maxCorner.getX() >= c.getX()
@@ -559,7 +561,8 @@ public class BuildingClientEvents {
 
     private static void renderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
 
-        drawBuildingToPlace(
+        if (!AreaMexClientEvents.active())   // Shift with an extractor: the area-mex circle replaces the single ghost
+            drawBuildingToPlace(
                 evt.getPoseStack(),
                 BuildingUtils.getBuildingOriginPos(ghostCursor(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
                 0
@@ -671,6 +674,13 @@ public class BuildingClientEvents {
         // prevent clicking behind HUDs
         if (HudClientEvents.isMouseOverAnyButtonOrHud()) {
             setBuildingToPlace(null);
+            return;
+        }
+
+        // Shift + extractor ghost: area mex (every free patch in the circle); the ghost stays armed like a Shift placement
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1 && AreaMexClientEvents.active()) {
+            AreaMexClientEvents.place();
+            evt.setCanceled(true);
             return;
         }
 
@@ -1080,6 +1090,7 @@ public class BuildingClientEvents {
             }
             // a levelled lab joins in its level's structure (design/building_upgrades.md)
             BuildingLevels.restore(newBuilding, upgradeLevel);
+            BlueprintClientEvents.remove(newBuilding.originPos);   // the site has risen: its ghost gives way
             buildings.add(newBuilding);
             // only production buildings have a queue. The server decides who may have it (PacketAuth.mayActFor): the
             // client can't, because at join the buildings arrive before the game mode and allied control (event

@@ -11,12 +11,9 @@ import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
 import com.solegendary.reignofnether.building.buildings.monsters.SculkCatalyst;
-import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
-import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.SculkCatalystPlacement;
-import com.solegendary.reignofnether.building.buildings.villagers.IronGolemBuilding;
-import com.solegendary.reignofnether.building.production.ActiveProduction;
 import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.building.production.QueuePopulation;
 import com.solegendary.reignofnether.entities.BlazeUnitFireball;
 import com.solegendary.reignofnether.entities.GhastUnitFireball;
 import com.solegendary.reignofnether.entities.WindcallerProjectile;
@@ -246,13 +243,11 @@ public class UnitServerEvents {
 
     private static boolean isServerStopping = false;
 
-    private static final int SAVE_TICKS_MAX = 600;
-    private static int saveTicks = 0;
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
             return;
-        saveTicks += 1;
+        knockbackIgnoreIds.clear();   // marks live for their own hit's call stack only (see the field)
         // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
         if (evt.getServer().getTickCount() % 20 == 0) {
             int sysChunks = Sys.begin(Sys.CHUNK_LOADER);
@@ -262,13 +257,8 @@ public class UnitServerEvents {
                 Sys.end(sysChunks);
             }
         }
-        if (saveTicks >= SAVE_TICKS_MAX) {
-            ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
-            if (level != null) {
-                saveGatherTargets(level);
-                saveTicks = 0;
-            }
-        }
+        // the gather targets reach the disk with Minecraft's world save (persistence/RtsSaves, plan 014), not on a
+        // 30 s timer of their own
     }
 
     @SubscribeEvent
@@ -285,31 +275,35 @@ public class UnitServerEvents {
         UnitSyncBatcher.clear();
         // the old global lists were never cleared: an order left in one singleplayer world ran in the next
         CommandQueues.clearAll();
+        clearWorldLists();
+    }
+
+    /**
+     * The world-scoped lists onServerStarted fills with addAll, emptied when the server stops - here, after the saves
+     * above, so the save still sees them (a stop handler of HeroServerEvents' own could run first and save an empty
+     * list). Without it, quitting world A and opening world B let A's fallen heroes be revived in B and saved into B,
+     * and reopening A doubled them; A's workers' gather targets leaked the same way (security audit F4, Oct 26).
+     */
+    public static void clearWorldLists() {
+        HeroServerEvents.fallenHeroes.clear();
+        synchronized (savedTargetResources) {
+            savedTargetResources.clear();
+        }
     }
 
     public static void addUnitPoofs(Level level, Entity entity) {
         ParticleUtil.addParticleExplosion(ParticleTypes.POOF, 35, level, entity.position());
     }
 
-    public static void saveFallenHeroUnits(ServerLevel level) {
-        saveFallenHeroUnits(level, true);
-    }
-
     /**
-     * Copies the fallen heroes into their save data. {@code flush} writes every dirty save file to disk now: right
-     * for the server stopping, wrong on each hero death mid-fight (a synchronous disk write of all the world's saved
-     * data on the server thread) - there the data is only marked dirty and Minecraft's autosave / the stop writes it.
-     * The log line counted every living unit ("Saved 615 fallen hero units" in a tester's match), not the heroes.
+     * Copies the fallen heroes into their save data and marks it dirty; Minecraft's world save or the stop writes it
+     * (persistence/RtsSaves, plan 014). It used to write every saved-data file to disk on each hero death mid-fight.
      */
-    public static void saveFallenHeroUnits(ServerLevel level, boolean flush) {
+    public static void saveFallenHeroUnits(ServerLevel level) {
         HeroUnitSaveData data = HeroUnitSaveData.getInstance(level);
         data.heroUnits.clear();
         data.heroUnits.addAll(HeroServerEvents.fallenHeroes);
         data.save();
-        if (flush) {
-            level.getDataStorage().save();
-            ReignOfNether.LOGGER.info("Saved " + HeroServerEvents.fallenHeroes.size() + " fallen hero units");
-        }
     }
 
     public static void saveGatherTargets(ServerLevel level) {
@@ -329,9 +323,7 @@ public class UnitServerEvents {
                 }
             }
         });
-        data.save();
-        level.getDataStorage().save();
-        //ReignOfNether.LOGGER.info("Saved " + numWorkersSaved + " gatherTargets");
+        data.save();   // dirty only: the world save writes it (persistence/RtsSaves)
     }
 
     @SubscribeEvent
@@ -381,19 +373,12 @@ public class UnitServerEvents {
         }
     }
 
+    private static final QueuePopulation queuePopulation = new QueuePopulation();
+
     public static int getCurrentPopulation(String ownerName) {
-        int currentPopulation = getUnitPopulation(ownerName);
-        for (BuildingPlacement building : BuildingServerEvents.getBuildings())
-            if (building.ownerName.equals(ownerName)) {
-                if (building instanceof ProductionPlacement prodPlacement) {
-                    for (ActiveProduction prodItem : prodPlacement.productionQueue)
-                        if (!(prodPlacement instanceof GraveyardPlacement gy) || gy.getUpgradeLevel() <= 0)
-                            currentPopulation += prodItem.item.getCost(false, ownerName).population;
-                } else if (building.getBuilding() instanceof IronGolemBuilding) {
-                    currentPopulation += ResourceCosts.IRON_GOLEM.population;
-                }
-            }
-        return currentPopulation;
+        // the queue part is memoised per owner per tick too (QueuePopulation: any queue change recounts at once)
+        return getUnitPopulation(ownerName) + queuePopulation.of(ownerName, BuildingServerEvents.getBuildings(), false,
+            serverLevel != null ? serverLevel.getGameTime() : 0, serverLevel != null);
     }
 
     // manually provide all the variables required to do unit actions
@@ -1317,7 +1302,12 @@ public class UnitServerEvents {
 
     private static float KNOCKBACK_RESIST_PER_TICKS = 0.01f;
 
-    public static ArrayList<Integer> knockbackIgnoreIds = new ArrayList<>();
+    // Entities hit by something that must not knock them back (shouldIgnoreKnockback): the knockback that follows the
+    // hit in the same hurt() call is cancelled and takes the mark. A hit with no knockback after it (an arrow with no
+    // shooter, or a target whose knockback an earlier branch cancels) left its id in the old list forever, and every
+    // knockback paid a removeIf over the leak. A hit and its knockback are one call stack, so the set is emptied at
+    // the end of every server tick (onServerTick) and a lookup is O(1).
+    public static final it.unimi.dsi.fastutil.ints.IntOpenHashSet knockbackIgnoreIds = new it.unimi.dsi.fastutil.ints.IntOpenHashSet();
     public static ArrayList<Pair<Integer, Integer>> knockbackResistIds = new ArrayList<>();
 
     @SubscribeEvent
@@ -1330,7 +1320,7 @@ public class UnitServerEvents {
             evt.setCanceled(true);
         else if (evt.getEntity() instanceof BruteUnit bruteUnit && bruteUnit.isHoldingUpShield())
             evt.setCanceled(true);
-        else if (knockbackIgnoreIds.removeIf(i -> i == evt.getEntity().getId()))
+        else if (knockbackIgnoreIds.remove(evt.getEntity().getId()))
             evt.setCanceled(true);
     }
 

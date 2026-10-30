@@ -157,6 +157,9 @@ public interface FactionHero extends HeroUnit {
         // ranks, XP and points reach clients that only just started tracking the hero (Reign of Nether syncs on change)
         if (mob.tickCount == 20)
             hero.syncToClients();
+        // the v2 brain's cheap half (the player's order, a combo's follow-up) every tick; the decisions once a second
+        if (com.solegendary.reignofnether.hero.ai.HeroBrain.drives(hero))
+            HeroBot.everyTick(mob, hero);
         if (mob.tickCount % 20 == 7)
             HeroBot.tickHero(mob, hero);
     }

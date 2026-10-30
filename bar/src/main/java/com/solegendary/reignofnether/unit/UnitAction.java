@@ -79,7 +79,6 @@ public enum UnitAction {
     POSSESS,
     BLOOD_LUST,
     CALL_TO_ARMS_BUILDING,
-    CALL_TO_ARMS_UNIT,
     BACK_TO_WORK_BUILDING,
     BACK_TO_WORK_UNIT,
     CONSUME_SLIME,
@@ -167,30 +166,24 @@ public enum UnitAction {
     WAR_DRUMS,            // Beyond and Tabs: Horde Warlord speed rally
     BASTION_AEGIS,        // Beyond and Tabs: Sunforged Evoker projectile dome
     RECLAIM,              // Beyond and Tabs: walk a worker to one wreck and stay on it until it is stripped (area reclaim)
-    TOTEM_OF_THE_PACK,    // Beyond and Tabs: Horde Bonewright wolf totem
     MAGMA_RUPTURE,        // Beyond and Tabs: Horde Blaze ground-crack eruption
     HOLY_BELL,            // Beyond and Tabs: Sunforged Royal Architect reveal pulse
     WITHERING_FOG,        // Beyond and Tabs: Gravebound Bone Dragon lingering fog line
     SUNRISE_SORTIE,       // Beyond and Tabs: Sunforged Lord Marshal line charge
-    SOUL_WISPS,           // Beyond and Tabs: Gravebound Embalmer reclaim/harass wisps
     LEAF_DASH,            // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
     AWAKEN_THICKET,       // Beyond and Tabs: Verdant Court Elder Druid temporary treant
     STAG_LEAP,            // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
     BLOOM,                // Beyond and Tabs: Verdant Court Bloom Priestess heal-and-cleanse burst
-    PLANT_VINE_SNARE,     // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
     PLANT_THICKET,        // Beyond and Tabs: Verdant Court Seedshaper 3x3 cover thicket (Living Terrain)
     OVERGROWTH,           // Beyond and Tabs: Verdant Court Grove Warden instant thicket ring + root
     RAISE_TIDEPOOL,       // Beyond and Tabs: Tidewrought Tide Priest aimed tidepool (the Tides core)
     FOG_BANK,             // Beyond and Tabs: Tidewrought Admiral sea-fog cloud that hides friendly units
-    RAISE_GREAT_TIDEPOOL, // Beyond and Tabs: Tidewrought Harbourmaster's larger, longer tidepool (T2)
     TENTACLE_GRAB,        // Beyond and Tabs: Tidewrought Kraken Caller drag-and-root on one enemy (T2)
     TIDAL_SLAM,           // Beyond and Tabs: Tidewrought Leviathan telegraphed wide-arc wave slam (T3)
     BLINK_STRIKE,         // Beyond and Tabs: Stormcallers Blade Dancer teleport onto an enemy (autocast on archers)
     SEAL,                 // Beyond and Tabs: Stormcallers Ink Scribe silences an enemy unit's abilities
     FROST_FIELD,          // Beyond and Tabs: Stormcallers Frost Adept temporary slowing frost sheet
     WARD,                 // Beyond and Tabs: Stormcallers Thunder Sage channelled projectile/spell ward
-    LEY_LINK,             // Beyond and Tabs: Stormcallers Geomancer two-click ley link between own buildings
-    MANA_WELL,            // Beyond and Tabs: Stormcallers Ley Master raises a spell-empowering well (T2)
     GROUND_SLAM,          // Beyond and Tabs: Stormcallers Earthshaker telegraphed damaging + rooting line (T2)
     SINGULARITY,          // Beyond and Tabs: Stormcallers Gravity Monk pulls every enemy round a spot together (T2)
     MIRROR_IMAGES,        // Beyond and Tabs: Stormcallers Mirror Mage conjures three harmless decoys of a friend (T2)
@@ -199,8 +192,6 @@ public enum UnitAction {
     SET_STANCE_HOLD_FIRE,   // Beyond and Tabs: BAR fire state toggles (EngagementStance) - no behaviour reset
     SET_STANCE_RETURN_FIRE,
     SET_STANCE_FIRE_AT_WILL,
-    FIELD_UPGRADE_PLATING,  // Beyond and Tabs: Brassworks Tinker rivets brass plating onto a machine (once)
-    FIELD_UPGRADE_BARREL,   // Beyond and Tabs: Brassworks Tinker fits a machine with a longer barrel (once)
     DEPLOY_TURRET,          // Beyond and Tabs: Brassworks Guildmaster sets a temporary auto-turret
     PROJECT_SHIELD,         // Beyond and Tabs: Brassworks Shield Projector bubble that follows a friend
     PLANT_CHARGE,           // Beyond and Tabs: Brassworks Sapper timed charge on an enemy building
@@ -216,13 +207,6 @@ public enum UnitAction {
     MOOR,                   // Beyond and Tabs: Shellback Siege-Turtle anchors into a fort / weighs anchor (T2 beast, toggle)
     DROP_TURRET,            // Beyond and Tabs: Steam Hauler sets a free Deployed Turret (T2 beast)
     // Beyond and Tabs combat engineers (design/combat_engineers.md): each faction engineer's ability, on V
-    BULWARK,                // Sunforged Field Mason: a friendly building takes half damage from attackers while it holds
-    BONE_GRAFT,             // Gravebound Bonesetter: a wreck's metal mends a friendly unit
-    TEAR_DOWN,              // Horde Wrecker: rips down an enemy wall segment, gate or revealed trap in reach
-    ROOTWALK,               // Verdant Rootwarden: sinks, then rises beside an own building
-    SALVAGE_HOOK,           // Tidewrought Salvager: reels a wreck to its feet
-    MENDING_RITE,           // Stormcallers Jade Mender: channelled mana heal on a friendly unit
-    OVERDRIVE,              // Brassworks Pioneer: x3 build power, then a vent
     // Beyond and Tabs autocast (ability/AutocastState): flips one ability's autocast switch on every ordered unit. The
     // ability is named by its own UnitAction's ordinal in the order's block position x (a state command: no reset, no queue)
     AUTOCAST_ENABLE,
@@ -235,5 +219,17 @@ public enum UnitAction {
     SKYWARD_SHOT,
     // Beyond and Tabs T3 roles (claude/t3-roles.md)
     DEEP_DIVE,              // Tidewrought Leviathan: dives from the water and surfaces by the aimed spot with a slam (T3)
-    GROW_GROVE              // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    GROW_GROVE,             // Verdant World Tree Walker: grows temporary treants round itself, heals the shade (T3)
+    TAKE_ROOT,              // Verdant Rooted Treant: roots in place and bursts root-spike lines / uproots (T1 vehicle, toggle)
+    DRAGON_DIVE,            // Gravebound Bone Dragon: stoops onto the aimed spot with an impact and fights on the ground; again: take off
+    // Beyond and Tabs essence casters (design/essence_casters.md): every race caster's shared ability
+    EMPOWER,                // spend 15 essence: a friendly unit within 6 blocks gains one veterancy rank
+    // the Stormcallers essence caster, the Spark Sage
+    STATIC_STEP,            // 5 essence: blink up to 8 blocks to a standable spot in sight
+    CAPTURED_SPARK,         // 10 essence: chain lightning, 30 damage a strike, 4 strikes, 6-block jumps
+    THUNDERHEAD,            // 20 essence: a storm cloud for 10 s strikes the enemy nearest its centre (6 blocks) for 25 a second
+    // the Brassworks essence caster, the Soul Engineer
+    PATCH_KIT,              // 5 essence: a friendly machine or building within 8 blocks is mended by 120 HP at once
+    GHOST_FURNACE,          // 10 essence: a 150 HP spirit-steam furnace scalds enemies within 5 blocks for 4 a second, 20 s
+    SOUL_BOILER             // 20 essence: a friendly building within 24 blocks builds and produces 50% faster for 20 s
 }

@@ -6,8 +6,10 @@
 //  3. Reads the live modpack (the packwiz pack the game's builds publish) for its Minecraft and Forge versions
 //  4. Creates a Prism instance that updates itself from that pack before every launch (packwiz), so a tester always
 //     runs the same build as the host's server - the mods are fetched on the first launch
-//  5. Puts a "Beyond and Tabs" shortcut on the Desktop and in the Start Menu
-//  6. Opens Prism Launcher so you can sign in with your Microsoft account and play
+//  5. Puts a "lovish" shortcut (his cat as the icon) in the Start Menu, opening the launcher
+//  6. Sets up the cat bubble: a round, always-on-top bubble that opens the launcher when clicked (bubble/bubble.ps1);
+//     the one Desktop icon, "lovish", brings it back (lovish, Oct 28)
+//  7. Opens Prism Launcher so you can sign in with your Microsoft account and play
 //
 // Re-running it is safe: anything already in place is kept, anything missing is fetched.
 package main
@@ -17,6 +19,7 @@ import (
 	"bufio"
 	"crypto/rand"
 	"crypto/sha1"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -32,6 +35,8 @@ import (
 
 const (
 	appName      = "Beyond and Tabs"
+	shortcutName = "lovish"     // lovish, Oct 23: the launcher carries his name and his cat, like his own desktop one
+	catIconKey   = "lovish_cat" // Prism custom icon key = file name in <Prism>/icons without the extension
 	instanceName = "BeyondAndTabs-test"
 	prismVersion = "11.1.1"
 	prismZipURL  = "https://github.com/PrismLauncher/PrismLauncher/releases/download/" + prismVersion + "/PrismLauncher-Windows-MSVC-Portable-" + prismVersion + ".zip"
@@ -44,6 +49,12 @@ const (
 )
 
 var httpClient = &http.Client{Timeout: 10 * time.Minute}
+
+//go:embed brand/cat.png
+var catPNG []byte
+
+//go:embed brand/cat.ico
+var catICO []byte
 
 type mrIndex struct {
 	Name         string `json:"name"`
@@ -62,6 +73,17 @@ type mrIndex struct {
 }
 
 func main() {
+	exe, _ := os.Executable()
+	if isLaunchMode(os.Args[1:], exe) {
+		if err := runLauncher(os.Args[1:]); err != nil {
+			fmt.Println("Launcher error:", err)
+			if !hasFlag(os.Args[1:], "--no-window") {
+				alert(appName+" launcher", err.Error())
+			}
+			os.Exit(1)
+		}
+		return
+	}
 	fmt.Printf("=== %s installer ===\n\n", appName)
 	if err := run(); err != nil {
 		fmt.Printf("\nSomething went wrong: %v\n", err)
@@ -148,10 +170,22 @@ func run() error {
 	}
 	os.RemoveAll(tmp)
 
-	// Shortcuts
-	fmt.Println("\nCreating shortcuts ...")
-	if err := shortcuts(prismExe, prismDir); err != nil {
-		fmt.Println("      (could not create shortcuts:", err, ")")
+	// The launcher (this exe, run with --launch) and the shortcuts that open it
+	fmt.Println("\nInstalling the launcher ...")
+	launcher := newGamePaths(base).launcher
+	if err := installLauncher(launcher); err != nil {
+		fmt.Println("      (could not copy the launcher to", launcher, ":", err, ")")
+	}
+	if exists(launcher) {
+		fmt.Println("\nCreating shortcuts ...")
+		if err := shortcuts(launcher, prismExe, prismDir); err != nil {
+			fmt.Println("      (could not create shortcuts:", err, ")")
+		}
+	} else {
+		fmt.Println("      Shortcuts not changed: there is no launcher to point them at. Run the installer again.")
+	}
+	if err := bubble(root, filepath.Join(prismDir, shortcutName+".ico"), launcher, prismExe); err != nil {
+		fmt.Println("      (could not set up the cat bubble:", err, ")")
 	}
 
 	fmt.Println("\nAll done!")
@@ -159,7 +193,8 @@ func run() error {
 	fmt.Println("then select \"" + instanceName + "\" and click Launch. The first start takes a few minutes")
 	fmt.Println("while Java, Minecraft and the mods are fetched (a small updater window shows the mods).")
 	fmt.Println("Every later launch updates the game to the newest build automatically.")
-	fmt.Println("\nNext time, use the \"" + appName + "\" shortcut on your Desktop.")
+	fmt.Println("\nNext time, click the cat bubble on your screen: it opens the " + appName + " launcher (what's new, your build, PLAY).")
+	fmt.Println("Closed it? The \"" + shortcutName + "\" icon on your Desktop brings it back. Drag the bubble to move it; right-click it to start it with Windows or close it.")
 	time.Sleep(2 * time.Second)
 	cmd := exec.Command(prismExe)
 	cmd.Dir = prismDir
@@ -354,19 +389,7 @@ func writeInstance(instDir, mc, forge string) error {
 	if !exists(cfgPath) {
 		b := make([]byte, 16)
 		rand.Read(b)
-		cfg := strings.Join([]string{
-			"[General]",
-			"ConfigVersion=1.3",
-			"InstanceType=OneSix",
-			"name=" + instanceName,
-			"iconKey=default",
-			"uuid=" + hex.EncodeToString(b),
-			"AutomaticJava=true",
-			"OverrideCommands=true",
-			preLaunch,
-			"",
-		}, "\n")
-		if err := os.WriteFile(cfgPath, []byte(cfg), 0o644); err != nil {
+		if err := os.WriteFile(cfgPath, []byte(instanceConfig(hex.EncodeToString(b))), 0o644); err != nil {
 			return err
 		}
 	} else if data, err := os.ReadFile(cfgPath); err == nil && !strings.Contains(string(data), "packwiz-installer-bootstrap") {
@@ -381,6 +404,14 @@ func writeInstance(instDir, mc, forge string) error {
 		out := strings.TrimRight(strings.Join(keep, "\n"), "\n") + "\nOverrideCommands=true\n" + preLaunch + "\n"
 		if err := os.WriteFile(cfgPath, []byte(out), 0o644); err != nil {
 			return err
+		}
+	}
+	// every instance, new or from an earlier installer, shows lovish's cat
+	if data, err := os.ReadFile(cfgPath); err == nil {
+		if out := withCatIcon(string(data)); out != string(data) {
+			if err := os.WriteFile(cfgPath, []byte(out), 0o644); err != nil {
+				return err
+			}
 		}
 	}
 	pack := map[string]any{
@@ -443,19 +474,93 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-func shortcuts(prismExe, prismDir string) error {
-	ps := `
+// instanceConfig is a new Prism instance.cfg: lovish's cat as the icon, the pack updater before every launch.
+func instanceConfig(uuid string) string {
+	return strings.Join([]string{
+		"[General]",
+		"ConfigVersion=1.3",
+		"InstanceType=OneSix",
+		"name=" + instanceName,
+		"iconKey=" + catIconKey,
+		"uuid=" + uuid,
+		"AutomaticJava=true",
+		"OverrideCommands=true",
+		preLaunch,
+		"",
+	}, "\n")
+}
+
+// withCatIcon sets iconKey to the cat in an existing instance.cfg (adds it when missing); running it twice is a no-op.
+func withCatIcon(cfg string) string {
+	lines := strings.Split(strings.ReplaceAll(cfg, "\r\n", "\n"), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "iconKey=") {
+			lines[i] = "iconKey=" + catIconKey
+			return strings.Join(lines, "\n")
+		}
+	}
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "[General]" {
+			lines = append(lines[:i+1], append([]string{"iconKey=" + catIconKey}, lines[i+1:]...)...)
+			return strings.Join(lines, "\n")
+		}
+	}
+	return strings.TrimRight(cfg, "\n") + "\niconKey=" + catIconKey + "\n"
+}
+
+// installBrand writes the cat into Prism's icons folder (the instance icon) and an .ico next to Prism (the shortcut).
+func installBrand(prismDir string) (string, error) {
+	icons := filepath.Join(prismDir, "icons")
+	if err := os.MkdirAll(icons, 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(filepath.Join(icons, catIconKey+".png"), catPNG, 0o644); err != nil {
+		return "", err
+	}
+	ico := filepath.Join(prismDir, shortcutName+".ico")
+	return ico, os.WriteFile(ico, catICO, 0o644)
+}
+
+// psq quotes a value for a single-quoted PowerShell string (a ' in a user name would otherwise end the string).
+func psq(s string) string { return strings.ReplaceAll(s, "'", "''") }
+
+// shortcutScript makes the Start Menu "lovish" shortcut with the cat icon, opening the launcher (launcher.exe
+// --launch, minimised console); the Desktop "lovish" is the bubble's (bubbleShortcutScript, lovish Oct 28: one Desktop
+// icon). The shortcut is only rewritten when it is missing, already opens this launcher, or is the one earlier
+// installers made (this Prism with -l "BeyondAndTabs-test"). The old "Beyond and Tabs" shortcuts from earlier
+// installers are removed from the Desktop and the Start Menu.
+func shortcutScript(launcherExe, prismExe, prismDir, icoPath string) string {
+	return `
+$exe = '` + psq(launcherExe) + `'
+$prism = '` + psq(prismExe) + `'
 $ws = New-Object -ComObject WScript.Shell
-foreach ($dir in @([Environment]::GetFolderPath('Desktop'), (Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'))) {
-  $s = $ws.CreateShortcut((Join-Path $dir '` + appName + `.lnk'))
-  $s.TargetPath = '` + prismExe + `'
-  $s.Arguments = '-l "` + instanceName + `"'
-  $s.WorkingDirectory = '` + prismDir + `'
-  $s.IconLocation = '` + prismExe + `,0'
-  $s.Description = 'Play ` + appName + `'
-  $s.Save()
+$start = Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs'
+foreach ($dir in @([Environment]::GetFolderPath('Desktop'), $start)) {
+  $lnk = Join-Path $dir '` + shortcutName + `.lnk'
+  if (($dir -eq $start) -and ((-not (Test-Path -LiteralPath $lnk)) -or ($ws.CreateShortcut($lnk).TargetPath -eq $exe) -or (($ws.CreateShortcut($lnk).TargetPath -eq $prism) -and ($ws.CreateShortcut($lnk).Arguments -eq '-l "` + instanceName + `"')))) {
+    $s = $ws.CreateShortcut($lnk)
+    $s.TargetPath = $exe
+    $s.Arguments = '--launch'
+    $s.WorkingDirectory = '` + psq(prismDir) + `'
+    $s.IconLocation = '` + psq(icoPath) + `,0'
+    $s.Description = 'Play ` + appName + `'
+    $s.WindowStyle = 7
+    $s.Save()
+  }
+  $oldPath = Join-Path $dir '` + appName + `.lnk'
+  if (Test-Path -LiteralPath $oldPath) {
+    $old = $ws.CreateShortcut($oldPath)
+    if (($old.TargetPath -eq $exe) -or ($old.TargetPath -eq $prism)) { Remove-Item -LiteralPath $oldPath -ErrorAction SilentlyContinue }
+  }
 }`
-	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps)
+}
+
+func shortcuts(launcherExe, prismExe, prismDir string) error {
+	ico, err := installBrand(prismDir)
+	if err != nil {
+		ico = launcherExe // no cat file: fall back to the exe's own icon (also the cat) rather than no shortcut
+	}
+	cmd := exec.Command("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", shortcutScript(launcherExe, prismExe, prismDir, ico))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))

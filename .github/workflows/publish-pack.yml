@@ -112,7 +112,12 @@ jobs:
 
       - name: Build the packwiz pack (Windows + Mac)
         if: env.SKIP != '1'
-        run: python3 pack/build_packwiz.py "$JAR" dl/BeyondAndTabs-Realistic.zip "$JAR_URL" "$RP_URL" "$VERSION" out
+        run: |
+          python3 pack/build_packwiz.py "$JAR" dl/BeyondAndTabs-Realistic.zip "$JAR_URL" "$RP_URL" "$VERSION" out
+          # nothing Complementary in either pack, checked before anything is pushed (author refused permission, Oct 29)
+          if find out -iname '*complementary*' | grep -q . || grep -rIqi complementary out; then
+            echo "::error::the built pack contains Complementary Reimagined"; exit 1
+          fi
 
       - name: Push the pack to the download repo
         if: env.SKIP != '1'
@@ -210,14 +215,13 @@ jobs:
             if [ "$variant" = mac ] && ls mods | grep -qiE 'embeddium|immediatelyfast|rubidium-extra|oculus'; then
               echo "::error::mac pack contains Embeddium, ImmediatelyFast, Embeddium Extra or Oculus"; exit 1
             fi
-            # the shader look (build_packwiz.SHADER_*): Windows gets Oculus + Complementary in labPBR mode, Mac neither
-            if [ "$variant" = windows ]; then
-              ls mods | grep -qi '^oculus-' || { echo "::error::windows pack has no Oculus"; exit 1; }
-              ls shaderpacks/ComplementaryReimagined_*.zip >/dev/null || { echo "::error::windows pack has no shader pack"; exit 1; }
-              grep -q '^RP_MODE=3' shaderpacks/ComplementaryReimagined_*.zip.txt
-              grep -q '^enableShaders=true' config/oculus.properties
-            elif [ -d shaderpacks ] && ls shaderpacks | grep -q .; then
-              echo "::error::mac pack has a shader pack"; exit 1
+            # Complementary Reimagined (and any shader pack) must not reach testers: its author refused us permission
+            # (Oct 29). Checked by file name and by content (settings files, metafiles) over the whole install.
+            if find . -iname '*complementary*' | grep -q . || grep -rIqi complementary . ; then
+              echo "::error::$variant pack contains Complementary Reimagined"; exit 1
+            fi
+            if [ -d shaderpacks ] && ls shaderpacks | grep -q .; then
+              echo "::error::$variant pack has a shader pack"; exit 1
             fi
             cd ../..
           done

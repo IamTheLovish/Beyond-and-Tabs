@@ -244,9 +244,9 @@ public class SpiderUnit extends Spider implements Unit, AttackerUnit, Convertabl
     }
 
     @Override
-    public int getSightRange() {
+    public int getBaseSightRange() {
         boolean isNight = !TimeUtils.isDay(level()) || NightUtils.isInRangeOfNightSource(getEyePosition(), level().isClientSide);
-        return Unit.super.getSightRange() + (isNight ? bonusNightSightRange : 0);
+        return Unit.super.getBaseSightRange() + (isNight ? bonusNightSightRange : 0);
     }
 
     // for some reason this.getNavigation().stop(); doesn't stop spider units from moving

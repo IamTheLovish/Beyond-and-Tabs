@@ -11,10 +11,13 @@ import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 import com.solegendary.reignofnether.unit.Checkpoint;
 import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
+import com.solegendary.reignofnether.unit.HeldBlow;
 import com.solegendary.reignofnether.unit.UnitAnimationAction;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
+import com.solegendary.reignofnether.unit.interfaces.KeyedSwing;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierAnim;
 import com.solegendary.reignofnether.unit.packets.UnitAnimationClientboundPacket;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
@@ -51,7 +54,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
+public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit, KeyedSwing {
     public static final Abilities ABILITIES = new Abilities();
 
     //region
@@ -226,6 +229,9 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
 
     public void tick() {
         this.setCanPickUpLoot(true);
+        // before the rest of the tick, so a blow held on the swing's tick lands keyedHitTicks() ticks later exactly
+        if (!this.level().isClientSide())
+            heldBlow.tick(this);
         super.tick();
         Unit.tick(this);
         AttackerUnit.tick(this);
@@ -352,5 +358,28 @@ public class VindicatorUnit extends Vindicator implements Unit, AttackerUnit {
     @Override
     public int getDamageTooltipColour() {
         return getSharpnessLevel() > 0 ? TooltipColours.GREEN : TooltipColours.WHITE;
+    }
+
+    /**
+     * The Halberdier body (HalberdierRenderer is bound to the vindicator_unit type alone) thrusts over its keyed clip's
+     * 18 ticks instead of vanilla's 6: HalberdierUnitModel samples THRUST by attackTime, so the swing's length is the
+     * clip's speed. Subclasses (Cutlass Raider, Reef Guard...) draw other bodies with no keyed attack and keep vanilla's.
+     */
+    @Override
+    public int keyedSwingTicks() {
+        return getClass() == VindicatorUnit.class ? HalberdierAnim.THRUST_TICKS : 0;
+    }
+
+    /** The thrust's blade arrives at THRUST_HIT_P of the clip (0.27 x 18 = tick 5): the blow lands there, not at 0. */
+    @Override
+    public int keyedHitTicks() {
+        return getClass() == VindicatorUnit.class ? Math.round(HalberdierAnim.THRUST_HIT_P * HalberdierAnim.THRUST_TICKS) : 0;
+    }
+
+    private final HeldBlow heldBlow = new HeldBlow();
+
+    @Override
+    public HeldBlow heldBlow() {
+        return heldBlow;
     }
 }
