@@ -160,25 +160,25 @@ TARGETS = {
     # r41 (eyes 41053751822, the shader's new S-curve has room for real blacks: the family sat at 0.25-0.35 on screen
     # where the benchmark sits at 0.10-0.15): back down to black - luma 0.27 / 0.29 / 0.26 / 0.27 -> 0.15 / 0.17 /
     # 0.14 / 0.16 - the hue separation through a subtle WARM chroma (sat 0.13 -> 0.06), not lightness
-    "polished_blackstone":        dict(luma=0.17, std=0.030, sat=0.06, tilt=12.0, smooth=60, pore=4),   # r42: 0.17
-    "polished_blackstone_bricks": dict(luma=0.20, std=0.055, sat=0.06, tilt=18.0, smooth=40, pore=8),   # r42; r44: light joints
-    "deepslate_bricks":           dict(luma=0.44, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),   # r44: 0.28 on screen -> ~0.34
+    "polished_blackstone":        dict(luma=0.21, std=0.030, sat=0.06, tilt=12.0, smooth=60, pore=4),   # r42; r45: 0.21
+    "polished_blackstone_bricks": dict(luma=0.24, std=0.050, sat=0.06, tilt=18.0, smooth=40, pore=8),   # r42; r44; r45: 0.24
+    "deepslate_bricks":           dict(luma=0.35, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),   # r44; r45: 0.35 (0.40 at 5000)
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
-    "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.19, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey; r42 / r43
-    "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
+    "deepslate_tiles":            dict(luma=0.38, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),   # r45: 0.30 -> 0.38 (0.44 at 5000)
+    "deepslate":                  dict(luma=0.22, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey; r45: 0.22
+    "deepslate_top":              dict(luma=0.22, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
     # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
     "polished_deepslate":         dict(luma=0.38, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
     # -> 0.060), flatter flakes (tilt 21 -> 16)
     # r31b (eyes: washed-out mosaic): the joints back (std 0.06 -> 0.085, tilt 16 -> 20), cooler (sat 0.10 -> 0.12)
-    "cobbled_deepslate":          dict(luma=0.26, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),   # r42: with deepslate
+    "cobbled_deepslate":          dict(luma=0.31, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),   # r42; r45: 0.31
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
     "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
     "flowering_azalea_leaves":    dict(luma=0.42, std=0.085, sat=0.62, tilt=16.5, smooth=60, pore=180),
-    "netherrack":                 dict(luma=0.30, std=0.060, sat=0.52, tilt=30.0, smooth=50, pore=30),   # r44: 0.17 on screen vs 0.39 - lifted
-    "nether_bricks":              dict(luma=0.17, std=0.050, sat=0.35, tilt=18.0, smooth=50, pore=12),   # r44: red-brown mortar
+    "netherrack":                 dict(luma=0.31, std=0.060, sat=0.64, tilt=30.0, smooth=50, pore=30),   # r44: lifted; r45: red again (it read brown, hue 39, at 5000)
+    "nether_bricks":              dict(luma=0.23, std=0.050, sat=0.45, tilt=18.0, smooth=50, pore=12),   # r44: red-brown mortar; r45: 0.23, sat 0.45
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
     # r41 (eyes 41053751822: a saturated neon cube, 0.468 on screen beside the lawn's 0.437, sat 0.59, hue 83 vs the
@@ -195,7 +195,7 @@ TARGETS = {
     # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
     # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
-    "sandstone_top": dict(luma=0.83, std=0.035, sat=0.26, tilt=6.7, smooth=27, pore=50),
+    "sandstone_top": dict(luma=0.83, std=0.045, sat=0.26, tilt=8.0, smooth=16, pore=50),   # r45: a matte grain (the walls read plaster-flat satin)
     "sandstone_bottom": dict(luma=0.76, std=0.056, sat=0.29, tilt=7.8, smooth=21, pore=50),
     # r31 (art director: "muddy, half a stop dark"): luma +20% (0.27 -> 0.33, 0.33 -> 0.40), cleaner hue (sat up),
     # a little more mottle spread, a satin fired skin (smooth 29 -> 36)
@@ -220,7 +220,7 @@ TARGETS = {
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.48, std=0.050, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),   # r35: a step under stone
-    "granite": dict(luma=0.47, std=0.048, sat=0.39, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),
+    "granite": dict(luma=0.60, std=0.055, sat=0.36, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),   # r45: a feldspar speckle, lighter (pink cobble at 0.47)
     "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
     # r42 (eyes 41058728743: the whole white family landed at 0.93-0.96 on screen - the shader lifts a 0.75 albedo to
     # 0.93 and rolls off at 0.96): a LADDER in albedo wide enough to survive the roll-off - snow 0.94 (soft, bluish) /
@@ -233,7 +233,7 @@ TARGETS = {
     # r44 (eyes stack5: the five pure whites sit within 0.02 on screen whatever their albedo - the roll-off is the
     # limit): TEXTURE is the separator at 32 px - snow soft drift relief, quartz a crisp tile line, white concrete
     # satin-flat, calcite grain and pits, bone clear rings, polished diorite clear dark speckle; hues within 10 degrees
-    "snow": dict(luma=0.94, std=0.022, sat=0.03, tilt=9.0, smooth=60, pore=0),   # r35; r42: softer; r44: drift relief, near-neutral
+    "snow": dict(luma=0.94, std=0.030, sat=0.0, tilt=9.0, smooth=60, pore=0),   # r35; r44: drift relief; r45: std 0.03, neutral (vs concrete)
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
@@ -244,7 +244,7 @@ TARGETS = {
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
     "calcite": dict(luma=0.61, std=0.065, sat=0.02, tilt=14.0, smooth=36, pore=10),   # r42 / r43 / r44: grain and pits
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
-    "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
+    "tuff": dict(luma=0.30, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),   # r45: 0.43 -> 0.30 (0.34 at 5000)
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
     # stripped logs share one generic 23 deg relief - 14 here (bare wood is smoother than bark); diorite std trimmed
     "birch_planks": dict(luma=0.65, std=0.060,   # r21: board joints vanished at RTS zoom
@@ -266,13 +266,16 @@ TARGETS = {
     # r31 (art director: "dull red-brown"): pinkish salmon, lighter (0.44 -> 0.52), the spread in the crystals
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
-    "polished_diorite": dict(luma=0.56, std=0.085, sat=0.02, tilt=4.0, smooth=110, pore=4),   # r42 / r43; r44: clear speckle
+    "polished_diorite": dict(luma=0.68, std=0.070, sat=0.02, tilt=4.0, smooth=110, pore=4),   # r45: back into the whites (0.74 grey on screen -> 0.86-0.88)
     # r42 (eyes 41058728743: the dark family overshot into one charcoal mass): a ladder - black concrete 0.07, coal 0.12
     # (new), blackstone 0.16 warm, deepslate 0.20 cool; the polished blackstone family a step over its rough stone
     # r43 (eyes 41066761082: on screen black concrete 0.19 / coal 0.13 / blackstone 0.20 / deepslate 0.26 / basalt
     # 0.37 - the dark end draws ~x1.2 and the concrete's satin picked up the sky): blackstone 0.15, deepslate 0.19,
     # basalt 0.27 for screen targets 0.19 / 0.25 / 0.33
-    "blackstone": dict(luma=0.16, std=0.050, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: warm black; r44: rough grain
+    # r45 (eyes 41078129930 at the game's day time 5000, where the dark end draws ~1.15 x albedo: nine darks crushed into
+    # 0.18-0.28 on screen): the ladder at 5000 - coal 0.16 / blackstone 0.22 / nether bricks 0.26 / polished blackstone
+    # bricks 0.28 / tuff 0.34 / cobbled deepslate 0.36 / deepslate bricks 0.40 / deepslate tiles 0.44 / basalt 0.46
+    "blackstone": dict(luma=0.19, std=0.050, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: warm black; r45: 0.19
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
@@ -292,18 +295,18 @@ TARGETS = {
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
     "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
-    "cracked_deepslate_bricks": dict(luma=0.42, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35; r44: with the bricks
-    "cracked_polished_blackstone_bricks": dict(luma=0.17, std=0.050, sat=0.06, tilt=22.0, smooth=19, pore=8),
+    "cracked_deepslate_bricks": dict(luma=0.34, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35; r44; r45
+    "cracked_polished_blackstone_bricks": dict(luma=0.22, std=0.050, sat=0.06, tilt=22.0, smooth=19, pore=8),   # r45
     "chiseled_nether_bricks": dict(luma=0.15, std=0.055, sat=0.30, tilt=12.0, smooth=30, pore=12, shoulder=0.30),
-    "chiseled_polished_blackstone": dict(luma=0.18, std=0.050, sat=0.06, tilt=22.0, smooth=30, pore=8),   # r35; r39; r41; r42
+    "chiseled_polished_blackstone": dict(luma=0.23, std=0.050, sat=0.06, tilt=22.0, smooth=30, pore=8),   # r35-r42; r45
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
     # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
     # r39 (eyes 41044148818: blackstone / basalt / deepslate one dark grey): basalt a warm grey (sat 0.05 -> 0.10)
-    "basalt_side": dict(luma=0.27, std=0.080, sat=0.10, tilt=18.0, smooth=30, pore=10, soften=1.0),   # r42: the column lines; r43
-    "basalt_top": dict(luma=0.27, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
+    "basalt_side": dict(luma=0.38, std=0.080, sat=0.10, tilt=18.0, smooth=30, pore=10, soften=1.0),   # r42: the column lines; r45: 0.38 (0.46 at 5000)
+    "basalt_top": dict(luma=0.38, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
     # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
     "smooth_basalt": dict(luma=0.30, std=0.025, sat=0.04, tilt=4.0, smooth=70, pore=8),
@@ -321,7 +324,7 @@ TARGETS = {
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
     # r41 (eyes 41053751822: "translucent green jelly"): an opaque cut-gem block - smoothness 253 -> 150, f0 15 -> 10,
     # darker body (0.58 -> 0.46) with a crystalline facet pattern, the facet-edge glow cut (m_gem edge_glow 0.35 -> 0.12)
-    "emerald_block": dict(luma=0.44, std=0.070, sat=0.50, tilt=12.0, smooth=120, pore=0),   # r42: sat -25%, half the facets
+    "emerald_block": dict(luma=0.44, std=0.075, sat=0.62, tilt=14.0, smooth=150, pore=0),   # r42; r45: facets with a specular pattern, no white joints
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
@@ -332,7 +335,7 @@ TARGETS = {
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
-    "white_concrete": dict(luma=0.72, std=0.012, sat=0.0, tilt=2.0, smooth=60, pore=10),   # r42: neutral satin; r43
+    "white_concrete": dict(luma=0.72, std=0.006, sat=0.0, tilt=2.0, smooth=60, pore=10),   # r42: neutral satin; r45: dead flat (vs snow)
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
     # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
@@ -352,7 +355,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.15, std=0.045, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r44: rough grain
+    "blackstone_top": dict(luma=0.18, std=0.045, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r45: 0.18
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
     "quartz_block_top": dict(luma=0.83, std=0.030, sat=0.03, tilt=4.0, smooth=145, pore=4),   # r42; r44: a crisp tile line
@@ -1533,13 +1536,25 @@ SEED_ORDER = SEED_ORDER + ("cartography_table_top", "cartography_table_side1", "
 TARGETS["crying_obsidian"] = dict(luma=0.14, std=0.080, sat=0.30, tilt=10.0, smooth=228, pore=0)
 SEED_ORDER = SEED_ORDER + ("crying_obsidian",)
 # round 42: the coal block (new; the dark ladder's second step, 0.12 with a faint glint)
-TARGETS["coal_block"] = dict(luma=0.13, std=0.055, sat=0.02, tilt=14.0, smooth=60, pore=4)   # r43: 0.13; r44: plates apart
+TARGETS["coal_block"] = dict(luma=0.14, std=0.055, sat=0.02, tilt=14.0, smooth=60, pore=4)   # r43; r44; r45: 0.14 (0.16 at 5000)
 SEED_ORDER = SEED_ORDER + ("coal_block",)
 # round 44: the ices (new; vanilla's showed - packed ice drew 0.49 neutral grey on screen vs the benchmark's 0.74)
 TARGETS["packed_ice"] = dict(luma=0.76, std=0.030, sat=0.10, tilt=4.0, smooth=210, pore=0, hspan=0.08)
-TARGETS["blue_ice"] = dict(luma=0.60, std=0.040, sat=0.45, tilt=4.0, smooth=220, pore=0, hspan=0.08)
+TARGETS["blue_ice"] = dict(luma=0.42, std=0.025, sat=0.68, tilt=3.0, smooth=225, pore=0, hspan=0.08)   # r45: glassy deep blue (60/110/190), large plates
 TARGETS["ice"] = dict(luma=0.80, std=0.030, sat=0.14, tilt=4.0, smooth=215, pore=0, hspan=0.06)
 SEED_ORDER = SEED_ORDER + ("packed_ice", "blue_ice", "ice")
+# round 45 (eyes 41078129930: the sandstone walls at the 34 view show one-block tiling and a plaster-flat satin): cut
+# sandstone (new - the wall's body was vanilla's 16x) and procedural variants for cut and smooth sandstone, appended
+# last; the variants register through PROC_VARIANT_OF (the recipes) and PROC_VARIANT_BLOCKS (the blockstates)
+TARGETS["cut_sandstone"] = dict(luma=0.80, std=0.050, sat=0.27, tilt=9.0, smooth=16, pore=50)
+SEED_ORDER = SEED_ORDER + ("cut_sandstone",)
+for _k in range(2, PROC_VARIANTS + 1):
+    for _base in ("cut_sandstone", "sandstone_top"):
+        PROC_VARIANT_OF["%s_v%d" % (_base, _k)] = _base
+        TARGETS["%s_v%d" % (_base, _k)] = dict(TARGETS[_base])
+        SEED_ORDER = SEED_ORDER + ("%s_v%d" % (_base, _k),)
+PROC_VARIANT_BLOCKS["cut_sandstone"] = ("cube_column", {"end": "sandstone_top", "side": "cut_sandstone"})
+PROC_VARIANT_BLOCKS["smooth_sandstone"] = ("cube_all", {"all": "sandstone_top"})
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2237,7 +2252,7 @@ def m_netherrack(F, n):
     vein = 1 - smoothstep(0.0, 0.04, np.abs(F.noise(3, 9, 0.5)))
     H = 0.3 + 0.5 * np.sqrt(lump) - 0.18 * pores - 0.1 * vein
     shade = 0.75 + 0.35 * norm01(H) - 0.15 * vein
-    return H, tint((0.50, 0.16, 0.14), shade)
+    return H, tint((0.52, 0.14, 0.17), shade)   # r45: the hue a step toward magenta (the 5000 sun pulls it to orange)
 
 
 def m_moss(F, n):
@@ -2295,6 +2310,18 @@ def m_sandstone(F, n, face):
         H = 0.6 + 0.05 * soft + rough * grain
         shade = 0.92 + 0.06 * soft + rough * grain
     return H, tint((0.86, 0.79, 0.58), shade)
+
+
+def m_cut_sandstone(F, n):
+    """Cut sandstone (round 45, new): a dressed ashlar face - the smooth sand face with a fine matte grain, two faint
+    bedding bands, a shallow chamfer round the block and a soft tonal drift block to block (the proc variants)."""
+    H, alb = m_sandstone(F, n, "top")
+    beds = F.fbm(2, 4, 0.55, sx=6.0, sy=1.0)
+    bev = frame(F, 0.05, 0.012)
+    grain = F.noise(16, 44, 0.0)
+    H = H * 0.6 + 0.2 + 0.18 * bev + 0.02 * beds + 0.015 * grain
+    alb = alb * (0.80 + 0.20 * bev + 0.04 * beds + 0.02 * grain)[..., None]
+    return H, np.clip(alb, 0, 1)
 
 
 def m_clayish(F, n, base, pits=0.04, mottle=0.08):
@@ -2612,8 +2639,8 @@ def m_igneous(F, n, base, speck_rgb, density, size=(18, 48)):
 def m_granite(F, n):
     """Granite: salmon feldspar, smoky quartz, a little dark mica in clustered flecks, a few pale plagioclase."""
     return m_crystal(F, n, [((0.62, 0.43, 0.36), 0.56), ((0.36, 0.31, 0.29), 0.08), ((0.50, 0.47, 0.45), 0.24),
-                            ((0.74, 0.62, 0.56), 0.12)], per_side=30, cluster=0.75, contrast=0.4, mottle=0.14,
-                     drift_base=3)
+                            ((0.74, 0.62, 0.56), 0.12)], per_side=40, cluster=0.3, contrast=0.5, mottle=0.05,
+                     drift_base=3)   # r45: a fine even speckle of grains, not clustered cobbles
 
 
 def m_polished_granite(F, n):
@@ -2658,10 +2685,11 @@ def m_ice(F, n, kind):
     line = np.clip(line + 0.6 * (1 - smoothstep(0.0, 0.03, frac2)) * smoothstep(0.5, 0.85, norm01(F.noise(2, 5, 0.5))), 0, 1)
     bloom = norm01(F.fbm(3, 3, 0.55))
     H = 0.55 + 0.04 * bloom - 0.05 * line
-    if kind == "blue":
-        base, bright = (0.42, 0.66, 0.88), (0.80, 0.92, 1.0)
+    if kind == "blue":                                            # r45: deep glassy blue, the plates large and calm
+        base, bright = (0.24, 0.43, 0.75), (0.34, 0.54, 0.84)
+        line = line * smoothstep(0.6, 0.9, norm01(F.noise(1, 3, 0.5)))   # only a few long fractures
     elif kind == "packed":
-        base, bright = (0.76, 0.86, 0.90), (0.94, 0.98, 1.0)
+        base, bright = (0.76, 0.86, 0.90), (0.82, 0.90, 0.93)   # r45: subtler cracks
     else:
         base, bright = (0.72, 0.86, 0.94), (0.92, 0.98, 1.0)
     alb = tint(base, 0.94 + 0.06 * bloom)
@@ -4234,8 +4262,8 @@ def m_plant(name, n):
         full = ps.fern(n, rng, large=True)
     H, shade = full[0], full[1]
     alpha = full[3] if straw else full[2]
-    if straw:   # dry straw: tan, the drawn values along the blade
-        rgb = np.array([0.80, 0.70, 0.46])[None, None, :] * shade[..., None]
+    if straw:   # dry straw: an olive khaki (r45: the tan read magenta-pink against the lawn at the tufts' bases)
+        rgb = np.array([0.70, 0.71, 0.42])[None, None, :] * shade[..., None]
     else:
         # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
         # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
@@ -5592,7 +5620,7 @@ def recipes():
     plain = {
         # round 11: the other factions' buildings
         "polished_blackstone": lambda F, n: m_polished(F, n, (0.17, 0.155, 0.14), 0.08, 0.06),   # r41: warm black
-        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14), mortar=1.3),   # r44: crisp LIGHT joints
+        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14), mortar=1.12),   # r44: light joints; r45: subtle (1.3 read as a wireframe cage)
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
         # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
         # r33 (critic: "micro-mesh" - 4 x 4 with wide dark joints): 3 x 3 larger tiles in a running bond, the joints
@@ -5674,7 +5702,7 @@ def recipes():
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
-        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14), cracks=1.0, mortar=1.3),
+        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.17, 0.155, 0.14), cracks=1.0, mortar=1.12),
         "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
         "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.17, 0.155, 0.14)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
@@ -5688,7 +5716,7 @@ def recipes():
         "diamond_block": lambda F, n: m_gem(F, n, (0.22, 0.58, 0.70), (0.72, 0.92, 0.96), edge_glow=0.08),   # r42: deeper
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
-        "emerald_block": lambda F, n: m_gem(F, n, (0.10, 0.40, 0.22), (0.36, 0.72, 0.44), inclusions=0.5, edge_glow=0.08, cells=2),   # r41 / r42
+        "emerald_block": lambda F, n: m_gem(F, n, (0.08, 0.38, 0.20), (0.26, 0.66, 0.38), inclusions=0.5, edge_glow=0.0, cells=3),   # r45: 3 cells, no edge line
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
@@ -5805,6 +5833,7 @@ def recipes():
     R["hanging_roots"] = _parts(m_hanging_roots)
     R["crying_obsidian"] = _parts(m_crying_obsidian, fit=False)   # round 41
     R["coal_block"] = _parts(m_coal_block)                         # round 42
+    R["cut_sandstone"] = _plain(m_cut_sandstone)                    # round 45
     R["packed_ice"] = _parts(lambda F, n: m_ice(F, n, "packed"))    # round 44
     R["blue_ice"] = _parts(lambda F, n: m_ice(F, n, "blue"))
     R["ice"] = _parts(lambda F, n: m_ice(F, n, "ice"))
