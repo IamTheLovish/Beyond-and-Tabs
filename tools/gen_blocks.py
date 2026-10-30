@@ -1345,7 +1345,9 @@ def m_obsidian_glass(F, n, cells=4):
     H = H + 0.18 * arete
     lit = lit_edge[idx, idx2] * (0.5 + 0.5 * norm01(F.noise(2, 6, 0.5)))   # a lighter edge that comes and goes
     # flow banding: slow and faint - the bands repeat every block, and strong ones striped a wall (v2 sheet)
-    flow = norm01(F.warp(F.noise(1, 2, 0.5, sx=5.0, sy=1.0), 0.0, 0.03 * F.noise(2, 6, 0.5)))
+    # r33 (critic, eyes 41029731853: "horizontal banding" on the side faces): the flow banding is no longer laid
+    # along u - an isotropic slow cloud, warped, so no face carries a horizontal stripe through every block
+    flow = norm01(F.warp(F.noise(1, 3, 0.5), 0.04 * F.noise(2, 6, 0.5), 0.04 * F.noise(2, 6, 0.5)))
     shade = tone[idx] * (0.965 + 0.07 * flow)
     alb = tint((0.075, 0.07, 0.095), shade)
     # r30b (eyes 41012344723 beside the Complementary benchmark 41012313108): the brown "smoky" aretes read as a web
@@ -1368,6 +1370,8 @@ def m_obsidian_glass(F, n, cells=4):
     # laid per face - its own direction, phase and spacing - and no band runs as one line across the tile
     wob = 0.015 * F.noise(1, 3, 0.5) + 0.006 * F.noise(3, 9, 0.5)
     th = rng.uniform(0, math.pi, m)
+    # r33: no band set within 20 degrees of horizontal (th ~ pi/2 lays the stripes along u - the sides banded)
+    th = np.where(np.abs(th - math.pi / 2) < 0.35, math.pi / 2 + np.sign(th - math.pi / 2 + 1e-9) * 0.35, th)
     ph = rng.uniform(0, 1, m)
     sp = rng.uniform(3.5, 6.0, m)                                            # band sets per block on that face
     flowc = (np.cos(th[idx]) * (U - 0.5) + np.sin(th[idx]) * (V - 0.5)) * sp[idx] + ph[idx] + wob * sp[idx]
