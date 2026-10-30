@@ -135,6 +135,20 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void bat$livingArmyClear(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
                                      MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
         MotionPass.restore();
+        bat$turning = entity;
+    }
+
+    // smooth turning (Kinematics.turn): the body yaw this render draws - its body, the head's net yaw and every layer
+    // all take it - from MotionPass.bodyYaw instead of vanilla's lerp. Ordinal 0 is the body's own rotLerp (a rider's
+    // vehicle yaw comes after it); the unit is the one render's HEAD saw
+    @Unique private LivingEntity bat$turning = null;
+
+    @Redirect(
+            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;rotLerp(FFF)F", ordinal = 0)
+    )
+    private float bat$smoothTurn(float partial, float from, float to) {
+        return MotionPass.bodyYaw(bat$turning, partial, from, to);
     }
 
     @Inject(

@@ -14,7 +14,7 @@ import com.solegendary.reignofnether.unit.EnemySearchBehaviour;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitGrid;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
-import com.solegendary.reignofnether.unit.controls.FlyingUnitMoveControl;
+import com.solegendary.reignofnether.unit.controls.DragonMoveControl;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
@@ -36,7 +36,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -63,7 +62,8 @@ import java.util.List;
  * Stormcallers T2 super flyer - the <b>Thunder Dragon</b> (design/stormcallers_plan.md, slice 3): Alex's Mobs' spectre
  * body (a single flying entity, no parts - safe for RoN's selection and grid) in a jade-and-gold sky-serpent skin
  * (ThunderDragonRenderer, tools/gen_storm_skins.py paints the spectre's UV outline) on the Sky Corsair's flight rules:
- * the bee's gravity-free flight, FlyingMoveToTargetGoal and FlyingUnitMoveControl, a flyer to every AA unit.
+ * the bee's gravity-free flight, FlyingMoveToTargetGoal and DragonMoveControl (a nose, a capped turn, an eased speed),
+ * a flyer to every AA unit.
  * <p>
  * Its attack is <b>chain lightning</b> every {@link #attacksPerSecond}-paced strike: {@link #attackDamage} to the target,
  * then the bolt jumps to up to {@link #CHAIN_JUMPS} more enemies within {@link #JUMP_RADIUS} blocks of the last one hit,
@@ -206,7 +206,8 @@ public class ThunderDragonUnit extends EntitySpectre implements Unit, AttackerUn
 
     public ThunderDragonUnit(EntityType<? extends EntitySpectre> entityType, Level level) {
         super(entityType, level);
-        this.moveControl = new FlyingUnitMoveControl(this);
+        // a nose, a capped turn and an eased speed (DragonFlight), not the ghast's nudges (lovish, Oct 30: "choppy")
+        this.moveControl = new DragonMoveControl(this);
         this.navigation = new FlyingPathNavigation(this, level);
         updateAbilityButtons();
     }
@@ -270,22 +271,33 @@ public class ThunderDragonUnit extends EntitySpectre implements Unit, AttackerUn
         updateRotation(yRotBefore);
     }
 
-    /** Faces the target while it has one, else where it is flying, else keeps its heading (the Corsair's rule). */
+    /** The client's yaw after this tick's lerp toward the server's, before the spectre's tick re-aims it at its drift. */
+    private float lerpedYaw = Float.NaN;
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        if (level().isClientSide())
+            lerpedYaw = getYRot();
+    }
+
+    /**
+     * The spectre's tick aims the yaw at the velocity every tick, on both sides (a nose that flicked with each nudge).
+     * On the server the body faces along the flight's nose ({@link DragonMoveControl#bodyYaw}: turned at a capped
+     * rate) and, hovering, turns toward its target at DragonMoveControl.HOVER_TURN; the client keeps the yaw it lerped
+     * from the server's.
+     */
     void updateRotation(float yRotBefore) {
-        LivingEntity target = this.getTarget();
-        Vec3 dMove = this.getDeltaMovement();
-        double x = 0, z = 0;
-        if (target != null) {
-            x = target.getX() - this.getX();
-            z = target.getZ() - this.getZ();
-        } else if (dMove.horizontalDistanceSqr() > 0.0025) {
-            x = dMove.x();
-            z = dMove.z();
-        }
-        if (Math.abs(x) > 0.05f || Math.abs(z) > 0.05f)
-            this.setYRot(-((float) Mth.atan2(x, z)) * 57.295776F);
-        else
+        if (level().isClientSide()) {
+            this.setYRot(Float.isNaN(lerpedYaw) ? yRotBefore : lerpedYaw);
+        } else if (this.moveControl instanceof DragonMoveControl dc) {
+            LivingEntity target = this.getTarget();
+            double x = target == null ? 0 : target.getX() - this.getX();
+            double z = target == null ? 0 : target.getZ() - this.getZ();
+            this.setYRot(dc.bodyYaw(yRotBefore, x, z));
+        } else {
             this.setYRot(yRotBefore);
+        }
         this.yBodyRot = this.getYRot();
     }
 

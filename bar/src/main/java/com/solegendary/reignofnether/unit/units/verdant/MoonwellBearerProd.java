@@ -54,7 +54,7 @@ public class MoonwellBearerProd extends ProductionItem implements IUnitProductio
         List<FormattedCharSequence> tooltipLines = new ArrayList<>(List.of(
                 Component.translatable("entity.reignofnether.moonwell_bearer_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 Component.translatable("entity.reignofnether.moonwell_bearer_unit.tooltip1").getVisualOrderText()
         ));
