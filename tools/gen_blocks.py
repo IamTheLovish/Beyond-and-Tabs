@@ -2921,17 +2921,52 @@ def m_log(F, n, base=(0.42, 0.33, 0.21), style="oak"):
 
 def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21), rim=(0.5, 0.2)):
     """A log's end grain: growth rings and radial checks inside a square border of bark (bark_rgb). rim = the
-    border's (height, relief): rough bark by default; a stripped log's bare-wood rim is nearly flat."""
-    du, dv = F.u - 0.5, F.v - 0.5
+    border's (height, relief): rough bark by default; a stripped log's bare-wood rim is nearly flat.
+    Round 35 (lovish: "radial drying cracks, growth rings and saturated heartwood"): the rings unevenly spaced
+    (wide earlywood, a thin dark latewood line each, the pith a little off centre and the rings wobbling), a darker
+    more saturated HEARTWOOD inside a paler sapwood, and 4-6 drying cracks running out from the pith - widest there,
+    tapering, deep in the height and dark - with a few fine ones between."""
+    rng = F.rng
+    cx, cy = 0.5 + 0.04 * (rng.random() - 0.5), 0.5 + 0.04 * (rng.random() - 0.5)   # the pith a little off centre
+    du, dv = F.u - cx, F.v - cy
     r = np.sqrt(du * du + dv * dv)
-    r_w = r + 0.012 * F.noise(3, 10, 0.5)
-    rings = 0.5 + 0.5 * np.cos(r_w * 2 * math.pi * 14)
-    bark = smoothstep(0.43, 0.47, np.maximum(np.abs(du), np.abs(dv)))   # the square bark border, ~1/16 block
-    checks = 1 - smoothstep(0.0, 0.02, np.abs((np.arctan2(dv, du) * 3 / math.pi) % 1.0 - 0.5) * r * 4 + (1 - smoothstep(0.1, 0.35, r)))
-    H = 0.6 + 0.08 * rings - 0.15 * checks * (r < 0.4) + 0.05 * F.noise(20, 60, 0.3)
+    ang = np.arctan2(dv, du)
+    r_w = r * (1 + 0.04 * F.noise(1, 3, 0.5)) + 0.005 * F.noise(4, 12, 0.5)        # the rings wobble
+    # uneven ring spacing: the radius warped by a slow function, ~18 rings to the edge
+    rw = r_w + 0.010 * np.sin(r_w * 2 * math.pi * 3.3 + 1.0)
+    ph = (rw * 18) % 1.0
+    late = smoothstep(0.62, 0.78, ph) * (1 - smoothstep(0.86, 1.0, ph))              # the thin dark latewood line
+    early = 1 - late
+    bark = smoothstep(0.43, 0.47, np.maximum(np.abs(F.u - 0.5), np.abs(F.v - 0.5)))   # the square bark border
+    # drying cracks: 4-6 radial, from the pith out to 0.15-0.45 of the block, widest at the pith
+    cracks = np.zeros((n, n))
+    k = 4 + int(rng.random() * 3)
+    for i in range(k):
+        a0 = i * 2 * math.pi / k + (rng.random() - 0.5) * 0.9
+        length = 0.15 + 0.30 * rng.random()
+        da = np.abs(((ang - a0 + math.pi) % (2 * math.pi)) - math.pi)
+        across = da * r                                     # distance from the crack line (tile units)
+        wide = 0.020 * (1 - r / length)                     # width tapers to the tip
+        c = (1 - smoothstep(0.0, np.maximum(wide, 1e-4), across)) * (r < length) * (r > 0.01)
+        cracks = np.maximum(cracks, c)
+    fine = np.zeros((n, n))
+    for i in range(6):
+        a0 = rng.random() * 2 * math.pi
+        r0, length = 0.12 + 0.2 * rng.random(), 0.08 + 0.12 * rng.random()
+        da = np.abs(((ang - a0 + math.pi) % (2 * math.pi)) - math.pi)
+        c = (1 - smoothstep(0.0, 0.004, da * r)) * (r > r0) * (r < r0 + length)
+        fine = np.maximum(fine, c)
+    cracks = np.clip(cracks + 0.6 * fine, 0, 1) * (bark < 0.5)
+    grain = F.noise(20, 60, 0.3)
+    H = 0.62 - 0.05 * late + 0.02 * grain - 0.22 * cracks
     H = np.where(bark > 0.5, rim[0] + rim[1] * F.noise(8, 30, 0.5), H)
-    shade = 0.82 + 0.25 * rings
-    alb = tint(wood, shade)
+    heart = 1 - smoothstep(0.16, 0.30, r_w)                 # the heartwood: darker and more saturated
+    wood = np.asarray(wood, dtype=np.float64)
+    sap = wood * np.array([1.06, 1.04, 1.02])
+    core = wood * np.array([0.84, 0.66, 0.52])
+    body = sap * (1 - heart)[..., None] + core * heart[..., None]
+    shade = 0.92 + 0.10 * early - 0.22 * late + 0.02 * grain - 0.55 * cracks
+    alb = np.clip(body * shade[..., None], 0, 1)
     bark_alb = tint(bark_rgb, 0.75 + 0.4 * norm01(H))
     alb = np.where(bark[..., None] > 0.5, bark_alb, alb)
     return H, alb
