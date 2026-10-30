@@ -40,6 +40,7 @@ public final class MotionPass {
     private static final float[] DEATH_OUT = new float[DeathFall.OUT];
     /** The offsets the placement reads: OUT, or DEATH_OUT for a fall. */
     private static float[] cur = OUT;
+    private static final float[] LOOK = new float[Motion.LOOK_LEN];
     private static final float[] SLIDERS = new float[7];
     private static final float[] SLIDERS_NO_BREATH = new float[7];   // for rigs that breathe by themselves
     private static final Quaternionf Q = new Quaternionf();   // PoseStack.mulPose copies it: one reused, no garbage
@@ -92,8 +93,15 @@ public final class MotionPass {
         try {
             readSliders();
             float zoom = OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getZoom() : 0f;
+            LOOK[Motion.LOOK_MODE] = map.look;
+            if (map.look != Motion.LOOK_NONE) {   // what LivingEntityRenderer gave setupAnim this frame
+                float body = Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot);
+                LOOK[Motion.LOOK_BODY_YAW] = body;
+                LOOK[Motion.LOOK_NET_YAW] = Mth.wrapDegrees(Mth.rotLerp(partial, e.yHeadRotO, e.yHeadRot) - body);
+                LOOK[Motion.LOOK_PITCH] = Mth.lerp(partial, e.xRotO, e.getXRot());
+            }
             Motion.pose(AnimStates.slab(), b, e.getId(), e.tickCount + partial, partial, zoom,
-                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, OUT);
+                map.noBreath ? SLIDERS_NO_BREATH : SLIDERS, map.flinchOnly, LOOK, OUT);
             place(map, ps);
         } catch (RuntimeException ex) {
             restore();
@@ -255,24 +263,45 @@ public final class MotionPass {
         ps.translate(0f, -1.5f, 0f);
     }
 
-    /** The torso bends about the waist; the head (and hat) and the arms ride on it. */
+    /** The torso bends about the waist and turns about its own upright (the look); the head (and hat) and the arms ride on it. */
     private static void bend(ModelPart[] p, boolean hierarchical, float waistY) {
-        float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ);
-        if (ax == 0f && az == 0f)
+        float ax = out(Motion.BODY, Motion.RX), az = -out(Motion.BODY, Motion.RZ), ay = out(Motion.BODY, Motion.RY);
+        if (ax == 0f && az == 0f && ay == 0f)
             return;
         if (hierarchical) {           // the head and arms are its children: they follow the bend by themselves
             if (p[Motion.BODY] != null) {
                 p[Motion.BODY].xRot += ax;
+                p[Motion.BODY].yRot += ay;
                 p[Motion.BODY].zRot += az;
             }
             return;
         }
+        if (ay != 0f) {               // first the turn: the shoulders swing round the spine, every rider turns with it
+            float cy = Mth.cos(ay), sy = Mth.sin(ay);
+            turn(p[Motion.BODY], ay, cy, sy);
+            turn(p[Motion.HEAD], ay, cy, sy);
+            turn(p[Motion.ARM_R], ay, cy, sy);
+            turn(p[Motion.ARM_L], ay, cy, sy);
+            turn(p[Motion.ARMS], ay, cy, sy);
+        }
+        if (ax == 0f && az == 0f)
+            return;
         float cx = Mth.cos(ax), sx = Mth.sin(ax), cz = Mth.cos(az), sz = Mth.sin(az);
         ride(p[Motion.BODY], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.HEAD], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_R], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARM_L], waistY, ax, az, cx, sx, cz, sz);
         ride(p[Motion.ARMS], waistY, ax, az, cx, sx, cz, sz);
+    }
+
+    /** A part turned with the torso about the model's upright axis (x = z = 0): its pivot swings round, its yaw adds. */
+    private static void turn(ModelPart p, float ay, float cy, float sy) {
+        if (p == null)
+            return;
+        float x = p.x, z = p.z;
+        p.x = x * cy + z * sy;
+        p.z = -x * sy + z * cy;
+        p.yRot += ay;
     }
 
     private static void ride(ModelPart p, float waistY, float ax, float az, float cx, float sx, float cz, float sz) {
