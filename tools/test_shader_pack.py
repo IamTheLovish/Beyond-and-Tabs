@@ -27,9 +27,12 @@ def _const(name, src=None):
     return float(m.group(1))
 
 
-def _s_curve(x, day=1.0):
-    """A model of final.fsh's sCurve() and its shoulder, from lib/settings.glsl's constants (luma in, luma out)."""
-    pivot, slope, toe, span = (_const(n) for n in ("S_CURVE_PIVOT", "S_CURVE_SLOPE", "S_CURVE_TOE", "S_CURVE_LIFT_SPAN"))
+def _s_curve(x, day=1.0, low=0.0):
+    """A model of final.fsh's sCurve() and its shoulder, from lib/settings.glsl's constants (luma in, luma out); low: the
+    light table's low row (1 = the low sun's curve)."""
+    pivot, span = _const("S_CURVE_PIVOT"), _const("S_CURVE_LIFT_SPAN")
+    slope = _const("S_CURVE_SLOPE") * (1.0 - low) + _const("S_CURVE_SLOPE_LOW") * low
+    toe = _const("S_CURVE_TOE") * (1.0 - low) + _const("S_CURVE_TOE_LOW") * low
     if x < pivot:
         u = 1.0 - x / pivot
         y = x * (1.0 - day * (slope * u + toe * u * u))
@@ -194,7 +197,7 @@ class ShaderPack(unittest.TestCase):
         # never reaches DISPLAY_WHITE, which stays under 1 (no channel clips), and the brightest white the stills showed
         # (grade output ~1.02) lands 0.95-0.975. Past WHITE_GUARD_LUMA ~30% of the colour goes: whites read white
         top, start = _const("DISPLAY_WHITE"), _const("DISPLAY_SHOULDER")
-        self.assertLess(top, 0.99)
+        self.assertLess(top, 0.995)
         r = top - start
         for lum in (0.9, 1.0, 1.2, 2.0):
             self.assertLess(start + r * (1.0 - math.exp(-(lum - start) / r)), top)
@@ -209,25 +212,35 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("perspectiveGeometry ? WHITE_DESATURATE_PERSPECTIVE : WHITE_DESATURATE", final)
 
     def test_s_curve_keeps_the_lawn_and_scales_the_darks(self):
-        # light pass 2: the lit lawn is the curve's fixed point (lovish: ~0.42 on his palette band), the darks go down
-        # in proportion. Inputs are the model's on-screen values before the curve (light table + grade): a cast shadow
-        # on the lawn 0.33 (the lawn 0.42), blackstone's sunlit top 0.27, a dark block's unlit side ~0.20
+        # light pass 2: the lit lawn is the curve's fixed point (lovish: ~0.42 on his palette band). Light pass 6 split
+        # it: the low sun keeps pass 2's curve (its 2.8:1 shadows scored 8.0-8.3) and its pins move to low=1; the day
+        # (time 5000) takes a gentle one. Retired day pins, with the reason: "a cast shadow 0.33 -> 0.70-0.75 of the
+        # lawn", "blackstone 0.27 -> <= 0.23", "a 0.20 dark side -> 0.14-0.20" - the day's darks were crushed (black
+        # concrete 0.106, five dark blocks at 0.15 +- 0.004, the dark pad's median 0.27 against the benchmark's 0.48)
+        # and the pivot slope sharpened the lawn's grain (0.045 against 0.037)
         pivot = _const("S_CURVE_PIVOT")
         self.assertAlmostEqual(pivot, 0.42)
-        self.assertAlmostEqual(_s_curve(pivot), pivot, places=6)
-        self.assertTrue(0.70 <= _s_curve(0.33) / pivot <= 0.75, _s_curve(0.33))
-        self.assertLessEqual(_s_curve(0.27), 0.23)
-        self.assertTrue(0.14 <= _s_curve(0.20) <= 0.20, _s_curve(0.20))
+        for low in (0.0, 1.0):
+            self.assertAlmostEqual(_s_curve(pivot, low=low), pivot, places=6)
+        # the low sun: pass 2's pins
+        self.assertTrue(0.70 <= _s_curve(0.33, low=1.0) / pivot <= 0.75, _s_curve(0.33, low=1.0))
+        self.assertLessEqual(_s_curve(0.27, low=1.0), 0.23)
+        # the day: black concrete (~0.16 before the curve) ~0.15, darks barely moved, the lawn's grain at most +10%
+        self.assertTrue(0.145 <= _s_curve(0.16) <= 0.16, _s_curve(0.16))
+        self.assertGreaterEqual(_s_curve(0.30), 0.285)
+        self.assertLessEqual(1.0 + _const("S_CURVE_SLOPE"), 1.10)
         # monotonic, never below zero, and the lawn's mean holds (its grain moves about as much up as down)
-        xs = [i / 200.0 for i in range(1, 241)]
-        ys = [_s_curve(x) for x in xs]
-        self.assertTrue(all(b > a for a, b in zip(ys, ys[1:])))
-        self.assertGreater(ys[0], 0.0)
-        self.assertAlmostEqual((_s_curve(0.37) + _s_curve(0.47)) / 2.0, 0.42, delta=0.005)
+        for low in (0.0, 1.0):
+            xs = [i / 200.0 for i in range(1, 241)]
+            ys = [_s_curve(x, low=low) for x in xs]
+            self.assertTrue(all(b > a for a, b in zip(ys, ys[1:])))
+            self.assertGreater(ys[0], 0.0)
+            self.assertAlmostEqual((_s_curve(0.37, low=low) + _s_curve(0.47, low=low)) / 2.0, 0.42, delta=0.005)
         # at night (day = 0) the curve is the identity below the shoulder
         self.assertAlmostEqual(_s_curve(0.15, day=0.0), 0.15)
         final = _read("final.fsh")
         self.assertIn("float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, sunH);", final)
+        self.assertIn("float slope = mix(S_CURVE_SLOPE, S_CURVE_SLOPE_LOW, low);", final)
 
     def test_glow_never_floors_the_darks(self):
         # the glow's screen blend lifted every pixel near a white block by the same amount (+~0.09 on a dark face):
@@ -249,8 +262,10 @@ class ShaderPack(unittest.TestCase):
             return [float(x) for x in re.search(r"const vec3 %s = vec3\(([^)]*)\);" % name, settings).group(1).split(",")]
 
         import colorsys
+        # Retired pin (light pass 6): "the zenith >= 0.08 luma over the horizon" - every frame's sky read darker toward
+        # the horizon, the inverse of a real sky (critic); now the horizon is >= 0.08 over the zenith, still bluer up
         zen, hor = vec("SKY_ZENITH_DAY"), vec("SKY_HORIZON_DAY")
-        self.assertGreater(sum(a * b for a, b in zip(zen, luma)), sum(a * b for a, b in zip(hor, luma)) + 0.08)
+        self.assertGreaterEqual(sum(a * b for a, b in zip(hor, luma)) - sum(a * b for a, b in zip(zen, luma)), 0.08)
         self.assertGreater(zen[2] / zen[0], hor[2] / hor[0])   # bluer at the zenith
         gold, deep = vec("SKY_SUNSET_GOLD"), vec("SKY_SUNSET_DEEP")
         hg, sg, _ = colorsys.rgb_to_hsv(*gold)
@@ -267,8 +282,15 @@ class ShaderPack(unittest.TestCase):
         self.assertLessEqual(sum(a * b for a, b in zip(zd, luma)), 0.66)
         self.assertGreaterEqual(sum(a * b for a, b in zip(deep, luma)) - sum(a * b for a, b in zip(zd, luma)), 0.12)
         clouds = _read("program", "clouds.fsh")
-        self.assertIn("skyGradient(normalize(viewPos)) * CLOUD_SKY", clouds)
-        self.assertIn("c = mix(c, skyGradient(dir), skyOwn());", _read("program", "sky.fsh"))
+        self.assertIn("skyGradient(dir) * CLOUD_SKY", clouds)
+        # light pass 6: lit from the sun's side, faded before the layer's rim (its far edge drew a dotted ellipse)
+        self.assertIn("1.0 - smoothstep(CLOUD_RIM_START, CLOUD_RIM_END", clouds)
+        self.assertLess(_const("CLOUD_RIM_END"), 1.0)
+        self.assertIn("c = mix(c, skyWithLights(dir), skyOwn());", _read("program", "sky.fsh"))
+        # light pass 6: composite paints the sky over every undrawn pixel of a perspective view (the clear colour showed
+        # where the sky programs' dome does not reach), so the look never depends on which sky programs run
+        self.assertIn("c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());",
+                      _read("composite.fsh"))
         self.assertIn("mix(fogColor, skyAir(), skyOwn())", _read("composite.fsh"))
 
     def test_metals_reflect_a_lit_environment(self):
@@ -351,7 +373,9 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 5): "blue > 2x green" - pass 4's indigo turned every shaded wall violet (H 231-251,
         # saturation up to 0.26). Now a sky blue, 1.2-1.5x green on faces looking up, a third of that on walls
         self.assertTrue(1.2 <= tint[2] / tint[1] <= 1.5, tint)
-        self.assertTrue(0.25 <= _const("SHADE_TINT_WALL") <= 0.5)
+        # light pass 6: walls 0.35 -> 0.60 of it (pass 5's shaded stone read dead grey); the low sun's shadows boosted
+        self.assertTrue(0.5 <= _const("SHADE_TINT_WALL") <= 0.7)
+        self.assertTrue(0.3 <= _const("SHADE_TINT_LOW_BOOST") <= 1.0)
         self.assertGreater(tint[2], tint[1])
         self.assertGreater(tint[1], tint[0])                  # blue-cyan, never violet (red above green)
         light = _read("lib", "light.glsl")
@@ -418,8 +442,13 @@ class ShaderPack(unittest.TestCase):
         sky = _read("program", "sky.fsh")
         self.assertIn("normalize(sunPosition)) > SUN_SPRITE_COS)\n        discard;", sky)
         self.assertNotIn("MC_RENDER_STAGE_SUN", sky)
-        self.assertIn("discColour * ((disc + halo)", sky)
-        self.assertIn("MOON_GLOW * moonUp", sky)
+        self.assertIn("discColour * ((disc + halo)", _read("lib", "sky.glsl"))
+        self.assertIn("MOON_GLOW * moonUp", _read("lib", "sky.glsl"))
+        # the probe that shows which sky programs the loader runs (SKY_PROBE 1: magenta, green, cyan), off for play
+        self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define SKY_PROBE 0 // \[0 1\]")
+        for name, colour in (("program/sky.fsh", "vec3(1.0, 0.0, 1.0)"), ("program/sky.fsh", "vec4(0.0, 1.0, 0.0"),
+                             ("program/clouds.fsh", "vec4(0.0, 1.0, 1.0")):
+            self.assertIn(colour, _read(*name.split("/")))
         self.assertTrue(0.85 <= _const("SUN_SPRITE_COS") <= 0.95)
         settings = _read("lib", "settings.glsl")
         for name in ("SUN_DISC_COLOUR", "SUN_DISC_LOW"):

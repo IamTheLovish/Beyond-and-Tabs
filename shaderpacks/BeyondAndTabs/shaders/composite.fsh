@@ -221,6 +221,14 @@ void main() {
         // colour (OrthoviewClientEvents.onFogColor) - shown as is, as without a pack
         if (ortho)
             c = fogColor;
+#if SKY_PROBE == 0
+        else
+            // the sky (light pass 6): painted here over every pixel nothing was drawn at. Under Oculus the 3/4 views'
+            // "sky" was mostly the loader's clear colour (vanilla's fog colour) - the sky programs' dome only covers
+            // the view above ~2 degrees and these cameras look 30 degrees down - so pass 4-5's gradient, the dusk
+            // colours and the sun disc never showed, and vanilla's sun square stayed. Vanilla's colours by night
+            c = mix(c, toDisplay(toneMap(skyWithLights(normalize(viewPosAt(texcoord, 1.0))))), skyOwn());
+#endif
     } else if (isEyeInWater == 0) {
         vec3 pos = viewPosAt(texcoord, depth);
         float dist = ortho ? -pos.z : length(pos);

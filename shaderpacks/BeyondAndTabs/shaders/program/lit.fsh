@@ -82,6 +82,12 @@ void main() {
     // First person and everything but terrain keep the hardware's choice. The README has the shimmer trade-off
 #ifdef LIT_TERRAIN
     float lodBias = orthoView() ? -TEXTURE_SHARPNESS : 0.0;
+    {
+        // the grass (a coloured vertex tint) takes GRASS_SHARPNESS_SHARE of it (light pass 6: the lawn's grain)
+        float hi = max(glcolor.r, max(glcolor.g, glcolor.b));
+        float tint = (hi - min(glcolor.r, min(glcolor.g, glcolor.b))) / max(hi, 1e-3);
+        lodBias *= mix(1.0, GRASS_SHARPNESS_SHARE, smoothstep(0.05, 0.15, tint));
+    }
 #else
     float lodBias = 0.0;
 #endif

@@ -127,7 +127,8 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // blue, not the same hue darker. sunLit: the sun's share arriving, 0..1. Where the sun reaches, the fill keeps the
 // light table's mild tint (a strongly blue fill tinted the whole lawn: #326)
 vec3 shadeTint(float sunLit, float upness) {
-    vec3 tint = mix(vec3(1.0), SHADE_TINT, mix(SHADE_TINT_WALL, 1.0, clamp(upness, 0.0, 1.0)));
+    float strength = mix(SHADE_TINT_WALL, 1.0, clamp(upness, 0.0, 1.0)) * (1.0 + SHADE_TINT_LOW_BOOST * lowSun());
+    vec3 tint = max(mix(vec3(1.0), SHADE_TINT, strength), vec3(0.0));
     return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
 }
 

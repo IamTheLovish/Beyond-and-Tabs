@@ -45,7 +45,9 @@ const float GLOW_RADIUS = 0.016;
 // light pass 3 (scratch, lovish decides): (1.06, 1.00, 0.90) -> (1.03, 1.00, 0.95). The warm push in the shadow bell
 // fought the cool shadow interior the coordinator asked for (lib/light.glsl shadeTint): it took a shaded lawn back to
 // the lit lawn's hue. #326's WorldLookPass Enchanted column carries the old value; the parity test skips until it lands
-const vec3 SHADOW_TINT = vec3(1.03, 1.00, 0.95);
+// light pass 6: (1.03, 1, 0.95) -> (1.01, 1, 0.98) - its warm push in the shadow bell turned the low sun's ground
+// shadow yellow-green (hue 70-95) against the cool shade tint. Scratch only: lovish decides
+const vec3 SHADOW_TINT = vec3(1.01, 1.00, 0.98);
 // highlights near neutral (lovish, Oct 30: "more white then cream sounds fine"): the old (1.09, 1.00, 0.85) turned
 // white quartz, iron and the capitol cream and grey stone brown (block critic vs the Complementary benchmark). The warm
 // Enchanted mood stays in the shadows' tint and the light table; whites read white. #326's WorldLookPass Enchanted
@@ -253,22 +255,25 @@ vec3 grade(vec3 c, float whiteDesaturate) {
 // the display's S-curve round the lit lawn (light pass 2, lib/settings.glsl S_CURVE_*), on luma as a ratio so a hue
 // holds: below the pivot the toe, x (1 - SLOPE u - TOE u^2) with u = 1 - x / PIVOT (slope 1 + SLOPE at the pivot,
 // darks taken down in proportion); above it the same slope easing back to 1 over LIFT_SPAN. day: 0 = no curve (night)
-float sCurve(float l, float day) {
+float sCurve(float l, float day, float low) {
+    // the day's gentle curve, the low sun's stronger one (light pass 6)
+    float slope = mix(S_CURVE_SLOPE, S_CURVE_SLOPE_LOW, low);
+    float toe = mix(S_CURVE_TOE, S_CURVE_TOE_LOW, low);
     if (l < S_CURVE_PIVOT) {
         float u = 1.0 - l / S_CURVE_PIVOT;
-        return l * (1.0 - day * (S_CURVE_SLOPE * u + S_CURVE_TOE * u * u));
+        return l * (1.0 - day * (slope * u + toe * u * u));
     }
     float d = min(l - S_CURVE_PIVOT, S_CURVE_LIFT_SPAN);
-    return l + day * S_CURVE_SLOPE * (d - d * d / (2.0 * S_CURVE_LIFT_SPAN));
+    return l + day * slope * (d - d * d / (2.0 * S_CURVE_LIFT_SPAN));
 }
 
 // the curve, then the display's shoulder (light pass 1, raised in pass 2): luma past DISPLAY_SHOULDER eases toward
 // DISPLAY_WHITE and never reaches it; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey.
 // start / top: the shoulder's (DISPLAY_* in the RTS view and the sky, DISPLAY_*_PERSPECTIVE on a perspective view's
 // geometry, light pass 3)
-vec3 displayShoulder(vec3 c, float day, float start, float top, float highlight) {
+vec3 displayShoulder(vec3 c, float day, float low, float start, float top, float highlight) {
     float l0 = dot(c, LUMA);
-    float l = sCurve(l0, day);
+    float l = sCurve(l0, day, low);
     // a perspective view's highlights scaled down as a ratio, eased in over 0.5-0.9 (PERSPECTIVE_HIGHLIGHT, light pass
     // 4): lit and shaded white faces keep their separation, the lawn and midtones are untouched
     l *= 1.0 - (1.0 - highlight) * smoothstep(0.5, 0.9, l);
@@ -321,7 +326,7 @@ void main() {
     float low = sunH > 0.0 ? 1.0 - smoothstep(0.10, 0.55, sunH) : 0.0;
     float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);
     float top = mix(DISPLAY_WHITE, DISPLAY_WHITE_LOW, low);
-    c = displayShoulder(c, day, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start,
+    c = displayShoulder(c, day, low, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start,
                         perspectiveGeometry ? DISPLAY_WHITE_PERSPECTIVE : top,
                         perspectiveGeometry ? PERSPECTIVE_HIGHLIGHT : 1.0);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)

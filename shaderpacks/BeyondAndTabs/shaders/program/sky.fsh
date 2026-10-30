@@ -37,7 +37,11 @@ void main() {
     if (dot(normalize(sv.xyz / sv.w), normalize(sunPosition)) > SUN_SPRITE_COS)
         discard;
     vec4 t = texture2D(texture, texcoord) * glcolor;
-    gl_FragData[0] = vec4(toLinear(t.rgb) * 2.0, t.a);   // the sun's disc a little above white
+#if SKY_PROBE == 1
+    gl_FragData[0] = vec4(0.0, 1.0, 0.0, t.a);
+    return;
+#endif
+    gl_FragData[0] = vec4(toLinear(t.rgb) * 2.0, t.a);   // the moon (and the sun, were it not dropped above)
 #else
 #ifdef MC_RENDER_STAGE_STARS
     if (renderStage == MC_RENDER_STAGE_STARS) {
@@ -48,25 +52,13 @@ void main() {
     vec4 v = gbufferProjectionInverse * vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight) * 2.0 - 1.0, 1.0, 1.0);
     vec3 dir = normalize(v.xyz / v.w);
     float up = dot(dir, normalize(upPosition));
-    // vanilla's own horizon and zenith colours carry the night; from dawn to dusk our gradient (lib/sky.glsl)
+    // vanilla's own horizon and zenith colours carry the night; from dawn to dusk our sky (lib/sky.glsl), which
+    // composite.fsh also paints over every undrawn pixel (light pass 6: this program alone left the clear colour showing)
     vec3 c = mix(toLinear(fogColor), toLinear(skyColor), smoothstep(-0.05, 0.45, up));
-    c = mix(c, skyGradient(dir), skyOwn());
-    float toSun = max(dot(dir, normalize(sunPosition)), 0.0);
-    float h = sunHeight();
-    // a warm glow round the sun, strongest when it is low
-    c += vec3(1.0, 0.72, 0.45) * (pow(toSun, 6.0) * 0.25 * smoothstep(-0.12, 0.05, h) * (1.0 - 0.6 * smoothstep(0.1, 0.6, h)));
-    c *= mix(0.6, 1.0, smoothstep(-0.3, 0.0, up));          // the ground side of the dome darker
-    // the sun's disc (lib/settings.glsl SUN_DISC_*): a soft-rimmed disc ~2x white in linear light, so it blooms, warmer
-    // as it sinks, with a halo; terrain drawn later covers it, and it sets below the horizon with the dome
-    float angle = acos(clamp(dot(dir, normalize(sunPosition)), -1.0, 1.0));
-    float disc = 1.0 - smoothstep(SUN_DISC_RADIUS * 0.75, SUN_DISC_RADIUS * 1.25, angle);
-    float halo = SUN_HALO * exp(-angle / (SUN_DISC_RADIUS * 4.0));
-    vec3 discColour = mix(SUN_DISC_COLOUR, SUN_DISC_LOW, lowSun());
-    c += discColour * ((disc + halo) * smoothstep(-0.02, 0.01, h) * smoothstep(-0.02, 0.02, up));
-    // a soft glow round the moon (vanilla's sprite draws the moon itself), while it is up
-    float toMoon = max(dot(dir, -normalize(sunPosition)), 0.0);
-    float moonUp = smoothstep(-0.05, 0.10, -h);
-    c += vec3(0.62, 0.70, 0.90) * (MOON_GLOW * moonUp * (pow(toMoon, 400.0) + 0.3 * pow(toMoon, 40.0)));
+    c = mix(c, skyWithLights(dir), skyOwn());
+#if SKY_PROBE == 1
+    c = vec3(1.0, 0.0, 1.0);
+#endif
     gl_FragData[0] = vec4(c, 1.0);
 #endif
 }

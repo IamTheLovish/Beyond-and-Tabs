@@ -13,6 +13,7 @@
 #include "/lib/sky.glsl"
 
 uniform sampler2D texture;
+uniform float far;
 
 varying vec2 texcoord;
 varying vec4 glcolor;
@@ -28,8 +29,22 @@ void main() {
     lightColours(sunColour, skyColour);
     // vanilla shades a cloud's faces (and dims them all at night): that shading, relative to its brightest face
     float shade = clamp(dot(c.rgb, LUMA) / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3), 0.5, 1.0);
-    vec3 lit = (skyGradient(normalize(viewPos)) * CLOUD_SKY + sunColour * CLOUD_SUN) * shade;
+    vec3 dir = normalize(viewPos);
+    // lit from the sun's side (light pass 6): the face of the layer toward the sun takes up to twice CLOUD_SUN
+    float sunSide = 0.5 + 0.5 * dot(dir, normalize(sunPosition));
+    vec3 lit = (skyGradient(dir) * CLOUD_SKY + sunColour * (CLOUD_SUN * 2.0 * sunSide)) * shade;
+    // the layer fades out toward its rim (CLOUD_RIM_*, of the render distance, measured across the ground): seen from a
+    // 3/4 view its far edge was a dotted ellipse in the sky (light pass 6)
+    vec3 player = mat3(gbufferModelViewInverse) * viewPos;
+    float alpha = c.a * (1.0 - smoothstep(CLOUD_RIM_START, CLOUD_RIM_END, length(player.xz) / max(far, 16.0)));
+    if (alpha < 0.004)
+        discard;
+#if SKY_PROBE == 1
+    gl_FragData[0] = vec4(0.0, 1.0, 1.0, alpha);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);
+    return;
+#endif
     // the RTS camera is orthographic (no view direction to read the ramp along): its clouds stay as drawn
-    gl_FragData[0] = vec4(orthoView() ? asDrawn : mix(asDrawn, lit, skyOwn()), c.a);
-    gl_FragData[1] = vec4(0.0, 0.0, 0.0, c.a);
+    gl_FragData[0] = vec4(orthoView() ? asDrawn : mix(asDrawn, lit, skyOwn()), alpha);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);
 }
