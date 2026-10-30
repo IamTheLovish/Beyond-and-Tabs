@@ -592,6 +592,54 @@ class EngineShedR11(unittest.TestCase):
                         bad.append((st, h[0], h[1]))
         self.assertEqual(sorted(set(bad))[:8], [])
 
+    # ---------------------------------------------------------------- round 3: the round-2 critic's diagnosis (fresh
+    # fable, before / after round 2: RTS 5 / close 4 / towers 4 - the roofs better, the south stack worse)
+    def test_r3_stack_bands_spaced(self):
+        """Critic r2: the right chimney "a brick column with a corbel ring every two blocks ... a stacked pagoda". A
+        stack's projecting courses (bands and crown) stand >= 3 courses apart."""
+        p = self.p
+        for s in self.m["stacks"]:
+            sx0, sx1, sz0, sz1 = s["shaft"]
+            rings = []
+            for y in range(self.m["stack_from"] + 2, s["top"] + 1):
+                ring = [(x, y, z) for x in range(sx0 - 1, sx1 + 2) for z in range(sz0 - 1, sz1 + 2)
+                        if not (sx0 <= x <= sx1 and sz0 <= z <= sz1)]
+                if sum(q in p.n for q in ring) >= 6:
+                    rings.append(y)
+            gaps = [b - a for a, b in zip(rings, rings[1:])]
+            self.assertTrue(all(d >= 3 for d in gaps), (s["top"], rings))
+
+    def test_r3_no_fire_seen_in_a_stack_mouth(self):
+        """Critic r2: "its open top shows a red block". No campfire and no red nether brick seen in any still."""
+        seen = sorted({(h[0], h[1]) for st in G.STILLS for h in self.p.hits[st].values()
+                       if "campfire" in h[1] or "nether" in h[1]})
+        self.assertEqual(seen, [])
+
+    def test_r3_no_black_block_on_the_tower_cap(self):
+        """Critic r2: the copper cap "with one black block at its base corner". No dark cell (deepslate tiles,
+        blackstone, coal) on the tower roof's eave-ring corners, seen in any still."""
+        x0, x1, z0, z1 = self.m["tower"]
+        corners = {(x, z) for x in (x0 - 1, x1 + 1) for z in (z0 - 1, z1 + 1)}
+        bad = sorted({h[0] for st in G.STILLS for h in self.p.hits[st].values() if (h[0][0], h[0][2]) in corners
+                      and h[0][1] > self.m["cornice"] and any(k in h[1] for k in ("deepslate_tile", "blackstone",
+                                                                                  "coal"))})
+        self.assertEqual(bad, [])
+
+    def test_r3_smoke_vent_framed_on_the_ridge(self):
+        """Critic r2: "a single dark square sits in the middle of the main roof near the ridge and reads as a missing
+        block". The spawn column (a smoke-vent shaft, kept open to the sky) is framed where it leaves the roof: the four
+        cells round it one over the ridge are an iron vent (bars or a wall), and rts_close sees >= 3 of them."""
+        sx, _, sz = L.SPAWN
+        ring = [(sx + a, 15, sz + c) for a, c in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        self.assertTrue(all(S.glyph(self.p.n.get(q, "")) == "|" for q in ring), [self.p.n.get(q) for q in ring])
+        seen = {h[0] for h in self.p.hits["rts_close"].values()}
+        self.assertGreaterEqual(sum(q in seen for q in ring), 3)
+
+    def test_r3_lit_rooms_not_orange(self):
+        """Critic r2: "a row of orange dots (lamps or fire) that read as scattered sparks" - the lit rooms' shroomlight
+        (orange) seen through the windows. No shroomlight in the build: the rooms' light is a pale gaslight."""
+        self.assertEqual(sorted({q for q, n in self.p.n.items() if n == "shroomlight"})[:5], [])
+
     def test_build_is_sound(self):
         """Lane and spawn column clear, no floating block, no pocket, nothing that pops off, no banned block."""
         L.check(self.rig, self.out)
