@@ -66,7 +66,10 @@ TARGETS = {
     "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=1.2,
                              mid=0.3),
     "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
-    "sand":             dict(luma=0.67, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
+    # Oct 29 (claude/environment-palette-oct29.md): luma 0.67 -> 0.50 - at 0.67 the river banks were the brightest
+    # ground on screen (luma 0.72-0.75 after the grade, r54) and competed with buildings and units; the palette band
+    # for sand is 0.48-0.58 (lights belong to what matters). Screen / texture was ~1.09 on r54.
+    "sand":             dict(luma=0.50, std=0.030, sat=0.40, tilt=11.0, smooth=40, pore=60),
     # round 24-26 (PR #160, eyes close-ups of the terrain sampler, run 39838783742; shipped by lovish Oct 22 20:23 "you
     # can ship them and keep working on them"): gravel's smoothness 50 -> 24 (a blue sky sheen at the 30-degree view)
     # and tilt 26 -> 16 (bubble wrap); oak planks sat 0.46 -> 0.40, smooth 70 -> 45 (orange, satin); oak bark sat
