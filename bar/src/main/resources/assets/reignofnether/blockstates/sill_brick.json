@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "reignofnether:block/sill_brick",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "reignofnether:block/sill_brick"
+    },
+    "facing=south": {
+      "model": "reignofnether:block/sill_brick",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "reignofnether:block/sill_brick",
+      "y": 270
+    }
+  }
+}

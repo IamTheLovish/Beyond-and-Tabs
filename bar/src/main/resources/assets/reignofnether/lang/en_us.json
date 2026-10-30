@@ -4198,5 +4198,20 @@
   "colour.reignofnether.coral": "Coral",
   "colour.reignofnether.ice": "Ice",
   "bot.reignofnether.difficulty.passive": "Passive",
-  "bot.reignofnether.difficulty.passive.tooltip": "Builds its economy and base like Easy, but never attacks, raids or scouts. For testing without being attacked."
+  "bot.reignofnether.difficulty.passive.tooltip": "Builds its economy and base like Easy, but never attacks, raids or scouts. For testing without being attacked.",
+  "block.reignofnether.cornice_stone": "Stone Cornice",
+  "block.reignofnether.cornice_brick": "Brick Cornice",
+  "block.reignofnether.cornice_slate": "Slate Cornice",
+  "block.reignofnether.cornice_copper": "Weathered Copper Cornice",
+  "block.reignofnether.string_course_stone": "Stone String Course",
+  "block.reignofnether.sill_stone": "Stone Window Sill",
+  "block.reignofnether.lintel_stone": "Stone Lintel",
+  "block.reignofnether.string_course_brick": "Brick String Course",
+  "block.reignofnether.sill_brick": "Brick Window Sill",
+  "block.reignofnether.lintel_brick": "Brick Lintel",
+  "block.reignofnether.string_course_slate": "Slate String Course",
+  "block.reignofnether.sill_slate": "Slate Window Sill",
+  "block.reignofnether.lintel_slate": "Slate Lintel",
+  "block.reignofnether.arch_ring_stone": "Stone Arch Ring",
+  "block.reignofnether.arch_ring_brick": "Brick Arch Ring"
 }
