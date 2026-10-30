@@ -105,9 +105,11 @@ TARGETS = {
     "gold_block":       dict(luma=0.72, std=0.050, sat=0.70, tilt=11.0, smooth=196, pore=0, f0=231),   # r31: polished
     # r31 (art director: "pale sandy planks with black holes"): darker oak staves, iron hoops with their own smoothness
     # (m_barrel_side / m_barrel_end paint smooth), the hoop bevel the main relief (tilt 17 -> 12)
-    "barrel_side":      dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
-    "barrel_top":       dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
-    "barrel_bottom":    dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    # r32 (critic: "the top is too dark and the hoop band doesn't read"): the heads lifted (0.26 -> 0.40) with the
+    # spread up so the iron chime hoop stays dark against the oak (std 0.075 -> 0.11); the staves a step lighter too
+    "barrel_side":      dict(luma=0.32, std=0.085, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    "barrel_top":       dict(luma=0.40, std=0.110, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    "barrel_bottom":    dict(luma=0.40, std=0.110, sat=0.46, tilt=12.0, smooth=57, pore=20),
     # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
     # contrast), satin stalks (smooth 20 -> 42)
     # r31b (eyes: ours tan beside the benchmark's yellow): one step more yellow saturation (0.56 -> 0.66)
@@ -1461,7 +1463,7 @@ def m_barrel_end(F, n, hole, rows=4):
     H = 0.40 + 0.10 * gap + 0.012 * lines + 0.02 * tone
     shade = (0.85 + 0.14 * tone + 0.07 * lines + 0.06 * streak) * (0.55 + 0.45 * gap)
     jit = np.stack([0.05 * hue + 0.02 * streak, 0.0 * hue, -0.05 * hue - 0.02 * streak], -1)
-    alb = tint((0.42, 0.28, 0.15), shade, jit)
+    alb = tint((0.56, 0.38, 0.20), shade, jit)      # r32: the head a paler oak than the staves (it is sawn, not split)
     smooth = 55 + 10 * streak
     if hole:
         r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
@@ -1472,7 +1474,7 @@ def m_barrel_end(F, n, hole, rows=4):
         alb = alb * (1 - 0.5 * groove[..., None])
         H = H + 0.05 * plug * (1 - (r / 0.075) ** 2).clip(0, 1) - 0.10 * groove
     d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
-    band = 1 - smoothstep(0.085, 0.100, d)                                  # the chime hoop round the head
+    band = 1 - smoothstep(0.105, 0.120, d)         # the chime hoop round the head (r32: wider, ~15 texels - it reads)
     ialb, iH, ismooth = iron_hoop(F, band, along_u=True)
     b = band[..., None]
     return dict(H=H * (1 - band) + (0.46 + iH) * band, alb=alb * (1 - b) + ialb * b,
