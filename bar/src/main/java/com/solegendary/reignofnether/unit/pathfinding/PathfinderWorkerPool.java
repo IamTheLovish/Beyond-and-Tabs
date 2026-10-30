@@ -234,17 +234,12 @@ public final class PathfinderWorkerPool {
         // behind parked requests either: it needs none of the chunk-build budget those are waiting for, and behind a
         // parked cold request it could sit until the next START at the earliest (an RTS move order's first step came
         // 3-4 ticks late in one runner of eight with its request pending the whole time, OrderLatencyGameTests,
-        // flake-stress 40953400719; the test's failure line now says what the pool held).
+        // flake-stress 40953400719; the test's failure line now says what the pool held, PathfinderWorkerPool.debugState).
         if (skipWarmChunks(pb)) {
             dispatchToPool(pb);
             return;
         }
         BUILD_QUEUE.add(pb);
-    }
-
-    /** For tests and logs: what the pool is holding (requests parked for chunks, searches running, results waiting). */
-    public static String debugState() {
-        return "pool queue " + BUILD_QUEUE.size() + ", running " + INFLIGHT.get() + ", results " + RESULTS.size();
     }
 
     // Advance the request's cursor over chunks that are already classified (free, as in processBuildQueue). True when
