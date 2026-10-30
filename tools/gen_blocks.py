@@ -102,7 +102,7 @@ TARGETS = {
     # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese.
     # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
     # - most players - a 0.63 gold reads brown (pack-study-vanilla 38740868045)
-    "gold_block":       dict(luma=0.72, std=0.050, sat=0.70, tilt=8.0, smooth=150, pore=0, f0=231),
+    "gold_block":       dict(luma=0.72, std=0.050, sat=0.70, tilt=11.0, smooth=196, pore=0, f0=231),   # r31: polished
     # r31 (art director: "pale sandy planks with black holes"): darker oak staves, iron hoops with their own smoothness
     # (m_barrel_side / m_barrel_end paint smooth), the hoop bevel the main relief (tilt 17 -> 12)
     "barrel_side":      dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
@@ -230,8 +230,9 @@ TARGETS = {
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
     "soul_sand": dict(luma=0.28, std=0.050, sat=0.20, tilt=15.0, smooth=28, pore=48, soften=0.8),
-    "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
-    "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=255),
+    # r31 (sampler 3: metals "painted stone"): chamfer + brushing in the relief (tilt 10 -> 13), smoother (147 -> 178)
+    "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=13.0, smooth=178, pore=0, f0=230),
+    "netherite_block": dict(luma=0.30, std=0.065, sat=0.12, tilt=13.0, smooth=205, pore=0, f0=255),
     "diamond_block": dict(luma=0.72, std=0.090, sat=0.30, tilt=12.0, smooth=250, pore=0, f0=44),
     "emerald_block": dict(luma=0.42, std=0.080, sat=0.50, tilt=12.0, smooth=200, pore=0, f0=15),
     "lapis_block": dict(luma=0.22, std=0.050, sat=0.55, tilt=7.6, smooth=60, pore=0, f0=15),
@@ -1092,6 +1093,22 @@ def m_raw_iron(F, n, cells=13):
     return H, np.clip(alb, 0, 1), f0
 
 
+def m_netherite(F, n, rgb=(0.30, 0.27, 0.29)):
+    """Round 31 (art director: netherite "dark polished with bolted bosses"): m_plate's dark polished plate with
+    four round bolted bosses (a dome in a ring seat) inset from the corners, each a touch brighter on its crown."""
+    H, alb, smooth = m_plate(F, n, rgb)
+    cs = np.array([0.22, 0.78])
+    du = np.min(np.abs(F.u[..., None] - cs[None, None, :]), -1)
+    dv = np.min(np.abs(F.v[..., None] - cs[None, None, :]), -1)
+    r = np.sqrt(du * du + dv * dv)
+    dome = np.clip(1 - (r / 0.055) ** 2, 0, 1)
+    seat = smoothstep(0.055, 0.062, r) * (1 - smoothstep(0.070, 0.080, r))   # the ring round the boss
+    H = H + 0.14 * np.sqrt(dome) - 0.05 * seat
+    alb = alb * (0.96 + 0.12 * dome - 0.15 * seat)[..., None]
+    smooth = np.where(dome > 0, 205 + 20 * dome, smooth)
+    return H, alb, smooth
+
+
 def m_plate(F, n, rgb):
     """Round 23: a cast block of metal: m_gold's plate (bevel, cast dents, polish scratches) in another colour,
     plus a per-texel smoothness - the split test (eyes 39675571483 / 39675576144, claude/diag-metals) showed the
@@ -1116,23 +1133,28 @@ def m_metal_plate(F, n, bevel=0.07, groove=0.012, dent=0.012, brush=1.0, smooth_
     a fine ripple. Albedo: a flat metal tone with the brushing (real polished metal is near-uniform in albedo - its
     look is all reflection). Smoothness: HIGH on the ground faces (the sky and sun reflect crisp), lower in the
     brushing grain and the dents - a per-texel map, the anisotropic streak that makes metal read as metal."""
-    bev = frame(F, bevel, groove)
+    # r31 (art director, sampler 3: the metals "read as painted stone" - need a plate bevel in the height so the sun
+    # catches an edge, the brushing in the normal, smoothness ~160-200): the rim is a straight 45-degree CHAMFER
+    # (linear, not a smoothstep pillow) a `bevel` wide, the brushing goes into the height at 4x (the normals carry
+    # the anisotropic streak), the dents stay broad and shallow
+    d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    bev = smoothstep(0.0, groove, d) * np.clip((d - groove) / max(bevel - groove, 1e-6), 0, 1)
     dents = F.noise(2, 6, 0.6)
     br = brushed(F, brush)
     wear = smoothstep(0.3, 0.9, norm01(F.fbm(2, 3, 0.5)))        # patches handled more (duller)
-    H = 0.35 + 0.5 * bev + dent * dents + 0.003 * (br - 0.5)
+    H = 0.35 + 0.5 * bev + dent * dents + 0.012 * (br - 0.5)
     shade = (0.93 + 0.04 * dents + 0.025 * (br - 0.5)) * (0.72 + 0.28 * bev)
     alb = tint((0.80, 0.80, 0.80), shade)
-    smooth = smooth_base + smooth_var * (br - 0.5) - 25 * wear - 20 * (1 - bev)
-    return H, alb, np.clip(smooth, 40, 240)
+    smooth = smooth_base + smooth_var * (br - 0.5) - 20 * wear - 25 * (1 - bev)
+    return H, alb, np.clip(smooth, 40, 245)
 
 
 def m_iron(F, n):
     """Round 23: an iron block as a riveted hot-rolled plate - brushed, a rivet row inside the bevel, the plate
     faces a cool neutral grey (the warm cast in the eyes stills was the rig's low sun: the grey reference block
     took the same tint)."""
-    H, alb, smooth = m_metal_plate(F, n, bevel=0.06, groove=0.010, dent=0.010, brush=1.0, smooth_base=150,
-                                   smooth_var=60)
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.07, groove=0.010, dent=0.010, brush=1.0, smooth_base=178,
+                                   smooth_var=50)
     # rivets: 4 per side, round domes at 1/8 block in from the edge
     cx = np.array([0.125, 0.375, 0.625, 0.875])
     du = np.min(np.abs(F.u[..., None] - cx[None, None, :]), -1)
@@ -1153,8 +1175,8 @@ def m_iron(F, n):
 def m_gold_r23(F, n):
     """Round 23 gold: a cast plate, finer polish than iron (less brushing), warm yellow, calm smoothness with the
     polish grain."""
-    H, alb, smooth = m_metal_plate(F, n, bevel=0.07, groove=0.015, dent=0.012, brush=0.6, smooth_base=185,
-                                   smooth_var=40)
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.08, groove=0.012, dent=0.012, brush=0.6, smooth_base=196,
+                                   smooth_var=32)
     L = alb @ np.array([0.2126, 0.7152, 0.0722])
     return H, tint((0.98, 0.78, 0.25), L / max(L.mean(), 1e-6)), smooth
 
@@ -3495,7 +3517,7 @@ def recipes():
     R["obsidian"] = _parts(m_obsidian_glass)
     R["mud"] = _parts(m_mud)                   # r31: drying mud flat, wet / dry in the smoothness
     R["iron_block"] = _parts(lambda F, n: _d3(m_iron(F, n)))                       # round 23: brushed, riveted
-    R["netherite_block"] = _parts(lambda F, n: _d3(m_plate(F, n, (0.30, 0.27, 0.29))))
+    R["netherite_block"] = _parts(lambda F, n: _d3(m_netherite(F, n)))   # r31: bolted bosses
     R["grass_block_snow"] = _grass_snow_side
     # round 16: cut-out and see-through blocks
     R["mangrove_roots_side"] = _parts(lambda F, n: m_roots(F, n, False))
