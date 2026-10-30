@@ -4,6 +4,7 @@ The pack (shaderpacks/BeyondAndTabs, design/own_shader_pack.md) is only ever run
 PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack" in the stills. CI installs glslang
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
+import math
 import os
 import re
 import sys
@@ -11,6 +12,19 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 import shader_pack_check as spc  # noqa: E402
+
+
+def _read(*parts):
+    return open(os.path.join(spc.SHADERS, *parts), encoding="utf-8").read()
+
+
+def _const(name, src=None):
+    """A `const float NAME = number;` from lib/settings.glsl (or the given source)."""
+    src = src if src is not None else _read("lib", "settings.glsl")
+    m = re.search(r"const float %s = (-?[\d.]+);" % name, src)
+    if m is None:
+        raise AssertionError("no const float %s" % name)
+    return float(m.group(1))
 
 
 class ShaderPack(unittest.TestCase):
@@ -73,12 +87,101 @@ class ShaderPack(unittest.TestCase):
         self.assertEqual(clears.get(1), {"vec4(0.0,0.0,0.0,0.0)"})
 
     def test_lit_ground_never_blooms(self):
-        # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
-        # (under 1 in linear light), so the threshold must stay at or above 1
+        # slice 3's judged number: zero bloom on a plain noon lawn. Retired pin: "BLOOM_THRESHOLD >= 1.0" held while the
+        # light table put sunlit ground at its albedo; the light pass lights it to LIGHT_OPEN_GROUND x its albedo, so
+        # the threshold is that (white quartz, albedo < 1, stays under it) - the same guarantee, not a looser one
         comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
-        m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
-        self.assertIsNotNone(m)
-        self.assertGreaterEqual(float(m.group(1)), 1.0)
+        self.assertIn("const float BLOOM_THRESHOLD = LIGHT_OPEN_GROUND;", comp)
+        self.assertGreaterEqual(_const("LIGHT_OPEN_GROUND"), 1.0)
+
+    # ---- the light pass (Oct 30, lovish's option B): the targets are named constants in lib/settings.glsl; these pin
+    # the arithmetic from them to the numbers the eyes stills are judged on ----
+
+    def test_light_table_hits_the_lawn_and_shadow_targets(self):
+        # the noon sun is 60 degrees up (sunPathRotation 30): open ground takes LIGHT_OPEN_GROUND x its albedo in all,
+        # the sky's share of it SHADOW_FILL_SHARE (a cast shadow on the lawn keeps that much). The tint lumas and the
+        # noon facing in light.glsl are written out as numbers: they must be what they claim
+        import math
+        light = _read("lib", "light.glsl")
+        luma = (0.2126, 0.7152, 0.0722)
+        for tint in ("SUN_TINT_HIGH", "SKY_TINT_HIGH"):
+            rgb = [float(x) for x in re.search(r"const vec3 %s = vec3\(([^)]*)\);" % tint, light).group(1).split(",")]
+            self.assertAlmostEqual(sum(a * b for a, b in zip(rgb, luma)), _const(tint + "_LUMA", light), places=3)
+        ndl = math.sin(math.radians(90.0 - _const("sunPathRotation")))
+        self.assertAlmostEqual((ndl + math.sqrt(ndl)) / 2.0, _const("NOON_SUN_FACING", light), places=3)
+        share, total = _const("SHADOW_FILL_SHARE"), _const("LIGHT_OPEN_GROUND")
+        self.assertGreaterEqual(share, 0.62)                   # the coordinator's floor: shadow >= 0.62 of lit
+        self.assertTrue(1.2 <= total <= 1.4, total)            # lawn ~0.42-0.43 on screen, the band's top (0.36-0.43)
+        self.assertIn("SUN_TINT_HIGH\n    * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND", light)
+        self.assertIn("SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND", light)
+        # the shadow light is cooler than the lit light (the sky's tint against the sun's): blue over green
+        sun = [float(x) for x in re.search(r"const vec3 SUN_TINT_HIGH = vec3\(([^)]*)\);", light).group(1).split(",")]
+        sky = [float(x) for x in re.search(r"const vec3 SKY_TINT_HIGH = vec3\(([^)]*)\);", light).group(1).split(",")]
+        self.assertGreater(sky[2] / sky[1], sun[2] / sun[1])
+
+    def test_walls_get_the_hemisphere_fill(self):
+        # an unlit wall: half the sky, half the ground's bounce (GROUND_ALBEDO of the sun and sky on the ground).
+        # Target ~0.68-0.72 of a sunlit top on screen, i.e. ~0.43-0.55 in linear light; slice 2's GROUND_BOUNCE is
+        # folded in, not stacked on top
+        light = _read("lib", "light.glsl")
+        self.assertNotIn("const float GROUND_BOUNCE", light)
+        self.assertIn("float skySeen = 0.5 + 0.5 * dot(n, up);", light)
+        share, ga = _const("SHADOW_FILL_SHARE"), _const("GROUND_ALBEDO")
+        wall = 0.5 * share + 0.5 * ga                          # of the sunlit top's light (sun + sky = 1)
+        self.assertTrue(0.43 <= wall <= 0.55, wall)
+        self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
+
+    def test_shadows_are_soft_and_never_self_shadow(self):
+        # the narrowest penumbra ~3 px at the RTS camera's default zoom (~33 px a block), a 5-block caster's ~3-6 px;
+        # the slope cap's shortfall is biased back in every direction (the sun-grazed walls' slivers)
+        px = 33.0
+        self.assertTrue(3.0 <= _const("PENUMBRA_MIN_BLOCKS") * px <= 6.0)
+        tip = 5.0 / math.sin(math.radians(60.0)) * _const("SUN_SPREAD") * px
+        self.assertTrue(3.0 <= tip <= 6.5, tip)
+        shadow = _read("lib", "shadow.glsl")
+        self.assertEqual(shadow.count("shortfall * length(o)"), 2)
+        self.assertNotIn("const float SUN_SPREAD", shadow)
+
+    def test_contact_ao_never_crushes(self):
+        # Retired pin: slice 3's AO_FLOOR 0.55 (picked for the judged floor at 0.35 of the lawn); with the vertex AO
+        # under it, block-block contacts and wall feet went near black on the stills. The floor is now >= 0.85
+        self.assertGreaterEqual(_const("CONTACT_AO_FLOOR"), 0.85)
+        self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
+        self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
+
+    def test_display_keeps_whites_white_and_unclipped(self):
+        # the shoulder: no pixel past DISPLAY_WHITE (p99 ~0.95, no clipping); past WHITE_GUARD_LUMA ~30% of the colour
+        # goes, so whites read white, not cream. A model of displayShoulder() on the brightest input
+        import math
+        top, start = _const("DISPLAY_WHITE"), _const("DISPLAY_SHOULDER")
+        self.assertLessEqual(top, 0.96)
+        r = top - start
+        for lum in (0.85, 1.0, 1.2, 2.0):
+            self.assertLess(start + r * (1.0 - math.exp(-(lum - start) / r)), top)
+        self.assertAlmostEqual(_const("WHITE_DESATURATE"), 0.30)
+        self.assertAlmostEqual(_const("WHITE_GUARD_LUMA"), 0.85)
+        final = _read("final.fsh")
+        self.assertIn("c = displayShoulder(c);", final)
+        self.assertIn("WHITE_DESATURATE * smoothstep(WHITE_GUARD_LUMA", final)
+
+    def test_no_film_grain(self):
+        # the dither read as grain over the lawn at the RTS zoom: off, and the local contrast never sharpens a texel
+        self.assertEqual(_const("DITHER_LSB"), 0.0)
+        final = _read("final.fsh")
+        self.assertIn("* (DITHER_LSB / 255.0)", final)
+        self.assertIn("float fine = dot(texture2D(colortex0, uv, LOCAL_CONTRAST_FINE_LOD).rgb, LUMA);", final)
+        self.assertGreaterEqual(_const("LOCAL_CONTRAST_FINE_LOD", final), 1.0)
+
+    def test_aerial_perspective_in_perspective_views_only(self):
+        # sky-tinted air from AERIAL_START, ~25-30% at 150 blocks; the orthographic RTS camera keeps its own haze
+        import math
+        start, scale, top = _const("AERIAL_START"), _const("AERIAL_SCALE"), _const("AERIAL_MAX")
+        self.assertAlmostEqual(start, 40.0)
+        at150 = top * (1.0 - math.exp(-(150.0 - start) / scale))
+        self.assertTrue(0.25 <= at150 <= 0.30, at150)
+        comp = _read("composite.fsh")
+        self.assertIn("float start = ortho ? rtsHazeStart() : AERIAL_START;", comp)
+        self.assertIn("float hazeMax = ortho ? HAZE_MAX : AERIAL_MAX;", comp)
 
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's

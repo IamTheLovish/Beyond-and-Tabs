@@ -5,9 +5,9 @@
 // The lit world (linear light, colortex0) onto the screen: the tone curve, then the air. The distance haze takes the
 // mod's own world look's distance rule (postfx/WorldLookPass, bat_postfx.fsh), aiming for the same air: in the RTS
 // view distance is measured along the view from the ground at the screen's bottom edge (an ortho image has no eye),
-// one e-fold per 56 blocks; in first person from the eye, clear for the first 12 blocks, one e-fold per 180. The haze
-// never covers more than 30% (Enchanted), so far overlays stay legible, and dark ground keeps less of it (the fog of
-// war's seen / unseen read is gameplay).
+// one e-fold per 56 blocks, never covering more than 30% (Enchanted), so far overlays stay legible. A perspective view
+// gets aerial perspective from the eye instead (AERIAL_*, lib/settings.glsl). Dark ground keeps less of either (the
+// fog of war's seen / unseen read is gameplay).
 // Before the tone curve, slice 3's ambient occlusion (lib/ao.glsl) takes its share of each pixel's light: the sky's
 // fill, as the lit draws recorded it in colortex1 (0 for overlays, water and everything drawn as is).
 // Also before the tone curve, slice 3's bloom source (colortex4): only light past BLOOM_THRESHOLD in linear light,
@@ -59,13 +59,12 @@ varying vec2 texcoord;
 
 const float HAZE_MAX = 0.30;
 const float HAZE_MAX_LIMIT = 0.85;
-const float FP_HAZE_START = 12.0;
-const float FP_HAZE_SCALE = 180.0;
 const float RTS_HAZE_SCALE = 56.0;
 const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);   // scattering drifts distant colour cool before the haze veils it
-// linear luma past which light blooms. The light table puts sunlit open ground at its albedo, so even white quartz or
-// snow at noon stays under ~0.85: a plain noon lawn adds exactly nothing (design: mean change under 1/255)
-const float BLOOM_THRESHOLD = 1.0;
+// linear luma past which light blooms. The light table puts sunlit open ground at LIGHT_OPEN_GROUND x its albedo (lib/
+// settings.glsl), so even white quartz or snow at noon stays under it: a plain noon lawn adds exactly nothing (design:
+// mean change under 1/255). It moved with the light pass's brighter table (1.0 -> 1.3), or white blocks would bloom
+const float BLOOM_THRESHOLD = LIGHT_OPEN_GROUND;
 
 bool orthoView() {
     return gbufferProjection[2][3] == 0.0 && gbufferProjection[3][3] == 1.0;
@@ -224,9 +223,13 @@ void main() {
     } else if (isEyeInWater == 0) {
         vec3 pos = viewPosAt(texcoord, depth);
         float dist = ortho ? -pos.z : length(pos);
-        float start = ortho ? rtsHazeStart() : FP_HAZE_START;
-        float scale = ortho ? RTS_HAZE_SCALE : FP_HAZE_SCALE;
-        float h = min(HAZE_MAX * HAZE_STRENGTH, HAZE_MAX_LIMIT) * (1.0 - exp(-max(dist - start, 0.0) / scale));
+        // a perspective view (first person, the 3/4 camera) gets aerial perspective: sky-tinted air from
+        // AERIAL_START blocks, ~27% at 150 (lib/settings.glsl, the light pass; it had 12 blocks and 180 per e-fold,
+        // ~16% at 150, which read as none). The orthographic RTS camera keeps its own haze, from the screen's bottom edge
+        float start = ortho ? rtsHazeStart() : AERIAL_START;
+        float scale = ortho ? RTS_HAZE_SCALE : AERIAL_SCALE;
+        float hazeMax = ortho ? HAZE_MAX : AERIAL_MAX;
+        float h = min(hazeMax * HAZE_STRENGTH, HAZE_MAX_LIMIT) * (1.0 - exp(-max(dist - start, 0.0) / scale));
         h *= mix(0.4, 1.0, smoothstep(0.05, 0.4, dot(c, LUMA)));
         // toward the sky's colour lightened toward the horizon's: in the RTS view the fog colour is the map edge's tone,
         // not air, and the vanilla horizon colour WorldLookPass uses is not handed to packs (eyes measures the gap)

@@ -44,7 +44,12 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 # tighter than the design's 0.45. Dusk and night may have a deeper shadow (fill from 0.45), but the darkest shadow
 # (floor) keeps the same 0.35 at every time: units in shade must read at night too, and the old pack's floor is ~0.42.
 # How dark the night is as a whole is NIGHT_LUMA's job, not the shadow ratio's
-BANDS = {"day": (0.55, 0.70, 0.35, 0.75), "dusk": (0.45, 0.75, 0.35, 0.75), "night": (0.45, 0.80, 0.35, 0.80)}
+# Retired day band (0.55, 0.70, 0.35, 0.75), Oct 30: lovish's option "B" of the light pass lifts the shadows (the
+# critic's 4.5/10 against Complementary: our shadows ~0.28 flat on a 0.37 lawn, the benchmark's ~0.45 and soft). The
+# light table now keeps SHADOW_FILL_SHARE 0.62 of the sunlit lawn's light in a cast shadow (lib/settings.glsl), ~0.78
+# on screen; the band moves with it rather than widening: fill 0.72-0.85 (still a clear shadow, never gone), floor from
+# 0.45 (the contact AO's floor, CONTACT_AO_FLOOR 0.85, keeps creases readable). Dusk and night keep theirs
+BANDS = {"day": (0.72, 0.85, 0.45, 0.85), "dusk": (0.45, 0.75, 0.35, 0.75), "night": (0.45, 0.80, 0.35, 0.80)}
 # luma p50 of a night still: lit enough to play (lanterns, moon), dark enough to read as night (day stills sit ~0.37)
 NIGHT_LUMA = (0.10, 0.30)
 

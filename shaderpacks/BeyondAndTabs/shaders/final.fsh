@@ -62,10 +62,13 @@ const float STRONG_HI = 1.8;
 // local contrast: luma pushed away from its neighbourhood's (~1 block across at the default zoom: colortex0's mip
 // 4.5 in five taps), so roofs, walls and the ground between them separate from the RTS camera. Subtle by design: at
 // most LOCAL_CONTRAST x LOCAL_CONTRAST_LIMIT (0.022) of luma, faded to nothing at black and white, so it never clips
-// a highlight or crushes a shadow and draws no visible halo round a unit
+// a highlight or crushes a shadow and draws no visible halo round a unit. The light pass made it a band: the pixel's
+// own side is colortex0's mip LOCAL_CONTRAST_FINE_LOD (~3 px), not the pixel, so texel-scale noise in a photo-scan
+// texture (the lawn's grain at the RTS zoom) is never sharpened - only shapes a block or so across
 const float LOCAL_CONTRAST = 0.22;
 const float LOCAL_CONTRAST_LIMIT = 0.10;
 const float LOCAL_CONTRAST_LOD = 4.5;
+const float LOCAL_CONTRAST_FINE_LOD = 1.5;
 const float LOCAL_CONTRAST_SPREAD = 20.0;      // pixels between the five taps
 // the loader builds colortex0's mipmaps before this pass: the local contrast's neighbourhood comes from them
 const bool colortex0MipmapEnabled = true;
@@ -198,7 +201,8 @@ float neighbourhoodLuma(vec2 uv, vec2 px) {
 
 vec3 localContrast(vec3 c, vec2 uv, vec2 px) {
     float l = dot(c, LUMA);
-    float detail = clamp(l - neighbourhoodLuma(uv, px), -LOCAL_CONTRAST_LIMIT, LOCAL_CONTRAST_LIMIT);
+    float fine = dot(texture2D(colortex0, uv, LOCAL_CONTRAST_FINE_LOD).rgb, LUMA);
+    float detail = clamp(fine - neighbourhoodLuma(uv, px), -LOCAL_CONTRAST_LIMIT, LOCAL_CONTRAST_LIMIT);
     float midtones = 4.0 * l * (1.0 - l);
     return c * ((l + LOCAL_CONTRAST * detail * midtones) / max(l, 1e-4));
 }
@@ -234,7 +238,27 @@ vec3 grade(vec3 c) {
     float lv = dot(c, LUMA);
     vec3 dv = c - lv;
     float sat = length(dv) / max(lv, 1e-3);
-    return max(lv + dv * (1.0 + VIBRANCE * grey * clamp(1.0 - sat / 0.6, 0.0, 1.0)), 0.0);
+    c = max(lv + dv * (1.0 + VIBRANCE * grey * clamp(1.0 - sat / 0.6, 0.0, 1.0)), 0.0);
+    // whites read white, not cream (the light pass, lib/settings.glsl): past WHITE_GUARD_LUMA the boosts above and the
+    // light's warmth are taken back by WHITE_DESATURATE
+    float lw = dot(c, LUMA);
+    return mix(c, vec3(lw), WHITE_DESATURATE * smoothstep(WHITE_GUARD_LUMA - 0.05, WHITE_GUARD_LUMA + 0.05, lw));
+}
+
+// the display's shoulder (the light pass): luma past DISPLAY_SHOULDER eases toward DISPLAY_WHITE and never reaches it,
+// as a ratio so a hue holds; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey instead
+vec3 displayShoulder(vec3 c) {
+    float l = dot(c, LUMA);
+    if (l > DISPLAY_SHOULDER) {
+        float r = DISPLAY_WHITE - DISPLAY_SHOULDER;
+        float t = DISPLAY_SHOULDER + r * (1.0 - exp(-(l - DISPLAY_SHOULDER) / r));
+        c *= t / l;
+        l = t;
+    }
+    float top = max(c.r, max(c.g, c.b));
+    if (top > DISPLAY_WHITE)
+        c = mix(vec3(l), c, (DISPLAY_WHITE - l) / max(top - l, 1e-4));
+    return c;
 }
 
 void main() {
@@ -257,7 +281,8 @@ void main() {
     float r2 = dot(d, d) / (0.25 * (aspect * aspect + 1.0));
     c *= 1.0 - VIGNETTE * r2 * r2;
 #endif
-    // one 8-bit step of dither, so the curve and the vignette never band
-    c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+    c = displayShoulder(c);
+    // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)
+    c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) * (DITHER_LSB / 255.0);
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }

@@ -63,6 +63,47 @@ const float ambientOcclusionLevel = 1.0;
 // camera's ~65 degrees down never reaches (water there is ~2% mirror), so from above it costs one fetch per pixel
 #define SSR 1 // [0 1]
 
+// ---- the light pass (Oct 30, lovish's option "B" after the critic's 4.5/10 against Complementary on the block
+// samplers): the lit lawn at the top of the environment palette's band, shadows lifted, walls filled. Each number is a
+// target the eyes stills measure (tools/shader_judge.py); tools/test_shader_pack.py pins the arithmetic between
+// them ----
+// open ground under the high sun, lit to this multiple of its albedo in linear light (was 1.0: "open ground at its
+// albedo"). With the grade on top, a noon lawn reads ~0.42-0.43 luma on screen, the top of the palette's 0.36-0.43
+// lawn band (it read ~0.37)
+const float LIGHT_OPEN_GROUND = 1.30;
+// the sky's share of that light: a cast shadow on open ground keeps this much of the sunlit ground's light (was ~0.41,
+// on screen ~0.65 of the lit lawn; now ~0.78 on screen). Shadows lift without the sun losing its direction
+const float SHADOW_FILL_SHARE = 0.62;
+// the hemisphere fill: a face sees the sky by (1 + up) / 2 of its directions and the ground by the rest; the ground
+// returns this share of the light falling on it (sun and sky; generous for grass, as it stands in for the bounce off
+// everything near). One term for what GROUND_BOUNCE did on its own: by the light table an unlit wall face gets ~0.53 of
+// a sunlit top's light, ~0.72 on screen (it was ~0.66 by the same model, measured ~0.55-0.6; benchmark ~0.65-0.7)
+const float GROUND_ALBEDO = 0.45;
+// the sun's penumbra (lib/shadow.glsl): angular spread (radians; the disc is 0.0093, plus the bright aureole and the
+// scatter of a hazy day), and the narrowest edge in blocks - about 3.3 px at the RTS camera's default zoom (~33 px a
+// block), so no edge is a razor line. A 5-block caster's tip ~0.15 block (~5 px)
+const float SUN_SPREAD = 0.025;
+const float PENUMBRA_MIN_BLOCKS = 0.10;
+// the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
+// never to a black crease (lib/ao.glsl)
+const float CONTACT_AO_FLOOR = 0.85;
+// the display's white: final.fsh rolls highlights off with a soft shoulder from DISPLAY_SHOULDER, so white blocks
+// stay under DISPLAY_WHITE (no clipping, p99 ~0.95)
+const float DISPLAY_SHOULDER = 0.80;
+const float DISPLAY_WHITE = 0.96;
+// whites read white, not cream: from WHITE_GUARD_LUMA up the grade's colour is taken back by WHITE_DESATURATE
+const float WHITE_GUARD_LUMA = 0.85;
+const float WHITE_DESATURATE = 0.30;
+// aerial perspective in a perspective view (first person, the 3/4 camera; never the orthographic RTS camera, which
+// keeps composite's own RTS haze): sky-tinted air from AERIAL_START blocks, AERIAL_MAX x (1 - e^-(d - start)/scale),
+// ~27% at 150 blocks (x HAZE_STRENGTH)
+const float AERIAL_START = 40.0;
+const float AERIAL_SCALE = 100.0;
+const float AERIAL_MAX = 0.40;
+// final.fsh's dither, in 8-bit steps (0: none). It read as film grain over the lawn at the RTS zoom; the 16-bit
+// buffers and the shoulder leave no banding a camera this close to the ground shows
+const float DITHER_LSB = 0.0;
+
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
 #define ID_LEAVES 10002.0

@@ -24,16 +24,17 @@ uniform sampler2D shadowtex0;
 const float SHADOW_NORMAL_OFFSET = 1.5;
 const float SHADOW_DEPTH_BIAS = 1.0;
 
-// the penumbra's width per block between caster and receiver: the sun's disc is 0.0093 radians across, widened a
-// little for the bright aureole round it in a real sky. A 4-block wall's shadow tip ~0.06 block soft (~2 px at the
-// default zoom), a 30-block tower's ~0.4 block
-const float SUN_SPREAD = 0.012;
+// the penumbra's width per block between caster and receiver (SUN_SPREAD) and its narrowest (PENUMBRA_MIN_BLOCKS) are
+// in lib/settings.glsl (the light pass: slice 3's 0.012 drew a 4-block wall's tip ~2 px soft, still a razor edge)
 // the farthest caster the blocker search looks for (blocks along the light): its penumbra is the widest drawn
 const float SHADOW_SEARCH_BLOCKS = 32.0;
 // the narrowest filter, in shadow texels: an edge right at its caster stays as crisp as slice 1's, never stair-stepped
 const float PENUMBRA_MIN_TEXELS = 0.75;
 // the steepest a receiver's plane may tilt in the light's view (depth per block across): past this the surface is
-// edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster
+// edge-on to the sun and gets little sun anyway; capping it keeps a far tap from passing behind the caster. What the
+// cap cuts off is added back as a bias that grows with the tap's distance in every direction (shortfall), so a tap
+// never lands in front of the true plane: before the light pass, the capped plane under-followed a sun-raked wall and
+// its taps toward the light met the wall itself - self-shadowed slivers along walls the sun grazes
 const float SHADOW_MAX_SLOPE = 3.0;
 
 float shadowTap(vec2 uv, float depth) {
@@ -62,7 +63,7 @@ vec2 shadowSpiral(int i, int n, float turn) {
 
 // s: the point in shadow-map space (uv, depth, bias applied); blocksPerUv: blocks across one unit of shadow uv;
 // depthPerBlock: shadow depth per block along the light; slope: the receiver's depth change per block of uv offset
-float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, float res) {
+float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, float shortfall, float res) {
     // a per-pixel turn of the tap pattern: neighbouring pixels sample different points, so a wide penumbra is smooth
     // to the eye rather than banded in 12 steps
     float turn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
@@ -72,7 +73,7 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     float blockerDepth = 0.0;
     for (int i = 0; i < 8; i++) {
         vec2 o = shadowSpiral(i, 8, turn) * searchUv;
-        float receiver = s.z + dot(slope, o) * blocksPerUv * depthPerBlock;
+        float receiver = s.z + (dot(slope, o) + shortfall * length(o)) * blocksPerUv * depthPerBlock;
         float d = texture2D(shadowtex0, s.xy + o).r;
         if (d < receiver) {
             blockers += 1.0;
@@ -82,14 +83,15 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     if (blockers < 0.5)
         return 1.0;
     float gap = max(s.z - blockerDepth / blockers, 0.0) / depthPerBlock;          // blocks from caster to receiver
-    float radiusUv = max(0.5 * gap * SUN_SPREAD / blocksPerUv, PENUMBRA_MIN_TEXELS * texel);
+    float radiusUv = max(0.5 * max(gap * SUN_SPREAD, PENUMBRA_MIN_BLOCKS) / blocksPerUv, PENUMBRA_MIN_TEXELS * texel);
     // every search tap blocked and the penumbra inside the searched disc: deep inside the shadow
     if (blockers > 7.5 && radiusUv < searchUv * 0.5)
         return 0.0;
     float lit = 0.0;
+    float plane = blocksPerUv * depthPerBlock;
     for (int i = 0; i < 12; i++) {
         vec2 o = shadowSpiral(i, 12, turn) * radiusUv;
-        lit += shadowBilinear(s.xy + o, s.z + dot(slope, o) * blocksPerUv * depthPerBlock, res);
+        lit += shadowBilinear(s.xy + o, s.z + (dot(slope, o) + shortfall * length(o)) * plane, res);
     }
     return lit / 12.0;
 }
@@ -116,9 +118,10 @@ float sunShadow(vec3 playerPos, vec3 worldNormal, vec3 fit) {
     vec3 ns = mat3(shadowModelView) * worldNormal;
     vec2 slope = ns.xy / max(ns.z, 1e-3);
     float steep = length(slope);
+    float shortfall = max(steep - SHADOW_MAX_SLOPE, 0.0);
     if (steep > SHADOW_MAX_SLOPE)
         slope *= SHADOW_MAX_SLOPE / steep;
-    float lit = softShadow(vec3(s.xy, depth), texelBlocks * res, depthPerBlock, slope, res);
+    float lit = softShadow(vec3(s.xy, depth), texelBlocks * res, depthPerBlock, slope, shortfall, res);
 #else
     float lit = shadowBilinear(s.xy, depth, res);
 #endif
