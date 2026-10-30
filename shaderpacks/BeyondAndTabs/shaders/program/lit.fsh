@@ -61,12 +61,13 @@ varying vec3 vT;
 varying vec3 vB;
 #endif
 
-// water also writes colortex2 (lib/water.glsl): composite reads it for the caustics and reflections. The loader keeps the directive
-// of the preprocessed source; were it ever to read both, the last one wins and water simply loses its caustics
+// colortex1: the sky's share of each pixel's light, for the ambient occlusion (slice 3, composite.fsh). Water also
+// writes colortex5 (lib/water.glsl): composite reads it for the caustics and reflections. Oculus runs the GLSL
+// preprocessor (comments kept) before it looks for the directive, so only the branch compiled in is seen
 #ifdef LIT_WATER
-/* DRAWBUFFERS:02 */
+/* DRAWBUFFERS:015 */
 #else
-/* DRAWBUFFERS:0 */
+/* DRAWBUFFERS:01 */
 #endif
 void main() {
     // sharper texture detail under the RTS camera ("better resolution", lovish Oct 30): it is orthographic at ~30-36
@@ -93,6 +94,7 @@ void main() {
         if (alpha < 0.004)
             discard;
         gl_FragData[0] = vec4(toLinear(albedo), alpha);
+        gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);   // no ambient occlusion on a selection or placement box
         return;
     }
 #endif
@@ -144,6 +146,9 @@ void main() {
     lightColours(sunColour, skyColour);
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
     vec3 c = lin * light;
+    // the light that comes from the sky as a whole, which ambient occlusion shuts out (slice 3, composite.fsh): the
+    // fill, and below a metal's or a gem's sky reflection
+    vec3 ambient = lin * skyFill(n, levels, ao, texAo, skyColour);
 #ifdef LIT_PBR
     // the RTS camera is orthographic: every pixel looks along the same direction, the view's -z, so the direction to
     // the eye is +z everywhere (-viewPos would point at an eye that does not exist). First person keeps the real eye
@@ -151,13 +156,16 @@ void main() {
     // a metal's light is its reflection: little diffuse. A dielectric gives up what it reflects (F0, 4% for most of
     // ours), so the lawn's sheen does not lift the lawn off its noon value target (design, slice 1 bands)
     c *= mix(1.0 - mat.f0.g, METAL_DIFFUSE, mat.metal);
+    ambient *= mix(1.0 - mat.f0.g, METAL_DIFFUSE, mat.metal);
     // the fog of war and a dark vertex colour dim the reflections as they dim the albedo (no light in the fog); the
     // brightest channel, so a biome's green tint does not count as darkening. A metal's F0 is its albedo, already tinted
     float tint = mix(max(glcolor.r, max(glcolor.g, glcolor.b)), 1.0, mat.metal);
     vec3 reflected = min(sunSpecular(mat, v, l) * sunArriving(shadow, levels, sunColour) * terminator,
                          vec3(SPEC_MAX));
-    reflected += skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
+    vec3 sheen = skyReflection(mat, v, levels.y, skyColour, sunColour) * (ao * texAo);
+    reflected += sheen;
     c += reflected * tint;
+    ambient += sheen * tint;
     // emission: the texture glows with its own colour, unlit (lanterns, spell glass, the Bone Dragon's thread)
     c += lin * mat.emission;
 #endif
@@ -231,17 +239,27 @@ void main() {
         }
 #endif
         gl_FragData[0] = vec4(c, alpha);
-        // written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel
+        // no occlusion on the water's own surface (colortex1 0, blended by its alpha, as for glass)
+        gl_FragData[1] = vec4(0.0, 0.0, 0.0, alpha);
+        // colortex5, written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel
         // b: how much of the reflected sky this pixel shows per unit of Fresnel (top surface only), so composite's
         // screen-space reflection can swap the sky for what the ray meets, on the same terms
-        float skyShare = top ? levels.y * fogDim * (1.0 - foam) : 0.0;
-        gl_FragData[1] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), skyShare, 1.0);
+        float reflectShare = top ? levels.y * fogDim * (1.0 - foam) : 0.0;
+        gl_FragData[2] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), reflectShare, 1.0);
         return;
     }
 #endif
     gl_FragData[0] = vec4(c, alpha);
+    // colortex1 R: the sky's share of this pixel's light. Water stays 0: its surface was not in the depth the
+    // occlusion was found from, and blending its 0 in by its alpha fades the bed's occlusion under it
+#ifdef LIT_WATER
+    float skyShare = 0.0;
+#else
+    float skyShare = clamp(dot(ambient, LUMA) / max(dot(c, LUMA), 1e-5), 0.0, 1.0);
+#endif
+    gl_FragData[1] = vec4(skyShare, 0.0, 0.0, alpha);
 #ifdef LIT_WATER
     // glass, ice and the rest: no water data, blended by their own alpha so a clear pane over water keeps it
-    gl_FragData[1] = vec4(0.0, 0.5, 0.0, alpha);
+    gl_FragData[2] = vec4(0.0, 0.5, 0.0, alpha);
 #endif
 }

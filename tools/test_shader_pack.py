@@ -29,6 +29,57 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
 
+    def test_ambient_occlusion_takes_only_the_sky_share(self):
+        # slice 3 (lib/ao.glsl): every program that writes colour also writes colortex1, the sky's share of the light,
+        # so composite.fsh darkens creases in the fill alone; overlays and water write 0 (an unlit program left out
+        # would take the ground's occlusion onto a selection ring)
+        for name in spc.programs():
+            if not name.startswith("gbuffers_") or not name.endswith(".fsh"):
+                continue
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            if "orthoView())\n        discard;" in src and "SKY" in src:
+                continue                    # the sky: nothing drawn in the RTS view, depth 1 elsewhere
+            self.assertIn("/* DRAWBUFFERS:01 */", src, name)
+            self.assertIn("gl_FragData[1]", src, name)
+        props = open(os.path.join(spc.SHADERS, "shaders.properties"), encoding="utf-8").read()
+        self.assertIn("scale.deferred=0.5", props)
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        self.assertIn("lin *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
+    def test_buffers_agree_across_programs(self):
+        # the loader gathers every colortexN format and clear directive from all programs into one table, the last one
+        # read winning: two passes using one colortex for different things (slice 3's AO and slice 4's water both took
+        # colortex2 before the stack) would silently share a format and a clear. Each buffer: one format, one clear
+        # colour; every buffer a program draws into or samples has a format; and none is sampled that nothing draws
+        formats, clears, written, read = {}, {}, set(), set()
+        for name in spc.programs():
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            for i, fmt in re.findall(r"const int colortex(\d+)Format = (\w+);", src):
+                formats.setdefault(int(i), set()).add(fmt)
+            for i, col in re.findall(r"const vec4 colortex(\d+)ClearColor = ([^;]+);", src):
+                clears.setdefault(int(i), set()).add(col.replace(" ", ""))
+            if name.endswith(".fsh"):
+                for d in re.findall(r"/\* DRAWBUFFERS:(\d+) \*/", src):
+                    written |= {int(c) for c in d}
+                read |= {int(i) for i in re.findall(r"uniform sampler2D colortex(\d+);", src)}
+        for i, f in formats.items():
+            self.assertEqual(len(f), 1, "colortex%d declared as %s" % (i, sorted(f)))
+        for i, c in clears.items():
+            self.assertEqual(len(c), 1, "colortex%d cleared to %s" % (i, sorted(c)))
+        for i in written | read:
+            self.assertIn(i, formats, "colortex%d has no format" % i)
+        self.assertEqual(read - written, set(), "sampled but never drawn into")
+        # colortex1 (the sky share) must clear to 0, not the loader's default white: an undrawn pixel takes no AO
+        self.assertEqual(clears.get(1), {"vec4(0.0,0.0,0.0,0.0)"})
+
+    def test_lit_ground_never_blooms(self):
+        # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
+        # (under 1 in linear light), so the threshold must stay at or above 1
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
+        self.assertIsNotNone(m)
+        self.assertGreaterEqual(float(m.group(1)), 1.0)
+
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's
         # final.fsh copies the Enchanted column of WorldLookPass (#326); until #326 is on this branch there is no third
@@ -114,10 +165,11 @@ class ShaderPack(unittest.TestCase):
         self.assertLessEqual(const("FOAM_OPACITY"), 0.6)
         comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
         self.assertRegex(comp, r"lin \*= max\(1\.0 \+ \(water\.g - 0\.5\) / CAUSTIC_ENCODE, 0\.0\);")
-        # the water layer's data goes to colortex2 from gbuffers_water only (one directive per program)
+        # the water layer's data goes to colortex5 from gbuffers_water only (one directive per program; 5 in the stack
+        # with slice 3, whose ambient occlusion has colortex1-3 and its bloom colortex4)
         water = spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh"))
-        self.assertIn("/* DRAWBUFFERS:02 */", water)
-        self.assertIn("uniform sampler2D colortex2;", comp)
+        self.assertIn("/* DRAWBUFFERS:015 */", water)
+        self.assertIn("uniform sampler2D colortex5;", comp)
 
     def test_reflections_march_only_where_they_show(self):
         """Screen-space reflections (composite.fsh) cost a 16-step march per water pixel; the budget (slice 4: +1.0 ms

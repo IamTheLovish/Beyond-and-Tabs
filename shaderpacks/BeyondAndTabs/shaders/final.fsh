@@ -4,13 +4,15 @@
 // mod's no-pack pass, with the Enchanted values of #326), so players with and without the pack see the same mood.
 // tools/test_shader_pack.py fails if these constants drift from WorldLookPass's Enchanted column once #326 is in.
 //
-// The "camera" after the air: edge smoothing on geometry edges, Enchanted's soft glow of the bright areas, the film
-// grade (exposure, an S on luma, a warm split tone, vibrance for dull colours only) and a vignette.
+// The "camera" after the air: edge smoothing on geometry edges, a gentle local contrast, Enchanted's soft glow of the
+// bright areas, the film grade (exposure, an S on luma, a warm split tone, saturation and vibrance that guard skin,
+// team colours and greys) and a vignette.
 
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex4;
 uniform sampler2D depthtex0;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
@@ -23,13 +25,18 @@ varying vec2 texcoord;
 // fantasy esque")
 const float CONTRAST = 0.18;
 const float SPLIT_TONE = 1.2;
-const float SATURATION = 1.0;
+// 1.0 -> 1.12 (slice 3, Oct 30, lovish: "richer saturation ... pop", then "hyper realism"): the richer colour a good
+// camera or slide film gives a sunny day, never cartoon. The boost is guarded (grade()): greys get none, skin and the
+// strongest colours (team colours, spell glows, overlays) little, so it lands on the lawn, roofs, wood and water.
+// #326's WorldLookPass Enchanted column should take the same value (and the guards) when it lands
+const float SATURATION = 1.12;
 const float VIGNETTE = 0.16;
 // 0.95 -> 1.05 (Oct 30): with slice 2's materials on, the noon lawn read 0.315 on the block stills, under the doc's
 // 0.36-0.43 band, and the critic called the whole scene a stop under the benchmark. Exposure scales lit and shade
 // alike, so the judged shadow / lit ratios hold
 const float EXPOSURE = 1.05;
-const float VIBRANCE = 0.45;
+// 0.45 -> 0.60 (slice 3): vibrance does most of the richening, on the dull colours only (see grade())
+const float VIBRANCE = 0.60;
 const float GLOW = 0.30;
 const float GLOW_THRESHOLD = 0.50;
 const float GLOW_RADIUS = 0.016;
@@ -39,6 +46,36 @@ const vec3 SHADOW_TINT = vec3(1.06, 1.00, 0.90);
 // Enchanted mood stays in the shadows' tint and the light table; whites read white. #326's WorldLookPass Enchanted
 // column must take the same value so players with and without the pack match.
 const vec3 HIGHLIGHT_TINT = vec3(1.03, 1.00, 0.96);
+
+// ---- slice 3's colour guards and local contrast ----
+// how much of the saturation boost skin keeps out of (0 = none, 1 = all): a face, a villager's hands and a unit's
+// bare arms keep their tone instead of turning orange (vibrance already leaves colours as strong as skin alone)
+const float SKIN_GUARD = 0.6;
+// greys get no boost at all: below GREY_GATE_LO's colourfulness (chroma over luma, before the split tone's faint
+// tint) the boost is zero, full from GREY_GATE_HI. White quartz, stone and iron stay neutral (whites stay white)
+const float GREY_GATE_LO = 0.03;
+const float GREY_GATE_HI = 0.10;
+// strong colours keep their drawn value: the saturation boost fades out between these colourfulness values (chroma
+// over luma: the lawn ~0.45, water and roofs ~0.5-0.6, team red and blue ~2.2)
+const float STRONG_LO = 1.0;
+const float STRONG_HI = 1.8;
+// local contrast: luma pushed away from its neighbourhood's (~1 block across at the default zoom: colortex0's mip
+// 4.5 in five taps), so roofs, walls and the ground between them separate from the RTS camera. Subtle by design: at
+// most LOCAL_CONTRAST x LOCAL_CONTRAST_LIMIT (0.022) of luma, faded to nothing at black and white, so it never clips
+// a highlight or crushes a shadow and draws no visible halo round a unit
+const float LOCAL_CONTRAST = 0.22;
+const float LOCAL_CONTRAST_LIMIT = 0.10;
+const float LOCAL_CONTRAST_LOD = 4.5;
+const float LOCAL_CONTRAST_SPREAD = 20.0;      // pixels between the five taps
+// the loader builds colortex0's mipmaps before this pass: the local contrast's neighbourhood comes from them
+const bool colortex0MipmapEnabled = true;
+
+// ---- slice 3's bloom: the light past composite.fsh's threshold (colortex4: emissive texels, glows, the sun's glint
+// on metal), spread by its own mipmaps 1-3 (2, 4 and 8 px texels), so the halo stays within ~1% of the screen's height
+// round a lantern at the default zoom. Real lenses scatter a little of a bright source's light; this is that, not a
+// haze over the scene ----
+const float BLOOM_STRENGTH = 0.6;
+const bool colortex4MipmapEnabled = true;
 
 // ---- edge smoothing: FXAA only where the depth buffer shows a geometry edge (textures inside a face keep every
 // texel; one-pixel-thin features such as name-tag glyphs are left as drawn) ----
@@ -136,6 +173,42 @@ vec3 glowAt(vec2 uv, float aspect) {
     return sum / wsum;
 }
 
+// 0..1: how much a colour looks like skin. Skin of every tone sits in the red-to-yellow sextant (r > g > b) about a
+// third of the way to yellow (hue ~15-40 degrees), moderately saturated
+float skinLike(vec3 c) {
+    float span = c.r - c.b;
+    if (c.r <= c.g || c.g <= c.b || span < 1e-3)
+        return 0.0;
+    float hue = (c.g - c.b) / span;                // 0 red .. 1 yellow
+    float s = span / c.r;
+    return (1.0 - smoothstep(0.2, 0.4, abs(hue - 0.45))) * smoothstep(0.08, 0.18, s)
+        * (1.0 - smoothstep(0.45, 0.60, s));
+}
+
+// the neighbourhood's luma round uv, from colortex0's mipmaps
+float neighbourhoodLuma(vec2 uv, vec2 px) {
+    vec2 o = px * LOCAL_CONTRAST_SPREAD;
+    vec3 s = texture2D(colortex0, uv, LOCAL_CONTRAST_LOD).rgb * 0.36
+        + (texture2D(colortex0, uv + vec2(o.x, o.y), LOCAL_CONTRAST_LOD).rgb
+           + texture2D(colortex0, uv + vec2(-o.x, o.y), LOCAL_CONTRAST_LOD).rgb
+           + texture2D(colortex0, uv + vec2(o.x, -o.y), LOCAL_CONTRAST_LOD).rgb
+           + texture2D(colortex0, uv + vec2(-o.x, -o.y), LOCAL_CONTRAST_LOD).rgb) * 0.16;
+    return dot(s, LUMA);
+}
+
+vec3 localContrast(vec3 c, vec2 uv, vec2 px) {
+    float l = dot(c, LUMA);
+    float detail = clamp(l - neighbourhoodLuma(uv, px), -LOCAL_CONTRAST_LIMIT, LOCAL_CONTRAST_LIMIT);
+    float midtones = 4.0 * l * (1.0 - l);
+    return c * ((l + LOCAL_CONTRAST * detail * midtones) / max(l, 1e-4));
+}
+
+vec3 bloomAt(vec2 uv) {
+    vec3 b = texture2D(colortex4, uv, 1.0).rgb * 0.55 + texture2D(colortex4, uv, 2.0).rgb * 0.30
+        + texture2D(colortex4, uv, 3.0).rgb * 0.15;
+    return toDisplay(b) * BLOOM_STRENGTH;
+}
+
 vec3 grade(vec3 c) {
     // filmic S on luma (slope 1 at black and white, 1 + CONTRAST through the midtones), as a ratio so saturation holds
     c *= EXPOSURE;
@@ -143,6 +216,11 @@ vec3 grade(vec3 c) {
     float lc = l + CONTRAST * 8.0 * l * l * (1.0 - l) * (1.0 - l) * (2.0 * l - 1.0);
     c *= lc / max(l, 1e-4);
     float chroma = length(c - lc);
+    // the pixel's own colourfulness, before the split tone gives near-greys its faint tint, decides the boosts below:
+    // none for greys, less for skin
+    float colourful = chroma / max(lc, 1e-3);
+    float grey = smoothstep(GREY_GATE_LO, GREY_GATE_HI, colourful);
+    float guard = grey * (1.0 - SKIN_GUARD * skinLike(c));
     // split tone in bells at 1/4 and 3/4 luma: black, white and the midtones stay neutral
     float shadows = smoothstep(0.0, 0.25, lc) - smoothstep(0.25, 0.5, lc);
     float highlights = smoothstep(0.5, 0.75, lc) - smoothstep(0.75, 1.0, lc);
@@ -151,12 +229,12 @@ vec3 grade(vec3 c) {
     float lt = dot(c, LUMA);
     vec3 v = c - lt;
     c = lt + v * min(1.0, max(chroma, 0.1 * SPLIT_TONE * lt) / max(length(v), 1e-5));
-    c = mix(vec3(lt), c, SATURATION);
+    c = mix(vec3(lt), c, 1.0 + (SATURATION - 1.0) * guard * (1.0 - smoothstep(STRONG_LO, STRONG_HI, colourful)));
     // vibrance for the dull pixels only: team colours, glows and the overlays' strong colours stay as drawn
     float lv = dot(c, LUMA);
     vec3 dv = c - lv;
     float sat = length(dv) / max(lv, 1e-3);
-    return lv + dv * (1.0 + VIBRANCE * clamp(1.0 - sat / 0.6, 0.0, 1.0));
+    return max(lv + dv * (1.0 + VIBRANCE * grey * clamp(1.0 - sat / 0.6, 0.0, 1.0)), 0.0);
 }
 
 void main() {
@@ -168,7 +246,11 @@ void main() {
     if (depth < 1.0 && geometryEdge(texcoord, px, depth, orthoView()))
         c = fxaa(texcoord, px, c);
 #endif
+#if BLOOM == 1
+    c = 1.0 - (1.0 - c) * (1.0 - min(bloomAt(texcoord), vec3(1.0)));
+#endif
 #if GRADE == 1
+    c = localContrast(c, texcoord, px);
     c = 1.0 - (1.0 - c) * (1.0 - GLOW * glowAt(texcoord, aspect));
     c = grade(c);
     vec2 d = (texcoord - 0.5) * vec2(aspect, 1.0);

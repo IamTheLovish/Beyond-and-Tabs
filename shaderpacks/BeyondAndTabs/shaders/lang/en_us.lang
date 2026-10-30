@@ -6,6 +6,20 @@ option.sunPathRotation=Sun tilt
 option.sunPathRotation.comment=Tilts the sun's path so noon still throws shadows you can see from above (30 = lovish's pick).
 option.HAZE_STRENGTH=Distance haze
 option.HAZE_STRENGTH.comment=How much air shows over distant ground (1 = the game's own look).
+option.BLOOM=Bloom
+option.BLOOM.comment=A small halo round lanterns, glowing parts and bright glints on metal. Lit ground never blooms.
+value.BLOOM.0=Off
+value.BLOOM.1=On
+option.SOFT_SHADOWS=Soft shadows
+option.SOFT_SHADOWS.comment=Shadows are sharp where they meet their caster and soften the farther they fall, as real sunlight does. Off: crisp edges everywhere (a little faster).
+value.SOFT_SHADOWS.0=Off
+value.SOFT_SHADOWS.1=On
+option.AO=Ambient occlusion
+option.AO.comment=Building bases, wall corners and unit feet sit in the ground: creases see less sky, so they lose part of the sky's light (never the sun's).
+value.AO.0=Off
+value.AO.1=On
+option.AO_STRENGTH=Occlusion strength
+option.AO_STRENGTH.comment=How dark the creases get (1 = the tuned look; the darkest is capped so units in alleys stay readable).
 option.GRADE=Colour grade
 option.GRADE.comment=Enchanted: a little dimmer, richer colour, golden light, a soft glow. Off: the tone curve only.
 value.GRADE.0=Off

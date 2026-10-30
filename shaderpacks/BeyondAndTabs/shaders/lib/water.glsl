@@ -96,7 +96,7 @@ float shoreFoam(float below, vec2 p, float t) {
 
 // ---- caustics: the ripples focusing sunlight into a moving net of bright lines on the bed ----
 // The water pass knows the bed under each pixel (depthtex1) but cannot change the bed's colour, which is already in
-// colortex0; it writes how much brighter the bed should be into colortex2 (WATER_DATA_*), and composite multiplies.
+// colortex0; it writes how much brighter the bed should be into colortex5 (WATER_DATA_*), and composite multiplies.
 // The pattern is followed from the bed up the sun's direction to the surface (so it slides as the sun moves and lines up
 // with the ripples above), animated, faded with depth (deeper focus spreads and dims), zero in the bed's shadow.
 
@@ -104,7 +104,7 @@ float shoreFoam(float below, vec2 p, float t) {
 const float CAUSTIC_STRENGTH = 1.3;
 // fades per block of water above the bed
 const float CAUSTIC_FADE = 0.45;
-// colortex2's caustic channel: 0.5 + boost * scale, so a boost of -2..+2 fits in 8 bits (steps of 1/64)
+// colortex5's caustic channel: 0.5 + boost * scale, so a boost of -2..+2 fits in 8 bits (steps of 1/64)
 const float CAUSTIC_ENCODE = 0.25;
 
 // one net: three plane waves 120 degrees apart, the plane warped by a slow swirl; where they cancel (their sum near 0) a
