@@ -394,6 +394,8 @@ public class HeroAiV2RolloutGameTests {
         Mob h = hero(helper, kit, me, (int) hx, (int) hz);
         Mob target = healFriend ? HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), me, (int) tx, (int) tz)
             : HeroAiV2GameTests.dummy(helper, them, (int) tx, (int) tz);
+        if (!healFriend && target != null)
+            target.setInvulnerable(false);   // the strike must be able to hurt it (dummy() is invulnerable)
         List<Mob> mobs = HeroAiV2GameTests.mobs(h, target);
         if (!(h instanceof FactionHero fh) || target == null) {
             HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
@@ -411,6 +413,7 @@ public class HeroAiV2RolloutGameTests {
         double[] spot = new double[2];
         double[] worst = { 0 };
         boolean[] cast = { false };
+        double[] last = { h.getX(), h.getZ() };
         helper.runAfterDelay(2, () -> {
             spot[0] = h.getX();
             spot[1] = h.getZ();
@@ -421,6 +424,7 @@ public class HeroAiV2RolloutGameTests {
             helper.runAfterDelay(t, () -> {
                 worst[0] = Math.max(worst[0], HeroAiV2GameTests.flat(h, spot[0], spot[1]));
                 cast[0] |= !ability.isOffCooldown(fh);
+                logMove(tag, tick, h, fh, last);
                 if (tick < 160)
                     return;
                 List<String> problems = new ArrayList<>();
@@ -458,6 +462,35 @@ public class HeroAiV2RolloutGameTests {
 
     /** Ticks the walk-off test watches the hero after the aim: the old cast goal walked ~1.5 blocks in about 13 ticks. */
     static final int WALK_OFF_WATCH = 60;
+
+    /**
+     * Diagnostic (review r3 on PR 416: held heroes stepped ~0.6 to cast at a spot in reach): each tick the hero moved
+     * more than 0.02, log where, its delta movement and what the cast goal and the navigator were doing.
+     */
+    static void logMove(String tag, int tick, Mob h, FactionHero fh, double[] last) {
+        double moved = Math.hypot(h.getX() - last[0], h.getZ() - last[1]);
+        last[0] = h.getX();
+        last[1] = h.getZ();
+        if (moved <= 0.02)
+            return;
+        String goal = "none";
+        try {
+            java.lang.reflect.Field f = fh.heroCore().getClass().getDeclaredField("castGoal");
+            f.setAccessible(true);
+            if (f.get(fh.heroCore()) instanceof com.solegendary.reignofnether.unit.goals.GenericTargetedSpellGoal g)
+                goal = "moveTarget " + g.getMoveTarget() + " castTarget " + g.getCastTarget() + " casting " + g.isCasting()
+                    + " channel " + g.getChannelTicks();
+        } catch (ReflectiveOperationException e) {
+            goal = "unreadable";
+        }
+        var nav = h.getNavigation();
+        com.solegendary.reignofnether.ReignOfNether.LOGGER.info(
+            "[HoldCast] {} t{} moved {} to ({}, {}) delta ({}, {}) | {} | nav done {} path {} | unit moveTarget {}",
+            tag, tick, String.format("%.3f", moved), String.format("%.3f", h.getX()), String.format("%.3f", h.getZ()),
+            String.format("%.3f", h.getDeltaMovement().x), String.format("%.3f", h.getDeltaMovement().z), goal,
+            nav.isDone(), nav.getPath() == null ? "null" : nav.getPath().getTarget(),
+            ((Unit) h).getMoveGoal() == null ? "none" : ((Unit) h).getMoveGoal().getMoveTarget());
+    }
 
     /** The entity the hero's cast goal is aimed at, if any (HeroCore.castGoal, read by name: the tests come first). */
     @javax.annotation.Nullable
