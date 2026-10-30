@@ -29,6 +29,7 @@ import java.util.Set;
  *   <li>Home (no tab open): the last tab's buildings are drawn click-only, without key badges; Z / X / C / V open a
  *       tab, and the grid keys keep their other meaning (S Stop, F Fight, ...).</li>
  *   <li>Open: the grid keys Q W E R / A S D F / Z X C V pick the building in their cell, the same keys in every tab.
+ *       The grid fills from the bottom row up (slot 0 on Z, drawn on the last row), like BAR's gridmenu.
  *       The key of a cell is fixed (BuildGroup.SLOT_KEYS), so another builder type's building added to a mixed card
  *       gets the key of the cell it lands in.</li>
  *   <li>The tab closes (home) when the building it picked is placed or dropped (BAR's CommandNotify), when the

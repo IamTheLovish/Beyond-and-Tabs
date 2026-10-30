@@ -153,9 +153,9 @@ public class ControlsReferenceScreen extends Screen {
         bind("build_tab_military", Keybindings.buildTabMilitary);
         bind("build_tab_defence", Keybindings.buildTabDefence);
         bind("build_tab_tech", Keybindings.buildTabTech);
-        slots("build_grid_row1", Keybindings.buildGrid[0], Keybindings.buildGrid[1], Keybindings.buildGrid[2], Keybindings.buildGrid[3]);
+        slots("build_grid_row1", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
         slots("build_grid_row2", Keybindings.buildGrid[4], Keybindings.buildGrid[5], Keybindings.buildGrid[6], Keybindings.buildGrid[7]);
-        slots("build_grid_row3", Keybindings.buildGrid[8], Keybindings.buildGrid[9], Keybindings.buildGrid[10], Keybindings.buildGrid[11]);
+        slots("build_grid_row3", Keybindings.buildGrid[0], Keybindings.buildGrid[1], Keybindings.buildGrid[2], Keybindings.buildGrid[3]);
         mouse("area_mex", t("left_drag"));
         mouse("place", t("left_click") + "  /  " + t("shift") + " + " + t("left_drag"));
         mouse("build_spacing", t("shift") + " + " + t("wheel"));   // BuildingLineClientEvents.onScroll

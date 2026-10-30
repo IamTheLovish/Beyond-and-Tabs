@@ -78,8 +78,8 @@ public class Keybindings {
     public static final Keybinding buildTabMilitary = new Keybinding("key.reignofnether.build_tab_military", GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
     public static final Keybinding buildTabDefence  = new Keybinding("key.reignofnether.build_tab_defence",  GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
     public static final Keybinding buildTabTech     = new Keybinding("key.reignofnether.build_tab_tech",     GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
-    // BAR's grid keys (gridmenu_key row col): the same twelve keys in every tab, in reading order, one per cell of the
-    // 4-wide build grid - Q W E R / A S D F / Z X C V. Live only while a tab is open (BuildTabs.onKey); then they win
+    // BAR's grid keys (gridmenu_key row col): the same twelve keys in every tab, one per cell of the 4-wide build grid -
+    // Q W E R / A S D F / Z X C V as laid out on the keyboard; buildings fill from the bottom row up (BuildGroup.SLOT_KEYS). Live only while a tab is open (BuildTabs.onKey); then they win
     // over the orders on the same keys (Stop S, Attack X, Fight F), and on W / A / S / D a tap picks, a hold pans.
     public static final Keybinding[] buildGrid = {
         new Keybinding("key.reignofnether.build_grid_1",  GLFW.GLFW_KEY_Q, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "Q"),
