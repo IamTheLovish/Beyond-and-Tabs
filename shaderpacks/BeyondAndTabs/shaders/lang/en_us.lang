@@ -18,3 +18,7 @@ option.MATERIALS=Material maps
 option.MATERIALS.comment=Reads our blocks' and units' surface maps: relief, metal and gem highlights, glowing parts. Off: flat surfaces, as before.
 value.MATERIALS.0=Off
 value.MATERIALS.1=On
+option.WATER_REALISM=Realistic water
+option.WATER_REALISM.comment=Water clear over a shallow bed and darkening to deep teal-blue with depth. Off: one even tint, as before.
+value.WATER_REALISM.0=Off
+value.WATER_REALISM.1=On

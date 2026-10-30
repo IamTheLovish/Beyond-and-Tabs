@@ -16,11 +16,20 @@
 #ifdef LIT_PBR
 #include "/lib/pbr.glsl"
 #endif
+#if defined LIT_WATER && WATER_REALISM == 1
+#define WATER_SURFACE
+#include "/lib/water.glsl"
+#endif
 
 uniform sampler2D texture;
 #ifdef LIT_PBR
 uniform sampler2D normals;             // the _n and _s maps beside each texture (the loader binds flat defaults where
 uniform sampler2D specular;            // a texture has none)
+#endif
+#ifdef WATER_SURFACE
+uniform sampler2D depthtex1;           // the depth of the opaque world only: the bed under the water
+uniform float viewWidth;
+uniform float viewHeight;
 #endif
 #ifdef LIT_ENTITY
 uniform vec4 entityColor;              // the hurt / creeper flash
@@ -34,6 +43,7 @@ varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
 varying float asDrawn;
+varying float waterBody;
 #ifdef LIT_PBR
 varying vec3 vT;
 varying vec3 vB;
@@ -100,7 +110,8 @@ void main() {
     }
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);
-    vec3 c = lin * surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+    vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+    vec3 c = lin * light;
 #ifdef LIT_PBR
     // the RTS camera is orthographic: every pixel looks along the same direction, the view's -z, so the direction to
     // the eye is +z everywhere (-viewPos would point at an eye that does not exist). First person keeps the real eye
@@ -119,5 +130,16 @@ void main() {
     c += lin * mat.emission;
 #endif
 
+#ifdef WATER_SURFACE
+    if (waterBody > 0.5) {
+        // the bed under this pixel and the path the view travels through the water to reach it
+        vec2 uv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+        float bedDepth = texture2D(depthtex1, uv).r;
+        float path = bedDepth >= 1.0 ? WATER_NO_BED : length(waterViewAt(uv, bedDepth) - viewPos);
+        // the lit water colour (slice 1's, which the palette was tuned on) is what deep water settles to; the bed
+        // already drawn under it shows through by what is left
+        alpha = waterOpacity(path);
+    }
+#endif
     gl_FragData[0] = vec4(c, alpha);
 }

@@ -31,5 +31,10 @@ const float ambientOcclusionLevel = 1.0;
 // gems, emission from _s. Off: the slice 1 look, for an A/B
 #define MATERIALS 1 // [0 1]
 
+// realistic water (slice 4, lib/water.glsl): opacity from the depth of water under each pixel - clear over a shallow
+// bed, the palette's dark teal-blue over deep water. Off: slice 1's one fixed alpha, for an A/B
+#define WATER_REALISM 1 // [0 1]
+
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0
+#define ID_WATER 10002.0

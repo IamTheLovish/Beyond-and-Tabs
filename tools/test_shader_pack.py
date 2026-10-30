@@ -43,7 +43,7 @@ class ShaderPack(unittest.TestCase):
 
     def test_material_maps_reach_the_lit_draws_but_not_water(self):
         # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
-        # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
+        # the hand pass LIT_PBR. Water has no _n / _s maps and its own surface (lib/water.glsl), so it stays out
         switch = open(os.path.join(spc.SHADERS, "lib", "pbrswitch.glsl"), encoding="utf-8").read()
         self.assertIn("!defined LIT_WATER", switch)
         for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
@@ -51,6 +51,25 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("uniform sampler2D normals;", src, name)
             self.assertIn("uniform sampler2D specular;", src, name)
         self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
+
+    def test_water_has_its_own_surface_with_a_fallback(self):
+        """Changed in slice 4 (claude/shader-water): this guard used to pin water to slice 1's plain surface ("water
+        keeps slice 1's surface until slice 4"). Slice 4 is here, so it now pins the new contract instead: water is
+        its own block id, gbuffers_water reads the opaque depth under it (depthtex1) to set its opacity from the
+        path through the water, and WATER_REALISM 0 still compiles to slice 1's one fixed alpha for an A/B."""
+        props = open(os.path.join(spc.SHADERS, "block.properties"), encoding="utf-8").read()
+        self.assertRegex(props, r"(?m)^block\.10002=water\b")
+        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        self.assertIn("#define ID_WATER 10002.0", settings)
+        self.assertRegex(settings, r"(?m)^#define WATER_REALISM 1 // \[0 1\]")
+        water = spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh"))
+        self.assertIn("uniform sampler2D depthtex1;", water)
+        self.assertIn("waterOpacity(", water)
+        plain = spc.with_options(water, {"WATER_REALISM": "0"})
+        self.assertIn("#define WATER_REALISM 0", plain)
+        self.assertIn("WATER_REALISM", spc.OPTION_VARIANTS[1])
+        # the slice 1 path survives: the texture's own alpha, written unless the realistic surface replaces it
+        self.assertIn("float alpha = tex.a;", water)
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):

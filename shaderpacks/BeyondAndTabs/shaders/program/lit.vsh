@@ -21,6 +21,8 @@ varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
 varying float asDrawn;
+varying float waterBody;              // 1 on water itself (block.properties), 0 on glass, ice and the rest of
+                                       // the translucent terrain
 #ifdef LIT_PBR
 varying vec3 vT;                       // the tangent frame for the _n map (lib/pbr.glsl), view space
 varying vec3 vB;
@@ -53,5 +55,10 @@ void main() {
     foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 ? 1.0 : 0.0;
 #else
     foliage = 0.0;
+#endif
+#ifdef LIT_WATER
+    waterBody = abs(mc_Entity.x - ID_WATER) < 0.5 ? 1.0 : 0.0;
+#else
+    waterBody = 0.0;
 #endif
 }
