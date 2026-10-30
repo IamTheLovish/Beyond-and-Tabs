@@ -81,7 +81,7 @@ TARGETS = {
     # foil (eyes structure run 39536435197) - the grain is for the light to catch, not lumps
     "stone":            dict(luma=0.52, std=0.050, sat=0.04, lf=0.0, ao=0.5, tilt=8.0, smooth=22, pore=12, soften=1.2,
                              mid=0.3),
-    "cobblestone":      dict(luma=0.41, std=0.090, sat=0.08, tilt=20.5, smooth=32, pore=16),
+    "cobblestone":      dict(luma=0.41, std=0.105, sat=0.08, tilt=22.0, smooth=32, pore=16),   # r48: stones apart from the mortar
     # Oct 29 (claude/environment-palette-oct29.md): luma 0.67 -> 0.50 - at 0.67 the river banks were the brightest
     # ground on screen (luma 0.72-0.75 after the grade, r54) and competed with buildings and units; the palette band
     # for sand is 0.48-0.58 (lights belong to what matters). Screen / texture was ~1.09 on r54.
@@ -140,8 +140,8 @@ TARGETS = {
     # r33 (critic, eyes 41029731853: ours 190/154/65 beside the benchmark's 215/196/23 - dimmer, tan): luma +15%
     # (0.63 -> 0.72), a more saturated yellow (0.76 -> 0.86), the stalk colour itself more lemon than orange
     # r47 (eyes 41094085391: an over-saturated flat yellow with no side falloff): sat -15%, the side a step darker
-    "hay_block_side":   dict(luma=0.62, std=0.105, sat=0.73, tilt=21.4, smooth=42, pore=40),
-    "hay_block_top":    dict(luma=0.71, std=0.095, sat=0.73, tilt=21.4, smooth=38, pore=40),
+    "hay_block_side":   dict(luma=0.62, std=0.130, sat=0.73, tilt=24.0, smooth=42, pore=40),   # r48: the strand read back (std 0.105 -> 0.13)
+    "hay_block_top":    dict(luma=0.71, std=0.115, sat=0.73, tilt=24.0, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -221,13 +221,13 @@ TARGETS = {
     # r33 (critic: "corrugation"): three broad flutes, softer (std 0.04 -> 0.03, tilt 16 -> 10)
     # r46 (eyes stack7 at 11800: saturated BLUE seam lines along the quartz joints - the sky reflected in the tilted
     # chamfer texels of a glossy face): the quartz family a satin (smooth 129-145 -> 100), the chamfers shallower
-    "quartz_pillar": dict(luma=0.84, std=0.030, sat=0.04, tilt=6.0, smooth=100, pore=4),   # r42; r46: satin
-    "quartz_pillar_top": dict(luma=0.83, std=0.050, sat=0.0, tilt=9.0, smooth=90, pore=4),   # r35: neutral; r42; r46
-    "quartz_bricks": dict(luma=0.81, std=0.032, sat=0.04, tilt=8.0, smooth=100, pore=4),   # r42; r46: satin
-    "quartz_block_bottom": dict(luma=0.83, std=0.012, sat=0.03, tilt=2.5, smooth=100, pore=4),   # r32: seamless; r42; r46
+    "quartz_pillar": dict(luma=0.86, std=0.035, sat=0.04, tilt=6.0, smooth=100, pore=4),   # r42; r46: satin; r48
+    "quartz_pillar_top": dict(luma=0.86, std=0.050, sat=0.0, tilt=9.0, smooth=90, pore=4),   # r35: neutral; r42; r46; r48
+    "quartz_bricks": dict(luma=0.84, std=0.036, sat=0.04, tilt=8.0, smooth=100, pore=4),   # r42; r46: satin; r48
+    "quartz_block_bottom": dict(luma=0.86, std=0.030, sat=0.03, tilt=2.5, smooth=100, pore=4),   # r32: seamless; r48: mottle
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
-    "andesite": dict(luma=0.48, std=0.050, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),   # r35: a step under stone
+    "andesite": dict(luma=0.48, std=0.060, sat=0.03, lf=0.4, ao=0.6, tilt=8.0, smooth=40, pore=12),   # r35: a step under stone; r48: a visible fine speckle
     "granite": dict(luma=0.60, std=0.035, sat=0.36, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),   # r45: feldspar speckle; r47: halved
     "diorite": dict(luma=0.73, std=0.045, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),   # r47: speckle halved
     # r42 (eyes 41058728743: the whole white family landed at 0.93-0.96 on screen - the shader lifts a 0.75 albedo to
@@ -251,7 +251,7 @@ TARGETS = {
     "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
     # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
-    "calcite": dict(luma=0.61, std=0.065, sat=0.02, tilt=14.0, smooth=36, pore=10),   # r42 / r43 / r44: grain and pits
+    "calcite": dict(luma=0.64, std=0.065, sat=0.02, tilt=14.0, smooth=36, pore=10),   # r42-44: grain and pits; r48
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
     "tuff": dict(luma=0.30, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),   # r45: 0.43 -> 0.30 (0.34 at 5000)
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
@@ -348,7 +348,7 @@ TARGETS = {
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
     # r46 (it read as a flat plastic UI swatch): 3-4% micro-variation - a soft mottle and faint form marks (m_clayish
     # mottle), still the calm one; matte (60 -> 40) so no sky sits in it
-    "white_concrete": dict(luma=0.72, std=0.030, sat=0.0, tilt=3.0, smooth=40, pore=10),   # r42: neutral; r46: fine mottle
+    "white_concrete": dict(luma=0.74, std=0.040, sat=0.0, tilt=3.0, smooth=40, pore=10),   # r42: neutral; r46: mottle; r48
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
     # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
@@ -371,8 +371,10 @@ TARGETS = {
     "blackstone_top": dict(luma=0.18, std=0.045, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r45: 0.18
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
-    "quartz_block_top": dict(luma=0.83, std=0.030, sat=0.03, tilt=3.0, smooth=100, pore=4),   # r42; r44: a crisp tile line; r46
-    "quartz_block_side": dict(luma=0.83, std=0.030, sat=0.03, tilt=3.0, smooth=100, pore=4),
+    # r48: the whites 3-5% soft mottle each (not identical flats) and the means a step apart - quartz 0.86 / white
+    # concrete 0.74 / calcite 0.64 (for ~0.97 / 0.94 / 0.90 on screen)
+    "quartz_block_top": dict(luma=0.86, std=0.040, sat=0.03, tilt=3.0, smooth=100, pore=4),   # r42; r44: tile line; r46; r48
+    "quartz_block_side": dict(luma=0.86, std=0.040, sat=0.03, tilt=3.0, smooth=100, pore=4),
     "farmland": dict(luma=0.38, std=0.080, sat=0.38, tilt=20.0, smooth=22, pore=56, soften=0.8),     # r31: rows
     "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=18.0, smooth=60, pore=64, soften=0.8),
     # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
@@ -1368,8 +1370,8 @@ for _c, (_w, _k, _t) in DYES.items():
     TARGETS[_c + "_stained_glass"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=235, pore=0, hspan=0.05))
     TARGETS[_c + "_stained_glass_pane_top"] = dict(colour_targets(_rgb, 0.030, tilt=4.0, smooth=200, pore=0))
     R37 += [_c + "_stained_glass", _c + "_stained_glass_pane_top"]
-TARGETS["chiseled_quartz_block"] = dict(luma=0.83, std=0.030, sat=0.0, tilt=7.0, smooth=100, pore=4)   # r42: with quartz; r46: satin
-TARGETS["chiseled_quartz_block_top"] = dict(luma=0.83, std=0.025, sat=0.0, tilt=5.0, smooth=100, pore=4)
+TARGETS["chiseled_quartz_block"] = dict(luma=0.86, std=0.035, sat=0.0, tilt=7.0, smooth=100, pore=4)   # r42: with quartz; r46; r48
+TARGETS["chiseled_quartz_block_top"] = dict(luma=0.86, std=0.030, sat=0.0, tilt=5.0, smooth=100, pore=4)
 TARGETS["chiseled_bookshelf_top"] = dict(luma=0.50, std=0.055, sat=0.40, tilt=8.0, smooth=45, pore=24)
 TARGETS["chiseled_bookshelf_side"] = dict(luma=0.46, std=0.070, sat=0.40, tilt=12.0, smooth=45, pore=24)
 TARGETS["chiseled_bookshelf_empty"] = dict(luma=0.36, std=0.090, sat=0.40, tilt=14.0, smooth=40, pore=24)
@@ -1430,7 +1432,7 @@ for _p in ("grass", "tall_grass_bottom", "tall_grass_top", "fern", "large_fern_b
 for _p in ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top"):
     # r42 (eyes 41058728743: far tufts read as a tan speckle at the 34 view): the straw closer to the lawn's screen
     # value and duller - luma 0.50 -> 0.42, sat 0.36 -> 0.24 - so it melts in with distance
-    TARGETS[_p] = dict(luma=0.42, std=0.110, sat=0.24, tilt=12.0, smooth=50, pore=120)
+    TARGETS[_p] = dict(luma=0.42, std=0.110, sat=0.30, tilt=12.0, smooth=50, pore=120)   # r48: warmer straw (sat 0.24 -> 0.30)
 # r34 (tufts round 34; critic r33: tufts 4/10 default, 6/10 preset): bold-blade sprites (tools/plant_sprites.py) and
 # more shapes - three short grasses, two ferns, two tall grasses - so neighbouring tufts differ. Each extra shape
 # takes its first shape's targets; appended (SEED_ORDER rule). m_plant fits only their luma MEAN and saturation, over
@@ -1483,14 +1485,17 @@ for _p in FLOWER_TEXTURES:
 # 0.96x of the lawn in game at 1.29x in albedo); this branch's clover lawn is 0.645 (r39), so at 0.72 they would fall
 # back to dark stamps. Lifted to the +0.1 band over the lawn (eyes 41044148818 brief: within 0.1 of the lawn, sat
 # <= 0.6 after the tint): short grass 0.72 -> 0.745, ferns 0.68 -> 0.71, tall grass and large fern 0.68 -> 0.73.
+# r48 (eyes 41098466051, with the shader's side lighting fixed: the tufts should sit 0.03-0.06 UNDER the lawn in the
+# tinted result, within 5 degrees of its hue): short grass 0.745 -> 0.60 (tinted 0.405 vs the lawn's 0.436), ferns
+# 0.57, tall grass and large fern 0.58; sat 0.12 -> 0.20 (the yellow bias, m_plant)
 for _sh in ("", "_b", "_c"):
     for _sz in ("", *PLANT_SIZES):
-        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.745)
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.60, sat=0.20)
 for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.71)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.57, sat=0.14)
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.73)
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.58, sat=0.20)
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
@@ -2032,7 +2037,7 @@ def m_hay_side(F, n):
     # stalks: a band of 16-40 cycles across u (3-8 texels per stalk), very long along v, with a slow wobble so no
     # stalk is a ruler line; plus a second thinner layer of stalks that cross at a slight angle
     wob = 0.005 * F.noise(1, 3, 0.5, sx=1.0, sy=3.0)
-    stalk = F.warp(F.noise(16, 40, 0.3, sx=1.0, sy=40.0), wob, 0.0)
+    stalk = F.warp(F.noise(10, 26, 0.3, sx=1.0, sy=40.0), wob, 0.0)     # r48: coarser strands (2-3 px at 32 per block)
     fine = F.warp(F.noise(40, 64, 0.0, sx=1.0, sy=40.0), wob, 0.0)
     # r31b (eyes 41023221433: the sides "read woven wicker"): no crossing stalks - straight, with a slow drift
     stalk = stalk + 0.25 * F.noise(4, 12, 0.5, sx=1.0, sy=30.0)
@@ -2058,7 +2063,7 @@ def m_hay_top(F, n):
     directional streaks): the top of the bale as stalks too - lying along u, pressed flat, in a few bundles that
     cross at slight angles, with a scatter of cut ends (small pale rings) where stalks point up out of the bale."""
     wob = 0.004 * F.noise(1, 3, 0.5, sx=3.0, sy=1.0)
-    stalk = F.warp(F.noise(16, 40, 0.3, sx=40.0, sy=1.0), 0.0, wob)
+    stalk = F.warp(F.noise(10, 26, 0.3, sx=40.0, sy=1.0), 0.0, wob)     # r48: coarser strands
     stalk = stalk + 0.25 * F.noise(4, 12, 0.5, sx=30.0, sy=1.0)
     fine = F.warp(F.noise(40, 64, 0.0, sx=40.0, sy=1.0), 0.0, wob)
     # bundles lying at a slight angle across the rest
@@ -2590,7 +2595,7 @@ def m_quartz(F, n, kind):
         vein = (1 - smoothstep(0.0, 0.22, line)) * smoothstep(0.1, 0.6, F.noise(1, 3, 0.5))
         vein = np.maximum(vein, 0.6 * F.blur(vein, 3.0))                 # a soft halo round the vein
         H = 0.5 + 0.16 * bev - 0.01 * vein + 0.01 * drift
-        shade = (0.96 - 0.05 * vein + 0.010 * drift) * (0.91 + 0.09 * bev)
+        shade = (0.96 - 0.05 * vein + 0.030 * drift) * (0.91 + 0.09 * bev)    # r48: a soft mottle on the face (0.01 -> 0.03)
     else:                          # smooth quartz (quartz_block_bottom): SEAMLESS - a soft cloud only (r32: no veins)
         slow = F.noise(1, 3, 0.5)
         cloud = slow + 0.5 * F.noise(4, 10, 0.5)                       # a soft marble cloud at two scales (colour)
@@ -2847,11 +2852,11 @@ def m_cobble_domed(F, n, cells=16, moss=0.15, base=(0.50, 0.50, 0.49)):
     pits = smoothstep(1.3, 2.2, -F.noise(8, 24, 0.5)) * stone     # a few shallow pits on the stones
     H = 0.15 + 0.75 * dome + 0.02 * grain * stone - 0.05 * pits - 0.10 * joint
     # colour: the crown a step lighter than the flank, the joint a dark grit
-    lit = 0.76 + 0.32 * dome
+    lit = 0.70 + 0.42 * dome                                   # r48: the crown lit a step more
     shade_stone = tone * lit * (1.0 + 0.05 * grain - 0.20 * pits)
     grit = 0.9 + 0.2 * F.noise(16, 48, 0.3)
     stone_rgb = rgb * shade_stone[..., None]
-    joint_rgb = np.array([0.26, 0.245, 0.22]) * grit[..., None]
+    joint_rgb = np.array([0.20, 0.19, 0.17]) * grit[..., None]   # r48: the mortar ~0.10 darker than the stones
     alb = stone_rgb * stone[..., None] + joint_rgb * (1 - stone[..., None])
     # moss (the shared material, moss_cushions): in some of the joints and creeping up the stones' feet; mossy
     # cobblestone (moss > 0.5) also grows cushions on some of the stone tops - patches, not a green wash
@@ -3674,9 +3679,10 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
         m, dome, moss_rgb = moss_cushions(F, seed, moss)                 # r34: the shared moss material
         # r47 (lime blobs too saturated on the bricks): the moss on stone 30% toward its own grey, a touch darker
         grey = (moss_rgb @ LUMA)[..., None] * np.ones(3)
-        moss_rgb = (0.7 * moss_rgb + 0.3 * grey) * 0.9
+        # r48 (a flat lime scatter): the cushions with depth - dark undersides, lit tops (0.6-1.3 over the dome)
+        moss_rgb = (0.7 * moss_rgb + 0.3 * grey) * 0.9 * (0.55 + 0.75 * dome)[..., None]
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
-        H = H + 0.10 * m * dome
+        H = H + 0.16 * m * dome
     if cracks > 0:
         # r32 (critic: "cracked needs 2-3 px dark fissures that survive mipmaps at 32 px per block"): r31's crack
         # threshold (0.014 on a unit-std noise(2, 7)) was a twentieth of a texel wide - it never showed. Now a
@@ -4291,13 +4297,16 @@ def m_plant(name, n):
         full = ps.fern(n, rng, large=True)
     H, shade = full[0], full[1]
     alpha = full[3] if straw else full[2]
-    if straw:   # dry straw: an olive khaki (r45: the tan read magenta-pink against the lawn at the tufts' bases)
-        rgb = np.array([0.70, 0.71, 0.42])[None, None, :] * shade[..., None]
+    if straw:   # dry straw: a warm olive-yellow (r45: tan read pink; r48: khaki read grey-blue under the sky)
+        rgb = np.array([0.74, 0.68, 0.34])[None, None, :] * shade[..., None]
     else:
         # r31 (fresh critic r31/r32, in-game noon stills: from above the tufts vanished into the lawn - same tint, same
         # value - and only their sun shadows showed, as dark stars): the blades carry a little warmth of their own, so
         # under the biome tint a tuft reads yellower and lighter than the turf it stands on, its shadow beneath it
-        rgb = np.stack([shade * 1.08, shade, shade * 0.80], -1)
+        # r48 (eyes 41098466051: the tufts read blue-grey, ~15 degrees cooler than the lawn - the sky on the leaning
+        # quads): a YELLOW bias (hue 57 in albedo -> ~78 tinted, the lawn's 79) with more of it (sat 0.20), so the
+        # sky shifts the hue less
+        rgb = np.stack([shade * 1.06, shade * 1.04, shade * 0.72], -1)
     t = TARGETS[name]
     alb = ps.bleed(_plant_fit(np.clip(rgb, 0, 1), alpha > 0.05, t["luma"], t["sat"]), alpha)
     H = ps.bleed(np.where(alpha > 0, H, 0.0), alpha)
@@ -5691,7 +5700,7 @@ def recipes():
         "quartz_bricks": lambda F, n: m_quartz(F, n, "bricks"),
         "quartz_block_bottom": lambda F, n: m_quartz(F, n, "smooth"),
         # neutral, a hair warm: a near-grey whose only hue is the speck's gets that hue blown up by the saturation fit
-        "andesite": lambda F, n: m_igneous(F, n, (0.54, 0.53, 0.51), (0.40, 0.40, 0.39), 0.9),
+        "andesite": lambda F, n: m_igneous(F, n, (0.54, 0.53, 0.51), (0.38, 0.38, 0.37), 0.5, size=(24, 56)),   # r48: finer, denser
         "granite": m_granite,
         "diorite": m_diorite,
         "snow": m_snow,
