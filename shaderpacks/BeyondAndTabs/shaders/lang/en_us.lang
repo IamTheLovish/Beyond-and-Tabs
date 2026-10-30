@@ -18,3 +18,15 @@ option.MATERIALS=Material maps
 option.MATERIALS.comment=Reads our blocks' and units' surface maps: relief, metal and gem highlights, glowing parts. Off: flat surfaces, as before.
 value.MATERIALS.0=Off
 value.MATERIALS.1=On
+option.WIND=Wind
+option.WIND.comment=Grass, flowers and crops sway from the foot up and leaves shimmer, with gusts rolling across the field along the wind the tree limbs move in.
+value.WIND.0=Off
+value.WIND.1=On
+option.WIND_STRENGTH=Wind strength
+option.WIND_STRENGTH.comment=How far plants and leaves move (1 = a grass tuft's top about an eighth of a block at a full gust).
+option.CLOUD_SHADOWS=Cloud shadows
+option.CLOUD_SHADOWS.comment=Soft cloud shadows drift over the field with the wind. They dim the sun by at most 30%, so units stay easy to read.
+value.CLOUD_SHADOWS.0=Off
+value.CLOUD_SHADOWS.1=On
+option.TEXTURE_SHARPNESS=Texture sharpness (RTS)
+option.TEXTURE_SHARPNESS.comment=Finer block texture detail in the RTS view. Higher is sharper but shimmers more as the camera pans (0 = default filtering).

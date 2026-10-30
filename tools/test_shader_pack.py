@@ -52,6 +52,20 @@ class ShaderPack(unittest.TestCase):
             self.assertIn("uniform sampler2D specular;", src, name)
         self.assertIn("#define LIT_WATER", open(os.path.join(spc.SHADERS, "gbuffers_water.fsh"), encoding="utf-8").read())
 
+    def test_wind_moves_the_shadow_with_the_leaves(self):
+        # lib/wind.glsl: the terrain pass and the shadow pass call the same function on the same world position, so
+        # a leaf's shadow never detaches from the leaf (Oct 30)
+        for name in ("gbuffers_terrain.vsh", "shadow.vsh"):
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            self.assertIn("windOffset(playerPos + cameraPosition", src, name)
+        props = open(os.path.join(spc.SHADERS, "block.properties"), encoding="utf-8").read()
+        self.assertIn("block.10002=oak_leaves", props)
+
+    def test_options_compile_both_ways(self):
+        # every option a program reads is compiled at both ends of its range (a toggle on and off)
+        src = spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.vsh"))
+        self.assertIn("WIND=0", [label for label, _ in spc.option_variants(src)])
+
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
         self.assertEqual(spc.check(spc.find_glslang()), [])

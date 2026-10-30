@@ -31,5 +31,17 @@ const float ambientOcclusionLevel = 1.0;
 // gems, emission from _s. Off: the slice 1 look, for an A/B
 #define MATERIALS 1 // [0 1]
 
+// plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
+#define WIND 1 // [0 1]
+// how far they move: 1 = a grass tuft's top ~0.12 block at a full gust
+#define WIND_STRENGTH 1.0 // [0.5 0.75 1.0 1.5 2.0]
+// cloud shadows (lib/clouds.glsl): soft patches drifting with the wind that take up to 30% of the sun, never the sky
+#define CLOUD_SHADOWS 1 // [0 1]
+// sharper block textures in the RTS view: mip levels the terrain's texture reads are pulled finer under the ortho
+// camera (0 = the hardware's choice; 1 = a whole level finer, visibly shimmering as the camera pans). README: trade-off
+#define TEXTURE_SHARPNESS 0.5 // [0.0 0.25 0.5 0.75 1.0]
+
 // block ids from block.properties
-#define ID_FOLIAGE 10001.0
+#define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
+#define ID_LEAVES 10002.0
+#define ID_FOLIAGE_UPPER 10003.0       // the upper half of a two-block plant
