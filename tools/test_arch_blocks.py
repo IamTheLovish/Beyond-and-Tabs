@@ -121,14 +121,15 @@ class Models(unittest.TestCase):
                     self.assertTrue(f["texture"].startswith("#"), (name, f))
                     self.assertIn(f["texture"][1:], m["textures"], (name, f))
 
-    def test_no_face_lies_on_the_wall_plane_behind_the_moulding(self):
-        """A face at the model's back (z 0, facing north) would z-fight the wall it is mounted on."""
+    def test_the_back_against_the_wall_is_culled_by_the_wall(self):
+        """Models are drawn facing north; a front-mounted moulding's back is the z 16 plane against the wall: a face
+        there must cull against the wall (cullface south), or it would z-fight the wall's own face."""
         for name, m in self.models().items():
             if not name.startswith(("cornice_", "string_course_")):
                 continue
             for e in m["elements"]:
-                if e["from"][2] == 0:
-                    self.assertNotIn("north", e["faces"], (name, e))
+                if e["to"][2] == 16 and "south" in e["faces"]:
+                    self.assertEqual(e["faces"]["south"].get("cullface"), "south", (name, e))
 
 
 class Collision(unittest.TestCase):
@@ -138,12 +139,13 @@ class Collision(unittest.TestCase):
                 props = dict(kv.split("=") for kv in key.split(","))
                 boxes = A.collision(bid, props)
                 self.assertTrue(boxes, (bid, key))
-                vol = 0
+                vox = set()
                 for b in boxes:
                     self.assertTrue(all(0 <= v <= 16 for v in b), (bid, key, b))
                     self.assertTrue(b[0] < b[3] and b[1] < b[4] and b[2] < b[5], (bid, key, b))
-                    vol += (b[3] - b[0]) * (b[4] - b[1]) * (b[5] - b[2])
-                self.assertLess(vol, 16 ** 3 * 0.9, (bid, key))      # never a full cube (overlaps count twice)
+                    vox |= {(x, y, z) for x in range(int(b[0]), int(b[3])) for y in range(int(b[1]), int(b[4]))
+                            for z in range(int(b[2]), int(b[5]))}
+                self.assertLess(len(vox), 16 ** 3 * 0.9, (bid, key))      # the union, on a 1 px grid: never a cube
 
     def test_facings_turn_the_collision_a_quarter_at_a_time(self):
         def bounds(bs):
@@ -178,9 +180,13 @@ class AntiToyGate(unittest.TestCase):
         self.assertEqual(g["run"], 4)
         self.assertFalse(g["ok"])
 
-    def test_vanilla_stairs_are_sub_block_but_not_fine_mouldings(self):
+    def test_vanilla_stairs_are_half_block_steps_not_fine_mouldings(self):
+        """Sub-block = relief finer than the half-block step every vanilla stair and slab makes (lesson 6: the Engine
+        Shed read as blocky with stairs everywhere). Stairs, slabs and walls break a flat run but are not fine."""
         st = T.cell_kind("stone_brick_stairs", {"facing": "north", "half": "top"}, "south")
-        self.assertEqual(st, "sub")
+        self.assertEqual(st, "half")
+        self.assertEqual(T.cell_kind("smooth_stone_slab", {"type": "bottom"}, "south"), "half")
+        self.assertEqual(T.cell_kind("oak_trapdoor", {}, "south"), "fine")      # a 3 px panel is fine relief
         self.assertEqual(T.cell_kind("bricks", {}, "south"), "full")
         self.assertEqual(T.cell_kind("reignofnether:cornice_stone", {"facing": "south", "shape": "straight"},
                                      "south"), "fine")

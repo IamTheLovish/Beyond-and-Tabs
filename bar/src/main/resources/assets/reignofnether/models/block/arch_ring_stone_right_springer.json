@@ -1,0 +1,202 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "minecraft:block/smooth_stone",
+    "ring": "minecraft:block/smooth_stone"
+  },
+  "elements": [
+    {
+      "from": [
+        14,
+        0,
+        14
+      ],
+      "to": [
+        16,
+        6,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            10,
+            2,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "south": {
+          "uv": [
+            14,
+            10,
+            16,
+            16
+          ],
+          "texture": "#ring",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            14,
+            10,
+            16,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "east": {
+          "uv": [
+            0,
+            10,
+            2,
+            16
+          ],
+          "texture": "#ring",
+          "cullface": "east"
+        },
+        "down": {
+          "uv": [
+            14,
+            0,
+            16,
+            2
+          ],
+          "texture": "#ring",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            14,
+            14,
+            16,
+            16
+          ],
+          "texture": "#ring"
+        }
+      }
+    },
+    {
+      "from": [
+        12,
+        0,
+        14
+      ],
+      "to": [
+        14,
+        4,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            12,
+            4,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "south": {
+          "uv": [
+            12,
+            12,
+            14,
+            16
+          ],
+          "texture": "#ring",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            14,
+            12,
+            16,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "down": {
+          "uv": [
+            12,
+            0,
+            14,
+            2
+          ],
+          "texture": "#ring",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            12,
+            14,
+            14,
+            16
+          ],
+          "texture": "#ring"
+        }
+      }
+    },
+    {
+      "from": [
+        10,
+        0,
+        14
+      ],
+      "to": [
+        12,
+        2,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            14,
+            6,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "south": {
+          "uv": [
+            10,
+            14,
+            12,
+            16
+          ],
+          "texture": "#ring",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            14,
+            14,
+            16,
+            16
+          ],
+          "texture": "#ring"
+        },
+        "down": {
+          "uv": [
+            10,
+            0,
+            12,
+            2
+          ],
+          "texture": "#ring",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            10,
+            14,
+            12,
+            16
+          ],
+          "texture": "#ring"
+        }
+      }
+    }
+  ]
+}
