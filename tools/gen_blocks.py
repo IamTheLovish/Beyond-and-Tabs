@@ -102,9 +102,11 @@ TARGETS = {
     # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
     # - most players - a 0.63 gold reads brown (pack-study-vanilla 38740868045)
     "gold_block":       dict(luma=0.72, std=0.050, sat=0.70, tilt=8.0, smooth=150, pore=0, f0=231),
-    "barrel_side":      dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
-    "barrel_top":       dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
-    "barrel_bottom":    dict(luma=0.30, std=0.070, sat=0.46, tilt=17.2, smooth=57, pore=20),
+    # r31 (art director: "pale sandy planks with black holes"): darker oak staves, iron hoops with their own smoothness
+    # (m_barrel_side / m_barrel_end paint smooth), the hoop bevel the main relief (tilt 17 -> 12)
+    "barrel_side":      dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    "barrel_top":       dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    "barrel_bottom":    dict(luma=0.26, std=0.075, sat=0.46, tilt=12.0, smooth=57, pore=20),
     # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
     # contrast), satin stalks (smooth 20 -> 42)
     "hay_block_side":   dict(luma=0.62, std=0.100, sat=0.56, tilt=21.4, smooth=42, pore=40),
@@ -1289,48 +1291,89 @@ def m_gold(F, n):
     return H, tint((0.98, 0.78, 0.25), shade)
 
 
-def staves(F, n, count=6):
-    """Barrel staves running along v: count boards, a dark seam between them, a little bow and grain."""
+def oak_grain(F, along_v=True):
+    """Sawn oak: fine straight latewood lines and broad streaks, long along v (along_v) or u. Two arrays (lines,
+    streak), each ~N(0, 1)."""
+    sx, sy = (1.0, 30.0) if along_v else (30.0, 1.0)
+    lines = F.warp(F.noise(16, 64, 0.5, sx=sx, sy=sy), 0.004 * F.noise(2, 6, 0.5) if along_v else 0.0,
+                   0.0 if along_v else 0.004 * F.noise(2, 6, 0.5))
+    sx, sy = (1.0, 12.0) if along_v else (12.0, 1.0)
+    streak = F.noise(4, 20, 0.6, sx=sx, sy=sy)
+    return lines, streak
+
+
+def iron_hoop(F, band, along_u=True):
+    """A forged iron hoop over mask `band` (0-1, two soft edges): a dull dark iron with a brushed grain along the
+    hoop, a little rust at its edges, a proud bevel. Returns (albedo, height add, smoothness)."""
+    sx, sy = (1.0, 10.0) if not along_u else (10.0, 1.0)
+    br = 0.5 + 0.5 * np.tanh(0.6 * F.noise(30, 60, 0.0, sx=sx, sy=sy))
+    dent = F.noise(3, 9, 0.5)
+    rust = smoothstep(0.6, 0.9, norm01(F.noise(4, 12, 0.5))) * (1 - smoothstep(0.3, 0.9, band))   # at the edges
+    iron = tint((0.21, 0.21, 0.22), 0.9 + 0.08 * dent + 0.06 * (br - 0.5))   # darker than the oak
+    rusty = tint((0.42, 0.26, 0.16), 0.9 + 0.1 * dent)
+    alb = iron * (1 - rust[..., None]) + rusty * rust[..., None]
+    H = 0.16 * smoothstep(0.0, 1.0, band) + 0.01 * dent
+    smooth = 120 + 50 * (br - 0.5) - 70 * rust
+    return alb, H, smooth
+
+
+def m_barrel_side(F, n, count=6):
+    """Round 31 (art director: "pale sandy planks with black holes"): an oak cask - six darker oak staves along v,
+    each slightly bowed with a straight sawn grain and its own tone, thin dark seams; two forged iron hoops with
+    two edges each (a proud bevel), brushed round the cask, a touch of rust at their edges, a rivet on each."""
     col = np.floor(F.u * count).astype(int)
     inside = (F.u * count) % 1.0
-    seam = smoothstep(0.0, 0.06, inside) * smoothstep(0.0, 0.06, 1 - inside)
-    bow = 1 - (2 * inside - 1) ** 2                       # each stave curves out a little
-    grain = F.noise(2, 40, 0.8, sx=1.0, sy=8.0)
-    tone = (F.rng.random(count) - 0.5)[col % count]
-    return seam, bow, grain, tone
+    seam = smoothstep(0.0, 0.03, inside) * smoothstep(0.0, 0.03, 1 - inside)
+    bow = 1 - (2 * inside - 1) ** 2
+    lines, streak = oak_grain(F, along_v=True)
+    rng = F.rng
+    tone = (rng.random(count) - 0.5)[col % count]
+    hue = (rng.random(count) - 0.5)[col % count]
+    H = 0.40 + 0.10 * seam + 0.06 * bow + 0.012 * lines + 0.02 * tone
+    shade = (0.85 + 0.14 * tone + 0.07 * lines + 0.06 * streak) * (0.55 + 0.45 * seam)
+    jit = np.stack([0.05 * hue + 0.02 * streak, 0.0 * hue, -0.05 * hue - 0.02 * streak], -1)
+    alb = tint((0.42, 0.28, 0.15), shade, jit)
+    smooth = 55 + 10 * streak
+    d = np.minimum(np.abs(F.v - 0.20), np.abs(F.v - 0.80))
+    band = 1 - smoothstep(0.045, 0.058, d)                   # two hoops, ~14 texels, two edges each
+    ialb, iH, ismooth = iron_hoop(F, band, along_u=True)
+    rivet = np.clip(1 - ((F.u - 0.5) ** 2 + np.minimum((F.v - 0.20) ** 2, (F.v - 0.80) ** 2)) / 0.018 ** 2, 0, 1)
+    iH = iH + 0.06 * np.sqrt(rivet)
+    ialb = ialb * (0.95 + 0.15 * np.sqrt(rivet))[..., None]
+    b = band[..., None]
+    return dict(H=H * (1 - band) + (0.46 + iH) * band, alb=alb * (1 - b) + ialb * b,
+                f0=np.where(band > 0.5, IRON, 10), smooth=smooth * (1 - band) + ismooth * band)
 
 
-def m_barrel_side(F, n):
-    seam, bow, grain, tone = staves(F, n)
-    hoop = (np.abs(F.v - 0.22) < 0.06) | (np.abs(F.v - 0.78) < 0.06)   # two iron hoops
-    H = 0.35 + 0.35 * seam + 0.1 * bow + 0.04 * grain
-    H = np.where(hoop, 0.85 + 0.03 * F.noise(8, 30, 0.4), H)
-    shade = (0.82 + 0.12 * tone + 0.10 * grain) * (0.55 + 0.45 * seam)
-    alb = tint((0.47, 0.33, 0.20), shade)
-    iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
-    return H, np.where(hoop[..., None], iron, alb), np.where(hoop, IRON, 10)
-
-
-def m_barrel_end(F, n, hole):
-    """Barrel top / bottom: boards across the lid inside an iron rim; the top has the bung hole."""
-    rows = 4
+def m_barrel_end(F, n, hole, rows=4):
+    """Round 31: the cask's head - oak boards across it inside a forged iron chime hoop; the top has the bung, a round
+    wooden plug sitting a hair proud in a dark groove (not a black hole)."""
     row = np.floor(F.v * rows).astype(int)
     inr = (F.v * rows) % 1.0
-    gap = smoothstep(0.0, 0.04, inr) * smoothstep(0.0, 0.04, 1 - inr)
-    grain = F.noise(2, 40, 0.8, sx=8.0, sy=1.0)
-    tone = (F.rng.random(rows) - 0.5)[row]
-    H = 0.35 + 0.35 * gap + 0.04 * grain
-    shade = (0.82 + 0.12 * tone + 0.10 * grain) * (0.6 + 0.4 * gap)
-    alb = tint((0.47, 0.33, 0.20), shade)
+    gap = smoothstep(0.0, 0.03, inr) * smoothstep(0.0, 0.03, 1 - inr)
+    lines, streak = oak_grain(F, along_v=False)
+    rng = F.rng
+    tone = (rng.random(rows) - 0.5)[row]
+    hue = (rng.random(rows) - 0.5)[row]
+    H = 0.40 + 0.10 * gap + 0.012 * lines + 0.02 * tone
+    shade = (0.85 + 0.14 * tone + 0.07 * lines + 0.06 * streak) * (0.55 + 0.45 * gap)
+    jit = np.stack([0.05 * hue + 0.02 * streak, 0.0 * hue, -0.05 * hue - 0.02 * streak], -1)
+    alb = tint((0.42, 0.28, 0.15), shade, jit)
+    smooth = 55 + 10 * streak
     if hole:
         r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
-        bung = r < 0.08
-        H = np.where(bung, 0.1, H)
-        alb = np.where(bung[..., None], np.array([0.08, 0.06, 0.05]), alb)
-    ring = (frame(F, 0.12, 0.10) < 0.9)               # the iron rim, ~1/10 block
-    H = np.where(ring, 0.8, H)
-    iron = tint((0.33, 0.32, 0.31), 0.85 + 0.2 * F.noise(8, 30, 0.4))
-    return H, np.where(ring[..., None], iron, alb), np.where(ring, IRON, 10)
+        plug = 1 - smoothstep(0.070, 0.080, r)
+        groove = smoothstep(0.070, 0.080, r) * (1 - smoothstep(0.085, 0.100, r))
+        pg = tint((0.44, 0.31, 0.17), 0.9 + 0.08 * F.noise(10, 30, 0.3) + 0.12 * np.clip(1 - (r / 0.075) ** 2, 0, 1))
+        alb = alb * (1 - plug[..., None]) + pg * plug[..., None]
+        alb = alb * (1 - 0.5 * groove[..., None])
+        H = H + 0.05 * plug * (1 - (r / 0.075) ** 2).clip(0, 1) - 0.10 * groove
+    d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+    band = 1 - smoothstep(0.085, 0.100, d)                                  # the chime hoop round the head
+    ialb, iH, ismooth = iron_hoop(F, band, along_u=True)
+    b = band[..., None]
+    return dict(H=H * (1 - band) + (0.46 + iH) * band, alb=alb * (1 - b) + ialb * b,
+                f0=np.where(band > 0.5, IRON, 10), smooth=smooth * (1 - band) + ismooth * band)
 
 
 def hay_twine(F, centres=(0.25, 0.75), half=0.03):
@@ -3170,9 +3213,9 @@ def recipes():
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
         "polished_andesite": _plain(m_polished_andesite), "smooth_stone": _plain(m_smooth_stone),
         "smooth_stone_slab_side": _plain(m_smooth_stone_slab_side), "spruce_planks": _plain(m_spruce_planks),
-        "raw_iron_block": _with_f0(m_raw_iron), "barrel_side": _with_f0(m_barrel_side),
-        "barrel_top": _with_f0(lambda F, n: m_barrel_end(F, n, True)),
-        "barrel_bottom": _with_f0(lambda F, n: m_barrel_end(F, n, False)),
+        "raw_iron_block": _with_f0(m_raw_iron), "barrel_side": _parts(m_barrel_side),
+        "barrel_top": _parts(lambda F, n: m_barrel_end(F, n, True)),
+        "barrel_bottom": _parts(lambda F, n: m_barrel_end(F, n, False)),
         "gold_block": _parts(lambda F, n: _d3(m_gold_r23(F, n))), "hay_block_side": _plain(m_hay_side), "hay_block_top": _plain(m_hay_top),
         "birch_log": _plain(m_birch_log),
         "birch_log_top": _plain(lambda F, n: m_log_top(F, n, (0.86, 0.76, 0.56), (0.86, 0.85, 0.80))),
