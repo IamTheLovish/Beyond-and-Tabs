@@ -118,8 +118,10 @@ class BuildingWorkTest {
         assertEquals(2, BuildingWork.PUFFS_PER_STACK);
         assertEquals(4, BuildingWork.CHUFF_PUFFS);
         assertEquals(24, BuildingWork.WORK_BUDGET, "working smoke has a budget like idle life's 40");
-        // campfire smoke lives 80-130 ticks: the column stands ~5 blocks (medium; subtle ~3, strong ~8)
-        double column = BuildingWork.PUFF_RISE * 105;
+        // the column stands ~5 blocks (medium; subtle ~3, strong ~8): rise x the puff's life
+        double column = BuildingWork.PUFF_RISE * BuildingWork.PUFF_LIFE_TICKS;
+        assertTrue(BuildingWork.PUFF_LIFE_TICKS >= 280 && BuildingWork.PUFF_LIFE_TICKS <= 330,
+            "the signal-fire smoke's life, 280-330 ticks: " + BuildingWork.PUFF_LIFE_TICKS);
         assertTrue(column >= 4 && column <= 6, "column " + column);
     }
 

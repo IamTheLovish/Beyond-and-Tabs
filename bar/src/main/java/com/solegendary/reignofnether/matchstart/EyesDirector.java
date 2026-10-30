@@ -1410,6 +1410,8 @@ public final class EyesDirector {
             structureError = null;
             workPlacement = null;
             workCount++;
+            // the dusk message ("Night falls...") lands over the building; the work stills are about the building
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
             BlockPos site = BlockPos.containing(ground(mc, siteCentre.getX() + 40 * workCount, siteCentre.getZ(), siteCentre.getY()));
             OrthoviewClientEvents.centreCameraOnPosInstant(Vec3.atBottomCenterOf(site));   // loads its chunks
             placeWork(mc, id, site);

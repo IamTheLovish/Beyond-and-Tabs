@@ -181,7 +181,10 @@ public class PartRenderClientEvents {
     private static final RandomSource RANDOM = RandomSource.create();
     private static final Matrix4f BASE = new Matrix4f(), FRAME = new Matrix4f(), PART = new Matrix4f(), BOX = new Matrix4f();
     private static final Matrix3f BASE_N = new Matrix3f(), FRAME_N = new Matrix3f(), PART_N = new Matrix3f(), BOX_N = new Matrix3f();
-    private static final Vector3f POS = new Vector3f(), NRM = new Vector3f();
+    private static final Vector3f POS = new Vector3f(), NRM = new Vector3f(), SKY_N = new Vector3f();
+    // the window light is a light, not a lit surface: its quads all take the sky-facing normal, which the entity shader
+    // lights fully - a west pane drawn with its own normal measured luma 0.49, not 0.76 (eyes run 41137865293)
+    private static boolean skyNormal = false;
     private static BlockRenderDispatcher renderer;
     private static VertexConsumer consumer;
     private static int light;
@@ -618,6 +621,8 @@ public class PartRenderClientEvents {
         BakedModel model = renderer.getBlockModel(WINDOW);
         int was = light;
         light = FULLBRIGHT;
+        BASE_N.transform(0f, 1f, 0f, SKY_N).normalize();
+        skyNormal = true;
         try {
             for (int i = 0; i < pickedLightCount; i++) {
                 Lights l = pickedLights[i];
@@ -647,6 +652,7 @@ public class PartRenderClientEvents {
             }
         } finally {
             light = was;
+            skyNormal = false;
             red = green = blue = 1f;
         }
         if (!firstLightLogged && facesDrawn > 0) {   // once a session: proof in a log (an eyes run's) that windows lit
@@ -845,8 +851,12 @@ public class PartRenderClientEvents {
             BakedQuad quad = list.get(q);
             int[] v = quad.getVertices();
             Direction d = quad.getDirection();
-            BOX_N.transform(d.getStepX(), d.getStepY(), d.getStepZ(), NRM);
-            NRM.normalize();
+            if (skyNormal) {
+                NRM.set(SKY_N);
+            } else {
+                BOX_N.transform(d.getStepX(), d.getStepY(), d.getStepZ(), NRM);
+                NRM.normalize();
+            }
             for (int k = 0; k < 4; k++) {
                 int o = k * 8;
                 BOX.transformPosition(Float.intBitsToFloat(v[o]), Float.intBitsToFloat(v[o + 1]), Float.intBitsToFloat(v[o + 2]), POS);

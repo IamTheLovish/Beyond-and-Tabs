@@ -32,8 +32,14 @@ public final class BuildingWork {
     public static final int CHUFF_PUFFS = 4;
     /** Labs a working pass may puff from, whatever the base size (8v8 safety); idle life keeps its own 40. */
     public static final int WORK_BUDGET = 24;
-    /** A puff's rise, blocks a tick: campfire smoke lives 80-130 ticks, so the column stands ~5 blocks. */
-    public static final double PUFF_RISE = 0.045;
+    /**
+     * A puff's life: vanilla's signal-fire smoke lives 280-330 ticks. Round 2's cosy smoke (80-130 ticks) at 0.045 showed
+     * only 1-2 blocks of column at the RTS camera (critic, Oct 30): the long-lived puff, rising slower, packs the same
+     * ~5 blocks with twice the puffs per block.
+     */
+    public static final int PUFF_LIFE_TICKS = 305;
+    /** A puff's rise, blocks a tick: PUFF_LIFE_TICKS x this = the ~5-block column (lovish's medium). */
+    public static final double PUFF_RISE = 0.017;
 
     // ------------------------------------------------------------------ window light (medium)
 
