@@ -61,6 +61,17 @@ plain lane has none): vanilla shades up 1.0, north/south 0.8, east/west 0.6, dow
 | `corbel_{stone,brick,copper}` | x 4-12; steps 3 / 6 / 9 / 12 proud, 4 px each; then up into the cornice's cell to the corona's soffit (y 26), 1 px behind its face | facing (4) | evenly spaced pale teeth hanging from the cornice band: the cornice gets legs (slice 1's "lid") | no free top: it carries the cornice; every other block (a 32 px pitch), capitals take their slots |
 | `corbel_course_{brick,stone,slate}` | steps of the shaft's brick (bricks / stone_bricks / deepslate_bricks) 2 / 4 / 6 proud, 4 px each; smooth stone coping 8 proud y 12-18 (its top 2 px above the shaft's: a pale rim round a recessed flue) | `shape` straight / outer / inner (12), like the cornice | a 48 px crown on a 32 px stack (1.5x flare) with a pale rim | thin 2 px steps under a thicker pale coping |
 
+Measured in the reference builds (Oct 30, study only, nothing copied; tools/schem_study.py, a corner / stack scan):
+
+| Feature | Ref | Measured |
+|---|---|---|
+| Tall stack | victorian-factory | 3 x 4 shaft, 28 tall, on a 5 x 5 stair plinth (1 block out each side); its top is a row of brick WALL blocks (8 px in, not out): no flared crown |
+| Short stack | victorian-factory | 2 x 1 shaft, 14 tall, widening to 4 x 3 in its top 2 layers: a corbelled crown 1 block out each side (2x flare at block scale; ours is 1.5x at 8 px) |
+| Corner | gare-de-minecraft | a full-height contrasting column (polished andesite on brick, andesite walls on polished andesite) - a pier, not alternating stones |
+| Corner | victorian-factory | a wall post on the arris (polished cut granite wall on brick, 18 columns; stone brick wall on stone bricks, 16): a bevelled corner |
+| Corner | chapel-of-brittany | stone brick corners on quartz walls (22 columns), cobblestone wall posts on stone brick (32) |
+| Long / short quoins | all of them | almost none at block scale (13 of 243 corner columns in the factory, 6 of 37 in the gare, most of them noise): at 16 px a quoin is a whole block, so the zipper is new, like slice 1's keystone |
+
 A ring round a 2x2 shaft is 8 straights + 4 outer corners (`tools/gen_arch_blocks.crown_cells`); a 3x3 shaft takes
 12 straights. The Engine Shed set: `pilaster_stone`, `quoin_stone`, `corbel_stone`, `corbel_course_brick`.
 
