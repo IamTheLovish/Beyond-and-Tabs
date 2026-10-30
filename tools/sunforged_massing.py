@@ -148,11 +148,11 @@ def edge(x0, x1, z0, z1):
     return [(x, z) for x in range(x0, x1 + 1) for z in range(z0, z1 + 1) if x in (x0, x1) or z in (z0, z1)]
 
 
-def corner_tower(g, x0, z0, top, out_x, out_z):
-    """A 4 x 4 tower shaft x0..x0+3, z0..z0+3 to `top`; the corbel ring at top + 1 one out on its two outer faces
+def corner_tower(g, x0, z0, top, out_x, out_z, w=4, crown=True):
+    """A w x w tower shaft x0..x0+w-1, z0..z0+w-1 to `top`; the corbel ring at top + 1 one out on its two outer faces
     (out_x = -1 west / +1 east, out_z = -1 north / +1 south): upside-down stairs, the crown course top + 2 and merlons
-    top + 3 on the 5 x 5."""
-    x1, z1 = x0 + 3, z0 + 3
+    top + 3 on the (w+1) x (w+1); without `crown`, the merlons sit on the corbel course (top + 2)."""
+    x1, z1 = x0 + w - 1, z0 + w - 1
     g.box(x0, x1, 1, top, z0, z1, WALL)
     cx0, cx1 = (x0 - 1, x1) if out_x < 0 else (x0, x1 + 1)
     cz0, cz1 = (z0 - 1, z1) if out_z < 0 else (z0, z1 + 1)
@@ -164,9 +164,10 @@ def corner_tower(g, x0, z0, top, out_x, out_z):
             else:
                 f = "east" if x < x0 else "west" if x > x1 else ("south" if z < z0 else "north")
                 g.stair(x, top + 1, z, f, "top")
-            g.set(x, top + 2, z, DRESS)
-    merlons(g, edge(cx0, cx1, cz0, cz1), top + 3)
-    return top + 3
+            if crown:
+                g.set(x, top + 2, z, DRESS)
+    merlons(g, edge(cx0, cx1, cz0, cz1), top + 2 + crown)
+    return top + 2 + crown
 
 
 def ground(g):
@@ -177,14 +178,15 @@ def ground(g):
         g.set(x, 0, 8, SILL)
 
 
-def rose(g, x, zc, yc):
-    """The sun disc: a round amber rose (a plus of 5 with its corners) in the bay face at x, a stone ring round it."""
-    for dz in range(-2, 3):
-        for dy in range(-2, 3):
+def rose(g, x, zc, yc, r=2):
+    """The sun disc: a round amber rose in the bay face at x, a stone ring round it (r 2: a 3 x 3 glass inside a 5 x 5
+    ring; r 1: a plus of glass inside a 3 x 3 ring)."""
+    for dz in range(-r, r + 1):
+        for dy in range(-r, r + 1):
             d = dz * dz + dy * dy
-            if d <= 2:
+            if d <= (2 if r == 2 else 1):
                 g.set(x, yc + dy, zc + dz, ROSE)
-            elif d <= 5:
+            elif d <= (5 if r == 2 else 2):
                 g.set(x, yc + dy, zc + dz, DRESS)
 
 
@@ -346,7 +348,72 @@ def build_c():
     return g, dict(landmark=(13, 8), top=top, next_top=14, towers=2)
 
 
-BUILDERS = {"a": build_a, "b": build_b, "c": build_c}
+def build_a2():
+    """A revised on the two blind critics' shared faults (runs 20261030-165241 / -165245-sunforged-massing-critic-a/b,
+    both ranked A first, 4 > 3 > 1 > 2 and 4 > 1 > 3 > 2): one change per element.
+    1. the spire "flattens to a salmon square at the RTS camera, barely tops the towers": everything else comes down
+       (keep terrace 12, front towers 16, back turrets 14) and the spire stands on a 5 x 5 TOWER SHAFT rising 4 clear
+       of the terrace with its own crenellated parapet (option C's tower, the best landmark of the four, both critics)
+       - the shaft's lit south and west faces show from the RTS camera; lead 25 - 16 = 9;
+    2. "four equal towers compete": a hierarchy - two 4 x 4 front towers flank the gate bay (16), the back corners
+       become small 3 x 3 corbelled turrets (14);
+    3. "the gate is not the darkest opening; the south wing's dark tiles and the light well beat it": the wing's roof
+       becomes a pale crenellated terrace (no dark tiles), the well shrinks to the spawn column itself (1 x 1) inside a
+       gold halo ring, the gate's mouth is lined dark (blackstone lane floor and back wall) and the bay carries a
+       bigger rose (5 x 5 round) over a stepped pointed head."""
+    g = Grid()
+    ground(g)
+    keep(g, 11)                                                         # terrace 12
+    tops = [corner_tower(g, 1, z0, 13, -1, oz) for z0, oz in ((1, -1), (12, 1))]          # front towers: top 16
+    tops += [corner_tower(g, 13, z0, 12, 1, oz, w=3, crown=False) for z0, oz in ((1, -1), (13, 1))]   # turrets: 14
+    g.box(0, 2, 1, 14, 4, 12, WALL)                                     # the front bay, 1 proud of the towers
+    merlons(g, edge(0, 2, 4, 12), 15)
+    g.box(11, 15, 12, 16, 6, 10, WALL)                                  # the spire's tower shaft, 4 clear of the terrace
+    merlons(g, edge(11, 15, 6, 10), 17)
+    top = spire(g, 13, 8, 17)
+    g.box(5, 11, 1, 5, 14, 15, WALL)                                    # the wing: a pale terrace, no dark tiles
+    for x in range(5, 12):
+        for z in (14, 15):
+            g.slab(x, 6, z, TERRACE)
+    merlons(g, [(x, 15) for x in range(5, 12)], 6)
+    lane_and_well(g, well=False)
+    for y in range(1, H_MAX):                                           # the spawn column: the well is 1 x 1
+        g.clear(8, y, 8)
+    for (x, z) in edge(7, 9, 7, 9):                                     # the gold halo round it on the terrace
+        g.set(x, 12, z, GOLD)
+    for x in range(1, 10):                                              # the gate's mouth lined dark
+        for z in LANE_Z:
+            g.set(x, 0, z, SILL)
+    for z in LANE_Z:
+        for y in range(1, LANE_H + 1):
+            g.set(10, y, z, SILL)
+    portal(g)
+    rose(g, 0, 8, 14, r=1)
+    return g, dict(landmark=(13, 8), top=top, next_top=max(tops), towers=4)
+
+
+def portal(g):
+    """A two-order splayed portal in the bay: the outer order at x 0 is 7 wide (z 5..11) and 9 tall to a pointed head
+    (springers at 10, apex 11, keystone 12); the inner order at x 1 is the lane's 5 x 8 under its own head (9). The 3/4
+    camera looks in at 45 degrees and sees the splay's inner faces - the dark mouth (A: the 34 still saw 71 pixels in)."""
+    for z in range(5, 12):
+        for y in range(1, 10):
+            g.clear(0, y, z)
+    for z in (7, 8, 9):
+        g.clear(0, 10, z)
+    for z, f in ((6, "north"), (10, "south")):
+        g.stair(0, 10, z, f, "top")
+    for z, f in ((7, "north"), (9, "south")):
+        g.stair(0, 11, z, f, "top")
+    g.clear(0, 11, 8)
+    g.set(0, 12, 8, "chiseled_stone_bricks")
+    for z in range(5, 12):                                              # the inner order's head over the lane
+        g.set(1, 9, z, DRESS)
+    for z, f in ((6, "north"), (10, "south")):
+        g.stair(1, 9, z, f, "top")
+
+
+BUILDERS = {"a": build_a, "b": build_b, "c": build_c, "a2": build_a2}
 
 
 # ------------------------------------------------------------------------------------------------- write + check
