@@ -20,6 +20,8 @@ import java.util.WeakHashMap;
  * <ul>
  *   <li>a luminous cloud RING round the layer being built - not a cloud overhead, the RTS camera looks down - that
  *   climbs with the build front and narrows as the building does (ConstructionShape: the ring hugs each layer);</li>
+ *   <li>the part still to come is absent but for one bold golden outline of its steps (slice 2 - the outline-only
+ *   paintover beat the "built but foggy" one a fresh critic scored 5/10), so how much is left reads at a glance;</li>
  *   <li>the build front's cut line glows where blocks are being set;</li>
  *   <li>shafts of light land on the front, a few at a time;</li>
  *   <li>golden glints orbit on the ring (the tools; slice 2 gives them hammer and chisel models);</li>
@@ -42,10 +44,11 @@ final class ConstructionFx {
     /** Per rising site: its shape, the placed count drawn (eased toward the server's), when it finished. */
     private static final class Site {
         final ConstructionShape shape;
+        final float[] outline;
         float shown;
         float doneAt = -1;
         float lastFront, lastRadius;
-        Site(ConstructionShape s) { shape = s; }
+        Site(ConstructionShape s) { shape = s; outline = new float[6 * s.maxOutlineBoxes()]; }
     }
     private static final Map<BuildingPlacement, Site> SITES = new WeakHashMap<>();
     private static final List<BuildingPlacement> scratch = new ArrayList<>();
@@ -136,6 +139,7 @@ final class ConstructionFx {
             BarFxClient.flatRing(cx, front + 0.05f, cz, r / ConstructionShape.RING_STANDOFF * 0.9f, 0.45f, GOLD, 0.45f, 36);
             if (!far)
                 drawShafts(cx, front, cz, r, clock);
+            drawOutline(s, front, far);
             drawGlints(cx, front, cz, r, clock, far);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
@@ -172,6 +176,36 @@ final class ConstructionFx {
             BarFxClient.streak(x, front + 4.5f, z, x, front + 0.05f, z, 0.28f, LIGHT, 0.10f * a, 0.85f * a);
             BarFxClient.softDisc(x, front + 0.1f, z, 0.45f, LIGHT, 0.9f * a, GOLD, 0, 10, 0, 0);
         }
+    }
+
+    /**
+     * The unbuilt part as a golden line drawing: the 12 edges of each box still to come, cut at the front. Lines stay a
+     * fixed share of the screen (wider in world units when zoomed out) so the progress reads at strategic zoom too.
+     */
+    static void drawOutline(Site s, float front, boolean far) {
+        int n = s.shape.outline(front, s.outline);
+        float w = far ? 0.16f : 0.07f;
+        float a = far ? 0.75f : 0.6f;
+        float[] o = s.outline;
+        for (int i = 0; i < n; i++) {
+            int b = i * 6;
+            float x0 = o[b], x1 = o[b + 1], z0 = o[b + 2], z1 = o[b + 3], y0 = o[b + 4], y1 = o[b + 5];
+            for (int h = 0; h < 2; h++) {   // the bottom and top rectangles
+                float y = h == 0 ? y0 : y1;
+                edge(x0, y, z0, x1, y, z0, w, a);
+                edge(x1, y, z0, x1, y, z1, w, a);
+                edge(x1, y, z1, x0, y, z1, w, a);
+                edge(x0, y, z1, x0, y, z0, w, a);
+            }
+            edge(x0, y0, z0, x0, y1, z0, w, a);   // the corners
+            edge(x1, y0, z0, x1, y1, z0, w, a);
+            edge(x1, y0, z1, x1, y1, z1, w, a);
+            edge(x0, y0, z1, x0, y1, z1, w, a);
+        }
+    }
+
+    private static void edge(float x0, float y0, float z0, float x1, float y1, float z1, float w, float a) {
+        BarFxClient.streak(x0, y0, z0, x1, y1, z1, w, GOLD, a, a);
     }
 
     /** The tools (for now golden glints with a short trail) orbiting on the ring, dipping as they strike. */

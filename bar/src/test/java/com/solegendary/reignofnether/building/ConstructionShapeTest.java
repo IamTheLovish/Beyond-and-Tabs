@@ -53,6 +53,38 @@ class ConstructionShapeTest {
         assertEquals(204.5f, s.centreZ(), 1e-4);
     }
 
+    /**
+     * Slice 2: the unbuilt part is drawn as one bold golden outline and is otherwise absent (the fresh critic scored the
+     * first concept 5/10 - "built but foggy" - and the outline-only paintover won). The outline is the boxes of the
+     * layers still to come, one box per run of layers sharing a footprint, cut off at the build front.
+     */
+    @Test
+    void theOutlineIsTheUnbuiltPartsStepsCutAtTheFront() {
+        ConstructionShape s = tower();
+        float[] out = new float[6 * s.maxOutlineBoxes()];
+        assertEquals(3, s.maxOutlineBoxes(), "a base, a middle and a spire");
+
+        int n = s.outline(s.frontY(0), out);
+        assertEquals(3, n, "nothing laid: the whole building is outline");
+        assertBox(out, 0, 100, 109, 200, 209, 64, 67);
+        assertBox(out, 1, 102, 107, 202, 207, 67, 70);
+        assertBox(out, 2, 104, 105, 204, 205, 70, 74);
+
+        n = s.outline(68.5f, out);
+        assertEquals(2, n, "the base is built: only the middle (from the front up) and the spire remain");
+        assertBox(out, 0, 102, 107, 202, 207, 68.5f, 70);
+        assertBox(out, 1, 104, 105, 204, 205, 70, 74);
+
+        assertEquals(0, s.outline(74f, out), "all laid: no outline");
+        assertEquals(0, ConstructionShape.of(List.of()).outline(0, new float[0]));
+    }
+
+    private static void assertBox(float[] o, int i, float x0, float x1, float z0, float z1, float y0, float y1) {
+        float[] want = { x0, x1, z0, z1, y0, y1 };
+        for (int k = 0; k < 6; k++)
+            assertEquals(want[k], o[i * 6 + k], 1e-4, "box " + i + " field " + k);
+    }
+
     @Test
     void anEmptyOrOddBuildingNeverThrows() {
         ConstructionShape e = ConstructionShape.of(List.of());
