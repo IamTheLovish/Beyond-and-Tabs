@@ -160,19 +160,19 @@ TARGETS = {
     # r41 (eyes 41053751822, the shader's new S-curve has room for real blacks: the family sat at 0.25-0.35 on screen
     # where the benchmark sits at 0.10-0.15): back down to black - luma 0.27 / 0.29 / 0.26 / 0.27 -> 0.15 / 0.17 /
     # 0.14 / 0.16 - the hue separation through a subtle WARM chroma (sat 0.13 -> 0.06), not lightness
-    "polished_blackstone":        dict(luma=0.15, std=0.030, sat=0.06, tilt=12.0, smooth=60, pore=4),
-    "polished_blackstone_bricks": dict(luma=0.17, std=0.050, sat=0.06, tilt=18.0, smooth=40, pore=8),
+    "polished_blackstone":        dict(luma=0.17, std=0.030, sat=0.06, tilt=12.0, smooth=60, pore=4),   # r42: 0.17
+    "polished_blackstone_bricks": dict(luma=0.19, std=0.050, sat=0.06, tilt=18.0, smooth=40, pore=8),   # r42: 0.19
     "deepslate_bricks":           dict(luma=0.38, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
     "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.27, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey
-    "deepslate_top":              dict(luma=0.27, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
+    "deepslate":                  dict(luma=0.20, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey; r42: 0.20
+    "deepslate_top":              dict(luma=0.20, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
     # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
     "polished_deepslate":         dict(luma=0.38, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
     # -> 0.060), flatter flakes (tilt 21 -> 16)
     # r31b (eyes: washed-out mosaic): the joints back (std 0.06 -> 0.085, tilt 16 -> 20), cooler (sat 0.10 -> 0.12)
-    "cobbled_deepslate":          dict(luma=0.32, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),
+    "cobbled_deepslate":          dict(luma=0.26, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),   # r42: with deepslate
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
     "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
@@ -278,16 +278,16 @@ TARGETS = {
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
     "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
     "cracked_deepslate_bricks": dict(luma=0.36, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35: with the family
-    "cracked_polished_blackstone_bricks": dict(luma=0.14, std=0.050, sat=0.06, tilt=22.0, smooth=19, pore=8),
+    "cracked_polished_blackstone_bricks": dict(luma=0.17, std=0.050, sat=0.06, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.055, sat=0.30, tilt=12.0, smooth=30, pore=12, shoulder=0.30),
-    "chiseled_polished_blackstone": dict(luma=0.16, std=0.050, sat=0.06, tilt=22.0, smooth=30, pore=8),   # r35; r39; r41
+    "chiseled_polished_blackstone": dict(luma=0.18, std=0.050, sat=0.06, tilt=22.0, smooth=30, pore=8),   # r35; r39; r41; r42
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
     # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
     # r39 (eyes 41044148818: blackstone / basalt / deepslate one dark grey): basalt a warm grey (sat 0.05 -> 0.10)
-    "basalt_side": dict(luma=0.30, std=0.060, sat=0.10, tilt=16.0, smooth=30, pore=10, soften=1.0),
+    "basalt_side": dict(luma=0.30, std=0.080, sat=0.10, tilt=18.0, smooth=30, pore=10, soften=1.0),   # r42: the column lines
     "basalt_top": dict(luma=0.30, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
     # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
@@ -1511,6 +1511,9 @@ SEED_ORDER = SEED_ORDER + ("cartography_table_top", "cartography_table_side1", "
 # round 41: crying obsidian (new; the albedo is drawn final - the tears glow through the emission map)
 TARGETS["crying_obsidian"] = dict(luma=0.14, std=0.080, sat=0.30, tilt=10.0, smooth=228, pore=0)
 SEED_ORDER = SEED_ORDER + ("crying_obsidian",)
+# round 42: the coal block (new; the dark ladder's second step, 0.12 with a faint glint)
+TARGETS["coal_block"] = dict(luma=0.12, std=0.040, sat=0.02, tilt=14.0, smooth=60, pore=4)
+SEED_ORDER = SEED_ORDER + ("coal_block",)
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1801,6 +1804,21 @@ def m_obsidian_glass(F, n, cells=4):
     alb = alb * (1 - core[..., None]) + core[..., None] * np.array([0.60, 0.55, 0.76])     # the glints, cool
     smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen + 5 * core    # the bands and cores glint
     return dict(H=H, alb=alb, smooth=smooth)
+
+
+def m_coal_block(F, n):
+    """Coal block (round 42, new): a block of bituminous coal - near-black, broken into blocky plates by fine
+    conchoidal cracks, a few plate faces glossy (the faint glint), the rest dull and sooty."""
+    f1, f2, idx, k = F.voronoi(12, 0.85)
+    crack = 1 - smoothstep(0.0, 0.012, f2 - f1)
+    tone = F.rng.uniform(0.85, 1.15, k)[idx]
+    glossy = (F.rng.random(k) < 0.3)[idx]
+    grain = F.noise(10, 30, 0.3)
+    H = 0.55 + 0.04 * (tone - 1) - 0.20 * crack + 0.01 * grain
+    shade = tone * (1 - 0.35 * crack) * (0.96 + 0.04 * grain)
+    alb = tint((0.12, 0.12, 0.12), shade)
+    smooth = np.where(glossy & (crack < 0.5), 150.0, 45.0)
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth)
 
 
 def m_crying_obsidian(F, n):
@@ -5724,6 +5742,7 @@ def recipes():
         R["hopper_" + f] = _parts(lambda F, n, ff=f: _d3(m_hopper(F, n, ff)))
     R["hanging_roots"] = _parts(m_hanging_roots)
     R["crying_obsidian"] = _parts(m_crying_obsidian, fit=False)   # round 41
+    R["coal_block"] = _parts(m_coal_block)                         # round 42
     return R
 
 
