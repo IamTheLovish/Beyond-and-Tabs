@@ -38,10 +38,7 @@ public class BuildingBlockData {
             }
             parsed = SERVER_BLOCKS.computeIfAbsent(structureName, n -> readBuildingBlocks(n, level, resourceManager));
         }
-        ArrayList<BuildingBlock> copy = new ArrayList<>(parsed.size());
-        for (BuildingBlock b : parsed)
-            copy.add(new BuildingBlock(b.getBlockPos(), b.getBlockState(), b.getBlockNbt() == null ? null : b.getBlockNbt().copy()));
-        return copy;
+        return parsed;   // TEST-PROOF ONLY, never merge: hands out the cached instance (no copy) to show structure_cache_hands_out_copies red
     }
 
     private static final java.util.Map<String, ArrayList<BuildingBlock>> SERVER_BLOCKS = new java.util.HashMap<>();
