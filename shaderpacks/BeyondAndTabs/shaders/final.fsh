@@ -31,7 +31,11 @@ const float GLOW = 0.30;
 const float GLOW_THRESHOLD = 0.50;
 const float GLOW_RADIUS = 0.016;
 const vec3 SHADOW_TINT = vec3(1.06, 1.00, 0.90);
-const vec3 HIGHLIGHT_TINT = vec3(1.09, 1.00, 0.85);
+// highlights near neutral (lovish, Oct 30: "more white then cream sounds fine"): the old (1.09, 1.00, 0.85) turned
+// white quartz, iron and the capitol cream and grey stone brown (block critic vs the Complementary benchmark). The warm
+// Enchanted mood stays in the shadows' tint and the light table; whites read white. #326's WorldLookPass Enchanted
+// column must take the same value so players with and without the pack match.
+const vec3 HIGHLIGHT_TINT = vec3(1.03, 1.00, 0.96);
 
 // ---- edge smoothing: FXAA only where the depth buffer shows a geometry edge (textures inside a face keep every
 // texel; one-pixel-thin features such as name-tag glyphs are left as drawn) ----
