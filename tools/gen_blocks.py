@@ -160,7 +160,7 @@ TARGETS = {
     # r31: cut columns (m_columnar polished) - crisp grooves, flat faces: tilt 25 -> 14 / 20 -> 10, satin 39 -> 70
     "polished_basalt_side": dict(luma=0.36, std=0.065, sat=0.05, tilt=14.0, smooth=70, pore=8),
     "polished_basalt_top": dict(luma=0.33, std=0.065, sat=0.02, tilt=10.0, smooth=70, pore=8),
-    "bone_block_side": dict(luma=0.86, std=0.050, sat=0.11, tilt=18.0, smooth=87, pore=20),
+    "bone_block_side": dict(luma=0.84, std=0.060, sat=0.12, tilt=16.0, smooth=80, pore=20),   # r31: shafts
     "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
     "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.09, tilt=13.4, smooth=104, pore=4),
@@ -177,7 +177,7 @@ TARGETS = {
     "clay": dict(luma=0.53, std=0.035, sat=0.10,   # r21: read pink-white under the warm sun - bluer
     tilt=8.9, smooth=102, pore=64),
     "red_sand": dict(luma=0.52, std=0.040, sat=0.60, tilt=12.9, smooth=34, pore=60),
-    "mud": dict(luma=0.22, std=0.028, sat=0.14, tilt=16.3, smooth=90, pore=64),
+    "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
     "calcite": dict(luma=0.87, std=0.075, sat=0.01, tilt=19.4, smooth=59, pore=10),
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
     "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
@@ -187,7 +187,8 @@ TARGETS = {
     sat=0.33, tilt=6.0, smooth=76, pore=24),
     "jungle_planks": dict(luma=0.48, std=0.055, sat=0.46, tilt=7.1, smooth=59, pore=24),
     "acacia_planks": dict(luma=0.45, std=0.048, sat=0.70, tilt=6.0, smooth=80, pore=24),   # r31: orange, a touch lighter
-    "dark_oak_planks": dict(luma=0.19, std=0.037, sat=0.64, tilt=6.6, smooth=50, pore=24),
+    # r31 (art director: "too black, grain lost"): 0.19 -> 0.25, more spread for the grain (0.037 -> 0.050)
+    "dark_oak_planks": dict(luma=0.25, std=0.050, sat=0.60, tilt=6.6, smooth=50, pore=24),
     "mangrove_planks": dict(luma=0.25, std=0.035, sat=0.60, tilt=6.0, smooth=54, pore=24),
     "crimson_planks": dict(luma=0.28, std=0.037, sat=0.56, tilt=10.0, smooth=41, pore=24),
     "warped_planks": dict(luma=0.44, std=0.049, sat=0.59, tilt=10.0, smooth=49, pore=24),
@@ -1757,8 +1758,33 @@ def m_basalt(F, n, top):
     return m_columnar(F, n, top, polished=True)
 
 
+def m_mud(F, n):
+    """Round 31 (art director: mud "a flat dark slab - wet sheen via smoothness, drying cracks"): a drying mud flat -
+    a network of shrinkage cracks (Voronoi plates ~1/4 block, the crack a groove whose plate edges curl up a little),
+    the plates' tops drying pale and matte, the cracks and the low puddled hollows still wet, dark and glossy (the
+    smoothness map carries the wet / dry split; the F0 stays dielectric)."""
+    f1, f2, idx, k = F.voronoi(16, 0.9)
+    wu, wv = 0.015 * F.noise(3, 9, 0.5), 0.015 * F.noise(3, 9, 0.5)
+    f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+    gap = f2 - f1
+    crack = 1 - smoothstep(0.0, 0.018, gap)              # the open crack
+    curl = smoothstep(0.018, 0.06, gap)                  # the plate: 0 at the curled-up lip, 1 inside
+    lip = (1 - curl) * (1 - crack)
+    wet = smoothstep(0.55, 0.9, norm01(F.fbm(2, 3, 0.55)))   # low hollows still wet
+    grain = F.noise(14, 40, 0.3)
+    H = 0.55 - 0.25 * crack + 0.06 * lip + 0.01 * grain - 0.04 * wet
+    dry = (1 - wet) * (1 - crack)
+    shade = 0.80 + 0.25 * dry * (0.6 + 0.4 * curl) + 0.02 * grain - 0.35 * crack
+    alb = tint((0.30, 0.25, 0.21), shade)
+    alb = alb * (1 - 0.15 * dry[..., None] * np.array([0.0, 0.2, 0.5])[None, None, :])   # dry mud: paler, greyer
+    smooth = 38 + 100 * np.clip(wet + 0.8 * crack, 0, 1) - 10 * lip
+    return dict(H=H, alb=alb, smooth=np.clip(smooth, 20, 170))
+
+
 def m_bone(F, n, top):
-    """Bone block: long bone grain along the side; the cut end shows the dense rim and the spongy marrow."""
+    """Bone block: long bone grain along the side; the cut end shows the dense rim and the spongy marrow.
+    Round 31 (art director: the sides "plain"): three bone shafts per side, each a rounded cylinder with fine
+    longitudinal striations, a slight bulge toward its ends, a few pits and a hairline crack, each its own tone."""
     if top:
         r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
         marrow = smoothstep(0.30, 0.22, r)
@@ -1767,10 +1793,23 @@ def m_bone(F, n, top):
         H = 0.5 + 0.3 * bev - 0.15 * marrow * sponge
         shade = (0.92 - 0.25 * marrow * sponge) * (0.8 + 0.2 * bev)
     else:
-        grain = F.noise(6, 40, 0.5, sx=1.0, sy=8.0)
-        groove = 1 - smoothstep(0.0, 0.05, np.abs(((F.u * 3) % 1.0) - 0.5) * 2 - 0.9)
-        H = 0.6 + 0.05 * grain - 0.15 * groove
-        shade = 0.92 + 0.05 * grain - 0.15 * groove
+        x = (F.u * 3) % 1.0                              # across one shaft
+        col = np.floor(F.u * 3).astype(int)
+        bulge = 1 + 0.08 * np.cos(2 * math.pi * F.v) ** 2   # a hair wider toward the block's ends
+        cyl = np.sqrt(np.clip(1 - ((2 * x - 1) / bulge) ** 2, 0, 1))   # a cylinder's profile
+        groove = 1 - smoothstep(0.0, 0.05, np.minimum(x, 1 - x))
+        stria = F.noise(24, 64, 0.3, sx=1.0, sy=16.0)   # fine lines along the shaft
+        grain = F.noise(4, 14, 0.5, sx=1.0, sy=8.0)
+        pit = smoothstep(0.86, 0.96, norm01(F.noise(8, 24, 0.3)))
+        crack = (1 - smoothstep(0.0, 0.012, np.abs(F.noise(2, 5, 0.5, sx=1.0, sy=6.0)))) \
+            * smoothstep(0.6, 0.9, norm01(F.noise(1, 3, 0.5)))
+        tone = F.rng.uniform(0.94, 1.04, 3)[col]
+        H = 0.3 + 0.55 * cyl + 0.015 * stria + 0.02 * grain - 0.05 * pit - 0.08 * crack
+        shade = tone * (0.80 + 0.20 * cyl) * (1 + 0.03 * stria + 0.04 * grain - 0.12 * pit - 0.2 * crack) \
+            * (1 - 0.3 * groove)
+        hue = grain
+        alb = tint((0.90, 0.87, 0.78), shade, np.stack([0.02 * hue, 0.0 * hue, -0.03 * hue], -1))
+        return H, alb
     return H, tint((0.90, 0.88, 0.80), shade)
 
 
@@ -3382,7 +3421,7 @@ def recipes():
         "coarse_dirt": m_coarse_dirt,
         "clay": lambda F, n: m_clayish(F, n, (0.62, 0.64, 0.70), pits=0.02, mottle=0.05),
         "red_sand": lambda F, n: m_sand(F, n, (0.75, 0.42, 0.18)),
-        "mud": lambda F, n: m_clayish(F, n, (0.26, 0.22, 0.22), pits=0.03, mottle=0.10),
+        # ("mud" moved below: r31 m_mud paints its own smoothness)
         "calcite": lambda F, n: m_igneous(F, n, (0.88, 0.88, 0.86), (0.75, 0.75, 0.74), 1.0),
         # fine ash with a few darker lapilli: small crystals, low contrast, the tone in a soft mottle (round 18)
         "tuff": lambda F, n: m_crystal(F, n, [((0.42, 0.42, 0.38), 0.85), ((0.32, 0.32, 0.29), 0.15)],
@@ -3392,7 +3431,7 @@ def recipes():
         "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
         # r31 (art director: "reddish-brown, should be the distinctive orange acacia"): hue 22 -> 27 deg, straighter
         "acacia_planks": lambda F, n: m_planks(F, n, (0.82, 0.46, 0.17), 0.006),
-        "dark_oak_planks": lambda F, n: m_planks(F, n, (0.28, 0.18, 0.10), 0.010),
+        "dark_oak_planks": lambda F, n: m_planks(F, n, (0.34, 0.22, 0.12), 0.006),   # r31: lifted, straighter grain
         "mangrove_planks": lambda F, n: m_planks(F, n, (0.48, 0.20, 0.18), 0.012),
         "crimson_planks": lambda F, n: m_planks(F, n, (0.42, 0.18, 0.28), 0.012),
         "warped_planks": lambda F, n: m_planks(F, n, (0.18, 0.45, 0.42), 0.012),
@@ -3454,6 +3493,7 @@ def recipes():
     # r30 (lovish Oct 30: "more realistic than" Complementary's obsidian): volcanic glass - conchoidal shell scoops
     # with ripple rings, smoky thin aretes, glass-smooth faces (m_obsidian_glass paints its own smoothness)
     R["obsidian"] = _parts(m_obsidian_glass)
+    R["mud"] = _parts(m_mud)                   # r31: drying mud flat, wet / dry in the smoothness
     R["iron_block"] = _parts(lambda F, n: _d3(m_iron(F, n)))                       # round 23: brushed, riveted
     R["netherite_block"] = _parts(lambda F, n: _d3(m_plate(F, n, (0.30, 0.27, 0.29))))
     R["grass_block_snow"] = _grass_snow_side
