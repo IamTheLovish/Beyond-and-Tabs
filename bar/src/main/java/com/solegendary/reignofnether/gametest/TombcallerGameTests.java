@@ -80,6 +80,13 @@ public class TombcallerGameTests {
     /** A stone old enough that its creep is full grown (8 blocks at a block per 40 ticks). */
     static final int FULL_GROWN = 8 * 40;
 
+    /** Adds a problem unless the last Raise Tombstone was refused for {@code why} (the start of RaiseTombstone.lastRefusal). */
+    static void refusedFor(List<String> problems, String what, String why) {
+        String got = RaiseTombstone.lastRefusal;
+        if (got == null || !got.startsWith(why))
+            problems.add(what + " was refused for \"" + got + "\", expected \"" + why + "\"");
+    }
+
     private static String owner(GameTestHelper helper, String what) {
         return "gametest_tombcaller_" + what + "_" + helper.absolutePos(BlockPos.ZERO).asLong();
     }
@@ -432,7 +439,7 @@ public class TombcallerGameTests {
                 if (raise == null)
                     throw new IllegalStateException("the Tombcaller has no Raise Tombstone");
                 long now = level.getGameTime();
-                raise.use(level, (Unit) caller, helper.absolutePos(new BlockPos(9, 1, 3)));
+                raise.use(level, (Unit) caller, helper.absolutePos(new BlockPos(9, 2, 3)));   // the grass: the arena's ground (stone at y=1)
                 stones.addAll(TombcallerServerEvents.stonesOf(caller));
                 for (TombstoneUnit s : level.getEntitiesOfClass(TombstoneUnit.class, caller.getBoundingBox().inflate(12)))
                     if (!stones.contains(s) && owner.equals(s.getOwnerName()))
@@ -466,9 +473,11 @@ public class TombcallerGameTests {
                 float cd = ((Unit) caller).getCooldown(raise);
                 if (cd < 25 * 20 - 2)
                     problems.add("Raise Tombstone's cooldown is " + cd + " ticks after the cast, expected 500");
-                raise.use(level, (Unit) caller, helper.absolutePos(new BlockPos(6, 1, 8)));
+                raise.use(level, (Unit) caller, helper.absolutePos(new BlockPos(6, 2, 8)));
                 if (Essence.get(caller) != 20 || TombcallerServerEvents.stonesOf(caller).size() > 1)
                     problems.add("a second Raise Tombstone during the cooldown went off (essence " + Essence.get(caller) + ")");
+                else if (RaiseTombstone.lastRefusal != null)   // the cooldown stops it in use(), before cast() looks
+                    problems.add("the second Raise Tombstone was refused by cast() (" + RaiseTombstone.lastRefusal + "), not by the cooldown");
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
@@ -505,28 +514,31 @@ public class TombcallerGameTests {
                     throw new IllegalStateException("the Tombcaller has no Raise Tombstone");
                 if (stones.contains(null))
                     throw new IllegalStateException("could not raise the three stones");
-                raise.use(level, (Unit) poor, helper.absolutePos(new BlockPos(6, 1, 2)));
+                raise.use(level, (Unit) poor, helper.absolutePos(new BlockPos(6, 2, 2)));
                 if (Essence.get(poor) != 9 || ((Unit) poor).getCooldown(raise) > 0 || !TombcallerServerEvents.stonesOf(poor).isEmpty())
                     problems.add("Raise Tombstone short of essence was not refused cleanly (essence " + Essence.get(poor) + ")");
+                refusedFor(problems, "Raise Tombstone short of essence", "short of essence");
                 if (TombcallerServerEvents.stonesOf(rich).size() != 3)
                     problems.add("setup: the rich caster keeps " + TombcallerServerEvents.stonesOf(rich).size() + " stones, expected 3");
                 // the cap first, then out of reach and in the air with one stone gone (so the cap is not what refuses)
-                raise.use(level, (Unit) rich, helper.absolutePos(new BlockPos(9, 1, 11)));
+                raise.use(level, (Unit) rich, helper.absolutePos(new BlockPos(9, 2, 11)));
                 if (Essence.get(rich) != 30 || ((Unit) rich).getCooldown(raise) > 0 || TombcallerServerEvents.stonesOf(rich).size() != 3)
                     problems.add("a fourth stone was not refused cleanly (essence " + Essence.get(rich) + ", stones "
                         + TombcallerServerEvents.stonesOf(rich).size() + ")");
+                refusedFor(problems, "a fourth stone", "at the cap");
                 // the autocast does not even try at the cap (no "already keeps three" every second), and does again below it
                 if (raise.canAutocastNow(level, (Unit) rich))
                     problems.add("the autocast would order a fourth stone at the cap");
                 stones.get(2).discard();
                 if (!raise.canAutocastNow(level, (Unit) rich))
                     problems.add("with two stones and 30 essence the autocast would not cast");
-                String[] what = { "12 blocks off", "in mid-air" };
-                BlockPos[] at = { helper.absolutePos(new BlockPos(14, 1, 13)), helper.absolutePos(new BlockPos(4, 8, 9)) };
+                String[] what = { "12 blocks off", "in mid-air" }, why = { "too far", "no room" };
+                BlockPos[] at = { helper.absolutePos(new BlockPos(14, 2, 13)), helper.absolutePos(new BlockPos(4, 8, 9)) };
                 for (int i = 0; i < at.length; i++) {
                     raise.use(level, (Unit) rich, at[i]);
                     if (Essence.get(rich) != 30 || ((Unit) rich).getCooldown(raise) > 0)
                         problems.add("Raise Tombstone " + what[i] + " was not refused cleanly (essence " + Essence.get(rich) + ")");
+                    refusedFor(problems, "Raise Tombstone " + what[i], why[i]);
                 }
                 for (TombstoneUnit s : level.getEntitiesOfClass(TombstoneUnit.class, rich.getBoundingBox().inflate(16)))
                     if (owner.equals(s.getOwnerName()) && !stones.contains(s)) {
@@ -578,11 +590,12 @@ public class TombcallerGameTests {
                     return;
                 if (TombcallerServerEvents.stoneCount(caller) != RaiseTombstone.MAX_STONES)
                     early.add("with one stone unloaded the caster counts " + TombcallerServerEvents.stoneCount(caller) + " stones, expected 3");
-                TombstoneUnit fourth = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true);
+                TombstoneUnit fourth = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 2, 11)), true);
                 if (fourth != null)
                     stones.add(fourth);
                 if (fourth != null || Essence.get(caller) != 30)
                     early.add("with one stone unloaded a fourth was raised (essence " + Essence.get(caller) + ")");
+                refusedFor(early, "with one stone unloaded a fourth", "at the cap");
                 Entity back = EntityType.loadEntityRecursive(saved, level, e -> e);   // its chunk loads again
                 if (back == null || !level.addFreshEntity(back))
                     throw new IllegalStateException("the saved stone did not load back");
@@ -603,7 +616,7 @@ public class TombcallerGameTests {
                 stones.get(0).setOwnerName(foe);   // what a Wraith's full possession does (WraithUnit.onCastPossess)
                 if (TombcallerServerEvents.stoneCount(caller) != 2)
                     problems.add("with one stone possessed the caster counts " + TombcallerServerEvents.stoneCount(caller) + ", expected 2");
-                TombstoneUnit fresh = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 1, 11)), true);
+                TombstoneUnit fresh = RaiseTombstone.cast(level, caller, owner, helper.absolutePos(new BlockPos(8, 2, 11)), true);
                 if (fresh != null)
                     stones.add(fresh);
                 if (fresh == null || Essence.get(caller) != 30 - RaiseTombstone.ESSENCE_COST)
@@ -631,8 +644,9 @@ public class TombcallerGameTests {
             helper.fail("could not spawn the Tombcaller");
             return;
         }
-        BlockPos pool = new BlockPos(12, 1, 12);   // the grass cell, now 1-deep water on the stone floor
-        helper.setBlock(pool, Blocks.WATER);
+        BlockPos pool = new BlockPos(12, 2, 12);   // the grass cell, now 1-deep water on the stone floor (y=1)
+        // put back when the test ends, pass or fail: the next batch on this spot finds the grass
+        TestCleanup.blocks(helper).set(helper.absolutePos(pool), Blocks.WATER.defaultBlockState());
         List<TombstoneUnit> raised = new ArrayList<>();
         helper.runAfterDelay(2, () -> {
             List<String> problems = new ArrayList<>();
@@ -645,13 +659,13 @@ public class TombcallerGameTests {
                         raised.add(s);
                     if (s != null || Essence.get(caller) != 30)
                         problems.add("Raise Tombstone " + what[i] + " was not refused (essence " + Essence.get(caller) + ")");
+                    refusedFor(problems, "Raise Tombstone " + what[i], "water at");
                 }
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
                 clearStones(level, raised, owner);
                 caller.discard();
-                helper.setBlock(pool, Blocks.GRASS_BLOCK);
             }
             finish(helper, problems);
         });
@@ -769,6 +783,8 @@ public class TombcallerGameTests {
     public static void tombstone_creep_heals_gravebound_friends_and_slows_enemies(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "creep"), foe = owner(helper, "creepfoe");
+        // Spider units take Slowness II in daylight: the speeds must not hang on the batch's time of day
+        Runnable daylight = TestCleanup.atEnd(helper, ArenaReady.noSunlight(owner, foe));
         TombstoneUnit s = stone(helper, null, owner, 8, 8, FULL_GROWN, false);
         Mob spiderOn = still(helper, EntityRegistrar.SPIDER_UNIT.get(), owner, 11, 8);
         Mob spiderOff = still(helper, EntityRegistrar.SPIDER_UNIT.get(), owner, 0, 0);
@@ -822,6 +838,7 @@ public class TombcallerGameTests {
             } finally {
                 discardAll(all);
                 clearStones(level, List.of(s), owner);
+                daylight.run();
             }
             finish(helper, problems);
         });
@@ -1018,6 +1035,8 @@ public class TombcallerGameTests {
     public static void tombcaller_grave_tide_hastens_and_heals_gravebound_friends(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "tide"), foe = owner(helper, "tidefoe");
+        // Spider units take Slowness II in daylight: the speeds must not hang on the batch's time of day
+        Runnable daylight = TestCleanup.atEnd(helper, ArenaReady.noSunlight(owner, foe));
         Mob caller = caller(helper, owner, 2, 2, 30);
         Mob near = still(helper, EntityRegistrar.SPIDER_UNIT.get(), owner, 5, 2);
         Mob onCreep = still(helper, EntityRegistrar.SPIDER_UNIT.get(), owner, 13, 9);
@@ -1088,6 +1107,7 @@ public class TombcallerGameTests {
             } finally {
                 discardAll(all);
                 clearStones(level, List.of(s), owner);
+                daylight.run();
             }
             finish(helper, problems);
         });
@@ -1098,6 +1118,8 @@ public class TombcallerGameTests {
     public static void tombcaller_grave_tide_refuses_when_short(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = owner(helper, "tideno");
+        // Spider units take Slowness II in daylight: the speeds must not hang on the batch's time of day
+        Runnable daylight = TestCleanup.atEnd(helper, ArenaReady.noSunlight(owner));
         Mob caller = caller(helper, owner, 4, 4, 4);
         Mob friend = still(helper, EntityRegistrar.SPIDER_UNIT.get(), owner, 6, 4);
         List<Mob> all = new ArrayList<>(Arrays.asList(caller, friend));
@@ -1121,6 +1143,7 @@ public class TombcallerGameTests {
                 problems.add("threw " + ex);
             } finally {
                 discardAll(all);
+                daylight.run();
             }
             finish(helper, problems);
         });
