@@ -2555,18 +2555,15 @@ def m_clay_bricks(F, n):
 # purple, cyan mid-bright, orange clean), the values stepped so neighbours separate at 32 px. The targets are the
 # table colour's own luma and saturation (colour_targets), so the fit keeps the hue and sets only the spread.
 def m_wool(F, n, rgb):
-    """Wool: a woven fibre - a fine weave of two crossing yarn directions (~22 yarns per block each way, the over-
-    and-under of a plain weave), soft fuzz over it, a slow drift of tone; soft and matte (the smoothness and tilt
-    from TARGETS: no specular)."""
-    yarns = 22
-    wu = np.sin(2 * math.pi * (F.u * yarns + 0.04 * F.noise(2, 6, 0.5)))
-    wv = np.sin(2 * math.pi * (F.v * yarns + 0.04 * F.noise(2, 6, 0.5)))
-    over = np.sign(np.sin(2 * math.pi * F.u * yarns) * np.sin(2 * math.pi * F.v * yarns))   # the plain weave
-    weave = 0.5 * (wu * (over > 0) + wv * (over <= 0)) + 0.5
-    fuzz = F.noise(24, 70, 0.3)
+    """Wool: a felted nap - matted fibre with no direction (round 37: a plain weave of 22 or 14 yarns per block both
+    read as STRIPES at 32 px in the lit preview, wool_compare.png; the felt reads as cloth), soft tufts under it, a
+    slow drift of tone; soft and matte (the smoothness and tilt from TARGETS: no specular)."""
+    nap = F.noise(10, 36, 0.4)
+    fibre = F.noise(30, 80, 0.2)
+    tuft = F.fbm(5, 3, 0.55)
     drift = F.fbm(2, 3, 0.5)
-    H = 0.5 + 0.10 * weave + 0.03 * fuzz + 0.03 * drift
-    shade = 0.90 + 0.10 * weave + 0.03 * fuzz + 0.05 * drift
+    H = 0.5 + 0.06 * nap + 0.02 * fibre + 0.05 * tuft
+    shade = 0.92 + 0.06 * nap + 0.015 * fibre + 0.06 * tuft + 0.04 * drift
     return H, tint(rgb, shade)
 
 
