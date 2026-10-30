@@ -57,3 +57,19 @@ lancets grey glass, wing / keep parapets plain coping.
   up face, 0.769 = snow); measure it on round 2's stills against smooth quartz (south 0.718) and calcite (0.706) and the
   snow cut (value >= 0.70, sat <= 0.12) before trusting the wall. Expected south 0.55-0.62 (diorite wall south 0.553).
   If it reads as snow: fall back to a light stone that does not, and log it.
+
+## Detail round 2 measured (eyes run 41145225614, round 2 and round 1 in one run)
+- polished diorite in that run: west 0.435, south 0.592, sat <= 0.026 - under the snow cut (0.70) and under smooth
+  quartz (0.718) and calcite (0.706): not snow. Its UP face 0.769 (snow): no diorite top is seen (camera model 0 % up).
+  (The table keeps the earlier diorite west entry, 0.373 / n 180 - --add-only never overwrites.)
+- snow share of the building's real pixels (rts / 34): round 2 0.008 / 0.003, round 1 0.000 / 0.000.
+- all wall pixels (rts / 34): 0.384 / 0.368 (round 1 0.329 / 0.317) - the dressings keep the mean in the mids.
+- spire: deepslate 0.17-0.20 (granite 0.55). Gold 0.031 -> 0.005 of the rts pixels.
+- critics 5 / 5 again (no gain): expected RTS 6+, landmark 6+, materials 6 - landmark met (6 / 6), materials missed (4 / 4).
+
+## Detail round 3 (expected, before its eyes run; the last detail round - stop after 2 without gains)
+- corners in the field stone: test_r3_no_ladder_stripes 0 flips (round 2: red); field share of the wall pixels up.
+- spire Macaw's spruce planks steep roof: value 0.33-0.40 (pack texture 0.42 x the measured up-face ratio 0.86),
+  sat 0.25-0.33, hue 25-35 (a weathered timber brown) - inside SPIRE_VAL 0.30-0.45 / SPIRE_SAT 0.10-0.35.
+- halo: 12 stone-brick slabs (up 0.467) in the terrace (0.549): a quiet ring, delta about 0.08.
+- critics: materials 5+, roofs 5+, landmark holds 6.
