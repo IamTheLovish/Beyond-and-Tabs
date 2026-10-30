@@ -155,6 +155,19 @@ public class PlayerPanelClientEvents {
         return screenWidth - RIGHT_MARGIN - (HudPanels.statsOpen ? PANEL_W : stripW);
     }
 
+    /**
+     * Where the side feed (the kill ticker) starts: just under the strip or the open table, as drawn this frame; the
+     * strip's own place when neither is showing (HudLayout.statsTop clears the economy bar's warning rows).
+     */
+    public static int feedTop(int screenWidth) {
+        if (zoneOn)
+            return zoneY + zoneH + 2;
+        var bar = HudClientEvents.economyBar;
+        int x = screenWidth - RIGHT_MARGIN - HudLayout.FEED_MAX_W;
+        return (bar == null ? HudLayout.STATS_TOP
+            : HudLayout.statsTop(bar.left(), bar.right(), bar.bottom(), x, HudLayout.FEED_MAX_W)) + HudLayout.STATS_STRIP_H + 2;
+    }
+
     public static void sync(List<PlayerPanelClientboundPacket.Entry> entries) {
         String me = MC.player == null ? "" : MC.player.getName().getString();
         spectatorView = !PlayerClientEvents.isRTSPlayer();

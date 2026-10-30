@@ -90,4 +90,33 @@ public class AreaMexDragGameTests {
             problems.add("a radius-6 drag encloses the patch 4 away");
         verdict(helper, problems);
     }
+
+    /** The drag replaced the old Shift + wheel ring: no wheel radius is left, and the hints name the drag. */
+    @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
+    public static void area_mex_hints_describe_the_drag_not_a_wheel_ring(GameTestHelper helper) {
+        List<String> problems = new ArrayList<>();
+        try (var in = AreaMexDragGameTests.class.getResourceAsStream("/assets/reignofnether/lang/en_us.json")) {
+            String lang = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            for (String key : new String[]{ "hud.reignofnether.patch_hint", "hud.reignofnether.area_mex_circle",
+                    "onboarding.reignofnether.controls.area_mex" }) {
+                int at = lang.indexOf("\"" + key + "\"");
+                if (at < 0) {
+                    problems.add(key + " is missing");
+                    continue;
+                }
+                String line = lang.substring(at, lang.indexOf('\n', at)).toLowerCase();
+                if (line.contains("wheel") || line.contains("scroll"))
+                    problems.add(key + " still talks about the wheel: " + line);
+                if (!line.contains("drag") && !line.contains("circle"))
+                    problems.add(key + " does not name the drag circle");
+            }
+        } catch (Exception e) {
+            problems.add("could not read the lang file: " + e);
+        }
+        // the circle radius comes only from the drag distance (no wheel state): same drag, same circle
+        BlockPos c = new BlockPos(0, 64, 0), d = new BlockPos(6, 64, 8);
+        if (AreaMexCircle.radius(c, d) != 10.0)
+            problems.add("a 6-8-10 drag gives radius 10");
+        verdict(helper, problems);
+    }
 }

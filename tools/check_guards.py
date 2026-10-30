@@ -26,6 +26,10 @@ CAMERA_KEYS = {"W", "A", "S", "D", "LEFT", "RIGHT", "UP", "DOWN"}
 # key id -> why it may share a camera key (a tap fires the order, a hold pans: keybinds/KeyTaps)
 ALLOWED_ON_CAMERA_KEYS = {
     "key.reignofnether.stop": "BAR's Stop on S; tap = order, hold = pan (KeyTaps). Kept until lovish says otherwise.",
+    "key.reignofnether.build_grid_2": "BAR grid build menu W: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
+    "key.reignofnether.build_grid_5": "BAR grid build menu A: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
+    "key.reignofnether.build_grid_6": "BAR grid build menu S: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
+    "key.reignofnether.build_grid_7": "BAR grid build menu D: live only while a build tab is open; a hold still pans (KeyTaps). Tester OK 2026-10-26.",
 }
 
 BINDING = re.compile(

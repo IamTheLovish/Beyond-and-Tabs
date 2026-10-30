@@ -1,0 +1,45 @@
+{
+  "_comment": "Lovish's Wager Book (design: hero-abilities-overhaul, 'First prototype: the Wager Book'). The keyword parser's whole understanding: no language model. Each intent lists its keywords (whole words; a keyword of 4+ letters also matches longer words that start with it, so 'rain' takes 'raining'; a phrase with a space matches as a phrase and counts once per word in it, so 'run away' beats 'run'). The intent with the most matches wins; a tie goes to the smaller 'size' (the smaller ask). No match is 'nonsense'. 'size_up' words raise the asked tier by one each (at most two), 'size_down' words lower it by one; a number of 10 or more raises it by one. 'base' is the agree chance before level and size (WagerVerdict). Read once from the jar when first needed (prototype): /reload and datapack overrides do not reach it yet; edit it in the source and rebuild. Edit freely: the GameTest wager_parser_maps_every_intent names one sample line per intent.",
+  "default_tier": 2,
+  "size_up": ["big", "bigger", "huge", "massive", "giant", "enormous", "everything", "all", "lots", "mega", "biggest", "strongest", "ultimate"],
+  "size_down": ["small", "little", "just", "tiny", "bit", "minor", "smallest", "teeny"],
+  "intents": [
+    { "id": "rain",      "size": 3, "base": 0.55, "aim": "self",   "keywords": ["rain", "storm", "wet", "weather", "clouds", "cloud", "drizzle", "thunder", "monsoon"] },
+    { "id": "sun",       "size": 2, "base": 0.55, "aim": "spot",   "keywords": ["sun", "sunny", "clear", "dry", "daylight", "warm", "sunshine", "noon"] },
+    { "id": "night",     "size": 2, "base": 0.55, "aim": "self",   "keywords": ["night", "dark", "darkness", "moon", "shadow", "dusk"] },
+    { "id": "wind",      "size": 2, "base": 0.55, "aim": "spot",   "keywords": ["wind", "gust", "blow", "push", "breeze", "whirlwind", "tornado"] },
+    { "id": "earth",     "size": 3, "base": 0.55, "aim": "spot",   "keywords": ["wall", "hill", "rock", "stone", "earth", "dig", "hole", "bridge", "mound"] },
+    { "id": "fire",      "size": 4, "base": 0.50, "aim": "spot",   "keywords": ["fire", "burn", "flame", "flames", "lava", "ember", "embers", "inferno"] },
+    { "id": "ice",       "size": 3, "base": 0.55, "aim": "spot",   "keywords": ["ice", "frost", "freeze", "snow", "cold", "hail", "frozen"] },
+    { "id": "heal",      "size": 2, "base": 0.60, "aim": "self",   "keywords": ["heal", "mend", "fix", "cure", "health", "hp", "healing", "patch"] },
+    { "id": "shield",    "size": 2, "base": 0.60, "aim": "self",   "keywords": ["shield", "protect", "guard", "armor", "armour", "block", "wall of light", "defend"] },
+    { "id": "speed",     "size": 1, "base": 0.60, "aim": "self",   "keywords": ["speed", "fast", "faster", "run", "haste", "quick", "hurry", "zoom"] },
+    { "id": "strength",  "size": 4, "base": 0.50, "aim": "self",   "keywords": ["damage", "strength", "power", "strong", "stronger", "hit harder", "kill", "attack"] },
+    { "id": "summon",    "size": 4, "base": 0.50, "aim": "summon", "keywords": ["summon", "help", "friends", "army", "soldiers", "minions", "more units", "dragon", "backup"] },
+    { "id": "animal",    "size": 3, "base": 0.55, "aim": "summon", "keywords": ["animal", "pig", "cow", "wolf", "wolves", "bear", "horse", "bird", "birds", "bison", "chicken"] },
+    { "id": "light",     "size": 1, "base": 0.60, "aim": "self",   "keywords": ["see", "light", "reveal", "vision", "scout", "where", "find", "lantern"] },
+    { "id": "hide",      "size": 2, "base": 0.55, "aim": "self",   "keywords": ["hide", "fog", "mist", "invisible", "sneak", "smoke", "cloak"] },
+    { "id": "teleport",  "size": 3, "base": 0.55, "aim": "spot",   "keywords": ["teleport", "blink", "jump", "bring", "come here", "go there", "warp", "swap"] },
+    { "id": "money",     "size": 5, "base": 0.45, "aim": "self",   "keywords": ["metal", "energy", "gold", "money", "resources", "rich", "pay", "cash", "coins"] },
+    { "id": "trap",      "size": 3, "base": 0.55, "aim": "spot",   "keywords": ["trap", "mine", "mines", "bomb", "snare", "ambush", "spikes"] },
+    { "id": "fear",      "size": 3, "base": 0.55, "aim": "self",   "keywords": ["fear", "scare", "terror", "run away", "boo", "scary", "spook"] },
+    { "id": "party",     "size": 1, "base": 0.65, "aim": "self",   "keywords": ["sing", "dance", "party", "music", "joke", "funny", "laugh", "song", "celebrate"] },
+    { "id": "nonsense",  "size": 0, "base": 0.95, "aim": "self",   "keywords": [] }
+  ],
+  "lines": {
+    "agree": ["Granted.", "Done, and I am not doing it again.", "Signed, sealed, regretted.", "Fine. But I am keeping the change.", "Lucky you.", "This one is good, do not waste it."],
+    "refuse": ["No.", "That is above my pay. I do not get paid.", "I had a feeling about this and the feeling said no.", "Counter-offer: a pebble.", "I read it twice. Still no.", "Denied, with love."],
+    "refuse_low": ["Ask me when you are taller.", "You are level {level}. I am not giving you the sun.", "I wrote 'no' very neatly so you can keep it."],
+    "twist": ["Granted, mostly.", "You will like it. Some of it.", "Close enough.", "I may have misread one word."],
+    "nonsense": ["I cannot read this and I am the one who wrote the alphabet.", "I could not read this. Here is a pebble."],
+    "legendary": ["Oh. That one. Stand back."],
+    "yap": [
+      "Did you know the book is heavier on Tuesdays? Neither did I. Anyway.",
+      "When I was a smaller Lovish I asked a book for things too. It said no. I said fine. We are still not talking.",
+      "Let me tell you about ink. No. Let me show you instead.",
+      "A wager is a promise with a hat on. Here is the hat.",
+      "Sometimes I just do things. This is one of those times.",
+      "Hold on, I had a thought. It is gone. Have this instead."
+    ]
+  }
+}

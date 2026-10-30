@@ -774,8 +774,6 @@ public class CommandQueueGameTests {
                         chunks.add(c);
                 }
         }
-        for (long[] c : chunks)
-            GameTestChunks.hold(level, (int) c[0], (int) c[1]);
 
         Runnable measure = () -> {
             var rng = new java.util.Random(8);
@@ -939,43 +937,17 @@ public class CommandQueueGameTests {
             else
                 helper.succeed();
         };
-        // measure once every forced chunk is entity-ticking: a fixed 40 ticks was not always enough (CI: 35 of the
-        // 400 units were in chunks still loading, so no order could find them)
-        boolean[] ran = { false };
-        // generating ~50 fresh chunks at x-3000 can take well over 15 s on a CI runner. Giving up at 300 ticks dropped
-        // the tickets mid-generation, and the next batch's structure load then parked the server thread for good (run
-        // 38336416146: stack in StructureUtils.forceLoadChunks -> setChunkForced, watchdog kill, no verdict). Wait up
-        // to a minute so the chunks finish before they are released.
-        // Run 38470339031 (after the duel pads had just generated 380 chunks of their own): a flat 60 s was still not
-        // enough. So the rule is the one GameTestChunks.awaitLoaded uses: keep waiting while chunks keep becoming
-        // ticking, give up only after 60 s (1200 ticks) with NO progress, hard cap 10 min - a stuck future shows as
-        // no progress, honest generation never trips it.
-        final int firstTry = 20, lastTry = 12000, stallTicks = 1200;
-        int[] best = { -1 }, lastProgressTick = { firstTry };
-        for (int t = firstTry; t <= lastTry; t += 5) {
-            final int tick = t;
-            helper.runAfterDelay(t, () -> {
-                if (ran[0])
-                    return;
-                int ticking = 0;
-                for (long[] c : chunks)
-                    if (level.isPositionEntityTicking(new BlockPos(((int) c[0] << 4) + 8, (int) y, ((int) c[1] << 4) + 8)))
-                        ticking++;
-                if (ticking > best[0]) {
-                    best[0] = ticking;
-                    lastProgressTick[0] = tick;
-                }
-                if (ticking == chunks.size()) {
-                    ran[0] = true;
-                    measure.run();
-                } else if (tick - lastProgressTick[0] >= stallTicks || tick + 5 > lastTry) {
-                    ran[0] = true;
-                    GameTestChunks.releaseAll(level, chunks);   // keeps the ticket of a chunk still loading: see there
-                    helper.fail("the benchmark's chunks never became entity-ticking (" + ticking + " of " + chunks.size()
-                        + " after " + tick + " ticks, no progress since tick " + lastProgressTick[0] + ")");
-                }
-            });
-        }
+        // Wait in WALL-CLOCK time, never in ticks: the GameTest server does not hold ticks to 50 ms (it runs them back
+        // to back), so a lone batch waiting on worldgen ticks at several hundred per second. Run 40447858037 (main
+        // 5057223) failed "15 of 24 after 6375 ticks, no progress since tick 5175" nine seconds after its batch began
+        // (319 progress-bar lines, one per 20 ticks): the per-tick poll's "1200 ticks without progress" that was meant
+        // as a minute was 1.7 s, and its 12,000-tick cap about 17 s, while the chunks at x-3000 were still generating.
+        // The waits every other far-chunk test uses (AudienceGameTests, TargetScanGameTests) block the server thread
+        // on System.nanoTime with the chunk source pumped, and stall only after 60 s with no progress anywhere in the
+        // cone: FULL chunks, then the ring that entity ticking needs, then the entity sections (a few ticks).
+        GameTestChunks.holdAndAwaitOrFail(level, chunks, "command queue benchmark");
+        GameTestChunks.awaitRingOrFail(level, chunks, "command queue benchmark");
+        GameTestChunks.whenEntitiesReady(helper, level, chunks, 5, 200, 12000, "command queue benchmark", measure);
     }
 
     static long cqSink;   // keeps the JIT from discarding the reference work

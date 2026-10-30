@@ -74,22 +74,22 @@ public class CommanderKeyGameTests {
                 boolean dgun = false;
                 for (int i = 0; i < list.size(); i++) {
                     dgun |= list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun;
-                    // the Villager's Call to Arms is drawn on hotkey 1 (HudClientEvents)
-                    boolean callToArms = list.get(i) instanceof com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
-                    claim.accept(callToArms ? Keybindings.hotkey1 : keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
-                    // the commander is a builder: Z / X / C / V open BAR's build lists while it is selected, so an ability
-                    // there never fires (orders, stockpiles and Call to Arms sharing them is by design, see Keybindings)
-                    if (!callToArms)
-                        for (Keybinding cat : Keybindings.buildCategoryKeys())
-                            if (keys.get(i).getKey() == cat.getDefaultKey() || keys.get(i).getAliasKey() == cat.getDefaultKey())
-                                clashes.add("ability " + list.get(i).getClass().getSimpleName() + " is on the build-list key " + cat.buttonLabel);
+                    claim.accept(keys.get(i), "ability " + list.get(i).getClass().getSimpleName());
                 }
                 var faction = Factions.getFaction(unit);
                 if (faction == null || faction.getBuildHotkeys().isEmpty())
                     problems.add(who + ": no faction build menu to check against");
                 else
+                    // the build grid keys (BuildGroup.SLOT_KEYS) share keys with the orders on purpose (live only in an
+                    // open tab, then ahead of the orders), but a commander ability on one would be shadowed while a
+                    // tab is open, so CommanderServerEvents keeps the added abilities off them: abilities only
                     for (var entry : faction.getBuildHotkeys().entrySet())
-                        claim.accept(entry.getValue(), "build " + entry.getKey().structureName);
+                        for (int code : new int[] { entry.getValue().getKey(), entry.getValue().getAliasKey() }) {
+                            String prev = code == -1 ? null : taken.get(code);
+                            // Call to Arms on V shares V with the Tech tab key as it did with the old factory key
+                            if (prev != null && prev.startsWith("ability") && !prev.contains("CallToArms"))
+                                clashes.add(prev + " and build slot " + entry.getValue().buttonLabel + " both on " + entry.getValue().buttonLabel);
+                        }
                 if (!dgun)
                     problems.add(who + ": the commander got no D-gun");
                 for (String c : clashes)

@@ -39,7 +39,7 @@ public class UnitIdleWorkerClientBoundPacket {
             return;
         Map<String, IntArrayList> byOwner = new HashMap<>();
         for (LivingEntity livingEntity : UnitServerEvents.getAllUnits()) {
-            if (countsAsIdleWorker(livingEntity))
+            if (countsAsIdleBuilder(livingEntity))
                 byOwner.computeIfAbsent(Audience.ownerOf(livingEntity), k -> new IntArrayList()).add(livingEntity.getId());
         }
         // every player, every second, even with an empty list: the client rebuilds its list from each packet
@@ -57,6 +57,14 @@ public class UnitIdleWorkerClientBoundPacket {
      */
     public static boolean countsAsIdleWorker(LivingEntity entity) {
         return entity instanceof WorkerUnit wu && !CommanderServerEvents.isCommander(entity) && WorkerUnit.isIdle(wu);
+    }
+
+    /**
+     * Every idle worker-type unit incl. the commander and T2 builders: the packet carries them all and the client
+     * splits them into the idle-worker / idle-T2-builder / commander buttons (hud/IdleButtons).
+     */
+    public static boolean countsAsIdleBuilder(LivingEntity entity) {
+        return entity instanceof WorkerUnit wu && WorkerUnit.isIdle(wu);
     }
 
     /**

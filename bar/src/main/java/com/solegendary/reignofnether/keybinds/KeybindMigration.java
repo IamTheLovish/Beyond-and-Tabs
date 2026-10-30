@@ -46,6 +46,10 @@ public final class KeybindMigration {
     static final List<Stale> STALE = List.of(
         // Oct 11 (c4d0b47) to Oct 21 (#39): Attack was A. Every install of those builds saved it.
         new Stale(1, "key.reignofnether.attack", GLFW.GLFW_KEY_A, "Attack A -> X, so A is pure camera pan-left (#39)"),
+        // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
+        // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
+        new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
+        new Stale(2, "key.reignofnether.idle_t2_builder", GLFW.GLFW_KEY_HOME, "Idle T2 builder Home -> Ctrl+Shift+B"),
         // Oct 8 to Oct 11: the first WASD builds. Stop sat on Space, Patrol on Y and Guard on P; c4d0b47 moved them to
         // BAR's S / P / G and the gather toggle gave G up, but an install of those days keeps the old keys.
         new Stale(1, "key.reignofnether.stop", GLFW.GLFW_KEY_SPACE, "Stop Space -> S (BAR)"),
