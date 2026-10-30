@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * The Ash Shaman's AI (design-draft-heroes-better-2026-10-30 #5): all four of its specs were Ai.NONE, and HeroBot
  * .isEscape took any ground-aimed NONE ability for "the way out". So in a fight the AI skipped Firewall, Lava Geyser and
- * Ember Totem, and a hurt Shaman threw its first ready spell at a spot away from the enemies. Its spells now strike at
+ * Ember Totem, a hurt one held them back as its escape, and under 30% it threw one at a spot away from the enemies. Its spells now strike at
  * the enemy, and only abilities marked as escapes are escapes. Written before the code (tests first).
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -58,12 +58,13 @@ public class HeroAshShamanAiGameTests {
     }
 
     /**
-     * A hurt Shaman (a quarter health, legs held so the only thing it can do is cast) with Firewall learnt and three
-     * enemies seven blocks off: if Firewall goes off, it goes at the enemies. Main casts it as an "escape", toward a spot
-     * away from them, and nobody burns.
+     * A hurt Shaman (45% health: above the flee line, below the 60% where the AI keeps its escape's mana back; legs held,
+     * so the only thing it can do is cast) with Firewall learnt and three enemies seven blocks off, in its reach: it
+     * burns them. Main takes Firewall for the Shaman's escape, so a hurt Shaman holds it back - and the time it does cast
+     * it (under 30%) it throws it at a spot away from the enemies.
      */
     @GameTest(template = ARENA, batch = "hero_ai_ash_shaman_escape", timeoutTicks = 200)
-    public static void hero_ai_ash_shaman_never_escapes_with_a_damage_spell(GameTestHelper helper) {
+    public static void hero_ai_ash_shaman_hurt_still_burns_the_enemy_in_reach(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "shaman_escape"), them = me + "_foe";
         HeroBot.setAiEnabled(me, true);
@@ -85,7 +86,7 @@ public class HeroAshShamanAiGameTests {
         FactionHeroAbility firewall = HeroAiGameTests.learn(s, 0);
         float[] hp = new float[3];
         helper.runAfterDelay(5, () -> {   // past the first tick, when the start level's stats are applied
-            shaman.setHealth(shaman.getMaxHealth() * 0.25f);
+            shaman.setHealth(shaman.getMaxHealth() * 0.45f);
             for (int i = 0; i < 3; i++)
                 hp[i] = foes.get(i).getHealth();
         });
@@ -94,8 +95,10 @@ public class HeroAshShamanAiGameTests {
             boolean hurt = false;
             for (int i = 0; i < 3; i++)
                 hurt |= foes.get(i).getHealth() < hp[i];
-            if (!firewall.isOffCooldown(s) && !hurt)
-                problems.add("the hurt Ash Shaman cast Firewall and no enemy burned: it was thrown away from them as an escape");
+            if (firewall.isOffCooldown(s))
+                problems.add("the hurt Ash Shaman (45% health) never cast Firewall at the enemies seven blocks off: it keeps it as an escape");
+            else if (!hurt)
+                problems.add("the hurt Ash Shaman cast Firewall and no enemy burned: it went away from them, as an escape");
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
