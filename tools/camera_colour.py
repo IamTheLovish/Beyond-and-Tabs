@@ -37,6 +37,17 @@ def lookup(table, name, face):
     return v["hue"], v["sat"], v["val"]
 
 
+def lookup_rgb(table, name, face):
+    """The MEAN RGB (0-1) of a block seen from `face` (else any measured face), else None - so an area's colour can be
+    the mean of its pixels as the stills show them (r12: the per-block medians read a spire's area saturation 0.313,
+    its pixels' mean 0.274-0.280). Entries measured before r12 have no mean: None."""
+    e = table["blocks"].get(name)
+    if not e:
+        return None
+    v = e.get(face) if e.get(face, {}).get("rgb") else next((x for x in e.values() if x.get("rgb")), None)
+    return tuple(v["rgb"]) if v else None
+
+
 def measure(nbt, stills_dir, prefix, stills=("rts", "rts_close", "34")):
     import numpy as np
     from PIL import Image
@@ -58,8 +69,10 @@ def measure(nbt, stills_dir, prefix, stills=("rts", "rts_close", "34")):
         # pixels' median is 151)
         w = 2 * np.pi * a[:, 0]
         hue = np.degrees(np.arctan2(np.median(np.sin(w)), np.median(np.cos(w))))
+        rgb = np.array([colorsys.hsv_to_rgb(*q) for q in a]).mean(0)
         out[name][face] = dict(hue=round(float(hue) % 360, 1), sat=round(float(np.median(a[:, 1])), 3),
-                               val=round(float(np.median(a[:, 2])), 3), n=len(a))
+                               val=round(float(np.median(a[:, 2])), 3), n=len(a),
+                               rgb=[round(float(c), 4) for c in rgb])
     return out
 
 

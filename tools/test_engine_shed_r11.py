@@ -111,7 +111,10 @@ class EngineShedR11(unittest.TestCase):
             self.assertGreaterEqual(sum(1 for q in px if q) / len(px), KNOWN, (still, "not photographed yet", Counter(
                 (h[1], h[2]) for h in hits if not CC.lookup(self.table, h[1], h[2])).most_common(5)))
             hsv = np.array([q for q in px if q])
-            rgb = np.array([colorsys.hsv_to_rgb(h / 360.0, s, v) for h, s, v in hsv]).mean(0)
+            # the area colour is the mean of the pixels (r12: each block's MEAN RGB as the stills show it, where the
+            # table has it - its median hue / sat / val read a spire 0.04 more saturated than its pixels' mean)
+            rgb = np.array([CC.lookup_rgb(self.table, h[1], h[2]) or colorsys.hsv_to_rgb(q[0] / 360.0, q[1], q[2])
+                            for h, q in zip(hits, px) if q]).mean(0)
             hue, sat, _ = colorsys.rgb_to_hsv(*rgb)
             self.assertTrue(COPPER_HUE[0] <= hue * 360 <= COPPER_HUE[1], (still, round(hue * 360)))
             self.assertTrue(COPPER_SAT[0] <= sat <= COPPER_SAT[1], (still, "sat", round(sat, 3)))

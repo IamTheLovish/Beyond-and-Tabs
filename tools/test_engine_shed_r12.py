@@ -36,6 +36,7 @@ ROOM_LIT = 10          # block light on a surface seen through a window: a lit r
 GLOW_SEEN = 0.10       # at most this share of a window's glass pixels show a light block straight behind the pane
 ROOM_SEEN = 0.50       # at least this share show a lit room surface
 FRAME_VAL = (0.27, 0.50)   # the gate frame's camera value: mid stone - not black (blackstone 0.13-0.22), not snow
+WARM_SURFACES = ("birch_planks", "birch_slab", "birch_stairs", "stripped_birch_wood")
 SOOT_DARK = 0.80       # a soot cell reads at most 0.8 x the value of brick on the same face, and grey (sat <= 0.15)
 
 
@@ -199,8 +200,10 @@ class EngineShedR12(EngineShedR11):
 
     def test_r12_stack_tapers_smoothly(self):
         """A tapered shaft: from the foot up to the crown each stack's plan width never grows, narrows at least twice
-        (foot -> lower shaft -> upper shaft), and every narrowing is made by sloped pieces (a Macaw's roof wash on the
-        narrowing course or the one under it), with no stair ledge on either."""
+        (foot -> lower shaft -> upper shaft), and no narrowing is a flat ledge: what it leaves open above, on the course
+        under it, is sloped pieces (a Macaw's wash) or thin wall tops, and neither course has a stair. (Round 2: both
+        round-1 critics read the lit Macaw's BRICK wash as a second ring from above; the designer took it out, leaving
+        the brick-wall sleeve's thin tops as the upper shoulder - the rule is no flat ledge, not "a wash everywhere".)"""
         p = self.p
         for s in self.m["stacks"]:
             foot, ring, width = self.stack_parts(s)
@@ -212,7 +215,13 @@ class EngineShedR12(EngineShedR11):
             for y in drops:
                 at = [p.n[(x, yy, z)] for yy in (y - 1, y) for x in range(s["base"][0], s["base"][1] + 1)
                       for z in range(s["base"][2], s["base"][3] + 1) if (x, yy, z) in p.n]
-                self.assertTrue(any(sloped(n) for n in at), (s["top"], y, Counter(at)))
+                under = [p.n[(x, y - 1, z)] for x in range(s["base"][0], s["base"][1] + 1)
+                         for z in range(s["base"][2], s["base"][3] + 1)
+                         if (x, y - 1, z) in p.n and (x, y, z) not in p.n]      # what the narrowing leaves open above
+                at_y = [p.n[(x, y, z)] for x in range(s["base"][0], s["base"][1] + 1)
+                        for z in range(s["base"][2], s["base"][3] + 1) if (x, y, z) in p.n]
+                self.assertTrue(all(sloped(n) or S.glyph(n) == "|" for n in under) and (under or any(
+                    sloped(n) for n in at_y)), (s["top"], y, Counter(under), Counter(at_y)))
                 self.assertFalse([n for n in at if S.glyph(n) == "s"], (s["top"], y, "a stair ledge"))
 
     def test_r12_stack_shaft_is_smooth(self):
@@ -348,6 +357,106 @@ class EngineShedR12(EngineShedR11):
             vals = [CC.lookup(self.table, h[1], h[2]) for h in hits]
             mid = sum(1 for v in vals if v and FRAME_VAL[0] <= v[2] <= FRAME_VAL[1]) / len(hits)
             self.assertGreaterEqual(mid, 0.70, (still, round(mid, 3), Counter(h[1] for h in hits).most_common(4)))
+
+    # ------------------------------------------------------------------------------------------- round 2: the round-1
+    # critics (two fresh, Oct 30: RTS 7 / 6.5, towers 6 / 6, gate 4 / 4, weathering 3 / 3, dusk 4 / 4) and the designer
+    # pass (itachi2-api run 20261030-040349-r12-round2-designer), each fault as what the stills show
+    def spire_cells(self):
+        x0, x1, z0, z1 = self.m["tower"]
+        return {q: n for q, n in self.p.n.items() if x0 - 1 <= q[0] <= x1 + 1 and z0 - 1 <= q[2] <= z1 + 1
+                and q[1] > self.m["cornice"] and S.glyph(n) not in "|*"}
+
+    def test_r2_spire_bed_is_no_dark_seam(self):
+        """Critics r1: "a dotted dark seam runs down one hip line" - the dark bed inside the spire's rings showing
+        through at the corner pieces. No dark block (deepslate, blackstone, coal) anywhere in the spire, the hidden bed
+        included."""
+        bad = sorted((q, n) for q, n in self.spire_cells().items() if not sloped(n)
+                     and any(k in n for k in ("deepslate", "blackstone", "coal")))
+        self.assertEqual(bad[:8], [], len(bad))
+
+    def test_r2_spire_value_band(self):
+        """Measured r1: the spire's area VALUE 0.52-0.54 (pixels) - the lightest large area at RTS; critics: "the
+        biggest saturated area ... may read as a team colour". The tower roof's area colour in rts_close and 34 (the mean
+        of its pixels as the stills show its blocks) has value 0.36-0.48: darker than r1, not as dark as the slate
+        (0.26)."""
+        import colorsys
+        import numpy as np
+        for still in ("rts_close", "34"):
+            hits = self.tower_roof_hits(still)
+            px = [CC.lookup_rgb(self.table, h[1], h[2]) for h in hits]
+            self.assertGreaterEqual(sum(1 for q in px if q) / len(px), 0.95, (still, "not photographed yet", Counter(
+                h[1] for h, q in zip(hits, px) if not q).most_common(3)))
+            v = colorsys.rgb_to_hsv(*np.array([q for q in px if q]).mean(0))[2]
+            self.assertTrue(0.36 <= v <= 0.48, (still, round(v, 3)))
+
+    def test_r2_no_roof_wash_above_the_stone_wash(self):
+        """Critics r1: the brick wash "reads as a second ring", "a second wide, sloped, orange-red square under the
+        crown" (measured value 0.525, sat 0.50-0.53 - lighter and redder than the wall brick). No roof-mod piece on a
+        stack above its stone wash (foot + 1)."""
+        for s in self.m["stacks"]:
+            foot, _, _ = self.stack_parts(s)
+            bad = [(q, n) for q, n in self.p.n.items() if self.in_stack(q, s, 0) and q[1] > foot + 1 and sloped(n)]
+            self.assertEqual(bad, [], s["top"])
+
+    def test_r2_stack_shaft_tones(self):
+        """The designer's band: every stack cell the rts / rts_close / 34 stills show between the stone wash and the
+        soot (wash + 1 .. top - 6) reads camera value 0.30-0.46 and saturation <= 0.45 - the wall brick's range, no lit
+        skirt."""
+        for s in self.m["stacks"]:
+            foot, _, _ = self.stack_parts(s)
+            bad = Counter()
+            for st in ("rts", "rts_close", "34"):
+                for h in self.p.hits[st].values():
+                    if self.in_stack(h[0], s, 0) and foot + 2 <= h[0][1] <= s["top"] - 6:
+                        c = CC.lookup(self.table, h[1], h[2])
+                        if not c or not (0.30 <= c[2] <= 0.46 and c[1] <= 0.45):
+                            bad[(h[1], h[2], c)] += 1
+            self.assertEqual(list(bad.most_common(4)), [], s["top"])
+
+    def test_r2_rooms_seen_through_the_glass_are_warm_surfaces(self):
+        """Critics r1: "the panes look pale grey, not orange"; measured: dusk glass hue 2, sat 0.16 - the panes show red
+        brick under block light. The designer: the surface the glass shows becomes a warm pale one. >= 80 % of the dusk
+        still's camera-window glass pixels show, as the first block behind the pane, a warm pale surface by look
+        (WARM_SURFACES: birch, pack luma 0.65, sat 0.33, a pale warm yellow)."""
+        glass = {q for g in self.camera_windows() for q in g}
+        hits = [h for h in self.p.hits["dusk"].values() if S.glyph(h[1]) == "g" and h[0] in glass]
+        self.assertGreater(len(hits), 200)
+        warm = sum(1 for h in hits if h[3] and h[3][1] in WARM_SURFACES)
+        self.assertGreaterEqual(warm / len(hits), 0.80, (warm, len(hits), Counter(h[3][1] for h in hits if h[3]
+                                                                                  ).most_common(4)))
+
+    def test_r2_soot_drips_down_each_stack(self):
+        """Critics r1: the soot "reads as a black collar ... not staining down the shaft". On each stack's two camera
+        faces (west, south) soot cells by look run down >= 3 consecutive courses from the course under the crown."""
+        p = self.p
+        for s in self.m["stacks"]:
+            sx0, sx1, sz0, sz1 = s["shaft"]
+
+            def sooty(y):
+                faces = [((sx0, y, z), "west") for z in range(sz0, sz1 + 1)] + \
+                        [((x, y, sz1), "south") for x in range(sx0, sx1 + 1)]
+                return any(q in p.n and self.soot(p.n[q], f) for q, f in faces)
+            run = 0
+            for y in range(s["top"] - 2, s["top"] - 8, -1):
+                if not sooty(y):
+                    break
+                run += 1
+            self.assertGreaterEqual(run, 3, s["top"])
+
+    def test_r2_long_streaks_under_the_eaves(self):
+        """Critics r1: "the pier streaks are invisible at the RTS camera" (1 x 2 cells). >= 4 soot streaks of 3+ cells
+        one over the other on the camera faces' walls (y 2..eave), seen in 34 or rts_close."""
+        p = self.p
+        cells, frame = {}, self.gate_frame()
+        for st in ("34", "rts_close"):
+            for h in p.hits[st].values():
+                if h[2] in ("west", "south") and 2 <= h[0][1] <= EAVE and not self.in_tower(h[0]) and not any(
+                        self.in_stack(h[0], s) for s in self.m["stacks"]) and h[0] not in frame:
+                    cells[h[0]] = cells.get(h[0]) or self.soot(h[1], h[2])
+        dark = {q for q, v in cells.items() if v}
+        long = [q for q in dark if (q[0], q[1] + 1, q[2]) not in dark and all((q[0], q[1] - k, q[2]) in dark
+                                                                                for k in (1, 2))]
+        self.assertGreaterEqual(len(long), 4, sorted(long))
 
 
 def block_light(n):
