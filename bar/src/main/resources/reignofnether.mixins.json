@@ -73,7 +73,6 @@
   "client": [
     "AnimProfileRendererMixin",
     "LivingEntityDamageMotionMixin",
-    "LivingEntityVoiceMixin",
     "UnitLodEyesLayerMixin",
     "CameraMixin",
     "ChatComponentMixin",
