@@ -94,4 +94,43 @@ public class HeroXpGameTests {
                 helper.succeed();
         });
     }
+
+    /**
+     * A fallen hero earns nothing: the hero is killed, and two ticks later an enemy dies beside its body (a dead hero
+     * stays in the unit list for a moment, longer while bodies are kept). Neither the body nor the fallen hero's record
+     * - what the revive brings back - gains XP. On main the orbs discarded themselves for a dying hero; paying at the
+     * kill must ask the same (review r1 on PR 419).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void hero_xp_a_fallen_hero_earns_none(GameTestHelper helper) {
+        String me = HeroGameTests.owner(helper, "xp_dead"), them = HeroGameTests.owner(helper, "xp_dead_victim");
+        Mob hero = HeroGameTests.spawnHero(helper, HeroKits.HORDE_WARCHIEF, me, 3, 3);
+        Mob victim = HeroGameTests.spawnUnit(helper, EntityRegistrar.VINDICATOR_UNIT.get(), them, 5, 3);
+        if (hero == null || victim == null) {
+            if (hero != null) hero.discard();
+            if (victim != null) victim.discard();
+            helper.fail("could not spawn the hero or its victim");
+            return;
+        }
+        String type = hero.getType().getDescriptionId();
+        hero.setNoAi(true);
+        helper.runAfterDelay(3, hero::kill);
+        helper.runAfterDelay(5, victim::kill);
+        helper.runAfterDelay(30, () -> {
+            int body = ((HeroUnit) hero).getExperience();
+            HeroUnitSave saved = null;
+            for (HeroUnitSave s : HeroServerEvents.fallenHeroes)
+                if (s.ownerName.equals(me) && s.name.equals(type))
+                    saved = s;
+            HeroServerEvents.fallenHeroes.removeIf(s -> s.ownerName.equals(me));
+            if (!hero.isRemoved())
+                hero.discard();
+            if (body != 0)
+                helper.fail("the fallen hero's body gained " + body + " XP from a kill two ticks after it died");
+            else if (saved != null && saved.experience != 0)
+                helper.fail("the fallen hero's record holds " + saved.experience + " XP");
+            else
+                helper.succeed();
+        });
+    }
 }
