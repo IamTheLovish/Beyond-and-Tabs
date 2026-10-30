@@ -2246,10 +2246,6 @@ public class BotPlayer {
      */
     public static boolean followsArmy(LivingEntity le) {
         return le instanceof SupportUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit
-            || le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit
             || le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit
             || le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit
             || le instanceof com.solegendary.reignofnether.essence.EssenceCarrier;

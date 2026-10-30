@@ -134,14 +134,17 @@ class SupportMathTest {
     }
 
     @Test
-    void healSkipsAFriendAboveNinetyPercent() {
+    void healTakesAFriendJustBelowFullButNeverAFullOne() {
+        // lovish's review r1 answer "Only full health": no cut below full - a golem at 92% is healed, a full one never
         SupportField f = field();
         add(f, 0, 0, ME);
-        f.add(null, 4, 0, 0, 0, 110f, 120f, 5f, FRIEND);   // 10 missing, but 92% of its health left
-        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
+        f.add(null, -4, 0, 0, 0, 120f, 120f, 5f, FRIEND);
+        assertEquals(-1, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV), "a full friend is never a heal target");
+        int near = f.add(null, 4, 0, 0, 0, 110f, 120f, 5f, FRIEND);   // 10 missing, 92% of its health left
+        assertEquals(near, SupportMath.healTarget(f, 0, 0, 8, SPLASH, 3f, INV));
         SupportMath.Aim aim = new SupportMath.Aim();
         f.add(null, 4, 1, 0, 0, 110f, 120f, 5f, FRIEND);
-        assertFalse(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "two at 92% are not hurt");
+        assertTrue(SupportMath.areaHealAim(f, 0, 0, 8, CLOUD, 3f, Undead.IMMUNE, aim), "two at 92% are worth an area heal");
     }
 
     @Test

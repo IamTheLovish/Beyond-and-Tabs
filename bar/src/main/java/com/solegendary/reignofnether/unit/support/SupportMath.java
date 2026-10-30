@@ -29,11 +29,6 @@ public final class SupportMath {
     /** The healer heals itself only below this fraction of its health, and then counts it this much more. */
     public static final float SELF_HEAL_FRACTION = 0.5f, SELF_HEAL_WEIGHT = 1.5f;
     /**
-     * lovish, Oct 30 ("heal low hp units not full hp units"): a friend above this fraction of its health is not hurt
-     * enough for a heal, however much health that is (3 of a golem's 120 is a scratch).
-     */
-    public static final float HEAL_MAX_FRACTION = 0.9f;
-    /**
      * A heal goes to the friend lowest on health (as a fraction); what the friend is worth only breaks a near-tie: the
      * most valuable unit (value 5) scores this much more, the cheapest nothing.
      */
@@ -190,11 +185,12 @@ public final class SupportMath {
     }
 
     /**
-     * Hurt enough for a heal: missing at least {@code minMissing} health and at most {@link #HEAL_MAX_FRACTION} of its
-     * health left.
+     * Hurt enough for a heal: missing at least {@code minMissing} health (a scratch is not worth a throw), so never a
+     * friend at full health. lovish, Oct 30 ("heal low hp units not full hp units"), and his review r1 answer "Only full
+     * health": no cut below full - who is lowest decides (healTarget), not a bar.
      */
     static boolean hurt(SupportField f, int i, float minMissing) {
-        return f.missing(i) >= minMissing && f.health[i] <= f.maxHealth[i] * HEAL_MAX_FRACTION;
+        return f.missing(i) >= minMissing;
     }
 
     /** What a friend's value adds to a heal's score: 0 for the cheapest (value 1) up to {@link #VALUE_TIEBREAK}. */
@@ -357,27 +353,6 @@ public final class SupportMath {
             int cnt = countWithin(f, F_ENEMY, 0, f.x[i], f.z[i], ENGAGE_RADIUS, false);
             if (cnt > bestCount) {
                 bestCount = cnt;
-                best = i;
-            }
-        }
-        return best;
-    }
-
-    /** How far entry {@code i} stands from (sx, sz) along the unit direction (ux, uz); behind is negative. */
-    public static double along(SupportField f, int i, double sx, double sz, double ux, double uz) {
-        return (f.x[i] - sx) * ux + (f.z[i] - sz) * uz;
-    }
-
-    /** The entry matching the flags furthest along the direction (ux, uz) from (sx, sz) - a march's head; or -1. */
-    public static int furthestAlong(SupportField f, int all, int none, double sx, double sz, double ux, double uz) {
-        int best = -1;
-        double bestA = -Double.MAX_VALUE;
-        for (int i = 0; i < f.n; i++) {
-            if (!has(f.flags[i], all, none))
-                continue;
-            double a = along(f, i, sx, sz, ux, uz);
-            if (a > bestA) {
-                bestA = a;
                 best = i;
             }
         }
