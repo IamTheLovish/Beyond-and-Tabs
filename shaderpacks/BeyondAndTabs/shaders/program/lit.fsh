@@ -168,6 +168,12 @@ void main() {
         vec3 v = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
         float fres = top ? waterFresnel(dot(wn, v)) : WATER_F0;
         c *= 1.0 + RIPPLE_SHADE * clamp(dot(wn, l) - dot(geomN, l), -0.25, 0.25);
+        // the fog of war's darkening of the water's vertex colour, for what is lit without the albedo (foam, reflections)
+        float fogDim = clamp(max(glcolor.r, max(glcolor.g, glcolor.b)) / WATER_TINT_BRIGHTEST, 0.0, 1.0);
+        // the shore line: the body turns to lit foam and the layer thickens a little where the water runs out
+        float foam = bed ? shoreFoam(below, playerPos.xz + cameraPosition.xz, frameTimeCounter) : 0.0;
+        c = mix(c, toLinear(vec3(FOAM_ALBEDO)) * light * fogDim, foam);
+        a = max(a, foam * FOAM_OPACITY);
 
         // what the surface reflects: the sky of this frame's light table (dimmed under a roof, as the materials' sky
         // sheen) and the sun's glint, which a bank's shadow on the water puts out
@@ -180,7 +186,7 @@ void main() {
         wm.metal = 0.0;
         wm.emission = 0.0;
         reflected += min(sunSpecular(wm, v, l) * sunArriving(shadow, levels, sunColour), vec3(SPEC_MAX));
-        reflected *= clamp(max(glcolor.r, max(glcolor.g, glcolor.b)) / WATER_TINT_BRIGHTEST, 0.0, 1.0);
+        reflected *= fogDim * (1.0 - foam);
 
         // Fresnel takes its share off what crosses the surface: the bed and the water body each show at (1 - F), the
         // reflection on top. One blend over the bed, dst (1 - A) + src A, with A = 1 - (1 - a)(1 - F)

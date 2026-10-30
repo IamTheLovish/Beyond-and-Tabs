@@ -73,6 +73,23 @@ float waterFresnel(float cosTheta) {
     return WATER_F0 + (1.0 - WATER_F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
 }
 
+// ---- the shore: a soft light line where the water runs out ----
+// Where the depth to the bed goes to zero (a bank's side meets the surface, a beach rises through it) the water is a
+// film over the bed, stirred to foam and catching the light: a narrow bright band. Measured as depth straight down, so
+// against a bank's wall it is ~0.12 blocks wide on screen at the RTS tilt - about four pixels at the default zoom.
+
+// the depth of water (blocks) over which the band fades out
+const float FOAM_WIDTH = 0.25;
+// the band's colour (display value) and its opacity at the very edge
+const float FOAM_ALBEDO = 0.85;
+const float FOAM_OPACITY = 0.6;
+
+// the foam's share at a pixel with `below` blocks of water under it: soft, and broken by a slow ripple along the shore
+float shoreFoam(float below, vec2 p, float t) {
+    float f = 1.0 - smoothstep(0.0, FOAM_WIDTH, below);
+    return f * (0.75 + 0.25 * sin(dot(p, vec2(3.1, 2.3)) + t * 1.7));
+}
+
 // ---- caustics: the ripples focusing sunlight into a moving net of bright lines on the bed ----
 // The water pass knows the bed under each pixel (depthtex1) but cannot change the bed's colour, which is already in
 // colortex0; it writes how much brighter the bed should be into colortex2 (WATER_DATA_*), and composite multiplies.
