@@ -120,10 +120,12 @@ class RangeCircleCostBench {
         newPs.translate(-cx, -cy, -cz);
         Matrix4f m = newPs.last().pose();
         Matrix3f n = newPs.last().normal();
+        // an array, not the list: a list's for-each iterator (32 B) was the only allocation in the second CI run
+        RangeCircleMesh[] meshArray = meshes.toArray(new RangeCircleMesh[0]);
         BenchRounds.Result now = BenchRounds.measure(ROUNDS, WARMUP, FRAMES, PAUSE_MS, (round, frame) -> {
             long t0 = System.nanoTime();
-            for (RangeCircleMesh mesh : meshes)
-                mesh.emit(m, n, newSink, 0f, 0f, 0f, 0.6f);
+            for (int i = 0; i < meshArray.length; i++)
+                meshArray[i].emit(m, n, newSink, 0f, 0f, 0f, 0.6f);
             return System.nanoTime() - t0;
         });
 
