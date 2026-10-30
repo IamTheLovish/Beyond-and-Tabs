@@ -227,7 +227,10 @@ class ShaderPack(unittest.TestCase):
         self.assertGreaterEqual(_const("CONTACT_AO_FLOOR"), 0.85)
         self.assertEqual(_const("CONTACT_SUN_SHARE"), 0.0)
         self.assertTrue(0.70 <= _const("CONTACT_FLOOR") <= 0.80)
-        self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.2)
+        # Retired (light pass 14): "CONTACT_RADIUS <= 0.2" - the critic on pass 12 found a 1-2 px hard band at the
+        # pillars' feet (target a 3-5 px gradient): 0.26 over four rings weighed toward the foot
+        self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.3)
+        self.assertIn("float w = 1.0 - 0.15 * ring;", _read("composite.fsh"))
         self.assertIn("lin *= contactOcclusion(uv, texture2D(depthtex1, uv).r);", _read("composite.fsh"))
         self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
@@ -550,11 +553,19 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("sunColour *= cloud;", lit)
         self.assertNotIn("shadow *= cloudShade(", lit)
         self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define SHADOW_PROBE 0 // \[0 1\]")
-        self.assertIn("plantCaster > 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(1.0)", _read("shadow.fsh"))
+        # light pass 14: the plant red keeps green 0 (the probe's test); blue marks the casters turned to a card
+        self.assertIn("plantCaster > 0.5 ? vec4(1.0, 0.0, plantTurned, 1.0) : vec4(1.0)", _read("shadow.fsh"))
         self.assertGreaterEqual(_const("CLOUD_DARKEST", _read("lib", "clouds.glsl")), 0.8)
         # light pass 12: plant casters turned square to the light (the probe: each tuft cast a thin X), walls lit by
         # plain N.L
-        self.assertIn("vec2 turned = across * (end * length(o) * PLANT_SHADOW_SHRINK);", _read("shadow.vsh"))
+        # Retired (light pass 14): "turned = across * (end * length(o) * ...)" - the end read from the position against
+        # the block's centre; grass's random XZ offset and other models can misread it (the pass-12 close still's tuft
+        # shadows stayed thin crosses). The end is the sprite's u against its centre's now, the half-width fixed
+        vsh = _read("shadow.vsh")
+        self.assertIn("float end = gl_MultiTexCoord0.x < mc_midTexCoord.x ? -1.0 : 1.0;", vsh)
+        self.assertIn("vec2 turned = across * (end * 0.64 * PLANT_SHADOW_SHRINK);", vsh)
+        # light pass 14: the stamp of what the pack saw (the dusk still was drawn with the sun up) stays 8 x 2 px
+        self.assertIn("gl_FragCoord.x < 8.0 && gl_FragCoord.y < 2.0", _read("final.fsh"))
         self.assertIn("mix(ndl, sqrt(ndl), 0.5 * clamp(dot(n, normalize(upPosition)), 0.0, 1.0))", _read("lib", "light.glsl"))
         # light pass 13: walls take SIDE_SUN of a high sun (quartz's lit side fused with its top in the shoulder), all of
         # it again for the low sun; the dusk's sun fades from ~8 degrees, still full by t11800's height (~0.232); the

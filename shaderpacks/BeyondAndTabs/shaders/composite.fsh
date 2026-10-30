@@ -191,10 +191,16 @@ float contactOcclusion(vec2 uv, float depth) {
     float occ = 0.0;
     if (texture2D(colortex1, uv).b > 0.5)
         return 1.0;                    // a plant: no crease on it
-    for (int i = 0; i < 9; i++) {
+    float weights = 0.0;
+    for (int i = 0; i < 12; i++) {
         float a = (float(i) + turn) * 2.39996323;
-        // three radii (light pass 10): the crease fades over its width instead of ending in a line
-        float r = CONTACT_RADIUS * (float(i / 3) + 1.0) / 3.0;
+        // three radii (light pass 10): the crease fades over its width instead of ending in a line. Light pass 14: four,
+        // the inner rings weighed more (1 down to 0.55), over the wider CONTACT_RADIUS - darkest at the foot, a gradient
+        // out to ~9 px instead of a 1-2 px band
+        float ring = float(i / 3);
+        float r = CONTACT_RADIUS * (ring + 1.0) / 4.0;
+        float w = 1.0 - 0.15 * ring;
+        weights += w;
         vec2 suv = uv + vec2(cos(a), sin(a)) * (r * uvPerBlock);
         float sd = texture2D(depthtex1, suv).r;
         // the sky, and plants (they ringed every tuft with a crease, light pass 10), occlude nothing here
@@ -202,9 +208,9 @@ float contactOcclusion(vec2 uv, float depth) {
             continue;
         vec3 v = viewPosAt(suv, sd) - p;
         float h = dot(v, n);
-        occ += max(h * inversesqrt(dot(v, v) + 1e-6) - 0.15, 0.0) * (1.0 - clamp((h - 3.0 * r) / r, 0.0, 1.0));
+        occ += w * max(h * inversesqrt(dot(v, v) + 1e-6) - 0.15, 0.0) * (1.0 - clamp((h - 3.0 * r) / r, 0.0, 1.0));
     }
-    return max(1.0 - CONTACT_GAIN * occ / 9.0, CONTACT_FLOOR);
+    return max(1.0 - CONTACT_GAIN * occ / weights, CONTACT_FLOOR);
 }
 
 // Seams in the RTS view (light pass 13). The critic's "hard straight dark bands" across the open lawn of the pass-11

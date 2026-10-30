@@ -10,6 +10,7 @@ uniform sampler2D texture;
 
 varying vec2 texcoord;
 varying float plantCaster;
+varying float plantTurned;
 
 void main() {
     // plants read their full-size texture (light pass 10): at the shadow map's scale the grass sprites came from a mip
@@ -22,6 +23,7 @@ void main() {
     // the caster is drawn smaller instead (shadow.vsh)
     if (plantCaster > 0.5 && a < PLANT_SHADOW_ALPHA)
         discard;
-    // shadowcolor0: red for plants, for SHADOW_PROBE (lit.fsh); white for everything else
-    gl_FragData[0] = plantCaster > 0.5 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(1.0);
+    // shadowcolor0: red for plants, for SHADOW_PROBE (lit.fsh); white for everything else. Blue also set for a plant
+    // whose caster was turned to a card (light pass 14: the probe paints those blue, the rest red)
+    gl_FragData[0] = plantCaster > 0.5 ? vec4(1.0, 0.0, plantTurned, 1.0) : vec4(1.0);
 }

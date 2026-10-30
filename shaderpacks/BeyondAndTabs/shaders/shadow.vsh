@@ -19,10 +19,12 @@ attribute vec2 mc_midTexCoord;         // the centre of this quad's sprite (a pl
 
 varying vec2 texcoord;
 varying float plantCaster;             // 1 for plants: shadow.fsh keeps only their solid texels
+varying float plantTurned;             // 1 where the turn to a card below ran (SHADOW_PROBE paints it blue)
 
 void main() {
     plantCaster = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 ? 1.0 : 0.0;
     texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    plantTurned = 0.0;
     // light pass 7: plants cast shadows again (the benchmark's tufts do; dropped since #350, when hard shadows read as
     // dark stars - the penumbra is soft now), and sway here exactly as lit.vsh sways them (the same windShare rule)
     gl_Position = ftransform();
@@ -51,9 +53,14 @@ void main() {
             vec3 lightDir = mat3(shadowModelViewInverse) * vec3(0.0, 0.0, 1.0);
             vec2 lh = lightDir.xz;
             vec2 across = dot(lh, lh) > 1e-6 ? normalize(vec2(-lh.y, lh.x)) : vec2(1.0, 0.0);
-            // which end of its quad a vertex is: crossed quads run along the two diagonals
-            float end = abs(o.x + o.y) > abs(o.x - o.y) ? sign(o.x + o.y) : sign(o.x - o.y);
-            vec2 turned = across * (end * length(o) * PLANT_SHADOW_SHRINK);
+            // which end of its quad a vertex is. Light pass 14: by the sprite's u against its centre's, not by the
+            // position against the block's centre - grass is drawn with a random XZ offset and a resource pack's model
+            // need not run along the diagonals, and a vertex whose side was misread left the quad's own line (the
+            // pass-12 close still: every tuft shadow still a thin cross along the world's diagonals). Half a block
+            // each way, as vanilla's cross spans its block corner to corner (~0.64), x PLANT_SHADOW_SHRINK
+            float end = gl_MultiTexCoord0.x < mc_midTexCoord.x ? -1.0 : 1.0;
+            vec2 turned = across * (end * 0.64 * PLANT_SHADOW_SHRINK);
+            plantTurned = 1.0;
             offset.xz += centre + turned - world.xz;
             float foot = floor(world.y + 0.01);
             offset.y += (foot - world.y) * (lower ? 1.0 - PLANT_SHADOW_HEIGHT : 0.0);

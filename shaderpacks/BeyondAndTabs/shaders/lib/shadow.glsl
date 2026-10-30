@@ -149,6 +149,8 @@ float plantShadowProbe(vec3 playerPos, vec3 fit) {
     clip.xy = shadowRemap(clip.xy, fit);
     if (max(abs(clip.x), abs(clip.y)) >= 1.0)
         return 0.0;
-    return texture2D(shadowcolor0, clip.xy * 0.5 + 0.5).g < 0.5 ? 1.0 : 0.0;
+    // 0 not a plant's, 1 a plant's, 2 a plant's turned to a card (light pass 14)
+    vec4 c = texture2D(shadowcolor0, clip.xy * 0.5 + 0.5);
+    return c.g < 0.5 ? (c.b > 0.5 ? 2.0 : 1.0) : 0.0;
 }
 #endif

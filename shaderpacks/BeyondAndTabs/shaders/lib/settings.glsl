@@ -142,7 +142,10 @@ const float PENUMBRA_MIN_BLOCKS = 0.10;
 const float CONTACT_AO_FLOOR = 0.85;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
-const float CONTACT_RADIUS = 0.16;            // ~5 px at the default RTS zoom
+// light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
+// block (~5 -> ~9 px at the default zoom's ~33 px a block) over four rings, the inner ones weighed more, so the crease
+// is darkest at the foot and fades over its width
+const float CONTACT_RADIUS = 0.26;            // ~9 px at the default RTS zoom
 const float CONTACT_GAIN = 1.0;
 const float CONTACT_FLOOR = 0.75;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
@@ -404,7 +407,15 @@ const float PLANT_SHADOW_SHRINK = 0.80;
 const float PLANT_SHADOW_HEIGHT = 0.9;
 // a probe (light pass 11): 1 paints red every lit pixel whose sun shadow comes from a plant (shadow.fsh writes plants
 // red in shadowcolor0), to prove the tufts reach the shadow map. Off for play
+// Light pass 14: plant shadows whose caster went through shadow.vsh's turn to a card are painted blue, the others red
+// (the pass-12 close still's tuft shadows are still thin crosses along the world's diagonals - the quads' own lines)
 #define SHADOW_PROBE 0 // [0 1]
+// a stamp (light pass 14): the bottom-left 8 x 2 px of every still carry what the pack saw this frame - red the world
+// time / 24000, green the sine of the SUN's height x 0.5 + 0.5, blue the shadow light's. The pass-12 dusk still
+// (meant for 13000, the sun ~3 degrees under, where the pack gives no direct light at all) is lit like t11800 at ~0.8
+// with its shadows pointing the same way (the sun's, not the moon's): the frame was not drawn at 13000. Read it
+// (green < 0.5: the sun is under) and turn it off once the dusk time is settled
+#define TIME_STAMP 1 // [0 1]
 // the meadow's macro variation (lib/meadow.glsl, light pass 3): patches MEADOW_CELL blocks per noise cell (~8-16 blocks
 // across), the albedo's linear value by exp(MEADOW_VALUE x field) - by a numpy model of the field through the
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->

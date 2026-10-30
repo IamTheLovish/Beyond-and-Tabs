@@ -20,6 +20,10 @@ uniform float viewWidth;
 uniform float viewHeight;
 uniform vec3 sunPosition;              // the S-curve is the day's (light pass 2): it fades in with the sun's height
 uniform vec3 upPosition;
+#if TIME_STAMP == 1
+uniform int worldTime;                 // TIME_STAMP (light pass 14)
+uniform vec3 shadowLightPosition;
+#endif
 
 varying vec2 texcoord;
 
@@ -337,5 +341,13 @@ void main() {
                         perspectiveGeometry ? PERSPECTIVE_HIGHLIGHT : 1.0);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)
     c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) * (DITHER_LSB / 255.0);
+#if TIME_STAMP == 1
+    // what the pack saw this frame, in the bottom-left 8 x 2 px (TIME_STAMP, lib/settings.glsl)
+    if (gl_FragCoord.x < 8.0 && gl_FragCoord.y < 2.0) {
+        vec3 up = normalize(upPosition);
+        c = vec3(float(worldTime) / 24000.0, dot(normalize(sunPosition), up) * 0.5 + 0.5,
+                 dot(normalize(shadowLightPosition), up) * 0.5 + 0.5);
+    }
+#endif
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }
