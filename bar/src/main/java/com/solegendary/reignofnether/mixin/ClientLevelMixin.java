@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.sounds.SoundClientEvents;
+import com.solegendary.reignofnether.sounds.VoicePairs;
 import com.solegendary.reignofnether.time.TimeClientEvents;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -57,6 +58,11 @@ public class ClientLevelMixin {
 
         ci.cancel();
         if (pSound.get().equals(SoundEvents.WARDEN_HEARTBEAT))
+            return;
+        // one event heard once: a unit's voice near the RTS player's body comes as a local copy (no player) and as the
+        // server's copy (this client's player); a far fight's comes only as the local copy (VoicePairs)
+        if ((pPlayer == null || pPlayer == this.minecraft.player) && VoicePairs.CLIENT.secondCopy(
+                pSound.get().getLocation().toString(), pX, pY, pZ, pPlayer == null, ((ClientLevel) (Object) this).getGameTime()))
             return;
 
         float volumeMult = 0.5f;
