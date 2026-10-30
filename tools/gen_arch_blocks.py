@@ -13,7 +13,16 @@ Profiles (measured from the reference builds, design/arch_blocks/profiles.md):
                    keystone 6 px proud.
   arch_ring_*      a segmental arch over a 3-wide opening (rise 10 px, ring 6 px, 3 proud, keystone 5 proud): pieces
                    left_springer, left_haunch, crown, right_haunch, right_springer (left / right as you face the wall).
-Every block hangs IN FRONT of the wall (its back against the wall face, culled by it) and faces away from it; models
+Slice 2 (Oct 30 2026; lovish: "the better building blocks we can get as well as textures the better", "every one
+that reads"; design pass itachi2-api arch2-design-b/-c):
+  pilaster_*       a flat pier, 12 px shaft 4 proud, 16 px plinth / abacus 6 proud: part base / shaft / capital /
+                   single, picked from the pilasters above and below.
+  quoin_stone      the dressed corner: a FULL stone cube replacing the wall's corner block, stones 2 px proud on its
+                   two faces, long (26 px, over the next block) / short alternating by long_side.
+  corbel_*         an eave bracket: four 3 px steps up into the cornice's cell to the corona's soffit.
+  corbel_course_*  a chimney crown course: three 2 px steps of the shaft's brick, a smooth stone coping 8 proud that
+                   stands 2 px above the shaft's top; shape straight / outer / inner like the cornice.
+Every moulding hangs IN FRONT of the wall (its back against the wall face, culled by it) and faces away from it; models
 are drawn facing north (front at small z, back at z 16). Textures are vanilla only (minecraft:block/...), so the
 realistic resource pack's retexture of bricks, smooth stone, polished deepslate and copper reaches them.
 
@@ -37,6 +46,8 @@ JAVA_REGISTRAR = JAVA_DIR + "/ArchBlocks.java"
 JAVA_SHAPES = JAVA_DIR + "/ArchShapes.java"
 LANG = ASSETS + "/lang/en_us.json"
 DEMO = "design/arch_blocks/demo_wall.nbt"
+DEMO2 = "design/arch_blocks/demo_wall_2.nbt"
+SAMPLER2 = "design/arch_blocks/sampler_2.nbt"
 FACINGS = ("north", "east", "south", "west")
 ROT = {"north": 0, "east": 90, "south": 180, "west": 270}
 
@@ -59,9 +70,25 @@ for _m in ("stone", "brick", "slate"):
     BLOCKS["lintel_" + _m] = {"kind": "lintel", "mat": _m, "props": {"keystone": ["false", "true"]}}
 for _m in ("stone", "brick"):
     BLOCKS["arch_ring_" + _m] = {"kind": "arch_ring", "mat": _m, "props": {"piece": PIECES}}
+# slice 2 - optional keys: "tex" {texture key: vanilla texture}, "like" (the Java vanilla block it is cut from),
+# "solid" (a full cube that occludes: registered without noOcclusion)
+PARTS = ["base", "capital", "shaft", "single"]
+LONG_SIDES = ["front", "side"]
+COURSE_STEPS = {"brick": ("bricks", "Blocks.BRICKS"), "stone": ("stone_bricks", "Blocks.STONE_BRICKS"),
+                "slate": ("deepslate_bricks", "Blocks.DEEPSLATE_BRICKS")}
+for _m in ("stone", "brick", "slate"):
+    BLOCKS["pilaster_" + _m] = {"kind": "pilaster", "mat": _m, "props": {"part": PARTS}}
+BLOCKS["quoin_stone"] = {"kind": "quoin", "mat": "stone", "props": {"long_side": LONG_SIDES}, "solid": True}
+for _m in ("stone", "brick", "copper"):
+    BLOCKS["corbel_" + _m] = {"kind": "corbel", "mat": _m, "props": {}}
+for _m in ("brick", "stone", "slate"):
+    BLOCKS["corbel_course_" + _m] = {"kind": "corbel_course", "mat": _m, "props": {"shape": SHAPES},
+                                     "tex": {"steps": COURSE_STEPS[_m][0], "coping": "smooth_stone"},
+                                     "like": COURSE_STEPS[_m][1]}
 
 NAMES = {"cornice": "Cornice", "string_course": "String Course", "sill": "Window Sill", "lintel": "Lintel",
-         "arch_ring": "Arch Ring"}
+         "arch_ring": "Arch Ring", "pilaster": "Pilaster", "quoin": "Quoin", "corbel": "Corbel",
+         "corbel_course": "Corbel Course"}
 
 # ---- profiles: (y0, y1, projection from the wall face in px[, teeth]) - bottom to top ---------------------------
 TEETH = ((1, 3), (5, 7), (9, 11), (13, 15))      # dentils: 2 px blocks, 2 px gaps
@@ -159,7 +186,11 @@ def arch(piece):
             if hi > lo:
                 boxes.append(("ring", (x0, lo, 0, x1, hi, 16)))
                 if not key:
-                    boxes.append(("ring", (x0, lo, -ARCH_PROUD, x1, hi, 0)))
+                    px0, px1 = x0, x1
+                    if piece == "crown":                   # stop at the keystone's sides: no top face shared with
+                        px0, px1 = (max(x0, 11), x1) if x1 > 11 else (x0, min(x1, 5))   # it (z-fighting, slice 2)
+                    if px1 > px0:
+                        boxes.append(("ring", (px0, lo, -ARCH_PROUD, px1, hi, 0)))
             if hi < 16:
                 boxes.append(("wall", (x0, hi, 0, x1, 16, 16)))
         else:
@@ -170,9 +201,55 @@ def arch(piece):
     return boxes
 
 
+# slice 2 profiles (px, facing north, back on the wall at z 16) - design/arch_blocks/profiles.md, slice 2
+PILASTER = {   # plinth 6 proud x 0-16, torus 5, shaft 4 x 2-14, astragal 5, neck 4, echinus 5, abacus 6
+    "base": [(0, 0, 10, 16, 4, 16), (1, 4, 11, 15, 6, 16), (2, 6, 12, 14, 16, 16)],
+    "shaft": [(2, 0, 12, 14, 16, 16)],
+    "capital": [(2, 0, 12, 14, 7, 16), (1, 7, 11, 15, 9, 16), (2, 9, 12, 14, 11, 16), (1, 11, 11, 15, 13, 16),
+                (0, 13, 10, 16, 16, 16)],
+    "single": [(0, 0, 10, 16, 4, 16), (1, 4, 11, 15, 6, 16), (2, 6, 12, 14, 11, 16), (1, 11, 11, 15, 13, 16),
+               (0, 13, 10, 16, 16, 16)],
+}
+CORBEL_STEPS = [(0, 4, 3), (4, 8, 6), (8, 12, 9), (12, 16, 12)]
+COURSE = [(0, 4, 2), (4, 8, 4), (8, 12, 6)]          # the crown's brick steps
+COPING = [(12, 16, 8), (16, 18, 8)]                  # its coping; the rim above the cell stands over the shaft's top
+
+
+def quoin(long_side):
+    """The corner block itself (a stone cube) and its two stones, 2 px proud of its exposed faces - front (north, z 0)
+    and side (west, x 0) - with 1 px joints top and bottom. The long stone wraps the arris and runs 8 px over the next
+    block of wall (the north face's wall runs east, the west face's runs south); the short one stops at the corner."""
+    if long_side == "front":
+        stones = [(-2, 1, -2, 24, 15, 0), (-2, 1, 0, 0, 15, 16)]
+    else:
+        stones = [(-2, 1, -2, 0, 15, 24), (0, 1, -2, 16, 15, 0)]
+    return [("core", (0, 0, 0, 16, 16, 16))] + [("stone", b) for b in stones]
+
+
+def corbel():
+    """Four steps 3 px out each, 8 px wide, then up into the cornice's cell to the corona's soffit, 1 px behind its
+    face: no free top under the cornice (a lone top read as loose debris in slice 1, r3)."""
+    corona = max(CORNICE, key=lambda layer: layer[2])
+    boxes = [("all", (4, y0, 16 - d, 12, y1, 16)) for y0, y1, d in CORBEL_STEPS]
+    return boxes + [("all", (4, 16, 16 - (corona[2] - 1), 12, 16 + corona[0], 16))]
+
+
+def corbel_course(shape):
+    return ([("steps", b) for layer in COURSE for b in _band(layer, shape)]
+            + [("coping", b) for layer in COPING for b in _band(layer, shape)])
+
+
 def geometry(bid, props):
     """[(texture key, box)] of a block's state, drawn facing north."""
     kind = BLOCKS[bid]["kind"]
+    if kind == "pilaster":
+        return [("all", b) for b in PILASTER[props["part"]]]
+    if kind == "quoin":
+        return quoin(props["long_side"])
+    if kind == "corbel":
+        return corbel()
+    if kind == "corbel_course":
+        return corbel_course(props["shape"])
     if kind == "cornice":
         return _profile(CORNICE, props["shape"])
     if kind == "string_course":
@@ -242,7 +319,9 @@ def model(bid, props):
     used = sorted({k for k, _ in geo})
     textures = {"particle": "minecraft:block/" + tex}
     for k in used:
-        if k == "wall":
+        if k in BLOCKS[bid].get("tex", {}):
+            textures[k] = "minecraft:block/" + BLOCKS[bid]["tex"][k]
+        elif k == "wall":
             textures[k] = "minecraft:block/bricks"
         elif k == "key" or (k == "ring" and BLOCKS[bid]["mat"] == "stone"):
             textures[k] = "minecraft:block/smooth_stone"
@@ -254,9 +333,11 @@ def model(bid, props):
         for face, (axis, hi) in FACE_DIR.items():
             if _covered(face, b, geo):
                 continue
-            f = {"uv": _uv(face, b), "texture": "#" + k}
-            if (hi and b[axis + 3] == 16) or (not hi and b[axis] == 0):
-                f["cullface"] = face
+            # a quoin's stone shows the whole texture once (smooth stone's frame round each stone), not a tiled run
+            f = {"uv": [0, 0, 16, 16] if k == "stone" else _uv(face, b), "texture": "#" + k}
+            inside = all(b[i] >= 0 and b[i + 3] <= 16 for i in range(3) if i != axis)
+            if inside and ((hi and b[axis + 3] == 16) or (not hi and b[axis] == 0)):
+                f["cullface"] = face             # only a face inside its cell's side; one past it is not hidden there
             faces[face] = f
         if faces:
             elements.append({"from": list(b[:3]), "to": list(b[3:]), "faces": faces})
@@ -265,8 +346,12 @@ def model(bid, props):
 
 def model_name(bid, props):
     kind = BLOCKS[bid]["kind"]
-    if kind in ("cornice", "string_course"):
+    if kind in ("cornice", "string_course", "corbel_course"):
         return bid + "_" + props["shape"]
+    if kind == "pilaster":
+        return bid + "_" + props["part"]
+    if kind == "quoin":
+        return bid + "_" + props["long_side"]
     if kind == "lintel":
         return bid + ("_keystone" if props["keystone"] == "true" else "")
     if kind == "arch_ring":
@@ -299,8 +384,8 @@ def files():
                     v["y"] = ROT[f]
                 variants[key] = v
         out["%s/blockstates/%s.json" % (ASSETS, bid)] = _dump({"variants": dict(sorted(variants.items()))})
-        default = {k: ("straight" if k == "shape" else "crown" if k == "piece" else "true" if k == "keystone" else v[0])
-                   for k, v in BLOCKS[bid]["props"].items()}
+        default = {k: {"shape": "straight", "piece": "crown", "keystone": "true", "part": "single",
+                       "long_side": "front"}.get(k, v[0]) for k, v in BLOCKS[bid]["props"].items()}
         out["%s/models/item/%s.json" % (ASSETS, bid)] = _dump({"parent": "reignofnether:block/"
                                                                + model_name(bid, default)})
         out["%s/loot_tables/blocks/%s.json" % (DATA, bid)] = _dump(
@@ -388,9 +473,11 @@ def java_registrar():
     regs = []
     for bid, b in BLOCKS.items():
         cls = {"cornice": "CorniceBlock", "string_course": "CorniceBlock", "sill": "SillBlock", "lintel": "LintelBlock",
-               "arch_ring": "ArchRingBlock"}[b["kind"]]
-        regs.append('    public static final RegistryObject<Block> %s = register("%s", () -> new %s("%s", props(%s)));'
-                    % (bid.upper(), bid, cls, b["kind"], MATERIALS[b["mat"]][1]))
+               "arch_ring": "ArchRingBlock", "pilaster": "PilasterBlock", "quoin": "QuoinBlock",
+               "corbel": "CorbelBlock", "corbel_course": "CorniceBlock"}[b["kind"]]
+        regs.append('    public static final RegistryObject<Block> %s = register("%s", () -> new %s("%s", %s(%s)));'
+                    % (bid.upper(), bid, cls, b["kind"], "solidProps" if b.get("solid") else "props",
+                       b.get("like", MATERIALS[b["mat"]][1])))
     return HEADER + """package com.solegendary.reignofnether.blocks.arch;
 
 import com.solegendary.reignofnether.ReignOfNether;
@@ -411,9 +498,10 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 
 /**
- * Our own architectural moulding blocks (slice 1: cornice, string course, sill, lintel + keystone, arch ring). Models
- * use vanilla textures only, so the realistic resource pack retextures them. Partial shapes: no occlusion (a cornice
- * never culls the wall face behind it, nothing shows through it either).
+ * Our own architectural moulding blocks (slice 1: cornice, string course, sill, lintel + keystone, arch ring; slice 2:
+ * pilaster, quoin, corbel bracket, corbel course). Models use vanilla textures only, so the realistic resource pack
+ * retextures them. Mouldings have partial shapes and no occlusion (a cornice never culls the wall face behind it,
+ * nothing shows through it either); the quoin is a full stone cube that occludes like the wall block it replaces.
  */
 public final class ArchBlocks {
     private ArchBlocks() {}
@@ -426,6 +514,13 @@ public final class ArchBlocks {
             .strength(like.defaultDestroyTime(), like.getExplosionResistance())
             .noOcclusion();
         return p.sound(like.defaultBlockState().getSoundType());
+    }
+
+    /** The same, as a full block that occludes like the wall block it replaces (the quoins). */
+    static BlockBehaviour.Properties solidProps(Block like) {
+        return BlockBehaviour.Properties.of().mapColor(like.defaultMapColor())
+            .strength(like.defaultDestroyTime(), like.getExplosionResistance())
+            .sound(like.defaultBlockState().getSoundType());
     }
 
     private static RegistryObject<Block> register(String name, Supplier<Block> block) {
@@ -535,6 +630,234 @@ def demo():
     return s
 
 
+# ---- slice 2: the facade photographed front-on, the materials sampler --------------------------------------------
+FACADE_W, FACADE_Z, FACADE_TOP = 21, 6, 8     # 21 wide, front wall at z 6 (mouldings at z 7), the cornice row y 8
+WINDOWS = ((3, 5), (9, 11), (15, 17))
+PILASTERS = (7, 13)
+CHIMNEY = (14, 2)                             # the 2x2 stack's north-west cell
+CHIMNEY_TOP = 12                              # the crown's row (the roof's ridge is y 10)
+CCW = {"north": "west", "west": "south", "south": "east", "east": "north"}
+
+
+def quoin_long_face(facing, long_side):
+    """The world face a quoin state carries its long stone on: the facing (front) or its counter-clockwise turn."""
+    return facing if long_side == "front" else CCW[facing]
+
+
+def crown_cells(x0, z0):
+    """{(x, z): (facing, shape)} of a corbel course ring round a 2x2 shaft whose cells are (x0 + 1..2, z0 + 1..2):
+    straights face away from the shaft, the outer corners sit on the diagonals (one-handed like the cornice)."""
+    out = {}
+    for i in (1, 2):
+        out[(x0 + i, z0)] = ("north", "straight")
+        out[(x0 + i, z0 + 3)] = ("south", "straight")
+        out[(x0, z0 + i)] = ("west", "straight")
+        out[(x0 + 3, z0 + i)] = ("east", "straight")
+    out[(x0 + 3, z0)] = ("north", "outer")
+    out[(x0 + 3, z0 + 3)] = ("east", "outer")
+    out[(x0, z0 + 3)] = ("south", "outer")
+    out[(x0, z0)] = ("west", "outer")
+    return out
+
+
+def _pane(x, lo, hi, **kw):
+    return dict(north="false", south="false", east=str(x < hi).lower(), west=str(x > lo).lower(), waterlogged="false")
+
+
+def facade2():
+    """A 21 x 8 brick facade, 7 deep, its face to the south (front wall z 6, mouldings at z 7), for a FRONT-on still:
+    quoins up both corners (long on the facade in the odd courses, so the plinth's string course dies against the
+    long stone), two stone pilasters (base y 1, capital y 7) dividing three bays, a slate plinth string course, sills
+    y 2 and lintels y 6 bearing on the jambs, a segmental arch over the middle window, brackets every other block under
+    the cornice (the capitals take their slots), a slate roof behind the cornice to a ridge at y 10 and a 2x2 brick
+    chimney (x 14-15, z 2-3) with the corbel course crown at y 12. Windows are 3 tall (y 3-5): no run of more than 3
+    plain bricks anywhere on the camera face (the anti-toy gate)."""
+    b = {}
+    W, Z, T = FACADE_W, FACADE_Z, FACADE_TOP
+    F = Z + 1
+
+    def put(x, y, z, name, **props):
+        b[(x, y, z)] = (name, props)
+
+    for x in range(W):
+        for y in range(1, T + 1):
+            for z in range(Z + 1):
+                put(x, y, z, "bricks")
+    for lo, hi in WINDOWS:                                        # a reveal, the glass, a dark room behind
+        for x in range(lo, hi + 1):
+            for y in range(3, 6 + (lo == 9)):                     # the arched one up into its arch row
+                if y < 6:
+                    b.pop((x, y, Z))
+                put(x, y, Z - 1, "glass_pane", **_pane(x, lo, hi))
+                put(x, y, Z - 2, "dark_oak_planks")
+    for y in range(1, T):                                         # quoins: long on the facade in the odd courses
+        odd = y % 2 == 1
+        put(0, y, Z, "reignofnether:quoin_stone", facing="west", long_side="side" if odd else "front")
+        put(W - 1, y, Z, "reignofnether:quoin_stone", facing="south", long_side="front" if odd else "side")
+        put(0, y, 0, "reignofnether:quoin_stone", facing="north", long_side="side" if odd else "front")
+        put(W - 1, y, 0, "reignofnether:quoin_stone", facing="east", long_side="front" if odd else "side")
+    for x in PILASTERS:
+        for y in range(1, T):
+            put(x, y, F, "reignofnether:pilaster_stone", facing="south",
+                part="base" if y == 1 else "capital" if y == T - 1 else "shaft")
+    for x in range(2, W - 2):                                     # the plinth: x 1 / 19 carry the long quoin stone
+        if x not in PILASTERS:
+            put(x, 1, F, "reignofnether:string_course_slate", facing="south", shape="straight")
+    for x in range(1, W - 1):
+        if x in PILASTERS:
+            continue
+        put(x, 2, F, "reignofnether:sill_stone", facing="south")
+        if x < 7 or x > 13:                                       # lintels bear on the jambs, keystones mid-window
+            put(x, 6, F, "reignofnether:lintel_stone", facing="south", keystone=str(x in (4, 16)).lower())
+    for i, piece in enumerate(PIECES):                            # the middle window's arch, as in slice 1
+        put(8 + i, 6, Z if piece in IN_WALL else F, "reignofnether:arch_ring_stone", facing="south", piece=piece)
+    for x in range(3, W - 3, 2):                                  # brackets every other block, capitals between
+        if x not in PILASTERS:
+            put(x, T - 1, F, "reignofnether:corbel_stone", facing="south")
+    for x in range(W):
+        put(x, T, F, "reignofnether:cornice_stone", facing="south", shape="straight")
+    put(-1, T, F, "reignofnether:cornice_stone", facing="south", shape="outer")
+    put(W, T, F, "reignofnether:cornice_stone", facing="east", shape="outer")
+    for z in range(Z + 1):
+        put(-1, T, z, "reignofnether:cornice_stone", facing="west", shape="straight")
+        put(W, T, z, "reignofnether:cornice_stone", facing="east", shape="straight")
+    for x in range(W):                                            # the slate roof, eaves behind the cornice
+        stairs = dict(half="bottom", shape="straight", waterlogged="false")
+        put(x, T + 1, Z, "deepslate_tile_stairs", facing="north", **stairs)
+        put(x, T + 1, 0, "deepslate_tile_stairs", facing="south", **stairs)
+        for z in range(1, Z):
+            put(x, T + 1, z, "deepslate_tiles")
+        put(x, T + 2, Z - 1, "deepslate_tile_stairs", facing="north", **stairs)
+        put(x, T + 2, 1, "deepslate_tile_stairs", facing="south", **stairs)
+        for z in range(2, Z - 1):
+            put(x, T + 2, z, "deepslate_tile_slab", type="bottom", waterlogged="false")
+    cx, cz = CHIMNEY
+    for y in range(T + 1, CHIMNEY_TOP + 1):
+        for x in (cx, cx + 1):
+            for z in (cz, cz + 1):
+                put(x, y, z, "bricks")
+    for (x, z), (facing, shape) in crown_cells(cx - 1, cz - 1).items():
+        put(x, CHIMNEY_TOP, z, "reignofnether:corbel_course_brick", facing=facing, shape=shape)
+    return S.Build(b)
+
+
+def sampler2():
+    """The other slice-2 materials, faces to the south: a stone-brick wall (x 0-8, z 1-2, y 1-5) with a slate and a
+    brick pilaster and a single stone one, a brick cornice on brick and weathered copper brackets; three 2x2 stacks
+    (brick, stone brick, deepslate brick; z 1-2, y 1-5) each with its own corbel course crown at y 5."""
+    b = {}
+
+    def put(x, y, z, name, **props):
+        b[(x, y, z)] = (name, props)
+
+    for x in range(9):
+        for y in range(1, 6):
+            for z in (1, 2):
+                put(x, y, z, "stone_bricks")
+    for x, mat in ((1, "slate"), (4, "brick")):
+        for y in range(1, 5):
+            put(x, y, 3, "reignofnether:pilaster_" + mat, facing="south",
+                part="base" if y == 1 else "capital" if y == 4 else "shaft")
+    put(7, 2, 3, "reignofnether:pilaster_stone", facing="south", part="single")
+    put(2, 4, 3, "reignofnether:corbel_brick", facing="south")
+    put(6, 4, 3, "reignofnether:corbel_copper", facing="south")
+    for x in range(9):
+        put(x, 5, 3, "reignofnether:cornice_brick", facing="south", shape="straight")
+    for x0, shaft, mat in ((10, "bricks", "brick"), (15, "stone_bricks", "stone"), (20, "deepslate_bricks", "slate")):
+        for y in range(1, 6):
+            for x in (x0 + 1, x0 + 2):
+                for z in (1, 2):
+                    put(x, y, z, shaft)
+        for (x, z), (facing, shape) in crown_cells(x0, 0).items():
+            put(x, 5, z, "reignofnether:corbel_course_" + mat, facing=facing, shape=shape)
+    return S.Build(b)
+
+
+def stamp(build, margin=3):
+    """A build on a grass pad, `margin` blocks round it (the eyes structure photos stamp it on a flat site)."""
+    from gen_structures import Structure
+    qs = list(build.blocks)
+    x0, y0, z0 = (min(q[i] for q in qs) for i in range(3))
+    x1, y1, z1 = (max(q[i] for q in qs) for i in range(3))
+    s = Structure(x1 - x0 + 1 + 2 * margin, y1 - min(y0, 1) + 3, z1 - z0 + 1 + 2 * margin)
+    s.fill(0, 0, 0, s.size[0] - 1, 0, s.size[2] - 1, "grass_block", snowy="false")
+    for (x, y, z), (n, pr) in build.blocks.items():
+        s.set(x - x0 + margin, y, z - z0 + margin, n, **pr)
+    return s
+
+
+# ---- z-fighting: coplanar faces facing the same way ---------------------------------------------------------------
+TURN = {"north": "east", "east": "south", "south": "west", "west": "north", "up": "up", "down": "down"}
+STEP = {"north": (0, 0, -1), "south": (0, 0, 1), "west": (-1, 0, 0), "east": (1, 0, 0), "up": (0, 1, 0),
+        "down": (0, -1, 0)}
+
+
+def _turned(face, facing):
+    for _ in range(ROT[facing] // 90):
+        face = TURN[face]
+    return face
+
+
+def _occludes(cell):
+    """A block that hides the faces culled against it: a vanilla full cube or our solid quoin."""
+    if cell is None:
+        return False
+    n, pr = cell
+    if n.startswith("reignofnether:"):
+        return bool(BLOCKS.get(n.split(":", 1)[1], {}).get("solid"))
+    import anti_toy
+    return anti_toy.cell_kind(n, pr) == "full"
+
+
+def _world_faces(build):
+    """Every face a camera could see: (owner, world face, plane px, rect px) - our models' elements turned to their
+    facing, vanilla full cubes' six sides; a face whose cullface points at an occluding neighbour is left out."""
+    out = []
+    for q, (n, pr) in build.blocks.items():
+        if n.startswith("reignofnether:"):
+            bid = n.split(":", 1)[1]
+            facing = pr.get("facing", "north")
+            st = {k: v for k, v in pr.items() if k != "facing"}
+            elems = [(tuple(e["from"] + e["to"]), e["faces"]) for e in model(bid, st)["elements"]]
+        elif _occludes((n, pr)):
+            facing = "north"
+            elems = [((0, 0, 0, 16, 16, 16), {f: {"cullface": f} for f in FACE_DIR})]
+        else:
+            continue
+        for i, (box, faces) in enumerate(elems):
+            wb = rotate(box, facing)
+            for face, spec in faces.items():
+                wf = _turned(face, facing)
+                cull = spec.get("cullface")
+                if cull:
+                    d = STEP[_turned(cull, facing)]
+                    if _occludes(build.blocks.get((q[0] + d[0], q[1] + d[1], q[2] + d[2]))):
+                        continue
+                axis, hi = FACE_DIR[wf]
+                plane = q[axis] * 16 + (wb[axis + 3] if hi else wb[axis])
+                rect = tuple((q[a] * 16 + wb[a], q[a] * 16 + wb[a + 3]) for a in range(3) if a != axis)
+                out.append(((q, i, n), wf, plane, rect))
+    return out
+
+
+def zfights(build):
+    """[(face, owner a, owner b)] of visible faces in one plane, facing the same way, overlapping by an area - they
+    flicker (z-fighting). At least one of the two is ours (vanilla against vanilla is the game's own business)."""
+    groups = {}
+    for owner, wf, plane, rect in _world_faces(build):
+        groups.setdefault((wf, plane), []).append((owner, rect))
+    out = []
+    for (wf, plane), faces in groups.items():
+        for i in range(len(faces)):
+            for j in range(i + 1, len(faces)):
+                (a, ra), (c, rc) = faces[i], faces[j]
+                if not (a[2].startswith("reignofnether:") or c[2].startswith("reignofnether:")):
+                    continue
+                if all(min(ra[k][1], rc[k][1]) > max(ra[k][0], rc[k][0]) for k in (0, 1)):
+                    out.append((wf, plane, a, c))
+    return out
+
+
 def write(path, text):
     full = os.path.join(ROOT, path)
     os.makedirs(os.path.dirname(full), exist_ok=True)
@@ -563,6 +886,8 @@ def main():
     out = os.path.join(ROOT, DEMO)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     demo().write(out)
+    stamp(facade2()).write(os.path.join(ROOT, DEMO2))
+    stamp(sampler2()).write(os.path.join(ROOT, SAMPLER2))
     print("%d blocks, %d files" % (len(BLOCKS), len(files())))
 
 

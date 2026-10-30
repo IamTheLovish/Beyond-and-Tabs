@@ -883,6 +883,9 @@ public final class EyesDirector {
     //   15_<name>_rts_close the RTS camera zoomed in to the building's size
     //   15_<name>_34        a first-person 3/4 view from the south-west (the side the RTS camera sees), ~30 degrees
     //                       down, from ~1.5x the building's largest size
+    //   15_<name>_front     first person due south of it, looking north square at its south face, 8 degrees down,
+    //                       the whole width and height in frame (Oct 30 2026: slice 1's moulding blocks were judged
+    //                       only from cameras that saw the wall at 45 degrees and its roof)
     //   15_<name>_dusk      the same 3/4 view at dusk (time 13000): lanterns, glow and glass against a dark sky
     //   15_<name>_rts_t<T>, 15_<name>_34_t<T>
     //                       with -Dbat.eyes.times=T,... (eyes.yml input `times`): the RTS and 3/4 views again at each
@@ -1043,11 +1046,21 @@ public final class EyesDirector {
                 if (phaseSeconds() < 5)
                     return;
                 shot(mc, label + "_34");
+                standFront(mc);
+                nextPhase(10);
+            }
+            case 10 -> {   // the front-on still, then dusk
+                if (phaseSeconds() > 1.5 && phaseSeconds() < 2.5)
+                    standFront(mc);
+                if (phaseSeconds() < 5)
+                    return;
+                shot(mc, label + "_front");
                 var server = mc.getSingleplayerServer();
                 server.execute(() -> {
                     dayTimeBefore = server.overworld().getDayTime();
                     server.overworld().setDayTime(13000);
                 });
+                standThreeQuarter(mc);
                 nextPhase(5);
             }
             case 5 -> {   // the client eases its sky toward the server's time (ClientLevelMixin.tickTime): wait for it
@@ -1168,6 +1181,26 @@ public final class EyesDirector {
      * The 3/4 view: from the south-west (-x, +z: the faces the RTS camera sees, design/lively_buildings.md), 30 degrees
      * above the horizontal, 1.5x the building's largest size from its middle (at least 12 blocks), looking at it.
      */
+    /** The front-on still's camera (15_<name>_front): due south of the structure, looking north at its south face. */
+    private static void standFront(Minecraft mc) {
+        double vfov = Math.toRadians(mc.options.fov().get());
+        double aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
+        double hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+        double halfW = structureSize.getX() * 1.1 / 2, halfH = structureSize.getY() * 1.15 / 2;
+        double fit = Math.max(halfW / Math.tan(hfov / 2), halfH / Math.tan(vfov / 2));
+        double d = Math.max(8, fit) + structureSize.getZ() / 2.0;   // from the footprint's middle: its face is nearer
+        Vec3 aim = structureMiddle(0.45);
+        double px = aim.x, pz = aim.z + d;
+        double eyeY = aim.y + d * Math.tan(Math.toRadians(8));
+        int ground = surfaceY(mc, (int) Math.floor(px), (int) Math.floor(pz));
+        if (ground != Integer.MIN_VALUE)
+            eyeY = Math.max(eyeY, ground + 2.5);
+        float pitch = (float) Math.toDegrees(Math.atan2(eyeY - aim.y, d));
+        mc.player.moveTo(px, eyeY - mc.player.getEyeHeight(), pz, 180f, pitch);
+        mc.player.setDeltaMovement(Vec3.ZERO);
+        mc.options.hideGui = true;
+    }
+
     private static void standThreeQuarter(Minecraft mc) {
         int big = Math.max(structureSize.getX(), Math.max(structureSize.getY(), structureSize.getZ()));
         double d = Math.max(12, 1.5 * big);

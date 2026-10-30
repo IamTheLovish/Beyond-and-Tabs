@@ -454,7 +454,8 @@ class Demo2(unittest.TestCase):
                 self.assertEqual(n, "reignofnether:quoin_stone", (x, y))
                 long_on_facade.append(A.quoin_long_face(p["facing"], p["long_side"]) == "south")
             self.assertEqual(long_on_facade[0], long_on_facade[1], y)
-            self.assertEqual(long_on_facade[0], y % 2 == 0, y)        # long on the facade every other course
+            # long on the facade every other course, from the plinth up (the string course dies against it)
+            self.assertEqual(long_on_facade[0], y % 2 == 1, y)
 
     def test_brackets_and_capitals_carry_the_cornice_every_other_block(self):
         b = A.facade2().blocks

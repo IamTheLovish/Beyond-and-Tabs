@@ -19,9 +19,10 @@ import java.util.ArrayList;
 import java.util.function.Supplier;
 
 /**
- * Our own architectural moulding blocks (slice 1: cornice, string course, sill, lintel + keystone, arch ring). Models
- * use vanilla textures only, so the realistic resource pack retextures them. Partial shapes: no occlusion (a cornice
- * never culls the wall face behind it, nothing shows through it either).
+ * Our own architectural moulding blocks (slice 1: cornice, string course, sill, lintel + keystone, arch ring; slice 2:
+ * pilaster, quoin, corbel bracket, corbel course). Models use vanilla textures only, so the realistic resource pack
+ * retextures them. Mouldings have partial shapes and no occlusion (a cornice never culls the wall face behind it,
+ * nothing shows through it either); the quoin is a full stone cube that occludes like the wall block it replaces.
  */
 public final class ArchBlocks {
     private ArchBlocks() {}
@@ -34,6 +35,13 @@ public final class ArchBlocks {
             .strength(like.defaultDestroyTime(), like.getExplosionResistance())
             .noOcclusion();
         return p.sound(like.defaultBlockState().getSoundType());
+    }
+
+    /** The same, as a full block that occludes like the wall block it replaces (the quoins). */
+    static BlockBehaviour.Properties solidProps(Block like) {
+        return BlockBehaviour.Properties.of().mapColor(like.defaultMapColor())
+            .strength(like.defaultDestroyTime(), like.getExplosionResistance())
+            .sound(like.defaultBlockState().getSoundType());
     }
 
     private static RegistryObject<Block> register(String name, Supplier<Block> block) {
@@ -61,6 +69,16 @@ public final class ArchBlocks {
     public static final RegistryObject<Block> LINTEL_SLATE = register("lintel_slate", () -> new LintelBlock("lintel", props(Blocks.POLISHED_DEEPSLATE)));
     public static final RegistryObject<Block> ARCH_RING_STONE = register("arch_ring_stone", () -> new ArchRingBlock("arch_ring", props(Blocks.SMOOTH_STONE)));
     public static final RegistryObject<Block> ARCH_RING_BRICK = register("arch_ring_brick", () -> new ArchRingBlock("arch_ring", props(Blocks.BRICKS)));
+    public static final RegistryObject<Block> PILASTER_STONE = register("pilaster_stone", () -> new PilasterBlock("pilaster", props(Blocks.SMOOTH_STONE)));
+    public static final RegistryObject<Block> PILASTER_BRICK = register("pilaster_brick", () -> new PilasterBlock("pilaster", props(Blocks.BRICKS)));
+    public static final RegistryObject<Block> PILASTER_SLATE = register("pilaster_slate", () -> new PilasterBlock("pilaster", props(Blocks.POLISHED_DEEPSLATE)));
+    public static final RegistryObject<Block> QUOIN_STONE = register("quoin_stone", () -> new QuoinBlock("quoin", solidProps(Blocks.SMOOTH_STONE)));
+    public static final RegistryObject<Block> CORBEL_STONE = register("corbel_stone", () -> new CorbelBlock("corbel", props(Blocks.SMOOTH_STONE)));
+    public static final RegistryObject<Block> CORBEL_BRICK = register("corbel_brick", () -> new CorbelBlock("corbel", props(Blocks.BRICKS)));
+    public static final RegistryObject<Block> CORBEL_COPPER = register("corbel_copper", () -> new CorbelBlock("corbel", props(Blocks.WEATHERED_CUT_COPPER)));
+    public static final RegistryObject<Block> CORBEL_COURSE_BRICK = register("corbel_course_brick", () -> new CorniceBlock("corbel_course", props(Blocks.BRICKS)));
+    public static final RegistryObject<Block> CORBEL_COURSE_STONE = register("corbel_course_stone", () -> new CorniceBlock("corbel_course", props(Blocks.STONE_BRICKS)));
+    public static final RegistryObject<Block> CORBEL_COURSE_SLATE = register("corbel_course_slate", () -> new CorniceBlock("corbel_course", props(Blocks.DEEPSLATE_BRICKS)));
 
     public static void init(FMLJavaModLoadingContext context) {
         BLOCKS.register(context.getModEventBus());

@@ -95,8 +95,7 @@
             3,
             15
           ],
-          "texture": "#ring",
-          "cullface": "east"
+          "texture": "#ring"
         },
         "down": {
           "uv": [
@@ -1212,8 +1211,7 @@
             16,
             7
           ],
-          "texture": "#ring",
-          "cullface": "west"
+          "texture": "#ring"
         },
         "east": {
           "uv": [

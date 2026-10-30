@@ -47,6 +47,32 @@ Corners: cornice and string course have `shape` straight / outer / inner (mitred
 corner is the other facing). Materials are vanilla textures only (smooth_stone, bricks, polished_deepslate,
 weathered_cut_copper), so the realistic resource pack retextures them.
 
+## Slice 2 (Oct 30 2026): pilaster, quoin, corbel bracket, corbel course
+
+Designed by a fresh API designer pass (itachi2-api runs arch2-design-b and -c, Command Center); lovish chose
+**every material that reads** (10 blocks, 104 states, 26 models) and **quoins that replace the corner block**.
+Far reads come from value contrast between materials, lit tops of steps and silhouette - never from cast shadow (the
+plain lane has none): vanilla shades up 1.0, north/south 0.8, east/west 0.6, down 0.5.
+
+| Block | Profile (px, facing north, back on the wall at z 16) | States | Far / RTS read | What makes it carving |
+|---|---|---|---|---|
+| `pilaster_{stone,brick,slate}` | shaft x 2-14, 4 proud; base: plinth x 0-16 6 proud y 0-4, torus x 1-15 5 proud y 4-6; capital: astragal 5 y 7-9, neck 4 y 9-11, echinus 5 y 11-13, abacus x 0-16 6 proud y 13-16; single = base + capital in one | `part` base / shaft / capital / single (16) | a pale stripe ~24 screen px wide splitting the brick into bays, wider at foot and head | the 2 px flare each side at both ends, the recessed neck |
+| `quoin_stone` | a FULL smooth stone cube (occludes; replaces the wall's corner block) + two stones 2 proud, y 1-15 (2 px joints): the long one 26 px (wraps the arris, 8 px over the next block), the short 16 | `long_side` front / side (8); placed by hand it alternates by course | a pale zipper up each corner against brick | the long / short alternation - outline, not relief; each stone shows smooth stone's frame once |
+| `corbel_{stone,brick,copper}` | x 4-12; steps 3 / 6 / 9 / 12 proud, 4 px each; then up into the cornice's cell to the corona's soffit (y 26), 1 px behind its face | facing (4) | evenly spaced pale teeth hanging from the cornice band: the cornice gets legs (slice 1's "lid") | no free top: it carries the cornice; every other block (a 32 px pitch), capitals take their slots |
+| `corbel_course_{brick,stone,slate}` | steps of the shaft's brick (bricks / stone_bricks / deepslate_bricks) 2 / 4 / 6 proud, 4 px each; smooth stone coping 8 proud y 12-18 (its top 2 px above the shaft's: a pale rim round a recessed flue) | `shape` straight / outer / inner (12), like the cornice | a 48 px crown on a 32 px stack (1.5x flare) with a pale rim | thin 2 px steps under a thicker pale coping |
+
+A ring round a 2x2 shaft is 8 straights + 4 outer corners (`tools/gen_arch_blocks.crown_cells`); a 3x3 shaft takes
+12 straights. The Engine Shed set: `pilaster_stone`, `quoin_stone`, `corbel_stone`, `corbel_course_brick`.
+
+Joins with slice 1: the capital's abacus (6 proud) stands 4 px past the cornice's lowest fillet (2) - a lit ledge
+under it; the string course dies against the pilaster's base and the quoin's long stone. No two visible faces of the
+demo walls are coplanar (`gen_arch_blocks.zfights`; it found the slice-1 arch crown's keystone sharing a top face with
+its neighbouring voussoirs - fixed). Faces of parts that leave their cell (the bracket's rise, the crown's rim, the arch
+ring's proud ring) no longer cull against the cell's neighbour.
+
+Stills: `demo_wall_2.nbt` (a 21 x 8 facade for a FRONT-on still, the eyes `_front` view) and `sampler_2.nbt` (the
+other materials).
+
 ## Next slice (not built)
 
-Three more profiles - candidates: pilaster with base and capital, quoin / rusticated corner, corbel / bracket.
+Candidates: a chimney taper block (3x3 foot to 2x2 crown), inner-corner quoins, rusticated ashlar, a balcony.
