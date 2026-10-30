@@ -76,6 +76,17 @@ public final class HeroKit {
         public final int channelTicks;   // wind-up once in range (targeted abilities)
         public final float[] a, b;       // per-rank values for the effect and the rank tooltip lines
         public final Effect effect;
+        /**
+         * Stuns, roots or slows what it hits: the hero AI casts it before the damage (the combo order, lovish's hero AI
+         * requirement 1: "stun/slow then damage").
+         */
+        public boolean cc = false;
+
+        /** Marks the ability as crowd control ({@link #cc}); returns it, for the kit table. */
+        public AbilitySpec cc() {
+            this.cc = true;
+            return this;
+        }
 
         public AbilitySpec(String id, String icon, Target target, Ai ai, int[] cooldownSeconds, float[] range, float radius,
                            int manaCost, int channelTicks, float[] a, float[] b, Effect effect) {
@@ -102,6 +113,10 @@ public final class HeroKit {
     public final float mana, manaPerLevel, manaRegen;
     public final ResourceCost cost;
     public final AbilitySpec[] abilities;
+    /** True for a hero trained at a faction's T2 lab (H13): it skips the castle clamp on the hero cap. */
+    public boolean t2Lab = false;
+    /** The level a fresh hero spawns at (1 for the T1-lab heroes; a T2-lab hero starts higher, ability points included). */
+    public int startLevel = 1;
 
     public HeroKit(String id, String itemName, String factionName, Role role, float health, float damage, float armour,
                    float speed, float mana, float manaPerLevel, float manaRegen, ResourceCost cost, AbilitySpec... abilities) {
@@ -120,6 +135,13 @@ public final class HeroKit {
         this.manaRegen = manaRegen;
         this.cost = cost;
         this.abilities = abilities;
+    }
+
+    /** Marks the kit as a T2-lab hero that spawns at {@code level} (H13: "the T2 lab is gate enough"). */
+    public HeroKit t2Lab(int level) {
+        this.t2Lab = true;
+        this.startLevel = level;
+        return this;
     }
 
     public String entityId() { return id + "_unit"; }

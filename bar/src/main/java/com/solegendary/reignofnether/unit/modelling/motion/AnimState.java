@@ -1,0 +1,71 @@
+package com.solegendary.reignofnether.unit.modelling.motion;
+
+import com.solegendary.reignofnether.unit.modelling.animations.Life;
+
+/**
+ * The layout of one unit's motion snapshot in the shared slab (design/living_army.md, section 3): the offsets of its
+ * floats from the slot's base. Written once per client tick by {@link Kinematics} and {@link Idle} (through
+ * {@link AnimStates}), read by every rig and by the living army's motion pass. Spring slots are {@link Life#SPRING}
+ * wide: [value, velocity, previous value]; read them with {@link Life#springAt}.
+ *
+ * Signs: speeds in blocks per tick, YAW_RATE in degrees per tick (+ = turning right), SP_LEAN degrees (+ = rolled to
+ * the unit's right), SP_PITCH degrees (+ = pitched forward), HIT_DIR radians (0 = hit from the front, +PI/2 = from the
+ * unit's right), SP_FLINCH_X degrees (+ = torso bent forward), SP_FLINCH_Z degrees (+ = bent to the right),
+ * SP_STAGGER (+ = the whole body rocked back, away from HIT_DIR), SP_HEAD_YAW / SP_HEAD_PITCH degrees, SP_ARMS degrees
+ * (+ = arms swung forward), SP_WEIGHT (-1 left leg .. 1 right leg).
+ */
+public final class AnimState {
+
+    private AnimState() {}
+
+    public static final int SPEED = 0, ACCEL = 1, YAW_RATE = 2, VSPEED = 3, SINCE_STOP = 4, SINCE_START = 5,
+        EXERTION = 6, HIT_AGE = 7, HIT_DIR = 8, HIT_SIZE = 9, LAST_HEALTH = 10, HIT_HEALTH0 = 11, SEEN_TICK = 12;
+
+    /**
+     * The breath as state, not a function of age (Mode A review Oct 27): BREATH_PHASE 0..1 now and BREATH_PREV a tick
+     * ago (the pose blends them by the partial tick), advanced each tick by TEMPO / period(exertion). As age / period
+     * the phase jumped whenever exertion moved the period, and at a long match's age the chest strobed. TEMPO is the
+     * unit's own breath tempo (Desync), 0 = 1.
+     */
+    public static final int BREATH_PHASE = 13, BREATH_PREV = 14, TEMPO = 15;
+
+    /** The idle scheduler's fields ({@link Idle}). */
+    public static final int IDLE_INIT = 16, IDLE_KIND = 17, IDLE_START = 18, IDLE_LEN = 19, IDLE_NEXT = 20,
+        IDLE_COUNT = 21, IDLE_LAST = 22, QUIET_UNTIL = 23, WEIGHT_NEXT = 24, WEIGHT_SIDE = 25, WEIGHT_START = 26,
+        GLANCE_YAW = 27, GLANCE_PITCH = 28,
+        /** The tick the scheduler last ran at (the entity's own tickCount). */
+        IDLE_CLOCK = 29;
+
+    /** Spring slots. */
+    public static final int SP_LEAN = 30, SP_PITCH = SP_LEAN + Life.SPRING, SP_FLINCH_X = SP_PITCH + Life.SPRING,
+        SP_FLINCH_Z = SP_FLINCH_X + Life.SPRING, SP_STAGGER = SP_FLINCH_Z + Life.SPRING,
+        SP_HEAD_YAW = SP_STAGGER + Life.SPRING, SP_HEAD_PITCH = SP_HEAD_YAW + Life.SPRING,
+        SP_ARMS = SP_HEAD_PITCH + Life.SPRING, SP_WEIGHT = SP_ARMS + Life.SPRING;
+
+    /**
+     * The death ({@link DeathFall}): its kind (DeathFall.ALIVE .. HEAVY), latched once when the unit starts dying; the
+     * fall's direction relative to the body (radians, 0 = forwards, +PI/2 = to its right); 1 once a frame has drawn
+     * the fall (only such a body is kept as a corpse, {@link Corpses}).
+     */
+    public static final int DEATH_KIND = SP_WEIGHT + Life.SPRING, DEATH_AZ = DEATH_KIND + 1, DEATH_DRAWN = DEATH_AZ + 1;
+
+    /**
+     * The contact recoil ({@link Kinematics#onContact}): a spring slot, degrees, + = the arms and torso knocked back as
+     * the unit's own blow lands - kicked on the same tick as its target's flinch.
+     */
+    public static final int SP_RECOIL = DEATH_DRAWN + 1;
+
+    /**
+     * The look ({@link Kinematics#look}, {@link Motion}'s look block): spring slots on where the head looks - its WORLD
+     * yaw (degrees, kept continuous across the wrap, so a body turning under a steady gaze does not drag the gaze) and
+     * its pitch (degrees, + = down) - and AIM, 0..1, a ranged unit drawing on a target (eased in and out).
+     */
+    public static final int SP_LOOK_YAW = SP_RECOIL + Life.SPRING, SP_LOOK_PITCH = SP_LOOK_YAW + Life.SPRING,
+        AIM = SP_LOOK_PITCH + Life.SPRING;
+
+    /** Floats per unit (room left for foot IK). */
+    public static final int STRIDE = 80;
+
+    /** HIT_SIZE values. */
+    public static final float NONE = 0f, FLINCH = 1f, STAGGER = 2f;
+}

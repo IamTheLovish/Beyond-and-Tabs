@@ -29,7 +29,7 @@ every decision is re-derived from world state so a reload loses nothing but the 
 
    One placement per think, so this order *is* the priority: a rule that fires every think starves the ones
    under it (an early draft put "every free patch while floating" ahead of the lab and built no lab at all).
-6. **Tech**: Tier 2 at `t2Minute` (hard 3 -> the T2 lab stands by ~8) once eight workers are out (the research
+6. **Tech**: Tier 2 at `t2Minute` (hard 5 -> the T2 lab stands by ~9-10) once eight workers are out (the research
    holds the capitol's queue, and workers only come from there), home extractors refitted one at a time,
    Tier 3 at `t3Minute` (hard 11 -> the T3 lab by ~18, raised by a T2 constructor), one experimental in production
    whenever 20 population is free.
@@ -169,7 +169,7 @@ stress budget.
 
 | knob | easy | medium | hard |
 |---|---|---|---|
-| t2Minute / t3Minute | 7 / never | 5 / 14 | 3 / 11 |
+| t2Minute / t3Minute | 9 / never | 7 / 14 | 5 / 11 |
 | workers: base + per 2 min + per income, cap | 5 + 0, 10 | 7 + 1 + 1/3 m/s, 20 | 9 + 2 + 1/2 m/s, 36 |
 | build sites (+ while floating) | 1 (+1) | 2 (+1) | 3 (+2) |
 | labs: one per N min, max | 6, 3 | 4, 6 | 3, 12 |

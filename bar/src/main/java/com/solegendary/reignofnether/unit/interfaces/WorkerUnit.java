@@ -133,12 +133,17 @@ public interface WorkerUnit {
         boolean isGathering = resGoal.isGathering();
         boolean isGatheringIdle = resGoal.isIdle();
         boolean isBuilding = unit.getBuildRepairGoal().getBuildingTarget() != null;
+        // a site queued in the fog is an order the worker still has: between its repaths the navigation reads "done",
+        // and a worker that then counted as idle was handed its next shift-queued order (which resets it and drops
+        // the fog queue), listed as an idle worker, or sent off to autocast
+        boolean hasFogSites = unit.getExploreBuildLocationGoal() != null
+                && !unit.getExploreBuildLocationGoal().getFogQueuedBuildings().isEmpty();
         boolean isFarming = resGoal.isFarming();
         boolean isAttacking = ((Unit) unit).getTargetGoal().getTarget() != null;
 
         // an explicit RECLAIM order keeps the worker busy until its wreck is stripped (see WreckServerEvents)
         boolean isReclaiming = com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming((Mob) unit);
 
-        return !isMoving && !isGathering && !isBuilding && isGatheringIdle && !isAttacking && !isFarming && !isReclaiming;
+        return !isMoving && !isGathering && !isBuilding && !hasFogSites && isGatheringIdle && !isAttacking && !isFarming && !isReclaiming;
     }
 }

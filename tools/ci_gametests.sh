@@ -26,7 +26,7 @@ WATCHER=$!
 # "[ChunkWait]" is kept too: the far-chunk waits (gametest/GameTestChunks) log how generation is going every 15 s
 # and, when they give up, where every chunk round the missing ones stood - the two duel pad failures of Oct 17
 # ("380 of 380 ... never loaded") were undiagnosable from the job log because that line matched none of these words
-timeout 40m ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error|ChunkWait" || true
+timeout "${GAMETEST_TIMEOUT:-40m}" ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error|ChunkWait" || true
 kill $WATCHER 2>/dev/null || true
 # the server thread's stack from each stall dump, one notice each (%0A = newline)
 for f in stall_*.txt; do
@@ -57,6 +57,10 @@ grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
 grep -oE "\[Melee\].*" gametest.log | head -40 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Melee diagnostics]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the bot soak (gametest/SkirmishGameTests bots_play_each_other_without_errors): one line per bot, one notice
 grep -oE "\[Soak\].*" gametest.log | head -8 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Bot soak]"} {printf "%%0A%s", $0} END{print ""}' || true
+# contact fights at scale (gametest/CombatEngageGameTests): acquisition times and damage per side, one notice
+if grep -q "\[Engage\]" gametest.log; then
+  grep -oE "\[Engage\].*" gametest.log | head -4 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Engage]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
 # the Tier 2 bots (gametest/TierGateGameTests bots_reach_tier_2...): when each began and finished the tech, then its state
 # once a game-minute (buildings, incomes, what held it back) - one notice per bot (a notice keeps only ~4 KB)
 for bot in hard medium easy; do
@@ -64,10 +68,19 @@ for bot in hard medium easy; do
 done
 # combat reactions (gametest/ReactionGameTests): kite steps and brace damage ratios, one notice
 grep -oE "\[Reaction\].*" gametest.log | head -12 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Reactions]"} {printf "%%0A%s", $0} END{print ""}' || true
+# the T1 raid measurements (gametest/RaidGameTests): time-to-kill per faction, short lines in ONE notice (a step keeps
+# 10 notices; one notice about 4000 characters)
+grep -oE "\[Raid\].*" gametest.log | head -46 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Raid TTK]"} {printf "%%0A%s", $0} END{print ""}' || true
 # the building-block mods' block ids (gametest/BuildingBlockModGameTests): counts and a sample per mod, one notice -
 # the vocabulary for structure generators (only in the shard that ran that test)
 if grep -q "\[ModBlocks\]" gametest.log; then
   grep -oE "\[ModBlocks\].*" gametest.log | head -6 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Mod blocks]"} {printf "%%0A%s", $0} END{print ""}' || true
+fi
+# how fast a pile of units spreads (gametest/PerfPushGameTests): the tick it passed, so a flake-stress run shows the
+# margin to the 400-tick timeout (the Oct 27 flake). Last of the notices: a full shard, already at the 10-notice limit,
+# drops this one rather than another measurement
+if grep -q "\[PushSpread\]" gametest.log; then
+  grep -oE "\[PushSpread\].*" gametest.log | head -4 | sed 's/%/%25/g' | awk 'BEGIN{printf "::notice::[Push spread]"} {printf "%%0A%s", $0} END{print ""}' || true
 fi
 # where the ~26 minutes go: wall time per test batch + the slowest tests, one notice (tools/gametest_timing.py)
 python3 ../tools/gametest_timing.py gametest.log || true
