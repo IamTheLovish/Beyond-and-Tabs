@@ -1344,6 +1344,10 @@ R38 += ["crafting_table_top", "crafting_table_side", "crafting_table_front", "ro
         "composter_side", "composter_top", "composter_bottom", "composter_compost", "composter_ready", "note_block",
         "jukebox_side", "jukebox_top"]
 SEED_ORDER = SEED_ORDER + tuple(R38)
+# round 39: the battlefield wall's mud bricks and packed mud (tan, the sampler's bricks' cousin) - appended last
+TARGETS["mud_bricks"] = dict(luma=0.45, std=0.055, sat=0.42, tilt=10.0, smooth=20, pore=50, soften=0.6)
+TARGETS["packed_mud"] = dict(luma=0.46, std=0.040, sat=0.42, tilt=8.0, smooth=18, pore=56, soften=0.8)
+SEED_ORDER = SEED_ORDER + ("mud_bricks", "packed_mud")
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -2550,6 +2554,57 @@ def m_cobble_domed(F, n, cells=16, moss=0.15, base=(0.50, 0.50, 0.49)):
     # the moss between stones sits in their shadow: darker than moss_block's open carpet (it read as lime specks)
     alb = alb * (1 - m[..., None]) + moss_rgb * 0.72 * m[..., None]
     H = H + 0.08 * m * mdome                             # the moss cushions stand a little proud
+    return H, np.clip(alb, 0, 1)
+
+
+def m_mud_bricks(F, n):
+    """Mud bricks (r39): the battlefield wall's tower stands beside the eyes samplers in MUD_BRICKS + PACKED_MUD,
+    which had no texture of ours and rendered as vanilla's under our shader as a purple-grey with soot blotches
+    (eyes 41044148818). A warm tan sun-dried brick: four courses of two in a running bond like the clay bricks, the
+    tones close (tan, a touch of ochre, a paler one), soft worn edges, a darker packed-mud mortar, a few darker damp
+    blotches ~20% darker (not 60%)."""
+    courses, per = 4, 2
+    course = np.floor(F.v * courses).astype(int)
+    in_c = (F.v * courses) % 1.0
+    off = np.where(course % 2 == 0, 0.0, 0.5)
+    ju = (F.u * per + off) % 1.0
+    brick = (course * per + np.floor(F.u * per + off).astype(int)) % 64
+    chip = 0.004 * F.noise(8, 24, 0.5)
+    dv = np.minimum(in_c, 1 - in_c) / courses + chip
+    du = np.minimum(ju, 1 - ju) / per + chip
+    dj = np.minimum(dv, du)
+    face = smoothstep(0.010, 0.022, dj)
+    worn = smoothstep(0.010, 0.06, dj)
+    rng = F.rng
+    kind = rng.random(64)[brick]
+    tone = (0.90 + 0.20 * rng.random(64))[brick]
+    base = np.where(kind[..., None] < 0.6, np.array([0.62, 0.50, 0.34]),
+                    np.where(kind[..., None] < 0.85, np.array([0.58, 0.44, 0.28]), np.array([0.68, 0.58, 0.42])))
+    grain = F.noise(12, 40, 0.3)
+    blotch = smoothstep(0.6, 0.9, norm01(F.fbm(3, 3, 0.55))) * face
+    straw = smoothstep(2.3, 2.7, F.noise(16, 40, 0.0, sx=1.0, sy=5.0)) * face   # a few straw flecks in the clay
+    H = 0.30 + 0.5 * np.sqrt(worn) * face + 0.008 * grain + 0.02 * F.fbm(4, 3, 0.5) * face + 0.02 * straw
+    shade = tone * (0.84 + 0.14 * worn + 0.02 * grain) * (1 - 0.20 * blotch)
+    alb = base * shade[..., None]
+    mortar = np.array([0.46, 0.38, 0.27]) * (0.85 + 0.08 * grain)[..., None]
+    alb = alb * face[..., None] + mortar * (1 - face[..., None])
+    alb = alb * (1 - straw[..., None]) + straw[..., None] * np.array([0.78, 0.70, 0.48])
+    return H, np.clip(alb, 0, 1)
+
+
+def m_packed_mud(F, n):
+    """Packed mud (r39): the sun-dried earth the mud bricks are made of - a smooth tamped face, broad soft damp
+    blotches ~20% darker, a few hairline shrink cracks, straw flecks."""
+    clumps = F.fbm(3, 3, 0.55)
+    blotch = smoothstep(0.55, 0.9, norm01(F.fbm(2, 3, 0.55)))
+    grain = F.noise(12, 40, 0.3)
+    line = np.abs(F.warp(F.noise(2, 6, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10)))
+    crack = (1 - smoothstep(0.0, 0.10, line)) * smoothstep(0.4, 0.8, norm01(F.noise(1, 3, 0.5)))
+    straw = smoothstep(2.4, 2.8, F.noise(16, 40, 0.0, sx=1.0, sy=5.0))      # sparse (a dense fleck field tiled)
+    H = 0.55 + 0.04 * clumps + 0.004 * grain - 0.10 * crack + 0.02 * straw
+    shade = (0.92 + 0.05 * clumps + 0.02 * grain) * (1 - 0.20 * blotch) * (1 - 0.30 * crack)
+    alb = tint((0.60, 0.48, 0.32), shade)
+    alb = alb * (1 - straw[..., None]) + straw[..., None] * np.array([0.78, 0.70, 0.48])
     return H, np.clip(alb, 0, 1)
 
 
@@ -5081,6 +5136,8 @@ def recipes():
     R["mushroom_stem"] = _plain(m_mushroom_stem)
     for f in ("side", "top", "bottom", "compost", "ready"):
         R["composter_" + f] = _plain(lambda F, n, ff=f: m_composter(F, n, ff))
+    R["mud_bricks"] = _plain(m_mud_bricks)                     # round 39
+    R["packed_mud"] = _plain(m_packed_mud)
     R["note_block"] = _plain(lambda F, n: m_note_block(F, n, "note"))
     R["jukebox_side"] = _plain(lambda F, n: m_note_block(F, n, "jukebox"))
     R["jukebox_top"] = _plain(lambda F, n: m_note_block(F, n, "jukebox_top"))
