@@ -1,0 +1,742 @@
+{
+ "about": "What colour each block IS in the eyes stills: per (block, face seen) the median hue / saturation / value of the real",
+ "sources": [
+  "r10 brass_t1 (ffc850d3), eyes-structures-look-subtle"
+ ],
+ "blocks": {
+  "brick_stairs": {
+   "west": {
+    "hue": 60.0,
+    "sat": 0.178,
+    "val": 0.31,
+    "n": 1865
+   },
+   "south": {
+    "hue": 14.5,
+    "sat": 0.211,
+    "val": 0.408,
+    "n": 2461
+   }
+  },
+  "brick_wall": {
+   "south": {
+    "hue": 11.8,
+    "sat": 0.448,
+    "val": 0.398,
+    "n": 408
+   },
+   "west": {
+    "hue": 12.0,
+    "sat": 0.443,
+    "val": 0.298,
+    "n": 359
+   }
+  },
+  "bricks": {
+   "up": {
+    "hue": 285.0,
+    "sat": 0.122,
+    "val": 0.198,
+    "n": 120
+   },
+   "south": {
+    "hue": 12.4,
+    "sat": 0.279,
+    "val": 0.38,
+    "n": 650
+   },
+   "west": {
+    "hue": 12.0,
+    "sat": 0.224,
+    "val": 0.306,
+    "n": 1263
+   }
+  },
+  "campfire": {
+   "up": {
+    "hue": 36.6,
+    "sat": 0.108,
+    "val": 0.416,
+    "n": 194
+   },
+   "south": {
+    "hue": 36.2,
+    "sat": 0.419,
+    "val": 0.435,
+    "n": 75
+   }
+  },
+  "chiseled_stone_bricks": {
+   "up": {
+    "hue": 60.0,
+    "sat": 0.218,
+    "val": 0.333,
+    "n": 151
+   },
+   "west": {
+    "hue": 60.0,
+    "sat": 0.023,
+    "val": 0.314,
+    "n": 203
+   },
+   "south": {
+    "hue": 60.0,
+    "sat": 0.018,
+    "val": 0.394,
+    "n": 216
+   }
+  },
+  "deepslate_brick_slab": {
+   "up": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.278,
+    "n": 4618
+   },
+   "south": {
+    "hue": 225.0,
+    "sat": 0.059,
+    "val": 0.271,
+    "n": 1350
+   },
+   "west": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.314,
+    "n": 488
+   }
+  },
+  "deepslate_brick_stairs": {
+   "up": {
+    "hue": 225.0,
+    "sat": 0.062,
+    "val": 0.302,
+    "n": 5541
+   },
+   "west": {
+    "hue": 225.0,
+    "sat": 0.066,
+    "val": 0.286,
+    "n": 3275
+   },
+   "south": {
+    "hue": 225.0,
+    "sat": 0.061,
+    "val": 0.282,
+    "n": 1918
+   }
+  },
+  "deepslate_bricks": {
+   "up": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.322,
+    "n": 21731
+   },
+   "west": {
+    "hue": 180.0,
+    "sat": 0.323,
+    "val": 0.278,
+    "n": 236
+   },
+   "south": {
+    "hue": 225.0,
+    "sat": 0.063,
+    "val": 0.298,
+    "n": 674
+   }
+  },
+  "deepslate_tile_slab": {
+   "up": {
+    "hue": 220.0,
+    "sat": 0.049,
+    "val": 0.231,
+    "n": 7513
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.05,
+    "val": 0.216,
+    "n": 1101
+   }
+  },
+  "deepslate_tile_stairs": {
+   "up": {
+    "hue": 220.0,
+    "sat": 0.059,
+    "val": 0.247,
+    "n": 11797
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.054,
+    "val": 0.224,
+    "n": 1524
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.053,
+    "val": 0.22,
+    "n": 437
+   }
+  },
+  "deepslate_tiles": {
+   "south": {
+    "hue": 210.0,
+    "sat": 0.049,
+    "val": 0.176,
+    "n": 217
+   }
+  },
+  "glass": {
+   "up": {
+    "hue": 60.0,
+    "sat": 0.059,
+    "val": 0.325,
+    "n": 729
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.043,
+    "val": 0.392,
+    "n": 856
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.057,
+    "val": 0.365,
+    "n": 476
+   }
+  },
+  "glass_pane": {
+   "west": {
+    "hue": 220.0,
+    "sat": 0.06,
+    "val": 0.365,
+    "n": 460
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.08,
+    "val": 0.475,
+    "n": 2068
+   }
+  },
+  "grass_block": {
+   "up": {
+    "hue": 101.0,
+    "sat": 0.409,
+    "val": 0.259,
+    "n": 240
+   },
+   "west": {
+    "hue": 100.6,
+    "sat": 0.432,
+    "val": 0.235,
+    "n": 229
+   }
+  },
+  "iron_bars": {
+   "up": {
+    "hue": 228.0,
+    "sat": 0.051,
+    "val": 0.133,
+    "n": 359
+   },
+   "west": {
+    "hue": 228.0,
+    "sat": 0.051,
+    "val": 0.318,
+    "n": 1134
+   }
+  },
+  "lantern": {
+   "up": {
+    "hue": 120.0,
+    "sat": 0.066,
+    "val": 0.345,
+    "n": 311
+   },
+   "west": {
+    "hue": 240.0,
+    "sat": 0.094,
+    "val": 0.192,
+    "n": 239
+   },
+   "south": {
+    "hue": 240.0,
+    "sat": 0.087,
+    "val": 0.204,
+    "n": 224
+   }
+  },
+  "polished_andesite": {
+   "up": {
+    "hue": 220.0,
+    "sat": 0.036,
+    "val": 0.353,
+    "n": 2750
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.054,
+    "val": 0.271,
+    "n": 2772
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.042,
+    "val": 0.373,
+    "n": 1011
+   }
+  },
+  "polished_blackstone_brick_slab": {
+   "up": {
+    "hue": 270.0,
+    "sat": 0.106,
+    "val": 0.224,
+    "n": 1483
+   },
+   "west": {
+    "hue": 274.3,
+    "sat": 0.107,
+    "val": 0.208,
+    "n": 175
+   },
+   "south": {
+    "hue": 270.0,
+    "sat": 0.105,
+    "val": 0.212,
+    "n": 166
+   }
+  },
+  "polished_blackstone_brick_stairs": {
+   "up": {
+    "hue": 276.0,
+    "sat": 0.105,
+    "val": 0.2,
+    "n": 8542
+   },
+   "south": {
+    "hue": 280.0,
+    "sat": 0.108,
+    "val": 0.176,
+    "n": 5855
+   },
+   "west": {
+    "hue": 280.0,
+    "sat": 0.105,
+    "val": 0.176,
+    "n": 6273
+   }
+  },
+  "polished_blackstone_brick_wall": {
+   "south": {
+    "hue": 101.1,
+    "sat": 0.118,
+    "val": 0.29,
+    "n": 289
+   },
+   "west": {
+    "hue": 260.0,
+    "sat": 0.132,
+    "val": 0.169,
+    "n": 330
+   }
+  },
+  "polished_blackstone_bricks": {
+   "west": {
+    "hue": 280.0,
+    "sat": 0.097,
+    "val": 0.133,
+    "n": 767
+   },
+   "south": {
+    "hue": 270.0,
+    "sat": 0.071,
+    "val": 0.196,
+    "n": 85
+   }
+  },
+  "polished_deepslate": {
+   "south": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.247,
+    "n": 1550
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.059,
+    "val": 0.184,
+    "n": 1089
+   },
+   "up": {
+    "hue": 225.0,
+    "sat": 0.059,
+    "val": 0.318,
+    "n": 524
+   }
+  },
+  "polished_deepslate_slab": {
+   "up": {
+    "hue": 225.0,
+    "sat": 0.058,
+    "val": 0.294,
+    "n": 18716
+   },
+   "south": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.294,
+    "n": 192
+   },
+   "west": {
+    "hue": 225.0,
+    "sat": 0.058,
+    "val": 0.282,
+    "n": 2168
+   }
+  },
+  "polished_deepslate_stairs": {
+   "up": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.298,
+    "n": 40218
+   },
+   "west": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.29,
+    "n": 4446
+   },
+   "south": {
+    "hue": 225.0,
+    "sat": 0.06,
+    "val": 0.286,
+    "n": 1690
+   }
+  },
+  "polished_granite": {
+   "up": {
+    "hue": 13.2,
+    "sat": 0.351,
+    "val": 0.357,
+    "n": 1983
+   },
+   "west": {
+    "hue": 12.4,
+    "sat": 0.333,
+    "val": 0.329,
+    "n": 3781
+   },
+   "south": {
+    "hue": 12.0,
+    "sat": 0.321,
+    "val": 0.353,
+    "n": 1243
+   }
+  },
+  "rail": {
+   "up": {
+    "hue": 99.6,
+    "sat": 0.425,
+    "val": 0.361,
+    "n": 1913
+   }
+  },
+  "red_nether_bricks": {
+   "west": {
+    "hue": 11.1,
+    "sat": 0.352,
+    "val": 0.247,
+    "n": 151
+   }
+  },
+  "shroomlight": {
+   "south": {
+    "hue": 225.0,
+    "sat": 0.062,
+    "val": 0.259,
+    "n": 322
+   },
+   "west": {
+    "hue": 225.0,
+    "sat": 0.061,
+    "val": 0.282,
+    "n": 47
+   }
+  },
+  "smooth_stone": {
+   "south": {
+    "hue": 220.0,
+    "sat": 0.06,
+    "val": 0.443,
+    "n": 1048
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.067,
+    "val": 0.325,
+    "n": 487
+   },
+   "up": {
+    "hue": 228.0,
+    "sat": 0.053,
+    "val": 0.329,
+    "n": 1936
+   }
+  },
+  "smooth_stone_slab": {
+   "up": {
+    "hue": 220.0,
+    "sat": 0.054,
+    "val": 0.49,
+    "n": 6484
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.053,
+    "val": 0.51,
+    "n": 820
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.053,
+    "val": 0.486,
+    "n": 812
+   }
+  },
+  "stone": {
+   "south": {
+    "hue": 60.0,
+    "sat": 0.029,
+    "val": 0.398,
+    "n": 200
+   }
+  },
+  "stone_brick_stairs": {
+   "west": {
+    "hue": 220.0,
+    "sat": 0.048,
+    "val": 0.286,
+    "n": 3875
+   },
+   "south": {
+    "hue": 222.9,
+    "sat": 0.038,
+    "val": 0.384,
+    "n": 2751
+   },
+   "up": {
+    "hue": 225.0,
+    "sat": 0.041,
+    "val": 0.38,
+    "n": 3889
+   }
+  },
+  "stone_brick_wall": {
+   "up": {
+    "hue": 220.0,
+    "sat": 0.055,
+    "val": 0.318,
+    "n": 426
+   },
+   "west": {
+    "hue": 216.0,
+    "sat": 0.054,
+    "val": 0.275,
+    "n": 942
+   },
+   "south": {
+    "hue": 220.0,
+    "sat": 0.057,
+    "val": 0.304,
+    "n": 720
+   }
+  },
+  "stone_bricks": {
+   "up": {
+    "hue": 216.0,
+    "sat": 0.037,
+    "val": 0.388,
+    "n": 5704
+   },
+   "west": {
+    "hue": 210.0,
+    "sat": 0.043,
+    "val": 0.31,
+    "n": 2164
+   },
+   "south": {
+    "hue": 216.0,
+    "sat": 0.046,
+    "val": 0.384,
+    "n": 404
+   }
+  },
+  "stone_slab": {
+   "up": {
+    "hue": 48.0,
+    "sat": 0.047,
+    "val": 0.471,
+    "n": 1526
+   },
+   "west": {
+    "hue": 45.0,
+    "sat": 0.043,
+    "val": 0.49,
+    "n": 285
+   }
+  },
+  "stone_stairs": {
+   "up": {
+    "hue": 120.0,
+    "sat": 0.049,
+    "val": 0.361,
+    "n": 6332
+   },
+   "west": {
+    "hue": 60.0,
+    "sat": 0.036,
+    "val": 0.424,
+    "n": 1277
+   },
+   "south": {
+    "hue": 45.0,
+    "sat": 0.045,
+    "val": 0.467,
+    "n": 495
+   }
+  },
+  "tuff": {
+   "up": {
+    "hue": 120.0,
+    "sat": 0.033,
+    "val": 0.337,
+    "n": 4536
+   },
+   "south": {
+    "hue": 120.0,
+    "sat": 0.031,
+    "val": 0.345,
+    "n": 2556
+   }
+  },
+  "waxed_oxidized_copper": {
+   "west": {
+    "hue": 157.1,
+    "sat": 0.444,
+    "val": 0.357,
+    "n": 1151
+   },
+   "south": {
+    "hue": 156.0,
+    "sat": 0.444,
+    "val": 0.486,
+    "n": 507
+   }
+  },
+  "waxed_oxidized_cut_copper": {
+   "up": {
+    "hue": 150.8,
+    "sat": 0.371,
+    "val": 0.376,
+    "n": 702
+   },
+   "south": {
+    "hue": 155.2,
+    "sat": 0.435,
+    "val": 0.471,
+    "n": 4666
+   },
+   "west": {
+    "hue": 156.6,
+    "sat": 0.439,
+    "val": 0.353,
+    "n": 2007
+   }
+  },
+  "waxed_oxidized_cut_copper_stairs": {
+   "up": {
+    "hue": 154.1,
+    "sat": 0.431,
+    "val": 0.478,
+    "n": 3636
+   },
+   "west": {
+    "hue": 154.3,
+    "sat": 0.432,
+    "val": 0.486,
+    "n": 1364
+   },
+   "south": {
+    "hue": 153.9,
+    "sat": 0.422,
+    "val": 0.486,
+    "n": 4381
+   }
+  },
+  "waxed_weathered_cut_copper": {
+   "south": {
+    "hue": 149.4,
+    "sat": 0.407,
+    "val": 0.412,
+    "n": 2418
+   },
+   "up": {
+    "hue": 138.5,
+    "sat": 0.315,
+    "val": 0.424,
+    "n": 1454
+   },
+   "west": {
+    "hue": 151.0,
+    "sat": 0.405,
+    "val": 0.318,
+    "n": 2067
+   }
+  },
+  "waxed_weathered_cut_copper_slab": {
+   "up": {
+    "hue": 216.0,
+    "sat": 0.28,
+    "val": 0.459,
+    "n": 485
+   },
+   "west": {
+    "hue": 215.7,
+    "sat": 0.294,
+    "val": 0.573,
+    "n": 125
+   },
+   "south": {
+    "hue": 215.7,
+    "sat": 0.256,
+    "val": 0.604,
+    "n": 140
+   }
+  },
+  "waxed_weathered_cut_copper_stairs": {
+   "up": {
+    "hue": 148.5,
+    "sat": 0.383,
+    "val": 0.353,
+    "n": 10761
+   },
+   "south": {
+    "hue": 145.9,
+    "sat": 0.357,
+    "val": 0.416,
+    "n": 3789
+   },
+   "west": {
+    "hue": 220.0,
+    "sat": 0.347,
+    "val": 0.396,
+    "n": 2637
+   }
+  }
+ }
+}
