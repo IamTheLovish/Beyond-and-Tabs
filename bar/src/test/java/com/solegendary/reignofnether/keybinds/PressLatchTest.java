@@ -50,6 +50,20 @@ class PressLatchTest {
     }
 
     @Test
+    void aPlainTapRightAfterACtrlTabChordRuns() {
+        // Ctrl+Tab (idle builder) then a plain Tab: the chord's release must end the latch (HudClientEvents.onKeyRelease
+        // releases it before the chord can return), or the plain press stays disarmed (Codex review of BAC-007b 2a)
+        PressLatch l = new PressLatch();
+        l.press(false);
+        assertFalse(l.release());
+        l.press(true);
+        assertTrue(l.release());
+        l.press(false);
+        l.press(true);   // without that release the plain press would only keep it disarmed
+        assertFalse(l.release());
+    }
+
+    @Test
     void aModifiedPressAfterAPlainOneDisarms() {
         // key repeat or a second press with Ctrl held: the latest press decides
         PressLatch l = new PressLatch();

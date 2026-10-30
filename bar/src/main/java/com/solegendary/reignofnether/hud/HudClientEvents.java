@@ -2337,6 +2337,9 @@ public class HudClientEvents {
     @SubscribeEvent
     public static void onKeyRelease(ScreenEvent.KeyReleased.KeyReleased.Post evt) {
         ControlGroup.onKeyReleased(evt.getKeyCode());
+        // every release of the select-commander key ends its latch, before anything below can return: a Ctrl+Tab idle-builder
+        // chord used to leave it held and disarmed, so the next plain Tab did nothing (Codex review of BAC-007b 2a)
+        boolean commanderTap = Keybindings.selectCommander.matches(evt.getKeyCode()) && selectCommanderPress.release();
         if (TextInputClientEvents.isAnyInputFocused())
             return;
         if (MC.screen == null || !MC.screen.getTitle().getString().contains("topdowngui_container"))
@@ -2358,7 +2361,7 @@ public class HudClientEvents {
         // Ctrl+Tab is the idle builder and Shift+Tab the camera overview (OrthoviewClientEvents). Decided at the press
         // (onInput latches it): a modifier let go before Tab must not turn the release into a plain Tab
         if (Keybindings.selectCommander.matches(key) && OrthoviewClientEvents.isEnabled()) {
-            if (selectCommanderPress.release())
+            if (commanderTap)
                 com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                     com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_COMMANDER);
             return;
