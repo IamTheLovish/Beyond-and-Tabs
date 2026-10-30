@@ -185,7 +185,8 @@ TARGETS = {
     # lawn's 92): luma 0.40 -> 0.37, sat 0.60 -> 0.48, the hue toward the lawn's (MOSS_RGB), matte (smooth 41 -> 24)
     # r42 (eyes 41058728743: it merged into the lawn): its own identity - a deeper cushion green, hue ~106 (MOSS_RGB),
     # luma 0.37 -> 0.33 (the lawn reads 0.44), cushion relief (std 0.06 -> 0.075, tilt 14 -> 18, m_moss tufts deeper)
-    "moss_block":                 dict(luma=0.33, std=0.075, sat=0.50, tilt=18.0, smooth=24, pore=60),
+    # r43 (eyes 41066761082: 0.36 on screen, under the lawn's 0.45; target ~0.48 above it): luma 0.33 -> 0.43
+    "moss_block":                 dict(luma=0.43, std=0.075, sat=0.50, tilt=18.0, smooth=24, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
     "mossy_stone_bricks":         dict(luma=0.41, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
@@ -320,11 +321,13 @@ TARGETS = {
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     # r36 (lovish lifted its protection; in game it read darker and duller than vanilla): a saturated, brighter
     # ultramarine (0.30 -> 0.38, sat 0.72 -> 0.86) with more gold pyrite
-    "lapis_block": dict(luma=0.38, std=0.060, sat=0.86, tilt=7.6, smooth=70, pore=0, f0=15),
+    # r43 (eyes 41066761082: the loudest block on any pallet, hue 229 sat 0.68 on screen): a deep ultramarine, sat 0.86
+    # -> 0.66 (-> ~0.55 on screen), the hue toward 215 (m_lapis), matte, the pyrite a dull brass
+    "lapis_block": dict(luma=0.36, std=0.060, sat=0.60, tilt=7.6, smooth=50, pore=0, f0=10),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     # r33 (critic, eyes 41029731853: 206/204/188 "greenish grey, not white"): neutral (sat 0 = greyscale - the old
     # 0.04 fit blew a near-grey base's green up), luma 0.80 -> 0.87, a faint concrete mottle (std 0.008 -> 0.012)
-    "white_concrete": dict(luma=0.76, std=0.012, sat=0.0, tilt=2.0, smooth=70, pore=10),   # r42: neutral satin
+    "white_concrete": dict(luma=0.72, std=0.012, sat=0.0, tilt=2.0, smooth=60, pore=10),   # r42: neutral satin; r43
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
     # r31b: -20% chroma. r33 (critic: "crushed"): a clearer dusty blue - luma 0.30 -> 0.37, sat 0.33 -> 0.42
     # r41 (eyes 41053751822: it read cornflower blue, hue 223): vanilla's blue terracotta is a dusky VIOLET (#4A3B5B,
@@ -1857,10 +1860,10 @@ def m_lapis(F, n):
     mott = F.fbm(3, 4, 0.55)
     wisp = smoothstep(0.75, 0.95, norm01(F.warp(F.noise(2, 6, 0.5), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9))))
     shade = 0.85 + 0.25 * norm01(mott)
-    alb = tint((0.10, 0.20, 0.62), shade)                    # r33: a cleaner ultramarine (less green in the blue)
+    alb = tint((0.10, 0.30, 0.56), shade)                    # r33: cleaner ultramarine; r43: hue 215, calmer
     alb = alb * (1 - 0.5 * wisp[..., None]) + 0.5 * wisp[..., None] * np.array([0.55, 0.58, 0.62])   # calcite veins
     fleck = smoothstep(2.0, 2.6, F.noise(30, 70, 0.0))      # r36: more, larger pyrite flecks (2-3 texels)
-    alb = alb * (1 - fleck[..., None]) + fleck[..., None] * np.array([0.78, 0.60, 0.20])
+    alb = alb * (1 - fleck[..., None]) + fleck[..., None] * np.array([0.62, 0.50, 0.22])   # r43: a dull brass, not electric
     b = frame(F, 0.06, 0.012)
     return 0.6 + 0.1 * mott * b, alb * (0.8 + 0.2 * b)[..., None]
 
