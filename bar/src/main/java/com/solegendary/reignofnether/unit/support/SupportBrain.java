@@ -59,8 +59,8 @@ import static com.solegendary.reignofnether.unit.support.SupportField.*;
  *       the spot, so after a cast pulled it forward it goes back. On the way it never leads (lovish, Oct 30: "stay
  *       behind units"): a Fight or an escort keeps its standoff behind the order's own fighter nearest a seen enemy,
  *       and a Fight's march no further on than the order's furthest fighter still on the move, less the standoff.
- *       Idle, it holds the standoff behind our front whenever that front fights within its look; on Follow, while its
- *       leader is in that fight (never off a player's move, hold position or a garrison);</li>
+ *       Idle, it holds the standoff behind our front whenever that front fights within its look; on Follow, behind
+ *       its leader's own fight (never off a player's move, hold position or a garrison);</li>
  *   <li>picks its next support cast on the same look - an attack order's harm when no friend is near the target, else
  *       an area heal on a cluster, a single heal, a cleanse, and an area harm only where no friend is - and asks the
  *       unit to deliver it (SupportUnit.castSupport; the Field Medic throws a potion today, PotionDelivery).</li>
@@ -128,8 +128,6 @@ public final class SupportBrain {
     private static final List<LivingEntity> SCRATCH = new ArrayList<>();
     private static final double[] P = new double[3], Q = new double[2], OURS = new double[2];
     private static final SupportMath.Aim AIM = new SupportMath.Aim();
-    // the FIELD index of the front the last behindFront found (-1: none), for the Follow check (inTheFight)
-    private static int FRONT = -1;
     private static final double[] STEP_ANGLES = { 0, 0.7, -0.7, 1.4, -1.4 };   // radians: ahead, ~40 and ~80 degrees aside
     private static final double[] STEP_SCALES = { 1.0, 0.6 };
 
@@ -444,7 +442,7 @@ public final class SupportBrain {
         double best = Double.NaN;
         for (int id : fighters)
             if (mob.level().getEntity(id) instanceof LivingEntity le && le.isAlive() && !le.isRemoved()
-                    && le instanceof AttackerUnit a && a.getAttackMoveTarget() != null) {
+                    && le instanceof AttackerUnit au && au.getAttackMoveTarget() != null) {
                 double a = (le.getX() - mob.getX()) * ux + (le.getZ() - mob.getZ()) * uz;
                 if (Double.isNaN(best) || a > best)
                     best = a;
@@ -468,13 +466,13 @@ public final class SupportBrain {
         return true;
     }
 
-    /**
-     * The standoff behind our front (SupportMath.front) into P, and that front's FIELD index into {@link #FRONT}; false
-     * when nobody near is in a fight.
-     */
+    /** The standoff behind our front (SupportMath.front round the unit) into P; false when nobody near is in a fight. */
     static boolean behindFront(Mob mob, SupportState s, double reach) {
-        int fr = SupportMath.front(FIELD, mob.getX(), mob.getZ(), reach + SCAN_EXTRA);
-        FRONT = fr;
+        return behindOf(mob, SupportMath.front(FIELD, mob.getX(), mob.getZ(), reach + SCAN_EXTRA), reach);
+    }
+
+    /** The standoff behind the front at FIELD index {@code fr}, away from the enemies round it, into P; false for -1. */
+    static boolean behindOf(Mob mob, int fr, double reach) {
         if (fr < 0)
             return false;
         SupportMath.centroid(FIELD, F_ENEMY, 0, FIELD.x[fr], FIELD.z[fr], SupportMath.ENGAGE_RADIUS, Q);
@@ -542,18 +540,21 @@ public final class SupportBrain {
     }
 
     /**
-     * An idle unit, or one on Follow, whose front fights within its look holds the standoff behind it, clear of enemy
-     * melee. On Follow only its leader's fight counts - the leader in it or just behind it ({@link #inTheFight}); then
-     * the follow's walk to the leader waits (Unit, SupportState.holdsBehind) and goes on a look or two after. A leader
-     * that walks off, or past someone else's fight, is followed as before (review r2: the first hold kept a medic
-     * behind any friendly fight in her look while her hero walked away).
+     * An idle unit whose front fights within its look holds the standoff behind it, clear of enemy melee. On Follow
+     * only its leader's fight counts: the front round the leader (SupportMath.front within the engage radius plus the
+     * standoff of it - the leader fighting, or just behind a fight), not the biggest fight near the unit; then the
+     * follow's walk to the leader waits (Unit, SupportState.holdsBehind) and goes on a look or two after. A leader that
+     * walks off, or past someone else's fight, is followed as before (review r2: the first hold kept a medic behind
+     * any friendly fight in her look while her hero walked away).
      */
     static void idleBehind(ServerLevel level, Mob mob, SupportUnit unit, SupportState s, long now, double reach) {
-        if (!behindFront(mob, s, reach))
-            return;
         LivingEntity leader = unit.getFollowTarget();
-        if (leader != null) {
-            if (!inTheFight(leader, FRONT, reach))
+        if (leader == null) {
+            if (!behindFront(mob, s, reach))
+                return;
+        } else {
+            if (!leader.isAlive() || leader.isRemoved() || !behindOf(mob, SupportMath.front(FIELD, leader.getX(), leader.getZ(),
+                    SupportMath.ENGAGE_RADIUS + standoff(reach)), reach))
                 return;
             s.heldBehindUntil = now + 2L * THINK_TICKS;
         }
@@ -562,18 +563,6 @@ public final class SupportBrain {
             return;
         SupportMath.keepClear(FIELD, CLEAR_OF_MELEE, P);
         goTo(level, mob, unit, s, now, P[0], P[2], P[1]);
-    }
-
-    /**
-     * Is a Follow's leader in the fight of the front at FIELD index {@code fr}: alive and within the front's engage
-     * radius plus the standoff of it (fighting there, or just behind it)?
-     */
-    static boolean inTheFight(LivingEntity leader, int fr, double reach) {
-        if (fr < 0 || !leader.isAlive() || leader.isRemoved())
-            return false;
-        double r = SupportMath.ENGAGE_RADIUS + standoff(reach);
-        double dx = leader.getX() - FIELD.x[fr], dz = leader.getZ() - FIELD.z[fr];
-        return dx * dx + dz * dz <= r * r;
     }
 
     /** The walk back to its post after a throw pulled an idle medic away (standoff memory for an idle unit). */
