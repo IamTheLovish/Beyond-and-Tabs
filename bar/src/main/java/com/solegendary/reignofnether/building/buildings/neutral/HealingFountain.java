@@ -30,7 +30,7 @@ public class HealingFountain extends Building implements RangeIndicatorAddon {
 
     public final static String buildingName = "Healing Fountain";
     public final static String structureName = "healing_fountain";
-    public final static ResourceCost cost = ResourceCost.Building(0,0,0,0);
+    public final static ResourceCost cost = ResourceCost.Building(0,0,0);
     public HealingFountain() {
         super(structureName, cost, false);
         this.name = buildingName;

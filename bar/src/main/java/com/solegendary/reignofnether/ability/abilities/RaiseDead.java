@@ -3,7 +3,6 @@ package com.solegendary.reignofnether.ability.abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AutoRule;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
-import com.solegendary.reignofnether.building.BuildingServerEvents;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
@@ -36,14 +35,30 @@ import java.util.List;
 /**
  * Gravebound Lich Regent: <b>Raise Dead</b> (design-factions.md, "every wreck is an army"). Up to {@link #MAX_RAISED}
  * wrecks within {@link #RADIUS} blocks rise as Ghouls (zombie units) under the commander's owner. Never free: each
- * Ghoul costs its normal metal, paid from the wreck first and the pool for any remainder, and it still needs
- * population room. Wreck metal beyond a Ghoul's cost stays on the wreck. 30 s cooldown, instant cast.
+ * Ghoul costs its normal metal, paid from the wreck first and the pool for any remainder; at most {@link #MAX_GHOULS}
+ * stand per player. Wreck metal beyond a Ghoul's cost stays on the wreck. 30 s cooldown, instant cast.
  */
 public class RaiseDead extends Ability {
 
     public static final int CD_SECONDS = 30;
     public static final double RADIUS = 10;
     public static final int MAX_RAISED = 3;
+    /**
+     * At most this many ghouls alive per player (lovish, Oct 29). With no population cap this is their only limit (they
+     * have no lifetime); a cast at the cap raises nothing, pays nothing and sets no cooldown.
+     */
+    public static final int MAX_GHOULS = 8;
+    /** Marks a ghoul (saved with it), so the cap counts the ones that came back from a save too. */
+    public static final String GHOUL_TAG = "bt_ghoul";
+
+    /** Ghouls alive for {@code owner} (server side). Public for the game test. */
+    public static int liveGhouls(String owner) {
+        int n = 0;
+        for (LivingEntity le : UnitServerEvents.getAllUnits())
+            if (le.isAlive() && le.getTags().contains(GHOUL_TAG) && le instanceof Unit u && owner.equals(u.getOwnerName()))
+                n++;
+        return n;
+    }
 
     public RaiseDead() {
         super(UnitAction.COMMANDER_RAISE_DEAD, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
@@ -83,10 +98,12 @@ public class RaiseDead extends Ability {
         }
     }
 
-    /** Raises what it can and returns how many rose. Public for the game test. */
+    /** Raises what it can (never past {@link #MAX_GHOULS} alive) and returns how many rose. Public for the game test. */
     public static int raise(ServerLevel level, LivingEntity self, String owner) {
+        int room = Math.min(MAX_RAISED, MAX_GHOULS - liveGhouls(owner));
+        if (room <= 0)
+            return 0;   // at the cap: nothing paid, nothing drained (the bot casts on cooldown: this is its limit too)
         float cost = ResourceCosts.ZOMBIE.metal();
-        int popEach = Math.max(1, ResourceCosts.ZOMBIE.population);
         Resources pool = null;
         for (Resources r : ResourcesServerEvents.resourcesList)
             if (r.ownerName.equals(owner))
@@ -98,11 +115,7 @@ public class RaiseDead extends Ability {
         near.sort(Comparator.comparingDouble(w -> w.distanceToSqr(self)));
         int raised = 0;
         for (Entity w : near) {
-            if (raised >= MAX_RAISED)
-                break;
-            int pop = UnitServerEvents.getCurrentPopulation(owner);
-            int cap = BuildingServerEvents.getTotalPopulationSupply(owner);
-            if (pop + popEach > cap)
+            if (raised >= room)
                 break;
             float fromWreck = Math.min(WreckServerEvents.metalOf(w), cost);
             float fromPool = cost - fromWreck;
@@ -113,6 +126,7 @@ public class RaiseDead extends Ability {
             WreckServerEvents.drain(level, w, fromWreck);
             Entity ghoul = UnitServerEvents.spawnMob(EntityRegistrar.ZOMBIE_UNIT.get(), level, w.blockPosition().below(), owner);   // spawnMob adds one block
             if (ghoul != null) {
+                ghoul.addTag(GHOUL_TAG);   // counted for the 8-per-player cap
                 raised++;
                 level.sendParticles(ParticleTypes.SOUL, w.getX(), w.getY() + 0.5, w.getZ(), 12, 0.4, 0.4, 0.4, 0.02);
             }
