@@ -31,5 +31,12 @@ const float ambientOcclusionLevel = 1.0;
 // gems, emission from _s. Off: the slice 1 look, for an A/B
 #define MATERIALS 1 // [0 1]
 
+// plants and leaves move in the wind (lib/wind.glsl): gusts rolling across the lawn, leaves shimmering. Off: still
+#define WIND 1 // [0 1]
+// how far they move: 1 = a grass tuft's top ~0.12 block at a full gust
+#define WIND_STRENGTH 1.0 // [0.5 0.75 1.0 1.5 2.0]
+
 // block ids from block.properties
-#define ID_FOLIAGE 10001.0
+#define ID_FOLIAGE 10001.0             // plants, and the lower half of two-block ones
+#define ID_LEAVES 10002.0
+#define ID_FOLIAGE_UPPER 10003.0       // the upper half of a two-block plant
