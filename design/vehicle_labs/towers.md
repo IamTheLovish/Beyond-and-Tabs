@@ -29,3 +29,11 @@ committed, never copied block for block - only the numbers below). Heights are a
 - Clock tower 3 x 3 (x 1..3, z 5..7), engaged in the corner of the erecting bay (z 8) and the shop (x 4): pale base
   course (1-2), brick shaft with slit lights (3-12), a pale clock stage with dark dials (13-14), an oversailing stair
   cornice (15), a weathered-copper stair pyramid (16-17), an iron finial (18) - 4 over the bay ridge (a's relationship).
+
+## r12 (Oct 30): lovish's picks replace the banding
+- Stacks: lovish (~00:30 ET, on r11 round 3) "probably both" - a smooth tapered shaft and ONE corbelled crown. The band
+  rule above ("a band every 5-6 courses") is retired for the Engine Shed; r12 keeps the foot and the heights and builds
+  foot -> Macaw's stone wash -> brick-wall-sleeved lower shaft -> Macaw's brick wash -> plain 2 x 2 -> one crown of our
+  cornice moulding (reignofnether:cornice_brick) under a blackstone cap.
+- Tower roof: "less stepped" - a steep spire (2 rise per run, Macaw's prismarine-brick steep roof, apex 20, finial 21)
+  in place of the 16-18 copper stair pyramid; the clock stage and cornice unchanged.

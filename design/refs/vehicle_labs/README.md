@@ -123,7 +123,9 @@ Inspiration only: several are signed by their builders and are never traced. Ref
    (balconies on corbels) and capped with a red cone that FLARES at the eaves (pagoda-like), a stone base, a garden
    courtyard, pine valley. Lesson: a tall tower is never a plain shaft - break it with galleries, corbel rings, string
    courses and a flared cap. Stormcallers: your towers. Tidewrought: the lighthouse with a gallery ring. Brassworks:
-   smokestacks with corbelled rings and caps.
+   ~~smokestacks with corbelled rings and caps~~ - RETIRED Oct 30 2026: lovish's pick on Engine Shed r11 round 3
+   (~00:30 ET, chimneys "probably both"): a smooth tapered shaft with ONE corbelled crown, from shaped blocks. The
+   ring stack read as a pagoda (critic: 6 and 5 rings). Brassworks stacks: taper + one crown (tools/engine_shed_r12.py).
 
 23. lovish's eighteenth reference (02:22): /root/bat/design/refs/vehicle_labs/ref18_brick_hall_central_tower.png - a
    Minecraft RED-BRICK hall with WHITE STONE BANDING (string courses, window heads, quoins), a long ARCADE along the
