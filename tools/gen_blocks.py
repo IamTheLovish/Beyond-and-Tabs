@@ -230,7 +230,7 @@ TARGETS = {
     "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
-    "soul_sand": dict(luma=0.28, std=0.050, sat=0.20, tilt=15.0, smooth=28, pore=48, soften=0.8),
+    "soul_sand": dict(luma=0.28, std=0.050, sat=0.30, tilt=15.0, smooth=28, pore=48, soften=0.8),   # r31b: warmer
     # r31 (sampler 3: metals "painted stone"): chamfer + brushing in the relief (tilt 10 -> 13), smoother (147 -> 178)
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=13.0, smooth=178, pore=0, f0=230),
     "netherite_block": dict(luma=0.30, std=0.065, sat=0.12, tilt=13.0, smooth=205, pore=0, f0=255),
@@ -241,7 +241,7 @@ TARGETS = {
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
     # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
-    "blue_terracotta": dict(luma=0.30, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
+    "blue_terracotta": dict(luma=0.30, std=0.018, sat=0.33, tilt=3.5, smooth=36, pore=30, soften=1.0),   # r31b: -20% chroma
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -2129,14 +2129,16 @@ def m_soul_sand(F, n):
     shade = 0.92 + 0.10 * norm01(H) + 0.04 * grains
     hue = F.noise(2, 6, 0.4)
     jit = np.stack([0.03 * hue, 0.0 * hue, -0.03 * hue], -1)
-    alb = tint((0.42, 0.36, 0.30), shade, jit)
-    # the hollows: 5 per block, each at its own place, size and turn; the "skull" is three scoops in one dish
+    # r31b (eyes 41023221433: the sides "show dark dashes in horizontal rows that repeat vertically", the base
+    # "reads grey pumice"): warmer brown (toward the benchmark's top), and every hollow turned to its own full
+    # angle so the socket pairs never line up as a row of dashes
+    alb = tint((0.46, 0.36, 0.27), shade, jit)
     hollow = np.zeros((n, n))
     sockets = np.zeros((n, n))
     for _ in range(5):
         cx, cy = rng.random(2)
         rad = rng.uniform(0.11, 0.15)
-        ang = rng.uniform(-0.6, 0.6)
+        ang = rng.uniform(0, 2 * math.pi)
         dx = (F.u - cx + 0.5) % 1.0 - 0.5
         dy = (F.v - cy + 0.5) % 1.0 - 0.5
         x = dx * math.cos(ang) + dy * math.sin(ang)
@@ -3566,7 +3568,8 @@ def recipes():
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
         "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
-        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.28, 0.52), flash=(0.94, 0.94, 0.98)),
+        # r31b (eyes: "reads as violet dyed wool"): a dusty slate-blue, chroma pulled toward grey
+        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.31, 0.32, 0.46), flash=(0.94, 0.94, 0.98)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
         "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
