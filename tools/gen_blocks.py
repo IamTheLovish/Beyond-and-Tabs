@@ -254,9 +254,11 @@ TARGETS = {
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=13.0, smooth=178, pore=0, f0=230),
     "netherite_block": dict(luma=0.30, std=0.065, sat=0.12, tilt=13.0, smooth=205, pore=0, f0=255),
     # r31: hard facets - more spread (bright tops, dark body) and tilt; emerald darker (0.42 -> 0.36), glossier
-    "diamond_block": dict(luma=0.70, std=0.120, sat=0.35, tilt=16.0, smooth=250, pore=0, f0=44),
+    # r33 (critic, eyes 41029731853: the gems need "brighter albedo bodies and smoother faces" so the shader's sky
+    # reflection makes them glassy): diamond 0.70 -> 0.78, emerald 0.50 -> 0.58, both glass-smooth (253)
+    "diamond_block": dict(luma=0.78, std=0.110, sat=0.35, tilt=14.0, smooth=253, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
-    "emerald_block": dict(luma=0.50, std=0.110, sat=0.72, tilt=16.0, smooth=235, pore=0, f0=15),
+    "emerald_block": dict(luma=0.58, std=0.100, sat=0.72, tilt=14.0, smooth=253, pore=0, f0=15),
     # r33 (critic, eyes 41029731853: the blues "crushed"): lapis lifted to a deep ultramarine that reads blue from
     # above - luma 0.22 -> 0.30, sat 0.55 -> 0.72
     "lapis_block": dict(luma=0.30, std=0.050, sat=0.72, tilt=7.6, smooth=60, pore=0, f0=15),
@@ -3706,10 +3708,10 @@ def recipes():
                                                  calm=True),
         "soul_sand": m_soul_sand,
         # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
-        "diamond_block": lambda F, n: m_gem(F, n, (0.28, 0.60, 0.72), (0.86, 0.97, 1.0)),
+        "diamond_block": lambda F, n: m_gem(F, n, (0.40, 0.72, 0.82), (0.90, 0.98, 1.0)),   # r33: brighter body
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
-        "emerald_block": lambda F, n: m_gem(F, n, (0.08, 0.50, 0.24), (0.58, 0.96, 0.64), inclusions=0.5, edge_glow=0.35),
+        "emerald_block": lambda F, n: m_gem(F, n, (0.14, 0.60, 0.30), (0.62, 0.97, 0.66), inclusions=0.4, edge_glow=0.35),
         # lapis is a stone, not a crystal: matte ultramarine blocks of rock with gold pyrite flecks
         "lapis_block": lambda F, n: m_lapis(F, n),
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
