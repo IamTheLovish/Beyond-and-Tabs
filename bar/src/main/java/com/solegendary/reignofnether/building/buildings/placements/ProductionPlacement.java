@@ -658,6 +658,8 @@ public class ProductionPlacement extends BuildingPlacement {
                     // ProductionItem.tick), so queueing is allowed with 0 resources. Only emeralds are paid upfront.
                     ActiveProduction activeProduction = new ActiveProduction(prodItem, false, ownerName);
                     productionQueue.add(activeProduction);
+                    if (prodItem instanceof com.solegendary.reignofnether.unit.units.piglins.WorldbreakerProd)
+                        com.solegendary.reignofnether.unit.T4Cap.announceStarted(ownerName);   // a Tier 4 is coming: tell every player
                     int emeraldCost = prodItem.getCost(level.isClientSide(), ownerName).emerald;
                     if (emeraldCost > 0)
                         ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));

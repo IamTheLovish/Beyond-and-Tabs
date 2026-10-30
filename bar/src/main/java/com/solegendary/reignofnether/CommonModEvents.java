@@ -143,6 +143,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.AbyssalHydraUnit.createAttributes().build());
         evt.put(EntityRegistrar.THORNWING_ROC_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornwingRocUnit.createAttributes().build());
         evt.put(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.WORLDBREAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WorldbreakerUnit.createAttributes().build());
         evt.put(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRUNT_UNIT.get(), GruntUnit.createAttributes().build());
         evt.put(EntityRegistrar.BONEWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit.createAttributes().build());

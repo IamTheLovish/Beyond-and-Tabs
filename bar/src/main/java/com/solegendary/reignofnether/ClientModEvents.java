@@ -235,6 +235,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.ABYSSAL_HYDRA_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.AbyssalHydraRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNWING_ROC_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornwingRocRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MAGMA_HURLER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.MagmaHurlerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.WORLDBREAKER_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WorldbreakerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GRUNT_UNIT.get(), PiglinUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.BONEWRIGHT_UNIT.get(), PiglinUnitRenderer::new);
