@@ -63,6 +63,13 @@ public final class AnimState {
     public static final int SP_LOOK_YAW = SP_RECOIL + Life.SPRING, SP_LOOK_PITCH = SP_LOOK_YAW + Life.SPRING,
         AIM = SP_LOOK_PITCH + Life.SPRING;
 
+    /**
+     * The turn ({@link Kinematics#turn}, {@link Kinematics#bodyYawAt}): a spring slot on the body's WORLD yaw as a
+     * frame draws it (degrees, kept continuous across the wrap) - the body swings round to a new heading over a moment
+     * where the server turns it in a tick or two.
+     */
+    public static final int SP_TURN = AIM + 1;
+
     /** Floats per unit (room left for foot IK). */
     public static final int STRIDE = 80;
 
