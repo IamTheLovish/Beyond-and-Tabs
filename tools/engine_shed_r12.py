@@ -39,7 +39,7 @@ DRIP = "mcwroofs:cyan_terracotta"
 # the drip cells per ring (eave ring 16-17 over x 0-4 z 4-8, upper ring 18-19 over x 1-3 z 5-7): two-cell clusters on
 # each face of the eave ring, one cell on each face of the upper ring above one of them - runs down the slope
 DRIPS = (set(), set())   # round 3: none - round 2's clusters read as "a mint arrow on dark grey" (both critics)
-ROOF = "cupola"          # round 3 builds both: "spire" (rounds 1-2's shape, the control) and "cupola" (the designer's B)
+ROOF = "spire"           # round 3 builds both: "spire" (rounds 1-2's shape, the control) and "cupola" (the designer's B)
 OUT_SPIRE = "design/vehicle_labs/brass_t1_r12_r3a.nbt"
 SOOT, SOOT_SL, STREAK = "polished_blackstone_bricks", "polished_blackstone_brick_slab", "deepslate_bricks"
 DRY = R.DRY
@@ -381,6 +381,5 @@ if __name__ == "__main__":
     rig = L.write(detail(), out)
     print(L.check(rig, out))
     L.check_banned(rig, "brass_t1_r12")
-    out = os.path.join(root, OUT_SPIRE)                    # round 3's control shape, for the side-by-side
-    rig = L.write(detail("spire"), out)
-    print(L.check(rig, out))
+    #     (round 3 also wrote the spire to OUT_SPIRE for the side-by-side with the cupola; round 4 builds the spire -
+    #     both critics' pick - as OUT, and brass_t1_r12_round3.nbt keeps round 3's spire as the control)

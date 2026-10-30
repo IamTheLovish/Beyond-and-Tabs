@@ -39,7 +39,7 @@ ROOM_LIT = 10          # block light on a surface seen through a window: a lit r
 GLOW_SEEN = 0.10       # at most this share of a window's glass pixels show a light block straight behind the pane
 ROOM_SEEN = 0.50       # at least this share show a lit room surface
 FRAME_VAL = (0.27, 0.50)   # the gate frame's camera value: mid stone - not black (blackstone 0.13-0.22), not snow
-WARM_SURFACES = ("birch_planks", "birch_slab", "birch_stairs", "stripped_birch_wood")
+WARM_SURFACES = ("acacia_planks", "acacia_slab", "acacia_stairs")   # round 4: birch read cream (critics r3)
 SOOT_DARK = 0.80       # a soot cell reads at most 0.8 x the value of brick on the same face, and grey (sat <= 0.15)
 
 
@@ -435,7 +435,8 @@ class EngineShedR12(EngineShedR11):
         """Critics r1: "the panes look pale grey, not orange"; measured: dusk glass hue 2, sat 0.16 - the panes show red
         brick under block light. The designer: the surface the glass shows becomes a warm pale one. >= 80 % of the dusk
         still's camera-window glass pixels that look INTO the room show, as the first block behind the pane, a warm pale
-        surface by look (WARM_SURFACES: birch, pack luma 0.65, sat 0.33, a pale warm yellow). (Into the room: the block
+        surface by look (WARM_SURFACES - round 2 birch, pack luma 0.65 sat 0.33: round-3 critics "reads cream, not orange";
+        round 4 acacia, pack luma 0.41 sat 0.62, in the designer's band hue 20-35, sat 0.45-0.65, luma 0.40-0.55). (Into the room: the block
         behind is off the pane's own wall plane - a ray grazing the 2 px pane's edge lands on the window's own jamb or
         sill, the outside wall, which stays brick.)"""
         glass = {q for g in self.camera_windows() for q in g}
@@ -469,8 +470,12 @@ class EngineShedR12(EngineShedR11):
                 run += 1
             self.assertGreaterEqual(run, 3, s["top"])
 
+    @unittest.skip("retired round 4: round-3 critics read the 3-course pier streaks as shutters")
     def test_r2_long_streaks_under_the_eaves(self):
-        """Critics r1: "the pier streaks are invisible at the RTS camera" (1 x 2 cells). >= 4 soot streaks of 3+ cells
+        """RETIRED round 4: critics r3 "the pier streaks read as shutters"; the designer replaced them with eave staining
+        that fades down from the dentils (test_r4_eave_staining_fades).
+
+        Critics r1: "the pier streaks are invisible at the RTS camera" (1 x 2 cells). >= 4 soot streaks of 3+ cells
         one over the other on the camera faces' walls (y 2..eave), seen in 34 or rts_close."""
         p = self.p
         cells, frame = {}, self.gate_frame()
@@ -502,8 +507,13 @@ class EngineShedR12(EngineShedR11):
     # critics (RTS 6.5 / 6.5, towers 6 / 6, gate 4 / 4, weathering 4 / 3, dusk 4 / 4 - no gain), the round-3 designer
     # (itachi2-api run 20261030-043958-r12-round3-designer) and lovish's answers (Oct 30: the obsidian lump is the coal
     # stage; a straight slim shaft; a lantern inside a room, seen through the glass, is OK)
+    @unittest.skip("re-scoped round 4: fine-grain streaks of the same hue family - test_r4_spire_streaks_fine_grain")
     def test_r3_spire_one_material(self):
-        """Critics r2: the grey drips "a mint arrow on dark grey". Of the tower roof's pixels in rts_close and 34, at most
+        """RE-SCOPED round 4: r11's streak band (15-45 % darker pixels) measured 0.046 on the one-material spire
+        (round 3); the round-4 designer adds fine-grain darker verdigris (no group over 2 cells) - the round-2 fault was
+        CLUSTERED grey, kept out by test_r4_spire_streaks_fine_grain.
+
+        Critics r2: the grey drips "a mint arrow on dark grey". Of the tower roof's pixels in rts_close and 34, at most
         5 % are a second material (anything but prismarine)."""
         for still in ("rts_close", "34"):
             hits = self.tower_roof_hits(still)
@@ -524,8 +534,12 @@ class EngineShedR12(EngineShedR11):
             v = colorsys.rgb_to_hsv(*np.array([q for q in px if q]).mean(0))[2]
             self.assertTrue(0.50 <= v <= 0.62, (still, round(v, 3)))
 
+    @unittest.skip("re-scoped round 4: a soot gradient under the soot course - test_r4_stack_soot_gradient")
     def test_r3_shaft_clean_below_the_soot_course(self):
-        """Critics r2: the drip "reads as an opening". No soot cell (by look) on a stack's shaft below its blackened
+        """RE-SCOPED round 4: round-3 critics "the bodies read clean and new" (weathering 3 / 3) after the drip went; the
+        designer hangs a ragged hem that fades in two courses (test_r4_stack_soot_gradient: nothing from top - 5 down).
+
+        Critics r2: the drip "reads as an opening". No soot cell (by look) on a stack's shaft below its blackened
         course (top - 2), down to the wash."""
         p = self.p
         for s in self.m["stacks"]:
@@ -605,6 +619,91 @@ class EngineShedR12(EngineShedR11):
         self.assertEqual(sorted(lamps - through), [], "lamps the dusk still does not see through glass")
         self.assertTrue(all(p.n.get((q[0], q[1] - 1, q[2])) for q in lamps))      # standing, on a floor or a shelf
         self.assertEqual(sorted(lamps & straight), [], "lamps seen straight")
+
+    # ------------------------------------------------------------------------------------------- round 4: the round-3
+    # critics (A, the spire: RTS 7 / 7, towers 7 / 7, gate 5 / 5, weathering 3 / 3, dusk 5.5 / 5.5) and the round-4
+    # designer (itachi2-api run 20261030-055914-r12-round4-designer); lovish asleep: "just decide the best option"
+    def shaft_faces(self, s, y):
+        """The 2 x 2 shaft's cells on its two camera faces (west, south) at course y, with the face each shows."""
+        sx0, sx1, sz0, sz1 = s["shaft"]
+        return [((sx0, y, z), "west") for z in range(sz0, sz1 + 1)] + [((x, y, sz1), "south")
+                                                                        for x in range(sx0, sx1 + 1)]
+
+    def test_r4_stack_soot_gradient(self):
+        """Critics r3: "the bodies read clean and new"; critics r2: a drip "reads as an opening". The designer: soot that
+        fades by density from its source - on each stack's two camera faces the share of soot cells (by look) is 0.35-0.60
+        at top - 3 (under the blackened course), 0.15-0.35 at top - 4, and 0-0.05 from top - 5 down to the wash."""
+        p = self.p
+        for s in self.m["stacks"]:
+            foot, _, _ = self.stack_parts(s)
+
+            def share(y):
+                cells = self.shaft_faces(s, y)
+                return sum(1 for q, f in cells if q in p.n and self.soot(p.n[q], f)) / len(cells)
+            self.assertTrue(0.35 <= share(s["top"] - 3) <= 0.60, (s["top"], "top-3", share(s["top"] - 3)))
+            self.assertTrue(0.15 <= share(s["top"] - 4) <= 0.35, (s["top"], "top-4", share(s["top"] - 4)))
+            low = [y for y in range(foot + 2, s["top"] - 4) if share(y) > 0.05]
+            self.assertEqual(low, [], s["top"])
+
+    def eave_rows(self):
+        """{y: [(cell, soot?)]} of the brick wall cells the 34 and rts_close stills show on the eave faces nearest the
+        stacks (south 24, south 16, west 4), y 2..5, off the windows."""
+        p = self.p
+        rows = {}
+        for st in ("34", "rts_close"):
+            for h in p.hits[st].values():
+                q = h[0]
+                face = (h[2] == "south" and q[2] in (16, 24)) or (h[2] == "west" and q[0] == 4)
+                if face and 2 <= q[1] <= 5 and S.glyph(h[1]) == "#" and not self.in_tower(q):
+                    rows.setdefault(q[1], {})[q] = self.soot(h[1], h[2])
+        return rows
+
+    def test_r4_eave_staining_fades(self):
+        """The designer: eave staining darkest under the dentils and fading down - the soot share of the eave faces'
+        seen wall cells 0.35-0.55 at y 5, 0.10-0.30 at y 4, 0-0.05 at y 3 and 2; no run of more than 2 soot cells along a
+        row or up a column (no shutter, no hole)."""
+        rows = self.eave_rows()
+
+        def share(y):
+            r = rows.get(y, {})
+            return sum(r.values()) / max(1, len(r))
+        self.assertTrue(0.35 <= share(5) <= 0.55, ("y5", round(share(5), 3), len(rows.get(5, {}))))
+        self.assertTrue(0.10 <= share(4) <= 0.30, ("y4", round(share(4), 3)))
+        self.assertTrue(share(3) <= 0.05 and share(2) <= 0.05, ("y3 / y2", share(3), share(2)))
+        dark = {q for r in rows.values() for q, v in r.items() if v}
+        runs = [q for q in dark for a, b, c in ((1, 0, 0), (0, 0, 1), (0, 1, 0))
+                if all((q[0] + k * a, q[1] + k * b, q[2] + k * c) in dark for k in (1, 2))]   # 3 in a row / column
+        self.assertEqual(sorted(runs), [])
+
+    def test_r4_spire_streaks_fine_grain(self):
+        """r11's streak band wants a weathered roof (15-45 % of its pixels >= 20 % darker), round 2's clustered grey drips
+        read as "a mint arrow". The designer: fine grain - the spire's second-material cells are the same hue family
+        (dark prismarine), 15-30 % of the spire's roof cells, in groups of at most 2 (a fall-line pair), and at least one
+        face of the upper ring has none (no arrow)."""
+        cells = {q: n for q, n in self.spire_cells().items() if sloped(n)}
+        dark = {q for q, n in cells.items() if "prismarine" in n and "dark" in n}
+        other = {q for q, n in cells.items() if "prismarine" not in n}
+        self.assertEqual(sorted(other), [])
+        self.assertTrue(0.15 <= len(dark) / len(cells) <= 0.30, (len(dark), len(cells)))
+        best, seen = 0, set()
+        for q in dark:
+            if q in seen:
+                continue
+            todo, comp = [q], set()
+            while todo:
+                c = todo.pop()
+                if c in comp or c not in dark:
+                    continue
+                comp.add(c)
+                todo += [(c[0] + a, c[1] + b, c[2] + d) for a in (-1, 0, 1) for b in (-1, 0, 1) for d in (-1, 0, 1)]
+            seen |= comp
+            best = max(best, len({(c[0], c[2]) for c in comp}))     # a steep piece pair (two courses) is one plan cell
+        self.assertLessEqual(best, 2, sorted(dark))
+        x0, x1, z0, z1 = self.m["tower"]
+        upper = {(q[0], q[2]) for q in dark if q[1] >= 18}
+        faces = [{(x0, z) for z in range(z0, z1 + 1)}, {(x1, z) for z in range(z0, z1 + 1)},
+                 {(x, z0) for x in range(x0, x1 + 1)}, {(x, z1) for x in range(x0, x1 + 1)}]
+        self.assertTrue(any(not (f & upper) for f in faces), sorted(upper))
 
 
 def block_light(n):
