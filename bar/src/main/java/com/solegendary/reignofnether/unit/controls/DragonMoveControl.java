@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.controls;
 
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -11,6 +12,10 @@ import net.minecraft.world.phys.Vec3;
  * nudges - a nose that turns at a capped rate, the velocity along it, a smooth speed-up, a braking ramp into the point
  * and a gentle climb - keeping {@link FlyingUnitMoveControl}'s sweep (a shut way ahead climbs over the obstacle; one
  * that cannot climb either waits). With nowhere to go it brakes along its nose to a hover instead of coasting.
+ *
+ * The Stormcallers' Celestial and Thunder dragons fly on it too (lovish, Oct 30: "choppy laggy ... isnt fluid at all":
+ * they were still on the ghast's nudges, their yaw snapped to the velocity). A dragon that is down but no flyer (the
+ * Celestial Dragon grounded by wind) walks: the same steering over the ground, pressed onto it.
  *
  * The flight owns the velocity, but a push from outside (knockback, a separation nudge) is kept and decays in the air
  * as it did before: whatever the velocity holds beyond what this control set last tick (after the 0.91 drag) is
@@ -41,6 +46,23 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
     /** The nose's heading (MC yaw degrees): where the dragon is flying. */
     public float heading() {
         return state.heading;
+    }
+
+    /** How fast (degrees per tick) a hovering dragon turns to face what it attacks (BoneDragonUnit.HOVER_TURN). */
+    public static final float HOVER_TURN = 6f;
+
+    /**
+     * The body's yaw this tick (server side), from its yaw now: along the nose while it cruises; hovering, turned
+     * toward (x, z) - the way to what it attacks, (0, 0) for nothing - at {@link #HOVER_TURN} degrees a tick, and the
+     * next flight starts from there.
+     */
+    public float bodyYaw(float yaw, double x, double z) {
+        if (isCruising())
+            return state.heading;
+        if (Math.abs(x) > 0.05 || Math.abs(z) > 0.05)
+            yaw = Mth.approachDegrees(yaw, -((float) Mth.atan2(x, z)) * Mth.RAD_TO_DEG, HOVER_TURN);
+        setHeading(yaw);
+        return yaw;
     }
 
     /** Turns the nose while hovering (the dragon facing its target); the next flight starts from here. */
@@ -110,6 +132,8 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         else if (push.lengthSqr() > 2.25)
             push = push.normalize().scale(1.5);
 
+        // down but no flyer (the Celestial Dragon grounded by wind; a landed Bone Dragon is perched below): it walks
+        boolean walking = !landed && mob instanceof Unit u && !u.isFlyingUnit();
         double[] v;
         if (landed) {
             v = DragonFlight.perched(state);
@@ -126,7 +150,9 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
             double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
             if (dist < 1.0 && state.speed < 0.02)
                 operation = Operation.WAIT;     // there (a take-off's climb has no goal to end it): hover, face targets
-            if (sweepIn-- <= 0 && dist > 1.0e-4) {
+            if (walking) {
+                blocked = false;
+            } else if (sweepIn-- <= 0 && dist > 1.0e-4) {
                 sweepIn = SWEEP_EVERY;
                 double r = Math.toRadians(state.heading);
                 Vec3 ahead = new Vec3(-Math.sin(r), Mth.clamp(dy / Math.max(1.0, dist), -0.5, 0.5), Math.cos(r)).normalize();
@@ -143,6 +169,11 @@ public class DragonMoveControl extends FlyingUnitMoveControl {
         } else {
             v = DragonFlight.brake(state);
             blocked = false;
+        }
+        if (walking) {
+            // pressed onto the ground every tick (a tick at 0 would leave it off the ground and the push sum wrong)
+            state.vy = 0.0;
+            v[1] = -0.3;
         }
         lastSet = new Vec3(v[0], v[1], v[2]);
         mob.setDeltaMovement(lastSet.add(push));
