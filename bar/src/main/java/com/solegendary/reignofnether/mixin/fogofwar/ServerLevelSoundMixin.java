@@ -33,6 +33,7 @@ public abstract class ServerLevelSoundMixin {
     )
     private void reignofnether$fogGateSound(PlayerList list, @Nullable Player except, double x, double y, double z,
                                             double radius, ResourceKey<Level> dimension, Packet<?> packet) {
+        com.solegendary.reignofnether.sounds.EarsCount.server(list, except, x, y, z, radius, dimension, packet);
         if (!FogOfWarServerEvents.isEnabled()) {
             list.broadcast(except, x, y, z, radius, dimension, packet);
             return;
