@@ -134,6 +134,29 @@ public final class EdgeOverlayRules {
         return (int) (h & 0x7FFFFFFF);
     }
 
+    private static final float[][] RISE = {
+            {1, 0, 0, 1},   // EDGE: its grass side (t = 0)
+            {1, 1, 0, 1},   // OUTER: both grass sides (s = 0 and t = 0)
+            {1, 0, 0, 0},   // INNER: the corner point the diagonal grass touches
+    };
+
+    /**
+     * How far each vertex of {@link #quad} rises from the block's own top to the grass's (0..1, in quad's vertex
+     * order; the same for every rotation, being in sprite space). On a full block both are 1 and nothing changes. On a
+     * lowered top (dirt_path, farmland: 15/16) the grass block beside it shows a 1/16 side step, which drew a straight
+     * dark line along the true block boundary outside the ragged fringe (eyes 41049090535, Oct 30): the fringe climbs to
+     * the grass's top where it touches grass and slopes down inward, so from the RTS camera (55-75 deg down) the step
+     * is behind it. The grass top it meets is at the same height there, so the two join with no lip.
+     */
+    public static float[] rise(int piece) {
+        return RISE[piece].clone();
+    }
+
+    /** {@link #rise} without the copy, for the baker. */
+    static float rise(int piece, int vertex) {
+        return RISE[piece][vertex];
+    }
+
     /**
      * The quad of a piece turned by rot: 4 vertices of (x, z, s, t), in vanilla's up-face order (counter-clockwise
      * from above). x, z are block coordinates 0-1; s, t the sprite coordinates 0-1 (t = 0 the sprite's top edge,

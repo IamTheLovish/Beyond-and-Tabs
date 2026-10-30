@@ -239,4 +239,25 @@ class EdgeOverlayRulesTest {
             }
         }
     }
+
+    @Test
+    void onALoweredTopThePieceRisesToTheGrassAtTheGrassEdge() {
+        // eyes 41049090535 (Oct 30): around dirt_path / farmland (top at 15/16) a straight dark line still ran along
+        // the block boundary - the grass block's 1/16 side step - outside the ragged fringe. The fringe now climbs to
+        // the grass's height where it touches grass and slopes down to the lowered top inward, covering the step.
+        for (int piece = 0; piece < PIECES; piece++) {
+            float[] q = quad(piece, 0);
+            float[] rise = rise(piece);
+            assertEquals(4, rise.length);
+            for (int i = 0; i < 4; i++) {
+                float s = q[i * 4 + 2], t = q[i * 4 + 3];
+                boolean onGrass = switch (piece) {
+                    case PIECE_EDGE -> t == 0;                        // the strip's grass side
+                    case PIECE_OUTER -> s == 0 || t == 0;             // both grass sides of the corner
+                    default -> s == 0 && t == 0;                      // the diagonal: only the corner point
+                };
+                assertEquals(onGrass ? 1f : 0f, rise[i], 1e-6, "piece " + piece + " vertex " + i);
+            }
+        }
+    }
 }

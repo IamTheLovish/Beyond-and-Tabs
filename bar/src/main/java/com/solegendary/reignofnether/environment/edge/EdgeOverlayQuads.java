@@ -80,12 +80,13 @@ final class EdgeOverlayQuads {
      */
     private static BakedQuad bake(int piece, int rot, TextureAtlasSprite sprite, float top) {
         float[] q = EdgeOverlayRules.quad(piece, rot);
-        float y = top + EdgeOverlayRules.lift(rot + (piece == EdgeOverlayRules.PIECE_EDGE ? 0 : 4));
+        float lift = EdgeOverlayRules.lift(rot + (piece == EdgeOverlayRules.PIECE_EDGE ? 0 : 4));
         int[] v = new int[32];
         for (int i = 0; i < 4; i++) {
             int o = i * 8;
             v[o] = Float.floatToRawIntBits(q[i * 4]);
-            v[o + 1] = Float.floatToRawIntBits(y);
+            // on a lowered top the piece climbs to the grass's top (1) at its grass edge, covering the 1/16 step
+            v[o + 1] = Float.floatToRawIntBits(top + (1f - top) * EdgeOverlayRules.rise(piece, i) + lift);
             v[o + 2] = Float.floatToRawIntBits(q[i * 4 + 1]);
             v[o + 3] = -1;                                              // white: the tint colours it
             v[o + 4] = Float.floatToRawIntBits(sprite.getU(q[i * 4 + 2] * 16f));
