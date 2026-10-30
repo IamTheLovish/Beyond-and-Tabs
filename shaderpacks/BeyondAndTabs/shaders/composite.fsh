@@ -14,9 +14,12 @@
 
 /*
 const int colortex0Format = RGBA16F;
+const int colortex2Format = RGBA8;
+const vec4 colortex2ClearColor = vec4(0.0, 0.5, 0.0, 0.0);
 */
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex2;           // the water layer's data (gbuffers_water, lib/water.glsl): r water, g caustics
 uniform sampler2D depthtex0;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
@@ -27,6 +30,8 @@ uniform float viewHeight;
 uniform int isEyeInWater;
 
 varying vec2 texcoord;
+
+#include "/lib/water.glsl"
 
 const float HAZE_MAX = 0.30;
 const float HAZE_MAX_LIMIT = 0.85;
@@ -59,7 +64,14 @@ float rtsHazeStart() {
 
 /* DRAWBUFFERS:0 */
 void main() {
-    vec3 c = toDisplay(toneMap(texture2D(colortex0, texcoord).rgb));
+    vec3 lin = texture2D(colortex0, texcoord).rgb;
+#if WATER_REALISM == 1 && CAUSTICS == 1
+    // the caustics the water pass worked out for the bed under it: a share more (or less) of the light seen through
+    vec4 water = texture2D(colortex2, texcoord);
+    if (water.r > 0.5)
+        lin *= max(1.0 + (water.g - 0.5) / CAUSTIC_ENCODE, 0.0);
+#endif
+    vec3 c = toDisplay(toneMap(lin));
     float depth = texture2D(depthtex0, texcoord).r;
     bool ortho = orthoView();
     if (depth >= 1.0) {

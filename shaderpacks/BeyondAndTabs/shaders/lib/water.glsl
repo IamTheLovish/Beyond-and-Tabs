@@ -72,3 +72,32 @@ vec3 waterNormal(vec2 p, float t) {
 float waterFresnel(float cosTheta) {
     return WATER_F0 + (1.0 - WATER_F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
 }
+
+// ---- caustics: the ripples focusing sunlight into a moving net of bright lines on the bed ----
+// The water pass knows the bed under each pixel (depthtex1) but cannot change the bed's colour, which is already in
+// colortex0; it writes how much brighter the bed should be into colortex2 (WATER_DATA_*), and composite multiplies.
+// The pattern is followed from the bed up the sun's direction to the surface (so it slides as the sun moves and lines up
+// with the ripples above), animated, faded with depth (deeper focus spreads and dims), zero in the bed's shadow.
+
+// share of the bed's sunlight the net moves around: its lines reach ~ +1.3x the sun's light, its gaps ~ -0.5x (the light they took)
+const float CAUSTIC_STRENGTH = 1.3;
+// fades per block of water above the bed
+const float CAUSTIC_FADE = 0.45;
+// colortex2's caustic channel: 0.5 + boost * scale, so a boost of -2..+2 fits in 8 bits (steps of 1/64)
+const float CAUSTIC_ENCODE = 0.25;
+
+// one net: three plane waves 120 degrees apart, the plane warped by a slow swirl; where they cancel (their sum near 0) a
+// thin bright line - the pattern of light focused through a rippled surface
+float causticNet(vec2 p, float t) {
+    vec2 q = p + 0.45 * vec2(sin(p.y * 1.3 + t * 0.7), sin(p.x * 1.1 - t * 0.6));
+    float s = sin(q.x * 2.3 + t * 0.9) + sin(dot(q, vec2(-1.15, 1.99)) + t * 1.1)
+        + sin(dot(q, vec2(-1.15, -1.99)) - t * 0.8);
+    return 1.0 - smoothstep(0.0, 0.9, abs(s));
+}
+
+// the bed's extra sunlight as a share of the sun's light, about zero on average: two nets of different sizes, so it
+// never reads as a tiled lattice
+float caustics(vec2 p, float t) {
+    float n = 0.6 * causticNet(p, t) + 0.4 * causticNet(p * 1.73 + vec2(3.1, 7.7), t * 1.21 + 2.0);
+    return clamp(n * n * 3.0 - 0.42, -0.4, 1.0) * CAUSTIC_STRENGTH;
+}

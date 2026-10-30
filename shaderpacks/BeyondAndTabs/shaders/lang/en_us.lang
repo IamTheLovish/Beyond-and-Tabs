@@ -24,3 +24,7 @@ value.WATER_REALISM.0=Off
 value.WATER_REALISM.1=On
 option.WATER_WAVES=Water ripples
 option.WATER_WAVES.comment=How steep the ripples on water are: they break up the sky's reflection and the sun's glint. 0 = still water.
+option.CAUSTICS=Caustics
+option.CAUSTICS.comment=Sunlight focused by the ripples into moving bright lines on the bed under shallow water.
+value.CAUSTICS.0=Off
+value.CAUSTICS.1=On

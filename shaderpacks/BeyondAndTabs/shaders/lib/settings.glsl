@@ -36,6 +36,8 @@ const float ambientOcclusionLevel = 1.0;
 #define WATER_REALISM 1 // [0 1]
 // the ripples on water: their steepness (0 = a still mirror, 1 = gentle, 2 = a breezy day)
 #define WATER_WAVES 1.0 // [0.0 0.5 1.0 1.5 2.0]
+// sunlight focused by the ripples into moving bright lines on the bed under shallow water
+#define CAUSTICS 1 // [0 1]
 
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0

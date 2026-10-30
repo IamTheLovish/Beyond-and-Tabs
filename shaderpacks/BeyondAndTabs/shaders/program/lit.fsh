@@ -56,7 +56,13 @@ varying vec3 vT;
 varying vec3 vB;
 #endif
 
+// water also writes colortex2 (lib/water.glsl): composite reads it for the caustics. The loader keeps the directive
+// of the preprocessed source; were it ever to read both, the last one wins and water simply loses its caustics
+#ifdef LIT_WATER
+/* DRAWBUFFERS:02 */
+#else
 /* DRAWBUFFERS:0 */
+#endif
 void main() {
     vec4 tex = texture2D(texture, texcoord);
     vec3 albedo = tex.rgb * glcolor.rgb;
@@ -142,7 +148,9 @@ void main() {
         // the bed under this pixel and the path the view travels through the water to reach it
         vec2 uv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
         float bedDepth = texture2D(depthtex1, uv).r;
-        float path = bedDepth >= 1.0 ? WATER_NO_BED : length(waterViewAt(uv, bedDepth) - viewPos);
+        bool bed = bedDepth < 1.0;
+        vec3 bedView = waterViewAt(uv, bedDepth);
+        float path = bed ? length(bedView - viewPos) : WATER_NO_BED;
         // the lit water colour (slice 1's, which the palette was tuned on) is what deep water settles to; the bed
         // already drawn under it shows through by what is left
         float a = waterOpacity(path);
@@ -150,6 +158,9 @@ void main() {
         // the ripples, on the top surface only (a waterfall's side keeps its face): world xz, so they stay put as the
         // camera pans
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+        vec3 bedPlayer = (gbufferModelViewInverse * vec4(bedView, 1.0)).xyz;
+        // the depth of water straight down to the bed, in blocks
+        float below = bed ? max(playerPos.y - bedPlayer.y, 0.0) : WATER_NO_BED;
         bool top = (mat3(gbufferModelViewInverse) * geomN).y > 0.5;
         vec3 wn = top ? mat3(gbufferModelView) * waterNormal(playerPos.xz + cameraPosition.xz, frameTimeCounter)
                       : geomN;
@@ -176,7 +187,32 @@ void main() {
         float A = 1.0 - (1.0 - a) * (1.0 - fres);
         c = (c * (a * (1.0 - fres)) + reflected) / max(A, 1e-3);
         alpha = A;
+
+        float boost = 0.0;
+#if CAUSTICS == 1
+        // caustics on the bed: the sun's direction in the world, followed from the bed up to the surface
+        vec3 lw = mat3(gbufferModelViewInverse) * l;
+        if (bed && lw.y > 0.05 && below > 0.02) {
+            vec2 atSurface = bedPlayer.xz + cameraPosition.xz + lw.xz * (below / lw.y);
+            // the bed's own sun shadow (a bank's shadow puts the caustics out on the bed under it too)
+            float bedShadow = sunShadow(bedPlayer, vec3(0.0, 1.0, 0.0), fit);
+            float bedSun = dot(sunArriving(bedShadow, levels, sunColour), LUMA) * sunFacing(normalize(upPosition), l);
+            float bedLight = bedSun + dot(skyColour, LUMA) + 1e-3;
+            // a share of the bed's light, seen through what is left of the water's opacity; none right at the shore
+            // line (the bed meets the surface there) and fading with depth
+            boost = caustics(atSurface, frameTimeCounter) * (bedSun / bedLight) * (1.0 - A)
+                * exp(-CAUSTIC_FADE * below) * smoothstep(0.02, 0.2, below);
+        }
+#endif
+        gl_FragData[0] = vec4(c, alpha);
+        // written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel
+        gl_FragData[1] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), 0.0, 1.0);
+        return;
     }
 #endif
     gl_FragData[0] = vec4(c, alpha);
+#ifdef LIT_WATER
+    // glass, ice and the rest: no water data, blended by their own alpha so a clear pane over water keeps it
+    gl_FragData[1] = vec4(0.0, 0.5, 0.0, alpha);
+#endif
 }
