@@ -154,13 +154,15 @@ TARGETS = {
     # r35 (critic: the dark stone families "read 0.25-0.35 and merge into one mass" - lift them with clear joints):
     # blackstone 0.19 -> 0.27 / 0.29, deepslate 0.19 -> 0.27, its bricks 0.30 -> 0.38, tiles 0.21 -> 0.30, polished
     # 0.32 -> 0.38, cobbled 0.27 -> 0.32 - the family keeps its order (deepslate under stone_bricks at 0.44)
-    "polished_blackstone":        dict(luma=0.27, std=0.030, sat=0.10, tilt=12.0, smooth=60, pore=4),
-    "polished_blackstone_bricks": dict(luma=0.29, std=0.055, sat=0.10, tilt=18.0, smooth=40, pore=8),
+    # r39: the whole blackstone family a violet-black (sat 0.10 -> 0.13, the base hue aligned with blackstone's), so
+    # the wall's body and its weathered blocks read as one stone, apart from blue deepslate and warm basalt
+    "polished_blackstone":        dict(luma=0.27, std=0.030, sat=0.13, tilt=12.0, smooth=60, pore=4),
+    "polished_blackstone_bricks": dict(luma=0.29, std=0.055, sat=0.13, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.38, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
     "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.27, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
-    "deepslate_top":              dict(luma=0.27, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
+    "deepslate":                  dict(luma=0.27, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey
+    "deepslate_top":              dict(luma=0.27, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
     # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
     "polished_deepslate":         dict(luma=0.38, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
@@ -243,7 +245,7 @@ TARGETS = {
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.25, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),   # r35: lifted with the family
+    "blackstone": dict(luma=0.25, std=0.035, sat=0.17, tilt=24.0, smooth=12, pore=12),   # r35: lifted; r39: violet-black
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
@@ -260,16 +262,17 @@ TARGETS = {
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
     "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
     "cracked_deepslate_bricks": dict(luma=0.36, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35: with the family
-    "cracked_polished_blackstone_bricks": dict(luma=0.26, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
+    "cracked_polished_blackstone_bricks": dict(luma=0.26, std=0.057, sat=0.13, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
-    "chiseled_polished_blackstone": dict(luma=0.27, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),   # r35
+    "chiseled_polished_blackstone": dict(luma=0.27, std=0.058, sat=0.14, tilt=22.0, smooth=30, pore=8),   # r35; r39
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
     # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
-    "basalt_side": dict(luma=0.30, std=0.060, sat=0.05, tilt=16.0, smooth=30, pore=10, soften=1.0),
-    "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
+    # r39 (eyes 41044148818: blackstone / basalt / deepslate one dark grey): basalt a warm grey (sat 0.05 -> 0.10)
+    "basalt_side": dict(luma=0.30, std=0.060, sat=0.10, tilt=16.0, smooth=30, pore=10, soften=1.0),
+    "basalt_top": dict(luma=0.30, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
     # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
     "smooth_basalt": dict(luma=0.30, std=0.025, sat=0.04, tilt=4.0, smooth=70, pore=8),
@@ -308,7 +311,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.24, std=0.033, sat=0.10, tilt=20.0, smooth=14, pore=12),   # r35
+    "blackstone_top": dict(luma=0.24, std=0.033, sat=0.17, tilt=20.0, smooth=14, pore=12),   # r35; r39: violet-black
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
     "quartz_block_top": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
@@ -2156,7 +2159,7 @@ def m_columnar(F, n, top, polished):
             + (0.0 if polished else 0.05) * F.noise(3, 12, 0.5, sx=1.0, sy=6.0)
         tone = rng.uniform(0.9, 1.1, len(edges))[col]
         shade = tone * (0.72 + 0.28 * rib) * (1 - 0.35 * crev - 0.25 * seg) * (1 + 0.04 * mottle + 0.03 * grit)
-    base = (0.33, 0.33, 0.35) if polished else (0.30, 0.30, 0.32)
+    base = (0.33, 0.33, 0.35) if polished else (0.33, 0.31, 0.29)     # r39: basalt a WARM grey (beside blue deepslate)
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.01 * hue, 0.0 * hue, -0.01 * hue], -1)
     return H, tint(base, shade, jit)
@@ -4952,8 +4955,8 @@ def recipes():
         R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): m_leaves(F, n, *a))
     plain = {
         # round 11: the other factions' buildings
-        "polished_blackstone": lambda F, n: m_polished(F, n, (0.20, 0.18, 0.20), 0.08, 0.06),
-        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
+        "polished_blackstone": lambda F, n: m_polished(F, n, (0.21, 0.18, 0.23), 0.08, 0.06),   # r39: violet
+        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
         # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
         # r33 (critic: "micro-mesh" - 4 x 4 with wide dark joints): 3 x 3 larger tiles in a running bond, the joints
@@ -5023,7 +5026,7 @@ def recipes():
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
-        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.6, (8, 20)),
+        "blackstone": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.6, (8, 20)),   # r39: violet-black
         # r22 (shader review: "purple cobble-cell pattern, no glassy darkness"): volcanic glass is near black with only
         # a faint violet depth - mottle 0.20 -> 0.06
         # r22b (eyes: a flat dark-brown cake, the flecks invisible): 3-5 large conchoidal planes of cool black glass,
@@ -5035,9 +5038,9 @@ def recipes():
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
-        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21), cracks=1.0),
+        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23), cracks=1.0),
         "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
-        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
+        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.18, 0.23)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
         # r32 (critic: smooth basalt vs basalt identical): a cut, calm face with a faint 2x2 seam, a hair of rim
@@ -5060,7 +5063,7 @@ def recipes():
         "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.36, 0.52), flash=(0.94, 0.95, 0.99)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
-        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.65, (8, 20)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
         "crimson_stem": lambda F, n: m_stem(F, n, (0.36, 0.12, 0.18), (0.72, 0.22, 0.24)),
