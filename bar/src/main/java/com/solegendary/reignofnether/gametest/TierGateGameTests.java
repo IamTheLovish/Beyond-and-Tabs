@@ -450,7 +450,9 @@ public class TierGateGameTests {
         for (int i = 0; i < count; i++) {
             failures.remove(names[i]);
             PlayerServerEvents.startRTSBot(level, names[i], starts[i], factions[i], 0);
-            bots.put(names[i], new BotPlayer(names[i], factions[i], levels[i], BlockPos.containing(starts[i])));
+            BotPlayer bot = new BotPlayer(names[i], factions[i], levels[i], BlockPos.containing(starts[i]));
+            bot.techDiagOn = true;   // the [T2Snap] lines print its tech gate inputs
+            bots.put(names[i], bot);
         }
         for (int i = 0; i < count; i++)
             for (int j = i + 1; j < count; j++)
