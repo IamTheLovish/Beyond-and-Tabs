@@ -371,12 +371,19 @@ public class HudClientEvents {
             controlGroup.entityIds.removeIf(id -> id == entityId);
     }
 
+    // BAR's Tab (select commander) as a plain press only: latched on the raw press here, the same event the overview's
+    // Shift+Tab and the Ctrl+Tab cycle read, and run on the release (onKeyRelease)
+    private static final com.solegendary.reignofnether.keybinds.PressLatch selectCommanderPress =
+        new com.solegendary.reignofnether.keybinds.PressLatch();
+
     @SubscribeEvent
     // can't use ScreenEvent.KeyboardKeyPressedEvent as that only happens when a screen is up
     public static void onInput(InputEvent.Key evt) {
         if (OrthoviewClientEvents.isEnabled() && evt.getAction() == GLFW.GLFW_PRESS) {
             if (evt.getKey() == Keybindings.getFnum(1).getKey())
                 HudPanels.onF1();   // RoN's F1 and vanilla's hideGui are one switch (HudPanels.hidden)
+            if (Keybindings.selectCommander.matches(evt.getKey()))
+                selectCommanderPress.press((evt.getModifiers() & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SHIFT | GLFW.GLFW_MOD_ALT)) == 0);
         }
     }
 
@@ -2336,9 +2343,10 @@ public class HudClientEvents {
                     net.minecraft.client.gui.screens.Screen.hasShiftDown(), Keybindings.altMod.isDown())))
             return;
         // BAR's Tab: select the commander and centre on it, even while the commander button is hidden. Plain press only:
-        // Ctrl+Tab cycles the selection and Shift+Tab is the camera overview (OrthoviewClientEvents)
+        // Ctrl+Tab cycles the selection and Shift+Tab is the camera overview (OrthoviewClientEvents). Decided at the press
+        // (onInput latches it): a modifier let go before Tab must not turn the release into a plain Tab
         if (Keybindings.selectCommander.matches(key) && OrthoviewClientEvents.isEnabled()) {
-            if (!Keybindings.ctrlMod.isDown() && !net.minecraft.client.gui.screens.Screen.hasShiftDown() && !Keybindings.altMod.isDown())
+            if (selectCommanderPress.release())
                 com.solegendary.reignofnether.hud.buttons.HelperButtons.runChord(
                     com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_COMMANDER);
             return;
