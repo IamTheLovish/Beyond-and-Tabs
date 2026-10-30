@@ -1,0 +1,30 @@
+{
+    "vertex": "reignofnether:bat_postfx",
+    "fragment": "reignofnether:bat_mist",
+    "attributes": [ "Position" ],
+    "samplers": [
+        { "name": "DiffuseSampler" },
+        { "name": "DepthSampler" },
+        { "name": "VisSampler" }
+    ],
+    "uniforms": [
+        { "name": "InvProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "InvViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "CamPos", "type": "float", "count": 3, "values": [ 0.0, 0.0, 0.0 ] },
+        { "name": "Ortho", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Floor", "type": "float", "count": 1, "values": [ 64.0 ] },
+        { "name": "Height", "type": "float", "count": 1, "values": [ 2.2 ] },
+        { "name": "Sigma", "type": "float", "count": 1, "values": [ 0.22 ] },
+        { "name": "Density", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "Offset", "type": "float", "count": 3, "values": [ 0.0, 0.0, 0.0 ] },
+        { "name": "WindDir", "type": "float", "count": 2, "values": [ 1.0, 0.0 ] },
+        { "name": "Time", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "LitColor", "type": "float", "count": 3, "values": [ 0.88, 0.92, 0.96 ] },
+        { "name": "DeepColor", "type": "float", "count": 3, "values": [ 0.5, 0.57, 0.68 ] },
+        { "name": "VisOrigin", "type": "float", "count": 2, "values": [ 0.0, 0.0 ] },
+        { "name": "VisInvSize", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "FogBoostMax", "type": "float", "count": 1, "values": [ 3.0 ] },
+        { "name": "MaxCover", "type": "float", "count": 1, "values": [ 0.85 ] },
+        { "name": "ValleyBase", "type": "float", "count": 1, "values": [ 64.0 ] }
+    ]
+}

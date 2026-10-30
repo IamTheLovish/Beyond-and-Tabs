@@ -3432,6 +3432,7 @@
   "buildings.reignofnether.advanced_solar.tooltip2": "Only a T2 constructor can build it; shutters close for 8 s when hit; it explodes when destroyed.",
   "building.reignofnether.must_be_lava": "Must be placed over lava",
   "options.reignofnether.building_ambience": "Building ambience",
+  "options.reignofnether.valley_mist": "Valley mist",
   "buildings.reignofnether.assembly_works": "Assembly Works",
   "buildings.reignofnether.assembly_works.tooltip1": "A brass-roofed assembly hall with a gantry crane and twin smokestacks: home of the Brassworks Tier 2 and the Engineer-Captain.",
   "buildings.reignofnether.assembly_works.tooltip2": "Requires a Machine Shop and Tier 2 research.",
