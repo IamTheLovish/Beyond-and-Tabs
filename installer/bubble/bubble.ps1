@@ -42,19 +42,29 @@ $form.Add_Paint({ param($s, $e)
 $script:lastLaunch = [datetime]::MinValue
 function Start-Game {
   if (([datetime]::Now - $script:lastLaunch).TotalSeconds -lt 20) { return }
-  # 1. the Desktop play shortcut (on lovish's PC it also starts his server)
+  # 1. the Desktop play shortcut (on lovish's PC it also starts his server) - unless it is this bubble's own
+  #    "lovish" shortcut (the installer's one Desktop icon), which would only bring the bubble back
   $desks = @([Environment]::GetFolderPath('Desktop'), (Join-Path $env:USERPROFILE 'Desktop'),
              (Join-Path $env:USERPROFILE 'OneDrive\Desktop')) | Select-Object -Unique
+  $wsh = New-Object -ComObject WScript.Shell
   foreach ($d in $desks) {
     $f = Join-Path $d 'lovish.lnk'
-    if (Test-Path -LiteralPath $f) {
+    if ((Test-Path -LiteralPath $f) -and -not ($wsh.CreateShortcut($f).Arguments -like '*bubble.ps1*')) {
       $script:lastLaunch = [datetime]::Now
       Start-Process -FilePath $f
       $tip.Show('Starting Beyond and Tabs...', $form, 0, -28, 4000)
       return
     }
   }
-  # 2. the installed Prism next to this folder
+  # 2. the launcher next to this folder (what's new, your build, PLAY)
+  $launcher = Join-Path (Split-Path -Parent $dir) 'launcher.exe'
+  if (Test-Path -LiteralPath $launcher) {
+    $script:lastLaunch = [datetime]::Now
+    Start-Process -FilePath $launcher -ArgumentList '--launch' -WorkingDirectory (Split-Path -Parent $launcher)
+    $tip.Show('Starting Beyond and Tabs...', $form, 0, -28, 4000)
+    return
+  }
+  # 3. the installed Prism next to this folder
   $prism = Join-Path (Split-Path -Parent $dir) 'PrismLauncher\prismlauncher.exe'
   if (Test-Path -LiteralPath $prism) {
     $script:lastLaunch = [datetime]::Now
