@@ -161,19 +161,46 @@ public final class Kinematics {
     }
 
     /**
-     * One tick of the turn: the body's world yaw (yBodyRot) as the server turned it.
+     * The turn's spring, per tick: a 180-degree order swings the body round in about 0.28 s (within 5 degrees by tick
+     * 6) with no step over 20 degrees in a third of a tick and no swing past the new heading (TurnTest's trace).
+     * The server turns it in a tick or two (MoveControl: 90 degrees a tick; a spell goal sets it outright).
+     */
+    public static final float TURN_OMEGA = 1.2f, TURN_ZETA = 0.85f;
+
+    /**
+     * One tick of the turn: the body's world yaw (yBodyRot) as the server turned it, into a spring - the drawn body
+     * swings round to a new heading over a moment instead of in a tick (lovish, Oct 30: visual only; orders, movement
+     * and hitboxes are the server's). The spring follows the angle the short way round and is kept within a turn of
+     * zero.
      *
      * @param fresh the slot's first tick: start facing that way, no swing in from zero
      */
     public static void turn(float[] s, int b, float bodyYawDeg, boolean fresh) {
+        int y = b + SP_TURN;
+        if (!Float.isFinite(bodyYawDeg))
+            return;
+        if (fresh) {
+            s[y] = s[y + 2] = Mth.wrapDegrees(bodyYawDeg);
+            s[y + 1] = 0f;
+            return;
+        }
+        float cur = s[y];
+        Life.spring(s, y, cur + Mth.wrapDegrees(bodyYawDeg - cur), TURN_OMEGA, TURN_ZETA, 1f);
+        if (Math.abs(s[y]) > 360f) {      // back within a turn: the value and the previous step together
+            float turn = 360f * Math.signum(s[y]);
+            s[y] -= turn;
+            s[y + 2] -= turn;
+        }
     }
 
     /**
-     * The body yaw a frame draws (LivingEntityRendererMixin, for the body, the head's net yaw and every layer), between
-     * yBodyRotO (from) and yBodyRot (to) at the partial tick.
+     * The body yaw a frame draws (LivingEntityRendererMixin, for the body, the head's net yaw and every layer): the
+     * turn spring at the partial tick, given as the nearest turn to vanilla's own lerp of yBodyRotO (from) and
+     * yBodyRot (to), so the head's net yaw the renderer takes from it stays within half a turn.
      */
     public static float bodyYawAt(float[] s, int b, float from, float to, float partial) {
-        return Mth.rotLerp(partial, from, to);
+        float vanilla = Mth.rotLerp(partial, from, to);
+        return vanilla + Mth.wrapDegrees(Life.springAt(s, b + SP_TURN, partial) - vanilla);
     }
 
     /**
