@@ -26,6 +26,14 @@ public class HeroClientboundPacket {
                 new HeroClientboundPacket(HeroAction.SET_EXPERIENCE, unitId, value, 0));
     }
 
+    /** Kill XP the hero just earned (HeroServerEvents): a "+N XP" over it, for its owner alone. */
+    public static void xpGained(int unitId, String owner, int value) {
+        if (owner == null || owner.isBlank() || value <= 0)
+            return;
+        PacketHandler.INSTANCE.send(Audience.owner(owner),
+                new HeroClientboundPacket(HeroAction.XP_GAINED, unitId, value, 0));
+    }
+
     public static void setSkillPoints(int unitId, int value) {
         PacketHandler.INSTANCE.send(Audience.teamOfUnit(unitId), // unspent points: its side and spectators
                 new HeroClientboundPacket(HeroAction.SET_SKILL_POINTS, unitId, value, 0));
@@ -98,6 +106,8 @@ public class HeroClientboundPacket {
                     if (hero != null) {
                         switch (action) {
                             case SET_EXPERIENCE -> hero.setExperience((int) value);
+                            case XP_GAINED -> com.solegendary.reignofnether.resources.ResourcesClientEvents.addFloatingText(
+                                "+" + (int) value + " XP", ((net.minecraft.world.entity.LivingEntity) hero).blockPosition().above(2));
                             case SET_SKILL_POINTS -> hero.setSkillPoints((int) value);
                             case SET_CHARGES -> hero.setChargesFromSaveData((int) value);
                             case SET_ABILITY_RANK -> {

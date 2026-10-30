@@ -160,6 +160,12 @@ public class ResourcesClientEvents {
         }
     }
 
+    /** One line of floating text at {@code pos}, in the RTS view (a hero's "+N XP"; the caller decides who sees it). */
+    public static void addFloatingText(String text, BlockPos pos) {
+        if (OrthoviewClientEvents.isEnabled())
+            floatingTexts.add(new FloatingText(text, pos, 0));
+    }
+
     public static void addFloatingTextsFromResources(Resources res, BlockPos pos) {
         if (!OrthoviewClientEvents.isEnabled()) {
             return;

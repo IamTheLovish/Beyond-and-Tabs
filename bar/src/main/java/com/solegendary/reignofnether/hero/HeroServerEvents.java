@@ -75,14 +75,19 @@ public class HeroServerEvents {
                             if (evt.getEntity() instanceof HeroUnit killedHero)
                                 expValue += killedHero.getHeroLevel() * 5;
 
-                            while (expValue > 0) {
-                                HeroExperienceOrb expOrb = HeroExperienceOrb.newOrb(level,
+                            // paid now, in full (design-draft-heroes-better #8): a point is 10 XP from a neutral, 5
+                            // from a player's unit - the orbs paid int(value / 2) each, so an odd last orb paid
+                            // nothing, and the XP was lost when the hero fell before its orbs reached it
+                            int xp = expValue * (deadOwner.isBlank() ? 10 : 5);
+                            heroUnit.addExperience(xp);
+                            HeroClientboundPacket.xpGained(((LivingEntity) heroUnit).getId(), heroOwner, xp);
+
+                            while (expValue > 0) {   // the orbs are the look of it now: they pay nothing
+                                HeroExperienceOrb expOrb = HeroExperienceOrb.visualOrb(level,
                                         heroUnit,
-                                        deadOwner.isBlank(),
                                         evt.getEntity().getX(),
                                         evt.getEntity().getY(),
-                                        evt.getEntity().getZ(),
-                                        expValue >= 2 ? 2 : 1
+                                        evt.getEntity().getZ()
                                 );
                                 expValue -= expValue >= 2 ? 2 : 1;
                                 evt.getEntity().level().addFreshEntity(expOrb);

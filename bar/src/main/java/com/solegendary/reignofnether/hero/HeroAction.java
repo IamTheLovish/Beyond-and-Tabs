@@ -14,5 +14,7 @@ public enum HeroAction {
     HERO_AI_ON,
     HERO_AI_OFF,
     // the sender selected their hero (D030: a select hands a fleeing hero back to the player's order): unitId = the hero
-    HERO_SELECTED
+    HERO_SELECTED,
+    // kill XP the hero just earned, for the owner's "+N XP" float: value = the XP
+    XP_GAINED
 }
