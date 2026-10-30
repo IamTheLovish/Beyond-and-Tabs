@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.unit.pathfinding;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -79,6 +80,22 @@ class LineOfWalkTest {
         assertEquals(p.getNodeCount() - 1, narrow, "the narrow body walks straight past the wall");
         assertEquals(1, wide, "the wide body keeps the nodes");
         assertTrue(!LineOfWalk.clearLine(0.5, 0.5, 7.5, 2.5, Y, 1.5, floor(wall)), "its straight line would graze the wall");
+    }
+
+    @Test
+    void aWideBodyIsCheckedAlongTheLineItReallyWalks() {
+        // a 1.4-wide body (an Iron Golem): vanilla walks it to each node's cell + 1.0 on x and z (Path.getEntityPosAtNode:
+        // the 2x2 box its evaluator cleared), not the cell's centre. A wall at (5, 3) sits off every node's box, clear of
+        // every line to a cell centre, but the real line to the far end grazes it
+        Set<Long> wall = Set.of(cell(5, 3));
+        Path p = staircase();
+        p.setNextNodeIndex(1);
+        double hw = 0.7, off = 1.0;
+        int to = LineOfWalk.farthest(off, off, Y, hw, p, floor(wall), j -> new Vec3(p.getNode(j).x + off, Y, p.getNode(j).z + off));
+        Node n = p.getNode(to);
+        assertTrue(LineOfWalk.clearLine(off, off, n.x + off, n.z + off, Y, hw + 0.1, floor(wall)),
+            "the line it really walks to node " + to + " (" + (n.x + off) + ", " + (n.z + off) + ") grazes the wall");
+        assertTrue(to > 1, "it still walks straight as far as the wall allows: " + to);
     }
 
     @Test

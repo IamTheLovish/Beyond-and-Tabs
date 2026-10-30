@@ -8,6 +8,9 @@ import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.function.IntFunction;
 
 /**
  * Walking a path in straight lines (troop animation plan, gain 2; lovish Oct 30: "Smooth the real path"). A path is a
@@ -71,6 +74,15 @@ public final class LineOfWalk {
      * when there is none (or the nodes ahead already run in one straight direction, as vanilla walks them anyway).
      */
     public static int farthest(double x, double z, int y, double halfWidth, Path path, Cells cells) {
+        return farthest(x, z, y, halfWidth, path, cells, j -> new Vec3(path.getNode(j).x + 0.5, y, path.getNode(j).z + 0.5));
+    }
+
+    /**
+     * As {@link #farthest(double, double, int, double, Path, Cells)}, with `aim` giving where the unit really walks to
+     * at each node (its {@link Path#getEntityPosAtNode}: a wide body's box, not the node's cell). Not used yet: lines are
+     * still judged to the cell's centre.
+     */
+    public static int farthest(double x, double z, int y, double halfWidth, Path path, Cells cells, IntFunction<Vec3> aim) {
         int next = path.getNextNodeIndex(), last = Math.min(path.getNodeCount() - 1, next + LOOKAHEAD);
         if (last <= next || path.getNode(next).y != y)
             return next;
