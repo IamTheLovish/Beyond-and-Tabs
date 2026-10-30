@@ -51,9 +51,10 @@ public final class HeroMarkerClientEvents {
         try {
             if (com.solegendary.reignofnether.postfx.ShaderPacks.skipOverlays())
                 return;   // shader pack shadow map: overlays cast no shadow
-            if (!OrthoviewClientEvents.isEnabled())
-                return;   // HeroLook.showMarker: the RTS view only
-            render(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick());
+            boolean rtsView = OrthoviewClientEvents.isEnabled();
+            if (!HeroLook.showMarker(true, rtsView, true, false))
+                return;   // not the RTS view: no marker on anyone this frame
+            render(evt.getPoseStack(), evt.getCamera(), evt.getPartialTick(), rtsView);
         } catch (Exception e) {
             // never take the game down over a marker
             if (!failedOnce) {
@@ -65,7 +66,7 @@ public final class HeroMarkerClientEvents {
         }
     }
 
-    private static void render(PoseStack pose, Camera camera, float pt) {
+    private static void render(PoseStack pose, Camera camera, float pt, boolean rtsView) {
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
         var cp = camera.getPosition();
         camX = (float) cp.x;
@@ -76,7 +77,8 @@ public final class HeroMarkerClientEvents {
         String me = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getName().getString();
         float pulse = 0.65f + 0.35f * (float) Math.sin(System.currentTimeMillis() / 160.0);
         for (LivingEntity e : UnitClientEvents.getAllUnits()) {
-            if (!(e instanceof Unit u) || !e.isAlive() || !HeroLook.showMarker(e instanceof HeroUnit, true,
+            // heroes first: the fog and cloak lookups run for the handful of heroes, not every unit each frame
+            if (!(e instanceof HeroUnit) || !(e instanceof Unit u) || !e.isAlive() || !HeroLook.showMarker(true, rtsView,
                     FogOfWarClientEvents.isInBrightChunk(e), UnitClientEvents.isHiddenFromLocalPlayer(e)))
                 continue;
             if (!begun) {

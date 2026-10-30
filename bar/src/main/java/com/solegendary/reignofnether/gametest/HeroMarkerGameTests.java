@@ -44,6 +44,8 @@ public class HeroMarkerGameTests {
                 problems.add("a marker on a hero under the fog of war (it gives away its spot)");
             if ((boolean) show.invoke(null, true, true, true, true))
                 problems.add("a marker on a hero cloaked from the viewer");
+            if ((boolean) show.invoke(null, true, true, false, true))
+                problems.add("a marker on a hero both under the fog and cloaked from the viewer");
             var badge = look.getMethod("showPointBadge", boolean.class, int.class);
             if (!(boolean) badge.invoke(null, true, 1))
                 problems.add("no unspent-point badge on the viewer's own hero holding a point");
@@ -53,10 +55,11 @@ public class HeroMarkerGameTests {
                 problems.add("an unspent-point badge on a hero with no point, or on another player's hero");
             var ring = look.getMethod("ringRadius", float.class);
             var crest = look.getMethod("crestHeight", float.class);
-            for (float width : new float[] { 0.6f, 1.0f, 1.4f }) {
-                // the drawn body is the hitbox times the scale: the ring sits just outside it (up to a block out)
+            for (float width : new float[] { 0.6f, 1.0f, 1.4f, 2.0f }) {
+                // the drawn body is the hitbox times the scale: the ring sits a quarter to half a block outside it (a
+                // ring measured on the unscaled hitbox falls inside that window for none of these widths)
                 float r = (float) ring.invoke(null, width), body = width * scale / 2;
-                if (r <= body || r > body + 1)
+                if (r - body < 0.25f || r - body > 0.5f)
                     problems.add(String.format("the ring (radius %.2f) does not sit just outside a drawn body %.2f wide", r, width * scale));
             }
             for (float height : new float[] { 1.8f, 2.4f }) {
