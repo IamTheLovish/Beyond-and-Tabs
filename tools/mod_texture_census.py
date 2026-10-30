@@ -62,17 +62,20 @@ def load_jars(paths):
 
 
 _CACHE = {}
+_ZIPS = {}
 
 
 def read(files, key):
-    cache = _CACHE
+    """One open ZipFile per jar for the whole run (CI 41011517925: reopening a 15 MB jar for each of thousands of
+    reads - its central directory parsed every time - ran past the 15-minute limit)."""
     if key not in files:
         return None
-    if key not in cache:
+    if key not in _CACHE:
         p, name = files[key]
-        with zipfile.ZipFile(p) as z:
-            cache[key] = z.read(name)
-    return cache[key]
+        if p not in _ZIPS:
+            _ZIPS[p] = zipfile.ZipFile(p)
+        _CACHE[key] = _ZIPS[p].read(name)
+    return _CACHE[key]
 
 
 def model_refs(state_json):
@@ -89,10 +92,20 @@ def model_refs(state_json):
     return out
 
 
+_MODELS = {}
+
+
 def textures_of(files, model_ref, depth=0):
     """The texture variables a model resolves to, following its parents (child variables override the parent's)."""
     if depth > 12:
         return {}
+    if model_ref in _MODELS:
+        return _MODELS[model_ref]
+    _MODELS[model_ref] = out = _textures_of(files, model_ref, depth)
+    return out
+
+
+def _textures_of(files, model_ref, depth):
     ns, path = ident(model_ref)
     raw = read(files, (ns, "models", path + ".json"))
     if raw is None:
