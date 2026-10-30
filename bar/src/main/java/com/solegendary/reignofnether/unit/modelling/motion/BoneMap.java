@@ -27,6 +27,13 @@ public final class BoneMap {
     final ModelPart[] dropped = new ModelPart[MAX_DROPPED];
     int droppedCount = 0;
     static final int MAX_DROPPED = 2;
+    /**
+     * Grips that carry a weapon in both hands - the grip is the parent of both arms (the Levy's crossbow): in the death
+     * they tip down by {@link MotionPass#LOWER_RAD}, so the weapon and the arms on it come to lie along the body.
+     */
+    final ModelPart[] lowered = new ModelPart[MAX_LOWERED];
+    int loweredCount = 0;
+    static final int MAX_LOWERED = 1;
     /** The waist, model px (y down, from the model origin): the torso bends about it. */
     final float waistY;
     /** A keyframe-clip body or a custom rig: breath and flinch only. */
@@ -93,6 +100,12 @@ public final class BoneMap {
     BoneMap drops(ModelPart weapon) {
         if (weapon != null && droppedCount < MAX_DROPPED)
             dropped[droppedCount++] = weapon;
+        return this;
+    }
+
+    BoneMap lowers(ModelPart grip) {
+        if (grip != null && loweredCount < MAX_LOWERED)
+            lowered[loweredCount++] = grip;
         return this;
     }
 

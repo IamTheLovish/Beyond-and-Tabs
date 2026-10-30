@@ -47,6 +47,8 @@ public class Barracks extends ProductionBuilding {
         this.productions.add(ProductionItems.DAWN_PALADIN, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.DAWN_PALADIN_REVIVE, Keybindings.abilitySlot8);
         this.productions.add(ProductionItems.SUNFIRE_MANGONEL, Keybindings.abilitySlot3);   // T1 siege lobber (design/siege_t1.md)
+        // the essence caster, tier 1 (lovish, Oct 29: "essence casters should be tier 1 like rez bots"; design/essence_casters.md)
+        this.productions.add(ProductionItems.ANGEL_CALLER, Keybindings.abilitySlot4);
         // building levels (design/building_upgrades.md): L1 -> L3 in place, on the ' key
         this.maxLevel = com.solegendary.reignofnether.building.BuildingLevels.MAX_LEVEL;
         this.productions.add(ProductionItems.UPGRADE_LAB_L2, Keybindings.hotkey12);

@@ -285,6 +285,38 @@ class DeathFallTest {
     }
 
     @Test
+    void aCrossbowHeldInBothHandsLowersAlongTheFallenBody() {
+        // the captures (eyes run 40978023283): the Levy fell on his back and his crossbow, held out in front of him in
+        // both hands, stood straight up out of the body with the arms that hold it. Its grip carries both arms, so
+        // the grip itself tips down: the crossbow comes to lie along the body, pointing at the feet
+        BoneMap map = BoneMaps.forModel(new CrossbowLevyModel<Entity>(CrossbowLevyModel.createBodyLayer().bakeRoot()));
+        assertNotNull(map);
+        assertEquals(1, map.loweredCount, "the crossbow's grip, carrying both arms");
+        ModelPart grip = map.lowered[0];
+        assertTrue(grip.hasChild("crossbow") && grip.hasChild("right_arm") && grip.hasChild("left_arm"));
+        grip.xRot = 0.02f;    // setupAnim's breath
+        int id = 9;
+        float[] s = dying(0f, false, 1, id);
+        float kind = s[B + AnimState.DEATH_KIND];
+        float reel = DeathFall.reelTicks(kind), down = DeathFall.impactTick(kind, id);
+        DeathFall.pose(s, B, id, reel, true, MotionPass.fallScratch());
+        MotionPass.placeFall(map, new PoseStack(), DeathFall.dropped(reel, kind, id));
+        assertEquals(0.02f, grip.xRot, 1e-6f, "still held out through the reel");
+        MotionPass.restore();
+        DeathFall.pose(s, B, id, down + 5f, true, MotionPass.fallScratch());
+        MotionPass.placeFall(map, new PoseStack(), DeathFall.dropped(down + 5f, kind, id));
+        // the crossbow points along -z in its grip's frame; tipped by xRot it points (0, sin, -cos) in the body's
+        float toFeet = Mth.sin(grip.xRot), outFront = -Mth.cos(grip.xRot);
+        assertTrue(toFeet > 0.9f, "along the body towards the feet once it lands, not out in front: " + toFeet);
+        assertTrue(Math.abs(outFront) < 0.45f, "barely off the body's plane: " + outFront);
+        MotionPass.restore();
+        assertEquals(0.02f, grip.xRot, 0f, "the living pose is left as setupAnim made it");
+        BoneMap hal = BoneMaps.forModel(new HalberdierModel<Entity>(HalberdierModel.createBodyLayer().bakeRoot()));
+        assertNotNull(hal);
+        assertEquals(0, hal.loweredCount, "the halberd's grip carries one arm: the halberd itself settles instead");
+    }
+
+    @Test
     void aBodyThatFallsByItselfIsRedOnlyWhileHurt() {
         // vanilla: red while hurt or dying, on the body and every layer (LivingEntityRenderer.getOverlayCoords)
         assertTrue(DeathFall.red(0, 5, false), "vanilla's death: red throughout");

@@ -58,7 +58,7 @@ public final class AutoCaster {
     public static final float ENERGY_RESERVE = 150f;
     private static final int SLOTS = 20;
 
-    private static final List<LivingEntity> SCRATCH = new ArrayList<>(), SCRATCH2 = new ArrayList<>();
+    private static final List<LivingEntity> SCRATCH = new ArrayList<>(), SCRATCH2 = new ArrayList<>(), SCRATCH3 = new ArrayList<>();
 
     // the last pass, for the stress line and the game tests
     public static long lastPassNanos = 0;
@@ -141,7 +141,8 @@ public final class AutoCaster {
                 return order(level, self, unit, ability, -1, self.blockPosition());
             }
             case SUMMON_WHEN_FREE -> {
-                if (!inCombat(self, unit) || ability.liveSummons(level, unit) >= ability.summonCap())
+                if (!(inCombat(self, unit) || friendInCombat(level, self, unit, ability.summonForFightsWithin()))
+                        || ability.liveSummons(level, unit) >= ability.summonCap())
                     return false;
                 return order(level, self, unit, ability, -1, self.blockPosition());
             }
@@ -249,6 +250,21 @@ public final class AutoCaster {
     }
 
     // ------------------------------------------------------------------ the rules' pieces
+
+    /** A friendly unit (its own side or an ally's) other than {@code self} within {@code r} blocks is in combat. */
+    static boolean friendInCombat(ServerLevel level, LivingEntity self, Unit unit, double r) {
+        if (r <= 0)
+            return false;
+        String owner = unit.getOwnerName();
+        for (LivingEntity le : UnitGrid.near(level, self.getX(), self.getZ(), r, SCRATCH3)) {
+            if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.distanceToSqr(self) > r * r
+                    || !com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAlliedOrOwned(u.getOwnerName(), owner))
+                continue;
+            if (inCombat(le, u))
+                return true;
+        }
+        return false;
+    }
 
     static boolean inCombat(LivingEntity self, Unit unit) {
         if (unit.hasLivingTarget())

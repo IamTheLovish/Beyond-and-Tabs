@@ -476,7 +476,7 @@ public interface AttackerUnit {
 
                 boolean isMeleeAttackedByFlyingOrGarrisoned = false;
                 if (lastDSEntity instanceof Unit unitDS &&
-                    (unitDS.isFlyingUnit() ||
+                    (unitDS.isFlyingOutOfMelee() ||
                         GarrisonableBuildingAddon.getGarrison(unitDS) != null ||
                         unitDS instanceof PhantomSummon ||
                         unitDS instanceof Vex) &&
