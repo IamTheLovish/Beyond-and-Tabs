@@ -138,7 +138,7 @@ public final class BuildingWork {
         return blockPath.endsWith("glass") ? FULL : NOT_GLASS;
     }
 
-    private static final Comparator<BlockPos> TOP_FIRST = Comparator.comparingInt(BlockPos::getY).reversed()
+    private static final Comparator<BlockPos> TOP_FIRST = Comparator.<BlockPos>comparingInt(BlockPos::getY).reversed()
         .thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ);
 
     /** Every open campfire on a lab is a stack: one with no structure block straight above it smokes into the open. */
