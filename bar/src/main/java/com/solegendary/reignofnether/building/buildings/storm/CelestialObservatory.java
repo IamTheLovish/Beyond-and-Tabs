@@ -69,7 +69,6 @@ public class CelestialObservatory extends ProductionBuilding {
         this.productions.add(ProductionItems.JADE_QILIN, Keybindings.abilitySlot9);   // T2 beast (design/big_units.md)
         this.productions.add(ProductionItems.JADE_MENDER, Keybindings.abilitySlot10);   // combat engineer (design/combat_engineers.md)
         // essence caster (design/essence_casters.md): the ten ability slots are taken, so the build menu's spare key
-        this.productions.add(ProductionItems.SPARK_SAGE, Keybindings.hotkey11);
     }
 
     /** Server and client: null if this lab's owner has Tier 2, else the message to show (the T2 items' produce gate). */
