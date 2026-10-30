@@ -34,6 +34,8 @@ const float ambientOcclusionLevel = 1.0;
 // realistic water (slice 4, lib/water.glsl): opacity from the depth of water under each pixel - clear over a shallow
 // bed, the palette's dark teal-blue over deep water. Off: slice 1's one fixed alpha, for an A/B
 #define WATER_REALISM 1 // [0 1]
+// the ripples on water: their steepness (0 = a still mirror, 1 = gentle, 2 = a breezy day)
+#define WATER_WAVES 1.0 // [0.0 0.5 1.0 1.5 2.0]
 
 // block ids from block.properties
 #define ID_FOLIAGE 10001.0

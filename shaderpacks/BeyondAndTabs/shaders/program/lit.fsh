@@ -18,6 +18,10 @@
 #endif
 #if defined LIT_WATER && WATER_REALISM == 1
 #define WATER_SURFACE
+#ifndef LIT_PBR
+// the GGX glint and the sky in a reflection, shared with the materials
+#include "/lib/pbr.glsl"
+#endif
 #include "/lib/water.glsl"
 #endif
 
@@ -30,6 +34,9 @@ uniform sampler2D specular;            // a texture has none)
 uniform sampler2D depthtex1;           // the depth of the opaque world only: the bed under the water
 uniform float viewWidth;
 uniform float viewHeight;
+uniform mat4 gbufferModelView;
+uniform vec3 cameraPosition;
+uniform float frameTimeCounter;
 #endif
 #ifdef LIT_ENTITY
 uniform vec4 entityColor;              // the hurt / creeper flash
@@ -138,7 +145,37 @@ void main() {
         float path = bedDepth >= 1.0 ? WATER_NO_BED : length(waterViewAt(uv, bedDepth) - viewPos);
         // the lit water colour (slice 1's, which the palette was tuned on) is what deep water settles to; the bed
         // already drawn under it shows through by what is left
-        alpha = waterOpacity(path);
+        float a = waterOpacity(path);
+
+        // the ripples, on the top surface only (a waterfall's side keeps its face): world xz, so they stay put as the
+        // camera pans
+        vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+        bool top = (mat3(gbufferModelViewInverse) * geomN).y > 0.5;
+        vec3 wn = top ? mat3(gbufferModelView) * waterNormal(playerPos.xz + cameraPosition.xz, frameTimeCounter)
+                      : geomN;
+        // the RTS camera is orthographic: one view direction for every pixel (as the materials' highlight)
+        vec3 v = orthoView() ? vec3(0.0, 0.0, 1.0) : normalize(-viewPos);
+        float fres = top ? waterFresnel(dot(wn, v)) : WATER_F0;
+        c *= 1.0 + RIPPLE_SHADE * clamp(dot(wn, l) - dot(geomN, l), -0.25, 0.25);
+
+        // what the surface reflects: the sky of this frame's light table (dimmed under a roof, as the materials' sky
+        // sheen) and the sun's glint, which a bank's shadow on the water puts out
+        vec3 reflected = skyInDirection(reflect(-v, wn), skyColour, sunColour) * (fres * levels.y);
+        Material wm;
+        wm.normal = wn;
+        wm.ao = 1.0;
+        wm.roughness = WATER_ROUGHNESS;
+        wm.f0 = vec3(WATER_F0);
+        wm.metal = 0.0;
+        wm.emission = 0.0;
+        reflected += min(sunSpecular(wm, v, l) * sunArriving(shadow, levels, sunColour), vec3(SPEC_MAX));
+        reflected *= clamp(max(glcolor.r, max(glcolor.g, glcolor.b)) / WATER_TINT_BRIGHTEST, 0.0, 1.0);
+
+        // Fresnel takes its share off what crosses the surface: the bed and the water body each show at (1 - F), the
+        // reflection on top. One blend over the bed, dst (1 - A) + src A, with A = 1 - (1 - a)(1 - F)
+        float A = 1.0 - (1.0 - a) * (1.0 - fres);
+        c = (c * (a * (1.0 - fres)) + reflected) / max(A, 1e-3);
+        alpha = A;
     }
 #endif
     gl_FragData[0] = vec4(c, alpha);

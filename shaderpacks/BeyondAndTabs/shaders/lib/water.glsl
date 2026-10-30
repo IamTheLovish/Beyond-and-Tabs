@@ -30,3 +30,45 @@ vec3 waterViewAt(vec2 uv, float depth) {
     vec4 v = gbufferProjectionInverse * vec4(vec3(uv, depth) * 2.0 - 1.0, 1.0);
     return v.xyz / v.w;
 }
+
+// ---- the surface: ripple normals, Fresnel, the sun's glint ----
+
+// water's reflectance straight on (n = 1.33): 2%. At the RTS camera's ~65 degrees down the view is ~25 degrees off the
+// surface's normal, where Fresnel is still ~2% - from above, water is mostly what lies under it, as in the reference;
+// toward a grazing first-person view it climbs to a mirror
+const float WATER_F0 = 0.02;
+// the glint's GGX roughness: small, so the sun breaks into sparkles on the ripples rather than one smeared sheet
+const float WATER_ROUGHNESS = 0.06;
+// how much the ripples shade the water body itself (the diffuse light's change with the tilt): a hint of relief on deep
+// water, where the 2% reflection alone would hide them
+const float RIPPLE_SHADE = 0.8;
+// the battlefield's water colour (#3A6A8C, its biome) has 0.55 as its brightest channel: a vertex colour darker than
+// that is the fog of war's tint, which dims the reflections as it dims the water (no light in the fog)
+const float WATER_TINT_BRIGHTEST = 0.55;
+
+// the slope (dh/dx, dh/dz) of one travelling wave a sin(k d.p - w t): steepness s = a k, so its slope is s d cos(..)
+vec2 waveSlope(vec2 p, float t, vec2 dir, float k, float steep) {
+    // deep-water dispersion w = sqrt(g k), slowed: a calm river, not a sea
+    return dir * (steep * cos(k * dot(dir, p) - 0.5 * sqrt(9.8 * k) * t));
+}
+
+// the surface's slope at world xz (blocks) and time t (seconds): four waves from 0.5 to 3 blocks long in different
+// directions, the shorter ones less steep, ~0.17 at most in all - gentle ripples that never look like a sea.
+// WATER_WAVES scales them (0 = a still mirror)
+vec2 waterSlope(vec2 p, float t) {
+    vec2 g = waveSlope(p, t, vec2(0.80, 0.60), 2.0, 0.050);
+    g += waveSlope(p, t, vec2(-0.48, 0.88), 3.7, 0.045);
+    g += waveSlope(p, t, vec2(0.96, -0.28), 6.8, 0.040);
+    g += waveSlope(p, t, vec2(-0.70, -0.71), 11.8, 0.030);
+    return g * WATER_WAVES;
+}
+
+// the rippled normal, world space (y up)
+vec3 waterNormal(vec2 p, float t) {
+    vec2 g = waterSlope(p, t);
+    return normalize(vec3(-g.x, 1.0, -g.y));
+}
+
+float waterFresnel(float cosTheta) {
+    return WATER_F0 + (1.0 - WATER_F0) * pow(1.0 - clamp(cosTheta, 0.0, 1.0), 5.0);
+}

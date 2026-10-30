@@ -22,3 +22,5 @@ option.WATER_REALISM=Realistic water
 option.WATER_REALISM.comment=Water clear over a shallow bed and darkening to deep teal-blue with depth. Off: one even tint, as before.
 value.WATER_REALISM.0=Off
 value.WATER_REALISM.1=On
+option.WATER_WAVES=Water ripples
+option.WATER_WAVES.comment=How steep the ripples on water are: they break up the sky's reflection and the sun's glint. 0 = still water.
