@@ -522,6 +522,69 @@ class EngineShedR11(unittest.TestCase):
         self.assertGreaterEqual(sum(seen.values()), 40, dict(seen))
         self.assertGreaterEqual(len(seen), 4, dict(seen))
 
+    # ---------------------------------------------------------------- round 2: the round-1 critic's diagnosis (fresh
+    # fable on before / after stills, Oct 29: RTS 6, close 5, towers 6), each fault as what the stills show
+    def test_r2_no_glow_block_seen_bare(self):
+        """Critic r1: "orange fire-looking blocks sit in the right wing roof" - the lit rooms' glow block (shroomlight)
+        seen straight, not through glass, in any still: none."""
+        bare = sorted({h[0] for st in G.STILLS for h in self.p.hits[st].values() if h[1] == "shroomlight"})
+        self.assertEqual(bare, [])
+
+    def test_r2_roof_tones_run_in_courses(self):
+        """Critic r1: "every roof plane has random 1- to 3-block patches ... use long continuous ridge / eave bands
+        instead of random speckle". In rts_close, each roof's cells whose tone class (dark < 0.27 <= mid < 0.40 <=
+        pale, pack luma) differs from the roof's main class all lie on one of its courses that is entirely that class
+        (a band along the eave or the ridge), never scattered."""
+        def cls(n):
+            v = GB.TARGETS.get(base(n), {}).get("luma")
+            return "?" if v is None else "dark" if v < 0.27 else "mid" if v < 0.40 else "pale"
+        roofs, comps = self.roof_components("rts_close")
+        bad = []
+        for comp in comps:
+            if len(comp) < 6:
+                continue
+            c = {q: cls(roofs[q]) for q in comp}
+            main = Counter(c.values()).most_common(1)[0][0]
+            for q, k in c.items():
+                if k == main:
+                    continue
+                course = [r for r in comp if r[1] == q[1]]
+                if any(c[r] != k for r in course):
+                    bad.append((q, k, roofs[q]))
+        self.assertEqual(sorted(bad)[:10], [], len(bad))
+
+    def test_r2_gate_interior_reads_lit(self):
+        """Critic r1: "the big vehicle door is still a flat black void". >= 25 % of the 34 still's pixels inside the
+        gate (x 1..9, between its jambs) show a light, glass with a light behind it, or a rail."""
+        inside = [h for h in self.p.hits["34"].values() if 1 <= h[0][0] <= 9 and 10 <= h[0][2] <= 14]
+        self.assertGreater(len(inside), 200)
+        good = [h for h in inside if light(h[1]) or h[1].endswith("rail") or h[1] == "shroomlight"
+                or (S.glyph(h[1]) == "g" and h[3] and light(h[3][1]))]
+        self.assertGreaterEqual(len(good) / len(inside), 0.25, (len(good), len(inside)))
+
+    def test_r2_tower_roof_is_no_chequer(self):
+        """Critic r1: "the corner tower's copper roof is a checkerboard of green and black blocks". The tower roof's top
+        cells on the plan (rts_close), by block id: no chequer (building_gates.alternations)."""
+        top = {}
+        for h in self.p.hits["rts_close"].values():
+            q = h[0]
+            if self.in_tower(q) and q[1] > self.m["cornice"] and q[1] >= top.get((q[0], q[2]), (-1,))[0]:
+                top[(q[0], q[2])] = (q[1], h[1])
+        bad = G.alternations({c: v[1] for c, v in top.items()})
+        self.assertEqual(sorted(bad), [])
+
+    def test_r2_stack_bands_are_not_dark_drums(self):
+        """Critic r1: the stacks' "alternating stone / black rings, like stacked drums". No dark-family (blue brick,
+        blackstone, deepslate) cell of a stack below its crown course is seen from above in rts or rts_close."""
+        bad = []
+        for st in ("rts", "rts_close"):
+            for h in self.p.hits[st].values():
+                for s in self.m["stacks"]:
+                    if h[2] == "up" and self.in_stack(h[0], s, 0) and h[0][1] < s["top"] - 1 and (
+                            "blackstone" in h[1] or "deepslate" in h[1]):
+                        bad.append((st, h[0], h[1]))
+        self.assertEqual(sorted(set(bad))[:8], [])
+
     def test_build_is_sound(self):
         """Lane and spawn column clear, no floating block, no pocket, nothing that pops off, no banned block."""
         L.check(self.rig, self.out)
