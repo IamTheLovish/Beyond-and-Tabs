@@ -1175,4 +1175,88 @@ public class SupportAiGameTests {
             }
         });
     }
+
+    /**
+     * Review r2: on Follow the medic holds behind her leader's fight, not anyone's. Her vindicator and a second one fight
+     * an enemy that can't die; once she holds behind them, her leader is moved 28 blocks back while the second fights
+     * on. She follows him out (main's follow did; r2's first hold kept her behind the other's fight until it ended).
+     */
+    @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 1200)
+    public static void healer_on_follow_leaves_a_fight_her_leader_left(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos p = longPad(helper, 296, 40);
+        List<Entity> made = new ArrayList<>();
+        String mine = owner(helper, "followleave"), theirs = mine + "_foe";
+        Mob leader = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 24.5, 7.5, made);
+        Mob other = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), mine, p, 24.5, 9.5, made);
+        Mob medic = spawn(level, EntityRegistrar.WITCH_UNIT.get(), mine, p, 20.5, 8.5, made);
+        Mob foe = spawn(level, EntityRegistrar.VINDICATOR_UNIT.get(), theirs, p, 34.5, 8.5, made);
+        if (leader == null || other == null || medic == null || foe == null) {
+            cleanUp(made, mine);
+            helper.fail("could not create the two vindicators, the medic and the enemy");
+            return;
+        }
+        foe.setNoAi(true);
+        AutocastState.setAll((Unit) foe, false);
+        AutocastState.setAll((Unit) medic, false);
+        foe.addEffect(new MobEffectInstance(MobEffectRegistrar.INVINCIBLE.get(), 2400));
+        int[] start = { -1 }, engagedAt = { -1 }, heldFor = { 0 }, leftAt = { -1 }, rejoinedAt = { -1 };
+        double[] otherGap = { 0 };
+        boolean[] done = { false };
+        ArenaReady.whenTicking(helper, made, 150, tick -> {
+            start[0] = tick;
+            order(level, mine, UnitAction.FOLLOW, leader.getId(), leader.blockPosition(), medic);
+            order(level, mine, UnitAction.ATTACK, foe.getId(), foe.blockPosition(), leader, other);
+        });
+        helper.onEachTick(() -> {
+            if (start[0] < 0 || done[0])
+                return;
+            int t = (int) (helper.getTick() - start[0]);
+            double dFront = Math.min(flat(leader, foe), flat(other, foe));
+            if (engagedAt[0] < 0 && dFront <= 2.5)
+                engagedAt[0] = t;
+            if (leftAt[0] < 0) {
+                // she holds behind the fight: 20 looks in a row her standoff behind it
+                if (engagedAt[0] >= 0 && flat(medic, foe) >= dFront + 4.5)
+                    heldFor[0]++;
+                else
+                    heldFor[0] = 0;
+                if (heldFor[0] >= 20 || (engagedAt[0] >= 0 && t >= engagedAt[0] + 200)) {
+                    leftAt[0] = t;
+                    order(level, mine, UnitAction.MOVE, -1, p.offset(4, -1, 8), leader);
+                }
+            } else if (rejoinedAt[0] < 0 && t >= leftAt[0] + 40 && flat(medic, leader) <= 6.0) {
+                rejoinedAt[0] = t;
+                otherGap[0] = flat(other, foe);
+            }
+            if ((leftAt[0] < 0 || (rejoinedAt[0] < 0 && t < leftAt[0] + 300)) && t < 900)
+                return;
+            done[0] = true;
+            try {
+                String where = "after " + t + " ticks: fight from tick " + engagedAt[0] + ", held behind it " + heldFor[0]
+                    + " looks, leader moved off at tick " + leftAt[0] + ", medic back by him at tick " + rejoinedAt[0]
+                    + ", medic now " + f(flat(medic, leader)) + " from him (leader at x " + f(leader.getX() - p.getX())
+                    + ", medic at x " + f(medic.getX() - p.getX()) + "), the other vindicator " + f(rejoinedAt[0] >= 0 ? otherGap[0]
+                    : flat(other, foe)) + " from the enemy, following " + (((Unit) medic).getFollowTarget() == leader);
+                ReignOfNether.LOGGER.info("[SupportAI gametest] follow leaves: {}", where);
+                List<String> problems = new ArrayList<>();
+                if (engagedAt[0] < 0)
+                    problems.add("the vindicators never reached the enemy");
+                else if (leftAt[0] < 0)
+                    problems.add("the leader was never moved off");
+                else if (rejoinedAt[0] < 0)
+                    problems.add("the medic did not follow her leader out of the fight within 300 ticks");
+                else if (otherGap[0] > 3.0)
+                    problems.add("the other vindicator was no longer fighting (" + f(otherGap[0]) + " from the enemy)");
+                if (((Unit) medic).getFollowTarget() != leader)
+                    problems.add("the medic is no longer on Follow");
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems) + " (" + where + ")");
+            } finally {
+                cleanUp(made, mine);
+            }
+        });
+    }
 }
