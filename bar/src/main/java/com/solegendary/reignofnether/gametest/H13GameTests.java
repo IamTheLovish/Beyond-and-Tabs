@@ -68,8 +68,13 @@ public class H13GameTests {
         return m;
     }
 
-    /** A Shaman owned by {@code owner} with every ability at rank 1, ready to cast. */
+    /**
+     * A Shaman owned by {@code owner} with every ability at rank 1, ready to cast - by the test alone: its owner's Hero
+     * AI is switched off, since with PR 418 the AI casts the Shaman's spells at the dummies by itself and a test that
+     * checks who its own cast hurt must be the only caster.
+     */
     static FactionHero readyShaman(GameTestHelper helper, String owner, int x, int z) {
+        com.solegendary.reignofnether.hero.HeroBot.setAiEnabled(owner, false);
         Mob m = HeroGameTests.spawnHero(helper, HeroKits.ASH_SHAMAN, owner, x, z);
         if (!(m instanceof FactionHero fh))
             return null;
