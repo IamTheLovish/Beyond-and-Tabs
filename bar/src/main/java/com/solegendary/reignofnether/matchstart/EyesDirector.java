@@ -974,14 +974,55 @@ public final class EyesDirector {
         structurePhase = phase;
         phaseNanos = System.nanoTime();
         phaseFrames0 = frames;
+        skyFrames = 0;
     }
 
     private static int frames = 0, phaseFrames0 = 0;
 
+    // The day time each DRAWN frame saw, which is what the shader pack saw: Iris reads worldTime and the sun angle from
+    // the client level when it draws. A still is grabbed in the client tick (shot), and Minecraft runs up to 10 ticks
+    // before each frame, so Screenshot.grab copies the frame drawn BEFORE that tick batch - on a ~2 fps shader client
+    // ~10 ticks (1000 day-time ticks of the client's easing) older than the getDayTime() the wait had just checked.
+    // Run 41115229441: all three dusk stills' TIME_STAMP read worldTime ~12000-12090 (R 128/255) and the sun ~10 deg up,
+    // while phase 5 had seen 13000 +-150 and shot on the first tick it got there.
+    private static final int SKY_FRAMES = 3;   // drawn frames in a row at the still's time before it is taken
+    private static final long SKY_TOLERANCE = 150;
+    private static long skyWant = -1, lastFrameDayTime = -1;
+    private static int skyFrames = 0;
+
     @SubscribeEvent
     public static void onRenderTick(TickEvent.RenderTickEvent evt) {
-        if (ENABLED && evt.phase == TickEvent.Phase.END)
-            frames++;
+        if (!ENABLED || evt.phase != TickEvent.Phase.END)
+            return;
+        frames++;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null)
+            return;
+        lastFrameDayTime = mc.level.getDayTime() % 24000;
+        if (skyWant >= 0 && Math.abs(lastFrameDayTime - skyWant) < SKY_TOLERANCE)
+            skyFrames++;
+        else
+            skyFrames = 0;
+    }
+
+    /**
+     * True once the last SKY_FRAMES drawn frames (the grabbed one among them) were all drawn at `want`, and the client
+     * is still there. Call it every tick of the wait; a new `want` starts the count again.
+     */
+    private static boolean skyHeld(Minecraft mc, long want) {
+        if (skyWant != want) {
+            skyWant = want;
+            skyFrames = 0;
+        }
+        long t = mc.level.getDayTime() % 24000;
+        return skyFrames >= SKY_FRAMES && Math.abs(t - want) < SKY_TOLERANCE;
+    }
+
+    /** The timeout's warning: what the last drawn frame and the client level show, against what the still wants. */
+    private static void warnSky(Minecraft mc, String still, long want, double seconds) {
+        ReignOfNether.LOGGER.warn("[Eyes] {}: the sky is not at {} after {} s - the last drawn frame saw {}, the client "
+            + "level is at {}, {} frames in a row at it", still, want, (int) seconds, lastFrameDayTime,
+            mc.level.getDayTime() % 24000, skyFrames);
     }
 
     /**
@@ -1116,6 +1157,15 @@ public final class EyesDirector {
                 // ground samplers, run 40703946521, Oct 28)
                 if (!structureSettled(mc, 5))
                     return;
+                // and once the client's sky has reached noon: the server jumps to 6000 when the site is set up, but the
+                // client eases its sky there (ClientLevelMixin.tickTime) - 2 of ~7 shader-lane runs shot a low sun with
+                // long shadows and a near-black field (41012329032, 41015896238, Oct 30). Same wait as the dusk still.
+                // ...in the drawn frames, not only in getDayTime(): see skyHeld
+                boolean atNoon = skyHeld(mc, 6000);
+                if (!atNoon && phaseSeconds() < 40)
+                    return;
+                if (!atNoon)
+                    warnSky(mc, label + "_rts", 6000, 40);
                 logAim(mc, label + "_rts");
                 shot(mc, label + "_rts");
                 benchStarted = false;
@@ -1180,12 +1230,14 @@ public final class EyesDirector {
             }
             case 5 -> {   // the client eases its sky toward the server's time (ClientLevelMixin.tickTime): wait for it
                 standThreeQuarter(mc);
-                long t = mc.level.getDayTime() % 24000;
-                boolean there = Math.abs(t - 13000) < 150;
+                // ...and in the frames it draws: shooting on the first tick getDayTime() reached 13000 grabbed a frame
+                // drawn ~10 ticks before, at ~12000 with the sun 10 degrees up (run 41115229441, skyHeld)
+                boolean there = skyHeld(mc, 13000);
                 if (!(there && phaseSeconds() > 3) && phaseSeconds() < 40)
                     return;
                 if (!there)
-                    ReignOfNether.LOGGER.warn("[Eyes] {}_dusk: the client sky is at {} not 13000 after 40 s", label, t);
+                    warnSky(mc, label + "_dusk", 13000, 40);
+                ReignOfNether.LOGGER.info("[Eyes] {}_dusk: the last drawn frame saw day time {}", label, lastFrameDayTime);
                 shot(mc, label + "_dusk");
                 // then the golden-hour RTS still: the low afternoon sun of lovish's villa reference (Oct 28)
                 var server = mc.getSingleplayerServer();
@@ -1199,14 +1251,12 @@ public final class EyesDirector {
                 nextPhase(11);
             }
             case 11 -> {   // 15_<name>_golden_rts: the RTS still's framing at GOLDEN_TIME, once the client sky is there
-                long t = mc.level.getDayTime() % 24000;
-                boolean there = Math.abs(t - EyesPhotoBooth.GOLDEN_TIME) < 150;
+                boolean there = skyHeld(mc, EyesPhotoBooth.GOLDEN_TIME);   // in the drawn frames (skyHeld)
                 boolean settled = structureSettled(mc, 5);   // called every tick: it re-aims for the first 3.5 s
                 if (!(there && settled) && phaseSeconds() < 40)
                     return;
                 if (!there)
-                    ReignOfNether.LOGGER.warn("[Eyes] {}_golden_rts: the client sky is at {} not {} after 40 s", label, t,
-                        EyesPhotoBooth.GOLDEN_TIME);
+                    warnSky(mc, label + "_golden_rts", EyesPhotoBooth.GOLDEN_TIME, 40);
                 mc.options.hideGui = true;
                 logAim(mc, label + "_golden_rts");
                 shot(mc, label + "_golden_rts");
@@ -1220,12 +1270,11 @@ public final class EyesDirector {
             }
             case 7 -> {   // an extra day time: the RTS view once the client's sky is there
                 long want = EXTRA_TIMES.get(timeIndex);
-                long t = mc.level.getDayTime() % 24000;
-                boolean there = Math.abs(t - want) < 150;
+                boolean there = skyHeld(mc, want);   // in the drawn frames (skyHeld)
                 if (!(there && phaseSeconds() > 4) && phaseSeconds() < 40)
                     return;
                 if (!there)
-                    ReignOfNether.LOGGER.warn("[Eyes] {}_rts_t{}: the client sky is at {} after 40 s", label, want, t);
+                    warnSky(mc, label + "_rts_t" + want, want, 40);
                 shot(mc, label + "_rts_t" + want);
                 if (OrthoviewClientEvents.isEnabled())
                     OrthoviewClientEvents.toggleEnable();
@@ -1245,12 +1294,11 @@ public final class EyesDirector {
                 startShadeArmy(mc);
             }
             case 9 -> {   // the shade army: noon's sky back on the client and the units standing
-                long t = mc.level.getDayTime() % 24000;
-                boolean there = Math.abs(t - SHADE_ARMY_TIME) < 150;
+                boolean there = skyHeld(mc, SHADE_ARMY_TIME);   // in the drawn frames (skyHeld)
                 if (!(there && phaseSeconds() > 5) && phaseSeconds() < 40)
                     return;
                 if (!there)
-                    ReignOfNether.LOGGER.warn("[Eyes] {}_rts_army: the client sky is at {} after 40 s", label, t);
+                    warnSky(mc, label + "_rts_army", SHADE_ARMY_TIME, 40);
                 shot(mc, label + "_rts_army");
                 runCommand(mc, "kill @e[tag=" + SHADE_ARMY_TAG + "]");
                 if (MIST_STILL) {
@@ -1282,10 +1330,11 @@ public final class EyesDirector {
                 // ~8 s of drawn frames at dawn so the wisps have spawned, faded in and drifted; a slow (shader) client
                 // spawns slower - give it up to 20 s for most of the r2 cap (120 at zoom 30)
                 boolean gathered = mistSeconds >= 8 && frames - mistSinceFrames >= 8 && (alive >= 80 || mistSeconds >= 20);
-                if (!(there && settled && gathered) && phaseSeconds() < 60)
+                boolean drawn = skyHeld(mc, dawn);   // and the drawn frames at dawn too (skyHeld)
+                if (!(there && drawn && settled && gathered) && phaseSeconds() < 60)
                     return;
-                if (!there)
-                    ReignOfNether.LOGGER.warn("[Eyes] {}_mist_rts: the client sky is at {} not {} after 60 s", label, t, dawn);
+                if (!drawn)
+                    warnSky(mc, label + "_mist_rts", dawn, 60);
                 mc.options.hideGui = true;
                 logAim(mc, label + "_mist_rts");
                 ReignOfNether.LOGGER.info("[Eyes] {}_mist_rts: {} mist wisps alive, {} s at dawn, density {}, mist {}",
