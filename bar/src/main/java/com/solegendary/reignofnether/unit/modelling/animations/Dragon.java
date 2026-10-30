@@ -100,9 +100,12 @@ public final class Dragon {
         public float climbSpeed = 0.06f;
         /** How much shorter the beat is in a full climb (a share of the beat), and the head's nod per unit of braking
          *  (degrees per b/t^2) and its cap - lovish, Oct 30: "refining the animation for the dragon". */
-        public float climbBeat = 0.32f, brakeNodPer = 600f, brakeNodMax = 10f;
+        public float climbBeat = 0.32f, brakeNodPer = 1000f, brakeNodMax = 10f;
         /** The drivers' speed smoothing and braking smoothing (ticks), and the forward speed (b/t) of a full bank. */
         public float speedTau = 8f, brakeTau = 6f, bankFullSpeed = 0.12f;
+        /** A brake counts once the smoothed braking has stayed over brakeOn (b/t^2) for brakeHold ticks: a stutter's
+         *  braking flips sign within a tick or two, a real brake holds (review r1 of #440); and the nod's dead band. */
+        public float brakeOn = 0.001f, brakeHold = 4f, brakeNodFrom = 0.003f;
         /** The take-off: how many ticks after it appears a dragon is still taking off. */
         public float takeoffTicks = 60f;
     }
@@ -180,7 +183,8 @@ public final class Dragon {
      *  climb, the beat phase (beats), flare, take-off, the smoothed speed, the smoothed braking, perched]. */
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
-        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19, ST_LEN = 20;
+        ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19,
+        ST_BRAKING = 20, ST_LEN = 21;
     /** The glide weight and the hover weight (state slots 0 and 5). */
     public static final int ST_GLIDE = 0, ST_HOVER = 5;
 
@@ -297,19 +301,13 @@ public final class Dragon {
         return (brake > 0.002f && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
     }
 
-    /** A fresh per-entity state (see STATE). */
     /**
      * The beat's length (ticks): quicker hovering and taking off, and quicker climbing - a dragon labouring up over a
-     * keep beats up to Params.climbBeat faster at a full climb (a dive does not: it stoops).
+     * keep beats up to Params.climbBeat faster at a full climb (a dive does not).
      */
     public static float beatTicks(Params P, float idle, float takeoff, float climb) {
         return P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff)
             * (1f - P.climbBeat * Math.max(0f, climb));
-    }
-
-    /** The stoop, 0..1, for a climb -1..1: the steeper the dive, the more the wings fold back (none above level). */
-    public static float stoop(float climb) {
-        return Life.smooth((-climb - 0.15f) / 0.7f);
     }
 
     /**
@@ -317,7 +315,8 @@ public final class Dragon {
      * on a little and the head dips, up to Params.brakeNodMax; none in steady flight or speeding up.
      */
     public static float brakeNod(Params P, float brake) {
-        return Mth.clamp(brake * P.brakeNodPer, 0f, P.brakeNodMax);
+        // a dead band: the braking noise of a stuttering cruise (up to ~0.003) never bobs the head
+        return Mth.clamp((brake - P.brakeNodFrom) * P.brakeNodPer, 0f, P.brakeNodMax);
     }
 
     /**
@@ -338,7 +337,9 @@ public final class Dragon {
         st[ST_GLIDE] += (wantGlide - st[ST_GLIDE]) * Math.min(1f, dt / (wantGlide > st[ST_GLIDE] ? 12f : 25f));
         float wantHover = speed < 0.02f ? 1f : 0f;
         // the flare: braking into a hover - the wings are air brakes while it slows, and until the hover has come in
-        float wantFlare = wantsFlare(speed, st[ST_BRAKE], st[ST_HOVER]) ? 1f : 0f;
+        st[ST_BRAKING] = st[ST_BRAKE] > P.brakeOn ? st[ST_BRAKING] + dt : 0f;
+        boolean braking = st[ST_BRAKING] >= P.brakeHold;
+        float wantFlare = (braking && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && st[ST_HOVER] < 0.8f) ? 1f : 0f;
         st[ST_FLARE] += (wantFlare - st[ST_FLARE]) * Math.min(1f, dt / (wantFlare > st[ST_FLARE] ? 5f : 14f));
         st[ST_HOVER] += (wantHover - st[ST_HOVER]) * Math.min(1f, dt / 25f);
         // the climb / dive, -1..1 (r12): from the client's own vertical speed, smoothed
@@ -346,13 +347,15 @@ public final class Dragon {
         st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
     }
 
-    /** STUB (red proof): drivers plus the take-off weight as animate computes it today (the raw speed and climb). */
+    /** As above, plus the take-off weight - from the smoothed speed and climb too (a stalled tick of a dragon that
+     *  just came into view read as "standing still" and played the take-off). */
     public static void drivers(float[] st, Params P, float speed, float vy, float dt, int tickCount) {
         drivers(st, P, speed, vy, dt);
-        float wantTakeoff = wantsTakeoff(P, tickCount, speed, Mth.clamp(vy / P.climbSpeed, -1f, 1f)) ? 1f : 0f;
+        float wantTakeoff = wantsTakeoff(P, tickCount, st[ST_SPEED], st[ST_CLIMB]) ? 1f : 0f;
         st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
     }
 
+    /** A fresh per-entity state (see STATE). */
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
         st[2] = age;
@@ -444,12 +447,9 @@ public final class Dragon {
         double dx = e.getX() - e.xo, dz = e.getZ() - e.zo;
         float speed = (float) Math.sqrt(dx * dx + dz * dz);
         float vy = (float) (e.getY() - e.yo);
-        drivers(st, P, speed, vy, dt);
+        drivers(st, P, speed, vy, dt, e.tickCount);
         float glide = st[ST_GLIDE], idle = st[ST_HOVER], climb = st[ST_CLIMB];
-        float wantClimb = Mth.clamp(vy / P.climbSpeed, -1f, 1f);
         // the take-off: just appeared, or climbing hard from (nearly) a standstill
-        float wantTakeoff = wantsTakeoff(P, e.tickCount, speed, wantClimb) ? 1f : 0f;
-        st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
         float takeoff = st[ST_TAKEOFF];
         // perched: down on the ground (the Bone Dragon's Dive) - it stands, wings folded, instead of hover-beating
         float wantPerch = e.onGround() && e.tickCount > 5 && e.deathTime == 0 ? 1f : 0f;
@@ -497,14 +497,13 @@ public final class Dragon {
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
         float off = Life.offset(id);
         float T = beatTicks(P, idle, takeoff, climb);
-        float stoop = stoop(climb) * (1f - perch);
         // the glide weight: the cruise rhythm (only cruising), and the speed's own glide with a corrective beat
         float cruise = (1f - idle) * (1f - Math.max(0f, climb)) * (1f - takeoff) * (1f - flare);
         float corrective = Life.bump(age, id, 6, 160f, 44f);
         float gs = glide * (1f - corrective);
         float gw0 = Math.max(rhythm(P, ph) * cruise, gs);
         float amp = (1f + 0.3f * Math.max(0f, climb)) * (1f + 0.25f * takeoff) * (1f - 0.15f * idle) * (1f - 0.35f * flare)
-            * (1f - 0.85f * perch) * (1f - 0.9f * stoop);
+            * (1f - 0.85f * perch);
         float s0 = shape(P, ph);
         float bankF = Math.min(1f, Math.abs(bank) / P.bankMax);
         float rip = (age + off) / 26f * Mth.TWO_PI;                 // the glide's slow billow
@@ -551,13 +550,6 @@ public final class Dragon {
             // the twist about the wing's long axis: pronation on the power stroke, supination on the recovery
             float foreX = -15f * (sA - sF) * a * (1f - gF);
             float handX = -20f * (sF - sH) * a * (1f - gH);
-            // the stoop: the wings fold back along the body and a little down, the beat stilled (amp above)
-            armY = Mth.lerp(stoop, armY, -38f);
-            armZ = Mth.lerp(stoop, armZ, -8f);
-            foreY = Mth.lerp(stoop, foreY, -42f);
-            foreZ = Mth.lerp(stoop, foreZ, -6f);
-            handY = Mth.lerp(stoop, handY, -30f);
-            handZ = Mth.lerp(stoop, handZ, -4f);
             dsl(r.arm[i], 0, s * armY, s * armZ + bank * 0.15f);
             dsl(r.fore[i], foreX, s * foreY, s * foreZ);
             dsl(r.hand[i], handX, s * handY, s * handZ);

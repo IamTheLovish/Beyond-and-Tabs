@@ -179,7 +179,6 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
 
     T = P["beatTicks"] * (1 + (P["hoverRate"] - 1) * idle) * (1 + (P["takeoffRate"] - 1) * takeoff) \
         * (1 - P["climbBeat"] * max(0.0, climb))
-    stoop = smooth((-climb - 0.15) / 0.7) * (1 - perch)   # Dragon.stoop: a dive folds the wings back
     lag = lambda ticks: ph - ticks / T                         # the beat phase `ticks` ago
     # the glide weight: the cruise rhythm (only cruising - a hover, a climb, a take-off and a flare beat on), and the
     # speed's own glide with a corrective beat every ~8 s
@@ -191,8 +190,7 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         return max(rhythm(p) * cruise, gs)
 
     gw0 = gw_at(ph)
-    amp = (1 + 0.3 * max(0.0, climb)) * (1 + 0.25 * takeoff) * (1 - 0.15 * idle) * (1 - 0.35 * flare) * (1 - 0.85 * perch) \
-        * (1 - 0.9 * stoop)
+    amp = (1 + 0.3 * max(0.0, climb)) * (1 + 0.25 * takeoff) * (1 - 0.15 * idle) * (1 - 0.35 * flare) * (1 - 0.85 * perch)
     s0 = shape(ph)
     bankF = min(1.0, abs(bank) / P["bankMax"])
     ripple = lambda j, k: math.sin((age + offset(ID)) / 26.0 * math.tau - 0.9 * j - 0.7 * k)   # the glide's slow billow
@@ -236,10 +234,6 @@ def pose(ph, age, glide=0.0, idle=0.0, bank=0.0, tailA=None, tailB=None, climb=0
         # the twist (pronation on the power stroke, supination on the recovery)
         foreX = -15 * (sA - sF) * a * (1 - gF)
         handX = -20 * (sF - sH) * a * (1 - gH)
-        # the stoop (Dragon.pose): the wings fold back along the body and a little down
-        armY, armZ = armY + (-38 - armY) * stoop, armZ + (-8 - armZ) * stoop
-        foreY, foreZ = foreY + (-42 - foreY) * stoop, foreZ + (-6 - foreZ) * stoop
-        handY, handZ = handY + (-30 - handY) * stoop, handZ + (-4 - handZ) * stoop
         dsl("wing_%s_arm" % side, 0, s * armY, s * armZ + bank * 0.15)
         dsl("wing_%s_fore" % side, foreX, s * foreY, s * foreZ)
         dsl("wing_%s_hand" % side, handX, s * handY, s * handZ)

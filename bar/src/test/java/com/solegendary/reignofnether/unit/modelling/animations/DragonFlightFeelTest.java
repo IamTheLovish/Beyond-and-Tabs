@@ -11,8 +11,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <ul>
  * <li>a climb beat at the cruise's slow rate (it only beat a little wider): a dragon labouring up over a keep should
  *     beat FASTER - {@link Dragon#beatTicks};</li>
- * <li>a dive counted as cruising (its bursts and glides, wings out): a stoop folds the wings back -
- *     {@link Dragon#stoop};</li>
  * <li>braking moved only the wings (the flare): the long neck should carry on a little and nod down as the body
  *     slows, then settle - {@link Dragon#brakeNod}.</li>
  * </ul>
@@ -28,16 +26,8 @@ class DragonFlightFeelTest {
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 1f) <= 0.75f * level, "a full climb beats at least a third faster");
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 0.5f) < level, "half a climb beats faster too");
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 0.5f) > Dragon.beatTicks(P, 0f, 0f, 1f), "and less than a full climb");
-        assertEquals(level, Dragon.beatTicks(P, 0f, 0f, -1f), 1e-3f, "a dive does not beat faster (it stoops)");
+        assertEquals(level, Dragon.beatTicks(P, 0f, 0f, -1f), 1e-3f, "a dive does not beat faster");
         assertTrue(Dragon.beatTicks(P, 0f, 0f, 1f) >= 0.6f * level, "but not frantically: at most 40% quicker");
-    }
-
-    @Test
-    void aDiveStoopsWithItsWingsSweptBack() {
-        assertEquals(0f, Dragon.stoop(0f), 1e-6f, "level flight: no stoop");
-        assertEquals(0f, Dragon.stoop(0.8f), 1e-6f, "a climb: no stoop");
-        assertTrue(Dragon.stoop(-1f) >= 0.9f, "a full dive is a stoop");
-        assertTrue(Dragon.stoop(-0.3f) < Dragon.stoop(-0.7f), "the steeper the dive, the more it folds");
     }
 
     @Test
