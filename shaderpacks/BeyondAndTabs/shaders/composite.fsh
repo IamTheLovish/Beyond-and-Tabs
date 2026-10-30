@@ -189,18 +189,22 @@ float contactOcclusion(vec2 uv, float depth) {
         uvPerBlock /= max(-p.z, 0.05);
     float turn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     float occ = 0.0;
-    for (int i = 0; i < 8; i++) {
-        float a = (float(i) + turn) * 0.78539816;
-        float r = CONTACT_RADIUS * (i < 4 ? 0.5 : 1.0);
+    if (texture2D(colortex1, uv).b > 0.5)
+        return 1.0;                    // a plant: no crease on it
+    for (int i = 0; i < 9; i++) {
+        float a = (float(i) + turn) * 2.39996323;
+        // three radii (light pass 10): the crease fades over its width instead of ending in a line
+        float r = CONTACT_RADIUS * (float(i / 3) + 1.0) / 3.0;
         vec2 suv = uv + vec2(cos(a), sin(a)) * (r * uvPerBlock);
         float sd = texture2D(depthtex1, suv).r;
-        if (sd >= 1.0)
+        // the sky, and plants (they ringed every tuft with a crease, light pass 10), occlude nothing here
+        if (sd >= 1.0 || texture2D(colortex1, suv).b > 0.5)
             continue;
         vec3 v = viewPosAt(suv, sd) - p;
         float h = dot(v, n);
         occ += max(h * inversesqrt(dot(v, v) + 1e-6) - 0.15, 0.0) * (1.0 - clamp((h - 3.0 * r) / r, 0.0, 1.0));
     }
-    return max(1.0 - CONTACT_GAIN * occ / 8.0, CONTACT_FLOOR);
+    return max(1.0 - CONTACT_GAIN * occ / 9.0, CONTACT_FLOOR);
 }
 
 void main() {

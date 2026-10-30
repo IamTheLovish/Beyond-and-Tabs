@@ -42,7 +42,8 @@ const vec3 SKY_HIGH = SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND / S
 const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 // light pass 9 (critic: the low sun's shadows ink-black, the benchmark's hazy gold): warmer and a little more of it
 // ((0.74, 0.70, 0.80) x 0.17 before). Model at t11800: a cast shadow ~0.13 -> ~0.16, the ratio ~2.9 -> ~2.4:1
-const vec3 SKY_LOW = vec3(0.82, 0.74, 0.70) * 0.24;
+// Light pass 10: olive-gold and more of it ((0.82, 0.74, 0.70) x 0.24 before): t11800's shadow / lit ~0.6 on screen
+const vec3 SKY_LOW = vec3(0.95, 0.85, 0.55) * 0.34;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -150,7 +151,8 @@ float gShadeGround = 0.0;
 
 vec3 shadeTint(float sunLit, float upness) {
     vec3 full = mix(SHADE_TINT_WALL, SHADE_TINT, clamp(upness, 0.0, 1.0) * gShadeGround);
-    vec3 tint = max(mix(vec3(1.0), full, 1.0 + SHADE_TINT_LOW_BOOST * lowSun()), vec3(0.0));
+    float strength = (1.0 + SHADE_TINT_LOW_BOOST * lowSun()) * (1.0 - SHADE_TINT_LOW_CUT * lowSun());
+    vec3 tint = max(mix(vec3(1.0), full, strength), vec3(0.0));
     return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
 }
 

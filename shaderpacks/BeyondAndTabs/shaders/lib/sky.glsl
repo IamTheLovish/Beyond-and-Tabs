@@ -50,9 +50,10 @@ vec3 skyGradient(vec3 dir) {
     vec3 dh = dir - up * u;
     vec3 sh = sun - up * dot(sun, up);
     float toward = dot(dh, dh) > 1e-6 && dot(sh, sh) > 1e-6 ? dot(normalize(dh), normalize(sh)) * 0.5 + 0.5 : 0.5;
-    vec3 zenith = mix(toLinear(SKY_ZENITH_DAY), toLinear(SKY_ZENITH_DUSK), skySunset() * (1.0 - 0.5 * skyGolden()));
+    vec3 zenith = mix(toLinear(SKY_ZENITH_DAY), toLinear(SKY_ZENITH_DUSK), skySunset() * (1.0 - 0.8 * skyGolden()));
     // the warm band climbs higher on the sun's side
-    float span = SKY_GRADIENT_SPAN * (1.0 + 0.4 * skySunset() * toward);
+    float span = SKY_GRADIENT_SPAN * (1.0 + 0.4 * skySunset() * toward)
+        * mix(1.0, SKY_DUSK_SPAN, skySunset() * (1.0 - skyGolden()));
     // one soft ramp (light pass 8: pass 7's 0.10 span read as a hard two-band sky): a square root, so the 3/4 frame's
     // top edge (~5 degrees up) is already ~0.4 of the way to the zenith
     vec3 c = mix(skyHorizon(toward), zenith, sqrt(clamp(u / span, 0.0, 1.0)));

@@ -58,7 +58,9 @@ class ShaderPack(unittest.TestCase):
     def test_the_loader_reads_our_settings(self):
         # the sun tilt lovish picked (Oct 29) and the shadow map's size, where every program sees them
         src = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
-        self.assertIn("const float sunPathRotation = 30.0;", src)
+        # Retired pin (light pass 10): "sunPathRotation = 30.0" - the tilt lovish picked (30 degrees) is kept, its sign
+        # flipped: at +30 the sun stood in the north at day time 5000, turned from both faces the RTS camera sees
+        self.assertIn("const float sunPathRotation = -30.0;", src)
         # Retired pin (light pass 7): "shadowMapResolution = 2048" - at 2048 the RTS fit drew ~2 px texels, so edges
         # stair-stepped or blurred into wavy bands (critic: the pad's shadow scalloped); 4096 by default now
         self.assertIn("const int shadowMapResolution = 4096;", src)
@@ -135,7 +137,8 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 5): "1.2 <= LIGHT_OPEN_GROUND <= 1.4" - it was set for a lawn ~0.42-0.43 on screen, but
         # with the S-curve, the meadow and pass 4 on top the pass-4 noon stills measured the lit lawn at 0.45-0.47. The
         # target is the lawn, so the band follows it: 1.05-1.20 (1.12 takes 0.46 back to ~0.42 through the curve)
-        self.assertTrue(1.05 <= total <= 1.20, total)
+        # light pass 10: up to 1.30 (the 5000 lawn read 0.40 at 1.20; 1.26 now)
+        self.assertTrue(1.05 <= total <= 1.30, total)
         self.assertIn("SUN_TINT_HIGH\n    * ((1.0 - SHADOW_FILL_SHARE) * LIGHT_OPEN_GROUND", light)
         self.assertIn("SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND", light)
         # the shadow light is cooler than the lit light (the sky's tint against the sun's): blue over green
@@ -155,8 +158,10 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 9): "0.43-0.55 of a sunlit top" - with the fill's direction (pass 5) a wall turned
         # from the sun took ~0.36 of it and the pedestals' shaded sides read black (0.28, top / side 3.3 against the
         # benchmark's 1.9). Now 0.55-0.65 before the direction, ~0.5 after it for a wall turned away
-        self.assertTrue(0.55 <= wall <= 0.65, wall)
-        self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.45)
+        # Retired again (light pass 10): "0.55-0.65" - with the sun now on one visible face, pass 9's bounce had lifted
+        # every side alike (quartz's sides 0.59 / 0.60, paper cut-outs). 0.48-0.55 now, the direction carrying the rest
+        self.assertTrue(0.48 <= wall <= 0.55, wall)
+        self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.33)
         self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
 
     def test_shadows_are_soft_and_never_self_shadow(self):
@@ -310,8 +315,10 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.52 <= sum(a * b for a, b in zip(deep, luma)) <= 0.62)
         hz, sz, _ = colorsys.rgb_to_hsv(*zd)
         # light pass 9: a mauve zenith instead (target <= (130, 117, 125) on screen)
-        self.assertTrue(290 <= hz * 360 <= 335 and 0.05 <= sz <= 0.2, (hz * 360, sz))
-        self.assertTrue(0.38 <= sum(a * b for a, b in zip(zd, luma)) <= 0.48)
+        # light pass 10: darker still, ~0.28 (the zenith >= 0.25 under the horizon at dusk)
+        self.assertTrue(275 <= hz * 360 <= 335 and 0.05 <= sz <= 0.2, (hz * 360, sz))
+        self.assertTrue(0.24 <= sum(a * b for a, b in zip(zd, luma)) <= 0.34)
+        self.assertTrue(0.2 <= _const("SKY_DUSK_SPAN") <= 0.5)
         hd_away = vec("SKY_HORIZON_DUSK")
         self.assertLess(sum(a * b for a, b in zip(hd_away, luma)), 0.5)
         self.assertGreaterEqual(sum(a * b for a, b in zip(deep, luma)) - sum(a * b for a, b in zip(zd, luma)), 0.12)
@@ -505,6 +512,14 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("gShadeGround = groundMaterial;", _read("program", "lit.fsh"))
         self.assertIn("sunColour *= smoothstep(MOON_FADE_LO, MOON_FADE_HI, -h);", light)
         self.assertTrue(0.7 <= _const("SKY_LIGHT_FULL") <= 0.9)
+        # light pass 10: plants' shadow texels read at mip 0 (their thin blades averaged under the alpha cut at the shadow
+        # map's scale); the contact crease leaves plants out (colortex1 blue); the ground's tint cut under a low sun;
+        # the sun's direct light full again by t11800's height (~0.23)
+        self.assertIn("texture2D(texture, texcoord, plantCaster > 0.5 ? -8.0 : 0.0).a", _read("shadow.fsh"))
+        self.assertIn("gl_FragData[1] = vec4(skyShare, 0.0, foliage, alpha);", _read("program", "lit.fsh"))
+        self.assertIn("texture2D(colortex1, suv).b > 0.5", _read("composite.fsh"))
+        self.assertTrue(0.6 <= _const("SHADE_TINT_LOW_CUT") <= 1.0)
+        self.assertLessEqual(_const("SUN_FADE_HI"), math.sin(math.radians(13.0)))
 
     def test_the_meadow_varies_across_the_field(self):
         # light pass 3 (round 41: the lawn read as uniform felt): a world-space low-frequency field on biome-tinted

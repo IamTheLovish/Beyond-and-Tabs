@@ -12,7 +12,9 @@ varying vec2 texcoord;
 varying float plantCaster;
 
 void main() {
-    float a = texture2D(texture, texcoord).a;
+    // plants read their full-size texture (light pass 10): at the shadow map's scale the grass sprites came from a mip
+    // whose thin blades averaged under PLANT_SHADOW_ALPHA, so nearly every tuft's shadow was discarded
+    float a = texture2D(texture, texcoord, plantCaster > 0.5 ? -8.0 : 0.0).a;
     if (a < 0.1)
         discard;
     // plants: only their solid texels (alpha >= PLANT_SHADOW_ALPHA, inside the silhouette's antialiased rim). Light

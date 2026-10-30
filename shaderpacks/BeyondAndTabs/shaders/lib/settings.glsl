@@ -6,8 +6,12 @@
 // from.
 
 // the sun's path tilted off the zenith: vanilla's sun crosses straight overhead, so at noon nothing throws a shadow the
-// RTS camera can see. lovish, Oct 29: the clear tilt, about 30 degrees
-const float sunPathRotation = 30.0; // [0.0 15.0 30.0 45.0]
+// RTS camera can see. lovish, Oct 29: the clear tilt, about 30 degrees. Light pass 10: the tilt's SIGN flipped, +30 ->
+// -30 (lovish to confirm). At +30 the sun stood in the north (the stills' shadows fell south, toward the camera), so at
+// day time 5000 both faces the RTS camera sees (south and west) were turned from it - quartz's two sides 0.587 / 0.597,
+// cubes read as paper cut-outs, where the benchmark's differ by 0.33. At -30 the sun stands in the south: the south
+// face sun-lit, the west face in shade; shadows fall north, away from the camera
+const float sunPathRotation = -30.0; // [-45.0 -30.0 -15.0 0.0 15.0 30.0 45.0]
 
 // the shadow map. The RTS view fits it to what is on screen (lib/shadowfit.glsl): ~25 texels per block at the default
 // zoom by the arithmetic, falling to the loader's whole box (~6 per block) when zoomed fully out
@@ -81,7 +85,9 @@ const float GRASS_SHARPNESS_SHARE = 0.4;
 // Light pass 6: 1.12 -> 1.20. Pass 5's stills were shot at a true zenith sun (the eyes' noon was not yet stable, #442)
 // and measured the lawn 0.41; the day is now judged at time 5000 (the skirmish's own), sun ~58 degrees up, which
 // gives open ground ~10% less sun than the zenith: 1.20 puts the lit lawn back at ~0.42 there
-const float LIGHT_OPEN_GROUND = 1.20;
+// Light pass 10: 1.20 -> 1.26 (the 5000 lawn read 0.40 in pass 9, under its 0.42-0.43; part of that was the contact
+// term darkening round every tuft, which plants are now kept out of)
+const float LIGHT_OPEN_GROUND = 1.26;
 // the sky's share of that light: a cast shadow on open ground keeps this much of the sunlit ground's light (was ~0.41,
 // on screen ~0.65 of the lit lawn; now ~0.78 on screen). Shadows lift without the sun losing its direction
 const float SHADOW_FILL_SHARE = 0.62;
@@ -92,7 +98,11 @@ const float SHADOW_FILL_SHARE = 0.62;
 // Light pass 9: 0.45 -> 0.60 (the pedestals' shaded sides read black at 5000: 0.28 on screen against tops at ~0.92;
 // target 0.36-0.42). With FILL_DIRECTION 0.30 -> 0.20 and the broad AO's floor back at 0.85: by the model a wall
 // turned from the sun gets ~1.6x its pass-8 light, ~0.37-0.40 on screen for the pedestals' stone
-const float GROUND_ALBEDO = 0.60;
+// Light pass 10: 0.60 -> 0.40 and FILL_DIRECTION 0.20 -> 0.30. With the sun now in the south (sunPathRotation -30),
+// a sun-lit face and a shaded one show side by side; pass 9's strong bounce had lifted every side alike (quartz's two
+// sides 0.59 / 0.60). Anchored on those stills: quartz's shaded (west) side ~0.55, its sun-lit (south) side ~0.75,
+// stone pedestals' shaded sides ~0.34
+const float GROUND_ALBEDO = 0.40;
 // the sun's penumbra (lib/shadow.glsl): angular spread (radians; the disc is 0.0093, plus the bright aureole), and
 // the narrowest edge in blocks. Light pass 2 (the critic, 5.5/10: "an edgeless darkening, things float"): light pass
 // 1's 0.025 / 0.10 drew every edge at least 0.10 block soft (~7 px at rts_close's ~67 px a block) and a shadow a block
@@ -116,8 +126,9 @@ const float PENUMBRA_MIN_BLOCKS = 0.05;
 // (composite.fsh contactOcclusion: CONTACT_RADIUS blocks, CONTACT_GAIN, never below CONTACT_FLOOR)
 const float CONTACT_AO_FLOOR = 0.85;
 const float CONTACT_SUN_SHARE = 0.0;
-const float CONTACT_RADIUS = 0.12;            // ~4 px at the default RTS zoom
-const float CONTACT_GAIN = 1.2;
+// light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
+const float CONTACT_RADIUS = 0.16;            // ~5 px at the default RTS zoom
+const float CONTACT_GAIN = 1.0;
 const float CONTACT_FLOOR = 0.75;
 // the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
 // stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
@@ -225,7 +236,11 @@ const vec3 SKY_SUNSET_DEEP = vec3(0.80, 0.55, 0.42);
 const float SKY_SUNSET_AWAY = 0.55;
 // light pass 8: (0.50, 0.58, 0.68) -> a deep blue-violet, ~0.37 luma at hue ~240 (target ~0.35)
 // light pass 9: a mauve, ~(120, 107, 118) on screen (target <= (130, 117, 125)), over the warm horizon
-const vec3 SKY_ZENITH_DUSK = vec3(0.47, 0.42, 0.46);
+// light pass 10: darker, ~0.28 luma (the critic: the zenith >= 0.25 under the horizon at dusk)
+const vec3 SKY_ZENITH_DUSK = vec3(0.30, 0.27, 0.31);
+// at dusk the ramp to the zenith runs over this share of SKY_GRADIENT_SPAN (light pass 10: a 3/4 frame's sky spans only
+// ~5 degrees, so the dusk zenith never showed)
+const float SKY_DUSK_SPAN = 0.3;
 // clouds (gbuffers_clouds, light pass 5): lit by the sky's ramp in their own direction (CLOUD_SKY of it) plus
 // CLOUD_SUN of the sun, so a dusk cloud takes the dusk colours instead of vanilla's grey-white slab
 const float CLOUD_SKY = 1.15;
@@ -272,15 +287,22 @@ const vec3 SHADE_TINT_WALL = vec3(0.93, 1.00, 1.21);
 // hue 70-95 at saturation 0.53-0.58; target ~105-120, <= 0.40)
 // light pass 9: 0.6 -> 0 (the low sun's shadows should read hazy gold, the benchmark's, not cool)
 const float SHADE_TINT_LOW_BOOST = 0.0;
+// and the ground's cool tint is cut by this share under a low sun (light pass 10: t11800's shadows read cool green,
+// (29, 49, 29); target olive ~(45, 55, 30))
+const float SHADE_TINT_LOW_CUT = 0.85;
 // the sun's spread under a low sun, scaled up to 1 + this (lib/shadow.glsl gShadowSpread, light pass 9): t11800's
 // long shadows ~6 -> ~10 px at the tip at the default zoom
-const float LOW_SUN_SPREAD = 0.8;
+const float LOW_SUN_SPREAD = 0.4;             // light pass 10: 0.8 -> 0.4 (target 6-8 px at the long tips)
 // the moon's light fades in between these depths of the sun under the horizon (sine), lib/light.glsl
 const float MOON_FADE_LO = 0.05;
 const float MOON_FADE_HI = 0.30;
 // the sun's direct light by its height's sine (light pass 9): nothing from ~1 degree under, full from SUN_FADE_HI
-const float SUN_FADE_LO = -0.017;
-const float SUN_FADE_HI = 0.18;
+// Light pass 10: the dusk still showed the sun's full shadow set (lit lawn 0.35 against 0.13): its shadows point away
+// from a warm western light, so the sun was the shadow light there, some ~5 degrees up (the eyes' client sky reaches its
+// time late; at 13000 the sun's sine is -0.05 by the celestial angle). The fade now ends where t11800 begins: ~0.2 at
+// 5 degrees up, full from 13 (t11800's ~0.23)
+const float SUN_FADE_LO = 0.02;
+const float SUN_FADE_HI = 0.22;
 // a sky light at or above this share of 15 counts as open sky (lib/light.glsl lightLevels, light pass 8)
 const float SKY_LIGHT_FULL = 0.8;
 // the material class of the ground's shade tint (light pass 8)
@@ -289,7 +311,7 @@ const float SKY_LIGHT_FULL = 0.8;
 // 0.67): the sky is brighter toward the sun and the sunlit ground bounces from that side, so a face turned toward the
 // sun's azimuth takes up to 1 + FILL_DIRECTION of the fill, one turned away 1 - FILL_DIRECTION; tops and the lawn none.
 // A wall facing the sun's azimuth against one facing away: fill ratio 1.86, ~1.2-1.3x on screen with the sun on it
-const float FILL_DIRECTION = 0.20;
+const float FILL_DIRECTION = 0.30;
 // the share of the occlusion (vertex and material AO) the ground's bounce takes (lib/light.glsl skyFill, light pass 7)
 const float BOUNCE_AO = 0.35;
 // how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square

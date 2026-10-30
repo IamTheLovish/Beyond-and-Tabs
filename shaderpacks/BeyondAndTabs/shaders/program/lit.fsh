@@ -337,7 +337,8 @@ void main() {
 #else
     float skyShare = clamp(dot(ambient, LUMA) / max(dot(c, LUMA), 1e-5), 0.0, 1.0);
 #endif
-    gl_FragData[1] = vec4(skyShare, 0.0, 0.0, alpha);
+    // colortex1 blue: a plant (composite's contact term leaves plants out: it ringed every tuft, light pass 10)
+    gl_FragData[1] = vec4(skyShare, 0.0, foliage, alpha);
 #ifdef LIT_WATER
     // glass, ice and the rest: no water data, blended by their own alpha so a clear pane over water keeps it
     gl_FragData[2] = vec4(0.0, 0.5, 0.0, alpha);
