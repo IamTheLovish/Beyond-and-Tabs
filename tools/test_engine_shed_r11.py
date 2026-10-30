@@ -51,10 +51,17 @@ FACES2 = ("west", "south")
 GUARD_SCALE = (0.7002075 / 0.7954359) ** 2   # tan(70/2) / tan(77/2), squared: a pixel count at FOV 70 -> 77
 
 
+def moulding(n):
+    """One of our own moulding blocks (#407, tools/gen_arch_blocks.py BLOCKS: cornice, string course, sill, lintel, arch
+    ring) - relief at 1-3 px steps, not a full plane (tools/anti_toy.py counts them as fine relief). Only those: a
+    full-cube block of ours stays a full cube."""
+    import gen_arch_blocks as A
+    return n.startswith("reignofnether:") and n.split(":", 1)[1] in A.BLOCKS
+
+
 def full(n):
-    """A full cube. Our own moulding blocks (reignofnether:cornice_* ..., #407) are relief at 1-3 px steps, not full
-    planes (tools/anti_toy.py counts them as fine relief): r12's chimney crown; r11 has none."""
-    return S.glyph(n) == "#" and not n.startswith("reignofnether:")
+    """A full cube (r12: our moulding blocks are not - the chimney crown; r11 has none)."""
+    return S.glyph(n) == "#" and not moulding(n)
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
@@ -628,7 +635,8 @@ class EngineShedR11(unittest.TestCase):
     def test_r3_no_fire_seen_in_a_stack_mouth(self):
         """Critic r2: "its open top shows a red block". No campfire and no red nether brick seen in any still."""
         seen = sorted({(h[0], h[1]) for st in G.STILLS for h in self.p.hits[st].values()
-                       if "campfire" in h[1] or "nether_brick" in h[1].split(":")[-1]})   # (r12: not reignofnether:)
+                       if "campfire" in h[1] or "nether" in h[1].split(":")[-1]})   # the block's own name (r12:
+        #     not the reignofnether: namespace) - red nether brick, netherrack, nether wart all read as fire
         self.assertEqual(seen, [])
 
     def test_r3_no_black_block_on_the_tower_cap(self):

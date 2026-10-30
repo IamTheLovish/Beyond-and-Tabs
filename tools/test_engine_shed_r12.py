@@ -23,6 +23,7 @@ import building_gates as G  # noqa: E402
 import camera_colour as CC  # noqa: E402
 import gen_blocks as GB  # noqa: E402
 import schem_study as S  # noqa: E402
+import test_engine_shed_r11 as R11  # noqa: E402
 from test_engine_shed_r11 import HAVE_NUMPY, EngineShedR11, full  # noqa: E402
 
 if HAVE_NUMPY:
@@ -43,7 +44,7 @@ SOOT_DARK = 0.80       # a soot cell reads at most 0.8 x the value of brick on t
 
 
 def moulding(n):
-    return n.startswith("reignofnether:")
+    return R11.moulding(n)
 
 
 def sloped(n):

@@ -101,7 +101,8 @@ COLOURS = {
     "target": (225, 200, 170), "oxidized": (85, 165, 135), "smoker": (95, 90, 85),
     # economy detail pass (lights, banners, skulls...)
     "soul_lantern": (90, 210, 220), "soul_campfire": (90, 210, 220), "end_rod": (250, 245, 225), "sea_lantern": (200, 235, 230), "lapis": (35, 65, 160), "lightning_rod": (200, 120, 85),
-    "exposed": (165, 120, 95), "weathered": (105, 150, 110),   # weathered copper is green-grey, not copper "shroomlight": (245, 150, 70), "magma": (190, 80, 30), "skull": (215, 210, 195),
+    "exposed": (165, 120, 95), "weathered": (105, 150, 110),   # weathered copper is green-grey, not copper
+    "shroomlight": (245, 150, 70), "magma": (190, 80, 30), "skull": (215, 210, 195),
     "wither_skeleton_skull": (35, 35, 35), "soul_soil": (80, 62, 50), "crying_obsidian": (90, 30, 150),
     "blast_furnace": (100, 100, 105), "barrel": (135, 100, 60), "smithing": (60, 50, 50), "diorite": (200, 200, 200),
     "raw_gold": (210, 160, 60), "chiseled_quartz": (225, 220, 210),

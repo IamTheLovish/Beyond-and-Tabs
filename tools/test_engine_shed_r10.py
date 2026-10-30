@@ -411,12 +411,18 @@ class EngineShedR10Camera(unittest.TestCase):
 SUB = "sfu_|=*g"     # glyphs of partial blocks; stairs s, slabs _, walls / bars / chains |, trapdoors =, lights, glass
 
 
+def _moulding(n):
+    """Our own moulding blocks only (#407, tools/gen_arch_blocks.py BLOCKS) - a full-cube block of ours is no sub-block."""
+    import gen_arch_blocks as A
+    return n.startswith("reignofnether:") and n.split(":", 1)[1] in A.BLOCKS
+
+
 def sub_block(n):
     """A thin or partial block (stairs, slabs, walls, fences, bars, panes, trapdoors, chains, buttons, lanterns,
     pots, rails): everything but a full cube."""
     #     (r12: "r" - a roof-mod slope, mcwroofs:* - and our own mouldings, reignofnether:*, are partial too; r10 and
     #     r11 have neither)
-    return (S.glyph(n) in "s_|=*gr" or n.startswith("reignofnether:") or
+    return (S.glyph(n) in "s_|=*gr" or _moulding(n) or
             n.endswith(("_button", "_pot", "rail", "_trapdoor", "_fence")) or
             n.startswith("potted_") or n in ("chain", "grindstone", "lightning_rod", "vine"))
 
