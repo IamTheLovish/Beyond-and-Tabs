@@ -165,8 +165,8 @@ TARGETS = {
     "deepslate_bricks":           dict(luma=0.38, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
     "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.20, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey; r42: 0.20
-    "deepslate_top":              dict(luma=0.20, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
+    "deepslate":                  dict(luma=0.19, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey; r42 / r43
+    "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
     # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
     "polished_deepslate":         dict(luma=0.38, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
@@ -204,10 +204,10 @@ TARGETS = {
     # r33 (critic: "4 bullseyes"): the spread in the slow mottle and the rim only (std 0.05 -> 0.035), flatter
     "polished_basalt_top": dict(luma=0.38, std=0.035, sat=0.02, tilt=6.0, smooth=90, pore=8),
     # r32 (critic: "ivory not cream"): sat 0.12 -> 0.07; the top's spread in the pores, matte bone (smooth 80 -> 50)
-    "bone_block_side": dict(luma=0.74, std=0.060, sat=0.09, tilt=16.0, smooth=44, pore=24),   # r42: the white ladder
+    "bone_block_side": dict(luma=0.67, std=0.060, sat=0.09, tilt=16.0, smooth=44, pore=24),   # r42 / r43: the white ladder
     # r33 (critic: "marshmallows / knuckles"): one flat sawn surface - the spread in fine pores (std 0.08 -> 0.055),
     # flatter (tilt 18 -> 11)
-    "bone_block_top": dict(luma=0.73, std=0.045, sat=0.09, tilt=7.0, smooth=40, pore=30, soften=1.0),   # r42: warm, its rings
+    "bone_block_top": dict(luma=0.66, std=0.045, sat=0.09, tilt=7.0, smooth=40, pore=30, soften=1.0),   # r42 / r43: warm, its rings
     # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
     # r33 (critic: "corrugation"): three broad flutes, softer (std 0.04 -> 0.03, tilt 16 -> 10)
     "quartz_pillar": dict(luma=0.84, std=0.030, sat=0.04, tilt=8.0, smooth=138, pore=4),   # r42: the white ladder
@@ -223,6 +223,10 @@ TARGETS = {
     # 0.93 and rolls off at 0.96): a LADDER in albedo wide enough to survive the roll-off - snow 0.94 (soft, bluish) /
     # quartz 0.83 (cool, smooth) / white wool 0.79 (felt) / white concrete 0.76 (satin) / bone 0.73 (warm, rings) /
     # calcite 0.69 (textured) / polished diorite 0.64; no two within 0.03
+    # r43 (eyes 41066761082: the r42 spread survived only at bone - on screen snow 0.96 / quartz 0.95 / concrete 0.93 /
+    # bone 0.90 / calcite 0.87 / diorite 0.87; near the top a 0.1 albedo step moves the screen ~0.04): the rungs under
+    # quartz spread further - wool 0.77, concrete 0.72, bone 0.66, calcite 0.61, polished diorite 0.56 - for screen
+    # targets 0.92 / 0.90 / 0.87 / 0.85 / 0.82
     "snow": dict(luma=0.94, std=0.019, sat=0.08, tilt=5.9, smooth=60, pore=0),   # r35: bluish-white; r42: softer
     "podzol_top": dict(luma=0.32, std=0.090, sat=0.40, tilt=20.0, smooth=41, pore=56),
     "coarse_dirt": dict(luma=0.36, std=0.080, sat=0.37, tilt=25.0, smooth=10, pore=56),
@@ -232,7 +236,7 @@ TARGETS = {
     "mud": dict(luma=0.22, std=0.045, sat=0.14, tilt=16.3, smooth=90, pore=64),   # r31: the cracks carry the spread
     # r35 (calcite / diorite / snow indistinguishable at 32 px): calcite a smooth bright white (std 0.075 -> 0.035,
     # tilt 19 -> 8), diorite keeps its speckle, snow the brightest and bluish
-    "calcite": dict(luma=0.69, std=0.050, sat=0.02, tilt=10.0, smooth=40, pore=10),   # r42: the textured foot of the ladder
+    "calcite": dict(luma=0.61, std=0.050, sat=0.02, tilt=10.0, smooth=36, pore=10),   # r42 / r43: the textured foot of the ladder
     # round 18: tuff is a fine ash rock - its 7-texel crystals speckled without shaders (std 0.085 -> 0.060)
     "tuff": dict(luma=0.43, std=0.060, sat=0.06, lf=0.5, tilt=14.0, smooth=11, pore=20),
     # round 13: single-block numbers from pack-study 38762019919 (vanilla 38762030150 beside it); the reference's
@@ -256,10 +260,13 @@ TARGETS = {
     # r31 (art director: "dull red-brown"): pinkish salmon, lighter (0.44 -> 0.52), the spread in the crystals
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
-    "polished_diorite": dict(luma=0.64, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),   # r42: under calcite
+    "polished_diorite": dict(luma=0.56, std=0.070, sat=0.02, tilt=4.0, smooth=110, pore=4),   # r42 / r43: under calcite
     # r42 (eyes 41058728743: the dark family overshot into one charcoal mass): a ladder - black concrete 0.07, coal 0.12
     # (new), blackstone 0.16 warm, deepslate 0.20 cool; the polished blackstone family a step over its rough stone
-    "blackstone": dict(luma=0.16, std=0.035, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: warm black; r42: 0.16
+    # r43 (eyes 41066761082: on screen black concrete 0.19 / coal 0.13 / blackstone 0.20 / deepslate 0.26 / basalt
+    # 0.37 - the dark end draws ~x1.2 and the concrete's satin picked up the sky): blackstone 0.15, deepslate 0.19,
+    # basalt 0.27 for screen targets 0.19 / 0.25 / 0.33
+    "blackstone": dict(luma=0.15, std=0.035, sat=0.07, tilt=24.0, smooth=12, pore=12),   # r41: warm black; r42 / r43
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
@@ -289,8 +296,8 @@ TARGETS = {
     # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
     # r39 (eyes 41044148818: blackstone / basalt / deepslate one dark grey): basalt a warm grey (sat 0.05 -> 0.10)
-    "basalt_side": dict(luma=0.30, std=0.080, sat=0.10, tilt=18.0, smooth=30, pore=10, soften=1.0),   # r42: the column lines
-    "basalt_top": dict(luma=0.30, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
+    "basalt_side": dict(luma=0.27, std=0.080, sat=0.10, tilt=18.0, smooth=30, pore=10, soften=1.0),   # r42: the column lines; r43
+    "basalt_top": dict(luma=0.27, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
     # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
     "smooth_basalt": dict(luma=0.30, std=0.025, sat=0.04, tilt=4.0, smooth=70, pore=8),
@@ -337,7 +344,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.15, std=0.033, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r42: 0.15
+    "blackstone_top": dict(luma=0.14, std=0.033, sat=0.07, tilt=20.0, smooth=14, pore=12),   # r41; r42 / r43
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
     "quartz_block_top": dict(luma=0.83, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),   # r42: the white ladder
@@ -1275,10 +1282,10 @@ for _k in range(2, PROC_VARIANTS + 1):
 # round 36: the dyed families (DYES, colour_targets) and the bookshelf - appended last; red_ / blue_terracotta and
 # terracotta keep their r31-r33 entries above (the family's anchors)
 DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
-    "white":      ((0.79, 0.79, 0.79), (0.76, 0.76, 0.76), (0.82, 0.70, 0.63)),   # r41: neutral; r42: the white ladder
+    "white":      ((0.77, 0.77, 0.77), (0.72, 0.72, 0.72), (0.82, 0.70, 0.63)),   # r41: neutral; r42 / r43: the white ladder
     "light_gray": ((0.58, 0.58, 0.55), (0.50, 0.50, 0.46), (0.54, 0.43, 0.39)),
     "gray":       ((0.28, 0.30, 0.31), (0.23, 0.24, 0.25), (0.26, 0.20, 0.17)),
-    "black":      ((0.11, 0.11, 0.12), (0.07, 0.07, 0.09), (0.16, 0.10, 0.08)),
+    "black":      ((0.11, 0.11, 0.12), (0.06, 0.06, 0.065), (0.16, 0.10, 0.08)),   # r43: the concrete near-neutral
     "brown":      ((0.45, 0.29, 0.17), (0.38, 0.24, 0.13), (0.31, 0.21, 0.14)),
     "red":        ((0.64, 0.17, 0.15), (0.57, 0.14, 0.13), (0.57, 0.25, 0.19)),
     "orange":     ((0.94, 0.48, 0.10), (0.88, 0.40, 0.03), (0.64, 0.34, 0.15)),
@@ -1318,6 +1325,8 @@ for _c, (_w, _k, _t) in DYES.items():
     if _c + "_concrete" not in TARGETS:              # white_concrete keeps its r33 entry (m_clayish, neutral)
         TARGETS[_c + "_concrete"] = colour_targets(_k, 0.018, tilt=3.0, smooth=64, pore=10)
         R36_FAMILY.append(_c + "_concrete")
+# r43 (eyes 41066761082: black concrete drew 0.19 on screen for a 0.07 albedo - its satin picked up the sky): matte
+TARGETS["black_concrete"] = dict(TARGETS["black_concrete"], smooth=24)
 for _c, (_w, _k, _t) in DYES.items():
     if _c + "_terracotta" not in TARGETS:
         TARGETS[_c + "_terracotta"] = colour_targets(_t, 0.022, tilt=3.5, smooth=36, pore=30, soften=1.0)
@@ -1516,7 +1525,7 @@ SEED_ORDER = SEED_ORDER + ("cartography_table_top", "cartography_table_side1", "
 TARGETS["crying_obsidian"] = dict(luma=0.14, std=0.080, sat=0.30, tilt=10.0, smooth=228, pore=0)
 SEED_ORDER = SEED_ORDER + ("crying_obsidian",)
 # round 42: the coal block (new; the dark ladder's second step, 0.12 with a faint glint)
-TARGETS["coal_block"] = dict(luma=0.12, std=0.040, sat=0.02, tilt=14.0, smooth=60, pore=4)
+TARGETS["coal_block"] = dict(luma=0.13, std=0.040, sat=0.02, tilt=14.0, smooth=60, pore=4)   # r43: 0.12 -> 0.13
 SEED_ORDER = SEED_ORDER + ("coal_block",)
 
 
