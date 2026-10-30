@@ -119,6 +119,41 @@ class ConstructionGridTest {
         assertTrue(b, "the +x face's front at z 22");
     }
 
+    /**
+     * Round 13 critic: the ghost still drew a lattice - a hollow building's missing walls showed their inner faces and
+     * edges through the outer ones. The ghost's VOLUME is the missing blocks plus the air they will enclose: air walled
+     * in on all four sides in its layer with a missing block above it in its column (a room under a roof to come). Not
+     * air under nothing (an open courtyard), not air under a standing roof (a finished room).
+     */
+    @Test
+    void theGhostsVolumeTakesInTheRoomItWillEnclose() {
+        List<int[]> b = new ArrayList<>();
+        for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) b.add(new int[] { x, 0, z });          // floor
+        for (int y = 1; y < 3; y++)
+            for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++)
+                if (x != 1 || z != 1) b.add(new int[] { x, y, z });                                      // walls
+        for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) b.add(new int[] { x, 3, z });          // roof
+        ConstructionGrid g = ConstructionGrid.of(b);
+        g.clear();
+        for (int[] p : b)
+            g.mark(p[0], p[1], p[2], p[1] <= 1);   // the floor and the first wall course stand
+        g.finish();
+        assertTrue(g.isVolume(1, 1, 1), "the room inside the standing course, the roof still to come");
+        assertTrue(g.isVolume(1, 2, 1), "the room inside the missing course");
+        assertTrue(g.isVolume(0, 2, 0), "a missing wall block");
+        assertTrue(!g.isVolume(0, 1, 0), "a standing wall block");
+        assertTrue(!g.isVolume(1, 0, 1), "the standing floor");
+        assertTrue(!g.isVolume(5, 2, 5), "outside");
+        // the roof built: the room is finished, no longer ghost
+        g.clear();
+        for (int[] p : b)
+            g.mark(p[0], p[1], p[2], p[1] != 2 || p[0] != 0);   // only the x = 0 side of the second course missing
+        g.finish();
+        assertTrue(!g.isVolume(1, 1, 1), "under a standing roof");
+        // an open court: walls round it, nothing above
+        assertTrue(!site().isVolume(11, 65, 21), "the site's open middle has nothing to come above it");
+    }
+
     @Test
     void aColumnsTopIsItsHighestStandingBlock() {
         ConstructionGrid g = site();

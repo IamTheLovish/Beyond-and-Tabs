@@ -30,6 +30,11 @@ public final class ConstructionGrid {
     private final byte[] cells;
     private final int[] missing;
     private int missingN;
+    private final boolean[] volume;
+    private final int[] volumeList;
+    private int volumeN;
+    // per row (y, z) the first / last x of a site block; per (y, x) the first / last z; per column the top missing y
+    private final int[] rowLo, rowHi, colLo, colHi, topMissing;
     // the rim: {x0, z0, x1, z1, y} per edge, and the face it tops: {x, y, z, side}
     private final float[] rim = new float[MAX_EDGES * 5];
     private final int[] face = new int[MAX_EDGES * 4];
@@ -43,6 +48,10 @@ public final class ConstructionGrid {
         this.x0 = x0; this.y0 = y0; this.z0 = z0; this.w = w; this.h = h; this.d = d;
         cells = new byte[w * h * d];
         missing = new int[w * h * d];
+        volume = new boolean[w * h * d];
+        volumeList = new int[w * h * d];
+        rowLo = new int[h * d]; rowHi = new int[h * d]; colLo = new int[h * w]; colHi = new int[h * w];
+        topMissing = new int[w * d];
     }
 
     /** @param blocks the site's (non-air) block positions as {x, y, z} */
@@ -102,6 +111,40 @@ public final class ConstructionGrid {
                     }
                 }
         fronts();
+        volume();
+    }
+
+    private void volume() {
+        java.util.Arrays.fill(rowLo, Integer.MAX_VALUE); java.util.Arrays.fill(rowHi, Integer.MIN_VALUE);
+        java.util.Arrays.fill(colLo, Integer.MAX_VALUE); java.util.Arrays.fill(colHi, Integer.MIN_VALUE);
+        java.util.Arrays.fill(topMissing, Integer.MIN_VALUE);
+        for (int j = 0; j < h; j++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w; i++) {
+                    byte c = cells[(j * d + k) * w + i];
+                    if (c == EMPTY)
+                        continue;
+                    int r = j * d + k, q = j * w + i;
+                    rowLo[r] = Math.min(rowLo[r], i); rowHi[r] = Math.max(rowHi[r], i);
+                    colLo[q] = Math.min(colLo[q], k); colHi[q] = Math.max(colHi[q], k);
+                    if (c == MISSING)
+                        topMissing[k * w + i] = Math.max(topMissing[k * w + i], j);
+                }
+        volumeN = 0;
+        for (int j = 0; j < h; j++)
+            for (int k = 0; k < d; k++)
+                for (int i = 0; i < w; i++) {
+                    int idx = (j * d + k) * w + i;
+                    byte c = cells[idx];
+                    boolean v = c == MISSING;
+                    if (c == EMPTY) {
+                        int r = j * d + k, q = j * w + i;
+                        v = rowLo[r] < i && i < rowHi[r] && colLo[q] < k && k < colHi[q] && topMissing[k * w + i] > j;
+                    }
+                    volume[idx] = v;
+                    if (v)
+                        volumeList[volumeN++] = idx;
+                }
     }
 
     /** The vertical fronts: each standing block's open faces, against a missing neighbour along the face. */
@@ -148,6 +191,22 @@ public final class ConstructionGrid {
     }
 
     public boolean isMissing(int x, int y, int z) { return cell(x, y, z) == MISSING; }
+    /**
+     * The ghost's VOLUME (round 13 critic: a hollow building's missing walls showed their inner faces and edges through
+     * the outer ones as a lattice): a missing block, or air it will enclose - walled in on all four sides in its layer
+     * (a block of the site somewhere along its row each way, and along its column each way) with a missing block above
+     * it in its column. Not air under nothing (an open court), not air under a standing roof (a finished room).
+     */
+    public boolean isVolume(int x, int y, int z) {
+        int i = index(x, y, z);
+        return i >= 0 && volume[i];
+    }
+
+    /** The volume's cells (missing blocks and the air they will enclose), for the ghost to walk. */
+    public int volumeCount() { return volumeN; }
+    public int volumeX(int i) { return volumeList[i] % w + x0; }
+    public int volumeY(int i) { return volumeList[i] / (w * d) + y0; }
+    public int volumeZ(int i) { return (volumeList[i] / w) % d + z0; }
     public boolean isStanding(int x, int y, int z) { return cell(x, y, z) == STANDING; }
     /** A block of the site, standing or missing (not air, not outside). */
     public boolean isStructure(int x, int y, int z) { return cell(x, y, z) != EMPTY; }
