@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.gametest;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.hero.FactionHero;
 import com.solegendary.reignofnether.hero.FactionHeroAbility;
+import com.solegendary.reignofnether.hero.HeroBot;
 import com.solegendary.reignofnether.hero.HeroKits;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -64,5 +65,45 @@ public class HeroAutoLearnGameTests {
                     helper.fail(String.join("; ", problems));
             });
         });
+    }
+
+    /**
+     * Guard, either way of holding auto-learn back for 23 s: the player's setting off, or the rank-up menu open (as the
+     * server hears it from the client, HeroServerboundPacket RANK_MENU_OPEN). Neither spends the point.
+     */
+    static void heldBack(GameTestHelper helper, String tag, boolean settingOff) {
+        String me = HeroGameTests.owner(helper, tag);
+        if (settingOff)
+            HeroBot.setAutoLearn(me, false);
+        Mob witch = HeroGameTests.spawnHero(helper, HeroKits.STORM_WITCH, me, 3, 3);
+        if (!(witch instanceof FactionHero w)) {
+            HeroBot.setAutoLearn(me, true);
+            helper.fail("could not spawn the test hero");
+            return;
+        }
+        if (!settingOff)
+            w.heroCore().rankUpMenuOpen = true;
+        helper.runAfterDelay(460, () -> {
+            List<String> problems = new ArrayList<>();
+            if (ranks(w) != 0 || w.getSkillPoints() != 1)
+                problems.add("auto-learn spent the point " + (settingOff ? "with the player's setting off" : "while the rank-up menu was open")
+                    + " (ranks " + ranks(w) + ", points " + w.getSkillPoints() + ")");
+            witch.discard();
+            HeroBot.setAutoLearn(me, true);
+            if (problems.isEmpty())
+                helper.succeed();
+            else
+                helper.fail(String.join("; ", problems));
+        });
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void hero_auto_learn_off_keeps_the_point_for_the_player(GameTestHelper helper) {
+        heldBack(helper, "autolearn_off", true);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void hero_auto_learn_waits_while_the_rank_menu_is_open(GameTestHelper helper) {
+        heldBack(helper, "autolearn_menu", false);
     }
 }

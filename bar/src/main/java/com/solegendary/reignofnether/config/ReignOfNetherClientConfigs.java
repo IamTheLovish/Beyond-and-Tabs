@@ -95,6 +95,7 @@ public class ReignOfNetherClientConfigs {
     // onboarding (onboarding/, design/onboarding.md): first-time tips, which were seen, the First Battle world
     public static final ForgeConfigSpec.ConfigValue<Boolean> ONBOARDING_TIPS;
     public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AI;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> HERO_AUTO_LEARN;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_SEEN_TIPS;
     public static final ForgeConfigSpec.ConfigValue<String> ONBOARDING_WORLD;
 
@@ -231,6 +232,8 @@ public class ReignOfNetherClientConfigs {
         ONBOARDING_TIPS = BUILDER.define("onboarding_tips", true);
         BUILDER.comment("Hero AI: while you are not possessing your hero it fights by itself with its abilities (HeroBot). Off = it only casts what you order.");
         HERO_AI = BUILDER.define("hero_ai", true);
+        BUILDER.comment("Auto-learn hero abilities: an ability point you leave unspent for 20 s is spent for you (never while the rank-up menu is open). Off = every point waits for you.");
+        HERO_AUTO_LEARN = BUILDER.define("hero_auto_learn", true);
         BUILDER.comment("Tips already shown (comma-separated ids); clear it to see them again");
         ONBOARDING_SEEN_TIPS = BUILDER.define("onboarding_seen_tips", "");
         BUILDER.comment("The saves folder of the last First Battle tutorial, for Resume (empty = none or finished)");

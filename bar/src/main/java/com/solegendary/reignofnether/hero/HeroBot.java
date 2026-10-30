@@ -104,8 +104,66 @@ public final class HeroBot {
     }
 
     /**
+     * The players who switched "Auto-learn hero abilities" off (lovish, Oct 30: "Auto after 20 s", with a setting to
+     * turn it off). On by default, so only the off switches are kept, as for the Hero AI; the client sends its setting
+     * (ReignOfNetherClientConfigs.HERO_AUTO_LEARN) when it logs in and when it changes.
+     */
+    private static final Set<String> AUTO_LEARN_OFF = ConcurrentHashMap.newKeySet();
+
+    /** Ticks a spendable point waits for the player's own pick before auto-learn spends it. */
+    public static final int AUTO_LEARN_TICKS = 20 * 20;
+
+    public static void setAutoLearn(String player, boolean on) {
+        if (player == null)
+            return;
+        if (on)
+            AUTO_LEARN_OFF.remove(player);
+        else
+            AUTO_LEARN_OFF.add(player);
+    }
+
+    public static boolean isAutoLearn(String player) {
+        return player != null && !AUTO_LEARN_OFF.contains(player);
+    }
+
+    /** A point the hero could spend now: one left, and an ability below its top rank whose level is reached. */
+    static boolean canSpend(FactionHero hero) {
+        if (hero.getSkillPoints() <= 0)
+            return false;
+        for (FactionHeroAbility a : hero.heroCore().abilities)
+            if (a.getRank(hero) < a.maxRank && hero.getHeroLevel() >= a.getLevelRequirement(hero))
+                return true;
+        return false;
+    }
+
+    /**
+     * Every second, for every player's hero (possessed or not, Hero AI on or off): a point the player has left unspent
+     * for {@link #AUTO_LEARN_TICKS} is spent as a bot's hero spends it ({@link #spendPoints}), so a hero never stays a
+     * plain unit with its abilities greyed out (design-draft-heroes-better #1). The clock waits while the rank-up menu is
+     * open, and the player's own pick inside the window always wins (no point left, nothing to do). Bots spend at once
+     * in {@link #tickHero}.
+     */
+    static void autoLearn(Mob mob, FactionHero hero) {
+        String owner = hero.getOwnerName();
+        if (owner == null || owner.isBlank() || BotServerEvents.brains.containsKey(owner))
+            return;
+        HeroCore core = hero.heroCore();
+        if (!isAutoLearn(owner) || core.rankUpMenuOpen || !canSpend(hero)) {
+            core.pointsWaitingSince = -1;
+            return;
+        }
+        long now = mob.level().getGameTime();
+        if (core.pointsWaitingSince < 0)
+            core.pointsWaitingSince = now;
+        else if (now - core.pointsWaitingSince >= AUTO_LEARN_TICKS) {
+            core.pointsWaitingSince = -1;
+            spendPoints(hero);
+        }
+    }
+
+    /**
      * Every second, for a hero nobody possesses: a bot's hero spends its points and fights; a player's hero fights while
-     * its owner's Hero AI is on, and its points stay the player's to spend (the rank-up choice is part of playing a hero).
+     * its owner's Hero AI is on (its points are the player's to spend, or auto-learn's after the player's 20 s).
      */
     static void tickHero(Mob mob, FactionHero hero) {
         String owner = hero.getOwnerName();

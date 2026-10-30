@@ -46,6 +46,8 @@ public final class HeroCore {
     public int experience = 0;
     public int skillPoints = 1;   // the first point comes with the hero (Reign of Nether's heroes do the same)
     public boolean rankUpMenuOpen = false;
+    // game time a spendable point was first seen unspent, -1 = none waiting (HeroBot.autoLearn; server only)
+    long pointsWaitingSince = -1;
     public boolean needsStatSync = false;
     boolean clientSynced = false; // the first experience sync on a client is a load, not a boon
     public float mana;

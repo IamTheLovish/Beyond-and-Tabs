@@ -25,6 +25,16 @@ public class HeroServerboundPacket {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.HERO_AI_ON : HeroAction.HERO_AI_OFF));
     }
 
+    /** Tells the server this player's "Auto-learn hero abilities" setting (on login and whenever the box is clicked). */
+    public static void sendAutoLearn(boolean on) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(-1, on ? HeroAction.AUTO_LEARN_ON : HeroAction.AUTO_LEARN_OFF));
+    }
+
+    /** Tells the server the player opened or closed their hero's rank-up menu (auto-learn waits while it is open). */
+    public static void sendRankMenu(int unitId, boolean open) {
+        PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, open ? HeroAction.RANK_MENU_OPEN : HeroAction.RANK_MENU_CLOSED));
+    }
+
     /** Tells the server the player selected their hero (UnitClientEvents, when a hero joins the selection). */
     public static void sendHeroSelected(int unitId) {
         PacketHandler.INSTANCE.sendToServer(new HeroServerboundPacket(unitId, HeroAction.HERO_SELECTED));
@@ -60,6 +70,24 @@ public class HeroServerboundPacket {
                 // a player's own setting, for their own heroes only (the owner name is the player's name)
                 if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_ai_switch", 10, 100))
                     HeroBot.setAiEnabled(sender.getName().getString(), heroAction == HeroAction.HERO_AI_ON);
+                success.set(true);
+                return;
+            }
+            if (heroAction == HeroAction.AUTO_LEARN_ON || heroAction == HeroAction.AUTO_LEARN_OFF) {
+                // as the Hero AI switch: the player's own setting, for their own heroes only
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_auto_learn_switch", 10, 100))
+                    HeroBot.setAutoLearn(sender.getName().getString(), heroAction == HeroAction.AUTO_LEARN_ON);
+                success.set(true);
+                return;
+            }
+            if (heroAction == HeroAction.RANK_MENU_OPEN || heroAction == HeroAction.RANK_MENU_CLOSED) {
+                // only a hero the sender may command: its open menu holds auto-learn back for that hero
+                if (com.solegendary.reignofnether.network.PacketAuth.allow(sender, "hero_rank_menu", 20, 100)
+                        && sender.serverLevel().getEntity(this.unitId) instanceof FactionHero hero
+                        && hero instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+                        && com.solegendary.reignofnether.unit.UnitActionItem.mayCommand(sender.serverLevel(),
+                            sender.getName().getString(), u, false))
+                    hero.heroCore().rankUpMenuOpen = heroAction == HeroAction.RANK_MENU_OPEN;
                 success.set(true);
                 return;
             }

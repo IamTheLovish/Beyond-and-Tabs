@@ -72,6 +72,16 @@ public class HudSettingsScreen extends Screen {
                 com.solegendary.reignofnether.hero.HeroServerboundPacket.sendHeroAi(this.selected());
             }
         }.pos(right, y).size(colW, rowH));
+        y += step;
+        // a hero's unspent ability point is spent for you after 20 s (HeroBot.autoLearn); the server hears of a change at once
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.HERO_AUTO_LEARN,
+                "Hero auto-learn on", "Hero auto-learn off") {
+            @Override
+            public void onPress() {
+                super.onPress();
+                com.solegendary.reignofnether.hero.HeroServerboundPacket.sendAutoLearn(this.selected());
+            }
+        }.pos(left, y).size(colW, rowH));
 
         addRenderableWidget(ReignOfNetherConfigScreen.button(left, this.height - 29, colW, 20,
                 Component.literal("HUD keys..."),
