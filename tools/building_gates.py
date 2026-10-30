@@ -366,10 +366,15 @@ def camera(b, view):
 # 55 deg at zoom 10 to 75 at 135, linear in log zoom), centred on the footprint's middle at 0.3 of the height
 # (centreCameraOnPosInstant(structureMiddle(0.3))); rts at zoom 30, rts_close at min(26, max(12, 1.25 (big + 0.6 h)));
 # 34 and dusk (the same view at day time 13000) first-person from the south-west, 30 deg up, 1.5 x the largest size
-# (>= 12) from the middle at 0.4 of the height, the client's default 70 deg vertical field of view (standThreeQuarter).
+# (>= 12) from the middle at 0.4 of the height, the client's 70 deg vertical field of view x 1.1 in
+# creative flight, 77 (standThreeQuarter).
 STILLS = ("rts", "rts_close", "34", "dusk")
 SCREEN = (1600, 900)
-FOV = 70.0
+# the 3/4 still's vertical field of view: the client's 70 times the creative-flight FOV modifier (1.1) - r12 (Oct 30): at
+# 70 the model drew the building ~1.2x too big on run 03:35Z's r11 34 / dusk stills (the copper mask landed up-left of
+# the roof, the glass mask above the windows); 77 puts the outline and the windows on the pixels
+# (tools/engine_shed_measure.py's overlays, five landmarks and the dusk window fit agree)
+FOV = 77.0
 FACE_NAMES = {(0, -1): "west", (0, 1): "east", (1, -1): "down", (1, 1): "up", (2, -1): "north", (2, 1): "south"}
 
 

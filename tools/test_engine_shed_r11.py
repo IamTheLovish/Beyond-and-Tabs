@@ -48,10 +48,13 @@ STREAK = (0.15, 0.45)           # share of the roof's pixels >= 20 % darker than
 BLOTCH = 0.05                   # at most this share under 45 % of the median value (r10's black blotches)
 KNOWN = 0.95                    # the share of pixels whose block / face the camera table has measured
 FACES2 = ("west", "south")
+GUARD_SCALE = (0.7002075 / 0.7954359) ** 2   # tan(70/2) / tan(77/2), squared: a pixel count at FOV 70 -> 77
 
 
 def full(n):
-    return S.glyph(n) == "#"
+    """A full cube. Our own moulding blocks (reignofnether:cornice_* ..., #407) are relief at 1-3 px steps, not full
+    planes (tools/anti_toy.py counts them as fine relief): r12's chimney crown; r11 has none."""
+    return S.glyph(n) == "#" and not n.startswith("reignofnether:")
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
@@ -562,7 +565,10 @@ class EngineShedR11(unittest.TestCase):
         lights = [q for q, n in self.p.n.items() if light(n)]
         inside = [h for h in self.p.hits["34"].values() if 1 <= h[0][0] <= 9 and 10 <= h[0][2] <= 14
                   and h[0][1] <= 8]
-        self.assertGreater(len(inside), 200)
+        # a sample-size guard (enough pixels to judge), not the look threshold: 200 pixels at the 3/4 camera as first
+        # modelled (FOV 70) is the same area as 155 at the corrected FOV 77 (building_gates.FOV, r12: the picture is
+        # (tan 35 / tan 38.5)^2 = 0.775 the size); the 25 % lit share below is unchanged
+        self.assertGreater(len(inside), 200 * GUARD_SCALE)
 
         def lit(q):
             return any(abs(q[0] - a[0]) + abs(q[1] - a[1]) + abs(q[2] - a[2]) <= 3 for a in lights)

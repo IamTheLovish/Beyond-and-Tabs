@@ -53,7 +53,11 @@ def measure(nbt, stills_dir, prefix, stills=("rts", "rts_close", "34")):
         if len(px) < MIN_PIXELS:
             continue
         a = np.array(px)
-        hue = np.degrees(np.angle(np.median(np.exp(2j * np.pi * a[:, 0]))))   # circular: red stays at 0
+        # circular (red stays at 0): the median of the unit vectors' cos and sin, each on its own - np.median of complex
+        # numbers sorts them by real part and picks one pixel's hue (r12: weathered copper stairs measured 216, their
+        # pixels' median is 151)
+        w = 2 * np.pi * a[:, 0]
+        hue = np.degrees(np.arctan2(np.median(np.sin(w)), np.median(np.cos(w))))
         out[name][face] = dict(hue=round(float(hue) % 360, 1), sat=round(float(np.median(a[:, 1])), 3),
                                val=round(float(np.median(a[:, 2])), 3), n=len(a))
     return out
