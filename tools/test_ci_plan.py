@@ -34,16 +34,27 @@ class CompileOnly(unittest.TestCase):
     """[compile-only] on a tests-only head: jar + JUnit, no GameTests (the red flake-stress run proves the tests)."""
     def test_tag_on_a_pull_request_head(self):
         self.assertTrue(ci_plan.compile_only("pull_request", "Hero marker: GameTest first [compile-only]" + NL + NL + "body"))
-        self.assertTrue(ci_plan.compile_only("pull_request", "Tests first" + NL + NL + "[compile-only]" + NL + "Co-Authored-By: x"))
 
     def test_no_tag_runs_everything(self):
-        for m in ["Hero marker: the fix", "", None, "compile-only without brackets", "[compile only]"]:
+        for m in ["Hero marker: the fix", "", None, "compile-only without brackets", "[compile only]",
+                  "The fix" + NL + NL + "The earlier head carried [compile-only]; this one runs everything."]:
             self.assertFalse(ci_plan.compile_only("pull_request", m), m)
 
     def test_never_on_main_or_by_hand(self):
         # a squash message on main can quote a PR's tagged commit; main and manual runs always run the suite
         for ev in ["push", "workflow_dispatch", "", None]:
             self.assertFalse(ci_plan.compile_only(ev, "Squash of #400" + NL + NL + "* Tests first [compile-only]"), ev)
+
+
+class PlanCode(unittest.TestCase):
+    """The `code` output main() writes: what jobs bar / bar-tests / compile-only key on."""
+    def test_values(self):
+        tagged = "Tests first [compile-only]"
+        self.assertEqual(ci_plan.plan_code(True, "pull_request", tagged), "compile")
+        self.assertEqual(ci_plan.plan_code(True, "pull_request", "the fix"), "true")
+        self.assertEqual(ci_plan.plan_code(False, "pull_request", tagged), "false")   # docs only stays docs only
+        self.assertEqual(ci_plan.plan_code(True, "pull_request", ""), "true")         # a failed lookup = the full suite
+        self.assertEqual(ci_plan.plan_code(True, "push", tagged), "true")
 
 
 if __name__ == "__main__":

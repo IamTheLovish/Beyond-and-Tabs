@@ -127,7 +127,7 @@ jobs:
   # What this run needs to test (tools/ci_plan.py): `code` = anything outside docs changed, so the GameTests (jobs bar and
   # bar-tests) run; a docs-only change skips them (skipped counts as passing for ci_wait; nothing new to publish). The
   # fast `build` checks always run. `matrix` = the shard numbers from the SHARD_n lines above. Unsure -> code.
-  # `code` = compile: a PR head commit tagged [compile-only] (a tests-only head before its red run): job bar builds the jar
+  # `code` = compile: a PR head commit whose subject line has [compile-only] (a tests-only head before its red run): job bar builds the jar
   # and runs JUnit, no GameTest runs, and job compile-only fails on purpose - such a head is never mergeable.
   # Ruff on the Python tools (bug-finding rules only, ruff.toml): seconds, so a script bug never costs a build.
   # On a PR it only does work when tools/ or ruff.toml changed; pushes to main always lint.
@@ -214,7 +214,8 @@ jobs:
     # build, so the two releases are still never updated at the same moment. Docs-only changes skip this job.
     needs: changes
     # where=mirror: this PR's GameTests run on the org's runners instead (job mirror below, tools/ci_route.py)
-    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && needs.changes.outputs.where != 'mirror' }}
+    # a [compile-only] head always compiles here: it runs no GameTests, so there is nothing to route to the mirror
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' && (needs.changes.outputs.where != 'mirror' || needs.changes.outputs.code == 'compile') }}
     runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4   # one commit: the dev-time count comes from job changes
