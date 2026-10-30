@@ -220,7 +220,7 @@ public final class HeroBot {
         for (FactionHeroAbility a : ready) {
             if (isEscape(a) || (reserve > 0 && hero.getMana() - a.manaCost < reserve))
                 continue;
-            if (fight(f, a))
+            if (fight(f, a, false))
                 return;
         }
     }
@@ -300,8 +300,19 @@ public final class HeroBot {
         return true;
     }
 
-    /** One fighting ability against what is round the hero now; false to look at the next one. */
-    static boolean fight(Fight f, FactionHeroAbility a) {
+    /**
+     * Blocks inside its range a ground cast is aimed when the hero must not walk to cast (v2): the cast goal measures to
+     * the aimed block's corner, so a spot at the very edge of the range walks the hero up to it (review r1 on PR 416: a
+     * held Gravecaller stepped about 1.4 blocks to raise its skeletons).
+     */
+    static final double STAY_MARGIN = 1.5;
+
+    /**
+     * One fighting ability against what is round the hero now; false to look at the next one. {@code stay}: the hero
+     * must cast from where it stands (v2, behind the player's order) - a forward ground cast is then aimed well inside
+     * its range, toward the target, instead of at a target the hero would have to walk to.
+     */
+    static boolean fight(Fight f, FactionHeroAbility a, boolean stay) {
         Mob mob = f.mob;
         if (isHeal(a))
             return false;   // heal() decided already
@@ -359,6 +370,16 @@ public final class HeroBot {
                 double d = t.distanceTo(mob);
                 // summons and turrets go toward the enemy, cover and pools at the hero's own feet
                 boolean forward = a.spec.id.equals("raise_the_fallen") || a.spec.id.equals("deploy_turret");
+                if (forward && stay) {
+                    double reach = a.range - STAY_MARGIN;
+                    if (d <= reach)
+                        return use(f, a, t.getOnPos());
+                    Vec3 dir = t.position().subtract(mob.position()).multiply(1, 0, 1);
+                    if (dir.lengthSqr() < 1e-4)
+                        return use(f, a, mob.getOnPos());
+                    Vec3 to = mob.position().add(dir.normalize().scale(reach));
+                    return use(f, a, BlockPos.containing(to.x, mob.getY() - 0.5, to.z));
+                }
                 return use(f, a, forward && d <= a.range ? t.getOnPos() : mob.getOnPos());
             }
             default -> {
@@ -662,7 +683,7 @@ public final class HeroBot {
             default -> {
                 // area bursts round the hero and ground casts at its own feet or at a target in reach: v1's rules,
                 // none of which walks the hero anywhere
-                if (!fight(f, a))
+                if (!fight(f, a, true))
                     return false;
                 b.record(now, Why.CAST, a.slot, -1);
                 return true;
