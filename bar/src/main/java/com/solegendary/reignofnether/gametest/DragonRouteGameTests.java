@@ -2,6 +2,7 @@ package com.solegendary.reignofnether.gametest;
 
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
 import com.solegendary.reignofnether.unit.controls.DragonFlight;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.core.BlockPos;
@@ -386,6 +387,68 @@ public class DragonRouteGameTests {
                     helper.fail(String.join("; ", problems));
             } finally {
                 dragon.discard();
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------ over the max
+
+    /** Its own batch: it lowers the world's flyingMaxYLevel rule while it runs, which no other test may see. */
+    static final String MAX_BATCH = "dragon_routes_max";
+
+    /**
+     * A hill it could climb (the ridge of {@link #bone_dragon_flies_over_a_hill_higher_than_its_ceiling}) whose top is
+     * past the flyingMaxYLevel rule (lowered to 15 over the floor for this test): it cannot go over, so the Bone Dragon
+     * must fly round it - never touching it, never past the rule - and be over its point in time. Held at the rule's
+     * height with the way ahead shut, it used to press on into the slope at the blocked crawl, for good.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + ARRIVE_BY + 100, batch = MAX_BATCH)
+    public static void bone_dragon_flies_round_a_mountain_past_the_flying_max(GameTestHelper helper) {
+        var rule = helper.getLevel().getGameRules().getRule(GameRuleRegistrar.FLYING_MAX_Y_LEVEL);
+        int was = rule.get();
+        TestCleanup.atEnd(helper, () -> rule.set(was, helper.getLevel().getServer()));
+        Course c = course(helper, 7);
+        rule.set(PAD_Y + 15, helper.getLevel().getServer());
+        for (int dx = 14; dx <= 47; dx++) {
+            int h = Math.max(1, 18 - Math.abs(dx - 31));
+            stone(helper, c, dx, 1, 6, dx, h, 18);
+        }
+        Mob dragon = spawn(helper, EntityRegistrar.BONE_DRAGON_UNIT.get(), c.x0() + 6.5, PAD_Y + 10.5, c.z0() + 12.5, -90f);
+        BlockPos target = c.at(52, 0, 12);
+        double tx = target.getX() + 0.5, tz = target.getZ() + 0.5;
+        helper.runAfterDelay(SETUP, () -> ((Unit) dragon).getMoveGoal().setMoveTarget(target));
+        final int[] arrived = { -1 }, touched = { 0 };
+        final double[] highest = { -1e9 };
+        final List<String> trace = new ArrayList<>();
+        for (int t = SETUP + 1; t <= SETUP + ARRIVE_BY + 80; t++) {
+            final int tick = t - SETUP;
+            helper.runAfterDelay(t, () -> {
+                double x = dragon.getX(), z = dragon.getZ();
+                if (tick % 10 == 0)
+                    trace.add(String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0()));
+                if (dragon.horizontalCollision || (dragon.verticalCollision && !dragon.onGround()))
+                    touched[0]++;
+                highest[0] = Math.max(highest[0], dragon.getY() - PAD_Y);
+                if (arrived[0] < 0 && Math.hypot(tx - x, tz - z) < 3.0)
+                    arrived[0] = tick;
+            });
+        }
+        helper.runAfterDelay(SETUP + ARRIVE_BY + 82, () -> {
+            try {
+                List<String> problems = new ArrayList<>();
+                if (arrived[0] < 0)
+                    problems.add("not over its point " + (ARRIVE_BY + 80) + " ticks after the order (" + tail(trace) + ")");
+                if (touched[0] > 0)
+                    problems.add(touched[0] + " ticks against the mountain");
+                if (highest[0] > 15 + OVERSHOOT)
+                    problems.add(String.format("flew %.2f over the floor, past the flyingMaxYLevel rule (15)", highest[0]));
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
+            } finally {
+                dragon.discard();
+                rule.set(was, helper.getLevel().getServer());
             }
         });
     }
