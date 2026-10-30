@@ -137,7 +137,8 @@ TARGETS = {
     "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
     # -> 0.060), flatter flakes (tilt 21 -> 16)
-    "cobbled_deepslate":          dict(luma=0.27, std=0.060, sat=0.10, tilt=16.0, smooth=26, pore=14),
+    # r31b (eyes: washed-out mosaic): the joints back (std 0.06 -> 0.085, tilt 16 -> 20), cooler (sat 0.10 -> 0.12)
+    "cobbled_deepslate":          dict(luma=0.27, std=0.085, sat=0.12, tilt=20.0, smooth=26, pore=14),
     "cut_copper":                 dict(luma=0.50, std=0.058, sat=0.55, tilt=12.0, smooth=104, pore=0),
     "oxidized_cut_copper":        dict(luma=0.55, std=0.065, sat=0.45, tilt=12.0, smooth=12, pore=20),
     "azalea_leaves":              dict(luma=0.43, std=0.080, sat=0.65, tilt=16.5, smooth=70, pore=180),
@@ -682,14 +683,22 @@ def m_cobbled_slate(F, n, cells=16):
     edges"): a rubble wall of SLATE - flat angular flakes, 4x4 per face, each a plane at its own slight tilt with a
     narrow chipped bevel (not a dome), set in a thin dark joint that is only a little darker than the stone. The
     stones are blue-grey, each its own tone, with faint lamination lines (slate splits in layers) in the relief."""
+    # r31b (eyes 41023221433, the one block WORSE than the benchmark: "contrast collapsed into a washed-out uniform
+    # mosaic, no gap shadow, shaded side featureless"): stones of two sizes (a few large flakes among the small),
+    # a dark open joint with AO (the gap shadow), the bevel rounder so the shaded side of each flake reads
     f1, f2, idx, k = F.voronoi(cells, 0.85)
+    g1, g2, gidx, gk = F.voronoi(cells * 2, 0.9)
+    big = (F.rng.random(k) < 0.6)[idx]                   # where a large flake sits; elsewhere two smaller ones
+    f1, f2 = np.where(big, f1, g1), np.where(big, f2, g2)
+    idx = np.where(big, idx, gidx + k)
+    k = k + gk
     wu, wv = 0.006 * F.noise(4, 12, 0.5), 0.006 * F.noise(4, 12, 0.5)
     f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
     idx = idx[(np.round((F.v + wv) * n).astype(int)) % n, (np.round((F.u + wu) * n).astype(int)) % n]
     edge = f2 - f1
-    stone = smoothstep(0.004, 0.030, edge)                # the stone's flat top: a narrow bevel, then flat
+    stone = smoothstep(0.006, 0.040, edge)                # the stone's top: a rounded bevel, then flat
     rng = F.rng
-    tone = rng.uniform(0.80, 1.15, k)[idx]
+    tone = rng.uniform(0.78, 1.18, k)[idx]
     # each flake a plane at its own slight tilt (the chipped cleavage face), its own level
     ang = 2 * math.pi
     cx = np.arctan2(np.bincount(idx.ravel(), np.sin(ang * F.u).ravel(), k),
@@ -703,13 +712,12 @@ def m_cobbled_slate(F, n, cells=16):
     lam = 0.5 * np.sin(2 * math.pi * (F.u * 14 + F.v * 9 + 0.6 * F.noise(2, 6, 0.5)))   # lamination lines
     lam = lam * smoothstep(0.4, 0.8, norm01(F.noise(2, 5, 0.5)))                          # only on some flakes
     grit = F.noise(20, 50, 0.3)
-    H = 0.35 + 0.5 * stone + plane * stone + 0.015 * grit + 0.012 * lam * stone
-    shade_stone = tone * (0.95 + 0.04 * grit + 0.05 * lam) * (0.9 + 0.1 * stone)
-    shade = np.where(stone > 0.05, shade_stone, 0.62 + 0.3 * stone)        # the joint: a little darker, not black
-    shade = shade_stone * stone + (0.66 + 0.1 * grit) * (1 - stone) * tone
+    H = 0.30 + 0.55 * np.sqrt(stone) + plane * stone + 0.015 * grit + 0.012 * lam * stone
+    shade_stone = tone * (0.95 + 0.04 * grit + 0.05 * lam) * (0.82 + 0.18 * stone)
+    shade = shade_stone * stone + (0.40 + 0.1 * grit) * (1 - stone) * tone   # the joint: dark, the gap's shadow
     hue = tone - 1.0
     jit = np.stack([-0.10 * hue, -0.03 * hue, 0.08 * hue], -1)                # lighter flakes bluer, darker warmer
-    return H, tint((0.31, 0.34, 0.39), shade, jit)
+    return H, tint((0.29, 0.32, 0.38), shade, jit)
 
 
 def m_gravel(F, n):
