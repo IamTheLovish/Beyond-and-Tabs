@@ -197,6 +197,12 @@ public class ScaffoldRenderClientEvents {
 
     private static boolean firstDrawnLogged = false;
 
+    // a new session (rejoin, another world) logs its first scaffold again
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut evt) {
+        firstDrawnLogged = false;
+    }
+
     /** Insertion into the distance-sorted pick list, dropping the furthest when full. */
     private static void insert(BuildingPlacement p, double d2, float a) {
         int i = pickedCount < MAX_SCAFFOLDS ? pickedCount++ : MAX_SCAFFOLDS - 1;
