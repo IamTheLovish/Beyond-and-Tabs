@@ -30,3 +30,17 @@ value.CLOUD_SHADOWS.0=Off
 value.CLOUD_SHADOWS.1=On
 option.TEXTURE_SHARPNESS=Texture sharpness (RTS)
 option.TEXTURE_SHARPNESS.comment=Finer block texture detail in the RTS view. Higher is sharper but shimmers more as the camera pans (0 = default filtering).
+option.WATER_REALISM=Realistic water
+option.WATER_REALISM.comment=Water clear over a shallow bed and darkening to deep teal-blue with depth. Off: one even tint, as before.
+value.WATER_REALISM.0=Off
+value.WATER_REALISM.1=On
+option.WATER_WAVES=Water ripples
+option.WATER_WAVES.comment=How steep the ripples on water are: they break up the sky's reflection and the sun's glint. 0 = still water.
+option.CAUSTICS=Caustics
+option.CAUSTICS.comment=Sunlight focused by the ripples into moving bright lines on the bed under shallow water.
+value.CAUSTICS.0=Off
+value.CAUSTICS.1=On
+option.SSR=Water reflections
+option.SSR.comment=Mirrors banks, trees and buildings in water seen at a low angle (first person). From the RTS camera water is mostly clear, and this costs almost nothing.
+value.SSR.0=Sky only
+value.SSR.1=On

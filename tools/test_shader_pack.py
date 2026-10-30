@@ -5,6 +5,7 @@ PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack"
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
 import os
+import re
 import sys
 import unittest
 
@@ -43,7 +44,7 @@ class ShaderPack(unittest.TestCase):
 
     def test_material_maps_reach_the_lit_draws_but_not_water(self):
         # slice 2 reads our _n / _s maps through one switch (lib/pbrswitch.glsl): terrain, entities, block entities and
-        # the hand pass LIT_PBR; water keeps slice 1's surface until slice 4 (design/own_shader_pack.md)
+        # the hand pass LIT_PBR. Water has no _n / _s maps and its own surface (lib/water.glsl), so it stays out
         switch = open(os.path.join(spc.SHADERS, "lib", "pbrswitch.glsl"), encoding="utf-8").read()
         self.assertIn("!defined LIT_WATER", switch)
         for name in ("gbuffers_terrain.fsh", "gbuffers_entities.fsh", "gbuffers_block.fsh", "gbuffers_hand.fsh"):
@@ -65,6 +66,78 @@ class ShaderPack(unittest.TestCase):
         # every option a program reads is compiled at both ends of its range (a toggle on and off)
         src = spc.expand(os.path.join(spc.SHADERS, "gbuffers_terrain.vsh"))
         self.assertIn("WIND=0", [label for label, _ in spc.option_variants(src)])
+
+    def test_water_has_its_own_surface_with_a_fallback(self):
+        """Changed in slice 4 (claude/shader-water): this guard used to pin water to slice 1's plain surface ("water
+        keeps slice 1's surface until slice 4"). Slice 4 is here, so it now pins the new contract instead: water is
+        its own block id (10004 in the stack, as the wind's leaves are 10002), gbuffers_water reads the opaque depth
+        under it (depthtex1) to set its opacity from the path through the water, and WATER_REALISM 0 still compiles
+        to slice 1's one fixed alpha for an A/B."""
+        props = open(os.path.join(spc.SHADERS, "block.properties"), encoding="utf-8").read()
+        self.assertRegex(props, r"(?m)^block\.10004=water\b")      # 10002 is the leaves (wind)
+        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        self.assertIn("#define ID_WATER 10004.0", settings)
+        self.assertRegex(settings, r"(?m)^#define WATER_REALISM 1 // \[0 1\]")
+        water = spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh"))
+        self.assertIn("uniform sampler2D depthtex1;", water)
+        self.assertIn("waterOpacity(", water)
+        plain = spc.with_options(water, {"WATER_REALISM": "0"})
+        self.assertIn("#define WATER_REALISM 0", plain)
+        self.assertIn("WATER_REALISM", spc.OPTION_VARIANTS[1])
+        # the slice 1 path survives: the texture's own alpha, written unless the realistic surface replaces it
+        self.assertIn("float alpha = tex.a;", water)
+
+    def test_units_in_a_ford_stay_readable(self):
+        """Readability through the water (slice 4: "units crossing a river stay readable", the 12 river stills).
+
+        Units are entities: the loader draws them before translucent terrain, so they are in depthtex1 and the water
+        layer lies over their submerged part with the path from the surface down to the unit, not to the bed - a leg
+        in a ford is only a short path deep. A model of the opacity curve from lib/water.glsl's own constants: half a
+        block of path (a unit wading) keeps at least 65% of the unit's colour, a 1-block ford shows the bed, and only
+        3+ blocks settle into the palette's opaque teal-blue. The foam band stays a few pixels thin, and the caustics
+        multiply by one number per pixel (composite), so a team colour's hue never shifts under water."""
+        import math
+        src = open(os.path.join(spc.SHADERS, "lib", "water.glsl"), encoding="utf-8").read()
+
+        def const(name):
+            return float(re.search(r"const float %s = ([0-9.]+);" % name, src).group(1))
+
+        k, deep = const("WATER_EXTINCTION"), const("WATER_DEEP_OPACITY")
+
+        def opacity(path):
+            return deep * (1.0 - math.exp(-k * path))
+
+        self.assertLessEqual(opacity(0.5), 0.35)          # a unit wading: its team colour keeps >= 65%
+        self.assertLessEqual(opacity(1.1), 0.62)          # a 1-block ford at the RTS tilt: the bed shows
+        self.assertGreaterEqual(opacity(3.3), 0.85)       # 3 blocks deep: open water, the palette's dark teal
+        self.assertLessEqual(const("FOAM_WIDTH"), 0.3)    # ~4 px at the default zoom
+        self.assertLessEqual(const("FOAM_OPACITY"), 0.6)
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        self.assertRegex(comp, r"lin \*= max\(1\.0 \+ \(water\.g - 0\.5\) / CAUSTIC_ENCODE, 0\.0\);")
+        # the water layer's data goes to colortex2 from gbuffers_water only (one directive per program)
+        water = spc.expand(os.path.join(spc.SHADERS, "gbuffers_water.fsh"))
+        self.assertIn("/* DRAWBUFFERS:02 */", water)
+        self.assertIn("uniform sampler2D colortex2;", comp)
+
+    def test_reflections_march_only_where_they_show(self):
+        """Screen-space reflections (composite.fsh) cost a 16-step march per water pixel; the budget (slice 4: +1.0 ms
+        in all on a 3070 Ti at 1080p) only allows it where the mirror is visible. Fresnel for water at the RTS camera's
+        ~65 degrees down, with the ripples' steepest tilt (~0.17 rad more), stays under the march's threshold, so from
+        above the march never runs; a grazing first-person view passes it."""
+        import math
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        water = open(os.path.join(spc.SHADERS, "lib", "water.glsl"), encoding="utf-8").read()
+        threshold = float(re.search(r"const float SSR_MIN_FRESNEL = ([0-9.]+);", comp).group(1))
+        f0 = float(re.search(r"const float WATER_F0 = ([0-9.]+);", water).group(1))
+
+        def fresnel(off_normal_deg):
+            return f0 + (1.0 - f0) * (1.0 - math.cos(math.radians(off_normal_deg))) ** 5
+
+        self.assertLess(fresnel(25.0 + math.degrees(0.17)), threshold)   # the RTS view: no march
+        self.assertGreater(fresnel(80.0), threshold)                     # first person near the horizon: mirror
+        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        self.assertRegex(settings, r"(?m)^#define SSR 1 // \[0 1\]")
+        self.assertRegex(settings, r"(?m)^#define CAUSTICS 1 // \[0 1\]")
 
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
