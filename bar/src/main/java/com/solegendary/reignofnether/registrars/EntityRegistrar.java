@@ -1144,19 +1144,6 @@ public class EntityRegistrar {
                     .sized(EntityType.PIGLIN.getWidth(), EntityType.PIGLIN.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wrecker_unit").toString()));
-    // the Horde's essence caster and its Blood Totem (design/essence_casters.md)
-    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit>> VOODOO_SHAMAN_UNIT = ENTITIES.register("voodoo_shaman_unit",
-            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit::new, MobCategory.CREATURE)
-                    .sized(EntityType.PIGLIN_BRUTE.getWidth(), EntityType.PIGLIN_BRUTE.getHeight())
-                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
-                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman_unit").toString()));
-    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit>> BLOOD_TOTEM_UNIT = ENTITIES.register("blood_totem",
-            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit::new, MobCategory.MISC)
-                    .fireImmune()
-                    .sized(0.75f, 1.25f)
-                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
-                    .updateInterval(10)
-                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blood_totem").toString()));
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit>> ROOTWARDEN_UNIT = ENTITIES.register("rootwarden_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.engineers.RootwardenUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
@@ -1177,6 +1164,19 @@ public class EntityRegistrar {
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pioneer_unit").toString()));
+    // the Horde's essence caster and its Blood Totem (design/essence_casters.md), appended last
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit>> VOODOO_SHAMAN_UNIT = ENTITIES.register("voodoo_shaman_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.VoodooShamanUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN_BRUTE.getWidth(), EntityType.PIGLIN_BRUTE.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "voodoo_shaman_unit").toString()));
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit>> BLOOD_TOTEM_UNIT = ENTITIES.register("blood_totem",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.BloodTotemUnit::new, MobCategory.MISC)
+                    .fireImmune()
+                    .sized(0.75f, 1.25f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blood_totem").toString()));
 
     public static void init(FMLJavaModLoadingContext context) {
         ENTITIES.register(context.getModEventBus());
