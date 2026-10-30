@@ -25,7 +25,8 @@ import org.joml.Vector3f;
 /**
  * The hero marker (HeroLook; lovish, Oct 30: "Ring + crest, 1.25x"): in the RTS view every hero the client holds has a
  * thin ring in its owner's colour on the ground round its feet and a small crest over its head - a camera-facing
- * diamond, gold rim round the owner's colour - so a hero is found in a crowd at a glance. One translucent batch a frame
+ * diamond, gold rim round the owner's colour - so a hero is found in a crowd at a glance. The viewer's own hero with
+ * an unspent ability point also shows a pulsing gold "+" beside its crest (HeroLook.showPointBadge). One translucent batch a frame
  * for all heroes (a handful per match); cloaked heroes are skipped.
  */
 @OnlyIn(Dist.CLIENT)
@@ -70,6 +71,8 @@ public final class HeroMarkerClientEvents {
         camZ = (float) cp.z;
         Vector3f left = camera.getLeftVector(), up = camera.getUpVector();
         boolean begun = false;
+        String me = Minecraft.getInstance().player == null ? null : Minecraft.getInstance().player.getName().getString();
+        float pulse = 0.65f + 0.35f * (float) Math.sin(System.currentTimeMillis() / 160.0);
         for (LivingEntity e : UnitClientEvents.getAllUnits()) {
             if (!(e instanceof HeroUnit) || !(e instanceof Unit u) || !e.isAlive() || e.isInvisible())
                 continue;
@@ -84,7 +87,11 @@ public final class HeroMarkerClientEvents {
             float y = (float) Mth.lerp(pt, e.yo, e.getY());
             float z = (float) Mth.lerp(pt, e.zo, e.getZ());
             ring(x, y + 0.06f, z, HeroLook.ringRadius(e.getBbWidth()), 0.07f, colour, 0.9f);
-            crest(x, y + HeroLook.crestHeight(e.getBbHeight()), z, 0.32f, colour, left, up);
+            float cy = y + HeroLook.crestHeight(e.getBbHeight());
+            crest(x, cy, z, 0.32f, colour, left, up);
+            boolean own = me != null && me.equals(owner);
+            if (HeroLook.showPointBadge(own, ((HeroUnit) e).getSkillPoints()))
+                plus(x - left.x() * 0.55f, cy + up.y() * 0.2f, z - left.z() * 0.55f, 0.16f, pulse, left, up);
         }
         if (begun) {
             buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
@@ -115,6 +122,22 @@ public final class HeroMarkerClientEvents {
     private static void crest(float x, float y, float z, float s, int c, Vector3f left, Vector3f up) {
         diamond(x, y, z, s, GOLD, 0.95f, left, up);
         diamond(x, y, z, s * 0.62f, c, 1.0f, left, up);
+    }
+
+    /** The unspent-point badge: a gold camera-facing "+" of half-size {@code s}, its alpha pulsing. */
+    private static void plus(float x, float y, float z, float s, float a, Vector3f left, Vector3f up) {
+        float t = s * 0.32f;
+        quad(x, y, z, left, s, up, t, GOLD, a);   // the bar across
+        quad(x, y, z, left, t, up, s, GOLD, a);   // the bar up
+    }
+
+    /** A camera-facing rectangle: {@code w} along {@code left}, {@code h} along {@code up}, both half-sizes. */
+    private static void quad(float x, float y, float z, Vector3f left, float w, Vector3f up, float h, int c, float a) {
+        float lx = left.x() * w, ly = left.y() * w, lz = left.z() * w, ux = up.x() * h, uy = up.y() * h, uz = up.z() * h;
+        v(x + lx + ux, y + ly + uy, z + lz + uz, c, a);
+        v(x - lx + ux, y - ly + uy, z - lz + uz, c, a);
+        v(x - lx - ux, y - ly - uy, z - lz - uz, c, a);
+        v(x + lx - ux, y + ly - uy, z + lz - uz, c, a);
     }
 
     private static void diamond(float x, float y, float z, float s, int c, float a, Vector3f left, Vector3f up) {

@@ -17,6 +17,14 @@ public final class HeroLook {
         return isHero && rtsView;
     }
 
+    /**
+     * The "+" badge beside the crest: the viewer's own hero holding unspent ability points (design draft #1's badge,
+     * so a point waiting for the player - or for auto-learn's 20 s, PR 415 - shows without selecting the hero).
+     */
+    public static boolean showPointBadge(boolean ownHero, int skillPoints) {
+        return ownHero && skillPoints > 0;
+    }
+
     /** The ring's radius round a hero whose hitbox is {@code width} wide: just outside its drawn (scaled) body. */
     public static float ringRadius(float width) {
         return width * SCALE / 2 + 0.3f;

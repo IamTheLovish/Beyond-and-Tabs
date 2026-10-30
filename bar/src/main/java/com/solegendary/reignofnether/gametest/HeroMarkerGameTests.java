@@ -39,6 +39,11 @@ public class HeroMarkerGameTests {
                 problems.add("a marker on a unit that is not a hero");
             if ((boolean) show.invoke(null, true, false))
                 problems.add("a marker on a hero outside the RTS view (first person)");
+            var badge = look.getMethod("showPointBadge", boolean.class, int.class);
+            if (!(boolean) badge.invoke(null, true, 1))
+                problems.add("no unspent-point badge on the viewer's own hero holding a point");
+            if ((boolean) badge.invoke(null, true, 0) || (boolean) badge.invoke(null, false, 2))
+                problems.add("an unspent-point badge on a hero with no point, or on another player's hero");
             var ring = look.getMethod("ringRadius", float.class);
             for (float width : new float[] { 0.6f, 1.0f, 1.4f }) {
                 float r = (float) ring.invoke(null, width), body = width * scale / 2;
