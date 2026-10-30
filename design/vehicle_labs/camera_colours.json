@@ -12,7 +12,9 @@
   "eyes 41124572036 sunforged_a (build e7b4e94)",
   "eyes 41124572036 sunforged_b (build e7b4e94)",
   "eyes 41124572036 sunforged_c (build e7b4e94)",
-  "eyes 41124572036 sunforged_l3 (build e7b4e94)"
+  "eyes 41124572036 sunforged_l3 (build e7b4e94)",
+  "eyes 41138964754 sunforged_l3 round 1 (build e7b4e94)",
+  "eyes 41138964754 sunforged_l1 round 1 (build e7b4e94)"
  ],
  "blocks": {
   "andesite": {
@@ -1946,6 +1948,65 @@
      0.3316,
      0.2976,
      0.248
+    ]
+   }
+  },
+  "reignofnether:cornice_stone": {
+   "west": {
+    "hue": 180.0,
+    "sat": 0.054,
+    "val": 0.396,
+    "n": 1269,
+    "rgb": [
+     0.4016,
+     0.3883,
+     0.3815
+    ]
+   },
+   "south": {
+    "hue": 180.0,
+    "sat": 0.03,
+    "val": 0.412,
+    "n": 3598,
+    "rgb": [
+     0.4023,
+     0.401,
+     0.3956
+    ]
+   }
+  },
+  "reignofnether:string_course_stone": {
+   "west": {
+    "hue": 180.0,
+    "sat": 0.029,
+    "val": 0.431,
+    "n": 3366,
+    "rgb": [
+     0.4111,
+     0.4163,
+     0.4114
+    ]
+   },
+   "south": {
+    "hue": 140.9,
+    "sat": 0.027,
+    "val": 0.427,
+    "n": 5505,
+    "rgb": [
+     0.4113,
+     0.4167,
+     0.4094
+    ]
+   },
+   "up": {
+    "hue": 193.5,
+    "sat": 0.029,
+    "val": 0.349,
+    "n": 3591,
+    "rgb": [
+     0.3382,
+     0.3432,
+     0.3447
     ]
    }
   },

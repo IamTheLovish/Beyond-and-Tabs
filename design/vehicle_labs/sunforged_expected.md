@@ -23,3 +23,23 @@ Control on the camera table: snow share 0.25 of the rts pixels (calcite / quartz
   mouth lined dark (blackstone bricks, value 0.13-0.18 on camera) - the darkest large area on the west face.
 - no dark area on the south face larger than the gate (the wing roof pale smooth-stone slab 0.42-0.54).
 - critics: landmark >= 6.5 (A 5 / 6), gate >= 6 (A 5 / 5), RTS >= 7.
+
+## A2 measured by eye (eyes run 41127459982, A and A2 in one run)
+The spire now stands on its shaft in the 3/4 still (a tower with a cone, not a cone on the roof); from the RTS camera
+the cone is still mostly a salmon square, the shaft's south face shows under it. The front / back tower hierarchy
+reads. The gold halo ring is a bright square on the terrace - a second focal point risk (left for the critics).
+No critic run on A vs A2: both critics' diagnoses were applied one change per element; detail round 1 builds on A2.
+
+## Detail round 1 (expected, before eyes run 41138964754; control = round 2 in the same run)
+- camera tests: 14 / 14 green once the mouldings are in the camera table (12 / 14 now: colour coverage only).
+- wall field value (rts_close, 34): 0.30-0.36 (andesite + stone-brick quoins + string courses), inside 0.28-0.50.
+- snow share: < 0.02 (no calcite / quartz / diorite; control 0.25).
+- critics vs round 1's 4/10 and the massing A scores: RTS 7, close 6, landmark 6, gate 6, roofs 6, materials 5, dusk 5.
+
+## Detail round 1 measured (eyes run 41138964754, round 1 and the control in one run)
+- camera tests 14 / 14 green after the mouldings were added to the table (camera_colour.py --add-only).
+- snow share (rts / 34): round 1 0.000 / 0.000, control 0.248 / 0.185 (expected < 0.02: met).
+- wall area value (west + south hits, rts / 34): round 1 0.348 / 0.347, control 0.418 / 0.435 (expected 0.30-0.36: met)
+  - and that is the fault both critics named: inside the ground's mid band 0.28-0.50 (Art method: lights 0.50+ belong to
+  buildings). Wall pixels: dressings (stone bricks + their stairs) 0.44, the andesite field 0.11.
+- critics 5 / 5 overall (control 4 / 4); expected RTS 7, landmark 6, gate 6 - RTS and gate missed by 2 and 1.

@@ -51,3 +51,15 @@ Lessons (r12): the 3/4 camera model was 1.2x too big (FOV 70, the game draws 77 
 table's hue median was wrong - fix the camera before judging; dusk light differs between eyes runs (compare dusk only
 inside one run); a second material on a small roof reads as a pattern at RTS whichever way it is placed (clusters ->
 arrow, fine grain -> V); the 3/4 camera looks down so steeply that a lamp more than 1 block behind a pane is never seen.
+
+## Sunwain Court r1 (Sunforged T1 vehicle lab, the r12 method; PR #456) - ref21, 17 x 17 x 26, one fixed rubric
+Designer pass: itachi2-api runs 20261030-162547-sunforged-design + -163025-sunforged-design-cont (rubric = r12's 7 axes).
+Each round photographed with its control in ONE eyes run (build e7b4e94 = build_run 41096418230, branch pack, plain
+lane, keep_only, times 6000); two fresh API critics per round, a / b. Expected and measured numbers:
+design/vehicle_labs/sunforged_expected.md.
+
+| Round | Eyes run | RTS | Close | Landmark | Gate | Roofs | Materials | Dusk | Main faults (critics) | Kept |
+|---|---|---|---|---|---|---|---|---|---|---|
+| round 2 (control, Oct 28) | - | 4 overall (round 1 critic) | | | | | | | no single landmark, weak gate, no bay rhythm, roof blob, mixed materials, messy ground, dead windows | - |
+| massing A / B / C + control | 41124572036 | A 6 / 7, C 5 / 5, control 5 / 5 | - | A 5 / 6, C 7 / 7, control 4 / 4 | A 5 / 5, control 3 / 3 | A 6 / 6, control 4 / 3 | - | - | both pick A (ref21 keep); spire flattens to a salmon square at RTS; four equal towers; gate not the darkest opening | A -> A2 (spire shaft, tower hierarchy, pale wing, splayed portal) |
+| detail r1 (aeb4ae58) | 41138964754 | 5 / 5 (control 4 / 4) | 5 / 5 | 6 / 5 | 5 / 5 | 5 / 6 | 5 / 5 | 5 / 3 | grey andesite walls (0.29 / 0.38) in the ground's mid band - "a plain grey castle with a yellow square on its roof"; the gold halo ring leads at RTS; the spire a squat hipped roof from above; windows read as white crosses; stacked battlement stripes | overall 5 / 5 vs control 4 / 4: one peak in 3/4, a real gate, a lit rose, zones, no chequer; L1 reads as the first stage |
