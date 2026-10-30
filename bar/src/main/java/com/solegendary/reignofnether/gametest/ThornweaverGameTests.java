@@ -163,6 +163,22 @@ public class ThornweaverGameTests {
         return level.getEntitiesOfClass(LivingEntity.class, new AABB(at).inflate(r, SeedOfRenewal.MAX_DY + 1, r), SproutGuardian::isGuardian);
     }
 
+    /**
+     * The guardians {@code caster} raised, from the spell's own list (SproutGuardian.guardiansOf): a treant raised in a
+     * chunk whose entities are still loading is hidden from a level query for a while, so a box search right after the
+     * cast can miss it (run 40986497550). Logs when the box search would have missed one, as evidence.
+     */
+    private static List<LivingEntity> guardiansOf(ServerLevel level, LivingEntity caster, BlockPos spot) {
+        List<LivingEntity> mine = new ArrayList<>();
+        for (Entity e : SproutGuardian.guardiansOf(caster))
+            if (e instanceof LivingEntity le)
+                mine.add(le);
+        if (mine.size() != guardiansNear(level, spot, 2).size())
+            ReignOfNether.LOGGER.info("[ThornweaverGameTests] {} guardian(s) on the spell's list, {} seen by a level query at {}",
+                mine.size(), guardiansNear(level, spot, 2).size(), spot);
+        return mine;
+    }
+
     private static void clearWispsNear(Vec3 at, double r) {
         for (Entity w : EssenceServerEvents.getWisps())
             if (!w.isRemoved() && w.position().distanceTo(at) <= r)
@@ -670,7 +686,7 @@ public class ThornweaverGameTests {
                     return;
                 }
                 sprout.use(level, (Unit) caster, spot);
-                List<LivingEntity> guardians = guardiansNear(level, spot, 2);
+                List<LivingEntity> guardians = guardiansOf(level, caster, spot);
                 made.addAll(guardians);
                 for (LivingEntity g : guardians)
                     if (g instanceof Mob m)
@@ -687,6 +703,8 @@ public class ThornweaverGameTests {
                         early.add("the guardian is not on the awakened-treant timer");
                     if (Math.abs(g.getY() - (spot.getY() + 1)) > 0.5)
                         early.add("the guardian stands at y " + g.getY() + ", not on the aimed ground (" + (spot.getY() + 1) + ")");
+                    if (Math.hypot(g.getX() - (spot.getX() + 0.5), g.getZ() - (spot.getZ() + 0.5)) > 1)
+                        early.add("the guardian woke at " + g.blockPosition() + ", not by the aimed spot " + spot);
                 }
                 if (Essence.get(caster) != 10)
                     early.add("the Thornweaver holds " + Essence.get(caster) + " essence after Sprout Guardian, expected 30 - 20 = 10");
@@ -747,7 +765,7 @@ public class ThornweaverGameTests {
                     return;
                 }
                 a.use(level, (Unit) poor, poorSpot);
-                List<LivingEntity> none = guardiansNear(level, poorSpot, 3);
+                List<LivingEntity> none = guardiansOf(level, poor, poorSpot);
                 made.addAll(none);
                 if (!none.isEmpty())
                     early.add("a Thornweaver 1 essence short raised a guardian");
@@ -756,9 +774,11 @@ public class ThornweaverGameTests {
                 if (((Unit) poor).getCooldown(a) > 0)
                     early.add("a Thornweaver 1 essence short got a cooldown");
                 b.use(level, (Unit) rich, richSpot);
-                List<LivingEntity> raised = guardiansNear(level, richSpot, 2);
+                List<LivingEntity> raised = guardiansOf(level, rich, richSpot);
                 made.addAll(raised);
-                if (raised.size() != 1)
+                if (raised.size() == 1 && Math.hypot(raised.get(0).getX() - (richSpot.getX() + 0.5), raised.get(0).getZ() - (richSpot.getZ() + 0.5)) > 1)
+                    early.add("the guardian woke at " + raised.get(0).blockPosition() + ", not by the aimed spot " + richSpot);
+                else if (raised.size() != 1)
                     early.add("the cast raised " + raised.size() + " guardians, expected 1 (essence left " + Essence.get(rich)
                         + ", cooldown " + ((Unit) rich).getCooldown(b) + ", standing cell " + SeedOfRenewal.standingCell(level,
                         richSpot.getX(), richSpot.getZ(), richSpot.getY() + 1) + " for the spot " + richSpot + ")");

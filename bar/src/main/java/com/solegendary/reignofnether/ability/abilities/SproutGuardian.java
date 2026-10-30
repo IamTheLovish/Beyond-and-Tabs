@@ -64,15 +64,23 @@ public class SproutGuardian extends Ability {
     /** The guardians {@code unit} raised that still stand. */
     @Override
     public int liveSummons(ServerLevel level, Unit unit) {
-        if (!(unit instanceof LivingEntity caster))
-            return 0;
+        return unit instanceof LivingEntity caster ? guardiansOf(caster).size() : 0;
+    }
+
+    /**
+     * The guardians {@code caster} raised that still stand (server thread). The game tests read them here rather than
+     * by a level query: a treant raised in a chunk whose entities are still loading is in the level but hidden from
+     * getEntitiesOfClass until they load (run 40986497550: a cast at tick 3 of the batch spent its essence, and a box
+     * search a moment later found no guardian).
+     */
+    public static List<Entity> guardiansOf(LivingEntity caster) {
         GUARDIANS.removeIf(e -> e.isRemoved() || !e.isAlive());
-        int n = 0;
         UUID id = caster.getUUID();
+        List<Entity> mine = new ArrayList<>();
         for (Entity e : GUARDIANS)
             if (e.getPersistentData().hasUUID(KEY_CASTER) && id.equals(e.getPersistentData().getUUID(KEY_CASTER)))
-                n++;
-        return n;
+                mine.add(e);
+        return mine;
     }
 
     @Override
