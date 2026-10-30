@@ -175,8 +175,15 @@ vec3 skyFill(vec3 n, vec2 levels, float ao, float texAo, vec3 sunColour, vec3 sk
 // everything else, which takes the walls' tint whichever way it faces
 float gShadeGround = 0.0;
 
+// 0..1: the high sun (light pass 16): 0 at t11800 and below, 1 from SHADE_TINT_HIGH_HI up
+float highSunTint() {
+    return smoothstep(SHADE_TINT_HIGH_LO, SHADE_TINT_HIGH_HI, sunHeight());
+}
+
 vec3 shadeTint(float sunLit, float upness) {
-    vec3 full = mix(SHADE_TINT_WALL, SHADE_TINT, clamp(upness, 0.0, 1.0) * gShadeGround);
+    // light pass 16: the ground's tint near neutral under a high sun (SHADE_TINT_GROUND_HIGH: the 5000 shadows read teal)
+    vec3 ground = mix(SHADE_TINT, mix(vec3(1.0), SHADE_TINT, SHADE_TINT_GROUND_HIGH), highSunTint());
+    vec3 full = mix(SHADE_TINT_WALL, ground, clamp(upness, 0.0, 1.0) * gShadeGround);
     float strength = (1.0 + SHADE_TINT_LOW_BOOST * lowSun()) * (1.0 - SHADE_TINT_LOW_CUT * lowSun());
     vec3 tint = max(mix(vec3(1.0), full, strength), vec3(0.0));
     return mix(tint, vec3(1.0), clamp(sunLit, 0.0, 1.0));
