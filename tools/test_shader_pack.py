@@ -391,6 +391,12 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);", lit)
         self.assertIn("mat.emission = 0.0;", lit)
         self.assertIn("reflected *= 1.0 - foliage;", lit)
+        # light pass 16: the plants' luma caps read the light an albedo carries (a saturated leaf escaped a display-
+        # space cap at 0.79-0.89 on screen), and an untinted plant's green texels keep under PLANT_MAX_SAT
+        self.assertIn("return pow(max(dot(toLinear(albedo), LUMA), 0.0), 1.0 / 2.2);", lit)
+        self.assertIn("float hl = plantLuma(held);", lit)
+        self.assertIn("float pl = plantLuma(albedo);", lit)
+        self.assertTrue(0.45 <= _const("PLANT_MAX_SAT") <= 0.6)
         particles = spc.expand(os.path.join(spc.SHADERS, "gbuffers_textured_lit.fsh"))
         self.assertIn("float shadow = sunShadow(playerPos", particles)
 
@@ -457,6 +463,13 @@ class ShaderPack(unittest.TestCase):
         # Retired pin (light pass 9): "SHADE_TINT_LOW_BOOST 0.3-1.0" - the low sun's shadows read ink-black and cool
         # against the benchmark's hazy gold; no boost now (and a warmer, larger SKY_LOW)
         self.assertEqual(_const("SHADE_TINT_LOW_BOOST"), 0.0)
+        # light pass 16: under a high sun the ground keeps only a little of SHADE_TINT (lp15's 5000 shadows on the lawn
+        # read teal, hue 114-125, blue 61-67; target hue 85-95, blue <= 58), faded in above t11800's sine (0.232), so
+        # the low sun's tint is untouched
+        self.assertTrue(0.0 <= _const("SHADE_TINT_GROUND_HIGH") <= 0.2)
+        self.assertGreater(_const("SHADE_TINT_HIGH_LO"), math.sin(math.radians(13.4)))
+        self.assertLess(_const("SHADE_TINT_HIGH_HI"), 0.84)
+        self.assertIn("mix(vec3(1.0), SHADE_TINT, SHADE_TINT_GROUND_HIGH), highSunTint());", _read("lib", "light.glsl"))
         for t in (tint, wall):
             self.assertGreater(t[2], t[1])
             self.assertGreater(t[1], t[0])                    # blue-cyan, never violet (red above green)
@@ -584,7 +597,10 @@ class ShaderPack(unittest.TestCase):
         light = _read("lib", "light.glsl")
         self.assertIn("(facing * sideKey(n) * mix(1.0, texAo, 0.5))", light)
         self.assertIn("return mix(mix(SIDE_SUN, 1.0, up), 1.0, lowSunFull());", light)
-        self.assertTrue(0.35 <= _const("SIDE_SUN") <= 0.75)
+        # Retired pin (light pass 16): "SIDE_SUN 0.35-0.75" - lp15 measured the white cubes' sun-lit sides 0.63-0.67
+        # (target 0.74-0.78; lp14o 0.71-0.75, Complementary 0.76) with the sun at 0.38 of the light: a lit wall now takes
+        # up to 1.3x the Lambert sun of a high sun (tops still brighter: N.L 0.48 x 1.2 against 0.88), never at t11800
+        self.assertTrue(0.75 <= _const("SIDE_SUN") <= 1.3)
         self.assertLess(_const("SUN_FADE_LO"), _const("SUN_FADE_HI"))
         self.assertLessEqual(_const("SKY_TWILIGHT_HI"), math.sin(math.radians(13.4)))
         comp = _read("composite.fsh")
@@ -619,6 +635,10 @@ class ShaderPack(unittest.TestCase):
         lit = _read("program", "lit.fsh")
         self.assertIn("float neutral = max(WHITE_WALL_NEUTRAL * side, WHITE_LOW_NEUTRAL * lowSun());", lit)
         self.assertTrue(0.4 <= _const("WHITE_LOW_NEUTRAL") <= 0.7)
+        # light pass 16: a white albedo's own cast goes on its shaded sides under a high sun (quartz's shade b-r +6..+23
+        # by texture; target +15..+25 on every block)
+        self.assertTrue(0.5 <= _const("WHITE_SHADE_NEUTRAL") <= 1.0)
+        self.assertIn("lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);", lit)
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):

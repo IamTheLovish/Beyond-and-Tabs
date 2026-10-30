@@ -75,6 +75,13 @@ varying vec3 vB;
 #else
 /* DRAWBUFFERS:01 */
 #endif
+// a plant's albedo luma for its caps, taken in light and shown as a display value (light pass 16): scaling the albedo
+// by k scales this by k, as the display luma does, but a saturated green no longer reads darker than the light it
+// carries (a display-space luma of 0.47 on (0.05, 0.95, 0.10) was 1.5x a grey 0.47's light)
+float plantLuma(vec3 albedo) {
+    return pow(max(dot(toLinear(albedo), LUMA), 0.0), 1.0 / 2.2);
+}
+
 void main() {
     // sharper texture detail under the RTS camera ("better resolution", lovish Oct 30): it is orthographic at ~30-36
     // screen pixels a block, so a 128 px block texture is drawn from the atlas's mip 2 (~4 texels to a pixel) and
@@ -149,7 +156,7 @@ void main() {
         // and its brightness under FOLIAGE_MAX_LUMA, eased in from FOLIAGE_LUMA_KNEE of it, hue and saturation kept
         // (light pass 13: the pass-11 stills had 673 neon lime tuft pixels, median (102, 222, 62), luma 0.72 = 1.8x the
         // lit lawn; the cap holds a sunlit tuft at <= ~1.15x the lawn beside it)
-        float hl = dot(held, LUMA);
+        float hl = plantLuma(held);
         float knee = FOLIAGE_LUMA_KNEE * FOLIAGE_MAX_LUMA;
         float room = FOLIAGE_MAX_LUMA - knee;
         float capped = hl <= knee ? hl : knee + room * (1.0 - exp(-(hl - knee) / room));
@@ -157,7 +164,14 @@ void main() {
         albedo = mix(albedo, held, tinted);
         // light pass 15: the plants without a tint (flowers, saplings, crops) under their own, looser cap
         {
-            float pl = dot(albedo, LUMA);
+            // light pass 16: a green texel's saturation under PLANT_MAX_SAT first (leaves and stems; petals keep theirs)
+            float ptop = max(albedo.r, max(albedo.g, albedo.b));
+            float psat = (ptop - min(albedo.r, min(albedo.g, albedo.b))) / max(ptop, 1e-4);
+            float green = albedo.g >= ptop - 1e-4 ? 1.0 : 0.0;
+            float pg = dot(albedo, LUMA);
+            vec3 calmed = mix(vec3(pg), albedo, min(1.0, PLANT_MAX_SAT / max(psat, 1e-4)));
+            albedo = mix(albedo, calmed, green * (1.0 - tinted));
+            float pl = plantLuma(albedo);
             float pk = PLANT_LUMA_KNEE * PLANT_MAX_LUMA;
             float pr = PLANT_MAX_LUMA - pk;
             float pc = pl <= pk ? pl : pk + pr * (1.0 - exp(-(pl - pk) / pr));
@@ -252,6 +266,10 @@ void main() {
         // a neutral (115, 116, 112), Complementary's (119, 122, 128))
         neutral *= clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0);
         light = mix(light, vec3(dot(light, LUMA)), neutral * whiteness);
+        // light pass 16: on a side the sun does not reach, a near-white albedo loses WHITE_SHADE_NEUTRAL of its own cast
+        // under a high sun, so the shade of every white wall is the sky's cool (cream and blue-white quartz alike)
+        float shadeSide = side * (1.0 - clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0)) * highSunTint();
+        lin = mix(lin, vec3(dot(lin, LUMA)), WHITE_SHADE_NEUTRAL * whiteness * shadeSide);
     }
     vec3 c = lin * light;
 #ifdef LIT_TERRAIN

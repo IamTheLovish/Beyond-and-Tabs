@@ -326,6 +326,15 @@ const float SHADE_TINT_LOW_BOOST = 0.0;
 // light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.85 -> 0.65: t11800's shadows
 // (44, 56, 22), blue to >= 30 - the low sun keeps more of the sky's cool in its shade
 const float SHADE_TINT_LOW_CUT = 0.65;
+// light pass 16: under a high sun the ground keeps only SHADE_TINT_GROUND_HIGH of SHADE_TINT's departure from neutral
+// (lib/light.glsl shadeTint), faded in by the sun's sine from SHADE_TINT_HIGH_LO to SHADE_TINT_HIGH_HI - nothing at
+// t11800 (0.232), all of it at 5000 (0.851). The lp15 5000 stills' "teal blotches with no caster" are real cast
+// shadows (casters off screen; the cube shadows on the pad measure the same, (48, 81, 48) hue 120): with the fill at
+// 0.62 of the light, the full tint turned every shadow on the lawn teal, (63, 108, 67) hue 114-125, blue 61-67 (the
+// chain model gives (63, 108, 68) for it). Model at 0.10: hue ~97 -> ~92-95 on screen, blue ~48-52, sat ~0.53
+const float SHADE_TINT_GROUND_HIGH = 0.10;
+const float SHADE_TINT_HIGH_LO = 0.30;
+const float SHADE_TINT_HIGH_HI = 0.55;
 // the sky's fill dims toward this share as the sun sinks from 0.20 to 0.05 of its sine (lib/light.glsl, light pass 11):
 // twilight, while SKY_LOW (t11800, ~0.23) is lifted for its olive shadows
 // light pass 13: 0.45 -> 0.30 and the dimming from 0.12-0.23 of the sine (was 0.05-0.20): the dusk still (shot with the
@@ -384,7 +393,10 @@ const float WALL_FILL = 0.31;
 // walls). Model at 5000: quartz 0.957 / 0.822 / 0.619 (1.55:1), a stone pedestal 0.636 / 0.337 / 0.215
 // light pass 15 (the first stills with our own pack, lp14o; critic realism 5.5 against Complementary's 7.5, mostly shadows): 0.45 -> 0.75: the sun's share fell to
 // 0.38 / 0.66 of the light; quartz's lit side 0.738 -> ~0.76 (target 0.76-0.78)
-const float SIDE_SUN = 0.75;
+// light pass 16: 0.75 -> 1.20 - lp15 measured the white cubes' sun-lit sides 0.63-0.67 (lp14o 0.71-0.75, Complementary
+// 0.76), b-r -8..-14: the chain model puts that at ~2/3 of the sun the table gives a south wall (0.71 at 0.75). Model
+// 0.80 at 1.20, ~0.73-0.76 on screen with lp15's shortfall; tops, shaded sides and t11800 (lowSunFull) untouched
+const float SIDE_SUN = 1.20;
 // the low sun's full share by the sine of its height: 1 at or below LOW_SUN_FULL_LO (t11800 is 0.232), 0 from
 // LOW_SUN_FULL_HI (light pass 13). SIDE_SUN's fade and the low shoulder (final.fsh) read it: the light table's own low
 // row (0.10-0.55) left t11800 only 0.80 low, so its whites' shoulder stopped at 0.86 (tops measured 0.87, target ~0.80)
@@ -423,8 +435,13 @@ const float FOLIAGE_LUMA_KNEE = 0.80;
 // (flowers, saplings, crops; lp14o 5000 sprites up to luma 0.90, brighter than quartz's lit side - Complementary 0.75)
 // ease off from PLANT_LUMA_KNEE of PLANT_MAX_LUMA toward it, hue and saturation kept: lit <= ~0.65 by the lawn's ratio
 // (albedo 0.355 -> 0.49 on screen)
+// light pass 16: both caps (this one and FOLIAGE_MAX_LUMA) read the albedo's luma in LIGHT, shown as a display value
+// (lit.fsh plantLuma): the display-space luma let a saturated green escape - a dandelion's leaf (0.05, 0.95, 0.10),
+// "capped" at 0.47, still carried 1.5x the light of a grey 0.47, and lp15's leaves peaked 0.79-0.89 on a 0.45 lawn.
+// And no plant's green texel past PLANT_MAX_SAT (flowers keep their petals: green hues only)
 const float PLANT_MAX_LUMA = 0.47;
 const float PLANT_LUMA_KNEE = 0.80;
+const float PLANT_MAX_SAT = 0.52;
 // the grass's own texture in shade (lit.fsh, light pass 15): light multiplies the albedo, so a shadow keeps the lawn's
 // relative contrast and loses its absolute grain with its level (lp14o: high-pass sd 0.007 in shadow, 0.0175 lit; the
 // target >= 0.018 at 0.28-0.32). Where no sun arrives the grass's texel luma against its 8 x 8 neighbourhood (the
@@ -477,6 +494,10 @@ const float MEADOW_HUE_BLUE = 0.11;
 // Light pass 4: 0.85 -> 0.50 - fully neutral, the perspective views' sunlit white walls lost their warmth (the castle
 // read hue-less); half keeps a lit white wall at a warm hue ~35-45 with a low saturation (cream was ~0.07)
 const float WHITE_WALL_NEUTRAL = 0.50;
+// light pass 16: and a near-white ALBEDO on a side the sun does not reach loses this share of its own cast under a high
+// sun (lit.fsh), so every white wall's shade is the sky's cool: lp15's quartz shade faces read b-r +22 on a blue-white
+// texture, +6..+8 on the creamy ones (the model: +19 / +5 at SHADE_TINT_WALL). Model at 0.8: +16..+21
+const float WHITE_SHADE_NEUTRAL = 0.80;
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;
