@@ -21,8 +21,9 @@ the green of the grass beside it, patches and fog included.
 
 Deterministic (fixed seeds); writes bar/src/main/resources/assets/reignofnether/textures/block/edge/ (the 1.20 block
 atlas takes every texture under textures/block/ of every namespace - no atlas json needed).
-    python3 tools/gen_edge_fringe.py [--preview DIR] [--check]
+    python3 tools/gen_edge_fringe.py [--preview DIR] [--check] [--sampler]
 --check regenerates into a temp dir and fails if the committed files differ (byte for byte).
+--sampler writes design/eyes/edge_sampler.nbt, the eyes structure-photo layout for the overlays (see edge_sampler).
 """
 import argparse
 import filecmp
@@ -226,11 +227,44 @@ def write(out_dir, preview=None):
         print("preview", os.path.join(preview, "edge_fringe_sheet.png"))
 
 
+SAMPLER = os.path.join(ROOT, "design", "eyes", "edge_sampler.nbt")
+
+
+def edge_sampler():
+    """The eyes layout (17 x 1 x 17, one layer of ground on the photo pad): a lawn of grass_block with every case the
+    rules draw - a dirt_path cross (strips, the crossing's inner tufts, its 4 dead ends with outer corners), a single
+    path block (all 4 strips + 4 outer corners), an L of dirt_path (an inside corner: the inner tuft), a 4 x 4 sand
+    patch, a 3 x 3 gravel patch, a coarse_dirt diagonal (inner tufts only on diagonal neighbours) and a farmland pair."""
+    import gen_structures as gs
+    S = gs.Structure(17, 1, 17)
+    S.fill(0, 0, 0, 16, 0, 16, "grass_block")
+    for i in range(1, 16):
+        S.set(i, 0, 8, "dirt_path")                  # east-west arm
+        S.set(8, 0, i, "dirt_path")                  # north-south arm
+    S.set(14, 0, 2, "dirt_path")                     # single path block
+    for z in range(11, 15):
+        S.set(2, 0, z, "dirt_path")                  # the L
+    for x in range(3, 6):
+        S.set(x, 0, 14, "dirt_path")
+    S.fill(11, 0, 11, 14, 0, 14, "sand")
+    S.fill(2, 0, 2, 4, 0, 4, "gravel")
+    for d in range(3):
+        S.set(11 + d, 0, 6 - d, "coarse_dirt")       # touching only at corners
+    S.set(5, 0, 11, "farmland")
+    S.set(6, 0, 11, "farmland")
+    S.write(SAMPLER)
+    print("wrote", SAMPLER)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--preview")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--sampler", action="store_true")
     args = ap.parse_args()
+    if args.sampler:
+        edge_sampler()
+        return
     if args.check:
         with tempfile.TemporaryDirectory() as d:
             write(d)
