@@ -106,6 +106,8 @@ public final class Dragon {
         /** A brake counts once the smoothed braking has stayed over brakeOn (b/t^2) for brakeHold ticks: a stutter's
          *  braking flips sign within a tick or two, a real brake holds (review r1 of #440); and the nod's dead band. */
         public float brakeOn = 0.001f, brakeHold = 4f, brakeNodFrom = 0.003f;
+        /** How long (ticks of motion) a fresh state's speed seed may still come down to the slowest tick. */
+        public float seedTicks = 3f;
         /** The take-off: how many ticks after it appears a dragon is still taking off. */
         public float takeoffTicks = 60f;
     }
@@ -332,10 +334,18 @@ public final class Dragon {
      * wings forward - and the glide swung in and out (lovish, Oct 30: "the wings looked really choppy").
      */
     public static void drivers(float[] st, Params P, float speed, float vy, float dt) {
-        // the first tick that moves seeds the smoothed speed (a fresh state starts at 0: no brake, no take-off from it)
-        if (st[ST_SPEED_SEEDED] == 0f && speed > 0f) {
-            st[ST_SPEED] = speed;
-            st[ST_SPEED_SEEDED] = 1f;
+        // the first tick that moves seeds the smoothed speed (a fresh state starts at 0: no brake, no take-off from it),
+        // and for Params.seedTicks the seed only comes DOWN to the slowest moving tick: a first tick that was a bunched
+        // one (0.34 at a 0.17 cruise) would otherwise decay like a brake - a nod, the glide coming in (review r3)
+        if (st[ST_SPEED_SEEDED] < P.seedTicks && (speed > 0f || st[ST_SPEED_SEEDED] > 0f)) {
+            if (speed > 0f)          // (a stalled tick inside the window is ignored, not read as a stop)
+                st[ST_SPEED] = st[ST_SPEED_SEEDED] == 0f ? speed : Math.min(st[ST_SPEED], speed);
+            st[ST_SPEED_SEEDED] += Math.max(dt, 1e-3f);
+            st[ST_BRAKE] = 0f;
+            st[ST_BRAKING] = 0f;
+            float wantClimb = Mth.clamp(vy / P.climbSpeed, -1f, 1f);
+            st[ST_CLIMB] += (wantClimb - st[ST_CLIMB]) * Math.min(1f, dt / 10f);
+            return;
         }
         // the braking (blocks per tick per tick) from the smoothed speed, smoothed again
         float lastSpeed = st[ST_SPEED];
