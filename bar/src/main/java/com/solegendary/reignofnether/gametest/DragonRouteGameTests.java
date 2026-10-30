@@ -26,8 +26,13 @@ import java.util.List;
  * (stop-go), and with the way up shut too (an overhang) it waited, the move goal re-issued the order next tick and it
  * pressed into the wall again - for good.
  *
- * Each test flies one dragon down a 56 x 24 glass course far from the grid (its chunks held): sent over a wall it must
- * arrive in time, never touch it, and keep its way on (no stop-go); boxed under a roof it must get out and arrive.
+ * lovish (Oct 30) on how: "increase max flying high by a bit then go around if it cant fly over that new max". A
+ * dragon cruises {@code 10} over the ground at its point and may climb at most {@link #HEADROOM} more to cross what
+ * is in its way; anything taller it flies round.
+ *
+ * Each test flies one dragon down a 56 x 24 glass course far from the grid (its chunks held): sent over a wall under
+ * that ceiling it must arrive in time, never touch it, keep its way on (no stop-go) and never rise past the ceiling;
+ * sent at a tower far taller it must fly round it under the ceiling; boxed under a roof it must get out and arrive.
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -38,8 +43,14 @@ public class DragonRouteGameTests {
     /** The course floor's height: above any natural peak, with room for the wall and the climb under the build cap. */
     static final int PAD_Y = 250;
     static final int W = 56, D = 24;
-    /** The wall's top surface above the floor (the dragon starts at its hover height, ten over the floor). */
-    static final int WALL_TOP = 30;
+    /** The wall's top surface above the floor (the dragon starts at its hover height, ten over the floor): its feet
+     *  must rise 5 blocks to cross it, under the ceiling. */
+    static final int WALL_TOP = 14;
+    /** How far above its flight height (10 over the ground at its point) a dragon may climb to cross something; the
+     *  tests allow a block over it for the ease out of the climb. */
+    static final double HEADROOM = 6.0;
+    /** The tower's top surface above the floor: far over the ceiling (it must go round). */
+    static final int TOWER_TOP = 40;
     /** Ticks after the order by which a dragon flown over the wall must be over its point (open air: ~260). */
     static final int ARRIVE_BY = 420;
     static final int SETUP = 20;   // ticks between laying the course and the order (chunk sends, entity sections)
@@ -110,10 +121,10 @@ public class DragonRouteGameTests {
     }
 
     /**
-     * Sent 42 blocks down the course over a wall that stands 20 blocks above its flight (the course's whole width), the
-     * dragon must be over its point by {@link #ARRIVE_BY} ticks, never touch the wall, and - once it is up to speed and
-     * until the last ten blocks - never fall under 0.6 x its cruise speed over the ground: it rises over the wall in its
-     * stride, not by stopping at it and climbing.
+     * Sent 42 blocks down the course over a wall (the course's whole width) whose top its feet must rise 5 blocks to
+     * clear - under its ceiling - the dragon must be over its point by {@link #ARRIVE_BY} ticks, never touch the wall,
+     * never climb past its ceiling, and - once it is up to speed and until the last ten blocks - never fall under 0.6 x
+     * its cruise speed over the ground: it rises over the wall in its stride, not by stopping at it and climbing.
      */
     static void overAWall(GameTestHelper helper, int slot, EntityType<? extends Mob> type) {
         Course c = course(helper, slot);
@@ -127,6 +138,7 @@ public class DragonRouteGameTests {
         final double[] last = { Double.NaN, Double.NaN };
         final double[] slowest = { Double.MAX_VALUE };
         final int[] arrived = { -1 }, touched = { 0 }, upToSpeed = { 0 };
+        final double[] highest = { -1e9 };
         final String[] slowAt = { "" }, touchedAt = { "" };
         final List<String> trace = new ArrayList<>();
         for (int t = SETUP + 1; t <= SETUP + ARRIVE_BY; t++) {
@@ -141,6 +153,7 @@ public class DragonRouteGameTests {
                     if (touched[0]++ == 0)
                         touchedAt[0] = trace.get(trace.size() - 1);
                 }
+                highest[0] = Math.max(highest[0], dragon.getY() - PAD_Y);
                 if (!Double.isNaN(last[0])) {
                     double speed = Math.hypot(x - last[0], z - last[1]);
                     if (speed >= 0.8 * cruise)
@@ -163,6 +176,8 @@ public class DragonRouteGameTests {
                     problems.add("not over its point " + ARRIVE_BY + " ticks after the order (" + tail(trace) + ")");
                 if (touched[0] > 0)
                     problems.add(touched[0] + " ticks against the wall, first " + touchedAt[0]);
+                if (highest[0] > 10.5 + HEADROOM + 1.0)
+                    problems.add(String.format("climbed to %.1f over the floor (ceiling %.1f)", highest[0], 10.5 + HEADROOM));
                 if (upToSpeed[0] == 0)
                     problems.add(String.format("never reached 0.8 x cruise (%.3f b/t)", cruise));
                 else if (slowest[0] < 0.6 * cruise)
@@ -172,6 +187,60 @@ public class DragonRouteGameTests {
                     helper.succeed();
                 else
                     helper.fail(EntityType.getKey(type) + ": " + String.join("; ", problems));
+            } finally {
+                dragon.discard();
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------------ round a tower
+
+    /**
+     * A 6 x 6 tower {@link #TOWER_TOP} high stands across the line to the point, far above the ceiling: the Bone Dragon
+     * must fly round it - over its point by {@link #ARRIVE_BY} + 80 ticks, never touching it, never higher than its
+     * ceiling. It used to see the tower a dozen blocks out and climb its face until the way was clear.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SETUP + ARRIVE_BY + 100, batch = BATCH)
+    public static void bone_dragon_flies_round_a_tower_too_tall_to_cross(GameTestHelper helper) {
+        Course c = course(helper, 4);
+        stone(helper, c, 24, 1, 9, 29, TOWER_TOP - 1, 15);
+        Mob dragon = spawn(helper, EntityRegistrar.BONE_DRAGON_UNIT.get(), c.x0() + 6.5, PAD_Y + 10.5, c.z0() + 12.5, -90f);
+        BlockPos target = c.at(48, 0, 12);
+        double tx = target.getX() + 0.5, tz = target.getZ() + 0.5;
+        helper.runAfterDelay(SETUP, () -> ((Unit) dragon).getMoveGoal().setMoveTarget(target));
+        final int[] arrived = { -1 }, touched = { 0 };
+        final double[] highest = { -1e9 };
+        final String[] touchedAt = { "" };
+        final List<String> trace = new ArrayList<>();
+        for (int t = SETUP + 1; t <= SETUP + ARRIVE_BY + 80; t++) {
+            final int tick = t - SETUP;
+            helper.runAfterDelay(t, () -> {
+                double x = dragon.getX(), z = dragon.getZ();
+                if (tick % 10 == 0)
+                    trace.add(String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0()));
+                if (dragon.horizontalCollision || (dragon.verticalCollision && !dragon.onGround())) {
+                    if (touched[0]++ == 0)
+                        touchedAt[0] = String.format("t%d %.1f %.1f %.1f", tick, x - c.x0(), dragon.getY() - PAD_Y, z - c.z0());
+                }
+                highest[0] = Math.max(highest[0], dragon.getY() - PAD_Y);
+                if (arrived[0] < 0 && Math.hypot(tx - x, tz - z) < 3.0)
+                    arrived[0] = tick;
+            });
+        }
+        helper.runAfterDelay(SETUP + ARRIVE_BY + 82, () -> {
+            try {
+                List<String> problems = new ArrayList<>();
+                if (arrived[0] < 0)
+                    problems.add("not over its point " + (ARRIVE_BY + 80) + " ticks after the order (" + tail(trace) + ")");
+                if (touched[0] > 0)
+                    problems.add(touched[0] + " ticks against the tower, first " + touchedAt[0]);
+                if (highest[0] > 10.5 + HEADROOM + 1.0)
+                    problems.add(String.format("climbed to %.1f over the floor (ceiling %.1f) instead of going round",
+                        highest[0], 10.5 + HEADROOM));
+                if (problems.isEmpty())
+                    helper.succeed();
+                else
+                    helper.fail(String.join("; ", problems));
             } finally {
                 dragon.discard();
             }
