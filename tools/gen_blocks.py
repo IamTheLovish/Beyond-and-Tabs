@@ -115,8 +115,10 @@ TARGETS = {
     # contrast), satin stalks (smooth 20 -> 42)
     # r31b (eyes: ours tan beside the benchmark's yellow): one step more yellow saturation (0.56 -> 0.66)
     # r32 (critic: "too tan, weak bands"): one step more golden saturation (0.66 -> 0.76), the twine darker and wider
-    "hay_block_side":   dict(luma=0.63, std=0.105, sat=0.76, tilt=21.4, smooth=42, pore=40),
-    "hay_block_top":    dict(luma=0.62, std=0.095, sat=0.76, tilt=21.4, smooth=38, pore=40),
+    # r33 (critic, eyes 41029731853: ours 190/154/65 beside the benchmark's 215/196/23 - dimmer, tan): luma +15%
+    # (0.63 -> 0.72), a more saturated yellow (0.76 -> 0.86), the stalk colour itself more lemon than orange
+    "hay_block_side":   dict(luma=0.72, std=0.105, sat=0.86, tilt=21.4, smooth=42, pore=40),
+    "hay_block_top":    dict(luma=0.71, std=0.095, sat=0.86, tilt=21.4, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -1526,7 +1528,7 @@ def m_hay_side(F, n):
     tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump
     # some stalks bleached pale, some still green-grey: a slow hue drift along the stalks
     bleach = norm01(F.noise(6, 20, 0.4, sx=1.0, sy=30.0))
-    base = np.array([0.90, 0.72, 0.26])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+    base = np.array([0.92, 0.80, 0.20])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
         * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]     # bleached: paler, less orange
     alb = np.clip(base * tone[..., None], 0, 1)
     cord = tint((0.22, 0.15, 0.09), 0.70 + 0.40 * twist)             # dark sisal twine (r32: darker, a dull brown)
@@ -1558,7 +1560,7 @@ def m_hay_top(F, n):
     H = 0.45 + 0.26 * prof + 0.04 * fine + 0.08 * clump + 0.12 * ring - 0.10 * hole
     tone = 0.62 + 0.55 * prof + 0.06 * fine + 0.10 * clump + 0.25 * ring - 0.35 * hole
     bleach = norm01(F.noise(6, 20, 0.4, sx=30.0, sy=1.0))
-    base = np.array([0.90, 0.72, 0.26])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
+    base = np.array([0.92, 0.80, 0.20])[None, None, :] * (1 + 0.10 * (bleach - 0.5))[..., None] \
         * np.array([1.0, 1.06, 1.3])[None, None, :] ** (bleach - 0.5)[..., None]
     return H, np.clip(base * tone[..., None], 0, 1)
 
