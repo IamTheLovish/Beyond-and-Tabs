@@ -115,10 +115,12 @@ public final class MotionPass {
     /**
      * The body yaw a frame draws for `e` (LivingEntityRendererMixin redirects LivingEntityRenderer.render's own
      * rotLerp of yBodyRotO..yBodyRot here): {@link Kinematics#bodyYawAt} for a ground unit with a slot - flyers keep
-     * vanilla's (their own flight code banks and turns them) - else vanilla's.
+     * vanilla's (their own flight code banks and turns them) - else vanilla's. A GUI render (the HUD portrait, the
+     * inventory screen) draws at partial 1 with its own pose in yBodyRot - a world frame's partial is always under 1 -
+     * so it keeps vanilla's too, or the portrait would turn to the unit's heading in the world.
      */
     public static float bodyYaw(LivingEntity e, float partial, float from, float to) {
-        if (e == null || !AnimStates.enabled() || (e instanceof Unit u && u.isFlyingUnit()))
+        if (e == null || partial >= 1f || !AnimStates.enabled() || (e instanceof Unit u && u.isFlyingUnit()))
             return Mth.rotLerp(partial, from, to);
         int b = AnimStates.base(e.getId());
         return b < 0 ? Mth.rotLerp(partial, from, to) : Kinematics.bodyYawAt(AnimStates.slab(), b, from, to, partial);
