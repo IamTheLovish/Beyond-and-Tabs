@@ -194,6 +194,21 @@ public class TombcallerGameTests {
         return sb.append(around(le.level(), le.blockPosition())).append("]").toString();
     }
 
+    /** DIAGNOSTIC: every arena column that is not the template's stone / grass / air, with the game time. */
+    private static String scan(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> odd = new ArrayList<>();
+        for (int x = 0; x < 16; x++)
+            for (int z = 0; z < 16; z++) {
+                String c = "";
+                for (int y = -1; y <= 3; y++)
+                    c += level.getBlockState(helper.absolutePos(new BlockPos(x, y, z))).getBlock().getDescriptionId().replace("block.minecraft.", "").charAt(0);
+                if (!c.substring(1).equals("sgaa"))
+                    odd.add(x + "," + z + ":" + c);
+            }
+        return " [diag t=" + level.getGameTime() + " origin " + helper.absolutePos(BlockPos.ZERO).toShortString() + " odd columns y-1..3 " + odd.size() + " " + odd + "]";
+    }
+
     /** DIAGNOSTIC: the block column at a spot and every entity near it. */
     private static String around(net.minecraft.world.level.Level level, BlockPos p) {
         StringBuilder sb = new StringBuilder(" column");
@@ -452,6 +467,7 @@ public class TombcallerGameTests {
             return;
         }
         List<TombstoneUnit> stones = new ArrayList<>();
+        String scan0 = scan(helper);
         helper.runAfterDelay(2, () -> {
             List<String> problems = new ArrayList<>();
             try {
@@ -466,7 +482,7 @@ public class TombcallerGameTests {
                         stones.add(s);   // cleaned up even if stonesOf missed it
                 if (TombcallerServerEvents.stonesOf(caller).size() != 1) {
                     problems.add("the caster keeps " + TombcallerServerEvents.stonesOf(caller).size() + " stones after one cast, expected 1"
-                        + " (refused: " + RaiseTombstone.lastRefusal + ")" + around(level, helper.absolutePos(new BlockPos(9, 2, 3))));
+                        + " (refused: " + RaiseTombstone.lastRefusal + ")" + around(level, helper.absolutePos(new BlockPos(9, 2, 3))) + scan0 + scan(helper));
                 } else {
                     TombstoneUnit s = TombcallerServerEvents.stonesOf(caller).get(0);
                     Vec3 want = cell(helper, 9, 3);
