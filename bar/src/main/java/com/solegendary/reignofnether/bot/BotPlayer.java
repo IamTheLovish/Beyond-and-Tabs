@@ -37,7 +37,16 @@ import java.util.Random;
  */
 public class BotPlayer {
 
-    public enum Difficulty { EASY, MEDIUM, HARD }
+    /** PASSIVE plays EASY's economy and base but never leaves home to fight (BotArmy gates every wave, raid, scout and site squad). */
+    public enum Difficulty {
+        EASY, MEDIUM, HARD, PASSIVE;   // the order is the lobby cycle (index 0..3 in the setup screens and packets)
+
+        /** The name on the lobby cycle button. */
+        public String label() { return name().charAt(0) + name().substring(1).toLowerCase(); }
+
+        /** Easy and Passive share the easy economy and tech rules. */
+        public boolean easyLike() { return this == EASY || this == PASSIVE; }
+    }
 
     /**
      * What each faction uses for each job. T2 lives in its own lab (needs Tier 2 research): it trains the T2 army
@@ -114,7 +123,9 @@ public class BotPlayer {
         // Gravity Monk and a Mirror Mage. The Thunder Sage's spells, Overcharge, Seal, Frost Field, Ward, the Geomancers'
         // ley links and the T2 spells (Singularity into Judgement, Mirror Images, Ground Slam, Mana Wells) are stormHabits.
         // Slice 4: a Seer, a Lantern Fortress and a Phoenix join the T2 mix (stormDomes keeps the Fortress's dome up in a
-        // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them)
+        // fight); Tier 3: the Ley Master raises Heaven's Gate and it makes Celestial Dragons (stormTempest casts with them).
+        // The essence caster, the Spark Sage, joins the T2 mix (lovish, Oct 29: bots build and use every caster); the
+        // AutoCaster casts its spells whenever it holds the essence
         if (faction.equals(Factions.STORMCALLERS))
             return new Kit(Buildings.JADE_PAGODA, null, null,
                 Buildings.METAL_EXTRACTOR_STORM, Buildings.WIND_GENERATOR_STORM, Buildings.LOTUS_ACADEMY,
@@ -125,7 +136,8 @@ public class BotPlayer {
                 Buildings.CELESTIAL_OBSERVATORY, ProductionItems.LEY_MASTER,
                 List.of(ProductionItems.EARTHSHAKER, ProductionItems.EARTHSHAKER, ProductionItems.THUNDER_DRAGON,
                         ProductionItems.GRAVITY_MONK, ProductionItems.MIRROR_MAGE, ProductionItems.LANTERN_FORTRESS,
-                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN),   // beasts-2 T2 beast
+                        ProductionItems.PHOENIX, ProductionItems.SEER, ProductionItems.JADE_QILIN,   // beasts-2 T2 beast
+                        ProductionItems.SPARK_SAGE),   // essence caster: its spells autocast (Static Step, Captured Spark, Thunderhead)
                 Buildings.HEAVENS_GATE, ProductionItems.CELESTIAL_DRAGON, Buildings.ENERGY_CONVERTER_STORM);
         // the Brassworks have no farm, house or tower - every use of those checks for null - so the bot plays an economy
         // and a T1 army (Iron Wardens in front, Rifle Squads behind, Steam Runners raiding, a Mortar Crawler, a Shield
@@ -144,7 +156,8 @@ public class BotPlayer {
                 Buildings.ASSEMBLY_WORKS, ProductionItems.ENGINEER_CAPTAIN,
                 List.of(ProductionItems.STEAM_JUGGERNAUT, ProductionItems.STEAM_JUGGERNAUT, ProductionItems.TESLA_WALKER,
                         ProductionItems.CLOCKWORK_SPIDER, ProductionItems.GYROCOPTER_GUNSHIP, ProductionItems.DRILL_BURROWER,
-                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER),   // beasts-2 T2 beast
+                        ProductionItems.REPAIR_CRAWLER, ProductionItems.STEAM_HAULER,   // beasts-2 T2 beast
+                        ProductionItems.SOUL_ENGINEER),   // essence caster: Patch Kit (BUILDING_HURT), Ghost Furnace and Soul Boiler autocast; Empower stays manual
                 Buildings.GREAT_FORGE, ProductionItems.IRON_LEVIATHAN_ENGINE, Buildings.ENERGY_CONVERTER_BRASS);
         return null;
     }
@@ -175,6 +188,9 @@ public class BotPlayer {
     // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
     long atCapSince = -1;
     static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
+    // game time since when the easy bot's T1 labs have paused to save for the T2 lab (-1 = not saving)
+    long t2SaveSince = -1;
+    static final long T2_SAVE_MAX_TICKS = 20 * 60 * 3;   // three minutes of saving at most, then the labs train again
 
     public final String name;
     public final Faction faction;
@@ -479,6 +495,15 @@ public class BotPlayer {
             if (!bp.isBuilt)
                 unbuilt++;
         }
+        // sites ordered but not started (no worker has reached them yet: building/Blueprints) are sites like any other for
+        // the bot: they count toward the allowance and the layout, get builders, and are watched and cancelled when stuck.
+        // Without this the next think would not see its own capitol order and lay another
+        for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name)) {
+            buildings.add(bp);
+            if (bp.getBuilding().isCapitol)
+                capitol = bp;
+            unbuilt++;
+        }
         if (capitol != null)
             home = capitol.originPos;
         BotCombatEngineers.think(this, level, gameTime, workers, army, buildings);   // takes them out of workers (design/combat_engineers.md)
@@ -579,12 +604,13 @@ public class BotPlayer {
             boolean floatLab = floating() && minutes >= 3 && armyBuildings < targetLabs(armyBuildings, minutes) && !levelInstead;
             if (!done && floatLab)
                 done = placeLab(level, armyBuildings, workers);
-            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction)
-            if (!done && floating()) {
-                BuildingPlacement annexLab = labWantingAnnex(buildings);
-                if (annexLab != null)
-                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
-            }
+            // the research's energy (resources/TierGate, ~110 energy/s) ahead of the annex: a floating easy bot laid an
+            // annex every think and no wind for six minutes, sat at 48-104 energy/s under the gate and only teched at the
+            // patience minute (bots_reach_tier_2, flake-stress 40779463480, Oct 28). The refits' energy stays below
+            float energyTarget = techEnergyTarget(tier2, buildings);
+            if (!done && !tier2 && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
+                    && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             // energy starved (under 30% with metal to spare): wind first, or every lab stalls
             if (!done && energyFill < 0.3f && metalFill > 0.2f && winds <= extractors * 2 + 2)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -604,6 +630,14 @@ public class BotPlayer {
             if (!done && tier2 && kit.t2Lab() != null && count(buildings, kit.t2Lab()) < 1
                     && t1Req != null && com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, t1Req))
                 done = placeTechBuilding(level, kit.t2Lab(), armyBuildings + 2, workers, 3);   // 3 builders: the lab is 504 builder-seconds
+            // floating with levelled labs: an annex beside one (BAR's nano turret, in-faction). Behind the tech buildings:
+            // ahead of them, a floating easy bot whose Dungeon was cancelled once laid annexes every think and never
+            // re-laid it (bots_reach_tier_2, flake-stress 40806850709 / 40806858215, Oct 29)
+            if (!done && floating()) {
+                BuildingPlacement annexLab = labWantingAnnex(buildings);
+                if (annexLab != null)
+                    done = placeNear(level, annexFor(), annexLab.centrePos, workers, 1);
+            }
             // a Geothermal Plant on lava near home once a T2 constructor is out (T2 energy: a field of wind in one)
             if (!done && count(buildings, kit.t2Lab()) >= 1)
                 done = economy.placeGeothermal(level, gameTime, tier2, buildings, workers);
@@ -653,7 +687,6 @@ public class BotPlayer {
             // the energy a tech step needs (resources/TierGate): before the research, ~110 energy/s for its drain plus the
             // base's own spending; after it, 20 energy/s for every extractor refit or the refits run on crumbs. Winds still
             // rising count at their average, so a bot does not pile a dozen sites on one shortfall
-            float energyTarget = techEnergyTarget(tier2, buildings);
             if (!done && armyBuildings >= 1 && energyTarget > 0 && workers.size() >= 2 && winds < 40
                     && plannedEnergyIncome(eco.energyIncome, buildings) < energyTarget)
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -703,9 +736,9 @@ public class BotPlayer {
                 done = BotDefences.think(this, level, buildings, workers, home, minutes);
         }
 
-        // 4b) tech: research tier 2 at the difficulty's minute (hard: 3, so the T2 lab stands by ~8), then refit
+        // 4b) tech: research tier 2 at the difficulty's minute (hard: 5 since Oct 24, so the T2 lab stands by ~9-10), then refit
         // home extractors one at a time
-        // (not before eight workers: the research holds the capitol's queue for two minutes, and workers only come
+        // (not before eight workers: the research holds the capitol's queue for three minutes, and workers only come
         // from the capitol - a hard bot that researched at minute 3 with six workers froze its whole base)
         // ready to tech: the capitol stops training workers so its queue empties and the research can start (a hard bot's
         // worker target keeps growing, so its queue was never empty and it only teched after twelve minutes)
@@ -713,6 +746,9 @@ public class BotPlayer {
             && t2Ready(minutes, army.size(), averageEnergyIncome(eco.energyIncome, buildings, false), buildings);
         if (techPending && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        techDiag = String.format("workers %d/%d avgE %.0f planE %.0f pend %b capq %d last %s", workers.size(), targetWorkers(),
+            averageEnergyIncome(eco.energyIncome, buildings, false), plannedEnergyIncome(eco.energyIncome, buildings), techPending,
+            capitol instanceof ProductionPlacement cpq ? cpq.productionQueue.size() : -1, lastPlacedName);
         if (tier2) {
             boolean upgrading = false;
             for (BuildingPlacement bp : buildings)
@@ -747,13 +783,34 @@ public class BotPlayer {
         economy.decommissionObsolete(gameTime, minutes, tier2, buildings);
 
         // 5) train fighters: every lab keeps queueDepth units queued (Repeat-style - the queue never runs dry
-        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen
+        // between units) in a mix the role table picks: anti-air against flyers, siege once defences are seen.
+        // Tier 2 researched and its lab not standing yet, with the tier gate's army out: the T1 labs finish what they
+        // hold and queue no more, so the lab's metal is not eaten by repeat queues (the easy bot fielded 225 fighters on
+        // an empty pool and never raised its Dungeon in bots_reach_tier_2, Oct 28)
+        // The same while the research itself runs on an empty pool (an easy bot with 177 fighters sat at 0 metal from
+        // minute 13 and its research never finished, flake-stress 40806858215, Oct 29)
+        // Easy bots only (lovish's call, Oct 29), never while floating, and for T2_SAVE_MAX_TICKS at most: a lab its
+        // workers can't reach would otherwise cap the army for the rest of the game (121 fighters from minute 13 on
+        // a pool that went 933 -> 3500, flake-stress 40839167566)
+        boolean researchStarved = !tier2 && metalFill < 0.1f
+            && com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2.itemIsBeingProduced(false, name);
+        boolean wantsT2Save = difficulty.easyLike() && !floating() && (tier2 || researchStarved) && kit.t2Lab() != null
+            && army.size() >= tuning.t2MinArmy() && !com.solegendary.reignofnether.resources.TierGate.ownsFinished(name, kit.t2Lab());
+        if (!wantsT2Save)
+            t2SaveSince = -1;
+        else if (t2SaveSince < 0)
+            t2SaveSince = gameTime;
+        boolean savingForT2Lab = wantsT2Save && gameTime - t2SaveSince < T2_SAVE_MAX_TICKS;
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && isLab(bp) && bp instanceof ProductionPlacement pp) {
                 if (bp.getBuilding() == Buildings.PORTAL_BASIC) {
                     // the Horde: a Basic Portal trains nothing until it is refitted to a Military Portal
                     if (pp.productionQueue.isEmpty())
                         pp.startProductionItem(ProductionItems.RESEARCH_PORTAL_FOR_MILITARY);
+                    continue;
+                }
+                if (savingForT2Lab) {
+                    pp.setRepeatQueue(false);
                     continue;
                 }
                 pp.setRepeatQueue(true);
@@ -764,7 +821,6 @@ public class BotPlayer {
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
         verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
-        verdantThickets(level, army, workers, gameTime, minutes);
         tideHabits(level, mine, army);
         tideFogBank(level, mine, army);
         tideKrakens(level, mine);
@@ -964,16 +1020,21 @@ public class BotPlayer {
         return ok;
     }
 
+    /** The origins placeExtractorImpl tries over a patch centre, in order (public: the footprint game test walks the same list). */
+    public static final int[] EXTRACTOR_DY = { 0, -1, 1 };
+    public static final int[][] EXTRACTOR_OFFSETS = { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} };
+
     boolean placeExtractorImpl(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
         if (workers.isEmpty())
             return false;
         level.getChunk(patch.getX() >> 4, patch.getZ() >> 4);
-        for (int dy : new int[] { 0, -1, 1 })
-            for (int[] o : new int[][] { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} }) {
+        for (int dy : EXTRACTOR_DY)
+            for (int[] o : EXTRACTOR_OFFSETS) {
                 BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
                 if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
                     continue;
-                workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(origin), v.blockPosition().distSqr(origin)));
+                workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, kit.extractor()) ? 1 : 0)
+                    .thenComparingDouble(u -> u.blockPosition().distSqr(origin)));   // tech builders last (placeNearImpl)
                 return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
                         new int[] { workers.get(0).getId() }, false, false, false, true) != null;
             }
@@ -986,7 +1047,7 @@ public class BotPlayer {
      * worth walking twice as far for - BARbarian's expansion rule. Patches next to enemy buildings are skipped (don't
      * send workers to die), and a patch whose placement failed waits two minutes.
      */
-    BlockPos freePatch(ServerLevel level) {
+    public BlockPos freePatch(ServerLevel level) {
         long now = level.getGameTime();
         return bestPatch(home, MetalPatches.getPatches(level), MetalPatches::valueOf, p -> {
             if (patchFailures.getOrDefault(p, 0) >= PATCH_GIVE_UP)
@@ -997,6 +1058,9 @@ public class BotPlayer {
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
                 if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10)
                     return false;
+            for (BuildingPlacement bp : com.solegendary.reignofnether.building.Blueprints.pendingOf(name))
+                if (bp.originPos.distSqr(p) < 10 * 10)
+                    return false;   // an extractor already ordered there
             BlockPos enemy = nearestEnemyBuildingAny(p);
             return enemy == null || enemy.distSqr(p) >= 45 * 45 || enemy.distSqr(p) >= p.distSqr(home);
         });
@@ -1172,12 +1236,12 @@ public class BotPlayer {
     }
 
     /**
-     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis, Totem of the Pack, Magma Rupture, Holy Bell, Withering
+     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis, Magma Rupture, Holy Bell, Withering
      * Fog) on any unit that carries one: same rule as the commander's signature - only once three or more enemy
      * units are within 12 blocks. The ground-targeted ones (Crypt Tide, Magma Rupture, Withering Fog) are aimed at
      * the nearest of them; the rest are cast where the unit stands. The enemy scan only runs for a unit with a
-     * power off cooldown, so an idle army costs nothing here. Sunrise Sortie and Soul Wisps have their own triggers
-     * ({@link #useSortie}, {@link #useWisps}).
+     * power off cooldown, so an idle army costs nothing here. Sunrise Sortie has its own trigger
+     * ({@link #useSortie}).
      */
     void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
@@ -1189,11 +1253,6 @@ public class BotPlayer {
                         useSortie(level, le, u, a);
                     continue;
                 }
-                if (a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps) {
-                    if (a.isOffCooldown(u))
-                        useWisps(level, le, u, a);
-                    continue;
-                }
                 if (a instanceof com.solegendary.reignofnether.ability.abilities.LeafDash) {
                     if (a.isOffCooldown(u))
                         useLeafDash(level, le, u, a);
@@ -1202,11 +1261,9 @@ public class BotPlayer {
                 boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
                         || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
                         || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog
-                        || a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket
                         || a instanceof com.solegendary.reignofnether.ability.abilities.StagLeap;
                 if (!aimed && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis)
-                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.Bloom))
                     continue;
@@ -1277,21 +1334,6 @@ public class BotPlayer {
             a.use(level, u, nearest.blockPosition());
     }
 
-    /** Soul Wisps: whenever the Embalmer is stripping a wreck, or an enemy unit comes within the wisps' reach. */
-    void useWisps(ServerLevel level, LivingEntity le, Unit u, com.solegendary.reignofnether.ability.Ability a) {
-        boolean go = com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming(le);
-        if (!go) {
-            double r = com.solegendary.reignofnether.ability.abilities.SoulWisps.RADIUS;
-            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
-                if (isEnemyUnit(other) && other.distanceToSqr(le) <= r * r) {
-                    go = true;
-                    break;
-                }
-        }
-        if (go)
-            a.use(level, u, le.blockPosition());
-    }
-
     /**
      * Leaf Dash: close on the nearest enemy ranged unit (archers, casters - what a Leafblade is for) within the
      * dash's reach, but only one at least 3 blocks off: next to it, the blade just swings.
@@ -1315,16 +1357,13 @@ public class BotPlayer {
 
     // ------------------------------------------------------------------ Verdant Court habits (slice 2)
 
-    /** Game time of the last Vine Snare errand this bot sent (one every 30 s at most). */
-    long lastSnareAt = -1;
     /** The narrowest point on the way from home toward the enemy, and its "across" direction; recomputed every 5 min. */
     BlockPos choke = null;
     double chokeAcrossX = 1, chokeAcrossZ = 0;
     long chokeAt = -1;
 
     /**
-     * For any bot whose units carry them (the Verdant Court today): Seedshapers plant a couple of Vine Snares across
-     * the choke point nearest home (from minute 2, up to 2 + 1 per 6 min, max 4), one Owl Watcher hovers over that
+     * For any bot whose units carry them (the Verdant Court today): one Owl Watcher hovers over that
      * choke as a picket, and Moonwell Bearers - not fighters, so they never get army orders - follow the army's
      * centre. Cheap: one centroid pass over the army and a few checks a think; the choke scan is a few dozen
      * heightmap reads every 5 minutes.
@@ -1345,7 +1384,8 @@ public class BotPlayer {
                         && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit)
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.InkScribeUnit)    // the Scribe seals from the line
                         && !(le instanceof com.solegendary.reignofnether.unit.units.storm.SeerUnit)         // the Seer watches from it
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit))   // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LanternFortressUnit)    // the Fortress shields it
+                        && !(le instanceof com.solegendary.reignofnether.essence.EssenceCarrier))   // essence casters follow the army too
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -1388,26 +1428,6 @@ public class BotPlayer {
                 order(List.of(owl), UnitAction.MOVE, choke.above(3));
             }
         }
-        // snares across the choke
-        int want = (int) Math.min(4, 2 + minutes / 6);
-        int have = com.solegendary.reignofnether.blocks.VineSnareBlockEntity.countOwned(level, name);
-        if (have >= want || (lastSnareAt >= 0 && gameTime - lastSnareAt < 20 * 30))
-            return;
-        for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantVineSnare) || !a.isOffCooldown(u))
-                    continue;
-                // across the gap: centre, then 2 blocks either side, then 4
-                int k = have + 1;
-                int side = (k / 2) * 2 * (k % 2 == 0 ? 1 : -1);
-                BlockPos at = choke.offset((int) Math.round(chokeAcrossX * side), 0, (int) Math.round(chokeAcrossZ * side));
-                a.use(level, u, MiscUtil.getHighestNonAirBlock(level, at));
-                lastSnareAt = gameTime;
-                return;
-            }
-        }
     }
 
     // ------------------------------------------------------------------ Stormcallers habits (slice 1)
@@ -1417,8 +1437,6 @@ public class BotPlayer {
     static final float OVERCHARGE_ON_FILL = 0.6f, OVERCHARGE_OFF_FILL = 0.2f;
     /** Energy kept before the bot's Ward (8 s of drain plus a Judgement), Seal and Frost Field (the Judgement reserve). */
     static final float WARD_RESERVE = 250f, SEAL_RESERVE = 175f, FROST_RESERVE = 200f;
-    /** Game time of the bot's last ley link (one per 10 s at most: the order is free, the beams are not). */
-    long lastLinkAt = -1;
     /** Energy kept before the T2 spells (slice 3): each leaves a Judgement's worth for the combo that follows. */
     static final float SINGULARITY_RESERVE = 200f, MIRROR_RESERVE = 200f, SLAM_RESERVE = 200f, WELL_RESERVE = 300f;
     /**
@@ -1444,8 +1462,7 @@ public class BotPlayer {
      *       (ManaServerEvents also switches it off by itself at 0).</li>
      *   <li>slice 2: it raises its Ward when it is fighting under fire (hit in the last 3 s with 2+ foes in reach); Ink
      *       Scribes seal the priciest enemy caster or commander in reach ({@link #stormSeals}); Frost Adepts freeze the
-     *       ground between the army and an enemy group pushing it ({@link #stormFrost}); Geomancers ley-link the wind
-     *       generators near home once there are three ({@link #stormLinks}), one link per think.</li>
+     *       ground between the army and an enemy group pushing it ({@link #stormFrost}).</li>
      * </ul>
      * Cheap: one centroid pass and one grid query for the army, and a small O(n^2) clump count (n = foes within the
      * Judgement's 14 blocks) only while the D-gun is off cooldown and affordable.
@@ -1467,10 +1484,8 @@ public class BotPlayer {
                 stormCommander(level, le, u, res);
         stormSeals(level, mine, res);
         stormFrost(level, mine, army, res);
-        stormLinks(level, mine, gameTime);
         stormMirror(level, mine, res);
         stormSlam(level, mine, res);
-        stormWells(level, mine, res);
         stormTempest(level, mine, res);
         stormDomes(level, mine, res);
         // Overcharge: on in a fight with a full pool, off when the fight ends or the pool runs low
@@ -1560,7 +1575,7 @@ public class BotPlayer {
                     }
                 }
             } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.DrillBurrowerUnit drill
-                    && difficulty != Difficulty.EASY && drill.getBurrowTicks() == 0 && le.tickCount % 20 == 0) {
+                    && !difficulty.easyLike() && drill.getBurrowTicks() == 0 && le.tickCount % 20 == 0) {
                 // slice 2: a Drill Burrower in a fight tunnels under the front line onto the nearest enemy shooter 6-16
                 // blocks off (artillery, archers, casters: what a raider is for)
                 com.solegendary.reignofnether.ability.Ability burrow = null;
@@ -1590,33 +1605,6 @@ public class BotPlayer {
                     burrow.setToMaxCooldown(u);
                     com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(le.getId(), burrow.action, burrow.cooldownMax);
                 }
-            } else if (le instanceof com.solegendary.reignofnether.unit.units.brass.TinkerUnit tinker && tinker.isIdle()
-                    && res.getMetal() >= com.solegendary.reignofnether.ability.abilities.FieldUpgrade.METAL_COST + 200
-                    && home != null && le.blockPosition().distSqr(home) <= 40 * 40) {
-                LivingEntity bare = null;
-                double best = com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE * com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE;
-                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(),
-                        com.solegendary.reignofnether.ability.abilities.FieldUpgrade.RANGE, scan)) {
-                    if (!(other instanceof com.solegendary.reignofnether.unit.units.brass.IronWardenUnit)
-                            || !com.solegendary.reignofnether.ability.abilities.FieldUpgrade.canUpgrade(name, other))
-                        continue;
-                    double d = other.distanceToSqr(le);
-                    if (d < best) {
-                        best = d;
-                        bare = other;
-                    }
-                }
-                scan.clear();
-                if (bare != null) {
-                    for (var a : u.getAbilities().get())
-                        if (a instanceof com.solegendary.reignofnether.ability.abilities.FieldUpgrade fu
-                                && fu.kind == com.solegendary.reignofnether.brass.Heat.UPGRADE_PLATING && a.isOffCooldown(u)) {
-                            if (com.solegendary.reignofnether.ability.abilities.FieldUpgrade.apply(level, le, name, bare, fu.kind, true))
-                                a.setToMaxCooldown(u);
-                            break;
-                        }
-                    return;   // one upgrade per think
-                }
             }
         }
     }
@@ -1626,7 +1614,7 @@ public class BotPlayer {
         for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
             if (!a.isOffCooldown(u))
                 continue;
-            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun && difficulty != Difficulty.EASY
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun && !difficulty.easyLike()
                     && com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
                         == com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.JUDGEMENT) {
                 float cost = com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST
@@ -1790,55 +1778,6 @@ public class BotPlayer {
         }
     }
 
-    /**
-     * Geomancers (slice 2): once the bot has three finished wind generators, an idle Geomancer links the nearest pair of
-     * generators within 60 blocks of home that are not yet linked (and within LeyNetwork.MAX_DISTANCE of each other),
-     * one link per 10 s, so the home wind farm resonates. The link is placed directly (the server-side half of the
-     * order); the Geomancer is only its author. Nothing when every pair in reach is linked or capped.
-     */
-    void stormLinks(ServerLevel level, List<LivingEntity> mine, long gameTime) {
-        if (home == null || (lastLinkAt >= 0 && gameTime - lastLinkAt < 20 * 10)
-                || com.solegendary.reignofnether.mana.LeyNetwork.linkCount(name) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_PLAYER)
-            return;
-        LivingEntity geomancer = null;
-        for (LivingEntity le : mine)
-            if (le instanceof com.solegendary.reignofnether.unit.units.storm.GeomancerUnit g && g.isIdle()
-                    && !(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit)   // a Ley Master's idle time goes to wells and the T3 lab
-                    && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
-                geomancer = le;
-                break;
-            }
-        if (geomancer == null)
-            return;
-        List<BuildingPlacement> winds = new ArrayList<>();
-        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
-            if (bp.isBuilt && !bp.isDestroyedServerside && name.equals(bp.ownerName)
-                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator
-                    && bp.centrePos.distSqr(home) <= 60 * 60)
-                winds.add(bp);
-        if (winds.size() < 3)
-            return;
-        BuildingPlacement a = null, b = null;
-        double best = Double.MAX_VALUE;
-        int maxD2 = com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE * com.solegendary.reignofnether.mana.LeyNetwork.MAX_DISTANCE;
-        for (int i = 0; i < winds.size(); i++)
-            for (int j = i + 1; j < winds.size(); j++) {
-                BuildingPlacement w1 = winds.get(i), w2 = winds.get(j);
-                double d = w1.centrePos.distSqr(w2.centrePos);
-                if (d > maxD2 || d >= best || com.solegendary.reignofnether.mana.LeyNetwork.isLinked(name, w1.centrePos, w2.centrePos)
-                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w1.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING
-                        || com.solegendary.reignofnether.mana.LeyNetwork.linksOf(name, w2.centrePos) >= com.solegendary.reignofnether.mana.LeyNetwork.LINKS_PER_BUILDING)
-                    continue;
-                best = d;
-                a = w1;
-                b = w2;
-            }
-        if (a == null)
-            return;
-        if (com.solegendary.reignofnether.ability.abilities.LeyLink.link(level, name, a, b, true))
-            lastLinkAt = gameTime;
-    }
-
     // ------------------------------------------------------------------ Stormcallers T2 habits (slice 3)
 
     /** The spot of a Singularity that closed within {@link #COMBO_TICKS} and lies within {@code range} of {@code from}, else null. */
@@ -1962,35 +1901,6 @@ public class BotPlayer {
         }
     }
 
-    /**
-     * Ley Masters: with a comfortable pool and fewer than two wells, an idle Ley Master near home raises a Mana Well at
-     * its feet - the base's casters (and the Sage falling back to it) cast stronger and cheaper there. One per think;
-     * keeps {@link #WELL_RESERVE}.
-     */
-    void stormWells(ServerLevel level, List<LivingEntity> mine, com.solegendary.reignofnether.resources.Resources res) {
-        if (home == null || com.solegendary.reignofnether.mana.ManaServerEvents.wellCount(name) >= 2
-                || res.getEnergy() < com.solegendary.reignofnether.ability.abilities.ManaWell.ENERGY_COST
-                    * com.solegendary.reignofnether.mana.ManaServerEvents.spellCostMultiplier(name) + WELL_RESERVE)
-            return;
-        for (LivingEntity le : mine) {
-            if (!(le instanceof com.solegendary.reignofnether.unit.units.storm.LeyMasterUnit master) || !master.isIdle() || sealed(le)
-                    || le.blockPosition().distSqr(home) > 40 * 40)
-                continue;
-            // not on top of an existing well (that would take it down), and not inside one (wells don't stack)
-            if (com.solegendary.reignofnether.mana.ManaServerEvents.insideWell(name, le.blockPosition()))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : master.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.ManaWell well) || !well.isOffCooldown(master))
-                    continue;
-                if (com.solegendary.reignofnether.ability.abilities.ManaWell.cast(level, master, name, le.blockPosition(), true)) {
-                    well.setToMaxCooldown(master);
-                    com.solegendary.reignofnether.ability.AbilityClientboundPacket.sendSetCooldownPacket(master.getId(), well.action, well.cooldownMax);
-                    return;
-                }
-                break;
-            }
-        }
-    }
 
     // ------------------------------------------------------------------ Stormcallers slice 4 habits
 
@@ -2250,61 +2160,6 @@ public class BotPlayer {
         }
     }
 
-    /** Game time of the last Plant Thicket errand this bot sent, and how many it has sent (alternates the spot). */
-    long lastThicketAt = -1;
-    int thicketErrands = 0;
-
-    /**
-     * Living Terrain (slice 3), for any bot whose Seedshapers carry Plant Thicket: from minute 3 an idle Seedshaper
-     * grows a 3x3 patch every 40 s, alternating between the home choke (just on the home side of it, left then right
-     * of the line) and the army's resting spot (its centre, when the army is idle near home) - cover where the army
-     * waits and where the enemy walks in. Stops at 1 patch + 1 per 4 min, never past the planting cap.
-     */
-    void verdantThickets(ServerLevel level, List<LivingEntity> army, List<LivingEntity> workers, long gameTime, long minutes) {
-        if (minutes < 3 || home == null || (lastThicketAt >= 0 && gameTime - lastThicketAt < 20 * 40))
-            return;
-        int want = (int) Math.min(com.solegendary.reignofnether.blocks.ThicketBlockEntity.MAX_PLANTED, 9 * (1 + minutes / 4));
-        if (com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, name) + 5 > want)
-            return;
-        BlockPos at = null;
-        if (thicketErrands % 2 == 1 && !army.isEmpty()) {
-            // the army's resting spot: only while it idles near home (a marching army has no resting spot)
-            double cx = 0, cz = 0;
-            boolean idle = true;
-            for (LivingEntity le : army) {
-                cx += le.getX();
-                cz += le.getZ();
-                if (le instanceof Unit u && !u.isIdle())
-                    idle = false;
-            }
-            BlockPos centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
-            if (idle && centre.distSqr(home) < 40 * 40)
-                at = centre;
-        }
-        if (at == null && choke != null) {
-            // a step back from the choke toward home, alternating sides of the line
-            double dx = home.getX() - choke.getX(), dz = home.getZ() - choke.getZ();
-            double len = Math.max(1, Math.hypot(dx, dz));
-            int side = (thicketErrands / 2) % 2 == 0 ? 3 : -3;
-            at = ground(level, (int) Math.round(choke.getX() + dx / len * 3 + chokeAcrossX * side),
-                    (int) Math.round(choke.getZ() + dz / len * 3 + chokeAcrossZ * side));
-        }
-        if (at == null)
-            return;
-        for (LivingEntity w : workers) {
-            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w) || sealed(w))
-                continue;
-            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
-                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantThicket) || !a.isOffCooldown(u))
-                    continue;
-                a.use(level, u, at);
-                lastThicketAt = gameTime;
-                thicketErrands++;
-                return;
-            }
-        }
-    }
-
     /**
      * The Grove Warden's Overgrowth once three or more enemy units are within 14 blocks: aimed at their centre, so
      * the root catches the pack and the thickets give the Court's units cover right in the fight.
@@ -2398,7 +2253,7 @@ public class BotPlayer {
      * over (300+), so a bot never stalls its own economy to shoot. Hard bots save less, easy bots never shoot.
      */
     void fireDGun(ServerLevel level, LivingEntity commander, Unit u) {
-        if (difficulty == Difficulty.EASY)
+        if (difficulty.easyLike())
             return;
         // Heaven's Judgement is a column aimed at the densest clump and paid through the Mana core: stormHabits
         if (com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(u)
@@ -2466,6 +2321,10 @@ public class BotPlayer {
         lastPlacedAt = gameTime;
     }
 
+    /** The tech gate's inputs at the last think and the last building placed, for TierGateGameTests' [T2Snap] line. */
+    public String techDiag = "-";
+    String lastPlacedName = "-";
+
     /** A placement that found no site: counted, named, and reported through {@link #blocked}. */
     void placeFailed(long gameTime, Building building, String reason) {
         lastFailed = building;
@@ -2503,9 +2362,36 @@ public class BotPlayer {
      */
     boolean placeTechBuilding(ServerLevel level, Building building, int index, List<LivingEntity> workers, int builders) {
         boolean ok = placeNear(level, building, layoutSlot(Layout.ARMY, index + techSlotShift), workers, builders);
+        if (!ok && building.getFaction().equals(Factions.PIGLINS))
+            ok = placeOnOwnNether(level, building, workers, builders);
         if (!ok)
             techSlotShift = (techSlotShift + 1) % 8;
         return ok;
+    }
+
+    /**
+     * A Horde building that must stand on netherrack, tried round each of the bot's own nether zones (its portals'
+     * spread) once the layout slot had none: in bots_reach_tier_2 the medium Horde's Hoglin Stables and Flame Sanctuary
+     * sat at "no valid site" for minutes, a third of the tries refused as must_be_nether (Oct 28).
+     */
+    boolean placeOnOwnNether(ServerLevel level, Building building, List<LivingEntity> workers, int builders) {
+        List<BlockPos> zones = new ArrayList<>();
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
+            if (name.equals(bp.ownerName) && bp.isBuilt
+                    && bp.getBuilding() instanceof com.solegendary.reignofnether.building.addon.NetherConvertingAddon nca
+                    && nca.getNetherZone(bp) != null)
+                zones.add(nca.getNetherZone(bp).getOrigin());
+        zones.sort((a, b) -> Double.compare(a.distSqr(home), b.distSqr(home)));
+        for (BlockPos zone : zones)
+            if (placeNearImpl(level, building, zone, workers, builders)) {
+                placed(level.getGameTime());
+                lastPlacedName = building.structureName;
+                return true;
+            }
+        if (!zones.isEmpty())
+            placeFailed(level.getGameTime(), building, "no valid site round " + zones.size() + " own nether zones, last "
+                + zones.get(zones.size() - 1).toShortString() + siteRejections());
+        return false;
     }
 
     /** A site the watch gave up on: remembered so the next placement goes elsewhere; a lab's slot moves on too. */
@@ -2531,15 +2417,32 @@ public class BotPlayer {
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
     boolean placeNear(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
         boolean ok = placeNearImpl(level, building, want, workers, builders);
-        if (ok)
+        if (ok) {
             placed(level.getGameTime());
-        else
+            lastPlacedName = building.structureName;
+        } else
             placeFailed(level.getGameTime(), building, "no valid site within 32 blocks of " + want.toShortString()
-                + (workers.isEmpty() ? " (no workers)" : ""));
+                + (workers.isEmpty() ? " (no workers)" : "") + siteRejections());
         return ok;
     }
 
+    /** Why the last placeNear's tries were refused (validator key -> tries), for the blocked reason: a site search that
+     *  finds nothing says whether the ground, the nether, the neighbours or the fog stopped it. */
+    final java.util.Map<String, Integer> lastSiteRejections = new java.util.TreeMap<>();
+
+    private String siteRejections() {
+        if (lastSiteRejections.isEmpty())
+            return "";
+        StringBuilder sb = new StringBuilder(" [");
+        lastSiteRejections.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> sb.append(sb.length() > 2 ? ", " : "").append(e.getKey().replace("building.reignofnether.", "")).append(' ').append(e.getValue()));
+        return sb.append(']').toString();
+    }
+
     boolean placeNearImpl(ServerLevel level, Building building, BlockPos want, List<LivingEntity> workers, int builders) {
+        lastSiteRejections.clear();
+        int[][] footprintCols = null;   // read once per search, on its first ground_not_flat refusal
         for (int ring = 0; ring <= 8; ring++) {
             for (int attempt = 0; attempt < (ring == 0 ? 1 : 8); attempt++) {
                 double a = attempt * Math.PI / 4 + ring;
@@ -2549,17 +2452,77 @@ public class BotPlayer {
                 BlockPos surface = MiscUtil.getHighestNonAirBlock(level, new BlockPos(x, 0, z), true);   // the ground block (leaves skipped, as the player's placement grid does: a bot site on a canopy sat 5 blocks over its builders, soak stalls Oct 21-22); structures sit at origin.y+1
                 if (nearBadSite(surface, level.getGameTime()))
                     continue;   // a site the watch cancelled: valid ground the workers never built on
-                if (BuildingValidators.isPlacementValid(level, building, surface, name, Rotation.NONE, false, false, true)) {
-                    workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(surface), v.blockPosition().distSqr(surface)));
+                BlockPos site = null;
+                String error = BuildingValidators.getPlacementValidityError(level, building, surface, name, Rotation.NONE, false, false, true);
+                if (error == null)
+                    site = surface;
+                else if (error.endsWith("ground_not_flat")) {
+                    // raised origins only for rolling ground, so a search refused for other reasons costs what it did
+                    if (footprintCols == null)
+                        footprintCols = footprintColumns(level, building);
+                    for (BlockPos tryAt : raisedHeights(level, surface, footprintCols)) {
+                        error = BuildingValidators.getPlacementValidityError(level, building, tryAt, name, Rotation.NONE, false, false, true);
+                        if (error == null) {
+                            site = tryAt;
+                            break;
+                        }
+                    }
+                }
+                if (site == null)
+                    lastSiteRejections.merge(error, 1, Integer::sum);
+                else {
+                    final BlockPos surfaceSite = site;
+                    // nearest first, but the builders of an unfinished tech building (T1 requirement, T2 lab) last: the
+                    // next site took the Dungeon's builders and the watch cancelled it at 20 of 63 blocks
+                    // (bots_reach_tier_2, flake-stress 40817960311, Oct 29)
+                    workers.sort(java.util.Comparator.<LivingEntity>comparingInt(u -> buildsTech(u, building) ? 1 : 0)
+                        .thenComparingDouble(u -> u.blockPosition().distSqr(surfaceSite)));
                     int take = Math.min(builders, workers.size());
                     int[] ids = new int[take];
                     for (int i = 0; i < take; i++)
                         ids[i] = workers.get(i).getId();
-                    return BuildingServerEvents.placeBuilding(building, surface, Rotation.NONE, name, ids, false, false, false, true) != null;
+                    return BuildingServerEvents.placeBuilding(building, surfaceSite, Rotation.NONE, name, ids, false, false, false, true) != null;
                 }
             }
         }
         return false;
+    }
+
+    /** The worker is building an unfinished T1 requirement or T2 lab of this bot's, and {@code next} is something else. */
+    boolean buildsTech(LivingEntity worker, Building next) {
+        BuildingPlacement target = BotSiteWatch.targetOf(worker);
+        if (target == null || target.isBuilt || kit.t2Lab() == null || target.getBuilding() == next)
+            return false;
+        Building b = target.getBuilding();
+        return b == kit.t2Lab() || b == com.solegendary.reignofnether.resources.TierGate.t1LabFor(kit.t2Lab());
+    }
+
+    /** The footprint's four corners and centre (x, z offsets from the origin), or none when it has no block data. */
+    int[][] footprintColumns(ServerLevel level, Building building) {
+        var blocks = building.getRelativeBlockData(level);
+        if (blocks == null || blocks.isEmpty())
+            return new int[0][];
+        BlockPos min = com.solegendary.reignofnether.building.BuildingUtils.getMinCorner(blocks);
+        BlockPos max = com.solegendary.reignofnether.building.BuildingUtils.getMaxCorner(blocks);
+        return new int[][] { { min.getX(), min.getZ() }, { max.getX(), min.getZ() }, { min.getX(), max.getZ() },
+            { max.getX(), max.getZ() }, { (min.getX() + max.getX()) / 2, (min.getZ() + max.getZ()) / 2 } };
+    }
+
+    /**
+     * Raised origins to try for a column whose ground was refused as ground_not_flat: one and two higher, then the
+     * highest ground under the footprint's corners and centre. The origin corner alone set the height, so on rolling
+     * ground every try of a big footprint clipped a rise (bots_reach_tier_2, Oct 28: the Horde's Hoglin Stables
+     * refused 36-65 of 65 tries as ground_not_flat); a raised origin leaves small gaps, which the validator allows
+     * and placement fills.
+     */
+    List<BlockPos> raisedHeights(ServerLevel level, BlockPos surface, int[][] cols) {
+        List<BlockPos> out = new ArrayList<>(List.of(surface.above(), surface.above(2)));
+        int top = surface.getY();
+        for (int[] c : cols)
+            top = Math.max(top, MiscUtil.getHighestNonAirBlock(level, surface.offset(c[0], 0, c[1]).atY(0), true).getY());
+        if (top > surface.getY() + 2)
+            out.add(surface.atY(top));
+        return out;
     }
 
     int count(List<BuildingPlacement> buildings, Building b) {
@@ -2571,6 +2534,11 @@ public class BotPlayer {
     }
 
     enum Layout { WIND, CONVERTER, VAULT, FARM, HOUSE, ARMY }
+
+    /** Where the bot's index-th converter goes (public for the game tests: converters must stay clear of each other's death blast). */
+    public BlockPos converterSlot(int index) {
+        return layoutSlot(Layout.CONVERTER, index);
+    }
 
     /**
      * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
@@ -2590,7 +2558,9 @@ public class BotPlayer {
         double back, side;
         switch (kind) {
             case WIND -> { back = 14 + (index / 6) * 4; side = (index % 6 - 2.5) * 4; }
-            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * 4); }
+            // converters are the fragile eco building and blow up their neighbours (RaidTuning.CONVERTER_BLAST_RADIUS 5): spaced
+            // 8 apart so one lost to a raid stays one lost
+            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * com.solegendary.reignofnether.raid.RaidTuning.CONVERTER_SPACING); }
             // vaults: a row past the converters, deepest in the base (they lose what they hold when they fall)
             case VAULT -> { back = 14 + 4 * 3 + 7; side = (index % 2 == 0 ? 1 : -1) * (2 + (index / 2) * 4); }
             case FARM -> { back = 4 + index * 12; side = 27; }
@@ -2623,7 +2593,7 @@ public class BotPlayer {
      * production whenever it has 20 population free. Easy bots never do (t3Minute 99).
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
-        if (difficulty == Difficulty.EASY || minutes < tuning.t3Minute())
+        if (difficulty.easyLike() || minutes < tuning.t3Minute())
             return;
         if (kit.t3Building() == null || kit.t3Unit() == null || kit.t2Lab() == null)
             return;   // a faction without its T3 yet: don't sink the economy into a Tier 3 that unlocks nothing
@@ -2751,8 +2721,13 @@ public class BotPlayer {
         int[] ids = new int[units.size()];
         for (int i = 0; i < units.size(); i++)
             ids[i] = units.get(i).getId();
+        if (orderListener != null)
+            orderListener.accept(action, target);
         UnitServerEvents.addActionItem(name, action, -1, ids, target, target);
     }
+
+    /** Test hook: told of every army order this bot gives (action, target); null in play. */
+    public java.util.function.BiConsumer<UnitAction, BlockPos> orderListener;
 
     BlockPos nearestEnemyBuilding(BlockPos from) {
         BlockPos best = null;
