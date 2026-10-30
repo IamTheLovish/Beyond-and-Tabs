@@ -1555,12 +1555,12 @@ for _p in FLOWER_TEXTURES:
 # 0.68 mean: plant_sprites TIP / BASE), a dark base (~0.33 tinted), the hue ~10 degrees toward yellow (m_plant)
 for _sh in ("", "_b", "_c"):
     for _sz in ("", *PLANT_SIZES):
-        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.58, sat=0.14)   # r50: olive; lawn L1: green, body under the lawn
+        TARGETS["grass" + _sh + _sz] = dict(TARGETS["grass" + _sh + _sz], luma=0.55, sat=0.30)   # lawn L1: green; L2: sat up (0.43 on screen -> >= 0.50), body L <= 0.38
 for _p in ("fern", "fern_b", "fern_t", "fern_b_t"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.55, sat=0.12)   # lawn L1
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.53, sat=0.24)   # lawn L1 / L2
 for _p in ("tall_grass_bottom", "tall_grass_top", "large_fern_bottom", "large_fern_top", "tall_grass_bottom_b",
            "tall_grass_top_b"):
-    TARGETS[_p] = dict(TARGETS[_p], luma=0.57, sat=0.14)   # lawn L1
+    TARGETS[_p] = dict(TARGETS[_p], luma=0.55, sat=0.30)   # lawn L1 / L2
 PLANT_SEEDS = (
     "grass",
     "tall_grass_bottom",
