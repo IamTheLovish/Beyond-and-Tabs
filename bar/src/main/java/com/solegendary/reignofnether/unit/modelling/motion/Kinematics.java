@@ -161,6 +161,22 @@ public final class Kinematics {
     }
 
     /**
+     * One tick of the turn: the body's world yaw (yBodyRot) as the server turned it.
+     *
+     * @param fresh the slot's first tick: start facing that way, no swing in from zero
+     */
+    public static void turn(float[] s, int b, float bodyYawDeg, boolean fresh) {
+    }
+
+    /**
+     * The body yaw a frame draws (LivingEntityRendererMixin, for the body, the head's net yaw and every layer), between
+     * yBodyRotO (from) and yBodyRot (to) at the partial tick.
+     */
+    public static float bodyYawAt(float[] s, int b, float from, float to, float partial) {
+        return Mth.rotLerp(partial, from, to);
+    }
+
+    /**
      * The contact event, attacker side: this unit's blow landed (the client's damage event names it as the direct
      * source - for a keyed swing that is HeldBlow's hit key, the frame the blade arrives). The weapon stops on the
      * target: the arms and torso jolt back and shudder still. Stamped in the same call as the target's {@link #onHit},

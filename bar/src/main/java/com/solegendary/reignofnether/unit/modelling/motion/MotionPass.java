@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.solegendary.reignofnether.hero.PossessionClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -97,7 +98,7 @@ public final class MotionPass {
             float zoom = OrthoviewClientEvents.isEnabled() ? OrthoviewClientEvents.getZoom() : 0f;
             LOOK[Motion.LOOK_MODE] = map.look;
             if (map.look != Motion.LOOK_NONE) {   // what LivingEntityRenderer gave setupAnim this frame
-                float body = Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot);
+                float body = bodyYaw(e, partial, e.yBodyRotO, e.yBodyRot);
                 LOOK[Motion.LOOK_BODY_YAW] = body;
                 LOOK[Motion.LOOK_NET_YAW] = Mth.wrapDegrees(Mth.rotLerp(partial, e.yHeadRotO, e.yHeadRot) - body);
                 LOOK[Motion.LOOK_PITCH] = Mth.lerp(partial, e.xRotO, e.getXRot());
@@ -109,6 +110,18 @@ public final class MotionPass {
             restore();
             BoneMaps.disable(model.getClass(), ex);
         }
+    }
+
+    /**
+     * The body yaw a frame draws for `e` (LivingEntityRendererMixin redirects LivingEntityRenderer.render's own
+     * rotLerp of yBodyRotO..yBodyRot here): {@link Kinematics#bodyYawAt} for a ground unit with a slot - flyers keep
+     * vanilla's (their own flight code banks and turns them) - else vanilla's.
+     */
+    public static float bodyYaw(LivingEntity e, float partial, float from, float to) {
+        if (e == null || !AnimStates.enabled() || (e instanceof Unit u && u.isFlyingUnit()))
+            return Mth.rotLerp(partial, from, to);
+        int b = AnimStates.base(e.getId());
+        return b < 0 ? Mth.rotLerp(partial, from, to) : Kinematics.bodyYawAt(AnimStates.slab(), b, from, to, partial);
     }
 
     /**
