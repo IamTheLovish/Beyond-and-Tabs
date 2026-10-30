@@ -5,6 +5,7 @@ import com.solegendary.reignofnether.unit.modelling.models.gen.CrossbowLevyModel
 import com.solegendary.reignofnether.unit.modelling.models.gen.HalberdierModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.IronGolemModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.util.Mth;
@@ -252,6 +253,35 @@ class DeathFallTest {
                 assertEquals(before[i * 6 + 1], map.death[i].zRot, 0f);
                 assertEquals(before[i * 6 + 2], map.death[i].y, 0f);
             }
+    }
+
+    @Test
+    void aHalberdHeldAtTheGuardLiesAlongTheFallenBody() {
+        // the captures: hit in the chest, the Halberdier fell on his back and his halberd, still at the guard (pointing
+        // forwards), stood straight up beside him
+        HalberdierModel<Entity> hal = new HalberdierModel<Entity>(HalberdierModel.createBodyLayer().bakeRoot());
+        BoneMap map = BoneMaps.forModel(hal);
+        assertNotNull(map);
+        assertEquals(1, map.droppedCount, "the halberd, on its grip beside the right arm");
+        ModelPart halberd = map.dropped[0];
+        halberd.xRot = -1.3f;     // the guard: pitched forwards, out in front of him
+        halberd.z = -6f;
+        int id = 4;
+        float[] s = dying(0f, false, 1, id);
+        float kind = s[B + AnimState.DEATH_KIND];
+        assertEquals(0f, DeathFall.dropped(DeathFall.reelTicks(kind), kind, id), 1e-6f, "still held through the reel");
+        float down = DeathFall.impactTick(kind, id);
+        assertEquals(1f, DeathFall.dropped(down, kind, id), 1e-4f, "at its rest by the time the body lands");
+        DeathFall.pose(s, B, id, down + 5f, true, MotionPass.fallScratch());
+        MotionPass.placeFall(map, new PoseStack(), DeathFall.dropped(down + 5f, kind, id));
+        assertEquals(0f, halberd.xRot, 1e-6f, "upright in the body's frame, as planted at rest: along the body lying");
+        assertEquals(0f, halberd.z, 1e-6f, "in the body's plane, not stood out in front of it");
+        MotionPass.restore();
+        assertEquals(-1.3f, halberd.xRot, 0f, "the living pose is left as setupAnim made it");
+        assertEquals(-6f, halberd.z, 0f);
+        BoneMap levy = BoneMaps.forModel(new CrossbowLevyModel<Entity>(CrossbowLevyModel.createBodyLayer().bakeRoot()));
+        assertNotNull(levy);
+        assertEquals(0, levy.droppedCount, "the Levy's crossbow rests held forwards: its rest is no lying pose");
     }
 
     @Test

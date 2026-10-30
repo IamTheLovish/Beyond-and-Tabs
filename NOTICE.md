@@ -94,3 +94,12 @@ The Stormcallers' Paper Crane is drawn on Alex's Mobs' shoebill model. Its skin
 (`textures/entities/paper_crane_unit.png`, `tools/gen_storm_skins.py`) is our own paint: the script reads only which
 pixels of the shoebill texture are part of its UV layout (the alpha outline), so the paint lands on the model, and
 fills them with its own paper colours, creases and seal marks. No Alex's Mobs pixel colour is copied.
+
+## Our shader pack (`shaderpacks/BeyondAndTabs`)
+
+Our shader pack for Oculus (not shipped to testers yet; it is meant to replace the old third-party one) is our own: every file is original work, written clean-room from the
+public documentation of the OptiFine / Iris shader-pack format, general graphics knowledge and this repository's own
+code (its grade and edge smoothing are ported from our `bat_postfx.fsh`). It is not derived from any other shader pack,
+and no other pack's source, settings or shader files were read to write it (design/own_shader_pack.md). It is released
+under this repository's licence, GNU GPL v2 or later (a copy is in the pack folder, so the built zip carries it).
+Oculus (LGPL v3), which loads it, is installed from its official Modrinth file, unmodified.
