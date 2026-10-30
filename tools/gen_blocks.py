@@ -80,7 +80,8 @@ TARGETS = {
     # round 3 (Oct 15): what the RTS view shows most after grass and water (the eyes ground census); new keys go at
     # the END - the seeds follow this order, so the older textures stay byte-identical. Targets = the single-block
     # numbers of pack-study run 38732322940 (polished andesite is near flat and polished; smooth stone is rough)
-    "stone_bricks":     dict(luma=0.47, std=0.081, sat=0.03, tilt=18.4, smooth=14, pore=12),
+    # r31: narrower, lighter mortar and flatter faces - std 0.081 -> 0.055, tilt 18.4 -> 11 (it read as cobble)
+    "stone_bricks":     dict(luma=0.50, std=0.055, sat=0.03, tilt=11.0, smooth=18, pore=12, soften=0.8),
     "polished_andesite": dict(luma=0.49, std=0.035, sat=0.03, tilt=3.0, smooth=119, pore=4),
     "smooth_stone":     dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),   # r21: cool mid grey
     "smooth_stone_slab_side": dict(luma=0.54, std=0.045, sat=0.04, tilt=17.7, smooth=16, pore=10),
@@ -146,7 +147,7 @@ TARGETS = {
     "prismarine_bricks":          dict(luma=0.58, std=0.075, sat=0.33, tilt=12.0, smooth=44, pore=10),
     "dark_prismarine":            dict(luma=0.31, std=0.070, sat=0.36, tilt=15.6, smooth=78, pore=10),
     "moss_block":                 dict(luma=0.40, std=0.060, sat=0.60, tilt=14.0, smooth=41, pore=60),
-    "mossy_stone_bricks":         dict(luma=0.44, std=0.070, sat=0.20, tilt=18.6, smooth=25, pore=30),
+    "mossy_stone_bricks":         dict(luma=0.46, std=0.060, sat=0.12, tilt=11.0, smooth=22, pore=30, soften=0.8),   # r31
     # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
     # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
@@ -213,7 +214,7 @@ TARGETS = {
     # round 14: single-block numbers, pack-study 38763481360 (vanilla 38763491796 beside it); metal and gem blocks
     # between the reference (which leans on shader reflections) and vanilla's brighter colours; relief trimmed on
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
-    "cracked_stone_bricks": dict(luma=0.44, std=0.085, sat=0.02, tilt=20.0, smooth=10, pore=12),
+    "cracked_stone_bricks": dict(luma=0.48, std=0.060, sat=0.02, tilt=12.0, smooth=16, pore=12, soften=0.8),   # r31
     "cracked_deepslate_bricks": dict(luma=0.29, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),
     "cracked_polished_blackstone_bricks": dict(luma=0.15, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
@@ -2046,28 +2047,51 @@ def frame(F, width, groove):
     return smoothstep(0.0, groove, d) * (0.85 + 0.15 * smoothstep(groove, width, d))
 
 
-def m_stone_bricks(F, n):
-    # two courses per block, joints offset by half a brick (as vanilla): big dressed blocks, chipped edges, a
-    # weathered face - the capitol's walls and stairs
+def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
+    """Stone bricks (r31, art director: "mortar too heavy and dark so it reads as cobble - narrower, lighter
+    mortar, flatter faces, moss as edge tint not blobs"): two courses per block, two dressed blocks per course,
+    joints offset by half a brick (vanilla's layout; the mossy and cracked blocks share it). The mortar is a thin
+    light-grey line (~2 texels at 128, a hair lighter than the stone, as lime mortar is), the arrises crisp, the
+    faces flat with a soft weathering and a few pits in the relief. moss: a green tint creeping from the joints
+    over the lower brick edges; cracks: a hairline through some bricks."""
     course = np.floor(F.v * 2).astype(int)
     in_c = (F.v * 2) % 1.0
     ju = (F.u + np.where(course % 2 == 0, 0.0, 0.5)) % 1.0
-    chip = 0.004 * F.noise(8, 24, 0.5)                    # ragged joints
+    chip = 0.003 * F.noise(8, 24, 0.5)                    # ragged joints
     dv = np.minimum(in_c, 1 - in_c) / 2 + chip           # distance to a bed joint (tile units)
     du = np.minimum(ju, 1 - ju) + chip                   # to a head joint
-    # joints wide enough to survive the mipmaps (round 20, see m_bricks)
-    face = smoothstep(0.010, 0.028, np.minimum(dv, du))  # 0 in the mortar, 1 on the face (a rounded arris)
+    dj = np.minimum(dv, du)
+    face = smoothstep(0.006, 0.016, dj)                  # 0 in the mortar, 1 on the face: a narrow joint
+    hf = smoothstep(0.006, 0.011, dj)                    # the height step crisper still
     # small tone steps between the bricks: the texture repeats on every block (stone bricks are never turned), so one
     # darker brick became a lattice across a wall (rts_view)
     tone = (F.rng.random(4) - 0.5)[(course * 2 + (ju > 0.5)) % 4]
     weather = F.fbm(3, 4, 0.55)
     grain = F.noise(12, 40, 0.3)
-    pits = smoothstep(0.75, 0.95, F.noise(10, 30, 0.4))
-    H = 0.25 + 0.6 * face + 0.05 * weather * face + 0.02 * grain - 0.08 * pits * face
-    shade = np.where(face > 0.2, (0.84 + 0.06 * tone + 0.07 * weather + 0.015 * grain - 0.06 * pits), 0.60 + 0.2 * face)
-    hue = F.noise(2, 5, 0.5)
+    pits = smoothstep(0.78, 0.95, F.noise(10, 30, 0.4))
+    H = 0.35 + 0.5 * hf + 0.03 * weather * face + 0.015 * grain - 0.06 * pits * face
+    stone = 0.88 + 0.05 * tone + 0.045 * weather + 0.008 * grain - 0.03 * pits
+    mortar = 0.78 + 0.03 * grain                          # mortar a touch darker than the stone, never black
+    shade = stone * face + mortar * (1 - face)
+    hue = F.noise(2, 5, 0.5) * (0.0 if moss > 0 else 1.0)   # (the mossy block's sat fit would blow the jitter up)
     jit = np.stack([0.02 * hue, 0.0 * hue, -0.02 * hue], -1)
-    return H, tint((0.50, 0.50, 0.49), shade, jit)
+    alb = tint((0.52, 0.52, 0.51), shade, jit)
+    alb = np.where((face < 0.5)[..., None], alb * np.array([1.0, 0.99, 0.96])[None, None, :], alb)   # mortar warm
+    if moss > 0:
+        # from the joints onto the brick edges (within ~1/10 block of a joint), thicker on the bed joints' lower
+        # side, patchy along the wall; a tint, not blobs on the faces
+        near = 1 - smoothstep(0.0, 0.09, dj)
+        patch = smoothstep(0.35, 0.75, norm01(F.fbm(2, 3, 0.55)))
+        m = np.clip(moss * near * (0.4 + 0.6 * patch) * (0.7 + 0.3 * norm01(F.noise(8, 24, 0.3))), 0, 1)
+        moss_rgb = tint((0.30, 0.42, 0.17), 0.9 + 0.2 * norm01(F.noise(10, 30, 0.3)))
+        alb = alb * (1 - 0.85 * m[..., None]) + moss_rgb * 0.85 * m[..., None]
+        H = H + 0.03 * m
+    if cracks > 0:
+        line = np.abs(F.warp(F.noise(2, 7, 0.5), 0.02 * F.noise(4, 12), 0.02 * F.noise(4, 12)))
+        crack = (1 - smoothstep(0.0, 0.014, line)) * smoothstep(0.3, 0.7, F.noise(1, 3, 0.5)) * cracks * face
+        H = H - 0.25 * crack
+        alb = alb * (1 - 0.5 * crack)[..., None]
+    return H, alb
 
 
 def m_polished_andesite(F, n):
@@ -3333,7 +3357,7 @@ def recipes():
         "prismarine_bricks": lambda F, n: m_bricks(F, n, 2, 2, (0.42, 0.66, 0.58), tone_amp=0.10),
         "dark_prismarine": lambda F, n: m_tiles(F, n, 2, (0.20, 0.38, 0.33)),
         "moss_block": m_moss,
-        "mossy_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), moss=0.8),
+        "mossy_stone_bricks": lambda F, n: m_stone_bricks(F, n, moss=0.9),   # r31: the plain layout, moss at the joints
         # round 12: the census's rest, other biomes' terrain
         "sandstone": lambda F, n: m_sandstone(F, n, "side"),
         "sandstone_top": lambda F, n: m_sandstone(F, n, "top"),
@@ -3393,7 +3417,7 @@ def recipes():
         "dirt_path_top": lambda F, n: m_path(F, n, False),
         "dirt_path_side": lambda F, n: m_path(F, n, True),
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
-        "cracked_stone_bricks": lambda F, n: m_bricks(F, n, 2, 1, (0.50, 0.50, 0.49), cracks=1.0),
+        "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
         "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21), cracks=1.0),
         "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
