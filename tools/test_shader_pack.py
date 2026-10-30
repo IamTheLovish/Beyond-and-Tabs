@@ -5,6 +5,7 @@ PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack"
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
 import os
+import re
 import sys
 import unittest
 
@@ -27,6 +28,31 @@ class ShaderPack(unittest.TestCase):
         src = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
         self.assertIn("const float sunPathRotation = 30.0;", src)
         self.assertIn("const int shadowMapResolution = 2048;", src)
+
+    def test_ambient_occlusion_takes_only_the_sky_share(self):
+        # slice 3 (lib/ao.glsl): every program that writes colour also writes colortex1, the sky's share of the light,
+        # so composite.fsh darkens creases in the fill alone; overlays and water write 0 (an unlit program left out
+        # would take the ground's occlusion onto a selection ring)
+        for name in spc.programs():
+            if not name.startswith("gbuffers_") or not name.endswith(".fsh"):
+                continue
+            src = spc.expand(os.path.join(spc.SHADERS, name))
+            if "orthoView())\n        discard;" in src and "SKY" in src:
+                continue                    # the sky: nothing drawn in the RTS view, depth 1 elsewhere
+            self.assertIn("/* DRAWBUFFERS:01 */", src, name)
+            self.assertIn("gl_FragData[1]", src, name)
+        props = open(os.path.join(spc.SHADERS, "shaders.properties"), encoding="utf-8").read()
+        self.assertIn("scale.deferred=0.5", props)
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
+    def test_lit_ground_never_blooms(self):
+        # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
+        # (under 1 in linear light), so the threshold must stay at or above 1
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
+        self.assertIsNotNone(m)
+        self.assertGreaterEqual(float(m.group(1)), 1.0)
 
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's

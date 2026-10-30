@@ -8,16 +8,30 @@
 // one e-fold per 56 blocks; in first person from the eye, clear for the first 12 blocks, one e-fold per 180. The haze
 // never covers more than 30% (Enchanted), so far overlays stay legible, and dark ground keeps less of it (the fog of
 // war's seen / unseen read is gameplay).
+// Before the tone curve, slice 3's ambient occlusion (lib/ao.glsl) takes its share of each pixel's light: the sky's
+// fill, as the lit draws recorded it in colortex1 (0 for overlays, water and everything drawn as is).
+// Also before the tone curve, slice 3's bloom source (colortex4): only light past BLOOM_THRESHOLD in linear light,
+// which lit ground never reaches (noon ground sits at its albedo, under 0.85) - lanterns and other emissive texels, glows,
+// the sun's glint on a metal. final.fsh spreads it.
 
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
+#include "/lib/ao.glsl"
 
 /*
 const int colortex0Format = RGBA16F;
+const int colortex1Format = RGBA8;
+const vec4 colortex1ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
+const int colortex4Format = RGBA16F;
 */
+const bool colortex4Clear = false;     // this pass writes every pixel of it
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex1;
+uniform sampler2D colortex3;
+uniform float viewWidth;
 uniform sampler2D depthtex0;
+uniform sampler2D depthtex1;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
 uniform vec3 skyColor;
@@ -34,6 +48,9 @@ const float FP_HAZE_START = 12.0;
 const float FP_HAZE_SCALE = 180.0;
 const float RTS_HAZE_SCALE = 56.0;
 const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);   // scattering drifts distant colour cool before the haze veils it
+// linear luma past which light blooms. The light table puts sunlit open ground at its albedo, so even white quartz or
+// snow at noon stays under ~0.85: a plain noon lawn adds exactly nothing (design: mean change under 1/255)
+const float BLOOM_THRESHOLD = 1.0;
 
 bool orthoView() {
     return gbufferProjection[2][3] == 0.0 && gbufferProjection[3][3] == 1.0;
@@ -57,10 +74,51 @@ float rtsHazeStart() {
     return best < 0.0 ? 0.0 : -viewPosAt(vec2(0.5, v), best).z;
 }
 
-/* DRAWBUFFERS:0 */
+// the blurred occlusion back at full resolution: of the four half-resolution neighbours, bilinear weights times how
+// near each one's depth is to this pixel's, so the value never crosses a silhouette (a unit's edge keeps its own)
+float occlusionAt(float viewDepth) {
+    vec2 viewSize = vec2(viewWidth, viewHeight);
+    vec2 h = gl_FragCoord.xy * AO_SCALE - 0.5;
+    vec2 base = floor(h) + 0.5;
+    vec2 f = fract(h);
+    float tolerance = 0.25 + 0.02 * viewDepth;
+    float sum = 0.0, weights = 0.0;
+    float nearest = 1.0, nearestGap = 1e9;
+    for (int i = 0; i < 4; i++) {
+        vec2 o = vec2(float(i - 2 * (i / 2)), float(i / 2));
+        vec2 s = texture2D(colortex3, aoCellUv(base + o, viewSize)).rg;
+        float gap = abs(s.y - viewDepth);
+        vec2 b = mix(1.0 - f, f, o);
+        float w = b.x * b.y * max(1.0 - gap / tolerance, 0.0);
+        sum += s.x * w;
+        weights += w;
+        if (gap < nearestGap) {
+            nearestGap = gap;
+            nearest = s.x;
+        }
+    }
+    return weights > 1e-3 ? sum / weights : nearest;
+}
+
+/* DRAWBUFFERS:04 */
 void main() {
-    vec3 c = toDisplay(toneMap(texture2D(colortex0, texcoord).rgb));
+    vec3 lit = texture2D(colortex0, texcoord).rgb;
     float depth = texture2D(depthtex0, texcoord).r;
+#if AO == 1
+    if (depth < 1.0) {
+        float skyShare = texture2D(colortex1, texcoord).r;
+        // depthtex1: the depth without water, the one the occlusion was found at
+        if (skyShare > 0.0)
+            lit *= 1.0 - skyShare * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
+    }
+#endif
+#if BLOOM == 1
+    float bright = dot(lit, LUMA);
+    gl_FragData[1] = vec4(lit * (max(bright - BLOOM_THRESHOLD, 0.0) / max(bright, 1e-4)), 1.0);
+#else
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+#endif
+    vec3 c = toDisplay(toneMap(lit));
     bool ortho = orthoView();
     if (depth >= 1.0) {
         // nothing drawn: in the RTS view that is past the map's edge, where the mod sets its own edge tone as the fog
