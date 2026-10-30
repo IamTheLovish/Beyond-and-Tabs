@@ -59,7 +59,7 @@ public class MilitiaProd extends ProductionItem {
             List.of(
                 FormattedCharSequence.forward(I18n.get("entity.reignofnether.militia_unit"), Style.EMPTY.withBold(true)),
                 ResourceCosts.getFormattedCost(cost),
-                ResourceCosts.getFormattedPopAndTime(cost),
+                ResourceCosts.getFormattedTime(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
                 FormattedCharSequence.forward(I18n.get("entity.reignofnether.militia_unit.tooltip1"), Style.EMPTY),
                 FormattedCharSequence.forward(I18n.get("entity.reignofnether.militia_unit.tooltip2"), Style.EMPTY)

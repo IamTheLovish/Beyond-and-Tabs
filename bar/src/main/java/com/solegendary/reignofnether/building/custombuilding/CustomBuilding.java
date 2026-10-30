@@ -90,7 +90,7 @@ public class CustomBuilding extends ProductionBuilding implements GarrisonableBu
     }
 
     public CustomBuilding(String structureName, Vec3i structureSize, Block portraitBlock, CompoundTag structureNbt, CompoundTag attributesNbt, ListTag commandsNbt) {
-        super(structureName, ResourceCost.Building(0,0,0,0), false);
+        super(structureName, ResourceCost.Building(0,0,0), false);
         this.name = WordUtils.capitalize(structureName
                 .replace("minecraft:", "")
                 .replace("reignofnether:", "")

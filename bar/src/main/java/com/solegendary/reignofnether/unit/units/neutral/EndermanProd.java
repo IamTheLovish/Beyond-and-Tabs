@@ -61,7 +61,7 @@ public class EndermanProd extends ProductionItem implements IUnitProductionItem 
                 List.of(
                         Component.translatable("entity.reignofnether.enderman_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                         ResourceCosts.getFormattedCost(cost),
-                        ResourceCosts.getFormattedPopAndTime(cost),
+                        ResourceCosts.getFormattedTime(cost),
                         FormattedCharSequence.EMPTY,
                         Component.translatable("entity.reignofnether.enderman_unit.tooltip1").getVisualOrderText(),
                         Component.translatable("entity.reignofnether.enderman_unit.tooltip2").getVisualOrderText()

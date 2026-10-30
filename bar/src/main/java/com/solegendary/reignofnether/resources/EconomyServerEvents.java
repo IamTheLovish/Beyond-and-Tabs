@@ -41,7 +41,7 @@ import java.util.Set;
  *   - Farms (Wheat Farm, Pumpkin Farm, Netherwart Farm - food was RoN's main resource): +1.5 metal/s, +5 energy/s
  *   - Stockpiles (Oak/Spruce stockpile - resource drop-offs): +0.5 metal/s, +500 metal and +500 energy storage
  *   - Civilian Portal (piglin resource drop-off): +1 metal/s, +10 energy/s
- *   - Population buildings (Villager House, Haunted House, Sculk Catalyst, Pocket Portal): +5 energy/s
+ *   - Former supply buildings (Villager House, Haunted House, Sculk Catalyst, Pocket Portal): +5 energy/s
  * New extractor/generator buildings only need to set Building.metalIncome/energyIncome (or override the getters).
  *
  * Spells (Stormcallers Mana, mana/ManaServerEvents) pay through {@link #drawSpell}: taken at once, never throttled by
