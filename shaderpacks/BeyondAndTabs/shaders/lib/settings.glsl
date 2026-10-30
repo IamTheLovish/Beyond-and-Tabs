@@ -18,6 +18,9 @@ const float shadowDistance = 160.0; // [96.0 128.0 160.0 224.0]
 // draw casters in that box, not out to the render distance (the fit never looks past the box)
 const float shadowDistanceRenderMul = 1.0;
 const bool shadowHardwareFiltering = false;
+// soft shadows (slice 3, lib/shadow.glsl): sharp at the caster's foot, softer the farther the shadow falls, as the
+// sun's disc makes them. Off: slice 1's crisp edge everywhere
+#define SOFT_SHADOWS 1 // [0 1]
 // vanilla's per-vertex ambient occlusion, kept (it arrives in the vertex colour's alpha: separateAo)
 const float ambientOcclusionLevel = 1.0;
 // screen-space ambient occlusion (slice 3: deferred.fsh, deferred1.fsh, applied in composite.fsh): building bases,
