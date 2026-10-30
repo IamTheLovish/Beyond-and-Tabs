@@ -65,7 +65,7 @@ public class ArtilleryGameTests {
             + Math.round(net.minecraft.util.Mth.wrapDegrees(g.yBodyRot))
             + ", at " + g.blockPosition().toShortString() + ", path index "
             + (nav.getPath() == null ? -1 : nav.getPath().getNextNodeIndex() + "/" + nav.getPath().getNodeCount())
-            + ", hold " + g.getHoldPosition() + ", aggressive " + g.isAggressive()
+            + ", hold " + g.getHoldPosition()
             + ", on ground " + g.onGround() + ", speed attr " + g.getAttributeValue(
                 net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
     }
@@ -344,21 +344,63 @@ public class ArtilleryGameTests {
         helper.getLevel().addFreshEntity(b);
         b.setupEquipmentAndUpgradesServer();
         double sx = b.getX(), sz = b.getZ();
+        double vx = v.getX(), vz = v.getZ();
         double[] moved = { 0 };
+        int[] tick = { 0 }, ordered = { -1 }, reissued = { 0 };
         float full = v.getMaxHealth();
-        helper.runAfterDelay(3, () -> ((AttackerUnit) b).setUnitAttackTarget(v));
+        helper.runAfterDelay(3, () -> {
+            ordered[0] = tick[0];
+            ((AttackerUnit) b).setUnitAttackTarget(v);
+        });
         helper.succeedWhen(() -> {
-            if (b.getTargetGoal().getTarget() != v && v.isAlive())
+            tick[0]++;
+            if (b.getTargetGoal().getTarget() != v && v.isAlive()) {
+                reissued[0]++;
                 ((AttackerUnit) b).setUnitAttackTarget(v);
+            }
             moved[0] = Math.max(moved[0], Math.hypot(b.getX() - sx, b.getZ() - sz));
             if (v.isAlive() && v.getHealth() >= full)
                 throw new GameTestAssertException("the bombard never hit the target (moved at most "
                     + String.format("%.1f", moved[0]) + ", now " + String.format("%.1f", flat(b, v))
                     + " away, dead zone " + com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit.MIN_RANGE
-                    + ", nav done " + b.getNavigation().isDone() + ", aggressive " + b.isAggressive() + ")");
+                    + ", nav done " + b.getNavigation().isDone() + "); " + bombardState(b, v, tick[0], ordered[0],
+                        reissued[0], Math.hypot(v.getX() - vx, v.getZ() - vz)));
             b.discard();
             v.discard();
         });
+    }
+
+    /** What the bombard and its foe are doing, for a failure message (CI shows only the message). */
+    static String bombardState(com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit b, VillagerUnit v,
+                               int tick, int ordered, int reissued, double foeMoved) {
+        var goal = b.getAttackGoal() instanceof com.solegendary.reignofnether.unit.goals.UnitBowAttackGoal<?> bow
+            ? String.valueOf(Math.round(bow.getAttackCooldown())) : "n/a";
+        int inFlight = b.level().getEntitiesOfClass(com.solegendary.reignofnether.unit.units.tide.BombardShell.class,
+            b.getBoundingBox().inflate(48)).size();
+        String burst = Double.isNaN(b.lastBurstX) ? "none yet" : "at " + String.format("%.1f,%.1f,%.1f", b.lastBurstX,
+            b.lastBurstY, b.lastBurstZ) + " " + String.format("%.1f", Math.hypot(b.lastBurstX - v.getX(),
+            b.lastBurstZ - v.getZ())) + " from foe, hit " + b.lastBurstHit;
+        var hurtBy = v.getLastHurtByMob();
+        var src = v.getLastDamageSource();
+        double dx = v.getX() - b.getX(), dy = v.getY() - b.getY(), dz = v.getZ() - b.getZ();
+        return "ticks since order " + (ordered < 0 ? "not ordered yet" : tick - ordered) + " (re-issued " + reissued
+            + "x), goals [" + b.runningGoalsForTest() + "], using item " + b.isUsingItem() + " for "
+            + b.getTicksUsingItem() + ", bow cooldown " + goal
+            + ", shells fired " + b.shellsFired + ", refused: dead zone " + b.shellsRefusedDeadZone
+            + " / not set up " + b.shellsRefusedNotSetUp + " / not server " + b.shellsRefusedClient
+            + ", last burst " + burst + ", in flight " + inFlight
+            + ", mob target " + (b.getTarget() == null ? "none" : b.getTarget() == v ? "foe" : "other")
+            + ", goal target " + (b.getTargetGoal().getTarget() == null ? "none"
+                : b.getTargetGoal().getTarget() == v ? "foe" : "other")
+            + ", bombard " + String.format("%.1f,%.1f,%.1f", b.getX(), b.getY(), b.getZ())
+            + ", foe " + String.format("%.1f,%.1f,%.1f", v.getX(), v.getY(), v.getZ())
+            + " (moved " + String.format("%.1f", foeMoved) + ")"
+            + ", flat " + String.format("%.1f", flat(b, v)) + " / 3D " + String.format("%.1f",
+                Math.sqrt(dx * dx + dy * dy + dz * dz))
+            + ", foe health " + String.format("%.1f", v.getHealth()) + "/" + String.format("%.1f", v.getMaxHealth())
+            + ", foe hurt by " + (hurtBy == null ? "none" : hurtBy.getType().toShortString())
+            + ", last damage " + (src == null ? "none" : src.getMsgId())
+            + ", hold " + b.getHoldPosition() + ", on ground " + b.onGround();
     }
 
     // ------------------------------------------------------------------ the artillery nerf (lovish, Oct 24)
