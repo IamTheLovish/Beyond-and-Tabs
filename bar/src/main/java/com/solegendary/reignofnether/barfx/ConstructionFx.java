@@ -184,29 +184,33 @@ final class ConstructionFx {
         BarFxClient.vc = null;
     }
 
-    /** The cloud ring: puffs on a circle at the front, each a lit top over a grey-blue belly, slowly orbiting. */
+    /**
+     * The cloud ring: ONE smooth, continuous band at the front. Round 4 critic (eyes 41031649391): a "pearl necklace" -
+     * puffs 0.45 across every 0.5 block, each fading to nothing at its rim, so every puff showed as its own bead. Now a
+     * soft flat band (a grey-blue belly under a white top) carries the ring unbroken, and many smaller-spaced puffs
+     * (every 0.3 block, each overlapping ~3 neighbours) with jittered size, spacing and alpha give it a cloud's texture
+     * without beads; the whole band drifts slowly round.
+     */
     static void drawRing(float cx, float front, float cz, float r, float clock, boolean far, float alpha) {
-        // round 3 overshot (a few faint puffs, no ring): closer puffs so they join into one continuous thin band
-        int n = Math.max(10, Math.min(56, Math.round((float) (2 * Math.PI * r / 0.5f))));
-        if (far)
-            n = Math.max(6, n / 2);
-        // a tighter, brighter band than the first stills (eyes 41003840710: a fresh critic read 1.5-block puffs at 0.55
-        // as grey-green haze over the lawn - smoke, not cloud): smaller puffs, a whiter top, a darker belly under it
-        // round 2 (41014293234): still fat cotton balls covering the wall corners - ~45% of that size and a third the
-        // opacity, so the ring is a thin wisp at the front, not a necklace
-        float size = 0.45f * Math.min(1.0f, 0.5f + r * 0.06f);
+        float y = front + 0.35f;
+        BarFxClient.flatRing(cx, y - 0.12f, cz, r, 0.55f, BELLY, 0.2f * alpha, 64);
+        BarFxClient.flatRing(cx, y, cz, r, 0.42f, CLOUD, 0.32f * alpha, 64);
+        int n = Math.max(16, Math.min(160, Math.round((float) (2 * Math.PI * r / (far ? 0.6f : 0.3f)))));
+        float scale = Math.min(1.0f, 0.55f + r * 0.07f);   // a spire's small ring gets smaller puffs
+        float gap = (float) (2 * Math.PI / n);
         for (int k = 0; k < n; k++) {
-            float ang = (float) (k * 2 * Math.PI / n + clock * 0.06f);
-            float wob = 0.18f * (float) Math.sin(clock * 0.7f + k * 1.7f);
-            float x = cx + (float) Math.cos(ang) * (r + wob), z = cz + (float) Math.sin(ang) * (r + wob);
-            float y = front + 0.35f + 0.12f * (float) Math.sin(clock * 0.9f + k * 2.3f);
-            float s = size * (0.85f + 0.3f * hash(k));
-            BarFxClient.softDisc(x, y - s * 0.3f, z, s * 1.05f, BELLY, 0.2f * alpha, BELLY, 0, 12, k, 0.08f);
-            BarFxClient.softDisc(x, y + s * 0.12f, z, s, CLOUD, 0.5f * alpha, CLOUD, 0.15f * alpha, 12, k * 1.3f, 0.12f);
+            float ang = k * gap + clock * 0.04f + (hash(k * 3 + 1) - 0.5f) * 0.6f * gap;
+            float rr = r + 0.12f * (float) Math.sin(clock * 0.35f + k * 1.7f);
+            float x = cx + (float) Math.cos(ang) * rr, z = cz + (float) Math.sin(ang) * rr;
+            float py = y + 0.06f * (float) Math.sin(clock * 0.5f + k * 2.3f);
+            float size = 0.5f * scale * (0.7f + 0.6f * hash(k));
+            float a = (0.16f + 0.12f * hash(k * 7 + 3)) * alpha;
+            if (k % 3 == 0)   // a grey-blue belly under every third puff
+                BarFxClient.softDisc(x, py - size * 0.35f, z, size * 1.1f, BELLY, 0.6f * a, BELLY, 0, 10, k, 0.08f);
+            BarFxClient.softDisc(x, py, z, size, CLOUD, a, CLOUD, 0, 10, k * 1.3f, 0.1f);
         }
     }
 
-    /** Two shafts at a time, each landing on the front for ~0.7 s at its own spot round the walls. */
     /**
      * Two shafts at a time, each landing for ~0.7 s on its own spot INSIDE the layer being built (round 3: a shaft
      * landing past the walls read as a flare cone on the lawn beside the site).
