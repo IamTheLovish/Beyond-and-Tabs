@@ -98,7 +98,7 @@ TARGETS = {
     "dark_oak_leaves":  dict(luma=0.50, std=0.090, sat=0.00, ao=0.35, tilt=9.0, smooth=60, pore=170),
     # round 7: the metal resource patches and the capitol's gold, barrels and hay (pack-study 38740563625, single
     # blocks); f0 230 / 231 = LabPBR 1.3's iron / gold, 255 = a metal with its albedo as F0 (238-254 are undefined)
-    "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.39, tilt=26.0, smooth=76, pore=10),
+    "raw_iron_block":   dict(luma=0.53, std=0.080, sat=0.26, tilt=24.0, smooth=76, pore=10),   # r31: pink-grey, rust blooms
     # gold: the reference's 23 deg comes from an engraved pattern; a cast plate with tilt 18 came out as lumpy cheese.
     # Luma between the reference (0.63, which leans on a shader's reflections) and vanilla (0.81): without shaders
     # - most players - a 0.63 gold reads brown (pack-study-vanilla 38740868045)
@@ -257,8 +257,8 @@ TARGETS = {
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     "quartz_block_top": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
     "quartz_block_side": dict(luma=0.90, std=0.016, sat=0.05, tilt=3.0, smooth=145, pore=4),
-    "farmland": dict(luma=0.38, std=0.085, sat=0.38, tilt=22.0, smooth=22, pore=56),
-    "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=20.0, smooth=60, pore=64),
+    "farmland": dict(luma=0.38, std=0.080, sat=0.38, tilt=20.0, smooth=22, pore=56, soften=0.8),     # r31: rows
+    "farmland_moist": dict(luma=0.24, std=0.070, sat=0.40, tilt=18.0, smooth=60, pore=64, soften=0.8),
     # the snowy side: dirt and snow each fitted to their own block's numbers (the recipe); smooth / pore between them
     "grass_block_snow": dict(luma=0.45, std=0.080, sat=0.30, tilt=19.0, smooth=35, pore=40),
     "crimson_stem": dict(luma=0.22, std=0.070, sat=0.60, tilt=24.0, smooth=40, pore=36),
@@ -1086,11 +1086,16 @@ def m_raw_iron(F, n, cells=13):
     pits = smoothstep(0.6, 1.0, F.noise(12, 40, 0.3))
     H = 0.2 + 0.7 * np.sqrt(lump) + 0.04 * F.noise(8, 30, 0.4) - 0.08 * pits
     worn = smoothstep(0.55, 0.85, norm01(H) + 0.15 * F.noise(4, 12, 0.5))   # the crests rubbed to bare metal
-    rust = np.array([0.62, 0.38, 0.24])
-    metal = np.array([0.62, 0.58, 0.55])
+    # r31 (art director: raw iron "toward pink-grey with rust blooms", it sat in the salmon band with the path and
+    # red sand): the lumps a pink-grey metal, the rust in BLOOMS - a few orange-brown patches that grow out of the
+    # hollows - rather than every hollow orange
+    rust = np.array([0.60, 0.34, 0.20])
+    metal = np.array([0.66, 0.60, 0.58])
+    bloom = smoothstep(0.45, 0.8, norm01(F.fbm(2, 3, 0.55)))                # where the rust has bloomed
+    rusty = np.clip((1 - worn) * (0.25 + 0.75 * bloom), 0, 1)
     shade = 0.70 + 0.35 * norm01(H) - 0.15 * pits
-    alb = (rust[None, None, :] * (1 - worn[..., None]) + metal[None, None, :] * worn[..., None]) * shade[..., None]
-    f0 = np.where(worn > 0.5, IRON, 10)
+    alb = (rust[None, None, :] * rusty[..., None] + metal[None, None, :] * (1 - rusty[..., None])) * shade[..., None]
+    f0 = np.where(rusty < 0.5, IRON, 10)
     return H, np.clip(alb, 0, 1), f0
 
 
@@ -2061,7 +2066,9 @@ def m_path(F, n, side):
     Hd, ad = m_dirt(F, n)
     packed = F.noise(3, 10, 0.5)
     Hp = 0.5 + 0.35 * (Hd - 0.55) + 0.04 * packed
-    ap = np.clip(ad * 1.12 + 0.03, 0, 1)
+    # r31 (art director: dirt path / raw iron / red sand / cut copper "all landed in one salmon band"): the path's
+    # hue toward olive-tan (hue ~36 deg from dirt's 26), its value (palette) unchanged - fit_albedo sets it
+    ap = np.clip((ad * 1.12 + 0.03) * np.array([0.99, 1.07, 0.92])[None, None, :], 0, 1)
     if not side:
         return Hp, ap
     band = F.v < (0.19 + 0.02 * F.noise(4, 12, 0.5)[0:1, :])
@@ -2351,20 +2358,26 @@ def m_log_top(F, n, wood=(0.70, 0.56, 0.36), bark_rgb=(0.42, 0.33, 0.21), rim=(0
 
 # ------------------------------------------------------------------ round 15: the face census's partial blocks ---
 def m_farmland(F, n, moist):
-    """Farmland: tilled dirt - four furrows across the block (vanilla's rows), crumbs on the ridges; the dry field
-    lighter with hairline cracks, the moist one darker and closer (its target)."""
-    Hd, ad = m_dirt(F, n)
-    ph = (F.v * 4 + 0.05 * F.noise(2, 6, 0.5)) % 1.0
+    """Farmland (r31, art director: "furrows not a dotted grid, darker moist troughs"): tilled soil in four rows
+    across the block - continuous ridges and troughs (no pebbles: m_dirt's stones drew a dotted grid), the crumbs
+    elongated along the rows, the troughs darker (and in the moist field wet-dark and smoother), the dry field's
+    ridges paler with hairline cracks."""
+    ph = (F.v * 4 + 0.04 * F.noise(1, 3, 0.5, sx=3.0, sy=1.0)) % 1.0     # the rows wander a little along u
     ridge = np.sin(math.pi * ph) ** 2                    # 0 in a furrow, 1 on a ridge
-    crumbs = F.noise(16, 50, 0.3)
-    H = 0.25 + 0.40 * ridge + 0.30 * norm01(Hd) + 0.04 * crumbs
-    shade = 0.80 + 0.24 * ridge                          # rows, not corduroy, at 36 px per block
+    clumps = F.fbm(3, 3, 0.55, sx=2.0, sy=1.0)           # soil clods, a little longer along the rows
+    crumbs = F.noise(10, 32, 0.3, sx=2.5, sy=1.0)
+    H = 0.25 + 0.45 * ridge + 0.12 * clumps * (0.5 + 0.5 * ridge) + 0.04 * crumbs
+    hue = F.noise(2, 6, 0.5)
+    jit = np.stack([0.05 * hue, 0.02 * hue, -0.04 * hue], -1)
+    trough = 0.62 if moist else 0.74
+    shade = trough + (1.0 - trough) * ridge + 0.08 * clumps + 0.03 * crumbs
+    alb = tint((0.46, 0.33, 0.22), shade, jit)
     if not moist:
         crack = 1 - smoothstep(0.0, 0.02, np.abs(F.warp(F.noise(3, 9, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10))))
         crack *= smoothstep(0.3, 0.8, F.noise(2, 5, 0.5)) * ridge
         H = H - 0.12 * crack
-        shade = shade - 0.25 * crack
-    return H, np.clip(ad * shade[..., None], 0, 1)
+        alb = alb * (1 - 0.25 * crack)[..., None]
+    return H, np.clip(alb, 0, 1)
 
 
 def m_grass_snow_side(F, n):
