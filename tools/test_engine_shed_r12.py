@@ -158,9 +158,9 @@ class EngineShedR12(EngineShedR11):
         p = self.p
         x0, x1, z0, z1 = s["base"]
         sx0, sx1, sz0, sz1 = s["shaft"]
-        foot = max(y for y in range(self.m["stack_from"], s["top"]) if all(
-            "stone" in p.n.get((x, y, z), "") and "blackstone" not in p.n.get((x, y, z), "")
-            for x in (x0, x1) for z in range(z0 + 1, z1)))
+        foot = max(y for y in range(self.m["stack_from"], s["top"]) if all(     # full stone blocks: a stair or a
+            full(p.n.get((x, y, z), "air")) and "stone" in p.n[(x, y, z)]       # roof-mod wash over it is not foot
+            and "blackstone" not in p.n[(x, y, z)] for x in (x0, x1) for z in range(z0 + 1, z1)))
 
         def ring(y):
             return [(x, y, z) for x in range(sx0 - 1, sx1 + 2) for z in range(sz0 - 1, sz1 + 2)
@@ -200,7 +200,7 @@ class EngineShedR12(EngineShedR11):
     def test_r12_stack_tapers_smoothly(self):
         """A tapered shaft: from the foot up to the crown each stack's plan width never grows, narrows at least twice
         (foot -> lower shaft -> upper shaft), and every narrowing is made by sloped pieces (a Macaw's roof wash on the
-        course under it), not a stair ledge."""
+        narrowing course or the one under it), with no stair ledge on either."""
         p = self.p
         for s in self.m["stacks"]:
             foot, ring, width = self.stack_parts(s)
@@ -210,11 +210,10 @@ class EngineShedR12(EngineShedR11):
             drops = [y for y, a, b in zip(ys[1:], w, w[1:]) if b < a]
             self.assertGreaterEqual(len(drops), 2, (s["top"], list(zip(ys, w))))
             for y in drops:
-                below = [p.n[q] for q in ring(y - 1) if q in p.n] + [
-                    p.n[(x, y - 1, z)] for x in range(s["base"][0], s["base"][1] + 1)
-                    for z in range(s["base"][2], s["base"][3] + 1) if (x, y - 1, z) in p.n]
-                self.assertTrue(any(sloped(n) for n in below), (s["top"], y, Counter(below)))
-                self.assertFalse([n for n in below if S.glyph(n) == "s"], (s["top"], y, "a stair ledge"))
+                at = [p.n[(x, yy, z)] for yy in (y - 1, y) for x in range(s["base"][0], s["base"][1] + 1)
+                      for z in range(s["base"][2], s["base"][3] + 1) if (x, yy, z) in p.n]
+                self.assertTrue(any(sloped(n) for n in at), (s["top"], y, Counter(at)))
+                self.assertFalse([n for n in at if S.glyph(n) == "s"], (s["top"], y, "a stair ledge"))
 
     def test_r12_stack_shaft_is_smooth(self):
         """The shaft itself carries no reveals: every cell of the 2 x 2 shaft from the foot's top up to the crown is a

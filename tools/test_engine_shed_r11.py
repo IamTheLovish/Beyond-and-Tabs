@@ -625,7 +625,7 @@ class EngineShedR11(unittest.TestCase):
     def test_r3_no_fire_seen_in_a_stack_mouth(self):
         """Critic r2: "its open top shows a red block". No campfire and no red nether brick seen in any still."""
         seen = sorted({(h[0], h[1]) for st in G.STILLS for h in self.p.hits[st].values()
-                       if "campfire" in h[1] or "nether" in h[1]})
+                       if "campfire" in h[1] or "nether_brick" in h[1].split(":")[-1]})   # (r12: not reignofnether:)
         self.assertEqual(seen, [])
 
     def test_r3_no_black_block_on_the_tower_cap(self):
