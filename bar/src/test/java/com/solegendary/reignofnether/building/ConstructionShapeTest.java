@@ -153,6 +153,37 @@ class ConstructionShapeTest {
         assertEquals(s.layers() - 1, s.layerOf(500f));
     }
 
+    /**
+     * Round 4 critic (eyes 41031649391, 6.5/10): the tools orbited on the ring's CIRCLE, which round a long building
+     * stands far off its long walls, so blows landed on the lawn (a flash with a trail - "a glowing sphere with a comet
+     * tail"). The tools now walk the cut line itself: a point a fraction {@code u} round the layer's footprint
+     * rectangle, with the outward normal of that side (the tool's grip leans out from the wall).
+     */
+    @Test
+    void aToolWalksTheCutLineRectangleWithItsOutwardNormal() {
+        float[] box = { 0, 6, 0, 2 }, p = new float[4];   // 6 x 2: perimeter 16
+        assertPoint(box, 0f, p, 0, 0, 0, -1);
+        assertPoint(box, 0.25f, p, 4, 0, 0, -1);           // 4 along the first (-z) side
+        assertPoint(box, 7f / 16, p, 6, 1, 1, 0);          // 7 along: halfway up the +x side
+        assertPoint(box, 11f / 16, p, 3, 2, 0, 1);         // 11 along: the middle of the +z side, walking back
+        assertPoint(box, 15f / 16, p, 0, 1, -1, 0);        // 15 along: the -x side
+        assertPoint(box, 1.25f, p, 4, 0, 0, -1);           // wraps
+        assertPoint(box, -1f / 16, p, 0, 1, -1, 0);        // negative wraps too
+        float[] dot = { 3, 3, 5, 5 };                       // a degenerate (empty) footprint: its point, no NaN
+        ConstructionShape.perimeterPoint(dot, 0.3f, p);
+        assertEquals(3f, p[0], 1e-4);
+        assertEquals(5f, p[1], 1e-4);
+        assertTrue(!Float.isNaN(p[2]) && !Float.isNaN(p[3]));
+    }
+
+    private static void assertPoint(float[] box, float u, float[] p, float x, float z, float nx, float nz) {
+        ConstructionShape.perimeterPoint(box, u, p);
+        assertEquals(x, p[0], 1e-4, "x at u " + u);
+        assertEquals(z, p[1], 1e-4, "z at u " + u);
+        assertEquals(nx, p[2], 1e-4, "nx at u " + u);
+        assertEquals(nz, p[3], 1e-4, "nz at u " + u);
+    }
+
     private static void assertBox(float[] o, int i, float x0, float x1, float z0, float z1, float y0, float y1) {
         float[] want = { x0, x1, z0, z1, y0, y1 };
         for (int k = 0; k < 6; k++)

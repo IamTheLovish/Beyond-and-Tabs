@@ -148,6 +148,29 @@ public final class ConstructionShape {
         System.arraycopy(layerBoxes, 4 * l, out, 0, 4);
     }
 
+    /**
+     * A point a fraction {@code u} (wrapping) of the way round a footprint {x0, x1, z0, z1}, walked from (x0, z0)
+     * along +x, +z, -x, -z, written to {@code out} as {x, z, nx, nz} with the outward normal of that side. The White
+     * Angel's tools walk the cut line with it (round 4 critic: on the ring's circle their blows landed on the lawn).
+     * Allocation-free.
+     */
+    public static void perimeterPoint(float[] box, float u, float[] out) {
+        float x0 = box[0], x1 = box[1], z0 = box[2], z1 = box[3];
+        float w = Math.max(0, x1 - x0), d = Math.max(0, z1 - z0), per = 2 * (w + d);
+        float f = u - (float) Math.floor(u);
+        float s = f * per;
+        if (s < w || per <= 0) {
+            out[0] = x0 + s; out[1] = z0; out[2] = 0; out[3] = -1;
+        } else if ((s -= w) < d) {
+            out[0] = x1; out[1] = z0 + s; out[2] = 1; out[3] = 0;
+        } else if ((s -= d) < w) {
+            out[0] = x1 - s; out[1] = z1; out[2] = 0; out[3] = 1;
+        } else {
+            s -= w;
+            out[0] = x0; out[1] = z1 - s; out[2] = -1; out[3] = 0;
+        }
+    }
+
     /** Layers from the bottom of the building to its top (some may be empty). */
     public int layers() {
         return perLayer.length;

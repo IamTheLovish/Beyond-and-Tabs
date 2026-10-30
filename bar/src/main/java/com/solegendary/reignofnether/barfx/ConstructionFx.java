@@ -24,7 +24,7 @@ import java.util.WeakHashMap;
  *   paintover beat the "built but foggy" one a fresh critic scored 5/10), so how much is left reads at a glance;</li>
  *   <li>the build front's cut line glows where blocks are being set;</li>
  *   <li>shafts of light land on the front, a few at a time;</li>
- *   <li>golden hammers and chisels orbit on the ring and swing down onto the front (slice 2);</li>
+ *   <li>golden hammers and a chisel walk the cut line and strike it (slice 2; round 5: screen-plane silhouettes);</li>
  *   <li>done: the ring flares into a halo and fades.</li>
  * </ul>
  * Building-agnostic: everything comes from the placement's own blocks (the buildings are being reworked). Pure client
@@ -41,8 +41,9 @@ final class ConstructionFx {
     /** The outline of the part still to come: a warm gold, quieter than the cut line (round 3 critic, eyes 41023134378:
      *  a saturated full-opacity box read as a debug wireframe / CAD tool, not the White Angel). */
     private static final int OUTLINE_GOLD = 0xF0C35A;
-    /** The tools' bodies, normal-blended: additive gold over the white walls vanished (round 3: "pale smudges"). */
-    private static final int TOOL_BODY = 0xB8862B;
+    /** The tools, normal-blended: additive gold over the white walls vanished (round 3: "pale smudges"); a gold head
+     *  and an ivory handle inside a dark rim, so a tool reads on the white walls and on the lawn alike (round 4). */
+    private static final int TOOL_BODY = 0xE0A83A, TOOL_HANDLE = 0xF1E7CF, TOOL_RIM = 0x3A2710;
     /** Seconds the finished halo takes to flare and fade. */
     private static final float DONE_SECONDS = 2.2f;
     /** Past this RTS zoom (strategic) the ring keeps half its puffs and the light shafts stop. */
@@ -55,6 +56,7 @@ final class ConstructionFx {
         final ConstructionShape shape;
         final float[] outline;
         final float[] cut = new float[4];
+        final float[] pt = new float[4];   // a tool's point on the cut line {x, z, nx, nz}
         final int[] standing;     // blocks standing per layer, recounted every RECOUNT seconds
         float countedAt = -1;
         float shown;
@@ -140,7 +142,7 @@ final class ConstructionFx {
             // (eyes 41003840710); a warm-WHITE core read cream (round 2, 41014293234), so the core is gold too
             drawCut(s, front, (far ? 0.3f : 0.16f) * 0.5f, LINE_GOLD, 0.8f);
             if (!far)
-                drawTools(s.shape.centreX(), front, s.shape.centreZ(), s.lastRadius, clock, true);
+                drawTools(s, front, clock, true);
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
@@ -174,7 +176,7 @@ final class ConstructionFx {
             if (far)
                 drawGlints(cx, front, cz, r, clock, true);
             else
-                drawTools(cx, front, cz, r, clock, false);
+                drawTools(s, front, clock, false);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
         BarFxClient.vc = null;
@@ -264,13 +266,7 @@ final class ConstructionFx {
         BarFxClient.streak(x0, y0, z0, x1, y1, z1, w, c, a0, a1);
     }
 
-    /**
-     * The tools orbiting on the ring: golden hammers and chisels in turn, each swinging down onto the front as it
-     * strikes (slice 2 - they were glints). Built from soft streaks so they need no model: a hammer is a handle and a
-     * crosswise head, a chisel a tapered blade. About a block long - ~30 px at the default RTS zoom, enough to read
-     * as a tool, not a spark. A short trail behind each keeps the orbit legible.
-     */
-    /** Strategic zoom: the tools shrink to golden glints with a short trail. */
+    /** Strategic zoom: the tools shrink to golden glints on the ring. */
     static void drawGlints(float cx, float front, float cz, float r, float clock, boolean far) {
         for (int i = 0; i < 2; i++) {
             float ang = (float) (i * Math.PI + clock * 0.55f);
@@ -280,48 +276,109 @@ final class ConstructionFx {
         }
     }
 
+    /** Hammer / chisel parts (blocks at the RTS zoom: 30 blocks tall on screen, so ~30 px a block). */
+    private static final float HANDLE = 1.15f, HANDLE_W = 0.15f, HEAD_L = 0.72f, HEAD_W = 0.32f, RIM = 0.06f;
+    private static final float CHISEL_GRIP = 0.55f, CHISEL_GRIP_W = 0.22f, CHISEL_BLADE = 0.7f;
+    /** Struck (head on the cut line, the handle leaning out from the wall) and raised (head back over the grip). */
+    private static final float STRUCK = 0.35f, RAISED = 3.5f;
+    /** The tools are pulled this far toward the camera so the wall top they strike never hides their heads. */
+    private static final float NUDGE = 0.6f;
+
     /**
-     * The tools: golden hammers and chisels orbiting just outside the walls and swinging down onto the cut line. Drawn
-     * twice - {@code body}: a solid dark-gold silhouette, normal-blended, so a tool reads against the white walls
-     * (round 3, eyes 41023134378: additive gold alone left "two pale smudges"); then the light: a bright edge, the
-     * trail, and a flash on the cut line at each blow.
+     * The tools: two golden hammers and a chisel walking the cut line and striking it. Round 4 (eyes 41031649391) showed
+     * only "a glowing sphere with a comet tail" - the root cause was the drawing, not the pass order: each tool was a
+     * soft streak (alpha only on its centre line, nothing at the edges) swinging in the vertical plane of the ring's
+     * tangent, so from the 65-degree RTS camera a tool on either side of the ring was edge-on (head folded onto the
+     * handle) and every tool was a few-pixel brown smear, while the 0.5-block additive blow flash and the trail - the
+     * only bright, wide parts - were all that read; and on the ring's circle the blows landed on the lawn.
+     * Now each tool is a hard-edged silhouette laid out in the SCREEN plane (camera left / up), so it always shows full
+     * length and its head always crosses the handle: a dark rim, then an ivory handle and a gold head (normal-blended,
+     * {@code body}); the light pass adds only a small glint on the head and a short, small flash where the blow lands.
+     * The tools walk the cut line rectangle (ConstructionShape.perimeterPoint) with the grip leaning out from the wall.
      */
-    static void drawTools(float cx, float front, float cz, float r, float clock, boolean body) {
-        for (int i = 0; i < 4; i++) {
-            float ang = (float) (i * Math.PI / 2 + clock * 0.55f);
-            float strike = (float) Math.max(0, Math.sin(clock * 3.1f + i * 1.9f));   // a quick dip toward the front
-            float y = front + 1.8f - 0.75f * strike * strike;   // the 2.1-block tool lands its head on the front
-            float ca = (float) Math.cos(ang), sa = (float) Math.sin(ang);
-            // just outside the cut line (the walls): r stands off past the corners (code review Oct 30)
-            float rs = r / ConstructionShape.RING_STANDOFF * 0.98f;
-            float x = cx + ca * rs, z = cz + sa * rs;
-            // a blow: from raised behind (2.4 rad - head up) down to struck (0.3 - head on the front, the handle still
-            // tilted so it reads from above)
-            float swing = 2.4f - 2.1f * strike;
-            float tx = -sa, tz = ca;                          // the orbit's tangent
-            float hx = (float) Math.sin(swing) * tx, hy = (float) -Math.cos(swing), hz = (float) Math.sin(swing) * tz;
-            float len = 2.1f;
-            float gx = x - hx * len * 0.5f, gy = y - hy * len * 0.5f, gz = z - hz * len * 0.5f;   // the grip end
-            float bx = x + hx * len * 0.5f, by = y + hy * len * 0.5f, bz = z + hz * len * 0.5f;   // the working end
-            float qx = tx * (float) Math.cos(swing), qy = (float) Math.sin(swing), qz = tz * (float) Math.cos(swing);
-            boolean hammer = (i & 1) == 0;
+    static void drawTools(Site s, float front, float clock, boolean body) {
+        s.shape.layerBox(front, s.cut);
+        float[] pt = s.pt;
+        for (int i = 0; i < 3; i++) {
+            boolean chisel = i == 1;
+            ConstructionShape.perimeterPoint(s.cut, i / 3f + clock * 0.02f, pt);
+            // outward in screen terms: +1 when the wall's outside is toward screen-left
+            float out = pt[2] * BarFxClient.leftX + pt[3] * BarFxClient.leftZ >= 0 ? 1 : -1;
+            float period = chisel ? 0.55f : 1.25f;
+            float t = clock / period + i * 0.37f, k = t - (float) Math.floor(t);
+            float lo = chisel ? 0.2f : STRUCK, hi = chisel ? 0.6f : RAISED;
+            float theta;
+            if (k < 0.08f)
+                theta = lo;                                              // the blow lands: hold a beat
+            else if (k < 0.75f) {
+                float e = (k - 0.08f) / 0.67f;
+                theta = lo + (hi - lo) * (1 - (1 - e) * (1 - e));        // raise, easing out
+            } else {
+                float e = (k - 0.75f) / 0.25f;
+                theta = hi + (lo - hi) * e * e;                          // the blow, accelerating
+            }
+            float reach = chisel ? CHISEL_GRIP + CHISEL_BLADE : HANDLE;
+            // the grip: fixed so that, struck, the working end sits on the cut line point
+            float su = (float) -Math.cos(lo), sl = (float) -Math.sin(lo) * out;
+            float px = pt[0] - BarFxClient.lookX * NUDGE, py = front + 0.04f - BarFxClient.lookY * NUDGE,
+                    pz = pt[1] - BarFxClient.lookZ * NUDGE;
+            float gx = px - (su * BarFxClient.upX + sl * BarFxClient.leftX) * reach;
+            float gy = py - (su * BarFxClient.upY + sl * BarFxClient.leftY) * reach;
+            float gz = pz - (su * BarFxClient.upZ + sl * BarFxClient.leftZ) * reach;
+            float du = (float) -Math.cos(theta), dl = (float) -Math.sin(theta) * out;   // grip -> working end
+            float flash = k < 0.15f ? 1 - k / 0.15f : 0;
             if (body) {
-                BarFxClient.streak(gx, gy, gz, bx, by, bz, hammer ? 0.2f : 0.3f, TOOL_BODY, 0.95f, hammer ? 0.95f : 0.7f);
-                if (hammer)
-                    BarFxClient.streak(bx - qx * 0.65f, by - qy * 0.65f, bz - qz * 0.65f,
-                            bx + qx * 0.65f, by + qy * 0.65f, bz + qz * 0.65f, 0.5f, TOOL_BODY, 0.95f, 0.95f);
+                for (int pass = 0; pass < 2; pass++) {   // the dark rim first, then the fill over it
+                    float e = pass == 0 ? RIM : 0;
+                    int c0 = pass == 0 ? TOOL_RIM : TOOL_HANDLE, c1 = pass == 0 ? TOOL_RIM : TOOL_BODY;
+                    float a = pass == 0 ? 0.85f : 1f;
+                    if (chisel) {
+                        bar(gx, gy, gz, du, dl, -e, CHISEL_GRIP + e, CHISEL_GRIP_W + 2 * e, CHISEL_GRIP_W + 2 * e, c0, a);
+                        bar(gx, gy, gz, du, dl, CHISEL_GRIP, CHISEL_BLADE + e, 0.15f + 2 * e, 0.05f + 2 * e, c1, a);
+                    } else {
+                        bar(gx, gy, gz, du, dl, -e, HANDLE + e, HANDLE_W + 2 * e, HANDLE_W + 2 * e, c0, a);
+                        // the head crosses the handle's end: along the perpendicular (-dl, du), centred on it
+                        float hx = gx + (du * BarFxClient.upX + dl * BarFxClient.leftX) * HANDLE;
+                        float hy = gy + (du * BarFxClient.upY + dl * BarFxClient.leftY) * HANDLE;
+                        float hz = gz + (du * BarFxClient.upZ + dl * BarFxClient.leftZ) * HANDLE;
+                        bar(hx, hy, hz, -dl, du, -HEAD_L / 2 - e, HEAD_L + 2 * e, HEAD_W + 2 * e, HEAD_W + 2 * e, c1, a);
+                    }
+                }
                 continue;
             }
-            float pa = ang - 0.35f;
-            float px = cx + (float) Math.cos(pa) * rs, pz = cz + (float) Math.sin(pa) * rs;
-            BarFxClient.streak(px, front + 1.8f, pz, x, y, z, 0.1f, GOLD, 0f, 0.3f);              // the trail
-            BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.07f, LIGHT, 0.7f, 0.7f);                  // a lit edge
-            if (hammer)
-                BarFxClient.streak(bx - qx * 0.6f, by - qy * 0.6f, bz - qz * 0.6f,
-                        bx + qx * 0.6f, by + qy * 0.6f, bz + qz * 0.6f, 0.16f, LIGHT, 0.8f, 0.8f);
-            if (strike > 0.85f)                                                                    // the blow lands
-                BarFxClient.softDisc(bx, front + 0.08f, bz, 0.5f * strike, LIGHT, strike, GOLD, 0.5f * strike, 10, 0, 0);
+            // the light: a glint on the head (or the chisel's edge) and, as a blow lands, a small short flash
+            float tip = chisel ? reach : HANDLE;
+            float ex = gx + (du * BarFxClient.upX + dl * BarFxClient.leftX) * tip;
+            float ey = gy + (du * BarFxClient.upY + dl * BarFxClient.leftY) * tip;
+            float ez = gz + (du * BarFxClient.upZ + dl * BarFxClient.leftZ) * tip;
+            float tw = 0.75f + 0.25f * (float) Math.sin(clock * 5 + i * 2.1f);
+            BarFxClient.softDisc(ex, ey, ez, 0.16f, LIGHT, 0.55f * tw, GOLD, 0, 8, 0, 0);
+            if (flash > 0)
+                BarFxClient.softDisc(px, py, pz, (chisel ? 0.22f : 0.32f) * (0.6f + 0.4f * flash), LIGHT, 0.85f * flash,
+                        GOLD, 0.2f * flash, 10, 0, 0);
         }
+    }
+
+    /**
+     * A hard-edged bar in the screen plane: from (x, y, z) offset {@code from} along the screen direction (du up, dl
+     * left; unit), {@code len} long, {@code w0} wide at its start and {@code w1} at its end, one alpha throughout
+     * (BarFxClient.streak fades to nothing at its sides, so a thin one vanishes - the round 4 tools).
+     */
+    private static void bar(float x, float y, float z, float du, float dl, float from, float len, float w0, float w1,
+                            int c, float a) {
+        float dx = du * BarFxClient.upX + dl * BarFxClient.leftX;
+        float dy = du * BarFxClient.upY + dl * BarFxClient.leftY;
+        float dz = du * BarFxClient.upZ + dl * BarFxClient.leftZ;
+        float nx = dl * BarFxClient.upX - du * BarFxClient.leftX;   // the screen perpendicular (-dl, du) up to sign
+        float ny = dl * BarFxClient.upY - du * BarFxClient.leftY;
+        float nz = dl * BarFxClient.upZ - du * BarFxClient.leftZ;
+        float ax = x + dx * from, ay = y + dy * from, az = z + dz * from;
+        float bx = ax + dx * len, by = ay + dy * len, bz = az + dz * len;
+        float h0 = w0 * 0.5f, h1 = w1 * 0.5f;
+        BarFxClient.v(ax - nx * h0, ay - ny * h0, az - nz * h0, c, a);
+        BarFxClient.v(bx - nx * h1, by - ny * h1, bz - nz * h1, c, a);
+        BarFxClient.v(bx + nx * h1, by + ny * h1, bz + nz * h1, c, a);
+        BarFxClient.v(ax + nx * h0, ay + ny * h0, az + nz * h0, c, a);
     }
 
     private static float hash(int i) {
