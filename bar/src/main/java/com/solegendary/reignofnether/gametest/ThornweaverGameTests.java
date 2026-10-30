@@ -671,7 +671,7 @@ public class ThornweaverGameTests {
         BlockPos spot = ground(helper, 7, 7);
         List<Entity> made = new ArrayList<>();
         List<String> early = new ArrayList<>();
-        boolean[] aliveLate = { false };
+        boolean[] aliveLate = { false }, inWorldLate = { false };
         final int cast = 2;
         helper.runAfterDelay(cast, () -> {
             try {
@@ -715,13 +715,18 @@ public class ThornweaverGameTests {
                 early.add("the cast threw " + ex);
             }
         });
-        helper.runAfterDelay(cast + 470, () -> aliveLate[0] = !made.isEmpty() && made.stream().allMatch(e -> !e.isRemoved() && e.isAlive()));
+        helper.runAfterDelay(cast + 470, () -> {
+            aliveLate[0] = !made.isEmpty() && made.stream().allMatch(e -> !e.isRemoved() && e.isAlive());
+            inWorldLate[0] = !made.isEmpty() && made.stream().allMatch(e -> level.getEntity(e.getUUID()) == e);   // not only on the spell's list
+        });
         helper.runAfterDelay(cast + 540, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (problems.isEmpty()) {
                     if (!aliveLate[0])
                         problems.add("the guardian was gone before 23.5 s, expected 25 s");
+                    else if (!inWorldLate[0])
+                        problems.add("the guardian on the spell's list was not in the world at 23.5 s (not found by its UUID)");
                     if (made.stream().anyMatch(e -> !e.isRemoved()))
                         problems.add("the guardian still stood 27 s after it woke, expected it to wither at 25 s");
                 }
@@ -736,7 +741,8 @@ public class ThornweaverGameTests {
 
     /**
      * Sprout Guardian refuses a Thornweaver 1 essence short (no treant, nothing spent, no cooldown); a guardian that
-     * is killed drops no essence wisp.
+     * is killed drops no essence wisp. The guardian is read from the spell's own list at the cast and must be in the
+     * world (found by its UUID) 20 ticks into the test, before it is killed: the list alone can't pass the test.
      */
     @GameTest(template = ARENA, timeoutTicks = 60, batch = BATCH)
     public static void thornweaver_sprout_guardian_refuses_when_short_and_drops_no_essence(GameTestHelper helper) {
@@ -755,6 +761,8 @@ public class ThornweaverGameTests {
         List<Entity> made = new ArrayList<>();
         List<String> early = new ArrayList<>();
         Vec3[] deathAt = { null };
+        LivingEntity[] guardian = { null };
+        final int inWorld = 20;
         helper.runAfterDelay(3, () -> {
             try {
                 SproutGuardian a = ability(poor, SproutGuardian.class), b = ability(rich, SproutGuardian.class);
@@ -783,17 +791,27 @@ public class ThornweaverGameTests {
                         + ", cooldown " + ((Unit) rich).getCooldown(b) + ", standing cell " + SeedOfRenewal.standingCell(level,
                         richSpot.getX(), richSpot.getZ(), richSpot.getY() + 1) + " for the spot " + richSpot + ")");
                 else {
-                    LivingEntity g = raised.get(0);
-                    if (g instanceof Mob m)
+                    guardian[0] = raised.get(0);
+                    if (guardian[0] instanceof Mob m)
                         m.setNoAi(true);
-                    deathAt[0] = g.position();
-                    g.kill();
                 }
             } catch (RuntimeException ex) {
                 early.add("the cast threw " + ex);
             }
         });
-        helper.runAfterDelay(15, () -> {
+        helper.runAfterDelay(inWorld, () -> {
+            LivingEntity g = guardian[0];
+            if (g == null)
+                return;
+            if (g.isRemoved() || level.getEntity(g.getUUID()) != g) {
+                early.add("the guardian on the spell's list is not in the world " + (inWorld - 3) + " ticks after the cast (removed "
+                    + g.isRemoved() + ", found by UUID " + (level.getEntity(g.getUUID()) != null) + ", at " + g.blockPosition() + ")");
+                return;
+            }
+            deathAt[0] = g.position();
+            g.kill();
+        });
+        helper.runAfterDelay(inWorld + 12, () -> {
             List<String> problems = new ArrayList<>(early);
             try {
                 if (problems.isEmpty() && deathAt[0] != null) {
