@@ -148,8 +148,10 @@ TARGETS = {
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
     "sandstone_top": dict(luma=0.83, std=0.035, sat=0.26, tilt=6.7, smooth=27, pore=50),
     "sandstone_bottom": dict(luma=0.76, std=0.056, sat=0.29, tilt=7.8, smooth=21, pore=50),
-    "red_terracotta": dict(luma=0.27, std=0.015, sat=0.55, tilt=4.0, smooth=29, pore=30),
-    "terracotta": dict(luma=0.33, std=0.015, sat=0.46, tilt=4.0, smooth=29, pore=30),
+    # r31 (art director: "muddy, half a stop dark"): luma +20% (0.27 -> 0.33, 0.33 -> 0.40), cleaner hue (sat up),
+    # a little more mottle spread, a satin fired skin (smooth 29 -> 36)
+    "red_terracotta": dict(luma=0.33, std=0.022, sat=0.62, tilt=3.5, smooth=36, pore=30, soften=1.0),
+    "terracotta": dict(luma=0.40, std=0.022, sat=0.52, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "polished_basalt_side": dict(luma=0.36, std=0.077, sat=0.05, tilt=25.0, smooth=39, pore=8),
     "polished_basalt_top": dict(luma=0.33, std=0.075,   # r21: in game 132 vs basalt 114 - read as bone beside it
     sat=0.02, tilt=20.0, smooth=26, pore=8),
@@ -226,7 +228,8 @@ TARGETS = {
     "lapis_block": dict(luma=0.22, std=0.050, sat=0.55, tilt=7.6, smooth=60, pore=0, f0=15),
     "end_stone": dict(luma=0.80, std=0.075, sat=0.28, tilt=17.1, smooth=39, pore=20),
     "white_concrete": dict(luma=0.80, std=0.008, sat=0.04, tilt=2.0, smooth=86, pore=10),
-    "blue_terracotta": dict(luma=0.25, std=0.010, sat=0.30, tilt=3.9, smooth=29, pore=30),
+    # r31: 0.25 -> 0.30 and a real blue-violet (sat 0.30 -> 0.42) - it read grey-purple like blackstone
+    "blue_terracotta": dict(luma=0.30, std=0.018, sat=0.42, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "podzol_side": dict(luma=0.36, std=0.090, sat=0.44, tilt=21.6, smooth=15, pore=56),
     # round 15 (Oct 15, the texture audit): the face census's partial blocks (tools/face_census.py) - our texture on
     # some faces of a block, vanilla 16x on the rest. Each new face takes its sibling's numbers: a stripped log's top
@@ -1574,6 +1577,22 @@ def m_clayish(F, n, base, pits=0.04, mottle=0.08):
     H = 0.6 + 0.05 * mot + 0.015 * fine - pits * pit
     shade = 0.9 + mottle * mot + 0.03 * fine - 1.5 * pits * pit
     return H, tint(base, shade)
+
+
+def m_terracotta(F, n, base, flash=(0.92, 0.90, 0.96)):
+    """Round 31 (art director: the terracottas "muddy, half a stop dark", blue "grey-purple like blackstone"): fired
+    clay is a CLEAN hue, mostly flat - a slow soft mottle (the clay body's mix), a few broad kiln-flashing clouds a
+    touch darker and cooler, a fine grain in the relief only and a handful of shallow pits. No peppery pits in the
+    colour (m_clayish's 16-48 cycle pits read as grit). The lift to value goes through TARGETS."""
+    mot = F.fbm(2, 3, 0.5)
+    cloud = smoothstep(0.55, 0.95, norm01(F.fbm(1, 3, 0.6)))          # kiln flashing, broad
+    fine = F.noise(20, 60, 0.3)
+    pit = smoothstep(0.85, 0.97, norm01(F.noise(10, 24, 0.3))) * smoothstep(0.5, 0.8, norm01(F.noise(1, 3, 0.5)))
+    H = 0.6 + 0.04 * mot + 0.012 * fine - 0.05 * pit
+    shade = 0.92 + 0.07 * mot + 0.004 * fine - 0.06 * pit                # the grain is for the light, not the colour
+    alb = tint(base, shade)
+    alb = alb * (1 - cloud[..., None]) + cloud[..., None] * alb * np.array(flash)[None, None, :]
+    return H, alb
 
 
 def m_basalt(F, n, top):
@@ -3118,8 +3137,9 @@ def recipes():
         "sandstone": lambda F, n: m_sandstone(F, n, "side"),
         "sandstone_top": lambda F, n: m_sandstone(F, n, "top"),
         "sandstone_bottom": lambda F, n: m_sandstone(F, n, "bottom"),
-        "red_terracotta": lambda F, n: m_clayish(F, n, (0.56, 0.24, 0.18)),
-        "terracotta": lambda F, n: m_clayish(F, n, (0.60, 0.38, 0.28)),
+        # r31: m_terracotta - clean fired-clay hues (orange-tan, brick red, blue-violet), soft mottle, no grit
+        "red_terracotta": lambda F, n: m_terracotta(F, n, (0.64, 0.22, 0.15)),
+        "terracotta": lambda F, n: m_terracotta(F, n, (0.72, 0.44, 0.28)),
         "polished_basalt_side": lambda F, n: m_basalt(F, n, False),
         "polished_basalt_top": lambda F, n: m_basalt(F, n, True),
         "bone_block_side": lambda F, n: m_bone(F, n, False),
@@ -3187,7 +3207,7 @@ def recipes():
         # r21: flat pale yellow, same as sand beside it - fewer, larger darker pits so it reads as porous stone
         "end_stone": lambda F, n: m_igneous(F, n, (0.86, 0.86, 0.66), (0.62, 0.62, 0.46), 0.9, size=(7, 16)),
         "white_concrete": lambda F, n: m_clayish(F, n, (0.86, 0.87, 0.87), pits=0.01, mottle=0.03),
-        "blue_terracotta": lambda F, n: m_clayish(F, n, (0.30, 0.25, 0.38)),
+        "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.28, 0.52), flash=(0.94, 0.94, 0.98)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
         "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
