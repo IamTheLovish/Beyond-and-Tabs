@@ -1,0 +1,200 @@
+[19:33:19] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 42)]
+[19:33:19] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 44)]
+[19:33:19] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:33:19] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_1_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_1_34_t11800.png
+[19:33:20] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit.png (1024x1024) uploaded with 3 mip levels
+[19:33:21] [Server thread/INFO]: [Tick] p50 5.8 ms, p95 10.3 ms, max 14.5 ms over the last 100 ticks; 19 units, 9 buildings, 1 players
+[19:33:21] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:33:21] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_team.png (1024x1024) uploaded with 3 mip levels
+[19:33:21] [Render thread/INFO]: Unit textures: reignofnether:textures/entities/squire_runner_unit_glow.png (1024x1024) uploaded with 3 mip levels
+[19:33:24] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_1_rts_army 1793388804841
+[19:33:24] [Server thread/INFO]: [Offline: Killed 8 entities]
+[19:33:25] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_1_rts_army: Saved screenshot as bat_eyes_15_block_sampler_1_rts_army.png
+[19:33:25] [Render thread/INFO]: [Eyes] 15_block_sampler_2: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/block_sampler_2.nbt' 22x7x13 placed at -268, 70, 37 (pad centre -257, 70, 43)
+[19:33:30] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts 1793388810942
+[19:33:31] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 11.1 ms, max 27.3 ms over the last 100 ticks; 12 units, 10 buildings, 1 players
+[19:33:31] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:33:31] [IO-Worker-4/INFO]: [Eyes] 15_block_sampler_2_rts: Saved screenshot as bat_eyes_15_block_sampler_2_rts.png
+[19:33:33] [Render thread/INFO]: [Frame] p50 583.7 ms (2 fps), p95 733.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:33:33] [Render thread/INFO]: [Anim] 13 units/frame (max 16): animation p50 0.4 ms, p95 0.5 ms; unit render p50 5.3 ms, p95 10.1 ms; per unit 24.5 us anim, 552.1 us render (anim 4%); RTS view, zoom 30, detail on, over 14 frames
+[19:33:33] [Render thread/INFO]: [FrameParts] 20 frames, mean 702.1 ms/frame; ours 9.4 ms (1%): unitBodies 3.39 (max 16.1, 5.1/f) | markersMapWorld 3.09 (max 34.4, 1.0/f) | unitShadow 1.49 (max 14.3, 3.5/f) | markersRange 0.73 (max 0.9, 1.0/f) | worldFx 0.25 (max 0.8, 14/f) | markersWreck 0.13 (max 1.2, 1.0/f) | bars 0.11 (max 1.6, 28/f) | unitOverlays 0.08 (max 0.2, 11/f) | buildingBoxes 0.07 (max 0.1, 1.0/f) | buildingDecor 0.05 (max 0.6, 4.0/f) (+14 smaller); elsewhere 692.7 ms; 0 section re-mesh requests/s
+[19:33:33] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: unitTick 0.02 (max 1.8, 8.1/t)
+[19:33:41] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 8.7 ms, max 16.0 ms over the last 100 ticks; 13 units, 10 buildings, 1 players
+[19:33:41] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:33:45] [Render thread/INFO]: [Frame] p50 593.5 ms (2 fps), p95 733.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:33:45] [Render thread/INFO]: [FrameParts] 20 frames, mean 619.9 ms/frame; ours 2.1 ms (0%): markersMapWorld 1.04 (max 3.8, 1.0/f) | markersRange 0.66 (max 0.8, 1.0/f) | worldFx 0.14 (max 0.3, 14/f) | markersWreck 0.12 (max 0.1, 1.0/f) | buildingBoxes 0.08 (max 0.1, 1.0/f) | unitOverlays 0.04 (max 0.1, 11/f) | buildingDecor 0.02 (max 0.0, 4.0/f) (+15 smaller); elsewhere 617.8 ms; 0 section re-mesh requests/s
+[19:33:45] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:33:51] [Server thread/INFO]: [Tick] p50 6.0 ms, p95 9.7 ms, max 14.3 ms over the last 100 ticks; 14 units, 12 buildings, 1 players
+[19:33:51] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:33:52] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[19:33:57] [Render thread/INFO]: [Frame] p50 597.8 ms (2 fps), p95 710.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:33:57] [Render thread/INFO]: [FrameParts] 20 frames, mean 618.9 ms/frame; ours 1.9 ms (0%): markersMapWorld 0.74 (max 3.1, 1.0/f) | markersRange 0.68 (max 0.9, 1.0/f) | buildingBoxes 0.18 (max 2.3, 1.0/f) | markersWreck 0.12 (max 0.5, 1.0/f) | worldFx 0.04 (max 0.1, 14/f) | unitOverlays 0.03 (max 0.0, 11/f) | buildingDecor 0.02 (max 0.0, 4.0/f) (+15 smaller); elsewhere 617.0 ms; 0 section re-mesh requests/s
+[19:33:57] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:34:01] [Server thread/INFO]: [Tick] p50 6.2 ms, p95 10.6 ms, max 30.1 ms over the last 100 ticks; 14 units, 13 buildings, 1 players
+[19:34:01] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:10] [Render thread/INFO]: [Frame] p50 604.0 ms (2 fps), p95 707.8 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:34:10] [Render thread/INFO]: [FrameParts] 20 frames, mean 631.6 ms/frame; ours 1.8 ms (0%): markersMapWorld 0.84 (max 3.4, 1.0/f) | markersRange 0.69 (max 0.9, 1.0/f) | markersWreck 0.11 (max 0.2, 1.0/f) | buildingBoxes 0.06 (max 0.1, 1.0/f) | unitOverlays 0.04 (max 0.0, 11/f) | buildingDecor 0.02 (max 0.1, 4.0/f) (+16 smaller); elsewhere 629.8 ms; 0 section re-mesh requests/s
+[19:34:10] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:34:10] [Render thread/INFO]: [ShaderBench] 15_block_sampler_2_rts: 60 frames, p50 618.93 ms, p95 680.63 ms, mean 623.31 ms; shader pack on; 1600x900; fps cap 120, vsync on
+[19:34:11] [Server thread/INFO]: [Tick] p50 5.7 ms, p95 8.7 ms, max 11.3 ms over the last 100 ticks; 16 units, 13 buildings, 1 players
+[19:34:11] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:15] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_close 1793388855300
+[19:34:15] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:15] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_2_rts_close: Saved screenshot as bat_eyes_15_block_sampler_2_rts_close.png
+[19:34:20] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34 1793388860813
+[19:34:21] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_2_34: Saved screenshot as bat_eyes_15_block_sampler_2_34.png
+[19:34:21] [Server thread/INFO]: [Tick] p50 7.2 ms, p95 12.0 ms, max 13.8 ms over the last 100 ticks; 16 units, 14 buildings, 1 players
+[19:34:21] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:21] [Render thread/INFO]: [System] [CHAT] 
+[19:34:21] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:34:21] [Render thread/INFO]: [System] [CHAT] 
+[19:34:22] [Render thread/INFO]: [Frame] p50 607.6 ms (2 fps), p95 707.8 ms, max 1089.4 ms over 240 frames; first-person view, zoom 26, 5 units known
+[19:34:22] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.0 ms, p95 0.1 ms; unit render p50 1.0 ms, p95 4.1 ms; per unit 3.6 us anim, 130.3 us render (anim 3%); first-person view, zoom 26, detail off, over 11 frames
+[19:34:22] [Render thread/INFO]: [FrameParts] 20 frames, mean 618.7 ms/frame; ours 2.5 ms (0%): markersRange 0.95 (max 3.9, 1.0/f) | unitBodies 0.49 (max 3.5, 3.0/f) | buildingDecor 0.33 (max 0.6, 4.0/f) | unitShadow 0.28 (max 0.8, 3.0/f) | markersMapWorld 0.25 (max 0.7, 0.4/f) | buildingBoxes 0.07 (max 0.8, 0.4/f) | unitOverlays 0.06 (max 0.1, 11/f) | markersWreck 0.04 (max 0.1, 1.0/f) (+16 smaller); elsewhere 616.2 ms; 0 section re-mesh requests/s
+[19:34:22] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:34:25] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_dusk 1793388865576
+[19:34:25] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:25] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_2_dusk: Saved screenshot as bat_eyes_15_block_sampler_2_dusk.png
+[19:34:29] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_t5000 1793388869594
+[19:34:29] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:29] [IO-Worker-5/INFO]: [Eyes] 15_block_sampler_2_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_2_rts_t5000.png
+[19:34:30] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[19:34:31] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 8.7 ms, max 16.2 ms over the last 100 ticks; 18 units, 14 buildings, 1 players
+[19:34:31] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:34] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34_t5000 1793388874706
+[19:34:34] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:35] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_2_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_2_34_t5000.png
+[19:34:36] [Render thread/INFO]: [Frame] p50 613.3 ms (2 fps), p95 709.4 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:34:36] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.0 ms, p95 0.0 ms; unit render p50 0.9 ms, p95 4.1 ms; per unit 3.7 us anim, 152.4 us render (anim 2%); RTS view, zoom 30, detail on, over 13 frames
+[19:34:36] [Render thread/INFO]: [FrameParts] 20 frames, mean 662.7 ms/frame; ours 2.9 ms (0%): markersRange 1.18 (max 3.9, 1.0/f) | unitBodies 0.47 (max 3.8, 3.0/f) | unitShadow 0.47 (max 3.6, 3.0/f) | buildingDecor 0.35 (max 0.7, 4.0/f) | markersMapWorld 0.22 (max 0.6, 0.4/f) | unitOverlays 0.05 (max 0.1, 11/f) | markersWreck 0.04 (max 0.1, 1.0/f) | buildingBoxes 0.03 (max 0.2, 0.4/f) (+16 smaller); elsewhere 659.8 ms; 0 section re-mesh requests/s
+[19:34:36] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:34:38] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_t11800 1793388878899
+[19:34:38] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:39] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_2_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_2_rts_t11800.png
+[19:34:41] [Server thread/INFO]: [Tick] p50 6.6 ms, p95 11.6 ms, max 28.7 ms over the last 100 ticks; 19 units, 14 buildings, 1 players
+[19:34:41] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:44] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_34_t11800 1793388884334
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-258, 70, 34)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 70, 34)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-258, 70, 52)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 70, 52)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-271, 70, 42)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-271, 70, 44)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 42)]
+[19:34:44] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 44)]
+[19:34:44] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:34:44] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_2_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_2_34_t11800.png
+[19:34:49] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_2_rts_army 1793388889657
+[19:34:49] [Server thread/INFO]: [Offline: Killed 8 entities]
+[19:34:49] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_2_rts_army: Saved screenshot as bat_eyes_15_block_sampler_2_rts_army.png
+[19:34:50] [Render thread/INFO]: [Eyes] 15_block_sampler_3: '/home/runner/work/Beyond-and-Tabs/Beyond-and-Tabs/eyes-structures/block_sampler_3.nbt' 22x7x13 placed at -268, 70, 37 (pad centre -257, 70, 43)
+[19:34:50] [Render thread/INFO]: [Frame] p50 619.0 ms (2 fps), p95 733.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 13 units known
+[19:34:50] [Render thread/INFO]: [Anim] 13 units/frame (max 16): animation p50 0.2 ms, p95 0.3 ms; unit render p50 3.6 ms, p95 8.3 ms; per unit 24.7 us anim, 284.7 us render (anim 9%); RTS view, zoom 30, detail on, over 14 frames
+[19:34:50] [Render thread/INFO]: [FrameParts] 20 frames, mean 712.2 ms/frame; ours 4.8 ms (1%): unitBodies 2.07 (max 7.4, 5.0/f) | markersRange 0.98 (max 3.9, 1.0/f) | unitShadow 0.85 (max 3.1, 5.0/f) | buildingDecor 0.35 (max 2.7, 4.0/f) | markersMapWorld 0.35 (max 0.7, 0.7/f) | markersWreck 0.06 (max 0.1, 1.0/f) | unitOverlays 0.06 (max 0.1, 11/f) | buildingBoxes 0.03 (max 0.1, 0.7/f) (+16 smaller); elsewhere 707.4 ms; 0 section re-mesh requests/s
+[19:34:50] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:34:51] [Server thread/INFO]: [Tick] p50 5.1 ms, p95 9.6 ms, max 49.7 ms over the last 100 ticks; 20 units, 15 buildings, 1 players
+[19:34:51] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:34:55] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts 1793388895686
+[19:34:55] [IO-Worker-5/INFO]: [Eyes] 15_block_sampler_3_rts: Saved screenshot as bat_eyes_15_block_sampler_3_rts.png
+[19:35:01] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 9.2 ms, max 24.1 ms over the last 100 ticks; 21 units, 15 buildings, 1 players
+[19:35:01] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:02] [Render thread/INFO]: [Frame] p50 619.5 ms (2 fps), p95 733.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:35:02] [Render thread/INFO]: [FrameParts] 20 frames, mean 614.3 ms/frame; ours 3.5 ms (1%): markersMapWorld 1.31 (max 7.0, 1.0/f) | unitBodies 0.87 (max 5.0, 2.0/f) | markersRange 0.66 (max 1.0, 1.0/f) | worldFx 0.27 (max 0.6, 14/f) | markersWreck 0.15 (max 0.5, 1.0/f) | unitShadow 0.09 (max 1.8, 0.4/f) | buildingBoxes 0.04 (max 0.1, 1.0/f) | unitOverlays 0.04 (max 0.1, 11/f) | bars 0.03 (max 0.4, 28/f) (+15 smaller); elsewhere 610.8 ms; 0 section re-mesh requests/s
+[19:35:02] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:35:09] [Render thread/INFO]: [Eyes] step 20 screen com.solegendary.reignofnether.guiscreen.TopdownGui level true
+[19:35:11] [Server thread/INFO]: [Tick] p50 5.9 ms, p95 10.3 ms, max 20.7 ms over the last 100 ticks; 22 units, 16 buildings, 1 players
+[19:35:11] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:14] [Render thread/INFO]: [Frame] p50 619.0 ms (2 fps), p95 730.8 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:35:14] [Render thread/INFO]: [FrameParts] 20 frames, mean 597.9 ms/frame; ours 1.7 ms (0%): markersMapWorld 0.72 (max 3.0, 1.0/f) | markersRange 0.66 (max 1.0, 1.0/f) | markersWreck 0.09 (max 0.1, 1.0/f) | buildingBoxes 0.05 (max 0.1, 1.0/f) | worldFx 0.04 (max 0.0, 14/f) | unitOverlays 0.03 (max 0.0, 11/f) (+16 smaller); elsewhere 596.2 ms; 0 section re-mesh requests/s
+[19:35:14] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:35:21] [Server thread/INFO]: [Tick] p50 4.1 ms, p95 7.5 ms, max 8.8 ms over the last 100 ticks; 23 units, 17 buildings, 1 players
+[19:35:21] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:26] [Render thread/INFO]: [Frame] p50 619.9 ms (2 fps), p95 726.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:35:26] [Render thread/INFO]: [FrameParts] 20 frames, mean 605.9 ms/frame; ours 1.8 ms (0%): markersMapWorld 0.71 (max 3.6, 1.0/f) | markersRange 0.69 (max 1.1, 1.0/f) | markersGrid 0.15 (max 3.0, 1.0/f) | markersWreck 0.08 (max 0.1, 1.0/f) | buildingBoxes 0.04 (max 0.0, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) | worldFx 0.02 (max 0.1, 14/f) (+15 smaller); elsewhere 604.2 ms; 0 section re-mesh requests/s
+[19:35:26] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:35:31] [Server thread/INFO]: [Tick] p50 5.4 ms, p95 7.9 ms, max 44.0 ms over the last 100 ticks; 24 units, 17 buildings, 1 players
+[19:35:31] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:32] [Server thread/INFO]: [Sys] the server is slow (tick p95 44.0 ms): per-system timing on
+[19:35:34] [Render thread/INFO]: [ShaderBench] 15_block_sampler_3_rts: 60 frames, p50 603.75 ms, p95 633.87 ms, mean 607.43 ms; shader pack on; 1600x900; fps cap 120, vsync on
+[19:35:37] [Server thread/INFO]: [Sys] the server is healthy again (tick p95 10.0 ms): per-system timing off
+[19:35:38] [Render thread/INFO]: [Frame] p50 619.5 ms (2 fps), p95 726.5 ms, max 1089.4 ms over 240 frames; RTS view, zoom 26, 5 units known
+[19:35:38] [Render thread/INFO]: [FrameParts] 20 frames, mean 614.5 ms/frame; ours 1.4 ms (0%): markersRange 0.66 (max 0.9, 1.0/f) | markersMapWorld 0.52 (max 0.7, 1.0/f) | markersWreck 0.09 (max 0.1, 1.0/f) | buildingBoxes 0.05 (max 0.1, 1.0/f) | unitOverlays 0.03 (max 0.0, 11/f) (+17 smaller); elsewhere 613.1 ms; 0 section re-mesh requests/s
+[19:35:38] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:35:39] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_close 1793388939537
+[19:35:39] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:35:39] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_3_rts_close: Saved screenshot as bat_eyes_15_block_sampler_3_rts_close.png
+[19:35:41] [Server thread/INFO]: [Tick] p50 6.5 ms, p95 10.8 ms, max 20.9 ms over the last 100 ticks; 25 units, 18 buildings, 1 players
+[19:35:41] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:41] [Server thread/INFO]: [Sys] 100 ticks, mean 5.8 ms/tick; ours 0.7 ms (12%): unit 0.16 (max 1.7, 25/t) | buildings 0.15 (max 3.2, 1.0/t) | attacker 0.09 (max 4.1, 24/t) | pushScan 0.05 (max 3.0, 24/t) | pathfinder 0.04 (max 0.8, 2.0/t) | stuckNudge 0.04 (max 3.0, 25/t) (+18 smaller); vanilla 4.4 ms (76%): chunks 1.88 (max 8.0, 3.0/t) | travel 0.66 (max 4.4, 48/t) | aiGoals 0.53 (max 29.0, 48/t) | unitTick 0.45 (max 4.1, 25/t) | baseTick 0.43 (max 4.2, 64/t) | otherEntities 0.36 (max 6.3, 64/t) | levelRest 0.06 (max 0.1, 3.0/t); elsewhere 0.7 ms; gc 26 ms
+[19:35:44] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34 1793388944955
+[19:35:45] [IO-Worker-5/INFO]: [Eyes] 15_block_sampler_3_34: Saved screenshot as bat_eyes_15_block_sampler_3_34.png
+[19:35:45] [Render thread/INFO]: [System] [CHAT] 
+[19:35:45] [Render thread/INFO]: [System] [CHAT] Night falls...
+[19:35:45] [Render thread/INFO]: [System] [CHAT] 
+[19:35:46] [Render thread/INFO]: [Eyes] step 20 screen none level true
+[19:35:50] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_dusk 1793388950178
+[19:35:50] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:35:50] [IO-Worker-5/INFO]: [Eyes] 15_block_sampler_3_dusk: Saved screenshot as bat_eyes_15_block_sampler_3_dusk.png
+[19:35:51] [Server thread/INFO]: [Tick] p50 6.2 ms, p95 11.2 ms, max 14.8 ms over the last 100 ticks; 26 units, 19 buildings, 1 players
+[19:35:51] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:35:53] [Render thread/INFO]: [Frame] p50 620.7 ms (2 fps), p95 755.1 ms, max 1089.4 ms over 240 frames; RTS view, zoom 30, 5 units known
+[19:35:53] [Render thread/INFO]: [Anim] 10 units/frame (max 16): animation p50 0.0 ms, p95 0.3 ms; unit render p50 1.0 ms, p95 5.1 ms; per unit 20.7 us anim, 226.7 us render (anim 9%); RTS view, zoom 30, detail on, over 21 frames
+[19:35:53] [Render thread/INFO]: [FrameParts] 20 frames, mean 702.4 ms/frame; ours 3.5 ms (0%): markersRange 1.37 (max 4.1, 1.0/f) | unitBodies 0.70 (max 3.9, 3.8/f) | unitShadow 0.44 (max 3.5, 3.8/f) | buildingDecor 0.44 (max 0.6, 4.0/f) | markersMapWorld 0.37 (max 5.3, 0.3/f) | unitOverlays 0.07 (max 0.1, 11/f) | markersWreck 0.03 (max 0.2, 1.0/f) (+17 smaller); elsewhere 698.9 ms; 0 section re-mesh requests/s
+[19:35:53] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:35:54] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t5000 1793388954354
+[19:35:54] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:35:54] [IO-Worker-13/INFO]: [Eyes] 15_block_sampler_3_rts_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t5000.png
+[19:35:59] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t5000 1793388959899
+[19:35:59] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:36:00] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_3_34_t5000: Saved screenshot as bat_eyes_15_block_sampler_3_34_t5000.png
+[19:36:01] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1465|0
+[19:36:01] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|4608|759|0
+[19:36:01] [Server thread/INFO]: RTSPlayerSaveData.load
+[19:36:01] [Server thread/INFO]: [Tick] p50 6.6 ms, p95 9.8 ms, max 191.7 ms over the last 100 ticks; 27 units, 19 buildings, 1 players
+[19:36:01] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:36:04] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_t11800 1793388964306
+[19:36:04] [Server thread/INFO]: [Player] literal{Offline} performed DISABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:36:04] [IO-Worker-12/INFO]: [Eyes] 15_block_sampler_3_rts_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_rts_t11800.png
+[19:36:07] [Render thread/INFO]: [Frame] p50 620.8 ms (2 fps), p95 756.1 ms, max 951.6 ms over 240 frames; first-person view, zoom 30, 5 units known
+[19:36:07] [Render thread/INFO]: [Anim] 10 units/frame (max 10): animation p50 0.0 ms, p95 0.1 ms; unit render p50 0.9 ms, p95 1.5 ms; per unit 4.4 us anim, 95.5 us render (anim 5%); first-person view, zoom 30, detail off, over 11 frames
+[19:36:07] [Render thread/INFO]: [FrameParts] 20 frames, mean 720.5 ms/frame; ours 2.8 ms (0%): markersRange 1.07 (max 3.9, 1.0/f) | buildingDecor 0.52 (max 3.7, 4.0/f) | markersMapWorld 0.36 (max 3.0, 0.4/f) | unitBodies 0.31 (max 0.6, 3.0/f) | unitShadow 0.27 (max 1.0, 3.0/f) | markersMetal 0.14 (max 2.7, 2.0/f) | unitOverlays 0.06 (max 0.2, 11/f) | markersWreck 0.03 (max 0.1, 1.0/f) | buildingBoxes 0.02 (max 0.2, 0.4/f) (+15 smaller); elsewhere 717.7 ms; 0 section re-mesh requests/s
+[19:36:07] [Render thread/INFO]: [FrameParts] 200 ticks, ours 0.0 ms/tick: nothing timed (+1 smaller)
+[19:36:10] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_34_t11800 1793388970017
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-258, 70, 34)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 70, 34)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-258, 70, 52)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-256, 70, 52)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-271, 70, 42)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-271, 70, 44)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 42)]
+[19:36:10] [Server thread/INFO]: [Offline: Summoned reignofnether:militia_unit for Offline at (-244, 70, 44)]
+[19:36:10] [Server thread/INFO]: [Player] literal{Offline} performed ENABLE_ORTHOVIEW (pos: [0.0, 0.0, 0.0])
+[19:36:10] [IO-Worker-5/INFO]: [Eyes] 15_block_sampler_3_34_t11800: Saved screenshot as bat_eyes_15_block_sampler_3_34_t11800.png
+[19:36:11] [Server thread/INFO]: [Tick] p50 6.8 ms, p95 10.6 ms, max 13.2 ms over the last 100 ticks; 37 units, 21 buildings, 1 players
+[19:36:11] [Server thread/INFO]: [Paths] last 10 s: 0 unit vanilla createPath, 0 short searches, 0 full-range fallbacks; chase cell memo 0/0 hits
+[19:36:15] [Render thread/INFO]: [Eyes] clip-mark 15_block_sampler_3_rts_army 1793388975488
+[19:36:15] [Server thread/INFO]: [Offline: Killed 8 entities]
+[19:36:15] [IO-Worker-11/INFO]: [Eyes] 15_block_sampler_3_rts_army: Saved screenshot as bat_eyes_15_block_sampler_3_rts_army.png
+[19:36:18] [Render thread/INFO]: [Eyes] unit textures with mips: 3 of 33 registered (up to 3 levels)
+[19:36:18] [Render thread/WARN]: [Eyes] unit textures without mips: [reignofnether:textures/entities/bone_dragon_unit.png, reignofnether:textures/entities/bone_dragon_unit_glow.png, reignofnether:textures/entities/bone_dragon_unit_team.png, reignofnether:textures/entities/crossbow_levy_unit.png, reignofnether:textures/entities/crossbow_levy_unit_glow.png, reignofnether:textures/entities/crossbow_levy_unit_team.png, reignofnether:textures/entities/dawn_paladin_body_unit.png, reignofnether:textures/entities/dawn_paladin_body_unit_glow.png, reignofnether:textures/entities/dawn_paladin_body_unit_team.png, reignofnether:textures/entities/dome_cleric_unit.png, reignofnether:textures/entities/dome_cleric_unit_glow.png, reignofnether:textures/entities/dome_cleric_unit_team.png, reignofnether:textures/entities/field_mason_body_unit.png, reignofnether:textures/entities/field_mason_body_unit_glow.png, reignofnether:textures/entities/field_mason_body_unit_team.png, reignofnether:textures/entities/field_medic_unit.png, reignofnether:textures/entities/field_medic_unit_glow.png, reignofnether:textures/entities/field_medic_unit_team.png, reignofnether:textures/entities/halberdier_unit.png, reignofnether:textures/entities/halberdier_unit_glow.png, reignofnether:textures/entities/halberdier_unit_team.png, reignofnether:textures/entities/mossback_bison_unit.png, reignofnether:textures/entities/mossback_bison_unit_glow.png, reignofnether:textures/entities/mossback_bison_unit_team.png, reignofnether:textures/entities/radiant_paladin_unit.png, reignofnether:textures/entities/radiant_paladin_unit_glow.png, reignofnether:textures/entities/radiant_paladin_unit_team.png, reignofnether:textures/entities/royal_architect_body_unit.png, reignofnether:textures/entities/royal_architect_body_unit_glow.png, reignofnether:textures/entities/royal_architect_body_unit_team.png]
+[19:36:18] [Render thread/INFO]: [Eyes] tour complete
+[19:36:18] [CullThread/INFO]: [dev.tr7zw.entityculling.CullTask:run:81]: Shutting down culling task!
+[19:36:18] [Render thread/INFO]: Stopping!
+[19:36:18] [Server thread/INFO]: Offline lost connection: Disconnected
+[19:36:18] [Server thread/INFO]: Offline left the game
+[19:36:18] [Server thread/INFO]: Player logged out: Offline, id: 2
+[19:36:18] [Server thread/INFO]: Stopping singleplayer server as player logged out
+[19:36:18] [Server thread/INFO]: RTSPlayerSaveData.load
+[19:36:18] [Server thread/INFO]: ResourcesSaveData.save: Offline|0|1500|1500|0
+[19:36:18] [Server thread/INFO]: ResourcesSaveData.save: Bot1 (medium)|0|4525|802|0
+[19:36:18] [Server thread/INFO]: Stopping server
+[19:36:18] [Server thread/INFO]: Saving players
+[19:36:18] [Server thread/INFO]: Saving worlds
+[19:36:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:overworld
+[19:36:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_end
+[19:36:18] [Server thread/INFO]: Saving chunks for level 'ServerLevel[Beyond and Tabs - Skirmish 1]'/minecraft:the_nether
+[19:36:19] [Server thread/INFO]: ThreadedAnvilChunkStorage (beyondandtabs_skirmish_1): All chunks are saved
+[19:36:19] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[19:36:19] [Server thread/INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[19:36:19] [Server thread/INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[19:36:19] [Render thread/INFO]: Stopping worker threads
