@@ -181,7 +181,10 @@ final class EyesHeroesScene {
         if (server != null) {
             BlockPos at = BlockPos.containing(bush.x, EyesDirector.surfaceY(mc, (int) Math.floor(bush.x), (int) Math.floor(bush.z)), bush.z);
             String owner = enemy;
-            server.execute(() -> com.solegendary.reignofnether.ability.abilities.PlantThicket.plantPatch(server.overworld(), owner, at, false));
+            server.execute(() -> {
+                int planted = com.solegendary.reignofnether.ability.abilities.PlantThicket.plantPatch(server.overworld(), owner, at, false);
+                ReignOfNether.LOGGER.info("[Eyes] 19_heroes: planted {} thicket blocks for '{}' round {}", planted, owner, at.toShortString());
+            });
         }
         summon(mc, enemy, HeroKits.ARCH_ENGINEER, bush, "");
         ReignOfNether.LOGGER.info("[Eyes] 19_heroes: summoned 4 heroes for '{}' round {}, 4 for '{}' ({} far out at {}, {} in a thicket at {})",
@@ -246,8 +249,10 @@ final class EyesHeroesScene {
             for (var e : server.overworld().getAllEntities())
                 if (e instanceof HeroUnit && e instanceof Unit u && e.isAlive() && e.position().distanceTo(centre) < 64) {
                     s++;
-                    ReignOfNether.LOGGER.info("[Eyes] {}: server has {} of '{}' at {}, concealed {}", still, e.getType().getDescriptionId(),
-                        u.getOwnerName(), EyesDirector.fmt(e.position()), com.solegendary.reignofnether.unit.Concealment.isConcealed(e));
+                    ReignOfNether.LOGGER.info("[Eyes] {}: server has {} of '{}' at {}, concealed {}{}", still, e.getType().getDescriptionId(),
+                        u.getOwnerName(), EyesDirector.fmt(e.position()), com.solegendary.reignofnether.unit.Concealment.isConcealed(e),
+                        me.equals(u.getOwnerName()) || !(e instanceof LivingEntity le2) ? ""
+                            : " (cover: " + com.solegendary.reignofnether.blocks.ThicketCover.diagnose(server.overworld(), le2) + ")");
                 }
             ReignOfNether.LOGGER.info("[Eyes] {}: {} heroes on the server within 64 of the scene", still, s);
         }
