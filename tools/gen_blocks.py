@@ -185,7 +185,7 @@ TARGETS = {
     "birch_planks": dict(luma=0.65, std=0.060,   # r21: board joints vanished at RTS zoom
     sat=0.33, tilt=6.0, smooth=76, pore=24),
     "jungle_planks": dict(luma=0.48, std=0.055, sat=0.46, tilt=7.1, smooth=59, pore=24),
-    "acacia_planks": dict(luma=0.41, std=0.043, sat=0.62, tilt=6.0, smooth=89, pore=24),
+    "acacia_planks": dict(luma=0.45, std=0.048, sat=0.70, tilt=6.0, smooth=80, pore=24),   # r31: orange, a touch lighter
     "dark_oak_planks": dict(luma=0.19, std=0.037, sat=0.64, tilt=6.6, smooth=50, pore=24),
     "mangrove_planks": dict(luma=0.25, std=0.035, sat=0.60, tilt=6.0, smooth=54, pore=24),
     "crimson_planks": dict(luma=0.28, std=0.037, sat=0.56, tilt=10.0, smooth=41, pore=24),
@@ -3281,7 +3281,8 @@ def recipes():
         # round 13: every wood's planks and stripped log, the long tail
         "birch_planks": lambda F, n: m_planks(F, n, (0.80, 0.70, 0.48), 0.012),
         "jungle_planks": lambda F, n: m_planks(F, n, (0.66, 0.46, 0.32), 0.012),
-        "acacia_planks": lambda F, n: m_planks(F, n, (0.72, 0.38, 0.20), 0.012),
+        # r31 (art director: "reddish-brown, should be the distinctive orange acacia"): hue 22 -> 27 deg, straighter
+        "acacia_planks": lambda F, n: m_planks(F, n, (0.82, 0.46, 0.17), 0.006),
         "dark_oak_planks": lambda F, n: m_planks(F, n, (0.28, 0.18, 0.10), 0.010),
         "mangrove_planks": lambda F, n: m_planks(F, n, (0.48, 0.20, 0.18), 0.012),
         "crimson_planks": lambda F, n: m_planks(F, n, (0.42, 0.18, 0.28), 0.012),
