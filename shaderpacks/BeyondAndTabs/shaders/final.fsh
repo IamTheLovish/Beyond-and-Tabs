@@ -12,6 +12,7 @@
 #include "/lib/color.glsl"
 
 uniform sampler2D colortex0;
+uniform sampler2D colortex4;
 uniform sampler2D depthtex0;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
@@ -68,6 +69,13 @@ const float LOCAL_CONTRAST_LOD = 4.5;
 const float LOCAL_CONTRAST_SPREAD = 20.0;      // pixels between the five taps
 // the loader builds colortex0's mipmaps before this pass: the local contrast's neighbourhood comes from them
 const bool colortex0MipmapEnabled = true;
+
+// ---- slice 3's bloom: the light past composite.fsh's threshold (colortex4: emissive texels, glows, the sun's glint
+// on metal), spread by its own mipmaps 1-3 (2, 4 and 8 px texels), so the halo stays within ~1% of the screen's height
+// round a lantern at the default zoom. Real lenses scatter a little of a bright source's light; this is that, not a
+// haze over the scene ----
+const float BLOOM_STRENGTH = 0.6;
+const bool colortex4MipmapEnabled = true;
 
 // ---- edge smoothing: FXAA only where the depth buffer shows a geometry edge (textures inside a face keep every
 // texel; one-pixel-thin features such as name-tag glyphs are left as drawn) ----
@@ -173,7 +181,8 @@ float skinLike(vec3 c) {
         return 0.0;
     float hue = (c.g - c.b) / span;                // 0 red .. 1 yellow
     float s = span / c.r;
-    return (1.0 - smoothstep(0.2, 0.4, abs(hue - 0.45))) * smoothstep(0.08, 0.18, s) * (1.0 - smoothstep(0.45, 0.60, s));
+    return (1.0 - smoothstep(0.2, 0.4, abs(hue - 0.45))) * smoothstep(0.08, 0.18, s)
+        * (1.0 - smoothstep(0.45, 0.60, s));
 }
 
 // the neighbourhood's luma round uv, from colortex0's mipmaps
@@ -192,6 +201,12 @@ vec3 localContrast(vec3 c, vec2 uv, vec2 px) {
     float detail = clamp(l - neighbourhoodLuma(uv, px), -LOCAL_CONTRAST_LIMIT, LOCAL_CONTRAST_LIMIT);
     float midtones = 4.0 * l * (1.0 - l);
     return c * ((l + LOCAL_CONTRAST * detail * midtones) / max(l, 1e-4));
+}
+
+vec3 bloomAt(vec2 uv) {
+    vec3 b = texture2D(colortex4, uv, 1.0).rgb * 0.55 + texture2D(colortex4, uv, 2.0).rgb * 0.30
+        + texture2D(colortex4, uv, 3.0).rgb * 0.15;
+    return toDisplay(b) * BLOOM_STRENGTH;
 }
 
 vec3 grade(vec3 c) {
@@ -230,6 +245,9 @@ void main() {
     float depth = depthAt(texcoord);
     if (depth < 1.0 && geometryEdge(texcoord, px, depth, orthoView()))
         c = fxaa(texcoord, px, c);
+#endif
+#if BLOOM == 1
+    c = 1.0 - (1.0 - c) * (1.0 - min(bloomAt(texcoord), vec3(1.0)));
 #endif
 #if GRADE == 1
     c = localContrast(c, texcoord, px);

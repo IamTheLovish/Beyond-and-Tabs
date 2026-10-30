@@ -10,6 +10,9 @@
 // war's seen / unseen read is gameplay).
 // Before the tone curve, slice 3's ambient occlusion (lib/ao.glsl) takes its share of each pixel's light: the sky's
 // fill, as the lit draws recorded it in colortex1 (0 for overlays, water and everything drawn as is).
+// Also before the tone curve, slice 3's bloom source (colortex4): only light past BLOOM_THRESHOLD in linear light,
+// which lit ground never reaches (noon ground sits at its albedo, under 0.85) - lanterns and other emissive texels, glows,
+// the sun's glint on a metal. final.fsh spreads it.
 
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
@@ -19,7 +22,9 @@
 const int colortex0Format = RGBA16F;
 const int colortex1Format = RGBA8;
 const vec4 colortex1ClearColor = vec4(0.0, 0.0, 0.0, 0.0);
+const int colortex4Format = RGBA16F;
 */
+const bool colortex4Clear = false;     // this pass writes every pixel of it
 
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
@@ -43,6 +48,9 @@ const float FP_HAZE_START = 12.0;
 const float FP_HAZE_SCALE = 180.0;
 const float RTS_HAZE_SCALE = 56.0;
 const vec3 DISTANCE_COOL = vec3(0.93, 0.99, 1.07);   // scattering drifts distant colour cool before the haze veils it
+// linear luma past which light blooms. The light table puts sunlit open ground at its albedo, so even white quartz or
+// snow at noon stays under ~0.85: a plain noon lawn adds exactly nothing (design: mean change under 1/255)
+const float BLOOM_THRESHOLD = 1.0;
 
 bool orthoView() {
     return gbufferProjection[2][3] == 0.0 && gbufferProjection[3][3] == 1.0;
@@ -92,7 +100,7 @@ float occlusionAt(float viewDepth) {
     return weights > 1e-3 ? sum / weights : nearest;
 }
 
-/* DRAWBUFFERS:0 */
+/* DRAWBUFFERS:04 */
 void main() {
     vec3 lit = texture2D(colortex0, texcoord).rgb;
     float depth = texture2D(depthtex0, texcoord).r;
@@ -103,6 +111,12 @@ void main() {
         if (skyShare > 0.0)
             lit *= 1.0 - skyShare * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
     }
+#endif
+#if BLOOM == 1
+    float bright = dot(lit, LUMA);
+    gl_FragData[1] = vec4(lit * (max(bright - BLOOM_THRESHOLD, 0.0) / max(bright, 1e-4)), 1.0);
+#else
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
 #endif
     vec3 c = toDisplay(toneMap(lit));
     bool ortho = orthoView();

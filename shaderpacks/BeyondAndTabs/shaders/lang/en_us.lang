@@ -6,6 +6,10 @@ option.sunPathRotation=Sun tilt
 option.sunPathRotation.comment=Tilts the sun's path so noon still throws shadows you can see from above (30 = lovish's pick).
 option.HAZE_STRENGTH=Distance haze
 option.HAZE_STRENGTH.comment=How much air shows over distant ground (1 = the game's own look).
+option.BLOOM=Bloom
+option.BLOOM.comment=A small halo round lanterns, glowing parts and bright glints on metal. Lit ground never blooms.
+value.BLOOM.0=Off
+value.BLOOM.1=On
 option.SOFT_SHADOWS=Soft shadows
 option.SOFT_SHADOWS.comment=Shadows are sharp where they meet their caster and soften the farther they fall, as real sunlight does. Off: crisp edges everywhere (a little faster).
 value.SOFT_SHADOWS.0=Off

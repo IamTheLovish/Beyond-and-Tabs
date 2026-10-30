@@ -5,6 +5,7 @@ PCs; a GLSL typo there costs a ten-minute eyes run and shows as "no shader pack"
 (build.yml, job ruff); without it the compile test is skipped and only the header checks run.
 """
 import os
+import re
 import sys
 import unittest
 
@@ -44,6 +45,14 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("scale.deferred=0.5", props)
         comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
         self.assertIn("lit *= 1.0 - skyShare * (1.0 - occlusionAt(", comp)
+
+    def test_lit_ground_never_blooms(self):
+        # slice 3's judged number: zero bloom on a plain noon lawn. The light table puts sunlit ground at its albedo
+        # (under 1 in linear light), so the threshold must stay at or above 1
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        m = re.search(r"const float BLOOM_THRESHOLD = ([\d.]+);", comp)
+        self.assertIsNotNone(m)
+        self.assertGreaterEqual(float(m.group(1)), 1.0)
 
     def test_grade_matches_the_mods_enchanted_look(self):
         # one table for both looks (design: players with and without the pack see the same mood). The pack's

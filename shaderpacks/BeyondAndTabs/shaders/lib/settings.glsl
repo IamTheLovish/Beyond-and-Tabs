@@ -26,8 +26,10 @@ const float ambientOcclusionLevel = 1.0;
 // screen-space ambient occlusion (slice 3: deferred.fsh, deferred1.fsh, applied in composite.fsh): building bases,
 // wall creases and unit feet shut out part of the sky, so they lose part of the sky's fill (never the sun's light)
 #define AO 1 // [0 1]
-// how strongly: 1 = the judged contact darkening (design: luma 1 block from a wall / 4 blocks away 0.75-0.90 in shade)
+// how strongly: 1 = the response tuned on a model of the RTS camera (lib/ao.glsl has the numbers)
 #define AO_STRENGTH 1.0 // [0.5 0.75 1.0 1.25 1.5]
+// bloom (slice 3, composite.fsh -> final.fsh): a small halo round lanterns, glows and glints; lit ground never blooms
+#define BLOOM 1 // [0 1]
 
 // distance haze strength, as the mod's own haze setting (1 = the Enchanted look's)
 #define HAZE_STRENGTH 1.0 // [0.0 0.5 1.0 1.5 2.0]

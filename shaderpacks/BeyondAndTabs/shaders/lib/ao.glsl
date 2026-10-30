@@ -44,8 +44,8 @@ vec3 aoViewPos(mat4 projectionInverse, vec2 uv, float depth) {
     return v.xyz / v.w;
 }
 
-// buffer uv of half-resolution pixel `cell` (pixel centres at +0.5) in a full-size buffer the passes fill the bottom-left
-// quarter of: one half-resolution pixel is one texel
+// buffer uv of half-resolution pixel `cell` (pixel centres at +0.5) in a full-size buffer the passes fill the
+// bottom-left quarter of: one half-resolution pixel is one texel
 vec2 aoCellUv(vec2 cell, vec2 viewSize) {
     vec2 last = floor(viewSize * AO_SCALE) - 0.5;
     return clamp(cell, vec2(0.5), last) / viewSize;
