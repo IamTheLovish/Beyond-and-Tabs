@@ -110,6 +110,20 @@ public final class WalkabilityGrid {
         if (grid != null) grid.markChunkDirty(level, bp);
     }
 
+    // the same block change while the rtsPathfinding flag is OFF: nothing drains dirty chunks then, so a cached chunk
+    // would keep the world as it was when the flag was last on and be served stale the moment it is switched on again
+    // (a match turning it on, a test taking it: the graveyard probe saw the pathfinder's picture closed one block past an
+    // open gate). drop the chunk instead; the next use builds it from the live world. no grid for the level -> no-op.
+    public static void forgetChunkIfPresent(Level level, BlockPos bp) {
+        if (level == null || bp == null) return;
+        WalkabilityGrid grid;
+        synchronized (WalkabilityGrid.class) { grid = PER_LEVEL.get(level); }
+        if (grid == null) return;
+        long key = ChunkPos.asLong(bp.getX() >> 4, bp.getZ() >> 4);
+        synchronized (grid.chunks) { grid.chunks.remove(key); }
+        synchronized (DIRTY_LOCK) { grid.dirtyChunks.remove(key); }
+    }
+
     private void markChunkDirty(Level level, BlockPos bp) {
         long key = ChunkPos.asLong(bp.getX() >> 4, bp.getZ() >> 4);
         WalkabilityGridChunk c;
