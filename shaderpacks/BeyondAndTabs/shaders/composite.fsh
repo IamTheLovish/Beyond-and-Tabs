@@ -166,6 +166,43 @@ float occlusionAt(float viewDepth) {
 }
 
 /* DRAWBUFFERS:04 */
+// a short-radius occlusion at full resolution (light pass 9: the critic wanted 2-3 px of darkening at every block foot
+// and between adjacent blocks, floor 0.75 of the lawn beside it; the half-resolution AO's 1.5-block radius cannot draw
+// a crease that narrow). The surface's plane from its neighbours one pixel away, 8 taps CONTACT_RADIUS blocks round
+// it; a tap the depth buffer shows rising above the plane occludes by the sine of its elevation. Taken off all the
+// light (a crease that tight shades the sun's light too), never below CONTACT_FLOOR
+float contactOcclusion(vec2 uv, float depth) {
+    if (depth >= 1.0)
+        return 1.0;
+    vec2 px = 1.0 / vec2(viewWidth, viewHeight);
+    vec3 p = viewPosAt(uv, depth);
+    vec3 pr = viewPosAt(uv + vec2(px.x, 0.0), texture2D(depthtex1, uv + vec2(px.x, 0.0)).r) - p;
+    vec3 pl = p - viewPosAt(uv - vec2(px.x, 0.0), texture2D(depthtex1, uv - vec2(px.x, 0.0)).r);
+    vec3 pu = viewPosAt(uv + vec2(0.0, px.y), texture2D(depthtex1, uv + vec2(0.0, px.y)).r) - p;
+    vec3 pd = p - viewPosAt(uv - vec2(0.0, px.y), texture2D(depthtex1, uv - vec2(0.0, px.y)).r);
+    vec3 n = normalize(cross(abs(pr.z) < abs(pl.z) ? pr : pl, abs(pu.z) < abs(pd.z) ? pu : pd));
+    bool ortho = orthoView();
+    if (dot(n, ortho ? vec3(0.0, 0.0, 1.0) : -p) < 0.0)
+        n = -n;
+    vec2 uvPerBlock = 0.5 * vec2(gbufferProjection[0][0], gbufferProjection[1][1]);
+    if (!ortho)
+        uvPerBlock /= max(-p.z, 0.05);
+    float turn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    float occ = 0.0;
+    for (int i = 0; i < 8; i++) {
+        float a = (float(i) + turn) * 0.78539816;
+        float r = CONTACT_RADIUS * (i < 4 ? 0.5 : 1.0);
+        vec2 suv = uv + vec2(cos(a), sin(a)) * (r * uvPerBlock);
+        float sd = texture2D(depthtex1, suv).r;
+        if (sd >= 1.0)
+            continue;
+        vec3 v = viewPosAt(suv, sd) - p;
+        float h = dot(v, n);
+        occ += max(h * inversesqrt(dot(v, v) + 1e-6) - 0.15, 0.0) * (1.0 - clamp((h - 3.0 * r) / r, 0.0, 1.0));
+    }
+    return max(1.0 - CONTACT_GAIN * occ / 8.0, CONTACT_FLOOR);
+}
+
 void main() {
     vec3 lin = texture2D(colortex0, texcoord).rgb;
     float depth = texture2D(depthtex0, texcoord).r;
@@ -173,10 +210,13 @@ void main() {
     if (depth < 1.0) {
         float skyShare = texture2D(colortex1, texcoord).r;
         // depthtex1: the depth without water, the one the occlusion was found at
-        if (skyShare > 0.0)
-            // the sky's share fully, CONTACT_SUN_SHARE of the rest (light pass 8: contact darkening at block feet)
+        if (skyShare > 0.0) {
+            // the sky's share fully, CONTACT_SUN_SHARE of the rest
             lin *= 1.0 - (skyShare + CONTACT_SUN_SHARE * (1.0 - skyShare))
                 * (1.0 - occlusionAt(-viewPosAt(texcoord, texture2D(depthtex1, texcoord).r).z));
+            // and the short contact term at full resolution, on all the light (light pass 9)
+            lin *= contactOcclusion(texcoord, texture2D(depthtex1, texcoord).r);
+        }
     }
 #endif
     bool ortho = orthoView();

@@ -101,6 +101,16 @@ void main() {
     float ao = 1.0;
     float alpha = tex.a * glcolor.a;
 #endif
+#if PROBE2 == 1 && defined PROBE_COLOUR
+    if (alpha < 0.004)
+        discard;
+    gl_FragData[0] = vec4(PROBE_COLOUR, 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+#ifdef LIT_WATER
+    gl_FragData[2] = vec4(0.0, 0.5, 0.0, 1.0);
+#endif
+    return;
+#endif
 #ifdef LIT_ENTITY
     if (asDrawn > 0.5) {               // an overlay box (lit.vsh): as drawn, fading all the way out
         if (alpha < 0.004)
@@ -117,6 +127,7 @@ void main() {
 #ifdef LIT_ENTITY
     albedo = mix(albedo, entityColor.rgb, entityColor.a);
 #endif
+
 #ifdef LIT_TERRAIN
     // biome-tinted terrain (a coloured vertex tint: grass, ferns, leaves, vines; a flower's is white and the fog of
     // war's grey, so both pass through as they are)
@@ -179,6 +190,7 @@ void main() {
     facing *= terminator;
 #endif
     float shadow = 0.0;
+    gShadowSpread = 1.0 + LOW_SUN_SPREAD * lowSun();
     if (facing > 0.0) {
         vec3 playerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
         vec3 worldNormal = mat3(gbufferModelViewInverse) * geomN;

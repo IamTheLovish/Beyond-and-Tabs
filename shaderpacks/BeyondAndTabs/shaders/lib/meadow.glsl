@@ -31,8 +31,12 @@ float meadowNoise(vec2 p) {
 
 // -1..1, two octaves (MEADOW_CELL and ~0.43 of it), offset so the value and hue fields are unrelated
 float meadowField(vec2 xz, vec2 offset) {
-    vec2 p = xz / MEADOW_CELL + offset;
-    float n = 0.80 * meadowNoise(p) + 0.20 * meadowNoise(p * 2.31 + vec2(41.0, 17.0));
+    // the lattice turned off the block axes (light pass 9: value noise on an axis-aligned lattice drew broad light and
+    // dark bands along the block axes on the lawn, in the RTS view's diagonals), each octave by its own angle
+    const mat2 TURN_A = mat2(0.8090, 0.5878, -0.5878, 0.8090);        // 36 degrees
+    const mat2 TURN_B = mat2(0.3746, -0.9272, 0.9272, 0.3746);        // -68 degrees
+    vec2 p = TURN_A * xz / MEADOW_CELL + offset;
+    float n = 0.80 * meadowNoise(p) + 0.20 * meadowNoise(TURN_B * p * 2.31 + vec2(41.0, 17.0));
     return clamp((n - 0.5) * 2.4, -1.0, 1.0);
 }
 

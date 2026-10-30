@@ -24,6 +24,11 @@ void main() {
     vec4 c = texture2D(texture, texcoord) * glcolor;
     if (c.a < 0.004)
         discard;
+#if PROBE2 == 1 && defined PROBE_COLOUR
+    gl_FragData[0] = vec4(PROBE_COLOUR, 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
     vec3 asDrawn = toLinear(c.rgb);
     vec3 sunColour, skyColour;
     lightColours(sunColour, skyColour);

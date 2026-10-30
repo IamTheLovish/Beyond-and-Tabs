@@ -52,7 +52,9 @@ float cloudShade(vec3 wp, vec3 worldLight) {
     vec2 xz = wp.xz + worldLight.xz * (max(CLOUD_HEIGHT - wp.y, 0.0) / up);
     // the layer drifts along the prevailing wind (the heading's mean: a wandering heading would make it slosh)
     xz -= vec2(cos(WIND_HEADING), sin(WIND_HEADING)) * (frameTimeCounter * CLOUD_SPEED);
-    vec2 p = xz / CLOUD_CELL;
+    // the lattice turned off the block axes (light pass 9: an axis-aligned value-noise lattice reads as bands along
+    // the block axes from the RTS camera)
+    vec2 p = mat2(0.8090, 0.5878, -0.5878, 0.8090) * xz / CLOUD_CELL;
     float n = 0.78 * cloudNoise(p) + 0.22 * cloudNoise(p * 2.3 + vec2(17.0, 41.0));
     float cover = smoothstep(CLOUD_COVER_LO, CLOUD_COVER_HI, n);
     return mix(1.0, CLOUD_DARKEST, cover);

@@ -45,6 +45,11 @@ void main() {
     if (c.a < 0.004)
         discard;
     vec3 lin = toLinear(c.rgb);
+#if PROBE2 == 1 && defined PROBE_COLOUR
+    gl_FragData[0] = vec4(PROBE_COLOUR, 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
 #ifdef UNLIT_SKYCATCH
     // the sky's strays (light passes 7-8). The SKY_PROBE run (eyes 41078134357) showed gbuffers_skybasic runs, while
     // gbuffers_clouds never does under Oculus: vanilla's clouds come through here (gbuffers_textured / gbuffers_basic).

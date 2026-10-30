@@ -2,4 +2,5 @@
 // Beyond and Tabs shader pack - GPL v2 or later (see LICENSE). Original work, written clean-room; not derived from
 // any other shader pack.
 #define SKY_TEXTURED
+#define PROBE_COLOUR vec3(0.5, 1.0, 0.0)
 #include "/program/sky.fsh"

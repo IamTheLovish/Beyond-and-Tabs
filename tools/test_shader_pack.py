@@ -152,7 +152,11 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("float skySeen = 0.5 + 0.5 * dot(n, up);", light)
         share, ga = _const("SHADOW_FILL_SHARE"), _const("GROUND_ALBEDO")
         wall = 0.5 * share + 0.5 * ga                          # of the sunlit top's light (sun + sky = 1)
-        self.assertTrue(0.43 <= wall <= 0.55, wall)
+        # Retired pin (light pass 9): "0.43-0.55 of a sunlit top" - with the fill's direction (pass 5) a wall turned
+        # from the sun took ~0.36 of it and the pedestals' shaded sides read black (0.28, top / side 3.3 against the
+        # benchmark's 1.9). Now 0.55-0.65 before the direction, ~0.5 after it for a wall turned away
+        self.assertTrue(0.55 <= wall <= 0.65, wall)
+        self.assertGreaterEqual(wall * (1.0 - _const("FILL_DIRECTION")), 0.45)
         self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
 
     def test_shadows_are_soft_and_never_self_shadow(self):
@@ -189,15 +193,24 @@ class ShaderPack(unittest.TestCase):
         self.assertEqual(shadow.count("shortfall * length(o)"), 2)
         self.assertNotIn("const float SUN_SPREAD", shadow)
         # the blocker search reaches the widest penumbra it draws (a caster SHADOW_SEARCH_BLOCKS away)
-        self.assertIn("0.5 * SHADOW_SEARCH_BLOCKS * SUN_SPREAD / blocksPerUv", shadow)
+        self.assertIn("0.5 * SHADOW_SEARCH_BLOCKS * spread / blocksPerUv", shadow)
+        # light pass 9: under a low sun the spread widens (hazier long shadows)
+        self.assertIn("float spread = SUN_SPREAD * gShadowSpread;", shadow)
+        self.assertIn("gShadowSpread = 1.0 + LOW_SUN_SPREAD * lowSun();", _read("program", "lit.fsh"))
 
     def test_contact_ao_never_crushes(self):
         # Retired pin: slice 3's AO_FLOOR 0.55 (picked for the judged floor at 0.35 of the lawn); with the vertex AO
         # under it, block-block contacts and wall feet went near black on the stills. The floor is now >= 0.85
         # Retired pin (light pass 8): ">= 0.85" - it left the block feet's contact darkening at ~0.02 luma, the
         # benchmark's one real advantage on the pad (critic); 0.6-0.75 now, taking part of the sun's light too
-        self.assertTrue(0.6 <= _const("CONTACT_AO_FLOOR") <= 0.75)
-        self.assertTrue(0.3 <= _const("CONTACT_SUN_SHARE") <= 0.6)
+        # Retired again (light pass 9): "0.6-0.75, 0.3-0.6 of the sun" - the broad occlusion then took the pedestals'
+        # shaded sides to 0.28 (top / side 3.3; the benchmark 1.9). It is back at >= 0.85 on the sky's share alone,
+        # and the block feet's crease is a short full-resolution term (composite.fsh contactOcclusion): ~4 px, floor 0.75
+        self.assertGreaterEqual(_const("CONTACT_AO_FLOOR"), 0.85)
+        self.assertEqual(_const("CONTACT_SUN_SHARE"), 0.0)
+        self.assertTrue(0.70 <= _const("CONTACT_FLOOR") <= 0.80)
+        self.assertTrue(0.08 <= _const("CONTACT_RADIUS") <= 0.2)
+        self.assertIn("lin *= contactOcclusion(texcoord, texture2D(depthtex1, texcoord).r);", _read("composite.fsh"))
         self.assertIn("const float AO_FLOOR = CONTACT_AO_FLOOR;", _read("lib", "ao.glsl"))
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
 
@@ -296,8 +309,9 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(18 <= hd * 360 <= 30, hd * 360)
         self.assertTrue(0.52 <= sum(a * b for a, b in zip(deep, luma)) <= 0.62)
         hz, sz, _ = colorsys.rgb_to_hsv(*zd)
-        self.assertTrue(225 <= hz * 360 <= 250 and 0.25 <= sz <= 0.45, (hz * 360, sz))
-        self.assertTrue(0.30 <= sum(a * b for a, b in zip(zd, luma)) <= 0.40)
+        # light pass 9: a mauve zenith instead (target <= (130, 117, 125) on screen)
+        self.assertTrue(290 <= hz * 360 <= 335 and 0.05 <= sz <= 0.2, (hz * 360, sz))
+        self.assertTrue(0.38 <= sum(a * b for a, b in zip(zd, luma)) <= 0.48)
         hd_away = vec("SKY_HORIZON_DUSK")
         self.assertLess(sum(a * b for a, b in zip(hd_away, luma)), 0.5)
         self.assertGreaterEqual(sum(a * b for a, b in zip(deep, luma)) - sum(a * b for a, b in zip(zd, luma)), 0.12)
@@ -399,7 +413,9 @@ class ShaderPack(unittest.TestCase):
         wall = [float(x) for x in re.search(r"const vec3 SHADE_TINT_WALL = vec3\(([^)]*)\);", settings).group(1).split(",")]
         self.assertTrue(1.1 <= wall[2] / wall[1] <= 1.3, wall)
         self.assertAlmostEqual(sum(a * b for a, b in zip(wall, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)
-        self.assertTrue(0.3 <= _const("SHADE_TINT_LOW_BOOST") <= 1.0)
+        # Retired pin (light pass 9): "SHADE_TINT_LOW_BOOST 0.3-1.0" - the low sun's shadows read ink-black and cool
+        # against the benchmark's hazy gold; no boost now (and a warmer, larger SKY_LOW)
+        self.assertEqual(_const("SHADE_TINT_LOW_BOOST"), 0.0)
         for t in (tint, wall):
             self.assertGreater(t[2], t[1])
             self.assertGreater(t[1], t[0])                    # blue-cyan, never violet (red above green)
@@ -408,7 +424,8 @@ class ShaderPack(unittest.TestCase):
         # light pass 5: the fill has a direction (the castle's walls at noon 0.68 / 0.67): a face toward the sun's
         # azimuth against one turned away >= 1.5x of fill, tops untouched
         d = _const("FILL_DIRECTION")
-        self.assertGreaterEqual((1.0 + d) / (1.0 - d), 1.5)
+        # light pass 9: 0.30 -> 0.20 (with a stronger ground bounce: the shaded sides read black), still >= 1.45x
+        self.assertGreaterEqual((1.0 + d) / (1.0 - d), 1.45)
         self.assertLessEqual(d, 0.4)
         self.assertIn("* fillDirection(n);", _read("program", "lit.fsh"))
 
@@ -474,7 +491,12 @@ class ShaderPack(unittest.TestCase):
         # light pass 8: plants' shadows thinned to their solid texels on every other map texel (~half a shadow); the
         # ground's shade tint by material (block.properties 10005), not by the normal; the moon fades in after
         # sunset; sky light from SKY_LIGHT_FULL counts as open sky (the chunk-border light step)
-        self.assertIn("plantCaster > 0.5 && (a < PLANT_SHADOW_ALPHA", _read("shadow.fsh"))
+        # light pass 9: pass 8's every-other-texel thinning removed the tufts' shadows; solid texels at full strength
+        # from a smaller caster now (shadow.vsh: PLANT_SHADOW_SHRINK across, PLANT_SHADOW_HEIGHT up)
+        self.assertIn("if (plantCaster > 0.5 && a < PLANT_SHADOW_ALPHA)", _read("shadow.fsh"))
+        self.assertNotIn("mod(floor(gl_FragCoord.x)", _read("shadow.fsh"))
+        self.assertTrue(0.4 <= _const("PLANT_SHADOW_SHRINK") <= 0.8)
+        self.assertTrue(0.5 <= _const("PLANT_SHADOW_HEIGHT") <= 0.9)
         props = open(os.path.join(spc.SHADERS, "block.properties"), encoding="utf-8").read()
         self.assertRegex(props, r"(?m)^block\.10005=grass_block dirt ")
         self.assertIn("#define ID_GROUND 10005.0", _read("lib", "settings.glsl"))
@@ -493,7 +515,10 @@ class ShaderPack(unittest.TestCase):
         # the RTS height (critic 7.0/10). Larger, softer cells and a value swing of ~0.06 luma std on screen
         self.assertTrue(14.0 <= _const("MEADOW_CELL") <= 22.0)
         # light pass 8: 0.55 -> 0.70 (the lawn to read "full" without more exposure)
-        self.assertTrue(0.60 <= _const("MEADOW_VALUE") <= 0.80)
+        # Retired (light pass 9): "0.60-0.80" - 0.70 read as broad bands along the block axes; blobs at <= 0.03 now,
+        # on a lattice turned off the axes
+        self.assertTrue(0.15 <= _const("MEADOW_VALUE") <= 0.30)
+        self.assertIn("TURN_A * xz / MEADOW_CELL", _read("lib", "meadow.glsl"))
         meadow = _read("lib", "meadow.glsl")
         self.assertIn("- 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45)", meadow)
         lit = _read("program", "lit.fsh")
@@ -523,6 +548,15 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("MOON_GLOW * moonUp", _read("lib", "sky.glsl"))
         # the probe that shows which sky programs the loader runs (SKY_PROBE 1: magenta, green, cyan), off for play
         self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define SKY_PROBE 0 // \[0 1\]")
+        # light pass 9: PROBE2 paints each program that defines PROBE_COLOUR its own flat colour (off for play)
+        self.assertRegex(_read("lib", "settings.glsl"), r"(?m)^#define PROBE2 0 // \[0 1\]")
+        colours = set()
+        for name in ("basic", "textured", "textured_lit", "weather", "beaconbeam", "spidereyes", "damagedblock",
+                     "entities", "block", "hand", "clouds", "skytextured"):
+            m = re.search(r"#define PROBE_COLOUR (vec3\([^)]*\))", _read("gbuffers_%s.fsh" % name))
+            self.assertIsNotNone(m, name)
+            colours.add(m.group(1))
+        self.assertEqual(len(colours), 12)                     # every program its own colour
         for name, colour in (("program/sky.fsh", "vec3(1.0, 0.0, 1.0)"), ("program/sky.fsh", "vec4(0.0, 1.0, 0.0"),
                              ("program/clouds.fsh", "vec4(0.0, 1.0, 1.0")):
             self.assertIn(colour, _read(*name.split("/")))

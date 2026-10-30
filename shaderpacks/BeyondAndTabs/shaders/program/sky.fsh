@@ -31,6 +31,11 @@ void main() {
     if (orthoView())
         discard;
 #ifdef SKY_TEXTURED
+#if PROBE2 == 1 && defined PROBE_COLOUR
+    gl_FragData[0] = vec4(PROBE_COLOUR, 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+#endif
     // the sun is our own disc, drawn with the dome (light pass 4: the loader does not name the sun's render stage, so
     // pass 3's check never ran and vanilla's square showed as a pale rectangle). The sprite is found by direction:
     // vanilla's sun quad spans ~0.3 rad from its centre (0.42 to a corner), the moon sits opposite

@@ -33,6 +33,9 @@ const float SHADOW_SEARCH_BLOCKS = 32.0;
 // Light pass 7: 1.0 in the RTS view (the fitted map at 4096 texels: ~1 px a texel at the default zoom, so an edge
 // is <= 2 px and straight - pass 6's 1.5 texels of a 2048 map drew a ~10 px wavy band), 2.0 in a perspective view
 // (the loader's whole box: coarse texels near the camera, which a narrower filter showed as stair-steps)
+// the sun's spread scaled per draw (light pass 9): lit.fsh widens it under a low sun (LOW_SUN_SPREAD), whose long
+// shadows read hard and ink-black against the benchmark's hazy ones
+float gShadowSpread = 1.0;
 const float PENUMBRA_MIN_TEXELS = 1.0;
 const float PENUMBRA_MIN_TEXELS_PERSPECTIVE = 2.0;
 // the steepest a receiver's plane may tilt in the light's view (depth per block across): past this the surface is
@@ -73,7 +76,8 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
     // to the eye rather than banded in 12 steps
     float turn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     float texel = 1.0 / res;
-    float searchUv = max(0.5 * SHADOW_SEARCH_BLOCKS * SUN_SPREAD / blocksPerUv, 1.5 * texel);
+    float spread = SUN_SPREAD * gShadowSpread;
+    float searchUv = max(0.5 * SHADOW_SEARCH_BLOCKS * spread / blocksPerUv, 1.5 * texel);
     float blockers = 0.0;
     float blockerDepth = 0.0;
     for (int i = 0; i < 8; i++) {
@@ -89,7 +93,7 @@ float softShadow(vec3 s, float blocksPerUv, float depthPerBlock, vec2 slope, flo
         return 1.0;
     float gap = max(s.z - blockerDepth / blockers, 0.0) / depthPerBlock;          // blocks from caster to receiver
     float minTexels = orthoView() ? PENUMBRA_MIN_TEXELS : PENUMBRA_MIN_TEXELS_PERSPECTIVE;
-    float radiusUv = max(0.5 * max(gap * SUN_SPREAD, PENUMBRA_MIN_BLOCKS) / blocksPerUv, minTexels * texel);
+    float radiusUv = max(0.5 * max(gap * spread, PENUMBRA_MIN_BLOCKS) / blocksPerUv, minTexels * texel);
     // every search tap blocked and the penumbra inside the searched disc: deep inside the shadow
     if (blockers > 7.5 && radiusUv < searchUv * 0.5)
         return 0.0;

@@ -3,4 +3,5 @@
 // any other shader pack.
 #define UNLIT_TEXTURED
 #define UNLIT_GLOW
+#define PROBE_COLOUR vec3(1.0, 0.5, 0.0)
 #include "/program/unlit.fsh"

@@ -40,7 +40,9 @@ const vec3 SKY_HIGH = SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND / S
 // Light pass 4: x 3.90 -> x 3.70 (luma 2.22): the grass now takes the whole rake (LOW_SUN_RAKE 1) and everything else
 // the plain facing, so the lawn holds ~0.38 while block tops come down (a white top ~0.89 after the low shoulder)
 const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
-const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
+// light pass 9 (critic: the low sun's shadows ink-black, the benchmark's hazy gold): warmer and a little more of it
+// ((0.74, 0.70, 0.80) x 0.17 before). Model at t11800: a cast shadow ~0.13 -> ~0.16, the ratio ~2.9 -> ~2.4:1
+const vec3 SKY_LOW = vec3(0.82, 0.74, 0.70) * 0.24;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
 const vec3 SKY_NIGHT = vec3(0.42, 0.50, 0.75) * 0.08;
@@ -73,6 +75,11 @@ void lightColours(out vec3 sunColour, out vec3 skyColour) {
     // degrees under) read mid-afternoon in its light, lawn 0.18 against the benchmark's 0.07 - and is full by night
     if (h <= 0.0)
         sunColour *= smoothstep(MOON_FADE_LO, MOON_FADE_HI, -h);
+    // and the sun's own strength follows its elevation down to nothing ~1 degree under the horizon (light pass 9: the
+    // dusk still was lit like 3 pm, 0.39 with hard shadows - the sun was still the shadow light there): ~0.3 a few
+    // degrees up, full from SUN_FADE_HI (t11800 is ~0.23)
+    else
+        sunColour *= smoothstep(SUN_FADE_LO, SUN_FADE_HI, h);
     // the sky's fill has no direction: it may glow on through twilight
     skyColour = mix(SKY_NIGHT, mix(SKY_LOW, SKY_HIGH, high), smoothstep(-0.08, 0.02, h));
     sunColour *= 1.0 - 0.75 * rainStrength;
