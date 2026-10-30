@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Every way the game (or a test) changes a production queue must move ProductionQueueList's epoch, or the per-tick
- * queue population (QueuePopulation) would count a stale queue: the queues are public lists changed from placements,
+ * Every way the game (or a test) changes a production queue must move ProductionQueueList's epoch, or a per-tick
+ * cache over the queues would count a stale queue: the queues are public lists changed from placements,
  * packets, match end and GameTests, through add / remove(0) / remove(item) / removeIf / clear and iterators. Reading a
  * queue must not move it.
  */

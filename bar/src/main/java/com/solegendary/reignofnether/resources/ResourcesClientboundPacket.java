@@ -102,39 +102,6 @@ public class ResourcesClientboundPacket {
         }
     }
 
-    public static void warnInsufficientPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
-                new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
-                        ownerName,
-                        0,0,0,0,
-                        new BlockPos(0, 0, 0),
-                        "server.resources.reignofnether.not_enough_pop"
-                )
-        );
-    }
-
-    public static void warnFullGraveyard(String ownerName) {
-        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
-                new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
-                        ownerName,
-                        0,0,0,0,
-                        new BlockPos(0, 0, 0),
-                        "server.resources.reignofnether.full_graveyard"
-                )
-        );
-    }
-
-    public static void warnMaxPopulation(String ownerName) {
-        PacketHandler.INSTANCE.send(Audience.owner(ownerName), // only the owner's client shows it
-            new ResourcesClientboundPacket(ResourcesAction.SHOW_WARNING,
-                ownerName,
-                0,0,0,0,
-                new BlockPos(0, 0, 0),
-                "server.resources.reignofnether.max_pop"
-            )
-        );
-    }
-
     public static void showFloatingText(Resources res, BlockPos pos) {
         PacketHandler.INSTANCE.send(Audience.owner(res.ownerName), // drawn only for the owner (their income)
             new ResourcesClientboundPacket(ResourcesAction.SHOW_FLOATING_TEXT,

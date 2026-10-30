@@ -31,10 +31,6 @@ public class GameruleClientboundPacket {
         PacketHandler.INSTANCE.send(Audience.all(), // a match-wide rule every client applies
                 new GameruleClientboundPacket(GameruleAction.SET_NEUTRAL_AGGRO, "", neutralAggro ? 1L : 0L));
     }
-    public static void setMaxPopulation(long maxPopulation) {
-        PacketHandler.INSTANCE.send(Audience.all(), // a match-wide rule every client applies
-                new GameruleClientboundPacket(GameruleAction.SET_MAX_POPULATION, "", maxPopulation));
-    }
     public static void setUnitGriefing(boolean unitGriefing) {
         PacketHandler.INSTANCE.send(Audience.all(), // a match-wide rule every client applies
                 new GameruleClientboundPacket(GameruleAction.SET_UNIT_GRIEFING, "", unitGriefing ? 1L : 0L));
@@ -128,7 +124,6 @@ public class GameruleClientboundPacket {
                         switch (action) {
                             case SET_LOG_FALLING -> GameruleClient.doLogFalling = value == 1L;
                             case SET_NEUTRAL_AGGRO -> GameruleClient.neutralAggro = value == 1L;
-                            case SET_MAX_POPULATION -> GameruleClient.maxPopulation = Math.toIntExact(value);
                             case SET_UNIT_GRIEFING -> GameruleClient.doUnitGriefing = value == 1L;
                             case SET_PLAYER_GRIEFING -> GameruleClient.doPlayerGriefing = value == 1L;
                             case SET_GROUND_Y_LEVEL -> {
