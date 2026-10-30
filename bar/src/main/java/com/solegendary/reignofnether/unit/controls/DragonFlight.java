@@ -14,7 +14,10 @@ package com.solegendary.reignofnether.unit.controls;
  * - a forward SPEED that eases up ({@link #ACCEL}) and down ({@link #DECEL}) toward the speed it wants: cruise, less in
  *   a hard turn (so a point beside it or behind it is reached by a tight turn, never an orbit), and a braking ramp over
  *   the last {@link #BRAKE} blocks (it comes in under the brake - the rig's flare plays - instead of coasting through);
- * - a climb rate that eases in and is capped ({@link #CLIMB_MAX}): it climbs and dives on its wings, not like a lift.
+ * - a climb rate that eases in and is capped ({@link #CLIMB_MAX}): it climbs and dives on its wings, not like a lift;
+ * - over what stands on its way (DragonMoveControl reads the route ahead) a steeper ROUTE climb ({@link #ROUTE_CLIMB_MAX})
+ *   paced to clear each obstacle in time ({@link #climbNeed}), easing back on the speed only when even that is not
+ *   enough - it rises early and flies over, instead of crawling up the wall at the last moment.
  * The cruise speed is the ghast brain's average for the same attribute ({@link #cruiseSpeed}), so the dragon crosses
  * the map as fast as before - no gameplay number changes, only how it gets there.
  *
@@ -33,6 +36,9 @@ public final class DragonFlight {
     /** In a turn sharper than this the dragon slows (cos of the angle off, floored at TURN_SLOWDOWN_MIN). */
     public static final float TURN_SLOWDOWN_FROM = 30f;
     public static final double TURN_SLOWDOWN_MIN = 0.3;
+    /** The route climb: its cap (b/t), its change per tick, how much faster than needed it climbs (it clears the top
+     *  early, not at the last tick), and how high above a top the feet pass (blocks). */
+    public static final double ROUTE_CLIMB_MAX = 0.25, ROUTE_CLIMB_ACCEL = 0.016, ROUTE_MARGIN = 1.15, ROUTE_CLEAR = 1.5;
 
     private DragonFlight() {}
 
@@ -61,6 +67,25 @@ public final class DragonFlight {
      * Returns {vx, vy, vz}, this tick's displacement.
      */
     public static double[] step(State s, double dx, double dy, double dz, double cruise, boolean blocked) {
+        return step(s, dx, dy, dz, cruise, blocked, 0.0);
+    }
+
+    /**
+     * The climb (b/t) that lifts the feet {@code rise} blocks within {@code ahead} blocks at {@code speed} (with a block
+     * to spare): 0 when there is nothing to rise over.
+     */
+    public static double climbNeed(double rise, double ahead, double speed) {
+        if (rise <= 0.0)
+            return 0.0;
+        return rise / Math.max(1.0, (ahead - 1.0) / Math.max(speed, 0.05));
+    }
+
+    /**
+     * As {@link #step(State, double, double, double, double, boolean)}, with the route ahead needing a climb of
+     * {@code need} b/t ({@link #climbNeed}; 0: nothing in the way): it climbs at least ROUTE_MARGIN x that, up to
+     * ROUTE_CLIMB_MAX, and if that cap is short it slows so the slope still clears.
+     */
+    public static double[] step(State s, double dx, double dy, double dz, double cruise, boolean blocked, double need) {
         double hd = Math.sqrt(dx * dx + dz * dz);
         float off = 0f;
         if (hd > STOP) {        // inside the stop radius it holds its nose: a push of a few tenths never swings it round
@@ -77,12 +102,19 @@ public final class DragonFlight {
         if (left > TURN_SLOWDOWN_FROM)
             want *= Math.max(TURN_SLOWDOWN_MIN, Math.cos(Math.toRadians(Math.min(90f, left))));
         double wantVy = Math.max(-CLIMB_MAX, Math.min(CLIMB_MAX, dy * CLIMB_GAIN));
+        double climbAccel = CLIMB_ACCEL;
+        if (need > 0.0) {
+            wantVy = Math.min(ROUTE_CLIMB_MAX, Math.max(wantVy, need * ROUTE_MARGIN));
+            climbAccel = ROUTE_CLIMB_ACCEL;
+            if (need > ROUTE_CLIMB_MAX)
+                want = Math.min(want, s.speed * ROUTE_CLIMB_MAX / need);
+        }
         if (blocked) {
             want = Math.min(want, cruise * TURN_SLOWDOWN_MIN);
-            wantVy = CLIMB_MAX;
+            wantVy = Math.max(wantVy, CLIMB_MAX);
         }
         s.speed += Math.max(-DECEL, Math.min(ACCEL, want - s.speed));
-        s.vy += Math.max(-CLIMB_ACCEL, Math.min(CLIMB_ACCEL, wantVy - s.vy));
+        s.vy += Math.max(-climbAccel, Math.min(climbAccel, wantVy - s.vy));
         return along(s);
     }
 
