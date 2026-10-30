@@ -165,8 +165,9 @@ TARGETS = {
     "polished_basalt_side": dict(luma=0.36, std=0.065, sat=0.05, tilt=14.0, smooth=70, pore=8),
     # r32 (critic: the top "a tight cobble / hex grid, indistinguishable from basalt"): ground rings, lifted 15%
     "polished_basalt_top": dict(luma=0.38, std=0.050, sat=0.02, tilt=8.0, smooth=90, pore=8),
-    "bone_block_side": dict(luma=0.84, std=0.060, sat=0.12, tilt=16.0, smooth=80, pore=20),   # r31: shafts
-    "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
+    # r32 (critic: "ivory not cream"): sat 0.12 -> 0.07; the top's spread in the pores, matte bone (smooth 80 -> 50)
+    "bone_block_side": dict(luma=0.84, std=0.060, sat=0.07, tilt=16.0, smooth=50, pore=24),
+    "bone_block_top": dict(luma=0.80, std=0.080, sat=0.07, tilt=18.0, smooth=44, pore=30),
     # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.05, tilt=16.0, smooth=138, pore=4),
     "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.05, tilt=13.4, smooth=104, pore=4),
@@ -1923,33 +1924,53 @@ def m_mud(F, n):
 def m_bone(F, n, top):
     """Bone block: long bone grain along the side; the cut end shows the dense rim and the spongy marrow.
     Round 31 (art director: the sides "plain"): three bone shafts per side, each a rounded cylinder with fine
-    longitudinal striations, a slight bulge toward its ends, a few pits and a hairline crack, each its own tone."""
+    longitudinal striations, a slight bulge toward its ends, a few pits and a hairline crack, each its own tone.
+    Round 32 (critic, eyes 41025894452: "reads as tiled ceramic: real bone, a porous fibrous end grain on top and
+    long fibres on the sides, ivory not cream"): the top is a sawn bone end - no square frame; a dense cortical
+    rim (smooth, bright) round a cancellous core, a foam of pores 3-6 texels across with thin bright walls (a
+    Voronoi's cell boundaries), the gap outside the rim in shadow; the sides' fibres are long, wavy and clearly
+    drawn (the cylinder shading pulled back so the shafts are not three tiles)."""
     if top:
-        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
-        marrow = smoothstep(0.30, 0.22, r)
-        sponge = smoothstep(0.2, 0.8, F.noise(14, 40, 0.2))
-        bev = frame(F, 0.08, 0.015)
-        H = 0.5 + 0.3 * bev - 0.15 * marrow * sponge
-        shade = (0.92 - 0.25 * marrow * sponge) * (0.8 + 0.2 * bev)
+        x, y = F.u - 0.5, F.v - 0.5
+        r = (np.abs(x) ** 3 + np.abs(y) ** 3) ** (1 / 3)                 # a rounded square: the bone's outline
+        r = r + 0.005 * F.noise(2, 6, 0.5)
+        core = 1 - smoothstep(0.35, 0.39, r)                              # the cancellous core
+        rim = smoothstep(0.35, 0.39, r) * (1 - smoothstep(0.455, 0.49, r))   # the dense cortical rim
+        gap = smoothstep(0.455, 0.49, r)                                   # outside the bone: a shadowed gap
+        f1, f2, idx, k = F.voronoi(500, 1.0)                               # pores ~5.7 texels
+        wu, wv = 0.006 * F.noise(4, 12, 0.5), 0.006 * F.noise(4, 12, 0.5)
+        f1, f2 = F.warp(f1, wu, wv), F.warp(f2, wu, wv)
+        wall = 1 - smoothstep(0.0, 0.012, f2 - f1)                         # the thin trabecular walls
+        cell = 1.0 / math.sqrt(500)
+        pore = smoothstep(0.25, 0.7, f1 / cell) * (1 - wall)              # deep in the middle of a cell
+        open_ = (F.rng.random(k) < 0.7)[idx]                               # some cells sealed (a solid patch)
+        pore = pore * open_
+        grain = F.noise(10, 30, 0.3)
+        dome = np.clip(1 - (r / 0.47) ** 2, 0, 1)
+        H = 0.25 + 0.55 * (1 - gap) + 0.08 * dome * rim - 0.22 * pore * core + 0.03 * wall * core + 0.01 * grain
+        shade = (0.95 + 0.03 * grain) * (1 - 0.45 * pore * core) * (1 + 0.05 * wall * core) * (1 - 0.35 * gap) \
+            * (1 + 0.04 * rim)
+        return H, tint((0.92, 0.89, 0.81), shade)
     else:
         x = (F.u * 3) % 1.0                              # across one shaft
         col = np.floor(F.u * 3).astype(int)
         bulge = 1 + 0.08 * np.cos(2 * math.pi * F.v) ** 2   # a hair wider toward the block's ends
         cyl = np.sqrt(np.clip(1 - ((2 * x - 1) / bulge) ** 2, 0, 1))   # a cylinder's profile
         groove = 1 - smoothstep(0.0, 0.05, np.minimum(x, 1 - x))
-        stria = F.noise(24, 64, 0.3, sx=1.0, sy=16.0)   # fine lines along the shaft
+        wob = 0.004 * F.noise(1, 3, 0.5, sx=1.0, sy=3.0)
+        stria = F.warp(F.noise(20, 56, 0.3, sx=1.0, sy=24.0), wob, 0.0)   # fine lines along the shaft, wavy
+        fibre = F.warp(F.noise(6, 16, 0.5, sx=1.0, sy=12.0), wob, 0.0)    # the broader fibre bundles
         grain = F.noise(4, 14, 0.5, sx=1.0, sy=8.0)
         pit = smoothstep(0.86, 0.96, norm01(F.noise(8, 24, 0.3)))
-        crack = (1 - smoothstep(0.0, 0.012, np.abs(F.noise(2, 5, 0.5, sx=1.0, sy=6.0)))) \
+        crack = (1 - smoothstep(0.0, 0.08, np.abs(F.noise(1, 3, 1.0, sx=1.0, sy=6.0)))) \
             * smoothstep(0.6, 0.9, norm01(F.noise(1, 3, 0.5)))
-        tone = F.rng.uniform(0.94, 1.04, 3)[col]
-        H = 0.3 + 0.55 * cyl + 0.015 * stria + 0.02 * grain - 0.05 * pit - 0.08 * crack
-        shade = tone * (0.80 + 0.20 * cyl) * (1 + 0.03 * stria + 0.04 * grain - 0.12 * pit - 0.2 * crack) \
-            * (1 - 0.3 * groove)
+        tone = F.rng.uniform(0.96, 1.03, 3)[col]
+        H = 0.3 + 0.4 * cyl + 0.03 * stria + 0.04 * fibre + 0.02 * grain - 0.05 * pit - 0.08 * crack
+        shade = tone * (0.86 + 0.14 * cyl) * (1 + 0.05 * stria + 0.07 * fibre + 0.03 * grain - 0.12 * pit - 0.2 * crack) \
+            * (1 - 0.25 * groove)
         hue = grain
-        alb = tint((0.90, 0.87, 0.78), shade, np.stack([0.02 * hue, 0.0 * hue, -0.03 * hue], -1))
+        alb = tint((0.92, 0.89, 0.81), shade, np.stack([0.015 * hue, 0.0 * hue, -0.02 * hue], -1))
         return H, alb
-    return H, tint((0.90, 0.88, 0.80), shade)
 
 
 def m_quartz(F, n, kind):
