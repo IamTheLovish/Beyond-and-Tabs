@@ -270,7 +270,19 @@ void main() {
     lightColours(sunColour, skyColour);
     sunColour *= cloud;
     gShadeGround = groundMaterial;
+    // light pass 19: on a top no sun reaches, the vertex AO stops at VERTEX_AO_SHADOW_FLOOR (the pad's grass between the
+    // cubes: a 0.78 shadow times the corner AO beside a block column read 0.61 of lit; plants keep their base AO)
+    {
+        float sunHere = clamp(shadow * min(facing * 4.0, 1.0), 0.0, 1.0);
+        float upw = smoothstep(0.5, 0.9, dot(geomN, normalize(upPosition))) * (1.0 - foliage);
+        ao = mix(ao, max(ao, VERTEX_AO_SHADOW_FLOOR), (1.0 - sunHere) * upw);
+    }
     vec3 light = surfaceLight(n, facing, shadow, levels, ao, texAo, sunColour, skyColour);
+#ifdef LIT_TERRAIN
+    // light pass 19: the biome-tinted ground (grass, tufts, leaves) under the low sun takes LOW_SUN_GRASS of its light,
+    // full from t11800's height (lowSunFull), nothing at 5000: lawn L1's brighter albedo put t11800's lawn at 0.334
+    light *= mix(1.0, LOW_SUN_GRASS, lowSunFull() * tinted);
+#endif
     // near-white faces turned from up lose the light's colour (WHITE_WALL_NEUTRAL, light pass 3): white sides read
     // white, not cream, while the ground keeps the warm sun
     {

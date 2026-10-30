@@ -665,6 +665,12 @@ class ShaderPack(unittest.TestCase):
         self.assertTrue(0.88 <= _const("AO_SHADOW_FLOOR") <= 0.97)
         self.assertGreater(_const("AO_SHADOW_FLOOR"), _const("CONTACT_AO_FLOOR"))
         self.assertIn("occ = mix(occ, max(occ, AO_SHADOW_FLOOR), smoothstep(0.70, 0.85, skyShare));", _read("composite.fsh"))
+        # light pass 19: the pad's shadow darkness was the vertex AO (AO_SHADOW_FLOOR a no-op in lp18): on a top no sun
+        # reaches it stops at VERTEX_AO_SHADOW_FLOOR; the biome-tinted ground takes LOW_SUN_GRASS under the low sun only
+        self.assertIn("ao = mix(ao, max(ao, VERTEX_AO_SHADOW_FLOOR), (1.0 - sunHere) * upw);", lit)
+        self.assertTrue(0.9 <= _const("VERTEX_AO_SHADOW_FLOOR") <= 1.0)
+        self.assertIn("light *= mix(1.0, LOW_SUN_GRASS, lowSunFull() * tinted);", lit)
+        self.assertTrue(0.7 <= _const("LOW_SUN_GRASS") <= 0.95)
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):

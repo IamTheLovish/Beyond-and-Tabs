@@ -155,6 +155,13 @@ const float CONTACT_AO_FLOOR = 0.85;
 // sun shadow next to a block took the 1.5-block AO (to 0.85) and the contact crease (to 0.75) on top of the shadow.
 // 0.78 x 0.93 = 0.73 of lit away from the foot; the contact crease (CONTACT_FLOOR) is kept at the foot
 const float AO_SHADOW_FLOOR = 0.93;
+// light pass 19: AO_SHADOW_FLOOR measured as a no-op (lp18 pad shadows 0.30 in both builds): the darkening is the
+// VERTEX AO (separateAo, glcolor.a), which takes the fill and so all of a shadow's light - the pad's grass between the
+// 2-high cube columns sits in their corner AO. On a top no sun reaches it stops here (lit.fsh)
+const float VERTEX_AO_SHADOW_FLOOR = 0.95;
+// light pass 19: the biome-tinted ground's light under the low sun (lit.fsh, by lowSunFull: 1 at t11800, 0 at 5000).
+// lawn L1 measured t11800's lawn 0.334 (LP17 0.300, Complementary 0.275); (0.30 / 0.334)^2.2 = 0.79
+const float LOW_SUN_GRASS = 0.80;
 const float CONTACT_SUN_SHARE = 0.0;
 // light pass 10: a softer crease (critic: "a little hard"): 0.12 -> 0.16 block, taps at three radii, gain 1.2 -> 1.0
 // light pass 14 (critic on pass 12: a 1-2 px hard band at the pillars' feet; target a 3-5 px gradient): 0.16 -> 0.26
@@ -531,7 +538,13 @@ const float WHITE_SHADE_SUN_HI = 0.45;
 // 0.03-0.04); the cast is the light's - the sky's part (the cool) scales with the vertex and material AO, the warm
 // ground bounce only BOUNCE_AO of it, so it varies by block. Model: +20.5 at a neutral 0.86 white, ~+18-20 with the
 // residual 0.2 of today's cast
-const vec3 WHITE_SHADE_COOL = vec3(0.92, 1.005, 1.19);   // light pass 18: blue 1.17 -> 1.19
+// light pass 19: (0.92, 1.005, 1.19) -> (0.90, 1.0025, 1.27). The probe (run 41143450711) showed the cool applied on
+// the right faces; it is spent after lit.fsh. A model of the whole chain for the east face (lp19/chain.py, east.py):
+// lit.fsh out b-r +12.4 at the old cool; the final glow from the white tops and lit sides beside it (GLOW 0.30, ~14 px)
+// adds near-neutral light, which drops the pixel under the grade's grey gate (GREY_GATE 0.03-0.10: no saturation or
+// vibrance) while the split tone's HIGHLIGHT_TINT (1.03, 1, 0.96) still warms it - +12.4 -> +9 at ~0.35 of the
+// glow estimate, the measured +9. Model with this cool: +16..+20 over glow 0.3-0.5
+const vec3 WHITE_SHADE_COOL = vec3(0.90, 1.0025, 1.27);
 // and under a low sun every near-white face, tops too, by this much (light pass 7: t11800's whites read 235/221/213, a
 // 22 spread; target <= 12 while the lawn keeps the warm light)
 const float WHITE_LOW_NEUTRAL = 0.55;
