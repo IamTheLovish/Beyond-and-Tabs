@@ -58,8 +58,13 @@ TARGETS = {
     # in-game stdev at 0.036 vs the benchmark's 0.057): procedural clover (clover_lawn) - std 0.045 -> 0.065 in 2-3
     # value bands of plants plus the clump shadows, a warm-cool hue spread (sat 0.05 -> 0.08), the mean unchanged
     # (the environment palette); soften 2.4 -> 1.0 and no mid boost (no scan grain to tame)
-    "grass_block_top":  dict(luma=0.645, std=0.065, sat=0.08, lf=0.0, tilt=18.0, smooth=24, pore=40, soften=0.4,
-                             shoulder=0.82),   # r36: soften 0.6 -> 0.4, crisper leaflet rims
+    # r39 (eyes 41044148818: the clover read as single-frequency speckle at the RTS zoom, std 0.10 on screen vs the
+    # benchmark's 0.06): std 0.065 -> 0.05 with more of it in the clumps (clover_lawn), tilt 18 -> 12 (the lit
+    # leaflets added speckle), soften 0.4 -> 1.0, the mean a few degrees toward yellow-green
+    # ao 1.0 -> 0.4: the AO darkened every gap between leaflets by up to 45% (AO std 0.125 - the largest part of the
+    # on-screen speckle in a lit mip test); the clump shadow is already painted in the albedo
+    "grass_block_top":  dict(luma=0.645, std=0.050, sat=0.11, lf=0.3, ao=0.4, tilt=9.0, smooth=24, pore=40, soften=1.0,
+                             shoulder=0.82),
     "grass_block_side": dict(luma=0.31, std=0.050, sat=0.34, lf=0.0, tilt=14.0, smooth=26, pore=48, toe=0.235),
     # r34: tilt 16 -> 8 - the turf lip is a rounded roll with hanging blades; at 16 the solver's strength (the band is
     # thin, so its mip tilt is small) made every blade edge a wall whose normals drew a black line under the lip
@@ -149,13 +154,15 @@ TARGETS = {
     # r35 (critic: the dark stone families "read 0.25-0.35 and merge into one mass" - lift them with clear joints):
     # blackstone 0.19 -> 0.27 / 0.29, deepslate 0.19 -> 0.27, its bricks 0.30 -> 0.38, tiles 0.21 -> 0.30, polished
     # 0.32 -> 0.38, cobbled 0.27 -> 0.32 - the family keeps its order (deepslate under stone_bricks at 0.44)
-    "polished_blackstone":        dict(luma=0.27, std=0.030, sat=0.10, tilt=12.0, smooth=60, pore=4),
-    "polished_blackstone_bricks": dict(luma=0.29, std=0.055, sat=0.10, tilt=18.0, smooth=40, pore=8),
+    # r39: the whole blackstone family a violet-black (sat 0.10 -> 0.13, the base hue aligned with blackstone's), so
+    # the wall's body and its weathered blocks read as one stone, apart from blue deepslate and warm basalt
+    "polished_blackstone":        dict(luma=0.27, std=0.030, sat=0.13, tilt=12.0, smooth=60, pore=4),
+    "polished_blackstone_bricks": dict(luma=0.29, std=0.055, sat=0.13, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.38, std=0.060, sat=0.02, tilt=15.0, smooth=15, pore=10),
     # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
     "deepslate_tiles":            dict(luma=0.30, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
-    "deepslate":                  dict(luma=0.27, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
-    "deepslate_top":              dict(luma=0.27, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
+    "deepslate":                  dict(luma=0.27, std=0.045, sat=0.14, tilt=21.0, smooth=12, pore=10),   # r39: blue-grey
+    "deepslate_top":              dict(luma=0.27, std=0.040, sat=0.14, tilt=18.0, smooth=15, pore=10),
     # r33 (critic: "brown-grey"): blue-grey - sat 0.02 -> 0.14 on a cool base
     "polished_deepslate":         dict(luma=0.38, std=0.030, sat=0.14, tilt=4.5, smooth=90, pore=4),
     # r31: blue-grey slate (sat 0.03 -> 0.10), a touch lighter (0.24 -> 0.27), joints lower in contrast (std 0.075
@@ -238,7 +245,7 @@ TARGETS = {
     # r32 (critic: "1.5 stops too dark / red"): 0.54 -> 0.68, pinker (sat 0.36 -> 0.26), the quartz grains' spread
     "polished_granite": dict(luma=0.68, std=0.055, sat=0.26, tilt=4.0, smooth=140, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
-    "blackstone": dict(luma=0.25, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),   # r35: lifted with the family
+    "blackstone": dict(luma=0.25, std=0.035, sat=0.17, tilt=24.0, smooth=12, pore=12),   # r35: lifted; r39: violet-black
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
@@ -255,16 +262,17 @@ TARGETS = {
     # the carved and plated blocks (the reference's 26-31 deg come from engraved patterns we draw flatter)
     "cracked_stone_bricks": dict(luma=0.43, std=0.068, sat=0.02, tilt=13.0, smooth=16, pore=12, soften=0.8),   # r32: fissures; r35: with stone_bricks
     "cracked_deepslate_bricks": dict(luma=0.36, std=0.062, sat=0.02, tilt=18.0, smooth=8, pore=10),   # r35: with the family
-    "cracked_polished_blackstone_bricks": dict(luma=0.26, std=0.057, sat=0.11, tilt=22.0, smooth=19, pore=8),
+    "cracked_polished_blackstone_bricks": dict(luma=0.26, std=0.057, sat=0.13, tilt=22.0, smooth=19, pore=8),
     "chiseled_nether_bricks": dict(luma=0.15, std=0.060, sat=0.30, tilt=22.0, smooth=49, pore=12),
-    "chiseled_polished_blackstone": dict(luma=0.27, std=0.058, sat=0.12, tilt=22.0, smooth=30, pore=8),   # r35
+    "chiseled_polished_blackstone": dict(luma=0.27, std=0.058, sat=0.14, tilt=22.0, smooth=30, pore=8),   # r35; r39
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
     # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
     # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
-    "basalt_side": dict(luma=0.30, std=0.060, sat=0.05, tilt=16.0, smooth=30, pore=10, soften=1.0),
-    "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
+    # r39 (eyes 41044148818: blackstone / basalt / deepslate one dark grey): basalt a warm grey (sat 0.05 -> 0.10)
+    "basalt_side": dict(luma=0.30, std=0.060, sat=0.10, tilt=16.0, smooth=30, pore=10, soften=1.0),
+    "basalt_top": dict(luma=0.30, std=0.060, sat=0.10, tilt=14.0, smooth=26, pore=10, soften=1.0),
     # r32: a cut face - calm (std 0.06 -> 0.035), flat (tilt 13.9 -> 5), satin (25 -> 70); basalt keeps its columns
     # r33 (critic: "concrete pavers"): no seam or rim - the spread in the grain only (std 0.035 -> 0.025)
     "smooth_basalt": dict(luma=0.30, std=0.025, sat=0.04, tilt=4.0, smooth=70, pore=8),
@@ -303,7 +311,7 @@ TARGETS = {
     "stripped_acacia_log_top": dict(luma=0.43, std=0.050, sat=0.63, tilt=12.0, smooth=40, pore=30),
     "stripped_dark_oak_log_top": dict(luma=0.20, std=0.035, sat=0.58, tilt=12.0, smooth=40, pore=30),
     "stripped_mangrove_log_top": dict(luma=0.27, std=0.045, sat=0.60, tilt=12.0, smooth=40, pore=30),
-    "blackstone_top": dict(luma=0.24, std=0.033, sat=0.10, tilt=20.0, smooth=14, pore=12),   # r35
+    "blackstone_top": dict(luma=0.24, std=0.033, sat=0.17, tilt=20.0, smooth=14, pore=12),   # r35; r39: violet-black
     # r31: near-white, the tile line subtle (std 0.03 -> 0.022), cool veins (sat 0.07 -> 0.05)
     # r32: the vein carries the hue (sat 0.05 -> 0.04 with a near-neutral body), a touch more spread for it
     "quartz_block_top": dict(luma=0.90, std=0.018, sat=0.03, tilt=3.0, smooth=145, pore=4),
@@ -1254,10 +1262,18 @@ DYES = {  # name: (wool, concrete, terracotta) rgb 0..1
     "cyan":       ((0.11, 0.58, 0.60), (0.09, 0.50, 0.56), (0.34, 0.38, 0.38)),
     "light_blue": ((0.26, 0.70, 0.86), (0.16, 0.56, 0.78), (0.45, 0.43, 0.54)),
     "blue":       ((0.22, 0.26, 0.66), (0.18, 0.19, 0.58), (0.30, 0.36, 0.52)),
-    "purple":     ((0.55, 0.28, 0.76), (0.43, 0.14, 0.64), (0.47, 0.28, 0.35)),
+    # r39: redder - hue 274 -> 283 (it read steel blue in game; 293 sat too close to magenta's 303)
+    "purple":     ((0.60, 0.27, 0.74), (0.48, 0.13, 0.62), (0.49, 0.27, 0.36)),
     "magenta":    ((0.76, 0.28, 0.72), (0.68, 0.19, 0.64), (0.59, 0.35, 0.43)),
     "pink":       ((0.93, 0.56, 0.68), (0.85, 0.40, 0.56), (0.63, 0.31, 0.31)),
 }
+
+
+def powder_colour(rgb):
+    """The powder's colour from its concrete's: lighter and less saturated (dry pigment on white filler)."""
+    rgb = np.asarray(rgb, dtype=np.float64)
+    grey = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
+    return tuple(np.clip(0.72 * rgb + 0.28 * grey + 0.10, 0, 1))
 
 
 def colour_targets(rgb, std, **kw):
@@ -1302,6 +1318,40 @@ TARGETS["chiseled_bookshelf_occupied"] = dict(luma=0.38, std=0.090, sat=0.42, ti
 R37 += ["chiseled_quartz_block", "chiseled_quartz_block_top", "chiseled_bookshelf_top", "chiseled_bookshelf_side",
         "chiseled_bookshelf_empty", "chiseled_bookshelf_occupied"]
 SEED_ORDER = SEED_ORDER + tuple(R37)
+# round 38: concrete powders, the full copper blocks, glazed terracottas, and the odd blocks of the builds
+R38 = []
+for _c, (_w, _k, _t) in DYES.items():
+    TARGETS[_c + "_concrete_powder"] = colour_targets(powder_colour(_k), 0.030, tilt=8.0, smooth=10, pore=56)
+    R38.append(_c + "_concrete_powder")
+for _name, _base in (("copper_block", "cut_copper"), ("exposed_copper", "exposed_cut_copper"),
+                     ("weathered_copper", "weathered_cut_copper"), ("oxidized_copper", "oxidized_cut_copper")):
+    TARGETS[_name] = dict(TARGETS[_base], tilt=9.0)
+    R38.append(_name)
+for _c, (_w, _k, _t) in DYES.items():
+    _g = tuple(0.55 * a + 0.45 * b for a, b in zip(_k, _t))        # the glaze: between the concrete and the clay
+    TARGETS[_c + "_glazed_terracotta"] = colour_targets(_g, 0.080, tilt=5.0, smooth=205, pore=0)
+    R38.append(_c + "_glazed_terracotta")
+TARGETS["crafting_table_top"] = dict(luma=0.50, std=0.060, sat=0.40, tilt=9.0, smooth=45, pore=24)
+TARGETS["crafting_table_side"] = dict(luma=0.48, std=0.060, sat=0.40, tilt=9.0, smooth=45, pore=24)
+TARGETS["crafting_table_front"] = dict(luma=0.48, std=0.070, sat=0.36, tilt=9.0, smooth=45, pore=24)
+TARGETS["rooted_dirt"] = dict(luma=0.38, std=0.070, sat=0.36, tilt=14.0, smooth=24, pore=56)
+TARGETS["mushroom_stem"] = dict(luma=0.74, std=0.045, sat=0.14, tilt=10.0, smooth=40, pore=40)
+TARGETS["composter_side"] = dict(luma=0.34, std=0.070, sat=0.36, tilt=10.0, smooth=40, pore=24)
+TARGETS["composter_top"] = dict(luma=0.24, std=0.120, sat=0.30, tilt=14.0, smooth=30, pore=24)
+TARGETS["composter_bottom"] = dict(luma=0.34, std=0.060, sat=0.36, tilt=8.0, smooth=40, pore=24)
+TARGETS["composter_compost"] = dict(luma=0.26, std=0.060, sat=0.40, tilt=14.0, smooth=24, pore=56)
+TARGETS["composter_ready"] = dict(luma=0.30, std=0.070, sat=0.34, tilt=14.0, smooth=24, pore=56)
+TARGETS["note_block"] = dict(luma=0.36, std=0.090, sat=0.40, tilt=12.0, smooth=45, pore=24)
+TARGETS["jukebox_side"] = dict(luma=0.40, std=0.080, sat=0.42, tilt=10.0, smooth=50, pore=24)
+TARGETS["jukebox_top"] = dict(luma=0.40, std=0.070, sat=0.40, tilt=8.0, smooth=50, pore=24)
+R38 += ["crafting_table_top", "crafting_table_side", "crafting_table_front", "rooted_dirt", "mushroom_stem",
+        "composter_side", "composter_top", "composter_bottom", "composter_compost", "composter_ready", "note_block",
+        "jukebox_side", "jukebox_top"]
+SEED_ORDER = SEED_ORDER + tuple(R38)
+# round 39: the battlefield wall's mud bricks and packed mud (tan, the sampler's bricks' cousin) - appended last
+TARGETS["mud_bricks"] = dict(luma=0.45, std=0.055, sat=0.42, tilt=10.0, smooth=20, pore=50, soften=0.6)
+TARGETS["packed_mud"] = dict(luma=0.46, std=0.040, sat=0.42, tilt=8.0, smooth=18, pore=56, soften=0.8)
+SEED_ORDER = SEED_ORDER + ("mud_bricks", "packed_mud")
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -1897,7 +1947,7 @@ def m_deepslate(F, n, top=False):
     return H, tint((0.28, 0.30, 0.35), shade)
 
 
-def m_copper(F, n, stage):
+def m_copper(F, n, stage, plate=False):
     """Round 23 cut copper, four plates per block with seams, in its four weathering stages (0 bare .. 3 oxidized):
     bare: salmon-pink metal, brushed, F0 234. exposed: the metal dulled brown-tarnished with the first green
     speckle in the seams. weathered: tarnish everywhere, verdigris spread in blotches from the seams and the low
@@ -1906,12 +1956,21 @@ def m_copper(F, n, stage):
     grid = 2
     iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
+    if plate:
+        # round 38: the FULL copper blocks - one rolled sheet per block (no cut seams): the sheet's own edge is the
+        # block's, with soft hammer marks across it; the patina creeps in from the edges and the hammered low spots
+        edge = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
     # r31 (art director, sampler 3: "keep the cut seams on all four, patina creeping from the seams, rough patina
     # over glossier metal, stage colours distinct"): seams wider (survive the mips under the patina), a crisper step,
     # the bare metal glossier (170) with the brushing in the relief
     face = smoothstep(0.005, 0.026, edge)
     ham = F.noise(4, 14, 0.6)
     br = brushed(F, 0.8)
+    if plate:
+        f1, f2, idx, k = F.voronoi(40, 1.0)
+        cell = 1.0 / math.sqrt(40)
+        dents = np.clip(1 - (f1 / (0.7 * cell)) ** 2, 0, 1) * (0.5 + 0.5 * F.rng.random(k))[idx]   # hammer marks
+        ham = 0.6 * ham - 0.9 * dents + 0.45
     # r36 (lovish: "copper rims brighter - the cut seams catch the light"): a chamfered arris round each plate, a
     # step lighter in the colour and raised in the height, so the seams draw a bright line under the sun
     arris = smoothstep(0.016, 0.026, edge) * (1 - smoothstep(0.026, 0.050, edge))
@@ -2101,7 +2160,7 @@ def m_columnar(F, n, top, polished):
             + (0.0 if polished else 0.05) * F.noise(3, 12, 0.5, sx=1.0, sy=6.0)
         tone = rng.uniform(0.9, 1.1, len(edges))[col]
         shade = tone * (0.72 + 0.28 * rib) * (1 - 0.35 * crev - 0.25 * seg) * (1 + 0.04 * mottle + 0.03 * grit)
-    base = (0.33, 0.33, 0.35) if polished else (0.30, 0.30, 0.32)
+    base = (0.33, 0.33, 0.35) if polished else (0.33, 0.31, 0.29)     # r39: basalt a WARM grey (beside blue deepslate)
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.01 * hue, 0.0 * hue, -0.01 * hue], -1)
     return H, tint(base, shade, jit)
@@ -2502,6 +2561,57 @@ def m_cobble_domed(F, n, cells=16, moss=0.15, base=(0.50, 0.50, 0.49)):
     return H, np.clip(alb, 0, 1)
 
 
+def m_mud_bricks(F, n):
+    """Mud bricks (r39): the battlefield wall's tower stands beside the eyes samplers in MUD_BRICKS + PACKED_MUD,
+    which had no texture of ours and rendered as vanilla's under our shader as a purple-grey with soot blotches
+    (eyes 41044148818). A warm tan sun-dried brick: four courses of two in a running bond like the clay bricks, the
+    tones close (tan, a touch of ochre, a paler one), soft worn edges, a darker packed-mud mortar, a few darker damp
+    blotches ~20% darker (not 60%)."""
+    courses, per = 4, 2
+    course = np.floor(F.v * courses).astype(int)
+    in_c = (F.v * courses) % 1.0
+    off = np.where(course % 2 == 0, 0.0, 0.5)
+    ju = (F.u * per + off) % 1.0
+    brick = (course * per + np.floor(F.u * per + off).astype(int)) % 64
+    chip = 0.004 * F.noise(8, 24, 0.5)
+    dv = np.minimum(in_c, 1 - in_c) / courses + chip
+    du = np.minimum(ju, 1 - ju) / per + chip
+    dj = np.minimum(dv, du)
+    face = smoothstep(0.010, 0.022, dj)
+    worn = smoothstep(0.010, 0.06, dj)
+    rng = F.rng
+    kind = rng.random(64)[brick]
+    tone = (0.90 + 0.20 * rng.random(64))[brick]
+    base = np.where(kind[..., None] < 0.6, np.array([0.62, 0.50, 0.34]),
+                    np.where(kind[..., None] < 0.85, np.array([0.58, 0.44, 0.28]), np.array([0.68, 0.58, 0.42])))
+    grain = F.noise(12, 40, 0.3)
+    blotch = smoothstep(0.6, 0.9, norm01(F.fbm(3, 3, 0.55))) * face
+    straw = smoothstep(2.3, 2.7, F.noise(16, 40, 0.0, sx=1.0, sy=5.0)) * face   # a few straw flecks in the clay
+    H = 0.30 + 0.5 * np.sqrt(worn) * face + 0.008 * grain + 0.02 * F.fbm(4, 3, 0.5) * face + 0.02 * straw
+    shade = tone * (0.84 + 0.14 * worn + 0.02 * grain) * (1 - 0.20 * blotch)
+    alb = base * shade[..., None]
+    mortar = np.array([0.46, 0.38, 0.27]) * (0.85 + 0.08 * grain)[..., None]
+    alb = alb * face[..., None] + mortar * (1 - face[..., None])
+    alb = alb * (1 - straw[..., None]) + straw[..., None] * np.array([0.78, 0.70, 0.48])
+    return H, np.clip(alb, 0, 1)
+
+
+def m_packed_mud(F, n):
+    """Packed mud (r39): the sun-dried earth the mud bricks are made of - a smooth tamped face, broad soft damp
+    blotches ~20% darker, a few hairline shrink cracks, straw flecks."""
+    clumps = F.fbm(3, 3, 0.55)
+    blotch = smoothstep(0.55, 0.9, norm01(F.fbm(2, 3, 0.55)))
+    grain = F.noise(12, 40, 0.3)
+    line = np.abs(F.warp(F.noise(2, 6, 0.5), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10)))
+    crack = (1 - smoothstep(0.0, 0.10, line)) * smoothstep(0.4, 0.8, norm01(F.noise(1, 3, 0.5)))
+    straw = smoothstep(2.4, 2.8, F.noise(16, 40, 0.0, sx=1.0, sy=5.0))      # sparse (a dense fleck field tiled)
+    H = 0.55 + 0.04 * clumps + 0.004 * grain - 0.10 * crack + 0.02 * straw
+    shade = (0.92 + 0.05 * clumps + 0.02 * grain) * (1 - 0.20 * blotch) * (1 - 0.30 * crack)
+    alb = tint((0.60, 0.48, 0.32), shade)
+    alb = alb * (1 - straw[..., None]) + straw[..., None] * np.array([0.78, 0.70, 0.48])
+    return H, np.clip(alb, 0, 1)
+
+
 def m_cracked_path(F, n, side):
     """Dirt path, round 34 (lovish's reference, Oct 30 05:43: a CRACKED DRY-EARTH path): packed, sun-baked earth
     broken into irregular polygon plates by dark cracks 1-3 texels wide (at 128), the plates' edges a little raised
@@ -2736,6 +2846,232 @@ def m_flagstone_sheet(F, blocks):
     shade = tone * (0.82 + 0.16 * worn) * (0.95 + 0.05 * cloud + 0.02 * grain - 0.08 * pores - 0.30 * crack)
     joint = np.array([0.40, 0.39, 0.38]) * (0.9 + 0.1 * grain)[..., None]
     alb = tint((0.55, 0.57, 0.61), shade) * slab[..., None] + joint * (1 - slab[..., None])
+    return H, np.clip(alb, 0, 1)
+
+
+# ------------------------------------------------------------------ round 38: powders, glazes, the odd blocks ------
+def m_concrete_powder(F, n, rgb):
+    """Concrete powder: dry pigment - a granular field of fine grains in soft clumps, matte, a little lighter and
+    less saturated than its concrete (the colour is pre-mixed by the caller)."""
+    grains = F.noise(14, 44, 0.2)
+    clumps = F.fbm(4, 3, 0.55)
+    fine = F.noise(30, 80, 0.0)
+    f1, f2, idx, k = F.voronoi(400, 1.0)
+    cell = 1.0 / math.sqrt(400)
+    crumb = np.clip(1 - (f1 / (0.6 * cell)) ** 2, 0, 1) * (F.rng.random(k) < 0.4)[idx]
+    H = 0.5 + 0.08 * clumps + 0.04 * grains + 0.02 * fine + 0.06 * crumb
+    shade = 0.92 + 0.06 * clumps + 0.04 * grains + 0.02 * fine + 0.05 * crumb
+    return H, tint(rgb, shade)
+
+
+def m_glazed(F, n, colour, kind):
+    """Glazed terracotta, round 38: our OWN motifs (never vanilla's designs) - one of four fantasy-medieval families
+    picked per colour: 'vine' (a curling tendril with leaves from one corner), 'star' (an eight-point star on a
+    quarter, its rays to the far corners), 'knot' (an interlaced band loop, open on two sides), 'scales' (a fish-
+    scale field with a quarter-rosette). Each motif is asymmetric, so vanilla's facing rotation lays four blocks
+    into a larger pattern. Glossy glaze: a crackle net in the relief and a faint line in the colour, the glaze
+    pooled darker at the tile's edges, smoothness ~200 (the recipe paints it: lower in the crackle)."""
+    base = np.asarray(colour, dtype=np.float64)
+    light = np.clip(base * 0.35 + 0.65 * np.array([0.95, 0.92, 0.85]), 0, 1)     # cream slip
+    dark = np.clip(base * 0.45, 0, 1)                                              # the dark line
+    u, v = F.u, F.v
+    motif = np.zeros((n, n))        # 1 = the light slip, -1 = the dark line, 0 = the glaze
+    if kind == "vine":
+        # a tendril curling out of the bottom-left corner: a thick dark stem along an arc, cream leaves (outlined
+        # discs with a dark midrib) alternating on each side of it, a curl at the tip
+        r = np.sqrt(u * u + (1 - v) ** 2)
+        ang = np.arctan2(1 - v, u)
+        stem = 1 - smoothstep(0.012, 0.03, np.abs(r - 0.66))
+        motif = np.where((stem > 0.5) & (ang > 0.08) & (ang < 1.45), -1.0, motif)
+        curl = 1 - smoothstep(0.012, 0.03, np.abs(np.sqrt((u - 0.10) ** 2 + (v - 0.38) ** 2) - 0.08))
+        motif = np.where((curl > 0.5) & (u > 0.10), -1.0, motif)
+        for i in range(4):
+            a = 0.25 + i * 0.36
+            rr = 0.66 + (0.13 if i % 2 == 0 else -0.13)
+            cx, cy = rr * math.cos(a), 1 - rr * math.sin(a)
+            d = np.sqrt((u - cx) ** 2 + (v - cy) ** 2)
+            motif = np.where(d < 0.085, 1.0, motif)                              # the leaf
+            motif = np.where((d > 0.070) & (d < 0.085), -1.0, motif)             # its outline
+            mid = np.abs((u - cx) * math.sin(a) + (v - cy) * math.cos(a)) < 0.008
+            motif = np.where(mid & (d < 0.07), -1.0, motif)                      # its midrib
+    elif kind == "star":
+        # an eight-point star on the top-right corner (a quarter shows: two squares, one turned 45 degrees), a dark
+        # core, a thin diagonal ray to the far corner, a cream dot there
+        du, dv = u - 1.0, v
+        sq1 = np.maximum(np.abs(du), np.abs(dv)) < 0.30
+        sq2 = (np.abs(du) + np.abs(dv)) < 0.44
+        r = np.sqrt(du * du + dv * dv)
+        motif = np.where(sq1 | sq2, 1.0, motif)
+        motif = np.where(r < 0.13, -1.0, motif)
+        diag = 1 - smoothstep(0.0, 0.015, np.abs(u - v))
+        motif = np.where((diag > 0.5) & (r > 0.50), -1.0, motif)
+        dots = np.sqrt((u - 0.18) ** 2 + (v - 0.82) ** 2) < 0.07
+        motif = np.where(dots, 1.0, motif)
+        motif = np.where(np.sqrt((u - 0.18) ** 2 + (v - 0.82) ** 2) < 0.03, -1.0, motif)
+    elif kind == "knot":
+        # an interlaced band: a loop whose two ends run off the left and bottom edges
+        d1 = np.abs(np.sqrt((u - 0.55) ** 2 + (v - 0.45) ** 2) - 0.30)
+        band = 1 - smoothstep(0.045, 0.065, d1)
+        line = 1 - smoothstep(0.0, 0.012, np.abs(d1 - 0.055))
+        out1 = (1 - smoothstep(0.045, 0.065, np.abs(v - 0.45))) * (u < 0.3)
+        out2 = (1 - smoothstep(0.045, 0.065, np.abs(u - 0.55))) * (v > 0.7)
+        motif = np.where((band > 0.5) | (out1 > 0.5) | (out2 > 0.5), 1.0, motif)
+        motif = np.where(line > 0.5, -1.0, motif)
+        motif = np.where((1 - smoothstep(0.0, 0.012, np.abs(np.abs(v - 0.45) - 0.055)) > 0.5) & (u < 0.3), -1.0, motif)
+        motif = np.where((1 - smoothstep(0.0, 0.012, np.abs(np.abs(u - 0.55) - 0.055)) > 0.5) & (v > 0.7), -1.0, motif)
+    else:   # scales
+        rows = 5
+        row = np.floor(v * rows)
+        uu = (u * rows + 0.5 * (row % 2)) % 1.0
+        vv = (v * rows) % 1.0
+        d = np.sqrt((uu - 0.5) ** 2 + (vv - 1.0) ** 2) * (1.0 / rows)
+        scale_line = 1 - smoothstep(0.0, 0.012, np.abs(d - 0.5 / rows))
+        motif = np.where(scale_line > 0.5, -1.0, motif)
+        shade_sc = smoothstep(0.3 / rows, 0.5 / rows, d)
+        motif = np.where((motif == 0) & (shade_sc > 0.6), 0.5, motif)
+        ros = np.sqrt((u - 0.0) ** 2 + (v - 0.0) ** 2)
+        motif = np.where(ros < 0.26, 1.0, motif)
+        motif = np.where(np.abs(ros - 0.26) < 0.015, -1.0, motif)
+        motif = np.where(ros < 0.10, -1.0, motif)
+    # the glaze: pooled darker toward the edges, a crackle net
+    e = np.minimum(np.minimum(u, 1 - u), np.minimum(v, 1 - v))
+    pool = 1 - smoothstep(0.0, 0.08, e)
+    f1, f2, idx, k = F.voronoi(140, 1.0)
+    crackle = 1 - smoothstep(0.0, 0.004, f2 - f1)
+    gloss = F.fbm(2, 3, 0.5)
+    alb = np.where(motif[..., None] > 0.75, light, np.where(motif[..., None] < -0.5, dark,
+                   np.where(motif[..., None] > 0.25, np.clip(base * 1.18, 0, 1), base)))
+    alb = alb * (1 - 0.22 * pool[..., None]) * (1 + 0.04 * gloss[..., None]) * (1 - 0.12 * crackle[..., None])
+    H = 0.6 + 0.02 * gloss - 0.03 * crackle + 0.03 * (motif > 0.75) - 0.02 * (motif < -0.5) - 0.02 * pool
+    smooth = np.clip(205 - 60 * crackle - 10 * pool, 80, 230)
+    return dict(H=H, alb=np.clip(alb, 0, 1), smooth=smooth)
+
+
+GLAZE_KIND = {"white": "star", "light_gray": "knot", "gray": "scales", "black": "vine", "brown": "knot",
+              "red": "star", "orange": "vine", "yellow": "star", "lime": "vine", "green": "scales",
+              "cyan": "knot", "light_blue": "scales", "blue": "star", "purple": "knot", "magenta": "vine",
+              "pink": "scales"}
+
+
+def m_crafting_table(F, n, face):
+    """Crafting table: an oak-planks box. 'top': a worked oak top with a 3 x 3 grid scored into it (saw marks and a
+    few nicks); 'front': the planks with two hung tools - a saw blade and a hammer - as painted silhouettes in
+    relief; 'side': the planks with a drawer (a recessed panel with an iron pull)."""
+    H, alb = m_planks(F, n, (0.66, 0.51, 0.31), 0.012)
+    H = H * 0.6 + 0.2
+    if face == "top":
+        gx = np.abs(((F.u * 3) % 1.0) - 0.5)
+        gy = np.abs(((F.v * 3) % 1.0) - 0.5)
+        score = np.maximum(smoothstep(0.45, 0.49, gx), smoothstep(0.45, 0.49, gy))     # 1 on the grid's lines
+        rim = frame(F, 0.06, 0.012)
+        nick = smoothstep(0.85, 0.97, norm01(F.noise(6, 18, 0.4)))
+        H = H - 0.14 * score - 0.06 * nick + 0.06 * (1 - rim)
+        alb = alb * (1 - 0.35 * score - 0.15 * nick + 0.06 * (1 - rim))[..., None]
+        return H, np.clip(alb, 0, 1)
+    if face == "side":
+        panel = frame(F, 0.14, 0.02) * (1 - frame(F, 0.30, 0.02))     # a drawer front: a raised border
+        inner = frame(F, 0.30, 0.02)
+        pull = 1 - smoothstep(0.03, 0.045, np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2))
+        H = H + 0.08 * panel - 0.04 * inner + 0.15 * pull
+        alb = alb * (1 + 0.08 * panel - 0.06 * inner)[..., None]
+        alb = np.where(pull[..., None] > 0.5, np.array([0.30, 0.30, 0.32]), alb)
+        return H, np.clip(alb, 0, 1)
+    # front: a saw (a blade with teeth) on the left, a hammer on the right, hung on the planks
+    blade = (F.u > 0.12) & (F.u < 0.42) & (F.v > 0.25) & (F.v < 0.60) & (F.v > 0.25 + 0.6 * (F.u - 0.12))
+    teeth = ((F.u * 40) % 1.0) < 0.5
+    blade = blade & ~((F.v > 0.25 + 0.6 * (F.u - 0.12) - 0.0) & (F.v < 0.25 + 0.6 * (F.u - 0.12) + 0.03) & ~teeth)
+    handle = (F.u > 0.08) & (F.u < 0.20) & (F.v > 0.55) & (F.v < 0.80)
+    head = (F.u > 0.56) & (F.u < 0.86) & (F.v > 0.22) & (F.v < 0.36)
+    shaft = (F.u > 0.68) & (F.u < 0.75) & (F.v > 0.36) & (F.v < 0.82)
+    iron = np.array([0.58, 0.58, 0.60]) * (0.9 + 0.1 * brushed(F, 0.6))[..., None]
+    wood = np.array([0.40, 0.28, 0.16])
+    alb = np.where((blade | head)[..., None], iron, alb)
+    alb = np.where((handle | shaft)[..., None], wood * (0.9 + 0.2 * F.noise(8, 30, 0.4))[..., None], alb)
+    H = np.where(blade | head | handle | shaft, 0.85, H)
+    return H, np.clip(alb, 0, 1)
+
+
+def m_rooted_dirt(F, n):
+    """Rooted dirt: our dirt crossed by a net of pale fibrous roots, thick and thin, a few knots."""
+    Hd, ad = m_dirt(F, n)
+    line = np.abs(F.warp(F.noise(2, 6, 0.6), 0.03 * F.noise(3, 9), 0.03 * F.noise(3, 9)))
+    thick = 1 - smoothstep(0.0, 0.30, line)                  # ~3 texels (unit-std noise: 0.035 was a third of one)
+    line2 = np.abs(F.warp(F.noise(4, 12, 0.6), 0.02 * F.noise(4, 10), 0.02 * F.noise(4, 10)))
+    thin = (1 - smoothstep(0.0, 0.14, line2)) * smoothstep(0.3, 0.7, norm01(F.noise(1, 4, 0.5)))
+    root = np.clip(thick + 0.7 * thin, 0, 1)
+    root_rgb = np.array([0.72, 0.62, 0.46]) * (0.85 + 0.3 * norm01(F.noise(10, 30, 0.3)))[..., None]
+    alb = ad * (1 - root[..., None]) + root_rgb * root[..., None]
+    return Hd + 0.14 * root, np.clip(alb, 0, 1)
+
+
+def m_mushroom_stem(F, n):
+    """Mushroom stem: a pale fibrous stalk - long vertical fibres, a soft lumpy surface, a few darker bruises."""
+    fib = F.noise(6, 30, 0.4, sx=1.0, sy=8.0)
+    lumps = F.fbm(3, 3, 0.55, sx=1.0, sy=2.0)
+    bruise = smoothstep(0.7, 0.95, norm01(F.fbm(2, 3, 0.5)))
+    H = 0.55 + 0.08 * lumps + 0.03 * fib
+    shade = 0.90 + 0.06 * lumps + 0.04 * fib - 0.12 * bruise
+    return H, tint((0.82, 0.78, 0.70), shade)
+
+
+def m_composter(F, n, face):
+    """Composter: spruce slats bound by two iron hoops ('side'), the open top's rim ('top': a square ring of slat
+    ends round a dark void), 'bottom' the floor of slats, 'compost' a bed of brown leaf litter and crumbs, 'ready'
+    the finished compost with bone-meal flecks."""
+    if face in ("compost", "ready"):
+        Hd, ad = m_dirt(F, n)
+        litter = smoothstep(0.5, 0.85, norm01(F.noise(6, 18, 0.4)))
+        alb = ad * np.array([0.9, 0.85, 0.75]) * (1 - 0.25 * litter)[..., None] + litter[..., None] * np.array([0.45, 0.32, 0.14])
+        if face == "ready":
+            fl = smoothstep(2.0, 2.6, F.noise(20, 50, 0.0))
+            alb = alb * (1 - fl[..., None]) + fl[..., None] * np.array([0.90, 0.90, 0.82])
+        return Hd, np.clip(alb, 0, 1)
+    H, alb = m_planks(F, n, (0.46, 0.34, 0.20), 0.012)
+    H, alb = np.rot90(H), np.rot90(alb)                   # upright slats
+    alb = alb * 0.9
+    if face == "side":
+        hoop = ((np.abs(F.v - 0.22) < 0.045) | (np.abs(F.v - 0.78) < 0.045)).astype(np.float64)
+        iron = np.array([0.30, 0.30, 0.32]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None]
+        alb = np.where(hoop[..., None] > 0.5, iron, alb)
+        H = np.where(hoop > 0.5, H + 0.12, H)
+        return H, np.clip(alb, 0, 1)
+    if face == "top":
+        e = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+        inner = smoothstep(0.11, 0.13, e)                 # 1 inside the rim: the dark void
+        alb = np.where(inner[..., None] > 0.5, np.array([0.08, 0.06, 0.04]), alb * 1.05)
+        H = np.where(inner > 0.5, 0.1, 0.85)
+        return H, np.clip(alb, 0, 1)
+    return H, np.clip(alb, 0, 1)
+
+
+def m_note_block(F, n, kind):
+    """Note block ('note'): an oak box with a round speaker grille of holes on each face; jukebox side ('jukebox'): the
+    box with a brass inlay band; jukebox top ('jukebox_top'): the lid with a dark record slot."""
+    H, alb = m_planks(F, n, (0.50, 0.36, 0.20), 0.012)
+    H = H * 0.6 + 0.2
+    if kind == "note":
+        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+        disc = 1 - smoothstep(0.27, 0.29, r)
+        ring = (1 - smoothstep(0.0, 0.02, np.abs(r - 0.28)))
+        hx, hy = ((F.u * 14) % 1.0) - 0.5, ((F.v * 14) % 1.0) - 0.5
+        holes = (1 - smoothstep(0.18, 0.26, np.sqrt(hx * hx + hy * hy))) * disc
+        alb = alb * (1 - 0.35 * disc)[..., None]
+        alb = np.where(holes[..., None] > 0.5, np.array([0.06, 0.05, 0.04]), alb)
+        alb = np.where(ring[..., None] > 0.5, np.array([0.62, 0.50, 0.22]), alb)   # a brass ring
+        H = H - 0.10 * disc - 0.15 * holes + 0.08 * ring
+        return H, np.clip(alb, 0, 1)
+    if kind == "jukebox":
+        band = ((F.v > 0.40) & (F.v < 0.52)).astype(np.float64)
+        inlay = band * (1 - smoothstep(0.0, 0.01, np.abs(((F.u * 6) % 1.0) - 0.5) - 0.25))
+        brass = np.array([0.70, 0.56, 0.24]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None]
+        alb = np.where(band[..., None] > 0.5, brass * (1 - 0.3 * inlay)[..., None], alb)
+        H = H + 0.06 * band - 0.04 * inlay
+        return H, np.clip(alb, 0, 1)
+    rim = frame(F, 0.08, 0.015)
+    slot = ((np.abs(F.v - 0.5) < 0.025) & (F.u > 0.2) & (F.u < 0.8)).astype(np.float64)
+    alb = alb * (0.92 + 0.08 * rim)[..., None]
+    alb = np.where(slot[..., None] > 0.5, np.array([0.05, 0.05, 0.05]), alb)
+    H = H + 0.06 * rim - 0.2 * slot
     return H, np.clip(alb, 0, 1)
 
 
@@ -3656,7 +3992,10 @@ def turned(scalars, vec, k, mirror=False, roll=False):
     return [np.rot90(a, k) for a in scalars], (np.rot90(nx, k), np.rot90(ny, k))
 
 
-def variant_mask(n, i, feather=3.0):
+VARIANT_MARGIN = (0.075, 0.03, 0.012, 0.04, 0.11)   # the band's width: base, slow wander, fine wander, min, max
+
+
+def variant_mask(n, i, feather=3.0, margin=VARIANT_MARGIN):
     """Where variant i shows its own copy: 1 inside an irregular blob, 0 in a thin border band (4-11% of the block
     from each edge, its width wandering), soft over `feather` texels. Variant 0 is the tile itself (all 0). The band
     is thin so the share of every block that is the same tile stays small (S4: the repeat at one block)."""
@@ -3664,7 +4003,8 @@ def variant_mask(n, i, feather=3.0):
         return np.zeros((n, n))
     F = Field(n, 2800 + 31 * i)                      # its own seed: the same blob for every scan material
     edge = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
-    margin = np.clip(0.075 + 0.03 * F.noise(1, 6, 0.6) + 0.012 * F.noise(6, 20, 0.3), 0.04, 0.11)
+    m0, slow, fine, lo, hi = margin
+    margin = np.clip(m0 + slow * F.noise(1, 6, 0.6) + fine * F.noise(6, 20, 0.3), lo, hi)
     return smoothstep(margin, margin + feather / n, edge)
 
 
@@ -3688,7 +4028,30 @@ def blend_maps(alb, n_img, s_img, other, m):
     return mix(alb, alb2), out_n, out_s
 
 
-def variant_maps(alb, n_img, s_img, i):
+# r39 (eyes 41044148818: "lighter rectangles" and straight bands on the lawn): every variant shows the SAME tile in
+# its border band, so whatever clump pattern lies in that ring repeats on every block as a lattice. The grass top
+# flattens its clump field inside the shared ring (clover_lawn: variant_frame), blends its blobs over 16 texels
+# instead of 3, and turns its copies without the half-block roll (a rolled copy would carry its calm frame through
+# the block's centre as a cross).
+VARIANT_FEATHER = {"grass_block_top": 8.0}
+# the grass top's band is thin (2.5-5.5% of the block: the seam only needs the mips to match, 8-12 texels at 256) so
+# the calm ring that every block shares stays a couple of screen pixels wide at the RTS zoom
+VARIANT_MARGIN_OF = {"grass_block_top": (0.04, 0.012, 0.006, 0.025, 0.055)}
+VARIANT_TRANSFORMS_UNROLLED = [None, (1, False, False), (2, False, False), (3, False, False), (0, True, False),
+                               (2, True, False)]
+VARIANT_TRANSFORMS_OF = {"grass_block_top": VARIANT_TRANSFORMS_UNROLLED}
+
+
+def variant_frame(n, feather, margin=VARIANT_MARGIN):
+    """Where ANY variant shows the tile itself (the union of the border bands, 1 in the band, 0 inside every blob):
+    a periodic material that flattens its large features here hides the ring that every block shares."""
+    frame = np.zeros((n, n))
+    for i in range(1, 6):
+        frame = np.maximum(frame, 1 - variant_mask(n, i, feather, margin))
+    return frame
+
+
+def variant_maps(alb, n_img, s_img, i, feather=3.0, transforms=None, margin=VARIANT_MARGIN):
     """Variant i of a scan material's FINAL maps: its own transformed copy inside variant_mask's blob, the tile
     itself in the border band (blend_maps)."""
     if i == 0:
@@ -3697,8 +4060,8 @@ def variant_maps(alb, n_img, s_img, i):
     nf = n_img.astype(np.float64) / 255.0
     vec = (nf[..., 0] * 2 - 1, nf[..., 1] * 2 - 1)
     (alb2, ao2, h2, s2), nxy2 = turned([alb, nf[..., 2], nf[..., 3], s_img.astype(np.float64)], vec,
-                                       *VARIANT_TRANSFORMS[i])
-    return blend_maps(alb, n_img, s_img, (alb2, nxy2, ao2, h2, s2), variant_mask(n, i))
+                                       *(transforms or VARIANT_TRANSFORMS)[i])
+    return blend_maps(alb, n_img, s_img, (alb2, nxy2, ao2, h2, s2), variant_mask(n, i, feather, margin))
 
 
 def finished(name, seed, n):
@@ -3801,16 +4164,20 @@ def clover_lawn(F, n):
     warm = np.zeros((n, n))                 # hue: +1 warm (yellow), -1 cool (blue-green)
     mound = F.fbm(3, 3, 0.5) + 0.5 * F.noise(6, 14, 0.5)     # the clumps: where the turf heaps up (1/10-1/4 block)
     mound = norm01(mound)
-    floor = -0.40 * (1 - mound)             # the gaps lie lower
-    H += 0.30 * mound
+    # r39: no clumps in the ring every variant shares (variant_frame) - the ring repeats on every block, and a clump
+    # in it drew a lattice of lighter rectangles in game; the blobs' turned copies carry the clumps instead
+    frame = F.blur(variant_frame(n, VARIANT_FEATHER["grass_block_top"], VARIANT_MARGIN_OF["grass_block_top"]), n / 64)
+    mound = 0.5 + (mound - 0.5) * (1 - frame)
+    floor = -0.30 * (1 - mound)             # the gaps lie lower
+    H += 0.45 * mound                       # r39: the clumps carry the relief (0.30 -> 0.45), the leaf steps less
     count = int(0.0030 * n * n)             # ~200 plants per tile at 256
     leaf_r = n / 38.0
     # each plant: a level (its height in the canopy), a tone band (3 bands) and a hue lean
     px, py = rng.random(count) * n, rng.random(count) * n
     mi = mound[np.minimum((py).astype(int), n - 1), np.minimum((px).astype(int), n - 1)]
-    level = 0.40 * mi + 0.35 * rng.random(count) * (0.4 + 0.6 * mi)
+    level = 0.25 * mi + 0.20 * rng.random(count) * (0.4 + 0.6 * mi)   # r39: shallower canopy steps (0.40 / 0.35)
     band = rng.integers(3, size=count)
-    tone = np.array([0.84, 1.0, 1.16])[band] * (0.97 + 0.06 * rng.random(count))
+    tone = np.array([0.90, 1.0, 1.10])[band] * (0.97 + 0.06 * rng.random(count))   # r39: calmer leaf-to-leaf
     lean = rng.standard_normal(count)
     rot = rng.random(count) * 2 * math.pi
     tilt_a = rng.random(count) * 2 * math.pi          # r36: each plant leans toward its own light direction
@@ -3837,15 +4204,15 @@ def clover_lawn(F, n):
             notch = smoothstep(0.55, 0.9, along) * (1 - smoothstep(0.0, 0.35, np.abs(across)))
             inside = (rr < 1.0) & (notch < 0.5)
             dome = np.clip(1 - rr * rr, 0, 1) * inside
-            h = lv + 0.12 * np.sqrt(dome)           # a cushion: steep only at its rim
+            h = lv + 0.07 * np.sqrt(dome)           # a cushion: steep only at its rim (r39: 0.12 -> 0.07)
             sub = H[np.ix_(win_y, win_x)]
             above = inside & (h > sub)
             H[np.ix_(win_y, win_x)] = np.where(above, h, sub)
             # the leaflet's shade: its tone band, a lit centre, a darker rim (self-shadow of the leaf above)
-            rim = 1 - 0.42 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim: the leaf's edge over its neighbour
+            rim = 1 - 0.30 * (1 - smoothstep(0.0, 0.30, dome))        # a dark rim: the leaf's edge over its neighbour
             vein = 1 + 0.10 * (1 - smoothstep(0.0, 0.12, np.abs(across))) * (along > -0.2)
             tiltl = (dx * tx[i] + dy * ty[i]) / R                       # r36: the leaf's own tilt (one side lit)
-            lit = tone[i] * (0.70 + 0.40 * dome) * (1 + 0.20 * tiltl) * rim * vein
+            lit = tone[i] * (0.78 + 0.26 * dome) * (1 + 0.14 * tiltl) * rim * vein
             s_sub = shade[np.ix_(win_y, win_x)]
             shade[np.ix_(win_y, win_x)] = np.where(above, lit, s_sub)
             w_sub = warm[np.ix_(win_y, win_x)]
@@ -3859,7 +4226,10 @@ def clover_lawn(F, n):
     warm = np.where(bl, warm + 0.8, warm)
     # the clumps: their crowns catch the light, the gaps between them lie in shadow (this is what the RTS camera
     # sees - 3-8 px wide at 32 px per block); plus the leaves' own self-shadow where the canopy drops
-    shade = shade * (0.78 + 0.40 * mound)
+    shade = shade * (0.70 + 0.55 * mound)                # r39: the clumps carry more of the spread (eyes 41044148818:
+    # the lawn read as single-frequency speckle, std 0.10 vs the benchmark's 0.06, with no macro variation)
+    shade = shade * (1 - 0.09 * frame)                   # the ring, flatter and unshadowed, lit ~2.5% brighter than
+    # the clumps (measured on the finished maps): 9% here is 2.5% after the fit scales the spread to its target
     rel = H - F.blur(H, n / 40)
     shadow = smoothstep(0.0, 0.25, -rel)
     shade = shade * (1 - 0.40 * shadow)
@@ -3880,6 +4250,8 @@ def clover_lawn(F, n):
     warm = np.where(fl, 1.5, warm)
     hue = np.clip(warm, -1.5, 1.5)
     alb = np.clip(np.stack([shade * (1 + 0.05 * hue), shade * (1 + 0.01 * hue), shade * (1 - 0.06 * hue)], -1) * 0.55, 0, 1)
+    alb = np.clip(alb * np.array([1.14, 1.0, 0.80]), 0, 1)   # r39: the mean ~6 degrees toward yellow-green (the fit
+    # scales the cast down with the leaf-to-leaf spread when it sets sat, so it is pushed hard here)
     return H, alb, flowers
 
 
@@ -3903,7 +4275,9 @@ def scan_textures(base, i, n):
     d = SCAN_BASES[base](F, n)
     alb = tone_limits(mid_band(F, soften(F, fit_albedo(d["alb"], t), t), t), t)
     n_img, s_img, k = maps(F, d["H"], t, None, d.get("nxy"))
-    alb, n_img, s_img = variant_maps(alb, n_img, s_img, i)
+    alb, n_img, s_img = variant_maps(alb, n_img, s_img, i, feather=VARIANT_FEATHER.get(base, 3.0),
+                                     transforms=VARIANT_TRANSFORMS_OF.get(base),
+                                     margin=VARIANT_MARGIN_OF.get(base, VARIANT_MARGIN))
     return dict(alb=alb, H=d["H"], maps=(n_img, s_img), k=k)
 
 
@@ -4582,8 +4956,8 @@ def recipes():
         R[name] = _cutout(lambda F, n, a=(count, length, width, round_tip): m_leaves(F, n, *a))
     plain = {
         # round 11: the other factions' buildings
-        "polished_blackstone": lambda F, n: m_polished(F, n, (0.20, 0.18, 0.20), 0.08, 0.06),
-        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
+        "polished_blackstone": lambda F, n: m_polished(F, n, (0.21, 0.18, 0.23), 0.08, 0.06),   # r39: violet
+        "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
         # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
         # r33 (critic: "micro-mesh" - 4 x 4 with wide dark joints): 3 x 3 larger tiles in a running bond, the joints
@@ -4653,7 +5027,7 @@ def recipes():
         # r21: 20-56 per block flecks read as pepper at RTS zoom - fewer, larger dark crystal clusters
         "polished_diorite": lambda F, n: m_polished(F, n, (0.84, 0.84, 0.82), 0.08, 0.16, fleck=(6, 18)),
         # r21 (reviewer: "high-contrast light speckle on black, pepper at RTS"): crystals closer in tone and larger
-        "blackstone": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.6, (8, 20)),
+        "blackstone": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.6, (8, 20)),   # r39: violet-black
         # r22 (shader review: "purple cobble-cell pattern, no glassy darkness"): volcanic glass is near black with only
         # a faint violet depth - mottle 0.20 -> 0.06
         # r22b (eyes: a flat dark-brown cake, the flecks invisible): 3-5 large conchoidal planes of cool black glass,
@@ -4665,9 +5039,9 @@ def recipes():
         # round 14: cracked / chiseled variants, metals and gems, the structure preview's gaps
         "cracked_stone_bricks": lambda F, n: m_stone_bricks(F, n, cracks=1.0),   # r31: the plain layout
         "cracked_deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32), cracks=1.0),
-        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21), cracks=1.0),
+        "cracked_polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.18, 0.23), cracks=1.0),
         "chiseled_nether_bricks": lambda F, n: m_chiseled(F, n, (0.30, 0.12, 0.14)),
-        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.19, 0.21)),
+        "chiseled_polished_blackstone": lambda F, n: m_chiseled(F, n, (0.21, 0.18, 0.23)),
         "reinforced_deepslate_side": lambda F, n: m_reinforced(F, n, False),
         "reinforced_deepslate_top": lambda F, n: m_reinforced(F, n, True),
         # r32 (critic: smooth basalt vs basalt identical): a cut, calm face with a faint 2x2 seam, a hair of rim
@@ -4690,7 +5064,7 @@ def recipes():
         "blue_terracotta": lambda F, n: m_terracotta(F, n, (0.30, 0.36, 0.52), flash=(0.94, 0.95, 0.99)),
         "podzol_side": m_podzol_side,
         # round 15: the face census's partial blocks
-        "blackstone_top": lambda F, n: m_igneous(F, n, (0.17, 0.15, 0.17), (0.215, 0.20, 0.22), 0.65, (8, 20)),
+        "blackstone_top": lambda F, n: m_igneous(F, n, (0.19, 0.14, 0.21), (0.23, 0.19, 0.25), 0.65, (8, 20)),
         "quartz_block_top": lambda F, n: m_quartz(F, n, "block_top"),
         "quartz_block_side": lambda F, n: m_quartz(F, n, "block_side"),
         "crimson_stem": lambda F, n: m_stem(F, n, (0.36, 0.12, 0.18), (0.72, 0.22, 0.24)),
@@ -4753,6 +5127,24 @@ def recipes():
     R["chiseled_bookshelf_side"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "side"))
     R["chiseled_bookshelf_empty"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "empty"))
     R["chiseled_bookshelf_occupied"] = _plain(lambda F, n: m_chiseled_bookshelf(F, n, "occupied"))
+    for colour, (_w, k_rgb, _t) in DYES.items():                # round 38
+        R[colour + "_concrete_powder"] = _plain(lambda F, n, c=powder_colour(k_rgb): m_concrete_powder(F, n, c))
+        gl = tuple(0.55 * a + 0.45 * b for a, b in zip(k_rgb, _t))
+        R[colour + "_glazed_terracotta"] = _parts(lambda F, n, c=gl, kd=GLAZE_KIND[colour]: m_glazed(F, n, c, kd))
+    for stage, name in enumerate(("copper_block", "exposed_copper", "weathered_copper", "oxidized_copper")):
+        R[name] = _parts(lambda F, n, st=stage: _d4(m_copper(F, n, st, plate=True)))
+    R["crafting_table_top"] = _plain(lambda F, n: m_crafting_table(F, n, "top"))
+    R["crafting_table_side"] = _plain(lambda F, n: m_crafting_table(F, n, "side"))
+    R["crafting_table_front"] = _plain(lambda F, n: m_crafting_table(F, n, "front"))
+    R["rooted_dirt"] = _plain(m_rooted_dirt)
+    R["mushroom_stem"] = _plain(m_mushroom_stem)
+    for f in ("side", "top", "bottom", "compost", "ready"):
+        R["composter_" + f] = _plain(lambda F, n, ff=f: m_composter(F, n, ff))
+    R["mud_bricks"] = _plain(m_mud_bricks)                     # round 39
+    R["packed_mud"] = _plain(m_packed_mud)
+    R["note_block"] = _plain(lambda F, n: m_note_block(F, n, "note"))
+    R["jukebox_side"] = _plain(lambda F, n: m_note_block(F, n, "jukebox"))
+    R["jukebox_top"] = _plain(lambda F, n: m_note_block(F, n, "jukebox_top"))
     R["exposed_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 1)))
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
