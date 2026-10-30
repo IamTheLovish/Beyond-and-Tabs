@@ -219,6 +219,12 @@ public final class MistPass {
         lr = Math.min(0.97f, lr * (1 - warm) + 0.94f * warm);
         lg = Math.min(0.97f, lg * (1 - warm) + 0.94f * warm);
         lb = Math.min(0.97f, lb * (1 - warm) + 0.91f * warm);
+        // r11f: pre-divided by the grade's highlight tint (WorldLookPass.highlightTint) - the grade runs after this pass,
+        // and Enchanted's gold (1.09, 1, 0.85) turned r11e's white strands cream (eyes r54: hue 40, sat 0.20)
+        float[] ht = com.solegendary.reignofnether.postfx.WorldLookPass.highlightTint();
+        lr = Math.min(0.97f, lr / Math.max(ht[0], 0.5f));
+        lg = Math.min(0.97f, lg / Math.max(ht[1], 0.5f));
+        lb = Math.min(0.97f, lb / Math.max(ht[2], 0.5f));
         float cl = 0.2126f * c[0] + 0.7152f * c[1] + 0.0722f * c[2];
         if (litU != null) litU.set(lr, lg, lb);
         if (deepU != null) deepU.set(0.70f * cl / 0.9f, 0.73f * cl / 0.9f, 0.80f * cl / 0.9f);

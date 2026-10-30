@@ -154,7 +154,8 @@ Bank bankAt(vec3 k, float fogShare, float local, float cov) {
     // r11e: cov = cellCover at the ray's middle (the strands; computed once per pixel)
     // r11b (eyes r48: over the water one uniform faint sheet - 0.35 + 0.85 x cov saturated the body everywhere):
     // the large noise now opens real gaps between strands
-    b.cover = local * (2.2 * cov - 0.6) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
+    // r11f: the banks fall off faster (local^1.6; mist lab: lawn cover 0.18 -> 0.10) - r54 laid a heavy sheet on the bank
+    b.cover = pow(local, 1.6) * (2.2 * cov - 0.6) + 0.12 * fogShare * smoothstep(0.0, 0.25, local);
     float billow = vnoise(vec3(k.x * 0.11, Time * 0.03, k.z * 0.2)) - 0.5;
     b.top = 1.0 + 3.6 * smoothstep(0.32, 0.78, b.cover) + 1.4 * billow;
     return b;
