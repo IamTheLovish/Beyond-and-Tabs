@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.production.ActiveProduction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
@@ -210,10 +211,15 @@ public class BuildProgressBarClientEvents {
             RenderSystem.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
             HealthBarClientEvents.renderProgress(pose, frac, 0, 0, BAR_WIDTH, mode, r, g, bl);
 
-            String text = eta.text;
-            float tw = font.width(text);
-            font.drawInBatch(text, -tw / 2f, -10, 0xFFFFFFFF, false, pose.last().pose(), buffers,
-                    Font.DisplayMode.SEE_THROUGH, 0x60000000, 0xF000F0);
+            // a White Angel site rising: no floating text in the scene (construction round 13 critic: the "ETA 0:10" in
+            // the world competed with the build front) - the bar stays, the ETA is in the building's panel
+            // (PortraitRendererBuilding, constructionEta)
+            if (build == null || FactionTraits.of(b.getFaction()) != FactionTraits.SUNFORGED) {
+                String text = eta.text;
+                float tw = font.width(text);
+                font.drawInBatch(text, -tw / 2f, -10, 0xFFFFFFFF, false, pose.last().pose(), buffers,
+                        Font.DisplayMode.SEE_THROUGH, 0x60000000, 0xF000F0);
+            }
             pose.popPose();
             drawn++;
         }
@@ -233,6 +239,17 @@ public class BuildProgressBarClientEvents {
             return px * px + py * py + pz * pz < r * r;
         }
         return dx * dx + dy * dy + dz * dz < FIRST_PERSON_RANGE * FIRST_PERSON_RANGE;
+    }
+
+    /**
+     * A rising site's time to finish as "m:ss" for the building's panel, or null while no rate is known (stalled, just
+     * started, finished). Read only; the estimate is the same one the world bar shows.
+     */
+    public static String constructionEta(BuildingPlacement b) {
+        Eta e = b == null || b.isBuilt ? null : BUILD_ETAS.get(b);
+        if (e == null || !e.text.startsWith("ETA ") || e.text.endsWith("--:--"))
+            return null;
+        return e.text.substring(4);
     }
 
     /** "ETA m:ss" from the smoothed rate, "ETA --:--" while stalled or before a rate is known. */

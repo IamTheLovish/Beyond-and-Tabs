@@ -87,8 +87,11 @@ public class PortraitRendererBuilding {
             name = building.getUpgradedName();
 
         name += com.solegendary.reignofnether.building.BuildingStats.titleSuffix(building);   // " (Lv 2)" on a levelled lab
-        if (!building.isBuilt)
-            name += " (" + (int) (building.getBlocksPlacedPercent() * 100) + "%)";
+        if (!building.isBuilt) {
+            // the time to finish lives here, not floating in the scene over a White Angel site (construction round 13)
+            String eta = com.solegendary.reignofnether.healthbars.BuildProgressBarClientEvents.constructionEta(building);
+            name += " (" + (int) (building.getBlocksPlacedPercent() * 100) + "%" + (eta != null ? ", " + eta : "") + ")";
+        }
 
         // the owner goes on its own small line above the title instead of a " (Owner)" suffix, which pushed long
         // names like "Metal Extractor (Bot3 (medium))" into an ellipsis that hid both the owner and the income
