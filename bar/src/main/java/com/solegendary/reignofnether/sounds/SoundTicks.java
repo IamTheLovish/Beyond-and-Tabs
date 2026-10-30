@@ -19,6 +19,11 @@ public final class SoundTicks {
     private SoundTicks() { }
 
     public static long now() {
-        return Util.getMillis() / 50L;
+        return of(Util.getMillis());
+    }
+
+    /** The tick at a real-time clock reading (Util.getMillis()). */
+    public static long of(long millis) {
+        return millis / 50L;
     }
 }
