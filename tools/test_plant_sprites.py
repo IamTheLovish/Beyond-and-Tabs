@@ -372,9 +372,12 @@ class Flowers(unittest.TestCase):
         cls.drawn = {k: ps.flower(N, np.random.default_rng(100 + i), k) for i, k in enumerate(FLOWER_NAMES)}
 
     def test_every_flower_is_ours_appended_and_mipped(self):
-        self.assertEqual(tuple(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES):]), FLOWER_NAMES,
-                         "the flowers go at the END of SEED_ORDER (seeds follow the order)")
-        self.assertEqual(gen_blocks.SEED_ORDER[-len(FLOWER_NAMES) - 1], "fern_b_t", "appended after r35's last")
+        # the flowers were appended as one block after r35's last plant (seeds follow the order); later rounds append
+        # after them (r40: the leftovers), so the check is their place, not the end of the tuple
+        i = gen_blocks.SEED_ORDER.index("dandelion")
+        self.assertEqual(tuple(gen_blocks.SEED_ORDER[i:i + len(FLOWER_NAMES)]), FLOWER_NAMES,
+                         "the flowers are one appended block in SEED_ORDER (seeds follow the order)")
+        self.assertEqual(gen_blocks.SEED_ORDER[i - 1], "fern_b_t", "appended after r35's last")
         for k in FLOWER_NAMES:
             self.assertIn(k, gen_blocks.RECIPES)
             self.assertIn(k, gen_blocks.CUTOUT)
