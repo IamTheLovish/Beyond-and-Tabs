@@ -167,15 +167,15 @@ TARGETS = {
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
     # flat dark slab (reviewer, eyes run 39548166615); the reference's numbers were for a lit flat view
-    "spruce_log":       dict(luma=0.19, std=0.070, sat=0.46, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart
+    "spruce_log":       dict(luma=0.22, std=0.085, sat=0.46, tilt=26.2, smooth=40, pore=36),   # r53: the flakes apart; r54: lifted 0.19 -> 0.22, std 0.085 (near-black at 30 px)
     "spruce_log_top":   dict(luma=0.31, std=0.075, sat=0.49, tilt=12.0, smooth=40, pore=30),
-    "birch_log":        dict(luma=0.85, std=0.140, sat=0.06, tilt=26.0, smooth=50, pore=30),
+    "birch_log":        dict(luma=0.72, std=0.210, sat=0.06, tilt=12.0, smooth=50, pore=30),   # r54: 2-3 dark bands (~0.25) on the 0.80 paper carry the spread; tilt 26 -> 12 (the paper's relief lit as speckle at 30 px)
     "birch_log_top":    dict(luma=0.67, std=0.110, sat=0.35, tilt=12.0, smooth=40, pore=30),
-    "acacia_log":       dict(luma=0.35, std=0.063, sat=0.19, tilt=26.1, smooth=40, pore=36),
+    "acacia_log":       dict(luma=0.35, std=0.080, sat=0.19, tilt=26.1, smooth=40, pore=36),   # r54: std 0.063 -> 0.080
     "acacia_log_top":   dict(luma=0.41, std=0.053, sat=0.63, tilt=12.0, smooth=40, pore=30),
-    "jungle_log":       dict(luma=0.29, std=0.070, sat=0.57, tilt=31.2, smooth=40, pore=36),
+    "jungle_log":       dict(luma=0.29, std=0.085, sat=0.57, tilt=31.2, smooth=40, pore=36),   # r54: std 0.070 -> 0.085
     "jungle_log_top":   dict(luma=0.43, std=0.100, sat=0.55, tilt=12.0, smooth=40, pore=30),
-    "dark_oak_log":     dict(luma=0.23, std=0.070, sat=0.49, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart
+    "dark_oak_log":     dict(luma=0.21, std=0.080, sat=0.49, tilt=31.3, smooth=40, pore=36),   # r53: the blocks apart; r54: darker, coarser than oak
     "dark_oak_log_top": dict(luma=0.21, std=0.039, sat=0.61, tilt=12.0, smooth=40, pore=30),
     # round 11: the other factions' buildings (structure census) - single-block numbers from pack-study 38760372803
     # (reference) beside 38760380796 (vanilla); std a little under the reference where rts_view says busy
@@ -2156,13 +2156,23 @@ def m_birch_log(F, n):
     branches fell or the bark cracked."""
     # r53 (the in-game critic): the lenticel bands at a quarter-block rhythm and twice as wide, the black patches
     # as diamonds (wider than tall, pointed ends) - at ~30 px per block r17's fine dashes were under a screen pixel
-    paper = F.fbm(3, 4, 0.5, sx=3.0, sy=1.0)
-    dash = np.abs(F.warp(F.noise(3, 10, 0.5, sx=10.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8)))   # long along u: across
-    lent = (1 - smoothstep(0.0, 0.09, dash)) * smoothstep(0.2, 0.7, F.noise(5, 16, 0.4))
+    # r54 (the critic in the camera simulator: "the lenticels are static speckle", micro 0.108): what reads on a birch
+    # at the RTS camera is 2-3 DARK BANDS per block running most of the way round the trunk (the lenticel rows, ~1/6
+    # block tall, L ~0.25 on ~0.80, their edges ragged), with the paper's speckle halved under them
+    paper = F.fbm(3, 3, 0.5, sx=3.0, sy=1.0)
+    rows = F.noise(2, 4, 0.8, sx=14.0, sy=1.0)                        # long along u: a slow profile up the trunk
+    rows = F.warp(rows, 0.0, 0.010 * F.noise(2, 5, 0.6))             # the band's edge wanders
+    band = smoothstep(0.55, 0.85, rows)                               # 2-3 bands per block, ~1/6 block tall
+    partial = smoothstep(-1.3, -0.6, F.noise(1, 3, 0.6, sx=1.0, sy=5.0))   # most of the width, a gap here and there
+    band = band * partial
+    ragged = 1 - 0.3 * smoothstep(0.3, 0.9, np.abs(F.noise(6, 16, 0.5, sx=3.0, sy=1.0))) * (1 - smoothstep(0.9, 1.0, band))
+    band = band * ragged
+    dash = np.abs(F.warp(F.noise(3, 10, 0.5, sx=10.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8)))   # finer lenticels between
+    lent = (1 - smoothstep(0.0, 0.07, dash)) * smoothstep(0.6, 0.9, F.noise(5, 16, 0.4)) * (1 - band)
     dia = F.noise(3, 8, 0.6, sx=2.5, sy=1.0)
-    patch = smoothstep(1.1, 1.6, dia - 0.4 * np.abs(F.noise(8, 24, 0.5, sx=1.0, sy=4.0)))   # ragged pointed ends
-    H = 0.6 + 0.08 * paper - 0.08 * lent - 0.05 * patch   # the marks are in the colour, barely in the relief
-    shade = 0.92 + 0.08 * paper - 0.55 * lent - 0.75 * patch
+    patch = smoothstep(1.2, 1.7, dia - 0.4 * np.abs(F.noise(8, 24, 0.5, sx=1.0, sy=4.0))) * (1 - band)   # a few
+    H = 0.6 + 0.06 * paper - 0.06 * band - 0.05 * lent - 0.05 * patch   # the marks are in the colour, barely in the relief
+    shade = 0.94 + 0.03 * paper - 0.72 * band - 0.30 * lent - 0.70 * patch
     return H, tint((0.86, 0.85, 0.80), shade)
 
 
@@ -3951,11 +3961,15 @@ BARK51 = {
     # ridges, jungle) and bands (dark lenticel bands across the trunk, cherry)
     # style: (furrows across the block, furrow depth, plate-break rate 0..1, scale roughness, secondary fissures,
     #         the ridge's grey-weathering 0..1, mottle, bands)
-    "oak": (4, 0.60, 0.25, 0.6, 0.6, 0.30, 0.0, 0.0),        # long deep irregular furrows, flat rough ridges
+    # r54 (the critic at 30 px: oak "even corduroy stripes", dark oak the same stripes, spruce near-black with the
+    # flakes invisible, jungle and acacia meso 0.013): oak's furrows at an UNEVEN spacing (0.15-0.4 block) cut across
+    # into blocky plates (breaks 0.25 -> 0.45); dark oak coarser (3 furrows, 1/4-block flakes) and deeper; spruce
+    # lifted (TARGETS luma 0.22) with the flakes' levels further apart; jungle and acacia one furrow fewer and deeper
+    "oak": (4, 0.70, 0.45, 0.6, 0.6, 0.30, 0.0, 0.0),        # long deep irregular furrows, flat rough ridges
     "spruce": (5, 0.25, 0.80, 1.2, 0.5, 0.20, 0.10, 0.0),    # flaky plates, shallower furrows
-    "acacia": (5, 0.50, 0.12, 0.4, 0.8, 0.50, 0.0, 0.0),     # long fibrous grey-brown ridges
-    "jungle": (5, 0.30, 0.10, 0.3, 0.4, 0.25, 0.22, 0.0),    # smoother, mottled
-    "dark_oak": (4, 0.70, 0.60, 0.7, 0.4, 0.25, 0.0, 0.0),   # blocky, deepest, cracked across into blocks
+    "acacia": (4, 0.60, 0.12, 0.4, 0.8, 0.50, 0.0, 0.0),     # long fibrous grey-brown ridges
+    "jungle": (4, 0.45, 0.10, 0.3, 0.4, 0.25, 0.35, 0.0),    # smoother, mottled
+    "dark_oak": (3, 0.80, 0.60, 0.7, 0.4, 0.25, 0.0, 0.0),   # blocky, deepest, cracked across into blocks
     "cherry": (6, 0.22, 0.05, 0.2, 0.3, 0.15, 0.06, 0.8),    # smooth, banded across with dark lenticels
 }
 
@@ -3964,7 +3978,9 @@ def m_bark_r51(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     per, depth, breaks_p, scaly, fine, greying, mottle, bands = BARK51[style]
     warp = 0.02 * F.noise(2, 6, 0.6)
     lo = max(1, int(round(per * 0.3)))
-    field = F.warp(F.noise(lo, per, 0.9, sx=1.0, sy=6.0), warp, 0.0)   # long along v (up the trunk)
+    # r54: a flatter spectrum (slope 0.9 -> 0.5) up to 1.5x `per`: the furrows' spacing wanders between ~0.15 and
+    # 0.4 block instead of settling on one rhythm (corduroy)
+    field = F.warp(F.noise(lo, per * 1.5, 0.5, sx=1.0, sy=6.0), warp, 0.0)   # long along v (up the trunk)
     gy = (np.roll(field, -1, 0) - np.roll(field, 1, 0)) / 2
     gx = (np.roll(field, -1, 1) - np.roll(field, 1, 1)) / 2
     a = np.abs(field) / np.maximum(np.sqrt(gx * gx + gy * gy), 0.02)   # ~distance to the furrow line, in texels
@@ -3983,7 +3999,7 @@ def m_bark_r51(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     # the furrows' own scale - a plate is about a quarter block tall)
     brk = np.abs(F.noise(2, 6, 0.6, sx=4.0, sy=1.0))
     where = smoothstep(1.0 - breaks_p, 1.6 - breaks_p, F.noise(2, 6, 0.5))
-    breaks = F.blur((1 - smoothstep(0.0, 0.16, brk)) * where * ridge, 0.8)
+    breaks = F.blur((1 - smoothstep(0.0, 0.22, brk)) * where * ridge, 0.8)   # r54: wider (a crack, not a hair)
     # each plate stands at its own level: a tone and height from a blocky noise (the plate's id has no cells here)
     plate = F.noise(2, 6, 0.6, sx=1.0, sy=3.0)
     scale = F.noise(10, 48, 0.4)                                       # scaly roughness on the ridge tops
@@ -3992,19 +4008,19 @@ def m_bark_r51(F, n, base=(0.42, 0.33, 0.21), style="oak"):
     # r53: lenticel bands across the trunk (cherry) and a blotchy mottle over the ridges (jungle, a little spruce)
     bandf = np.abs(F.warp(F.noise(3, 8, 0.6, sx=8.0, sy=1.0), 0.0, 0.008 * F.noise(3, 8)))
     lent = (1 - smoothstep(0.0, 0.30, bandf)) * smoothstep(0.0, 0.5, F.noise(4, 12, 0.4)) * bands
-    mot = mottle * F.noise(3, 8, 0.6)
+    mot = mottle * F.noise(2, 6, 0.7)                                  # r54: coarser (1/4-block blotches)
     # r53: FLAKES for the plated barks (spruce, dark oak): Voronoi plates taller than wide, each at its own level, its
     # lower edge standing proud of the flake below (a shadow line under it, a lit lip) - the ridges are built of them
     # at `breaks_p` strength instead of only being cut across
     flake = None
     if breaks_p >= 0.5:
-        kcol = 7 if breaks_p >= 0.7 else 5                                  # flakes ~1/7 block (spruce), 1/5 (dark oak)
+        kcol = 6 if breaks_p >= 0.7 else 4                                  # flakes ~1/6 block (spruce), 1/4 (dark oak)
         p1, p2, pidx, pk = F.voronoi(kcol * kcol, 1.0, aniso=(1.0, 0.8), grid=(kcol, kcol))
         lvl = F.rng.uniform(-1.0, 1.0, pk)[pidx]
         seam = 1 - smoothstep(0.0, 0.014, p2 - p1)
         under = smoothstep(0.0, 0.03, p2 - p1) * (1 - smoothstep(0.03, 0.07, p2 - p1))   # the lip around each flake
         flake = (0.5 * lvl - 0.8 * seam + 0.15 * under) * (breaks_p - 0.3) / 0.7
-        flake_s = (0.16 * lvl - 0.40 * seam + 0.08 * under) * (breaks_p - 0.3) / 0.7
+        flake_s = (0.32 * lvl - 0.40 * seam + 0.10 * under) * (breaks_p - 0.3) / 0.7   # r54: 0.16 -> 0.32 (the plates' levels apart)
     # r53: the furrows' share of the relief and the tone follows their depth (kf: oak 1) - a flaky or banded bark is
     # not a furrowed one in another colour
     kf = min(1.0, depth / 0.6) * (1 - 0.5 * bands)
