@@ -863,6 +863,26 @@ def m_sand(F, n, base=(0.86, 0.78, 0.58)):
     return H, tint(base, shade, jit)
 
 
+def m_sand_sheet(F, blocks, base=(0.86, 0.78, 0.58)):
+    """Round 35: wind ripples across a SHEET of blocks x blocks sand (Athena's "giant" model lays the sheet over the
+    world by block position, so the crests run on from block to block instead of repeating every block). Crests
+    every ~0.28 block, sinuous, with the asymmetric profile of a wind ripple (a gentle windward slope, a steep lee
+    face), a coarse grain and a slow drift of tone; periodic over the sheet. F is a Field of the sheet's size."""
+    cyc = 3.6 * blocks                                   # crests per sheet
+    wander = 0.30 * F.noise(1, 3, 0.6) + 0.10 * F.noise(3, 8, 0.4)     # gently sinuous, nearly parallel
+    ph = (F.v * cyc + wander + 0.04 * F.noise(8, 20, 0.3)) % 1.0
+    ripple = np.where(ph < 0.72, ph / 0.72, 1 - (ph - 0.72) / 0.28)      # sawtooth: long rise, short drop
+    ripple = ripple * ripple * (3 - 2 * ripple)          # eased
+    grains = F.noise(10 * blocks, 28 * blocks, 0.0)
+    drift = F.fbm(2, 3, 0.5)
+    H = 0.5 + 0.22 * (ripple - 0.5) + 0.012 * grains + 0.04 * drift
+    hue = F.noise(3, 8, 0.4)
+    jit = np.stack([0.02 * hue, 0.01 * hue, -0.03 * hue], -1)
+    # the crests catch the light, the lee lies a touch darker - in the colour too, for the plain game
+    shade = 0.90 + 0.10 * ripple + 0.02 * grains + 0.04 * drift
+    return H, tint(base, shade, jit)
+
+
 def grass_blades(F, count, length_px, width_px):
     """Short blades scattered over the tile: a height bump along each blade, wrapped."""
     n = F.n
@@ -4148,6 +4168,15 @@ def write_models():
             model("%s_v%d" % (block, k), "minecraft:block/" + parent, {s: "%s_v%d" % (b, k) for s, b in slots.items()})
             picks.append({"model": "minecraft:block/%s_v%d" % (block, k), "weight": 1})
         blockstate(block, {"": picks})
+    # round 35: the giant sheets (GIANT) - Athena's loader in the blockstate, the sprites 1..N*N, the vanilla model as
+    # the fallback (no turns: the sheet's position does the variation)
+    for name, (_base, blocks) in GIANT.items():
+        ctm = {"particle": "minecraft:block/" + name}
+        for i in range(1, blocks * blocks + 1):
+            ctm[str(i)] = "minecraft:block/%s_g%d" % (name, i)
+        with open(os.path.join(BLOCKSTATE_DIR, name + ".json"), "w") as f:
+            json.dump({"athena:loader": "athena:giant", "width": blocks, "height": blocks, "ctm_textures": ctm,
+                       "variants": {"": {"model": "minecraft:block/" + name}}}, f, indent=1)
     for name in ROTATED_BLOCKSTATES:
         models = [name] + [v for v, b in LEAF_VARIANTS.items() if b == name]
         turns = [dict({"model": "minecraft:block/" + m}, **({"x": x} if x else {}), **({"y": y} if y else {}))
@@ -4546,10 +4575,45 @@ def make(name, res, preview_dir):
     return name, report
 
 
+# Round 35: multi-block sheets through Athena's "giant" model (athena-forge 3.1.2, installed with Chipped): the
+# blockstate names a width x height grid of sprites and each block shows the one at its world (x, z) on the top -
+# (x | z, y) on the sides - so a pattern larger than a block (wind ripples across a dune) carries on from block to
+# block. Square sizes only (the 1.20.1 code indexes with height). Its quads carry no biome tint: never grass.
+GIANT = {"sand": ((0.86, 0.78, 0.58), 4)}     # (red_sand is on the "beat the benchmark" list: untouched for now)
+
+
+def write_giant(name, res, preview_dir=None):
+    """The sheet of `name` (GIANT): one Field over blocks x blocks, fitted and solved once (one mean, one normal
+    strength), cut into blocks * blocks tiles <name>_g1.. (row-major from the sheet's top left, Athena's order:
+    1 + x + z * N) with their _n and _s. The single-block texture (make) stays as the particle and the fallback."""
+    base, blocks = GIANT[name]
+    t = targets_for(name)
+    t = dict(t, tilt=t["tilt"] * 1.3)                    # the ripples want a lower sun than the flat grains did
+    big = res * blocks
+    F = Field(big, SEEDS[name] + 7)
+    H, alb = m_sand_sheet(F, blocks, base)
+    alb = soften(F, fit_albedo(alb, t), t)
+    n_img, s_img, k = maps(F, H, t)
+    for z in range(blocks):
+        for x in range(blocks):
+            i = 1 + x + z * blocks
+            sl = (slice(z * res, (z + 1) * res), slice(x * res, (x + 1) * res))
+            to_png(alb[sl]).save(os.path.join(BLOCK_DIR, "%s_g%d.png" % (name, i)), **PNG_OPTS)
+            Image.fromarray(n_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "%s_g%d_n.png" % (name, i)), **PNG_OPTS)
+            Image.fromarray(s_img[sl], "RGBA").save(os.path.join(BLOCK_DIR, "%s_g%d_s.png" % (name, i)), **PNG_OPTS)
+    if preview_dir:
+        img = lit_preview(alb, n_img)[:big, :big]
+        Image.fromarray((img * 255).astype(np.uint8), "RGB").resize((512, 512), Image.LANCZOS).save(
+            os.path.join(preview_dir, name + "_sheet_lit.png"))
+    return {"normal_strength": round(k, 2), "blocks": blocks}
+
+
 def _job(args):
     name, res, preview_dir, hires = args
     if hires and name in HIRES:
         res *= 2
+    if name.endswith("_giant"):
+        return name, write_giant(name[:-6], res, preview_dir)
     if name == "water_still":
         return name, write_water(res, preview_dir)
     if name == "water_flow":
@@ -4568,7 +4632,7 @@ def build(res, preview_dir=None, jobs=None, hires=True):
     if preview_dir:
         os.makedirs(preview_dir, exist_ok=True)
     # the two water strips are the longest jobs: first, so no worker is left finishing them alone
-    names = ["water_flow", "water_still"] + list(TARGETS)
+    names = ["water_flow", "water_still"] + [g + "_giant" for g in GIANT] + list(TARGETS)
     jobs = max(1, jobs or os.cpu_count() or 1)
     work = [(n, res, preview_dir, hires) for n in names]
     if jobs == 1:
@@ -4577,7 +4641,7 @@ def build(res, preview_dir=None, jobs=None, hires=True):
         from concurrent.futures import ProcessPoolExecutor
         with ProcessPoolExecutor(max_workers=jobs) as ex:
             done = dict(ex.map(_job, work))
-    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"]}
+    report = {n: done[n] for n in list(TARGETS) + ["water_still", "water_flow"] + [g + "_giant" for g in GIANT]}
     write_models()
     # LabPBR format declaration: Iris / Oculus read assets/minecraft/optifine/texture.properties and give shader packs
     # MC_TEXTURE_FORMAT_LAB_PBR(_1_3) - without it a pack can't tell our _n / _s maps are LabPBR 1.3 (study notes,
