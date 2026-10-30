@@ -44,8 +44,7 @@ public final class KeybindMigration {
     public record Move(String binding, int from, int to) { }
 
     static final List<Stale> STALE = List.of(
-        // Oct 11 (c4d0b47) to Oct 21 (#39): Attack was A. Every install of those builds saved it.
-        new Stale(1, "key.reignofnether.attack", GLFW.GLFW_KEY_A, "Attack A -> X, so A is pure camera pan-left (#39)"),
+        // (Attack A -> X, layout 1, is gone with the Attack binding itself: see CARRY below, layout 3.)
         // Oct 23 to Oct 26: the commander and idle T2 builder buttons shipped on End / Home, which the production
         // monitor (Home) and pause unit production (End) now use. Their chords are Ctrl+C / Ctrl+Shift+B (ChordKeys).
         new Stale(2, "key.reignofnether.select_commander", GLFW.GLFW_KEY_END, "Select commander End -> Ctrl+C"),
@@ -67,6 +66,20 @@ public final class KeybindMigration {
         // Oct 21 (b6e85bad): Select all military units moved K -> "-" because K is build slot 7. Layouts 1 and 2 forgot
         // the row, so every install that saved K kept it, and K picked the building instead (Lane C tester, TESTER-ASKS 16).
         new Stale(3, "key.reignofnether.select_army", GLFW.GLFW_KEY_K, "Select army K -> - (K is build slot 7)")
+    );
+
+    /**
+     * A binding that no longer exists, whose saved key goes to its successor if the player chose it. Oct 22 (lovish:
+     * "we dont need f and x, only f"): the Attack order was merged into Fight, so an install that rebound Attack to a
+     * key of its own keeps that key, now on Fight. {@code oldDefaults} are the keys older builds shipped Attack on (A,
+     * then X): saved on one of them it is the default of a binding that is gone, not a choice, and Fight keeps F.
+     * The saved key of the retired binding is read from options.txt by KeybindsClientEvents (no mapping exists any more).
+     */
+    public record Carry(int version, String retired, String successor, List<Integer> oldDefaults, String history) { }
+
+    static final List<Carry> CARRY = List.of(
+        new Carry(3, "key.reignofnether.attack", "key.reignofnether.fight", List.of(GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X),
+            "Attack merged into Fight: your Attack key now starts Fight / Attack-move")
     );
 
     private KeybindMigration() { }
@@ -100,6 +113,19 @@ public final class KeybindMigration {
             if (now == row.oldKey() && now != target)
                 moves.add(new Move(row.binding(), now, target));
         }
+        for (Carry row : CARRY) {
+            if (row.version() <= savedVersion || row.version() > LAYOUT_VERSION)
+                continue;
+            Keybinding successor = all.get(row.successor());
+            if (successor == null)
+                continue;
+            int theirs = savedKey.applyAsInt(row.retired());
+            int now = savedKey.applyAsInt(row.successor());
+            // only a real keyboard key the player chose, onto a successor still on its default
+            if (theirs >= 0 && theirs != CUSTOM && !row.oldDefaults().contains(theirs)
+                    && now == successor.getDefaultKey() && theirs != now)
+                moves.add(new Move(row.successor(), now, theirs));
+        }
         return moves;
     }
 
@@ -107,6 +133,9 @@ public final class KeybindMigration {
     public static String history(String binding) {
         for (Stale row : STALE)
             if (row.binding().equals(binding))
+                return row.history();
+        for (Carry row : CARRY)
+            if (row.successor().equals(binding))
                 return row.history();
         return binding;
     }

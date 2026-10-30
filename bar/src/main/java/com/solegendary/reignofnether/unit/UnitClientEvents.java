@@ -274,8 +274,15 @@ public class UnitClientEvents {
 
     private static long lastLeftClickTime = 0; // to track double clicks
 
+    /** Fight / Attack-move (F) is armed (UnitAction.ATTACK is no longer armed by any button, but still counts). */
     private static boolean isLeftClickAttack() {
-        return CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK;
+        UnitAction armed = CursorClientEvents.getLeftClickAction();
+        return armed == UnitAction.ATTACK_MOVE || armed == UnitAction.ATTACK;
+    }
+
+    /** What an armed Fight click attacks: anything that is not the player's own or an ally's. */
+    private static boolean isAttackTarget(Relationship relationship) {
+        return relationship != Relationship.OWNED && relationship != Relationship.FRIENDLY;
     }
 
     @SubscribeEvent
@@ -946,28 +953,23 @@ public class UnitClientEvents {
             if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.PATROL) {
                 sendUnitCommand(UnitAction.PATROL);
             }
-            else if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.ATTACK_MOVE) {
-                // Fight (F) armed: whatever is under the cursor, the group fights its way to that spot; a drag before
-                // release lays a fight line (BAR's F)
-                beginLeftLine(UnitAction.ATTACK_MOVE, evt.getMouseX(), evt.getMouseY());
+            else if (!selectedUnits.isEmpty() && isLeftClickAttack()) {
+                // Fight / Attack-move (F) armed, the one attack order (lovish, Oct 22): a click on an enemy unit or
+                // building attacks it, a click on the ground fights its way to the spot, and a drag before release
+                // lays a fight line. Friends under the cursor are not attacked - the click fights to their spot.
+                if (preselectedUnits.size() == 1 && !targetingSelf() && isAttackTarget(getPlayerToEntityRelationship(preselectedUnits.get(0))))
+                    sendUnitCommand(UnitAction.ATTACK);
+                else if (BuildingClientEvents.getPreselectedBuilding() != null
+                        && isAttackTarget(getPlayerToBuildingRelationship(BuildingClientEvents.getPreselectedBuilding())))
+                    sendUnitCommand(UnitAction.ATTACK_BUILDING);
+                else
+                    beginLeftLine(UnitAction.ATTACK_MOVE, evt.getMouseX(), evt.getMouseY());
             }
             else if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.GUARD) {
                 // needs something to guard: a unit under the cursor or a building at the clicked spot
                 if (!preselectedUnits.isEmpty() || BuildingClientEvents.getPreselectedBuilding() != null)
                     sendUnitCommand(UnitAction.GUARD);
                 CursorClientEvents.setLeftClickAction(null);
-            }
-            else if (!selectedUnits.isEmpty() && isLeftClickAttack()) {
-                // A + left click -> force attack single unit (even if friendly)
-                if (preselectedUnits.size() == 1 && !targetingSelf()) {
-                    sendUnitCommand(UnitAction.ATTACK);
-                }
-                // A + left click -> force attack building (even if friendly)
-                else if (BuildingClientEvents.getPreselectedBuilding() != null)
-                    sendUnitCommand(UnitAction.ATTACK_BUILDING);
-                // A + left click -> attack move ground; a drag before release makes it an attack-move line
-                else
-                    beginLeftLine(UnitAction.ATTACK_MOVE, evt.getMouseX(), evt.getMouseY());
             }
 
             // select all nearby units of the same type when the same unit is double-clicked
@@ -1390,7 +1392,8 @@ public class UnitClientEvents {
             return;
         if (!FogOfWarClientEvents.isInBrightChunk(entity))
             return;
-        if (isPreselected && isLeftClickAttack && !targetingSelf && !isMouseOverAnyButtonOrHud)
+        if (isPreselected && isLeftClickAttack && !targetingSelf && !isMouseOverAnyButtonOrHud
+                && isAttackTarget(getPlayerToEntityRelationship(entity)))
             MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vc, entityAABB, 1.0f, 0.3f, 0.3f, 1.0f, false);
         else if (isSelected)
             MyRenderer.drawLineBoxOutlineOnlyInCameraSpace(poseStack, vc, entityAABB, 1.0f, 1.0f, 1.0f, 1.0f, false);

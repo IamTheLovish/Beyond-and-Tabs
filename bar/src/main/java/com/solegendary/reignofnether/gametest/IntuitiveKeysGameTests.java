@@ -50,12 +50,17 @@ public class IntuitiveKeysGameTests {
 
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
     public static void ac1_attack_stays_on_x_and_a_stays_pure_pan(GameTestHelper helper) {
-        // BAR Legacy has Attack on A, but #39 (lovish) moved it to X on purpose: a hold of A waited before panning
+        // BAR Legacy has Attack on A, but #39 (lovish) took it off A on purpose: a hold of A waited before panning. Oct 22
+        // (lovish, #201: "we dont need f and x, only f"): the Attack order is merged into Fight / Attack-move on F, so no
+        // binding is Attack any more and nothing but the pan fires on A
         List<String> problems = new ArrayList<>();
-        if (Keybindings.attack.getDefaultKey() != GLFW.GLFW_KEY_X)
-            problems.add("Attack must ship on X (#39), is " + Keybindings.attack.getDefaultKey());
-        if (Keybindings.attack.matches(GLFW.GLFW_KEY_A))
-            problems.add("A must not fire Attack");
+        for (var kb : Keybindings.all())
+            if ("key.reignofnether.attack".equals(kb.getTranslationKey()))
+                problems.add("the Attack binding must be gone (merged into Fight)");
+        if (Keybindings.fight.getDefaultKey() != GLFW.GLFW_KEY_F)
+            problems.add("Fight / Attack-move must ship on F, is " + Keybindings.fight.getDefaultKey());
+        if (Keybindings.fight.matches(GLFW.GLFW_KEY_A))
+            problems.add("A must not fire Fight");
         if (Keybindings.panLeft.getDefaultKey() != GLFW.GLFW_KEY_A)
             problems.add("A is still pan-left");
         verdict(helper, problems);

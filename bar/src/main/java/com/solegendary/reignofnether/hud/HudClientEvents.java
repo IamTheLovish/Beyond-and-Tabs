@@ -1300,13 +1300,12 @@ public class HudClientEvents {
             blitY = screenHeight - iconFrameSize;
 
             ArrayList<Button> actionButtons = new ArrayList<>();
-            // BAR order and keys from CommandCard (shared with the hotkey GameTest): Attack, Move, Stop, Hold/Build,
+            // BAR order and keys from CommandCard (shared with the hotkey GameTest): Fight, Move, Stop, Hold/Build,
             // Patrol, Guard on the bottom row, the fire state / gather / garrison above
             boolean garrisoned = GarrisonableBuildingAddon.getGarrison(unit) != null;
             for (CommandCard.Order order : CommandCard.orders(hudSelectedEntity instanceof AttackerUnit,
                     hudSelectedEntity instanceof WorkerUnit, unit.canGarrison(), garrisoned)) {
                 actionButtons.add(switch (order) {
-                    case ATTACK -> ActionButtons.attack;
                     case FIGHT -> ActionButtons.fight;
                     case MOVE -> ActionButtons.move;
                     case STOP -> ActionButtons.stop;
@@ -1529,7 +1528,7 @@ public class HudClientEvents {
             ArrayList<Button> actionButtons = new ArrayList<>();
 
             if (NonUnitClientEvents.canAttack(getSelectedUnits().get(0)))
-                actionButtons.add(ActionButtons.attack);
+                actionButtons.add(ActionButtons.fight);
 
             actionButtons.add(ActionButtons.stop);
 

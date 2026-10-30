@@ -8,7 +8,7 @@ import java.util.List;
 
 // Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
 // RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, open shop S->Space (Stop is back on S as a tap, see
-// the order keys below; Attack moved to X on Oct 21),
+// the order keys below; Attack merged into Fight on F on Oct 22),
 // return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
 // A changed default does NOT reach an install that already saved the old one (Minecraft keeps every mapping in
 // options.txt): add the old key to KeybindMigration.STALE and bump its LAYOUT_VERSION whenever a default moves.
@@ -76,14 +76,15 @@ public class Keybindings {
     public static final Keybinding abilitySlot10       = new Keybinding("key.reignofnether.ability_10",   GLFW.GLFW_KEY_P,             CATEGORY_RTS, "P");
     // BAR's gridmenu (luaui/Widgets/gui_gridmenu.lua, keybind_defaults.json "Grid" profile): with the build menu on the
     // card and no tab open, Z / X / C / V open the Economy / Military / Defence / Tech tab (BAR's gridmenu_category 1-4)
-    // instead of ability slot 2, Attack, hotkey 4 and hotkey 1. They share the keys on purpose: own conflict context.
+    // instead of ability slot 2, hotkey 4 and hotkey 1 (X has no order since Attack merged into Fight). They share
+    // the keys on purpose: own conflict context.
     public static final Keybinding buildTabEconomy  = new Keybinding("key.reignofnether.build_tab_economy",  GLFW.GLFW_KEY_Z, CATEGORY_RTS, RtsConflictContext.BUILDER, "Z");
     public static final Keybinding buildTabMilitary = new Keybinding("key.reignofnether.build_tab_military", GLFW.GLFW_KEY_X, CATEGORY_RTS, RtsConflictContext.BUILDER, "X");
     public static final Keybinding buildTabDefence  = new Keybinding("key.reignofnether.build_tab_defence",  GLFW.GLFW_KEY_C, CATEGORY_RTS, RtsConflictContext.BUILDER, "C");
     public static final Keybinding buildTabTech     = new Keybinding("key.reignofnether.build_tab_tech",     GLFW.GLFW_KEY_V, CATEGORY_RTS, RtsConflictContext.BUILDER, "V");
     // BAR's grid keys (gridmenu_key row col): the same twelve keys in every tab, in reading order, one per cell of the
     // 4-wide build grid - Q W E R / A S D F / Z X C V. Live only while a tab is open (BuildTabs.onKey); then they win
-    // over the orders on the same keys (Stop S, Attack X, Fight F), and on W / A / S / D a tap picks, a hold pans.
+    // over the orders on the same keys (Stop S, Fight F), and on W / A / S / D a tap picks, a hold pans.
     public static final Keybinding[] buildGrid = {
         new Keybinding("key.reignofnether.build_grid_1",  GLFW.GLFW_KEY_Q, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "Q"),
         new Keybinding("key.reignofnether.build_grid_2",  GLFW.GLFW_KEY_W, CATEGORY_RTS, RtsConflictContext.BUILD_GRID, "W"),
@@ -132,18 +133,13 @@ public class Keybindings {
     // letter, the punctuation slots and the abilities are used), and while a building ghost is out "]" rotates it
     // (BuildingClientEvents) before the HUD sees the key. ReturnResourcesKeyGameTests checks this key against each faction's worker.
     public static final Keybinding returnResources = new Keybinding("key.reignofnether.return_resources", GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY_RTS, "]");
-    // Oct 21 (lovish: the order on A blocks the WASD camera): Attack moved off A to X so A is pure pan-left. Fight stays
-    // on F. S (Stop) still shares the tap/hold rule below. Installs that saved the old A were moved to X once
-    // (KeybindMigration, layout 1). Oct 26: kept on X (BAR Legacy has A, but #39 took it off A on purpose: a hold of A
-    // waited before panning).
-    // BAR's order keys on the command card (lovish: "I can't use formation when using attack command, which I don't
-    // even see an attack command" - the card read X / B / G / N / Y / P / "Spc"). X attack, S stop, M move, H hold,
-    // P patrol, G guard (BAR's Attack is A, which is camera pan-left here). S is also WASD panning: a TAP
-    // (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card has one on that key, a hold pans (KeyTaps,
-    // OrthoviewClientEvents). Space jumps to the last alert (lastAlert), as in BAR.
-    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, RtsConflictContext.COMMAND, "X");
-    // BAR's Fight (F): attack-move, armed - a click fights to the spot, a drag lays a fight line (lovish, Oct 14 02:38:
-    // "add a fight command on F"). Fighters only: a worker's F is its build menu slot (hotkey3) and the commander is both.
+    // BAR's order keys on the command card: F fight, S stop, M move, H hold, P patrol, G guard. S is also WASD panning:
+    // a TAP (< KeyTaps.TAP_MS, lag allowed for) fires the order when the card has one on that key, a hold pans
+    // (KeyTaps, OrthoviewClientEvents). Space jumps to the last alert (lastAlert), as in BAR.
+    // Oct 22 (lovish: "I have to double click twice with f ... we dont need f and x, only f"): the separate Attack
+    // order (A, then X) is gone. Fight (F) is the one order: armed, a click on an enemy attacks it, a click on the
+    // ground attack-moves, a drag lays a line, Shift queues. X stays only the builder's Military tab and grid cell.
+    // Every attacker has it, workers and the commander too: the F build-grid cell is live only in an open tab.
     public static final Keybinding fight       = new Keybinding("key.reignofnether.fight",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, RtsConflictContext.COMMAND, "F");
     public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, RtsConflictContext.COMMAND, "S");
     public static final Keybinding move        = new Keybinding("key.reignofnether.move",         GLFW.GLFW_KEY_M,             CATEGORY_RTS, RtsConflictContext.COMMAND, "M");
@@ -250,7 +246,7 @@ public class Keybindings {
             abilitySlot6, abilitySlot7, abilitySlot8, abilitySlot9, abilitySlot10,
             buildTabEconomy, buildTabMilitary, buildTabDefence, buildTabTech,
             hotkey1, hotkey2, minimapToggle, hotkey3, hotkey4, hotkey5, hotkey6, hotkey7, hotkey8, hotkey9, idleWorker, idleT2Builder, selectCommander, selectArmy, returnResources,
-            attack, fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
+            fight, stop, move, hold, patrol, guard, lastAlert, hotkey11, hotkey12,
             build, gather, garrison,
             chat, commandBar, deselect, tab, openShop, overcharge, statsTable, cleanView,
             item1, item2, item3, item4, item5, item6,

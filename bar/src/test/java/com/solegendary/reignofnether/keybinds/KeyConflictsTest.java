@@ -29,9 +29,9 @@ class KeyConflictsTest {
     }
 
     @Test
-    void attackOnAIsFlaggedAsPanLeft() {
-        List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.attack", GLFW.GLFW_KEY_A));
-        assertEquals(List.of(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_left", GLFW.GLFW_KEY_A)), o);
+    void fightOnAIsFlaggedAsPanLeft() {
+        List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.fight", GLFW.GLFW_KEY_A));
+        assertEquals(List.of(new KeyConflicts.Overlap("key.reignofnether.fight", "key.reignofnether.pan_left", GLFW.GLFW_KEY_A)), o);
     }
 
     @Test
@@ -41,11 +41,10 @@ class KeyConflictsTest {
 
     @Test
     void aPanKeyMovedOntoAnOrderKeyIsFlaggedToo() {
-        // pan-up moved to X, where Attack, the Military tab key and grid cell 10 ship: they did not move, the pan key did -
-        // one key, four jobs, all three flagged
+        // pan-up moved to X, where the Military tab key and grid cell 10 ship (Attack is merged into Fight, Oct 22): they
+        // did not move, the pan key did - both flagged
         List<KeyConflicts.Overlap> o = overlaps(Map.of("key.reignofnether.pan_up", GLFW.GLFW_KEY_X));
-        assertEquals(3, o.size(), o.toString());
-        assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.attack", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
+        assertEquals(2, o.size(), o.toString());
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_tab_military", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
         assertTrue(o.contains(new KeyConflicts.Overlap("key.reignofnether.build_grid_10", "key.reignofnether.pan_up", GLFW.GLFW_KEY_X)), o.toString());
         // pan-up moved to F, where the order Fight ships: an order key under a moved pan key is flagged too
@@ -62,8 +61,8 @@ class KeyConflictsTest {
 
     @Test
     void unboundAndModifiedKeysNeverConflict() {
-        assertEquals(List.of(), overlaps(Map.of("key.reignofnether.attack", -1)));
-        assertEquals(List.of(), overlaps(Map.of("key.reignofnether.attack", KeybindMigration.CUSTOM)));
+        assertEquals(List.of(), overlaps(Map.of("key.reignofnether.fight", -1)));
+        assertEquals(List.of(), overlaps(Map.of("key.reignofnether.fight", KeybindMigration.CUSTOM)));
     }
 
     @Test
