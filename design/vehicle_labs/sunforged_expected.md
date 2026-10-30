@@ -43,3 +43,17 @@ No critic run on A vs A2: both critics' diagnoses were applied one change per el
   - and that is the fault both critics named: inside the ground's mid band 0.28-0.50 (Art method: lights 0.50+ belong to
   buildings). Wall pixels: dressings (stone bricks + their stairs) 0.44, the andesite field 0.11.
 - critics 5 / 5 overall (control 4 / 4); expected RTS 7, landmark 6, gate 6 - RTS and gate missed by 2 and 1.
+
+## Detail round 2 (expected, before its eyes run; one change per element)
+Wall stone light (field polished diorite on vertical faces only - its top reads as snow, so crowns and merlons stay stone brick; quoins stone brick / diorite), spire dark slate, halo removed,
+lancets grey glass, wing / keep parapets plain coping.
+- wall field value (polished diorite; pack-texture prediction scaled by the measured andesite / stone-brick / calcite
+  ratios west 0.59, south 0.79): west 0.45, south 0.60, field area 0.50-0.55; dressings 0.30-0.35 (gap >= 0.15).
+- snow share < 0.02 (diorite south 0.60 < 0.70).
+- gold share of the rts pixels 0.031 -> 0.005 in the camera model (finial + rose boss only).
+- spire value 0.18-0.28 (deepslate; granite was 0.55): the darkest large area at the top, over the 0.47-0.54 terrace.
+- critics: RTS 6+, landmark 6+, materials 6, dusk unchanged (5 / 3).
+- snow check on the stills: polished diorite's SOUTH face is not in the camera table yet (the lookup falls back to its
+  up face, 0.769 = snow); measure it on round 2's stills against smooth quartz (south 0.718) and calcite (0.706) and the
+  snow cut (value >= 0.70, sat <= 0.12) before trusting the wall. Expected south 0.55-0.62 (diorite wall south 0.553).
+  If it reads as snow: fall back to a light stone that does not, and log it.

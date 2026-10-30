@@ -21,7 +21,7 @@ THE MASSING (A2: the blind pick A, revised on both massing critics' shared fault
 eyes run 41124572036, critics 20261030-165241 / -165245)
 Plot 17 x 17 (x 0..16 west -> east, z 0..16 north -> south; the RTS camera looks north-east from the south-west and
 sees the roofs, the WEST face x 0 - the front - and the SOUTH face z 16).
-  keep         x 3..15, z 3..13, walls to 11, a smooth-stone terrace at 12 inside a crenellated parapet
+  keep         x 3..15, z 3..13, walls to 11, a smooth-stone terrace at 12
   front towers x 1..4 at z 1..4 (NW) and z 12..15 (SW): shafts to 13, the corbel table at 14 one out on the outer
                faces, the crown course 15 with arrow loops, merlons 16 - they frame the bay
   back turrets x 13..15 at z 1..3 (NE) and z 13..15 (SE): 3 x 3 to 12, corbel 13, merlons 14 - smaller (hierarchy)
@@ -29,13 +29,13 @@ sees the roofs, the WEST face x 0 - the front - and the SOUTH face z 16).
                pointed head and keystone at 12; inner x 1: the lane's 5 x 8) and the ROSE over it (centre y 14)
   spire tower  x 11..15, z 6..10: the shaft rises 4 clear of the terrace (13..16) with belfry lancets, then the SPIRE -
                a 5 x 5 steep foot (17, 18), the 3 x 3 steep body (19..22), a needle (23, 24), the gold finial (25)
-  wing         x 5..11, z 14..15, to 5, a pale crenellated terrace at 6
-  the well     the spawn column (8, y, 8) only, open to the sky through the terrace inside a GOLD HALO ring (y 12)
+  wing         x 5..11, z 14..15, to 5, a pale terrace at 6
+  the well     the spawn column (8, y, 8) only, open to the sky through the terrace (round 1's gold halo ring: gone)
   the mouth    the lane x 0..9, z 6..10, y 1..8: blackstone-brick floor, deepslate-brick passage walls and ceiling
 
 THE DETAIL GRAMMAR (round 1 - one grammar on every camera face):
   - a battered first course (stone-brick stairs) round every outer wall;
-  - stone-brick QUOINS at every corner, long and short (stone bricks / polished andesite);
+  - QUOINS at every corner, long and short (stone bricks / polished andesite; round 2: stone bricks / diorite);
   - STOREYS of four courses: two of glass (a 2-wide lancet per panel, 1-wide on the turret), a pointed head (two
     upside-down stairs), our STRING COURSE (#407 reignofnether:string_course_stone) at the storey line; the cornice
     (reignofnether:cornice_stone) at the top course;
@@ -45,6 +45,24 @@ THE DETAIL GRAMMAR (round 1 - one grammar on every camera face):
   Palette (by look, camera_colours.json): polished andesite walls (west 0.29 / south 0.38), stone-brick dressings
   (0.29-0.41), smooth-stone-slab terraces (0.47-0.54), deepslate-brick mouth (dark), a muted warm spire (Macaw's
   granite steep roof, hue 16, sat 0.36-0.39 - lovish's call open: the enemy relation colour), gold the one accent.
+
+ROUND 2 (one change per element; round 1's two fresh critics, runs 20261030-185320 / -185323: 5/10 each against the
+control's 4/10 - better structure, but "a plain grey castle with a yellow square on its roof"):
+  - the wall FIELD polished diorite on the vertical faces only, instead of polished andesite (0.29 / 0.38, inside the
+    ground's mid band: "the building no longer owns the lights"); the quoins alternate stone bricks / diorite; the
+    dressings (stone bricks, strings, cornices) stay, now darker than the field (zones). NOTE for lovish: his Oct 20
+    pick for the White Angel stone ("middle is fine", gothic_parts STONES["warm"]) is polished ANDESITE walls with
+    warm polished-diorite sills, lintels and drip courses - diorite walls are one step lighter than his pick, tried on
+    the critics' diagnosis; one line (WALL) reverts it. No diorite on any top the cameras see from above: its up face
+    reads as snow (polished diorite up 0.769 / sat 0.044 - Itachi 2's lesson 2, "calcite/diorite read as snow");
+  - the SPIRE dark slate (Macaw's deepslate steep roof, gothic_parts' "his tall dark needles") instead of the salmon
+    granite ("a squat hipped roof", "a second saturated accent near the enemy relation hue"): the strongest value
+    contrast at the focal point, over the pale terrace; the gold finial stays;
+  - the gold HALO ring on the terrace removed ("the first thing seen", "a square donut, not a halo"): gold is only the
+    finial and the rose's boss;
+  - the LANCETS grey-tinted glass (clear panes read as "white crosses") - dark slits as in ref21, the lit rooms behind;
+  - the wing's and the keep's PARAPETS plain smooth-stone coping (merlons on every edge read as "stacked battlements");
+    the merlons stay on the towers' crowns, the turrets and the bay - one crenel line at the tops.
 
 ANCHORS (structure-local x, y, z; in game these become client-drawn moving parts later):
   gate        (0..1, 1..9, 5..11) the portal; the animated gate leaf hangs in the inner order (x 1)
@@ -75,12 +93,14 @@ H1, H3 = 16, 26
 DRY = dict(waterlogged="false")
 POST_UP = dict(up="true", north="none", south="none", east="none", west="none", waterlogged="false")
 
-WALL = "polished_andesite"
+WALL = "polished_diorite"          # round 2 (was polished andesite, 0.29 / 0.38: "in the ground's mid band")
 DRESS = "stone_bricks"
 DRESS_ST = "stone_brick_stairs"
 DRESS_SL = "stone_brick_slab"
 POST = "stone_brick_wall"
-QUOIN = ("stone_bricks", "polished_andesite")
+QUOIN = ("stone_bricks", "polished_diorite")    # round 2: long and short, dark / light (was stone bricks / andesite)
+CROWN = "stone_bricks"         # the crown course and merlons: NOT diorite - its top reads as snow from above
+CROWN_SL = "stone_brick_slab"  # (camera table: polished diorite up 0.769 / sat 0.044; diorite wall up 0.725)
 TERRACE = "smooth_stone_slab"
 PAVE = "polished_andesite"
 MOUTH_FLOOR = "polished_blackstone_bricks"
@@ -88,11 +108,11 @@ MOUTH_WALL = "deepslate_bricks"
 MOUTH_CEIL = "deepslate_tiles"
 STRING = "reignofnether:string_course_stone"
 CORNICE = "reignofnether:cornice_stone"
-GLASS = "glass_pane"
+GLASS = "gray_stained_glass_pane"   # round 2 (clear panes read as "white crosses", both critics)
 ROSE = "orange_stained_glass"
 ROOM = "birch_planks"
-SPIRE = "mcwroofs:granite"
-SPIRE_CORE = "granite"
+SPIRE = "mcwroofs:deepslate"       # round 2 (granite, salmon: "a squat hipped roof", a 2nd saturated accent)
+SPIRE_CORE = "polished_deepslate"
 GOLD = "gold_block"
 LOOP = "iron_bars"
 KEY = "chiseled_stone_bricks"
@@ -131,9 +151,9 @@ def edge(x0, x1, z0, z1):
 def merlons(g, cells, y):
     for (x, z) in cells:
         if (x + z) % 2 == 0:
-            g.set(x, y, z, DRESS)
+            g.set(x, y, z, CROWN)
         else:
-            g.slab(x, y, z, DRESS_SL)
+            g.slab(x, y, z, CROWN_SL)
 
 
 # ============================================================================================ the face grammar
@@ -216,7 +236,7 @@ def keep(g):
     for x in range(3, 16):
         for z in range(3, 14):
             g.slab(x, 12, z, TERRACE)
-    merlons(g, edge(3, 15, 3, 13), 12)
+
 
 
 def loop_props(along_z):
@@ -239,7 +259,7 @@ def corner_tower(g, x0, z0, top, out_x, out_z, w=4, crown=True):
                 f = "east" if x < x0 else "west" if x > x1 else ("south" if z < z0 else "north")
                 g.stair(x, top + 1, z, f, "top")
             if crown:
-                g.set(x, top + 2, z, DRESS)
+                g.set(x, top + 2, z, CROWN)
     if crown:
         mid_x, mid_z = (cx0 + cx1) // 2, (cz0 + cz1) // 2
         for (x, z) in ((cx0, mid_z), (cx1, mid_z), (mid_x, cz0), (mid_x, cz1)):
@@ -270,8 +290,12 @@ def bay(g, level):
     for z in (5, 11):                                                   # colonnettes framing the rose
         for y in range(11, 16):
             g.set(0, y, z, POST, **POST_UP)
+    for z in (5, 11):                                                   # the colonnettes' imposts
+        g.set(0, 10, z, DRESS)
     if level >= 3:
         merlons(g, edge(0, 2, 4, 12), 16)
+        for z in range(5, 12):                                          # the bay's roof inside its merlons
+            g.slab(1, 16, z, DRESS_SL)
 
 
 def portal(g):
@@ -342,7 +366,6 @@ def wing(g):
     for x in range(5, 12):
         for z in (14, 15):
             g.slab(x, 6, z, TERRACE)
-    merlons(g, [(x, 15) for x in range(5, 12)], 6)
     face(g, "south", 15, 5, 11, 1, 5, [(6, 7), (9, 10)], (2,))
     face(g, "south", 13, 5, 12, 6, 11, [(6, 7), (10, 11)], (7,), batter=False)     # the keep's south face over it
     for x in range(5, 13):                                              # its base: a string course on the wing roof
@@ -412,8 +435,6 @@ def spire(g, cx, cz, y_foot):
 def well(g):
     for y in range(1, H3):
         g.clear(SPAWN[0], y, SPAWN[2])
-    for (x, z) in edge(7, 9, 7, 9):
-        g.set(x, 12, z, GOLD)
 
 
 def lane(g):
@@ -487,7 +508,7 @@ def check(rig, path, label):
     assert not floating(n), "floating: %s" % floating(n)[:8]
     bad = sorted({v for v in n.values() if any(f in v for f in (
         "water", "lava", "sand", "gravel", "_concrete_powder", "fire", "redstone", "tuff_brick", "polished_tuff",
-        "sapling", "torch", "cobweb", "scaffolding", "pink", "purple", "magenta", "calcite", "quartz", "diorite"))
+        "sapling", "torch", "cobweb", "scaffolding", "pink", "purple", "magenta", "calcite", "quartz"))
         or ("copper" in v and not v.startswith("waxed_"))})
     assert not bad, "forbidden: %s" % bad
     one_way, ground_, roof, rooms, note = ap.audit(label, path)
