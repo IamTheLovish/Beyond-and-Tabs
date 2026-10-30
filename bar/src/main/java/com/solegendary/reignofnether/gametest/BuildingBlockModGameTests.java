@@ -179,6 +179,78 @@ public class BuildingBlockModGameTests {
     }
 
     /**
+     * The server parses each structure once and caches it (BuildingBlockData): every caller gets its own copies, so
+     * one placement that moves, turns or edits its blocks can't change the next one's building. A structure that
+     * isn't there gives an empty list, every time, and not a cached null.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void structure_cache_hands_out_copies(GameTestHelper helper) {
+        var modFile = ModList.get().getModFileById(ReignOfNether.MOD_ID);
+        if (modFile == null) {
+            helper.fail("could not find our own mod file");
+            return;
+        }
+        // the first shipped structure with a block that carries NBT (a chest, a sign, a spawner...)
+        String name = null;
+        int index = -1;
+        try (Stream<Path> files = Files.list(modFile.getFile().findResource("data", ReignOfNether.MOD_ID, "structures"))) {
+            for (Path p : files.filter(f -> f.toString().endsWith(".nbt")).sorted().toList()) {
+                String n = p.getFileName().toString().replace(".nbt", "");
+                List<BuildingBlock> blocks = BuildingBlockData.getBuildingBlocksFromNbt(n, helper.getLevel());
+                for (int i = 0; i < blocks.size() && index < 0; i++)
+                    if (blocks.get(i).getBlockNbt() != null)
+                        index = i;
+                if (index >= 0) {
+                    name = n;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            helper.fail("could not list the structures (" + e + ")");
+            return;
+        }
+        if (name == null) {
+            helper.fail("no shipped structure has a block with NBT - the copy check needs one");
+            return;
+        }
+
+        List<String> problems = new ArrayList<>();
+        List<BuildingBlock> first = BuildingBlockData.getBuildingBlocksFromNbt(name, helper.getLevel());
+        BuildingBlock b = first.get(index);
+        var pos = b.getBlockPos();
+        var state = b.getBlockState();
+        CompoundTag nbt = b.getBlockNbt().copy();
+        int size = first.size();
+        b.setBlockPos(pos.offset(7, 7, 7));
+        b.setBlockState(net.minecraft.world.level.block.Blocks.BEDROCK.defaultBlockState());
+        b.getBlockNbt().putString("bt_cache_test", "changed");
+        first.clear();
+
+        List<BuildingBlock> second = BuildingBlockData.getBuildingBlocksFromNbt(name, helper.getLevel());
+        if (second.size() != size)
+            problems.add(name + ": clearing the first list left the second with " + second.size() + " blocks, not " + size);
+        else {
+            BuildingBlock s = second.get(index);
+            if (!s.getBlockPos().equals(pos))
+                problems.add(name + " block " + index + ": moving the first copy moved the second (" + s.getBlockPos() + ")");
+            if (s.getBlockState() != state)
+                problems.add(name + " block " + index + ": changing the first copy's state changed the second (" + s.getBlockState() + ")");
+            if (!nbt.equals(s.getBlockNbt()))
+                problems.add(name + " block " + index + ": editing the first copy's NBT edited the second (" + s.getBlockNbt() + ")");
+        }
+
+        for (int call = 1; call <= 2; call++) {
+            List<BuildingBlock> none = BuildingBlockData.getBuildingBlocksFromNbt("bt_no_such_structure", helper.getLevel());
+            if (none == null || !none.isEmpty())
+                problems.add("a missing structure gave " + (none == null ? "null" : none.size() + " blocks") + " on call " + call);
+        }
+
+        if (!problems.isEmpty())
+            helper.fail("structure cache: " + problems);
+        helper.succeed();
+    }
+
+    /**
      * A FramedBlocks slope placed the way a building places it - a structure palette entry plus the block's "nbt"
      * (FramedBlockEntity's camo: {type: framedblocks:block, state: {Name}}, FramedBlocks 9.4.3 BlockCamoContainer),
      * read by BuildingBlockData and put down by BuildingPlacement.restoreBlockEntity - keeps its camo through the
