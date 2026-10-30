@@ -184,7 +184,7 @@ public final class Dragon {
     private static final Map<LivingEntity, float[]> STATE = new WeakHashMap<>();
     public static final int ST_BANK = 1, ST_HEADING = 8, ST_BANK_VEL = 9, ST_TAIL_A = 10, ST_TAIL_B = 11, ST_SEEDED = 12,
         ST_CLIMB = 13, ST_PHASE = 14, ST_FLARE = 15, ST_TAKEOFF = 16, ST_SPEED = 17, ST_BRAKE = 18, ST_PERCH = 19,
-        ST_BRAKING = 20, ST_LEN = 21;
+        ST_BRAKING = 20, ST_SPEED_SEEDED = 21, ST_LEN = 22;
     /** The glide weight and the hover weight (state slots 0 and 5). */
     public static final int ST_GLIDE = 0, ST_HOVER = 5;
 
@@ -298,7 +298,12 @@ public final class Dragon {
      * the second, so the flare came after the braking it is meant to show.
      */
     public static boolean wantsFlare(float speed, float brake, float hover) {
-        return (brake > 0.002f && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
+        return wantsFlare(speed, brake > 0.002f, hover);
+    }
+
+    /** The same rule with the brake already judged (Dragon.drivers: a brake that has HELD, review r1 of #440). */
+    public static boolean wantsFlare(float speed, boolean braking, float hover) {
+        return (braking && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && hover < 0.8f);
     }
 
     /**
@@ -327,6 +332,11 @@ public final class Dragon {
      * wings forward - and the glide swung in and out (lovish, Oct 30: "the wings looked really choppy").
      */
     public static void drivers(float[] st, Params P, float speed, float vy, float dt) {
+        // the first tick that moves seeds the smoothed speed (a fresh state starts at 0: no brake, no take-off from it)
+        if (st[ST_SPEED_SEEDED] == 0f && speed > 0f) {
+            st[ST_SPEED] = speed;
+            st[ST_SPEED_SEEDED] = 1f;
+        }
         // the braking (blocks per tick per tick) from the smoothed speed, smoothed again
         float lastSpeed = st[ST_SPEED];
         st[ST_SPEED] += (speed - st[ST_SPEED]) * Math.min(1f, dt / P.speedTau);
@@ -339,7 +349,7 @@ public final class Dragon {
         // the flare: braking into a hover - the wings are air brakes while it slows, and until the hover has come in
         st[ST_BRAKING] = st[ST_BRAKE] > P.brakeOn ? st[ST_BRAKING] + dt : 0f;
         boolean braking = st[ST_BRAKING] >= P.brakeHold;
-        float wantFlare = (braking && speed < 0.13f && speed > 0.02f) || (speed < 0.02f && st[ST_HOVER] < 0.8f) ? 1f : 0f;
+        float wantFlare = wantsFlare(speed, braking, st[ST_HOVER]) ? 1f : 0f;
         st[ST_FLARE] += (wantFlare - st[ST_FLARE]) * Math.min(1f, dt / (wantFlare > st[ST_FLARE] ? 5f : 14f));
         st[ST_HOVER] += (wantHover - st[ST_HOVER]) * Math.min(1f, dt / 25f);
         // the climb / dive, -1..1 (r12): from the client's own vertical speed, smoothed
@@ -351,7 +361,9 @@ public final class Dragon {
      *  just came into view read as "standing still" and played the take-off). */
     public static void drivers(float[] st, Params P, float speed, float vy, float dt, int tickCount) {
         drivers(st, P, speed, vy, dt);
-        float wantTakeoff = wantsTakeoff(P, tickCount, st[ST_SPEED], st[ST_CLIMB]) ? 1f : 0f;
+        // not before the speed is known: seeded by a moving tick, or two ticks of standing still
+        boolean known = st[ST_SPEED_SEEDED] != 0f || tickCount >= 2;
+        float wantTakeoff = known && wantsTakeoff(P, tickCount, st[ST_SPEED], st[ST_CLIMB]) ? 1f : 0f;
         st[ST_TAKEOFF] += (wantTakeoff - st[ST_TAKEOFF]) * Math.min(1f, dt / (wantTakeoff > st[ST_TAKEOFF] ? 6f : 20f));
     }
 
@@ -437,9 +449,8 @@ public final class Dragon {
         if (st == null) {
             STATE.put(e, st = newState(age));
             st[ST_PHASE] = Life.offset(id) / P.beatTicks;
-            double dx0 = e.getX() - e.xo, dz0 = e.getZ() - e.zo;
-            st[ST_SPEED] = (float) Math.sqrt(dx0 * dx0 + dz0 * dz0);
-            st[ST_TAKEOFF] = wantsTakeoff(P, e.tickCount, st[ST_SPEED], 0f) ? 1f : 0f;
+            // the smoothed speed is seeded by the first tick that moves (Dragon.drivers): this frame's tick delta is 0
+            // for a dragon that just came into tracking range (xo == x), and a seed of 0 played the take-off
         }
         float dt = Mth.clamp(age - st[2], 0f, 20f);
         st[2] = age;
