@@ -112,6 +112,12 @@ public final class EyesDirector {
     private static int closeUpAt = -1;            // 07b-s: tick of the close-up's next step
     private static int closeUpPhase = 0;          // still, walking, fighting
     private static int closeUpRetried = -1;       // the subject (CLOSE_UPS index) already restarted once
+    // 06b/06c: a site rising (each faction's way of building, claude/faction-construction-oct29.md)
+    private static int consPhase = 0;             // 0 order, 1 wait for the site, 2 wait for half built, 3 close-up
+    private static int consTry = 0, consAt = -1;
+    private static BuildingPlacement consSite = null;
+    private static final int[][] CONS_OFFSETS = { { 10, 10 }, { -12, 10 }, { 10, -12 }, { -12, -12 } };
+    private static final int ZOOM_CLOSE_SITE = 16;
     private static final int ZOOM_STRATEGIC = 85; // past StrategicViewClientEvents.STRATEGIC_ZOOM_ENTER (70), below
                                                   // the big-unit switch (70 * 1.35): icons, but a golem keeps its model
 
@@ -1403,8 +1409,105 @@ public final class EyesDirector {
                 giveUp("06_build_menu", "the worker left the selection before the shot");
             else {
                 shot(mc, "06_build_menu");
-                next();
+                consPhase = 0;
+                consTry = 0;
+                consAt = ticks + 5;
+                consSite = null;
             }
+            return;
+        }
+        if (ticks > shotAt && shotAt >= 0)
+            sceneConstruction(mc);
+    }
+
+    /**
+     * 06b / 06c: a building rising, shot about half built - each faction's way of building (ConstructionFx; the White
+     * Angel cloud ring is the pilot). The tour's owned workers are ordered to build a Barracks beside the first one
+     * (a few spots tried in turn: the server refuses a bad one silently), then the camera waits for the site to be
+     * 40-70% laid.
+     */
+    private static void sceneConstruction(Minecraft mc) {
+        if (ticks > shotAt + 20 * 110) {
+            giveUp("06b_construction", "no site got half built (phase " + consPhase + ", try " + consTry + ")");
+            return;
+        }
+        if (mc.player == null)
+            return;
+        String me = mc.player.getName().getString();
+        switch (consPhase) {
+            case 0 -> {
+                if (ticks < consAt)
+                    return;
+                List<LivingEntity> workers = new ArrayList<>();
+                for (LivingEntity le : new ArrayList<>(UnitClientEvents.getAllUnits()))
+                    if (le instanceof WorkerUnit && le instanceof Unit && le.isAlive() && !le.isPassenger()
+                            && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED && workers.size() < 5)
+                        workers.add(le);
+                if (workers.isEmpty()) {
+                    giveUp("06b_construction", "no owned worker");
+                    return;
+                }
+                int[] ids = new int[workers.size()];
+                for (int i = 0; i < ids.length; i++)
+                    ids[i] = workers.get(i).getId();
+                int[] o = CONS_OFFSETS[consTry % CONS_OFFSETS.length];
+                BlockPos origin = workers.get(0).getOnPos().offset(o[0], 0, o[1]);
+                com.solegendary.reignofnether.building.BuildingServerboundPacket.placeBuilding(
+                    com.solegendary.reignofnether.building.Buildings.BARRACKS, origin,
+                    net.minecraft.world.level.block.Rotation.NONE, me, ids, false);
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: ordered {} workers to build a Barracks at {} (try {})",
+                        ids.length, origin.toShortString(), consTry);
+                consPhase = 1;
+                consAt = ticks + 20 * 4;
+            }
+            case 1 -> {
+                for (BuildingPlacement b : new ArrayList<>(BuildingClientEvents.getBuildings()))
+                    if (b.getBuilding() == com.solegendary.reignofnether.building.Buildings.BARRACKS && !b.isBuilt
+                            && BuildingClientEvents.getPlayerToBuildingRelationship(b) == Relationship.OWNED) {
+                        consSite = b;
+                        consPhase = 2;
+                        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: site at {}, {} blocks", b.centrePos.toShortString(), b.getBlocksTotal());
+                        return;
+                    }
+                if (ticks >= consAt) {   // refused (no placement appeared): the next spot
+                    consTry++;
+                    if (consTry >= CONS_OFFSETS.length) {
+                        giveUp("06b_construction", "every spot was refused");
+                        return;
+                    }
+                    consPhase = 0;
+                    consAt = ticks;
+                }
+            }
+            case 2 -> {
+                BuildingPlacement b = consSite;
+                if (b == null || b.isBuilt) {
+                    giveUp("06b_construction", "the site finished before it was shot");
+                    return;
+                }
+                float k = b.getBlocksTotal() <= 0 ? 0 : (float) b.serverBlocksPlaced / b.getBlocksTotal();
+                if (ticks % 40 == 0)
+                    ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {}% laid", Math.round(k * 100));
+                if (k < 0.4f)
+                    return;
+                UnitClientEvents.clearSelectedUnits();
+                BuildingClientEvents.clearSelectedBuildings();
+                setZoom(ZOOM_NORMAL);
+                OrthoviewClientEvents.centreCameraOnPosInstant(net.minecraft.world.phys.Vec3.atCenterOf(b.centrePos));
+                consPhase = 3;
+                consAt = ticks + 30;
+            }
+            case 3 -> {
+                if (ticks == consAt) {
+                    shot(mc, "06b_construction_rts");
+                    setZoom(ZOOM_CLOSE_SITE);
+                } else if (ticks == consAt + 30) {
+                    shot(mc, "06c_construction_close");
+                    setZoom(ZOOM_NORMAL);
+                    next();
+                }
+            }
+            default -> next();
         }
     }
 
