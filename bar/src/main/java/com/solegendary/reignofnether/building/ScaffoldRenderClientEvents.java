@@ -162,6 +162,11 @@ public class ScaffoldRenderClientEvents {
             VertexConsumer solid = buffers.getBuffer(Sheets.cutoutBlockSheet());
             VertexConsumer fading = null;
 
+            if (!firstDrawnLogged) {   // once a session, as the statues and parts say theirs (eyes reads it)
+                firstDrawnLogged = true;
+                com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Scaffolds] first scaffold drawn: {} site(s) in "
+                    + "view, the nearest at {}", pickedCount, picked[0].centrePos.toShortString());
+            }
             matrix.pushPose();
             pose = matrix.last();
             basePose.set(pose.pose());
@@ -189,6 +194,8 @@ public class ScaffoldRenderClientEvents {
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
         }
     }
+
+    private static boolean firstDrawnLogged = false;
 
     /** Insertion into the distance-sorted pick list, dropping the furthest when full. */
     private static void insert(BuildingPlacement p, double d2, float a) {
