@@ -37,6 +37,9 @@ public final class DefenceCosts {
     public static final ResourceCost SKY_WATCH = ResourceCost.Building(0, 160, 120, 0);
     public static final ResourceCost SKY_WATCH_HEAVY = ResourceCost.Building(0, 380, 260, 0);
     public static final ResourceCost FLAK = ResourceCost.Building(0, 350, 280, 0);
+    // the anti-siege tower (BAR's HLT; lovish Oct 29, design/siege_t1.md): ~1.7x the enhanced anti-raid tower, the
+    // price of about five T1 siege lobbers (95 m each) - six of them die before it falls
+    public static final ResourceCost SIEGE_GUARD = ResourceCost.Building(0, 650, 450, 0);
     // baked from the T3 costs (bakeAntiT3); until then a placeholder that is never shown (costs bake at common setup)
     public static final ResourceCost ANTI_T3 = ResourceCost.Building(0, 260, 275, 0);
 
@@ -65,6 +68,7 @@ public final class DefenceCosts {
             case SKY_WATCH_HEAVY -> SKY_WATCH_HEAVY;
             case FLAK -> FLAK;
             case ANTI_T3 -> ANTI_T3;
+            case SIEGE_GUARD -> SIEGE_GUARD;
         };
     }
 

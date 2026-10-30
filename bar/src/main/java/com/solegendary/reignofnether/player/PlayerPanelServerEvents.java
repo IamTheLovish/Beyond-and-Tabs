@@ -78,13 +78,10 @@ public class PlayerPanelServerEvents {
         com.solegendary.reignofnether.ability.abilities.CryptTide.class,
         com.solegendary.reignofnether.ability.abilities.WarDrums.class,
         com.solegendary.reignofnether.ability.abilities.BastionAegis.class,
-        com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class,
         com.solegendary.reignofnether.ability.abilities.MagmaRupture.class,
         com.solegendary.reignofnether.ability.abilities.HolyBell.class,
         com.solegendary.reignofnether.ability.abilities.WitheringFog.class,
         com.solegendary.reignofnether.ability.abilities.SunriseSortie.class,
-        com.solegendary.reignofnether.ability.abilities.SoulWisps.class,
-        com.solegendary.reignofnether.ability.abilities.AwakenThicket.class,
         com.solegendary.reignofnether.ability.abilities.Bloom.class);
 
     @SubscribeEvent
@@ -249,7 +246,7 @@ public class PlayerPanelServerEvents {
         float metal = 0, energy = 0, mStored = 0, mStorage = 0, eStored = 0, eStorage = 0;
         if (alive) {
             EconomyServerEvents.PlayerEconomy eco = EconomyServerEvents.getEconomy(p.name);
-            metal = eco.metalIncome + eco.metalConverted;   // same "income" the economy bar shows
+            metal = eco.effectiveMetalIncome() + eco.metalConverted;   // same "income" the economy bar shows
             energy = eco.energyIncome;
             mStorage = eco.metalStorage;
             eStorage = eco.energyStorage;

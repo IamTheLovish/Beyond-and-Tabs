@@ -32,7 +32,7 @@ import java.util.ArrayList;
  */
 public class WardSpirePlacement extends BuildingPlacement {
 
-    public static final int RANGE = 40;
+    public static final int RANGE = 64;   // was 40: a wider umbrella (tester feedback; balance number for lovish)
     public static final int CHARGE_TICKS = 90 * 20;
     public static final int MAX_CHARGES = 1;
 

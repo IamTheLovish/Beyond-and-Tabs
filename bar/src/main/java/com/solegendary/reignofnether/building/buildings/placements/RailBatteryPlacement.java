@@ -52,6 +52,8 @@ public class RailBatteryPlacement extends BuildingPlacement {
     @Nullable public Vec3 lineFrom, lineTo;
     /** The enemy owner a game test limits targets to (null in play: game tests share one world). */
     @Nullable public String onlyFoe = null;
+    /** The last look found a target: the battery looks again the tick it is ready, not at the next SCAN_TICKS. */
+    private boolean engaged = false;
 
     private final List<LivingEntity> scratch = new ArrayList<>();
 
@@ -67,7 +69,12 @@ public class RailBatteryPlacement extends BuildingPlacement {
             tickRail(sl);
     }
 
-    /** One server tick of the weapon: cooldown, then charge, then fire. Public for the game test. */
+    /**
+     * One server tick of the weapon: cooldown, then charge, then fire - a new charge may start on the tick the cooldown
+     * reaches 0, so a battery in a fight fires every CHARGE_TICKS + COOLDOWN_TICKS exactly; an idle one looks only
+     * every SCAN_TICKS. It used to skip that tick and wait for the next SCAN_TICKS: 140 ticks a shot, not 130
+     * (DefenceTower's tickWeapon had the same). Public for the game test.
+     */
     public void tickRail(ServerLevel sl) {
         if (!isBuilt || isDestroyedServerside || ownerName == null || ownerName.isBlank())
             return;
@@ -79,12 +86,10 @@ public class RailBatteryPlacement extends BuildingPlacement {
                 fire(sl);
             return;
         }
-        if (cooldown > 0) {
-            cooldown--;
+        if (cooldown > 0 && --cooldown > 0)
             return;
-        }
-        if (tickAge % SCAN_TICKS == 0)
-            startCharge(sl);
+        if (engaged || tickAge % SCAN_TICKS == 0)
+            engaged = startCharge(sl);
     }
 
     /** The barrel: the top of the battery's centre column. */

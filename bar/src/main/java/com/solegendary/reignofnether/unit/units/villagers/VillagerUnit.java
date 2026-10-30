@@ -5,7 +5,6 @@ import com.mojang.serialization.Dynamic;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
-import com.solegendary.reignofnether.ability.abilities.CallToArmsUnit;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuildingClientEvents;
 import com.solegendary.reignofnether.building.production.ProductionItems;
@@ -82,9 +81,6 @@ import static com.solegendary.reignofnether.util.MiscUtil.fcs;
 
 public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit, VillagerDataHolder, ConvertableUnit {
     public static final Abilities ABILITIES = new Abilities();
-    static {
-        ABILITIES.add(new CallToArmsUnit(), Keybindings.abilitySlot1);
-    }
 
     //region
     @Override
