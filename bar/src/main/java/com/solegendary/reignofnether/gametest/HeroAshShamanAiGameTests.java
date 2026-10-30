@@ -29,7 +29,10 @@ public class HeroAshShamanAiGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
 
-    /** Three enemies five blocks off and all three spells learnt: in 10 s the AI casts at least one of them. */
+    /**
+     * Three enemies five blocks off and all three spells learnt: in 10 s the AI casts each of them (one a second, as
+     * its fight brain decides; review r1: "any one" let a Shaman that only ever cast Firewall pass).
+     */
     @GameTest(template = ARENA, batch = "hero_ai_ash_shaman_fight", timeoutTicks = 260)
     public static void hero_ai_ash_shaman_casts_in_a_fight(GameTestHelper helper) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
@@ -48,11 +51,14 @@ public class HeroAshShamanAiGameTests {
             HeroAiGameTests.learn(s, 2));
         helper.runAfterDelay(200, () -> {
             List<String> problems = new ArrayList<>();
-            boolean cast = false;
+            List<String> notCast = new ArrayList<>();
             for (FactionHeroAbility a : spells)
-                cast |= !a.isOffCooldown(s);
-            if (!cast)
+                if (a.isOffCooldown(s))
+                    notCast.add(a.spec.id);
+            if (notCast.size() == spells.size())
                 problems.add("in 10 s with three enemies five blocks off, the Ash Shaman's AI cast none of Firewall, Lava Geyser, Ember Totem");
+            else if (!notCast.isEmpty())
+                problems.add("in 10 s with three enemies five blocks off, the Ash Shaman's AI never cast " + notCast);
             HeroAiGameTests.finish(helper, problems, mobs, null);
         });
     }
