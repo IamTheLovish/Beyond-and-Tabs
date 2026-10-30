@@ -1620,18 +1620,21 @@ def m_copper(F, n, stage):
     grid = 2
     iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
-    face = smoothstep(0.004, 0.02, edge)
+    # r31 (art director, sampler 3: "keep the cut seams on all four, patina creeping from the seams, rough patina
+    # over glossier metal, stage colours distinct"): seams wider (survive the mips under the patina), a crisper step,
+    # the bare metal glossier (170) with the brushing in the relief
+    face = smoothstep(0.005, 0.026, edge)
     ham = F.noise(4, 14, 0.6)
     br = brushed(F, 0.8)
-    H = 0.35 + 0.5 * face + 0.02 * ham + 0.005 * (br - 0.5)
-    metal = tint((0.80, 0.45, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5)) * (0.65 + 0.35 * face))
-    smooth_metal = np.clip(150 + 40 * (br - 0.5) - 15 * (1 - face), 40, 230)
+    H = 0.35 + 0.5 * smoothstep(0.005, 0.016, edge) + 0.02 * ham + 0.010 * (br - 0.5)
+    metal = tint((0.82, 0.46, 0.30), (0.95 + 0.06 * ham + 0.03 * (br - 0.5)) * (0.60 + 0.40 * face))
+    smooth_metal = np.clip(170 + 40 * (br - 0.5) - 20 * (1 - face), 40, 235)
     if stage == 0:
         return H, metal, np.full(H.shape, 234), smooth_metal
     # tarnish: a brown-purple film that dulls the metal (copper's first oxide, Cu2O)
     tarn_n = norm01(F.fbm(2, 4, 0.55))
     tarn = smoothstep(0.1, 0.7, tarn_n + (0.5 if stage >= 2 else 0.0))
-    tarnished = metal * (1 - tarn[..., None]) + tarn[..., None] * tint((0.46, 0.30, 0.24), 0.9 + 0.2 * ham)
+    tarnished = metal * (1 - tarn[..., None]) + tarn[..., None] * tint((0.50, 0.30, 0.22), 0.9 + 0.2 * ham)
     # verdigris: grows from the seams and the hollows outward
     seed_n = norm01(F.warp(F.fbm(2, 3, 0.55), 0.015 * F.noise(2, 6), 0.015 * F.noise(2, 6)))
     low = 1 - face + 0.25 * (1 - norm01(F.blur(ham, F.n / 24)))
@@ -1640,13 +1643,14 @@ def m_copper(F, n, stage):
     spots = smoothstep(0.88, 0.97, norm01(F.noise(6, 16, 0.4))) * (0.5 if stage == 1 else 0.0)
     verd = np.clip(verd + spots, 0, 1)
     vtone = 0.85 + 0.2 * norm01(F.fbm(3, 3, 0.5)) + 0.05 * ham
-    green = tint((0.33, 0.62, 0.50), vtone)
-    pale = tint((0.55, 0.75, 0.62), vtone)                 # the chalky light bloom on thick patina
-    bloom = smoothstep(0.6, 0.95, norm01(F.fbm(4, 3, 0.5))) * (stage >= 2)
+    # the stages' greens differ: weathered a deeper blue-green, oxidized the lighter chalky teal of a thick patina
+    green = tint((0.28, 0.56, 0.46) if stage == 2 else (0.36, 0.66, 0.52), vtone)
+    pale = tint((0.56, 0.78, 0.64), vtone)                 # the chalky light bloom on thick patina
+    bloom = smoothstep(0.6, 0.95, norm01(F.fbm(4, 3, 0.5))) * (stage >= 2) * (0.6 if stage == 2 else 1.0)
     green = green * (1 - 0.6 * bloom[..., None]) + pale * 0.6 * bloom[..., None]
     alb = tarnished * (1 - verd[..., None]) + green * verd[..., None]
-    alb = np.where((face < 0.3)[..., None], alb * 0.8, alb)
-    H = H + 0.015 * verd * norm01(F.noise(12, 40, 0.3))   # the crust is a little rough
+    alb = alb * (0.72 + 0.28 * face)[..., None]            # the seams stay under the patina (every stage)
+    H = H + 0.03 * verd * norm01(F.noise(12, 40, 0.3))    # the crust is rough
     f0 = np.where(verd > 0.5, 10, 234)
     smooth = smooth_metal * (1 - tarn * 0.45) * (1 - verd) + verd * (18 + 10 * (1 - vtone))
     return H, alb, f0, np.clip(smooth, 8, 230)
