@@ -267,6 +267,8 @@ public class EntityRegistrar {
                     .sized(EntityType.PHANTOM.getWidth() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE,
                            EntityType.PHANTOM.getHeight() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bone_dragon_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit>> ROYAL_ARCHITECT_UNIT = ENTITIES.register("royal_architect_unit",
@@ -527,6 +529,8 @@ public class EntityRegistrar {
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.ThunderDragonUnit::new, MobCategory.CREATURE)
                     .sized(1.6f, 1.0f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thunder_dragon_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.storm.EarthshakerUnit>> EARTHSHAKER_UNIT = ENTITIES.register("earthshaker_unit",
@@ -578,6 +582,8 @@ public class EntityRegistrar {
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.storm.CelestialDragonUnit::new, MobCategory.CREATURE)
                     .sized(2.4f, 1.4f)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    // every tick: a big fast flyer lerped from every 3rd tick stutters (DragonFlightGameTests)
+                    .updateInterval(1)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "celestial_dragon_unit").toString()));
 
 
