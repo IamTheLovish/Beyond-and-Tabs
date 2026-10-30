@@ -156,9 +156,9 @@ TARGETS = {
     # a little more mottle spread, a satin fired skin (smooth 29 -> 36)
     "red_terracotta": dict(luma=0.33, std=0.022, sat=0.62, tilt=3.5, smooth=36, pore=30, soften=1.0),
     "terracotta": dict(luma=0.40, std=0.022, sat=0.52, tilt=3.5, smooth=36, pore=30, soften=1.0),
-    "polished_basalt_side": dict(luma=0.36, std=0.077, sat=0.05, tilt=25.0, smooth=39, pore=8),
-    "polished_basalt_top": dict(luma=0.33, std=0.075,   # r21: in game 132 vs basalt 114 - read as bone beside it
-    sat=0.02, tilt=20.0, smooth=26, pore=8),
+    # r31: cut columns (m_columnar polished) - crisp grooves, flat faces: tilt 25 -> 14 / 20 -> 10, satin 39 -> 70
+    "polished_basalt_side": dict(luma=0.36, std=0.065, sat=0.05, tilt=14.0, smooth=70, pore=8),
+    "polished_basalt_top": dict(luma=0.33, std=0.065, sat=0.02, tilt=10.0, smooth=70, pore=8),
     "bone_block_side": dict(luma=0.86, std=0.050, sat=0.11, tilt=18.0, smooth=87, pore=20),
     "bone_block_top": dict(luma=0.80, std=0.070, sat=0.13, tilt=16.2, smooth=73, pore=20),
     "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.08, tilt=16.0, smooth=138, pore=4),
@@ -221,10 +221,10 @@ TARGETS = {
     "reinforced_deepslate_side": dict(luma=0.40, std=0.150, sat=0.06, tilt=20.0, smooth=11, pore=8),
     "reinforced_deepslate_top": dict(luma=0.36, std=0.140, sat=0.06, tilt=20.0, smooth=16, pore=8),
     # round 28: the Rock035 scan (SCAN section) - toe keeps its darkest grain inside the albedo range (S3)
-    "basalt_side": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=30, pore=10, soften=2.5, mid=1.0,
-                        toe=0.245),
-    "basalt_top": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=26, pore=10, soften=2.5, mid=1.0,
-                       toe=0.245),
+    # r31: columnar (m_columnar) - the ribs and joints carry the spread (std 0.05 -> 0.06) and the relief (tilt 12 ->
+    # 16); soften 2.5 -> 1.0 (procedural, no scan grain to tame)
+    "basalt_side": dict(luma=0.30, std=0.060, sat=0.05, tilt=16.0, smooth=30, pore=10, soften=1.0),
+    "basalt_top": dict(luma=0.30, std=0.060, sat=0.05, tilt=14.0, smooth=26, pore=10, soften=1.0),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
     # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
     "soul_sand": dict(luma=0.28, std=0.050, sat=0.20, tilt=15.0, smooth=28, pore=48, soften=0.8),
@@ -1685,20 +1685,74 @@ def m_terracotta(F, n, base, flash=(0.92, 0.90, 0.96)):
     return H, alb
 
 
-def m_basalt(F, n, top):
-    """Polished basalt: vertical columnar flutes on the side; on the top a squared ring pattern of the cut column."""
+COLUMN_EDGES = (0.0, 0.21, 0.40, 0.62, 0.81)   # the five columns' left edges along u - FIXED, so stacked blocks
+#                                                (any variant) keep each column running through
+
+
+def hex_ends(F, n, jitter=0.35):
+    """The cut ends of basalt columns: a near-hexagonal Voronoi (low jitter, 3x3 per block), each column its own
+    level. Returns (joint 0-1, per-cell level, f2 - f1)."""
+    f1, f2, idx, k = F.voronoi(9, jitter)
+    level = F.rng.uniform(-1, 1, k)[idx]
+    return 1 - smoothstep(0.0, 0.022, f2 - f1), level, f2 - f1
+
+
+def m_columnar(F, n, top, polished):
+    """Round 31 (art director: basalt's "columnar structure lost: hex column ends on top, vertical ribs with relief
+    on the sides"): basalt as it forms - a bundle of columns. Side: five upright columns per block, each a rounded
+    rib (a polished one a flat facet) with a dark crevice between, cross-joints at different heights on each column
+    (the columns are jointed), fine-grained dark grey rock with a faint grit. Top: the cut ends, near-hexagonal,
+    each at its own level, joints as dark grooves with chamfered edges. The polished block keeps the same structure
+    cut flat: crisp grooves, flat faces, a satin finish."""
+    rng = F.rng
+    grit = F.noise(16, 48, 0.3)
+    mottle = F.fbm(2, 3, 0.5)
     if top:
-        d = np.maximum(np.abs(F.u - 0.5), np.abs(F.v - 0.5))
-        rings = 0.5 + 0.5 * np.cos(d * 2 * math.pi * 6 + 0.6 * F.noise(3, 8))
-        bev = frame(F, 0.06, 0.012)
-        H = 0.4 + 0.4 * bev + 0.08 * rings
-        shade = (0.86 + 0.10 * rings) * (0.75 + 0.25 * bev)
+        joint, level, gap = hex_ends(F, n, 0.30 if polished else 0.4)
+        face = smoothstep(0.0, 0.05 if polished else 0.07, gap)        # chamfer into the joint
+        H = 0.55 + 0.35 * face + (0.02 if polished else 0.05) * level + (0.004 if polished else 0.02) * grit
+        shade = (0.90 + (0.03 if polished else 0.06) * level + 0.05 * mottle + 0.02 * grit) * (0.60 + 0.40 * face)
+        if not polished:                                                # a rough end: pits and a few chips
+            pit = smoothstep(0.8, 0.96, norm01(F.noise(8, 24, 0.3)))
+            H = H - 0.08 * pit * face
+            shade = shade - 0.10 * pit * face
     else:
-        flutes = 0.5 + 0.5 * np.cos(F.u * 2 * math.pi * 5 + 0.4 * F.noise(2, 6, 0.5, sx=1.0, sy=6.0))
-        streak = F.noise(4, 30, 0.4, sx=1.0, sy=8.0)
-        H = 0.45 + 0.25 * flutes + 0.05 * streak
-        shade = 0.82 + 0.15 * flutes + 0.06 * streak
-    return H, tint((0.36, 0.36, 0.38), shade)
+        edges = np.array(COLUMN_EDGES)
+        wob = 0.006 * F.noise(1, 3, 0.5, sx=1.0, sy=4.0)
+        u = (F.u + wob) % 1.0
+        d = (u[..., None] - edges[None, None, :]) % 1.0                 # distance past each edge
+        col = np.argmin(d, -1)
+        start = edges[col]
+        width = (np.roll(edges, -1) - edges) % 1.0
+        w = width[col]
+        x = ((u - start) % 1.0) / w                                     # 0..1 across the column
+        if polished:
+            rib = smoothstep(0.0, 0.08, x) * smoothstep(0.0, 0.08, 1 - x)   # flat with a crisp drop
+        else:                                                           # an angular prism: two facets, a crease
+            ridge_at = (0.42 + 0.16 * rng.random(len(edges)))[col]
+            rib = np.where(x < ridge_at, x / ridge_at, (1 - x) / (1 - ridge_at)) ** 0.7
+            rib = rib * (0.9 + 0.1 * norm01(F.noise(3, 10, 0.5, sx=1.0, sy=5.0)))   # weathered, uneven
+        crev = 1 - smoothstep(0.0, 0.035 if polished else 0.06, np.minimum(x, 1 - x) * w)
+        # cross-joints: each column broken at its own heights (1-2 per block), a thin dark line, slightly open
+        seg = np.zeros((n, n))
+        for c in range(len(edges)):
+            for _ in range(2 if rng.random() < 0.6 else 1):
+                y0 = rng.random()
+                dy = np.abs((F.v - y0 + 0.5) % 1.0 - 0.5)
+                seg = np.where(col == c, np.maximum(seg, 1 - smoothstep(0.004, 0.012, dy)), seg)
+        seg = seg * smoothstep(0.1, 0.9, 1 - crev)
+        H = 0.35 + 0.45 * rib - 0.06 * seg + (0.005 if polished else 0.03) * grit \
+            + (0.0 if polished else 0.05) * F.noise(3, 12, 0.5, sx=1.0, sy=6.0)
+        tone = rng.uniform(0.9, 1.1, len(edges))[col]
+        shade = tone * (0.72 + 0.28 * rib) * (1 - 0.35 * crev - 0.25 * seg) * (1 + 0.04 * mottle + 0.03 * grit)
+    base = (0.33, 0.33, 0.35) if polished else (0.30, 0.30, 0.32)
+    hue = F.noise(2, 5, 0.5)
+    jit = np.stack([0.01 * hue, 0.0 * hue, -0.01 * hue], -1)
+    return H, tint(base, shade, jit)
+
+
+def m_basalt(F, n, top):
+    return m_columnar(F, n, top, polished=True)
 
 
 def m_bone(F, n, top):
@@ -2620,8 +2674,8 @@ def m_scan_basalt(F, n, end=False):
     return d
 
 
-SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top,
-              "basalt_side": m_scan_basalt, "basalt_top": lambda F, n: m_scan_basalt(F, n, end=True)}
+SCAN_BASES = {"stone": m_scan_stone, "dirt": m_scan_dirt, "grass_block_top": m_scan_grass_top}
+# (basalt left the scans in r31: m_columnar)
 
 
 def scan_textures(base, i, n):
@@ -3228,7 +3282,10 @@ def recipes():
         "grass_block_side": _scan_grass_side(0),
         "grass_block_side_overlay": _scan_grass_overlay(0),
         "dirt": _scan("dirt"), "stone": _scan("stone"), "cobblestone": _plain(m_cobblestone),
-        "basalt_side": _scan("basalt_side"), "basalt_top": _scan("basalt_top"),
+        # r31: columnar basalt (m_columnar) in place of the Rock035 scan - the scan's variants turned the tile, which
+        # would lay the ribs sideways; each variant is its own roll on the fixed column edges (COLUMN_EDGES)
+        "basalt_side": _plain(lambda F, n: m_columnar(F, n, False, False)),
+        "basalt_top": _plain(lambda F, n: m_columnar(F, n, True, False)),
         "sand": _plain(m_sand), "gravel": _plain(m_gravel_r25), "oak_planks": _plain(m_oak_planks_r24),
         "oak_log": _plain(m_oak_bark_r24),
         "oak_log_top": _plain(m_log_top), "stone_bricks": _plain(m_stone_bricks),
@@ -3387,7 +3444,9 @@ def recipes():
     R["weathered_cut_copper"] = _parts(lambda F, n: _d4(m_copper(F, n, 2)))
     for name, base in SCAN_VARIANT_OF.items():        # round 28: variant k is SCAN index k - 1
         i = int(name.rsplit("_v", 1)[1]) - 1
-        if base in SCAN_BASES:
+        if base in ("basalt_side", "basalt_top"):     # r31: procedural columns, their own seed each
+            R[name] = R[base]
+        elif base in SCAN_BASES:
             R[name] = _scan(base, i)
         elif base == "grass_block_side":
             R[name] = _scan_grass_side(i)
