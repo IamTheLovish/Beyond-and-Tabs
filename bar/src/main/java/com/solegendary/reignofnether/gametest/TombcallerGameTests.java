@@ -192,8 +192,9 @@ public class TombcallerGameTests {
         return units.stream().filter(Objects::nonNull).toList();
     }
 
+    /** The standing cell at (x, z): on the arena's grass (template y=2, over its stone at y=1), so y=3. */
     private static Vec3 cell(GameTestHelper helper, double x, double z) {
-        BlockPos at = helper.absolutePos(new BlockPos(0, 2, 0));
+        BlockPos at = helper.absolutePos(new BlockPos(0, 3, 0));
         return new Vec3(at.getX() + x + 0.5, at.getY(), at.getZ() + z + 0.5);
     }
 
