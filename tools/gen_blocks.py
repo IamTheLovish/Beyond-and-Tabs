@@ -1474,6 +1474,17 @@ PLANT_SEEDS = (
     "red_tulip",
 )
 SEED_ORDER = SEED_ORDER + PLANT_SEEDS
+# round 40: the builds' leftovers - the cartography table (dark oak with a parchment chart), the hopper (cast iron,
+# f0 230 like the iron block, dark and dull) and hanging roots (a cut-out cross sprite) - appended last
+for _f in ("top", "side1", "side2", "side3"):
+    TARGETS["cartography_table_" + _f] = dict(luma=0.38 if _f != "top" else 0.52, std=0.070, sat=0.48,
+                                              tilt=8.0, smooth=50, pore=24)
+TARGETS["hopper_outside"] = dict(luma=0.30, std=0.050, sat=0.02, tilt=10.0, smooth=110, pore=0, f0=230)
+TARGETS["hopper_top"] = dict(luma=0.28, std=0.060, sat=0.02, tilt=12.0, smooth=110, pore=0, f0=230)
+TARGETS["hopper_inside"] = dict(luma=0.20, std=0.060, sat=0.02, tilt=10.0, smooth=90, pore=0, f0=230)
+TARGETS["hanging_roots"] = dict(luma=0.42, std=0.070, sat=0.36, tilt=18.0, smooth=30, pore=40, ao=0.3)
+SEED_ORDER = SEED_ORDER + ("cartography_table_top", "cartography_table_side1", "cartography_table_side2",
+                           "cartography_table_side3", "hopper_outside", "hopper_top", "hopper_inside", "hanging_roots")
 
 
 IRON = 230   # LabPBR 1.3's predefined iron (the shader uses iron's own F0, tinted by the albedo)
@@ -3772,6 +3783,112 @@ def periodic_path(F, along, count=3, amp=0.06):
     return off
 
 
+def m_cartography_table(F, n, face):
+    """Cartography table (round 40): a dark oak box. 'top': the worked top under a sheet of parchment - a drawn chart
+    (a wandering coastline, hatched sea, a few inked marks) with a brass compass at a corner; 'side1': the planks
+    with a parchment sheet pinned up; 'side2': the planks with a brass compass dial; 'side3': the planks with a
+    shelf rail."""
+    H, alb = m_planks(F, n, (0.34, 0.22, 0.12), 0.006)
+    H = H * 0.6 + 0.2
+    paper = np.array([0.82, 0.74, 0.56])
+    grain = 0.9 + 0.1 * norm01(F.noise(8, 30, 0.4))
+    ink = np.array([0.30, 0.22, 0.14])
+    if face == "top":
+        e = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
+        sheet = smoothstep(0.06, 0.075, e)                   # the parchment, a border of table round it
+        coast = F.warp(F.noise(2, 5, 0.6), 0.04 * F.noise(3, 8), 0.04 * F.noise(3, 8))
+        land = smoothstep(-0.1, 0.1, coast)
+        line = 1 - smoothstep(0.0, 0.05, np.abs(coast))     # the inked coastline
+        hatch = (((F.u + F.v) * 40) % 1.0 < 0.35) * (1 - land) * smoothstep(0.05, 0.25, np.abs(coast))
+        mark = smoothstep(0.92, 0.98, norm01(F.noise(8, 20, 0.3))) * land
+        cr = np.sqrt((F.u - 0.80) ** 2 + (F.v - 0.80) ** 2)
+        dial = 1 - smoothstep(0.07, 0.085, cr)
+        needle = dial * (1 - smoothstep(0.0, 0.012, np.abs(F.u - F.v - 0.0))) * (cr < 0.06)
+        face_rgb = paper * grain[..., None] * (1 - 0.12 * (1 - land))[..., None]
+        face_rgb = face_rgb * (1 - 0.55 * line - 0.25 * hatch - 0.5 * mark)[..., None]
+        face_rgb = np.where(dial[..., None] > 0.5, np.array([0.66, 0.52, 0.22]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None], face_rgb)
+        face_rgb = np.where(needle[..., None] > 0.5, ink, face_rgb)
+        alb = alb * (1 - sheet[..., None]) + face_rgb * sheet[..., None]
+        H = H * (1 - sheet) + sheet * (0.62 + 0.01 * F.noise(6, 20, 0.4) - 0.02 * line + 0.05 * dial)
+        return H, np.clip(alb, 0, 1)
+    if face == "side1":
+        sheet = ((F.u > 0.14) & (F.u < 0.86) & (F.v > 0.12) & (F.v < 0.78)).astype(np.float64)
+        line = 1 - smoothstep(0.0, 0.05, np.abs(F.warp(F.noise(2, 5, 0.6), 0.04 * F.noise(3, 8), 0.04 * F.noise(3, 8))))
+        pin = np.minimum(np.sqrt((F.u - 0.18) ** 2 + (F.v - 0.16) ** 2), np.sqrt((F.u - 0.82) ** 2 + (F.v - 0.16) ** 2))
+        pin = 1 - smoothstep(0.018, 0.028, pin)
+        face_rgb = paper * grain[..., None] * (1 - 0.5 * line)[..., None]
+        alb = alb * (1 - sheet[..., None]) + face_rgb * sheet[..., None]
+        alb = np.where(pin[..., None] > 0.5, np.array([0.55, 0.55, 0.58]), alb)
+        H = H + 0.06 * sheet + 0.10 * pin
+        return H, np.clip(alb, 0, 1)
+    if face == "side2":
+        cr = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.45) ** 2)
+        dial = 1 - smoothstep(0.17, 0.185, cr)
+        ring = 1 - smoothstep(0.0, 0.015, np.abs(cr - 0.175))
+        ang = np.arctan2(F.v - 0.45, F.u - 0.5)
+        ticks = dial * (cr > 0.13) * ((np.abs(((ang / (2 * math.pi) * 8) % 1.0) - 0.5) < 0.04))
+        needle = dial * (cr < 0.14) * (1 - smoothstep(0.0, 0.012, np.abs((F.u - 0.5) * 0.7 - (F.v - 0.45) * 0.7)))
+        brass = np.array([0.66, 0.52, 0.22]) * (0.9 + 0.15 * brushed(F, 0.6))[..., None]
+        alb = np.where(dial[..., None] > 0.5, paper * 0.95, alb)
+        alb = np.where((ring + ticks)[..., None] > 0.5, brass, alb)
+        alb = np.where(needle[..., None] > 0.5, ink, alb)
+        H = H + 0.08 * dial + 0.04 * ring
+        return H, np.clip(alb, 0, 1)
+    rail = ((F.v > 0.30) & (F.v < 0.36)).astype(np.float64)       # side3: a shelf rail across the planks
+    alb = alb * (1 + 0.10 * rail)[..., None]
+    H = H + 0.10 * rail
+    return H, np.clip(alb, 0, 1)
+
+
+def m_hopper(F, n, face):
+    """Hopper (round 40): cast iron - a dark, dull plate (m_metal_plate's bevel and dents, the brushing faint, the
+    smoothness low). 'outside': the plate with a rivet at each corner; 'top': the rim's top face with the bevel;
+    'inside': the funnel's floor, darker toward the centre hole."""
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.06, groove=0.010, dent=0.015, brush=0.4, smooth_base=105,
+                                   smooth_var=18, coarse=True)
+    alb = alb * 0.42
+    if face == "outside":
+        cx = np.array([0.12, 0.88])
+        d = np.sqrt(np.min(np.abs(F.u[..., None] - cx), -1) ** 2 + np.min(np.abs(F.v[..., None] - cx), -1) ** 2)
+        dome = np.clip(1 - (d / 0.035) ** 2, 0, 1)
+        H = np.where(dome > 0, H + 0.10 * np.sqrt(dome), H)
+        alb = np.where(dome[..., None] > 0, alb * (0.95 + 0.15 * np.sqrt(dome))[..., None], alb)
+    elif face == "inside":
+        r = np.sqrt((F.u - 0.5) ** 2 + (F.v - 0.5) ** 2)
+        funnel = smoothstep(0.12, 0.50, r)                     # 0 at the centre hole, 1 at the rim
+        hole = 1 - smoothstep(0.10, 0.13, r)
+        H = H * funnel + 0.05 * (1 - funnel)
+        alb = alb * (0.55 + 0.45 * funnel)[..., None]
+        alb = np.where(hole[..., None] > 0.5, np.array([0.03, 0.03, 0.03]), alb)
+        smooth = np.where(hole > 0.5, 40, smooth)
+    return H, np.clip(alb, 0, 1), smooth
+
+
+def m_hanging_roots(F, n):
+    """Hanging roots (round 40): a cut-out cross sprite - fibrous roots hanging from the top edge, wavy, tapering,
+    of several lengths, a few forking; pale earthy brown, darker toward the ceiling."""
+    depth = np.full((n, n), -1.0)
+    across, length = np.zeros((n, n)), np.zeros((n, n))
+    for _ in range(14):
+        x0 = F.rng.random()
+        ln = 0.35 + 0.65 * F.rng.random()                     # how far down it hangs
+        path = x0 + periodic_path(F, F.v, 3, 0.03) * 2
+        w0 = 0.010 + 0.012 * F.rng.random()
+        w = w0 * (1 - 0.8 * np.clip(F.v / ln, 0, 1))          # tapers toward the tip
+        d = (F.u - path + 0.5) % 1.0 - 0.5
+        dd = F.rng.random()
+        inside = (np.abs(d) < w) & (F.v < ln) & (dd > depth)
+        depth = np.where(inside, dd, depth)
+        across = np.where(inside, d / np.maximum(w, 1e-6), across)
+        length = np.where(inside, ln, length)
+    alpha = (depth >= 0).astype(np.float64)
+    dome = 1 - across ** 2
+    fibre = F.noise(8, 40, 0.5)
+    H = np.where(alpha > 0, 0.3 + 0.3 * depth + 0.3 * dome + 0.03 * fibre, 0.0)
+    shade = np.where(alpha > 0, (0.55 + 0.2 * depth + 0.15 * dome + 0.04 * fibre) * (0.8 + 0.3 * F.v), 0.3)
+    return dict(H=H, alb=tint((0.58, 0.46, 0.34), shade), alpha=alpha)
+
+
 def m_roots(F, n, top):
     """Mangrove roots: a tangle of woody roots with gaps (cut-out). The side (two crossed planes in the model) shows
     them running mostly down, the top a mat in both directions. Each root is a wavy strand with a round section and
@@ -4914,6 +5031,7 @@ STRAW = ("grass_straw", "tall_grass_straw_bottom", "tall_grass_straw_top",
          *("grass_straw" + sh + sz for sh in ("", "_b", "_c") for sz in PLANT_SIZES))                    # r35
 CUTOUT |= set(PLANTS) | set(STRAW)   # round 29
 CUTOUT |= set(FLOWER_TEXTURES)       # r36
+CUTOUT.add("hanging_roots")          # round 40
 
 
 # leaning quads for a tuft seen from above (round 29c/d): (axis, angle) per quad; axis x tips the plane through the root
@@ -5090,6 +5208,7 @@ _MIPPED = "minecraft:cutout_mipped"
 MODEL_OVERRIDES = {
     "glass": {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/glass"}},
     "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
+    "hanging_roots": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/hanging_roots"}},
     # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
     # breaks into flickering dashes from the RTS camera)
     # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer;
@@ -5554,6 +5673,11 @@ def recipes():
         R[p] = _parts(lambda F, n, p=p: m_plant(p, n), fit=False)
     for p in FLOWER_TEXTURES:                              # r36: drawn in their final colours
         R[p] = _parts(lambda F, n, p=p: m_flower(p, n), fit=False)
+    for f in ("top", "side1", "side2", "side3"):           # round 40: the leftovers
+        R["cartography_table_" + f] = _plain(lambda F, n, ff=f: m_cartography_table(F, n, ff))
+    for f in ("outside", "top", "inside"):
+        R["hopper_" + f] = _parts(lambda F, n, ff=f: _d3(m_hopper(F, n, ff)))
+    R["hanging_roots"] = _parts(m_hanging_roots)
     return R
 
 
