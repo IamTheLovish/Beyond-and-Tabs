@@ -341,8 +341,94 @@ def build_ac():
     return revised(SPECS["ac"])
 
 
+# ---- (af) lovish's pick (Oct 29 19:5x): OLD a, small fixes only - from the blind critic's diagnosis of a (read 7,
+# massing 6: the tower a detached post, the south stack's pale plinth box on a camera face, a blank left flank) and
+# lovish 20:00: "the towers on this building need more refinement". Everything else is a's: the erecting bay and its
+# gate, the north-light field, the stacks' places and tops (the south one moved 2 north, off the south face).
+# Stack and tower proportions measured on the study builds: design/vehicle_labs/towers.md.
+AF = dict(bay=(0, 9, 8, 16), tower=(1, 3, 5, 7), flank_x=4,
+          boilers=[(12, 16, 0, 4), (12, 16, 18, 23)],
+          stacks=[dict(base=(13, 16, 0, 3), shaft=(14, 15, 1, 2), top=25),
+                  dict(base=(13, 16, 19, 22), shaft=(14, 15, 20, 21), top=22)])
+CORNICE = "stone_brick_stairs"
+CLOCK = "smooth_stone"
+
+
+def build_af():
+    g = L.G()
+    bay = AF["bay"]
+    tx0, tx1, tz0, tz1 = AF["tower"]
+    in_bay = lambda x, z: bay[0] <= x <= bay[1] and bay[2] <= z <= bay[3]          # noqa: E731
+    in_tower = lambda x, z: tx0 <= x <= tx1 and tz0 <= z <= tz1                    # noqa: E731
+    in_boiler = lambda x, z: any(a <= x <= b and c <= z <= d for a, b, c, d in AF["boilers"])   # noqa: E731
+    shop = [(x, z) for x in range(4, SX) for z in range(SZ) if not in_bay(x, z) and not in_boiler(x, z)]
+    for (x, z) in shop:
+        body(g, x, x, z, z, 6)
+    saw(g, shop, "z", range(1, SZ, 4), 6, +1)                   # a's six teeth, glass facing south (camera)
+    fx = AF["flank_x"]                                           # fix 3: the shop's west flank in the teeth's beat -
+    for z in [z for z in range(SZ) if z % 4 in (1, 2) and not in_bay(fx, z) and not in_boiler(fx, z)
+              and not tz0 - 1 <= z <= tz1 + 1]:                  # a 2-wide window under every tooth, 2-wide piers
+        g.fill(fx, fx, 2, 5, z, z, GLASS)
+    body(g, *bay, 10)
+    gable_x(g, *bay, 10)
+    door(g, 0)
+    for (bx0, bx1, bz0, bz1) in AF["boilers"]:                   # fix 2: each stack on a brick boiler house
+        body(g, bx0, bx1, bz0, bz1, 6)
+        gable_x(g, bx0, bx1, bz0, bz1, 6)
+    for s in AF["stacks"]:                                       # 4 x 4 foot to 12, a step-in, a 2 x 2 shaft, a
+        x0, x1, z0, z1 = s["base"]                               # corbelled crown one course under the cap
+        sx0, sx1, sz0, sz1 = s["shaft"]
+        top = s["top"]
+        g.fill(x0, x1, 2, 12, z0, z1, STACK)
+        for x in range(x0, x1 + 1):                              # the weathering: stairs stepping in to the shaft
+            for z in range(z0, z1 + 1):
+                if not (sx0 <= x <= sx1 and sz0 <= z <= sz1):
+                    f = "west" if x < sx0 else "east" if x > sx1 else "north" if z < sz0 else "south"
+                    g.set(x, 13, z, "stone_brick_stairs", facing={"west": "east", "east": "west",
+                                                                   "north": "south", "south": "north"}[f],
+                          half="bottom", shape="straight", waterlogged="false")
+        g.fill(sx0, sx1, 13, top - 1, sz0, sz1, STACK)
+        for x in range(x0, x1 + 1):                              # the crown: an oversailing course at top - 1
+            for z in range(z0, z1 + 1):
+                if not (sx0 <= x <= sx1 and sz0 <= z <= sz1):
+                    f = "west" if x < sx0 else "east" if x > sx1 else "north" if z < sz0 else "south"
+                    g.set(x, top - 1, z, "stone_brick_stairs", facing={"west": "east", "east": "west",
+                                                                        "north": "south", "south": "north"}[f],
+                          half="top", shape="straight", waterlogged="false")
+        g.fill(sx0, sx1, top, top, sz0, sz1, IRON)
+    # fix 1: the clock tower engaged in the corner of the bay (z 8) and the shop (x 4): a pale base, a brick shaft with
+    # slit lights, a pale clock stage, an oversailing cornice, a copper pyramid roof and an iron finial (a's top, 18)
+    body(g, tx0, tx1, tz0, tz1, 12)
+    g.fill(tx0, tx1, 2, 2, tz0, tz1, BASE)
+    for y in (6, 7, 9, 10):
+        g.set(tx0, y, (tz0 + tz1) // 2, GLASS)
+    g.fill(tx0, tx1, 13, 14, tz0, tz1, CLOCK)
+    for x, z in ((tx0, (tz0 + tz1) // 2), ((tx0 + tx1) // 2, tz0)):
+        g.set(x, 13, z, IRON)                                     # the clock faces (west, north) - dark dials
+    for x in range(tx0 - 1, tx1 + 2):
+        for z in range(tz0 - 1, tz1 + 2):
+            if in_tower(x, z):
+                g.set(x, 15, z, CLOCK)
+                continue
+            f = "west" if x < tx0 else "east" if x > tx1 else "north" if z < tz0 else "south"
+            g.set(x, 15, z, CORNICE, facing={"west": "east", "east": "west", "north": "south",
+                                             "south": "north"}[f], half="top", shape="straight", waterlogged="false")
+    for x in range(tx0, tx1 + 1):
+        for z in range(tz0, tz1 + 1):
+            if (x, z) == ((tx0 + tx1) // 2, (tz0 + tz1) // 2):
+                g.set(x, 16, z, COPPER)
+                continue
+            f = "west" if x < (tx0 + tx1) // 2 else "east" if x > (tx0 + tx1) // 2 else \
+                "north" if z < (tz0 + tz1) // 2 else "south"
+            g.set(x, 16, z, COPPER_ST, facing={"west": "east", "east": "west", "north": "south", "south": "north"}[f],
+                  half="bottom", shape="straight", waterlogged="false")
+    g.set((tx0 + tx1) // 2, 17, (tz0 + tz1) // 2, COPPER)
+    g.set((tx0 + tx1) // 2, 18, (tz0 + tz1) // 2, "polished_blackstone_wall")
+    return finish(g, lane_apron(0))
+
+
 BUILDERS = {"a": build_a, "b": build_b, "c": build_c, "c2": build_c2, "c3": build_c3, "a2": build_a2,
-            "ac": build_ac}
+            "ac": build_ac, "af": build_af}
 # what the tests hold each option to: the door plane, the stacks (plinth box + shaft + top), the tower (box), the
 # dominant mass's eave, and where the sawtooth is (section plane, teeth's glazed columns, facing, run)
 OPTIONS = {
@@ -385,6 +471,11 @@ def revised_meta(o):
 
 for _o in SPECS:
     OPTIONS[_o] = revised_meta(_o)
+OPTIONS["af"] = dict(door_x=0, eave=10, bay=AF["bay"], flank_x=AF["flank_x"],
+                     stacks=[dict(box=s["base"], shaft=s["shaft"], base=s["base"], top=s["top"], above_roof=10)
+                             for s in AF["stacks"]],
+                     tower=dict(box=AF["tower"], clock=(13, 15), cornice=15),
+                     sawtooth=[dict(axis="z", at=11, face=+1, teeth=list(range(4, SZ, 4)), run=(0, 24))])
 
 
 def build(o):
