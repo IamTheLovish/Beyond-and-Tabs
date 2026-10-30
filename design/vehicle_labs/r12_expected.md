@@ -32,3 +32,21 @@ Spire sat 0.274 / 0.280 (in band), hue 158 / 152, value 0.544 / 0.520 (not predi
 | Stack between wash and soot, value / sat | bricks_roof 0.525 / 0.5 | brick 0.33-0.41 / 0.31-0.43 | no wash, no sleeve |
 Expected critics: towers +1 (one clean step-in, no second ring; spire no seam, not the lightest area), weathering +1
 (drips, longer streaks, spire streaks), dusk +1 to +2 (warm panes), gate 0 to +1 (gantry), RTS +0.5.
+
+## Round 2 measured (eyes run 41026048601, same-run control round 1)
+Spire sat 0.215 / 0.220, value 0.464 / 0.443 (in the band 0.36-0.48; but the drips read as dark wedges). Dusk glass
+unchanged inside the run (hue 271 -> 249, value 0.22 -> 0.23; round 1's own run had read hue 2: dusk differs between
+runs). Noon glass hue 7 -> 37 (the birch shows at noon). Gantry beam top 0.51 (over 0.50). Coal stage 0.07-0.09.
+
+## Round 3 - expected, written before its stills (two shapes: r3a spire, r3b cupola = brass_t1_r12.nbt)
+| Measure | Round 2 | Round 3 expected | Why |
+|---|---|---|---|
+| Spire area sat / value, r3a | 0.215 / 0.464 | 0.26-0.29 / 0.51-0.56 | one material again: round 1 measured 0.275 / 0.549 |
+| Cupola area sat / value, r3b | - | 0.24-0.30 / 0.50-0.60 | the same prismarine, 45 deg pieces (flatter tops catch more light) |
+| Coal stage area value | 0.07-0.09 | 0.20-0.28 | cobbled deepslate facets (pack luma 0.24) over a 2-block coal core |
+| Dusk glass hue (area) | 249 | 30-60 on the lamp windows, 200-260 elsewhere; whole-region mean 220-280 (lamps are small) | a lit lamp in 6 rooms, <= 10 % of each pane |
+| Dusk pixels > value 0.75 | 0 % | 0.5-3 % | the lamp points |
+| Shaft below the soot course | drip 0.19-0.25 | brick 0.33-0.45 | no drip |
+| Gantry beam top | 0.51 | 0.45-0.48 | stone slab (measured up 0.471) |
+Expected critics: towers +1 (no arrow; cupola or spire chosen side by side), gate +1 to +2 (the coal lump broken -
+lovish's own target), dusk +1 (warm points inside), weathering 0, RTS +0.5.

@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import engine_shed_massing as M  # noqa: E402
 import engine_shed_r11 as R  # noqa: E402
 import lab_vehicle_brass as L  # noqa: E402
-from engine_shed_r11 import (BRICK, PALE, PALE_SL, PLINTH, STONE, STONE_ST, STONE_W, at, in_of, slab, stair)  # noqa: E402
+from engine_shed_r11 import (BRICK, PALE, PLINTH, STONE, STONE_ST, STONE_W, at, in_of, slab, stair)  # noqa: E402
 
 OUT = "design/vehicle_labs/brass_t1_r12.nbt"
 SX, SZ = R.SX, R.SZ
@@ -38,7 +38,9 @@ SPIRE = "mcwroofs:prismarine_brick"
 DRIP = "mcwroofs:cyan_terracotta"
 # the drip cells per ring (eave ring 16-17 over x 0-4 z 4-8, upper ring 18-19 over x 1-3 z 5-7): two-cell clusters on
 # each face of the eave ring, one cell on each face of the upper ring above one of them - runs down the slope
-DRIPS = ({(0, 5), (0, 6), (2, 8), (3, 8), (1, 4), (4, 6), (4, 7)}, {(1, 5), (3, 7)})
+DRIPS = (set(), set())   # round 3: none - round 2's clusters read as "a mint arrow on dark grey" (both critics)
+ROOF = "cupola"          # round 3 builds both: "spire" (rounds 1-2's shape, the control) and "cupola" (the designer's B)
+OUT_SPIRE = "design/vehicle_labs/brass_t1_r12_r3a.nbt"
 SOOT, SOOT_SL, STREAK = "polished_blackstone_bricks", "polished_blackstone_brick_slab", "deepslate_bricks"
 DRY = R.DRY
 # r11's windows (tools/engine_shed_r11.py walls()): (face, wall plane, columns, bottom row, top row)
@@ -162,6 +164,49 @@ def room_lights(g):
     return sources
 
 
+def room_lamps(g):
+    """Round 3 - lovish (Oct 30): a warm lantern inside a room, behind the glass and seen through it, is "light inside
+    the rooms". Per window, a lantern stands on the floor block the 3/4 / dusk camera sees most through that window's
+    panes (its rays run north-east and steeply down: they land 1 block in, beside the window's middle - a lantern 2-3
+    deep, as first asked, no eyes camera can see), kept only if that camera then sees it THROUGH the glass and no eyes
+    camera sees it straight, and it fills at most 10 % of the pane; where no spot lets a lantern do that, a lit
+    three-candle cluster (smaller, as warm). (Standing: the structure rig takes no hanging lanterns - they can drop.)"""
+    import building_gates as G
+    import schem_study as S
+    from collections import Counter
+
+    def shots():
+        b = S.Build(dict(g.b))
+        return {st: G.shoot(b, st, 2) for st in ("rts", "rts_close", "34")}
+    LAMPS.clear()
+    first = shots()["34"]
+    for face, plane, us, y0, y1 in WINDOWS:
+        panes = {at(face, plane, u, y) for u in us for y in range(y0, y1 + 1)}
+        floors = Counter(h[3][0] for h in first.values() if h[0] in panes and h[3] and S.glyph(h[3][1]) == "#"
+                         and (h[3][0][0] > plane if face == "west" else h[3][0][2] < plane))   # behind the wall
+        done = False
+        for lamp, fl in [(k, f) for k in ("lantern", "candle") for f, _ in floors.most_common(8)]:
+            #     a lantern first; where every spot puts one over 10 % of the pane, a lit three-candle cluster (smaller)
+            q = (fl[0], fl[1] + 1, fl[2])
+            if done or q in g.b or fl in panes or (q[0] in L.LANE_X and q[2] in L.LANE_Z and q[1] <= L.LANE_H) or \
+                    (q[0], q[2]) == (L.SPAWN[0], L.SPAWN[2]) or (face == "west" and q[0] <= plane) or \
+                    (face == "south" and q[2] >= plane):
+                continue
+            if lamp == "lantern":
+                g.set(*q, "lantern", hanging="false", **DRY)
+            else:
+                g.set(*q, "candle", candles="3", lit="true", **DRY)
+            hits = shots()
+            through = [h for h in hits["34"].values() if h[0] in panes and h[3]]
+            share = sum(1 for h in through if h[3][0] == q) / max(1, len(through))
+            straight = any(h[0] == q for hh in hits.values() for h in hh.values())
+            if 0 < share <= 0.10 and not straight:          # a warm point, not the pane's face (<= 10 %, round 1)
+                LAMPS.add(q)
+                done = True
+                continue
+            g.clear(*q)
+
+
 def warm_surfaces(g):
     """Round 2 (the designer; critics r1: "the panes look pale grey, not orange"; measured dusk glass hue 2, sat 0.16 -
     red brick under the block light): every block the eyes cameras (rts, rts_close, 34 / dusk) see through a wall
@@ -186,6 +231,31 @@ def warm_surfaces(g):
 
 
 # ---------------------------------------------------------------------------------------------------- 3. the spire
+def cupola(g):
+    """Round 3, the designer's B (lovish's pick 3 names "a clock cupola"): over r11's clock stage and cornice (15), one
+    material, Macaw's prismarine brick - a 45 deg roof ring on the 5 x 5 eave (16) round a prismarine-brick deck, an open
+    3 x 3 lantern of four prismarine-wall posts (17-18), a 45 deg roof ring over it round a prismarine-brick centre (19),
+    a pyramid top (20) and an iron finial (21): staged, not stepped by accident."""
+    x0, x1, z0, z1 = TOWER
+    for q in [q for q in g.b if x0 - 1 <= q[0] <= x1 + 1 and z0 - 1 <= q[2] <= z1 + 1 and q[1] > R.CORNICE_Y]:
+        del g.b[q]
+    cx, cz = (x0 + x1) // 2, (z0 + z1) // 2
+    for (x, z), f, sh in ring_cells(x0 - 1, x1 + 1, z0 - 1, z1 + 1):
+        macaw(g, (x, 16, z), SPIRE + "_roof", f, sh)
+    for x in range(x0, x1 + 1):
+        for z in range(z0, z1 + 1):
+            g.set(x, 16, z, "prismarine_bricks")
+    for x in (x0, x1):
+        for z in (z0, z1):
+            for y in (17, 18):
+                g.set(x, y, z, "prismarine_wall", **DRY)
+    for (x, z), f, sh in ring_cells(x0, x1, z0, z1):
+        macaw(g, (x, 19, z), SPIRE + "_roof", f, sh)
+    g.set(cx, 19, cz, "prismarine_bricks")
+    g.set(cx, 20, cz, SPIRE + "_top_roof", part="pyramid")
+    g.set(cx, 21, cz, "chain", axis="y", **DRY)
+
+
 def spire(g):
     """Over r11's clock stage and cornice (15): a steep spire of Macaw's prismarine-brick roof - the 5 x 5 eave ring
     (16 steep, 17 upper steep), the 3 x 3 ring (18, 19), a pyramid top (20) and an iron finial (21): 2 rise per run,
@@ -239,7 +309,18 @@ def gantry(g):
         for y in range(1, 5):
             g.set(1, y, z, STONE_W, **DRY)
     for z in range(18, 24):
-        slab(g, (1, 5, z), PALE_SL)
+        slab(g, (1, 5, z), "stone_slab")                   # (round 3: smooth stone's top read 0.51, over the band)
+
+
+def coal_stage(g):
+    """Round 3 - lovish (Oct 30): the "obsidian lump" is the coal stage (measured: value 0.07-0.09, a solid black
+    2 x 3 block). A heap: coal only at its core (z 2), cobbled-deepslate stairs rising to it either side (lit facets, pack
+    luma 0.24), a cobbled-deepslate slab cresting it; nothing over y 3; the bars and the stepped stone stage stay."""
+    for x in (1, 2):
+        g.set(x, 2, 2, "coal_block")
+        stair(g, (x, 2, 1), "cobbled_deepslate_stairs", "south")
+        stair(g, (x, 2, 3), "cobbled_deepslate_stairs", "north")
+        slab(g, (x, 3, 2), "cobbled_deepslate_slab")
 
 
 # ---------------------------------------------------------------------------------------------------- 4. soot
@@ -253,11 +334,8 @@ def weathering(g):
         for x in range(sx0, sx1 + 1):
             for z in range(sz0, sz1 + 1):
                 g.set(x, top - 2, z, SOOT)
-        g.set(sx0, top - 3, sz1, SOOT)                      # the drip down the west / south arris, fading
-        g.set(sx0, top - 3, sz0, STREAK)                    # (round 2: the critics read top - 2 / - 3 as a collar)
-        g.set(sx1, top - 3, sz1, STREAK)
-        for y in (top - 4, top - 5):
-            g.set(sx0, y, sz1, STREAK)
+        #     round 3: no drip under it (both round-2 critics: "reads as an opening") - the dark top course is the study
+        #     chimney's crown event (koin)
     piers = []
     for face, plane, span in (("south", 24, range(4, 17)), ("south", 16, range(0, 10)), ("west", 4, range(16, 25))):
         run = [u for u in span if all(g.b.get(at(face, plane, u, y), ("",))[0] == BRICK for y in (3, 4, 5))
@@ -269,7 +347,7 @@ def weathering(g):
     return piers
 
 
-def detail():
+def detail(roof=None):
     g = M.build_af()
     for q, (n, p) in list(g.b.items()):
         if n == M.WALL:
@@ -282,13 +360,15 @@ def detail():
     gate(g)
     stacks(g)
     R.tower(g)
-    spire(g)
+    (cupola if (roof or ROOF) == "cupola" else spire)(g)
     R.yard(g)
     gantry(g)
+    coal_stage(g)
     R.life(g)
     R.gate_interior(g)
     R.bevel(g)
     room_lights(g)
+    room_lamps(g)
     weathering(g)
     for y in range(1, L.H_MAX):                            # the spawn column / smoke-vent shaft
         g.clear(L.SPAWN[0], y, L.SPAWN[2])
@@ -301,3 +381,6 @@ if __name__ == "__main__":
     rig = L.write(detail(), out)
     print(L.check(rig, out))
     L.check_banned(rig, "brass_t1_r12")
+    out = os.path.join(root, OUT_SPIRE)                    # round 3's control shape, for the side-by-side
+    rig = L.write(detail("spire"), out)
+    print(L.check(rig, out))

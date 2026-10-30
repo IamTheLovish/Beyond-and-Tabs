@@ -75,6 +75,12 @@ class EngineShedR12(EngineShedR11):
     def test_r3_stack_bands_spaced(self):
         """r11 round 3 spaced the stacks' bands >= 3 courses apart; with lovish's single crown there are no bands."""
 
+    @unittest.skip("retired round 3, lovish Oct 30: the coal stage is the 'obsidian lump' - test_r3_coal_stage_*")
+    def test_coal_stage_seen(self):
+        """r10 (d) asked for >= 4 coal blocks on a raised stage, >= 3 of them seen in rts and 34. lovish (asked, Oct 30)
+        named that black block the "obsidian lump"; round 3 keeps a 2-block coal core in a heap of lit stone facets
+        (test_r3_coal_stage_not_an_obsidian_lump, test_r3_coal_stage_value_band)."""
+
     @unittest.skip("retired, lovish Oct 30 ~00:30: 'warm orange' dusk light")
     def test_r3_lit_rooms_not_orange(self):
         """r11 round 3 banned shroomlight (the round-2 critic's "orange sparks"); lovish asked for the dusk light back to
@@ -582,15 +588,21 @@ class EngineShedR12(EngineShedR11):
             self.assertTrue(0.20 <= v <= 0.32, (still, round(v, 3)))
 
     def test_r3_a_lamp_inside_every_window_room(self):
-        """lovish (Oct 30): a warm lantern inside a room, 2-3 blocks behind the glass and seen through it, is "light
-        inside the rooms". Behind each camera-face window (r11's WINDOWS on the south and west faces) a hanging lantern
-        stands 2-3 blocks in, the dusk still shows it through that window's glass, and no camera sees it straight."""
+        """lovish (Oct 30): a warm lantern inside a room, behind the glass and seen through it, is "light inside the
+        rooms" (asked as "2-3 blocks behind"; the 3/4 camera's rays through a pane land on the floor 1 block in, so a lamp
+        deeper is never seen - built at depth 1-3). Behind each camera-face window onto a room (r11's WINDOWS; the lane's
+        are not rooms) a lantern stands 1-3 blocks in (on a floor or shelf: the structure rig takes no hanging lanterns), the dusk still shows it through that window's glass, and no camera sees it straight."""
         p = self.p
-        lamps = {q for q, n in p.n.items() if n == "lantern" and q in E.LAMPS}
-        self.assertGreaterEqual(len(lamps), len(E.WINDOWS) - 2, sorted(lamps))     # (a lane window may have none)
+        lamps = {q for q, n in p.n.items() if n in ("lantern", "candle") and q in E.LAMPS}   # (a lit candle cluster
+        #     where a lantern would fill more than 10 % of a narrow pane)
+        lane = {(x, z) for x in L.LANE_X for z in range(L.LANE_Z[0] - 1, L.LANE_Z[-1] + 2)}   # the lane and its walls
+        rooms = [w for w in E.WINDOWS if not any((q[0], q[2]) in lane for d in (1, 2, 3) for q in [
+            E.in_of(w[0], E.at(w[0], w[1], sorted(w[2])[len(w[2]) // 2], w[3]), d)])]   # the bay's windows look on the lane
+        self.assertGreaterEqual(len(lamps), len(rooms), (sorted(lamps), len(rooms)))
         through = {h[3][0] for h in p.hits["dusk"].values() if S.glyph(h[1]) == "g" and h[3]}
         straight = {h[0] for st in G.STILLS for h in p.hits[st].values()}
         self.assertEqual(sorted(lamps - through), [], "lamps the dusk still does not see through glass")
+        self.assertTrue(all(p.n.get((q[0], q[1] - 1, q[2])) for q in lamps))      # standing, on a floor or a shelf
         self.assertEqual(sorted(lamps & straight), [], "lamps seen straight")
 
 
