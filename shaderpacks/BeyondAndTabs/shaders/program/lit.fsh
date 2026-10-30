@@ -56,7 +56,7 @@ varying vec3 vT;
 varying vec3 vB;
 #endif
 
-// water also writes colortex2 (lib/water.glsl): composite reads it for the caustics. The loader keeps the directive
+// water also writes colortex2 (lib/water.glsl): composite reads it for the caustics and reflections. The loader keeps the directive
 // of the preprocessed source; were it ever to read both, the last one wins and water simply loses its caustics
 #ifdef LIT_WATER
 /* DRAWBUFFERS:02 */
@@ -154,6 +154,7 @@ void main() {
         // the lit water colour (slice 1's, which the palette was tuned on) is what deep water settles to; the bed
         // already drawn under it shows through by what is left
         float a = waterOpacity(path);
+        c *= mix(SHALLOW_TINT, vec3(1.0), smoothstep(0.0, SHALLOW_TINT_PATH, path));
 
         // the ripples, on the top surface only (a waterfall's side keeps its face): world xz, so they stay put as the
         // camera pans
@@ -212,7 +213,10 @@ void main() {
 #endif
         gl_FragData[0] = vec4(c, alpha);
         // written opaque (alpha 1) so it replaces what the buffer held: one water layer's data per pixel
-        gl_FragData[1] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), 0.0, 1.0);
+        // b: how much of the reflected sky this pixel shows per unit of Fresnel (top surface only), so composite's
+        // screen-space reflection can swap the sky for what the ray meets, on the same terms
+        float skyShare = top ? levels.y * fogDim * (1.0 - foam) : 0.0;
+        gl_FragData[1] = vec4(1.0, clamp(0.5 + boost * CAUSTIC_ENCODE, 0.0, 1.0), skyShare, 1.0);
         return;
     }
 #endif

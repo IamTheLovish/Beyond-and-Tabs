@@ -28,3 +28,7 @@ option.CAUSTICS=Caustics
 option.CAUSTICS.comment=Sunlight focused by the ripples into moving bright lines on the bed under shallow water.
 value.CAUSTICS.0=Off
 value.CAUSTICS.1=On
+option.SSR=Water reflections
+option.SSR.comment=Mirrors banks, trees and buildings in water seen at a low angle (first person). From the RTS camera water is mostly clear, and this costs almost nothing.
+value.SSR.0=Sky only
+value.SSR.1=On

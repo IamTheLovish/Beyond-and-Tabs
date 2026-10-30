@@ -104,6 +104,26 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("/* DRAWBUFFERS:02 */", water)
         self.assertIn("uniform sampler2D colortex2;", comp)
 
+    def test_reflections_march_only_where_they_show(self):
+        """Screen-space reflections (composite.fsh) cost a 16-step march per water pixel; the budget (slice 4: +1.0 ms
+        in all on a 3070 Ti at 1080p) only allows it where the mirror is visible. Fresnel for water at the RTS camera's
+        ~65 degrees down, with the ripples' steepest tilt (~0.17 rad more), stays under the march's threshold, so from
+        above the march never runs; a grazing first-person view passes it."""
+        import math
+        comp = open(os.path.join(spc.SHADERS, "composite.fsh"), encoding="utf-8").read()
+        water = open(os.path.join(spc.SHADERS, "lib", "water.glsl"), encoding="utf-8").read()
+        threshold = float(re.search(r"const float SSR_MIN_FRESNEL = ([0-9.]+);", comp).group(1))
+        f0 = float(re.search(r"const float WATER_F0 = ([0-9.]+);", water).group(1))
+
+        def fresnel(off_normal_deg):
+            return f0 + (1.0 - f0) * (1.0 - math.cos(math.radians(off_normal_deg))) ** 5
+
+        self.assertLess(fresnel(25.0 + math.degrees(0.17)), threshold)   # the RTS view: no march
+        self.assertGreater(fresnel(80.0), threshold)                     # first person near the horizon: mirror
+        settings = open(os.path.join(spc.SHADERS, "lib", "settings.glsl"), encoding="utf-8").read()
+        self.assertRegex(settings, r"(?m)^#define SSR 1 // \[0 1\]")
+        self.assertRegex(settings, r"(?m)^#define CAUSTICS 1 // \[0 1\]")
+
     @unittest.skipUnless(spc.find_glslang(), "glslang not installed")
     def test_every_program_compiles(self):
         self.assertEqual(spc.check(spc.find_glslang()), [])

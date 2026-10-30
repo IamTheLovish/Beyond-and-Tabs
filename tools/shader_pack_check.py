@@ -27,7 +27,7 @@ INCLUDE = re.compile(r'^\s*#include\s+"([^"]+)"\s*$')
 LOADER_MACROS = {"MC_RENDER_STAGE_STARS": "5"}
 # option-screen switches (lib/settings.glsl `#define NAME value // [...]`) compiled at a non-default value as well: one
 # variant per entry, each applied to the programs that read it
-OPTION_VARIANTS = [{"MATERIALS": "0"}, {"WATER_REALISM": "0"}, {"CAUSTICS": "0"}]
+OPTION_VARIANTS = [{"MATERIALS": "0"}, {"WATER_REALISM": "0"}, {"CAUSTICS": "0"}, {"SSR": "0"}, {"CAUSTICS": "0", "SSR": "0"}]
 
 
 def expand(path, seen=()):

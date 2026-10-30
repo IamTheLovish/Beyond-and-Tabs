@@ -17,6 +17,10 @@ const float WATER_EXTINCTION = 0.80;
 // the opacity deep water settles to: a little above slice 1's 0.85, so a lake reads as a body of water, not tinted
 // glass, while the far bank's shapes still ghost through at the very edge
 const float WATER_DEEP_OPACITY = 0.92;
+// thin water leans teal-green (lovish's second reference, Oct 30): the biome's #3A6A8C (hue ~205) multiplied toward
+// hue ~196 over a shallow bed, back to the biome's own colour by ~2 blocks of path - inside the palette's 195-210
+const vec3 SHALLOW_TINT = vec3(0.90, 1.06, 0.96);
+const float SHALLOW_TINT_PATH = 2.0;
 // the path used where nothing opaque lies behind the water (a waterfall over the void, the map's edge): deep
 const float WATER_NO_BED = 64.0;
 
