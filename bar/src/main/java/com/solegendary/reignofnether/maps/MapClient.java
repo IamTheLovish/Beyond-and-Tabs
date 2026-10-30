@@ -23,6 +23,7 @@ import com.solegendary.reignofnether.player.PlayerClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.startpos.CapturePointServerEvents;
 import com.solegendary.reignofnether.startpos.CapturePointsClient;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -394,7 +395,7 @@ public final class MapClient {
         int fill = s.owner().isEmpty() ? 0xB4B4B4 : PlayerColors.getPlayerDisplayColorHex(s.owner()) & 0xFFFFFF;
         boolean contested = !s.claimant().isEmpty() && !s.claimant().equals(s.owner()) && s.progress() > 0
             && (s.owner().isEmpty() ? s.progress() < 1 : s.progress() < 1);
-        int ring = contested && (MC.level.getGameTime() / 10) % 2 == 0
+        int ring = contested && (ClientTicks.now() / 10) % 2 == 0
             ? PlayerColors.getPlayerDisplayColorHex(s.claimant()) & 0xFFFFFF : 0x000000;
         for (int x = -4; x <= 4; x++)
             for (int z = -4; z <= 4; z++) {

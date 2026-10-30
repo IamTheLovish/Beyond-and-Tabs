@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -96,7 +97,7 @@ public class ScaffoldRenderClientEvents {
             if (MC.level == null || StrategicViewClientEvents.isStrategicView())
                 return;
 
-            long now = MC.level.getGameTime();
+            long now = ClientTicks.now();
             float partial = evt.getPartialTick();
             Vec3 cam = evt.getCamera().getPosition();
             camX = cam.x;

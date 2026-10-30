@@ -84,6 +84,7 @@ public class ClientEventRegistrar {
         // the animation profile ([Anim]: the Life layer's share of a unit's render, per frame): reads only
         vanillaEventBus.register(com.solegendary.reignofnether.perf.AnimProfile.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.renderers.UnitLod.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.time.ClientTicks.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.AnimStates.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.Corpses.class);   // bodies held
         vanillaEventBus.register(com.solegendary.reignofnether.unit.modelling.motion.LivingArmyToggle.class);

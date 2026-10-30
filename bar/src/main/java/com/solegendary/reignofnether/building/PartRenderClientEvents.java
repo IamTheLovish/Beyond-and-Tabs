@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -201,9 +202,11 @@ public class PartRenderClientEvents {
             return;
         try {
             watchFrameRate();
-            long now = MC.level.getGameTime();
+            long now = ClientTicks.now();
             List<BuildingPlacement> buildings = BuildingClientEvents.getBuildings();
-            if (now - refreshedAt < REFRESH_TICKS && now >= refreshedAt && buildings.size() == refreshedCount)
+            // MIN_VALUE = refresh now (now - MIN_VALUE overflowed negative, and that skipped the refresh)
+            if (refreshedAt != Long.MIN_VALUE && now - refreshedAt < REFRESH_TICKS && now >= refreshedAt
+                && buildings.size() == refreshedCount)
                 return;
             refreshedAt = now;
             refreshedCount = buildings.size();
@@ -406,7 +409,7 @@ public class PartRenderClientEvents {
         renderer = MC.getBlockRenderer();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
         consumer = buffers.getBuffer(Sheets.cutoutBlockSheet());   // a fixed buffer: no allocation
-        long clock = MC.level.getGameTime() % CLOCK_WRAP;
+        long clock = ClientTicks.now() % CLOCK_WRAP;
         float now = clock + evt.getPartialTick();
         try {
             for (int i = 0; i < pickedCount; i++) {

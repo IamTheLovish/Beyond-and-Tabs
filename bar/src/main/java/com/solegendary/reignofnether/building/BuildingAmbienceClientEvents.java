@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
 import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
+import com.solegendary.reignofnether.time.ClientTicks;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -73,9 +74,9 @@ public class BuildingAmbienceClientEvents {
         // particles are invisible at strategic zoom; don't pay for them (zoom-out performance)
         if (StrategicViewClientEvents.isStrategicView() || !DisplaySettings.buildingAmbience())
             return;
-        if (MC.level.getGameTime() % IDLE_PERIOD == 0)
+        if (ClientTicks.now() % IDLE_PERIOD == 0)
             idleLife();
-        if (MC.level.getGameTime() % 8 != 0)
+        if (ClientTicks.now() % 8 != 0)
             return;
 
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
