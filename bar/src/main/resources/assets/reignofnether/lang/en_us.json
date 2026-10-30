@@ -3315,6 +3315,7 @@
   "hud.reignofnether.overflow.todo_energy": "build converters or storage",
   "hud.reignofnether.hover.producing": "Producing %s  %s%%",
   "hud.reignofnether.hover.not_producing": "Not producing",
+  "hud.reignofnether.hover.construction": "Construction %s%%",
   "hud.reignofnether.controls.title": "Controls",
   "hud.reignofnether.controls.left_drag": "Left-drag",
   "hud.reignofnether.controls.right_click": "Right-click",

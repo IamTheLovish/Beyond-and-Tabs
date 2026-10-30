@@ -113,8 +113,13 @@ public final class EyesDirector {
     private static int closeUpPhase = 0;          // still, walking, fighting
     private static int closeUpRetried = -1;       // the subject (CLOSE_UPS index) already restarted once
     // 06b/06c: a site rising (each faction's way of building, claude/faction-construction-oct29.md)
-    private static int consPhase = 0;             // 0 order, 1 wait for the site, 2 wait for half built, 3 close-up
+    private static int consPhase = 0;             // 0 order, 1 wait for the site, 2 wait for half built, 4 wait for a
+                                                  // builder at the front, 3 the two shots
     private static int consTry = 0, consAt = -1;
+    private static int consStep = 0, consRetried = 0;   // phase 3: framing 06b, 06b, framing 06c, 06c
+    /** Phase 4 waits at most this long (ticks) for one of the site's builders to stand within CONS_NEAR of it. */
+    private static final int CONS_WAIT = 20 * 12;
+    private static final double CONS_NEAR = 3;
     private static BuildingPlacement consSite = null;
     private static final int[][] CONS_OFFSETS = { { 10, 10 }, { -12, 10 }, { 10, -12 }, { -12, -12 } };
     private static final int ZOOM_CLOSE_SITE = 16;
@@ -1427,7 +1432,7 @@ public final class EyesDirector {
      * 40-70% laid.
      */
     private static void sceneConstruction(Minecraft mc) {
-        if (ticks > shotAt + 20 * 110) {
+        if (ticks > shotAt + 20 * 130) {   // round 17: + the wait for a builder at the front (CONS_WAIT)
             giveUp("06b_construction", "no site got half built (phase " + consPhase + ", try " + consTry + ")");
             return;
         }
@@ -1438,11 +1443,26 @@ public final class EyesDirector {
             case 0 -> {
                 if (ticks < consAt)
                     return;
+                // the crew: owned workers, NOT the Commander (construction round 16 critic: the shot centred on the
+                // Commander standing on the castle edge, no tool, and none of the five workers was in frame. The Commander
+                // could be one of the five ordered (the first five owned WorkerUnits) and builds at 3x a worker's power
+                // (WorkerUnit.COMMANDER_BUILD_POWER), so it could carry the site to 40% before the villagers walking in
+                // reached it, and the old aim counted it as "a worker at the site"). The Commander only if there is no
+                // one else; phase 4 logs where the crew actually is.
                 List<LivingEntity> workers = new ArrayList<>();
+                LivingEntity commander = null;
                 for (LivingEntity le : new ArrayList<>(UnitClientEvents.getAllUnits()))
                     if (le instanceof WorkerUnit && le instanceof Unit && le.isAlive() && !le.isPassenger()
-                            && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED && workers.size() < 5)
-                        workers.add(le);
+                            && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED) {
+                        if (com.solegendary.reignofnether.player.CommanderServerEvents.looksLikeCommander(le))
+                            commander = le;
+                        else if (workers.size() < 5)
+                            workers.add(le);
+                    }
+                if (workers.isEmpty() && commander != null)
+                    workers.add(commander);
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: the crew is {} workers{}", workers.size(),
+                        commander == null ? "" : workers.contains(commander) ? " (only the Commander)" : " (the Commander left out)");
                 if (workers.isEmpty()) {
                     giveUp("06b_construction", "no owned worker");
                     return;
@@ -1490,49 +1510,145 @@ public final class EyesDirector {
                     ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {}% laid", Math.round(k * 100));
                 if (k < 0.4f)
                     return;
+                consPhase = 4;
+                consAt = ticks + CONS_WAIT;
+            }
+            case 4 -> {
+                // round 16 critic: zero of the five workers in frame. Wait (CONS_WAIT at most) until one of the site's
+                // own builders stands within CONS_NEAR of it, so "being built now" has someone at work in the shot
+                BuildingPlacement b = consSite;
+                if (b == null || b.isBuilt) {
+                    giveUp("06b_construction", "the site finished before it was shot");
+                    return;
+                }
+                float k = b.getBlocksTotal() <= 0 ? 0 : (float) b.serverBlocksPlaced / b.getBlocksTotal();
+                int n = siteWorkers(mc, b);
+                boolean near = consPickN > 0 && consNearest <= CONS_NEAR;
+                if (!near && ticks < consAt && k < 0.85f)
+                    return;
+                ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {} workers on this site, nearest {} blocks ({}% laid, {} ticks waited{})",
+                        n, n == 0 ? "-" : String.format(java.util.Locale.ROOT, "%.1f", consNearest), Math.round(k * 100),
+                        ticks - (consAt - CONS_WAIT), near ? "" : ", none within " + CONS_NEAR + " - shot anyway");
                 UnitClientEvents.clearSelectedUnits();
                 BuildingClientEvents.clearSelectedBuildings();
-                setZoom(ZOOM_NORMAL);
-                OrthoviewClientEvents.centreCameraOnPosInstant(consAim(b));
+                setZoom(consFit(mc, b, ZOOM_NORMAL));
                 consPhase = 3;
-                consAt = ticks + 30;
+                consStep = 0;
+                consRetried = 0;
+                consAt = ticks + 25;
             }
             case 3 -> {
-                if (ticks == consAt) {
-                    shot(mc, "06b_construction_rts");
-                    setZoom(ZOOM_CLOSE_SITE);
-                } else if (ticks == consAt + 30) {
-                    shot(mc, "06c_construction_close");
-                    setZoom(ZOOM_NORMAL);
-                    next();
+                // the zoom settles (25 ticks; the tilt follows it), then the framing is worked out with the camera's
+                // own yaw and tilt (ConsFraming), the camera centred, and the shot taken 8 ticks later
+                BuildingPlacement b = consSite;
+                if (b == null || ticks < consAt)
+                    return;
+                switch (consStep) {
+                    case 0, 2 -> {
+                        float want = consFit(mc, b, consStep == 0 ? ZOOM_NORMAL : ZOOM_CLOSE_SITE);
+                        if (want > OrthoviewClientEvents.getZoom() + 0.25f && consRetried < 2) {   // the tilt moved the fit
+                            consRetried++;
+                            setZoom(want);
+                            consAt = ticks + 20;
+                            return;
+                        }
+                        OrthoviewClientEvents.centreCameraOnPosInstant(consAim(mc, b));
+                        consStep++;
+                        consAt = ticks + 8;
+                    }
+                    case 1 -> {
+                        shot(mc, "06b_construction_rts");
+                        setZoom(consFit(mc, b, ZOOM_CLOSE_SITE));
+                        consStep = 2;
+                        consRetried = 0;
+                        consAt = ticks + 25;
+                    }
+                    default -> {
+                        shot(mc, "06c_construction_close");
+                        setZoom(ZOOM_NORMAL);
+                        next();
+                    }
                 }
             }
             default -> next();
         }
     }
 
+    // phase 4 / 3 scratch: the site's builders, how many there are and the nearest one's distance from the footprint
+    private static final double[][] consPick = new double[8][3];
+    private static final boolean[] consOn = new boolean[8];
+    private static int consPickN = 0;
+    private static double consNearest = Double.MAX_VALUE;
+
+    /** The site's box {x0, y0, z0, x1, y1, z1} (block edges). */
+    private static double[] consBox(BuildingPlacement b) {
+        return new double[] { b.minCorner.getX(), b.minCorner.getY(), b.minCorner.getZ(),
+                b.maxCorner.getX() + 1, b.maxCorner.getY() + 1, b.maxCorner.getZ() + 1 };
+    }
+
     /**
-     * Where 06b / 06c look: the site's centre pulled 60% of the way toward its builders. Construction round 15 critic:
-     * no worker in either still, so nothing said "being built now". The workers were there - they build from within
-     * BuildRepairGoal.BUILD_RANGE (2) of the footprint, on the side they walked in from - in the round 15 stills the near
-     * side - and centred on the site's middle that side lies at the bottom of the screen, under the building panel (the 06b still
-     * shows only their health bars and a name plate peeking out above it). Pulled toward them, they stand in the open
-     * between the site and the panel, the build front and their tools in view.
+     * The owned workers whose task is THIS site (their server-side BuildRepairGoal target - the tour runs on the
+     * integrated server - is this placement), into consPick / consOn; returns how many, and leaves the nearest one's
+     * distance from the footprint in consNearest. Never the Commander unless it is building this site itself.
      */
-    private static Vec3 consAim(BuildingPlacement b) {
-        Vec3 c = Vec3.atCenterOf(b.centrePos);
-        double x = 0, y = 0, z = 0;
+    private static int siteWorkers(Minecraft mc, BuildingPlacement b) {
+        var server = mc.getSingleplayerServer();
+        net.minecraft.server.level.ServerLevel level = server == null || mc.level == null ? null
+                : server.getLevel(mc.level.dimension());
+        double[] box = consBox(b);
+        consPickN = 0;
+        consNearest = Double.MAX_VALUE;
         int n = 0;
-        for (LivingEntity le : new ArrayList<>(UnitClientEvents.getAllUnits()))
-            if (le instanceof WorkerUnit && le.isAlive() && b.isPosInsideBuilding(le.getOnPos(), 4)
-                    && UnitClientEvents.getPlayerToEntityRelationship(le) == Relationship.OWNED) {
-                x += le.getX(); y += le.getY(); z += le.getZ();
-                n++;
+        for (LivingEntity le : new ArrayList<>(UnitClientEvents.getAllUnits())) {
+            if (!(le instanceof WorkerUnit) || !le.isAlive()
+                    || UnitClientEvents.getPlayerToEntityRelationship(le) != Relationship.OWNED)
+                continue;
+            Entity se = level == null ? null : level.getEntity(le.getId());
+            BuildingPlacement t = se instanceof WorkerUnit sw && sw.getBuildRepairGoal() != null
+                    ? sw.getBuildRepairGoal().getBuildingTarget() : null;
+            if (t == null || !t.centrePos.equals(b.centrePos))
+                continue;
+            n++;
+            if (consPickN < consPick.length) {
+                consPick[consPickN][0] = le.getX(); consPick[consPickN][1] = le.getY(); consPick[consPickN][2] = le.getZ();
+                consOn[consPickN] = true;
+                consPickN++;
             }
-        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {} owned workers at the site", n);
-        if (n == 0)
-            return c;
-        return c.add((x / n - c.x) * 0.6, (y / n - c.y) * 0.6, (z / n - c.z) * 0.6);
+            consNearest = Math.min(consNearest, ConsFraming.distance(box, le.getX(), le.getZ()));
+        }
+        return n;
+    }
+
+    private static float consAspect(Minecraft mc) {
+        return (float) mc.getWindow().getScreenWidth() / Math.max(1, mc.getWindow().getScreenHeight());
+    }
+
+    /** The zoom at which the whole site and a block of ghost headroom fit the safe area (ConsFraming), never closer
+     *  than {@code minZoom}. */
+    private static float consFit(Minecraft mc, BuildingPlacement b, float minZoom) {
+        return ConsFraming.fitZoom(consBox(b), OrthoviewClientEvents.getCamRotX(), OrthoviewClientEvents.getCamRotY(),
+                consAspect(mc), minZoom);
+    }
+
+    /**
+     * Where 06b / 06c look (construction round 16 critic: aimed 60% of the way toward "the workers at the site", the
+     * shot centred on the Commander standing on the castle edge - a WorkerUnit, no tool, not building it - with none of
+     * the five workers in frame, and the close shot cut off under the top HUD band). Now ConsFraming: the site's box
+     * centred and fitted first, then a pan toward the nearest worker whose task is THIS site within 12 blocks, only as
+     * far as the whole building stays in the safe area.
+     */
+    private static Vec3 consAim(Minecraft mc, BuildingPlacement b) {
+        double[] box = consBox(b), aim = new double[3];
+        int n = siteWorkers(mc, b);
+        int w = ConsFraming.pickWorker(box, consPick, consOn, consPickN);
+        float zoom = OrthoviewClientEvents.getZoom();
+        boolean in = ConsFraming.aim(box, OrthoviewClientEvents.getCamRotX(), OrthoviewClientEvents.getCamRotY(),
+                consAspect(mc), zoom, w < 0 ? null : consPick[w], aim);
+        ReignOfNether.LOGGER.info("[Eyes] 06b_construction: {} workers on this site, nearest {} blocks; zoom {}, {}", n,
+                n == 0 ? "-" : String.format(java.util.Locale.ROOT, "%.1f", consNearest),
+                String.format(java.util.Locale.ROOT, "%.1f", zoom),
+                w < 0 ? "no builder within 12 - the building centred" : in ? "panned to a builder" : "a builder outside - the building kept whole");
+        return new Vec3(aim[0], aim[1], aim[2]);
     }
 
     // ---- 07: two armies, by the game's own summon command ----
