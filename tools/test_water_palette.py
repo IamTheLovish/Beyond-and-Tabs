@@ -47,6 +47,10 @@ class WaterPalette(unittest.TestCase):
         # (The first calibration, 1.07x, came from the forest still, where the mist covers the river - wrong.)
         # Target on camera: 0.235-0.27 - inside the palette band (0.24-0.31) and at least 0.06 under the lawn (~0.33).
         # r57's 0.206 was too dark (toward a hole), the old 0.301 level with the lawn.
+        # The 0.775 was measured with the sand bed at texture luma 0.67. #404 lowered the sand to 0.50, so the bed (15% of
+        # the pixel) gives 0.15 x 0.17 = 0.026 less in the model (0.323 -> 0.298, camera 0.250 -> 0.231, under the band).
+        # The ratio is a multiplicative grade and still holds, so the water colour was raised (#3A6A8C -> #41769C, same
+        # hue 205) to put the camera back at 0.250.
         px = modelled_pixel()
         cam = 0.775 * sum(LUMA[i] * px[i] for i in range(3))
         self.assertGreaterEqual(cam, 0.235, "water too dark - reads as a hole: camera %.3f" % cam)
