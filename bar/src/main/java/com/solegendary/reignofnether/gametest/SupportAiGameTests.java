@@ -709,9 +709,9 @@ public class SupportAiGameTests {
 
     /**
      * lovish, Oct 30: "heal low hp units not full hp units". A medic with three friends in reach, each on its own (no
-     * splash reaches two of them): an Iron Golem at 80% (24 of 120 missing, and a costly unit), a vindicator at 60% (30
-     * of 75 missing) and a full vindicator. Her first heal goes to the vindicator, the lowest on health; the old score
-     * (missing health x cost) sent it to the golem.
+     * splash reaches two of them): an Iron Golem at 65% (42 of 120 missing, and a costly unit), a vindicator at 50%
+     * (37.5 of 75 missing) and a full vindicator. Her first heal goes to the vindicator, the lowest on health; the old
+     * score (missing health x cost) sent it to the golem - more health missing, whatever the golem's cost.
      */
     @GameTest(template = ARENA, batch = BATCH, timeoutTicks = 500)
     public static void healer_heals_the_lowest_hp_fraction_first(GameTestHelper helper) {
@@ -738,8 +738,8 @@ public class SupportAiGameTests {
         double[] first = new double[2];
         boolean[] done = { false };
         ArenaReady.whenTicking(helper, made, 150, tick -> {
-            golem.setHealth(golem.getMaxHealth() * 0.8f);
-            low.setHealth(low.getMaxHealth() * 0.6f);
+            golem.setHealth(golem.getMaxHealth() * 0.65f);
+            low.setHealth(low.getMaxHealth() * 0.5f);
             hp[0] = golem.getHealth();
             hp[1] = low.getHealth();
             hp[2] = full.getHealth();
@@ -773,11 +773,11 @@ public class SupportAiGameTests {
                     double toLow = Math.hypot(first[0] - low.getX(), first[1] - low.getZ());
                     double toGolem = Math.hypot(first[0] - golem.getX(), first[1] - golem.getZ());
                     if (toLow > 2.0)
-                        problems.add("her first heal was not aimed at the vindicator at 60% (" + f(toLow) + " off it, "
-                            + f(toGolem) + " off the golem at 80%)");
+                        problems.add("her first heal was not aimed at the vindicator at 50% (" + f(toLow) + " off it, "
+                            + f(toGolem) + " off the golem at 65%)");
                 }
                 if (low.getHealth() <= hp[1])
-                    problems.add("the vindicator at 60% was not healed");
+                    problems.add("the vindicator at 50% was not healed");
                 if (problems.isEmpty())
                     helper.succeed();
                 else
