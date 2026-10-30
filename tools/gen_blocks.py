@@ -108,8 +108,9 @@ TARGETS = {
     # r32 (critic: "the top is too dark and the hoop band doesn't read"): the heads lifted (0.26 -> 0.40) with the
     # spread up so the iron chime hoop stays dark against the oak (std 0.075 -> 0.11); the staves a step lighter too
     "barrel_side":      dict(luma=0.32, std=0.085, sat=0.46, tilt=12.0, smooth=57, pore=20),
-    "barrel_top":       dict(luma=0.40, std=0.110, sat=0.46, tilt=12.0, smooth=57, pore=20),
-    "barrel_bottom":    dict(luma=0.40, std=0.110, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    # r33 (critic: "black X too heavy"): a narrower, grey chime hoop - less spread (std 0.11 -> 0.08)
+    "barrel_top":       dict(luma=0.40, std=0.080, sat=0.46, tilt=12.0, smooth=57, pore=20),
+    "barrel_bottom":    dict(luma=0.40, std=0.080, sat=0.46, tilt=12.0, smooth=57, pore=20),
     # r31 (art director: "reads as packed dirt"): straw is pale gold - luma 0.54 -> 0.62, more spread (stalk-to-stalk
     # contrast), satin stalks (smooth 20 -> 42)
     # r31b (eyes: ours tan beside the benchmark's yellow): one step more yellow saturation (0.56 -> 0.66)
@@ -135,7 +136,8 @@ TARGETS = {
     "polished_blackstone":        dict(luma=0.19, std=0.030, sat=0.10, tilt=12.0, smooth=60, pore=4),
     "polished_blackstone_bricks": dict(luma=0.19, std=0.049, sat=0.10, tilt=18.0, smooth=40, pore=8),
     "deepslate_bricks":           dict(luma=0.30, std=0.057, sat=0.02, tilt=15.0, smooth=15, pore=10),
-    "deepslate_tiles":            dict(luma=0.21, std=0.060, sat=0.01, tilt=18.0, smooth=30, pore=10),
+    # r33 (critic: "micro-mesh"): 3 x 3 tiles in a running bond, narrower joints - std 0.06 -> 0.05, tilt 18 -> 14
+    "deepslate_tiles":            dict(luma=0.21, std=0.045, sat=0.01, tilt=14.0, smooth=30, pore=10),
     "deepslate":                  dict(luma=0.19, std=0.045, sat=0.05, tilt=21.0, smooth=12, pore=10),
     "deepslate_top":              dict(luma=0.19, std=0.040, sat=0.05, tilt=18.0, smooth=15, pore=10),
     "polished_deepslate":         dict(luma=0.31, std=0.030, sat=0.02, tilt=4.5, smooth=90, pore=4),
@@ -167,14 +169,16 @@ TARGETS = {
     # r31: cut columns (m_columnar polished) - crisp grooves, flat faces: tilt 25 -> 14 / 20 -> 10, satin 39 -> 70
     "polished_basalt_side": dict(luma=0.36, std=0.065, sat=0.05, tilt=14.0, smooth=70, pore=8),
     # r32 (critic: the top "a tight cobble / hex grid, indistinguishable from basalt"): ground rings, lifted 15%
-    "polished_basalt_top": dict(luma=0.38, std=0.050, sat=0.02, tilt=8.0, smooth=90, pore=8),
+    # r33 (critic: "4 bullseyes"): the spread in the slow mottle and the rim only (std 0.05 -> 0.035), flatter
+    "polished_basalt_top": dict(luma=0.38, std=0.035, sat=0.02, tilt=6.0, smooth=90, pore=8),
     # r32 (critic: "ivory not cream"): sat 0.12 -> 0.07; the top's spread in the pores, matte bone (smooth 80 -> 50)
     "bone_block_side": dict(luma=0.84, std=0.060, sat=0.07, tilt=16.0, smooth=50, pore=24),
     # r33 (critic: "marshmallows / knuckles"): one flat sawn surface - the spread in fine pores (std 0.08 -> 0.055),
     # flatter (tilt 18 -> 11)
     "bone_block_top": dict(luma=0.82, std=0.040, sat=0.07, tilt=7.0, smooth=44, pore=30, soften=1.0),
     # r32 (critic: "whites are cream" - mostly the shader's grade; the textures' own warm cast cut to near neutral)
-    "quartz_pillar": dict(luma=0.92, std=0.040, sat=0.05, tilt=16.0, smooth=138, pore=4),
+    # r33 (critic: "corrugation"): three broad flutes, softer (std 0.04 -> 0.03, tilt 16 -> 10)
+    "quartz_pillar": dict(luma=0.92, std=0.030, sat=0.05, tilt=8.0, smooth=138, pore=4),
     "quartz_pillar_top": dict(luma=0.88, std=0.050, sat=0.05, tilt=13.4, smooth=104, pore=4),
     "quartz_bricks": dict(luma=0.87, std=0.032, sat=0.05, tilt=10.4, smooth=129, pore=4),
     "quartz_block_bottom": dict(luma=0.91, std=0.012, sat=0.03, tilt=2.5, smooth=145, pore=4),   # r32: seamless, no veins
@@ -1415,14 +1419,15 @@ def oak_grain(F, along_v=True):
     return lines, streak
 
 
-def iron_hoop(F, band, along_u=True):
+def iron_hoop(F, band, along_u=True, tone=1.0):
     """A forged iron hoop over mask `band` (0-1, two soft edges): a dull dark iron with a brushed grain along the
-    hoop, a little rust at its edges, a proud bevel. Returns (albedo, height add, smoothness)."""
+    hoop, a little rust at its edges, a proud bevel. Returns (albedo, height add, smoothness). tone lifts the iron
+    (a weathered grey hoop, r33)."""
     sx, sy = (1.0, 10.0) if not along_u else (10.0, 1.0)
     br = 0.5 + 0.5 * np.tanh(0.6 * F.noise(30, 60, 0.0, sx=sx, sy=sy))
     dent = F.noise(3, 9, 0.5)
     rust = smoothstep(0.6, 0.9, norm01(F.noise(4, 12, 0.5))) * (1 - smoothstep(0.3, 0.9, band))   # at the edges
-    iron = tint((0.21, 0.21, 0.22), 0.9 + 0.08 * dent + 0.06 * (br - 0.5))   # darker than the oak
+    iron = tint((0.21 * tone, 0.21 * tone, 0.22 * tone), 0.9 + 0.08 * dent + 0.06 * (br - 0.5))   # darker than the oak
     rusty = tint((0.42, 0.26, 0.16), 0.9 + 0.1 * dent)
     alb = iron * (1 - rust[..., None]) + rusty * rust[..., None]
     H = 0.16 * smoothstep(0.0, 1.0, band) + 0.01 * dent
@@ -1482,8 +1487,10 @@ def m_barrel_end(F, n, hole, rows=4):
         alb = alb * (1 - 0.5 * groove[..., None])
         H = H + 0.05 * plug * (1 - (r / 0.075) ** 2).clip(0, 1) - 0.10 * groove
     d = np.minimum(np.minimum(F.u, 1 - F.u), np.minimum(F.v, 1 - F.v))
-    band = 1 - smoothstep(0.105, 0.120, d)         # the chime hoop round the head (r32: wider, ~15 texels - it reads)
-    ialb, iH, ismooth = iron_hoop(F, band, along_u=True)
+    # r33 (critic, eyes 41029731853: "black X too heavy" - the r32 15-texel near-black chime hoop drew a dark cross
+    # through every 2x2 of barrels): a narrower hoop (~9 texels) of weathered grey iron, still a hoop, not a bar
+    band = 1 - smoothstep(0.062, 0.075, d)
+    ialb, iH, ismooth = iron_hoop(F, band, along_u=True, tone=1.35)
     b = band[..., None]
     return dict(H=H * (1 - band) + (0.46 + iH) * band, alb=alb * (1 - b) + ialb * b,
                 f0=np.where(band > 0.5, IRON, 10), smooth=smooth * (1 - band) + ismooth * band)
@@ -1645,10 +1652,14 @@ def m_polished(F, n, base, mottle=0.10, crystals=0.10, fleck=(20, 56), seam=0.0,
     return H, tint(base, shade)
 
 
-def m_tiles(F, n, grid, base, joint=(0.008, 0.022), grout=0.64):
-    """Square tiles, grid x grid per block, each a little uneven in tone and set, thin dark joints."""
-    cu, cv = np.floor(F.u * grid).astype(int), np.floor(F.v * grid).astype(int)
-    iu, iv = (F.u * grid) % 1.0, (F.v * grid) % 1.0
+def m_tiles(F, n, grid, base, joint=(0.008, 0.022), grout=0.64, bond=0.0):
+    """Square tiles, grid x grid per block, each a little uneven in tone and set, thin dark joints. bond > 0 shifts
+    each row along u by that much more of the block than the row above (a running bond; grid * grid * bond must be
+    whole for the tile to wrap - 1/9 on a 3 x 3: a third of a tile per row)."""
+    cv = np.floor(F.v * grid).astype(int)
+    us = (F.u + bond * cv) % 1.0
+    cu = np.floor(us * grid).astype(int)
+    iu, iv = (us * grid) % 1.0, (F.v * grid) % 1.0
     edge = np.minimum(np.minimum(iu, 1 - iu), np.minimum(iv, 1 - iv)) / grid
     face = smoothstep(joint[0], joint[1], edge)                # joints that survive the mipmaps (round 20)
     tone = (F.rng.random(grid * grid) - 0.5)[(cv * grid + cu) % (grid * grid)]
@@ -1897,12 +1908,14 @@ def m_polished_basalt_top(F, n, rings=16, lobe=4.0):
     r = (np.abs(x) ** lobe + np.abs(y) ** lobe) ** (1.0 / lobe)          # a rounded square's radius
     r = r + 0.002 * F.noise(2, 6, 0.5)                                   # the rings wander a hair
     fine = np.cos(2 * math.pi * r * 2 * rings)                           # 1 ring per 4 texels
-    broad = np.cos(2 * math.pi * r * rings / 2)                          # every fourth ring deeper
+    # r33 (critic, eyes 41029731853: "4 bullseyes" on the 2x2 - the every-fourth deeper ring survived the mipmaps as
+    # a target per block): no broad rings. The fine rings stay in the relief (the light finds them up close, the
+    # mipmaps average them to a calm sheen), the colour a calm polished face: a slow mottle, a faint grit, the rim.
     grit = F.noise(16, 48, 0.3)
     mottle = F.fbm(2, 3, 0.5)
     bev = frame(F, 0.05, 0.012)
-    H = 0.35 + 0.5 * bev + 0.025 * fine + 0.02 * broad + 0.004 * grit
-    shade = (0.92 + 0.05 * fine + 0.05 * broad + 0.03 * mottle + 0.008 * grit) * (0.75 + 0.25 * bev)
+    H = 0.35 + 0.5 * bev + 0.02 * fine + 0.004 * grit + 0.015 * mottle
+    shade = (0.92 + 0.02 * fine + 0.05 * mottle + 0.008 * grit) * (0.75 + 0.25 * bev)
     hue = F.noise(2, 5, 0.5)
     jit = np.stack([0.01 * hue, 0.0 * hue, -0.01 * hue], -1)
     return H, tint((0.35, 0.35, 0.37), shade, jit)
@@ -1992,9 +2005,15 @@ def m_quartz(F, n, kind):
         H, alb = m_bricks(F, n, 2, 2, (0.92, 0.90, 0.86), pits=0.02, tone_amp=0.03)
         return H, alb * (1 - 0.08 * vein)[..., None]
     if kind == "pillar":
-        flutes = 0.5 + 0.5 * np.cos(F.u * 2 * math.pi * 4)
-        H = 0.5 + 0.2 * flutes - 0.02 * vein
-        shade = 0.92 + 0.06 * flutes - 0.08 * vein
+        # r33 (critic, eyes 41029731853: "corrugation" - 4 sine ridges per block at full contrast): a classical
+        # fluted column - three broad shallow scoops per block with a flat fillet between, the scoop's shading soft
+        # (its relief does the work under the light), the vein faint across them
+        x = (F.u * 3) % 1.0
+        fillet = 0.14                                                  # the flat land each side of a scoop
+        sc = np.clip((x - fillet / 2) / (1 - fillet), 0, 1)
+        flutes = np.sin(math.pi * sc) ** 2 * (x > fillet / 2) * (x < 1 - fillet / 2)   # 1 deep in the scoop
+        H = 0.62 - 0.09 * flutes - 0.015 * vein
+        shade = 0.95 - 0.025 * flutes - 0.06 * vein
     elif kind == "pillar_top":
         bev = frame(F, 0.10, 0.02)
         inner = frame(F, 0.22, 0.17)
@@ -3594,7 +3613,10 @@ def recipes():
         "polished_blackstone_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.21, 0.19, 0.21)),
         "deepslate_bricks": lambda F, n: m_bricks(F, n, 4, 2, (0.30, 0.30, 0.32)),
         # r21: the 4x4 grid turned to grey static at RTS zoom - wider, darker joints so the grid survives the mips
-        "deepslate_tiles": lambda F, n: m_tiles(F, n, 4, (0.22, 0.22, 0.24), joint=(0.014, 0.034), grout=0.38),
+        # r33 (critic: "micro-mesh" - 4 x 4 with wide dark joints): 3 x 3 larger tiles in a running bond, the joints
+        # narrower and lighter (a grout line, not a black grid)
+        "deepslate_tiles": lambda F, n: m_tiles(F, n, 3, (0.22, 0.22, 0.24), joint=(0.008, 0.022), grout=0.60,
+                                                bond=1.0 / 9),
         "deepslate": lambda F, n: m_deepslate(F, n),
         "deepslate_top": lambda F, n: m_deepslate(F, n, top=True),
         # r32 (critic: polished vs rough twins identical at RTS): a faint 2x2 seam, a tighter calmer grain
