@@ -10,6 +10,8 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,11 +26,16 @@ import java.util.List;
 public class HeroLookGameTests {
 
     static final String ARENA = SkirmishGameTests.ARENA;
-    static final String ENTITIES = "/assets/reignofnether/textures/entities/";
-
+    /** A texture of textures/entities, read from the mod file as UnitSkinGameTests reads them; null when it is missing. */
     static BufferedImage skin(String file) {
-        try (InputStream in = HeroLookGameTests.class.getResourceAsStream(ENTITIES + file)) {
-            return in == null ? null : ImageIO.read(in);
+        var modFile = net.minecraftforge.fml.ModList.get().getModFileById(ReignOfNether.MOD_ID);
+        if (modFile == null)
+            return null;
+        Path path = modFile.getFile().findResource("assets", ReignOfNether.MOD_ID, "textures", "entities", file);
+        if (!Files.exists(path))
+            return null;
+        try (InputStream in = Files.newInputStream(path)) {
+            return ImageIO.read(in);
         } catch (Exception e) {
             return null;
         }
