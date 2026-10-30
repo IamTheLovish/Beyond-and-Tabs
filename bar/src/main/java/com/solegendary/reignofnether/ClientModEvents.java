@@ -83,9 +83,10 @@ public class ClientModEvents {
                 BlockRegistrar.WRAITH_SNOW_LAYER.get()
         );
 
-        // Tidewrought tidepool: the grey vanilla water texture tinted the faction's shallow-sea teal
+        // Light Grid tile (the tidepool, design/ai_faction.md slice 1a): the white grid lines tinted one light colour
+        // (team-coloured lines need the owner on the client: later); the dark panel stays dark under any tint
         evt.register(
-                (state, level, pos, tintIndex) -> 0x3CC8BE,
+                (state, level, pos, tintIndex) -> 0x7FF4FF,
                 BlockRegistrar.TIDEPOOL.get()
         );
 
@@ -464,11 +465,14 @@ public class ClientModEvents {
     @OnlyIn(Dist.CLIENT)
     public static void registerShaders(RegisterShadersEvent evt) {
         com.solegendary.reignofnether.postfx.WorldLookPass.registerShader(evt);
+        com.solegendary.reignofnether.ambient.mist.MistPass.registerShader(evt);   // the valley mist's volume (r6)
     }
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
     public static void registerParticles(RegisterParticleProvidersEvent evt) {
+        evt.registerSpriteSet(ParticleRegistrar.MIST.get(),
+                com.solegendary.reignofnether.ambient.mist.MistParticle.Provider::new);
         evt.registerSpriteSet(
                 ParticleRegistrar.BIG_ENCHANT.get(),
                 BigEnchantParticle.Provider::new

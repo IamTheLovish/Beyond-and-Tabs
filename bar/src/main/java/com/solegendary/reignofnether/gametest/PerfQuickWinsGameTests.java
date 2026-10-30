@@ -47,8 +47,6 @@ import java.util.List;
  *       still has its knockback cancelled.</li>
  *   <li>Unit.tick's item-pickup query is skipped while the level holds no item: an item dropped after quiet ticks is
  *       still picked up.</li>
- *   <li>getCurrentPopulation's production-queue part is cached per owner per tick: queuing, unqueuing and removing a
- *       building in the same tick still count exactly as before.</li>
  * </ul>
  */
 @GameTestHolder(ReignOfNether.MOD_ID)
@@ -283,71 +281,9 @@ public class PerfQuickWinsGameTests {
 
     // ------------------------------------------------------------------------------------------------ population
 
-    /**
-     * Queued production counts toward population exactly as before, inside one tick: each Zombie queued adds its
-     * population at once, a removed queue entry and a cleared queue take it away at once, and a production building
-     * that leaves the building list stops counting at once.
+    /*
+     * Retired - lovish Oct 29: no max population. population_counts_queued_production_as_before pinned the per-tick
+     * cache of getCurrentPopulation's queue part (QueuePopulation); with no population shown or limited anywhere, that
+     * count and its cache are gone.
      */
-    @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void population_counts_queued_production_as_before(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        String owner = owner(helper, "pop");
-        Resources pool = new Resources(owner, 0, 100000, 100000);
-        ResourcesServerEvents.resourcesList.add(pool);
-        GraveyardPlacement gy = null;
-        List<String> problems = new ArrayList<>();
-        try {
-            BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.GRAVEYARD, level,
-                helper.absolutePos(new BlockPos(4, 1, 4)), Rotation.NONE, owner, false);
-            if (!(bp instanceof GraveyardPlacement g)) {
-                helper.fail("the Graveyard placement is " + bp);
-                return;
-            }
-            gy = g;
-            for (int x = gy.minCorner.getX() - 1; x <= gy.maxCorner.getX() + 1; x++)
-                for (int z = gy.minCorner.getZ() - 1; z <= gy.maxCorner.getZ() + 1; z++)
-                    level.setBlock(new BlockPos(x, gy.minCorner.getY() - 1, z), Blocks.STONE.defaultBlockState(), 2);
-            for (var blk : gy.getBlocks())
-                level.setBlock(blk.getBlockPos(), blk.getBlockState(), 2);
-            gy.initPlacedBlocks();
-            gy.isBuilt = true;
-            gy.autoRelease = false;
-            int base = UnitServerEvents.getCurrentPopulation(owner);
-            BuildingServerEvents.getBuildings().add(gy);
-            expect(problems, "a graveyard with an empty queue", base, UnitServerEvents.getCurrentPopulation(owner));
-            int cost = ProductionItems.ZOMBIE.getCost(false, owner).population;
-            if (cost <= 0)
-                problems.add("set-up: a Zombie costs " + cost + " population");
-            for (int i = 1; i <= 3; i++) {
-                if (!gy.startProductionItem(ProductionItems.ZOMBIE))
-                    problems.add("queuing Zombie " + i + " was refused");
-                expect(problems, i + " Zombies queued", base + i * cost, UnitServerEvents.getCurrentPopulation(owner));
-            }
-            gy.productionQueue.remove(gy.productionQueue.size() - 1);
-            expect(problems, "one queued Zombie removed", base + 2 * cost, UnitServerEvents.getCurrentPopulation(owner));
-            gy.productionQueue.clear();
-            expect(problems, "the queue cleared", base, UnitServerEvents.getCurrentPopulation(owner));
-            gy.startProductionItem(ProductionItems.ZOMBIE);
-            expect(problems, "a Zombie queued again", base + cost, UnitServerEvents.getCurrentPopulation(owner));
-            BuildingServerEvents.getBuildings().remove(gy);
-            expect(problems, "the graveyard gone from the building list", base, UnitServerEvents.getCurrentPopulation(owner));
-            if (problems.isEmpty())
-                helper.succeed();
-            else
-                helper.fail(String.join("; ", problems));
-        } finally {
-            if (gy != null) {
-                gy.productionQueue.clear();
-                BuildingServerEvents.getBuildings().remove(gy);
-                for (var blk : gy.getBlocks())
-                    level.setBlock(blk.getBlockPos(), Blocks.AIR.defaultBlockState(), 2);
-            }
-            ResourcesServerEvents.resourcesList.remove(pool);
-        }
-    }
-
-    private static void expect(List<String> problems, String when, int want, int got) {
-        if (want != got)
-            problems.add(when + ": population " + got + ", want " + want);
-    }
 }

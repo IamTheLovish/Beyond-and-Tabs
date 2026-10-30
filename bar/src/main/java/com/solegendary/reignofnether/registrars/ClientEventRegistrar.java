@@ -197,6 +197,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeyTaps.class);   // tap vs hold for S and any order on W/A/S/D
         vanillaEventBus.register(com.solegendary.reignofnether.keybinds.KeybindsClientEvents.class);   // saved keys -> new defaults, once
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ambient.mist.MistClientEvents.class);   // valley mist
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PartRenderClientEvents.class);   // drawn extractor rigs
@@ -229,6 +230,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(StartPosServerEvents.class);
         vanillaEventBus.register(AlliancesServerEvents.class);
         vanillaEventBus.register(HeroServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hero.HeroRankMenuClient.class);   // keeps the rank-up menu hold alive
         vanillaEventBus.register(NonUnitServerEvents.class);
         vanillaEventBus.register(TimeServerEvents.class);
         vanillaEventBus.register(CustomBuildingServerEvents.class);
