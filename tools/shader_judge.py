@@ -49,7 +49,14 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 # light table now keeps SHADOW_FILL_SHARE 0.62 of the sunlit lawn's light in a cast shadow (lib/settings.glsl), ~0.78
 # on screen; the band moves with it rather than widening: fill 0.72-0.85 (still a clear shadow, never gone), floor from
 # 0.45 (the contact AO's floor, CONTACT_AO_FLOOR 0.85, keeps creases readable). Dusk and night keep theirs
-BANDS = {"day": (0.72, 0.85, 0.45, 0.85), "dusk": (0.45, 0.75, 0.35, 0.75), "night": (0.45, 0.80, 0.35, 0.80)}
+# Retired day band (0.72, 0.85, 0.45, 0.85), Oct 30, light pass 2: on the pass-1 stills that band passed shadows that
+# read as an edgeless darkening (critic 5.5/10: shadow side ~0.90 of the lit lawn on screen, "things float") and darks
+# lifted to ~0.23 (target 0.12-0.15). final.fsh's S-curve round the lit lawn (lib/settings.glsl S_CURVE_*) takes a cast
+# shadow to ~0.71 of the lawn and the darks down in proportion; it also spreads the lawn's own grain (detail 0.045 ->
+# ~0.057, the benchmark's), which the Otsu split counts too. Applied to the pass-1 rts_close stills the curve measures
+# fill 0.66 and floor 0.29-0.30 (scratchpad simulation), so the band moves there, no wider: fill 0.60-0.74, floor
+# 0.25-0.45 (the blackest shadowed lawn ~0.12-0.15 against a ~0.45 lit mean; above 0.45 the darks are floored again)
+BANDS = {"day": (0.60, 0.74, 0.25, 0.45), "dusk": (0.45, 0.75, 0.35, 0.75), "night": (0.45, 0.80, 0.35, 0.80)}
 # luma p50 of a night still: lit enough to play (lanterns, moon), dark enough to read as night (day stills sit ~0.37)
 NIGHT_LUMA = (0.10, 0.30)
 

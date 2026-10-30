@@ -79,18 +79,62 @@ const float SHADOW_FILL_SHARE = 0.62;
 // everything near). One term for what GROUND_BOUNCE did on its own: by the light table an unlit wall face gets ~0.53 of
 // a sunlit top's light, ~0.72 on screen (it was ~0.66 by the same model, measured ~0.55-0.6; benchmark ~0.65-0.7)
 const float GROUND_ALBEDO = 0.45;
-// the sun's penumbra (lib/shadow.glsl): angular spread (radians; the disc is 0.0093, plus the bright aureole and the
-// scatter of a hazy day), and the narrowest edge in blocks - about 3.3 px at the RTS camera's default zoom (~33 px a
-// block), so no edge is a razor line. A 5-block caster's tip ~0.15 block (~5 px)
-const float SUN_SPREAD = 0.025;
-const float PENUMBRA_MIN_BLOCKS = 0.10;
+// the sun's penumbra (lib/shadow.glsl): angular spread (radians; the disc is 0.0093, plus the bright aureole), and
+// the narrowest edge in blocks. Light pass 2 (the critic, 5.5/10: "an edgeless darkening, things float"): light pass
+// 1's 0.025 / 0.10 drew every edge at least 0.10 block soft (~7 px at rts_close's ~67 px a block) and a shadow a block
+// or two across never reached its full depth. Now the contact is crisp (0.03 block: ~1 px at the default zoom, ~2 px
+// at rts_close) and the edge widens with the blocker's distance: a 2-block caster's tip ~2.5 px at rts_close, a
+// 5-block one's ~6 px
+const float SUN_SPREAD = 0.016;
+const float PENUMBRA_MIN_BLOCKS = 0.03;
 // the screen-space ambient occlusion's floor on the fill (slice 3 had 0.55): a block-block contact darkens a little,
 // never to a black crease (lib/ao.glsl)
 const float CONTACT_AO_FLOOR = 0.85;
-// the display's white: final.fsh rolls highlights off with a soft shoulder from DISPLAY_SHOULDER, so white blocks
-// stay under DISPLAY_WHITE (no clipping, p99 ~0.95)
-const float DISPLAY_SHOULDER = 0.80;
-const float DISPLAY_WHITE = 0.96;
+// the display's S-curve (final.fsh, light pass 2), on luma as a ratio, after the grade. The lit lawn is its pivot and
+// stays where it is (lovish: the lawn mid-toned on the palette band, ~0.42; buildings own the lights). Below the
+// pivot a toe takes the darks down in proportion to how far below the lawn they sit - x (1 - SLOPE u - TOE u^2),
+// u = 1 - x / PIVOT - so the fill scales with albedo all the way down: by the model of the light table and grade, a
+// cast shadow on the lawn 0.33 -> 0.30 (0.71 of the lit lawn; was ~0.78), blackstone's sunlit top 0.27 -> 0.22, a
+// dark block's unlit side ~0.20 -> 0.15. Above the pivot the slope 1 + SLOPE eases back to 1 over LIFT_SPAN (at most
+// +0.05), so buildings brighten without their shaded faces flattening into the shoulder. Day only: the curve fades in
+// with the sun's height (S_CURVE_DAY_*), so dusk keeps its glow and night is not crushed
+const float S_CURVE_PIVOT = 0.42;
+const float S_CURVE_SLOPE = 0.32;
+const float S_CURVE_TOE = 0.36;
+const float S_CURVE_LIFT_SPAN = 0.30;
+const float S_CURVE_DAY_LO = 0.05;            // sine of the sun's height: no curve at or below
+const float S_CURVE_DAY_HI = 0.35;            // the whole curve from here (Noon and Morning are ~0.86)
+// the display's white: past DISPLAY_SHOULDER the curve rolls highlights off toward DISPLAY_WHITE and never reaches it,
+// so white blocks land ~0.95-0.97 (light pass 1's 0.80 / 0.96 held them at ~0.92) and nothing clips
+const float DISPLAY_SHOULDER = 0.85;
+const float DISPLAY_WHITE = 0.985;
+// Enchanted's glow (final.fsh) is a screen blend: it lifted every pixel near a white block by the same amount, so a
+// dark face beside a white top gained ~+0.09 - an albedo-independent floor on the darks (light pass 2). Its lift now
+// scales with the pixel's own luma, (luma / GLOW_THRESHOLD)^GLOW_DARK_GUARD: the lawn keeps ~0.7 of it, darks little
+const float GLOW_DARK_GUARD = 2.0;
+// the daytime sky in a perspective view (program/sky.fsh) and the aerial haze's air (composite.fsh): a gradient from
+// SKY_HORIZON_DAY to SKY_ZENITH_DAY over the first SKY_GRADIENT_SPAN of the sine of the view's height. Display
+// colours before the grade, solved through the model of the grade and the S-curve so the screen shows a zenith ~0.88
+// luma, bluer (0.78, 0.90, 0.98), and a paler horizon ~0.75 (0.72, 0.76, 0.80). It had vanilla's colours, which the
+// glow and the white guard took to a flat near-white (critic, light pass 1's 34 / dusk stills)
+const vec3 SKY_ZENITH_DAY = vec3(0.58, 0.81, 1.00);
+const vec3 SKY_HORIZON_DAY = vec3(0.61, 0.65, 0.70);
+const float SKY_GRADIENT_SPAN = 0.60;
+// metals' reflections (lib/pbr.glsl): the sky above the horizon, the ground below it as the fill sees it (GROUND_ALBEDO
+// of the sun and sky falling on the ground), never dimmed below SKY_FILL_FLOOR by a low sky light - the fill's own
+// floor. Light pass 1's iron_block side reflected ~nothing and read near black (RGB ~0.24) beside its white mortar.
+// Which texels are metal: LabPBR F0 codes 230-237 and 255 (the pack's only metal codes: tools/gen_blocks.py, 230 / 231
+// / 234 / 255). The pack's dielectrics stop at 44 (the gems); a code between DIELECTRIC_F0_MAX_CODE and 230 is a
+// mipmap's blend of a metal texel and a dielectric one (an iron hoop on a barrel, rust on iron), read as that share
+// of metal - not as a dielectric with an F0 up to 0.9, a white mirror sheen on wood or rust
+const float DIELECTRIC_F0_MAX_CODE = 64.0;
+// biome-tinted plants (grass, ferns; lit.fsh): their albedo held to the lawn's band, so a tuft reads as part of the
+// lawn, not neon lime (light pass 1's tufts: luma ~0.62 on a 0.42 lawn, saturation ~0.8). HSV saturation of the
+// albedo at most FOLIAGE_MAX_SAT (the lawn's own is ~0.36; the grade lifts both ~1.5x on screen), its luma at most
+// FOLIAGE_MAX_LUMA (the lawn's ~0.37), and the foot of the plant shaded to FOLIAGE_BASE_AO (the blades crowd there)
+const float FOLIAGE_MAX_SAT = 0.40;
+const float FOLIAGE_MAX_LUMA = 0.42;
+const float FOLIAGE_BASE_AO = 0.70;
 // whites read white, not cream: from WHITE_GUARD_LUMA up the grade's colour is taken back by WHITE_DESATURATE
 const float WHITE_GUARD_LUMA = 0.85;
 const float WHITE_DESATURATE = 0.30;

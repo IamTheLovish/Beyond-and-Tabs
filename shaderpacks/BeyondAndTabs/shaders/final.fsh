@@ -6,7 +6,7 @@
 //
 // The "camera" after the air: edge smoothing on geometry edges, a gentle local contrast, Enchanted's soft glow of the
 // bright areas, the film grade (exposure, an S on luma, a warm split tone, saturation and vibrance that guard skin,
-// team colours and greys) and a vignette.
+// team colours and greys), a vignette, then the display's S-curve round the lit lawn and its shoulder (light pass 2).
 
 #include "/lib/settings.glsl"
 #include "/lib/color.glsl"
@@ -18,6 +18,8 @@ uniform mat4 gbufferProjection;
 uniform mat4 gbufferProjectionInverse;
 uniform float viewWidth;
 uniform float viewHeight;
+uniform vec3 sunPosition;              // the S-curve is the day's (light pass 2): it fades in with the sun's height
+uniform vec3 upPosition;
 
 varying vec2 texcoord;
 
@@ -245,10 +247,24 @@ vec3 grade(vec3 c) {
     return mix(c, vec3(lw), WHITE_DESATURATE * smoothstep(WHITE_GUARD_LUMA - 0.05, WHITE_GUARD_LUMA + 0.05, lw));
 }
 
-// the display's shoulder (the light pass): luma past DISPLAY_SHOULDER eases toward DISPLAY_WHITE and never reaches it,
-// as a ratio so a hue holds; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey instead
-vec3 displayShoulder(vec3 c) {
-    float l = dot(c, LUMA);
+// the display's S-curve round the lit lawn (light pass 2, lib/settings.glsl S_CURVE_*), on luma as a ratio so a hue
+// holds: below the pivot the toe, x (1 - SLOPE u - TOE u^2) with u = 1 - x / PIVOT (slope 1 + SLOPE at the pivot,
+// darks taken down in proportion); above it the same slope easing back to 1 over LIFT_SPAN. day: 0 = no curve (night)
+float sCurve(float l, float day) {
+    if (l < S_CURVE_PIVOT) {
+        float u = 1.0 - l / S_CURVE_PIVOT;
+        return l * (1.0 - day * (S_CURVE_SLOPE * u + S_CURVE_TOE * u * u));
+    }
+    float d = min(l - S_CURVE_PIVOT, S_CURVE_LIFT_SPAN);
+    return l + day * S_CURVE_SLOPE * (d - d * d / (2.0 * S_CURVE_LIFT_SPAN));
+}
+
+// the curve, then the display's shoulder (light pass 1, raised in pass 2): luma past DISPLAY_SHOULDER eases toward
+// DISPLAY_WHITE and never reaches it; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey
+vec3 displayShoulder(vec3 c, float day) {
+    float l0 = dot(c, LUMA);
+    float l = sCurve(l0, day);
+    c *= l / max(l0, 1e-5);
     if (l > DISPLAY_SHOULDER) {
         float r = DISPLAY_WHITE - DISPLAY_SHOULDER;
         float t = DISPLAY_SHOULDER + r * (1.0 - exp(-(l - DISPLAY_SHOULDER) / r));
@@ -274,14 +290,23 @@ void main() {
     c = 1.0 - (1.0 - c) * (1.0 - min(bloomAt(texcoord), vec3(1.0)));
 #endif
 #if GRADE == 1
-    c = localContrast(c, texcoord, px);
-    c = 1.0 - (1.0 - c) * (1.0 - GLOW * glowAt(texcoord, aspect));
+    // the perspective views' sky (nothing drawn: depth 1) takes the grade but not the local contrast or the glow, which
+    // took it to a flat near-white (light pass 2; program/sky.fsh draws its gradient for the grade it gets)
+    bool sky = texture2D(depthtex0, texcoord).r >= 1.0;
+    if (!sky) {
+        c = localContrast(c, texcoord, px);
+        // the glow's lift scales with the pixel's own luma (GLOW_DARK_GUARD): a screen blend alone lifted darks near
+        // a white block by a fixed amount, the floor that flattened the low end
+        float guard = pow(clamp(dot(c, LUMA) / GLOW_THRESHOLD, 0.0, 1.0), GLOW_DARK_GUARD);
+        c += (1.0 - c) * (GLOW * guard * glowAt(texcoord, aspect));
+    }
     c = grade(c);
     vec2 d = (texcoord - 0.5) * vec2(aspect, 1.0);
     float r2 = dot(d, d) / (0.25 * (aspect * aspect + 1.0));
     c *= 1.0 - VIGNETTE * r2 * r2;
 #endif
-    c = displayShoulder(c);
+    float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, dot(normalize(sunPosition), normalize(upPosition)));
+    c = displayShoulder(c, day);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)
     c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) * (DITHER_LSB / 255.0);
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);

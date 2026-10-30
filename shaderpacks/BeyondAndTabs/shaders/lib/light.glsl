@@ -53,6 +53,12 @@ float sunHeight() {
     return dot(normalize(sunPosition), normalize(upPosition));
 }
 
+// 0..1: how much of the daytime sky gradient (SKY_*_DAY, lib/settings.glsl) the sky and the aerial haze use: all of it
+// with the sun high (Morning, Noon), none from dusk on
+float skyDay() {
+    return smoothstep(0.10, 0.45, sunHeight());
+}
+
 // the colours for this frame: the shadow light (sun by day, moon by night) and the sky's fill
 void lightColours(out vec3 sunColour, out vec3 skyColour) {
     float h = sunHeight();

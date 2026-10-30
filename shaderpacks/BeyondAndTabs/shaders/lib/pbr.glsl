@@ -9,7 +9,8 @@
 //   _s  R perceptual smoothness, G F0 (0-229 linear, 230-237 the LabPBR named metals, 255 a metal with its albedo as
 //       F0), B porosity / subsurface (not read yet), A emission (0-254, 255 = none).
 // The sun gets a GGX highlight, the sky a cheap two-colour reflection, so a metal, a gem or obsidian keeps a sheen in
-// the shade where no highlight can reach. No environment map: the RTS camera sees mostly sky in a reflection.
+// the shade where no highlight can reach. No environment map: the sky and the lit ground stand in for it (screen-
+// space reflections run on water only, where they hit; composite.fsh).
 // Needs lib/color.glsl and lib/light.glsl (upPosition, the light table) before it.
 
 const float PI = 3.14159265;
@@ -27,11 +28,12 @@ const float MIN_ROUGHNESS = 0.02;
 // what is left of a metal's diffuse light (a metal has none; a little keeps a dark-albedo metal from going black where
 // the sky reflection shows ground)
 const float METAL_DIFFUSE = 0.10;
-// the reflected sky, from the light table's fill: bluer overhead, paler and warmer at the horizon, the ground below
-// dimmer and warm (what a polished surface turned from the camera shows - grass and earth)
+// the reflected sky, from the light table's fill: bluer overhead, paler and warmer at the horizon. Below the horizon
+// the ground as the fill sees it (light pass 2): GROUND_ALBEDO of the sun and sky falling on open ground, tinted as
+// grass and earth (GROUND_TINT, about the lawn's hue at luma 1) - one hemisphere for the fill and the reflections
 const vec3 ZENITH_TINT = vec3(0.86, 0.96, 1.18);
 const vec3 HORIZON_TINT = vec3(1.20, 1.15, 1.05);
-const vec3 GROUND_TINT = vec3(0.55, 0.52, 0.42);
+const vec3 GROUND_TINT = vec3(1.05, 1.02, 0.80);
 
 struct Material {
     vec3 normal;        // the mapped normal, view space
@@ -73,15 +75,13 @@ Material readMaterial(vec4 nTex, vec4 sTex, vec3 albedo, vec3 geomNormal, vec3 t
     float rough = (1.0 - smoothness) * (1.0 - smoothness);     // LabPBR: perceptual smoothness to linear roughness
     m.roughness = max(rough, MIN_ROUGHNESS);
     float code = floor(sTex.g * 255.0 + 0.5);
-    if (code >= 229.5) {
-        // 230-237 named metals and 255 albedo-as-F0: the albedo's own colour as F0, so a gold trim stays gold and a
-        // team-tinted plate keeps its tint (the named metals' fixed values would turn every iron unit the same grey)
-        m.f0 = albedo;
-        m.metal = 1.0;
-    } else {
-        m.f0 = vec3(code / 255.0);
-        m.metal = 0.0;
-    }
+    // 230-237 named metals and 255 albedo-as-F0: the albedo's own colour as F0, so a gold trim stays gold and a
+    // team-tinted plate keeps its tint (the named metals' fixed values would turn every iron unit the same grey).
+    // 238-254 only come from a mipmap blending those two, so they stay metal. A code between DIELECTRIC_F0_MAX_CODE
+    // and 230 is a mip's blend of a metal texel with a dielectric one: that share of metal (light pass 2's audit;
+    // lib/settings.glsl), so a barrel's hoop seen from afar is never a dielectric with a near-mirror F0
+    m.metal = clamp((code - DIELECTRIC_F0_MAX_CODE) / (229.5 - DIELECTRIC_F0_MAX_CODE), 0.0, 1.0);
+    m.f0 = mix(vec3(min(code, DIELECTRIC_F0_MAX_CODE) / 255.0), albedo, m.metal);
     m.emission = sTex.a < 254.5 / 255.0 ? sTex.a * (255.0 / 254.0) : 0.0;
     return m;
 }
@@ -118,13 +118,17 @@ vec3 skyInDirection(vec3 r, vec3 skyColour, vec3 sunColour) {
     vec3 zenith = skyColour * ZENITH_TINT;
     if (u >= 0.0)
         return mix(horizon, zenith, sqrt(u));
-    return mix(horizon, skyColour * GROUND_TINT, smoothstep(0.0, 0.3, -u));
+    vec3 up = normalize(upPosition);
+    vec3 ground = GROUND_TINT * GROUND_ALBEDO
+        * (sunColour * sunFacing(up, normalize(shadowLightPosition)) + skyColour);
+    return mix(horizon, ground, smoothstep(0.0, 0.3, -u));
 }
 
-// the reflected sky, weighted by Fresnel and by smoothness (a rough surface scatters it into its diffuse look), and by
-// the sky light level: a cave wall shows no sky
+// the reflected environment (sky above the horizon, lit ground below), weighted by Fresnel and by smoothness (a rough
+// surface scatters it into its diffuse look), and by the sky light level as the fill is - down to SKY_FILL_FLOOR, never
+// to nothing (light pass 2: a metal face with a stale or low sky light reflected black; lib/light.glsl has the floor)
 vec3 skyReflection(Material m, vec3 v, float skyLevel, vec3 skyColour, vec3 sunColour) {
     vec3 r = reflect(-v, m.normal);
     vec3 f = fresnelSchlick(m.f0, dot(m.normal, v));
-    return skyInDirection(r, skyColour, sunColour) * f * ((1.0 - m.roughness) * skyLevel);
+    return skyInDirection(r, skyColour, sunColour) * f * ((1.0 - m.roughness) * mix(SKY_FILL_FLOOR, 1.0, skyLevel));
 }

@@ -43,6 +43,10 @@ void main() {
     float up = dot(dir, normalize(upPosition));
     // vanilla's own horizon and zenith colours for the time and biome, blended over a wider band
     vec3 c = mix(toLinear(fogColor), toLinear(skyColor), smoothstep(-0.05, 0.45, up));
+    // by day our own gradient (light pass 2, lib/settings.glsl): a bluer zenith over a paler horizon, the colour the
+    // aerial haze fades distant ground into (composite.fsh). Vanilla's pair stays for dawn, dusk and night
+    vec3 day = mix(toLinear(SKY_HORIZON_DAY), toLinear(SKY_ZENITH_DAY), smoothstep(0.0, SKY_GRADIENT_SPAN, up));
+    c = mix(c, day, skyDay());
     // a warm glow round the sun, strongest when it is low
     float toSun = max(dot(dir, normalize(sunPosition)), 0.0);
     float h = sunHeight();

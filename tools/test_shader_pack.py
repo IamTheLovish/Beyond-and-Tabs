@@ -27,6 +27,21 @@ def _const(name, src=None):
     return float(m.group(1))
 
 
+def _s_curve(x, day=1.0):
+    """A model of final.fsh's sCurve() and its shoulder, from lib/settings.glsl's constants (luma in, luma out)."""
+    pivot, slope, toe, span = (_const(n) for n in ("S_CURVE_PIVOT", "S_CURVE_SLOPE", "S_CURVE_TOE", "S_CURVE_LIFT_SPAN"))
+    if x < pivot:
+        u = 1.0 - x / pivot
+        y = x * (1.0 - day * (slope * u + toe * u * u))
+    else:
+        d = min(x - pivot, span)
+        y = x + day * slope * (d - d * d / (2.0 * span))
+    start, top = _const("DISPLAY_SHOULDER"), _const("DISPLAY_WHITE")
+    if y > start:
+        y = start + (top - start) * (1.0 - math.exp(-(y - start) / (top - start)))
+    return y
+
+
 class ShaderPack(unittest.TestCase):
     def test_every_file_is_ours_and_clean_room(self):
         self.assertEqual(spc.header_problems(), [])
@@ -132,15 +147,29 @@ class ShaderPack(unittest.TestCase):
         self.assertLess(wall, share)                           # a wall in shade sits below the shaded lawn
 
     def test_shadows_are_soft_and_never_self_shadow(self):
-        # the narrowest penumbra ~3 px at the RTS camera's default zoom (~33 px a block), a 5-block caster's ~3-6 px;
-        # the slope cap's shortfall is biased back in every direction (the sun-grazed walls' slivers)
-        px = 33.0
-        self.assertTrue(3.0 <= _const("PENUMBRA_MIN_BLOCKS") * px <= 6.0)
-        tip = 5.0 / math.sin(math.radians(60.0)) * _const("SUN_SPREAD") * px
-        self.assertTrue(3.0 <= tip <= 6.5, tip)
+        # Retired pins (light pass 2): "PENUMBRA_MIN_BLOCKS ~3-6 px at the default zoom" and "a 5-block caster's tip
+        # 3-6.5 px". Light pass 1 set the floor at 0.10 block so no edge was a razor line; in game every shadow then
+        # read as an edgeless darkening (critic, 5.5/10: "things float", the penumbra 20+ px at rts_close) and a shadow
+        # a block or two across never reached its full depth. The coordinator's target replaces them: a crisp contact
+        # and a 2-4 px penumbra at rts_close (~67 px a block) for the usual 2-3 block casters, widening with distance.
+        # The slope cap's shortfall is still biased back in every direction (the sun-grazed walls' slivers)
+        close = 67.0
+        along = 1.0 / math.sin(math.radians(60.0))            # blocks along the light per block of caster height
+        contact = _const("PENUMBRA_MIN_BLOCKS") * close
+        self.assertTrue(1.0 <= contact <= 2.5, contact)
+
+        def edge(height):
+            return max(height * along * _const("SUN_SPREAD"), _const("PENUMBRA_MIN_BLOCKS")) * close
+
+        self.assertTrue(2.0 <= edge(2.0) <= 4.0, edge(2.0))
+        self.assertTrue(2.0 <= edge(3.0) <= 4.0, edge(3.0))
+        self.assertTrue(edge(5.0) <= 7.0, edge(5.0))
+        self.assertLess(edge(2.0), edge(5.0))                  # widening with the blocker's distance
         shadow = _read("lib", "shadow.glsl")
         self.assertEqual(shadow.count("shortfall * length(o)"), 2)
         self.assertNotIn("const float SUN_SPREAD", shadow)
+        # the blocker search reaches the widest penumbra it draws (a caster SHADOW_SEARCH_BLOCKS away)
+        self.assertIn("0.5 * SHADOW_SEARCH_BLOCKS * SUN_SPREAD / blocksPerUv", shadow)
 
     def test_contact_ao_never_crushes(self):
         # Retired pin: slice 3's AO_FLOOR 0.55 (picked for the judged floor at 0.35 of the lawn); with the vertex AO
@@ -150,19 +179,91 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("max(ao, AO_FLOOR)", _read("deferred.fsh"))
 
     def test_display_keeps_whites_white_and_unclipped(self):
-        # the shoulder: no pixel past DISPLAY_WHITE (p99 ~0.95, no clipping); past WHITE_GUARD_LUMA ~30% of the colour
-        # goes, so whites read white, not cream. A model of displayShoulder() on the brightest input
-        import math
+        # Retired pin (light pass 2): "DISPLAY_WHITE <= 0.96" held whites at ~0.92 on the stills (p99 0.92 against the
+        # benchmark's 0.93-0.95); the coordinator's target is p99 >= 0.95, toward ~0.97, still unclipped. The shoulder
+        # never reaches DISPLAY_WHITE, which stays under 1 (no channel clips), and the brightest white the stills showed
+        # (grade output ~1.02) lands 0.95-0.975. Past WHITE_GUARD_LUMA ~30% of the colour goes: whites read white
         top, start = _const("DISPLAY_WHITE"), _const("DISPLAY_SHOULDER")
-        self.assertLessEqual(top, 0.96)
+        self.assertLess(top, 0.99)
         r = top - start
-        for lum in (0.85, 1.0, 1.2, 2.0):
+        for lum in (0.9, 1.0, 1.2, 2.0):
             self.assertLess(start + r * (1.0 - math.exp(-(lum - start) / r)), top)
+        white = _s_curve(1.02)
+        self.assertTrue(0.95 <= white <= 0.975, white)
         self.assertAlmostEqual(_const("WHITE_DESATURATE"), 0.30)
         self.assertAlmostEqual(_const("WHITE_GUARD_LUMA"), 0.85)
         final = _read("final.fsh")
-        self.assertIn("c = displayShoulder(c);", final)
+        self.assertIn("c = displayShoulder(c, day);", final)
         self.assertIn("WHITE_DESATURATE * smoothstep(WHITE_GUARD_LUMA", final)
+
+    def test_s_curve_keeps_the_lawn_and_scales_the_darks(self):
+        # light pass 2: the lit lawn is the curve's fixed point (lovish: ~0.42 on his palette band), the darks go down
+        # in proportion. Inputs are the model's on-screen values before the curve (light table + grade): a cast shadow
+        # on the lawn 0.33 (the lawn 0.42), blackstone's sunlit top 0.27, a dark block's unlit side ~0.20
+        pivot = _const("S_CURVE_PIVOT")
+        self.assertAlmostEqual(pivot, 0.42)
+        self.assertAlmostEqual(_s_curve(pivot), pivot, places=6)
+        self.assertTrue(0.70 <= _s_curve(0.33) / pivot <= 0.75, _s_curve(0.33))
+        self.assertLessEqual(_s_curve(0.27), 0.23)
+        self.assertTrue(0.14 <= _s_curve(0.20) <= 0.20, _s_curve(0.20))
+        # monotonic, never below zero, and the lawn's mean holds (its grain moves about as much up as down)
+        xs = [i / 200.0 for i in range(1, 241)]
+        ys = [_s_curve(x) for x in xs]
+        self.assertTrue(all(b > a for a, b in zip(ys, ys[1:])))
+        self.assertGreater(ys[0], 0.0)
+        self.assertAlmostEqual((_s_curve(0.37) + _s_curve(0.47)) / 2.0, 0.42, delta=0.005)
+        # at night (day = 0) the curve is the identity below the shoulder
+        self.assertAlmostEqual(_s_curve(0.15, day=0.0), 0.15)
+        final = _read("final.fsh")
+        self.assertIn("smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, dot(normalize(sunPosition)", final)
+
+    def test_glow_never_floors_the_darks(self):
+        # the glow's screen blend lifted every pixel near a white block by the same amount (+~0.09 on a dark face):
+        # its lift now scales with the pixel's own luma; the perspective sky takes no glow and no local contrast
+        final = _read("final.fsh")
+        self.assertIn("pow(clamp(dot(c, LUMA) / GLOW_THRESHOLD, 0.0, 1.0), GLOW_DARK_GUARD)", final)
+        self.assertNotIn("c = 1.0 - (1.0 - c) * (1.0 - GLOW * glowAt", final)
+        self.assertGreaterEqual(_const("GLOW_DARK_GUARD"), 1.0)
+        self.assertIn("if (!sky) {", final)
+
+    def test_sky_has_a_gradient_the_haze_shares(self):
+        # light pass 2: by day a bluer zenith over a paler horizon (on screen ~0.88 and ~0.75 luma through the grade),
+        # and the perspective views' aerial haze fades far ground into that horizon
+        settings = _read("lib", "settings.glsl")
+        luma = (0.2126, 0.7152, 0.0722)
+
+        def vec(name):
+            return [float(x) for x in re.search(r"const vec3 %s = vec3\(([^)]*)\);" % name, settings).group(1).split(",")]
+
+        zen, hor = vec("SKY_ZENITH_DAY"), vec("SKY_HORIZON_DAY")
+        self.assertGreater(sum(a * b for a, b in zip(zen, luma)), sum(a * b for a, b in zip(hor, luma)) + 0.08)
+        self.assertGreater(zen[2] / zen[0], hor[2] / hor[0])   # bluer at the zenith
+        self.assertIn("c = mix(c, day, skyDay());", _read("program", "sky.fsh"))
+        self.assertIn("mix(fogColor, SKY_HORIZON_DAY, skyDay())", _read("composite.fsh"))
+
+    def test_metals_reflect_a_lit_environment(self):
+        # light pass 2: a metal's reflection below the horizon is the lit ground (the fill's hemisphere), dimmed by a
+        # low sky light no further than the fill's floor; only F0 codes from DIELECTRIC_F0_MAX_CODE up count as metal,
+        # a mip's blend in between as its share of metal (the pack's dielectrics stop at 44, its metals are 230+)
+        pbr = _read("lib", "pbr.glsl")
+        self.assertIn("GROUND_TINT * GROUND_ALBEDO", pbr)
+        self.assertIn("mix(SKY_FILL_FLOOR, 1.0, skyLevel)", pbr)
+        self.assertIn("(code - DIELECTRIC_F0_MAX_CODE) / (229.5 - DIELECTRIC_F0_MAX_CODE)", pbr)
+        code = _const("DIELECTRIC_F0_MAX_CODE")
+        self.assertTrue(44 < code < 230, code)
+        gen = open(os.path.join(spc.ROOT, "..", "..", "tools", "gen_blocks.py"), encoding="utf-8").read()
+        for f0 in (int(x) for x in re.findall(r"\bf0=(\d+)", gen)):
+            self.assertTrue(f0 <= 44 or 230 <= f0 <= 237 or f0 == 255, f0)   # no code a mip blend could mimic
+
+    def test_grass_tufts_sit_in_the_lawns_band(self):
+        # light pass 2: biome-tinted plants keep their albedo inside the lawn's band (the tufts read neon lime, luma
+        # ~0.62 on a 0.42 lawn), take a little base occlusion, and never emit
+        self.assertLessEqual(_const("FOLIAGE_MAX_SAT"), 0.45)
+        self.assertLessEqual(_const("FOLIAGE_MAX_LUMA"), 0.45)
+        self.assertTrue(0.6 <= _const("FOLIAGE_BASE_AO") <= 0.85)
+        lit = _read("program", "lit.fsh")
+        self.assertIn("ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);", lit)
+        self.assertIn("mat.emission = 0.0;", lit)
 
     def test_no_film_grain(self):
         # the dither read as grain over the lawn at the RTS zoom: off, and the local contrast never sharpens a texel

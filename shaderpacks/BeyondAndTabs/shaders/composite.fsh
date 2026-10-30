@@ -233,12 +233,14 @@ void main() {
         h *= mix(0.4, 1.0, smoothstep(0.05, 0.4, dot(c, LUMA)));
         // toward the sky's colour lightened toward the horizon's: in the RTS view the fog colour is the map edge's tone,
         // not air, and the vanilla horizon colour WorldLookPass uses is not handed to packs (eyes measures the gap)
-        vec3 air = ortho ? mix(skyColor, vec3(1.0), 0.25) : fogColor;
+        // A perspective view's air by day is the sky gradient's horizon (light pass 2, program/sky.fsh), so far ground
+        // fades into the sky drawn behind it
+        vec3 air = ortho ? mix(skyColor, vec3(1.0), 0.25) : mix(fogColor, SKY_HORIZON_DAY, skyDay());
         c = mix(c, vec3(dot(c, LUMA)), h * 0.5);
         c *= mix(vec3(1.0), DISTANCE_COOL, h);
         c = mix(c, air, h);
-        if (!ortho)                    // vanilla's fog at the render distance's edge
-            c = mix(c, fogColor, smoothstep(far * 0.8, far, length(pos)));
+        if (!ortho)                    // the render distance's edge fades into the same air (vanilla's fog there)
+            c = mix(c, air, smoothstep(far * 0.8, far, length(pos)));
     }
     gl_FragData[0] = vec4(c, 1.0);
 }

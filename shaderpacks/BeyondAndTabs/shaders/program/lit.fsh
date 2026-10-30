@@ -54,6 +54,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float plantUp;
 varying float asDrawn;
 varying float waterBody;
 #ifdef LIT_PBR
@@ -105,6 +106,24 @@ void main() {
 #ifdef LIT_ENTITY
     albedo = mix(albedo, entityColor.rgb, entityColor.a);
 #endif
+#ifdef LIT_TERRAIN
+    if (foliage > 0.5) {
+        // a biome-tinted plant (grass, fern: a coloured vertex tint; a flower's is white) keeps its albedo inside the
+        // lawn's band, so a tuft reads as part of the lawn rather than neon lime (light pass 2, lib/settings.glsl); the
+        // fog of war's tint is grey and passes through. Flowers keep their petals' colour
+        float tintChroma = max(glcolor.r, max(glcolor.g, glcolor.b)) - min(glcolor.r, min(glcolor.g, glcolor.b));
+        float tinted = smoothstep(0.05, 0.15, tintChroma / max(max(glcolor.r, max(glcolor.g, glcolor.b)), 1e-3));
+        float top = max(albedo.r, max(albedo.g, albedo.b));
+        float sat = (top - min(albedo.r, min(albedo.g, albedo.b))) / max(top, 1e-4);
+        float l = dot(albedo, LUMA);
+        // HSV saturation scales with the distance from the grey of the same luma (for a fixed brightest channel)
+        vec3 held = mix(vec3(l), albedo, min(1.0, FOLIAGE_MAX_SAT / max(sat, 1e-4)));
+        held *= min(1.0, FOLIAGE_MAX_LUMA / max(dot(held, LUMA), 1e-4));
+        albedo = mix(albedo, held, tinted);
+        // the blades crowd at the foot: a little base occlusion, as the lawn's own texture has between its clumps
+        ao *= mix(FOLIAGE_BASE_AO, 1.0, plantUp);
+    }
+#endif
 
     // grass, flowers and crops are crossed planes whose normals point sideways: lit as the ground they stand on, so a
     // tuft reads as part of the lawn (no dark patches on the planes turned from the sun)
@@ -120,6 +139,12 @@ void main() {
     // the plants keep their up normal: their maps would tilt it back toward the planes' sideways look
     Material mat = readMaterial(texture2D(normals, texcoord, lodBias), texture2D(specular, texcoord, lodBias), lin,
                                 geomN, vT, vB, !plane);
+#ifdef LIT_TERRAIN
+    // no plant in block.properties' 10001 / 10003 glows, and the pack paints them no _s map: whatever the loader binds
+    // in its place must never read as emission (a tuft drawn unlit-bright; light pass 2)
+    if (foliage > 0.5)
+        mat.emission = 0.0;
+#endif
     vec3 n = mat.normal;
     float texAo = mat.ao;
 #else

@@ -10,7 +10,7 @@
 #include "/lib/wind.glsl"
 
 attribute vec4 mc_Entity;
-#if defined LIT_TERRAIN && WIND == 1
+#ifdef LIT_TERRAIN
 attribute vec2 mc_midTexCoord;         // the centre of this quad's sprite in the atlas (the loader's)
 #endif
 #ifdef LIT_PBR
@@ -24,6 +24,7 @@ varying vec3 viewPos;
 varying vec3 viewNormal;
 varying vec3 fit;
 varying float foliage;
+varying float plantUp;                 // a plant's height up its sprite: 0 at the foot, 1 at the top (FOLIAGE_BASE_AO)
 varying float asDrawn;
 varying float waterBody;              // 1 on water itself (block.properties), 0 on glass, ice and the rest of
                                        // the translucent terrain
@@ -86,8 +87,12 @@ void main() {
 #endif
 #ifdef LIT_TERRAIN
     foliage = abs(mc_Entity.x - ID_FOLIAGE) < 0.5 || abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 ? 1.0 : 0.0;
+    // v runs down the texture: a vertex above the sprite's centre is the plane's top; a two-block plant's upper half
+    // is all top. Interpolated, 0 at the foot to 1 at the top
+    plantUp = abs(mc_Entity.x - ID_FOLIAGE_UPPER) < 0.5 || gl_MultiTexCoord0.y < mc_midTexCoord.y ? 1.0 : 0.0;
 #else
     foliage = 0.0;
+    plantUp = 1.0;
 #endif
 #ifdef LIT_WATER
     waterBody = abs(mc_Entity.x - ID_WATER) < 0.5 ? 1.0 : 0.0;
