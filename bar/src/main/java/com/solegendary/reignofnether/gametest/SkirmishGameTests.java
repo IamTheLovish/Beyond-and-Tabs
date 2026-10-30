@@ -6160,7 +6160,9 @@ public class SkirmishGameTests {
         // (deployed_turret_unit: the Brassworks Guildmaster's Deploy Turret summon - registered to the faction so its
         // kills/colour/ownership read as Brassworks, but DeployTurret spawns it and pays its 40 metal)
         // (clockwork_drone_unit: launched by the Iron Leviathan Engine, never trained)
-        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit", "clockwork_drone_unit");
+        // (mender_angel_unit, seraph_archer_unit, sword_seraph_unit: the Angel Caller's essence summons, CallAngel)
+        Set<String> noProdOk = Set.of("silverfish_unit", "armoured_hoglin_unit", "deployed_turret_unit", "clockwork_drone_unit",
+            "mender_angel_unit", "seraph_archer_unit", "sword_seraph_unit");
         List<String> gaps = new ArrayList<>();
         int checked = 0;
         for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
@@ -11849,9 +11851,10 @@ public class SkirmishGameTests {
             if (e != null)
                 e.discard();
         }
-        // nine of the faction's own plus the shared T1 siege lobber (the Steam Lobber, design/siege_t1.md; not a Machine)
-        if (units != 10)
-            helper.fail("the Foundry Hall and the Machine Shop should train ten units, found " + units);
+        // nine of the faction's own, the shared T1 siege lobber (the Steam Lobber, design/siege_t1.md; not a Machine) and
+        // the essence caster (the Soul Engineer, a person; casters are tier 1 - lovish, Oct 29)
+        if (units != 11)
+            helper.fail("the Foundry Hall and the Machine Shop should train eleven units, found " + units);
         if (machines != 6)
             helper.fail("six of the T1 units are machines (Gyro Scout, Steam Runner, Iron Warden, Flak Cart, Mortar Crawler, Shield Projector), found " + machines);
         // the Flak Cart is wind-type anti-air; the Deployed Turret is a machine of the faction but never trained

@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.solegendary.reignofnether.unit.Relationship;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
+import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -143,6 +144,8 @@ public final class AnimStates {
         boolean fighting = le.swinging || (le instanceof Mob m && m.isAggressive());
         Kinematics.step(s, b, (float) (le.getX() - le.xo), (float) (le.getY() - le.yo), (float) (le.getZ() - le.zo),
             le.yBodyRot - le.yBodyRotO, le.getHealth(), le.getMaxHealth(), fighting, fresh);
+        Kinematics.look(s, b, le.yHeadRot, le.getXRot(),
+            le instanceof RangedAttackerUnit && le instanceof Mob m2 && m2.isAggressive(), fresh);
         if (fresh) {
             // its own tempo and a phase of its own: neighbours never breathe in step (Desync, Life.offset)
             s[b + AnimState.TEMPO] = Desync.tempo(id);

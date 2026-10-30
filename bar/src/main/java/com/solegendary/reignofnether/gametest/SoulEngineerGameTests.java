@@ -64,7 +64,8 @@ import java.util.Objects;
  * The Brassworks essence caster, the Soul Engineer (design/essence_casters.md; lovish approved draft 2 on Oct 29: "one
  * caster per race"; the numbers are the revision-scaled ones of the design's last section). Written before the code:
  * <ul>
- *   <li>trained at the Assembly Works (Brassworks T2 lab) once Tier 2 is researched, for a cost; an essence carrier with
+ *   <li>trained at the Machine Shop (the Brassworks T1 army lab) with no Tier 2 (lovish, Oct 29: casters are tier 1, like
+ *       rez bots), for a cost; an essence carrier with
  *       three spells and the shared Empower, each spell gated for the bots on its essence ({@code autocastEssence});</li>
  *   <li>Patch Kit: 5 essence, 12 s - a friendly machine or building within 8 is mended by 120 HP; refused on a target at
  *       full health (and on an enemy's, out of reach, or short); autocast at a hurt building (AutoRule.BUILDING_HURT);</li>
@@ -222,15 +223,20 @@ public class SoulEngineerGameTests {
     // ------------------------------------------------------------------------------------------- the unit
 
     /**
-     * The Assembly Works trains the Soul Engineer (its own slot), for a real cost (metal, energy, population), behind the
-     * Tier 2 gate like the rest of the lab; the item makes a Soul Engineer, a Brassworks unit whose cost is the item's.
+     * The Machine Shop (the Brassworks T1 army lab) trains the Soul Engineer (its own slot) for a real cost (metal,
+     * energy, population) with no Tier 2 - casters are tier 1, like rez bots (lovish, Oct 29) - and the Assembly Works
+     * (T2) no longer does; the item makes a Soul Engineer, a Brassworks unit whose cost is the item's.
      */
     @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
-    public static void soul_engineer_trains_at_the_assembly_works_for_a_cost(GameTestHelper helper) {
+    public static void soul_engineer_trains_at_the_machine_shop_for_a_cost(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         List<String> problems = new ArrayList<>();
-        if (!Buildings.ASSEMBLY_WORKS.productions.get().contains(ProductionItems.SOUL_ENGINEER))
-            problems.add("the Assembly Works does not offer the Soul Engineer");
+        if (!Buildings.MACHINE_SHOP.productions.get().contains(ProductionItems.SOUL_ENGINEER))
+            problems.add("the Machine Shop does not offer the Soul Engineer");
+        if (Buildings.ASSEMBLY_WORKS.productions.get().contains(ProductionItems.SOUL_ENGINEER))
+            problems.add("the Assembly Works (T2) still offers the Soul Engineer");
+        if ((Object) ProductionItems.SOUL_ENGINEER instanceof com.solegendary.reignofnether.unit.units.brass.BrassT2Prod)
+            problems.add("the Soul Engineer's item is still a BrassT2Prod (the Tier 2 gate)");
         ResourceCost cost = ResourceCosts.SOUL_ENGINEER;
         if (cost.metal() <= 0 || cost.energy() <= 0 || cost.population <= 0 || cost.ticks <= 0)
             problems.add("the Soul Engineer costs " + cost.metal() + " metal, " + cost.energy() + " energy, " + cost.population
@@ -242,22 +248,20 @@ public class SoulEngineerGameTests {
 
         String me = owner(helper, "train");
         BlockPos corner = helper.absolutePos(BlockPos.ZERO);
-        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.ASSEMBLY_WORKS, level,
+        BuildingPlacement bp = BuildingUtils.getNewBuildingPlacement(Buildings.MACHINE_SHOP, level,
             new BlockPos(corner.getX() + 2, corner.getY() + 1, corner.getZ() + 3), Rotation.NONE, me, false);
         Resources pool = new Resources(me, 0, 0, 0);
         ResourcesServerEvents.resourcesList.add(pool);
         Mob made = null;
         try {
             if (!(bp instanceof ProductionPlacement pp)) {
-                problems.add("no Assembly Works placement: " + bp);
+                problems.add("no Machine Shop placement: " + bp);
             } else {
                 pp.isBuilt = true;
-                if (ProductionItems.SOUL_ENGINEER.getProduceErrorMsg(pp) == null)
-                    problems.add("the Soul Engineer was offered without Tier 2");
-                ResearchServerEvents.addResearch(me, ProductionItems.RESEARCH_TIER_2);
+                ResearchServerEvents.removeAllResearchFor(me);   // no Tier 2
                 String err = ProductionItems.SOUL_ENGINEER.getProduceErrorMsg(pp);
                 if (err != null)
-                    problems.add("with Tier 2 the Soul Engineer is refused: " + err);
+                    problems.add("without Tier 2 the Machine Shop refuses the Soul Engineer: " + err);
                 else if (!pp.startProductionItem(ProductionItems.SOUL_ENGINEER))
                     problems.add("the server refused to queue the Soul Engineer");
                 pp.productionQueue.clear();
@@ -953,7 +957,7 @@ public class SoulEngineerGameTests {
                     problems.add("Soul Boiler boiled an enemy's building (" + Essence.get(rich) + " essence)");
                 shop.ownerName = me;
                 // already boiling
-                shop.boilUntilTick = level.getGameTime() + 100;
+                SoulBoiler.startBoil(shop, level.getGameTime() + 100);
                 sbR.use(level, (Unit) rich, shop.centrePos);
                 if (Essence.get(rich) != 30 || shop.boilUntilTick != level.getGameTime() + 100)
                     problems.add("Soul Boiler boiled a building already boiling (" + Essence.get(rich) + " essence)");
@@ -982,6 +986,7 @@ public class SoulEngineerGameTests {
         BuildingPlacement shop = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, true);
         helper.runAfterDelay(3, () -> {
             List<String> problems = new ArrayList<>();
+            BuildingPlacement idleSite = null;
             try {
                 if (!(caster instanceof SoulEngineerUnit se) || !(shop instanceof ProductionPlacement pp)) {
                     problems.add("could not set up the Soul Engineer and the Machine Shop");
@@ -994,6 +999,8 @@ public class SoulEngineerGameTests {
                 // a unit queued with no population room (the cap lowered to 0 for this check): the queue is held, no boil
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.STEAM_RUNNER, false, me));
                 int maxPop = UnitServerEvents.maxPopulation;   // BAR: everyone's supply is the host's cap
+                // a server global: keep this window tick-free (no delay, spawn or anything that ticks between the set
+                // and the restore), or parallel tests would see the 0 cap
                 try {
                     UnitServerEvents.maxPopulation = 0;
                     if (ProductionItems.STEAM_RUNNER.isBelowPopulationSupply(pp))
@@ -1007,10 +1014,11 @@ public class SoulEngineerGameTests {
                 pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // no population
                 // a friendly site nobody is building, alone in reach
                 BuildingServerEvents.getBuildings().remove(shop);
-                BuildingPlacement idleSite = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
+                idleSite = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, false);
                 if (se.autoBoil() || (idleSite != null && SoulBoiler.isBoiling(idleSite)))
                     problems.add("the Soul Engineer boiled a site nobody is building by itself");
                 BuildingServerEvents.getBuildings().remove(idleSite);
+                idleSite = null;
                 BuildingServerEvents.getBuildings().add(shop);
                 // sealed
                 caster.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -1032,6 +1040,8 @@ public class SoulEngineerGameTests {
             } catch (RuntimeException ex) {
                 problems.add("threw " + ex);
             } finally {
+                if (idleSite != null)
+                    BuildingServerEvents.getBuildings().remove(idleSite);
                 unsite(level, shop);
                 discardAll(live(caster));
                 finish(helper, problems);
@@ -1042,20 +1052,23 @@ public class SoulEngineerGameTests {
     // ------------------------------------------------------------------------------------------- the bots
 
     /**
-     * Bots build and use every caster (lovish, Oct 29): the Brassworks bot's T2 army list, trained at its T2 lab, holds the
-     * Soul Engineer, and the spells it autocasts are gated on essence for them (the gather test checks the rules).
+     * Bots build and use every caster (lovish, Oct 29): the Brassworks bot's T1 army list, trained at its army lab (the
+     * Machine Shop), holds the Soul Engineer - casters are tier 1 - and its T2 list does not; the spells it autocasts are
+     * gated on essence for them (the gather test checks the rules).
      */
     @GameTest(template = ARENA, timeoutTicks = 20, batch = BATCH)
-    public static void soul_engineer_bots_train_it_at_their_t2_lab(GameTestHelper helper) {
+    public static void soul_engineer_bots_train_it_at_their_t1_lab(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.BRASSWORKS);
         if (kit == null)
             problems.add("the Brassworks has no bot kit");
         else {
-            if (kit.t2Lab() != Buildings.ASSEMBLY_WORKS)
-                problems.add("the Brassworks bot's T2 lab is " + kit.t2Lab() + ", not the Assembly Works");
-            if (!kit.t2Army().contains(ProductionItems.SOUL_ENGINEER))
-                problems.add("the Brassworks bot's T2 army list has no Soul Engineer: bots never train it");
+            if (kit.armyBuilding() != Buildings.MACHINE_SHOP)
+                problems.add("the Brassworks bot's army lab is " + kit.armyBuilding() + ", not the Machine Shop");
+            if (!kit.army().contains(ProductionItems.SOUL_ENGINEER))
+                problems.add("the Brassworks bot's T1 army list has no Soul Engineer: bots never train it before Tier 2");
+            if (kit.t2Army().contains(ProductionItems.SOUL_ENGINEER))
+                problems.add("the Brassworks bot still queues the Soul Engineer at its T2 lab");
         }
         finish(helper, problems);
     }
@@ -1192,6 +1205,61 @@ public class SoulEngineerGameTests {
             } finally {
                 BuildingServerEvents.getBuildings().remove(rising);
                 discardAll(live(caster));
+                finish(helper, problems);
+            }
+        });
+    }
+
+    // ------------------------------------------------------------------------------------------- polish
+
+    /**
+     * A boil belongs to the owner it was cast for: when the building changes hands (a capture rewrites ownerName in
+     * place, BuildingPlacement.checkAndDoCapture) it stops boiling at once, and the new owner's Soul Engineer can boil
+     * it for itself (not refused as already boiling).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40, batch = BATCH)
+    public static void soul_engineer_soul_boiler_ends_when_the_building_changes_hands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String me = owner(helper, "boilmine"), foe = owner(helper, "boiltaker");
+        Mob caster = engineer(helper, me, 1, 1, 20);
+        Mob taker = engineer(helper, foe, 1, 2, 20);
+        BuildingPlacement shop = site(helper, Buildings.MACHINE_SHOP, me, 3, 3, true);
+        helper.runAfterDelay(3, () -> {
+            List<String> problems = new ArrayList<>();
+            try {
+                SoulBoiler sb = caster == null ? null : ability(caster, SoulBoiler.class);
+                SoulBoiler sbT = taker == null ? null : ability(taker, SoulBoiler.class);
+                if (sb == null || sbT == null || !(shop instanceof ProductionPlacement pp)) {
+                    problems.add("could not set up the two Soul Engineers and the Machine Shop");
+                    return;
+                }
+                beside(caster, shop, 6);
+                beside(taker, shop, 4);
+                pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, me));   // work, no population
+                float p0 = pp.getProductionBuildPower();
+                sb.use(level, (Unit) caster, shop.centrePos);
+                if (!SoulBoiler.isBoiling(shop)) {
+                    problems.add("setup: the owner's Soul Boiler did not boil its own Machine Shop");
+                    return;
+                }
+                // the capture: ownerName rewritten in place; the queue is the capturer's now
+                shop.ownerName = foe;
+                pp.productionQueue.clear();
+                pp.productionQueue.add(new ActiveProduction(ProductionItems.UPGRADE_LAB_L2, false, foe));
+                if (SoulBoiler.isBoiling(shop) || SoulBoiler.speedMult(shop) != 1f)
+                    problems.add("the captured Machine Shop still boils for its new owner (factor " + SoulBoiler.speedMult(shop) + ")");
+                float p1 = pp.getProductionBuildPower();
+                if (Math.abs(p1 - p0) > 1e-3f)
+                    problems.add("the captured Machine Shop produces with " + p1 + " power, the unboiled " + p0);
+                sbT.use(level, (Unit) taker, shop.centrePos);
+                if (!SoulBoiler.isBoiling(shop) || Essence.get(taker) != 0)
+                    problems.add("the new owner's Soul Engineer could not boil its captured Machine Shop ("
+                        + Essence.get(taker) + " essence left of 20)");
+            } catch (RuntimeException ex) {
+                problems.add("threw " + ex);
+            } finally {
+                unsite(level, shop);
+                discardAll(live(caster, taker));
                 finish(helper, problems);
             }
         });
