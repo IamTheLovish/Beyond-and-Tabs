@@ -31,16 +31,36 @@ class KeybindMigrationTest {
     }
 
     @Test
-    void attackDefaultIsX() {
-        // #39: A is pure camera pan-left
-        assertEquals(GLFW.GLFW_KEY_X, Keybindings.attack.getDefaultKey());
+    void attackDefaultIsA() {
+        // BAR Grid (BarGridDefaults, BAC-007b): WASD panning is gone, so A is Attack again
+        assertEquals(GLFW.GLFW_KEY_A, Keybindings.attack.getDefaultKey());
+        assertEquals(3, KeybindMigration.LAYOUT_VERSION);
     }
 
     @Test
-    void attackSavedOnTheOldDefaultAMovesToX() {
-        List<KeybindMigration.Move> moves = plan(0, Map.of(ATTACK, GLFW.GLFW_KEY_A));
+    void attackSavedOnTheOldDefaultXMovesToA() {
+        List<KeybindMigration.Move> moves = plan(0, Map.of(ATTACK, GLFW.GLFW_KEY_X));
         assertEquals(1, moves.size(), moves.toString());
-        assertEquals(new KeybindMigration.Move(ATTACK, GLFW.GLFW_KEY_A, GLFW.GLFW_KEY_X), moves.get(0));
+        assertEquals(new KeybindMigration.Move(ATTACK, GLFW.GLFW_KEY_X, GLFW.GLFW_KEY_A), moves.get(0));
+    }
+
+    @Test
+    void aLayoutTwoInstallWithEveryOldOrderKeyGetsExactlySevenMoves() {
+        // layout 2 shipped Attack X, Stop S, Patrol P, Guard G, Hold H, Move M and an unbound commander key; the
+        // overview stays on Tab (it needs Shift now, no key moves). Nothing else moves.
+        Map<String, Integer> old = Map.of(
+            ATTACK, GLFW.GLFW_KEY_X, "key.reignofnether.stop", GLFW.GLFW_KEY_S, "key.reignofnether.patrol", GLFW.GLFW_KEY_P,
+            "key.reignofnether.guard", GLFW.GLFW_KEY_G, "key.reignofnether.hold", GLFW.GLFW_KEY_H,
+            "key.reignofnether.move", GLFW.GLFW_KEY_M, "key.reignofnether.select_commander", -1);
+        List<KeybindMigration.Move> moves = plan(2, old);
+        assertEquals(7, moves.size(), moves.toString());
+        for (KeybindMigration.Move m : moves)
+            assertEquals(KeybindMigration.bindings().get(m.binding()).getDefaultKey(), m.to(), m.binding());
+        // each lands on its BarGridDefaults row; Move goes unbound
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.stop", GLFW.GLFW_KEY_S, GLFW.GLFW_KEY_G)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.move", GLFW.GLFW_KEY_M, -1)), moves.toString());
+        assertTrue(moves.contains(new KeybindMigration.Move("key.reignofnether.select_commander", -1, GLFW.GLFW_KEY_TAB)), moves.toString());
+        assertEquals(List.of(), plan(3, old), "a layout 3 install is left alone");
     }
 
     @Test
@@ -52,8 +72,8 @@ class KeybindMigrationTest {
 
     @Test
     void anAlreadyMigratedInstallKeepsAnAChosenAfterwards() {
-        // layout 1 ran once; the player then put Attack back on A on purpose - the next launch must not undo that
-        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_A)));
+        // the layout ran once; the player then put Attack back on X on purpose - the next launch must not undo that
+        assertEquals(List.of(), plan(KeybindMigration.LAYOUT_VERSION, Map.of(ATTACK, GLFW.GLFW_KEY_X)));
     }
 
     @Test
@@ -64,11 +84,12 @@ class KeybindMigrationTest {
     @Test
     void anInstallFromTheFirstWasdBuildsGetsEveryStaleKeyBack() {
         // an options.txt written by the Oct 8-11 builds / Reign of Nether itself: every old default saved
+        // (a binding that moved twice, Stop Space then S, was saved on its oldest key)
         Map<String, Integer> old = new HashMap<>();
         for (KeybindMigration.Stale row : KeybindMigration.STALE)
-            old.put(row.binding(), row.oldKey());
+            old.putIfAbsent(row.binding(), row.oldKey());
         List<KeybindMigration.Move> moves = plan(0, old);
-        assertEquals(KeybindMigration.STALE.size(), moves.size());
+        assertEquals(old.size(), moves.size());
         // applying them leaves every binding on its default and nothing on a camera key it does not ship on
         Map<String, Integer> after = new HashMap<>(old);
         for (KeybindMigration.Move m : moves)

@@ -8,17 +8,25 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** BAR Legacy's Ctrl selection chords (ChordKeys): the table and the Ctrl+Z rule. */
+/** BAR's Ctrl selection chords (ChordKeys): the table and the same-type rule. */
 class ChordKeysTest {
 
     @Test
     void theLegacyChords() {
-        assertEquals(Chord.SELECT_ARMY, ChordKeys.of(GLFW.GLFW_KEY_W, true, false, false));
         assertEquals(Chord.SELECT_COMMANDER, ChordKeys.of(GLFW.GLFW_KEY_C, true, false, false));
         assertEquals(Chord.IDLE_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_B, true, false, false));
         assertEquals(Chord.IDLE_T2_BUILDER, ChordKeys.of(GLFW.GLFW_KEY_B, true, true, false));
-        assertEquals(Chord.SELECT_ALL_UNITS, ChordKeys.of(GLFW.GLFW_KEY_A, true, false, false));
-        assertEquals(Chord.SELECT_SAME_TYPE, ChordKeys.of(GLFW.GLFW_KEY_Z, true, false, false));
+        // BAR Grid: Ctrl+E every unit, Ctrl+W every unit of the selected types (BarGridDefaults)
+        assertEquals(Chord.SELECT_ALL_UNITS, ChordKeys.of(GLFW.GLFW_KEY_E, true, false, false));
+        assertEquals(Chord.SELECT_SAME_TYPE, ChordKeys.of(GLFW.GLFW_KEY_W, true, false, false));
+    }
+
+    @Test
+    void theLegacyChordsAreGoneAndNoArmyChordRemains() {
+        assertEquals(Chord.NONE, ChordKeys.of(GLFW.GLFW_KEY_A, true, false, false));
+        assertEquals(Chord.NONE, ChordKeys.of(GLFW.GLFW_KEY_Z, true, false, false));
+        for (Chord c : Chord.values())
+            assertNotEquals("SELECT_ARMY", c.name(), "the select-army chord is removed (the - key keeps the button)");
     }
 
     @Test
@@ -54,7 +62,7 @@ class ChordKeysTest {
 
     @Test
     void theMovedButtonsAreOffHomeAndEnd() {
-        assertEquals(GLFW.GLFW_KEY_UNKNOWN, Keybindings.selectCommander.getDefaultKey());
+        assertEquals(GLFW.GLFW_KEY_TAB, Keybindings.selectCommander.getDefaultKey());
         assertEquals(GLFW.GLFW_KEY_UNKNOWN, Keybindings.idleT2Builder.getDefaultKey());
         assertEquals(Chord.SELECT_COMMANDER, Keybindings.selectCommander.getChord());
         assertEquals(Chord.IDLE_T2_BUILDER, Keybindings.idleT2Builder.getChord());

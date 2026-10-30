@@ -127,17 +127,22 @@ public class BuildCategoryKeysGameTests {
         verdict(helper, problems);
     }
 
-    /** BAR's Ctrl+W selects the army: "-" stays its card key, and W (pan up) is the only binding Ctrl+W could touch. */
+    /**
+     * BAR's Ctrl+W selects every unit of the selected types: "-" stays the select-army button's key, and nothing but the
+     * second grid cell is on a plain W (the chord wins over it while Ctrl is held, ChordKeys).
+     */
     @GameTest(template = SkirmishGameTests.ARENA, timeoutTicks = 20)
-    public static void ctrl_w_select_army_does_not_clash_with_pan_or_build_keys(GameTestHelper helper) {
+    public static void ctrl_w_same_type_does_not_clash_with_build_keys(GameTestHelper helper) {
         List<String> problems = new ArrayList<>();
         if (Keybindings.selectArmy.getDefaultKey() != GLFW.GLFW_KEY_MINUS)
             problems.add("select army keeps '-' as its own key");
-        if (Keybindings.panUp.getDefaultKey() != GLFW.GLFW_KEY_W)
-            problems.add("W is pan up (a held W pans; only Ctrl+W selects the army)");
-        for (Keybinding kb : List.of(Keybindings.buildTabEconomy, Keybindings.buildTabMilitary, Keybindings.buildTabDefence, Keybindings.buildTabTech))
-            if (kb.getDefaultKey() == GLFW.GLFW_KEY_W)
-                problems.add(kb.getTranslationKey() + " must not sit on W");
+        if (com.solegendary.reignofnether.keybinds.ChordKeys.of(GLFW.GLFW_KEY_W, true, false, false)
+                != com.solegendary.reignofnether.keybinds.ChordKeys.Chord.SELECT_SAME_TYPE)
+            problems.add("Ctrl+W selects the same types");
+        for (Keybinding kb : Keybindings.all())
+            if (kb.getTranslationKey() != null && kb.getDefaultKey() == GLFW.GLFW_KEY_W
+                    && !kb.getTranslationKey().equals("key.reignofnether.build_grid_2"))
+                problems.add(kb.getTranslationKey() + " must not sit on W (only grid cell 2 and the Ctrl+W chord do)");
         verdict(helper, problems);
     }
 
