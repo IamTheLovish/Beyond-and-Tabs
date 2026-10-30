@@ -31,9 +31,12 @@ public final class LineOfWalk {
 
     /**
      * How many nodes ahead a straight line may reach: far, so the node it aims at - on the staircase, up to half a block
-     * off the true line - turns it by under 2 degrees (6 nodes would be 5, and every re-aim a fresh swing).
+     * off the true line - turns it by under a degree (6 nodes would be 5, and every re-aim a fresh swing), and so a path
+     * that runs straight along an axis first and takes all its diagonal steps later (A* breaks its ties that way: the
+     * RTS grid's 2x2 path for a Siege Ox, Oct 30) is cut across while the turn is still ahead - at 16 the unit walked 5
+     * blocks east before the diagonals came within reach, 16 degrees off its line.
      */
-    public static final int LOOKAHEAD = 16;
+    public static final int LOOKAHEAD = 32;
     /** Ticks between re-aims while the node it aims at is still ahead (the line is judged again from where it is). */
     public static final int REAIM_TICKS = 10;
     /** The spacing of the samples along the line, in blocks (a cell is never skipped at this width). */

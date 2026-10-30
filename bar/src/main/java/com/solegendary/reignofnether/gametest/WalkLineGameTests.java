@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  * axes and diagonals, and the unit aims at each node in turn, so its heading swings between the axis and the diagonal
  * every few blocks - drawn, the body rocks from side to side all the way. On an open glass pad far from the test grid
  * one unit is ordered 32 blocks east and 7 south (12 degrees off the axis). Over the walk - from 10 ticks after the order
- * (the first turn is #412's) until 4 blocks short of the goal - its body yaw (what every frame draws) must stay within
+ * and 2 blocks on (the first turn is #412's) until 4 blocks short of the goal - its body yaw (what every frame draws) must stay within
  * {@link #MAX_OFF} of the bearing to the goal, and may turn the net way it has to plus at most {@link #MAX_ROCK}
  * degrees: the excess of all its turning over the net turn is the rocking (a clean corner adds nothing to it, a swing
  * out and back adds both halves; the bearing bound catches a path that bunches its diagonal steps into one corner).
@@ -359,9 +359,11 @@ public class WalkLineGameTests {
                         touch[1] = t;
                     break;
                 }
-            // judged from 10 ticks after the order (the first turn is #412's) until 4 blocks short of the goal (the
-            // stop and the last node are not the line)
-            if (t >= 10 && left > 4) {
+            // judged from 10 ticks after the order and 2 blocks from the spawn (the first turn is #412's; an RTS path
+            // comes from the worker pool some ticks after the order, so at 10 ticks the unit may not have turned yet)
+            // until 4 blocks short of the goal (the stop and the last node are not the line)
+            double fromX = m.getX() - sx, fromZ = m.getZ() - sz;
+            if (t >= 10 && fromX * fromX + fromZ * fromZ >= 4 && left > 4) {
                 if (Float.isNaN(turn[1])) {
                     turn[1] = turn[2] = m.yBodyRot;
                 } else {
