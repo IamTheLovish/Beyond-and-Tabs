@@ -31,6 +31,7 @@ public final class SupportState {
     Mode mode = Mode.NONE;
     @Nullable LivingEntity orderTarget;
     @Nullable LivingEntity anchor;
+    // the order's own fighters: an escort's (the nearest alive is its anchor) or a Fight's (its march's head)
     int[] escortIds = new int[0];
     @Nullable BlockPos destination;
     @Nullable BlockPos buildingPos;
@@ -48,6 +49,9 @@ public final class SupportState {
     boolean homing;
     double homeX, homeY, homeZ;
     boolean homeArmed;
+
+    // a unit on Follow that holds its standoff behind a fight: the follow's walk to its leader waits until then
+    long heldBehindUntil = Long.MIN_VALUE / 2;
 
     // the danger step
     long kiteUntil = Long.MIN_VALUE / 2;
@@ -69,6 +73,11 @@ public final class SupportState {
         return destination;
     }
 
+    /** While true, a unit on Follow holds its standoff behind a fight and Unit's follow walk to its leader waits. */
+    public boolean holdsBehind(long now) {
+        return now < heldBehindUntil;
+    }
+
     /** No support order and no walk back to its post: what Unit.isIdle adds for a support unit (SupportUnit.isIdle). */
     public boolean isIdle() {
         return mode == Mode.NONE && !homing;
@@ -86,6 +95,7 @@ public final class SupportState {
         hasStand = false;
         homing = false;
         homeArmed = false;
+        heldBehindUntil = Long.MIN_VALUE / 2;
     }
 
     void escort(LivingEntity target, LivingEntity anchor, int[] fighterIds) {
@@ -102,10 +112,11 @@ public final class SupportState {
         orderTarget = target;
     }
 
-    void fight(BlockPos destination) {
+    void fight(BlockPos destination, int[] fighterIds) {
         endOrder();
         mode = Mode.SUPPORT_MOVE;
         this.destination = destination;
+        escortIds = fighterIds;
     }
 
     void standoffBuilding(BlockPos buildingPos, double x, double z, double keepOut) {
