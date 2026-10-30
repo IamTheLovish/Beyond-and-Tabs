@@ -291,6 +291,21 @@ public final class Dragon {
     }
 
     /** A fresh per-entity state (see STATE). */
+    /** STUB (red proof): the beat length today - hover and take-off only, the climb does not change it. */
+    public static float beatTicks(Params P, float idle, float takeoff, float climb) {
+        return P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+    }
+
+    /** STUB (red proof): no stoop today - a dive is drawn as cruising. */
+    public static float stoop(float climb) {
+        return 0f;
+    }
+
+    /** STUB (red proof): no nod today - braking moves only the wings. */
+    public static float brakeNod(Params P, float brake) {
+        return 0f;
+    }
+
     public static float[] newState(float age) {
         float[] st = new float[ST_LEN];
         st[2] = age;
