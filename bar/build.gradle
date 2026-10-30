@@ -236,6 +236,10 @@ dependencies {
     // half-timber frames, pillars for the Brassworks. CurseForge-only (not on Modrinth), and 1.20.1 has only "snapshot"
     // builds since 1.0.296 - this is the newest. Resolved through cursemaven (the repository above).
     runtimeOnly fg.deobf('curse.maven:domum-ornamentum-527361:8765962')
+    // Macaw's Trapdoors 1.1.5 (MIT; Modrinth 5B4awHaA, Forge 1.20.1; lovish Oct 30 2026: "no weird license stuff"):
+    // shutters, hatches, panels. No dependencies. Brick & Mortar was considered and dropped: its README says
+    // "Asset license (ARR)". Same rules: required (mods.toml), never bundled, assets never copied.
+    runtimeOnly fg.deobf('maven.modrinth:macaws-trapdoors:5B4awHaA')
 }
 
 mixin {
