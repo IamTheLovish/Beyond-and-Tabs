@@ -42,13 +42,15 @@ def modelled_pixel():
 class WaterPalette(unittest.TestCase):
 
     def test_open_water_reads_below_the_lawn(self):
-        # calibration (eyes r54, Verdant noon, plain, after the grade): this model gave 0.392 where the camera measured
-        # 0.42 - the camera reads ~1.07x the model. The palette band 0.24-0.31 (at least 0.06 under the lawn's ~0.33)
-        # is therefore a model band of 0.225-0.29
+        # calibration on OPEN water (the tour's 12_river_crossing pad, noon, plain, after the grade): the camera reads
+        # 0.775x this model - r56 (old values) model 0.392 -> camera 0.301, r57 (#294D6B) model 0.263 -> camera 0.206.
+        # (The first calibration, 1.07x, came from the forest still, where the mist covers the river - wrong.)
+        # Target on camera: 0.235-0.27 - inside the palette band (0.24-0.31) and at least 0.06 under the lawn (~0.33).
+        # r57's 0.206 was too dark (toward a hole), the old 0.301 level with the lawn.
         px = modelled_pixel()
-        lum = sum(LUMA[i] * px[i] for i in range(3))
-        self.assertGreaterEqual(lum, 0.225, "water too dark - reads as a hole: %.3f" % lum)
-        self.assertLessEqual(lum, 0.29, "water as bright as the land: %.3f" % lum)
+        cam = 0.775 * sum(LUMA[i] * px[i] for i in range(3))
+        self.assertGreaterEqual(cam, 0.235, "water too dark - reads as a hole: camera %.3f" % cam)
+        self.assertLessEqual(cam, 0.27, "water too close to the lawn: camera %.3f" % cam)
 
     def test_teal_blue_not_royal_violet(self):
         h, s, v = colorsys.rgb_to_hsv(*modelled_pixel())
