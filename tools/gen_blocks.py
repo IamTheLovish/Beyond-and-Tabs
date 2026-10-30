@@ -204,7 +204,8 @@ TARGETS = {
     # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
     # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
     # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
-    "obsidian": dict(luma=0.15, std=0.075, sat=0.26, tilt=10.0, smooth=228, pore=0),
+    # r31b: brighter, more numerous glints (eyes 41018675091: the benchmark's top face glitters) - std 0.075 -> 0.09
+    "obsidian": dict(luma=0.16, std=0.090, sat=0.30, tilt=10.0, smooth=228, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -1249,7 +1250,7 @@ def m_obsidian_glass(F, n, cells=4):
     bands = np.zeros((n, n))
     nb = 6
     centres = (np.arange(nb) + 0.5 + 0.5 * (rng.random(nb) - 0.5)) / nb     # spread over the block, jittered
-    widths = rng.uniform(0.012, 0.030, nb)                                   # 1.5-4 texels sigma at 128x
+    widths = rng.uniform(0.010, 0.040, nb)                                   # 1.3-5 texels sigma at 128x: varied
     strength = rng.uniform(0.65, 1.0, nb)
     for c, w, s in zip(centres, widths, strength):
         d = (flowc - c + 0.5) % 1.0 - 0.5
@@ -1262,8 +1263,15 @@ def m_obsidian_glass(F, n, cells=4):
     dim[rng.permutation(m)[:max(1, m // 3)]] = True                           # a third of the faces (one of four)
     face_catch = np.where(dim, rng.uniform(0.05, 0.2, m), rng.uniform(0.6, 1.0, m))[idx]
     sheen = np.clip(bands * along * streak * face_catch * (1 - arete), 0, 0.85)
-    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.34, 0.27, 0.47])   # hue ~262: lavender
-    smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen                # the bands glint
+    # r31b (eyes 41018675091, r30b beside the benchmark: our sheen "dimmer and duller - mauve, not lavender", the
+    # benchmark's glints "brighter and more numerous, its top face glitters"): sharper bright CORES inside the soft
+    # bands - where a mid-scale fibre noise peaks along the band the inclusions lie densest, 2-6 texels, of varied
+    # size, lavender (hue ~265) - the glitter; they sit in the bands, so no polka dots on the dark glass
+    fibre = norm01(F.warp(F.noise(6, 18, 0.4, sx=3.0, sy=1.0), 0.0, 0.01 * F.noise(3, 8, 0.5)))
+    core = smoothstep(0.55, 0.85, fibre) * smoothstep(0.15, 0.5, sheen) * (1 - arete)
+    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.40, 0.32, 0.58])   # hue ~258: lavender
+    alb = alb * (1 - core[..., None]) + core[..., None] * np.array([0.62, 0.50, 0.86])     # hue ~260, the glints
+    smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen + 5 * core    # the bands and cores glint
     return dict(H=H, alb=alb, smooth=smooth)
 
 
