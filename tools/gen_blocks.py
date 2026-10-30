@@ -220,7 +220,8 @@ TARGETS = {
     "basalt_top": dict(luma=0.30, std=0.050, sat=0.05, lf=0.0, tilt=12.0, smooth=26, pore=10, soften=2.5, mid=1.0,
                        toe=0.245),
     "smooth_basalt": dict(luma=0.30, std=0.060, sat=0.06, tilt=13.9, smooth=25, pore=8),
-    "soul_sand": dict(luma=0.25, std=0.045, sat=0.37, tilt=24.0, smooth=60, pore=40),
+    # r31 (art director: "reads as dirt"): grey-brown ash - sat 0.37 -> 0.20, a touch lighter, matte (smooth 60 -> 28)
+    "soul_sand": dict(luma=0.28, std=0.050, sat=0.20, tilt=15.0, smooth=28, pore=48, soften=0.8),
     "iron_block": dict(luma=0.76, std=0.070, sat=0.04, tilt=10.0, smooth=147, pore=0, f0=230),
     "netherite_block": dict(luma=0.30, std=0.060, sat=0.12, tilt=10.0, smooth=201, pore=0, f0=255),
     "diamond_block": dict(luma=0.72, std=0.090, sat=0.30, tilt=12.0, smooth=250, pore=0, f0=44),
@@ -1828,10 +1829,44 @@ def m_basalt_rough(F, n, top):
 
 
 def m_soul_sand(F, n):
-    """Soul sand: dark, clumped grains with deep hollows."""
-    H, alb = m_sand(F, n, (0.36, 0.27, 0.21))
-    hollow = smoothstep(0.7, 1.0, F.noise(5, 12, 0.5))
-    return H - 0.25 * hollow, alb * (1 - 0.45 * hollow)[..., None]
+    """Round 31 (art director: "reads as dirt"): grey-brown ASH sand - fine grains, soft dunes - with a few shallow
+    hollows a face-width across that suggest a skull (a rounded dish with two deeper sockets side by side and a
+    short groove below), the depth in the height / normal so the light finds them, and a handful of pale bone chips
+    lying in the sand. Dark fantasy as an accent; the block stays sand."""
+    rng = F.rng
+    grains = F.noise(20, 56, 0.2)
+    dune = F.fbm(2, 3, 0.5)
+    H = 0.6 + 0.08 * dune + 0.03 * grains
+    shade = 0.92 + 0.10 * norm01(H) + 0.04 * grains
+    hue = F.noise(2, 6, 0.4)
+    jit = np.stack([0.03 * hue, 0.0 * hue, -0.03 * hue], -1)
+    alb = tint((0.42, 0.36, 0.30), shade, jit)
+    # the hollows: 5 per block, each at its own place, size and turn; the "skull" is three scoops in one dish
+    hollow = np.zeros((n, n))
+    sockets = np.zeros((n, n))
+    for _ in range(5):
+        cx, cy = rng.random(2)
+        rad = rng.uniform(0.11, 0.15)
+        ang = rng.uniform(-0.6, 0.6)
+        dx = (F.u - cx + 0.5) % 1.0 - 0.5
+        dy = (F.v - cy + 0.5) % 1.0 - 0.5
+        x = dx * math.cos(ang) + dy * math.sin(ang)
+        y = -dx * math.sin(ang) + dy * math.cos(ang)
+        dish = np.clip(1 - (x * x + (y * 1.15) ** 2) / (rad * rad), 0, 1)
+        hollow = np.maximum(hollow, dish ** 1.2)
+        for sx_ in (-0.36, 0.36):                         # two eye sockets, deeper, soft-walled
+            d2 = ((x - sx_ * rad) ** 2 + (y + 0.22 * rad) ** 2) / (0.34 * rad) ** 2
+            sockets = np.maximum(sockets, np.exp(-1.5 * d2) * (d2 < 2.5))
+        groove = np.exp(-((y - 0.5 * rad) / (0.14 * rad)) ** 2) * np.clip(1 - (x / (0.4 * rad)) ** 2, 0, 1)
+        sockets = np.maximum(sockets, 0.5 * groove)
+    H = H - 0.25 * hollow - 0.22 * sockets
+    alb = alb * (1 - 0.14 * hollow - 0.18 * sockets)[..., None]
+    # bone chips: a few pale irregular flakes, 3-7 texels
+    chip = smoothstep(0.84, 0.92, norm01(F.warp(F.noise(4, 10, 0.4), 0.01 * F.noise(4, 10), 0.01 * F.noise(4, 10))))
+    chip = chip * smoothstep(0.6, 0.85, norm01(F.noise(1, 3, 0.5)))     # only in some places
+    H = H + 0.06 * chip
+    alb = alb * (1 - chip[..., None]) + chip[..., None] * tint((0.58, 0.54, 0.46), 0.92 + 0.08 * grains)
+    return H, alb
 
 
 def m_podzol_side(F, n):
