@@ -64,7 +64,9 @@ TARGETS = {
     # leaflets added speckle), soften 0.4 -> 1.0, the mean a few degrees toward yellow-green
     # ao 1.0 -> 0.4: the AO darkened every gap between leaflets by up to 45% (AO std 0.125 - the largest part of the
     # on-screen speckle in a lit mip test); the clump shadow is already painted in the albedo
-    "grass_block_top":  dict(luma=0.645, std=0.050, sat=0.11, lf=0.3, ao=0.4, tilt=9.0, smooth=24, pore=40, soften=1.0,
+    # r47 (eyes 41094085391 at 5000: salt-and-pepper, local contrast 0.025 vs the benchmark's 0.012; p5 >= 0.30 asked):
+    # std 0.05 -> 0.042, tilt 9 -> 7, the clump shadow shallower (clover_lawn); the mean unchanged
+    "grass_block_top":  dict(luma=0.645, std=0.042, sat=0.11, lf=0.3, ao=0.4, tilt=7.0, smooth=24, pore=40, soften=1.2,
                              shoulder=0.82),
     # r46 (eyes stack7: the sampler pads' rim - this face - was the darkest thing on screen at ~0.12 at 5000): the
     # soil is the dirt texture (_scan_grass_side), so the lift is its humus band (0.22 -> 0.10 darker) - gate G5
@@ -137,8 +139,9 @@ TARGETS = {
     # r32 (critic: "too tan, weak bands"): one step more golden saturation (0.66 -> 0.76), the twine darker and wider
     # r33 (critic, eyes 41029731853: ours 190/154/65 beside the benchmark's 215/196/23 - dimmer, tan): luma +15%
     # (0.63 -> 0.72), a more saturated yellow (0.76 -> 0.86), the stalk colour itself more lemon than orange
-    "hay_block_side":   dict(luma=0.72, std=0.105, sat=0.86, tilt=21.4, smooth=42, pore=40),
-    "hay_block_top":    dict(luma=0.71, std=0.095, sat=0.86, tilt=21.4, smooth=38, pore=40),
+    # r47 (eyes 41094085391: an over-saturated flat yellow with no side falloff): sat -15%, the side a step darker
+    "hay_block_side":   dict(luma=0.62, std=0.105, sat=0.73, tilt=21.4, smooth=42, pore=40),
+    "hay_block_top":    dict(luma=0.71, std=0.095, sat=0.73, tilt=21.4, smooth=38, pore=40),
     # round 8: every wood's bark and end grain (pack-study 38743610740, single blocks; the reference's log tops carry
     # little relief, 8.4 deg - ours keep 12 like the oak top)
     # round 19: the darkest barks a little lighter and with more spread - under shaders dark oak and jungle read as a
@@ -194,7 +197,7 @@ TARGETS = {
     "moss_block":                 dict(luma=0.50, std=0.075, sat=0.55, tilt=18.0, smooth=24, pore=60),
     # r32 (critic: moss patches must be "real green, readable from above"): the moss clumps carry the hue and the
     # spread - sat 0.12 -> 0.22, std 0.06 -> 0.075, a touch more relief for the cushions
-    "mossy_stone_bricks":         dict(luma=0.44, std=0.075, sat=0.15, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35: with stone_bricks
+    "mossy_stone_bricks":         dict(luma=0.44, std=0.075, sat=0.11, tilt=13.0, smooth=22, pore=36, soften=0.8),   # r35; r47: moss sat -30%
     # round 12: single-block numbers from pack-study 38761293030 (reference; vanilla 38761302665 beside it); std
     # trimmed where the reference is busy from the RTS camera (podzol 0.120, coarse dirt 0.128, diorite 0.116)
     "sandstone": dict(luma=0.57, std=0.060, sat=0.54, tilt=12.6, smooth=21, pore=50),
@@ -225,8 +228,8 @@ TARGETS = {
     # round 17 (lovish Oct 20: "pepper dots"): the crystalline stones trimmed to read as one calm stone from the RTS
     # camera - andesite 0.075, granite 0.071, diorite 0.100 before
     "andesite": dict(luma=0.48, std=0.050, sat=0.03, lf=0.4, ao=0.6, tilt=7.0, smooth=49, pore=12),   # r35: a step under stone
-    "granite": dict(luma=0.60, std=0.055, sat=0.36, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),   # r45: a feldspar speckle, lighter (pink cobble at 0.47)
-    "diorite": dict(luma=0.73, std=0.070, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),
+    "granite": dict(luma=0.60, std=0.035, sat=0.36, lf=0.4, ao=0.6, tilt=7.0, smooth=42, pore=12),   # r45: feldspar speckle; r47: halved
+    "diorite": dict(luma=0.73, std=0.045, sat=0.02, lf=0.4, ao=0.6, tilt=7.0, smooth=22, pore=12),   # r47: speckle halved
     # r42 (eyes 41058728743: the whole white family landed at 0.93-0.96 on screen - the shader lifts a 0.75 albedo to
     # 0.93 and rolls off at 0.96): a LADDER in albedo wide enough to survive the roll-off - snow 0.94 (soft, bluish) /
     # quartz 0.83 (cool, smooth) / white wool 0.79 (felt) / white concrete 0.76 (satin) / bone 0.73 (warm, rings) /
@@ -326,7 +329,9 @@ TARGETS = {
     # reflection makes them glassy): diamond 0.70 -> 0.78, emerald 0.50 -> 0.58, both glass-smooth (253)
     # r42 (eyes 41058728743: blew to near-white cyan beside the whites): a deeper cyan with real facets - luma 0.78 ->
     # 0.68, smoothness 253 -> 170, the body colour deeper (m_gem)
-    "diamond_block": dict(luma=0.68, std=0.100, sat=0.38, tilt=14.0, smooth=170, pore=0, f0=44),
+    # r47 (it read as ice beside the new ices): gem character - dark internal planes, bright facet edges, a cyan-blue
+    # body at 0.62 (the blue ice is 0.42 deep blue, the packed ice 0.76 pale)
+    "diamond_block": dict(luma=0.62, std=0.120, sat=0.48, tilt=16.0, smooth=190, pore=0, f0=44),
     # r32 (critic: "too dark and muddy"): 0.36 -> 0.50, a cleaner green (sat 0.60 -> 0.72)
     # r41 (eyes 41053751822: "translucent green jelly"): an opaque cut-gem block - smoothness 253 -> 150, f0 15 -> 10,
     # darker body (0.58 -> 0.46) with a crystalline facet pattern, the facet-edge glow cut (m_gem edge_glow 0.35 -> 0.12)
@@ -1556,6 +1561,10 @@ SEED_ORDER = SEED_ORDER + ("packed_ice", "blue_ice", "ice")
 # last; the variants register through PROC_VARIANT_OF (the recipes) and PROC_VARIANT_BLOCKS (the blockstates)
 TARGETS["cut_sandstone"] = dict(luma=0.80, std=0.050, sat=0.27, tilt=9.0, smooth=16, pore=50)
 SEED_ORDER = SEED_ORDER + ("cut_sandstone",)
+# round 47: the gold block's SIDE (new; eyes 41094085391: "no top / side separation") - the same plate 18% darker,
+# on a cube_column override (MODEL_OVERRIDES: end = gold_block, side = gold_block_side)
+TARGETS["gold_block_side"] = dict(TARGETS["gold_block"], luma=0.59)
+SEED_ORDER = SEED_ORDER + ("gold_block_side",)
 for _k in range(2, PROC_VARIANTS + 1):
     for _base in ("cut_sandstone", "sandstone_top"):
         PROC_VARIANT_OF["%s_v%d" % (_base, _k)] = _base
@@ -1681,9 +1690,15 @@ def m_iron(F, n):
 def m_gold_r23(F, n):
     """Round 23 gold: a cast plate, finer polish than iron (less brushing), warm yellow, calm smoothness with the
     polish grain."""
-    H, alb, smooth = m_metal_plate(F, n, bevel=0.08, groove=0.012, dent=0.012, brush=0.6, smooth_base=200,
+    H, alb, smooth = m_metal_plate(F, n, bevel=0.08, groove=0.012, dent=0.012, brush=0.6, smooth_base=176,
                                    smooth_var=16, coarse=True)        # r33: coarse polish grain, no glitter
-    L = alb @ np.array([0.2126, 0.7152, 0.0722])
+    # r47 (eyes 41094085391: the top blew out as one glint): brushed BANDS of smoothness across the plate (the sun's
+    # glint breaks into stripes) and a plate seam through the middle each way
+    bands = 0.5 + 0.5 * np.tanh(2.0 * F.noise(3, 9, 0.4, sx=1.0, sy=30.0))
+    seam = 1 - smoothstep(0.0, 1.5 / n, np.minimum(np.abs(F.u - 0.5), np.abs(F.v - 0.5)))
+    smooth = np.clip(smooth - 40 * (bands - 0.5) - 60 * seam, 60, 245)
+    H = H - 0.06 * seam
+    L = alb @ np.array([0.2126, 0.7152, 0.0722]) * (1 - 0.08 * seam)
     return H, tint((0.98, 0.78, 0.25), L / max(L.mean(), 1e-6)), smooth
 
 
@@ -2136,7 +2151,7 @@ def m_bricks(F, n, courses, per_course, base, moss=0.0, pits=0.08, tone_amp=0.06
         spall = smoothstep(0.14, 0.3, line) * (1 - smoothstep(0.4, 0.7, line)) * where * cracks * face
         spall = spall * smoothstep(0.2, 0.6, norm01(F.noise(3, 9, 0.5)))        # only along parts of the crack
         H = H - 0.3 * crack - 0.10 * spall
-        alb = alb * (1 - 0.7 * crack + 0.6 * spall)[..., None]
+        alb = alb * (1 - 0.25 * crack - 0.06 * spall)[..., None]   # r47: <= 25% darker, the spall no longer a pale line
     return H, alb
 
 
@@ -2647,8 +2662,8 @@ def m_igneous(F, n, base, speck_rgb, density, size=(18, 48)):
 def m_granite(F, n):
     """Granite: salmon feldspar, smoky quartz, a little dark mica in clustered flecks, a few pale plagioclase."""
     return m_crystal(F, n, [((0.62, 0.43, 0.36), 0.56), ((0.36, 0.31, 0.29), 0.08), ((0.50, 0.47, 0.45), 0.24),
-                            ((0.74, 0.62, 0.56), 0.12)], per_side=40, cluster=0.3, contrast=0.5, mottle=0.05,
-                     drift_base=3)   # r45: a fine even speckle of grains, not clustered cobbles
+                            ((0.74, 0.62, 0.56), 0.12)], per_side=32, cluster=0.3, contrast=0.25, mottle=0.05,
+                     drift_base=3)   # r45: a fine even speckle; r47: half the amplitude, larger grains
 
 
 def m_polished_granite(F, n):
@@ -2671,8 +2686,9 @@ def m_diorite(F, n):
     """Diorite: white plagioclase with dark hornblende gathered in flecks and streaks (not even pepper)."""
     # round 19b: the dark minerals back to clear flecks (contrast 0.5 -> 0.7, spread out - cluster 0.45): under shaders
     # diorite washed out into pale stone; it reads as diorite by its black-and-white fleck
-    return m_crystal(F, n, [((0.84, 0.84, 0.82), 0.72), ((0.30, 0.30, 0.31), 0.16), ((0.66, 0.66, 0.65), 0.12)],
-                     per_side=34, cluster=0.45, contrast=0.7, mottle=0.06, drift_base=3)
+    # r47 (eyes 41094085391: crunchy at the RTS mip): half the speckle amplitude, slightly larger grains
+    return m_crystal(F, n, [((0.84, 0.84, 0.82), 0.72), ((0.44, 0.44, 0.45), 0.16), ((0.70, 0.70, 0.69), 0.12)],
+                     per_side=28, cluster=0.45, contrast=0.35, mottle=0.06, drift_base=3)
 
 
 def m_calcite(F, n):
@@ -3656,6 +3672,9 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
         patch = norm01(F.fbm(2, 3, 0.55))
         seed = np.clip(near * (0.3 + 0.9 * patch) + 0.6 * smoothstep(0.7, 0.95, patch), 0, 1)   # where moss grows
         m, dome, moss_rgb = moss_cushions(F, seed, moss)                 # r34: the shared moss material
+        # r47 (lime blobs too saturated on the bricks): the moss on stone 30% toward its own grey, a touch darker
+        grey = (moss_rgb @ LUMA)[..., None] * np.ones(3)
+        moss_rgb = (0.7 * moss_rgb + 0.3 * grey) * 0.9
         alb = alb * (1 - m[..., None]) + moss_rgb * m[..., None]
         H = H + 0.10 * m * dome
     if cracks > 0:
@@ -3670,7 +3689,9 @@ def m_stone_bricks(F, n, moss=0.0, cracks=0.0):
         chip = smoothstep(0.09, 0.2, line) * (1 - smoothstep(0.2, 0.4, line)) * where \
             * smoothstep(0.3, 0.7, norm01(F.noise(3, 9, 0.5)))
         H = H - 0.18 * crack - 0.04 * halo - 0.03 * chip
-        alb = alb * (1 - 0.42 * crack - 0.10 * halo + 0.10 * chip)[..., None]
+        # r47 (eyes 41094085391: white crack lines, a cartoon contrast): the fissure at most 25% darker, the chipped
+        # edge no longer lighter (it became a white line after the fit)
+        alb = alb * (1 - 0.25 * crack - 0.08 * halo - 0.03 * chip)[..., None]
     return H, alb
 
 
@@ -4710,7 +4731,7 @@ def clover_lawn(F, n):
     # the clumps (measured on the finished maps): 9% here is 2.5% after the fit scales the spread to its target
     rel = H - F.blur(H, n / 40)
     shadow = smoothstep(0.0, 0.25, -rel)
-    shade = shade * (1 - 0.40 * shadow)
+    shade = shade * (1 - 0.28 * shadow)                 # r47: 0.40 -> 0.28 (the dark gaps set p5)
     # a few tiny flowers: 4-5 petals, pale, sparse
     flowers = np.zeros((n, n))
     for _ in range(int(0.00018 * n * n) + 2):
@@ -5366,10 +5387,14 @@ TUFT_BLOCKSTATES = {
 # reads a "render_type" from a block model, so the pack overrides these models with the same geometry and
 # cutout_mipped (what vanilla's leaves use). Geometry copied from vanilla 1.20.1's models.
 _MIPPED = "minecraft:cutout_mipped"
+SOLID_OVERRIDES = {"gold_block"}     # overrides that stay on the solid render layer (no render_type)
 MODEL_OVERRIDES = {
     "glass": {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/glass"}},
     "cobweb": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/cobweb"}},
     "hanging_roots": {"parent": "minecraft:block/cross", "textures": {"cross": "minecraft:block/hanging_roots"}},
+    # round 47: the gold block as a column - its own darker side texture (vanilla: cube_all; SOLID_OVERRIDES)
+    "gold_block": {"parent": "minecraft:block/cube_column", "textures": {"end": "minecraft:block/gold_block",
+                                                                         "side": "minecraft:block/gold_block_side"}},
     # round 29: the grass plants (vanilla: tinted_cross, plain cutout - a 128x blade sprite minified without mips
     # breaks into flickering dashes from the RTS camera)
     # round 29b: grass and tall grass = vanilla's tinted cross plus the same two quads untinted with the straw layer;
@@ -5432,7 +5457,8 @@ def write_models():
     os.makedirs(MODEL_DIR, exist_ok=True)
     for name, model in MODEL_OVERRIDES.items():
         with open(os.path.join(MODEL_DIR, name + ".json"), "w") as f:
-            json.dump(dict(model, render_type=_MIPPED), f, indent=1)
+            # a solid block's override (round 47: gold_block as a column) keeps vanilla's solid render layer
+            json.dump(model if name in SOLID_OVERRIDES else dict(model, render_type=_MIPPED), f, indent=1)
     os.makedirs(BLOCKSTATE_DIR, exist_ok=True)
     for v, base in LEAF_VARIANTS.items():      # the variant's own model: vanilla's leaves model on its texture
         with open(os.path.join(MODEL_DIR, v + ".json"), "w") as f:
@@ -5721,7 +5747,7 @@ def recipes():
         "smooth_basalt": lambda F, n: m_polished(F, n, (0.28, 0.28, 0.30), 0.06, 0.03, rim=None, calm=True),
         "soul_sand": m_soul_sand,
         # r31: m_gem - 3-5 hard flat facets, deep body, bright tops (m_facets' 16-18 pyramids read as cabbage)
-        "diamond_block": lambda F, n: m_gem(F, n, (0.22, 0.58, 0.70), (0.72, 0.92, 0.96), edge_glow=0.08),   # r42: deeper
+        "diamond_block": lambda F, n: m_gem(F, n, (0.12, 0.42, 0.60), (0.62, 0.90, 0.98), edge_glow=0.30, cells=3),   # r47: a gem
         # r32 (critic: "too dark and muddy - a clear emerald green body with lighter facet edges"): a clean emerald
         # body, bright facet tops, the facet edges glowing, half the jardin
         "emerald_block": lambda F, n: m_gem(F, n, (0.08, 0.38, 0.20), (0.26, 0.66, 0.38), inclusions=0.5, edge_glow=0.0, cells=3),   # r45: 3 cells, no edge line
@@ -5842,6 +5868,7 @@ def recipes():
     R["crying_obsidian"] = _parts(m_crying_obsidian, fit=False)   # round 41
     R["coal_block"] = _parts(m_coal_block)                         # round 42
     R["cut_sandstone"] = _plain(m_cut_sandstone)                    # round 45
+    R["gold_block_side"] = _parts(lambda F, n: _d3(m_gold_r23(F, n)))   # round 47: the plate, fitted darker
     R["packed_ice"] = _parts(lambda F, n: m_ice(F, n, "packed"))    # round 44
     R["blue_ice"] = _parts(lambda F, n: m_ice(F, n, "blue"))
     R["ice"] = _parts(lambda F, n: m_ice(F, n, "ice"))
