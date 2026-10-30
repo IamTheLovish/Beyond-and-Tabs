@@ -54,7 +54,7 @@ public class PillagerProd extends ProductionItem implements IUnitProductionItem 
         List<FormattedCharSequence> tooltipLines = new ArrayList<>(List.of(
             Component.translatable("entity.reignofnether.pillager_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
             ResourceCosts.getFormattedCost(cost),
-            ResourceCosts.getFormattedPopAndTime(cost),
+            ResourceCosts.getFormattedTime(cost),
             FormattedCharSequence.forward("", Style.EMPTY),
             Component.translatable("entity.reignofnether.pillager_unit.tooltip1").getVisualOrderText()
         ));

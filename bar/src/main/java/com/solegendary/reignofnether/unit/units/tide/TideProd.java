@@ -76,7 +76,7 @@ public abstract class TideProd extends ProductionItem implements IUnitProduction
         List<FormattedCharSequence> lines = new ArrayList<>();
         lines.add(Component.translatable(langKey).withStyle(Style.EMPTY.withBold(true)).getVisualOrderText());
         lines.add(ResourceCosts.getFormattedCost(unitCost));
-        lines.add(ResourceCosts.getFormattedPopAndTime(unitCost));
+        lines.add(ResourceCosts.getFormattedTime(unitCost));
         lines.add(FormattedCharSequence.forward("", Style.EMPTY));
         lines.addAll(description());
         return new StartProductionButton(name, icon, hotkey,
