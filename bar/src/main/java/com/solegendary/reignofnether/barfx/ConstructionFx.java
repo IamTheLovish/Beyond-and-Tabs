@@ -36,6 +36,8 @@ final class ConstructionFx {
     private ConstructionFx() { }
 
     private static final int CLOUD = 0xFFFBF2, BELLY = 0xA9B6CB, GOLD = 0xFFD27A, LIGHT = 0xFFF3D2;
+    /** The outline and cut line: a saturated gold (round 2 critic: the warm-white core over gold read cream-white). */
+    private static final int LINE_GOLD = 0xFFC21A;
     /** Seconds the finished halo takes to flare and fade. */
     private static final float DONE_SECONDS = 2.2f;
     /** Past this RTS zoom (strategic) the ring keeps half its puffs and the light shafts stop. */
@@ -45,6 +47,7 @@ final class ConstructionFx {
     private static final class Site {
         final ConstructionShape shape;
         final float[] outline;
+        final float[] cut = new float[4];
         float shown;
         float doneAt = -1;
         float lastFront, lastRadius;
@@ -114,11 +117,10 @@ final class ConstructionFx {
             s.lastRadius = s.lastRadius <= 0 ? r : s.lastRadius + (r - s.lastRadius) * Math.min(1, dt * 2.5f);
             s.lastFront = front;
             drawRing(s.shape.centreX(), front, s.shape.centreZ(), s.lastRadius, clock, far, 1f);
-            // the cut line's core, normal-blended: additive gold alone over the lawn read olive (eyes 41003840710)
-            BarFxClient.flatRing(s.shape.centreX(), front + 0.04f, s.shape.centreZ(),
-                    s.lastRadius / ConstructionShape.RING_STANDOFF * 0.92f, far ? 0.4f : 0.25f, LIGHT, 0.85f, 36);
-            // the outline's core the same way: most of its edges cross lawn from above (code review Oct 30)
-            drawOutline(s, front, (far ? 0.16f : 0.07f) * 0.45f, LIGHT, 0.7f);
+            // the cut line and the outline get a normal-blended gold core: additive gold alone over the lawn read olive
+            // (eyes 41003840710); a warm-WHITE core read cream (round 2, 41014293234), so the core is gold too
+            drawCut(s, front, (far ? 0.3f : 0.16f) * 0.5f, LINE_GOLD, 0.8f);
+            drawOutline(s, front, (far ? 0.3f : 0.14f) * 0.45f, LINE_GOLD, 0.45f);
         }
         buffers.endBatch(BarFxRenderTypes.TRANSLUCENT);
 
@@ -140,11 +142,13 @@ final class ConstructionFx {
                 continue;
             }
             float front = s.lastFront, r = s.lastRadius;
-            // the cut line: a soft ring of light just inside the walls, where blocks are being set
-            BarFxClient.flatRing(cx, front + 0.05f, cz, r / ConstructionShape.RING_STANDOFF * 0.92f, 0.5f, GOLD, 0.8f, 36);
+            // the cut line: the layer being built's own footprint at the front (round 2 critic: a circle round the corners
+            // read as a glow band round the base, not where blocks are being set)
+            drawCut(s, front, far ? 0.3f : 0.16f, LINE_GOLD, 0.9f);
             if (!far)
                 drawShafts(cx, front, cz, r, clock);
-            drawOutline(s, front, far ? 0.16f : 0.07f, GOLD, far ? 0.75f : 0.6f);
+            // one bold silhouette: twice the selection box's weight so the two never read as one (round 2 critic)
+            drawOutline(s, front, far ? 0.3f : 0.14f, LINE_GOLD, far ? 0.8f : 0.7f);
             drawGlints(cx, front, cz, r, clock, far);
         }
         buffers.endBatch(BarFxRenderTypes.ADDITIVE);
@@ -153,20 +157,22 @@ final class ConstructionFx {
 
     /** The cloud ring: puffs on a circle at the front, each a lit top over a grey-blue belly, slowly orbiting. */
     static void drawRing(float cx, float front, float cz, float r, float clock, boolean far, float alpha) {
-        int n = Math.max(6, Math.min(26, Math.round((float) (2 * Math.PI * r / 1.5f))));
+        int n = Math.max(8, Math.min(40, Math.round((float) (2 * Math.PI * r / 0.8f))));   // smaller puffs, closer
         if (far)
             n = Math.max(6, n / 2);
         // a tighter, brighter band than the first stills (eyes 41003840710: a fresh critic read 1.5-block puffs at 0.55
         // as grey-green haze over the lawn - smoke, not cloud): smaller puffs, a whiter top, a darker belly under it
-        float size = Math.min(1.0f, 0.5f + r * 0.06f);
+        // round 2 (41014293234): still fat cotton balls covering the wall corners - ~45% of that size and a third the
+        // opacity, so the ring is a thin wisp at the front, not a necklace
+        float size = 0.45f * Math.min(1.0f, 0.5f + r * 0.06f);
         for (int k = 0; k < n; k++) {
             float ang = (float) (k * 2 * Math.PI / n + clock * 0.06f);
             float wob = 0.18f * (float) Math.sin(clock * 0.7f + k * 1.7f);
             float x = cx + (float) Math.cos(ang) * (r + wob), z = cz + (float) Math.sin(ang) * (r + wob);
-            float y = front + 0.55f + 0.2f * (float) Math.sin(clock * 0.9f + k * 2.3f);
+            float y = front + 0.35f + 0.12f * (float) Math.sin(clock * 0.9f + k * 2.3f);
             float s = size * (0.85f + 0.3f * hash(k));
-            BarFxClient.softDisc(x, y - s * 0.3f, z, s * 1.05f, BELLY, 0.42f * alpha, BELLY, 0, 12, k, 0.08f);
-            BarFxClient.softDisc(x, y + s * 0.12f, z, s, CLOUD, 0.8f * alpha, CLOUD, 0.25f * alpha, 12, k * 1.3f, 0.12f);
+            BarFxClient.softDisc(x, y - s * 0.3f, z, s * 1.05f, BELLY, 0.18f * alpha, BELLY, 0, 12, k, 0.08f);
+            BarFxClient.softDisc(x, y + s * 0.12f, z, s, CLOUD, 0.35f * alpha, CLOUD, 0.1f * alpha, 12, k * 1.3f, 0.12f);
         }
     }
 
@@ -183,7 +189,6 @@ final class ConstructionFx {
             float x = cx + (float) Math.cos(ang) * rr, z = cz + (float) Math.sin(ang) * rr;
             float a = (float) Math.sin(Math.PI * k);   // fades in and out
             BarFxClient.streak(x, front + 4.5f, z, x, front + 0.05f, z, 0.28f, LIGHT, 0.10f * a, 0.85f * a);
-            BarFxClient.softDisc(x, front + 0.1f, z, 0.45f + 0.35f * a, LIGHT, 0.95f * a, GOLD, 0.4f * a, 12, 0, 0);
         }
     }
 
@@ -191,6 +196,15 @@ final class ConstructionFx {
      * The unbuilt part as a golden line drawing: the 12 edges of each box still to come, cut at the front. Lines stay a
      * fixed share of the screen (wider in world units when zoomed out) so the progress reads at strategic zoom too.
      */
+    static void drawCut(Site s, float front, float w, int c, float a) {
+        s.shape.layerBox(front, s.cut);
+        float x0 = s.cut[0], x1 = s.cut[1], z0 = s.cut[2], z1 = s.cut[3], y = front + 0.04f;
+        edge(x0, y, z0, x1, y, z0, w, c, a);
+        edge(x1, y, z0, x1, y, z1, w, c, a);
+        edge(x1, y, z1, x0, y, z1, w, c, a);
+        edge(x0, y, z1, x0, y, z0, w, c, a);
+    }
+
     static void drawOutline(Site s, float front, float w, int c, float a) {
         int n = s.shape.outline(front, s.outline);
         float[] o = s.outline;
@@ -226,7 +240,7 @@ final class ConstructionFx {
         for (int i = 0; i < n; i++) {
             float ang = (float) (i * 2 * Math.PI / n + clock * 0.55f);
             float strike = (float) Math.max(0, Math.sin(clock * 3.1f + i * 1.9f));   // a quick dip toward the front
-            float y = front + 1.3f - 0.8f * strike * strike;
+            float y = front + 1.8f - 0.75f * strike * strike;   // the 2.1-block tool lands its head on the front
             float ca = (float) Math.cos(ang), sa = (float) Math.sin(ang);
             // strike at the cut line (the walls), not the cloud ring: r stands off past the corners, so tools at r hit
             // the lawn beside the building (code review Oct 30); the trail still comes in from the ring
@@ -234,7 +248,7 @@ final class ConstructionFx {
             float x = cx + ca * rs, z = cz + sa * rs;
             float pa = ang - 0.35f;
             float px = cx + (float) Math.cos(pa) * r * 0.97f, pz = cz + (float) Math.sin(pa) * r * 0.97f;
-            BarFxClient.streak(px, front + 1.3f, pz, x, y, z, 0.12f, GOLD, 0f, 0.35f);
+            BarFxClient.streak(px, front + 1.8f, pz, x, y, z, 0.12f, GOLD, 0f, 0.35f);
             if (far) {
                 BarFxClient.softDisc(x, y, z, 0.32f, LIGHT, 1f, GOLD, 0.2f, 10, 0, 0);
                 continue;
@@ -244,17 +258,17 @@ final class ConstructionFx {
             float swing = 2.4f - 2.1f * strike;
             float tx = -sa, tz = ca;                          // the orbit's tangent
             float hx = (float) Math.sin(swing) * tx, hy = (float) -Math.cos(swing), hz = (float) Math.sin(swing) * tz;
-            float len = 0.95f;
+            float len = 2.1f;   // round 2: ~1 block tools read as placed gold blocks or vanished - 2.2x
             float gx = x - hx * len * 0.5f, gy = y - hy * len * 0.5f, gz = z - hz * len * 0.5f;   // the grip end
             float bx = x + hx * len * 0.5f, by = y + hy * len * 0.5f, bz = z + hz * len * 0.5f;   // the working end
             if ((i & 1) == 0) {
-                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.09f, GOLD, 0.9f, 0.9f);              // handle
+                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.16f, GOLD, 0.9f, 0.9f);              // handle
                 // the head lies across the handle's end, perpendicular to it in the swing plane
                 float qx = tx * (float) Math.cos(swing), qy = (float) Math.sin(swing), qz = tz * (float) Math.cos(swing);
-                BarFxClient.streak(bx - qx * 0.3f, by - qy * 0.3f, bz - qz * 0.3f,
-                        bx + qx * 0.3f, by + qy * 0.3f, bz + qz * 0.3f, 0.2f, LIGHT, 1f, 1f);
+                BarFxClient.streak(bx - qx * 0.65f, by - qy * 0.65f, bz - qz * 0.65f,
+                        bx + qx * 0.65f, by + qy * 0.65f, bz + qz * 0.65f, 0.42f, LIGHT, 1f, 1f);
             } else {
-                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.13f, GOLD, 0.9f, 0.5f);               // chisel: tapers
+                BarFxClient.streak(gx, gy, gz, bx, by, bz, 0.28f, GOLD, 0.9f, 0.5f);               // chisel: tapers
                 BarFxClient.softDisc(bx, by, bz, 0.12f + 0.25f * strike, LIGHT, strike, GOLD, 0, 8, 0, 0);   // the bite
             }
         }

@@ -30,8 +30,11 @@ public final class ConstructionShape {
     private final float cx, cz;
     /** The outline's boxes, bottom up: one per run of layers sharing a footprint, {x0, x1, z0, z1, y0, y1} each. */
     private final float[] boxes;
+    /** Each layer's own footprint box {x0, x1, z0, z1} (block edges); an empty layer takes the one below. */
+    private final float[] layerBoxes;
 
-    private ConstructionShape(int minY, int[] perLayer, float[] halfDiag, int total, float cx, float cz, float[] boxes) {
+    private ConstructionShape(int minY, int[] perLayer, float[] halfDiag, int total, float cx, float cz, float[] boxes,
+                              float[] layerBoxes) {
         this.minY = minY;
         this.perLayer = perLayer;
         this.halfDiag = halfDiag;
@@ -39,12 +42,13 @@ public final class ConstructionShape {
         this.cx = cx;
         this.cz = cz;
         this.boxes = boxes;
+        this.layerBoxes = layerBoxes;
     }
 
     /** @param blocks absolute block positions as {x, y, z} */
     public static ConstructionShape of(List<int[]> blocks) {
         if (blocks.isEmpty())
-            return new ConstructionShape(0, new int[0], new float[0], 0, 0, 0, new float[0]);
+            return new ConstructionShape(0, new int[0], new float[0], 0, 0, 0, new float[0], new float[0]);
         int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
         int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
         for (int[] b : blocks) {
@@ -118,7 +122,30 @@ public final class ConstructionShape {
             System.arraycopy(runs, b + 6, runs, b, (nRuns - best - 2) * 6);
             nRuns--;
         }
-        return new ConstructionShape(minY, count, reach, blocks.size(), cx, cz, java.util.Arrays.copyOf(runs, 6 * nRuns));
+        float[] lb = new float[4 * layers];
+        for (int l = 0; l < layers; l++) {
+            if (count[l] == 0) {
+                if (l > 0)
+                    System.arraycopy(lb, 4 * (l - 1), lb, 4 * l, 4);
+                continue;
+            }
+            lb[4 * l] = lx0[l]; lb[4 * l + 1] = lx1[l] + 1; lb[4 * l + 2] = lz0[l]; lb[4 * l + 3] = lz1[l] + 1;
+        }
+        return new ConstructionShape(minY, count, reach, blocks.size(), cx, cz, java.util.Arrays.copyOf(runs, 6 * nRuns), lb);
+    }
+
+    /**
+     * The footprint {x0, x1, z0, z1} of the layer the build front is in (clamped to the first / last layer) - where
+     * the cut line is drawn. Allocation-free.
+     */
+    public void layerBox(float frontY, float[] out) {
+        int layers = perLayer.length;
+        if (layers == 0) {
+            java.util.Arrays.fill(out, 0, 4, 0f);
+            return;
+        }
+        int l = Math.max(0, Math.min(layers - 1, (int) Math.floor(frontY - minY)));
+        System.arraycopy(layerBoxes, 4 * l, out, 0, 4);
     }
 
     /** How many boxes {@link #outline} can write at most (size its buffer 6x this, once). */

@@ -111,6 +111,25 @@ class ConstructionShapeTest {
         assertEquals(0f, out[0], 1e-4, "a merged box covers the widest layer it holds");
     }
 
+    /**
+     * Round 2 critic (eyes 41014293234, 4/10): the cut line was a circle round the corners and read as a glow band
+     * round the base, not as where blocks are being set. It is now the layer being built's own footprint rectangle.
+     */
+    @Test
+    void theCutLineIsTheFootprintOfTheLayerBeingBuilt() {
+        ConstructionShape s = tower();
+        float[] r = new float[4];
+        s.layerBox(64.5f, r);
+        assertEquals(100f, r[0], 1e-4); assertEquals(109f, r[1], 1e-4);
+        assertEquals(200f, r[2], 1e-4); assertEquals(209f, r[3], 1e-4);
+        s.layerBox(68.2f, r);
+        assertEquals(102f, r[0], 1e-4); assertEquals(107f, r[1], 1e-4);
+        s.layerBox(80f, r);   // past the top: the last layer
+        assertEquals(104f, r[0], 1e-4); assertEquals(105f, r[1], 1e-4);
+        s.layerBox(10f, r);   // below the bottom: the first layer
+        assertEquals(100f, r[0], 1e-4);
+    }
+
     private static void assertBox(float[] o, int i, float x0, float x1, float z0, float z1, float y0, float y1) {
         float[] want = { x0, x1, z0, z1, y0, y1 };
         for (int k = 0; k < 6; k++)
