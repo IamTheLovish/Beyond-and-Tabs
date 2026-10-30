@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
 import com.solegendary.reignofnether.config.DisplaySettings;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
@@ -22,9 +23,11 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -38,8 +41,11 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 /**
@@ -64,6 +70,13 @@ import java.util.WeakHashMap;
  * axle stubs, bails, the drum's back rope) or Full (default; it drops to Low by itself for the session after 10 s under
  * 40 fps with rigs on screen, with a one-line notice - not in eyes tours, whose software GL is always slow). Any error
  * while drawing switches the parts off for the session with one WARN line instead of crashing the game.
+ *
+ * Lit windows (building animations slice 1; lovish, Oct 30: "lit windows", medium; rules in {@link BuildingWork}):
+ * while a lab works - built, in sight, queued - its glass glows warm white: one fullbright face per outside glass face
+ * (roof first, at most 48), drawn in the same cutout batch as the rigs, so no new draw call. Half light for 10 ticks on
+ * the way in, 20 on the way out; dark when idle, under fog or with parts Off; a broken pane goes dark; faces turned
+ * away from the camera are skipped; the nearest 32 (Full) or 16 (Low) labs, nothing under 3 px a block. The glass
+ * faces are found once per shape from the placement's blocks; the frame allocates nothing.
  */
 public class PartRenderClientEvents {
 
@@ -105,6 +118,11 @@ public class PartRenderClientEvents {
     private static final BlockState CHAIN = Blocks.CHAIN.defaultBlockState();
     private static final BlockState ORE = Blocks.RAW_IRON_BLOCK.defaultBlockState();
     private static final BlockState FLAG = Blocks.WHITE_WOOL.defaultBlockState();
+    // the lit pane: a flat white face tinted warm (BuildingWork.WARM_*), drawn fullbright
+    private static final BlockState WINDOW = Blocks.WHITE_CONCRETE.defaultBlockState();
+    private static final int LIGHTS_FULL = 32, LIGHTS_LOW = 16;
+    // a full glass block's light sits just outside its face; a pane's on its middle plane, just outside the glass
+    private static final float GLASS_OUT = 0.01f, PANE_IN = -(0.5f - 1f / 16f - 0.01f);
 
     /**
      * Per placement, refreshed on the client tick. Holds no reference to its placement (it is a WeakHashMap value),
@@ -128,6 +146,23 @@ public class PartRenderClientEvents {
     }
     private static final Map<BuildingPlacement, State> STATES = new WeakHashMap<>();
     private static final ArrayList<State> CANDIDATES = new ArrayList<>();
+
+    /** A lab's windows, refreshed on the client tick: no reference to its placement (a WeakHashMap value). */
+    private static final class Lights {
+        int blockCount = -1;           // the placement's block count the faces were found for
+        int[] faces = new int[0];      // per face: x, y, z (world cell), dir | pane << 3
+        boolean[] standing = new boolean[0];
+        final BuildingWork.Clock clock = new BuildingWork.Clock();
+        AABB box;
+        double cx, cy, cz;
+        int lit;                       // faces standing
+    }
+    private static final Map<BuildingPlacement, Lights> LIGHTS = new WeakHashMap<>();
+    private static final ArrayList<Lights> LIT = new ArrayList<>();
+    private static final Lights[] pickedLights = new Lights[LIGHTS_FULL];
+    private static final double[] pickedLightDist = new double[LIGHTS_FULL];
+    private static int pickedLightCount = 0;
+    private static boolean firstLightLogged = false;
     private static long refreshedAt = Long.MIN_VALUE;
     private static int refreshedCount = -1;
     private static final BlockPos.MutableBlockPos MUT = new BlockPos.MutableBlockPos();
@@ -157,7 +192,7 @@ public class PartRenderClientEvents {
     private static long fpsSince = 0;
     // eyes tours only: what the parts cost (a [Parts] timing line a minute)
     private static long nanosTotal = 0, nanosPeak = 0;
-    private static int timedFrames = 0, rigsPeak = 0, timingSeconds = 0;
+    private static int timedFrames = 0, rigsPeak = 0, timingSeconds = 0, labsPeak = 0, facesPeak = 0;
 
     /** The setting in force: the player's (or the migrated ambience switch), Full dropped to Low if the frame rate asked. */
     private static int setting() {
@@ -176,6 +211,7 @@ public class PartRenderClientEvents {
     private static void disable(Throwable e) {
         disabled = true;
         CANDIDATES.clear();
+        LIT.clear();
         StackTraceElement[] st = e.getStackTrace();
         ReignOfNether.LOGGER.warn("[Parts] extractor rigs switched off for this session after an error: {}{}", e,
             st.length > 0 ? " at " + st[0] : "");
@@ -190,9 +226,11 @@ public class PartRenderClientEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         if (MC.level == null) {
-            if (!CANDIDATES.isEmpty() || !STATES.isEmpty()) {
+            if (!CANDIDATES.isEmpty() || !STATES.isEmpty() || !LIT.isEmpty() || !LIGHTS.isEmpty()) {
                 CANDIDATES.clear();
                 STATES.clear();
+                LIT.clear();
+                LIGHTS.clear();
             }
             refreshedAt = Long.MIN_VALUE;
             return;
@@ -207,18 +245,23 @@ public class PartRenderClientEvents {
                 return;
             refreshedAt = now;
             refreshedCount = buildings.size();
-            refresh(buildings);
+            refresh(buildings, now);
         } catch (RuntimeException | LinkageError e) {
             disable(e);
         }
     }
 
-    private static void refresh(List<BuildingPlacement> buildings) {
+    private static void refresh(List<BuildingPlacement> buildings, long now) {
         CANDIDATES.clear();
+        LIT.clear();
         if (setting() == DisplaySettings.ANIM_OFF)
             return;
         for (int i = 0; i < buildings.size(); i++) {
             BuildingPlacement p = buildings.get(i);
+            if (BuildingWork.isLab(p.isCapitol, p.getBuilding().maxLevel)) {
+                refreshLights(p, now);
+                continue;
+            }
             if (!p.isBuilt || !p.isExploredClientside || p.originPos == null || !(p.getBuilding() instanceof MetalExtractor))
                 continue;
             BuildingParts.Rig rig = BuildingParts.rigFor(p.currentStructureName);
@@ -249,6 +292,72 @@ public class PartRenderClientEvents {
             if (s.axleUp || s.poleUp)
                 CANDIDATES.add(s);
         }
+    }
+
+    /** A lab's windows: found once per shape, then its working state, which panes stand, and whether it is lit. */
+    private static void refreshLights(BuildingPlacement p, long now) {
+        if (!p.isBuilt || !p.isExploredClientside || p.originPos == null)
+            return;
+        Lights l = LIGHTS.get(p);
+        if (l == null) {
+            l = new Lights();
+            LIGHTS.put(p, l);
+        }
+        if (l.blockCount != p.getBlocks().size())
+            findWindows(l, p);
+        if (l.faces.length == 0)
+            return;
+        boolean inSight = FogOfWarClientEvents.isInBrightChunk(p.centrePos);
+        boolean queued = p instanceof ProductionPlacement pp && !pp.productionQueue.isEmpty();
+        l.clock.update(BuildingWork.isWorking(true, inSight, queued), now);
+        if (l.clock.windowLevel(now) <= 0f)
+            return;
+        l.lit = 0;
+        for (int k = 0, n = l.standing.length; k < n; k++) {
+            l.standing[k] = !MC.level.getBlockState(MUT.set(l.faces[k * 4], l.faces[k * 4 + 1], l.faces[k * 4 + 2])).isAir();
+            if (l.standing[k])
+                l.lit++;
+        }
+        if (l.lit > 0)
+            LIT.add(l);
+    }
+
+    private static void findWindows(Lights l, BuildingPlacement p) {
+        l.blockCount = p.getBlocks().size();
+        Set<BlockPos> solid = new HashSet<>();
+        Map<BlockPos, Integer> glass = new HashMap<>();
+        for (BuildingBlock bb : p.getBlocks()) {
+            BlockState st = bb.getBlockState();
+            if (st.isAir())
+                continue;
+            solid.add(bb.getBlockPos());
+            String path = BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
+            if (!path.endsWith("glass") && !path.endsWith("glass_pane"))
+                continue;
+            int kind = BuildingWork.glassKind(path, side(st, CrossCollisionBlock.NORTH), side(st, CrossCollisionBlock.SOUTH),
+                side(st, CrossCollisionBlock.WEST), side(st, CrossCollisionBlock.EAST));
+            if (kind != BuildingWork.NOT_GLASS)
+                glass.put(bb.getBlockPos(), kind);
+        }
+        List<BuildingWork.Face> faces = BuildingWork.windowFaces(glass, solid, BuildingWork.MAX_WINDOW_FACES);
+        l.faces = new int[faces.size() * 4];
+        l.standing = new boolean[faces.size()];
+        for (int k = 0; k < faces.size(); k++) {
+            BuildingWork.Face f = faces.get(k);
+            l.faces[k * 4] = f.cell().getX();
+            l.faces[k * 4 + 1] = f.cell().getY();
+            l.faces[k * 4 + 2] = f.cell().getZ();
+            l.faces[k * 4 + 3] = f.dir() | (f.pane() ? 8 : 0);
+        }
+        l.box = new AABB(p.minCorner.getX() - 1, p.minCorner.getY() - 1, p.minCorner.getZ() - 1,
+            p.maxCorner.getX() + 2, p.maxCorner.getY() + 2, p.maxCorner.getZ() + 2);
+        l.cx = p.centrePos.getX() + 0.5;
+        l.cy = p.centrePos.getY() + 0.5;
+        l.cz = p.centrePos.getZ() + 0.5;
+    }
+
+    private static boolean side(BlockState st, net.minecraft.world.level.block.state.properties.BooleanProperty prop) {
+        return st.hasProperty(prop) && st.getValue(prop);
     }
 
     /** Works out a rig's frame on its placement: origin, rotation, phase, the hub in the world and the culling box. */
@@ -320,11 +429,12 @@ public class PartRenderClientEvents {
         if (++timingSeconds < 60)
             return;
         timingSeconds = 0;
-        if (timedFrames > 0 && rigsPeak > 0)
-            ReignOfNether.LOGGER.info(String.format("[Parts] timing: %.3f ms/frame on average, %.3f peak, up to %d rigs drawn, %d frames",
-                nanosTotal / 1e6 / timedFrames, nanosPeak / 1e6, rigsPeak, timedFrames));
+        if (timedFrames > 0 && (rigsPeak > 0 || labsPeak > 0))
+            ReignOfNether.LOGGER.info(String.format("[Parts] timing: %.3f ms/frame on average, %.3f peak, up to %d rigs drawn, "
+                    + "up to %d lit labs (%d window faces), %d frames",
+                nanosTotal / 1e6 / timedFrames, nanosPeak / 1e6, rigsPeak, labsPeak, facesPeak, timedFrames));
         nanosTotal = nanosPeak = 0;
-        timedFrames = rigsPeak = 0;
+        timedFrames = rigsPeak = labsPeak = facesPeak = 0;
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -348,7 +458,8 @@ public class PartRenderClientEvents {
                     DisplaySettings.buildingAnimationChosen() ? "" : " (default, from building_ambience)");
             }
             // at strategic zoom the parts are a few pixels: icons carry the map there
-            if (setting == DisplaySettings.ANIM_OFF || CANDIDATES.isEmpty() || StrategicViewClientEvents.isStrategicView())
+            if (setting == DisplaySettings.ANIM_OFF || CANDIDATES.isEmpty() && LIT.isEmpty()
+                    || StrategicViewClientEvents.isStrategicView())
                 return;
             long t0 = System.nanoTime();
             try {
@@ -356,12 +467,14 @@ public class PartRenderClientEvents {
             } catch (RuntimeException | LinkageError e) {
                 disable(e);
             }
-            if (com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED && pickedCount > 0) {
+            if (com.solegendary.reignofnether.matchstart.EyesDirector.ENABLED && (pickedCount > 0 || pickedLightCount > 0)) {
                 long dt = System.nanoTime() - t0;
                 nanosTotal += dt;
                 nanosPeak = Math.max(nanosPeak, dt);
                 timedFrames++;
                 rigsPeak = Math.max(rigsPeak, pickedCount);
+                labsPeak = Math.max(labsPeak, pickedLightCount);
+                facesPeak = Math.max(facesPeak, facesDrawn);
             }
         } finally {
             com.solegendary.reignofnether.perf.FrameParts.end(fp);
@@ -384,9 +497,12 @@ public class PartRenderClientEvents {
             insert(s, d2, cap);
         }
         rigsThisSecond += pickedCount;
-        if (pickedCount == 0)
+        pickLights(cam, frustum, setting == DisplaySettings.ANIM_LOW ? LIGHTS_LOW : LIGHTS_FULL);
+        rigsThisSecond += pickedLightCount;
+        facesDrawn = 0;
+        if (pickedCount == 0 && pickedLightCount == 0)
             return;
-        if (!firstDrawLogged) {   // once a session: proof in a log (an eyes tour's) that a rig was really drawn
+        if (!firstDrawLogged && pickedCount > 0) {   // once a session: proof in a log (an eyes tour's) that a rig was really drawn
             firstDrawLogged = true;
             State s = picked[0];
             ReignOfNether.LOGGER.info("[Parts] first rig drawn: {} at {} {} {}, {} in view", s.rig.structure(), s.ox, s.oy,
@@ -406,7 +522,8 @@ public class PartRenderClientEvents {
         renderer = MC.getBlockRenderer();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
         consumer = buffers.getBuffer(Sheets.cutoutBlockSheet());   // a fixed buffer: no allocation
-        long clock = MC.level.getGameTime() % CLOCK_WRAP;
+        long gameTime = MC.level.getGameTime();
+        long clock = gameTime % CLOCK_WRAP;
         float now = clock + evt.getPartialTick();
         try {
             for (int i = 0; i < pickedCount; i++) {
@@ -415,9 +532,13 @@ public class PartRenderClientEvents {
                 if (px >= NONE_PX)
                     drawRig(s, now, cam, px < lodPx, full);
             }
+            if (pickedLightCount > 0)
+                windows(cam, evt.getCamera().getLookVector(), gameTime, ortho, orthoPx, screenH);
         } finally {
             for (int i = 0; i < pickedCount; i++)
                 picked[i] = null;
+            for (int i = 0; i < pickedLightCount; i++)
+                pickedLights[i] = null;
             consumer = null;
             red = green = blue = 1f;
             buffers.endBatch(Sheets.cutoutBlockSheet());
@@ -457,6 +578,77 @@ public class PartRenderClientEvents {
             hoist(rig, skin, t, simple, full);
         if (s.poleUp)
             pennant(s, rig, skin, t, simple);
+    }
+
+    // ---- lit windows ----
+
+    private static int facesDrawn = 0;
+
+    /** The nearest lit labs in view, like the rigs' pick. */
+    private static void pickLights(Vec3 cam, Frustum frustum, int cap) {
+        pickedLightCount = 0;
+        for (int i = 0, n = LIT.size(); i < n; i++) {
+            Lights l = LIT.get(i);
+            double dx = l.cx - cam.x, dy = l.cy - cam.y, dz = l.cz - cam.z;
+            double d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 > MAX_DIST_SQR || (pickedLightCount == cap && d2 >= pickedLightDist[cap - 1]))
+                continue;
+            if (frustum != null && !frustum.isVisible(l.box))
+                continue;
+            int k = pickedLightCount < cap ? pickedLightCount++ : cap - 1;
+            while (k > 0 && pickedLightDist[k - 1] > d2) {
+                pickedLights[k] = pickedLights[k - 1];
+                pickedLightDist[k] = pickedLightDist[k - 1];
+                k--;
+            }
+            pickedLights[k] = l;
+            pickedLightDist[k] = d2;
+        }
+    }
+
+    /**
+     * Each picked lab's standing glass faces that turn toward the camera, as one fullbright warm face each: white
+     * concrete's face quad in that direction, just outside the glass (a pane: on its middle plane).
+     */
+    private static void windows(Vec3 cam, Vector3f look, long gameTime, boolean ortho, float orthoPx, float screenH) {
+        BakedModel model = renderer.getBlockModel(WINDOW);
+        int was = light;
+        light = FULLBRIGHT;
+        try {
+            for (int i = 0; i < pickedLightCount; i++) {
+                Lights l = pickedLights[i];
+                float px = ortho ? orthoPx : screenH / (1.4f * (float) Math.sqrt(pickedLightDist[i]));
+                float level = l.clock.windowLevel(gameTime);
+                if (px < NONE_PX || level <= 0f)
+                    continue;
+                red = BuildingWork.WARM_R * level;
+                green = BuildingWork.WARM_G * level;
+                blue = BuildingWork.WARM_B * level;
+                int[] f = l.faces;
+                for (int k = 0, n = l.standing.length; k < n; k++) {
+                    if (!l.standing[k])
+                        continue;
+                    int code = f[k * 4 + 3];
+                    Direction d = DIRECTIONS[code & 7];
+                    if (d.getStepX() * look.x() + d.getStepY() * look.y() + d.getStepZ() * look.z() >= 0f)
+                        continue;   // turned away from the camera
+                    float off = (code & 8) != 0 ? PANE_IN : GLASS_OUT;
+                    BOX.set(BASE).translate((float) (f[k * 4] - cam.x) + d.getStepX() * off,
+                        (float) (f[k * 4 + 1] - cam.y) + d.getStepY() * off, (float) (f[k * 4 + 2] - cam.z) + d.getStepZ() * off);
+                    BOX_N.set(BASE_N);
+                    RANDOM.setSeed(42L);
+                    quads(model.getQuads(WINDOW, d, RANDOM, ModelData.EMPTY, null));
+                    facesDrawn++;
+                }
+            }
+        } finally {
+            light = was;
+            red = green = blue = 1f;
+        }
+        if (!firstLightLogged && facesDrawn > 0) {   // once a session: proof in a log (an eyes run's) that windows lit
+            firstLightLogged = true;
+            ReignOfNether.LOGGER.info("[Parts] first lit windows drawn: {} faces on {} labs in view", facesDrawn, pickedLightCount);
+        }
     }
 
     // ---- the hoist: wheel, skip, chain ----

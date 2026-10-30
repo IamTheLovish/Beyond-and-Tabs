@@ -230,6 +230,7 @@ public class BuildingProductionClientboundPacket {
                                 }
                                 pBuilding.productionQueue.removeIf(pItem -> pItem.completed);
                             }
+                            BuildingWork.noteRelease(pBuilding);   // the stacks' chuff as the unit leaves
                         }
                     }
                     default -> { }
