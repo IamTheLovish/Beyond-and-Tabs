@@ -171,6 +171,77 @@ public final class ConstructionShape {
         }
     }
 
+    /** Seconds of a tool's beat: moving to the next spot, winding up, the blow; the rest of the cycle is the recoil. */
+    public static final float BEAT_MOVE = 0.35f, BEAT_WIND = 0.3f, BEAT_STRIKE = 0.1f, BEAT_CYCLE = 1.1f;
+
+    /** The length of {@link #ringPoint}'s rounded rectangle round {@code box} at {@code pad}. */
+    public static float ringLength(float[] box, float pad) {
+        float w = Math.max(0, box[1] - box[0]), d = Math.max(0, box[3] - box[2]);
+        return 2 * (w + d) + (float) (2 * Math.PI) * Math.max(0, pad);
+    }
+
+    /**
+     * A point a fraction {@code u} (wrapping) round the footprint {x0, x1, z0, z1} grown by {@code pad} on every side
+     * with rounded corners (radius pad), written to {@code out} as {x, z, nx, nz} with the outward normal. Walked as
+     * {@link #perimeterPoint}: from the -z side's start along +x, +z, -x, -z, each side followed by its corner arc. The
+     * White Angel's cloud ring hugs the layer on it (round 5 critic: a circle through a long building's corners stood
+     * far off its long walls and read as a lens-flare halo). Allocation-free.
+     */
+    public static void ringPoint(float[] box, float pad, float u, float[] out) {
+        float x0 = box[0], x1 = box[1], z0 = box[2], z1 = box[3];
+        float w = Math.max(0, x1 - x0), d = Math.max(0, z1 - z0), p = Math.max(0, pad);
+        float arc = (float) (Math.PI / 2) * p, per = 2 * (w + d) + 4 * arc;
+        if (per <= 0) {
+            out[0] = x0; out[1] = z0; out[2] = 0; out[3] = -1;
+            return;
+        }
+        float s = (u - (float) Math.floor(u)) * per;
+        // four sides, each with its corner after it: side start, direction, normal; the corner's centre and start angle
+        for (int side = 0; side < 4; side++) {
+            float len = (side & 1) == 0 ? w : d;
+            float nx = side == 1 ? 1 : side == 3 ? -1 : 0, nz = side == 0 ? -1 : side == 2 ? 1 : 0;
+            float sx = side == 0 || side == 3 ? x0 : x1, sz = side < 2 ? z0 : z1;   // where the side starts (on the box)
+            float tx = side == 0 ? 1 : side == 2 ? -1 : 0, tz = side == 1 ? 1 : side == 3 ? -1 : 0;
+            if (s < len || side == 3 && arc <= 0 && s <= len + 1e-4f) {
+                out[0] = sx + tx * s + nx * p; out[1] = sz + tz * s + nz * p; out[2] = nx; out[3] = nz;
+                return;
+            }
+            s -= len;
+            if (s < arc || side == 3) {
+                // round the corner at the side's end: from this side's normal toward the next side's
+                double a0 = Math.atan2(nz, nx), a = a0 + (arc > 0 ? Math.min(s, arc) / p : 0);
+                float cx = sx + tx * len, cz = sz + tz * len;
+                float ox = (float) Math.cos(a), oz = (float) Math.sin(a);
+                out[0] = cx + ox * p; out[1] = cz + oz * p; out[2] = ox; out[3] = oz;
+                return;
+            }
+            s -= arc;
+        }
+    }
+
+    /**
+     * Where a tool is in its beat at {@code t} seconds (the round 5 critic: the tools hovered - now each moves to a
+     * spot on the front, winds up, strikes, recoils while its sparks fly, and moves on): written to {@code out} as
+     * {cycle, move done 0..1, wound back 0..1, seconds since the last blow (-1 before the first)}. Allocation-free.
+     */
+    public static void strikeBeat(float t, float[] out) {
+        float c = (float) Math.floor(t / BEAT_CYCLE), k = t - c * BEAT_CYCLE;
+        float hit = BEAT_MOVE + BEAT_WIND + BEAT_STRIKE;
+        out[0] = c;
+        out[1] = Math.min(1f, k / BEAT_MOVE);
+        if (k < BEAT_MOVE)
+            out[2] = 0;
+        else if (k < BEAT_MOVE + BEAT_WIND) {
+            float e = (k - BEAT_MOVE) / BEAT_WIND;
+            out[2] = 1 - (1 - e) * (1 - e);                       // winding up, easing out
+        } else if (k < hit) {
+            float e = (k - BEAT_MOVE - BEAT_WIND) / BEAT_STRIKE;
+            out[2] = 1 - e * e;                                    // the blow, accelerating
+        } else
+            out[2] = 0;
+        out[3] = k >= hit ? k - hit : c > 0 ? k + BEAT_CYCLE - hit : -1;
+    }
+
     /** Layers from the bottom of the building to its top (some may be empty). */
     public int layers() {
         return perLayer.length;

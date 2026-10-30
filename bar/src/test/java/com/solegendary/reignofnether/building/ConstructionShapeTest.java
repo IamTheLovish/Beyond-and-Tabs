@@ -176,6 +176,77 @@ class ConstructionShapeTest {
         assertTrue(!Float.isNaN(p[2]) && !Float.isNaN(p[3]));
     }
 
+    /**
+     * Round 5 critic (eyes 41049022535, 7/10): the ring round a long building, a circle through its corners, stood far
+     * off the long walls and read as a lens-flare halo. The cloud ring now hugs the layer: the footprint grown by
+     * {@code pad} on every side with rounded corners (radius pad), walked from the -z side's start, with its outward
+     * normal - the same walk as perimeterPoint when pad is 0.
+     */
+    @Test
+    void theCloudRingIsARoundedRectanglePadOutsideTheFootprint() {
+        float[] box = { 0, 6, 0, 2 }, p = new float[4];
+        float per = 16 + (float) Math.PI;                    // 6 x 2 sides + a full circle of radius 0.5 at the corners
+        assertEquals(per, ConstructionShape.ringLength(box, 0.5f), 1e-4);
+        assertRing(box, 0f, p, 0, -0.5f, 0, -1);
+        assertRing(box, 3f / per, p, 3, -0.5f, 0, -1);
+        float c = (float) Math.sqrt(0.5);                    // halfway round the first corner arc: 45 degrees
+        assertRing(box, (6 + (float) Math.PI / 8) / per, p, 6 + 0.5f * c, -0.5f * c, c, -c);
+        assertRing(box, (6 + (float) Math.PI / 4 + 1) / per, p, 6.5f, 1, 1, 0);
+        assertRing(box, (6 + (float) Math.PI / 2 + 2 + 3) / per, p, 3, 2.5f, 0, 1);   // the +z side, walking back
+        assertRing(box, (12 + 3 * (float) Math.PI / 4 + 3) / per, p, -0.5f, 1, -1, 0);
+        assertRing(box, 1 + 3f / per, p, 3, -0.5f, 0, -1);  // wraps
+        ConstructionShape.ringPoint(box, 0f, 0.3f, p);       // no pad: the plain cut line walk
+        float[] q = new float[4];
+        ConstructionShape.perimeterPoint(box, 0.3f, q);
+        for (int i = 0; i < 4; i++)
+            assertEquals(q[i], p[i], 1e-4, "pad 0 field " + i);
+    }
+
+    private static void assertRing(float[] box, float u, float[] p, float x, float z, float nx, float nz) {
+        ConstructionShape.ringPoint(box, 0.5f, u, p);
+        assertEquals(x, p[0], 1e-3, "x at u " + u);
+        assertEquals(z, p[1], 1e-3, "z at u " + u);
+        assertEquals(nx, p[2], 1e-3, "nx at u " + u);
+        assertEquals(nz, p[3], 1e-3, "nz at u " + u);
+    }
+
+    /**
+     * Round 5 critic: the tools hovered. Each now runs a beat - move to a new spot on the front (MOVE s, never idle
+     * longer), wind up (WIND s), strike (STRIKE s), recoil while the sparks fly - and the beat says where it is:
+     * {cycle, move done 0..1, wound back 0..1, seconds since the last blow or -1}.
+     */
+    @Test
+    void aToolBeatMovesWindsStrikesAndThrowsSparks() {
+        float[] b = new float[4];
+        float m = ConstructionShape.BEAT_MOVE, w = ConstructionShape.BEAT_WIND, st = ConstructionShape.BEAT_STRIKE;
+        float cyc = ConstructionShape.BEAT_CYCLE;
+        assertTrue(m <= 0.5f, "never idle more than ~0.5 s");
+        assertEquals(0.3f, w, 1e-4);
+        assertEquals(0.1f, st, 1e-4);
+
+        ConstructionShape.strikeBeat(m * 0.5f, b);           // moving, the first cycle: no blow yet
+        assertEquals(0f, b[0], 1e-4);
+        assertEquals(0.5f, b[1], 1e-4);
+        assertEquals(0f, b[2], 1e-4);
+        assertEquals(-1f, b[3], 1e-4);
+
+        ConstructionShape.strikeBeat(m + w, b);              // fully wound
+        assertEquals(1f, b[1], 1e-4);
+        assertEquals(1f, b[2], 1e-4);
+
+        ConstructionShape.strikeBeat(m + w + st * 0.5f, b);  // mid blow: coming down
+        assertTrue(b[2] > 0 && b[2] < 1, "mid blow " + b[2]);
+
+        ConstructionShape.strikeBeat(m + w + st + 0.2f, b);  // the blow landed 0.2 s ago
+        assertEquals(0f, b[2], 1e-4);
+        assertEquals(0.2f, b[3], 1e-4);
+
+        ConstructionShape.strikeBeat(cyc + 0.1f, b);         // the next cycle: moving on, the last blow's sparks still out
+        assertEquals(1f, b[0], 1e-4);
+        assertEquals(cyc - (m + w + st) + 0.1f, b[3], 1e-4);
+        assertTrue(b[1] > 0 && b[1] < 1);
+    }
+
     private static void assertPoint(float[] box, float u, float[] p, float x, float z, float nx, float nz) {
         ConstructionShape.perimeterPoint(box, u, p);
         assertEquals(x, p[0], 1e-4, "x at u " + u);
