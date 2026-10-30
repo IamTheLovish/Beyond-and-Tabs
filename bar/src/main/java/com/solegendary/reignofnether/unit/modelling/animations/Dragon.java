@@ -98,6 +98,9 @@ public final class Dragon {
         public float bankHover = 0.45f, bankGround = 0.12f;
         /** The climb: the vertical speed (blocks per tick) that counts as a full climb / dive. */
         public float climbSpeed = 0.06f;
+        /** How much shorter the beat is in a full climb (a share of the beat), and the head's nod per unit of braking
+         *  (degrees per b/t^2) and its cap - lovish, Oct 30: "refining the animation for the dragon". */
+        public float climbBeat = 0.32f, brakeNodPer = 600f, brakeNodMax = 10f;
         /** The take-off: how many ticks after it appears a dragon is still taking off. */
         public float takeoffTicks = 60f;
     }
@@ -291,19 +294,26 @@ public final class Dragon {
     }
 
     /** A fresh per-entity state (see STATE). */
-    /** STUB (red proof): the beat length today - hover and take-off only, the climb does not change it. */
+    /**
+     * The beat's length (ticks): quicker hovering and taking off, and quicker climbing - a dragon labouring up over a
+     * keep beats up to Params.climbBeat faster at a full climb (a dive does not: it stoops).
+     */
     public static float beatTicks(Params P, float idle, float takeoff, float climb) {
-        return P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+        return P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff)
+            * (1f - P.climbBeat * Math.max(0f, climb));
     }
 
-    /** STUB (red proof): no stoop today - a dive is drawn as cruising. */
+    /** The stoop, 0..1, for a climb -1..1: the steeper the dive, the more the wings fold back (none above level). */
     public static float stoop(float climb) {
-        return 0f;
+        return Life.smooth((-climb - 0.15f) / 0.7f);
     }
 
-    /** STUB (red proof): no nod today - braking moves only the wings. */
+    /**
+     * The head's nod (degrees down) while the body brakes (b/t per tick, as animate smooths it): the long neck carries
+     * on a little and the head dips, up to Params.brakeNodMax; none in steady flight or speeding up.
+     */
     public static float brakeNod(Params P, float brake) {
-        return 0f;
+        return Mth.clamp(brake * P.brakeNodPer, 0f, P.brakeNodMax);
     }
 
     public static float[] newState(float age) {
@@ -413,7 +423,7 @@ public final class Dragon {
         st[ST_PERCH] += (wantPerch - st[ST_PERCH]) * Math.min(1f, dt / 8f);
         float perch = st[ST_PERCH];
         // the beat's phase advances at the CURRENT rate (a hover beats quicker, a take-off quicker still)
-        float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+        float T = beatTicks(P, idle, takeoff, st[ST_CLIMB]);
         st[ST_PHASE] += dt / T;
         if (st[ST_PHASE] > 4096f)
             st[ST_PHASE] -= 4096f - 4096f % (P.burstBeats + P.glideBeats);   // keep float precision; same rhythm
@@ -439,6 +449,8 @@ public final class Dragon {
 
         pose(r, P, id, st[ST_PHASE], age, glide, idle, bank, st[ST_TAIL_A], st[ST_TAIL_B], climb, st[ST_FLARE], takeoff,
             perch, age - st[3], e.hurtTime, e.deathTime, netHeadYaw, headPitch);
+        // the neck's follow-through: braking, the head carries on and dips (x < 0 drops a forward part's nose)
+        dsl(r.head, -brakeNod(P, st[ST_BRAKE]) * (1f - perch), 0f, 0f);
     }
 
     /**
@@ -451,14 +463,15 @@ public final class Dragon {
                             float tailA, float tailB, float climb, float flare, float takeoff, float perch, float attackT,
                             int hurtTime, int deathTime, float netHeadYaw, float headPitch) {
         float off = Life.offset(id);
-        float T = P.beatTicks * (1f + (P.hoverRate - 1f) * idle) * (1f + (P.takeoffRate - 1f) * takeoff);
+        float T = beatTicks(P, idle, takeoff, climb);
+        float stoop = stoop(climb) * (1f - perch);
         // the glide weight: the cruise rhythm (only cruising), and the speed's own glide with a corrective beat
         float cruise = (1f - idle) * (1f - Math.max(0f, climb)) * (1f - takeoff) * (1f - flare);
         float corrective = Life.bump(age, id, 6, 160f, 44f);
         float gs = glide * (1f - corrective);
         float gw0 = Math.max(rhythm(P, ph) * cruise, gs);
         float amp = (1f + 0.3f * Math.max(0f, climb)) * (1f + 0.25f * takeoff) * (1f - 0.15f * idle) * (1f - 0.35f * flare)
-            * (1f - 0.85f * perch);
+            * (1f - 0.85f * perch) * (1f - 0.9f * stoop);
         float s0 = shape(P, ph);
         float bankF = Math.min(1f, Math.abs(bank) / P.bankMax);
         float rip = (age + off) / 26f * Mth.TWO_PI;                 // the glide's slow billow
@@ -505,6 +518,13 @@ public final class Dragon {
             // the twist about the wing's long axis: pronation on the power stroke, supination on the recovery
             float foreX = -15f * (sA - sF) * a * (1f - gF);
             float handX = -20f * (sF - sH) * a * (1f - gH);
+            // the stoop: the wings fold back along the body and a little down, the beat stilled (amp above)
+            armY = Mth.lerp(stoop, armY, -38f);
+            armZ = Mth.lerp(stoop, armZ, -8f);
+            foreY = Mth.lerp(stoop, foreY, -42f);
+            foreZ = Mth.lerp(stoop, foreZ, -6f);
+            handY = Mth.lerp(stoop, handY, -30f);
+            handZ = Mth.lerp(stoop, handZ, -4f);
             dsl(r.arm[i], 0, s * armY, s * armZ + bank * 0.15f);
             dsl(r.fore[i], foreX, s * foreY, s * foreZ);
             dsl(r.hand[i], handX, s * handY, s * handZ);
