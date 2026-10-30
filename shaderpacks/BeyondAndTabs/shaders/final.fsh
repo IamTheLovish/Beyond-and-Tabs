@@ -266,9 +266,12 @@ float sCurve(float l, float day) {
 // DISPLAY_WHITE and never reaches it; a channel that would still pass DISPLAY_WHITE is blended toward the pixel's grey.
 // start / top: the shoulder's (DISPLAY_* in the RTS view and the sky, DISPLAY_*_PERSPECTIVE on a perspective view's
 // geometry, light pass 3)
-vec3 displayShoulder(vec3 c, float day, float start, float top) {
+vec3 displayShoulder(vec3 c, float day, float start, float top, float highlight) {
     float l0 = dot(c, LUMA);
     float l = sCurve(l0, day);
+    // a perspective view's highlights scaled down as a ratio, eased in over 0.5-0.9 (PERSPECTIVE_HIGHLIGHT, light pass
+    // 4): lit and shaded white faces keep their separation, the lawn and midtones are untouched
+    l *= 1.0 - (1.0 - highlight) * smoothstep(0.5, 0.9, l);
     c *= l / max(l0, 1e-5);
     if (l > start) {
         float r = top - start;
@@ -312,9 +315,15 @@ void main() {
     float r2 = dot(d, d) / (0.25 * (aspect * aspect + 1.0));
     c *= 1.0 - VIGNETTE * r2 * r2;
 #endif
-    float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, dot(normalize(sunPosition), normalize(upPosition)));
-    c = displayShoulder(c, day, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : DISPLAY_SHOULDER,
-                        perspectiveGeometry ? DISPLAY_WHITE_PERSPECTIVE : DISPLAY_WHITE);
+    float sunH = dot(normalize(sunPosition), normalize(upPosition));
+    float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, sunH);
+    // the low sun's shoulder (light pass 4): white tops under a raking sun stay under ~0.90
+    float low = sunH > 0.0 ? 1.0 - smoothstep(0.10, 0.55, sunH) : 0.0;
+    float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);
+    float top = mix(DISPLAY_WHITE, DISPLAY_WHITE_LOW, low);
+    c = displayShoulder(c, day, perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start,
+                        perspectiveGeometry ? DISPLAY_WHITE_PERSPECTIVE : top,
+                        perspectiveGeometry ? PERSPECTIVE_HIGHLIGHT : 1.0);
     // dither in 8-bit steps (DITHER_LSB, lib/settings.glsl; the light pass turned it off: it read as film grain)
     c += (fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) - 0.5) * (DITHER_LSB / 255.0);
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);

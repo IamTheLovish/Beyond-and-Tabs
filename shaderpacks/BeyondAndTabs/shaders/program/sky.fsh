@@ -9,6 +9,7 @@
 #include "/lib/color.glsl"
 #include "/lib/shadowfit.glsl"
 #include "/lib/light.glsl"
+#include "/lib/sky.glsl"
 
 uniform vec3 skyColor;
 uniform vec3 fogColor;
@@ -17,7 +18,7 @@ uniform float viewHeight;
 #ifdef SKY_TEXTURED
 uniform sampler2D texture;
 #endif
-#if (defined SKY_BASIC && defined MC_RENDER_STAGE_STARS) || (defined SKY_TEXTURED && defined MC_RENDER_STAGE_SUN)
+#if defined SKY_BASIC && defined MC_RENDER_STAGE_STARS
 uniform int renderStage;
 #endif
 
@@ -29,11 +30,12 @@ void main() {
     if (orthoView())
         discard;
 #ifdef SKY_TEXTURED
-#ifdef MC_RENDER_STAGE_SUN
-    // the sun is our own disc, drawn with the dome below (light pass 3); vanilla's square sprite is not
-    if (renderStage == MC_RENDER_STAGE_SUN)
+    // the sun is our own disc, drawn with the dome (light pass 4: the loader does not name the sun's render stage, so
+    // pass 3's check never ran and vanilla's square showed as a pale rectangle). The sprite is found by direction:
+    // vanilla's sun quad spans ~0.3 rad from its centre (0.42 to a corner), the moon sits opposite
+    vec4 sv = gbufferProjectionInverse * vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight) * 2.0 - 1.0, 1.0, 1.0);
+    if (dot(normalize(sv.xyz / sv.w), normalize(sunPosition)) > SUN_SPRITE_COS)
         discard;
-#endif
     vec4 t = texture2D(texture, texcoord) * glcolor;
     gl_FragData[0] = vec4(toLinear(t.rgb) * 2.0, t.a);   // the sun's disc a little above white
 #else
@@ -46,27 +48,21 @@ void main() {
     vec4 v = gbufferProjectionInverse * vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight) * 2.0 - 1.0, 1.0, 1.0);
     vec3 dir = normalize(v.xyz / v.w);
     float up = dot(dir, normalize(upPosition));
-    // vanilla's own horizon and zenith colours for the time and biome, blended over a wider band
+    // vanilla's own horizon and zenith colours carry the night; from dawn to dusk our gradient (lib/sky.glsl)
     vec3 c = mix(toLinear(fogColor), toLinear(skyColor), smoothstep(-0.05, 0.45, up));
-    // by day our own gradient (light pass 2, lib/settings.glsl): a bluer zenith over a paler horizon, the colour the
-    // aerial haze fades distant ground into (composite.fsh). Vanilla's pair stays for dawn, dusk and night
-    vec3 day = mix(toLinear(SKY_HORIZON_DAY), toLinear(SKY_ZENITH_DAY), smoothstep(0.0, SKY_GRADIENT_SPAN, up));
-    c = mix(c, day, skyDay());
-    // a warm glow round the sun, strongest when it is low
+    c = mix(c, skyGradient(dir), skyOwn());
     float toSun = max(dot(dir, normalize(sunPosition)), 0.0);
     float h = sunHeight();
+    // a warm glow round the sun, strongest when it is low
     c += vec3(1.0, 0.72, 0.45) * (pow(toSun, 6.0) * 0.25 * smoothstep(-0.12, 0.05, h) * (1.0 - 0.6 * smoothstep(0.1, 0.6, h)));
     c *= mix(0.6, 1.0, smoothstep(-0.3, 0.0, up));          // the ground side of the dome darker
-#ifdef MC_RENDER_STAGE_SUN
-    // the sun's disc (light pass 3, lib/settings.glsl SUN_DISC_*): a soft-rimmed warm disc ~2x white in linear light,
-    // so it blooms, and a halo round it; it sets below the horizon with the dome. Only where the loader names the sun's
-    // stage, so vanilla's sprite (dropped above) is never lost without a replacement
-    float angle = acos(clamp(toSun, -1.0, 1.0));
-    float above = smoothstep(-0.02, 0.01, dot(normalize(sunPosition), normalize(upPosition)));
+    // the sun's disc (lib/settings.glsl SUN_DISC_*): a soft-rimmed disc ~2x white in linear light, so it blooms, warmer
+    // as it sinks, with a halo; terrain drawn later covers it, and it sets below the horizon with the dome
+    float angle = acos(clamp(dot(dir, normalize(sunPosition)), -1.0, 1.0));
     float disc = 1.0 - smoothstep(SUN_DISC_RADIUS * 0.75, SUN_DISC_RADIUS * 1.25, angle);
     float halo = SUN_HALO * exp(-angle / (SUN_DISC_RADIUS * 4.0));
-    c += SUN_DISC_COLOUR * ((disc + halo) * above * smoothstep(-0.02, 0.02, up));
-#endif
+    vec3 discColour = mix(SUN_DISC_COLOUR, SUN_DISC_LOW, lowSun());
+    c += discColour * ((disc + halo) * smoothstep(-0.02, 0.01, h) * smoothstep(-0.02, 0.02, up));
     // a soft glow round the moon (vanilla's sprite draws the moon itself), while it is up
     float toMoon = max(dot(dir, -normalize(sunPosition)), 0.0);
     float moonUp = smoothstep(-0.05, 0.10, -h);

@@ -32,7 +32,7 @@ float meadowNoise(vec2 p) {
 // -1..1, two octaves (MEADOW_CELL and ~0.43 of it), offset so the value and hue fields are unrelated
 float meadowField(vec2 xz, vec2 offset) {
     vec2 p = xz / MEADOW_CELL + offset;
-    float n = 0.68 * meadowNoise(p) + 0.32 * meadowNoise(p * 2.31 + vec2(41.0, 17.0));
+    float n = 0.80 * meadowNoise(p) + 0.20 * meadowNoise(p * 2.31 + vec2(41.0, 17.0));
     return clamp((n - 0.5) * 2.4, -1.0, 1.0);
 }
 
@@ -40,8 +40,8 @@ float meadowField(vec2 xz, vec2 offset) {
 vec3 meadow(vec3 albedo, vec2 xz) {
     float v = meadowField(xz, vec2(0.0));
     float d = meadowField(xz, vec2(113.0, 59.0));
-    // value: a log-normal factor in linear light, normalised to a mean of 1 (v has a std of ~0.4)
-    float k = MEADOW_VALUE * v - 0.5 * (MEADOW_VALUE * 0.4) * (MEADOW_VALUE * 0.4);
+    // value: a log-normal factor in linear light, normalised to a mean of 1 (v has a std of ~0.45)
+    float k = MEADOW_VALUE * v - 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45);
     vec3 lin = toLinear(albedo) * exp(k);
     // hue: dry (d > 0) leans yellow - red up, blue down; lush leans blue-green. ~6 degrees at the field's extremes
     lin *= vec3(1.0 + MEADOW_HUE_RED * d, 1.0, 1.0 - MEADOW_HUE_BLUE * d);

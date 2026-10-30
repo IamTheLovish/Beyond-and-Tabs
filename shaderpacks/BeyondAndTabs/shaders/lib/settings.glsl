@@ -120,8 +120,17 @@ const float DISPLAY_WHITE = 0.985;
 // stills). Its geometry rolls off from DISPLAY_SHOULDER_PERSPECTIVE toward DISPLAY_WHITE_PERSPECTIVE instead, so a lit
 // white wall lands ~0.76-0.78 with its brick lines; the white guard takes less of its colour there
 // (WHITE_DESATURATE_PERSPECTIVE). The sky keeps the RTS shoulder (its zenith sits ~0.88)
-const float DISPLAY_SHOULDER_PERSPECTIVE = 0.64;
-const float DISPLAY_WHITE_PERSPECTIVE = 0.785;
+// Light pass 4 (critic: pass 3's roll-off from 0.64 made the castle a grey cardboard cutout, lit and shaded faces 0.02
+// apart): the highlights are scaled down as a ratio instead - by PERSPECTIVE_HIGHLIGHT, eased in from luma 0.5 to 0.9
+// so the lawn and the midtones are untouched - and only the very top rolls off (0.86 toward 0.94). A lit white wall
+// (~1.10 after the S-curve) lands ~0.87, its shaded face (~0.90) ~0.72: 0.15 apart, the brick lines kept
+const float PERSPECTIVE_HIGHLIGHT = 0.80;
+const float DISPLAY_SHOULDER_PERSPECTIVE = 0.86;
+const float DISPLAY_WHITE_PERSPECTIVE = 0.94;
+// the low sun's whites (light pass 4: block tops at t11800 0.95 against a 0.38 lawn read pasted on): as the sun sinks
+// (the light table's low row) the shoulder moves to DISPLAY_SHOULDER_LOW / DISPLAY_WHITE_LOW. A white top ~0.89
+const float DISPLAY_SHOULDER_LOW = 0.80;
+const float DISPLAY_WHITE_LOW = 0.925;
 const float WHITE_DESATURATE_PERSPECTIVE = 0.10;
 // Enchanted's glow (final.fsh) is a screen blend: it lifted every pixel near a white block by the same amount, so a
 // dark face beside a white top gained ~+0.09 - an albedo-independent floor on the darks (light pass 2). Its lift now
@@ -136,20 +145,35 @@ const vec3 SKY_ZENITH_DAY = vec3(0.58, 0.81, 1.00);
 // light pass 3: the horizon a little bluer (0.61, 0.65, 0.70 before), on screen ~(0.70, 0.76, 0.84), luma ~0.75
 const vec3 SKY_HORIZON_DAY = vec3(0.60, 0.65, 0.72);
 const float SKY_GRADIENT_SPAN = 0.60;
+// the low sun's sky (lib/sky.glsl, light pass 4): below SKY_SUNSET_HIGH of the sun's sine the horizon warms toward the
+// sun - SKY_SUNSET_GOLD (hue ~33, t11800) turning SKY_SUNSET_DEEP (hue ~15, darker: the dusk still) as the sun reaches
+// the horizon - with SKY_SUNSET_AWAY of it on the side away from the sun, and the zenith deepens to SKY_ZENITH_DUSK.
+// Display colours before the grade. At the horizon dusk and t11800 differ by ~0.18 luma and ~18 degrees of hue
+const float SKY_SUNSET_HIGH = 0.25;
+const vec3 SKY_SUNSET_GOLD = vec3(0.95, 0.75, 0.50);
+const vec3 SKY_SUNSET_DEEP = vec3(0.85, 0.45, 0.32);
+const float SKY_SUNSET_AWAY = 0.35;
+const vec3 SKY_ZENITH_DUSK = vec3(0.36, 0.50, 0.75);
 // the sun's disc in the sky (program/sky.fsh, light pass 3; vanilla's square sprite is not drawn): SUN_DISC_RADIUS
 // (radians, ~2x the real disc so it reads at 1080p) with a soft rim, slightly warm, ~2x white in linear light so it
 // blooms; a halo of SUN_HALO round it. The moon keeps vanilla's sprite with a soft MOON_GLOW round it at dusk and night
 const float SUN_DISC_RADIUS = 0.018;
 const vec3 SUN_DISC_COLOUR = vec3(1.00, 0.93, 0.80) * 2.2;
+const vec3 SUN_DISC_LOW = vec3(1.00, 0.85, 0.60) * 2.2;      // the low sun's disc, warmer
 const float SUN_HALO = 0.35;
+const float SUN_SPRITE_COS = 0.90;           // vanilla's sun sprite: within ~0.45 rad of the sun's direction
 const float MOON_GLOW = 0.18;
 // the fill where no sun arrives (lib/light.glsl shadeTint, light pass 3): the sky's blue, luma 1. A cast shadow on the
 // noon lawn reads ~+10 degrees of hue toward blue against the lit lawn, by the model (it was the same hue, darker)
-const vec3 SHADE_TINT = vec3(0.934, 1.006, 1.138);
-// how much harder a sinking sun rakes the ground (lib/light.glsl sunFacing): the facing's easing toward a square root
-// grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Open ground under a 13-degree sun
-// 0.35 -> 0.45 of the sun; walls facing it unchanged
-const float LOW_SUN_RAKE = 0.5;
+// Light pass 4 (the critic: the noon shadow interior still rgb(0.106, 0.158, 0.073), hue 97, a dead green-black; target
+// hue 130-170, blue >= 0.75 of green): much bluer, and on the sky's part of the fill only (the ground's bounce stays
+// warm). Model of a noon cast shadow on the lawn: hue ~160, blue ~0.85 of green, its luma unchanged
+const vec3 SHADE_TINT = vec3(0.78, 0.95, 2.10);
+// how much harder a sinking sun rakes the grass (lib/light.glsl sunFacingRaked): the facing's easing toward a square
+// root grows from 0.5 by this much as the sun goes from 0.55 to 0.10 of its height's sine. Light pass 4: grass and plants
+// only (biome-tinted terrain; pass 3 raked every top, so white block tops outshone the lawn at t11800) and all the way
+// to the square root: the lawn under a 13-degree sun takes 0.47 of the sun, block tops 0.35
+const float LOW_SUN_RAKE = 1.0;
 // metals' reflections (lib/pbr.glsl): the sky above the horizon, the ground below it as the fill sees it (GROUND_ALBEDO
 // of the sun and sky falling on the ground), never dimmed below SKY_FILL_FLOOR by a low sky light - the fill's own
 // floor. Light pass 1's iron_block side reflected ~nothing and read near black (RGB ~0.24) beside its white mortar.
@@ -169,15 +193,20 @@ const float FOLIAGE_BASE_AO = 0.85;
 // S-curve's 1.32 slope at the lawn: a macro std of ~0.04 luma (p5-p95 ~0.36-0.49), the frame-wide lawn std ~0.03 ->
 // ~0.05, the mean unchanged (factor mean ~0.997) - and the hue by MEADOW_HUE_* (red and blue in linear light, ~+-6
 // degrees at the field's extremes, ~+-2.5 typical)
-const float MEADOW_CELL = 11.3;
-const float MEADOW_VALUE = 0.40;
-const float MEADOW_HUE_RED = 0.11;
-const float MEADOW_HUE_BLUE = 0.15;
+// Light pass 4 (critic: imperceptible from RTS height): larger, softer cells (11.3 -> 17.3 blocks, the coarse octave
+// 0.80 of the field), value 0.40 -> 0.55 (macro std ~0.06 on screen, p5-p95 ~0.32-0.52, lawn std ~0.07 in all) and
+// hue 0.11 / 0.15 -> 0.17 / 0.23 (~+-3.5 degrees typical, ~+-8-10 at the extremes); the mean unchanged
+const float MEADOW_CELL = 17.3;
+const float MEADOW_VALUE = 0.55;
+const float MEADOW_HUE_RED = 0.17;
+const float MEADOW_HUE_BLUE = 0.23;
 // near-white faces turned from the up direction lose the light's colour (light pass 3: white wool and white blocks'
 // sides read cream, H 40, S 0.07, under the warm sun while their tops stayed neutral): the light on a face of albedo
 // luma past ~0.7 and saturation under ~0.12 is pulled toward its own grey by WHITE_WALL_NEUTRAL x (1 - up). The ground
 // keeps the warm sun; coloured walls keep it too
-const float WHITE_WALL_NEUTRAL = 0.85;
+// Light pass 4: 0.85 -> 0.50 - fully neutral, the perspective views' sunlit white walls lost their warmth (the castle
+// read hue-less); half keeps a lit white wall at a warm hue ~35-45 with a low saturation (cream was ~0.07)
+const float WHITE_WALL_NEUTRAL = 0.50;
 // a rough dielectric's sun glint never passes this share of SPEC_MAX (light pass 3: nether bricks strobed white on
 // their bevels' normals at smoothness ~0.1-0.2): the cap rises to the full SPEC_MAX from smoothness 0.2 to 0.6. Metals
 // keep the full cap. Also every glint fades out where the mapped normal turns from the eye (n.v under 0.2)
@@ -192,10 +221,14 @@ const float WHITE_DESATURATE = 0.30;
 // denser, from 30 blocks, ~41% at 100 blocks, ~54% at 150, ~62% at 200, toward the sky gradient's bluer horizon, and
 // the air takes the colour it veils fully (AERIAL_DESAT; the RTS haze keeps its half). By the model, far lawn at
 // 150-200 blocks: H ~165-185, S ~0.18-0.20, luma ~0.58-0.61 on screen (was ~27% at 150, the 0.40 / 100 / 40 of pass 1)
+// Light pass 4 (critic 7.0/10: overshot - the far ground took the sky's colour, 0.62, saturation 0.20, hue 212, the
+// horizon dissolved, the 34 views' local contrast fell to 0.016): ~31% at 150 blocks, ~35% at 200, and the air no
+// longer takes the colour it veils (AERIAL_DESAT 0). Model: far lawn saturation ~0.29-0.31, luma ~0.53, ~0.2 under the
+// sky's horizon, hue ~125-140 (blue-green, not the sky's blue)
 const float AERIAL_START = 30.0;
 const float AERIAL_SCALE = 80.0;
-const float AERIAL_MAX = 0.70;
-const float AERIAL_DESAT = 1.0;
+const float AERIAL_MAX = 0.40;
+const float AERIAL_DESAT = 0.0;
 // final.fsh's dither, in 8-bit steps (0: none). It read as film grain over the lawn at the RTS zoom; the 16-bit
 // buffers and the shoulder leave no banding a camera this close to the ground shows
 const float DITHER_LSB = 0.0;

@@ -160,7 +160,12 @@ void main() {
     vec3 n = geomN;
     float texAo = 1.0;
 #endif
+#ifdef LIT_TERRAIN
+    // the grass and plants rake harder under a low sun than everything else (light pass 4, lib/light.glsl)
+    float facing = mix(sunFacing(n, l), sunFacingRaked(n, l), tinted);
+#else
     float facing = sunFacing(n, l);
+#endif
 #ifdef LIT_PBR
     // past the face's own terminator no bump is lit (a soft step, for the smooth normals of round entity parts)
     float terminator = clamp(dot(geomN, l) * 20.0, 0.0, 1.0);

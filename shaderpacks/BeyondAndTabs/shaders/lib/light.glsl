@@ -37,7 +37,9 @@ const vec3 SKY_HIGH = SKY_TINT_HIGH * (SHADOW_FILL_SHARE * LIGHT_OPEN_GROUND / S
 // lawn 0.22-0.24, shadow 0.15, sun / shadow 1.5:1, the lawn olive at hue 75-80): the sun is brighter and more orange
 // ((1.00, 0.62, 0.34) x 1.50 before; luma 2.34 now) and rakes the ground harder (LOW_SUN_RAKE), the fill unchanged.
 // By the model at t11800 (sun ~13 degrees up): lit lawn ~0.38 at hue ~68, a cast shadow ~0.13, ratio ~2.9:1
-const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.90;
+// Light pass 4: x 3.90 -> x 3.70 (luma 2.22): the grass now takes the whole rake (LOW_SUN_RAKE 1) and everything else
+// the plain facing, so the lawn holds ~0.38 while block tops come down (a white top ~0.89 after the low shoulder)
+const vec3 SUN_LOW = vec3(1.00, 0.52, 0.22) * 3.70;
 const vec3 SKY_LOW = vec3(0.74, 0.70, 0.80) * 0.17;
 // moonlight: cool and dim; lanterns and lit buildings carry the night (TimeOfDay: NIGHT)
 const vec3 MOON = vec3(0.50, 0.62, 1.00) * 0.22;
@@ -54,12 +56,6 @@ const float SKY_FILL_FLOOR = 0.35;
 // sine of the sun's height above the horizon
 float sunHeight() {
     return dot(normalize(sunPosition), normalize(upPosition));
-}
-
-// 0..1: how much of the daytime sky gradient (SKY_*_DAY, lib/settings.glsl) the sky and the aerial haze use: all of it
-// with the sun high (Morning, Noon), none from dusk on
-float skyDay() {
-    return smoothstep(0.10, 0.45, sunHeight());
 }
 
 // the colours for this frame: the shadow light (sun by day, moon by night) and the sky's fill
@@ -82,15 +78,23 @@ vec2 lightLevels(vec2 lm) {
 }
 
 // Lambert, eased toward a square root: a low sun still rakes the open ground (Dusk's long shadows read as shade, not
-// as nothing), and the terminator on round shapes is softer. As the sun sinks the easing grows by LOW_SUN_RAKE (light
-// pass 3): open ground under a 13-degree sun takes 0.45 of the sun's light instead of 0.35, while a wall facing it
-// (Lambert near 1, where the square root changes nothing) stays as it was - warm light raking across the grass. The
-// high sun (Morning, Noon) is untouched: NOON_SUN_FACING holds
+// as nothing), and the terminator on round shapes is softer. The grass rakes harder as the sun sinks: sunFacingRaked
 float sunFacing(vec3 n, vec3 l) {
     float ndl = max(dot(n, l), 0.0);
+    return mix(ndl, sqrt(ndl), 0.5);
+}
+
+// 0..1: how low the sun is (the light table's low row; 0 by night)
+float lowSun() {
     float h = sunHeight();
-    float low = h > 0.0 ? 1.0 - smoothstep(0.10, 0.55, h) : 0.0;
-    return mix(ndl, sqrt(ndl), 0.5 + LOW_SUN_RAKE * low);
+    return h > 0.0 ? 1.0 - smoothstep(0.10, 0.55, h) : 0.0;
+}
+
+// the grass's facing (light pass 4: biome-tinted terrain only, lit.fsh): eased further toward a square root as the sun
+// sinks, by LOW_SUN_RAKE - warm light raking across the grass, while block tops keep the plain facing
+float sunFacingRaked(vec3 n, vec3 l) {
+    float ndl = max(dot(n, l), 0.0);
+    return mix(ndl, sqrt(ndl), min(0.5 + 0.5 * LOW_SUN_RAKE * lowSun(), 1.0));
 }
 
 // the sun's light reaching a surface before its facing: the colour, the shadow, and the fade where the sky light says
@@ -130,7 +134,11 @@ vec3 surfaceLight(vec3 n, float facing, float shadow, vec2 levels, float ao, flo
                   vec3 skyColour) {
     float daylight = smoothstep(-0.05, 0.2, sunHeight());
     vec3 light = sunArriving(shadow, levels, sunColour) * (facing * mix(1.0, texAo, 0.5));
-    light += skyFill(n, levels, ao, texAo, sunColour, skyColour) * shadeTint(shadow * min(facing * 4.0, 1.0));
+    light += skyFill(n, levels, ao, texAo, sunColour, skyColour);
+    // the sky's part of the fill, cooled where no sun arrives (shadeTint); the ground's bounce keeps its warmth
+    float skySeen = 0.5 + 0.5 * dot(n, normalize(upPosition));
+    vec3 skyPart = skyColour * (skySeen * mix(SKY_FILL_FLOOR, 1.0, levels.y) * ao * texAo);
+    light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0)) - 1.0);
     light += BLOCK_LIGHT * (pow(levels.x, 3.0) * mix(1.0, 0.35, daylight) * mix(0.6, 1.0, ao));
     return light + MIN_LIGHT;
 }

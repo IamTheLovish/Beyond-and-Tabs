@@ -200,7 +200,8 @@ class ShaderPack(unittest.TestCase):
         self.assertAlmostEqual(_const("WHITE_DESATURATE"), 0.30)
         self.assertAlmostEqual(_const("WHITE_GUARD_LUMA"), 0.85)
         final = _read("final.fsh")
-        self.assertIn("perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : DISPLAY_SHOULDER", final)
+        self.assertIn("perspectiveGeometry ? DISPLAY_SHOULDER_PERSPECTIVE : start", final)
+        self.assertIn("float start = mix(DISPLAY_SHOULDER, DISPLAY_SHOULDER_LOW, low);", final)
         self.assertIn("whiteDesaturate * smoothstep(WHITE_GUARD_LUMA", final)
         self.assertIn("perspectiveGeometry ? WHITE_DESATURATE_PERSPECTIVE : WHITE_DESATURATE", final)
 
@@ -223,7 +224,7 @@ class ShaderPack(unittest.TestCase):
         # at night (day = 0) the curve is the identity below the shoulder
         self.assertAlmostEqual(_s_curve(0.15, day=0.0), 0.15)
         final = _read("final.fsh")
-        self.assertIn("smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, dot(normalize(sunPosition)", final)
+        self.assertIn("float day = smoothstep(S_CURVE_DAY_LO, S_CURVE_DAY_HI, sunH);", final)
 
     def test_glow_never_floors_the_darks(self):
         # the glow's screen blend lifted every pixel near a white block by the same amount (+~0.09 on a dark face):
@@ -235,19 +236,27 @@ class ShaderPack(unittest.TestCase):
         self.assertIn("if (!sky) {", final)
 
     def test_sky_has_a_gradient_the_haze_shares(self):
-        # light pass 2: by day a bluer zenith over a paler horizon (on screen ~0.88 and ~0.75 luma through the grade),
-        # and the perspective views' aerial haze fades far ground into that horizon
+        # light pass 2: by day a bluer zenith over a paler horizon; the perspective views' aerial haze fades far ground
+        # into that horizon. Light pass 4: as the sun sinks the horizon warms toward the sun (gold at t11800, deep orange
+        # at dusk: >= 15 degrees of hue and >= 0.08 luma apart) and the zenith deepens; the haze's air follows
         settings = _read("lib", "settings.glsl")
         luma = (0.2126, 0.7152, 0.0722)
 
         def vec(name):
             return [float(x) for x in re.search(r"const vec3 %s = vec3\(([^)]*)\);" % name, settings).group(1).split(",")]
 
+        import colorsys
         zen, hor = vec("SKY_ZENITH_DAY"), vec("SKY_HORIZON_DAY")
         self.assertGreater(sum(a * b for a, b in zip(zen, luma)), sum(a * b for a, b in zip(hor, luma)) + 0.08)
         self.assertGreater(zen[2] / zen[0], hor[2] / hor[0])   # bluer at the zenith
-        self.assertIn("c = mix(c, day, skyDay());", _read("program", "sky.fsh"))
-        self.assertIn("mix(fogColor, SKY_HORIZON_DAY, skyDay())", _read("composite.fsh"))
+        gold, deep = vec("SKY_SUNSET_GOLD"), vec("SKY_SUNSET_DEEP")
+        hg, sg, _ = colorsys.rgb_to_hsv(*gold)
+        hd, sd, _ = colorsys.rgb_to_hsv(*deep)
+        self.assertTrue(25 <= hg * 360 <= 40 and sg >= 0.3, (hg * 360, sg))
+        self.assertGreaterEqual((hg - hd) * 360, 15)
+        self.assertGreaterEqual(sum(a * b for a, b in zip(gold, luma)) - sum(a * b for a, b in zip(deep, luma)), 0.08)
+        self.assertIn("c = mix(c, skyGradient(dir), skyOwn());", _read("program", "sky.fsh"))
+        self.assertIn("mix(fogColor, skyAir(), skyOwn())", _read("composite.fsh"))
 
     def test_metals_reflect_a_lit_environment(self):
         # light pass 2: a metal's reflection below the horizon is the lit ground (the fill's hemisphere), dimmed by a
@@ -305,9 +314,14 @@ class ShaderPack(unittest.TestCase):
         sky_high = _const("SHADOW_FILL_SHARE") * _const("LIGHT_OPEN_GROUND")
         sun = lum(vec3("SUN_LOW")) * (1.0 - high) + sun_high * high
         sky = lum(vec3("SKY_LOW")) * (1.0 - high) + sky_high * high
-        k = 0.5 + _const("LOW_SUN_RAKE") * (1.0 - high)
+        k = min(0.5 + 0.5 * _const("LOW_SUN_RAKE") * (1.0 - high), 1.0)      # sunFacingRaked: the grass
         facing = (1.0 - k) * h + k * math.sqrt(h)
         self.assertGreaterEqual((sun * facing + sky) / sky, 2.4)
+        # light pass 4: only the grass rakes (block tops keep the plain facing, so a white top under the low shoulder
+        # stays under ~0.90 against a ~0.37 lawn), and the low sun's shoulder sits lower
+        self.assertIn("float facing = mix(sunFacing(n, l), sunFacingRaked(n, l), tinted);", _read("program", "lit.fsh"))
+        self.assertLess(_const("DISPLAY_WHITE_LOW"), _const("DISPLAY_WHITE"))
+        self.assertLessEqual(_const("DISPLAY_SHOULDER_LOW"), _const("DISPLAY_SHOULDER"))
         low = vec3("SUN_LOW")
         self.assertLess(low[2] / low[0], 0.30)                 # golden, not white
         self.assertLessEqual(_const("S_CURVE_DAY_HI"), h)      # the whole S-curve at t11800
@@ -317,20 +331,35 @@ class ShaderPack(unittest.TestCase):
         # shadow is the lit ground's colour shifted toward blue rather than the same hue darker
         settings = _read("lib", "settings.glsl")
         tint = [float(x) for x in re.search(r"const vec3 SHADE_TINT = vec3\(([^)]*)\);", settings).group(1).split(",")]
-        self.assertAlmostEqual(sum(a * b for a, b in zip(tint, (0.2126, 0.7152, 0.0722))), 1.0, places=2)
-        self.assertGreater(tint[2] / tint[0], 1.15)
-        self.assertIn("shadeTint(shadow * min(facing * 4.0, 1.0))", _read("lib", "light.glsl"))
+        self.assertAlmostEqual(sum(a * b for a, b in zip(tint, (0.2126, 0.7152, 0.0722))), 1.0, delta=0.01)
+        # light pass 4: the pass-3 tint (blue 1.14 of the luma) did not read - the noon shadow stayed hue 97, blue 0.46 of
+        # green. Now blue >= 2x red-weighted (in game the shadow's blue needs ~1.6x on screen for blue >= 0.75 green),
+        # on the sky's part of the fill only
+        self.assertGreater(tint[2] / tint[1], 2.0)
+        light = _read("lib", "light.glsl")
+        self.assertIn("light += skyPart * (shadeTint(shadow * min(facing * 4.0, 1.0)) - 1.0);", light)
 
     def test_perspective_whites_keep_their_lines(self):
-        # light pass 3: white buildings in the perspective views read blown out (the castle 0.82, saturation 0.05). Their
-        # geometry rolls off toward DISPLAY_WHITE_PERSPECTIVE: a lit white wall (grade output ~0.95-1.05) lands
-        # 0.74-0.78, the lawn (0.42) untouched, and the white guard keeps most of the colour
-        start, top = _const("DISPLAY_SHOULDER_PERSPECTIVE"), _const("DISPLAY_WHITE_PERSPECTIVE")
-        self.assertGreater(start, _const("S_CURVE_PIVOT") + 0.1)
-        for lum in (0.95, 1.05):
-            y = lum + _const("S_CURVE_SLOPE") * (_const("S_CURVE_LIFT_SPAN") / 2.0)
-            y = start + (top - start) * (1.0 - math.exp(-(y - start) / (top - start)))
-            self.assertTrue(0.74 <= y <= 0.78, y)
+        # Retired pin (light pass 4): "a lit white wall lands 0.74-0.78" by a roll-off from 0.64 - in game it flattened
+        # the castle into grey cardboard, lit and shaded faces 0.02 apart (critic 7.0/10). Now the highlights scale down
+        # as a ratio (PERSPECTIVE_HIGHLIGHT, eased in over 0.5-0.9) and only the very top rolls off: a lit white wall
+        # (~1.05 out of the grade) ~0.85-0.89, its shaded face (~0.85) ~0.68-0.74, at least 0.15 apart; the lawn untouched
+        def persp(x):
+            pivot, slope, span = _const("S_CURVE_PIVOT"), _const("S_CURVE_SLOPE"), _const("S_CURVE_LIFT_SPAN")
+            d = min(max(x - pivot, 0.0), span)
+            y = x + slope * (d - d * d / (2.0 * span))
+            t = min(max((y - 0.5) / 0.4, 0.0), 1.0)
+            y *= 1.0 - (1.0 - _const("PERSPECTIVE_HIGHLIGHT")) * t * t * (3.0 - 2.0 * t)
+            start, top = _const("DISPLAY_SHOULDER_PERSPECTIVE"), _const("DISPLAY_WHITE_PERSPECTIVE")
+            if y > start:
+                y = start + (top - start) * (1.0 - math.exp(-(y - start) / (top - start)))
+            return y
+
+        lit, shaded = persp(1.05), persp(0.85)
+        self.assertTrue(0.84 <= lit <= 0.90, lit)
+        self.assertTrue(0.66 <= shaded <= 0.75, shaded)
+        self.assertGreaterEqual(lit - shaded, 0.15)
+        self.assertAlmostEqual(persp(0.42), 0.42, places=6)
         self.assertLess(_const("WHITE_DESATURATE_PERSPECTIVE"), _const("WHITE_DESATURATE"))
 
     def test_the_meadow_varies_across_the_field(self):
@@ -338,32 +367,40 @@ class ShaderPack(unittest.TestCase):
         # terrain. Patches ~8-16 blocks (the noise cell), a value swing that adds ~0.04 of macro std on screen (numpy
         # model in the constant's comment: lawn std ~0.03 -> ~0.05, the 0.045-0.06 target), the mean held by the
         # log-normal normalisation; ~+-6 degrees of hue at the extremes
-        self.assertTrue(8.0 <= _const("MEADOW_CELL") <= 16.0)
-        self.assertTrue(0.30 <= _const("MEADOW_VALUE") <= 0.45)
+        # Retired pins (light pass 4): MEADOW_CELL 8-16 and MEADOW_VALUE 0.30-0.45 - the patches were imperceptible from
+        # the RTS height (critic 7.0/10). Larger, softer cells and a value swing of ~0.06 luma std on screen
+        self.assertTrue(14.0 <= _const("MEADOW_CELL") <= 22.0)
+        self.assertTrue(0.50 <= _const("MEADOW_VALUE") <= 0.65)
         meadow = _read("lib", "meadow.glsl")
-        self.assertIn("- 0.5 * (MEADOW_VALUE * 0.4) * (MEADOW_VALUE * 0.4)", meadow)
+        self.assertIn("- 0.5 * (MEADOW_VALUE * 0.45) * (MEADOW_VALUE * 0.45)", meadow)
         lit = _read("program", "lit.fsh")
         self.assertIn("albedo = mix(albedo, meadow(albedo, world.xz), tinted);", lit)
 
     def test_white_sides_and_rough_glints(self):
         # light pass 3: near-white faces turned from up lose the warm light's colour (white wool's sides read cream);
         # a rough dielectric's glint is capped (nether bricks strobed on their bevels)
-        self.assertTrue(0.6 <= _const("WHITE_WALL_NEUTRAL") <= 1.0)
+        # Retired pin (light pass 4): WHITE_WALL_NEUTRAL 0.6-1.0 - fully neutral, the perspective views' sunlit white walls
+        # lost their warmth (the castle read hue-less); half of it keeps them warm without the cream cast
+        self.assertTrue(0.4 <= _const("WHITE_WALL_NEUTRAL") <= 0.6)
         self.assertLessEqual(_const("ROUGH_GLINT_CAP"), 0.2)
         lit = _read("program", "lit.fsh")
         self.assertIn("WHITE_WALL_NEUTRAL * whiteness * side", lit)
         self.assertIn("mix(mix(ROUGH_GLINT_CAP, 1.0, glossy), 1.0, mat.metal)", lit)
 
     def test_the_sky_has_a_sun(self):
-        # light pass 3: a soft warm sun disc that blooms, vanilla's square sprite dropped only where the loader names
-        # the sun's stage; a glow round the moon
+        # light pass 4: the loader does not name the sun's render stage, so vanilla's square sun is found by direction
+        # in gbuffers_skytextured and dropped; our soft disc (warmer as the sun sinks) is drawn with the dome, which the
+        # terrain covers. A glow round the moon
         sky = _read("program", "sky.fsh")
-        self.assertIn("if (renderStage == MC_RENDER_STAGE_SUN)\n        discard;", sky)
-        self.assertIn("SUN_DISC_COLOUR * ((disc + halo)", sky)
+        self.assertIn("normalize(sunPosition)) > SUN_SPRITE_COS)\n        discard;", sky)
+        self.assertNotIn("MC_RENDER_STAGE_SUN", sky)
+        self.assertIn("discColour * ((disc + halo)", sky)
         self.assertIn("MOON_GLOW * moonUp", sky)
+        self.assertTrue(0.85 <= _const("SUN_SPRITE_COS") <= 0.95)
         settings = _read("lib", "settings.glsl")
-        disc = [float(x) for x in re.search(r"const vec3 SUN_DISC_COLOUR = vec3\(([^)]*)\) \* ([\d.]+);", settings).groups()[0].split(",")]
-        self.assertGreater(disc[0], disc[2])                   # slightly warm
+        for name in ("SUN_DISC_COLOUR", "SUN_DISC_LOW"):
+            disc = [float(x) for x in re.search(r"const vec3 %s = vec3\(([^)]*)\)" % name, settings).group(1).split(",")]
+            self.assertGreater(disc[0], disc[2])               # warm
 
     def test_no_film_grain(self):
         # the dither read as grain over the lawn at the RTS zoom: off, and the local contrast never sharpens a texel
@@ -374,15 +411,16 @@ class ShaderPack(unittest.TestCase):
         self.assertGreaterEqual(_const("LOCAL_CONTRAST_FINE_LOD", final), 1.0)
 
     def test_aerial_perspective_in_perspective_views_only(self):
-        # Retired pin (light pass 3): "AERIAL_START 40, ~25-30% at 150 blocks". In game the far lawn stayed muddy grey
-        # (H 102, S 0.28, luma 0.43; the benchmark airy blue-white). Now denser - ~50-60% at 150-200 blocks - toward the
-        # sky gradient's horizon, taking the colour it veils; the orthographic RTS camera keeps its own haze
+        # Retired pins (light pass 4): pass 3's "~50-58% at 150 blocks, 58-66% at 200" and "the air takes all the colour
+        # it veils" overshot - the far ground took the sky's colour (0.62, saturation 0.20, hue 212) and the horizon
+        # dissolved (critic 7.0/10). Now ~30-35% at 150-200 blocks without the extra desaturation: by the model the far
+        # lawn keeps saturation ~0.3 and sits ~0.2 under the horizon. The orthographic RTS camera keeps its own haze
         start, scale, top = _const("AERIAL_START"), _const("AERIAL_SCALE"), _const("AERIAL_MAX")
         at150 = top * (1.0 - math.exp(-(150.0 - start) / scale))
         at200 = top * (1.0 - math.exp(-(200.0 - start) / scale))
-        self.assertTrue(0.50 <= at150 <= 0.58, at150)
-        self.assertTrue(0.58 <= at200 <= 0.66, at200)
-        self.assertLessEqual(top, _const("HAZE_MAX_LIMIT", _read("composite.fsh")))
+        self.assertTrue(0.28 <= at150 <= 0.34, at150)
+        self.assertTrue(0.32 <= at200 <= 0.38, at200)
+        self.assertLessEqual(_const("AERIAL_DESAT"), 0.25)
         comp = _read("composite.fsh")
         self.assertIn("float start = ortho ? rtsHazeStart() : AERIAL_START;", comp)
         self.assertIn("float hazeMax = ortho ? HAZE_MAX : AERIAL_MAX;", comp)
