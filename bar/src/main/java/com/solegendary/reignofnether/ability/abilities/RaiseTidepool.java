@@ -55,7 +55,7 @@ public class RaiseTidepool extends Ability {
 
     @Override
     public AbilityButton getButton(Keybinding hotkey, Unit unit) {
-        return new AbilityButton("Raise Tidepool",
+        return new AbilityButton("Draw Grid",
             ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/nautilus_shell.png"),
             hotkey,
             () -> CursorClientEvents.getLeftClickAction() == UnitAction.RAISE_TIDEPOOL,
@@ -64,8 +64,8 @@ public class RaiseTidepool extends Ability {
             () -> CursorClientEvents.setLeftClickAction(UnitAction.RAISE_TIDEPOOL),
             null,
             List.of(
-                FormattedCharSequence.forward("Raise Tidepool  (" + ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
-                FormattedCharSequence.forward("Shallow water rises on open ground up to " + RANGE + " blocks away for "
+                FormattedCharSequence.forward("Draw Grid  (" + ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown)", Style.EMPTY.withBold(true)),
+                FormattedCharSequence.forward("Lays a patch of light grid on open ground up to " + RANGE + " blocks away for "
                     + TidepoolServerEvents.DEFAULT_LIFETIME_TICKS / 20 + " s.", Style.EMPTY),
                 FormattedCharSequence.forward("Tidewrought on it are faster and heal. Enemies can drain it.", Style.EMPTY),
                 FormattedCharSequence.forward("They bring the sea with them.", Style.EMPTY.withItalic(true))
