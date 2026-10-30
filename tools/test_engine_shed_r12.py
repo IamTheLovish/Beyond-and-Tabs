@@ -199,11 +199,12 @@ class EngineShedR12(EngineShedR11):
             self.assertTrue(set(crown) & s34, (s["top"], "crown not seen in 34"))
 
     def test_r12_stack_tapers_smoothly(self):
-        """A tapered shaft: from the foot up to the crown each stack's plan width never grows, narrows at least twice
-        (foot -> lower shaft -> upper shaft), and no narrowing is a flat ledge: what it leaves open above, on the course
-        under it, is sloped pieces (a Macaw's wash) or thin wall tops, and neither course has a stair. (Round 2: both
-        round-1 critics read the lit Macaw's BRICK wash as a second ring from above; the designer took it out, leaving
-        the brick-wall sleeve's thin tops as the upper shoulder - the rule is no flat ledge, not "a wash everywhere".)"""
+        """A tapered shaft: from the foot up to the crown each stack's plan width never grows and narrows at least
+        once, and no narrowing is a flat ledge: what it leaves open above, on the course under it, is sloped pieces (a
+        Macaw's wash) or thin wall tops, and neither course has a stair. (Round 1 asked for two narrowings - foot ->
+        sleeved lower shaft -> slim shaft - the builder's own design. Round 2: both critics read its second step as a
+        ring, the sleeve measured redder than the wall brick (sat 0.452), and the designer's fallback and the study
+        chimney (koin: 5 -> 3 over ONE wash) both have one step-in.)"""
         p = self.p
         for s in self.m["stacks"]:
             foot, ring, width = self.stack_parts(s)
@@ -211,7 +212,7 @@ class EngineShedR12(EngineShedR11):
             w = [width(y) for y in ys]
             self.assertTrue(all(b <= a for a, b in zip(w, w[1:])), (s["top"], list(zip(ys, w))))
             drops = [y for y, a, b in zip(ys[1:], w, w[1:]) if b < a]
-            self.assertGreaterEqual(len(drops), 2, (s["top"], list(zip(ys, w))))
+            self.assertGreaterEqual(len(drops), 1, (s["top"], list(zip(ys, w))))
             for y in drops:
                 at = [p.n[(x, yy, z)] for yy in (y - 1, y) for x in range(s["base"][0], s["base"][1] + 1)
                       for z in range(s["base"][2], s["base"][3] + 1) if (x, yy, z) in p.n]
@@ -416,10 +417,14 @@ class EngineShedR12(EngineShedR11):
     def test_r2_rooms_seen_through_the_glass_are_warm_surfaces(self):
         """Critics r1: "the panes look pale grey, not orange"; measured: dusk glass hue 2, sat 0.16 - the panes show red
         brick under block light. The designer: the surface the glass shows becomes a warm pale one. >= 80 % of the dusk
-        still's camera-window glass pixels show, as the first block behind the pane, a warm pale surface by look
-        (WARM_SURFACES: birch, pack luma 0.65, sat 0.33, a pale warm yellow)."""
+        still's camera-window glass pixels that look INTO the room show, as the first block behind the pane, a warm pale
+        surface by look (WARM_SURFACES: birch, pack luma 0.65, sat 0.33, a pale warm yellow). (Into the room: the block
+        behind is off the pane's own wall plane - a ray grazing the 2 px pane's edge lands on the window's own jamb or
+        sill, the outside wall, which stays brick.)"""
         glass = {q for g in self.camera_windows() for q in g}
-        hits = [h for h in self.p.hits["dusk"].values() if S.glyph(h[1]) == "g" and h[0] in glass]
+        normal = {"west": 0, "south": 2}                   # the axis a pane on that face looks along
+        hits = [h for h in self.p.hits["dusk"].values() if S.glyph(h[1]) == "g" and h[0] in glass and h[3]
+                and h[2] in normal and h[3][0][normal[h[2]]] != h[0][normal[h[2]]]]
         self.assertGreater(len(hits), 200)
         warm = sum(1 for h in hits if h[3] and h[3][1] in WARM_SURFACES)
         self.assertGreaterEqual(warm / len(hits), 0.80, (warm, len(hits), Counter(h[3][1] for h in hits if h[3]
@@ -457,6 +462,20 @@ class EngineShedR12(EngineShedR11):
         long = [q for q in dark if (q[0], q[1] + 1, q[2]) not in dark and all((q[0], q[1] - k, q[2]) in dark
                                                                                 for k in (1, 2))]
         self.assertGreaterEqual(len(long), 4, sorted(long))
+
+    def test_r2_gantry_not_an_obsidian_lump(self):
+        """Critics r1 (both): the darkest mass at the front is still "the iron gantry over the second rail line ... the
+        dark H" - likely lovish's "obsidian lump". lovish, asked (Oct 30): "idk"; so both are dressed. The gantry's posts
+        and beam (x 1, z 18 / 23 posts, the beam over z 18-23 at y 5) as rts and 34 show them: >= 70 % of their pixels
+        camera value 0.27-0.50 (FRAME_VAL, both edges). The chassis on the rails under it stays dark iron."""
+        p = self.p
+        gantry = {(1, y, z) for y in range(1, 5) for z in (18, 23)} | {(1, 5, z) for z in range(18, 24)}
+        for still in ("rts", "34"):
+            hits = [h for h in p.hits[still].values() if h[0] in gantry]
+            self.assertGreater(len(hits), 30, still)
+            vals = [CC.lookup(self.table, h[1], h[2]) for h in hits]
+            mid = sum(1 for v in vals if v and FRAME_VAL[0] <= v[2] <= FRAME_VAL[1]) / len(hits)
+            self.assertGreaterEqual(mid, 0.70, (still, round(mid, 3), Counter(h[1] for h in hits).most_common(3)))
 
 
 def block_light(n):

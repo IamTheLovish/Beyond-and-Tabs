@@ -5,9 +5,9 @@ One change per element (r11 is tools/engine_shed_r11.py; everything not named he
 footprint, massing, sawtooth roofs and their bands, the brick / slate palette, the plinth, the eave relief, the smoke,
 the chimney positions):
 1. chimneys ("probably both"): a smooth tapered shaft and ONE corbelled crown, from shaped blocks. The stone foot
-   stays (it meets the boiler-house roof); over it a smooth Macaw's stone wash, a battered lower shaft (a brick-wall
-   sleeve round the 2 x 2), a smooth Macaw's brick wash, the plain 2 x 2 shaft, and one crown: our own corbelled cornice
-   (#407 reignofnether:cornice_brick, mitred corners) under a dark cap. No bands, no reveals.
+   stays (it meets the boiler-house roof); over it a smooth Macaw's stone wash, the plain 2 x 2 shaft, and one crown:
+   our own corbelled cornice (#407 reignofnether:cornice_brick, mitred corners) under a dark cap. No bands, no
+   reveals. (Round 1 also had a brick-wall sleeve and a Macaw's brick wash: the critics read them as a second ring.)
 2. dusk light (warm orange, softer, inside the rooms): r11's pearlescent glow behind every pane goes; each window's room
    is lit by a warm shroomlight hidden in its ceiling over the window head (the cameras look down and never see it),
    so the panes show a lit brick floor and jambs, not a glowing face.
@@ -26,14 +26,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import engine_shed_massing as M  # noqa: E402
 import engine_shed_r11 as R  # noqa: E402
 import lab_vehicle_brass as L  # noqa: E402
-from engine_shed_r11 import (BRICK, PALE, PLINTH, STONE, STONE_ST, STONE_W, at, in_of, slab, stair)  # noqa: E402
+from engine_shed_r11 import (BRICK, PALE, PALE_SL, PLINTH, STONE, STONE_ST, STONE_W, at, in_of, slab, stair)  # noqa: E402
 
 OUT = "design/vehicle_labs/brass_t1_r12.nbt"
 SX, SZ = R.SX, R.SZ
 TOWER = R.TOWER
 META = dict(R.META)
 WARM = "shroomlight"
+WARM_SURFACE = "birch_planks"
 SPIRE = "mcwroofs:prismarine_brick"
+DRIP = "mcwroofs:cyan_terracotta"
+# the drip cells per ring (eave ring 16-17 over x 0-4 z 4-8, upper ring 18-19 over x 1-3 z 5-7): two-cell clusters on
+# each face of the eave ring, one cell on each face of the upper ring above one of them - runs down the slope
+DRIPS = ({(0, 5), (0, 6), (2, 8), (3, 8), (1, 4), (4, 6), (4, 7)}, {(1, 5), (3, 7)})
 SOOT, SOOT_SL, STREAK = "polished_blackstone_bricks", "polished_blackstone_brick_slab", "deepslate_bricks"
 DRY = R.DRY
 # r11's windows (tools/engine_shed_r11.py walls()): (face, wall plane, columns, bottom row, top row)
@@ -105,13 +110,10 @@ def stacks(g):
         for (x, z), f, sh in ring_cells(x0, x1, z0, z1):   # the stone wash: smooth, rising to the shaft
             macaw(g, (x, wash, z), "mcwroofs:stone_bricks_roof", f, sh)
         shaft(wash)
-        for y in range(wash + 1, upper):                   # the battered lower shaft
-            shaft(y)
-            for (x, z), _, _ in ring_cells(x0, x1, z0, z1):
-                g.set(x, y, z, "brick_wall", **DRY)
-        for (x, z), f, sh in ring_cells(x0, x1, z0, z1):   # the brick wash onto the slim shaft
-            macaw(g, (x, upper, z), "mcwroofs:bricks_roof", f, sh)
-        shaft(upper)
+        for y in range(wash + 1, upper + 1):               # round 2: the slim shaft straight off the stone wash -
+            shaft(y)                                       # the critics read the lit brick wash (value 0.525, sat
+        #     0.5) as a second ring and the brick-wall sleeve measured redder than the wall brick (sat 0.452): one
+        #     smooth step-in, as the study chimney (koin: 5 -> 3 over one wash)
         for y in range(upper + 1, top - 1):
             shaft(y)
         shaft(top - 1)                                     # the crown course
@@ -155,26 +157,53 @@ def room_lights(g):
         up = (q[0], q[1] + 1, q[2])
         if up not in g.b:
             g.set(*up, "polished_deepslate")
+    warm_surfaces(g)
     return sources
+
+
+def warm_surfaces(g):
+    """Round 2 (the designer; critics r1: "the panes look pale grey, not orange"; measured dusk glass hue 2, sat 0.16 -
+    red brick under the block light): every block the eyes cameras (rts, rts_close, 34 / dusk) see through a wall
+    window's pane, within 8 blocks of it, becomes warm pale birch (pack luma 0.65, sat 0.33) - the floor and the far
+    walls of a lit room. Lights, glass, thin pieces and anything a camera sees straight (not through glass) stay."""
+    import building_gates as G
+    import schem_study as S
+    b = S.Build(dict(g.b))
+    shots = [G.shoot(b, still, 2) for still in ("rts", "rts_close", "34")]
+    seen = {h[0] for hits in shots for h in hits.values()}             # what a camera sees straight stays as it is
+    for hits in shots:
+        for h in hits.values():
+            if h[1] != R.PANE or not h[3] or h[0][1] > 9:
+                continue
+            q, n = h[3]
+            if q in seen or n == WARM or max(abs(q[i] - h[0][i]) for i in range(3)) > 8:
+                continue
+            if S.glyph(n) == "#":
+                g.set(*q, WARM_SURFACE)
+            elif n.endswith("_stairs") and not n.startswith("birch"):          # an inner head or reveal stair
+                g.set(*q, "birch_stairs", **g.b[q][1])
 
 
 # ---------------------------------------------------------------------------------------------------- 3. the spire
 def spire(g):
     """Over r11's clock stage and cornice (15): a steep spire of Macaw's prismarine-brick roof - the 5 x 5 eave ring
     (16 steep, 17 upper steep), the 3 x 3 ring (18, 19), a pyramid top (20) and an iron finial (21): 2 rise per run,
-    one smooth verdigris surface (no lead rolls, no hip stones)."""
+    one smooth verdigris surface (no lead rolls, no hip stones). Round 2: weathering drips of grey-green cyan
+    terracotta in clusters down the faces (DRIPS - never an a-b-a-b-a run: no chequer), about a third of the seen
+    spire: the critics' "uniform copper", and its value 0.52-0.54 down towards 0.36-0.48; the bed the spire's own stone."""
     x0, x1, z0, z1 = TOWER
     for q in [q for q in g.b if x0 - 1 <= q[0] <= x1 + 1 and z0 - 1 <= q[2] <= z1 + 1 and q[1] > R.CORNICE_Y]:
         del g.b[q]
     cx, cz = (x0 + x1) // 2, (z0 + z1) // 2
     for k, (y, (a0, a1, b0, b1)) in enumerate(((16, (x0 - 1, x1 + 1, z0 - 1, z1 + 1)), (18, (x0, x1, z0, z1)))):
         for (x, z), f, sh in ring_cells(a0, a1, b0, b1):
-            macaw(g, (x, y, z), SPIRE + "_steep_roof", f, sh)
-            macaw(g, (x, y + 1, z), SPIRE + "_upper_steep_roof", f, sh)
-        for x in range(a0 + 1, a1):                        # the bed inside the ring (hidden)
-            for z in range(b0 + 1, b1):
+            mat = DRIP if (x, z) in DRIPS[k] else SPIRE
+            macaw(g, (x, y, z), mat + "_steep_roof", f, sh)
+            macaw(g, (x, y + 1, z), mat + "_upper_steep_roof", f, sh)
+        for x in range(a0 + 1, a1):                        # the bed inside the ring (hidden; round 2: the spire's own
+            for z in range(b0 + 1, b1):                    # stone - the dark bed showed as a dotted seam at the hip)
                 for yy in (y, y + 1):
-                    g.set(x, yy, z, "polished_deepslate")
+                    g.set(x, yy, z, "prismarine_bricks")
     g.set(cx, 20, cz, SPIRE + "_top_roof", part="pyramid")
     g.set(cx, 21, cz, "chain", axis="y", **DRY)
 
@@ -201,25 +230,40 @@ def gate(g):
             g.set(*q, "chiseled_stone_bricks" if n == "key" else STONE)
 
 
+def gantry(g):
+    """Round 2 (critics r1, both: the darkest front mass is the iron gantry over the south apron's rails - "the dark
+    H" - likely lovish's "obsidian lump"; lovish asked, Oct 30: "idk"): its posts stone-brick walls, its beam smooth
+    stone slabs - a mid-grey frame (camera value 0.28-0.48). The chassis and the chain hoist under it stay dark iron."""
+    for z in (18, 23):
+        for y in range(1, 5):
+            g.set(1, y, z, STONE_W, **DRY)
+    for z in range(18, 24):
+        slab(g, (1, 5, z), PALE_SL)
+
+
 # ---------------------------------------------------------------------------------------------------- 4. soot
 def weathering(g):
     """Soot. At each stack's top: the cap is blackstone (stacks()), the course under the crown blackened round the
-    shaft, and one drip a course lower on its two camera faces. Under the eaves: a two-course deepslate-brick streak on
-    every second brick pier of the camera faces (y 4-5, under the dentil course)."""
+    shaft, and a drip fading down its south-west arris (blackstone, then deepslate brick, 3 courses). Under the eaves:
+    a three-course deepslate-brick streak on every second brick pier of the camera faces (y 3-5, under the dentils)."""
     for s in M.AF["stacks"]:
         sx0, sx1, sz0, sz1 = s["shaft"]
         top = s["top"]
         for x in range(sx0, sx1 + 1):
             for z in range(sz0, sz1 + 1):
                 g.set(x, top - 2, z, SOOT)
-        g.set(sx0, top - 3, sz1, SOOT)                      # the drip on the west / south arris
+        g.set(sx0, top - 3, sz1, SOOT)                      # the drip down the west / south arris, fading
+        g.set(sx0, top - 3, sz0, STREAK)                    # (round 2: the critics read top - 2 / - 3 as a collar)
+        g.set(sx1, top - 3, sz1, STREAK)
+        for y in (top - 4, top - 5):
+            g.set(sx0, y, sz1, STREAK)
     piers = []
     for face, plane, span in (("south", 24, range(4, 17)), ("south", 16, range(0, 10)), ("west", 4, range(16, 25))):
-        run = [u for u in span if all(g.b.get(at(face, plane, u, y), ("",))[0] == BRICK for y in (4, 5))
+        run = [u for u in span if all(g.b.get(at(face, plane, u, y), ("",))[0] == BRICK for y in (3, 4, 5))
                and at(face, plane, u, 6) in g.b]
         piers += [(face, plane, u) for u in run[::2]]
-    for face, plane, u in piers:
-        for y in (4, 5):
+    for face, plane, u in piers:                           # round 2: three courses (1 x 2 did not read)
+        for y in (3, 4, 5):
             g.set(*at(face, plane, u, y), STREAK)
     return piers
 
@@ -239,6 +283,7 @@ def detail():
     R.tower(g)
     spire(g)
     R.yard(g)
+    gantry(g)
     R.life(g)
     R.gate_interior(g)
     R.bevel(g)
