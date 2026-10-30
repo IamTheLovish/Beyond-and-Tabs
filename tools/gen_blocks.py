@@ -192,7 +192,10 @@ TARGETS = {
     "polished_granite": dict(luma=0.44, std=0.060, sat=0.37, tilt=4.0, smooth=125, pore=4),
     "polished_diorite": dict(luma=0.75, std=0.070, sat=0.02, tilt=4.0, smooth=136, pore=4),
     "blackstone": dict(luma=0.18, std=0.035, sat=0.10, tilt=24.0, smooth=12, pore=12),
-    "obsidian": dict(luma=0.085, std=0.05, sat=0.24, tilt=10.0, smooth=228, pore=0),   # r30: m_obsidian_glass paints its own smoothness (faces 228)
+    # r30: m_obsidian_glass paints its own smoothness (faces 228). r31: luma 0.085 -> 0.15, std 0.05 -> 0.075 - in
+    # game the r30b block still read near-black (its top face measured 0.053 on screen vs the benchmark's 0.11 base
+    # with glints at 0.32 over a quarter of the face); the lift lives in the sheen bands, the glass between stays dark
+    "obsidian": dict(luma=0.15, std=0.075, sat=0.26, tilt=10.0, smooth=228, pore=0),
     "red_nether_bricks": dict(luma=0.11, std=0.035, sat=0.84, tilt=15.0, smooth=29, pore=12),
     "chiseled_stone_bricks": dict(luma=0.45, std=0.085, sat=0.03, tilt=22.0, smooth=25, pore=12),
     "dirt_path_top": dict(luma=0.47, std=0.050, sat=0.44, tilt=15.0, smooth=29, pore=50),
@@ -1189,17 +1192,32 @@ def m_obsidian_glass(F, n, cells=4):
     # shader's sun makes them glint - an original pattern, not specks.
     a = (0.18 * arete * lit)[..., None]
     alb = alb * (1 - a) + np.array([0.20, 0.20, 0.22]) * a
-    # v3 sheet: discrete lenses read as scattered fish - real sheen is a soft band whose strength depends on how the
-    # FRACTURE FACE meets the banding, so it is broad and continuous, strong on some faces and absent on others
-    band = F.warp(F.noise(2, 7, 0.8, sx=3.0, sy=1.0), 0.02 * F.noise(3, 8, 0.5), 0.0)
-    streak = 0.75 + 0.25 * norm01(F.noise(10, 30, 0.3, sx=4.0, sy=1.0))   # fine streaks inside the band
-    face_catch = rng.uniform(0.25, 1.0, m)[idx]                            # how strongly each face shows it
-    # broad and capped (v4 sheet: a narrow threshold put the whole spread into ONE bright blob a block - a sticker
-    # repeating on every block): most of the face carries some sheen, none of it blows out
-    raw = smoothstep(-0.6, 1.4, band) * streak * face_catch * (1 - arete)
-    sheen = 0.5 * np.tanh(1.8 * raw)                                          # a soft knee: no peak blob (v5 sheet)
-    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.34, 0.27, 0.46])
-    smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 20 * sheen
+    # r31 (art director, the r30b stills beside the benchmark: the block still read near-black, and the one broad
+    # sheen patch per block was a sticker - the same heart shape on every block of a wall): the sheen is BANDS - in
+    # real sheen obsidian the aligned micro-inclusions lie in thin layers along the flow, so a fracture face shows
+    # several narrow lavender stripes (3-8 texels, two edges each), wavy, each one coming and going along its length
+    # (a lens is finite) and catching more on some faces than others. Five bands at their own spacing and strength
+    # make a stripe set, not a blob; the lift to the benchmark's values (base ~0.11, glints ~0.32 over a quarter of
+    # the face) goes through TARGETS (luma / std).
+    flowc = F.v + 0.035 * F.noise(1, 3, 0.5) + 0.010 * F.noise(3, 9, 0.5)  # the flow layers: wavy, run along u
+    bands = np.zeros((n, n))
+    nb = 6
+    centres = (np.arange(nb) + 0.5 + 0.5 * (rng.random(nb) - 0.5)) / nb     # spread over the block, jittered
+    widths = rng.uniform(0.012, 0.030, nb)                                   # 1.5-4 texels sigma at 128x
+    strength = rng.uniform(0.65, 1.0, nb)
+    for c, w, s in zip(centres, widths, strength):
+        d = (flowc - c + 0.5) % 1.0 - 0.5
+        bands += s * np.exp(-(d / w) ** 2)
+    along = 0.35 + 0.65 * smoothstep(0.0, 0.6, norm01(F.noise(1, 4, 0.6, sx=3.0, sy=1.0)))   # a lens fades along u
+    streak = 0.8 + 0.2 * norm01(F.noise(12, 32, 0.3, sx=4.0, sy=1.0))           # fibrous inside the band
+    # the sheen is seen only where the fracture face meets the layers at the right angle: some faces show the whole
+    # band set, others almost none - so a wall is not zebra-striped, the stripes come in patches
+    dim = np.zeros(m, bool)
+    dim[rng.permutation(m)[:max(1, m // 3)]] = True                           # a third of the faces (one of four)
+    face_catch = np.where(dim, rng.uniform(0.05, 0.2, m), rng.uniform(0.6, 1.0, m))[idx]
+    sheen = np.clip(bands * along * streak * face_catch * (1 - arete), 0, 0.85)
+    alb = alb * (1 - sheen[..., None]) + sheen[..., None] * np.array([0.34, 0.27, 0.47])   # hue ~262: lavender
+    smooth = 228 - 95 * arete - 4 * np.abs(ripple) + 22 * sheen                # the bands glint
     return dict(H=H, alb=alb, smooth=smooth)
 
 
