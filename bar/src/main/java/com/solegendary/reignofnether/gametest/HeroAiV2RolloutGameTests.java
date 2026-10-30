@@ -199,17 +199,20 @@ public class HeroAiV2RolloutGameTests {
     }
 
     /**
-     * Hold position for {@code kit}: the hero, its first three abilities learnt, holds its spot with an enemy
-     * {@code foeDist} blocks off and never leaves it by more than a block - it casts only from where it stands. For the
-     * Gravecaller and the Arch-Engineer the enemy stands at the full range of their forward ground cast (Raise the
-     * Fallen 10, Deploy Turret 8): the cast goal measures to the target block's corner, so a cast aimed at the edge of
-     * its range walks the hero there (review r1 on PR 416: about 1.4 blocks).
+     * Hold position for {@code kit}: the hero (at block hx, hz), its first three abilities learnt, holds its spot with
+     * an enemy at block (fx, fz) and never leaves it by more than {@code tolerance} - it casts only from where it stands.
+     * <p>
+     * The Gravecaller and the Arch-Engineer have a forward ground cast (Raise the Fallen, range 10; Deploy Turret, 8)
+     * aimed at the target's block. GenericTargetedSpellGoal.isInRange measures to that block's lowest corner, so with the
+     * enemy just inside the range by its centre but that corner just outside it - the enemy toward -x/-z - a held hero
+     * walks until the corner is in range: about half a block (the first red, 41034472996, saw 1.1 once in three under a
+     * 1-block tolerance). Their tests stand the enemy so and allow 0.3 blocks; the others keep the Paladin test's 1.
      */
-    static void keepsHold(GameTestHelper helper, HeroKit kit, int foeDist, String tag) {
+    static void keepsHold(GameTestHelper helper, HeroKit kit, int hx, int hz, int fx, int fz, double tolerance, String tag) {
         SkirmishGameTests.openGround(helper, 0, 0, 15, 15);
         String me = HeroGameTests.owner(helper, "v2r_hold_" + tag), them = me + "_foe";
-        Mob h = hero(helper, kit, me, 4, 2);
-        Mob foe = HeroAiV2GameTests.dummy(helper, them, 4, 2 + foeDist);
+        Mob h = hero(helper, kit, me, hx, hz);
+        Mob foe = HeroAiV2GameTests.dummy(helper, them, fx, fz);
         List<Mob> mobs = HeroAiV2GameTests.mobs(h, foe);
         if (!(h instanceof FactionHero fh) || foe == null) {
             HeroAiGameTests.finish(helper, List.of("could not spawn the test units"), mobs, null);
@@ -230,8 +233,9 @@ public class HeroAiV2RolloutGameTests {
                 if (tick < 160)
                     return;
                 List<String> problems = new ArrayList<>();
-                if (worst[0] > 1.0)
-                    problems.add(String.format("%s left its hold spot by %.1f blocks (an enemy %d blocks off)", kit.itemName, worst[0], foeDist));
+                if (worst[0] > tolerance)
+                    problems.add(String.format("%s left its hold spot by %.2f blocks (allowed %.1f; an enemy %.1f blocks off)", kit.itemName,
+                        worst[0], tolerance, Math.hypot(fx - hx, fz - hz)));
                 HeroAiGameTests.finish(helper, problems, mobs, null);
             });
         }
@@ -325,19 +329,19 @@ public class HeroAiV2RolloutGameTests {
 
     // hold: every hero; the two with a forward ground cast face an enemy at that cast's full range
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_gravecaller", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_gravecaller_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.GRAVECALLER, 10, "grave"); }
+    public static void hero_ai_v2_rollout_gravecaller_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.GRAVECALLER, 13, 13, 6, 6, 0.3, "grave"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_engineer", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_arch_engineer_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ARCH_ENGINEER, 8, "engineer"); }
+    public static void hero_ai_v2_rollout_arch_engineer_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ARCH_ENGINEER, 13, 13, 8, 7, 0.3, "engineer"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_druid", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_druid_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.THORNHEART_DRUID, 6, "druid"); }
+    public static void hero_ai_v2_rollout_druid_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.THORNHEART_DRUID, 4, 2, 4, 8, 1.0, "druid"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_corsair", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_corsair_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.CORSAIR_CAPTAIN, 6, "corsair"); }
+    public static void hero_ai_v2_rollout_corsair_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.CORSAIR_CAPTAIN, 4, 2, 4, 8, 1.0, "corsair"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_witch", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_storm_witch_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.STORM_WITCH, 6, "witch"); }
+    public static void hero_ai_v2_rollout_storm_witch_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.STORM_WITCH, 4, 2, 4, 8, 1.0, "witch"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_warchief", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_warchief_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.HORDE_WARCHIEF, 6, "warchief"); }
+    public static void hero_ai_v2_rollout_warchief_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.HORDE_WARCHIEF, 4, 2, 4, 8, 1.0, "warchief"); }
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_hold_shaman", timeoutTicks = 220)
-    public static void hero_ai_v2_rollout_ash_shaman_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ASH_SHAMAN, 6, "shaman"); }
+    public static void hero_ai_v2_rollout_ash_shaman_keeps_hold_position(GameTestHelper helper) { keepsHold(helper, HeroKits.ASH_SHAMAN, 4, 2, 4, 8, 1.0, "shaman"); }
 
     // move: every hero but the Warchief (its own test above, with the leap check)
     @GameTest(template = ARENA, batch = "hero_ai_v2_rollout_move_gravecaller", timeoutTicks = 300)
