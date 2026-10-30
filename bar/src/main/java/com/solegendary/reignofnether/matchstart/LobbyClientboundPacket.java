@@ -43,6 +43,8 @@ public class LobbyClientboundPacket {
     // the match sun (match.TimeOfDay / match.DayCycle ids); set on snapshots, encoded after the map
     public int timeOfDay = 0;
     public int dayCycle = com.solegendary.reignofnether.match.DayCycle.DEFAULT.ordinal();
+    // the host's "Alliances" choice (true = locked in the match, lovish D032); set on snapshots, encoded after the sun
+    public boolean lockAlliances = true;
     public boolean playerList = com.solegendary.reignofnether.match.PlayerListRule.DEFAULT;   // encoded last
 
     LobbyClientboundPacket(Kind kind, boolean open, boolean starting, String hostName, int arena, int metal,
@@ -67,6 +69,7 @@ public class LobbyClientboundPacket {
         p.choosePositions = MultiplayerLobby.choosePositions;
         p.timeOfDay = MultiplayerLobby.timeOfDay;
         p.dayCycle = MultiplayerLobby.dayCycle;
+        p.lockAlliances = MultiplayerLobby.lockAlliances;
         p.playerList = MultiplayerLobby.playerList;
         return p;
     }
@@ -130,6 +133,7 @@ public class LobbyClientboundPacket {
         choosePositions = buf.readBoolean();
         timeOfDay = buf.readByte();
         dayCycle = buf.readByte();
+        lockAlliances = buf.readBoolean();
         playerList = buf.readBoolean();
     }
 
@@ -161,6 +165,7 @@ public class LobbyClientboundPacket {
         buf.writeBoolean(choosePositions);
         buf.writeByte(timeOfDay);
         buf.writeByte(dayCycle);
+        buf.writeBoolean(lockAlliances);
         buf.writeBoolean(playerList);
     }
 

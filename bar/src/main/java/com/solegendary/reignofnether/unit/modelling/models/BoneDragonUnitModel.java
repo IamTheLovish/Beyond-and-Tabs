@@ -9,31 +9,18 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * The Bone Dragon in motion: our own body (BoneDragonModel, from design/models/gravebound_bone_dragon.json by
- * tools/gen_dragon.py -> tools/dsl_to_game.py) on the shared dragon rig ({@link Dragon}). A huge dead wyrm: a slow
- * 40-tick beat with a heavy downstroke, a 120-tick breath that swells the ribcage round the soul-light, a five-link
- * neck and a seven-link tail that roll with lag, a yawn and a head shake now and then, a banking roll into every turn
- * (r12). Everything is keyed off the entity's own state (speed, turn rate, climb, swing, hurt and death time).
+ * tools/gen_dragon.py -> tools/dsl_to_game.py) on the shared dragon rig ({@link Dragon}). A huge dead wyrm (r13): a
+ * slow 52-tick beat with a heavy downstroke and a slow folding recovery, flap bursts between glides, three-strip sails
+ * that billow, an eight-link neck that holds an S and a ten-link tail that steers, hover / flare / take-off states, a
+ * banking roll into every turn. Everything is keyed off the entity's own state (speed, turn rate, climb, swing, hurt
+ * and death time, age).
  */
 @OnlyIn(Dist.CLIENT)
 public class BoneDragonUnitModel extends BoneDragonModel<BoneDragonUnit> {
 
+    /** r13: the rig's defaults ARE the Bone Dragon's (design/anims/bone_dragon_flight.md; tools/dragon_poses.py
+     *  draws the same numbers) - a 52-tick beat with a 34 % power stroke, 3-beat bursts between 2-beat glides. */
     private static final Dragon.Params PARAMS = new Dragon.Params();
-    static {
-        PARAMS.beatTicks = 52f;   // r12d: a 10-block wyrm beats in ~2.6 s (lovish clips 16-40-34 / 16-43-09)
-        PARAMS.down = 0.64f;
-        PARAMS.flapUp = 32f;
-        PARAMS.flapDown = -38f;
-        PARAMS.glideArm = 7f;
-        PARAMS.breathTicks = 90f;
-        PARAMS.neckLag = 2.5f;
-        PARAMS.tailLag = 3f;
-        PARAMS.riseP = 9f;
-        PARAMS.dropPx = 6f;
-        PARAMS.pitchUp = 10f;
-        PARAMS.pitchDown = 6f;
-        PARAMS.attackTicks = 22f;
-        PARAMS.attackWindup = 6f;
-    }
 
     private final Dragon.Rig rig;
 

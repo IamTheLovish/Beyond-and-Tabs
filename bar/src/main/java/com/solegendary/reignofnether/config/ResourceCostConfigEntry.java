@@ -1,10 +1,14 @@
 package com.solegendary.reignofnether.config;
 
+import com.electronwill.nightconfig.core.Config;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import net.minecraftforge.common.ForgeConfigSpec;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class ResourceCostConfigEntry {
     public static final List<ResourceCostConfigEntry> ENTRIES = new ArrayList<>();
@@ -58,9 +62,71 @@ public class ResourceCostConfigEntry {
         builder.pop();
     }
 
-    public Integer getFood() {return this.FOOD.get();}
-    public Integer getWood() {return this.WOOD.get();}
-    public Integer getOre() {return this.ORE.get();}
-    public Integer getSeconds() {return this.SECONDS.get();}
-    public Integer getPopulation() {return this.POPULATION.get();}
+    public int getFood() {return read(this.FOOD);}
+    public int getWood() {return read(this.WOOD);}
+    public int getOre() {return read(this.ORE);}
+    public int getSeconds() {return read(this.SECONDS);}
+    public int getPopulation() {return read(this.POPULATION);}
+
+    /**
+     * A loaded value is never null, but Forge 47's ConfigValue.get() can return null while the config reloads on
+     * another thread: it checks its cached value and returns it in two reads of a plain field, and the reload's
+     * clearCache() can land between them (PR run 40469588386: mod loading crashed in COMMON_SETUP, where
+     * ResourceCosts.deferredLoadResourceCosts reads every entry while the corrected config file reloads). Reading
+     * get() again only made that unlikely: #221's CI (run 40587228567) had a value null across 8 reads on a loaded
+     * runner. So a null with a loaded config reads the value straight from the loaded config, the way get() itself
+     * does on an empty cache (ConfigValue.getRaw), which no reload can clear; no value changes, only the null goes.
+     * A null with no loaded config is a real fault and says which value.
+     */
+    private static int read(ForgeConfigSpec.ConfigValue<Integer> value) {
+        Integer v = value.get();
+        if (v != null)
+            return v;
+        Object raw = Raw.read(value);
+        if (raw == null)
+            throw new IllegalStateException("config value " + String.join(".", value.getPath())
+                + " is null and its config is not loaded");
+        return (Integer) raw;
+    }
+
+    /**
+     * Forge keeps the loaded config and getRaw private to ForgeConfigSpec (PR #287's ConfigValueReloadRaceMixin
+     * reaches them with an accessor; this one is plain reflection so the JUnit test, which runs without mixins, takes
+     * the same path). Forge's own names, not Minecraft's, so the same in production.
+     */
+    private static final class Raw {
+        private static final Field SPEC;
+        private static final Field CHILD_CONFIG;
+        private static final Field DEFAULT_SUPPLIER;
+        private static final Method GET_RAW;
+
+        static {
+            try {
+                SPEC = ForgeConfigSpec.ConfigValue.class.getDeclaredField("spec");
+                CHILD_CONFIG = ForgeConfigSpec.class.getDeclaredField("childConfig");
+                DEFAULT_SUPPLIER = ForgeConfigSpec.ConfigValue.class.getDeclaredField("defaultSupplier");
+                GET_RAW = ForgeConfigSpec.ConfigValue.class.getDeclaredMethod("getRaw", Config.class, List.class, Supplier.class);
+                SPEC.setAccessible(true);
+                CHILD_CONFIG.setAccessible(true);
+                DEFAULT_SUPPLIER.setAccessible(true);
+                GET_RAW.setAccessible(true);
+            } catch (ReflectiveOperationException e) {
+                throw new ExceptionInInitializerError(e);
+            }
+        }
+
+        /** The value from the loaded config, or null when there is none. */
+        static Object read(ForgeConfigSpec.ConfigValue<?> value) {
+            try {
+                Object spec = SPEC.get(value);
+                Object loaded = spec == null ? null : CHILD_CONFIG.get(spec);
+                if (loaded == null)
+                    return null;
+                return GET_RAW.invoke(value, loaded, value.getPath(), DEFAULT_SUPPLIER.get(value));
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("config value " + String.join(".", value.getPath())
+                    + " could not be read from its loaded config", e);
+            }
+        }
+    }
 }

@@ -37,15 +37,14 @@ public final class HudPanels {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    // chevron / click-zone ids
-    public static final int STATS = 0, KILLFEED = 1, ALERTS = 2, CHEAT = 3, UNITCARD = 4, ECONOMY = 5, COMMAND = 6;
+    // chevron / click-zone ids (1 was the kill feed, removed; left unused so the other ids keep their numbers)
+    public static final int STATS = 0, ALERTS = 2, CHEAT = 3, UNITCARD = 4, ECONOMY = 5, COMMAND = 6;
     public static final int TAB_FIRST = 8;   // stats tabs 8..11
     public static final int TABS = 4;
     public static final int CHEVRON = 9;     // px
 
     public static boolean statsOpen = false;
     public static int statsTab = 0;
-    public static boolean killFeedCollapsed = true;
     public static boolean alertsCollapsed = false;
     public static boolean cheatSheetCollapsed = true;
     public static boolean unitCardCompact = false;
@@ -69,7 +68,6 @@ public final class HudPanels {
         try {
             statsOpen = ReignOfNetherClientConfigs.HUD_STATS_OPEN.get();
             statsTab = Math.max(0, Math.min(TABS - 1, ReignOfNetherClientConfigs.HUD_STATS_TAB.get()));
-            killFeedCollapsed = ReignOfNetherClientConfigs.HUD_KILLFEED_COLLAPSED.get();
             alertsCollapsed = ReignOfNetherClientConfigs.HUD_ALERTS_COLLAPSED.get();
             cheatSheetCollapsed = ReignOfNetherClientConfigs.HUD_CHEATSHEET_COLLAPSED.get();
             unitCardCompact = ReignOfNetherClientConfigs.HUD_UNITCARD_COMPACT.get();
@@ -135,7 +133,6 @@ public final class HudPanels {
         ensureLoaded();
         switch (id) {
             case STATS -> toggleStats();
-            case KILLFEED -> save(ReignOfNetherClientConfigs.HUD_KILLFEED_COLLAPSED, killFeedCollapsed = !killFeedCollapsed);
             case ALERTS -> save(ReignOfNetherClientConfigs.HUD_ALERTS_COLLAPSED, alertsCollapsed = !alertsCollapsed);
             case CHEAT -> save(ReignOfNetherClientConfigs.HUD_CHEATSHEET_COLLAPSED, cheatSheetCollapsed = !cheatSheetCollapsed);
             case UNITCARD -> save(ReignOfNetherClientConfigs.HUD_UNITCARD_COMPACT, unitCardCompact = !unitCardCompact);

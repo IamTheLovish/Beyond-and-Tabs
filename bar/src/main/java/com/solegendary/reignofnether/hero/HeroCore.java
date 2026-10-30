@@ -3,6 +3,7 @@ package com.solegendary.reignofnether.hero;
 import com.solegendary.reignofnether.ability.Abilities;
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.HeroAbility;
+import com.solegendary.reignofnether.hero.ai.HeroBrain;
 import com.solegendary.reignofnether.keybinds.Keybinding;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.registrars.AttributeRegistrar;
@@ -70,6 +71,15 @@ public final class HeroCore {
     double motionApex;
     @Nullable Consumer<Mob> onLand;
 
+    // a hero that spawns above level 1 (H13) gets its level's stats once its attributes exist (first server tick)
+    boolean needsStartStats = false;
+
+    // the v2 hero AI's state (hero/ai/HeroBrain), made on first use: it lives and dies with the hero
+    @Nullable HeroBrain brain;
+
+    // timed ground effects (Firewall, Lava Geyser, Ember Totem): each returns true when finished; run every server tick
+    final List<java.util.function.BooleanSupplier> timers = new ArrayList<>();
+
     // temporary summons (Raise Dead): entity + game time it crumbles
     final List<Entity> summons = new ArrayList<>();
     final List<Long> summonEnds = new ArrayList<>();
@@ -79,6 +89,13 @@ public final class HeroCore {
         this.mob = mob;
         this.maxMana = kit.mana;
         this.mana = kit.mana;
+        if (kit.startLevel > 1) {
+            // a T2-lab hero (H13) comes in at its start level with the points its levels would have given: the first
+            // point plus one per level, as HeroUnit.addExperience grants them (a loaded hero overwrites both from NBT)
+            this.experience = HeroProgression.xpForLevel(kit.startLevel);
+            this.skillPoints = 1 + (kit.startLevel - 1);
+            this.needsStartStats = true;
+        }
         List<Pair<Ability, Keybinding>> list = new ArrayList<>(4);
         for (int i = 0; i < 4; i++) {
             FactionHeroAbility a = new FactionHeroAbility(kit.abilities[i], i);
@@ -133,13 +150,38 @@ public final class HeroCore {
 
     public boolean inMotion() { return motionTo != null; }
 
+    /** The v2 brain's state for this hero (made on first use). */
+    public HeroBrain brain() {
+        if (brain == null)
+            brain = new HeroBrain(mob.getId());
+        return brain;
+    }
+
+    /** The brain if one was ever made (MiscUtil asks this for every target pick: never makes one). */
+    @Nullable
+    public HeroBrain brainIfAny() {
+        return brain;
+    }
+
     void addSummon(Entity e, long endTick) {
+        // every hero summon passes here (Raise the Fallen calls it directly, Phenomena through HeroFx): its death
+        // pays nothing - no essence wisp, XP orbs or veterancy (unit/Summons; PR 360 review: the skeletons were free essence)
+        com.solegendary.reignofnether.unit.Summons.mark(e);
         summons.add(e);
         summonEnds.add(endTick);
     }
 
     /** Server tick: the cast goal, the scripted motion, the frenzy and the summons' lifetimes. */
     void tickServer() {
+        if (needsStartStats) {
+            needsStartStats = false;
+            // a fresh spawn is at full health: lift it to the start level's maximum (a loaded hero keeps its saved health)
+            boolean full = mob.getHealth() >= mob.getMaxHealth() - 0.01f;
+            ((com.solegendary.reignofnether.unit.interfaces.HeroUnit) mob).setStatsForLevel(full);
+        }
+        for (int i = timers.size() - 1; i >= 0; i--)
+            if (timers.get(i).getAsBoolean())
+                timers.remove(i);
         if (castGoal != null)
             castGoal.tick();
         if (motionTo != null) {
@@ -205,5 +247,6 @@ public final class HeroCore {
                 e.discard();
         summons.clear();
         summonEnds.clear();
+        timers.clear();   // a dead shaman's fires go out
     }
 }

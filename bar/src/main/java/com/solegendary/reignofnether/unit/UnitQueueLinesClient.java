@@ -62,6 +62,12 @@ public class UnitQueueLinesClient {
         queues = next;
     }
 
+    /** Queue-line entries the server last sent for the unit (its current order, if drawn, plus the waiting ones). */
+    public static int entryCount(int unitId) {
+        int[] e = queues.get(unitId);
+        return e == null ? 0 : e.length / UnitQueueSync.INTS_PER_ENTRY;
+    }
+
     public static void clear() {
         queues = new Int2ObjectOpenHashMap<>();
     }

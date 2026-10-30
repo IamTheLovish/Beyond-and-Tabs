@@ -36,7 +36,8 @@ import java.util.List;
  *   <li><b>Gun</b>: a light swivel shot ({@link #DAMAGE}) at the nearest enemy unit it can see within
  *   {@link #ATTACK_RANGE} every {@link #ATTACK_COOLDOWN_TICKS} ticks - a picket, not a fortress (the Storm Oak hits four
  *   times as hard). Hidden units are never shot until the beam finds them.</li>
- *   <li><b>Sight</b>: {@link #SIGHT_RANGE} blocks once built (a capitol sees 32), so the tower is also the faction's
+ *   <li><b>Sight</b>: {@link #SIGHT_RANGE} base blocks once built (60 of fog at the 1.5x Vision multiplier; a capitol
+ *   32 base, 48 of fog), so the tower is also the faction's
  *   watch post.</li>
  * </ul>
  * Cost at 8v8: one grid query per pass (twice a second) and one per shot, no allocation (reused lists), a handful of
@@ -64,8 +65,8 @@ public class LighthouseBatteryPlacement extends BuildingPlacement {
     }
 
     @Override
-    public int getSightRange() {
-        return isBuilt ? SIGHT_RANGE : super.getSightRange();
+    public int getBaseSightRange() {
+        return isBuilt ? SIGHT_RANGE : super.getBaseSightRange();
     }
 
     @Override
